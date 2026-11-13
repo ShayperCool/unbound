@@ -185,12 +185,14 @@ namespace UnityEngine.TextCore.LowLevel
 
         public static FontEngineError LoadFontFace(Font font, int pointSize) => LoadFontFace(font, (float)pointSize, 0);
 
-        /// <summary>The face of a Font asset (its font file), or of the first OS font it stands for.</summary>
+        /// <summary>The face of a Font asset (its font file), or of the first OS font it stands for.
+        /// A font without font data fails, as the Editor's built-in LegacyRuntime does: TextCore then
+        /// builds its asset from the OS fallback families (tests/projects/osfontfallback).</summary>
         public static FontEngineError LoadFontFace(Font font, float pointSize, int faceIndex)
         {
             if (font == null) return FontEngineError.Invalid_File;
             var source = font.m_Source as NativeGlyphSource ?? (font.m_Source as ChainGlyphSource)?.First as NativeGlyphSource;
-            if (source == null) return FontEngineError.Invalid_File;
+            if (source == null || !source.HasGlyphData) return FontEngineError.Invalid_File;
             return Load(new LoadedFace { Handle = source.Handle, FaceIndex = faceIndex }, pointSize);
         }
 
@@ -307,19 +309,34 @@ namespace UnityEngine.TextCore.LowLevel
             return references;
         }
 
+        /// <summary>An installed face of the family: of the style when one is given, else the
+        /// Regular face (Unity 6000.0.71f1 macOS Editor, tests/projects/osfontfallback: Arial is
+        /// Arial.ttf and Helvetica Neue its face 0, not the first file or face listed). A family
+        /// without a Regular face gives its first listed one; the Editor's choice there follows an
+        /// unspecified listing order (Hiragino Sans W8, Futura Condensed ExtraBold).</summary>
         internal static bool TryGetSystemFontReference(string familyName, string styleName, out FontReference fontRef)
         {
             fontRef = default;
             if (string.IsNullOrEmpty(familyName)) return false;
+            bool anyStyle = string.IsNullOrEmpty(styleName);
+            Font.OsFace found = null;
             foreach (var face in Font.OsFonts().Faces)
             {
                 if (!string.Equals(face.Family, familyName, StringComparison.OrdinalIgnoreCase)) continue;
-                if (!string.IsNullOrEmpty(styleName) && !string.Equals(face.Style, styleName, StringComparison.OrdinalIgnoreCase)) continue;
-                fontRef = new FontReference { familyName = face.Family, styleName = face.Style, faceIndex = face.Index, filePath = face.Path };
-                return true;
+                if (!string.Equals(face.Style, anyStyle ? RegularStyle : styleName, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (anyStyle) found ??= face;
+                    continue;
+                }
+                found = face;
+                break;
             }
-            return false;
+            if (found == null) return false;
+            fontRef = new FontReference { familyName = found.Family, styleName = found.Style, faceIndex = found.Index, filePath = found.Path };
+            return true;
         }
+
+        const string RegularStyle = "Regular";
 
         /// <summary>Whether the loaded face has colour glyphs (FreeType's colour face flag).</summary>
         internal static bool IsColorFontFace() => s_Face?.Info.Color == true;

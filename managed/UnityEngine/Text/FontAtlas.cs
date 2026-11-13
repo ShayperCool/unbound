@@ -132,27 +132,50 @@ namespace Unbound.Runtime
                     "WenQuanYi Zen Hei", "Droid Sans Fallback", "Microsoft YaHei", "PingFang SC", "Hiragino Sans" },
         };
 
+        /// <summary>The OS families TextCore makes fallback font assets of (Font.GetOSFallbacks), in
+        /// order. On macOS the Unity 6000.0.71f1 macOS Editor's list (tests/projects/osfontfallback):
+        /// the common families, Apple Color Emoji, then LastResort. Elsewhere the groups above
+        /// (unmeasured).</summary>
         internal static string[] OsFallbackNames
         {
             get
             {
                 var names = new List<string>();
+                if (OperatingSystem.IsMacOS())
+                {
+                    names.AddRange(s_CommonOsFallbackNames);
+                    names.Add("Apple Color Emoji");
+                    names.Add("LastResort");
+                    return names.ToArray();
+                }
                 foreach (var group in s_OsFallbackGroups) names.AddRange(group);
                 return names.ToArray();
             }
         }
 
+        /// <summary>The families both Editors' OS fallback lists start with, before the platform's.</summary>
+        static readonly string[] s_CommonOsFallbackNames = {
+            "Arial", "Arial Unicode MS", "Helvetica Neue", "Microsoft Sans Serif", "Microsoft YaHei",
+            "Malgun Gothic", "Gulim", "MS Gothic", "Nirmala UI",
+        };
+
         /// <summary>The OS families a legacy dynamic font falls back to, per character and in this
         /// order, after its own face, fallback fonts and font names (Unity 6000.0.71f1 Editor on
         /// Linux, tests/projects/glyphraster): common families, the platform's, then LastResort.</summary>
-        internal static readonly string[] LegacyOsFallbackNames = {
-            "Arial", "Arial Unicode MS", "Helvetica Neue", "Microsoft Sans Serif", "Microsoft YaHei",
-            "Malgun Gothic", "Gulim", "MS Gothic", "Nirmala UI",
+        internal static readonly string[] LegacyOsFallbackNames = Concat(s_CommonOsFallbackNames, new[] {
             "FreeSans", "Droid Sans", "DejaVu Sans", "Liberation Sans", "WenQuanYi Micro Hei", "HYSong",
             "NanumGothic", "TakaoGothic", "Noto Sans CJK JP", "Noto Sans CJK KR", "Noto Sans CJK SC",
             "Noto Sans CJK TC", "Droid Sans Fallback", "Noto Color Emoji",
             "LastResort",
-        };
+        });
+
+        static string[] Concat(string[] first, string[] second)
+        {
+            var all = new string[first.Length + second.Length];
+            first.CopyTo(all, 0);
+            second.CopyTo(all, first.Length);
+            return all;
+        }
 
         static readonly Dictionary<string, NativeGlyphSource> s_OsFaces = new Dictionary<string, NativeGlyphSource>(StringComparer.OrdinalIgnoreCase);
 
