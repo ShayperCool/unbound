@@ -20,6 +20,7 @@ pub mod bundle;
 pub mod bundle_cache;
 pub mod cache;
 pub mod color;
+pub mod dilate;
 pub mod font;
 mod font_freetype;
 mod font_legacy;
@@ -34,6 +35,7 @@ pub mod serialized_mesh;
 pub mod serialized_texture;
 pub mod sort;
 pub mod sprite;
+pub mod sprite_atlas;
 pub mod sprite_mesh;
 pub mod texture;
 

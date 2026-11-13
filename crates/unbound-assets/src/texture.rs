@@ -2396,70 +2396,22 @@ impl Image {
     /// those of the texels k left, right, below and above (in that order), keeping the first
     /// one nearest in Manhattan distance. Texels the flood never reaches keep their colour.
     fn dilate_transparent(&mut self) {
+        /// The importer's longest jump.
         const MAX_STEP: usize = 16;
-        const NONE: (u16, u16) = (u16::MAX, u16::MAX);
         if self.format != TextureFormat::Rgba8 {
             return;
         }
         let (w, h) = (self.width as usize, self.height as usize);
-        // Coordinates are 16-bit with 0xffff for none; larger images are left as they are.
-        if w == 0 || h == 0 || w > 0xfffe || h > 0xfffe {
-            return;
-        }
         // Rows are stored top-down here; the Editor floods bottom-up (y = 0 is the last row).
         let index = |x: usize, y: usize| (h - 1 - y) * w + x;
         let data = &mut self.data;
         let visible = |data: &[u8], i: usize| data[i * 4 + 3] != 0;
-        let mut seeds: Vec<(u16, u16)> = vec![NONE; w * h];
-        for y in 0..h {
-            for x in 0..w {
-                if visible(data, index(x, y)) {
-                    seeds[y * w + x] = (x as u16, y as u16);
-                }
-            }
-        }
-        let distance = |(sx, sy): (u16, u16), x: usize, y: usize| {
-            (sx as isize - x as isize).unsigned_abs() + (sy as isize - y as isize).unsigned_abs()
-        };
-        let mut next = seeds.clone();
-        let mut step = (w.max(h) / 2).min(MAX_STEP);
-        while step > 0 {
-            let k = step as isize;
-            for y in 0..h {
-                for x in 0..w {
-                    let mut best = seeds[y * w + x];
-                    if best != (x as u16, y as u16) {
-                        let mut best_distance = if best == NONE {
-                            usize::MAX
-                        } else {
-                            distance(best, x, y)
-                        };
-                        for (dx, dy) in [(-k, 0), (k, 0), (0, -k), (0, k)] {
-                            let (nx, ny) = (x as isize + dx, y as isize + dy);
-                            if nx < 0 || ny < 0 || nx >= w as isize || ny >= h as isize {
-                                continue;
-                            }
-                            let seed = seeds[ny as usize * w + nx as usize];
-                            if seed == NONE {
-                                continue;
-                            }
-                            let d = distance(seed, x, y);
-                            if d < best_distance {
-                                (best, best_distance) = (seed, d);
-                            }
-                        }
-                    }
-                    next[y * w + x] = best;
-                }
-            }
-            std::mem::swap(&mut seeds, &mut next);
-            step /= 2;
-        }
+        let seeds = crate::dilate::jump_flood(w, h, MAX_STEP, |x, y| visible(data, index(x, y)));
         for y in 0..h {
             for x in 0..w {
                 let (sx, sy) = seeds[y * w + x];
                 let i = index(x, y);
-                if (sx, sy) == NONE || visible(data, i) {
+                if (sx, sy) == crate::dilate::NONE || visible(data, i) {
                     continue;
                 }
                 let s = index(sx as usize, sy as usize);
