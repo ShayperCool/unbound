@@ -72,19 +72,20 @@ pub struct PlayModeAtlases {
 }
 
 impl PlayModeAtlases {
-    /// One line naming the mode and the first atlases (`a, b +3`), for the one-time warning
-    /// and `unbound doctor`.
-    pub fn message(&self) -> String {
-        const SHOWN: usize = 5;
+    /// The atlases the one-time warning names before it counts the rest (`a, b +3`).
+    pub const WARNING_SHOWN: usize = 5;
+
+    /// One line naming the mode and the first `shown` atlases (`a, b +3`).
+    pub fn message(&self, shown: usize) -> String {
         let mut names = self
             .paths
             .iter()
-            .take(SHOWN)
+            .take(shown)
             .map(String::as_str)
             .collect::<Vec<_>>()
             .join(", ");
-        if self.paths.len() > SHOWN {
-            names.push_str(&format!(" +{}", self.paths.len() - SHOWN));
+        if self.paths.len() > shown {
+            names.push_str(&format!(" +{}", self.paths.len() - shown));
         }
         format!(
             "Sprite Packer mode \"{}\" packs sprite atlases before entering Play mode; Unbound does not pack them, so their sprites draw and report from their own textures, not from the packed atlas (texture, UVs, packed rects, Sprite.packed). Atlases ({}): {names}",
@@ -447,7 +448,7 @@ impl Settings {
         self.application_identifiers.get(key).map(String::as_str)
     }
 
-    /// The atlases among `asset_paths` the Editor packs before Play mode under the project's
+    /// The atlases among `asset_paths` (files, not folders) the Editor packs before Play mode under the project's
     /// Sprite Packer mode, or `None` when the mode packs none in Play mode.
     pub fn play_mode_atlases<'a>(
         &self,
@@ -525,7 +526,7 @@ mod tests {
         let message = with_mode(4)
             .play_mode_atlases(many.iter().map(String::as_str))
             .unwrap()
-            .message();
+            .message(PlayModeAtlases::WARNING_SHOWN);
         assert!(
             message.contains("Atlases (7): Assets/0.spriteatlas, "),
             "{message}"

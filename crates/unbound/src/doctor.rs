@@ -277,9 +277,11 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             }
         }
     }
-    let play_mode_atlases = project
-        .settings
-        .play_mode_atlases(db.iter().map(|asset| asset.path.as_str()));
+    let play_mode_atlases = project.settings.play_mode_atlases(
+        db.iter()
+            .filter(|asset| !asset.is_folder)
+            .map(|asset| asset.path.as_str()),
+    );
     let inventory_seconds = start.elapsed().as_secs_f64();
     let message_start = Instant::now();
     let request: Vec<FoundRequest> = found
@@ -420,7 +422,10 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         println!("  {limitation}");
     }
     if let Some(atlases) = &play_mode_atlases {
-        println!("\nSprite atlases:\n  {}", atlases.message());
+        println!(
+            "\nSprite atlases:\n  {}",
+            atlases.message(atlases.paths.len())
+        );
     }
     let read =
         by_reading.get("Read").map_or(0, Vec::len) + by_reading.get("Loader").map_or(0, Vec::len);
