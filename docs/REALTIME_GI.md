@@ -26,12 +26,14 @@ pipeline. In a gamma-space project the systems solve as in a linear one and the 
 the realtime lightmap with an exponent of 1/2.2 (`unity_DynamicLightmap_HDR` (1, 1/2.2) instead
 of (1, 1)), `DynamicGI.SetEmissive` takes its color as a gamma color in both, and the sky the
 environment and the ambient probe are drawn from writes gamma-encoded colors, which are taken
-as such (tests/projects/realtimegi `--color-space gamma`: the Room's lightmaps, frames and
-probes match, as loaded, with its point light moved, brighter, with bounce intensity 3, with
-the indirect scale 2, in the three emission cases, with an albedo change, with a spot and a
-directional light, and with the ambient color, a procedural sky at ambient intensities 1 and 2,
-a gradient and a script's cube as the environment; the update threshold's and indirect scale's
-defaults are a linear project's; the rest of the linear sequence is not measured there).
+as such (tests/projects/realtimegi `--color-space gamma`: the Room's lightmaps and frames match
+within the comparator's tolerance, as loaded, with its point light moved, brighter, with bounce
+intensity 3, with the indirect scale 2, in the three emission cases, with an albedo change,
+with a spot and a directional light, and with the ambient color, a procedural sky at ambient
+intensities 1 and 2, a gradient and a script's cube as the environment, and so do its light
+probes but in `room-bounce`, which has the linear project's residual (below, Residuals); the
+update threshold's and indirect scale's defaults are a linear project's; the rest of the linear
+sequence is not measured there).
 
 ## Documented contract (6000.0)
 
@@ -994,13 +996,15 @@ Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
   most 0.008; 0.004 and 0.02 at ambient intensity 2, on values around 0.4) and 0.001 for a
   script's cube (the comparator's mean and largest difference).
 - Frames: the engine's differ from the Editor's by 0.4 of 255 on average over the cases (0.75
-  at most, where a spot or directional light's shadow edge crosses a few pixels) and are gated
-  on a mean of 2. (They were 3 to 21 off while a scene without a default reflection reflected
+  at most in a linear project, 0.77 in a gamma project's `room-directional`, where a spot or
+  directional light's shadow edge crosses a few pixels) and are gated on a mean of 2. (They were 3 to 21 off while a scene without a default reflection reflected
   grey instead of the Editor's black cube, `end-reflection`.)
-- Light probes (reported, 5 values in the engine's run): a probe's coefficients are sums of
+- Light probes (reported, 5 values in the engine's run of a linear project, 6 in a gamma
+  project's, all in `room-bounce`): a probe's coefficients are sums of
   large weights of both signs, so small differences of the values they read show in the small
   higher-band ones. In `room-bounce`, the brightest case, higher-band coefficients of five of
-  the eight outer probes differ by up to about 0.5% of band 0: the bias above, cause open.
+  the eight outer probes differ by up to about 0.5% of band 0 (in a gamma project six probes,
+  e.g. 0.277 against 0.446 at a band 0 of about 37): the bias above, cause open.
   (Drawn through Vulkan, one coefficient of one probe in `RoomScaled` is 15% low, three
   coefficients are off in `room-indirectscale` and three more probes in `room-bounce`: the
   missing corner texels of the material textures.)
@@ -1029,10 +1033,11 @@ measure):
   merged from several scenes, and systems that reference another scene's systems.
 - Directionality: texel copies, several directional systems, a lightmaps mode a script changes
   ([Directionality](#directionality)).
-- Gamma-space projects: what the gamma sequence of the probe does not record (it has the Room's
-  light, emission, albedo and environment cases: not the cases without UpdateGIMaterials or
-  UpdateEnvironment, the other skybox, environment-data and ambient-probe cases, nor the other
-  scenes of the linear sequence), directionality, and a render pipeline.
+- Gamma-space projects: what the gamma sequence of the probe does not record (of the linear
+  sequence's Room cases not `room-moved-next-frame`, `room-pointoff`, `room-spot-behind`,
+  `room-directional-turned`, `room-directional-noshadows`, `room-sky-sun` and its turn, the cases
+  without UpdateGIMaterials or UpdateEnvironment, the other skybox, environment-data and
+  ambient-probe cases, nor the other scenes), directionality, and a render pipeline.
 - Devices: drawn through Vulkan the material textures lack each chart's last corner texel, and
   the Editor's own Vulkan capture differs from its OpenGL Core one; no rule covers both yet
   ([Material inputs](#material-inputs)).
