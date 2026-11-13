@@ -9,7 +9,7 @@ namespace UnityEngine
     {
         static readonly List<ParticleSystemForceField> s_All = new List<ParticleSystemForceField>();
 
-        public ParticleSystemForceField() { }
+        public ParticleSystemForceField() { if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured) length = 1f; }
 
         public ParticleSystemForceFieldShape shape { get; set; }
         public float startRange { get; set; }

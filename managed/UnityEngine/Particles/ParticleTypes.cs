@@ -447,7 +447,8 @@ namespace UnityEngine
 
         [Obsolete("collider property is deprecated. Use colliderComponent instead, which supports Collider and Collider2D components (UnityUpgradable) -> colliderComponent", true)]
         [Unbound.EditorFaithful("obsolete as an error: no compiled game code can call it")]
-        public Component collider => null;
+        public Component collider => Unbound.Runtime.Compat.RemovedParticleMembersMeasured
+            ? throw new InvalidOperationException("collider property is deprecated. Use colliderComponent instead, which supports Collider and Collider2D components") : null;
 
         public Vector3 intersection => m_Intersection;
         public Vector3 normal => m_Normal;

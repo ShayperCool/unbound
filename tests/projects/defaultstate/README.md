@@ -107,9 +107,10 @@ contexts. Both independent GPU repeats and Unbound match all 54 controls. The or
 
 The Core slice adds another 42 independent controls while preserving all prior rows,
 for 11,517 rows at that stage. Physics2D adds 17 controls and Physics adds 31,
-for 11,565 rows before Audio. Audio adds 25 controls, giving 11,590 current rows.
-The comparison now has 10,585 exact rows, 1,005 differing reference rows, zero
-missing rows and 30 extra implementation rows. Its 1,037 queue
+for 11,565 rows before Audio. Audio adds 25 controls, giving 11,590 rows before ParticleSystem.
+The ParticleSystem slice adds 362 controls, giving 11,952 current rows.
+The comparison now has 11,284 exact rows, 668 differing reference rows, zero
+missing rows and 30 extra implementation rows. Its 700 queue
 entries retain the same 50 variable rows; two happen to equal the implementation
 snapshot. Variable rows remain unresolved comparisons.
 
@@ -240,15 +241,49 @@ Four WebCamTexture rows remain exact migration entries. Empty constructor argume
 do not settle device discovery, the no-device name, readability or backing graphics
 resource state. The existing 16x16 placeholder lacks capture backing. Device/resource
 lifecycle controls are needed; these NVIDIA-only observations must not become general
-format or device-name constants. The optional UnityEditor.CoreModule work remains
+format or device-name constants. The UnityEditor.CoreModule work remains
 queued: 94 importer rows, 97 window rows and 28 other editor-context rows. Remaining
-ParticleSystem, UIElements, Animation and small-module rows are listed below.
+UIElements, Animation and small-module rows are listed below.
 All 50 variable policies and the constructor-store discrepancy remain unchanged.
 The final counts include one lighting row resolved independently during integration.
 
+The ParticleSystem slice resolves 337 rows and retains all 11,590 earlier canonical
+rows byte for byte. Both NVIDIA GPU Editor repeats and the engine match its 362 new
+controls, including every property of a handle retained after its owner is destroyed.
+The 169 earlier controls remain unchanged in both Editor repeats.
+
+| ParticleSystem cause | Resolved rows | Rule and controls |
+| --- | ---: | --- |
+| Module handle reads | 322 | Missing owners return the measured property fallback. Curves and gradients are empty values; culling mode, texture clip channel, row mode and trail texture scale have explicit nonzero fallbacks. Managed owner-dependent counts and legacy flip reads still throw. An attached copied handle writes through to the same system, and destroying its owner changes the read result. |
+| Removed accessors | 8 | The six legacy sub-emitter properties reject reads and writes, including on an attached system, while the current list remains empty. The removed collision-event accessor rejects both an empty payload and one with a real collider ID; colliderComponent still resolves that collider. |
+| Constructor values and key metadata | 7 | Default module curve keys retain unweighted one-third handles. Emitter velocity uses Rigidbody, interior collisions start disabled, noise quality starts Medium, rows start Random, the sprite list starts with one empty slot and force-field length starts at one. Explicit quality/length writes and attached curve values remain writable. The first AddSprite replaces the single empty slot, another sprite appends, AddSprite rejects null and SetSprite accepts null. |
+
+The [6000.0 module documentation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.MainModule.html)
+describes module writes as changes to their owning system; the copied-handle control
+changes the value before reading through both handles. The [sub-emitter API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.SubEmittersModule.html)
+describes the current list operations, and [colliderComponent](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleCollisionEvent-colliderComponent.html)
+identifies the struck collider. [AddSprite](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.TextureSheetAnimationModule.AddSprite.html)
+adds a sprite to the animation. The initial empty-slot replacement, null handling,
+missing-owner fallbacks and precise constructor values above are observations of
+6000.0.71f1, rather than documented release-independent guarantees.
+
+Missing-owner reads and removed particle accessors use separate exact-release Compat
+mechanisms. Constructor values reuse the constructor-initialization mechanism. Other
+releases retain their earlier unmeasured values and access paths. Simulation rules,
+importer/cache writers and serialized cache payloads do not change. The existing
+particlecurves, particlerender and particletrails suites retain their baseline results.
+
+ParticleSystem keeps ten rows: four module aggregates with inactive gradient color
+storage, the unchanged variable random seed and five inherited Renderer observations.
+The canonical inactive color fields are not reproduced by later captures or by the
+initialized managed values; active gradient keys/modes alone do not establish those
+unused fields as deterministic defaults. Their exact raw rows stay queued. The emitter
+velocity correction therefore does not remove the still-differing MainModule aggregate.
+The inherited renderer rows remain part of the Core renderer follow-up. All 50 variable
+policies and all earlier canonical rows remain unchanged.
+
 | Release module | Queued rows |
 | --- | ---: |
-| UnityEngine.ParticleSystemModule | 347 |
 | UnityEditor.CoreModule | 219 |
 | UnityEngine.UIElementsModule | 159 |
 | UnityEngine.CoreModule | 115 |
@@ -257,6 +292,7 @@ The final counts include one lighting row resolved independently during integrat
 | UnityEngine.AssetBundleModule | 24 |
 | UnityEngine.AnimationModule | 20 |
 | UnityEngine.TerrainModule | 13 |
+| UnityEngine.ParticleSystemModule | 10 |
 | UnityEngine.TextCoreTextEngineModule | 10 |
 | UnityEngine.TilemapModule | 10 |
 | UnityEngine.VideoModule | 9 |

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unbound.Runtime;
 
 namespace UnityEngine
 {
@@ -15,8 +16,21 @@ namespace UnityEngine
 
         static ModuleCurve C(float value, CurveRange range = CurveRange.Any) => ModuleCurve.Constant(value, range);
 
-        static ModuleCurve Linear(float multiplier, float from, float to, CurveRange range = CurveRange.Any) =>
-            ModuleCurve.Curve(multiplier, AnimationCurve.Linear(0f, from, 1f, to), range);
+        static ModuleCurve Linear(float multiplier, float from, float to, CurveRange range = CurveRange.Any)
+        {
+            var curve = AnimationCurve.Linear(0f, from, 1f, to);
+            if (Compat.DefaultConstructorStateMeasured)
+            {
+                // Default module keys retain the unweighted one-third handles recorded
+                // by tests/projects/defaultstate on 6000.0.71f1.
+                const float DefaultKeyWeight = 1f / 3f;
+                var keys = curve.keys;
+                for (int i = 0; i < keys.Length; i++)
+                    keys[i].inWeight = keys[i].outWeight = DefaultKeyWeight;
+                curve.keys = keys;
+            }
+            return ModuleCurve.Curve(multiplier, curve, range);
+        }
 
         internal sealed class MainData : ModuleData
         {
@@ -45,7 +59,8 @@ namespace UnityEngine
             internal ParticleSystemScalingMode scalingMode = ParticleSystemScalingMode.Local;
             internal bool playOnAwake = true;
             internal int maxParticles = 1000;
-            internal ParticleSystemEmitterVelocityMode emitterVelocityMode;
+            internal ParticleSystemEmitterVelocityMode emitterVelocityMode = Compat.DefaultConstructorStateMeasured
+                ? ParticleSystemEmitterVelocityMode.Rigidbody : ParticleSystemEmitterVelocityMode.Transform;
             internal Vector3 customEmitterVelocity;
             internal ParticleSystemStopAction stopAction;
             internal ParticleSystemRingBufferMode ringBufferMode;
@@ -218,7 +233,8 @@ namespace UnityEngine
             internal int octaveCount = 1;
             internal float octaveMultiplier = 0.5f;
             internal float octaveScale = 2f;
-            internal ParticleSystemNoiseQuality quality = ParticleSystemNoiseQuality.High;
+            internal ParticleSystemNoiseQuality quality = Compat.DefaultConstructorStateMeasured
+                ? ParticleSystemNoiseQuality.Medium : ParticleSystemNoiseQuality.High;
             internal ModuleCurve scrollSpeed = C(0f);
             internal bool remapEnabled;
             internal ModuleCurve remapX = Linear(1f, -1f, 1f);
@@ -250,7 +266,7 @@ namespace UnityEngine
             internal bool multiplyColliderForceByCollisionAngle = true;
             internal bool multiplyColliderForceByParticleSpeed;
             internal bool multiplyColliderForceByParticleSize;
-            internal bool enableInteriorCollisions = true;
+            internal bool enableInteriorCollisions = !Compat.DefaultConstructorStateMeasured;
             internal List<Transform> planes = new List<Transform>();
         }
 
@@ -289,7 +305,8 @@ namespace UnityEngine
             internal int numTilesX = 1;
             internal int numTilesY = 1;
             internal ParticleSystemAnimationType animation;
-            internal ParticleSystemAnimationRowMode rowMode;
+            internal ParticleSystemAnimationRowMode rowMode = Compat.DefaultConstructorStateMeasured
+                ? ParticleSystemAnimationRowMode.Random : ParticleSystemAnimationRowMode.Custom;
             internal ModuleCurve frameOverTime = Linear(0.9999f, 0f, 1f, CurveRange.Frame);
             internal ModuleCurve startFrame = C(0f, CurveRange.Frame);
             internal int cycleCount = 1;
@@ -298,7 +315,8 @@ namespace UnityEngine
             internal Vector2 speedRange = new Vector2(0f, 1f);
             internal float flipU;
             internal float flipV;
-            internal List<Sprite> sprites = new List<Sprite>();
+            internal List<Sprite> sprites = Compat.DefaultConstructorStateMeasured
+                ? new List<Sprite> { null } : new List<Sprite>();
         }
 
         internal sealed class LightsData : ModuleData

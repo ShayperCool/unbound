@@ -27,6 +27,12 @@ namespace Unbound.Runtime
         /// <summary>Removed reverb settings and warnings measured by defaultstate on 6000.0.71f1.
         /// Other releases retain the previous, unmeasured stub response.</summary>
         internal static bool RemovedAudioSettingsMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// <summary>Particle module properties without an owner, measured by defaultstate on 6000.0.71f1.
+        /// Other releases retain their previous unmeasured missing-owner behavior.</summary>
+        internal static bool ParticleModuleHandlesMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// <summary>Removed particle members reject access in the defaultstate 6000.0.71f1 reference.
+        /// Other releases retain their previous unmeasured compatibility paths.</summary>
+        internal static bool RemovedParticleMembersMeasured => Release == (6000, 0, 71, 'f', 1);
         // Shared result code of Unity exception constructors in the defaultstate 6000.0.71f1 reference.
         internal const int UnityExceptionResult = -2147467261;
         /// <summary>Refresh-rate fractions, invalid-rate ordering and rounded integer conversion,

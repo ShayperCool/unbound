@@ -134,22 +134,23 @@ defaults need release evidence and a control that can distinguish the behavior b
 Q411's shared removed-getter migration resolves 1,196 rows. The Core slice resolves
 another 156 rows, including one Canvas viewport observation; Physics2D resolves 157
 and Physics resolves 89. Audio resolves 185 more; an independently integrated lighting
-fix resolves one additional row. The default-state probe now has 10,585 exact rows and
-1,037 queued rows, including the unchanged 50 variable rows. Its 11,590 canonical rows
+fix resolves one additional row. The ParticleSystem slice resolves another 337 rows. The default-state probe now has
+11,284 exact rows and 700 queued rows, including the unchanged 50 variable rows. Its 11,952 canonical rows
 preserve every original line. Added controls
 cover exact removed-getter messages, valid and rejected factories, requirements,
 explicit constructor arguments, aliases, refresh-rate arithmetic, drive input ranges,
-material ownership and existing audio-provider requirements.
+material ownership, existing audio-provider requirements, module ownership after
+destruction, removed particle accessors, default curve key metadata and sprite slots.
 
 Fixed removed-getter exceptions come from the selected release assembly during stub
 generation. Conditional and computed getters retain their existing fallback. Core
 constructor, factory and refresh-rate mechanisms select exactly 6000.0.71f1; other
 profiles keep their previous unmeasured paths, recorded in the compatibility gaps.
 The generator format is version 5. API declarations and lookup checks still retain
-1,317 exact release exceptions with zero errors; this slice adds no exceptions.
+1,127 exact release exceptions with zero errors; this slice adds no exceptions.
 
 The probe README lists remaining module counts and unresolved contexts. In particular,
-CoreModule keeps 116 rows requiring operation/payload validity, rendering initialization
+CoreModule keeps 115 rows requiring operation/payload validity, rendering initialization
 or imported/serialized state controls. Two TextCore instance IDs and one Canvas early
 layout value retain updated exact implementation payloads, without changing reference
 values or adding variable policies.
@@ -159,3 +160,10 @@ Its 17 controls include live collision entry/exit and observable contact-array m
 so changing an invalid manual constructor does not change valid callback payloads. The
 existing exact-release Physics2D mechanism carries these observations. Polygon initialization
 and initial substep accounting remain explicit follow-ups; no variable policy was widened.
+
+ParticleSystem retains ten rows after its module-handle and initialization changes:
+four aggregates with inactive gradient color fields, the variable random seed and five
+inherited Renderer rows. The canonical raw values and all 50 variable policies remain
+strict. Missing-owner fallbacks and removed accessors have exact-release Compat rules;
+constructor values reuse the existing initialization rule. The README records the
+362 independent controls and the remaining renderer and inactive-storage contexts.

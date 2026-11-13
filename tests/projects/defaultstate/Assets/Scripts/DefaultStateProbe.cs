@@ -41,15 +41,24 @@ public sealed class DefaultStateProbe : MonoBehaviour
         if (index<candidates.Length) return;
         Capture(new Candidate { type=typeof(FreshStateControl).FullName, module=typeof(FreshStateControl).Assembly.GetName().Name,
             category="class", status="candidate" });
-        RemovedGetterControls();
-        CoreControls();
-        Physics2DControls();
-        Physics2DPayloadControls();
-        PhysicsControls();
-        AudioControls();
-        PhysicsPayloadControls();
-        Emit("complete","value","1"); output.Dispose(); output=null;
-        EditorApplication.Exit(0);
+        try
+        {
+            RemovedGetterControls();
+            CoreControls();
+            Physics2DControls();
+            Physics2DPayloadControls();
+            PhysicsControls();
+            AudioControls();
+            ParticleModuleControls();
+            PhysicsPayloadControls();
+            Emit("complete","value","1"); output.Dispose(); output=null;
+            EditorApplication.Exit(0);
+        }
+        catch (Exception error)
+        {
+            Debug.LogException(error); output?.Dispose(); output=null;
+            EditorApplication.Exit(1);
+        }
     }
     static void Emit(string key,string status,string value)
     {
@@ -425,6 +434,86 @@ public sealed class DefaultStateProbe : MonoBehaviour
             CoreValue("Audio/removedReverbSetting", new object[] { first, second, handler.warnings.ToArray() });
         }
         finally { Debug.unityLogger.logHandler = previous; UnityEngine.Object.DestroyImmediate(zoneOwner); }
+    }
+    static void ParticleModuleControls()
+    {
+        var owner = new GameObject("ParticleModuleControl"); owner.SetActive(false);
+        var system = owner.AddComponent<ParticleSystem>();
+        CoreValue("Particles/defaultInitialization", new object[] { system.main.emitterVelocityMode,
+            system.collision.enableInteriorCollisions, system.textureSheetAnimation.rowMode,
+            system.textureSheetAnimation.spriteCount, system.textureSheetAnimation.GetSprite(0) == null });
+        CoreValue("Particles/defaultLinearCurves", new object[] { system.sizeOverLifetime.x, system.sizeBySpeed.x,
+            system.lifetimeByEmitterSpeed.curve, system.noise.remap, system.textureSheetAnimation.frameOverTime });
+        var noise = system.noise; var initialQuality = noise.quality; noise.quality = ParticleSystemNoiseQuality.High;
+        CoreValue("Particles/noiseQuality", new object[] { initialQuality, noise.quality });
+        var field = owner.AddComponent<ParticleSystemForceField>();
+        var initialLength = field.length; field.length = 3.5f;
+        CoreValue("Particles/forceFieldLength", new object[] { initialLength, field.length });
+        var subEmitters = system.subEmitters;
+        foreach (var property in typeof(ParticleSystem.SubEmittersModule).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.PropertyType == typeof(ParticleSystem)).OrderBy(p => p.Name, StringComparer.Ordinal))
+        {
+            try { property.GetValue(subEmitters, null); Emit("CoreControl/Particles/removed/" + property.Name + "/get", "value", "returned"); }
+            catch (Exception error) { Emit("CoreControl/Particles/removed/" + property.Name + "/get", "getter-threw", Error(error)); }
+            try { property.SetValue(subEmitters, system, null); Emit("CoreControl/Particles/removed/" + property.Name + "/set", "value", "returned"); }
+            catch (Exception error) { Emit("CoreControl/Particles/removed/" + property.Name + "/set", "setter-threw", Error(error)); }
+        }
+        CoreValue("Particles/removedPreservesCount", system.subEmitters.subEmittersCount);
+        var sheet = system.textureSheetAnimation;
+        try { sheet.AddSprite(null); Emit("CoreControl/Particles/addNullSprite", "value", "returned"); }
+        catch (Exception error) { Emit("CoreControl/Particles/addNullSprite", "setter-threw", Error(error) + ":" + error.Message); }
+        var emptyCount = sheet.spriteCount;
+        var texture = new Texture2D(1, 1); var sprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), Vector2.zero);
+        try
+        {
+            sheet.AddSprite(sprite); var firstCount = sheet.spriteCount; var first = sheet.GetSprite(0) == sprite;
+            sheet.AddSprite(sprite); var secondCount = sheet.spriteCount;
+            sheet.RemoveSprite(1);
+            try { sheet.SetSprite(0, null); Emit("CoreControl/Particles/setNullSprite", "value", "returned"); }
+            catch (Exception error) { Emit("CoreControl/Particles/setNullSprite", "setter-threw", Error(error) + ":" + error.Message); }
+            var replaced = sheet.spriteCount == 1 && sheet.GetSprite(0) == sprite;
+            sheet.RemoveSprite(0); var removed = sheet.spriteCount; sheet.AddSprite(sprite);
+            CoreValue("Particles/spriteSlots", new object[] { emptyCount, firstCount, first, secondCount, replaced, removed, sheet.spriteCount });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(sprite); UnityEngine.Object.DestroyImmediate(texture); }
+        var collider = owner.AddComponent<BoxCollider>();
+        foreach (var populated in new[] { false, true })
+        {
+            object collisionEvent = default(ParticleCollisionEvent);
+            if (populated) typeof(ParticleCollisionEvent).GetField("m_ColliderInstanceID", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(collisionEvent, collider.GetInstanceID());
+            try { typeof(ParticleCollisionEvent).GetProperty("collider").GetValue(collisionEvent, null); }
+            catch (Exception error)
+            {
+                while (error is TargetInvocationException && error.InnerException != null) error = error.InnerException;
+                Emit("CoreControl/Particles/removedCollider/" + populated, "getter-threw", error.GetType().FullName + ":" + error.Message);
+            }
+            CoreValue("Particles/colliderComponent/" + populated,
+                ((ParticleCollisionEvent)collisionEvent).colliderComponent == (populated ? collider : null));
+        }
+        var main = system.main; main.startSpeed = 13f; main.loop = false;
+        var shape = system.shape; shape.radius = 2.75f;
+        var copied = main; copied.startSpeedMultiplier = 17f;
+        CoreValue("Particles/attached", new object[] { main.startSpeed, system.main.startSpeedMultiplier, main.loop, shape.radius });
+        var handles = new object[] { system.main, system.emission, system.shape, system.velocityOverLifetime,
+            system.limitVelocityOverLifetime, system.inheritVelocity, system.lifetimeByEmitterSpeed, system.forceOverLifetime,
+            system.colorOverLifetime, system.colorBySpeed, system.sizeOverLifetime, system.sizeBySpeed,
+            system.rotationOverLifetime, system.rotationBySpeed, system.externalForces, system.noise,
+            system.collision, system.trigger, system.subEmitters, system.textureSheetAnimation, system.lights,
+            system.trails, system.customData };
+        UnityEngine.Object.DestroyImmediate(owner);
+        foreach (var handle in handles)
+        {
+            var type = handle.GetType();
+            foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                .Where(p => p.CanRead && p.GetIndexParameters().Length == 0).OrderBy(p => p.Name, StringComparer.Ordinal))
+            {
+                var key = "CoreControl/Particles/destroyed/" + type.Name + "/" + property.Name;
+                try { Emit(key, "value", Format(property.GetValue(handle, null), property.PropertyType, new HashSet<object>(identity), 0)); }
+                catch (Exception error) { Emit(key, "getter-threw", Error(error)); }
+            }
+        }
+        CoreValue("Particles/defaultIsolated", default(ParticleSystem.MainModule).startSpeed);
     }
     static void RemovedGetterControls()
     {
