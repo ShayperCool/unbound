@@ -9,7 +9,7 @@ eight own method bodies and the public code-optimization mode.
 ```bash
 python3 tests/projects/texturepixels/operation_control.py editor --release 6000.0.71f1 --profile release --label fresh-label
 python3 tests/projects/texturepixels/operation_control.py publish --release 6000.0.71f1 --profile release --label fresh-label
-UNBOUND_CLI=/immutable/runtime/unbound python3 tests/projects/texturepixels/operation_control.py check --release 6000.0.71f1 --profile release
+UNBOUND_MONO_FLOATS=1 UNBOUND_CLI=/immutable/runtime/unbound python3 tests/projects/texturepixels/operation_control.py check --release 6000.0.71f1 --profile release
 ```
 
 Use `--profile debug` for the separate Debug Editor reference. The check replays
@@ -30,8 +30,8 @@ Subtraction and remainder controls agree on these inputs, which does not establi
 their width for all operands. NaN, infinity, denormals, inlining decisions,
 exception paths, generic methods and other platforms remain unmeasured.
 
-Those counts describe CoreCLR's float evaluation. With the script float rule
-(tests/projects/floatrounding) every numeric and boolean record matches in both modes on macOS;
+Those counts describe CoreCLR's float evaluation, the engine's default. With the script float rule
+(tests/projects/floatrounding; the opt-in `UNBOUND_MONO_FLOATS=1` in the command above) every numeric and boolean record matches in both modes on macOS;
 the remaining records (Release 6, Debug 5) are `gameIL/` bodies of converted methods, which show
 the IL as loaded, with its conversions.
 

@@ -3009,6 +3009,7 @@ the measured release (`Compat.MonoFloats`, `Compat.ScriptFloatsWide`); by defaul
 CoreCLR's float32 evaluation. tests/projects/floatrounding's gate opts in and still matches every
 control (Release 206/268, Debug 215/268 values, 0 failures, the same residuals). With it off,
 texturepixels' VolumeRGFloat rows and humanoid's rotateThenSolve step 17 differ again as before
-Q429 (the latter listed in its known residual), twod's spriteshape.render matches again, and four
+Q429 (the latter within its bounded residual), twod's spriteshape.render matches again, and four
 2D probes move by rounding without failures. The hot-reload
-delta conversion and the Burst Mono phase (Q436) are dropped with it.
+restart for float edits and the Burst exemption are off by default with it; converting hot-reload
+deltas and measuring Burst in the Editor (Q436) are dropped.

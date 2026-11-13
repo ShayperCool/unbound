@@ -10,7 +10,7 @@ own four method bodies through the public reflection API and the Release code mo
 ```bash
 python3 tests/projects/texturepixels/arithmetic_control.py editor --release 6000.0.71f1 --label fresh-label
 python3 tests/projects/texturepixels/arithmetic_control.py publish --release 6000.0.71f1 --label fresh-label
-UNBOUND_CLI=/immutable/runtime/unbound python3 tests/projects/texturepixels/arithmetic_control.py check --release 6000.0.71f1
+UNBOUND_MONO_FLOATS=1 UNBOUND_CLI=/immutable/runtime/unbound python3 tests/projects/texturepixels/arithmetic_control.py check --release 6000.0.71f1
 ```
 
 The Editor keeps wider intermediate arithmetic in the measured expressions;
@@ -26,7 +26,9 @@ gap. Changing Texture3D storage or readback would corrupt correctly supplied dat
 
 The check command reports every raw difference. Before the script float rule
 (tests/projects/floatrounding) it matched 55/62 values, with all four game-method bodies and the
-Release mode key. With the rule every numeric value and the mode key match (59/62 on macOS); the
+Release mode key. With the rule, an opt-in of the engine (`UNBOUND_MONO_FLOATS=1`, as in the command above; off by
+default since the user decision of 2026-11-13, which gives 55/62 again), every numeric value and the
+mode key match (59/62 on macOS); the
 `gameIL.*` bodies of the three converted methods show the IL as loaded, with its conversions.
 This causal supplement does not replace the parent parity gate, whose three
 strict VolumeRGFloat rows per color space remain open. A general compatibility

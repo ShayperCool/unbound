@@ -318,6 +318,8 @@ public static class S { public static float Scale(float a, float t) { float r = 
         [InlineData("1", true)]
         [InlineData("true", true)]
         [InlineData("ON", true)]
+        [InlineData("off", false)]
+        [InlineData("yes", false)]
         public void TheEnvironmentVariableOptsIn(string value, bool expected) =>
             Assert.Equal(expected, Unbound.Runtime.Compat.OptedIn(value));
 

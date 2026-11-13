@@ -111,8 +111,16 @@ namespace Unbound.Runtime
         /// variable UNBOUND_MONO_FLOATS set to 1, true or on when the engine starts.</summary>
         internal static bool MonoFloats = OptedIn(Environment.GetEnvironmentVariable("UNBOUND_MONO_FLOATS"));
 
-        internal static bool OptedIn(string value) =>
-            value != null && (value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase) || value.Equals("on", StringComparison.OrdinalIgnoreCase));
+        internal static bool OptedIn(string value)
+        {
+            if (string.IsNullOrEmpty(value) || value == "0" || value.Equals("false", StringComparison.OrdinalIgnoreCase)
+                || value.Equals("off", StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase) || value.Equals("on", StringComparison.OrdinalIgnoreCase))
+                return true;
+            Console.Error.WriteLine($"unbound: UNBOUND_MONO_FLOATS={value} is not 1, true, on, 0, false or off; the Mono float opt-in stays off");
+            return false;
+        }
 
         /// <summary>On arm64 hosts transform arithmetic follows the macOS arm64 Editor: a set rotation is
         /// normalized with one sum (x² + y²) + (z² + w²) for every component, and a scale's reciprocal
