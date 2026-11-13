@@ -30,7 +30,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 43;
+pub const FORMAT_VERSION: u32 = 44;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -3907,7 +3907,7 @@ float4 frag() : SV_Target
             (
                 builtin.join("Particle Standard Surface.shader"),
                 &[],
-                &["_Color", "unity_IndirectSpecColor"],
+                &["_Color", "unity_SpecCube0_HDR"],
             ),
             (
                 builtin.join("Particle Standard Surface.shader"),
@@ -3973,8 +3973,11 @@ float4 frag() : SV_Target
                 assert!(uses(&c, u), "{name} {keywords:?}: {u} unused");
             }
             assert!(c.main_texture, "{name}");
+            // No lightmaps in these variants; the Standard models sample the reflection cubes.
             assert!(
-                !c.textures.iter().any(|t| t.starts_with("unity_")),
+                !c.textures
+                    .iter()
+                    .any(|t| t.starts_with("unity_") && !t.starts_with("unity_SpecCube")),
                 "{name}: {:?}",
                 c.textures
             );
@@ -4054,6 +4057,24 @@ void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_M
         ] {
             assert!(uses(&c, u), "{u}");
         }
+
+        // The Standard lighting model reflects the reflection cube (a probe's, else the default
+        // reflection), as Unity's generated pass does, not the sky's average color.
+        let metal = r#"
+#pragma surface surf Standard
+struct Input { float3 worldPos; };
+void surf (Input IN, inout SurfaceOutputStandard o) { o.Albedo = 0.9; o.Metallic = 1; o.Smoothness = 0.95; }
+"#;
+        let mut metal = program(metal, true);
+        metal.light_mode = Some("ForwardBase".into());
+        let c = compiler.compile(&metal, &[], false).unwrap();
+        assert!(
+            c.textures.iter().any(|t| t == "unity_SpecCube0"),
+            "{:?}",
+            c.textures
+        );
+        assert!(uses(&c, "unity_SpecCube0_HDR"));
+        assert!(!uses(&c, "unity_IndirectSpecColor"));
 
         // A VFACE input: the fragment's facing.
         let two_sided = r#"

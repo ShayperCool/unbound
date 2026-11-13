@@ -167,10 +167,6 @@ impl Surface {
         if !self.ambient {
             line("#undef LIGHTPROBE_SH");
         }
-        // No reflection probes: specular reflections are the sky's average color.
-        line("#ifndef _GLOSSYREFLECTIONS_OFF");
-        line("#define _GLOSSYREFLECTIONS_OFF 1");
-        line("#endif");
         line("#include \"UnityCG.cginc\"");
         line("#include \"Lighting.cginc\"");
         if matches!(self.model.as_str(), "Standard" | "StandardSpecular") {
