@@ -149,7 +149,12 @@ pub struct DotsDraw {
     pub header: [u32; DOTS_HEADER_WORDS],
     pub window_offset: u32,
     pub window_size: u32,
-    /// The visible instances' indices in the batch, one per instance drawn.
+    /// An indirect command's visible instances: their offset in the buffer bound as
+    /// `unity_DOTSInstancing_IndirectInstanceVisibility` with bit 31 set, which the shader library
+    /// reads from the first visible instance element's `y`; 0 for a direct command.
+    pub indirect: u32,
+    /// The visible instances' indices in the batch, one per instance drawn (none for an indirect
+    /// command, whose instance count the arguments buffer gives).
     pub visible: Vec<u32>,
 }
 
@@ -647,6 +652,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 }
                 let window_offset = r.u32()?;
                 let window_size = r.u32()?;
+                let indirect = r.u32()?;
                 let count = r.u32()? as usize;
                 let mut visible = Vec::with_capacity(count.min(MAX_DOTS_INSTANCES));
                 for _ in 0..count {
@@ -656,6 +662,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     header,
                     window_offset,
                     window_size,
+                    indirect,
                     visible,
                 })
             }
@@ -1071,6 +1078,7 @@ impl Writer {
                 }
                 self.u32(d.window_offset);
                 self.u32(d.window_size);
+                self.u32(d.indirect);
                 self.u32(d.visible.len() as u32);
                 for v in &d.visible {
                     self.u32(*v);
@@ -1500,7 +1508,15 @@ mod tests {
                 ],
                 window_offset: 256,
                 window_size: 16384,
+                indirect: 0,
                 visible: vec![3, 1, 2],
+            }),
+            Command::DotsDraw(DotsDraw {
+                header: [0; DOTS_HEADER_WORDS],
+                window_offset: 0,
+                window_size: 0,
+                indirect: 0x8000_0040,
+                visible: vec![],
             }),
             Command::RenderPipeline("UniversalPipeline".into()),
             Command::PassTags(vec!["UniversalForward".into(), "SRPDefaultUnlit".into()]),
@@ -1854,10 +1870,10 @@ mod tests {
     /// zone, 22 render protocols 10/11's 32-bit indices and logical instance IDs, 23 the
     /// Distortion filter kind, 28 render protocol 12's shared arrays and 31 the imported texture's
     /// reported format; 35 adds deferred render-target mips, 36 listener pose snapshots and 37 the downloaded audio decoder;
-    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts.
+    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts, 73 BatchRendererGroup indirect draws.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 72);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 73);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

@@ -330,6 +330,56 @@ namespace UnityEngine.Tests
             Assert.Empty(Collect(data, all));
         }
 
+        /// <summary>An indirect command (the GPU Resident Drawer's under occlusion culling) is an
+        /// item of its mesh and material whose properties add its visible instance buffer as
+        /// unity_DOTSInstancing_IndirectInstanceVisibility; the batch's own stay as they are.</summary>
+        [Fact]
+        public void IndirectCommandsBecomeItemsWithTheirVisibleInstanceBuffer()
+        {
+            var visible = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 4, 4);
+            var args = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, 5, 4);
+            BatchRendererGroup group = null;
+            var filter = new BatchFilterSettings { renderingLayerMask = uint.MaxValue };
+            group = Group((g, c, o, u) =>
+            {
+                var d = (BatchCullingOutputDrawCommands*)o.drawCommands.GetUnsafePtr();
+                int alignment = UnsafeUtility.AlignOf<long>();
+                d->indirectDrawCommands = (BatchDrawCommandIndirect*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommandIndirect>(), alignment, Allocator.TempJob);
+                d->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>(), alignment, Allocator.TempJob);
+                d->indirectDrawCommands[0] = new BatchDrawCommandIndirect
+                {
+                    batchID = new BatchID { value = 1 }, meshID = new BatchMeshID { value = 1 }, materialID = new BatchMaterialID { value = 1 },
+                    topology = MeshTopology.Triangles, visibleOffset = 3, visibleInstancesBufferHandle = visible.bufferHandle,
+                    indirectArgsBufferHandle = args.bufferHandle, flags = BatchDrawCommandFlags.LODCrossFadeValuePacked,
+                };
+                d->indirectDrawCommandCount = 1;
+                d->drawRangeCount = 1;
+                d->drawRanges[0] = new BatchDrawRange { drawCommandsType = BatchDrawCommandType.Indirect, drawCommandsBegin = 0, drawCommandsCount = 1, filterSettings = filter };
+                return default;
+            });
+            group.RegisterMesh(m_Mesh);
+            group.RegisterMaterial(m_Material);
+            var batch = AddBatch(group);
+            try
+            {
+                var item = Assert.Single(Collect(Cull(), new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue }));
+                Assert.True(item.Dots.Value.Indirect);
+                Assert.Same(m_Material, item.Material);
+                Assert.Equal(visible.bufferHandle, item.Properties[BatchCulling.IndirectVisibilityId]);
+                Assert.False(group.GetBatch(batch).Properties.ContainsKey(BatchCulling.IndirectVisibilityId));
+                // The cross-fade flag, and camera motion from the range's default motion mode.
+                Assert.Equal(32u | 4u, item.Dots.Value.Header.Flags);
+                // Kept between cullings: the same dictionary while the batch is unchanged.
+                var again = Assert.Single(Collect(Cull(), new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue }));
+                Assert.Same(item.Properties, again.Properties);
+            }
+            finally
+            {
+                visible.Release();
+                args.Release();
+            }
+        }
+
         [Fact]
         public void ShadowOnlyRangesAreLeftOutOfCameraLists()
         {

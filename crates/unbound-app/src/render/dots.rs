@@ -9,6 +9,10 @@
 //!   the batch index of the draw's instance `i`; `.y` 0 (no indirect visible instances); the
 //!   `.z` and `.w` of the first four elements hold the draw's header (rendering layer mask,
 //!   flags, mesh bounds: `LoadDOTSInstancedData_RenderingLayer`, `_LightData`, ...);
+//! - an indirect draw command has no visible instance indices: the first element's `.y` is its
+//!   packed indirect visible offset, from which the shader library reads each instance's batch
+//!   index in the `unity_DOTSInstancing_IndirectInstanceVisibility` buffer (`SV_InstanceID`
+//!   past it), and the arguments buffer gives the instance count;
 //! - in uniform buffer mode (OpenGL devices) the cbuffer `unity_DOTSInstanceData` is the window of
 //!   the batch's buffer AddBatch gave; on the others `unity_DOTSInstanceData` is a byte address
 //!   buffer, bound by name to the whole buffer.
@@ -121,6 +125,10 @@ pub fn write(
     if let Some((offset, size)) = layout.visibility {
         let (offset, size) = (offset as usize, size as usize);
         let elements = size / VISIBLE_STRIDE;
+        if draw.indirect != 0 && elements > 0 {
+            put(out, offset, 0);
+            put(out, offset + 4, draw.indirect);
+        }
         for (i, index) in draw.visible.iter().take(elements).enumerate() {
             let at = offset + i * VISIBLE_STRIDE;
             put(out, at, *index);
@@ -220,6 +228,7 @@ mod tests {
             header: [3, 0x11, 10, 11, 12, 13, 14, 15],
             window_offset: 16,
             window_size: 24,
+            indirect: 0,
             visible: vec![5, 9, 11],
         };
         let mut out = vec![0xAAu8; 80];
@@ -243,6 +252,7 @@ mod tests {
             header: [0; DOTS_HEADER_WORDS],
             window_offset: 60,
             window_size: 0,
+            indirect: 0,
             visible: vec![0],
         };
         let data = vec![1u8; 64];
@@ -253,6 +263,25 @@ mod tests {
         let mut out = vec![0xAAu8; 80];
         write(&layout(), &draw, &[], None, &mut out);
         assert!(out[48..80].iter().all(|b| *b == 0));
+    }
+
+    #[test]
+    fn indirect_draws_take_their_packed_offset() {
+        let draw = DotsDraw {
+            header: [3, 0x11, 10, 11, 12, 13, 14, 15],
+            window_offset: 0,
+            window_size: 0,
+            indirect: 0x8000_0007,
+            visible: vec![],
+        };
+        let mut out = vec![0xAAu8; 80];
+        write(&layout(), &draw, &[], None, &mut out);
+        let word = |at: usize| u32::from_le_bytes(out[at..at + 4].try_into().unwrap());
+        assert_eq!(
+            [word(16), word(20), word(24), word(28)],
+            [0, 0x8000_0007, 3, 0x11]
+        );
+        assert_eq!([word(40), word(44)], [10, 11]);
     }
 
     #[test]

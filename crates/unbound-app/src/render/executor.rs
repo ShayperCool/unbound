@@ -3142,13 +3142,16 @@ impl UnityRenderer {
                     let mut planned =
                         self.plan_draw(&draw, &target, time, mesh_instance, dots.as_ref());
                     if let Some(dots) = &dots {
-                        // One instance per visible instance (an empty command draws nothing).
-                        if dots.visible.is_empty() {
-                            continue;
-                        }
-                        for p in &mut planned {
-                            if let Planned::Draw(p) = p {
-                                p.instances = dots.visible.len() as u32;
+                        // One instance per visible instance (an empty command draws nothing); an
+                        // indirect command's count comes from its arguments buffer (DrawSetup).
+                        if dots.indirect == 0 {
+                            if dots.visible.is_empty() {
+                                continue;
+                            }
+                            for p in &mut planned {
+                                if let Planned::Draw(p) = p {
+                                    p.instances = dots.visible.len() as u32;
+                                }
                             }
                         }
                     }

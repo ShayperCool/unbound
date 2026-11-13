@@ -345,8 +345,9 @@ namespace Unbound.Runtime
         /// instancing variant, one instance per index of <paramref name="visible"/> (at most
         /// <see cref="Unbound.Runtime.BatchCulling.MaxInstancesPerDraw"/>), the draw's header
         /// (<see cref="Unbound.Runtime.BatchCulling.Header"/>), and the window of the batch's
-        /// buffer a constant buffer reads (size 0: all of it).</summary>
-        internal static void DotsDraw(in Unbound.Runtime.BatchCulling.Header header, uint windowOffset, uint windowSize, int* visible, int count)
+        /// buffer a constant buffer reads (size 0: all of it); an indirect command's packed visible
+        /// offset (else 0), with no visible instances.</summary>
+        internal static void DotsDraw(in Unbound.Runtime.BatchCulling.Header header, uint windowOffset, uint windowSize, uint indirect, int* visible, int count)
         {
             U8(DotsDrawOp);
             U32(header.RenderingLayer);
@@ -359,7 +360,9 @@ namespace Unbound.Runtime
             F32(header.Extent.z);
             U32(windowOffset);
             U32(windowSize);
+            U32(indirect);
             U32((uint)count);
+            if (count == 0) return;
             Reserve(count * 4);
             new ReadOnlySpan<byte>(visible, count * 4).CopyTo(new Span<byte>(s_Buffer, s_Length, count * 4));
             s_Length += count * 4;

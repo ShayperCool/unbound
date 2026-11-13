@@ -305,6 +305,25 @@ namespace UnityEngine.Rendering
             internal uint Offset;
             internal uint Window;
             internal readonly Dictionary<int, object> Properties = new Dictionary<int, object>();
+            /// <summary>Bumped when <see cref="Properties"/> change (SetBatchBuffer).</summary>
+            internal int Version;
+            /// <summary>The properties with an indirect command's visible instance buffer, by the
+            /// buffer, and the version they copy.</summary>
+            readonly Dictionary<uint, (Dictionary<int, object> Properties, int Version)> m_WithVisibility = new Dictionary<uint, (Dictionary<int, object>, int)>();
+
+            /// <summary>The properties an indirect command draws with: the batch's and its visible
+            /// instance buffer as unity_DOTSInstancing_IndirectInstanceVisibility (kept between
+            /// frames: no allocation once made).</summary>
+            internal Dictionary<int, object> WithVisibility(GraphicsBufferHandle visible)
+            {
+                if (m_WithVisibility.TryGetValue(visible.value, out var kept) && kept.Version == Version) return kept.Properties;
+                var properties = kept.Properties ?? new Dictionary<int, object>();
+                properties.Clear();
+                foreach (var pair in Properties) properties[pair.Key] = pair.Value;
+                properties[Unbound.Runtime.BatchCulling.IndirectVisibilityId] = visible;
+                m_WithVisibility[visible.value] = (properties, Version);
+                return properties;
+            }
         }
 
         internal readonly OnPerformCulling m_Culling;
@@ -413,6 +432,7 @@ namespace UnityEngine.Rendering
             batch.Buffer = handle;
             batch.Offset = offset;
             batch.Window = window;
+            batch.Version++;
             // The buffer by its handle, as unity_DOTSInstanceData (a byte address buffer, or the
             // constant buffer the window is read from).
             batch.Properties[Unbound.Runtime.BatchCulling.InstanceDataId] = handle;

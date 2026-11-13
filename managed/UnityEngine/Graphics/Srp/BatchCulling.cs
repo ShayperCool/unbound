@@ -102,7 +102,14 @@ namespace Unbound.Runtime
             internal Output Output;
             internal int Command;
             internal Header Header;
+            /// <summary>An indirect draw command (of the output's indirect commands).</summary>
+            internal bool Indirect;
         }
+
+        /// <summary>The bit of an indirect command's packed visible offset that marks it indirect
+        /// (core's UnityDOTSInstancing.hlsl <c>kIndirectVisibleOffsetEnabledBit</c>).</summary>
+        const uint IndirectVisibleOffsetEnabled = 0x80000000;
+        internal static readonly int IndirectVisibilityId = Shader.PropertyToID("unity_DOTSInstancing_IndirectInstanceVisibility");
 
         /// <summary>
         /// What DOTS instancing shaders read of a draw besides its instances (the z and w of the
@@ -331,12 +338,12 @@ namespace Unbound.Runtime
         internal static uint s_Warned;
 
         // Unsupported parts of draw commands (bits of s_Warned).
-        const int UnsupportedIndirect = 0, UnsupportedProcedural = 1, UnsupportedProceduralIndirect = 2, UnsupportedLightmap = 3,
+        const int UnsupportedIndirectTopology = 0, UnsupportedProcedural = 1, UnsupportedProceduralIndirect = 2, UnsupportedLightmap = 3,
             UnsupportedCrossFadeKeyword = 4, UnsupportedMissingArrays = 5, UnsupportedLocalLightCulling = 6;
 
         static readonly string[] s_Unsupported =
         {
-            "BatchRendererGroup indirect draw commands are not supported yet; they are not drawn.",
+            "BatchRendererGroup indirect draw commands of a topology other than triangles are not supported yet; they are not drawn.",
             "BatchRendererGroup procedural draw commands are not supported yet; they are not drawn.",
             "BatchRendererGroup procedural indirect draw commands are not supported yet; they are not drawn.",
             "BatchRendererGroup draw commands flagged IsLightMapped draw without their lightmaps (LIGHTMAP_ON and the lightmap of lightmapIndex are not bound yet).",
@@ -400,24 +407,16 @@ namespace Unbound.Runtime
                     if ((filtering.layerMask & (1 << filter.layer)) == 0) continue;
                     if ((filtering.renderingLayerMask & filter.renderingLayerMask) == 0) continue;
                     if (filtering.excludeMotionVectorObjects && filter.motionMode == MotionVectorGenerationMode.Object) continue;
-                    if (range.drawCommandsType != BatchDrawCommandType.Direct)
+                    if (range.drawCommandsType == BatchDrawCommandType.Indirect)
                     {
-                        WarnOnce(range.drawCommandsType switch
-                        {
-                            BatchDrawCommandType.Indirect => UnsupportedIndirect,
-                            BatchDrawCommandType.Procedural => UnsupportedProcedural,
-                            _ => UnsupportedProceduralIndirect,
-                        });
+                        CollectIndirect(output, ref d, range, filter, main, into, ref sequence);
                         continue;
                     }
-                    var lighting = LightingOf(filter);
-                    uint motion = filter.motionMode switch
+                    if (range.drawCommandsType != BatchDrawCommandType.Direct)
                     {
-                        MotionVectorGenerationMode.Camera => FlagCameraMotion,
-                        MotionVectorGenerationMode.ForceNoMotion => FlagForceZeroMotion,
-                        _ => 0u,
-                    };
-                    bool lit = main != null && (main.cullingMask & (1 << filter.layer)) != 0;
+                        WarnOnce(range.drawCommandsType == BatchDrawCommandType.Procedural ? UnsupportedProcedural : UnsupportedProceduralIndirect);
+                        continue;
+                    }
                     long end = Math.Min((long)range.drawCommandsBegin + range.drawCommandsCount, d.drawCommandCount);
                     for (long c = range.drawCommandsBegin; c < end; c++)
                     {
@@ -428,38 +427,86 @@ namespace Unbound.Runtime
                         var material = group.GetRegisteredMaterial(command.materialID);
                         if (batch == null || mesh == null || material == null || command.visibleCount == 0) continue;
                         if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
-                        var flags = (uint)command.flags;
-                        bool lightmapped = (command.flags & BatchDrawCommandFlags.IsLightMapped) != 0;
-                        if (lightmapped) WarnOnce(UnsupportedLightmap);
-                        if ((command.flags & BatchDrawCommandFlags.LODCrossFadeKeyword) == BatchDrawCommandFlags.LODCrossFadeKeyword) WarnOnce(UnsupportedCrossFadeKeyword);
-                        var bounds = mesh.bounds;
-                        var header = new Header
-                        {
-                            RenderingLayer = filter.renderingLayerMask,
-                            Flags = (flags & (FlagFlipWinding | FlagLodCrossFadeValuePacked)) | motion
-                                | (lit && !(lightmapped && FrameBuilder.InLightmap(main)) ? FlagMainLightEnabled : 0u),
-                            Center = bounds.center,
-                            Extent = bounds.extents,
-                        };
-                        into.Add(new FrameBuilder.DrawItem
-                        {
-                            Mesh = mesh.Sync(),
-                            Submesh = Math.Min(command.submeshIndex, Math.Max(0, mesh.subMeshCount - 1)),
-                            Material = material,
-                            Model = Matrix4x4.identity,
-                            Color = Color.white,
-                            Queue = material.renderQueue,
-                            Sequence = sequence++,
-                            Properties = batch.Properties,
-                            Lighting = lighting,
-                            Bounds = group.m_GlobalBounds ?? default,
-                            CullBounds = group.m_GlobalBounds ?? default,
-                            Layer = filter.layer,
-                            Dots = new DrawRef { Output = output, Command = (int)c, Header = header },
-                        });
+                        into.Add(Item(output, (int)c, false, mesh, command.submeshIndex, material, command.flags, batch.Properties, filter, main, ref sequence));
                     }
                 }
             }
+        }
+
+        /// <summary>A range's indirect commands: each draws its mesh's indices with the counts its
+        /// arguments buffer holds at its offset (IndirectDrawIndexedArgs), the instances' batch
+        /// indices read from its visible instance buffer from its visible offset on.</summary>
+        static void CollectIndirect(Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, in BatchFilterSettings filter, Light main,
+            List<FrameBuilder.DrawItem> into, ref long sequence)
+        {
+            if (range.drawCommandsCount > 0 && d.indirectDrawCommands == null)
+            {
+                WarnOnce(UnsupportedMissingArrays);
+                return;
+            }
+            long end = Math.Min((long)range.drawCommandsBegin + range.drawCommandsCount, d.indirectDrawCommandCount);
+            for (long c = range.drawCommandsBegin; c < end; c++)
+            {
+                var command = d.indirectDrawCommands[c];
+                var group = output.Group;
+                var batch = group.GetBatch(command.batchID);
+                var mesh = group.GetRegisteredMesh(command.meshID);
+                var material = group.GetRegisteredMaterial(command.materialID);
+                if (batch == null || mesh == null || material == null) continue;
+                if (command.topology != MeshTopology.Triangles)
+                {
+                    WarnOnce(UnsupportedIndirectTopology);
+                    continue;
+                }
+                // The arguments give the indices (the first one and the count): the mesh's whole
+                // index buffer is read.
+                into.Add(Item(output, (int)c, true, mesh, 0, material, command.flags,
+                    batch.WithVisibility(command.visibleInstancesBufferHandle), filter, main, ref sequence));
+            }
+        }
+
+        /// <summary>A command's draw item: its mesh, submesh and material at the default sorting
+        /// layer, its batch's properties and its header.</summary>
+        static FrameBuilder.DrawItem Item(Output output, int command, bool indirect, Mesh mesh, int submesh, Material material, BatchDrawCommandFlags commandFlags,
+            Dictionary<int, object> properties, in BatchFilterSettings filter, Light main, ref long sequence)
+        {
+            uint motion = filter.motionMode switch
+            {
+                MotionVectorGenerationMode.Camera => FlagCameraMotion,
+                MotionVectorGenerationMode.ForceNoMotion => FlagForceZeroMotion,
+                _ => 0u,
+            };
+            bool lit = main != null && (main.cullingMask & (1 << filter.layer)) != 0;
+            var flags = (uint)commandFlags;
+            bool lightmapped = (commandFlags & BatchDrawCommandFlags.IsLightMapped) != 0;
+            if (lightmapped) WarnOnce(UnsupportedLightmap);
+            if ((commandFlags & BatchDrawCommandFlags.LODCrossFadeKeyword) == BatchDrawCommandFlags.LODCrossFadeKeyword) WarnOnce(UnsupportedCrossFadeKeyword);
+            var bounds = mesh.bounds;
+            var header = new Header
+            {
+                RenderingLayer = filter.renderingLayerMask,
+                Flags = (flags & (FlagFlipWinding | FlagLodCrossFadeValuePacked)) | motion
+                    | (lit && !(lightmapped && FrameBuilder.InLightmap(main)) ? FlagMainLightEnabled : 0u),
+                Center = bounds.center,
+                Extent = bounds.extents,
+            };
+            var group = output.Group;
+            return new FrameBuilder.DrawItem
+            {
+                Mesh = mesh.Sync(),
+                Submesh = Math.Min(submesh, Math.Max(0, mesh.subMeshCount - 1)),
+                Material = material,
+                Model = Matrix4x4.identity,
+                Color = Color.white,
+                Queue = material.renderQueue,
+                Sequence = sequence++,
+                Properties = properties,
+                Lighting = LightingOf(filter),
+                Bounds = group.m_GlobalBounds ?? default,
+                CullBounds = group.m_GlobalBounds ?? default,
+                Layer = filter.layer,
+                Dots = new DrawRef { Output = output, Command = command, Header = header, Indirect = indirect },
+            };
         }
 
         /// <summary>A draw command's draws: its visible instances in draws of at most
@@ -467,6 +514,16 @@ namespace Unbound.Runtime
         internal static void Draw(in FrameBuilder.DrawItem item, DrawRef dots, ulong material, int pass, Dictionary<int, object> properties)
         {
             ref var d = ref dots.Output.Drawn;
+            if (dots.Indirect)
+            {
+                var indirect = d.indirectDrawCommands[dots.Command];
+                var indirectBatch = dots.Output.Group?.GetBatch(indirect.batchID);
+                if (indirectBatch == null) return;
+                GfxStream.DotsDraw(dots.Header, indirectBatch.Offset, indirectBatch.Window, indirect.visibleOffset | IndirectVisibleOffsetEnabled, null, 0);
+                GfxStream.DrawSetup(new DrawSetup { Instances = 1, Args = indirect.indirectArgsBufferHandle.value, Offset = indirect.indirectArgsBufferOffset, Indexed = true });
+                GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);
+                return;
+            }
             var command = d.drawCommands[dots.Command];
             var batch = dots.Output.Group?.GetBatch(command.batchID);
             if (batch == null) return;
@@ -474,7 +531,7 @@ namespace Unbound.Runtime
             for (uint first = 0; first < command.visibleCount; first += MaxInstancesPerDraw)
             {
                 int count = (int)Math.Min(MaxInstancesPerDraw, command.visibleCount - first);
-                GfxStream.DotsDraw(dots.Header, batch.Offset, batch.Window, visible + first, count);
+                GfxStream.DotsDraw(dots.Header, batch.Offset, batch.Window, 0, visible + first, count);
                 GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);
             }
         }
