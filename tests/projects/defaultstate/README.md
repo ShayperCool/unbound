@@ -113,9 +113,9 @@ The Editor slice adds 223 controls while preserving all 11,957 previous rows,
 giving 12,180 rows before UIElements. UIElements adds 95 controls and six atlas-settings
 rows, preserving all earlier raw rows, for 12,281 rows before the remaining Core work.
 Declaration work adds one more factory row. Core adds 229 controls, giving 12,511 rows.
-A later SpriteUtility declaration adds one factory row. The Small slice adds 192 controls,
-preserving all 12,512 earlier raw rows, for 12,704 current rows. The comparison has
-12,437 exact rows, 267 differing reference rows, zero missing rows and zero extra implementation rows.
+Later SpriteUtility and hash utility declarations add three factory rows. The Small slice adds 192 controls,
+preserving all 12,514 earlier raw rows, for 12,706 current rows. The comparison has
+12,439 exact rows, 267 differing reference rows, zero missing rows and zero extra implementation rows.
 Small resolves 107 existing queue entries and adds three exact initialized-context gaps,
 giving 269 entries with the same 50 variable policies. Two variable observations happen
 to equal this implementation snapshot; their policies remain unresolved.

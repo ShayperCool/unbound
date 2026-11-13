@@ -372,9 +372,9 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
 
 - [x] Q403 default-state capture and comparison: [defaultstate](../tests/projects/defaultstate/README.md)
       covers 1,032 constructible matching types. Q411's shared mechanism resolves 1,196 rows;
-      its Core slice resolves another 156, Physics2D resolves 157, Physics resolves 89 and Audio resolves 185. ParticleSystem resolves 337 more, Editor resolves 132 and UIElements resolves 61 more across its values and shared JSON string transfer. Remaining Core mechanisms resolve another 127 rows across their shared wrappers and renderer families. Small resolves 107 existing entries and adds three exact contextual gaps. A separate integrated lighting fix resolves one more. The 12,704-row reference preserves all original
+      its Core slice resolves another 156, Physics2D resolves 157, Physics resolves 89 and Audio resolves 185. ParticleSystem resolves 337 more, Editor resolves 132 and UIElements resolves 61 more across its values and shared JSON string transfer. Remaining Core mechanisms resolve another 127 rows across their shared wrappers and renderer families. Small resolves 107 existing entries and adds three exact contextual gaps. A separate integrated lighting fix resolves one more. The 12,706-row reference preserves all original
       rows and adds independently repeated message, constructor, requirement, collision and arithmetic
-      controls. The comparison has 12,437 exact rows, 267 differing reference rows, zero extra
+      controls. The comparison has 12,439 exact rows, 267 differing reference rows, zero extra
       implementation rows and the unchanged 50 variable observations inside 269 exact,
       reasoned migration entries. UIElements retains 98 rows, Editor 87, ParticleSystem five, CoreModule 32, Physics2D five, Physics five and Audio four; the README lists every module
       and the unresolved payload, rendering and import contexts. Static constructor comparison
