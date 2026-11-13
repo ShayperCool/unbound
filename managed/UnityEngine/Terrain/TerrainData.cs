@@ -18,8 +18,8 @@ namespace UnityEngine
         internal const int MaxHeight = 32766;
         internal static readonly int k_MaximumResolution = 4097;
         internal static readonly int k_MinimumDetailResolutionPerPatch = 8;
-        internal static readonly int k_MaximumDetailResolutionPerPatch = 128;
-        internal static readonly int k_MaximumDetailPatchCount = 32;
+        internal static readonly int k_MaximumDetailResolutionPerPatch = 1000;
+        internal static readonly int k_MaximumDetailPatchCount = 10000;
         internal static readonly int k_MinimumAlphamapResolution = 16;
         internal static readonly int k_MaximumAlphamapResolution = 4096;
         internal static readonly int k_MinimumBaseMapResolution = 16;
@@ -631,10 +631,28 @@ namespace UnityEngine
         public int detailResolutionPerPatch => m_DetailResolutionPerPatch;
         public int detailPatchCount => m_DetailResolutionPerPatch > 0 ? (m_DetailResolution + m_DetailResolutionPerPatch - 1) / m_DetailResolutionPerPatch : 0;
 
+        /// <summary>Keeps whole patches: the resolution becomes the patch count (the resolution
+        /// over the clamped samples per patch, rounded down) times the samples per patch.</summary>
         public void SetDetailResolution(int detailResolution, int resolutionPerPatch)
         {
-            m_DetailResolution = Mathf.Clamp(detailResolution, 0, 4048);
-            m_DetailResolutionPerPatch = Mathf.Clamp(resolutionPerPatch, k_MinimumDetailResolutionPerPatch, k_MaximumDetailResolutionPerPatch);
+            if (detailResolution < 0)
+            {
+                Debug.LogWarning("detailResolution must not be negative.");
+                detailResolution = 0;
+            }
+            if (resolutionPerPatch < k_MinimumDetailResolutionPerPatch || resolutionPerPatch > k_MaximumDetailResolutionPerPatch)
+            {
+                Debug.LogWarning("resolutionPerPatch is clamped to the range of [" + k_MinimumDetailResolutionPerPatch + ", " + k_MaximumDetailResolutionPerPatch + "].");
+                resolutionPerPatch = Math.Min(k_MaximumDetailResolutionPerPatch, Math.Max(resolutionPerPatch, k_MinimumDetailResolutionPerPatch));
+            }
+            int patchCount = detailResolution / resolutionPerPatch;
+            if (patchCount > k_MaximumDetailPatchCount)
+            {
+                Debug.LogWarning("Patch count (detailResolution / resolutionPerPatch) is clamped to the range of [0, " + k_MaximumDetailPatchCount + "].");
+                patchCount = k_MaximumDetailPatchCount;
+            }
+            m_DetailResolution = patchCount * resolutionPerPatch;
+            m_DetailResolutionPerPatch = resolutionPerPatch;
             // A new resolution starts the layers empty.
             m_DetailLayers = new byte[m_DetailPrototypes.Length][];
             m_DetailsVersion++;

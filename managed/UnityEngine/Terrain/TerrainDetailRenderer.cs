@@ -51,6 +51,7 @@ namespace UnityEngine
         TerrainData m_DetailsData;
         int m_DetailsVersion = -1, m_DetailsHeights = -1;
         Vector3 m_DetailsOrigin;
+        bool m_DetailsLegacy;
         Texture2D m_DetailAtlas;
         readonly Material[] m_DetailMaterials = new Material[3];
         static readonly string[] s_DetailShaders =
@@ -63,7 +64,8 @@ namespace UnityEngine
         void CollectDetails(Terrain terrain, TerrainData data, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             var origin = terrain.GetPosition();
-            if (m_DetailsData != data || m_DetailsVersion != data.m_DetailsVersion || m_DetailsHeights != data.m_HeightsVersion || m_DetailsOrigin != origin)
+            if (m_DetailsData != data || m_DetailsVersion != data.m_DetailsVersion || m_DetailsHeights != data.m_HeightsVersion || m_DetailsOrigin != origin
+                || m_DetailsLegacy != QualitySettings.useLegacyDetailDistribution)
                 BuildDetails(terrain, data, origin);
             float distance = terrain.detailObjectDistance;
             if (distance <= 0f) return;
@@ -214,6 +216,7 @@ namespace UnityEngine
             m_DetailsVersion = data.m_DetailsVersion;
             m_DetailsHeights = data.m_HeightsVersion;
             m_DetailsOrigin = origin;
+            m_DetailsLegacy = QualitySettings.useLegacyDetailDistribution;
             var prototypes = data.detailPrototypes;
             if (prototypes.Length == 0 || data.detailResolution == 0) return;
             var rects = BuildDetailAtlas(prototypes, out var white);

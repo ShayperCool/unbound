@@ -162,6 +162,38 @@ namespace UnityEngine.Tests
             Assert.InRange(total, 32, 96);
         }
 
+        /// <summary>SetDetailResolution keeps whole patches, and instances still span the terrain.</summary>
+        [Fact]
+        public void DetailResolutionKeepsWholePatches()
+        {
+            var warnings = new Errors(LogType.Warning);
+            var previous = Debug.unityLogger.logHandler;
+            try
+            {
+                Debug.unityLogger.logHandler = warnings;
+                var texture = Own(new Texture2D(4, 4));
+                var data = Data(DetailScatterMode.InstanceCountMode, new DetailPrototype { prototypeTexture = texture, noiseSeed = 3 });
+                data.SetDetailResolution(100, 32);
+                Assert.Equal(96, data.detailResolution);
+                Assert.Equal(3, data.detailPatchCount);
+                Assert.Empty(warnings.Messages);
+                var values = new int[96, 96];
+                values[95, 95] = 1;
+                data.SetDetailLayer(0, 0, 0, values);
+                var last = Assert.Single(data.ComputeDetailInstanceTransforms(2, 2, 0, 1f, out _));
+                Assert.InRange(last.posX, 16f * 95 / 96, 16f);
+                Assert.InRange(last.posZ, 16f * 95 / 96, 16f);
+                data.SetDetailResolution(-5, 4);
+                Assert.Equal(0, data.detailResolution);
+                Assert.Equal(8, data.detailResolutionPerPatch);
+                Assert.Equal(new[] { "detailResolution must not be negative.", "resolutionPerPatch is clamped to the range of [8, 1000]." }, warnings.Messages);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+        }
+
         [Fact]
         public void LegacyDistributionMovesInstancesButKeepsTheirCount()
         {
@@ -185,10 +217,12 @@ namespace UnityEngine.Tests
 
         sealed class Errors : ILogHandler
         {
+            readonly LogType m_Type;
             internal readonly List<string> Messages = new List<string>();
+            internal Errors(LogType type = LogType.Error) => m_Type = type;
             public void LogFormat(LogType type, Object context, string format, params object[] args)
             {
-                if (type == LogType.Error) Messages.Add(string.Format(format, args));
+                if (type == m_Type) Messages.Add(string.Format(format, args));
             }
             public void LogException(Exception error, Object context) => throw error;
         }
