@@ -95,43 +95,54 @@ namespace UnityEngine
         /// </summary>
         public bool IntersectRay(Ray ray, out float distance) => IntersectRayAABB(ray, this, out distance);
 
+        // Contains, SqrDistance and ClosestPoint compare and round in the order of the Unity
+        // 6000.0.71f1 Editor (tests/projects/floatrounding, native/boundsPoint).
+
         /// <summary>True if the point is inside or on the surface of the box.</summary>
         public bool Contains(Vector3 point)
         {
-            Vector3 lo = min, hi = max;
-            return point.x >= lo.x && point.x <= hi.x &&
-                   point.y >= lo.y && point.y <= hi.y &&
-                   point.z >= lo.z && point.z <= hi.z;
+            float x = m_Center.x, y = m_Center.y, z = m_Center.z;
+            float ex = m_Extents.x, ey = m_Extents.y, ez = m_Extents.z;
+            if (point.x < x - ex || point.x > x + ex || point.y < y - ey || point.y > y + ey || point.z < z - ez)
+                return false;
+            return !(point.z > z + ez);
         }
 
         /// <summary>Squared distance from the point to the box; 0 inside.</summary>
         public float SqrDistance(Vector3 point)
         {
-            float sqr = 0F;
-            for (int i = 0; i < 3; i++)
-            {
-                float lo = m_Center[i] - m_Extents[i];
-                float hi = m_Center[i] + m_Extents[i];
-                float p = point[i];
-                if (p < lo)
-                {
-                    float d = lo - p;
-                    sqr += d * d;
-                }
-                else if (p > hi)
-                {
-                    float d = p - hi;
-                    sqr += d * d;
-                }
-            }
-            return sqr;
+            float dx = MathF.Max(MathF.Abs(point.x - m_Center.x), m_Extents.x) - m_Extents.x;
+            float dy = MathF.Max(MathF.Abs(point.y - m_Center.y), m_Extents.y) - m_Extents.y;
+            float dz = MathF.Max(MathF.Abs(point.z - m_Center.z), m_Extents.z) - m_Extents.z;
+            return dx * dx + dy * dy + dz * dz;
         }
 
         /// <summary>The closest point on or in the box; a point inside is returned unchanged.</summary>
         public Vector3 ClosestPoint(Vector3 point)
         {
-            Vector3 lo = min, hi = max;
-            return new Vector3(Mathf.Clamp(point.x, lo.x, hi.x), Mathf.Clamp(point.y, lo.y, hi.y), Mathf.Clamp(point.z, lo.z, hi.z));
+            float squared = 0F;
+            float x = ClosestOffset(point.x - m_Center.x, m_Extents.x, ref squared);
+            float y = ClosestOffset(point.y - m_Center.y, m_Extents.y, ref squared);
+            float z = ClosestOffset(point.z - m_Center.z, m_Extents.z, ref squared);
+            if (squared == 0F)
+                return point;
+            return new Vector3(m_Center.x + x, m_Center.y + y, m_Center.z + z);
+        }
+
+        // The offset from the centre clamped to [-extent, extent], adding the squared overshoot.
+        private static float ClosestOffset(float offset, float extent, ref float squared)
+        {
+            if (offset < -extent)
+            {
+                float d = offset + extent;
+                squared += d * d;
+                return -extent;
+            }
+            if (offset <= extent)
+                return offset;
+            float over = offset - extent;
+            squared += over * over;
+            return extent;
         }
 
         // Slab test against the three axis-aligned slab pairs.
