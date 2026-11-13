@@ -821,7 +821,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 48;
+    const VERSION: u32 = 49;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1417,7 +1417,9 @@ impl<'a> Builder<'a> {
             .filter_map(|s| Take::new(scene, s))
             .collect();
         let mut ranges = clip_ranges(imp);
-        if ranges.is_empty() {
+        // Without clips in the meta, each take makes one of its span.
+        let take_clips = ranges.is_empty();
+        if take_clips {
             for take in &takes {
                 let name = take.stack.element.name.to_string();
                 ranges.push(ClipRange::take(&name, take.begin * fps, take.end * fps));
@@ -1508,6 +1510,23 @@ impl<'a> Builder<'a> {
             else {
                 continue;
             };
+            // A clip of the meta whose range has no frames (its last frame not after its first)
+            // imports as an empty clip, whatever the rig, with the Editor's warning
+            // (6000.0.71f1, tests/projects/modelclips HumanSingle, GenericSingle, LegacySingle:
+            // no curves, length 1). A range ending before it starts is unmeasured and taken the
+            // same way; a take's own clip keeps its span's rule (`Take::new`).
+            let no_frames = !range.preview && !take_clips && range.last <= range.first;
+            if no_frames {
+                warnings.push(format!(
+                    "Model '{}' contains animation clip '{}' which has length of {} frames (start={}, end={}). It will result in empty animation.",
+                    self.name,
+                    range.name,
+                    range.last - range.first,
+                    range.first,
+                    range.last
+                ));
+            }
+            let empty = empty || no_frames;
             let opts = ufbx::BakeOpts {
                 resample_rate: fps,
                 minimum_sample_rate: fps,
@@ -1524,7 +1543,7 @@ impl<'a> Builder<'a> {
             // conversion is measured for whole takes with every body part on, and the
             // transform curves they keep for mask type None and for masks made from the model
             // that list transforms.
-            if self.settings.animation_type == 3 && !range.preview {
+            if self.settings.animation_type == 3 && !range.preview && !empty {
                 let half_frame = 0.5 / fps;
                 if (start - time_begin).abs() > half_frame || (time_end - end).abs() > half_frame {
                     warnings.push(format!(
@@ -1737,7 +1756,7 @@ impl<'a> Builder<'a> {
                     time: frame.map_or(0.0, |f| (f / fps) as f32),
                 },
             };
-            if let Some(node) = motion_node {
+            if let Some(node) = motion_node.filter(|_| !empty) {
                 floats.extend(self.motion_curves(node, &stack.anim, start, end, fps));
             }
             clips.push(ModelClip {

@@ -14,7 +14,10 @@ KeyframeReduction with loose errors, and `RigStatic` without animation import. T
 `HumanOptimal` (Optimal, Position Error 5); `HumanLong` is the same rig with compression Off
 and a clip of 31 frames (made by tests/projects/humanoid/make_models.py); `HumanTwistNone`,
 `HumanTwistAll` and `HumanTwistPart` carry animated bones that are not human bones under three
-clip masks; `HumanTwistGeneric` is the same file imported as Generic. Other Humanoid clip
+clip masks; `HumanTwistGeneric` is the same file imported as Generic. `HumanSingle`,
+`GenericSingle` and `LegacySingle` are `HumanLong` with one clip of no frames (first and last
+frame 5) imported as Humanoid, Generic and Legacy; their records come last and were recorded with
+the macOS Editor (two identical captures, whose other records match the Linux reference). Other Humanoid clip
 settings are not covered.
 
 `ClipProbe` records each imported clip (length, frame rate, flags, events,

@@ -3609,3 +3609,9 @@
 {"k":"clip.HumanTwistGeneric.Scene.curve.Root/Hips/SpineHelper/Spine/RightUpperArm/RightUpperArmTwist|m_LocalScale.x","v":{"first":0,"last":0.6666667,"values":[1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012,1.00000012]}}
 {"k":"clip.HumanTwistGeneric.Scene.curve.Root/Hips/SpineHelper/Spine/RightUpperArm/RightUpperArmTwist|m_LocalScale.y","v":{"first":0,"last":0.6666667,"values":[0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994,0.99999994]}}
 {"k":"clip.HumanTwistGeneric.Scene.curve.Root/Hips/SpineHelper/Spine/RightUpperArm/RightUpperArmTwist|m_LocalScale.z","v":{"first":0,"last":0.6666667,"values":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]}}
+{"k":"keys.HumanSingle.Scene","v":{"frameRate":30,"length":1,"curves":0}}
+{"k":"curves.HumanSingle.Scene","v":{"animator":0,"others":0,"transformPaths":0}}
+{"k":"keys.GenericSingle.Scene","v":{"frameRate":30,"length":1,"curves":0}}
+{"k":"curves.GenericSingle.Scene","v":{"animator":0,"others":0,"transformPaths":0}}
+{"k":"keys.LegacySingle.Scene","v":{"frameRate":30,"length":1,"curves":0}}
+{"k":"curves.LegacySingle.Scene","v":{"animator":0,"others":0,"transformPaths":0}}

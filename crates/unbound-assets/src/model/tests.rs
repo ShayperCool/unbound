@@ -1632,3 +1632,45 @@ fn a_humanoid_clip_keeps_every_frame_and_carries_its_key_reduction() {
     assert_eq!(generic.human_key_reduction, None);
     assert!(keys(&generic) < keys(&generic_off));
 }
+
+/// A clip of the meta whose range has no frames imports as an empty clip of length 1 with the
+/// Editor's warning, whatever the rig (6000.0.71f1, tests/projects/modelclips HumanSingle,
+/// GenericSingle, LegacySingle: frames 5 to 5 of HumanLong's take). Controls: the same meta with
+/// the range one frame longer keeps its curves, without the warning.
+#[test]
+fn a_clip_range_of_no_frames_is_an_empty_clip() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/modelclips/Assets/Resources");
+    let import = |name: &str, meta_text: &str| {
+        let source = dir.join(format!("{name}.fbx"));
+        ModelImporter::default()
+            .import(&source, &std::fs::read(&source).unwrap(), &meta(meta_text))
+            .unwrap()
+    };
+    let warning =
+        "which has length of 0 frames (start=5, end=5). It will result in empty animation.";
+    for name in ["HumanSingle", "GenericSingle", "LegacySingle"] {
+        let text = std::fs::read_to_string(dir.join(format!("{name}.fbx.meta"))).unwrap();
+        let model = import(name, &text);
+        let clip = model.clips.iter().find(|c| !c.preview).unwrap();
+        assert!(clip.curves.is_empty() && clip.floats.is_empty(), "{name}");
+        assert_eq!(clip.length, 1.0, "{name}");
+        assert!(
+            model.warnings.iter().any(|w| w
+                .starts_with(&format!("Model '{name}' contains animation clip 'Scene' "))
+                && w.ends_with(warning)),
+            "{name}: {:?}",
+            model.warnings
+        );
+        let longer = import(name, &text.replace("lastFrame: 5", "lastFrame: 6"));
+        let clip = longer.clips.iter().find(|c| !c.preview).unwrap();
+        assert!(!clip.curves.is_empty(), "{name}");
+        assert!(
+            !longer
+                .warnings
+                .iter()
+                .any(|w| w.ends_with("It will result in empty animation.")),
+            "{name}"
+        );
+    }
+}

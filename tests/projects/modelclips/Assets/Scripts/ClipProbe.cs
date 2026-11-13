@@ -282,6 +282,12 @@ public class ClipProbe : MonoBehaviour
             foreach (var mask in new[] { "None", "All", "Part" }) TransformCurves("HumanTwist" + mask);
             Nodes("HumanTwistGeneric");
             Imported("HumanTwistGeneric", true);
+            // Last: a clip of a single frame (frame 5 of HumanLong's take), Humanoid, Generic and Legacy.
+            foreach (var model in new[] { "HumanSingle", "GenericSingle", "LegacySingle" })
+            {
+                Keys(model);
+                TransformCurves(model);
+            }
         }
         catch (Exception e)
         {
