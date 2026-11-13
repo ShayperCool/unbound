@@ -314,7 +314,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
     return found
 
 
-def inventory(path):
+def inventory(path, directory_ctimes=None):
     """Newest descendant and allocated/reclaimable bytes, never follow links.
 
     Count a hardlinked inode as reclaimable only if all of its names are here.
@@ -328,8 +328,12 @@ def inventory(path):
         info = current.lstat()
         if info.st_dev != device or stat.S_ISDIR(info.st_mode) and current.is_mount():
             raise OSError(f'mount boundary inside candidate: {current}')
-        newest = max(newest, info.st_mtime, info.st_ctime)
         key = (info.st_dev, info.st_ino)
+        ctime = info.st_ctime
+        changed = (directory_ctimes or {}).get(key)
+        if stat.S_ISDIR(info.st_mode) and changed and info.st_ctime_ns == changed[0]:
+            ctime = changed[1]
+        newest = max(newest, info.st_mtime, ctime)
         if key not in inodes:
             allocated += info.st_blocks*512
             inodes[key] = [info, 0]
@@ -430,10 +434,11 @@ class Janitor:
             return 'live process'
         return None
 
-    def reason(self, path, hours):
+    def reason(self, path, hours, directory_ctimes=None):
         if reason := self.protection_reason(path):
             return reason
-        newest, _, _ = inventory(path)
+        newest, _, _ = (inventory(path, directory_ctimes=directory_ctimes)
+                        if directory_ctimes else inventory(path))
         if newest >= time.time()-hours*3600:
             return 'recently modified'
         return None
@@ -457,14 +462,21 @@ class Janitor:
                 return None
             _, allocated, reclaimable = inventory(path)
             directory = path.is_dir() and not path.is_symlink()
-            # Finish age checks before chmod changes directory ctimes.
-            if reason := self.reason(path, hours):
-                self.emit('keep', path=str(path), reason=reason)
-                return None
+            directory_ctimes = {}
             if self.apply and directory:
                 # Only directories need chmod; files can share live target inodes.
                 for _, _, _, descriptor in os.fwalk(path, follow_symlinks=False):
-                    os.fchmod(descriptor, stat.S_IMODE(os.fstat(descriptor).st_mode) | stat.S_IRWXU)
+                    before = os.fstat(descriptor)
+                    mode = stat.S_IMODE(before.st_mode)
+                    if mode & stat.S_IRWXU != stat.S_IRWXU:
+                        os.fchmod(descriptor, mode | stat.S_IRWXU)
+                        after = os.fstat(descriptor)
+                        directory_ctimes[(before.st_dev, before.st_ino)] = (after.st_ctime_ns, before.st_ctime)
+            # Recheck every descendant after permission preparation. Only the
+            # exact ctime changes made above are excluded from the age test.
+            if reason := self.reason(path, hours, directory_ctimes):
+                self.emit('keep', path=str(path), reason=reason)
+                return None
             identity = path.lstat()
             task = next((p.name.lower() for p in path.parents
                          if p.parent in (self.volume, self.cache.resolve()) and

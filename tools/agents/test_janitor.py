@@ -535,11 +535,26 @@ class JanitorTests(unittest.TestCase):
         path = self.directory('q1/old')
         path.chmod(0o555)
         self.j.apply = True
-        self.j.idle_hours = 0.000001
-        time.sleep(0.03)
+        self.j.idle_hours = 0.0001
+        time.sleep(0.5)
         with patch.object(janitor, 'process_paths', return_value=set()):
             self.assertTrue(self.j.remove(path, kind='task'))
         self.assertFalse(path.exists())
+
+    def test_write_during_directory_permission_preparation_is_kept(self):
+        path = self.directory('q1/old')
+        path.chmod(0o555)
+        original = janitor.os.fchmod
+        def concurrent_write(descriptor, mode):
+            original(descriptor, mode)
+            (path/'output').write_text('new output')
+        self.j.apply = True
+        self.j.idle_hours = 0.0001
+        time.sleep(0.5)
+        with patch.object(janitor, 'process_paths', return_value=set()), \
+             patch.object(janitor.os, 'fchmod', side_effect=concurrent_write):
+            self.assertFalse(self.j.remove(path, kind='task'))
+        self.assertEqual((path/'output').read_text(), 'new output')
 
     def test_write_during_other_file_preparation_is_kept(self):
         root = self.directory('q1')
@@ -553,8 +568,8 @@ class JanitorTests(unittest.TestCase):
                 paths[0].write_text('new output')
             return result
         self.j.apply = True
-        self.j.idle_hours = 0.000001
-        time.sleep(0.03)
+        self.j.idle_hours = 0.0001
+        time.sleep(0.5)
         with patch.object(janitor, 'process_paths', return_value=set()), \
              patch.object(janitor, 'inventory', side_effect=concurrent_inventory):
             self.assertEqual(self.j.remove_batch([(p, 'task', None) for p in paths]), 1)
