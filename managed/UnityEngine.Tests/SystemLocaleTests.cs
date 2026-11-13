@@ -81,7 +81,10 @@ namespace UnityEngine.Tests
                     Assert.Equal("tlh_XX.UTF-8", SystemLocale.Name());
                     return;
                 }
-                Assert.Equal(FirstPreferredLanguage(), SystemLocale.Name());
+                string name = SystemLocale.Name();
+                Assert.NotEqual("tlh_XX.UTF-8", name);
+                string preferred = FirstPreferredLanguage();
+                if (preferred != null) Assert.Equal(preferred, name);
             }
             finally
             {
@@ -91,7 +94,8 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>The user's first preferred language as the defaults tool prints the list.</summary>
+        /// <summary>The user's first preferred language as the defaults tool prints the list
+        /// (<c>(\n    "en-US",\n    de\n)</c>), or null when the user has set none.</summary>
         static string FirstPreferredLanguage()
         {
             var start = new System.Diagnostics.ProcessStartInfo("/usr/bin/defaults", "read -g AppleLanguages")
@@ -101,9 +105,15 @@ namespace UnityEngine.Tests
             };
             using var process = System.Diagnostics.Process.Start(start);
             string output = process.StandardOutput.ReadToEnd();
+            process.StandardError.ReadToEnd();
             process.WaitForExit();
-            Assert.Equal(0, process.ExitCode);
-            return output.Trim().TrimStart('(').Split(',')[0].Trim().Trim('"');
+            if (process.ExitCode != 0) return null;
+            foreach (string entry in output.Split(new[] { '(', ')', ',', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string language = entry.Trim().Trim('"');
+                if (language.Length > 0) return language;
+            }
+            return null;
         }
     }
 }
