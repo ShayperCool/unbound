@@ -262,7 +262,7 @@ namespace UnityEngine
                 var position = new Vector3(0f, p.Top - p.Height * 0.5f, 0f) - forward * (2f * (p.Height + p.Width));
                 var cameraToWorld = Matrix4x4.TRS(position, rotation, Vector3.one);
                 m_AtlasCameraToWorld = cameraToWorld;
-                var view = Matrix4x4.Scale(new Vector3(1f, 1f, -1f)) * cameraToWorld.inverse;
+                var view = Matrix4x4.Scale(new Vector3(1f, 1f, -1f)) * cameraToWorld.inverseDoublePrecision;
                 float size = Mathf.Max(p.Width, p.Height) * 0.5f;
                 var pixels = new Rect(p.CellX * m_Atlas.width, 0f, p.CellWidth * m_Atlas.width, AtlasHeight);
                 // The cell's width over its height, whatever its pixels: the billboard's ratio (at most 1).
@@ -367,7 +367,7 @@ namespace UnityEngine
         {
             if (m_Billboards.Count == 0) return;
             var cameraObject = camera.Camera;
-            var euler = cameraObject != null ? cameraObject.transform.eulerAngles : Quaternion.LookRotation(camera.Forward).eulerAngles;
+            var euler = cameraObject != null ? cameraObject.transform.eulerAngles : Quaternion.LookRotationSilent(camera.Forward).eulerAngles;
             // Drawn again when the camera turns or the lights it was lit by change (measured: a
             // sun's intensity alone, tests/projects/treebillboards sunonly).
             GatherTreeLights();
