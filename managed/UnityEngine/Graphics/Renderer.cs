@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 namespace UnityEngine
 {
     /// <summary>What every renderer has: materials, sorting, visibility, bounds.</summary>
-    public partial class Renderer : Component
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] public partial class Renderer : Component
     {
         internal bool m_Enabled = true;
         internal Material[] m_Materials = new Material[1]; // one empty slot when added by script (measured)
@@ -618,7 +618,7 @@ namespace UnityEngine
         }
     }
 
-    [ClassId(33)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [ClassId(33)]
     public sealed partial class MeshFilter : Component
     {
         internal Mesh m_Mesh;
@@ -789,7 +789,7 @@ namespace UnityEngine
         }
     }
 
-    [ClassId(212)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [ClassId(212)]
     public sealed partial class SpriteRenderer : Renderer
     {
         Sprite m_Sprite;

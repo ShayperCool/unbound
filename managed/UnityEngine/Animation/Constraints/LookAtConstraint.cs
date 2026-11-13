@@ -4,7 +4,7 @@ using Unbound.Runtime;
 
 namespace UnityEngine.Animations
 {
-    [ClassId(1183024399)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [ClassId(1183024399)]
     public sealed partial class LookAtConstraint : Behaviour, IConstraint, IConstraintInternal
     {
         internal readonly ConstraintData m_Constraint = new ConstraintData(ConstraintKind.LookAt);

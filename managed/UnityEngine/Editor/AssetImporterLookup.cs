@@ -65,7 +65,7 @@ namespace UnityEditor
     }
 
     /// <summary>A precompiled plugin's settings: on which platforms it is enabled, and with what.</summary>
-    public sealed partial class PluginImporter : AssetImporter
+    [global::UnityEngine.@ExcludeFromPresetAttribute] public sealed partial class PluginImporter : AssetImporter
     {
         sealed class Platform
         {

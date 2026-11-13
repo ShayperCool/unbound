@@ -49,7 +49,7 @@ namespace UnityEditor
         public int identifier;
     }
 
-    internal enum LogMessageFlags
+    [global::System.@FlagsAttribute] internal enum LogMessageFlags
     {
         kNoLogMessageFlags = 0,
         kError = 1,

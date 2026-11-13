@@ -4,7 +4,7 @@ using Unbound.Runtime;
 
 namespace UnityEngine.Animations
 {
-    [ClassId(1818360608)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [ClassId(1818360608)]
     public sealed partial class PositionConstraint : Behaviour, IConstraint, IConstraintInternal
     {
         internal readonly ConstraintData m_Constraint = new ConstraintData(ConstraintKind.Position);

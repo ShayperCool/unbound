@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 namespace UnityEngine
 {
     /// <summary>A view into the scene: its matrices, clearing and the space conversions games use.</summary>
-    [ClassId(20)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [ClassId(20)]
     public sealed partial class Camera : Behaviour
     {
         public delegate void CameraCallback(Camera cam);

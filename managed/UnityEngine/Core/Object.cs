@@ -314,7 +314,7 @@ namespace UnityEngine
 
         [global::System.@ObsoleteAttribute("Object.FindObjectsOfType has been deprecated. Use Object.FindObjectsByType instead which lets you decide whether you need the results sorted or not.  FindObjectsOfType sorts the results by InstanceID, but if you do not need this using FindObjectSortMode.None is considerably faster.", false)] public static Object[] FindObjectsOfType(Type type) => FindObjectsOfType(type, false);
 
-        public static Object[] FindObjectsOfType(Type type, bool includeInactive)
+        [global::System.@ObsoleteAttribute("Object.FindObjectsOfType has been deprecated. Use Object.FindObjectsByType instead which lets you decide whether you need the results sorted or not.  FindObjectsOfType sorts the results by InstanceID but if you do not need this using FindObjectSortMode.None is considerably faster.", false)] public static Object[] FindObjectsOfType(Type type, bool includeInactive)
         {
             MainThreadCheck.Check("FindObjectsByType");
             return ObjectRegistry.TypedArray(type, ObjectRegistry.FindSceneObjects(type, includeInactive, sorted: true));
@@ -341,9 +341,9 @@ namespace UnityEngine
         public static T[] FindObjectsByType<T>(FindObjectsInactive findObjectsInactive, FindObjectsSortMode sortMode) where T : Object =>
             Cast<T>(FindObjectsByType(typeof(T), findObjectsInactive, sortMode));
 
-        public static Object FindObjectOfType(Type type) => FindObjectOfType(type, false);
+        [global::System.@ObsoleteAttribute("Object.FindObjectOfType has been deprecated. Use Object.FindFirstObjectByType instead or if finding any instance is acceptable the faster Object.FindAnyObjectByType", false)] public static Object FindObjectOfType(Type type) => FindObjectOfType(type, false);
 
-        public static Object FindObjectOfType(Type type, bool includeInactive)
+        [global::System.@ObsoleteAttribute("Object.FindObjectOfType has been deprecated. Use Object.FindFirstObjectByType instead or if finding any instance is acceptable the faster Object.FindAnyObjectByType", false)] public static Object FindObjectOfType(Type type, bool includeInactive)
         {
             MainThreadCheck.Check("FindObjectsByType");
             return ObjectRegistry.FindFirstSceneObject(type, includeInactive);

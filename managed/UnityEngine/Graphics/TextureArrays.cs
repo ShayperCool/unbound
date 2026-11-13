@@ -439,7 +439,7 @@ namespace UnityEngine
     }
 
     /// <summary>An array of 2D textures of one size and format, sampled by slice.</summary>
-    [ClassId(187)]
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(187)]
     public sealed partial class Texture2DArray : Texture, ISerializedAsset
     {
         TextureFormat m_Format;
@@ -610,7 +610,7 @@ namespace UnityEngine
 
     /// <summary>An array of cube maps of one size and format: six faces each (layer element × 6 +
     /// face), sampled by direction and element.</summary>
-    [ClassId(188)]
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(188)]
     public sealed partial class CubemapArray : Texture, ISerializedAsset
     {
         TextureFormat m_Format;
@@ -740,7 +740,7 @@ namespace UnityEngine
     }
 
     /// <summary>A 3D texture: width × height × depth texels, sampled in three coordinates.</summary>
-    [ClassId(117)]
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(117)]
     public sealed partial class Texture3D : Texture, ISerializedAsset
     {
         TextureFormat m_Format;

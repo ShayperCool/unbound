@@ -5,7 +5,7 @@ namespace UnityEngine.Rendering
 {
     /// <summary>Renderers under a sorting group sort together, as one unit, by the group's sorting
     /// layer, order and distance; inside the group they sort among themselves.</summary>
-    [ClassId(210)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [ClassId(210)]
     public sealed partial class SortingGroup : Behaviour
     {
         internal int m_SortingLayerID;

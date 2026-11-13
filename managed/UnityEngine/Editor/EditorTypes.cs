@@ -37,7 +37,7 @@ namespace UnityEditor
         CoppaNotCompliant = 2,
     }
 
-    public enum SelectionMode
+    [global::System.@FlagsAttribute] public enum SelectionMode
     {
         Unfiltered = 0,
         TopLevel = 1,

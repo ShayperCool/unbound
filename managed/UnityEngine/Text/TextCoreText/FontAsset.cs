@@ -16,7 +16,7 @@ namespace UnityEngine.TextCore.Text
     /// <see cref="UpdateFontAssetsInUpdateQueue"/> runs (GenerateText does first), as in Unity: a
     /// first measure of new characters is without their kerning.
     /// </summary>
-    [Serializable]
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [Serializable]
     public partial class FontAsset : TextAsset
     {
         /// <summary>The atlas padding Unity's SDF materials add one to (their gradient scale).</summary>

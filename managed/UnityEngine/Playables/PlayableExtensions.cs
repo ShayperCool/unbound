@@ -212,7 +212,7 @@ namespace UnityEngine.Playables
     }
 
     /// <summary>An asset that makes playables (a timeline).</summary>
-    [Serializable]
+    [global::UnityEngine.@AssetFileNameExtensionAttribute("playable", new string[] {  })] [Serializable]
     public abstract partial class PlayableAsset : ScriptableObject, IPlayableAsset
     {
         protected PlayableAsset() { }

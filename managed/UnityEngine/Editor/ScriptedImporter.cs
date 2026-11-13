@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 namespace UnityEditor
 {
     /// <summary>An asset's importer, as the Editor exposes it: its path and settings.</summary>
-    public partial class AssetImporter : Object
+    [global::UnityEngine.Scripting.@PreserveAttribute] public partial class AssetImporter : Object
     {
         internal string m_AssetPath = "";
 
@@ -55,7 +55,7 @@ namespace UnityEditor
 namespace UnityEditor.AssetImporters
 {
     /// <summary>A project importer written in C#; Unbound runs it when an asset it imports loads.</summary>
-    public abstract partial class ScriptedImporter : AssetImporter
+    [global::UnityEngine.Scripting.@PreserveAttribute] public abstract partial class ScriptedImporter : AssetImporter
     {
         protected ScriptedImporter() { }
 

@@ -203,7 +203,7 @@ namespace UnityEngine.TextCore.Text
     }
 
     /// <summary>Sprites in text are not supported yet: sprite assets are never found.</summary>
-    public partial class SpriteAsset : TextAsset
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [global::UnityEngine.@HelpURLAttribute("https://docs.unity3d.com/2023.3/Documentation/Manual/UIE-sprite.html")] public partial class SpriteAsset : TextAsset
     {
     }
 
@@ -256,7 +256,7 @@ namespace UnityEngine.TextCore.Text
         }
     }
 
-    [Serializable]
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [Serializable]
     public partial class TextStyleSheet : ScriptableObject
     {
         [SerializeField] List<TextStyle> m_StyleList = new List<TextStyle>(1);

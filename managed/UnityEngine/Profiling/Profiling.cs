@@ -531,7 +531,7 @@ namespace Unity.Profiling.LowLevel.Unsafe
             return new ProfilerRecorderHandle(stat == null ? k_InvalidHandle : (ulong)stat.Handle);
         }
 
-        internal static unsafe ProfilerRecorderHandle GetByName__Unmanaged(ProfilerCategory category, byte* name, int nameLen) =>
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] internal static unsafe ProfilerRecorderHandle GetByName__Unmanaged(ProfilerCategory category, byte* name, int nameLen) =>
             GetByName(category, ProfilerUnsafeUtility.Utf8ToString(name, nameLen));
 
         internal static unsafe ProfilerRecorderHandle GetByName(ProfilerCategory category, char* name, int nameLen) =>
@@ -610,7 +610,7 @@ namespace Unity.Profiling.LowLevel.Unsafe
 
         internal static ushort CreateCategory(string name, ProfilerCategoryColor colorIndex) => ProfilerCore.CreateCategory(name, colorIndex);
 
-        internal static ushort CreateCategory__Unmanaged(byte* name, int nameLen, ProfilerCategoryColor colorIndex) =>
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] internal static ushort CreateCategory__Unmanaged(byte* name, int nameLen, ProfilerCategoryColor colorIndex) =>
             ProfilerCore.CreateCategory(Utf8ToString(name, nameLen), colorIndex);
 
         public static ushort CreateCategory(char* name, int nameLen, ProfilerCategoryColor colorIndex) =>
@@ -629,7 +629,7 @@ namespace Unity.Profiling.LowLevel.Unsafe
 
         public static IntPtr CreateMarker(string name, ushort categoryId, MarkerFlags flags, int metadataCount) => ProfilerCore.CreateMarker(name, categoryId, flags, metadataCount);
 
-        internal static IntPtr CreateMarker__Unmanaged(byte* name, int nameLen, ushort categoryId, MarkerFlags flags, int metadataCount) =>
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] internal static IntPtr CreateMarker__Unmanaged(byte* name, int nameLen, ushort categoryId, MarkerFlags flags, int metadataCount) =>
             ProfilerCore.CreateMarker(Utf8ToString(name, nameLen), categoryId, flags, metadataCount);
 
         public static IntPtr CreateMarker(char* name, int nameLen, ushort categoryId, MarkerFlags flags, int metadataCount) =>
@@ -639,7 +639,7 @@ namespace Unity.Profiling.LowLevel.Unsafe
 
         public static void SetMarkerMetadata(IntPtr markerPtr, int index, string name, byte type, byte unit) => ProfilerCore.SetMarkerMetadata(markerPtr, index, name);
 
-        internal static void SetMarkerMetadata__Unmanaged(IntPtr markerPtr, int index, byte* name, int nameLen, byte type, byte unit) =>
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] internal static void SetMarkerMetadata__Unmanaged(IntPtr markerPtr, int index, byte* name, int nameLen, byte type, byte unit) =>
             ProfilerCore.SetMarkerMetadata(markerPtr, index, Utf8ToString(name, nameLen));
 
         public static void SetMarkerMetadata(IntPtr markerPtr, int index, char* name, int nameLen, byte type, byte unit) =>
@@ -656,7 +656,7 @@ namespace Unity.Profiling.LowLevel.Unsafe
         public static void* CreateCounterValue(out IntPtr counterPtr, string name, ushort categoryId, MarkerFlags flags, byte dataType, byte dataUnit, int dataSize, ProfilerCounterOptions counterOptions) =>
             ProfilerCore.CreateCounterValue(out counterPtr, name, categoryId, flags, dataType, dataUnit, dataSize, counterOptions);
 
-        internal static void* CreateCounterValue__Unmanaged(out IntPtr counterPtr, byte* name, int nameLen, ushort categoryId, MarkerFlags flags, byte dataType, byte dataUnit, int dataSize, ProfilerCounterOptions counterOptions) =>
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] internal static void* CreateCounterValue__Unmanaged(out IntPtr counterPtr, byte* name, int nameLen, ushort categoryId, MarkerFlags flags, byte dataType, byte dataUnit, int dataSize, ProfilerCounterOptions counterOptions) =>
             ProfilerCore.CreateCounterValue(out counterPtr, Utf8ToString(name, nameLen), categoryId, flags, dataType, dataUnit, dataSize, counterOptions);
 
         public static void* CreateCounterValue(out IntPtr counterPtr, char* name, int nameLen, ushort categoryId, MarkerFlags flags, byte dataType, byte dataUnit, int dataSize, ProfilerCounterOptions counterOptions) =>

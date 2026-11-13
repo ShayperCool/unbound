@@ -76,9 +76,9 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After accessor slice |
+| Category | Before Q410 | After user annotation slice |
 | --- | ---: | ---: |
-| Attributes | 938 | 304 |
+| Attributes | 938 | 246 |
 | Modifiers | 87 | 13 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 4 |
@@ -87,7 +87,7 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 466 |
+| Total | 1,332 | 408 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -138,14 +138,15 @@ with different before/after names and an unchanged output-path control.
 Q410-Editor-computed-setters retains EditorApplication.isFocused and
 EditorAssemblies.loadedAssemblies. Their current getters derive live state; matching
 private setters requires adapting focus updates and assembly-cache invalidation,
-with diverged-state controls. Q410-Editor-coordination retains the AssetPostprocessor
-setter and ObjectIdentifier serialization flag while Q411 owns their source files.
+with diverged-state controls. The accessor slice resolves the AssetPostprocessor
+setter. Q410-Editor-coordination retains the ObjectIdentifier serialization flag
+until its source ownership and serialized payload controls are ready.
 The five NamedBuildTarget readonly differences also require a generated header
 currently owned by Q411. Q410-Editor-serialized-payloads retains five Serializable
 flags on EditorBuildSettingsScene, PackageInfo, PackageCollection, ListRequest and
 SearchRequest. Their current property/cache/request storage needs the selected
 serialized payloads and nested/overwrite controls before the runtime classifies them
-as serialized composites. These fourteen exact differences remain visible in the allow-list.
+as serialized composites. The thirteen remaining exact differences stay visible in the allow-list.
 
 The same slice excludes MultiColumnHeaderState.m_MaxNumberOfSortedColumns from
 serialization. A control starts it at 9, supplies 17 in JSON, and confirms 9 survives
@@ -198,6 +199,21 @@ focus and game-domain state migration already tracked above. No no-op setters ar
 row differences per Gamma and Linear profile. The exact landed parent and this
 slice produce byte-identical 315-row outputs in both profiles; this numerical
 follow-up remains Q410-texturepixels-baseline.
+
+The user annotation slice updates 74 declarations and resolves 58 exact annotation
+entries. It copies Flags, RequireComponent, preset exclusions, help URLs, required
+members, preservation markers, asset extensions and edit-mode markers through the
+selected declaration renderer. Three Object lookup overloads now carry their
+selected obsolete warnings. Sixteen compound entries retain their exact remaining
+metadata differences for the later policy/type migration. Texture2D annotations
+remain queued while another slice owns a partial declaration.
+
+The 127 added probe rows include every changed declaration, six formatting values
+for each of eight enums and five component-requirement controls. A joint begins
+without a Rigidbody, adding it creates one, and adding a second joint retains one
+shared Rigidbody. A Light retains one Transform and a Camera remains an independent
+control without a Rigidbody. Existing internal class IDs and all non-target
+annotations are preserved, including across partial declarations.
 
 ## Landing checks and default state
 

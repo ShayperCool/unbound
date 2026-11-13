@@ -15,7 +15,7 @@ namespace UnityEngine.AI
     /// finds a path plans with it but moves only from the next; transforms follow (measured in
     /// `tests/projects/navmesh`, `navcost` loop.*).
     /// </summary>
-    [ClassId(195)]
+    [global::UnityEngine.@HelpURLAttribute("https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshAgent.html")] [ClassId(195)]
     public sealed partial class NavMeshAgent : Behaviour
     {
         int m_AgentTypeID;

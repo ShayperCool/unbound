@@ -235,3 +235,11 @@ The selected release exposes the public getters described by
 [Texture.updateCount](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture-updateCount.html)
 and [Camera.current](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Camera-current.html).
 This slice changes declaration metadata and preserves existing mutation timing.
+
+The user annotation controls expand the reference from 1,066 to 1,193 rows.
+They record 74 selected annotations, eight enum formatting controls at six values
+each, and five component-requirement values. The Rigidbody dependency begins absent,
+then exists after AddComponent; a second joint reuses it. The
+[6000.0 RequireComponent contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RequireComponent.html)
+checks missing dependencies when AddComponent runs, without retroactively repairing
+existing components. These controls exercise that call with a missing dependency.

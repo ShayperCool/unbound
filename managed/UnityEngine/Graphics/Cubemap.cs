@@ -12,7 +12,7 @@ namespace UnityEngine
     /// <summary>A cube texture: six square faces, each with its mip chain. Script-made cubemaps
     /// keep their pixels (RGBA, floats for HDR formats) and upload on Apply; built-in ones load
     /// straight to the renderer.</summary>
-    [ClassId(89)]
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(89)]
     public sealed partial class Cubemap : Texture, ISerializedAsset
     {
         TextureFormat m_Format = TextureFormat.RGBA32;

@@ -12,7 +12,6 @@ namespace UnityEngine
     /// Unlike Behaviours, colliders are Components with their own enabled flag.
     /// </summary>
     [ClassId(56)]
-    [RequireComponent(typeof(Transform))]
     public partial class Collider : Component
     {
         // Serialized state.
@@ -357,7 +356,7 @@ namespace UnityEngine
         internal override void CopyFrom(Component source, Func<Object, Object> remap) => CopyColliderData((Collider)source);
     }
 
-    [ClassId(65)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [ClassId(65)]
     public partial class BoxCollider : Collider
     {
         internal Vector3 m_Center;
@@ -410,7 +409,7 @@ namespace UnityEngine
         }
     }
 
-    [ClassId(135)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [ClassId(135)]
     public partial class SphereCollider : Collider
     {
         internal Vector3 m_Center;
@@ -455,7 +454,7 @@ namespace UnityEngine
         }
     }
 
-    [ClassId(136)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [ClassId(136)]
     public partial class CapsuleCollider : Collider
     {
         internal Vector3 m_Center;
@@ -554,7 +553,7 @@ namespace UnityEngine
 
     /// <summary>A collider from a mesh: its convex hull (convex), or its triangles, which Box3D (like
     /// Unity since 5) only collides on static and kinematic bodies.</summary>
-    [ClassId(64)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [ClassId(64)]
     public partial class MeshCollider : Collider
     {
         internal Mesh m_Mesh;

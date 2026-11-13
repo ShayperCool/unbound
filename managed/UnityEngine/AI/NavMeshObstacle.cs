@@ -7,7 +7,7 @@ namespace UnityEngine.AI
     /// An obstacle agents avoid in their local avoidance; a carving obstacle cuts a hole in the
     /// NavMesh (see ObstacleSystem and NavMeshCarving).
     /// </summary>
-    [ClassId(208)]
+    [global::UnityEngine.@HelpURLAttribute("https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshObstacle.html")] [ClassId(208)]
     public sealed partial class NavMeshObstacle : Behaviour
     {
         float m_Height = 1f;

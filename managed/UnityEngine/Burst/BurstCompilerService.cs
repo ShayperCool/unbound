@@ -156,7 +156,7 @@ namespace Unity.Collections.LowLevel.Unsafe
                     throw new InvalidOperationException("Unable to create a SharedStatic for this key. This is most likely due to the size of the struct inside of the SharedStatic having changed or the same key being reused for differently sized values. To fix this the editor needs to be restarted.");
             }
 
-            public static void* GetOrCreateSharedStaticInternal(long getHashCode64, long getSubHashCode64, uint sizeOf, uint alignment)
+            [global::UnityEngine.Scripting.@RequiredMemberAttribute] public static void* GetOrCreateSharedStaticInternal(long getHashCode64, long getSubHashCode64, uint sizeOf, uint alignment)
             {
                 CheckSizeOf(sizeOf);
                 var key = new Hash128((ulong)getHashCode64, (ulong)getSubHashCode64);

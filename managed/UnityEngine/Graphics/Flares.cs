@@ -127,7 +127,7 @@ namespace UnityEngine
 
     /// <summary>A halo around the object (an internal class in Unity: scenes and AddComponent by
     /// name make it).</summary>
-    [ClassId(122)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [ClassId(122)]
     internal sealed partial class Halo : Behaviour
     {
         // A Halo added by script draws nothing (measured: tests/projects/flares ho.added); scenes

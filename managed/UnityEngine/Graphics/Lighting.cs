@@ -10,7 +10,7 @@ namespace UnityEngine
     /// sun, else the brightest enabled directional light) and the ambient of
     /// <see cref="RenderSettings"/>; see <see cref="LightingGlobals"/>.
     /// </summary>
-    [ClassId(108)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] [ClassId(108)]
     public sealed partial class Light : Behaviour
     {
         internal static readonly List<Light> s_Enabled = new List<Light>();

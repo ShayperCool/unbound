@@ -192,6 +192,7 @@ public class AttributeInheritanceProbe : MonoBehaviour
         DeclarationCoreModifierControls.Record(Row);
         DeclarationAccessControls.Record(Row);
         DeclarationAccessorControls.Record(Row);
+        DeclarationAnnotationControls.Record(Row);
                 Row("complete", 1);
             }
             EditorApplication.Exit(0);

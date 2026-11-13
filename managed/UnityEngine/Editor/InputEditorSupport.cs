@@ -49,7 +49,7 @@ namespace UnityEditor.Build.Profile
     /// <summary>The Editor's build profiles. A project plays with its classic platform (no
     /// active profile), whose player settings are the project's: the Input System reads its
     /// active input handling from <c>s_GlobalPlayerSettings</c> through reflection.</summary>
-    public sealed partial class BuildProfile : ScriptableObject
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [global::UnityEngine.@HelpURLAttribute("build-profiles-reference")] public sealed partial class BuildProfile : ScriptableObject
     {
         static PlayerSettings s_GlobalPlayerSettings = PlayerSettings.Project;
         PlayerSettings m_PlayerSettings;

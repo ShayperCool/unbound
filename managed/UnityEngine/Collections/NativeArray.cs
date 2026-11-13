@@ -711,7 +711,7 @@ namespace Unity.Collections
         FirstUserIndex = 64,
     }
 
-    [Flags]
+
     public enum NativeArrayOptions
     {
         UninitializedMemory = 0,

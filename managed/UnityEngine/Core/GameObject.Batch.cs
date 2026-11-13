@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 namespace UnityEngine
 {
     /// <summary>The batch calls by instance id (tests/projects/coreapis).</summary>
-    public sealed partial class GameObject
+    [global::UnityEngine.@ExcludeFromPresetAttribute] public sealed partial class GameObject
     {
         public static void SetGameObjectsActive(NativeArray<int> instanceIDs, bool active)
         {

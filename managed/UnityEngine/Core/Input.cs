@@ -388,8 +388,8 @@ namespace UnityEngine
 
     public partial struct RefreshRate : IEquatable<RefreshRate>, IComparable<RefreshRate>
     {
-        public uint numerator;
-        public uint denominator;
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] public uint numerator;
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] public uint denominator;
         public double value => Compat.RefreshRateFractionsMeasured || denominator != 0 ? (double)numerator / denominator : 0;
         public bool Equals(RefreshRate other)
         {
@@ -411,12 +411,12 @@ namespace UnityEngine
 
     public partial struct DisplayInfo : IEquatable<DisplayInfo>
     {
-        internal ulong handle;
-        public int width;
-        public int height;
-        public RefreshRate refreshRate;
-        public RectInt workArea;
-        public string name;
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] internal ulong handle;
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] public int width;
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] public int height;
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] public RefreshRate refreshRate;
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] public RectInt workArea;
+        [global::UnityEngine.Scripting.@RequiredMemberAttribute] public string name;
         public bool Equals(DisplayInfo other) => handle == other.handle && width == other.width && height == other.height && name == other.name;
     }
 

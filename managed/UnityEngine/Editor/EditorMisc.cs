@@ -332,7 +332,7 @@ namespace UnityEditor
         public TextScriptImporter() { }
     }
 
-    public partial class MonoImporter : AssetImporter
+    [global::UnityEngine.@ExcludeFromPresetAttribute] public partial class MonoImporter : AssetImporter
     {
         public MonoImporter() { }
 

@@ -13,7 +13,7 @@ namespace UnityEngine
     /// objects of its serialized files are made when an asset is first loaded, so references into
     /// bundles loaded after it (its dependencies) resolve, as in Unity.
     /// </summary>
-    public partial class AssetBundle : Object
+    [global::UnityEngine.@ExcludeFromPresetAttribute] public partial class AssetBundle : Object
     {
         internal ulong m_NativeId;
         internal readonly List<string> m_Files = new List<string>();

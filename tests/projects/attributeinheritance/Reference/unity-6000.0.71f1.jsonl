@@ -1063,4 +1063,131 @@
 {"key":"accessor.paths.changed","value":"after"}
 {"key":"accessor.paths.identity","value":"True"}
 {"key":"accessor.paths.control-isfield","value":"True"}
+{"key":"annotation.UnityEngine.AI.NavMeshObstacle.type","value":"UnityEngine.HelpURLAttribute(https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshObstacle.html){}"}
+{"key":"annotation.UnityEngine.AI.NavMeshAgent.type","value":"UnityEngine.HelpURLAttribute(https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshAgent.html){}"}
+{"key":"annotation.UnityEngine.AnimatorOverrideController.type","value":"UnityEngine.HelpURLAttribute(AnimatorOverrideController){}"}
+{"key":"annotation.UnityEngine.Audio.AudioMixer.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.Unity.Baselib.LowLevel.Binding+Baselib_FileIO_OpenFlags.type","value":""}
+{"key":"annotation.Unity.Baselib.LowLevel.Binding+Baselib_Socket_PollEvents.type","value":""}
+{"key":"annotation.Unity.Collections.LowLevel.Unsafe.BurstLike+SharedStatic.M:static GetOrCreateSharedStaticInternal`0(System.Int64,System.Int64,System.UInt32,System.UInt32):System.Void*","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.Unity.Collections.NativeArrayOptions.type","value":""}
+{"key":"annotation.UnityEngine.GameObject.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEngine.RefreshRate.F:numerator:System.UInt32","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.UnityEngine.RefreshRate.F:denominator:System.UInt32","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.UnityEngine.DisplayInfo.F:handle:System.UInt64","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.UnityEngine.DisplayInfo.F:width:System.Int32","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.UnityEngine.DisplayInfo.F:height:System.Int32","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.UnityEngine.DisplayInfo.F:refreshRate:UnityEngine.RefreshRate","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.UnityEngine.DisplayInfo.F:workArea:UnityEngine.RectInt","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.UnityEngine.DisplayInfo.F:name:System.String","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.UnityEngine.GamepadSpeakerOutputType.type","value":""}
+{"key":"annotation.UnityEngine.HideFlags.type","value":"System.FlagsAttribute(){}"}
+{"key":"annotation.UnityEngine.Object.M:static FindObjectsOfType`0(System.Type,System.Boolean):UnityEngine.Object[]","value":"System.ObsoleteAttribute(Object.FindObjectsOfType has been deprecated. Use Object.FindObjectsByType instead which lets you decide whether you need the results sorted or not.  FindObjectsOfType sorts the results by InstanceID but if you do not need this using FindObjectSortMode.None is considerably faster.,False){}"}
+{"key":"annotation.UnityEngine.Object.M:static FindObjectOfType`0(System.Type):UnityEngine.Object","value":"System.ObsoleteAttribute(Object.FindObjectOfType has been deprecated. Use Object.FindFirstObjectByType instead or if finding any instance is acceptable the faster Object.FindAnyObjectByType,False){}"}
+{"key":"annotation.UnityEngine.Object.M:static FindObjectOfType`0(System.Type,System.Boolean):UnityEngine.Object","value":"System.ObsoleteAttribute(Object.FindObjectOfType has been deprecated. Use Object.FindFirstObjectByType instead or if finding any instance is acceptable the faster Object.FindAnyObjectByType,False){}"}
+{"key":"annotation.UnityEditor.AssetImporter.type","value":"UnityEngine.Scripting.PreserveAttribute(){}"}
+{"key":"annotation.UnityEditor.AssetImporters.ScriptedImporter.type","value":"UnityEngine.Scripting.PreserveAttribute(){}"}
+{"key":"annotation.UnityEditor.LogMessageFlags.type","value":"System.FlagsAttribute(){}"}
+{"key":"annotation.UnityEditor.SelectionMode.type","value":"System.FlagsAttribute(){}"}
+{"key":"annotation.UnityEditor.Build.Profile.BuildProfile.type","value":"UnityEngine.ExcludeFromPresetAttribute(){};UnityEngine.HelpURLAttribute(build-profiles-reference){}"}
+{"key":"annotation.UnityEditor.MonoImporter.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEditor.MonoScript.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEditor.PluginImporter.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEngine.Light.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){};UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.Camera.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.Renderer.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.MeshFilter.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.SpriteRenderer.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.Cubemap.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEngine.Halo.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.Mesh.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEngine.Sprite.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEngine.MaterialPropertyType.type","value":""}
+{"key":"annotation.UnityEngine.Rendering.SortingGroup.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.Texture2DArray.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEngine.CubemapArray.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEngine.Texture3D.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEngine.GUISkin.type","value":"UnityEngine.AssetFileNameExtensionAttribute(guiskin,[]){};UnityEngine.ExecuteInEditMode(){}"}
+{"key":"annotation.UnityEngine.Collider.type","value":""}
+{"key":"annotation.UnityEngine.BoxCollider.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.SphereCollider.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.CapsuleCollider.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.MeshCollider.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.Joint.type","value":""}
+{"key":"annotation.UnityEngine.FixedJoint.type","value":"UnityEngine.RequireComponent(UnityEngine.Rigidbody){}"}
+{"key":"annotation.UnityEngine.HingeJoint.type","value":"UnityEngine.RequireComponent(UnityEngine.Rigidbody){}"}
+{"key":"annotation.UnityEngine.SpringJoint.type","value":"UnityEngine.RequireComponent(UnityEngine.Rigidbody){}"}
+{"key":"annotation.UnityEngine.CharacterJoint.type","value":"UnityEngine.RequireComponent(UnityEngine.Rigidbody){}"}
+{"key":"annotation.UnityEngine.ConfigurableJoint.type","value":"UnityEngine.RequireComponent(UnityEngine.Rigidbody){}"}
+{"key":"annotation.UnityEngine.Playables.PlayableAsset.type","value":"UnityEngine.AssetFileNameExtensionAttribute(playable,[]){}"}
+{"key":"annotation.UnityEngine.Playables.PlayableDirector.type","value":"UnityEngine.HelpURLAttribute(https://docs.unity3d.com/ScriptReference/Playables.PlayableDirector.html){}"}
+{"key":"annotation.Unity.Profiling.LowLevel.Unsafe.ProfilerRecorderHandle.M:static GetByName__Unmanaged`0(Unity.Profiling.ProfilerCategory,System.Byte*,System.Int32):Unity.Profiling.LowLevel.Unsafe.ProfilerRecorderHandle","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.M:static CreateCategory__Unmanaged`0(System.Byte*,System.Int32,Unity.Profiling.ProfilerCategoryColor):System.UInt16","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.M:static CreateMarker__Unmanaged`0(System.Byte*,System.Int32,System.UInt16,Unity.Profiling.LowLevel.MarkerFlags,System.Int32):System.IntPtr","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.M:static SetMarkerMetadata__Unmanaged`0(System.IntPtr,System.Int32,System.Byte*,System.Int32,System.Byte,System.Byte):System.Void","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.M:static CreateCounterValue__Unmanaged`0(out System.IntPtr,System.Byte*,System.Int32,System.UInt16,Unity.Profiling.LowLevel.MarkerFlags,System.Byte,System.Byte,System.Int32,Unity.Profiling.ProfilerCounterOptions):System.Void*","value":"UnityEngine.Scripting.RequiredMemberAttribute(){}"}
+{"key":"annotation.UnityEngine.AssetBundle.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEngine.Animations.AimConstraint.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.Animations.LookAtConstraint.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.Animations.ParentConstraint.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.Animations.PositionConstraint.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.Animations.RotationConstraint.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.Animations.ScaleConstraint.type","value":"UnityEngine.RequireComponent(UnityEngine.Transform){}"}
+{"key":"annotation.UnityEngine.TextCore.Text.FontAsset.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEngine.TextCore.Text.SpriteAsset.type","value":"UnityEngine.ExcludeFromPresetAttribute(){};UnityEngine.HelpURLAttribute(https://docs.unity3d.com/2023.3/Documentation/Manual/UIE-sprite.html){}"}
+{"key":"annotation.UnityEngine.TextCore.Text.TextStyleSheet.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.UnityEngine.TextCore.Text.TextSettings.type","value":"UnityEngine.ExcludeFromPresetAttribute(){}"}
+{"key":"annotation.flags.Unity.Baselib.LowLevel.Binding+Baselib_FileIO_OpenFlags.0","value":"0"}
+{"key":"annotation.flags.Unity.Baselib.LowLevel.Binding+Baselib_FileIO_OpenFlags.1","value":"Read"}
+{"key":"annotation.flags.Unity.Baselib.LowLevel.Binding+Baselib_FileIO_OpenFlags.3","value":"3"}
+{"key":"annotation.flags.Unity.Baselib.LowLevel.Binding+Baselib_FileIO_OpenFlags.5","value":"5"}
+{"key":"annotation.flags.Unity.Baselib.LowLevel.Binding+Baselib_FileIO_OpenFlags.7","value":"7"}
+{"key":"annotation.flags.Unity.Baselib.LowLevel.Binding+Baselib_FileIO_OpenFlags.15","value":"15"}
+{"key":"annotation.flags.Unity.Baselib.LowLevel.Binding+Baselib_Socket_PollEvents.0","value":"0"}
+{"key":"annotation.flags.Unity.Baselib.LowLevel.Binding+Baselib_Socket_PollEvents.1","value":"Readable"}
+{"key":"annotation.flags.Unity.Baselib.LowLevel.Binding+Baselib_Socket_PollEvents.3","value":"3"}
+{"key":"annotation.flags.Unity.Baselib.LowLevel.Binding+Baselib_Socket_PollEvents.5","value":"5"}
+{"key":"annotation.flags.Unity.Baselib.LowLevel.Binding+Baselib_Socket_PollEvents.7","value":"7"}
+{"key":"annotation.flags.Unity.Baselib.LowLevel.Binding+Baselib_Socket_PollEvents.15","value":"15"}
+{"key":"annotation.flags.Unity.Collections.NativeArrayOptions.0","value":"UninitializedMemory"}
+{"key":"annotation.flags.Unity.Collections.NativeArrayOptions.1","value":"ClearMemory"}
+{"key":"annotation.flags.Unity.Collections.NativeArrayOptions.3","value":"3"}
+{"key":"annotation.flags.Unity.Collections.NativeArrayOptions.5","value":"5"}
+{"key":"annotation.flags.Unity.Collections.NativeArrayOptions.7","value":"7"}
+{"key":"annotation.flags.Unity.Collections.NativeArrayOptions.15","value":"15"}
+{"key":"annotation.flags.UnityEngine.GamepadSpeakerOutputType.0","value":"Speaker"}
+{"key":"annotation.flags.UnityEngine.GamepadSpeakerOutputType.1","value":"Vibration"}
+{"key":"annotation.flags.UnityEngine.GamepadSpeakerOutputType.3","value":"3"}
+{"key":"annotation.flags.UnityEngine.GamepadSpeakerOutputType.5","value":"5"}
+{"key":"annotation.flags.UnityEngine.GamepadSpeakerOutputType.7","value":"7"}
+{"key":"annotation.flags.UnityEngine.GamepadSpeakerOutputType.15","value":"15"}
+{"key":"annotation.flags.UnityEngine.HideFlags.0","value":"None"}
+{"key":"annotation.flags.UnityEngine.HideFlags.1","value":"HideInHierarchy"}
+{"key":"annotation.flags.UnityEngine.HideFlags.3","value":"HideInHierarchy, HideInInspector"}
+{"key":"annotation.flags.UnityEngine.HideFlags.5","value":"HideInHierarchy, DontSaveInEditor"}
+{"key":"annotation.flags.UnityEngine.HideFlags.7","value":"HideInHierarchy, HideInInspector, DontSaveInEditor"}
+{"key":"annotation.flags.UnityEngine.HideFlags.15","value":"HideInHierarchy, HideInInspector, DontSaveInEditor, NotEditable"}
+{"key":"annotation.flags.UnityEditor.LogMessageFlags.0","value":"kNoLogMessageFlags"}
+{"key":"annotation.flags.UnityEditor.LogMessageFlags.1","value":"kError"}
+{"key":"annotation.flags.UnityEditor.LogMessageFlags.3","value":"kError, kAssert"}
+{"key":"annotation.flags.UnityEditor.LogMessageFlags.5","value":"kError, kLog"}
+{"key":"annotation.flags.UnityEditor.LogMessageFlags.7","value":"kError, kAssert, kLog"}
+{"key":"annotation.flags.UnityEditor.LogMessageFlags.15","value":"15"}
+{"key":"annotation.flags.UnityEditor.SelectionMode.0","value":"Unfiltered"}
+{"key":"annotation.flags.UnityEditor.SelectionMode.1","value":"TopLevel"}
+{"key":"annotation.flags.UnityEditor.SelectionMode.3","value":"TopLevel, Deep"}
+{"key":"annotation.flags.UnityEditor.SelectionMode.5","value":"TopLevel, ExcludePrefab"}
+{"key":"annotation.flags.UnityEditor.SelectionMode.7","value":"TopLevel, Deep, ExcludePrefab"}
+{"key":"annotation.flags.UnityEditor.SelectionMode.15","value":"TopLevel, Deep, ExcludePrefab, OnlyUserModifiable"}
+{"key":"annotation.flags.UnityEngine.MaterialPropertyType.0","value":"Float"}
+{"key":"annotation.flags.UnityEngine.MaterialPropertyType.1","value":"Int"}
+{"key":"annotation.flags.UnityEngine.MaterialPropertyType.3","value":"Matrix"}
+{"key":"annotation.flags.UnityEngine.MaterialPropertyType.5","value":"ConstantBuffer"}
+{"key":"annotation.flags.UnityEngine.MaterialPropertyType.7","value":"7"}
+{"key":"annotation.flags.UnityEngine.MaterialPropertyType.15","value":"15"}
+{"key":"annotation.require.joint-before-rigidbody","value":"True"}
+{"key":"annotation.require.joint-rigidbody","value":"True"}
+{"key":"annotation.require.shared-rigidbody-count","value":"1"}
+{"key":"annotation.require.light-transform-count","value":"1"}
+{"key":"annotation.require.camera-control-rigidbody","value":"True"}
 {"key":"complete","value":"1"}

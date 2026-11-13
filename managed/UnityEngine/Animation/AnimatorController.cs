@@ -122,7 +122,7 @@ namespace UnityEngine
     }
 
     /// <summary>A controller that plays another controller's state machines with some clips replaced.</summary>
-    [ClassId(221)]
+    [global::UnityEngine.@HelpURLAttribute("AnimatorOverrideController")] [ClassId(221)]
     public partial class AnimatorOverrideController : RuntimeAnimatorController
     {
         internal RuntimeAnimatorController m_Controller;

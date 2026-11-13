@@ -614,7 +614,7 @@ namespace UnityEngine
     }
 
     /// <summary>A set of styles for the controls (and custom ones looked up by name).</summary>
-    [Serializable]
+    [global::UnityEngine.@ExecuteInEditMode] [global::UnityEngine.@AssetFileNameExtensionAttribute("guiskin", new string[] {  })] [Serializable]
     public sealed partial class GUISkin : ScriptableObject
     {
         [SerializeField] Font m_Font;

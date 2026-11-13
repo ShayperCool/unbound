@@ -12,7 +12,7 @@ namespace UnityEngine.Audio
     /// mixer. Lowpass, Highpass, Echo, SFX Reverb, Send, Receive and Duck Volume process the summed
     /// group signal in serialized effect order.
     /// </summary>
-    [ClassId(241)]
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(241)]
     public partial class AudioMixer : Object, ISerializedAsset
     {
         internal AudioMixerGroup m_OutputGroup;

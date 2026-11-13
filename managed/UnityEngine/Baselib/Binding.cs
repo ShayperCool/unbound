@@ -92,7 +92,7 @@ namespace Unity.Baselib.LowLevel
             public IntPtr handle;
         }
 
-        [Flags]
+
         public enum Baselib_FileIO_OpenFlags : uint
         {
             Read = 1u,
@@ -325,7 +325,7 @@ namespace Unity.Baselib.LowLevel
             public uint dataLen;
         }
 
-        [Flags]
+
         public enum Baselib_Socket_PollEvents
         {
             Readable = 1,

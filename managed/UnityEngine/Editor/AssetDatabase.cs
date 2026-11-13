@@ -347,7 +347,7 @@ namespace UnityEditor
     }
 
     /// <summary>A script asset: its source text and the class it declares.</summary>
-    public partial class MonoScript : TextAsset
+    [global::UnityEngine.@ExcludeFromPresetAttribute] public partial class MonoScript : TextAsset
     {
         internal string m_Guid;
         /// <summary>The script's file id in its file: a script file's own, or a built-in script's.</summary>

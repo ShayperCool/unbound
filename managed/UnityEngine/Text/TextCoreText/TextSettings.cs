@@ -10,7 +10,7 @@ namespace UnityEngine.TextCore.Text
     /// default style sheet, line-breaking rules, and the font assets made for Fonts
     /// (<see cref="GetCachedFontAsset"/>, how UI Toolkit draws a Font).
     /// </summary>
-    [Serializable]
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [Serializable]
     public partial class TextSettings : ScriptableObject
     {
         [SerializeField] protected string m_Version;

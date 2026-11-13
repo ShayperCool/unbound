@@ -13,7 +13,7 @@ namespace UnityEngine.Playables
     /// outputs to the scene objects of its generic bindings, resolves exposed references, and keeps
     /// the root playable's time by its wrap mode.
     /// </summary>
-    [ClassId(320)]
+    [global::UnityEngine.@HelpURLAttribute("https://docs.unity3d.com/ScriptReference/Playables.PlayableDirector.html")] [ClassId(320)]
     public partial class PlayableDirector : Behaviour, IExposedPropertyTable
     {
         internal ScriptableObject m_PlayableAsset;

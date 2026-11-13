@@ -5,7 +5,7 @@ namespace UnityEngine
 {
     /// <summary>A region of a texture drawn as a quad (or a tight mesh), with a pivot and a scale
     /// (pixels per unit).</summary>
-    [ClassId(213)]
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(213)]
     public sealed partial class Sprite : Object, Instantiation.ICloneable
     {
         internal Texture2D m_Texture;

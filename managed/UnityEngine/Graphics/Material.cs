@@ -1520,7 +1520,7 @@ namespace UnityEngine
         }
     }
 
-    [Flags]
+
     public enum MaterialPropertyType
     {
         Float = 0,

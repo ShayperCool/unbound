@@ -7,7 +7,7 @@ namespace UnityEngine
 {
     /// <summary>Vertices, attributes and submesh indices. The data lives here; the renderer gets a copy
     /// when the mesh changed.</summary>
-    [ClassId(43)]
+    [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(43)]
     public sealed partial class Mesh : Object, Instantiation.ICloneable
     {
         internal Vector3[] m_Vertices = Array.Empty<Vector3>();

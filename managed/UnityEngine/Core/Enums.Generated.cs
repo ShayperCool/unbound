@@ -527,7 +527,7 @@ namespace UnityEngine
     }
 
 
-    [Flags]
+
     public enum GamepadSpeakerOutputType
     {
         Speaker = 0,
@@ -535,7 +535,7 @@ namespace UnityEngine
         SecondaryVibration = 2,
     }
 
-    public enum HideFlags
+    [global::System.@FlagsAttribute] public enum HideFlags
     {
         None = 0,
         HideInHierarchy = 1,

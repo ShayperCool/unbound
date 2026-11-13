@@ -82,7 +82,7 @@ namespace UnityEngine
     /// the connected anchor, turned so that the joint starts at rest; drive limits are forces.
     /// Hinge, character, configurable and fixed joints are D6 joints, spring joints distance joints.
     /// </summary>
-    [RequireComponent(typeof(Rigidbody))]
+
     public partial class Joint : Component
     {
         internal Rigidbody m_ConnectedBody;
@@ -383,14 +383,14 @@ namespace UnityEngine
         });
     }
 
-    [ClassId(138)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Rigidbody))] [ClassId(138)]
     public partial class FixedJoint : Joint
     {
         public FixedJoint() { }
     }
 
     /// <summary>A hinge: a D6 joint free (or limited) about its axis, driven by its motor or spring.</summary>
-    [ClassId(59)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Rigidbody))] [ClassId(59)]
     public partial class HingeJoint : Joint
     {
         JointMotor m_Motor;
@@ -516,7 +516,7 @@ namespace UnityEngine
 
     /// <summary>A spring: a distance joint keeping the anchors between the min and max distances,
     /// with the spring outside them.</summary>
-    [ClassId(145)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Rigidbody))] [ClassId(145)]
     public partial class SpringJoint : Joint
     {
         float m_Spring = 10f, m_Damper = 0.2f, m_MinDistance, m_MaxDistance, m_Tolerance = 0.025f;
@@ -558,7 +558,7 @@ namespace UnityEngine
 
     /// <summary>A character joint: a D6 joint with the anchor locked, twist limited about the axis and
     /// swing limited in a cone about the swing axes.</summary>
-    [ClassId(144)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Rigidbody))] [ClassId(144)]
     public partial class CharacterJoint : Joint
     {
         Vector3 m_SwingAxis = Vector3.up;
@@ -631,7 +631,7 @@ namespace UnityEngine
 
     /// <summary>A configurable joint: PhysX's D6 joint, each axis locked, limited or free, with
     /// linear and angular limits and drives.</summary>
-    [ClassId(153)]
+    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Rigidbody))] [ClassId(153)]
     public partial class ConfigurableJoint : Joint
     {
         Vector3 m_SecondaryAxis = Vector3.up;
