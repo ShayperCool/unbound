@@ -110,7 +110,7 @@ Run output stays under `${XDG_CACHE_HOME:-~/.cache}/unbound/validation/runs/cont
 The Unity 6000.0.71f1 macOS arm64 Editor (batch mode, `-nographics`, macOS 26)
 records 409/412 against the committed Linux reference. `edit/bounciness/final`,
 `edit/separation/final` and `edit/separation/trace` differ beyond the
-tolerances, and 98 values differ in raw form. Unbound built for arm64 matches
+tolerances, and 98 records differ in raw form. Unbound built for arm64 matches
 that macOS capture 412/412, with those three records' values equal to it. So
 the three rows that fail against the reference on macOS are the Editor's own
 arm64 results, and `run.py check` on macOS reports exactly those three. The

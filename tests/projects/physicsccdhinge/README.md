@@ -554,7 +554,7 @@ of the reference where named.
 | `--geometry-rotation` | 714/718, 4 unexpected | 665/718, 1 unexpected | 661/718, 5 unexpected |
 
 The Unity Editor itself computes different physics on arm64: 1955 of the
-6814 default values differ from the Linux reference, and five of them,
+6814 default rows differ from the Linux reference, and five of them,
 `ccd/ghost/3/{1..5}/body` (an angular velocity of opposite sign), exceed the
 tolerances. Unbound on macOS gives those five values exactly as the macOS
 Editor does. In `ccd/rotating`, `ccd/ghost`, `ccd/kinematic-moving`,
