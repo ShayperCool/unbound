@@ -4,6 +4,7 @@
     <Nullable>disable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <UnboundNativeDirGiven Condition="'$(UnboundNativeDir)' != '' or '$(CARGO_TARGET_DIR)' != ''">true</UnboundNativeDirGiven>
     <UnboundNativeDir Condition="'$(UnboundNativeDir)' == '' and '$(CARGO_TARGET_DIR)' != ''">$([System.IO.Path]::GetFullPath('$(CARGO_TARGET_DIR)', '$(MSBuildStartupDirectory)'))/managed</UnboundNativeDir>
     <UnboundNativeDir Condition="'$(UnboundNativeDir)' == ''">$(MSBuildProjectDirectory)/../../target/managed</UnboundNativeDir>
   </PropertyGroup>
@@ -30,6 +31,28 @@
   <ItemGroup>
     <None Include="$(UnboundNativeDir)/*unbound_physx.*" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" />
   </ItemGroup>
+  <!-- Without an explicit target (CARGO_TARGET_DIR or UnboundNativeDir) and without a build in
+       ../../target, the native libraries are in the checkout's private target that tools/build.py
+       selects. Without them the physics, cloth, vehicle and tessellation tests cannot run: stop
+       with the reason instead of failing them. -->
+  <Target Name="UnboundLocateNativeLibraries" BeforeTargets="AssignTargetPaths"
+          Condition="'@(None->WithMetadataValue('Filename', 'libunbound_physx'))@(None->WithMetadataValue('Filename', 'unbound_physx'))' == ''">
+    <Exec Condition="'$(UnboundNativeDirGiven)' != 'true'" Command="python3 tools/build.py --cache none --print-env" WorkingDirectory="$(MSBuildProjectDirectory)/../.."
+          ConsoleToMSBuild="true" StandardOutputImportance="low" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="UnboundBuildEnvironment" />
+    </Exec>
+    <PropertyGroup>
+      <UnboundBuildTarget>$([System.Text.RegularExpressions.Regex]::Match('$(UnboundBuildEnvironment)', '"CARGO_TARGET_DIR": "([^"]+)"').Groups[1].Value)</UnboundBuildTarget>
+    </PropertyGroup>
+    <!-- Qualified metadata: inside a target, a bare %(Filename) would batch over every None item. -->
+    <ItemGroup Condition="'$(UnboundBuildTarget)' != ''">
+      <UnboundNativeLibrary Include="$(UnboundBuildTarget)/managed/*unbound_physx.*" />
+      <None Include="@(UnboundNativeLibrary)" CopyToOutputDirectory="PreserveNewest"
+            Link="%(UnboundNativeLibrary.Filename)%(UnboundNativeLibrary.Extension)" />
+    </ItemGroup>
+    <Error Condition="'@(None->WithMetadataValue('Filename', 'libunbound_physx'))@(None->WithMetadataValue('Filename', 'unbound_physx'))' == ''"
+           Text="UnityEngine.Tests needs the native unbound_physx library, found neither in $(UnboundNativeDir) nor in the private target of tools/build.py ($(UnboundBuildTarget)): build it with `python3 tools/build.py -- build --release --locked -p unbound`, or name its target with CARGO_TARGET_DIR or -p:UnboundNativeDir=&lt;target&gt;/managed." />
+  </Target>
   <ItemGroup>
     <ProjectReference Include="../Unbound.ReaderFields/Unbound.ReaderFields.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
