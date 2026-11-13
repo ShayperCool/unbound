@@ -77,6 +77,14 @@ public class ShaderResourcesProbe : MonoBehaviour
                         Row("member." + modes[mode] + "." + index, Draw(member));
                     }
                 colors.Release();
+                var gaps = new Material(Shader.Find("Probe/UniformGaps"));
+                gaps.SetVector("_Used", new Vector4(0.25f, 0.5f, 0.125f, 0.5f));
+                gaps.SetVector("_VertexOnly", Vector4.zero);
+                gaps.SetFloat("_Depth", 0f);
+                gaps.SetVector("_Tiling", new Vector4(1f, 1f, 0f, 0f));
+                gaps.SetFloat("_Scale", 2f);
+                gaps.SetVector("_Bias", new Vector4(0.25f, 0f, 0.5f, 0.25f));
+                Row("gaps.color", Draw(gaps));
 
                 var many = new Material(Shader.Find("Probe/ManyTextures"));
                 for (int k = 0; k < 24; k++) many.SetTexture("_T" + k, Solid(new Color32((byte)(k * 8), 0, 0, 255)));

@@ -11,6 +11,16 @@ with `Graphics.Blit` on the third frame and records one pixel of each case (byte
   one stage (URP's Lit with probe volumes binds 21 and shares sampler states among them): the last,
   the 17th and the mean of all; `many.24.changed` after one texture is replaced.
 
+* **`gaps.color`** (`Assets/Shaders/UniformGaps.shader`): a material block whose members around
+  one the vertex program alone reads are read by the fragment program (a uniform layout with
+  rows only one stage uses). A control: it compiles with or without the type order fix below.
+  The fitting of uniform blocks pads such gaps with members of new types, which naga appends
+  after the block's struct; the types are put back in dependency order before the program is
+  validated (unit test `fit::tests::padding_with_new_types_keeps_the_types_in_dependency_order`).
+  The program this was found with (a Shader Graph water shader's fragment program in a keyword
+  variant, whose merged uniform block lacked a row the other stage had) is not reproduced here:
+  the probe's own blocks keep every member in both stages.
+
 Measured in the Unity 6000.0.71f1 Editor (OpenGL Core, two identical captures on the NVIDIA
 driver). The Editor's compiler refuses more than 16 sampler states in a stage (a `sampler2D` per
 texture), so the textures share one.

@@ -3,6 +3,7 @@
   "summary": "shaderresources: .*",
   "engine_paths": [
     "crates/unbound-shaders/src/buffer_members.rs",
+    "crates/unbound-shaders/src/fit.rs",
     "vendor/wgpu-sampler/wgpu-hal/src/gles/adapter.rs"
   ]
 }
