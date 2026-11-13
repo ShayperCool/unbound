@@ -100,27 +100,44 @@ namespace UnityEngine
 
         public float ComputeDetailCoverage(int detailPrototypeIndex)
         {
-            // Only coverage mode has a coverage (instance counts give 0).
-            if (m_DetailScatterMode != DetailScatterMode.CoverageMode) return 0f;
-            if (detailPrototypeIndex < 0 || detailPrototypeIndex >= m_DetailPrototypes.Length) return 0f;
+            if (detailPrototypeIndex < 0 || detailPrototypeIndex >= m_DetailPrototypes.Length)
+            {
+                Debug.LogError("Invalid detail prototype index");
+                return 0f;
+            }
+            // Only coverage mode has a coverage.
+            if (m_DetailScatterMode != DetailScatterMode.CoverageMode)
+            {
+                Debug.LogError("Detail coverage unsupported when terrain is set to InstanceCount scattering mode.");
+                return 0f;
+            }
             var p = m_DetailPrototypes[detailPrototypeIndex];
+            if (!p.Validate()) return 0f;
             float footprint = Footprint(p);
             return footprint > 0f ? p.m_Density / footprint : 0f;
         }
 
-        /// <summary>The width an instance covers: the average width, for meshes drawn without
-        /// instancing times the diagonal of the mesh's bounds across x and z (measured with a
-        /// cube).</summary>
+        /// <summary>The width an instance covers: the average width times the prototype's width
+        /// across x (<see cref="PrototypeExtentX"/> twice).</summary>
         static float Footprint(DetailPrototype p)
         {
-            float width = 0.5f * (p.m_MinWidth + p.m_MaxWidth);
-            if (p.usePrototypeMesh && !p.useInstancing && p.m_Prototype != null
-                && p.m_Prototype.GetComponent<MeshFilter>() is MeshFilter filter && filter.sharedMesh != null)
-            {
-                var size = filter.sharedMesh.bounds.size;
-                width *= Mathf.Sqrt(size.x * size.x + size.z * size.z);
-            }
-            return width;
+            float extent = PrototypeExtentX(p);
+            return (p.m_MaxWidth + p.m_MinWidth) * (extent + extent) * 0.5f;
+        }
+
+        /// <summary>Half the prototype's width across x as the Editor sizes it: a grass texture is
+        /// a unit quad (0.5); a mesh drawn without instancing, any turn of its vertices (their
+        /// largest distance from the y axis); a mesh drawn with instancing, its bounds.</summary>
+        static float PrototypeExtentX(DetailPrototype p)
+        {
+            if (!p.usePrototypeMesh || p.m_Prototype == null) return 0.5f;
+            var mesh = p.m_Prototype.GetComponent<MeshFilter>() is MeshFilter filter ? filter.sharedMesh : null;
+            if (mesh == null) return 0f;
+            if (p.useInstancing) return mesh.bounds.extents.x;
+            float radius = 0f;
+            foreach (var v in mesh.m_Vertices)
+                radius = Math.Max(radius, (float)Math.Sqrt(v.z * v.z + v.x * v.x));
+            return radius;
         }
 
         // ------------------------------------------------------------ instances
@@ -156,12 +173,16 @@ namespace UnityEngine
         static float Frac(float v) => v - (float)Math.Floor(v);
 
         /// <summary>
-        /// A patch's instances of a layer. Instance count mode: each sample's count (at most 16)
-        /// of points of the R2 sequence, starting for the sample at (seed mod 4095) + 255 × row,
-        /// where the seed (noiseSeed + the sample's index in the patch + 1013 × the patch's index,
-        /// patches column by column) also seeds the sample's generator, which gives each instance
-        /// three numbers: jitter in x and z (positionJitter / √count of a sample) and the rotation.
-        /// Sizes follow Mathf.PerlinNoise of the position × noiseSpread.
+        /// A patch's instances of a layer, sample by sample (rows of the patch, then columns). A
+        /// sample's generator is seeded by noiseSeed + the sample's index in the patch + 1013 × the
+        /// patch's index (patches column by column). Instance count mode: the sample's value (at
+        /// most 16) is its count. Coverage mode: the count comes from
+        /// <see cref="CoverageCandidates"/>, and each candidate is kept when a draw is at most
+        /// the coverage squared. Each instance then draws three numbers: its place in the sample, and
+        /// its turn. The place is a point of the R2 sequence (numbered from (seed mod 4095) + 2 +
+        /// 255 × the sample's row, one more per candidate) jittered by positionJitter × (draw -
+        /// 0.5) / √count in x and z, or with QualitySettings.useLegacyDetailDistribution the two
+        /// draws themselves. Sizes follow Mathf.PerlinNoise of the position × noiseSpread.
         /// </summary>
         public DetailInstanceTransform[] ComputeDetailInstanceTransforms(int patchX, int patchY, int layer, float density, out Bounds bounds)
         {
@@ -174,90 +195,95 @@ namespace UnityEngine
             if (values == null || !prototype.Validate() || patchX < 0 || patchY < 0 || patchX >= patches || patchY >= patches)
                 return list.ToArray();
             var size = this.size;
-            float cellX = size.x / m_DetailResolution, cellZ = size.z / m_DetailResolution;
-            if (m_DetailScatterMode == DetailScatterMode.InstanceCountMode)
+            bool coverage = m_DetailScatterMode == DetailScatterMode.CoverageMode;
+            bool legacy = QualitySettings.useLegacyDetailDistribution;
+            float cellX = size.x * (1f / perPatch / patches), cellZ = size.z * (1f / perPatch / patches);
+            float perUnit = 0f;
+            if (coverage)
             {
-                int patchTerm = 1013 * (patchX * patches + patchY);
-                for (int ly = 0; ly < perPatch; ly++)
-                    for (int lx = 0; lx < perPatch; lx++)
-                    {
-                        int gx = patchX * perPatch + lx, gy = patchY * perPatch + ly;
-                        if (gx >= m_DetailResolution || gy >= m_DetailResolution) continue;
-                        int count = Math.Min(16, (int)values[gy * m_DetailResolution + gx]);
-                        if (count == 0) continue;
-                        int seed = prototype.m_NoiseSeed + lx + ly * perPatch + patchTerm;
-                        var random = new Rand((uint)seed);
-                        int first = (int)((uint)seed % 4095u) + 255 * ly;
-                        float jitter = prototype.m_PositionJitter / (float)Math.Sqrt(count);
-                        for (int i = 0; i < count; i++)
-                        {
-                            float u = random.Float(), v = random.Float(), w = random.Float();
-                            float k = first + i + 2;
-                            float fx = Frac(0.5f + k * s_R2X), fz = Frac(0.5f + k * s_R2Z);
-                            if (jitter != 0f)
-                            {
-                                fx = Frac(fx + jitter * (0.5f - u));
-                                fz = Frac(fz + jitter * (0.5f - v));
-                            }
-                            list.Add(Instance(prototype, (gx + fx) * cellX, (gy + fz) * cellZ, w));
-                        }
-                    }
-            }
-            else
-            {
-                // Coverage mode: n candidates a side per sample (the sample's size × density over
-                // the prototype's footprint), each kept when a draw falls under the coverage
-                // squared. Under 0.75 a side, a sample gets one candidate when its first two draws
-                // fall under n (measured on lone samples; next to covered samples and the terrain's
-                // edge the Editor keeps more, by a rule not known yet).
                 float footprint = Footprint(prototype);
-                float n = footprint > 0f ? cellX * prototype.m_Density / footprint : 0f;
-                int patchTerm = 1013 * (patchX * patches + patchY);
-                for (int ly = 0; ly < perPatch; ly++)
-                    for (int lx = 0; lx < perPatch; lx++)
-                    {
-                        int gx = patchX * perPatch + lx, gy = patchY * perPatch + ly;
-                        if (gx >= m_DetailResolution || gy >= m_DetailResolution) continue;
-                        int value = values[gy * m_DetailResolution + gx];
-                        if (value == 0) continue;
-                        int seed = prototype.m_NoiseSeed + lx + ly * perPatch + patchTerm;
-                        var random = new Rand((uint)seed);
-                        float o0 = random.Float(), o1 = random.Float();
-                        int side = n >= 0.75f ? (int)Math.Floor(n + 0.5f) : (o0 < n && o1 < n ? 1 : 0);
-                        if (side == 0) continue;
-                        float keep = value / 255f;
-                        keep *= keep;
-                        int first = (int)((uint)seed % 4095u) + 255 * ly;
-                        float jitter = prototype.m_PositionJitter / side;
-                        for (int c = 0; c < side * side; c++)
-                        {
-                            if (!(random.Float() < keep)) continue;
-                            float u = random.Float(), v = random.Float(), w = random.Float();
-                            float k = first + c + 2;
-                            float fx = Frac(0.5f + k * s_R2X), fz = Frac(0.5f + k * s_R2Z);
-                            if (jitter != 0f)
-                            {
-                                fx = Frac(fx + jitter * (0.5f - u));
-                                fz = Frac(fz + jitter * (0.5f - v));
-                            }
-                            list.Add(Instance(prototype, (gx + fx) * cellX, (gy + fz) * cellZ, w));
-                        }
-                    }
+                perUnit = footprint > 0f ? 1f / footprint * prototype.m_Density : 0f;
             }
+            float sampleUv = 1f / (patches * perPatch);
+            int patchTerm = 1013 * (patchX * patches + patchY);
+            for (int ly = 0; ly < perPatch; ly++)
+                for (int lx = 0; lx < perPatch; lx++)
+                {
+                    int gx = patchX * perPatch + lx, gy = patchY * perPatch + ly;
+                    if (gx >= m_DetailResolution || gy >= m_DetailResolution) continue;
+                    int value = values[gy * m_DetailResolution + gx];
+                    if (value == 0) continue;
+                    int seed = prototype.m_NoiseSeed + lx + ly * perPatch + patchTerm;
+                    var random = new Rand((uint)seed);
+                    float keep = 0f;
+                    int count;
+                    if (coverage)
+                    {
+                        keep = value / 255f * (value / 255f);
+                        count = CoverageCandidates(perUnit, cellX, cellZ, ref random, lx, ly);
+                    }
+                    else count = Math.Min(16, value);
+                    if (count <= 0) continue;
+                    float spread = (float)Math.Sqrt(count);
+                    float cornerU = ((float)lx / perPatch + patchX) / patches;
+                    float cornerV = ((float)ly / perPatch + patchY) / patches;
+                    int point = (int)((uint)seed % 4095u) + 2 + 255 * ly;
+                    for (int c = 0; c < count; c++, point++)
+                    {
+                        if (coverage && !(random.Float() <= keep)) continue;
+                        float u = random.Float(), v = random.Float(), w = random.Float();
+                        float fx = u, fz = v;
+                        if (!legacy)
+                        {
+                            fx = Frac(Frac(point * s_R2X + 0.5f) - prototype.m_PositionJitter * ((u - 0.5f) / spread));
+                            fz = Frac(Frac(point * s_R2Z + 0.5f) - prototype.m_PositionJitter * ((v - 0.5f) / spread));
+                        }
+                        list.Add(Instance(prototype, Frac(fx * sampleUv + cornerU), Frac(fz * sampleUv + cornerV), w));
+                    }
+                }
             bounds = InstanceBounds(prototype, list);
             return list.ToArray();
         }
 
-        DetailInstanceTransform Instance(DetailPrototype prototype, float x, float z, float turn)
+        /// <summary>
+        /// Coverage mode's candidates of a sample: the prototype's instances per unit (density over
+        /// its footprint) less a random offset of up to half an instance (two draws, scaled by the
+        /// sample's size, at most 1 per unit), counted as the steps of that spacing that start
+        /// within the sample's columns and rows, from the patch's corner.
+        /// </summary>
+        static int CoverageCandidates(float perUnit, float cellX, float cellZ, ref Rand random, int lx, int ly)
         {
+            if (!(perUnit > 0f)) return 0;
+            float r0 = random.Float(), r1 = random.Float();
+            float scaled = Math.Min(perUnit, 1f);
+            float ox = Math.Clamp((r0 + -0.5f) * scaled / cellX, -0.5f, 0.5f);
+            float oz = Math.Clamp((r1 + -0.5f) * scaled / cellZ, -0.5f, 0.5f);
+            float stepX = 1f / Math.Abs(perUnit - ox + CoverageEpsilon);
+            float stepZ = 1f / Math.Abs(perUnit - oz + CoverageEpsilon);
+            int columns = (int)(Round((lx + 1) * cellX / stepX) - Round(lx * cellX / stepX));
+            int rows = (int)(Round((ly + 1) * cellZ / stepZ) - Round(ly * cellZ / stepZ));
+            return rows * columns;
+        }
+
+        /// <summary>Keeps coverage mode's spacing finite where the offset cancels the density
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/grass).</summary>
+        const float CoverageEpsilon = 1e-6f;
+
+        static float Round(float v) => MathF.Round(v, MidpointRounding.AwayFromZero);
+
+        /// <summary>An instance at the terrain's normalized position (u, v).</summary>
+        DetailInstanceTransform Instance(DetailPrototype prototype, float u, float v, float turn)
+        {
+            var size = this.size;
+            float x = size.x * u, z = size.z * v;
             float noise = Mathf.PerlinNoise(x * prototype.m_NoiseSpread, z * prototype.m_NoiseSpread);
             return new DetailInstanceTransform
             {
                 posX = x,
-                posY = GetInterpolatedHeight(x / size.x, z / size.z),
+                posY = GetInterpolatedHeight(u, v),
                 posZ = z,
-                scaleXZ = prototype.m_MinWidth + (prototype.m_MaxWidth - prototype.m_MinWidth) * noise,
-                scaleY = prototype.m_MinHeight + (prototype.m_MaxHeight - prototype.m_MinHeight) * noise,
+                scaleXZ = prototype.m_MinWidth * (1f - noise) + prototype.m_MaxWidth * noise,
+                scaleY = prototype.m_MinHeight * (1f - noise) + prototype.m_MaxHeight * noise,
                 rotationY = turn * 2f * Mathf.PI,
             };
         }

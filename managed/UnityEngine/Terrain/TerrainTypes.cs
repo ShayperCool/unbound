@@ -185,15 +185,45 @@ namespace UnityEngine
 
         public bool Validate(out string errorMessage) => ValidateDetailPrototype(this, out errorMessage);
 
+        /// <summary>The Editor's checks of a prototype, in its order and with its messages
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/grass); a prototype that fails
+        /// gets no instances and no coverage.</summary>
         internal static bool ValidateDetailPrototype(DetailPrototype prototype, out string errorMessage)
         {
-            errorMessage = "";
-            if (prototype.usePrototypeMesh ? prototype.m_Prototype == null : prototype.m_PrototypeTexture == null)
+            errorMessage = DetailPrototypeError(prototype) ?? "";
+            return errorMessage.Length == 0;
+        }
+
+        static string DetailPrototypeError(DetailPrototype p)
+        {
+            var mode = (DetailRenderMode)p.m_RenderMode;
+            if (!p.usePrototypeMesh)
             {
-                errorMessage = prototype.usePrototypeMesh ? "The detail prototype has no prefab" : "The detail prototype has no texture";
-                return false;
+                if (p.m_PrototypeTexture == null) return "Prototype is missing texture.";
+                if (mode == DetailRenderMode.VertexLit) return "Render mode cannot be VertexLit.";
+                if (p.useInstancing) return "Detail instancing is only supported on mesh details.";
+                return null;
             }
-            return true;
+            var prefab = p.m_Prototype;
+            if (prefab == null) return "Prototype is missing Game Object.";
+            if (mode == DetailRenderMode.GrassBillboard) return "Render mode cannot be GrassBillboard.";
+            if (mode != DetailRenderMode.VertexLit && p.useInstancing) return "Render mode must be VertexLit.";
+            if (prefab.GetComponent<LODGroup>() != null) return "LOD Group component is not supported.";
+            var renderer = prefab.GetComponent<Renderer>();
+            if (renderer == null) return "Renderer component is missing.";
+            var materials = renderer.sharedMaterials;
+            if (materials.Length != 1) return "A detail prototype must have exactly one material.";
+            if (materials[0] == null) return "Material is missing.";
+            var filter = prefab.GetComponent<MeshFilter>();
+            if (filter == null) return "Mesh Filter component is missing.";
+            var mesh = filter.sharedMesh;
+            if (mesh == null) return "Mesh is missing.";
+            if (mesh.vertexCount == 0) return "No vertex is available.";
+            if (p.useInstancing) return null;
+            if (!mesh.HasVertexAttribute(Rendering.VertexAttribute.TexCoord0)) return "No texcoord is available.";
+            for (int i = 0; i < mesh.subMeshCount; i++)
+                if (mesh.GetSubMesh(i).indexCount >= 3) return null;
+            return "No triangle is available.";
         }
 
         internal static bool IsModeSupportedByRenderPipeline(DetailRenderMode renderMode, bool useInstancing, out string errorMessage)

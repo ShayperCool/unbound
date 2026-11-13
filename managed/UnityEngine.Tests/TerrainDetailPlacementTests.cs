@@ -1,0 +1,196 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine.Rendering;
+using Xunit;
+
+namespace UnityEngine.Tests
+{
+    /// <summary>Where terrain details go and which prototypes get any (tests/projects/grass):
+    /// prototype validation, the footprint behind coverage, coverage candidates and the legacy
+    /// distribution, on prototypes other than the probe's.</summary>
+    public class TerrainDetailPlacementTests : IDisposable
+    {
+        readonly List<Object> m_Objects = new List<Object>();
+
+        public void Dispose()
+        {
+            foreach (var o in m_Objects) Object.DestroyImmediate(o);
+            QualitySettings.useLegacyDetailDistribution = false;
+        }
+
+        T Own<T>(T o) where T : Object { m_Objects.Add(o); return o; }
+
+        /// <summary>A prefab of a box (center, half size) with uvs or not, and its renderer's
+        /// materials.</summary>
+        GameObject Box(Vector3 center, Vector3 half, bool uvs = true, int materials = 1)
+        {
+            var mesh = Own(new Mesh());
+            var vertices = new Vector3[8];
+            var uv = new Vector2[8];
+            for (int i = 0; i < 8; i++)
+            {
+                vertices[i] = center + new Vector3((i & 1) != 0 ? half.x : -half.x, (i & 2) != 0 ? half.y : -half.y, (i & 4) != 0 ? half.z : -half.z);
+                uv[i] = new Vector2(i & 1, (i >> 1) & 1);
+            }
+            mesh.vertices = vertices;
+            if (uvs) mesh.uv = uv;
+            mesh.triangles = new[] { 0, 2, 1, 1, 2, 3, 4, 5, 6, 5, 7, 6, 0, 1, 4, 1, 5, 4, 2, 6, 3, 3, 6, 7, 0, 4, 2, 2, 4, 6, 1, 3, 5, 3, 7, 5 };
+            mesh.RecalculateBounds();
+            var go = Own(new GameObject("box"));
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var material = Own(new Material(Shader.Create("Standard", 2000)));
+            var list = new Material[materials];
+            for (int i = 0; i < materials; i++) list[i] = material;
+            go.AddComponent<MeshRenderer>().sharedMaterials = list;
+            return go;
+        }
+
+        TerrainData Data(DetailScatterMode mode, params DetailPrototype[] prototypes)
+        {
+            var data = Own(new TerrainData { heightmapResolution = 33 });
+            data.size = new Vector3(16f, 2f, 16f);
+            data.SetDetailScatterMode(mode);
+            data.SetDetailResolution(32, 8);
+            data.detailPrototypes = prototypes;
+            return data;
+        }
+
+        static void Fill(TerrainData data, int layer, int value)
+        {
+            var values = new int[32, 32];
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++)
+                    values[y, x] = value;
+            data.SetDetailLayer(0, 0, layer, values);
+        }
+
+        static string Error(DetailPrototype prototype)
+        {
+            Assert.Equal(prototype.Validate(out var error), error.Length == 0);
+            return error;
+        }
+
+        [Fact]
+        public void PrototypesAreCheckedInTheEditorsOrder()
+        {
+            var texture = Own(new Texture2D(4, 4));
+            var box = Box(Vector3.zero, Vector3.one * 0.5f);
+            Assert.Equal("Prototype is missing texture.", Error(new DetailPrototype { usePrototypeMesh = false }));
+            Assert.Equal("Render mode cannot be VertexLit.", Error(new DetailPrototype { prototypeTexture = texture, renderMode = DetailRenderMode.VertexLit }));
+            Assert.Equal("Detail instancing is only supported on mesh details.", Error(new DetailPrototype { prototypeTexture = texture, useInstancing = true }));
+            Assert.Equal("", Error(new DetailPrototype { prototypeTexture = texture, renderMode = DetailRenderMode.GrassBillboard }));
+            Assert.Equal("Prototype is missing Game Object.", Error(new DetailPrototype { usePrototypeMesh = true }));
+            Assert.Equal("Render mode cannot be GrassBillboard.", Error(new DetailPrototype { prototype = box, usePrototypeMesh = true, renderMode = DetailRenderMode.GrassBillboard }));
+            Assert.Equal("Render mode must be VertexLit.", Error(new DetailPrototype { prototype = box, usePrototypeMesh = true, useInstancing = true, renderMode = DetailRenderMode.Grass }));
+            // A mesh drawn without instancing may use the grass shader.
+            Assert.Equal("", Error(new DetailPrototype { prototype = box, usePrototypeMesh = true, renderMode = DetailRenderMode.Grass }));
+            Assert.Equal("A detail prototype must have exactly one material.", Error(new DetailPrototype { prototype = Box(Vector3.zero, Vector3.one, materials: 2), usePrototypeMesh = true, renderMode = DetailRenderMode.VertexLit }));
+            var bare = Box(Vector3.zero, Vector3.one, uvs: false);
+            Assert.Equal("No texcoord is available.", Error(new DetailPrototype { prototype = bare, usePrototypeMesh = true, renderMode = DetailRenderMode.VertexLit }));
+            // Instanced meshes need no uvs.
+            Assert.Equal("", Error(new DetailPrototype { prototype = bare, usePrototypeMesh = true, useInstancing = true, renderMode = DetailRenderMode.VertexLit }));
+            var empty = Own(new GameObject("no mesh"));
+            empty.AddComponent<MeshRenderer>().sharedMaterial = Own(new Material(Shader.Create("Standard", 2000)));
+            Assert.Equal("Mesh Filter component is missing.", Error(new DetailPrototype { prototype = empty, usePrototypeMesh = true, renderMode = DetailRenderMode.VertexLit }));
+            empty.AddComponent<MeshFilter>();
+            Assert.Equal("Mesh is missing.", Error(new DetailPrototype { prototype = empty, usePrototypeMesh = true, renderMode = DetailRenderMode.VertexLit }));
+            var lod = Box(Vector3.zero, Vector3.one);
+            lod.AddComponent<LODGroup>();
+            Assert.Equal("LOD Group component is not supported.", Error(new DetailPrototype { prototype = lod, usePrototypeMesh = true, renderMode = DetailRenderMode.VertexLit }));
+        }
+
+        [Fact]
+        public void InvalidPrototypesGetNoInstancesOrCoverage()
+        {
+            var bare = Box(Vector3.zero, Vector3.one * 0.5f, uvs: false);
+            var data = Data(DetailScatterMode.CoverageMode, new DetailPrototype { prototype = bare, usePrototypeMesh = true, renderMode = DetailRenderMode.VertexLit });
+            Fill(data, 0, 255);
+            Assert.Equal(0f, data.ComputeDetailCoverage(0));
+            Assert.Empty(data.ComputeDetailInstanceTransforms(1, 1, 0, 1f, out _));
+        }
+
+        /// <summary>The footprint behind coverage: the average width times twice the vertices'
+        /// largest distance from the y axis without instancing, the bounds' width with it.</summary>
+        [Fact]
+        public void CoverageFollowsThePrototypesWidthAcrossX()
+        {
+            var box = Box(new Vector3(0.5f, 0f, 0.2f), new Vector3(1f, 0.3f, 0.4f));
+            var plain = new DetailPrototype { prototype = box, usePrototypeMesh = true, renderMode = DetailRenderMode.VertexLit, minWidth = 1f, maxWidth = 3f, density = 2f };
+            var instanced = new DetailPrototype { prototype = box, usePrototypeMesh = true, useInstancing = true, renderMode = DetailRenderMode.VertexLit, minWidth = 1f, maxWidth = 3f, density = 2f };
+            var grass = new DetailPrototype { prototypeTexture = Own(new Texture2D(4, 4)), minWidth = 1f, maxWidth = 3f, density = 2f };
+            var data = Data(DetailScatterMode.CoverageMode, plain, instanced, grass);
+            float radius = Mathf.Sqrt(1.5f * 1.5f + 0.6f * 0.6f);
+            Assert.Equal(2f / (2f * 2f * radius), data.ComputeDetailCoverage(0), 5);
+            Assert.Equal(2f / (2f * 2f), data.ComputeDetailCoverage(1), 5);
+            Assert.Equal(2f / 2f, data.ComputeDetailCoverage(2), 5);
+        }
+
+        [Fact]
+        public void CoverageOfABadIndexOrInInstanceCountModeIsAnError()
+        {
+            var errors = new Errors();
+            var previous = Debug.unityLogger.logHandler;
+            try
+            {
+                Debug.unityLogger.logHandler = errors;
+                var counts = Data(DetailScatterMode.InstanceCountMode, new DetailPrototype { prototypeTexture = Own(new Texture2D(4, 4)) });
+                Assert.Equal(0f, counts.ComputeDetailCoverage(-1));
+                Assert.Equal(0f, counts.ComputeDetailCoverage(0));
+                Assert.Equal(new[] { "Invalid detail prototype index", "Detail coverage unsupported when terrain is set to InstanceCount scattering mode." }, errors.Messages);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+        }
+
+        /// <summary>Coverage candidates: the steps of the spacing that start within a sample,
+        /// so a prototype wider than a sample still gets instances on some samples, and full
+        /// coverage keeps every candidate.</summary>
+        [Fact]
+        public void WidePrototypesStillGetSomeInstances()
+        {
+            var texture = Own(new Texture2D(4, 4));
+            // Samples 0.5 units across; footprint 2 units: a quarter of an instance per sample side.
+            var data = Data(DetailScatterMode.CoverageMode, new DetailPrototype { prototypeTexture = texture, minWidth = 2f, maxWidth = 2f, noiseSeed = 11 });
+            Fill(data, 0, 255);
+            int total = 0;
+            for (int py = 0; py < 4; py++)
+                for (int px = 0; px < 4; px++)
+                    total += data.ComputeDetailInstanceTransforms(px, py, 0, 1f, out _).Length;
+            // About one instance per 2 × 2 units of the 16 × 16 terrain.
+            Assert.InRange(total, 32, 96);
+        }
+
+        [Fact]
+        public void LegacyDistributionMovesInstancesButKeepsTheirCount()
+        {
+            var texture = Own(new Texture2D(4, 4));
+            var data = Data(DetailScatterMode.InstanceCountMode, new DetailPrototype { prototypeTexture = texture, noiseSeed = 5, positionJitter = 0.5f });
+            Fill(data, 0, 3);
+            var r2 = data.ComputeDetailInstanceTransforms(2, 1, 0, 1f, out _);
+            QualitySettings.useLegacyDetailDistribution = true;
+            var legacy = data.ComputeDetailInstanceTransforms(2, 1, 0, 1f, out _);
+            Assert.Equal(8 * 8 * 3, r2.Length);
+            Assert.Equal(r2.Length, legacy.Length);
+            Assert.NotEqual(r2[0].posX, legacy[0].posX);
+            // The size and turn draws are the same: only the place within the sample differs.
+            Assert.Equal(r2[0].rotationY, legacy[0].rotationY);
+            for (int i = 0; i < legacy.Length; i++)
+            {
+                Assert.InRange(legacy[i].posX, 8f, 12f);
+                Assert.InRange(legacy[i].posZ, 4f, 8f);
+            }
+        }
+
+        sealed class Errors : ILogHandler
+        {
+            internal readonly List<string> Messages = new List<string>();
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Error) Messages.Add(string.Format(format, args));
+            }
+            public void LogException(Exception error, Object context) => throw error;
+        }
+    }
+}
