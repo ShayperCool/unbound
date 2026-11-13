@@ -70,7 +70,10 @@ public partial class HumanoidProbe
     /// after its change, the human stream's body and muscles after it, and the final pose with
     /// the transforms' locals every fourth step. RotateThenHuman turns the lower arm, reads the
     /// human stream and the bones again (humanBetween, between), then turns the head. Prop only
-    /// reads, also the handle of an object added under the left hand (<see cref="PropRecord"/>).</summary>
+    /// reads, also the handle of an object added under the left hand (<see cref="PropRecord"/>).
+    /// Solve moves the left hand's goal and solves the IK; RotateThenSolve turns the lower arm, reads the human stream, then moves the left hand's
+    /// goal and solves the IK; SolveTwice moves the goal and solves, reads the human stream and
+    /// solves again: a solve after the pose was read back on the rig's root scaled by 100.</summary>
     static void BoneHandles()
     {
         foreach (HumanBoneJob.Mode mode in System.Enum.GetValues(typeof(HumanBoneJob.Mode)))
@@ -107,7 +110,7 @@ public partial class HumanoidProbe
 /// one of them.</summary>
 public struct HumanBoneJob : IAnimationJob
 {
-    public enum Mode { Read, RotateLocal, RotateWorld, MoveHips, MoveArm, Scale, RotateThenHuman, HumanThenRead, Prop }
+    public enum Mode { Read, RotateLocal, RotateWorld, MoveHips, MoveArm, Scale, RotateThenHuman, HumanThenRead, Prop, Solve, RotateThenSolve, SolveTwice }
 
     public Mode mode;
     TransformStreamHandle hips, spine, arm, head, hand, prop;
@@ -130,6 +133,16 @@ public struct HumanBoneJob : IAnimationJob
     public TransformStreamHandle Handle(int i) => i == 0 ? hips : i == 1 ? spine : i == 2 ? arm : i == 3 ? head : hand;
 
     public void ProcessRootMotion(AnimationStream stream) { }
+
+    /// <summary>The left hand's goal moved by (10, 20, 0) world units (a tenth and a fifth of the
+    /// rig's local unit of 100) at full weight, and the IK solved.</summary>
+    static void SolveLeftHand(AnimationStream stream)
+    {
+        var h = stream.AsHuman();
+        h.SetGoalPosition(AvatarIKGoal.LeftHand, h.GetGoalPosition(AvatarIKGoal.LeftHand) + new Vector3(10f, 20f, 0f));
+        h.SetGoalWeightPosition(AvatarIKGoal.LeftHand, 1f);
+        h.SolveIK();
+    }
 
     public void ProcessAnimation(AnimationStream stream)
     {
@@ -159,6 +172,21 @@ public struct HumanBoneJob : IAnimationJob
                 break;
             case Mode.Scale:
                 spine.SetLocalScale(stream, new Vector3(1.2f, 1.2f, 1.2f));
+                break;
+            case Mode.Solve:
+                SolveLeftHand(stream);
+                break;
+            case Mode.RotateThenSolve:
+                // A bone, then the pose read back, then the left hand's goal moved and solved.
+                arm.SetLocalRotation(stream, arm.GetLocalRotation(stream) * Quaternion.Euler(0f, 0f, 40f));
+                HumanoidProbe.JobRecord("humanBetween", stream);
+                SolveLeftHand(stream);
+                break;
+            case Mode.SolveTwice:
+                // The left hand's goal moved and solved, the pose read back, solved again.
+                SolveLeftHand(stream);
+                HumanoidProbe.JobRecord("humanBetween", stream);
+                stream.AsHuman().SolveIK();
                 break;
         }
         HumanoidProbe.BoneRecord("after", stream, ref this);
