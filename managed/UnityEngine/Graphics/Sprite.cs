@@ -59,6 +59,8 @@ namespace UnityEngine
             copy.m_Mesh = null;
             // The copy builds its own data access view: writing through it must not change this one.
             copy.m_MeshData = null;
+            // Its own scriptable object list (measured: adding to a copy leaves the original).
+            if (m_ScriptableObjects != null) copy.m_ScriptableObjects = new List<ScriptableObject>(m_ScriptableObjects);
             return copy;
         }
 

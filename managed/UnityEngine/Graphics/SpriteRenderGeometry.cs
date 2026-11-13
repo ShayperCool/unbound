@@ -17,11 +17,15 @@ namespace Unbound.Runtime
             internal Color32[] Colors;
             /// <summary>Blend weights and indices together (Unity saves both channels or neither).</summary>
             internal BoneWeight[] Weights;
+            /// <summary>Texture coordinate channels 1 to 7 by channel (null when none is saved).</summary>
+            internal Vector2[][] TexCoords;
+            /// <summary>The stored texture coordinates 0 (zero unless saved as the sprite's own).</summary>
+            internal Vector2[] Uv;
         }
 
         // Channel indices (VertexAttribute order) and formats (VertexAttributeFormat).
         const int PositionChannel = 0, NormalChannel = 1, TangentChannel = 2, ColorChannel = 3, UvChannel = 4,
-            BlendWeightChannel = 12, BlendIndicesChannel = 13;
+            LastTexCoordChannel = 11, BlendWeightChannel = 12, BlendIndicesChannel = 13;
         const int Float32 = 0, UNorm8 = 2, UInt32 = 10;
 
         /// <summary>Each stream's stride and start: the streams follow each other in order, each
@@ -102,6 +106,8 @@ namespace Unbound.Runtime
                     TangentChannel or BlendWeightChannel => c.Dimension == 0 || c.Format == Float32 && c.Dimension == 4,
                     ColorChannel => c.Dimension == 0 || c.Format == UNorm8 && c.Dimension == 4,
                     BlendIndicesChannel => c.Dimension == 0 || c.Format == UInt32 && c.Dimension == 4,
+                    // Texture coordinates 1 to 7: two floats, as SetVertexAttribute writes them.
+                    > UvChannel and <= LastTexCoordChannel => c.Dimension == 0 || c.Format == Float32 && c.Dimension == 2,
                     _ => c.Dimension == 0,
                 };
                 if (!known)
@@ -115,10 +121,8 @@ namespace Unbound.Runtime
                 checked((int)(starts[channels[channel].Stream] + (long)vertex * strides[channels[channel].Stream] + channels[channel].Offset + component * 4));
             // Values are kept as saved (the API returns them; drawing uses only positions and UVs).
             float F(int channel, int vertex, int component) => BitConverter.ToSingle(data, At(channel, vertex, component));
-            for (int v = 0; v < count; v++)
-                if (F(UvChannel, v, 0) != 0f || F(UvChannel, v, 1) != 0f)
-                    throw new NotSupportedException("nonempty stored Sprite UV streams are not supported");
-            var attributes = new Attributes();
+            var attributes = new Attributes { Uv = new Vector2[count] };
+            for (int v = 0; v < count; v++) attributes.Uv[v] = new Vector2(F(UvChannel, v, 0), F(UvChannel, v, 1));
             if (channels[NormalChannel].Dimension != 0)
             {
                 attributes.Normals = new Vector3[count];
@@ -139,6 +143,14 @@ namespace Unbound.Runtime
                     int at = At(ColorChannel, v, 0);
                     attributes.Colors[v] = new Color32(data[at], data[at + 1], data[at + 2], data[at + 3]);
                 }
+            }
+            for (int channel = UvChannel + 1; channel <= LastTexCoordChannel; channel++)
+            {
+                if (channels[channel].Dimension == 0) continue;
+                var values = new Vector2[count];
+                for (int v = 0; v < count; v++) values[v] = new Vector2(F(channel, v, 0), F(channel, v, 1));
+                attributes.TexCoords ??= new Vector2[LastTexCoordChannel - UvChannel + 1][];
+                attributes.TexCoords[channel - UvChannel] = values;
             }
             if (channels[BlendWeightChannel].Dimension != 0)
             {

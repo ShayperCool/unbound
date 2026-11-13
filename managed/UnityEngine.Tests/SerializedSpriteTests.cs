@@ -208,6 +208,98 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SavedTextureCoordinateChannelsLoad()
+        {
+            var sprite = Assert.IsType<Sprite>(Load(Documents("Layouts/TexCoords")).MainObject);
+            int count = sprite.GetVertexCount();
+            for (int channel = 1; channel <= 7; channel++)
+            {
+                var attribute = UnityEngine.Rendering.VertexAttribute.TexCoord0 + channel;
+                Assert.True(sprite.HasVertexAttribute(attribute));
+                var values = sprite.GetVertexAttribute<Vector2>(attribute);
+                Assert.Equal(count, values.Length);
+                for (int i = 0; i < count; i++)
+                {
+                    Assert.Equal(channel + i * .25f, values[i].x, 5);
+                    Assert.Equal(channel * .5f - i, values[i].y, 5);
+                }
+            }
+            var own = Assert.IsType<Sprite>(Load(Documents("Layouts/TexCoord0")).MainObject);
+            for (int i = 0; i < own.uv.Length; i++)
+            {
+                Assert.Equal(.05f + i * .1f, own.uv[i].x, 5);
+                Assert.Equal(.9f - i * .05f, own.uv[i].y, 5);
+            }
+        }
+
+        [Fact]
+        public void ScriptableObjectsAreAListWithoutRepeats()
+        {
+            var texture = new Texture2D(8, 8);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 8, 8), new Vector2(.5f, .5f), 8);
+            var a = ScriptableObject.CreateInstance<ScriptableObject>();
+            var b = ScriptableObject.CreateInstance<ScriptableObject>();
+            var c = ScriptableObject.CreateInstance<ScriptableObject>();
+            try
+            {
+                Assert.Equal(0u, sprite.GetScriptableObjectsCount());
+                Assert.True(sprite.AddScriptableObject(a));
+                Assert.False(sprite.AddScriptableObject(a));
+                Assert.Equal("obj", Assert.Throws<ArgumentNullException>(() => sprite.AddScriptableObject(null)).ParamName);
+                Assert.True(sprite.AddScriptableObject(b));
+                var two = new ScriptableObject[1];
+                Assert.Equal(1u, sprite.GetScriptableObjects(two));
+                Assert.Same(a, two[0]);
+                Assert.Equal("scriptableObjects", Assert.Throws<ArgumentNullException>(() => sprite.GetScriptableObjects(null)).ParamName);
+                Assert.False(sprite.SetScriptableObjectAt(b, 0));
+                Assert.False(sprite.SetScriptableObjectAt(a, 0));
+                Assert.False(sprite.SetScriptableObjectAt(c, 9));
+                Assert.True(sprite.SetScriptableObjectAt(c, 1));
+                Assert.False(sprite.RemoveScriptableObjectAt(7));
+                var copy = Object.Instantiate(sprite);
+                Object.DestroyImmediate(c);
+                var held = new ScriptableObject[3];
+                Assert.Equal(2u, sprite.GetScriptableObjects(held));
+                Assert.Same(a, held[0]);
+                Assert.True(ReferenceEquals(held[1], null));
+                Assert.True(sprite.RemoveScriptableObjectAt(0));
+                Assert.Equal(1u, sprite.GetScriptableObjectsCount());
+                // A copy keeps its own list.
+                Assert.Equal(2u, copy.GetScriptableObjectsCount());
+                Object.DestroyImmediate(copy);
+            }
+            finally
+            {
+                Object.DestroyImmediate(sprite); Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(a); Object.DestroyImmediate(b);
+            }
+        }
+
+        [Theory]
+        [InlineData(0, false)]
+        [InlineData(128, true)]
+        public void StoredTextureCoordinatesAreUsedOnlyAsTheSpritesOwn(int setting, bool stored)
+        {
+            // An ordinary save stores zeros and the UVs come from uvTransform; settingsRaw bit 7
+            // marks texture coordinates set through SetVertexAttribute (tests/projects/spriteassets).
+            var computed = Assert.IsType<Sprite>(Load(Documents("Rectangle")).MainObject).uv;
+            var docs = Documents("Rectangle");
+            var rd = docs[0].Body.Get("m_RD");
+            var vd = rd.Get("m_VertexData");
+            var bytes = Convert.FromHexString(vd.Str("_typelessdata"));
+            BitConverter.GetBytes(1f).CopyTo(bytes, 48);
+            Set(vd, "_typelessdata", YNode.MakeScalar(Convert.ToHexString(bytes)));
+            Set(rd, "settingsRaw", YNode.MakeScalar(setting.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            var uv = Assert.IsType<Sprite>(Load(docs).MainObject).uv;
+            if (stored)
+            {
+                Assert.Equal(new Vector2(1f, 0f), uv[0]);
+                Assert.All(uv.Skip(1), v => Assert.Equal(Vector2.zero, v));
+            }
+            else Assert.Equal(computed, uv);
+        }
+
+        [Fact]
         public void EarlierVertexDataAndSpritesSavedWithoutATextureLoad()
         {
             var v2 = Assert.IsType<Sprite>(Load(Documents("Layouts/VertexV2")).MainObject);
@@ -263,7 +355,6 @@ namespace UnityEngine.Tests
         [InlineData("wrong-fileid", "Texture2D")]
         [InlineData("indices", "index 65535")]
         [InlineData("vertices", "m_DataSize")]
-        [InlineData("uv-stream", "stored Sprite UV")]
         public void UnsupportedDataIsAnErrorAndLeavesNoDefaultSprite(string variant, string diagnostic)
         {
             var docs = Documents("Rectangle");
@@ -278,17 +369,12 @@ namespace UnityEngine.Tests
                 case "downscale": Set(rd, "downscaleMultiplier", YNode.MakeScalar(".5")); break;
                 case "version": Set(rd, "serializedVersion", YNode.MakeScalar("99")); break;
                 case "vertex-version": Set(rd.Get("m_VertexData"), "serializedVersion", YNode.MakeScalar("4")); break;
-                case "channel": Set(rd.Get("m_VertexData").Get("m_Channels").Items[5], "dimension", YNode.MakeScalar("2")); break;
+                // Texture coordinates 1 to 7 are saved as two floats; three are not a saved layout.
+                case "channel": Set(rd.Get("m_VertexData").Get("m_Channels").Items[5], "dimension", YNode.MakeScalar("3")); break;
                 case "unknown-field": rd.Keys = rd.Keys.Append("futureMesh").ToArray(); rd.Values = rd.Values.Append(YNode.MakeMap()).ToArray(); break;
                 case "wrong-fileid": Set(rd.Get("texture"), "fileID", YNode.MakeScalar("2800001")); break;
                 case "indices": Set(rd, "m_IndexBuffer", YNode.MakeScalar("ffff01000200020001000300")); break;
                 case "vertices": Set(rd.Get("m_VertexData"), "_typelessdata", YNode.MakeScalar("00")); break;
-                case "uv-stream":
-                    var vd = rd.Get("m_VertexData");
-                    var bytes = Convert.FromHexString(vd.Str("_typelessdata"));
-                    BitConverter.GetBytes(1f).CopyTo(bytes, 48);
-                    Set(vd, "_typelessdata", YNode.MakeScalar(Convert.ToHexString(bytes)));
-                    break;
             }
             var logger = Debug.unityLogger;
             var previous = logger.logHandler;

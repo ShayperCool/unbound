@@ -32,7 +32,11 @@ namespace UnityEngine
             internal int Settings;
             internal uint Extrude;
             internal bool IsPolygon;
+            internal ObjectRef[] ScriptableObjects;
         }
+
+        /// <summary>settingsRaw bits a saved Sprite's own render data has.</summary>
+        const int MeshTypeSetting = 64, OwnTexCoordsSetting = 128;
 
         static SavedSprite ReadSpriteData(YNode body)
         {
@@ -41,20 +45,25 @@ namespace UnityEngine
             // A Sprite saved from a SpriteAtlas member keeps the atlas and its packed render data
             // (m_AtlasRD) beside its own; the Editor draws and reports it from m_RD, unpacked.
             if (!string.IsNullOrEmpty(body.Str("m_AtlasName")))
-                throw new NotSupportedException("legacy Sprite Packer atlas representations are not supported");
-            if (body.Get("m_ScriptableObjects") != null) Empty(body, "m_ScriptableObjects");
+                throw new NotSupportedException("legacy Sprite Packer atlas representations are not supported (the Unity 6000 Editor's Sprite Packer modes no longer pack sprites by tag)");
+            // Earlier Editors saved no scriptable objects field.
+            var scriptableObjects = body.Get("m_ScriptableObjects") != null
+                ? Array.ConvertAll(Sequence(body, "m_ScriptableObjects"), o => o.AsRef()) : Array.Empty<ObjectRef>();
             var rd = Need(body, "m_RD");
             Version(rd, 3);
             foreach (var key in rd.Keys)
                 if (!RenderKeys.Contains(key)) throw new NotSupportedException($"unfamiliar Sprite render-data field `{key}`");
             // settingsRaw: bit 0 packed, bit 1 tight packing, bits 2-5 the packing rotation, bit 6
-            // the mesh type. m_RD of a saved Sprite is never packed (only its m_AtlasRD is).
+            // the mesh type, bit 7 the stored texture coordinates are the sprite's own (set through
+            // SetVertexAttribute). m_RD of a saved Sprite is never packed: only its m_AtlasRD is, also
+            // for split-alpha and downscaled variant atlases (measured, tests/projects/spriteassets).
             int settings = Integer(rd, "settingsRaw");
-            if (settings != 0 && settings != 64)
-                throw new NotSupportedException($"packed, rotated or unfamiliar Sprite settingsRaw {settings}");
-            if (!Ref(rd, "alphaTexture").IsNull) throw new NotSupportedException("split alpha textures are not supported");
+            if ((settings & ~(MeshTypeSetting | OwnTexCoordsSetting)) != 0)
+                throw new NotSupportedException($"packed, rotated or unfamiliar Sprite settingsRaw {settings}: the Editor saves a Sprite's own render data unpacked");
+            if (!Ref(rd, "alphaTexture").IsNull)
+                throw new NotSupportedException("split alpha textures in a Sprite's own render data are not supported (the Editor keeps them in m_AtlasRD)");
             if (Number(rd, "downscaleMultiplier") != 1f)
-                throw new NotSupportedException("downscaled Sprite render data is not supported");
+                throw new NotSupportedException("downscaled Sprite render data is not supported (the Editor keeps a variant atlas's scale in m_AtlasRD)");
             var rect = Rectangle(Need(body, "m_Rect"));
             var pivot = V2(Need(body, "m_Pivot"));
             var border = V4(Need(body, "m_Border"));
@@ -112,6 +121,7 @@ namespace UnityEngine
                 Shapes = shapes.ToArray(), Bones = bones, BindPoses = bindPoses, Texture = Ref(rd, "texture"),
                 Secondary = secondary, Settings = settings, Extrude = checked((uint)Integer(body, "m_Extrude")),
                 IsPolygon = body.Get("m_IsPolygon") != null && Integer(body, "m_IsPolygon") != 0,
+                ScriptableObjects = scriptableObjects,
             };
         }
 
@@ -141,10 +151,11 @@ namespace UnityEngine
                     throw new NotSupportedException($"Sprite secondary texture {reference} did not resolve to a Texture2D");
                 secondary[i] = new SecondarySpriteTexture { name = name, texture = t };
             }
-            // The UVs map the positions through uvTransform into the texture; without a texture
-            // they are zero (measured).
-            var uv = new Vector2[data.Vertices.Length];
-            if (texture != null)
+            // The UVs map the positions through uvTransform into the texture, unless the stored ones
+            // are the sprite's own (settingsRaw bit 7) or there is no texture: then they are the
+            // stored ones, zero for an ordinary save (measured: tests/projects/spriteassets).
+            var uv = data.Attributes.Uv;
+            if (texture != null && (data.Settings & OwnTexCoordsSetting) == 0)
                 for (int i = 0; i < uv.Length; i++)
                 {
                     uv[i] = new Vector2((data.Vertices[i].x * data.Transform.x + data.Transform.y) / texture.width,
@@ -171,6 +182,11 @@ namespace UnityEngine
             m_Normals = data.Attributes.Normals;
             m_Tangents = data.Attributes.Tangents;
             m_Colors = data.Attributes.Colors;
+            m_TexCoords = data.Attributes.TexCoords;
+            // A reference that resolves to no scriptable object reads as null.
+            if (data.ScriptableObjects.Length > 0)
+                m_ScriptableObjects = new List<ScriptableObject>(Array.ConvertAll(data.ScriptableObjects,
+                    o => o.IsNull ? null : resolver.Resolve(o, typeof(ScriptableObject)) as ScriptableObject));
             m_SecondaryTextures = secondary.Length != 0 ? secondary : null;
             m_SecondaryGuids = null;
             m_SecondaryProperties = null;
@@ -255,10 +271,6 @@ namespace UnityEngine
         }
         static YNode[] Sequence(YNode node, string key) => Need(node, key) is var n && n.Kind == YKind.Seq
             ? n.Items : throw new FormatException($"Sprite `{key}` is not a sequence");
-        static void Empty(YNode node, string key)
-        {
-            if (Sequence(node, key).Length != 0) throw new NotSupportedException($"Sprite `{key}` is not supported");
-        }
         static void Version(YNode node, int expected)
         {
             int actual = Integer(node, "serializedVersion");

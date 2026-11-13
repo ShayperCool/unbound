@@ -2265,11 +2265,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal global::UnityEngine.Vector4 GetPadding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.GetPadding"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Sprite CreateSpriteWithoutTextureScripting(global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsToUnits, global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.CreateSpriteWithoutTextureScripting"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Sprite CreateSprite(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot, float pixelsPerUnit, uint extrude, global::UnityEngine.SpriteMeshType meshType, global::UnityEngine.Vector4 border, bool generateFallbackPhysicsShape, global::UnityEngine.SecondarySpriteTexture[] secondaryTexture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.CreateSprite"); return default; }
-        [global::Unbound.Stub] public uint GetScriptableObjectsCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.GetScriptableObjectsCount"); return default; }
-        [global::Unbound.Stub] public uint GetScriptableObjects(global::UnityEngine.ScriptableObject[] scriptableObjects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.GetScriptableObjects"); return default; }
-        [global::Unbound.Stub] public bool AddScriptableObject(global::UnityEngine.ScriptableObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.AddScriptableObject"); return default; }
-        [global::Unbound.Stub] public bool RemoveScriptableObjectAt(uint i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.RemoveScriptableObjectAt"); return default; }
-        [global::Unbound.Stub] public bool SetScriptableObjectAt(global::UnityEngine.ScriptableObject obj, uint i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.SetScriptableObjectAt"); return default; }
         internal uint extrude { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Sprite.extrude"); return default; } }
     }
     unsafe partial class SpriteRenderer
