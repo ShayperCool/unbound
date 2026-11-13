@@ -109,7 +109,14 @@ namespace Unity.Jobs { public interface IJob { void Execute(); } }
             return (image.ToArray(), pdb.ToArray());
         }
 
-        internal static Assembly Load(byte[] image) => new AssemblyLoadContext("wide floats " + Guid.NewGuid(), isCollectible: true).LoadFromStream(new MemoryStream(image));
+        /// <summary>Loads a game image in its own context, which finds the generated converted math
+        /// as the game's load context does.</summary>
+        internal static Assembly Load(byte[] image)
+        {
+            var context = new AssemblyLoadContext("wide floats " + Guid.NewGuid(), isCollectible: true);
+            context.Resolving += (c, name) => name.Name == WideFloats.EngineMathAssembly ? c.LoadFromStream(new MemoryStream(WideFloats.EngineMathImage())) : null;
+            return context.LoadFromStream(new MemoryStream(image));
+        }
 
         static object Run(Assembly assembly, string type, string method, float a = 16777216f, float b = 1f, float c = -16777216f) =>
             assembly.GetType(type)!.GetMethod(method)!.Invoke(null, new object[] { a, b, c })!;

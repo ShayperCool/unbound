@@ -54,6 +54,10 @@ namespace Unbound.Runtime
         /// <summary>Identifies what <see cref="ImageFilter"/> does: adapted images are cached under
         /// their input's hash plus this (set by the host with the filter).</summary>
         internal static string ImageFilterVersion = "";
+        /// <summary>Assemblies Unbound generates for adapted game assemblies to reference, by name, with
+        /// what builds each image (set by the host with <see cref="ImageFilter"/>). An image is
+        /// built once per <see cref="ImageFilterVersion"/> and cached as adapted images are.</summary>
+        internal static readonly Dictionary<string, Func<byte[]>> GeneratedAssemblies = new Dictionary<string, Func<byte[]>>(StringComparer.Ordinal);
         static GameLoadContext s_Context;
         static readonly List<Assembly> s_Assemblies = new List<Assembly>();
         static readonly Dictionary<string, Type> s_ScriptsByGuid = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
@@ -340,6 +344,8 @@ namespace Unbound.Runtime
                 if (name == s_Engine.GetName().Name) return s_Engine;
                 if (m_ByName.TryGetValue(name, out var game))
                     return LoadGameAssembly(game);
+                if (GeneratedAssemblies.TryGetValue(name, out var generate))
+                    return LoadGeneratedAssembly(name, generate);
                 if (m_FacadeDir != null)
                 {
                     var facade = Path.Combine(m_FacadeDir, name + ".dll");
@@ -391,6 +397,22 @@ namespace Unbound.Runtime
                     WriteAtomically(record, System.Text.Encoding.UTF8.GetBytes(path));
                 }
                 if (path.Length == 0) return LoadFromAssemblyPath(game.Dll);
+                return LoadFromAssemblyPath(path);
+            }
+
+            /// <summary>A generated assembly, from Library/Unbound/AdaptedAssemblies like adapted ones.</summary>
+            Assembly LoadGeneratedAssembly(string name, Func<byte[]> generate)
+            {
+                var adapted = Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "AdaptedAssemblies");
+                var record = Path.Combine(adapted, "inputs", Hash(System.Text.Encoding.UTF8.GetBytes(name), "generated|" + ImageFilterVersion + "|" + PeImage.Version));
+                string path = File.Exists(record) ? File.ReadAllText(record) : null;
+                if (path == null || !File.Exists(path))
+                {
+                    var image = generate();
+                    path = Path.Combine(adapted, Hash(image, ""), name + ".dll");
+                    if (!File.Exists(path)) WriteAtomically(path, image);
+                    WriteAtomically(record, System.Text.Encoding.UTF8.GetBytes(path));
+                }
                 return LoadFromAssemblyPath(path);
             }
 

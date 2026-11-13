@@ -16,11 +16,12 @@ namespace Unbound.Host;
 /// Unity implements most of its math structs (Mathf, Vector2/3/4, Quaternion, Matrix4x4, Color,
 /// Plane, ...) in C#, so in the Editor their arithmetic runs on Mono under the same rule as script
 /// code: a game's call to <c>Vector3.Dot</c> sums double products. Unbound's engine evaluates these
-/// methods in float32, as its own callers (which stand for Unity's native code) need. A game
-/// assembly's calls to such a method go instead to a copy of the method's body, converted as script
-/// code is and added to the game assembly; the copy's own calls to other such methods go to their
-/// copies. Methods Unity binds to native code (<see cref="NativeMath"/>) keep the engine's float32
-/// evaluation, as do the methods whose converted body would not change.
+/// methods in float32, as its own callers (which stand for Unity's native code) need. Game code's
+/// calls to such a method go instead to a converted copy of it in a generated assembly,
+/// <see cref="EngineMathAssembly"/> (built once per engine, outside the game's debuggable
+/// assemblies, so the runtime optimizes it in either code optimization mode); a copy's calls to
+/// other such methods go to their copies. Methods Unity binds to native code (<see cref="NativeMath"/>)
+/// keep the engine's float32 evaluation, as do the methods whose converted body would not change.
 /// </summary>
 static partial class WideFloats
 {
@@ -59,8 +60,10 @@ static partial class WideFloats
         "Vector3.OrthoNormalize", "Vector3.RotateTowards", "Vector3.Slerp", "Vector3.SlerpUnclamped",
     };
 
-    /// <summary>The name of the type that holds a game assembly's copies of engine math methods.</summary>
-    internal const string EngineMathType = "<Unbound>EngineMath";
+    /// <summary>The generated assembly holding the converted math, and its type.</summary>
+    internal const string EngineMathAssembly = "Unbound.EngineMath";
+    const string EngineMathNamespace = "Unbound";
+    const string EngineMathType = "EngineMath";
 
     /// <summary>Whether a method of the math sources is one of Unity's math methods that run in C#.</summary>
     internal static bool IsScriptMath(MethodDefinition method)
@@ -103,7 +106,11 @@ static partial class WideFloats
                         grew |= converted.Add(method);
             }
             foreach (var method in converted) Methods[method.FullName] = method;
+            Copies = new EngineMathCopies(source, converted);
         }
+
+        /// <summary>The generated assembly with every converted method.</summary>
+        internal readonly EngineMathCopies Copies;
     }
 
     const string ScriptMathResource = "Unbound.ScriptMath.dll";
@@ -114,6 +121,9 @@ static partial class WideFloats
     /// can change (or a stack the analysis cannot follow).</summary>
     internal static bool NeedsConversion(MethodDefinition method) =>
         method.HasBody && (WideExpressions(method) is not var (loads, unboxed) || loads.Count > 0 || unboxed.Count > 0);
+
+    /// <summary>The image of <see cref="EngineMathAssembly"/>.</summary>
+    internal static byte[] EngineMathImage() => Engine().Copies.Image;
 
     /// <summary>The math sources' module (for tests).</summary>
     internal static Mono.Cecil.ModuleDefinition ScriptMathModule => Engine().Source;
@@ -137,8 +147,11 @@ static partial class WideFloats
     /// <summary>The script math method a call in game code names, when it runs converted.</summary>
     static MethodDefinition? ScriptMathCallee(MethodReference callee)
     {
+        // Unity's math structs live in UnityEngine.CoreModule (UnityEngine for older plugins).
         if (callee is GenericInstanceMethod || callee.DeclaringType is not { Namespace: "UnityEngine" } declaring
-            || declaring is TypeSpecification || declaring.Scope is not AssemblyNameReference || !s_ScriptMathTypes.Contains(declaring.Name))
+            || declaring is TypeSpecification || !s_ScriptMathTypes.Contains(declaring.Name)
+            || declaring.Scope is not AssemblyNameReference { Name: var scope }
+            || !(scope == "UnityEngine" || scope.StartsWith("UnityEngine.", StringComparison.Ordinal)))
             return null;
         return Engine().Methods.TryGetValue(callee.FullName, out var method) ? method : null;
     }
@@ -164,20 +177,12 @@ static partial class WideFloats
             type.Scope == m_Source ? m_Engine : base.ImportScope(type);
     }
 
-    /// <summary>Copies of engine math methods added to one game module.</summary>
-    sealed class EngineMathCopies
+    /// <summary>Points a game module's calls to converted math at the generated assembly.</summary>
+    sealed class EngineMathCalls
     {
         readonly Mono.Cecil.ModuleDefinition m_Module;
-        EngineImporter? m_Importer;
-        TypeDefinition? m_Type;
-        readonly Dictionary<MethodDefinition, MethodDefinition> m_Copies = new();
-        readonly Dictionary<MethodDefinition, MethodDefinition> m_Constructions = new();
 
-        internal EngineMathCopies(Mono.Cecil.ModuleDefinition module) => m_Module = module;
-
-        EngineImporter Importer => m_Importer ??= new EngineImporter(m_Module, Engine().Source);
-
-        TypeReference Import(TypeReference type) => Importer.ImportReference(type, null);
+        internal EngineMathCalls(Mono.Cecil.ModuleDefinition module) => m_Module = module;
 
         /// <summary>Redirects the method's calls to converted engine math; false when it has none.</summary>
         internal bool Redirect(MethodDefinition method)
@@ -187,47 +192,83 @@ static partial class WideFloats
             {
                 var code = instruction.OpCode.Code;
                 if (code is not (Code.Call or Code.Newobj or Code.Ldftn) || instruction.Operand is not MethodReference callee) continue;
-                if (ScriptMathCallee(callee) is not { } engine) continue;
-                if (code == Code.Ldftn && engine.HasThis) continue; // a delegate needs the method itself
+                if (ScriptMathCallee(callee) is not { } math) continue;
+                if (code == Code.Ldftn && math.HasThis) continue; // a delegate needs the method itself
+                var copies = Engine().Copies;
                 if (code == Code.Newobj)
                 {
                     instruction.OpCode = OpCodes.Call;
-                    instruction.Operand = Construction(engine);
+                    instruction.Operand = m_Module.ImportReference(copies.Construction(math));
                 }
                 else
                 {
-                    instruction.Operand = Copy(engine);
+                    instruction.Operand = m_Module.ImportReference(copies.Copy(math));
                 }
                 changed = true;
             }
             return changed;
         }
+    }
 
-        TypeDefinition Type()
+    /// <summary>The generated assembly: a public static copy of every converted method, and for each
+    /// converted constructor a method returning the value it builds (for <c>newobj</c>).</summary>
+    sealed class EngineMathCopies
+    {
+        readonly Mono.Cecil.ModuleDefinition m_Module;
+        readonly EngineImporter m_Importer;
+        readonly TypeDefinition m_Type;
+        readonly HashSet<MethodDefinition> m_Converted;
+        readonly Dictionary<MethodDefinition, MethodDefinition> m_Copies = new();
+        readonly Dictionary<MethodDefinition, MethodDefinition> m_Constructions = new();
+
+        internal readonly byte[] Image;
+
+        internal EngineMathCopies(Mono.Cecil.ModuleDefinition source, HashSet<MethodDefinition> converted)
         {
-            if (m_Type != null) return m_Type;
-            m_Type = new TypeDefinition("", EngineMathType,
-                TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit,
+            m_Converted = converted;
+            var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(EngineMathAssembly, new Version(0, 0, 0, 0)),
+                EngineMathAssembly, ModuleKind.Dll);
+            m_Module = assembly.MainModule;
+            m_Importer = new EngineImporter(m_Module, source);
+            m_Type = new TypeDefinition(EngineMathNamespace, EngineMathType,
+                TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit,
                 m_Module.TypeSystem.Object);
             m_Module.Types.Add(m_Type);
             // The copies use the engine's internal members as the engine's own methods do.
             AccessChecks.IgnoreChecksTo(m_Module, typeof(UnityEngine.Object).Assembly.GetName().Name!);
-            return m_Type;
+            // In a fixed order: the image depends only on the sources.
+            foreach (var method in converted.OrderBy(m => m.FullName, StringComparer.Ordinal))
+            {
+                Copy(method);
+                if (method.IsConstructor) Construction(method);
+            }
+            using var output = new System.IO.MemoryStream();
+            assembly.Write(output);
+            Image = output.ToArray();
         }
+
+        TypeReference Import(TypeReference type) => m_Importer.ImportReference(type, null);
+
+        /// <summary>The copy of a converted method (made when the assembly is built).</summary>
+        internal MethodDefinition Copy(MethodDefinition engine) =>
+            m_Copies.TryGetValue(engine, out var copy) ? copy : MakeCopy(engine);
+
+        /// <summary>The construction of a converted constructor.</summary>
+        internal MethodDefinition Construction(MethodDefinition constructor) =>
+            m_Constructions.TryGetValue(constructor, out var construction) ? construction : MakeConstruction(constructor);
 
         /// <summary>A static method taking the instance (for instance methods and constructors) by
         /// reference first, then the method's parameters, with the method's body converted.</summary>
-        MethodDefinition Copy(MethodDefinition engine)
+        MethodDefinition MakeCopy(MethodDefinition engine)
         {
-            if (m_Copies.TryGetValue(engine, out var copy)) return copy;
             var returnType = engine.IsConstructor ? m_Module.TypeSystem.Void : Import(engine.ReturnType);
-            copy = new MethodDefinition(engine.DeclaringType.Name + "." + engine.Name,
-                MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig, returnType)
+            var copy = new MethodDefinition(engine.DeclaringType.Name + "." + engine.Name,
+                MethodAttributes.Public | MethodAttributes.Static | MethodAttributes.HideBySig, returnType)
             {
                 ImplAttributes = engine.ImplAttributes & ~Mono.Cecil.MethodImplAttributes.NoOptimization,
             };
             m_Copies[engine] = copy;
-            Type().Methods.Add(copy);
+            m_Type.Methods.Add(copy);
             if (engine.HasThis)
                 copy.Parameters.Add(new ParameterDefinition("this", ParameterAttributes.None,
                     new ByReferenceType(Import(engine.DeclaringType))));
@@ -239,12 +280,11 @@ static partial class WideFloats
         }
 
         /// <summary>For <c>newobj</c>: a static method returning the value its constructor's copy builds.</summary>
-        MethodDefinition Construction(MethodDefinition constructor)
+        MethodDefinition MakeConstruction(MethodDefinition constructor)
         {
-            if (m_Constructions.TryGetValue(constructor, out var construction)) return construction;
             var type = Import(constructor.DeclaringType);
-            construction = new MethodDefinition(constructor.DeclaringType.Name + ".new",
-                MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig, type);
+            var construction = new MethodDefinition(constructor.DeclaringType.Name + ".new",
+                MethodAttributes.Public | MethodAttributes.Static | MethodAttributes.HideBySig, type);
             foreach (var parameter in constructor.Parameters)
                 construction.Parameters.Add(new ParameterDefinition(parameter.Name, parameter.Attributes, Import(parameter.ParameterType)));
             var value = new VariableDefinition(type);
@@ -258,12 +298,12 @@ static partial class WideFloats
             il.Emit(OpCodes.Ret);
             construction.Body.OptimizeMacros();
             m_Constructions[constructor] = construction;
-            Type().Methods.Add(construction);
+            m_Type.Methods.Add(construction);
             return construction;
         }
 
-        /// <summary>The engine method's body in <paramref name="copy"/>, its members imported and its
-        /// calls to converted engine math going to their copies. The copy's parameters are the
+        /// <summary>The method's body in <paramref name="copy"/>, its members imported as the engine's
+        /// and its calls to converted math going to their copies. The copy's parameters are the
         /// engine method's in the same positions (the instance first), so argument numbers hold.</summary>
         void CopyBody(MethodDefinition engine, MethodDefinition copy)
         {
@@ -293,15 +333,15 @@ static partial class WideFloats
                     Instruction[] targets => targets.Select(t => instructions[t]).ToArray(),
                     ParameterDefinition parameter => Parameter(parameter),
                     VariableDefinition variable => body.Variables[variable.Index],
-                    MethodDefinition callee when Engine().Methods.ContainsKey(callee.FullName) && clone.OpCode.Code is Code.Call or Code.Newobj =>
+                    MethodDefinition callee when m_Converted.Contains(callee) && clone.OpCode.Code is Code.Call or Code.Newobj =>
                         clone.OpCode.Code == Code.Newobj ? Construction(callee) : Copy(callee),
-                    MethodReference callee => Importer.ImportReference(callee, copy),
-                    FieldReference field => Importer.ImportReference(field, copy),
+                    MethodReference callee => m_Importer.ImportReference(callee, copy),
+                    FieldReference field => m_Importer.ImportReference(field, copy),
                     TypeReference type => Import(type),
                     CallSite => throw new NotSupportedException($"{engine.FullName}: calli"),
                     var operand => operand,
                 };
-                if (clone.OpCode.Code == Code.Newobj && clone.Operand is MethodDefinition { DeclaringType.Name: EngineMathType })
+                if (clone.OpCode.Code == Code.Newobj && clone.Operand is MethodDefinition { DeclaringType: var declaring } && declaring == m_Type)
                     clone.OpCode = OpCodes.Call;
             }
             foreach (var handler in source.ExceptionHandlers)

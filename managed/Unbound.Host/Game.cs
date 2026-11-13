@@ -330,6 +330,9 @@ public static unsafe class Game
         GameDomain.ImageFilterVersion = typeof(Game).Assembly.ManifestModule.ModuleVersionId + "|"
             + typeof(UnityEngine.Object).Assembly.ManifestModule.ModuleVersionId
             + (Unbound.Runtime.Compat.ScriptFloatsWide ? "|wide-floats" : "");
+        // Converted game assemblies call the converted math in this generated assembly.
+        GameDomain.GeneratedAssemblies.Clear();
+        if (Unbound.Runtime.Compat.ScriptFloatsWide) GameDomain.GeneratedAssemblies[WideFloats.EngineMathAssembly] = WideFloats.EngineMathImage;
         System.IO.Directory.CreateDirectory(c.PersistentDataPath);
         ProjectInfo.BuildScenes.Clear();
         foreach (var s in c.BuildScenes) ProjectInfo.BuildScenes.Add((s.Path, s.Guid));

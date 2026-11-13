@@ -70,10 +70,10 @@ public static class Game
         public void NativeMethodsAndOperatorsStayTheEngines()
         {
             using var module = Mono.Cecil.ModuleDefinition.ReadModule(new MemoryStream(s_Game.Value.Image));
-            Assert.Contains("<Unbound>EngineMath::Vector3.Dot", Callees(GameMethod(module, "Dot")));
-            Assert.Contains("<Unbound>EngineMath::Vector3.get_sqrMagnitude", Callees(GameMethod(module, "Magnitude")));
+            Assert.Contains("EngineMath::Vector3.Dot", Callees(GameMethod(module, "Dot")));
+            Assert.Contains("EngineMath::Vector3.get_sqrMagnitude", Callees(GameMethod(module, "Magnitude")));
             // Instance methods take the value by reference, as the engine's call did.
-            Assert.Contains("<Unbound>EngineMath::Vector3.Normalize", Callees(GameMethod(module, "Normalized")));
+            Assert.Contains("EngineMath::Vector3.Normalize", Callees(GameMethod(module, "Normalized")));
             // Quaternion.Slerp runs in Unity's native code; constructors without arithmetic stay too.
             Assert.Equal(new[] { "Quaternion::Slerp" }, Callees(GameMethod(module, "Slerp")));
             Assert.Contains("Vector3::.ctor", Callees(GameMethod(module, "Dot")));
@@ -83,11 +83,28 @@ public static class Game
         }
 
         [Fact]
+        public void TheCopiesLiveInOneOptimizedAssembly()
+        {
+            // Debug-compiled game code disables the JIT's optimizations for its own module only: the
+            // copies are in the generated assembly, which carries no DebuggableAttribute.
+            var debug = WideFloats.Widen(WideFloatsTests.Emit(WideFloatsTests.Compilation(Source, OptimizationLevel.Debug, "ScriptMathDebug", engine: true)).Image);
+            using var module = Mono.Cecil.ModuleDefinition.ReadModule(new MemoryStream(debug));
+            Assert.DoesNotContain(module.Types, t => t.Name == "EngineMath");
+            var dot = GameMethod(module, "Dot").Body.Instructions.Select(i => i.Operand).OfType<Mono.Cecil.MethodReference>().Single(m => m.Name == "Vector3.Dot");
+            Assert.Equal(WideFloats.EngineMathAssembly, ((Mono.Cecil.AssemblyNameReference)dot.DeclaringType.Scope).Name);
+            using var generated = Mono.Cecil.AssemblyDefinition.ReadAssembly(new MemoryStream(WideFloats.EngineMathImage()));
+            Assert.DoesNotContain(generated.CustomAttributes, a => a.AttributeType.Name == nameof(System.Diagnostics.DebuggableAttribute));
+            Assert.Equal(1f, WideFloatsTests.Load(debug).GetType("Game")!.GetMethod("Dot")!.Invoke(null, new object[] { 4097f, 1f, -16785408f }));
+            // Built once: the same image every time.
+            Assert.Same(WideFloats.EngineMathImage(), WideFloats.EngineMathImage());
+        }
+
+        [Fact]
         public void ConstructorsAndDelegatesUseTheCopies()
         {
             using var module = Mono.Cecil.ModuleDefinition.ReadModule(new MemoryStream(s_Game.Value.Image));
-            Assert.Contains("<Unbound>EngineMath::Plane.new", Callees(GameMethod(module, "PlaneDistance")));
-            Assert.Contains("<Unbound>EngineMath::Vector3.Cross", Callees(GameMethod(module, "Cross")));
+            Assert.Contains("EngineMath::Plane.new", Callees(GameMethod(module, "PlaneDistance")));
+            Assert.Contains("EngineMath::Vector3.Cross", Callees(GameMethod(module, "Cross")));
             Assert.Equal(-2f, Call("PlaneDistance", new Vector3(0f, 2f, 0f), new Vector3(5f, 2f, 7f)));
             var cross = (Func<Vector3, Vector3, Vector3>)Call("Cross");
             Assert.Equal(new Vector3(0f, 0f, 1f), cross(Vector3.right, Vector3.up));

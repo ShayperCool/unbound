@@ -65,8 +65,8 @@ static partial class WideFloats
         using var input = new MemoryStream(image);
         using var assembly = AccessChecks.Read(input);
         bool changed = false;
-        var math = new EngineMathCopies(assembly.MainModule);
-        foreach (var type in assembly.MainModule.GetTypes().ToList())
+        var math = new EngineMathCalls(assembly.MainModule);
+        foreach (var type in assembly.MainModule.GetTypes())
             foreach (var method in type.Methods)
                 if (method.HasBody && !CompiledByBurst(method))
                 {
