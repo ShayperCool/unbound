@@ -982,7 +982,8 @@ namespace Unbound.Runtime
         /// 10-10-10-2 and signed normalized 8-bit R, RG and RGBA. Their upload data is four floats
         /// per texel.</summary>
         internal const int GpuRG16UNorm = 13, GpuRGBA16UNorm = 14, GpuRGB10A2UNorm = 15, GpuR16UNorm = 16,
-            GpuR8SNorm = 35, GpuRG8SNorm = 36, GpuRGBA8SNorm = 37;
+            GpuR8SNorm = 35, GpuRG8SNorm = 36, GpuRGBA8SNorm = 37,
+            GpuRGB10A2UInt = 73, GpuR16SNorm = 74, GpuRG16SNorm = 75, GpuRGBA16SNorm = 76, GpuRGB16SNorm = 77;
 
         /// <summary>Packet formats of 8-bit texels with fewer than four channels: Alpha8 (one
         /// byte, sampled (0, 0, 0, a); the renderer keeps it as RGBA8), R8_UNorm and R8G8_UNorm
@@ -1050,10 +1051,10 @@ namespace Unbound.Runtime
         /// between them need it).</summary>
         internal static int GpuNormFormat(UnityEngine.Experimental.Rendering.GraphicsFormat format) => format switch
         {
-            UnityEngine.Experimental.Rendering.GraphicsFormat.R16_SNorm => 74,
-            UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_SNorm => 75,
-            UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_SNorm => 76,
-            UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16_SNorm => 77,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R16_SNorm => GpuR16SNorm,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_SNorm => GpuRG16SNorm,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_SNorm => GpuRGBA16SNorm,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16_SNorm => GpuRGB16SNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm => GpuR16UNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_UNorm => GpuRG16UNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_UNorm => GpuRGBA16UNorm,
