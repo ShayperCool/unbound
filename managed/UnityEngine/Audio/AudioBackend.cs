@@ -30,6 +30,13 @@ namespace Unbound.Runtime
     /// </summary>
     internal abstract class AudioBackend
     {
+        internal const string SixInputUnsupportedMessage = "Unbound: six-channel playback requires a non-streamed 2D voice with Stereo or Prologic output in the measured audio profile.";
+
+        internal static void ValidateSixInputClip(AudioClip clip)
+        {
+            if (clip != null && clip.m_Channels == 6 && clip.UsesStreamingInput && Compat.AudioSixChannelStereoVoicesMeasured)
+                throw new NotSupportedException(SixInputUnsupportedMessage);
+        }
         static AudioBackend s_Current;
         static long s_NextHandle;
 
@@ -133,13 +140,17 @@ namespace Unbound.Runtime
 
         internal override void UpdateSource(ulong handle, ref AudioSourcePacket packet)
         {
-            fixed (AudioSourcePacket* p = &packet) Native.Api.AudioUpdateSource(handle, p);
+            int result;
+            fixed (AudioSourcePacket* p = &packet) result = Native.Api.AudioUpdateSource(handle, p);
+            if (result < 0) Debug.LogError(SixInputUnsupportedMessage);
         }
 
         internal override bool Command(ulong handle, in AudioSourceCommand command)
         {
             var c = command;
-            return Native.Api.AudioSourceCommand(handle, &c) != 0;
+            int result = Native.Api.AudioSourceCommand(handle, &c);
+            if (result < 0) throw new NotSupportedException(SixInputUnsupportedMessage);
+            return result > 0;
         }
 
         internal override AudioSourceState State(ulong handle)
@@ -233,6 +244,7 @@ namespace Unbound.Runtime
             internal int Channels, Frequency, Frames;
             internal float[] Samples;
             internal bool Stream;
+            internal bool StreamingInput;
         }
 
         sealed class Voice
@@ -252,6 +264,7 @@ namespace Unbound.Runtime
             internal Voice Main;
             internal readonly List<Voice> OneShots = new List<Voice>();
             internal double Pending;
+            internal bool TwoDInput = true;
         }
 
         readonly Dictionary<ulong, Clip> m_Clips = new Dictionary<ulong, Clip>();
@@ -285,7 +298,7 @@ namespace Unbound.Runtime
                 return false;
             }
             info = asset.Info;
-            m_Clips[handle] = new Clip { Channels = info.Channels, Frequency = info.Frequency, Frames = info.Frames, Samples = (float[])asset.Samples.Clone() };
+            m_Clips[handle] = new Clip { Channels = info.Channels, Frequency = info.Frequency, Frames = info.Frames, Samples = (float[])asset.Samples.Clone(), StreamingInput = info.LoadType == 2 };
             return true;
         }
 
@@ -328,6 +341,23 @@ namespace Unbound.Runtime
             return source;
         }
 
+        unsafe static bool TwoDInput(in AudioSourcePacket packet)
+        {
+            if (!(packet.SpatialBlend <= 0f)) return false;
+            if (packet.SpatialBlendCurve != null)
+                for (int i = 0; i < packet.CurveLength; i++)
+                    if (!(packet.SpatialBlendCurve[i] <= 0f)) return false;
+            return true;
+        }
+
+        bool RejectsSixInput(Source source, ulong handle)
+        {
+            return Compat.AudioSixChannelStereoVoicesMeasured
+                && m_Clips.TryGetValue(handle, out var clip) && clip.Channels == 6
+                && (clip.Stream || clip.StreamingInput || !source.TwoDInput
+                    || (ActiveSpeakerMode != AudioSpeakerMode.Stereo && ActiveSpeakerMode != AudioSpeakerMode.Prologic));
+        }
+
         internal override void UpdateSource(ulong handle, ref AudioSourcePacket packet)
         {
             var copy = packet;
@@ -346,6 +376,23 @@ namespace Unbound.Runtime
                 copy.Filters = null;
             }
             source.Params = copy;
+            source.TwoDInput = TwoDInput(packet);
+            bool rejected = false;
+            if (source.Main != null && RejectsSixInput(source, source.Main.Clip))
+            {
+                source.Main = null;
+                source.Pending = 0;
+                rejected = true;
+            }
+            int retained = 0;
+            for (int i = 0; i < source.OneShots.Count; i++)
+            {
+                var voice = source.OneShots[i];
+                if (RejectsSixInput(source, voice.Clip)) rejected = true;
+                else source.OneShots[retained++] = voice;
+            }
+            source.OneShots.RemoveRange(retained, source.OneShots.Count - retained);
+            if (rejected) Debug.LogError(SixInputUnsupportedMessage);
         }
 
         /// <summary>Why packets' filter descriptors were refused (tests).</summary>
@@ -393,6 +440,14 @@ namespace Unbound.Runtime
         internal override bool Command(ulong handle, in AudioSourceCommand command)
         {
             var source = SourceOf(handle);
+            bool rejected = command.Kind == AudioCommandKind.Play ? RejectsSixInput(source, source.Params.Clip)
+                : command.Kind == AudioCommandKind.PlayOneShot && RejectsSixInput(source, command.Clip);
+            if (command.Kind == AudioCommandKind.UnPause)
+            {
+                rejected |= source.Main != null && RejectsSixInput(source, source.Main.Clip);
+                for (int i = 0; i < source.OneShots.Count; i++) rejected |= RejectsSixInput(source, source.OneShots[i].Clip);
+            }
+            if (rejected) throw new NotSupportedException(SixInputUnsupportedMessage);
             long now = m_Frames;
             long Start(double time) => time < 0 ? now + FrameOf(-time) : Math.Max(now, FrameOf(time));
             switch (command.Kind)

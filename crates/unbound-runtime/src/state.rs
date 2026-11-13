@@ -1457,10 +1457,9 @@ pub fn import_audio(handle: u64, guid: &str) -> Result<crate::audio::protocol::A
         Ok(owned) => owned.samples,
         Err(shared) => shared.samples.clone(),
     };
-    s.audio.mixer().add_clip(
-        handle,
-        crate::audio::Clip::new(info.channels as usize, info.frequency as u32, samples),
-    );
+    let mut clip = crate::audio::Clip::new(info.channels as usize, info.frequency as u32, samples);
+    clip.streamed_asset = info.load_type == 2;
+    s.audio.mixer().add_clip(handle, clip);
     Ok(info)
 }
 

@@ -42,9 +42,11 @@ Stereo/Prologic scope. All 1,310,770 encoding values per rate and device pass
 strictly; the source-processing profile passes all 11,665,952 values per rate.
 `Compat` selects this mechanism. The earlier engine diagnostic's 262052 strict
 and 262014 gate discrepancies per rate are retained as before results, with full
-sample ranges and unchanged bounds. Six-input spatial sources, other output
-layouts, streamed clips and other releases retain their previous unqualified
-first-two-input path and remain Q416-R5a. Physical drivers and encoded output
+sample ranges and unchanged bounds. Six-input spatial sources, other active output
+layouts and streamed clips remain Q416-R5a. Starting those voices on the measured
+release fails clearly; live context changes stop only unsupported six-input voices
+and report an error on the control thread. Other releases retain their previous
+unqualified first-two-input path. Physical drivers and encoded output
 outside the measured PulseAudio contexts remain unmeasured.
 
 Record two fresh projects with `native.py --release 6000.0.71f1 --rate RATE

@@ -23,7 +23,8 @@ const RENDERING_LIMITATIONS: &[&str] = &[
 
 const AUDIO_LIMITATIONS: &[&str] = &[
     "3D AudioDistortionFilter and AudioChorusFilter are measured only on Unity 6000.0.71f1; other releases reject these placements.",
-    "AudioListener filter components interleaved with OnAudioFilterRead scripts, or sharing their GameObject with an AudioSource, are not supported.",
+    "AudioListener script/component interleaving is measured only on Unity 6000.0.71f1; sharing the listener GameObject with an AudioSource is unsupported.",
+    "Six-channel voice playback on the measured audio profile requires non-streamed 2D Stereo/Prologic output; other six-input contexts are unsupported.",
 ];
 
 /// The keys whose referenced object turns an ignored scene settings class into an unread one

@@ -104,6 +104,8 @@ namespace UnityEngine
 
         public AudioClipLoadType loadType => m_LoadType;
 
+        internal bool UsesStreamingInput => m_Stream || m_LoadType == AudioClipLoadType.Streaming || m_Download == DownloadedForm.Streamed;
+
         public bool preloadAudioData => m_PreloadAudioData;
 
         public bool ambisonic => m_Ambisonic;
@@ -206,7 +208,7 @@ namespace UnityEngine
             ThrowIfDestroyed();
             if (m_Handle == 0) return false;
             if (Compat.AssetCloneResourcesMeasured) EnsureLoaded();
-            if (m_Stream || m_LoadType == AudioClipLoadType.Streaming || m_Download == DownloadedForm.Streamed)
+            if (UsesStreamingInput)
             {
                 Debug.LogError($"Can't get data from streamed samples for audio clip \"{m_Name}\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'.", this);
                 return false;
@@ -226,7 +228,7 @@ namespace UnityEngine
             ThrowIfDestroyed();
             if (m_Handle == 0) return false;
             if (Compat.AssetCloneResourcesMeasured) EnsureLoaded();
-            if (m_Stream || m_LoadType == AudioClipLoadType.Streaming || m_Download == DownloadedForm.Streamed)
+            if (UsesStreamingInput)
             {
                 Debug.LogError($"Cannot set data on streamed samples for audio clip \"{m_Name}\". If the AudioClip was created via AudioClip.Create and no PCM read callback was provided, the 'stream' argument must be false. For a disk-based AudioClip changing the load type to DecompressOnLoad on the AudioClip will allow modification of the data.", this);
                 return false;

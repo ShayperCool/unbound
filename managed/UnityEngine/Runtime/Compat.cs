@@ -329,6 +329,9 @@ namespace Unbound.Runtime
 
         /// <summary>Speaker-wide effects, measured by tests/projects/audiopitch's surround profile.</summary>
         internal static bool AudioSurroundEffectsMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// <summary>Six decoded inputs to Stereo, measured by audiopitch/VOICE_INPUT.md.
+        /// Other six-input contexts are rejected on this release.</summary>
+        internal static bool AudioSixChannelStereoVoicesMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Block-constant effect parameters applying the measured history rules,
         /// measured on 6000.0.71f1 by tests/projects/audiodistortion's live profile.</summary>

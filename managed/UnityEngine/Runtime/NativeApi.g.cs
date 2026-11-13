@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 71;
+        internal const uint CurrentVersion = 72;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -45,7 +45,9 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<ulong, int, int, int, int, void> AudioCreateClip;
         internal delegate* unmanaged<ulong, int, float*, int, int, int> AudioClipData;
         internal delegate* unmanaged<ulong, void> AudioReleaseClip;
-        internal delegate* unmanaged<ulong, AudioSourcePacket*, void> AudioUpdateSource;
+        /// <summary>0: applied; negative: an unsupported voice was stopped.</summary>
+        internal delegate* unmanaged<ulong, AudioSourcePacket*, int> AudioUpdateSource;
+        /// <summary>Positive: admitted; 0: no voice; negative: unsupported input context.</summary>
         internal delegate* unmanaged<ulong, AudioSourceCommand*, int> AudioSourceCommand;
         internal delegate* unmanaged<ulong, AudioSourceState*, void> AudioSourceState;
         internal delegate* unmanaged<ulong, void> AudioReleaseSource;

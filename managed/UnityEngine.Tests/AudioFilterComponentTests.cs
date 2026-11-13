@@ -32,6 +32,131 @@ namespace UnityEngine.Tests
         // Chorus and Distortion are measured on this release (Compat).
         readonly string m_Release = ProjectInfo.UnityVersion;
 
+        [Theory]
+        [InlineData(AudioSpeakerMode.Mono, 0f, false)]
+        [InlineData(AudioSpeakerMode.Stereo, 1f, false)]
+        [InlineData(AudioSpeakerMode.Stereo, 0f, true)]
+        public void SixInputPlaybackRefusesUnmeasuredContexts(AudioSpeakerMode mode, float blend, bool stream)
+        {
+            var config = AudioSettings.GetConfiguration();
+            config.speakerMode = mode;
+            Assert.True(AudioSettings.Reset(config));
+            var source = Source("Six input admission");
+            source.playOnAwake = false;
+            source.spatialBlend = blend;
+            var clip = stream ? AudioClip.Create("Six input stream", 1024, 6, 48000, true, data => Array.Clear(data))
+                : AudioClip.Create("Six input", 1024, 6, 48000, false);
+            try
+            {
+                source.clip = clip;
+                Assert.Equal(AudioBackend.SixInputUnsupportedMessage, Assert.Throws<NotSupportedException>(() => source.Play()).Message);
+                Assert.Throws<NotSupportedException>(() => source.PlayScheduled(1));
+                Assert.Throws<NotSupportedException>(() => source.PlayOneShot(clip));
+                Assert.Equal(AudioVoiceState.None, m_Backend.State(source.Handle).Main);
+                Assert.Equal(0, m_Backend.State(source.Handle).OneShots);
+            }
+            finally { Object.DestroyImmediate(clip); }
+        }
+
+        [Fact]
+        public void SixInputAdmissionUsesTheActiveDriverLayout()
+        {
+            var config = AudioSettings.GetConfiguration();
+            config.speakerMode = AudioSpeakerMode.Quad;
+            Assert.True(AudioSettings.Reset(config));
+            Assert.Equal(AudioSpeakerMode.Stereo, m_Backend.ActiveSpeakerMode);
+            var source = Source("Clamped six input layout");
+            source.playOnAwake = false;
+            var clip = AudioClip.Create("Six input", 1024, 6, 48000, false);
+            try
+            {
+                source.clip = clip;
+                source.Play();
+                Assert.Equal(AudioVoiceState.Playing, m_Backend.State(source.Handle).Main);
+            }
+            finally { Object.DestroyImmediate(clip); }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void LeavingSixInputScopeStopsOnlyThoseVoicesAndReportsOnce(bool curve)
+        {
+            var source = Source("Live six input admission");
+            source.playOnAwake = false;
+            var six = AudioClip.Create("Six input", 1024, 6, 48000, false);
+            var stereo = AudioClip.Create("Stereo control", 1024, 2, 48000, false);
+            try
+            {
+                source.clip = six;
+                source.Play();
+                source.PlayOneShot(six);
+                source.PlayOneShot(stereo);
+                if (curve) source.SetCustomCurve(AudioSourceCurveType.SpatialBlend, new AnimationCurve(new Keyframe(0, 1), new Keyframe(1, 1)));
+                else source.spatialBlend = 1;
+                source.Flush(always: true);
+                Assert.Equal(AudioVoiceState.None, m_Backend.State(source.Handle).Main);
+                Assert.Equal(1, m_Backend.State(source.Handle).OneShots);
+                Assert.Single(Errors("six-channel playback"));
+                source.Flush(always: true);
+                Assert.Single(Errors("six-channel playback"));
+                source.PlayOneShot(stereo);
+                Assert.Equal(2, m_Backend.State(source.Handle).OneShots);
+            }
+            finally { Object.DestroyImmediate(six); Object.DestroyImmediate(stereo); }
+        }
+
+        [Fact]
+        public void SixInputStreamingLoadMetadataIsRejectedBeforePlayback()
+        {
+            var source = Source("Streamed six input metadata");
+            source.playOnAwake = false;
+            var clip = AudioClip.Create("Six input metadata", 1024, 6, 48000, false);
+            try
+            {
+                clip.m_LoadType = AudioClipLoadType.Streaming;
+                source.clip = clip;
+                Assert.Throws<NotSupportedException>(() => source.Play());
+                Assert.Throws<NotSupportedException>(() => source.PlayOneShot(clip));
+            }
+            finally { Object.DestroyImmediate(clip); }
+        }
+
+        static int s_CommandStatus, s_UpdateStatus;
+        [System.Runtime.InteropServices.UnmanagedCallersOnly]
+        static int CommandStatus(ulong handle, AudioSourceCommand* command) => s_CommandStatus;
+        [System.Runtime.InteropServices.UnmanagedCallersOnly]
+        static int UpdateStatus(ulong handle, AudioSourcePacket* packet) => s_UpdateStatus;
+
+        [Fact]
+        public void NativePlaybackStatusBecomesAnExceptionOrLiveDiagnostic()
+        {
+            var apiField = typeof(Native).GetField("s_Api", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            var readyField = typeof(Native).GetField("s_Ready", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            var previousApi = (NativeApi)apiField.GetValue(null);
+            bool previousReady = (bool)readyField.GetValue(null);
+            try
+            {
+                var api = new NativeApi { Version = NativeApi.CurrentVersion, AudioSourceCommand = &CommandStatus, AudioUpdateSource = &UpdateStatus };
+                Native.Initialize(&api);
+                var backend = new NativeAudioBackend();
+                s_CommandStatus = -1;
+                Assert.Throws<NotSupportedException>(() => backend.Command(1, new AudioSourceCommand()));
+                s_CommandStatus = 0;
+                Assert.False(backend.Command(1, new AudioSourceCommand()));
+                s_CommandStatus = 1;
+                Assert.True(backend.Command(1, new AudioSourceCommand()));
+                var packet = new AudioSourcePacket();
+                s_UpdateStatus = -1;
+                backend.UpdateSource(1, ref packet);
+                Assert.Single(Errors("six-channel playback"));
+                s_UpdateStatus = 0;
+                backend.UpdateSource(1, ref packet);
+                Assert.Single(Errors("six-channel playback"));
+            }
+            finally { apiField.SetValue(null, previousApi); readyField.SetValue(null, previousReady); }
+        }
+
         public AudioFilterComponentTests()
         {
             ProjectInfo.UnityVersion = "6000.0.71f1";
@@ -119,7 +244,7 @@ namespace UnityEngine.Tests
             // 23 adds Distortion, 24 adds Chorus, 25-27 mixer effects, 28 render protocol 12, 29
             // frame input versions, 30 the decoded-resampling flag and 31 the imported texture
             // format, 32 mesh colors, 33 component tail timing, 34 the instance multiplier, 35 deferred render-target mips, 36 source-loop listener poses 37 the downloaded audio decoder 38 prepared callback buffers and 39 retained MSAA resolves and 40 parameterised mixer Pitch Shifter FFT size, 41 native rendering plugins, 42 legacy glyph bearings, 43 the zone startup frame flag, 44 Pitch Shifter Max channels, 45 realtime GI, 46 driver capabilities, 47 component activation flags, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment and 52 directional realtime lightmaps; 60 BatchRendererGroup draws; 61 scripts' profiler markers for native plugins; 63 TextCore glyph loads; 65 mesh instances' call counts.
-            Assert.Equal(71u, NativeApi.CurrentVersion);
+            Assert.Equal(72u, NativeApi.CurrentVersion);
             var frame = default(AudioFramePacket);
             byte* f = (byte*)&frame;
             Assert.Equal(68, (int)((byte*)&frame.ListenerPlan - f));

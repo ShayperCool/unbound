@@ -36,6 +36,40 @@ const SIX_INPUT_CHANNELS: usize = 6;
 const SIX_INPUT_MATRIX_ENTRIES: usize = SIX_INPUT_CHANNELS * 2;
 /// Six-input Stereo basis controls, tests/projects/audiopitch `encoding`.
 const SURROUND_STEREO_FOLD_GAIN: f32 = 0.5;
+/// Playback was refused because six-input rendering is outside its measured context.
+pub const SIX_INPUT_UNSUPPORTED: i32 = -1;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SixInputMode {
+    Legacy,
+    Stereo,
+    Unsupported,
+}
+
+impl SixInputMode {
+    fn of(params: &SourceParams, config: &MixerConfig, measured: bool) -> Self {
+        if !measured {
+            Self::Legacy
+        } else if matches!(
+            config.speaker_mode,
+            speaker_mode::STEREO | speaker_mode::PROLOGIC
+        ) && params.spatial_blend <= 0.0
+            && params.spatial_blend_curve.iter().all(|value| *value <= 0.0)
+        {
+            Self::Stereo
+        } else {
+            Self::Unsupported
+        }
+    }
+
+    fn rejects(self, clip: Option<&Clip>) -> bool {
+        clip.is_some_and(|clip| {
+            clip.channels == SIX_INPUT_CHANNELS
+                && self != Self::Legacy
+                && (self != Self::Stereo || clip.stream || clip.streamed_asset)
+        })
+    }
+}
 
 /// Decoded (or user-made) audio data.
 #[derive(Debug, Clone, Default)]
@@ -46,6 +80,8 @@ pub struct Clip {
     /// Interleaved; empty for a streamed clip, whose data comes from its PCM reader.
     pub samples: Vec<f32>,
     pub stream: bool,
+    /// The authored load type, even when its samples are available in the decoded cache.
+    pub streamed_asset: bool,
 }
 
 impl Clip {
@@ -57,6 +93,7 @@ impl Clip {
             rate,
             samples,
             stream: false,
+            streamed_asset: false,
         }
     }
 
@@ -742,6 +779,8 @@ pub struct Source {
     component_playback: bool,
     completed_shots: Vec<u64>,
     completed_main: Option<u64>,
+    /// A render-side admission failure awaiting a control-thread diagnostic.
+    input_rejected: bool,
     completion_frontier: u64,
     /// Its filter components (`params.filters`), with this source's own state.
     chain: FilterChain,
@@ -1489,7 +1528,7 @@ impl Mixer {
         self.voice_priority.reserve(additional);
     }
 
-    pub fn update_source(&mut self, handle: u64, mut params: SourceParams) {
+    pub fn update_source(&mut self, handle: u64, mut params: SourceParams) -> i32 {
         self.prepare_source(handle);
         let rate = self.config.sample_rate;
         let source = self.sources.entry(handle).or_default();
@@ -1554,6 +1593,28 @@ impl Mixer {
             params.has(source_flags::SURROUND_EFFECTS),
         );
         source.params = params;
+        let mode = SixInputMode::of(
+            &source.params,
+            &self.config,
+            self.output_rules.six_channel_stereo_voices,
+        );
+        let mut rejected = std::mem::take(&mut source.input_rejected);
+        if source
+            .main
+            .as_ref()
+            .is_some_and(|voice| mode.rejects(self.clips.get(&voice.clip)))
+        {
+            source.main = None;
+            source.pending_position = 0.0;
+            source.completed_main = None;
+            rejected = true;
+        }
+        source.one_shots.retain(|voice| {
+            let keep = !mode.rejects(self.clips.get(&voice.clip));
+            rejected |= !keep;
+            keep
+        });
+        if rejected { SIX_INPUT_UNSUPPORTED } else { 0 }
     }
 
     /// The listener's components from the frame packet: an unchanged list keeps the chain and
@@ -1899,8 +1960,37 @@ impl Mixer {
         }
     }
 
+    /// Numeric admission failure for the managed control path; no audio-thread diagnostics.
+    pub fn command_error(&self, handle: u64, command: &AudioSourceCommand) -> i32 {
+        let source = self.sources.get(&handle);
+        let default = SourceParams::default();
+        let params = source.map_or(&default, |source| &source.params);
+        let mode = SixInputMode::of(
+            params,
+            &self.config,
+            self.output_rules.six_channel_stereo_voices,
+        );
+        let rejects = |handle| mode.rejects(self.clips.get(&handle));
+        let rejected = match command.kind {
+            command::PLAY => rejects(params.clip),
+            command::PLAY_ONE_SHOT => rejects(command.clip),
+            command::UNPAUSE => source.is_some_and(|source| {
+                source
+                    .main
+                    .iter()
+                    .chain(&source.one_shots)
+                    .any(|voice| rejects(voice.clip))
+            }),
+            _ => false,
+        };
+        if rejected { SIX_INPUT_UNSUPPORTED } else { 0 }
+    }
+
     /// Reports admission before a later render can change the source's voice counts.
     pub fn command(&mut self, handle: u64, cmd: &AudioSourceCommand) -> bool {
+        if self.command_error(handle, cmd) != 0 {
+            return false;
+        }
         self.prepare_source(handle);
         let now = self.frames;
         let rate = self.config.sample_rate;
@@ -2698,11 +2788,7 @@ impl Mixer {
             self.zone_input[..n * 2].fill(0.0);
             self.zone_extra.fill(0.0);
         }
-        let six_channel_stereo_voices = self.output_rules.six_channel_stereo_voices
-            && matches!(
-                config.speaker_mode,
-                speaker_mode::STEREO | speaker_mode::PROLOGIC
-            );
+        let six_channel_stereo_voices = self.output_rules.six_channel_stereo_voices;
         let Self {
             sources,
             clips,
@@ -2798,7 +2884,8 @@ impl Mixer {
                     .then_some(source.params.pan_stereo),
                 )
             };
-            gains.six_input_stereo = six_channel_stereo_voices && gains.mono_pan.is_some();
+            gains.six_input_mode =
+                SixInputMode::of(&source.params, &config, six_channel_stereo_voices);
             let dsp_frames = config.buffer_size.max(1) as u64;
             source.completion_frontier = (t0 + n as u64).div_ceil(dsp_frames) * dsp_frames;
             let generator = filter_only;
@@ -3573,24 +3660,38 @@ fn render_source_voices(
 ) -> Option<u64> {
     let mut finished_at: Option<u64> = None;
     let target_for = |clip: Option<&Clip>| {
-        if gains.six_input_stereo
+        if gains.six_input_mode.rejects(clip) {
+            // Admission and live parameter updates report this on the control thread.
+            // Never render an unsupported six-input voice through the two-input path.
+            None
+        } else if gains.six_input_mode == SixInputMode::Stereo
             && clip.is_some_and(|clip| clip.channels == SIX_INPUT_CHANNELS && !clip.stream)
         {
-            (gains.six_input_matrix(), SIX_INPUT_MATRIX_ENTRIES, true)
+            Some((gains.six_input_matrix(), SIX_INPUT_MATRIX_ENTRIES, true))
         } else {
-            (
+            Some((
                 gains.matrix(clip.map_or(2, |c| c.channels)),
                 gains.entries,
                 false,
-            )
+            ))
         }
     };
     let measured_resampling = source.params.has(source_flags::DECODED_RESAMPLING);
     let measured_matrix = source.params.has(source_flags::SPATIAL_STEREO);
+    let main_target = source
+        .main
+        .as_ref()
+        .and_then(|voice| target_for(clips.get(&voice.clip)));
+    if source.main.is_some() && main_target.is_none() {
+        source.main = None;
+        source.pending_position = 0.0;
+        source.completed_main = None;
+        source.input_rejected = true;
+    }
     if let Some(main) = &mut source.main
         && main.clip != 0
+        && let Some((target, entries, six_input)) = main_target
     {
-        let (target, entries, six_input) = target_for(clips.get(&main.clip));
         if let Some(end) = render_voice(
             main,
             clips.get(&main.clip),
@@ -3622,7 +3723,10 @@ fn render_source_voices(
         }
     }
     source.one_shots.retain_mut(|voice| {
-        let (target, entries, six_input) = target_for(clips.get(&voice.clip));
+        let Some((target, entries, six_input)) = target_for(clips.get(&voice.clip)) else {
+            source.input_rejected = true;
+            return false;
+        };
         let finished = render_voice(
             voice,
             clips.get(&voice.clip),
@@ -3864,7 +3968,7 @@ struct VoiceGains {
     /// The matrix entries in use: the front pair's four, then two per extra output channel.
     entries: usize,
     /// Measured 2D Stereo output can retain all six decoded inputs through its gain matrix.
-    six_input_stereo: bool,
+    six_input_mode: SixInputMode,
 }
 
 impl VoiceGains {
@@ -3875,7 +3979,7 @@ impl VoiceGains {
             mono_target: mono_target.map(front_matrix),
             mono_pan,
             entries: 4,
-            six_input_stereo: false,
+            six_input_mode: SixInputMode::Legacy,
         }
     }
     /// Every output channel of a surround layout of `channels` channels.
@@ -3885,7 +3989,7 @@ impl VoiceGains {
             mono_target: Some(gains.mono.map(|g| g * volume)),
             mono_pan: None,
             entries: channels * 2,
-            six_input_stereo: false,
+            six_input_mode: SixInputMode::Legacy,
         }
     }
     /// A mono output: every voice enters the graph already mono, on both lanes, so
@@ -4200,6 +4304,138 @@ fn render_voice(
 mod tests {
     use super::*;
     use crate::audio::protocol::AudioSourceCommand;
+
+    #[test]
+    fn unmeasured_six_input_voices_are_refused_with_a_diagnostic_code() {
+        for (mode, blend, stream, streamed_asset) in [
+            (speaker_mode::STEREO, 0.5, false, false),
+            (speaker_mode::QUAD, 0.0, false, false),
+            (speaker_mode::MONO, 0.0, false, false),
+            (speaker_mode::STEREO, 0.0, true, false),
+            (speaker_mode::STEREO, 0.0, false, true),
+        ] {
+            for kind in [command::PLAY, command::PLAY_ONE_SHOT] {
+                let mut mixer = Mixer::new(MixerConfig {
+                    speaker_mode: mode,
+                    ..Default::default()
+                });
+                mixer.output_rules.six_channel_stereo_voices = true;
+                let mut clip = Clip::new(6, 48000, [0.0, 0.0, 0.25, 0.0, 0.0, 0.0].repeat(1024));
+                clip.stream = stream;
+                clip.streamed_asset = streamed_asset;
+                mixer.add_clip(1, clip);
+                source_with(&mut mixer, 7, 1, |params| params.spatial_blend = blend);
+                let command = AudioSourceCommand {
+                    kind,
+                    clip: 1,
+                    volume_scale: 1.0,
+                    ..Default::default()
+                };
+                assert_eq!(mixer.command_error(7, &command), SIX_INPUT_UNSUPPORTED);
+                assert!(!mixer.command(7, &command));
+                assert_eq!(mixer.source_state(7).main, voice_state::NONE);
+                assert_eq!(mixer.source_state(7).one_shots, 0);
+                // Ordinary inputs remain usable in these layouts and source contexts.
+                mixer.add_clip(2, Clip::new(2, 48000, [0.125, 0.25].repeat(1024)));
+                source_with(&mut mixer, 7, 2, |params| params.spatial_blend = blend);
+                let ordinary = AudioSourceCommand {
+                    kind,
+                    clip: 2,
+                    volume_scale: 1.0,
+                    ..Default::default()
+                };
+                assert_eq!(mixer.command_error(7, &ordinary), 0);
+                assert!(mixer.command(7, &ordinary));
+                let channels = mixer.config.output_channels();
+                let mut output = vec![0.0; 97 * channels];
+                mixer.render(&mut output, channels);
+                assert!(output.iter().any(|value| *value != 0.0));
+            }
+        }
+    }
+
+    #[test]
+    fn an_unmeasured_live_context_stops_only_the_six_input_voices() {
+        let mut mixer = Mixer::new(MixerConfig::default());
+        mixer.output_rules.six_channel_stereo_voices = true;
+        mixer.add_clip(
+            1,
+            Clip::new(6, 48000, [0.0, 0.0, 0.25, 0.0, 0.0, 0.0].repeat(1024)),
+        );
+        mixer.add_clip(2, Clip::new(2, 48000, [0.125, 0.25].repeat(1024)));
+        source_with(&mut mixer, 7, 1, |_| {});
+        play(&mut mixer, 7, command::PLAY, 0.0);
+        assert!(mixer.command(
+            7,
+            &AudioSourceCommand {
+                kind: command::PLAY_ONE_SHOT,
+                clip: 2,
+                volume_scale: 1.0,
+                ..Default::default()
+            }
+        ));
+        assert!(mixer.command(
+            7,
+            &AudioSourceCommand {
+                kind: command::PLAY_ONE_SHOT,
+                clip: 1,
+                volume_scale: 1.0,
+                ..Default::default()
+            }
+        ));
+        let params = SourceParams {
+            clip: 1,
+            spatial_blend: 1.0,
+            ..Default::default()
+        };
+        assert_eq!(
+            mixer.update_source(7, params.clone()),
+            SIX_INPUT_UNSUPPORTED
+        );
+        assert_eq!(mixer.source_state(7).main, voice_state::NONE);
+        assert_eq!(mixer.source_state(7).one_shots, 1);
+        assert_eq!(mixer.update_source(7, params), 0);
+        let mut output = [0.0; 97 * 2];
+        mixer.render(&mut output, 2);
+        assert!(output.iter().any(|value| *value != 0.0));
+    }
+
+    #[test]
+    fn render_side_six_input_rejection_is_reported_on_the_next_control_update() {
+        let mut mixer = Mixer::new(MixerConfig::default());
+        mixer.output_rules.six_channel_stereo_voices = true;
+        mixer.add_clip(
+            1,
+            Clip::new(6, 48000, [0.0, 0.0, 0.25, 0.0, 0.0, 0.0].repeat(1024)),
+        );
+        mixer.add_clip(2, Clip::new(2, 48000, [0.125, 0.25].repeat(1024)));
+        source_with(&mut mixer, 7, 1, |_| {});
+        play(&mut mixer, 7, command::PLAY, 0.0);
+        for clip in [1, 2] {
+            assert!(mixer.command(
+                7,
+                &AudioSourceCommand {
+                    kind: command::PLAY_ONE_SHOT,
+                    clip,
+                    volume_scale: 1.0,
+                    ..Default::default()
+                }
+            ));
+        }
+        // A context change after admission must preserve ordinary voices and its diagnostic.
+        mixer.config.speaker_mode = speaker_mode::QUAD;
+        let mut output = [0.0; 97 * 4];
+        mixer.render(&mut output, 4);
+        assert_eq!(mixer.source_state(7).main, voice_state::NONE);
+        assert_eq!(mixer.source_state(7).one_shots, 1);
+        assert!(output.iter().any(|value| *value != 0.0));
+        let params = mixer.sources[&7].params.clone();
+        assert_eq!(
+            mixer.update_source(7, params.clone()),
+            SIX_INPUT_UNSUPPORTED
+        );
+        assert_eq!(mixer.update_source(7, params), 0);
+    }
 
     #[test]
     fn six_input_stereo_balances_sides_and_retains_center_through_live_pan() {

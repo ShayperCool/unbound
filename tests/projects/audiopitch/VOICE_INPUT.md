@@ -40,7 +40,7 @@ These are different layouts on the same backend, not measurements of multiple ha
 
 ## Remaining scope
 
-**Q416-R5a** covers six-input spatial sources, other output layouts, streamed six-channel clips, other input widths and arbitrary graph histories. Those contexts retain the previous unqualified first-two-input path; this change does not certify them. Other releases retain that path too, explicitly unmeasured. Physical-device PCM, other backends, setting pairs and releases remain unmeasured. No encoded-output reference is available for those contexts.
+**Q416-R5a** covers six-input spatial sources, other output layouts, streamed six-channel clips, other input widths and arbitrary graph histories. On the measured release, starting a six-channel voice outside non-streamed 2D Stereo/Prologic throws a clear unsupported-context exception. Admission uses the active driver layout, so a requested wide layout that falls back to Stereo remains eligible. A live change outside the scope stops only the six-channel voices and reports one error on the control thread; ordinary mono/stereo voices continue. NativeApi 72 carries these status receipts without audio-thread logging or allocation. `unbound doctor` lists the limitation. Other input widths and graph histories remain unqualified. Other releases retain the prior first-two-input path, explicitly unmeasured. Physical-device PCM, other backends, setting pairs and releases remain unmeasured. No encoded-output reference is available for those contexts.
 
 ## Reproduction
 

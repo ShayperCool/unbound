@@ -79,7 +79,8 @@ use std::ffi::c_void;
 /// 69: packed unsigned and signed 16-bit normalized texture packet formats.
 /// 70: listener filter reconnection and recreation commands travel with their frame.
 /// 71: texture packet flag 32 binds native multisampled images without automatic resolves.
-pub const NATIVE_API_VERSION: u32 = 71;
+/// 72: source updates and playback commands report unsupported input contexts.
+pub const NATIVE_API_VERSION: u32 = 72;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -160,7 +161,9 @@ pub struct NativeApi {
     pub audio_create_clip: extern "C" fn(u64, i32, i32, i32, i32),
     pub audio_clip_data: extern "C" fn(u64, i32, *mut f32, i32, i32) -> i32,
     pub audio_release_clip: extern "C" fn(u64),
-    pub audio_update_source: extern "C" fn(u64, *const AudioSourcePacket),
+    /// 0: applied; negative: an unsupported voice was stopped.
+    pub audio_update_source: extern "C" fn(u64, *const AudioSourcePacket) -> i32,
+    /// Positive: admitted; 0: no voice; negative: unsupported input context.
     pub audio_source_command: extern "C" fn(u64, *const AudioSourceCommand) -> i32,
     pub audio_source_state: extern "C" fn(u64, *mut AudioSourceState),
     pub audio_release_source: extern "C" fn(u64),
@@ -1146,6 +1149,7 @@ extern "C" fn audio_create_clip(
             frames,
             samples: Vec::new(),
             stream: true,
+            streamed_asset: false,
         }
     } else {
         Clip::new(
@@ -1181,12 +1185,12 @@ extern "C" fn audio_release_clip(handle: u64) {
     state::state().audio.mixer().release_clip(handle);
 }
 
-extern "C" fn audio_update_source(handle: u64, packet: *const AudioSourcePacket) {
+extern "C" fn audio_update_source(handle: u64, packet: *const AudioSourcePacket) -> i32 {
     if packet.is_null() {
-        return;
+        return 0;
     }
     let params = unsafe { SourceParams::from_packet(&*packet) };
-    state::state().audio.mixer().update_source(handle, params);
+    state::state().audio.mixer().update_source(handle, params)
 }
 
 extern "C" fn audio_source_command(handle: u64, command: *const AudioSourceCommand) -> i32 {
@@ -1194,7 +1198,12 @@ extern "C" fn audio_source_command(handle: u64, command: *const AudioSourceComma
         return 0;
     }
     let command = unsafe { *command };
-    i32::from(state::state().audio.mixer().command(handle, &command))
+    let mut mixer = state::state().audio.mixer();
+    let error = mixer.command_error(handle, &command);
+    if error != 0 {
+        return error;
+    }
+    i32::from(mixer.command(handle, &command))
 }
 
 extern "C" fn audio_source_state(handle: u64, out: *mut AudioSourceState) {
