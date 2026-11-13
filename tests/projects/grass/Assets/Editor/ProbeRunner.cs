@@ -74,9 +74,10 @@ public static class ProbeRunner
         var blade = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Grass/Blade.png");
         var slab = MakeSlab("Slab", true);
         var bare = MakeSlab("SlabBare", false);
+        var ground = MakeGround();
 
-        var counts = MakeDensityData("DensityCounts", DetailScatterMode.InstanceCountMode, blade, slab, bare);
-        var coverage = MakeDensityData("DensityCoverage", DetailScatterMode.CoverageMode, blade, slab, bare);
+        var counts = MakeDensityData("DensityCounts", DetailScatterMode.InstanceCountMode, blade, slab, bare, ground);
+        var coverage = MakeDensityData("DensityCoverage", DetailScatterMode.CoverageMode, blade, slab, bare, ground);
         var a = Terrain.CreateTerrainGameObject(counts);
         a.name = "DensityCounts";
         a.transform.position = new Vector3(-200f, 0f, 0f);
@@ -121,6 +122,7 @@ public static class ProbeRunner
 
         var data = new TerrainData();
         AssetDatabase.CreateAsset(data, "Assets/Grass/Refusals.asset");
+        data.terrainLayers = new[] { AssetDatabase.LoadAssetAtPath<TerrainLayer>("Assets/Grass/Ground.terrainlayer") };
         data.heightmapResolution = 33;
         data.size = new Vector3(32f, 2f, 32f);
         data.SetDetailScatterMode(DetailScatterMode.CoverageMode);
@@ -159,6 +161,21 @@ public static class ProbeRunner
         AssetDatabase.SaveAssets();
     }
 
+    /// <summary>The added terrains' one layer: a smooth earthy gradient in 8 m tiles (so that
+    /// their images show the details on a layered terrain, not the layerless checker).</summary>
+    static TerrainLayer MakeGround()
+    {
+        var texture = new Texture2D(32, 32, TextureFormat.RGBA32, false);
+        for (int y = 0; y < 32; y++)
+            for (int x = 0; x < 32; x++)
+                texture.SetPixel(x, y, new Color(0.45f + 0.1f * Mathf.Sin(x * 0.196f), 0.38f + 0.08f * Mathf.Cos(y * 0.196f), 0.25f, 1f));
+        File.WriteAllBytes("Assets/Grass/Ground.png", texture.EncodeToPNG());
+        AssetDatabase.ImportAsset("Assets/Grass/Ground.png");
+        var layer = new TerrainLayer { diffuseTexture = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Grass/Ground.png"), tileSize = new Vector2(8f, 8f) };
+        AssetDatabase.CreateAsset(layer, "Assets/Grass/Ground.terrainlayer");
+        return layer;
+    }
+
     /// <summary>A lopsided box (off the y axis, longer in x), with or without uvs.</summary>
     static GameObject MakeSlab(string name, bool uvs)
     {
@@ -191,10 +208,11 @@ public static class ProbeRunner
         return prefab;
     }
 
-    static TerrainData MakeDensityData(string name, DetailScatterMode mode, Texture2D blade, GameObject slab, GameObject bare)
+    static TerrainData MakeDensityData(string name, DetailScatterMode mode, Texture2D blade, GameObject slab, GameObject bare, TerrainLayer ground)
     {
         var data = new TerrainData();
         AssetDatabase.CreateAsset(data, $"Assets/Grass/{name}.asset");
+        data.terrainLayers = new[] { ground };
         data.heightmapResolution = 33;
         data.size = new Vector3(32f, 6f, 32f);
         var heights = new float[33, 33];

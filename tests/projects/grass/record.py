@@ -21,7 +21,7 @@ from probe_paths import cache_artifact_path, run_root  # noqa: E402
 from editor_runner import EditorJob, differences, result_problem, run  # noqa: E402
 
 # What ProbeRunner.CreateDensity and CreateRefusals add or change.
-CREATED = ['Assets/Grass/Slab.asset', 'Assets/Grass/Slab.prefab', 'Assets/Grass/SlabBare.asset',
+CREATED = ['Assets/Grass/Ground.png', 'Assets/Grass/Ground.terrainlayer', 'Assets/Grass/Slab.asset', 'Assets/Grass/Slab.prefab', 'Assets/Grass/SlabBare.asset',
            'Assets/Grass/SlabBare.prefab', 'Assets/Grass/DensityCounts.asset',
            'Assets/Grass/DensityCoverage.asset', 'Assets/Grass/SlabTwoMaterials.prefab', 'Assets/Grass/SlabLOD.prefab',
            'Assets/Grass/SlabNoMesh.prefab', 'Assets/Grass/Refusals.asset', 'Assets/Scenes/Density.unity',
