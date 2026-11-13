@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 8b4c4543ccf67342fa7a15a4f093e676
+guid: 9a57d6bece39443e99d34b0f9b8148a3
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -133,7 +133,7 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures:
-    - texture: {fileID: 2800000, guid: dd3a47fedfd0cb30c9b43b66054cf5f5, type: 3}
+    - texture: {fileID: 2800000, guid: 0a567694b708b9abeaac203161ced196, type: 3}
       name: _NormalMap
     spriteCustomMetadata:
       entries: []
