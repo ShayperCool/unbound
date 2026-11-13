@@ -63,6 +63,41 @@ public class UitkProbe : MonoBehaviour
         return texture;
     }
 
+    // Own and inline samplers along each volume axis. Samples outside both ends distinguish
+    // mirror-clamp from both ordinary clamp and repeated mirroring.
+    static void MirrorWrap(StringBuilder rows)
+    {
+        var volume = new Texture3D(2, 2, 2, TextureFormat.RGBAFloat, false);
+        volume.filterMode = FilterMode.Point;
+        var colors = new Color[8];
+        for (int i = 0; i < colors.Length; i++) colors[i] = new Color(i / 8f, 0, 0, 1);
+        volume.SetPixels(colors);
+        volume.Apply(false);
+        var target = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        target.Create();
+        var cpu = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
+        var material = new Material(Shader.Find("Probe/SamplerStates/MirrorWrap"));
+        material.SetTexture("_Vol", volume);
+        foreach (var mode in new[] { TextureWrapMode.Clamp, TextureWrapMode.Mirror, TextureWrapMode.MirrorOnce })
+        {
+            volume.wrapMode = mode;
+            for (int axis = 0; axis < 3; axis++)
+            {
+                material.SetVector("_Axis", new Vector4(axis == 0 ? 1 : 0, axis == 1 ? 1 : 0, axis == 2 ? 1 : 0, 0));
+                material.SetFloat("_Inline", 0);
+                Graphics.Blit(null, target, material);
+                Row(rows, "MirrorWrap.own." + mode + "." + axis, Read(target, cpu));
+                if (mode == TextureWrapMode.Clamp)
+                {
+                    material.SetFloat("_Inline", 1);
+                    Graphics.Blit(null, target, material);
+                    Row(rows, "MirrorWrap.inline." + axis, Read(target, cpu));
+                }
+            }
+        }
+        DestroyImmediate(material); DestroyImmediate(cpu); DestroyImmediate(target); DestroyImmediate(volume);
+    }
+
     static Texture2D Pair(float first, float second, FilterMode filter)
     {
         var texture = new Texture2D(2, 1, TextureFormat.RGBAFloat, false, true);
@@ -192,6 +227,7 @@ public class UitkProbe : MonoBehaviour
             Computes(rows, depths);
             StencilFaces(rows);
             RendererFaces(rows);
+            MirrorWrap(rows);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)

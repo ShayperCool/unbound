@@ -824,6 +824,12 @@ impl super::Device {
     }
 
     /// Portability-subset samplerMipLodBias is not enabled by this backend.
+    pub fn sampler_mirror_clamp(&self) -> bool {
+        self.shared
+            .enabled_extensions
+            .contains(&ash::khr::sampler_mirror_clamp_to_edge::NAME)
+    }
+
     pub fn sampler_lod_bias_limit(&self) -> Option<f32> {
         if self
             .shared
@@ -1324,14 +1330,21 @@ impl crate::Device for super::Device {
         &self,
         desc: &crate::SamplerDescriptor,
     ) -> Result<super::Sampler, crate::DeviceError> {
+        let address = |axis: usize| {
+            if desc.mirror_clamp[axis] {
+                vk::SamplerAddressMode::MIRROR_CLAMP_TO_EDGE
+            } else {
+                conv::map_address_mode(desc.address_modes[axis])
+            }
+        };
         let mut create_info = vk::SamplerCreateInfo::default()
             .flags(vk::SamplerCreateFlags::empty())
             .mag_filter(conv::map_filter_mode(desc.mag_filter))
             .min_filter(conv::map_filter_mode(desc.min_filter))
             .mipmap_mode(conv::map_mip_filter_mode(desc.mipmap_filter))
-            .address_mode_u(conv::map_address_mode(desc.address_modes[0]))
-            .address_mode_v(conv::map_address_mode(desc.address_modes[1]))
-            .address_mode_w(conv::map_address_mode(desc.address_modes[2]))
+            .address_mode_u(address(0))
+            .address_mode_v(address(1))
+            .address_mode_w(address(2))
             .mip_lod_bias(desc.lod_bias)
             .min_lod(desc.lod_clamp.start)
             .max_lod(desc.lod_clamp.end);

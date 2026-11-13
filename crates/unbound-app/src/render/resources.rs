@@ -312,11 +312,14 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey, reversed_z: bool) 
         ..Default::default()
     };
     let bias = f32::from_bits(key.lod_bias_bits);
-    if bias == 0.0 && !native_nearest {
+    let native_mirror_clamp = device.native_sampler_mirror_clamp() == Some(true);
+    let mirror_clamp =
+        [key.wrap_u, key.wrap_v, key.wrap_w].map(|mode| mode == 3 && native_mirror_clamp);
+    if bias == 0.0 && !native_nearest && !mirror_clamp.contains(&true) {
         device.create_sampler(&descriptor)
     } else {
         device
-            .create_sampler_with_lod_bias(&descriptor, bias)
+            .create_sampler_with_native_options(&descriptor, bias, mirror_clamp)
             .expect("nonzero texture mipMapBias requires native Vulkan sampler LOD bias support")
     }
 }

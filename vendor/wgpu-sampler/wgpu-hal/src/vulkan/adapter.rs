@@ -1224,6 +1224,12 @@ impl PhysicalDeviceProperties {
         // Require `VK_KHR_swapchain`
         extensions.push(khr::swapchain::NAME);
 
+        // Unbound: enable the optional extension even on core 1.2+ devices. Its enabled
+        // presence permits MIRROR_CLAMP_TO_EDGE without a Vulkan12 feature chain.
+        if self.supports_extension(khr::sampler_mirror_clamp_to_edge::NAME) {
+            extensions.push(khr::sampler_mirror_clamp_to_edge::NAME);
+        }
+
         if self.device_api_version < vk::API_VERSION_1_1 {
             // Require `VK_KHR_maintenance1`
             extensions.push(khr::maintenance1::NAME);

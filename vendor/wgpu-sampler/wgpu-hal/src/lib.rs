@@ -2257,6 +2257,8 @@ pub struct SamplerDescriptor<'a> {
     pub lod_clamp: Range<f32>,
     /// Native Vulkan bias, validated by Core; zero on other backends.
     pub lod_bias: f32,
+    /// Native Vulkan mirror-clamp axes, validated by Core; false on other backends.
+    pub mirror_clamp: [bool; 3],
     pub compare: Option<wgt::CompareFunction>,
     // Must in the range [1, 16].
     //

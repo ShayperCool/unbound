@@ -10,7 +10,7 @@ The SHA-256 values below identify the published `.crate` archives and are checke
 | wgpu-core | `14c018fce9b6270aa203c2fdd56f3cce996713534bd757e4ea58c8560b121f14` |
 | wgpu-hal | `b6b7fb58561a792bc237628ba0792e332de418fefe145f13b5ed8201e6d52f58` |
 
-`native-lod-bias.patch` and then `gl-device.patch` contain every source change relative to those
+`native-lod-bias.patch`, `gl-device.patch` and `native-mirror-clamp.patch`, in that order, contain every source change relative to those
 archives. `reproduce.py --output <fresh-cache-directory>` recreates the three patched source trees.
 An optional `--archive-dir` supplies previously downloaded archives. The script does not
 read the Cargo registry or depend on machine-specific paths. No dependency version changes
@@ -98,3 +98,20 @@ desktop OpenGL device through EGL (skipped without one; it must then be a 4.5 co
 | `wgpu-hal/src/gles/mod.rs` `MAX_TEXTURE_SLOTS`, `MAX_SAMPLERS`; `adapter.rs` `Adapter::expose` | 32 texture slots and samplers (before: 16 each); the device's sampled textures and samplers per stage are the context's texture units (`GL_MAX_TEXTURE_IMAGE_UNITS`, `GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS`, `GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS` and, with compute shaders, `GL_MAX_COMPUTE_TEXTURE_IMAGE_UNITS`, the least of them) up to those 32, the most the command encoder's 32-bit dirty-texture masks hold. | URP's Lit with Adaptive Probe Volumes (`PROBE_VOLUMES_L1`) binds 21 textures in a stage, over the 16 the backend allowed (creating the pipeline failed and the renderer stopped); measured: the NVIDIA driver gives each stage 32 units and binds 192 at once (`gl_backend_tests::a_stage_binds_the_contexts_texture_units`). |
 | `wgpu-hal/src/gles/egl.rs` `Instance::enumerate_adapters` | Desktop OpenGL contexts enable `GL_TEXTURE_CUBE_MAP_SEAMLESS`. | Unity's devices filter a cube map across the edges of its faces, as OpenGL ES and the other backends always do; without it reflections sampled near a face's edge differed from the Editor's (tests/projects/assetbundles `thing`, builtinfx `probe_*`). |
 | `wgpu/src/api/queue.rs` `Queue::submit`, `SUBMISSION`; `wgpu/src/api/surface.rs` `Surface::configure` | A submission and a surface configuration hold one process-wide lock, so they never overlap on different threads. A callback a configuration fires must not submit. | The game thread submits the renderer's commands while Bevy's render thread configures the window's surface (when it is made, resized or found outdated): Core's configuration waits for the GPU and fails when a submission arrives meanwhile ("Failed to wait for GPU to come idle", then a panic acquiring the unconfigured surface: tests/projects/display on the OpenGL device), and Vulkan's waits for the device to idle, which no submission may overlap. |
+
+## Vulkan mirror-clamp (`native-mirror-clamp.patch`)
+
+The optional `VK_KHR_sampler_mirror_clamp_to_edge` extension is enabled when advertised,
+including on Vulkan 1.2+ devices. `Device::native_sampler_mirror_clamp()` reports its enabled
+state, or `None` for other backends. The native sampler options carry three independent
+mirror-clamp axes through Core validation, trace descriptors and HAL. Core rejects an opt-in
+unless the extension is enabled. Vulkan uses `VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE`
+for those axes; ordinary descriptors, LOD bias and sampler ownership remain unchanged.
+
+Unity 6000.0.71f1 documents MirrorOnce as reflection around zero followed by edge clamping,
+with support dependent on the device. `tests/projects/samplerstates` covers texture-owned
+and inline samplers, all three volume axes and Clamp/Mirror controls. Device measurements
+use the NVIDIA driver only. OpenGL Core keeps its previous sampler path.
+
+References: [Unity MirrorOnce](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureWrapMode.MirrorOnce.html),
+[Vulkan sampler valid usage](https://docs.vulkan.org/refpages/latest/refpages/source/VkSamplerCreateInfo.html).

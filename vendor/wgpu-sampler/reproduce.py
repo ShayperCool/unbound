@@ -7,7 +7,7 @@ VERSION = '30.0.1'
 CHECKSUMS = {'wgpu': '527ccdf43dd5b2e8676eed9984ce00e2bbb0a1b85b70c1969dcb6cd2eb55ab9e', 'wgpu-core': '14c018fce9b6270aa203c2fdd56f3cce996713534bd757e4ea58c8560b121f14', 'wgpu-hal': 'b6b7fb58561a792bc237628ba0792e332de418fefe145f13b5ed8201e6d52f58'}
 ROOT = Path(__file__).resolve().parent
 # Applied in this order; PATCHES.md lists every change.
-PATCHES = ['native-lod-bias.patch', 'gl-device.patch']
+PATCHES = ['native-lod-bias.patch', 'gl-device.patch', 'native-mirror-clamp.patch']
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)

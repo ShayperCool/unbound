@@ -1,0 +1,178 @@
+diff --git a/wgpu-core/src/device/global.rs b/wgpu-core/src/device/global.rs
+index 29ae2207c..c00671ae0 100644
+--- a/wgpu-core/src/device/global.rs
++++ b/wgpu-core/src/device/global.rs
+@@ -620,0 +621,7 @@ impl Global {
++    pub fn device_native_sampler_mirror_clamp(&self, device_id: DeviceId) -> Option<bool> {
++        self.hub
++            .devices
++            .get(device_id)
++            .native_sampler_mirror_clamp()
++    }
++
+diff --git a/wgpu-core/src/device/resource.rs b/wgpu-core/src/device/resource.rs
+index a2e132327..46e6716c4 100644
+--- a/wgpu-core/src/device/resource.rs
++++ b/wgpu-core/src/device/resource.rs
+@@ -2251,0 +2252,10 @@ impl Device {
++    pub fn native_sampler_mirror_clamp(&self) -> Option<bool> {
++        let raw = self.raw().as_any();
++        #[cfg(vulkan)]
++        if let Some(device) = raw.downcast_ref::<hal::vulkan::Device>() {
++            return Some(device.sampler_mirror_clamp());
++        }
++        let _ = raw;
++        None
++    }
++
+@@ -2271,0 +2282,3 @@ impl Device {
++        if desc.mirror_clamp.contains(&true) && self.native_sampler_mirror_clamp() != Some(true) {
++            return Err(resource::CreateSamplerError::UnsupportedMirrorClamp);
++        }
+@@ -2362,0 +2376 @@ impl Device {
++            mirror_clamp: desc.mirror_clamp,
+diff --git a/wgpu-core/src/device/trace/record.rs b/wgpu-core/src/device/trace/record.rs
+index 4051560b6..1005180c3 100644
+--- a/wgpu-core/src/device/trace/record.rs
++++ b/wgpu-core/src/device/trace/record.rs
+@@ -991,0 +992 @@ fn action_to_owned(action: Action<'_, PointerReferences>) -> Action<'static, Poi
++                mirror_clamp: desc.mirror_clamp,
+diff --git a/wgpu-core/src/resource.rs b/wgpu-core/src/resource.rs
+index c05675ee5..4607b476a 100644
+--- a/wgpu-core/src/resource.rs
++++ b/wgpu-core/src/resource.rs
+@@ -2258,0 +2259,3 @@ pub struct SamplerDescriptor<'a> {
++    /// Native Vulkan mirror-clamp axes; ordinary samplers leave all false.
++    #[cfg_attr(feature = "serde", serde(default))]
++    pub mirror_clamp: [bool; 3],
+@@ -2320 +2323,3 @@ pub enum CreateSamplerError {
+-    #[error("Native sampler LOD bias or anisotropic nearest-mip filtering is unsupported on this backend/device")]
++    #[error(
++        "Native sampler LOD bias or anisotropic nearest-mip filtering is unsupported on this backend/device"
++    )]
+@@ -2321,0 +2327,2 @@ pub enum CreateSamplerError {
++    #[error("Native sampler mirror-clamp-to-edge is unsupported on this backend/device")]
++    UnsupportedMirrorClamp,
+@@ -2326 +2333,3 @@ pub enum CreateSamplerError {
+-    #[error("Invalid lodMaxClamp: {lod_max_clamp}. Must be greater or equal to lodMinClamp (which is {lod_min_clamp}).")]
++    #[error(
++        "Invalid lodMaxClamp: {lod_max_clamp}. Must be greater or equal to lodMinClamp (which is {lod_min_clamp})."
++    )]
+@@ -2333 +2342,3 @@ pub enum CreateSamplerError {
+-    #[error("Invalid filter mode for {filter_type:?}: {filter_mode:?}. When anistropic clamp is not 1 (it is {anisotropic_clamp}), all filter modes must be linear.")]
++    #[error(
++        "Invalid filter mode for {filter_type:?}: {filter_mode:?}. When anistropic clamp is not 1 (it is {anisotropic_clamp}), all filter modes must be linear."
++    )]
+@@ -2339 +2350,3 @@ pub enum CreateSamplerError {
+-    #[error("Invalid filter mode for {filter_type:?}: {filter_mode:?}. When anistropic clamp is not 1 (it is {anisotropic_clamp}), all filter modes must be linear.")]
++    #[error(
++        "Invalid filter mode for {filter_type:?}: {filter_mode:?}. When anistropic clamp is not 1 (it is {anisotropic_clamp}), all filter modes must be linear."
++    )]
+@@ -2402,0 +2416 @@ impl WebGpuError for CreateSamplerError {
++            | Self::UnsupportedMirrorClamp
+diff --git a/wgpu-hal/examples/halmark/main.rs b/wgpu-hal/examples/halmark/main.rs
+index d49139efa..959d067f2 100644
+--- a/wgpu-hal/examples/halmark/main.rs
++++ b/wgpu-hal/examples/halmark/main.rs
+@@ -396,0 +397,2 @@ impl<A: hal::Api> Example<A> {
++            lod_bias: 0.0,
++            mirror_clamp: [false; 3],
+diff --git a/wgpu-hal/src/lib.rs b/wgpu-hal/src/lib.rs
+index e4c22ddcd..5d418c5fe 100644
+--- a/wgpu-hal/src/lib.rs
++++ b/wgpu-hal/src/lib.rs
+@@ -2259,0 +2260,2 @@ pub struct SamplerDescriptor<'a> {
++    /// Native Vulkan mirror-clamp axes, validated by Core; false on other backends.
++    pub mirror_clamp: [bool; 3],
+diff --git a/wgpu-hal/src/vulkan/adapter.rs b/wgpu-hal/src/vulkan/adapter.rs
+index 190762182..f3e19462f 100644
+--- a/wgpu-hal/src/vulkan/adapter.rs
++++ b/wgpu-hal/src/vulkan/adapter.rs
+@@ -1226,0 +1227,6 @@ impl PhysicalDeviceProperties {
++        // Unbound: enable the optional extension even on core 1.2+ devices. Its enabled
++        // presence permits MIRROR_CLAMP_TO_EDGE without a Vulkan12 feature chain.
++        if self.supports_extension(khr::sampler_mirror_clamp_to_edge::NAME) {
++            extensions.push(khr::sampler_mirror_clamp_to_edge::NAME);
++        }
++
+diff --git a/wgpu-hal/src/vulkan/device.rs b/wgpu-hal/src/vulkan/device.rs
+index 2d6d1d5c1..ca53ea688 100644
+--- a/wgpu-hal/src/vulkan/device.rs
++++ b/wgpu-hal/src/vulkan/device.rs
+@@ -826,0 +827,6 @@ impl super::Device {
++    pub fn sampler_mirror_clamp(&self) -> bool {
++        self.shared
++            .enabled_extensions
++            .contains(&ash::khr::sampler_mirror_clamp_to_edge::NAME)
++    }
++
+@@ -1326,0 +1333,7 @@ impl crate::Device for super::Device {
++        let address = |axis: usize| {
++            if desc.mirror_clamp[axis] {
++                vk::SamplerAddressMode::MIRROR_CLAMP_TO_EDGE
++            } else {
++                conv::map_address_mode(desc.address_modes[axis])
++            }
++        };
+@@ -1332,3 +1345,3 @@ impl crate::Device for super::Device {
+-            .address_mode_u(conv::map_address_mode(desc.address_modes[0]))
+-            .address_mode_v(conv::map_address_mode(desc.address_modes[1]))
+-            .address_mode_w(conv::map_address_mode(desc.address_modes[2]))
++            .address_mode_u(address(0))
++            .address_mode_v(address(1))
++            .address_mode_w(address(2))
+diff --git a/wgpu/src/api/device.rs b/wgpu/src/api/device.rs
+index bd76ec48d..5328f14f1 100644
+--- a/wgpu/src/api/device.rs
++++ b/wgpu/src/api/device.rs
+@@ -502,0 +503,9 @@ impl Device {
++    /// Whether the Vulkan device enabled mirror-clamp-to-edge. `None` on other backends.
++    pub fn native_sampler_mirror_clamp(&self) -> Option<bool> {
++        #[cfg(wgpu_core)]
++        if let Some(device) = self.inner.as_core_opt() {
++            return device.native_sampler_mirror_clamp();
++        }
++        None
++    }
++
+@@ -513,0 +523,11 @@ impl Device {
++    ) -> Option<Sampler> {
++        self.create_sampler_with_native_options(desc, lod_bias, [false; 3])
++    }
++
++    /// Native sampler options. Each true axis uses Vulkan mirror-clamp-to-edge, after
++    /// checking that the device enabled the extension. Ordinary descriptors are unchanged.
++    pub fn create_sampler_with_native_options(
++        &self,
++        desc: &SamplerDescriptor<'_>,
++        lod_bias: f32,
++        mirror_clamp: [bool; 3],
+@@ -517 +537 @@ impl Device {
+-        if lod_bias == 0.0 && !native_mip_filter {
++        if lod_bias == 0.0 && !native_mip_filter && !mirror_clamp.contains(&true) {
+@@ -523 +543,6 @@ impl Device {
+-                inner: device.create_sampler_with_lod_bias(desc, lod_bias, native_mip_filter),
++                inner: device.create_sampler_with_native_options(
++                    desc,
++                    lod_bias,
++                    native_mip_filter,
++                    mirror_clamp,
++                ),
+diff --git a/wgpu/src/backend/wgpu_core.rs b/wgpu/src/backend/wgpu_core.rs
+index 3e6a7a28b..35b786c2e 100644
+--- a/wgpu/src/backend/wgpu_core.rs
++++ b/wgpu/src/backend/wgpu_core.rs
+@@ -478 +478,5 @@ impl CoreDevice {
+-    pub(crate) fn create_sampler_with_lod_bias(
++    pub(crate) fn native_sampler_mirror_clamp(&self) -> Option<bool> {
++        self.context.0.device_native_sampler_mirror_clamp(self.id)
++    }
++
++    pub(crate) fn create_sampler_with_native_options(
+@@ -482,0 +487 @@ impl CoreDevice {
++        mirror_clamp: [bool; 3],
+@@ -497,0 +503 @@ impl CoreDevice {
++            mirror_clamp,
+@@ -1773 +1779 @@ impl dispatch::DeviceInterface for CoreDevice {
+-        self.create_sampler_with_lod_bias(desc, 0.0, false)
++        self.create_sampler_with_native_options(desc, 0.0, false, [false; 3])

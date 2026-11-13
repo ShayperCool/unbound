@@ -500,6 +500,15 @@ impl Device {
         None
     }
 
+    /// Whether the Vulkan device enabled mirror-clamp-to-edge. `None` on other backends.
+    pub fn native_sampler_mirror_clamp(&self) -> Option<bool> {
+        #[cfg(wgpu_core)]
+        if let Some(device) = self.inner.as_core_opt() {
+            return device.native_sampler_mirror_clamp();
+        }
+        None
+    }
+
     /// Creates a native Vulkan sampler with a bias applied after derivative LOD calculation.
     ///
     /// Also permits anisotropy with nearest-mip filtering on Vulkan. Ordinary creation
@@ -512,15 +521,31 @@ impl Device {
         desc: &SamplerDescriptor<'_>,
         lod_bias: f32,
     ) -> Option<Sampler> {
+        self.create_sampler_with_native_options(desc, lod_bias, [false; 3])
+    }
+
+    /// Native sampler options. Each true axis uses Vulkan mirror-clamp-to-edge, after
+    /// checking that the device enabled the extension. Ordinary descriptors are unchanged.
+    pub fn create_sampler_with_native_options(
+        &self,
+        desc: &SamplerDescriptor<'_>,
+        lod_bias: f32,
+        mirror_clamp: [bool; 3],
+    ) -> Option<Sampler> {
         let native_mip_filter =
             desc.anisotropy_clamp > 1 && desc.mipmap_filter == MipmapFilterMode::Nearest;
-        if lod_bias == 0.0 && !native_mip_filter {
+        if lod_bias == 0.0 && !native_mip_filter && !mirror_clamp.contains(&true) {
             return Some(self.create_sampler(desc));
         }
         #[cfg(wgpu_core)]
         if let Some(device) = self.inner.as_core_opt() {
             return Some(Sampler {
-                inner: device.create_sampler_with_lod_bias(desc, lod_bias, native_mip_filter),
+                inner: device.create_sampler_with_native_options(
+                    desc,
+                    lod_bias,
+                    native_mip_filter,
+                    mirror_clamp,
+                ),
             });
         }
         None

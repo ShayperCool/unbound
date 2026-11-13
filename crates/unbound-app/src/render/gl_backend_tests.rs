@@ -1150,3 +1150,26 @@ fn a_stage_binds_the_contexts_texture_units() {
     // Texture k holds 8k: the last 248, the 17th 128, the mean of 0..248 is 124.
     assert_eq!(read(&device, &queue, &target)[5], [248, 128, 124, 255]);
 }
+
+/// The Vulkan-only native opt-in must fail validation on OpenGL, while ordinary sampler
+/// creation and the zero-option native path keep working on that same device.
+#[test]
+fn native_mirror_clamp_is_rejected_on_opengl() {
+    let Some((device, _queue)) = gl_device() else {
+        return;
+    };
+    assert_eq!(device.native_sampler_mirror_clamp(), None);
+    let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let rejected =
+        device.create_sampler_with_native_options(&Default::default(), 0.0, [true, false, false]);
+    assert!(rejected.is_some());
+    let error = bevy::tasks::block_on(scope.pop()).expect("unsupported native option must fail");
+    assert!(
+        error.to_string().contains("mirror-clamp-to-edge"),
+        "{error}"
+    );
+    let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let _ordinary = device.create_sampler(&Default::default());
+    let _native = device.create_sampler_with_native_options(&Default::default(), 0.0, [false; 3]);
+    assert!(bevy::tasks::block_on(scope.pop()).is_none());
+}

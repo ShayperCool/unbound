@@ -2256,6 +2256,9 @@ pub struct SamplerDescriptor<'a> {
     /// Opt into Vulkan anisotropic nearest-mip filtering through the native creation API.
     #[cfg_attr(feature = "serde", serde(default))]
     pub native_mip_filter: bool,
+    /// Native Vulkan mirror-clamp axes; ordinary samplers leave all false.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub mirror_clamp: [bool; 3],
     /// If this is enabled, this is a comparison sampler using the given comparison function.
     pub compare: Option<wgt::CompareFunction>,
     /// Must be at least 1. If this is not 1, all filter modes must be linear.
@@ -2317,26 +2320,36 @@ impl fmt::Debug for SamplerFilterErrorType {
 pub enum CreateSamplerError {
     #[error(transparent)]
     Device(#[from] DeviceError),
-    #[error("Native sampler LOD bias or anisotropic nearest-mip filtering is unsupported on this backend/device")]
+    #[error(
+        "Native sampler LOD bias or anisotropic nearest-mip filtering is unsupported on this backend/device"
+    )]
     UnsupportedLodBias,
+    #[error("Native sampler mirror-clamp-to-edge is unsupported on this backend/device")]
+    UnsupportedMirrorClamp,
     #[error("Invalid sampler LOD bias {bias}; it must be finite and within +/-{limit}")]
     InvalidLodBias { bias: f32, limit: f32 },
     #[error("Invalid lodMinClamp: {0}. Must be greater or equal to 0.0")]
     InvalidLodMinClamp(f32),
-    #[error("Invalid lodMaxClamp: {lod_max_clamp}. Must be greater or equal to lodMinClamp (which is {lod_min_clamp}).")]
+    #[error(
+        "Invalid lodMaxClamp: {lod_max_clamp}. Must be greater or equal to lodMinClamp (which is {lod_min_clamp})."
+    )]
     InvalidLodMaxClamp {
         lod_min_clamp: f32,
         lod_max_clamp: f32,
     },
     #[error("Invalid anisotropic clamp: {0}. Must be at least 1.")]
     InvalidAnisotropy(u16),
-    #[error("Invalid filter mode for {filter_type:?}: {filter_mode:?}. When anistropic clamp is not 1 (it is {anisotropic_clamp}), all filter modes must be linear.")]
+    #[error(
+        "Invalid filter mode for {filter_type:?}: {filter_mode:?}. When anistropic clamp is not 1 (it is {anisotropic_clamp}), all filter modes must be linear."
+    )]
     InvalidFilterModeWithAnisotropy {
         filter_type: SamplerFilterErrorType,
         filter_mode: wgt::FilterMode,
         anisotropic_clamp: u16,
     },
-    #[error("Invalid filter mode for {filter_type:?}: {filter_mode:?}. When anistropic clamp is not 1 (it is {anisotropic_clamp}), all filter modes must be linear.")]
+    #[error(
+        "Invalid filter mode for {filter_type:?}: {filter_mode:?}. When anistropic clamp is not 1 (it is {anisotropic_clamp}), all filter modes must be linear."
+    )]
     InvalidMipmapFilterModeWithAnisotropy {
         filter_type: SamplerFilterErrorType,
         filter_mode: wgt::MipmapFilterMode,
@@ -2400,6 +2413,7 @@ impl WebGpuError for CreateSamplerError {
             Self::MissingFeatures(e) => e.webgpu_error_type(),
 
             Self::UnsupportedLodBias
+            | Self::UnsupportedMirrorClamp
             | Self::InvalidLodBias { .. }
             | Self::InvalidLodMinClamp(_)
             | Self::InvalidLodMaxClamp { .. }

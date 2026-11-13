@@ -394,6 +394,8 @@ impl<A: hal::Api> Example<A> {
             min_filter: wgpu_types::FilterMode::Nearest,
             mipmap_filter: wgpu_types::MipmapFilterMode::Nearest,
             lod_clamp: 0.0..32.0,
+            lod_bias: 0.0,
+            mirror_clamp: [false; 3],
             compare: None,
             anisotropy_clamp: 1,
             border_color: None,

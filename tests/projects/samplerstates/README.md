@@ -73,7 +73,8 @@ Unbound: `run.py check` compares an Unbound capture (`--force-glcore`, or `--for
 list the cases that differ with their cause: Unbound compares where the Editor's comparison
 reads the depth of a texture whose state does not compare, filters a 16-bit depth buffer
 linearly to 0.400392 where the Editor reads 26240/65535 (suspected: Unbound filters a float copy
-of it), and samples `MirrorOnce` as `Mirror`. A depth buffer of 16 bits is stored as 16 bits
+of it). OpenGL Core retains the existing `MirrorOnce` approximation as `Mirror`; Vulkan uses
+native mirror-clamp-to-edge where the device enables it. A depth buffer of 16 bits is stored as 16 bits
 without stencil, as in the Editor.
 
 `Stencil.<target>.*` (last): a target of two texels cleared, its left texel drawn with stencil 1,
@@ -123,3 +124,17 @@ kernel that compares and loads a texture on the OpenGL device.
     python3 tests/projects/samplerstates/run.py publish a-1 a-2
     python3 tests/projects/samplerstates/run.py check
     python3 tests/projects/samplerstates/run.py check --device vulkan
+
+`MirrorWrap.*` samples a volume along U, V and W at positive and negative coordinates
+inside and outside the mirrored interval. Texture-owned Clamp and Mirror controls distinguish
+edge clamping from repeated reflection. The inline PointMirrorOnce sampler uses the same
+coordinates with a texture whose own mode is Clamp. On Vulkan the inline and texture-owned
+MirrorOnce states reflect around zero and clamp at either edge. OpenGL Core ignores the
+inline state and uses the texture's own state; its three texture-owned MirrorOnce rows retain
+the existing declared approximation. Both 489-row references preserve all 477 earlier rows,
+from two identical captures per device on Unity 6000.0.71f1, NVIDIA RTX 4060 only.
+
+Contract: [TextureWrapMode.MirrorOnce](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureWrapMode.MirrorOnce.html)
+defines reflection around zero followed by edge clamping and requires checking device support.
+The native Vulkan opt-in requires the enabled mirror-clamp extension; other backend creation
+rejects that option. The zero-option path and ordinary samplers retain their validation.

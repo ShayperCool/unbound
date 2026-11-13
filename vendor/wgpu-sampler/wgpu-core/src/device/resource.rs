@@ -2249,6 +2249,16 @@ impl Device {
         Ok(external_texture)
     }
 
+    pub fn native_sampler_mirror_clamp(&self) -> Option<bool> {
+        let raw = self.raw().as_any();
+        #[cfg(vulkan)]
+        if let Some(device) = raw.downcast_ref::<hal::vulkan::Device>() {
+            return Some(device.sampler_mirror_clamp());
+        }
+        let _ = raw;
+        None
+    }
+
     pub fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
         let raw = self.raw().as_any();
         #[cfg(vulkan)]
@@ -2269,6 +2279,9 @@ impl Device {
         desc: &resource::SamplerDescriptor,
     ) -> Result<Arc<Sampler>, resource::CreateSamplerError> {
         self.check_is_valid()?;
+        if desc.mirror_clamp.contains(&true) && self.native_sampler_mirror_clamp() != Some(true) {
+            return Err(resource::CreateSamplerError::UnsupportedMirrorClamp);
+        }
         if desc.lod_bias != 0.0 || desc.native_mip_filter {
             let limit = self.native_sampler_lod_bias_limit();
             if desc.native_mip_filter && limit.is_none() {
@@ -2360,6 +2373,7 @@ impl Device {
             min_filter: desc.min_filter,
             mipmap_filter: desc.mipmap_filter,
             lod_bias: desc.lod_bias,
+            mirror_clamp: desc.mirror_clamp,
             lod_clamp: desc.lod_min_clamp..desc.lod_max_clamp,
             compare: desc.compare,
             anisotropy_clamp,

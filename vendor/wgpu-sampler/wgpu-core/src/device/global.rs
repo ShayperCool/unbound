@@ -618,6 +618,13 @@ impl Global {
             .native_sampler_lod_bias_limit()
     }
 
+    pub fn device_native_sampler_mirror_clamp(&self, device_id: DeviceId) -> Option<bool> {
+        self.hub
+            .devices
+            .get(device_id)
+            .native_sampler_mirror_clamp()
+    }
+
     pub fn device_create_sampler(
         &self,
         device_id: DeviceId,
