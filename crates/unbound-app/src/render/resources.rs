@@ -2477,6 +2477,7 @@ mod tests {
                 rg8: full(),
                 integer_storage: 0,
                 packed_float_target: false,
+                ..NormFormatCaps::NONE
             };
             for code in [13, 14, 15, 16] {
                 let s = stored(code, true, true, 1, &caps);
