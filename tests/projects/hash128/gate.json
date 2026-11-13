@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/hash128/run.py gate"],
+  "summary": "hash128: .*",
+  "engine_paths": ["managed/UnityEngine/Core/Hash128.cs", "managed/UnityEngine/Core/HashUtilities.cs", "managed/UnityEngine/Core/SpookyHash.cs"]
+}
