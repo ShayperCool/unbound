@@ -57,11 +57,14 @@ namespace UnityEngine.Tests
                 circle.offset = new Vector2(.17f, -.23f);
                 Physics2D.SyncTransforms();
                 var group = new PhysicsShapeGroup2D(); circle.GetShapes(group);
-                Assert.Equal(.9541002f, body.localToWorldMatrix.m00);
-                Assert.Equal(.29948768f, group.localToWorldMatrix.m10);
+                // The Linux x86-64 and macOS arm64 Editors (6000.0.71f1) differ here by an ulp;
+                // the platform's sine and cosine give each one's values.
+                bool mac = System.OperatingSystem.IsMacOS();
+                Assert.Equal(mac ? .954100132f : .9541002f, body.localToWorldMatrix.m00);
+                Assert.Equal(mac ? .29948771f : .29948768f, group.localToWorldMatrix.m10);
                 var points = new System.Collections.Generic.List<Vector2>(); group.GetShapeVertices(0, points);
                 Assert.Equal(-1.44641972f, points[0].x);
-                Assert.Equal(-.8890377f, points[0].y);
+                Assert.Equal(mac ? -.889037609f : -.8890377f, points[0].y);
             }
             finally
             {

@@ -11,12 +11,21 @@ namespace UnityEngine.Tests
         public void Dispose() => ProjectInfo.UnityVersion = m_Release;
         static float F(int bits) => BitConverter.Int32BitsToSingle(bits);
         static Quaternion Q(int x, int y, int z, int w) => new Quaternion(F(x), F(y), F(z), F(w));
+        /// <summary>Stands for the NaN an invalid operation (infinity over infinity) produces:
+        /// the CPU's default NaN, negative on x86-64 (the Linux Editor's -4194304) and
+        /// positive on arm64 (2143289344 in the macOS arm64 Editor). A NaN input propagates
+        /// unchanged on both.</summary>
+        const int GeneratedNaN = int.MaxValue;
+        static readonly int s_DefaultNaN =
+            System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64
+                ? 0x7FC00000 : unchecked((int)0xFFC00000);
+        static int Expected(int bits) => bits == GeneratedNaN ? s_DefaultNaN : bits;
         static void Bits(Quaternion q, int x, int y, int z, int w)
         {
-            Assert.Equal(x, BitConverter.SingleToInt32Bits(q.x));
-            Assert.Equal(y, BitConverter.SingleToInt32Bits(q.y));
-            Assert.Equal(z, BitConverter.SingleToInt32Bits(q.z));
-            Assert.Equal(w, BitConverter.SingleToInt32Bits(q.w));
+            Assert.Equal(Expected(x), BitConverter.SingleToInt32Bits(q.x));
+            Assert.Equal(Expected(y), BitConverter.SingleToInt32Bits(q.y));
+            Assert.Equal(Expected(z), BitConverter.SingleToInt32Bits(q.z));
+            Assert.Equal(Expected(w), BitConverter.SingleToInt32Bits(q.w));
         }
 
         // Unity 6000.0.71f1, quaternioneuler fixed-input controls.
@@ -33,8 +42,8 @@ namespace UnityEngine.Tests
         [InlineData(1594541859, -544553181, 1607477941, -536164573, 2139095040, 0, -2147483648, 0, -2147483648)]
         [InlineData(-4194304, 1065353216, 1073741824, 1077936128, -4194304, -4194304, -4194304, -4194304, -4194304)]
         [InlineData(1065353216, 1073741824, 1077936128, -4194304, -4194304, -4194304, -4194304, -4194304, -4194304)]
-        [InlineData(2139095040, 1065353216, 1073741824, 1077936128, 2139095040, -4194304, 0, 0, 0)]
-        [InlineData(1065353216, -8388608, 1073741824, 1077936128, 2139095040, 0, -4194304, 0, 0)]
+        [InlineData(2139095040, 1065353216, 1073741824, 1077936128, 2139095040, GeneratedNaN, 0, 0, 0)]
+        [InlineData(1065353216, -8388608, 1073741824, 1077936128, 2139095040, 0, GeneratedNaN, 0, 0)]
         [InlineData(-2147483648, 0, -2147483648, 0, 0, 0, 0, 0, 1065353216)]
         [InlineData(0, 0, 1045178139, 1065016408, 1065353215, 0, 0, 1045178140, 1065016409)]
         [InlineData(0, 0, 1039034558, 1065239150, 1065353215, 0, 0, 1039034559, 1065239151)]
