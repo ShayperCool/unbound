@@ -47,7 +47,7 @@ namespace UnityEngine
 
         /// <summary>
         /// Spherical interpolation along the shorter arc in double precision, normalized: the engine's
-        /// own blending of rotations (root motion, layer turns, body interpolation), which the
+        /// own blending of rotations (root motion, layer turns, body interpolation, agent turning), which the
         /// animation and physics probes measure. Unity's scripting Quaternion.Slerp is
         /// Quaternion.SlerpUnclamped, with its own single-precision order.
         /// </summary>
