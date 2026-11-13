@@ -1498,25 +1498,7 @@ pub fn import_texture(
     let (original_width, original_height) = (image.width, image.height);
     let (w, h) = npot_size(image.width, image.height, settings.npot_scale);
     let (w, h) = fit_max_size(w, h, settings.max_size);
-    settings.compressed_fallback_alpha = settings.compressed_fallback_alpha.filter(|alpha| {
-        let invalid_mips = settings.mipmaps && (!w.is_power_of_two() || !h.is_power_of_two());
-        if *alpha {
-            // Automatic HDR remains ETC2 rather than following an ASTC project default.
-            invalid_mips
-                && (image.format == TextureFormat::Rgba8 || settings.explicit_format.is_some())
-        } else {
-            image.format == TextureFormat::Rgba32F && (invalid_mips || w % 4 != 0 || h % 4 != 0)
-        }
-    });
-    if let Some(alpha) = settings.compressed_fallback_alpha {
-        // Filter full radiance before narrowing each level; compressed HDR size fallbacks
-        // do not apply HDR gamma conversion. ASTC keeps alpha; BC6H's RGB fallback drops it.
-        settings.gamma_hdr = false;
-        if image.format == TextureFormat::Rgba32F {
-            settings.srgb = false;
-        }
-        settings.format_alpha = Some(alpha);
-    }
+    resolve_size_fallback(&mut settings, w, h, image.format);
     // HDR colour in a gamma project is gamma-encoded: a 2D texture's per level after resizing and
     // filtering (measured with tests/projects/textureimport), a cubemap's here before its faces
     // are cut (unmeasured order), a glossy-convolved cubemap's mips after the convolution
@@ -1633,6 +1615,29 @@ pub fn import_texture(
     })
 }
 
+/// Keeps the compressed-size byte fallback only where the final size and format need it (an
+/// image of `width` x `height` in `format`).
+fn resolve_size_fallback(settings: &mut TextureSettings, w: u32, h: u32, format: TextureFormat) {
+    settings.compressed_fallback_alpha = settings.compressed_fallback_alpha.filter(|alpha| {
+        let invalid_mips = settings.mipmaps && (!w.is_power_of_two() || !h.is_power_of_two());
+        if *alpha {
+            // Automatic HDR remains ETC2 rather than following an ASTC project default.
+            invalid_mips && (format == TextureFormat::Rgba8 || settings.explicit_format.is_some())
+        } else {
+            format == TextureFormat::Rgba32F && (invalid_mips || w % 4 != 0 || h % 4 != 0)
+        }
+    });
+    if let Some(alpha) = settings.compressed_fallback_alpha {
+        // Filter full radiance before narrowing each level; compressed HDR size fallbacks
+        // do not apply HDR gamma conversion. ASTC keeps alpha; BC6H's RGB fallback drops it.
+        settings.gamma_hdr = false;
+        if format == TextureFormat::Rgba32F {
+            settings.srgb = false;
+        }
+        settings.format_alpha = Some(alpha);
+    }
+}
+
 /// A 2D texture made of RGBA8 texels (rows bottom-up) instead of a file, such as a sprite atlas
 /// page: its mip chain and sampler state from `settings` (no resizing, dilation or sprites).
 /// [`TextureImporter::store`] then stores it as the build target does.
@@ -1641,8 +1646,9 @@ pub fn import_pixels(
     width: u32,
     height: u32,
     texels: Vec<u8>,
-    settings: TextureSettings,
+    mut settings: TextureSettings,
 ) -> ImportedTexture {
+    resolve_size_fallback(&mut settings, width, height, TextureFormat::Rgba8);
     let image = Image {
         width,
         height,
