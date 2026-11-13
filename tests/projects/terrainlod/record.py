@@ -3,7 +3,8 @@
 
     record.py create  --release 6000.0.71f1   # run ProbeRunner.Create, copy Assets/ back
     record.py record  --release 6000.0.71f1   # two independent GPU captures
-    record.py publish --release 6000.0.71f1   # write Reference/unity-<release>/ when both agree
+    record.py publish --release 6000.0.71f1   # write Reference/unity-<release>/ when both agree; an existing
+                                              # reference only gains rows after its own and new images
 """
 import argparse
 import os
@@ -32,7 +33,8 @@ def outputs(directory):
 
 def complete(directory):
     path = directory/'terrainlod.jsonl'
-    if not path.is_file() or len(path.read_text().splitlines()) != 13:
+    lines = path.read_text().splitlines() if path.is_file() else []
+    if sum('"image"' in line for line in lines) != 14 or not any('"basemap"' in line for line in lines):
         return 'missing or incomplete terrainlod.jsonl'
     return None
 
@@ -79,12 +81,21 @@ def main():
     if problems:
         sys.exit('the captures differ ('+'; '.join(problems)+'); not publishing')
     target = reference_root(PROBE)
+    names = outputs(captures[0])
     if target.exists():
-        sys.exit(f'refusing to overwrite reference: {target}')
-    target.mkdir(parents=True)
-    for name in outputs(captures[0]):
+        # Rows and images already published stay as they are; only additions are taken.
+        old = (target/'terrainlod.jsonl').read_text().splitlines(keepends=True)
+        new = (captures[0]/'terrainlod.jsonl').read_text().splitlines(keepends=True)
+        if new[:len(old)] != old:
+            sys.exit('the committed reference rows changed; not publishing')
+        changed = [n for n in names if n.endswith('.png') and (target/n).exists() and (target/n).read_bytes() != (captures[0]/n).read_bytes()]
+        if changed:
+            sys.exit(f'committed images changed ({", ".join(changed)}); not publishing')
+        names = ['terrainlod.jsonl'] + [n for n in names if n.endswith('.png') and not (target/n).exists()]
+    target.mkdir(parents=True, exist_ok=True)
+    for name in names:
         shutil.copyfile(captures[0]/name, target/name)
-    print(f'published {len(outputs(captures[0]))} files to {target}')
+    print(f'published {len(names)} files to {target}')
     return 0
 
 

@@ -11,3 +11,6 @@
 {"image":"tiles","pixelError":30,"basemapDistance":1000,"maximumLOD":0,"minimumLODSimplification":0,"orthographic":false}
 {"image":"base150","pixelError":5,"basemapDistance":150,"maximumLOD":0,"minimumLODSimplification":0,"orthographic":false}
 {"image":"base0","pixelError":5,"basemapDistance":0,"maximumLOD":0,"minimumLODSimplification":0,"orthographic":false}
+{"image":"baseortho","pixelError":20,"basemapDistance":0,"maximumLOD":0,"minimumLODSimplification":0,"orthographic":true}
+{"basemap":"BaseMap-Hidden/TerrainEngine/Splatmap/Standard-BaseGen-_MainTex","width":256,"height":256,"graphicsFormat":"R8G8B8A8_UNorm","sRGB":false,"useMipMap":true,"autoGenerateMips":false,"mipmapCount":9,"filterMode":"Bilinear","anisoLevel":1,"wrapMode":"Clamp","hideFlags":"125","count":2}
+{"basemap":"BaseMap-Hidden/TerrainEngine/Splatmap/Standard-BaseGen-_MetallicTex","width":64,"height":64,"graphicsFormat":"R8_UNorm","sRGB":false,"useMipMap":true,"autoGenerateMips":false,"mipmapCount":7,"filterMode":"Bilinear","anisoLevel":1,"wrapMode":"Clamp","hideFlags":"125","count":2}

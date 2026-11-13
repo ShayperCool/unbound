@@ -10,7 +10,8 @@ using UnityEngine;
 /// it, at its own settings) from one view at several pixel errors, with heightmapMaximumLOD and
 /// heightmapMinimumLODSimplification, from above orthographically, along the tiles' seam, and with
 /// base map distances that put part or all of it on the base map.
-/// Writes <c>terrainlod.jsonl</c> (the settings each image used) and PNGs into
+/// Writes <c>terrainlod.jsonl</c> (the settings each image used, then the base maps the terrains made)
+/// and PNGs into
 /// <c>TERRAIN_LOD_PROBE_OUT</c>, then quits.
 /// </summary>
 public class TerrainLodProbe : MonoBehaviour
@@ -49,6 +50,18 @@ public class TerrainLodProbe : MonoBehaviour
         east.heightmapPixelError = 5f;
         Capture(dir, "base150", terrain, eye, at, 5f, 150f, 0, 0);
         Capture(dir, "base0", terrain, eye, at, 5f, 0f, 0, 0);
+        // Orthographic views draw no patch on the base map, whatever the distance.
+        Capture(dir, "baseortho", terrain, new Vector3(200f, 200f, 200f), new Vector3(200f, 0f, 200.001f), 20f, 0f, 0, 0, true);
+        // The base maps the terrains' materials made: one row per name and description, with how many.
+        var maps = new System.Collections.Generic.SortedDictionary<string, int>(StringComparer.Ordinal);
+        foreach (var rt in Resources.FindObjectsOfTypeAll<RenderTexture>())
+        {
+            if (!rt.name.StartsWith("BaseMap-", StringComparison.Ordinal)) continue;
+            var row = $"{{\"basemap\":\"{rt.name}\",\"width\":{rt.width},\"height\":{rt.height},\"graphicsFormat\":\"{rt.graphicsFormat}\",\"sRGB\":{(rt.sRGB ? "true" : "false")},\"useMipMap\":{(rt.useMipMap ? "true" : "false")},\"autoGenerateMips\":{(rt.autoGenerateMips ? "true" : "false")},\"mipmapCount\":{rt.mipmapCount},\"filterMode\":\"{rt.filterMode}\",\"anisoLevel\":{rt.anisoLevel},\"wrapMode\":\"{rt.wrapMode}\",\"hideFlags\":\"{rt.hideFlags}\"";
+            maps.TryGetValue(row, out int count);
+            maps[row] = count + 1;
+        }
+        foreach (var pair in maps) m_Out.Append(pair.Key).Append($",\"count\":{pair.Value}}}\n");
         File.WriteAllText(Path.Combine(dir, "terrainlod.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
