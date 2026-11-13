@@ -8,6 +8,7 @@ const LEGACY_MINIMUM_BUFFER: u32 = 64;
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct AudioOutputRules {
     pub requested_buffer_sizes: bool,
+    pub scheduled_start_times: bool,
 }
 
 impl AudioOutputRules {
@@ -16,6 +17,7 @@ impl AudioOutputRules {
     pub fn for_version(version: UnityVersion) -> Self {
         Self {
             requested_buffer_sizes: version == UnityVersion::new(6000, 0, 71),
+            scheduled_start_times: version == UnityVersion::new(6000, 0, 71),
         }
     }
 
@@ -29,6 +31,17 @@ impl AudioOutputRules {
         } else {
             // Other releases retain the previous unmeasured minimum.
             requested.max(LEGACY_MINIMUM_BUFFER)
+        }
+    }
+
+    /// Start times and delays select the preceding whole sample frame. Other releases
+    /// retain the previous, unmeasured nearest-frame conversion.
+    pub fn scheduled_frame(self, seconds: f64, rate: u32) -> u64 {
+        let frames = seconds.max(0.0) * rate as f64;
+        if self.scheduled_start_times {
+            frames as u64
+        } else {
+            frames.round() as u64
         }
     }
 }
@@ -56,6 +69,7 @@ mod tests {
     #[test]
     fn positive_buffer_requests_are_preserved_only_on_the_measured_release() {
         let measured = AudioOutputRules::for_version(UnityVersion::new(6000, 0, 71));
+        assert!(measured.scheduled_start_times);
         for size in [1, 16, 31, 32, 33, 64, 340, 8192] {
             assert_eq!(measured.buffer_size(size), size);
         }
@@ -66,6 +80,7 @@ mod tests {
             UnityVersion::new(6000, 0, 72),
         ] {
             let other = AudioOutputRules::for_version(version);
+            assert!(!other.scheduled_start_times);
             assert_eq!(other.buffer_size(32), 64);
             assert_eq!(other.buffer_size(340), 340);
         }

@@ -369,6 +369,7 @@ impl Engine {
     ) -> Self {
         let mut mixer = Mixer::new(MixerConfig::default());
         mixer.defer_voice_submission = true;
+        mixer.output_rules = output_rules;
         let configuration = AudioConfiguration {
             speaker_mode: settings.speaker_mode,
             dsp_buffer_size: settings.dsp_buffer_size,

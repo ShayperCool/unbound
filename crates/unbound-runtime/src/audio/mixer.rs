@@ -582,6 +582,8 @@ struct Voice {
     end_at: u64,
     paused: bool,
     submitted: bool,
+    /// The audio update has not yet published the initial scheduled start.
+    start_pending: bool,
     volume_scale: f32,
     /// The gain matrix of the last block (ramped from), `[output * 2 + input]`.
     matrix: Matrix,
@@ -607,6 +609,7 @@ impl Voice {
             end_at: u64::MAX,
             paused: false,
             submitted: true,
+            start_pending: false,
             volume_scale,
             matrix: [0.0; MATRIX_ENTRIES],
             fresh: true,
@@ -1043,6 +1046,7 @@ pub struct Mixer {
     /// Accumulated startup gains, shared by all mixers using this DSP period.
     input_fade_curve: Vec<f32>,
     pub config: MixerConfig,
+    pub output_rules: unbound_compat::AudioOutputRules,
     /// The engine submits component voices at its audio update; direct DSP users may render
     /// immediately. Full AudioMixer graphs also require update-based submission.
     pub defer_voice_submission: bool,
@@ -1219,6 +1223,7 @@ impl Mixer {
         Self {
             input_fade_curve: Self::input_fade_curve(config.buffer_size),
             config,
+            output_rules: Default::default(),
             defer_voice_submission: false,
             frames: 0,
             clips: HashMap::new(),
@@ -1778,6 +1783,7 @@ impl Mixer {
             }
             if let Some(voice) = &mut source.main {
                 voice.submitted = true;
+                voice.start_pending = false;
             }
             for voice in &mut source.one_shots {
                 voice.submitted = true;
@@ -1845,6 +1851,7 @@ impl Mixer {
         self.prepare_source(handle);
         let now = self.frames;
         let rate = self.config.sample_rate;
+        let output_rules = self.output_rules;
         let callback = self.callback;
         let Self {
             sources,
@@ -1861,9 +1868,9 @@ impl Mixer {
         source.component_playback = deferred;
         let start_frame = |time: f64| -> u64 {
             if time < 0.0 {
-                now + frame_of(-time, rate)
+                now + output_rules.scheduled_frame(-time, rate)
             } else {
-                frame_of(time, rate).max(now)
+                output_rules.scheduled_frame(time, rate).max(now)
             }
         };
         match cmd.kind {
@@ -1907,6 +1914,7 @@ impl Mixer {
                 let restart_pending = source.main.as_ref().is_some_and(|v| !v.submitted);
                 let mut voice = Voice::new(clip_handle, position, start_frame(cmd.time), 1.0);
                 voice.submitted = !deferred || restart_pending;
+                voice.start_pending = deferred;
                 if clip.stream {
                     voice.position = 0.0;
                     voice.stream = Some(StreamState::at((position as usize).min(clip.frames)));
@@ -2015,6 +2023,7 @@ impl Mixer {
             command::SET_SCHEDULED_START => {
                 if let Some(main) = &mut source.main
                     && now < main.start_at
+                    && !(output_rules.scheduled_start_times && main.start_pending)
                 {
                     main.start_at = start_frame(cmd.time);
                 }
@@ -4246,6 +4255,81 @@ mod tests {
         assert_eq!(out[9 * 2], mono_gain(119));
         assert_eq!(out[10 * 2], 0.0);
         assert_eq!(m.source_state(7).main, voice_state::NONE);
+    }
+
+    #[test]
+    fn scheduled_start_edits_follow_audio_update_publication() {
+        for measured in [false, true] {
+            for restart in [false, true] {
+                for edit_after_update in [false, true] {
+                    let mut m = Mixer::new(MixerConfig {
+                        sample_rate: 32000,
+                        buffer_size: 97,
+                        ..MixerConfig::default()
+                    });
+                    if measured {
+                        m.output_rules = unbound_compat::AudioOutputRules::for_version(
+                            unbound_compat::UnityVersion::new(6000, 0, 71),
+                        );
+                    }
+                    m.defer_voice_submission = true;
+                    m.add_clip(1, Clip::new(2, 32000, vec![0.25; 800]));
+                    source_with(&mut m, 7, 1, |_| {});
+                    play(&mut m, 7, command::PLAY, 300.75 / 32000.0);
+                    if restart {
+                        play(&mut m, 7, command::PLAY, 300.75 / 32000.0);
+                    }
+                    if edit_after_update {
+                        m.update_suspension();
+                    }
+                    play(&mut m, 7, command::SET_SCHEDULED_START, 100.75 / 32000.0);
+                    play(&mut m, 7, command::SET_SCHEDULED_END, 350.75 / 32000.0);
+                    m.update_suspension();
+                    let mut out = vec![0.0; 800];
+                    m.render(&mut out, 2);
+                    let first = out.chunks_exact(2).position(|frame| frame[0] != 0.0);
+                    let expected = if !measured {
+                        101
+                    } else if edit_after_update {
+                        100
+                    } else {
+                        300
+                    };
+                    assert_eq!(first, Some(expected));
+                    assert_eq!(out[expected * 2], 0.25);
+                    assert_eq!(out[349 * 2], 0.25);
+                    assert_eq!(out[350 * 2], 0.0);
+                    assert_eq!(m.source_state(7).main, voice_state::NONE);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn fractional_delays_count_whole_frames_from_the_current_clock() {
+        for measured in [false, true] {
+            let mut m = Mixer::new(MixerConfig {
+                sample_rate: 32000,
+                buffer_size: 97,
+                ..MixerConfig::default()
+            });
+            if measured {
+                m.output_rules = unbound_compat::AudioOutputRules::for_version(
+                    unbound_compat::UnityVersion::new(6000, 0, 71),
+                );
+            }
+            m.advance(17);
+            m.add_clip(1, Clip::new(2, 32000, vec![0.25; 400]));
+            source_with(&mut m, 7, 1, |_| {});
+            play(&mut m, 7, command::PLAY, -100.75 / 32000.0);
+            let mut out = vec![0.0; 300];
+            m.render(&mut out, 2);
+            let first = out.chunks_exact(2).position(|frame| frame[0] != 0.0);
+            let expected = if measured { 100 } else { 101 };
+            assert_eq!(first, Some(expected));
+            assert_eq!(out[expected * 2], 0.25);
+            assert_eq!(m.source_state(7).position, (150 - expected) as f64);
+        }
     }
 
     #[test]

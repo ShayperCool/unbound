@@ -79,3 +79,8 @@ Q416 captures are retained separately. No canonical reset PCM, fixed startup
 delay, sample alignment or additional tolerance is introduced. Q416-R1 remains open
 for a rule that accounts for both the matching and delayed histories, including
 scheduled recovery and the device queue.
+
+The separate [sample scheduling profile](SCHEDULE.md) resolves whole-sample
+start conversion and start edits before/after audio-update publication. Its
+future starts use an integer DSP-frame anchor and an eight-buffer lead. It does
+not replace the immediate or scheduled diagnostic histories above.

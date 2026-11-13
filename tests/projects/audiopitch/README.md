@@ -150,3 +150,7 @@ sessions unstarted. Successful sessions merge in the declared order before the
 unchanged strict and one-step PCM comparisons. References and capture formats do
 not change. Scheduling controls run with
 `python3 -m unittest tools.agents.test_audio_context`.
+
+[Fractional scheduling and audio-update publication](SCHEDULE.md) has a separate
+21-control reference at both rates, including post-reset recovery. Immediate
+reset publication and device-queue timing remain scoped by [RECOVERY.md](RECOVERY.md).
