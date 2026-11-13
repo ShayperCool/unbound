@@ -86,6 +86,9 @@
 {"k":"children/after","v":"B"}
 {"k":"children/parent","v":"True"}
 {"k":"children/read","v":"B"}
+{"k":"clone/componentCount","v":"2"}
+{"k":"clone/componentAlias","v":"False"}
+{"k":"clone/componentIndependent","v":"True"}
 {"k":"clone/staticFlags","v":"2147483647"}
 {"k":"clone/constrain","v":"False"}
 {"k":"clone/hint.x","v":"13"}
@@ -93,4 +96,5 @@
 {"k":"clone/hint.z","v":"-26"}
 {"k":"components/removedDestroyedWithOwner","v":"False"}
 {"k":"children/changeCallbacks","v":"0"}
+{"k":"rect/jsonHasChildren","v":"False"}
 {"k":"complete","v":"1"}

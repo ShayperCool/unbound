@@ -2916,7 +2916,7 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 ### Q402: serialized GameObject and Transform bindings
 
 - Unity 6000.0.71f1, tests/projects/serializedstructure: two identical GPU Editor
-  captures, 96 values. The original engine completes 1/96; the bindings match 96/96.
+  captures, 100 values. The original engine completes 1/96; the bindings match 100/100.
 - The remaining 18 editorcallbacks prefab-field differences are resolved. Its
   24 missing/extra callback-order pairs and strict scene-queue timing stay visible.
 - Raw icon/navigation/static metadata, separate Euler hints and scale lock are

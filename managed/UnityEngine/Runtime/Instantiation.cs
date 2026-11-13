@@ -244,7 +244,7 @@ namespace Unbound.Runtime
             Transform transformClone = null;
             foreach (var c in sourceGo.m_Components)
             {
-                if (c.m_Destroyed) continue;
+                if (c.m_Destroyed || map.ContainsKey(c)) continue;
                 var clone = ComponentFactory.Create(c.GetType(), go, deserializing: true);
                 if (clone is Transform t)
                 {

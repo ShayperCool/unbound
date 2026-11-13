@@ -1,6 +1,6 @@
 # Serialized GameObject and Transform state
 
-Two independent Unity 6000.0.71f1 Editor runs on the NVIDIA GPU agree on all 96
+Two independent Unity 6000.0.71f1 Editor runs on the NVIDIA GPU agree on all 100
 values in the reference. The probe records GameObject metadata, Transform scale
 lock and Euler hints, component slots, child order and cloning.
 
@@ -24,6 +24,8 @@ The captures distinguish these rules:
 - Component slots cannot be resized or reordered through SerializedProperty.
   Replacing a slot's reference is allowed and changes GetComponents. The removed
   component survives destruction of the GameObject whose list no longer names it.
+  Runtime cloning produces one component per distinct source component, discarding
+  repeated slots. Script references remap to that unique cloned object.
 - Reordering existing children changes GetChild order without reparenting or
   sending OnTransformChildrenChanged.
 
@@ -38,7 +40,8 @@ Child writes support permutations of the existing children. Null or foreign
 component references, changing the first Transform, and child membership or
 ownership changes through serialized arrays report an unsupported-operation
 error. Their ownership, lifetime and invalid-data rules need separate controls.
-Multi-target structural writes and JSON hierarchy-link writes remain unmeasured.
+RectTransform JSON omits hierarchy links too. Multi-target structural writes and
+JSON hierarchy-link writes remain unmeasured.
 Other Unity releases have no reference for this schema here.
 
 ```sh

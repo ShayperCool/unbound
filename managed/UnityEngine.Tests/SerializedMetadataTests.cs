@@ -6,6 +6,8 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
+    public sealed class MetadataReferenceHolder : MonoBehaviour { public Collider target; }
+
     public class SerializedMetadataTests
     {
         [Fact]
@@ -137,6 +139,49 @@ namespace UnityEngine.Tests
                 EditorJsonUtility.FromJsonOverwrite("{\"GameObject\":{\"m_Component\":[],\"m_NavMeshLayer\":5}}", go);
                 Assert.Same(go.transform, go.GetComponents<Component>()[0]);
                 Assert.Equal(5, new SerializedObject(go).FindProperty("m_NavMeshLayer").intValue);
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+
+        [Fact]
+        public void CloningRepeatedComponentSlotsProducesOneObjectAndRemapsScriptReferences()
+        {
+            var go = new GameObject("repeated slots");
+            var box = go.AddComponent<BoxCollider>();
+            var sphere = go.AddComponent<SphereCollider>();
+            var holder = go.AddComponent<MetadataReferenceHolder>();
+            holder.target = sphere;
+            GameObject copy = null;
+            try
+            {
+                using var so = new SerializedObject(go);
+                so.FindProperty("m_Component").GetArrayElementAtIndex(1).FindPropertyRelative("component").objectReferenceValue = sphere;
+                Assert.True(so.ApplyModifiedProperties());
+                Assert.Equal(4, go.GetComponentCount());
+                copy = Object.Instantiate(go);
+                Assert.Equal(3, copy.GetComponentCount());
+                Assert.Single(copy.GetComponents<SphereCollider>());
+                Assert.Same(copy.GetComponent<SphereCollider>(), copy.GetComponent<MetadataReferenceHolder>().target);
+                Assert.NotSame(sphere, copy.GetComponent<MetadataReferenceHolder>().target);
+            }
+            finally { Object.DestroyImmediate(copy); Object.DestroyImmediate(go); Object.DestroyImmediate(box); }
+        }
+
+        [Fact]
+        public void RectTransformJsonOmitsHierarchyLinksAndRetainsMetadata()
+        {
+            var go = new GameObject("rect", typeof(RectTransform));
+            var child = new GameObject("rect child", typeof(RectTransform));
+            child.transform.SetParent(go.transform, false);
+            try
+            {
+                using var so = new SerializedObject(go.transform);
+                so.FindProperty("m_ConstrainProportionsScale").boolValue = true;
+                Assert.True(so.ApplyModifiedProperties());
+                var json = EditorJsonUtility.ToJson(go.transform);
+                Assert.DoesNotContain("\"m_Children\"", json);
+                Assert.Contains("\"m_ConstrainProportionsScale\":true", json);
+                Assert.Same(child.transform, go.transform.GetChild(0));
             }
             finally { Object.DestroyImmediate(go); }
         }

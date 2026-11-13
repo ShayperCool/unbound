@@ -239,6 +239,7 @@ namespace UnityEngine
                     default:
                         foreach (var field in SerializedTree.NativeFields(obj))
                         {
+                            if (field.ElementType != null) continue;
                             if (field.Name == "m_Script" || field.Name == "m_ObjectHideFlags" || field.Name == "m_CorrespondingSourceObject"
                                 || field.Name == "m_PrefabInstance" || field.Name == "m_PrefabAsset" || field.Name == "m_GameObject" || field.Name == "m_Father")
                                 continue;
