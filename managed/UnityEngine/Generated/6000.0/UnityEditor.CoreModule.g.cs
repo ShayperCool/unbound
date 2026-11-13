@@ -2649,24 +2649,13 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static int LocalFileIDToClassID(long fileId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.LocalFileIDToClassID"); return default; }
         [global::Unbound.Stub] internal static long MakeLocalFileIDWithHash(int persistentTypeId, string name, long offset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.MakeLocalFileIDWithHash"); return default; }
         [global::Unbound.Stub] internal long MakeInternalID(int persistentTypeId, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.MakeInternalID"); return default; }
-        [global::Unbound.Stub] public void AddRemap(global::UnityEditor.AssetImporter.SourceAssetIdentifier identifier, global::UnityEngine.Object externalObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.AddRemap"); }
-        [global::Unbound.Stub] public bool RemoveRemap(global::UnityEditor.AssetImporter.SourceAssetIdentifier identifier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.RemoveRemap"); return default; }
         [global::Unbound.Stub] internal void RenameSubAssets(int peristentTypeId, string[] oldNames, string[] newNames) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.RenameSubAssets"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.Dictionary<global::UnityEditor.AssetImporter.SourceAssetIdentifier, global::UnityEngine.Object> GetExternalObjectMap() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.GetExternalObjectMap"); return new global::System.Collections.Generic.Dictionary<global::UnityEditor.AssetImporter.SourceAssetIdentifier, global::UnityEngine.Object>(); }
         [global::Unbound.Stub] internal static void RegisterImporter(global::System.Type importer, int importerVersion, int queuePos, string fileExt, bool supportsImportDependencyHinting, bool autoSelect, bool allowCaching) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.RegisterImporter"); }
         [global::Unbound.Stub] public bool SupportsRemappedAssetType(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.SupportsRemappedAssetType"); return default; }
         [global::Unbound.Stub] internal double GetImportStartTime() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.GetImportStartTime"); return default; }
         [global::Unbound.Stub] internal global::UnityEditor.AssetPostprocessor.PostprocessorInfo[] GetDynamicPostprocessors() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.GetDynamicPostprocessors"); return global::System.Array.Empty<global::UnityEditor.AssetPostprocessor.PostprocessorInfo>(); }
         [global::Unbound.Stub] internal static global::UnityEditor.AssetPostprocessor.PostprocessorInfo[] GetStaticPostprocessors(global::System.Type importerType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.GetStaticPostprocessors"); return global::System.Array.Empty<global::UnityEditor.AssetPostprocessor.PostprocessorInfo>(); }
         public ulong assetTimeStamp { [global::Unbound.Stub] get { this.CheckImporterState("get_assetTimeStamp"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.assetTimeStamp"); return default; } }
-        [global::Unbound.Stub]
-        public unsafe partial struct SourceAssetIdentifier
-        {
-            [global::Unbound.Stub] public global::System.Type type;
-            [global::Unbound.Stub] public string name;
-            [global::Unbound.Stub] public SourceAssetIdentifier(global::UnityEngine.Object asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.SourceAssetIdentifier.ctor"); }
-            [global::Unbound.Stub] public SourceAssetIdentifier(global::System.Type type, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporter.SourceAssetIdentifier.ctor"); }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe abstract partial class AssetImporterTabbedEditor : global::UnityEditor.AssetImporters.AssetImporterEditor
@@ -47620,24 +47609,6 @@ namespace UnityEditor.Snap
 }
 namespace UnityEditor.SpeedTree.Importer
 {
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class AdditionalSettings
-    {
-        [global::Unbound.Stub] public global::UnityEngine.MotionVectorGenerationMode motionVectorModeEnumValue;
-        [global::Unbound.Stub] public bool generateColliders;
-        [global::Unbound.Stub] public bool generateRigidbody;
-        [global::Unbound.Stub] public AdditionalSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.AdditionalSettings.ctor"); }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class AssetIdentifier
-    {
-        [global::Unbound.Stub] public string type;
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] public AssetIdentifier(global::UnityEngine.Object asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.AssetIdentifier.ctor"); }
-        [global::Unbound.Stub] public AssetIdentifier(global::System.Type type, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.AssetIdentifier.ctor"); }
-    }
     [global::Unbound.Stub]
     internal unsafe abstract partial class BaseSpeedTree9ImporterTabUI : global::UnityEditor.BaseAssetImporterTabUI
     {
@@ -47700,37 +47671,6 @@ namespace UnityEditor.SpeedTree.Importer
         public uint IndexStart { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.DrawCall.IndexStart"); return default; } }
         public uint IndexCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.DrawCall.IndexCount"); return default; } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class LODMaterials
-    {
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<global::UnityEditor.SpeedTree.Importer.MaterialInfo> materials;
-        [global::Unbound.Stub] public global::System.Collections.Generic.Dictionary<int, global::System.Collections.Generic.List<int>> lodToMaterials;
-        [global::Unbound.Stub] public global::System.Collections.Generic.Dictionary<string, int> matNameToIndex;
-        [global::Unbound.Stub] public void AddLodMaterialIndex(int lod, int matIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.LODMaterials.AddLodMaterialIndex"); }
-        [global::Unbound.Stub] public LODMaterials() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.LODMaterials.ctor"); }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class LODSettings
-    {
-        [global::Unbound.Stub] public bool enableSmoothLODTransition;
-        [global::Unbound.Stub] public bool animateCrossFading;
-        [global::Unbound.Stub] public float billboardTransitionCrossFadeWidth;
-        [global::Unbound.Stub] public float fadeOutWidth;
-        [global::Unbound.Stub] public bool hasBillboard;
-        [global::Unbound.Stub] public LODSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.LODSettings.ctor"); }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class LightingSettings
-    {
-        [global::Unbound.Stub] public bool enableShadowCasting;
-        [global::Unbound.Stub] public bool enableShadowReceiving;
-        [global::Unbound.Stub] public bool enableLightProbes;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.ReflectionProbeUsage reflectionProbeEnumValue;
-        [global::Unbound.Stub] public LightingSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.LightingSettings.ctor"); }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class Lod : global::UnityEditor.SpeedTree.Importer.ReaderData
     {
@@ -47740,15 +47680,6 @@ namespace UnityEditor.SpeedTree.Importer
         public uint[] Indices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.Lod.Indices"); return global::System.Array.Empty<uint>(); } }
         public global::UnityEditor.SpeedTree.Importer.DrawCall[] DrawCalls { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.Lod.DrawCalls"); return global::System.Array.Empty<global::UnityEditor.SpeedTree.Importer.DrawCall>(); } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class MaterialInfo
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Material material;
-        [global::Unbound.Stub] public string defaultName;
-        [global::Unbound.Stub] public bool exported;
-        [global::Unbound.Stub] public MaterialInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.MaterialInfo.ctor"); }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class MaterialMap : global::UnityEditor.SpeedTree.Importer.ReaderData
     {
@@ -47757,51 +47688,6 @@ namespace UnityEditor.SpeedTree.Importer
         public bool Used { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.MaterialMap.Used"); return default; } }
         public string Path { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.MaterialMap.Path"); return default; } }
         public global::UnityEditor.SpeedTree.Importer.Vec4 Color { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.MaterialMap.Color"); return default; } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class MaterialSettings
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Color mainColor;
-        [global::Unbound.Stub] public global::UnityEngine.Color hueVariation;
-        [global::Unbound.Stub] public float alphaClipThreshold;
-        [global::Unbound.Stub] public float transmissionScale;
-        [global::Unbound.Stub] public bool enableHueVariation;
-        [global::Unbound.Stub] public bool enableBumpMapping;
-        [global::Unbound.Stub] public bool enableSubsurfaceScattering;
-        [global::Unbound.Stub] public global::UnityEngine.Vector4 diffusionProfileAssetID;
-        [global::Unbound.Stub] public uint diffusionProfileID;
-        [global::Unbound.Stub] public MaterialSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.MaterialSettings.ctor"); }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64, AllowMultiple = true)]
-    [global::Unbound.Stub]
-    public unsafe partial class MaterialSettingsCallbackAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public int MethodVersion;
-        [global::Unbound.Stub] public MaterialSettingsCallbackAttribute(int methodVersion) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.MaterialSettingsCallbackAttribute.ctor"); }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class MeshSettings
-    {
-        [global::Unbound.Stub] public global::UnityEditor.SpeedTree.Importer.SpeedTreeImporterCommon.STUnitConversion unitConversion;
-        [global::Unbound.Stub] public float scaleFactor;
-        [global::Unbound.Stub] public MeshSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.MeshSettings.ctor"); }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class PerLODSettings
-    {
-        [global::Unbound.Stub] public bool enableSettingOverride;
-        [global::Unbound.Stub] public float height;
-        [global::Unbound.Stub] public bool castShadows;
-        [global::Unbound.Stub] public bool receiveShadows;
-        [global::Unbound.Stub] public bool useLightProbes;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.ReflectionProbeUsage reflectionProbeUsage;
-        [global::Unbound.Stub] public bool enableBump;
-        [global::Unbound.Stub] public bool enableHue;
-        [global::Unbound.Stub] public bool enableSubsurface;
-        [global::Unbound.Stub] public PerLODSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.PerLODSettings.ctor"); }
     }
     internal unsafe partial interface ReaderData
     {
@@ -47818,27 +47704,14 @@ namespace UnityEditor.SpeedTree.Importer
         public bool Billboard { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.STMaterial.Billboard"); return default; } }
         public global::UnityEditor.SpeedTree.Importer.MaterialMap[] Maps { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.STMaterial.Maps"); return global::System.Array.Empty<global::UnityEditor.SpeedTree.Importer.MaterialMap>(); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class SpeedTree9Importer : global::UnityEditor.AssetImporters.ScriptedImporter
+    unsafe partial class SpeedTree9Importer
     {
-        [global::Unbound.Stub] internal global::UnityEditor.SpeedTree.Importer.MeshSettings m_MeshSettings;
-        [global::Unbound.Stub] internal global::UnityEditor.SpeedTree.Importer.MaterialSettings m_MaterialSettings;
-        [global::Unbound.Stub] internal global::UnityEditor.SpeedTree.Importer.LightingSettings m_LightingSettings;
-        [global::Unbound.Stub] internal global::UnityEditor.SpeedTree.Importer.AdditionalSettings m_AdditionalSettings;
-        [global::Unbound.Stub] internal global::UnityEditor.SpeedTree.Importer.LODSettings m_LODSettings;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEditor.SpeedTree.Importer.PerLODSettings> m_PerLODSettings;
-        [global::Unbound.Stub] internal global::UnityEditor.SpeedTree.Importer.WindSettings m_WindSettings;
-        [global::Unbound.Stub] internal int m_MaterialVersion;
-        [global::Unbound.Stub] internal global::UnityEditor.SpeedTree.Importer.SpeedTreeImporterOutputData m_OutputImporterData;
         [global::Unbound.Stub] public override bool SupportsRemappedAssetType(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTree9Importer.SupportsRemappedAssetType"); return default; }
-        [global::Unbound.Stub] public override void OnImportAsset(global::UnityEditor.AssetImporters.AssetImportContext ctx) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTree9Importer.OnImportAsset"); }
         [global::Unbound.Stub] internal void RegenerateMaterials() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTree9Importer.RegenerateMaterials"); }
         [global::Unbound.Stub] internal bool SearchAndRemapMaterials(string materialFolderPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTree9Importer.SearchAndRemapMaterials"); return default; }
         [global::Unbound.Stub] internal string GetMaterialFolderPath() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTree9Importer.GetMaterialFolderPath"); return default; }
         [global::Unbound.Stub] internal void SetMaterialsVersionToCurrent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTree9Importer.SetMaterialsVersionToCurrent"); }
-        [global::Unbound.Stub] internal static bool TryGetShaderForCurrentRenderPipeline(out global::UnityEngine.Shader shader) { shader = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTree9Importer.TryGetShaderForCurrentRenderPipeline"); return default; }
         [global::Unbound.Stub] internal float[] GetPerLODSettingsHeights() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTree9Importer.GetPerLODSettingsHeights"); return global::System.Array.Empty<float>(); }
-        [global::Unbound.Stub] public SpeedTree9Importer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTree9Importer.ctor"); }
         internal bool MaterialsShouldBeRegenerated { [global::Unbound.Stub] get { this.CheckImporterState("get_MaterialsShouldBeRegenerated"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTree9Importer.MaterialsShouldBeRegenerated"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class ImporterSettings
@@ -47850,7 +47723,6 @@ namespace UnityEditor.SpeedTree.Importer
             internal const string kMaterialSettingsDependencyname = "SpeedTree9Importer_MaterialSettings";
             internal const string kIconName = "UnityEditor/SpeedTree9Importer Icon";
         }
-        public unsafe delegate void OnAssetPostProcess(global::UnityEngine.GameObject mainObject);
         public unsafe delegate void OnCustomEditorSettings(ref global::UnityEditor.SerializedProperty diffusionProfileAsset, ref global::UnityEditor.SerializedProperty diffusionProfileHash);
     }
     [global::Unbound.Stub]
@@ -47933,71 +47805,6 @@ namespace UnityEditor.SpeedTree.Importer
         [global::Unbound.Stub] public static T[] GetDataObjectArray<T>(in byte[] data, int offset, int index) where T : global::UnityEditor.SpeedTree.Importer.ReaderData, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTree9ReaderUtility.GetDataObjectArray"); return global::System.Array.Empty<T>(); }
     }
     [global::Unbound.Stub]
-    internal unsafe partial class SpeedTreeConstants
-    {
-        [global::Unbound.Stub] internal static readonly float kFeetToMetersRatio;
-        [global::Unbound.Stub] internal static readonly float kCentimetersToMetersRatio;
-        [global::Unbound.Stub] internal static readonly float kInchesToMetersRatio;
-        [global::Unbound.Stub] internal static readonly float kAlphaTestRef;
-        [global::Unbound.Stub] internal static readonly string kBillboardMaterialName;
-        [global::Unbound.Stub] public SpeedTreeConstants() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTreeConstants.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class SpeedTreeImporterCommon
-    {
-        internal enum STUnitConversion
-        {
-            kLeaveAsIs = 0,
-            kFeetToMeters = 1,
-            kCentimetersToMeters = 2,
-            kInchesToMeters = 3,
-            kCustomConversion = 4,
-        }
-        [global::Unbound.Stub]
-        internal unsafe static partial class MaterialProperties
-        {
-            [global::Unbound.Stub] internal static readonly int MainTexID;
-            [global::Unbound.Stub] internal static readonly int ColorTintID;
-            [global::Unbound.Stub] internal static readonly int NormalMapKwToggleID;
-            [global::Unbound.Stub] internal static readonly int NormalMapID;
-            [global::Unbound.Stub] internal static readonly int ExtraMapKwToggleID;
-            [global::Unbound.Stub] internal static readonly int ExtraTexID;
-            [global::Unbound.Stub] internal static readonly int GlossinessID;
-            [global::Unbound.Stub] internal static readonly int MetallicID;
-            [global::Unbound.Stub] internal static readonly int SubsurfaceKwToggleID;
-            [global::Unbound.Stub] internal static readonly int SubsurfaceTexID;
-            [global::Unbound.Stub] internal static readonly int SubsurfaceColorID;
-            [global::Unbound.Stub] internal static readonly int AlphaClipThresholdID;
-            [global::Unbound.Stub] internal static readonly int TransmissionScaleID;
-            [global::Unbound.Stub] internal static readonly int DiffusionProfileAssetID;
-            [global::Unbound.Stub] internal static readonly int DiffusionProfileID;
-            [global::Unbound.Stub] internal static readonly int HueVariationKwToggleID;
-            [global::Unbound.Stub] internal static readonly int HueVariationColorID;
-            [global::Unbound.Stub] internal static readonly int LeafFacingKwToggleID;
-            [global::Unbound.Stub] internal static readonly int BillboardKwToggleID;
-            [global::Unbound.Stub] internal static readonly int DoubleSidedToggleID;
-            [global::Unbound.Stub] internal static readonly int DoubleSidedNormalModeID;
-            [global::Unbound.Stub] internal static readonly int BackfaceNormalModeID;
-            [global::Unbound.Stub] internal static readonly int TwoSidedID;
-            [global::Unbound.Stub] internal static readonly int WindSharedKwToggle;
-            [global::Unbound.Stub] internal static readonly int WindBranch2KwToggle;
-            [global::Unbound.Stub] internal static readonly int WindBranch1KwToggle;
-            [global::Unbound.Stub] internal static readonly int WindRippleKwToggle;
-            [global::Unbound.Stub] internal static readonly int WindShimmerKwToggle;
-        }
-        [global::Unbound.Stub]
-        internal unsafe static partial class MaterialKeywords
-        {
-            [global::Unbound.Stub] internal static readonly string VBSetupStandardID;
-            [global::Unbound.Stub] internal static readonly string VBSetupBranch2ID;
-            [global::Unbound.Stub] internal static readonly string VBSetupCameraFacingID;
-            [global::Unbound.Stub] internal static readonly string VBSetupBranch2AndCameraFacingID;
-            [global::Unbound.Stub] internal static readonly string VBSetupBillboardID;
-            [global::Unbound.Stub] internal static readonly string VBSetupID;
-            [global::Unbound.Stub] internal static readonly string BillboardID;
-        }
-    }
-    [global::Unbound.Stub]
     internal unsafe static partial class SpeedTreeImporterCommonEditor
     {
         [global::Unbound.Stub] internal static void ShowMeshGUI(ref global::UnityEditor.SerializedProperty unitConversionEnumValue, ref global::UnityEditor.SerializedProperty scaleFactor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTreeImporterCommonEditor.ShowMeshGUI"); }
@@ -48046,20 +47853,6 @@ namespace UnityEditor.SpeedTree.Importer
             [global::Unbound.Stub] public static global::UnityEngine.GUIContent[] GetWindQualityNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTreeImporterCommonEditor.Styles.GetWindQualityNames"); return global::System.Array.Empty<global::UnityEngine.GUIContent>(); }
             [global::Unbound.Stub] public Styles() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTreeImporterCommonEditor.Styles.ctor"); }
         }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class SpeedTreeImporterOutputData : global::UnityEngine.ScriptableObject
-    {
-        [global::Unbound.Stub] public global::UnityEngine.GameObject mainObject;
-        [global::Unbound.Stub] public global::UnityEditor.SpeedTree.Importer.LODMaterials lodMaterials;
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<global::UnityEditor.SpeedTree.Importer.AssetIdentifier> materialsIdentifiers;
-        [global::Unbound.Stub] public global::UnityEngine.SpeedTreeWindConfig9 m_WindConfig;
-        [global::Unbound.Stub] public bool hasEmbeddedMaterials;
-        [global::Unbound.Stub] public bool hasAlphaClipThreshold;
-        [global::Unbound.Stub] public bool hasTransmissionScale;
-        [global::Unbound.Stub] public bool hasBillboard;
-        [global::Unbound.Stub] public static global::UnityEditor.SpeedTree.Importer.SpeedTreeImporterOutputData Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTreeImporterOutputData.Create"); return default; }
-        [global::Unbound.Stub] public SpeedTreeImporterOutputData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.SpeedTreeImporterOutputData.ctor"); }
     }
     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Pack = 4)]
     [global::Unbound.Stub]
@@ -48164,16 +47957,6 @@ namespace UnityEditor.SpeedTree.Importer
             public float Shimmer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.WindConfigSDK.WindRipple.Shimmer"); return default; } }
             public float Independence { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.WindConfigSDK.WindRipple.Independence"); return default; } }
         }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class WindSettings
-    {
-        [global::Unbound.Stub] public bool enableWind;
-        [global::Unbound.Stub] public float strenghResponse;
-        [global::Unbound.Stub] public float directionResponse;
-        [global::Unbound.Stub] public float randomness;
-        [global::Unbound.Stub] public WindSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpeedTree.Importer.WindSettings.ctor"); }
     }
 }
 namespace UnityEditor.Sprites

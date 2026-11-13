@@ -7,65 +7,9 @@
 
 namespace UnityEngine
 {
-    [global::Unbound.Stub]
-    public unsafe partial class SpeedTreeWindAsset : global::UnityEngine.Object
+    unsafe partial struct SpeedTreeWindConfig9
     {
-        [global::Unbound.Stub] internal SpeedTreeWindAsset(int version, global::UnityEngine.SpeedTreeWindConfig9 config) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpeedTreeWindAsset.ctor"); }
-        public int Version { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpeedTreeWindAsset.Version"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpeedTreeWindAsset.Version"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct SpeedTreeWindConfig9
-    {
-        [global::Unbound.Stub] public float strengthResponse;
-        [global::Unbound.Stub] public float directionResponse;
-        [global::Unbound.Stub] public float gustFrequency;
-        [global::Unbound.Stub] public float gustStrengthMin;
-        [global::Unbound.Stub] public float gustStrengthMax;
-        [global::Unbound.Stub] public float gustDurationMin;
-        [global::Unbound.Stub] public float gustDurationMax;
-        [global::Unbound.Stub] public float gustRiseScalar;
-        [global::Unbound.Stub] public float gustFallScalar;
-        [global::Unbound.Stub] public float branch1StretchLimit;
-        [global::Unbound.Stub] public float branch2StretchLimit;
-        [global::Unbound.Stub] public float sharedHeightStart;
-        [global::Unbound.Stub] public fixed float bendShared[20];
-        [global::Unbound.Stub] public fixed float oscillationShared[20];
-        [global::Unbound.Stub] public fixed float speedShared[20];
-        [global::Unbound.Stub] public fixed float turbulenceShared[20];
-        [global::Unbound.Stub] public fixed float flexibilityShared[20];
-        [global::Unbound.Stub] public float independenceShared;
-        [global::Unbound.Stub] public fixed float bendBranch1[20];
-        [global::Unbound.Stub] public fixed float oscillationBranch1[20];
-        [global::Unbound.Stub] public fixed float speedBranch1[20];
-        [global::Unbound.Stub] public fixed float turbulenceBranch1[20];
-        [global::Unbound.Stub] public fixed float flexibilityBranch1[20];
-        [global::Unbound.Stub] public float independenceBranch1;
-        [global::Unbound.Stub] public fixed float bendBranch2[20];
-        [global::Unbound.Stub] public fixed float oscillationBranch2[20];
-        [global::Unbound.Stub] public fixed float speedBranch2[20];
-        [global::Unbound.Stub] public fixed float turbulenceBranch2[20];
-        [global::Unbound.Stub] public fixed float flexibilityBranch2[20];
-        [global::Unbound.Stub] public float independenceBranch2;
-        [global::Unbound.Stub] public fixed float planarRipple[20];
-        [global::Unbound.Stub] public fixed float directionalRipple[20];
-        [global::Unbound.Stub] public fixed float speedRipple[20];
-        [global::Unbound.Stub] public fixed float flexibilityRipple[20];
-        [global::Unbound.Stub] public float independenceRipple;
-        [global::Unbound.Stub] public float shimmerRipple;
-        [global::Unbound.Stub] public float treeExtentX;
-        [global::Unbound.Stub] public float treeExtentY;
-        [global::Unbound.Stub] public float treeExtentZ;
-        [global::Unbound.Stub] public float windIndependence;
-        [global::Unbound.Stub] public int doShared;
-        [global::Unbound.Stub] public int doBranch1;
-        [global::Unbound.Stub] public int doBranch2;
-        [global::Unbound.Stub] public int doRipple;
-        [global::Unbound.Stub] public int doShimmer;
-        [global::Unbound.Stub] public int lodFade;
-        [global::Unbound.Stub] public float importScale;
-        [global::Unbound.Stub] public SpeedTreeWindConfig9() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpeedTreeWindConfig9.ctor"); }
         [global::Unbound.Stub] public static byte[] Serialize(global::UnityEngine.SpeedTreeWindConfig9 config) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpeedTreeWindConfig9.Serialize"); return global::System.Array.Empty<byte>(); }
-        public bool IsWindEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpeedTreeWindConfig9.IsWindEnabled"); return default; } }
     }
     [global::Unbound.Stub]
     public unsafe static partial class TerrainCallbacks
@@ -95,13 +39,10 @@ namespace UnityEngine
         [global::Unbound.Stub] public static void UpdateGIMaterials(this global::UnityEngine.Terrain terrain, int x, int y, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainExtensions.UpdateGIMaterials"); }
         [global::Unbound.Stub] internal static void UpdateGIMaterialsForTerrain(int terrainInstanceID, global::UnityEngine.Rect uvBounds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainExtensions.UpdateGIMaterialsForTerrain"); }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class Tree : global::UnityEngine.Component
+    unsafe partial class Tree
     {
-        [global::Unbound.Stub] public Tree() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.ctor"); }
         public global::UnityEngine.ScriptableObject data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.data"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.data"); } }
         public bool hasSpeedTreeWind { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.hasSpeedTreeWind"); return default; } }
-        public global::UnityEngine.SpeedTreeWindAsset windAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.windAsset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.windAsset"); } }
     }
 }
 namespace UnityEngine.Rendering
