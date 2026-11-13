@@ -148,6 +148,15 @@ fn message_line(message: &UnsupportedMessage) -> String {
 /// Adds the non-stripped documents of one Unity YAML file to `found`: class id, the type name
 /// (the document's single top-level key), its keys, and which of [`DATA_KEYS`] reference an
 /// object. Not a full parse: document headers and the first indentation level only.
+/// The GUIDs of the prefabs a scene's or prefab's instances come from (`m_SourcePrefab`).
+fn prefab_sources(text: &str) -> impl Iterator<Item = &str> {
+    text.lines().filter_map(|line| {
+        let rest = line.trim_start().strip_prefix("m_SourcePrefab: {")?;
+        let guid = rest.split("guid: ").nth(1)?;
+        Some(guid.split([',', '}']).next()?.trim())
+    })
+}
+
 fn scan(text: &str, path: &str, found: &mut BTreeMap<i32, Found>) {
     let mut current: Option<i32> = None;
     let mut expect_name = false;
@@ -265,11 +274,30 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
     let database_seconds = start.elapsed().as_secs_f64() - project_seconds;
     let mut found = BTreeMap::new();
     let mut files = 0usize;
+    // Assets a ScriptedImporter imports, by GUID: scene and prefab instances of their objects do
+    // not expand yet.
+    let scripted: BTreeMap<String, String> = db
+        .iter()
+        .filter(|a| !a.is_folder && unbound_assets::meta::scripted_importer_of(&a.file).is_some())
+        .map(|a| (a.guid.to_string(), a.path.clone()))
+        .collect();
+    let mut scripted_instances: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for asset in db.iter().filter(|a| !a.is_folder) {
         // Unity YAML only (scenes, prefabs, YAML assets); imported files are not objects here.
         if let Some(bytes) = read_yaml(&asset.file) {
             files += 1;
-            scan(&String::from_utf8_lossy(&bytes), &asset.path, &mut found);
+            let text = String::from_utf8_lossy(&bytes);
+            if !scripted.is_empty() {
+                for source in prefab_sources(&text) {
+                    if let Some(path) = scripted.get(source) {
+                        scripted_instances
+                            .entry(path.clone())
+                            .or_default()
+                            .insert(asset.path.clone());
+                    }
+                }
+            }
+            scan(&text, &asset.path, &mut found);
         } else if let Some(result) = fields::read_documents(&asset.file) {
             files += 1;
             match result {
@@ -340,6 +368,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "projectSettingsFields": settings_coverage.project_settings_fields,
             "unreadInRelease": coverage.unread_in_release,
             "renderingLimitations": RENDERING_LIMITATIONS,
+            "scriptedPrefabInstances": scripted_instances,
             "audioLimitations": AUDIO_LIMITATIONS,
             "playModeSpriteAtlases": play_mode_atlases.as_ref().map(|a| json!({"mode": a.mode, "atlases": a.paths})),
             "unsupportedMessages": messages.messages,
@@ -421,6 +450,16 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
     println!("\nRendering limitations:");
     for limitation in RENDERING_LIMITATIONS {
         println!("  {limitation}");
+    }
+    if !scripted_instances.is_empty() {
+        println!("\nPrefab instances of ScriptedImporter assets (not expanded, missing in play):");
+        for (source, users) in &scripted_instances {
+            println!(
+                "  {source}: in {} files: {}",
+                users.len(),
+                some_files(users, 3)
+            );
+        }
     }
     if let Some(atlases) = &play_mode_atlases {
         println!("\nSprite atlases:\n  {}", atlases.doctor_message());

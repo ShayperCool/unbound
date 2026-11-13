@@ -17,6 +17,7 @@ namespace UnityEditor.SpeedTree.Importer
     /// level overrides the settings) unless <c>externalObjects</c> remaps it, collider children, the
     /// wind asset and the importer's output data. The settings are the .meta's.
     /// </summary>
+    [ScriptedImporter(3, "st9", AllowCaching = true)]
     public partial class SpeedTree9Importer : ScriptedImporter
     {
         [SerializeField] internal MeshSettings m_MeshSettings = new MeshSettings();
@@ -597,10 +598,11 @@ namespace UnityEditor.SpeedTree.Importer
             /// <summary>The samples of a wind curve.</summary>
             const int CurveSamples = 20;
 
+            /// <summary>A curve keeps its first samples (a longer one is cut, as in the Editor).</summary>
             static void CheckCurve(float[] source)
             {
-                if (source.Length != CurveSamples)
-                    throw new FormatException($"a SpeedTree 9 wind curve has {source.Length} samples, not {CurveSamples}");
+                if (source.Length < CurveSamples)
+                    throw new FormatException($"a SpeedTree 9 wind curve has {source.Length} samples, fewer than {CurveSamples}");
             }
 
             static unsafe void Copied(float[] source, float* target)

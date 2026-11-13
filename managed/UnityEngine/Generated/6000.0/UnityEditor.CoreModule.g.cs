@@ -28962,21 +28962,15 @@ namespace UnityEditor.AssetImporters
         [global::Unbound.Stub] public virtual bool SupportsRemappedAssetType(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporter.SupportsRemappedAssetType"); return default; }
         [global::Unbound.Stub] internal static void RegisterScriptedImporters() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporter.RegisterScriptedImporters"); }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4, Inherited = false)]
-    [global::Unbound.Stub]
-    public unsafe partial class ScriptedImporterAttribute : global::System.Attribute
+    unsafe partial class ScriptedImporterAttribute
     {
         [global::System.Obsolete("Use overrideFileExtensions instead to specify this importer is an override for those file extensions")] [global::Unbound.Stub] public bool AutoSelect;
-        [global::Unbound.Stub] public bool AllowCaching;
-        [global::Unbound.Stub] public ScriptedImporterAttribute(int version, string ext) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterAttribute.ctor"); }
         [global::Unbound.Stub] public ScriptedImporterAttribute(int version, string ext, int importQueueOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterAttribute.ctor"); }
         [global::Unbound.Stub] public ScriptedImporterAttribute(int version, string[] exts) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterAttribute.ctor"); }
         [global::Unbound.Stub] public ScriptedImporterAttribute(int version, string[] exts, string[] overrideExts) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterAttribute.ctor"); }
         [global::Unbound.Stub] public ScriptedImporterAttribute(int version, string[] exts, int importQueueOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterAttribute.ctor"); }
         [global::Unbound.Stub] public ScriptedImporterAttribute(int version, string[] exts, string[] overrideExts, int importQueueOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterAttribute.ctor"); }
-        public int version { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterAttribute.version"); return default; } }
         public int importQueuePriority { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterAttribute.importQueuePriority"); return default; } }
-        public string[] fileExtensions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterAttribute.fileExtensions"); return global::System.Array.Empty<string>(); } }
         public string[] overrideFileExtensions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ScriptedImporterAttribute.overrideFileExtensions"); return global::System.Array.Empty<string>(); } }
     }
     [global::Unbound.Stub]

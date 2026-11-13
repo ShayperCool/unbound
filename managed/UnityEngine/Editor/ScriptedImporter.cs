@@ -111,6 +111,22 @@ namespace UnityEditor
 
 namespace UnityEditor.AssetImporters
 {
+    /// <summary>Names the file extensions a ScriptedImporter class imports and its version.</summary>
+    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+    public partial class ScriptedImporterAttribute : Attribute
+    {
+        public bool AllowCaching;
+
+        public ScriptedImporterAttribute(int version, string ext)
+        {
+            this.version = version;
+            fileExtensions = new[] { ext };
+        }
+
+        public int version { get; private set; }
+        public string[] fileExtensions { get; private set; }
+    }
+
     /// <summary>A project importer written in C#; Unbound runs it when an asset it imports loads.</summary>
     [global::UnityEngine.Scripting.@PreserveAttribute] public abstract partial class ScriptedImporter : AssetImporter
     {

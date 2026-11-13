@@ -50,6 +50,8 @@ namespace UnityEditor
                     importer = type != null && typeof(AssetImporter).IsAssignableFrom(type) && !type.IsAbstract
                         ? (AssetImporter)ObjectConstruction.CreateWithBacking(type)
                         : (AssetImporter)ObjectConstruction.CreateWithBacking(typeof(AssetImporter));
+                    // Every importer's .meta lists its remaps the same way.
+                    importer.ReadExternalObjects(doc.Body);
                 }
             }
             if (importer == null) return null;

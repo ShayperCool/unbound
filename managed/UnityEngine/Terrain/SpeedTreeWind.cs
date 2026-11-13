@@ -5,6 +5,7 @@ namespace UnityEngine
     /// <summary>The wind configuration of a SpeedTree 9 tree (its importer makes one); Unbound keeps
     /// it for the trees' renderers. Wind animation is not drawn yet.</summary>
     [ClassId(228)]
+    [ExcludeFromPreset]
     public partial class SpeedTreeWindAsset : Object
     {
         int m_Version;
@@ -83,6 +84,7 @@ namespace UnityEngine
     /// <summary>A tree's component: the SpeedTree 9 importer gives each level of detail one, with
     /// the tree's wind asset.</summary>
     [ClassId(193)]
+    [ExcludeFromPreset]
     public sealed partial class Tree : Component
     {
         SpeedTreeWindAsset m_WindAsset;

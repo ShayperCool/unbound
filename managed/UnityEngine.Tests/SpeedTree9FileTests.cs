@@ -41,5 +41,21 @@ namespace UnityEngine.Tests
             BitConverter.GetBytes(0x40000000u).CopyTo(huge, 0);
             Assert.Throws<FormatException>(() => SpeedTree9File.Read(WithSignature(huge)));
         }
+    
+
+        /// <summary>Mesh bounds centre on (min + max) * 0.5, which differs in the last bit from
+        /// Bounds.SetMinMax's min + extents for these corners (tests/projects/speedtree9).</summary>
+        [Fact]
+        public void MeshBoundsCentreOnTheMeanOfTheCorners()
+        {
+            var min = new Vector3(BitConverter.Int32BitsToSingle(unchecked((int)0xbd3b44e7u)), 0f, 0f);
+            var max = new Vector3(BitConverter.Int32BitsToSingle(0x3dbb44e7), 1f, 2f);
+            var mesh = new Mesh { vertices = new[] { min, max } };
+            var expected = (min + max) * 0.5f;
+            var other = new Bounds();
+            other.SetMinMax(min, max);
+            Assert.NotEqual(BitConverter.SingleToInt32Bits(expected.x), BitConverter.SingleToInt32Bits(other.center.x));
+            Assert.Equal(BitConverter.SingleToInt32Bits(expected.x), BitConverter.SingleToInt32Bits(mesh.bounds.center.x));
+        }
     }
 }
