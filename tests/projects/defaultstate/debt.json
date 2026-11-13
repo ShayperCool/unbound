@@ -1625,32 +1625,6 @@
       }
     },
     {
-      "key": "UnityEngine.PolygonCollider2D/Property/UnityEngine.Collider2D/bounds",
-      "module": "UnityEngine.Physics2DModule",
-      "reason": "Q411 unresolved default polygon initialization: radius and angular arithmetic differ. Changing only a measured coordinate would fit one shape; reconstruct the initializer and check runtime versus imported paths before changing this exact row.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=-2.98023224E-08;y=0.0954914689;z=0};extents=UnityEngine.Vector3{x=0.95105648;y=0.904508531;z=0};max=UnityEngine.Vector3{x=0.95105648;y=1;z=0};min=UnityEngine.Vector3{x=-0.95105648;y=-0.809017062;z=0};size=UnityEngine.Vector3{x=1.90211296;y=1.80901706;z=0}}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=-4.47034836E-08;y=0.0477457196;z=0};extents=UnityEngine.Vector3{x=0.47552824;y=0.452254295;z=0};max=UnityEngine.Vector3{x=0.475528181;y=0.5;z=0};min=UnityEngine.Vector3{x=-0.4755283;y=-0.404508591;z=0};size=UnityEngine.Vector3{x=0.95105648;y=0.904508591;z=0}}"
-      }
-    },
-    {
-      "key": "UnityEngine.PolygonCollider2D/Property/UnityEngine.PolygonCollider2D/points",
-      "module": "UnityEngine.Physics2DModule",
-      "reason": "Q411 unresolved default polygon initialization: radius and angular arithmetic differ. Changing only a measured coordinate would fit one shape; reconstruct the initializer and check runtime versus imported paths before changing this exact row.",
-      "expected": {
-        "status": "value",
-        "value": "[UnityEngine.Vector2{x=0;y=1},UnityEngine.Vector2{x=-0.95105654;y=0.309016973},UnityEngine.Vector2{x=-0.587785184;y=-0.809017062},UnityEngine.Vector2{x=0.587785363;y=-0.809016943},UnityEngine.Vector2{x=0.95105648;y=0.309017122}]"
-      },
-      "actual": {
-        "status": "value",
-        "value": "[UnityEngine.Vector2{x=-2.18556941E-08;y=0.5},UnityEngine.Vector2{x=-0.4755283;y=0.154508397},UnityEngine.Vector2{x=-0.293892533;y=-0.404508561},UnityEngine.Vector2{x=0.293892741;y=-0.404508412},UnityEngine.Vector2{x=0.47552821;y=0.154508635}]"
-      }
-    },
-    {
       "key": "UnityEngine.RenderTextureDescriptor/Property/UnityEngine.RenderTextureDescriptor/colorFormat",
       "module": "UnityEngine.CoreModule",
       "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",

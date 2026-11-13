@@ -415,6 +415,9 @@ namespace UnityEngine
 
         internal virtual void SetLocalBounds(Bounds value) => m_LocalBoundsOverride = value;
 
+        /// <summary>The local bounds set through bounds / localBounds, if any.</summary>
+        internal Bounds? LocalBoundsOverride => m_LocalBoundsOverride;
+
         internal virtual Bounds GetWorldBounds()
         {
             var local = localBounds;
@@ -925,9 +928,24 @@ namespace UnityEngine
                 var r = m_Sprite.rect;
                 var p = m_Sprite.pivot;
                 var min = new Vector2(-p.x / r.width * m_Size.x, -p.y / r.height * m_Size.y);
-                return new Bounds(new Vector3(min.x + m_Size.x * 0.5f, min.y + m_Size.y * 0.5f, 0f), new Vector3(m_Size.x, m_Size.y, 0.2f));
+                return Flipped(new Bounds(new Vector3(min.x + m_Size.x * 0.5f, min.y + m_Size.y * 0.5f, 0f), new Vector3(m_Size.x, m_Size.y, 0.2f)));
             }
-            return m_Sprite.bounds;
+            return Flipped(m_Sprite.bounds);
+        }
+
+        /// <summary>The sprite's bounds as Simple drawing has them, flipped, else the set local bounds
+        /// (what a BoxCollider2D added to the object fits, whatever the draw mode); empty without a
+        /// sprite (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteoutlines).</summary>
+        internal Bounds SimpleSpriteBounds() => LocalBoundsOverride ?? (m_Sprite == null ? default : Flipped(m_Sprite.bounds));
+
+        /// <summary>Bounds mirrored through the pivot along each flipped axis, as the flipped vertices
+        /// are (matches the Unity 6000.0.71f1 Editor's localBounds, tests/projects/spriteoutlines).</summary>
+        Bounds Flipped(Bounds bounds)
+        {
+            if (!m_FlipX && !m_FlipY) return bounds;
+            var c = bounds.center;
+            bounds.center = new Vector3(m_FlipX ? -c.x : c.x, m_FlipY ? -c.y : c.y, c.z);
+            return bounds;
         }
 
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)

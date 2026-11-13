@@ -94,6 +94,26 @@ namespace UnityEngine
         internal virtual void BuildShapes(Matrix4x4 toBody, List<Shape> shapes) { }
 
         /// <summary>The shapes must be rebuilt (a geometry or contact property changed).</summary>
+        /// <summary>The smallest size component or radius the shape setters keep (measured: setting
+        /// 0, -3 or 1e-6 keeps 0.0001; tests/projects/spriteoutlines).</summary>
+        internal const float MinimumExtent = 0.0001f;
+
+        /// <summary>The bounds an added collider fits: the local bounds of the object's (first)
+        /// renderer, through that renderer's matrix into the object's space; false without a renderer
+        /// or with empty bounds (a sprite renderer without a sprite). Flips and Sliced or Tiled sizes
+        /// are in them (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteoutlines).</summary>
+        internal bool RendererLocalBounds(out Bounds bounds)
+        {
+            bounds = default;
+            var renderer = GetComponent<Renderer>();
+            if (renderer == null) return false;
+            var local = renderer.localBounds;
+            var e = local.extents;
+            if (e.x == 0f && e.y == 0f && e.z == 0f) return false;
+            bounds = Renderer.TransformBounds(local, transform.worldToLocalMatrix * renderer.BoundsMatrix);
+            return true;
+        }
+
         internal void ShapeChanged()
         {
             CaptureMaterial();
@@ -632,9 +652,23 @@ namespace UnityEngine
             get => m_Radius;
             set
             {
-                m_Radius = Mathf.Max(value, 0.0001f);
+                m_Radius = Mathf.Max(value, MinimumExtent);
                 ShapeChanged();
             }
+        }
+
+        /// <summary>The largest radius an added circle takes from its renderer's bounds.</summary>
+        const float MaximumFittedRadius = 1e6f;
+
+        /// <summary>Added to an object with a renderer: the circle around its bounds (the larger
+        /// half extent, within 0.0001 and 1e6) at their centre (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/spriteoutlines).</summary>
+        internal override void OnAddedByScript()
+        {
+            if (!RendererLocalBounds(out var b)) return;
+            float r = b.extents.y <= b.extents.x ? b.extents.x : b.extents.y;
+            m_Radius = r < MinimumExtent ? MinimumExtent : Mathf.Min(r, MaximumFittedRadius);
+            offset = b.center;
         }
 
         [global::System.@ObsoleteAttribute("CircleCollider2D.center has been deprecated. Use CircleCollider2D.offset instead (UnityUpgradable) -> offset", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] public Vector2 center
@@ -694,10 +728,25 @@ namespace UnityEngine
             get => m_Size;
             set
             {
+                value = new Vector2(Mathf.Max(value.x, MinimumExtent), Mathf.Max(value.y, MinimumExtent));
                 if (m_Size != value) CaptureSkin();
                 m_Size = value;
                 ShapeChanged();
             }
+        }
+
+        /// <summary>Added to an object with a renderer: the box of its bounds; a sprite renderer's
+        /// are the sprite's in Simple drawing (flipped, whatever the draw mode; its set local
+        /// bounds when there are some; empty without a sprite) (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/spriteoutlines).</summary>
+        internal override void OnAddedByScript()
+        {
+            Bounds b;
+            var sprite = GetComponent<SpriteRenderer>();
+            if (sprite != null) b = sprite.SimpleSpriteBounds();
+            else if (!RendererLocalBounds(out b)) return;
+            size = new Vector2(b.extents.x + b.extents.x, b.extents.y + b.extents.y);
+            offset = b.center;
         }
 
         public float edgeRadius
@@ -775,9 +824,18 @@ namespace UnityEngine
             get => m_Size;
             set
             {
-                m_Size = value;
+                m_Size = new Vector2(Mathf.Max(value.x, MinimumExtent), Mathf.Max(value.y, MinimumExtent));
                 ShapeChanged();
             }
+        }
+
+        /// <summary>Added to an object with a renderer: the capsule of its bounds (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/spriteoutlines).</summary>
+        internal override void OnAddedByScript()
+        {
+            if (!RendererLocalBounds(out var b)) return;
+            size = new Vector2(b.extents.x + b.extents.x, b.extents.y + b.extents.y);
+            offset = b.center;
         }
 
         public CapsuleDirection2D direction
@@ -889,16 +947,30 @@ namespace UnityEngine
         public PolygonCollider2D() { }
 
         /// <summary>Added to a sprite's object: the sprite's collider outline (its physics shape,
-        /// else its traced outline), as the Unity 6000.0.71f1 Editor initializes it in Play mode
-        /// (tests/projects/spriteoutlines).</summary>
+        /// else its traced outline; not flipped). Without one, a pentagon around the renderer's
+        /// bounds (the larger half extent, at their centre), else the unit pentagon (matches the
+        /// Unity 6000.0.71f1 Editor in Play mode, tests/projects/spriteoutlines).</summary>
         internal override void OnAddedByScript()
         {
             var sprite = GetComponent<SpriteRenderer>()?.sprite;
-            if (sprite == null) return;
-            var outline = sprite.ColliderOutline();
-            if (outline.Length == 0) return;
-            m_Paths = new List<Vector2[]>(outline.Length);
-            foreach (var path in outline) m_Paths.Add((Vector2[])path.Clone());
+            var outline = sprite != null ? sprite.ColliderOutline() : Array.Empty<Vector2[]>();
+            if (outline.Length > 0)
+            {
+                m_Paths = new List<Vector2[]>(outline.Length);
+                foreach (var path in outline) m_Paths.Add((Vector2[])path.Clone());
+            }
+            else
+            {
+                var centre = Vector2.zero;
+                float radius = 1f;
+                if (RendererLocalBounds(out var b))
+                {
+                    centre = b.center;
+                    float r = b.extents.y <= b.extents.x ? b.extents.x : b.extents.y;
+                    if (r > 0f) radius = r;
+                }
+                m_Paths = new List<Vector2[]> { RegularPolygon(5, new Vector2(radius, radius), centre) };
+            }
             ShapeChanged();
         }
 
@@ -992,14 +1064,15 @@ namespace UnityEngine
             ShapeChanged();
         }
 
+        /// <summary>A regular polygon of radius `scale` around `offset`, from the top and
+        /// anticlockwise; the angle grows by one step per corner (matches the Unity 6000.0.71f1
+        /// Editor's CreatePrimitive and default pentagon, tests/projects/spriteoutlines).</summary>
         static Vector2[] RegularPolygon(int sides, Vector2 scale, Vector2 offset)
         {
             var points = new Vector2[sides];
-            for (int i = 0; i < sides; i++)
-            {
-                float a = Mathf.PI * 0.5f + i * 2f * Mathf.PI / sides;
-                points[i] = new Vector2(Mathf.Cos(a) * 0.5f * scale.x, Mathf.Sin(a) * 0.5f * scale.y) + offset;
-            }
+            float step = 2f * Mathf.PI / sides, angle = 0f;
+            for (int i = 0; i < sides; i++, angle += step)
+                points[i] = new Vector2(offset.x - Mathf.Sin(angle) * scale.x, Mathf.Cos(angle) * scale.y + offset.y);
             return points;
         }
 
@@ -1070,6 +1143,29 @@ namespace UnityEngine
         }
 
         public int edgeCount => Math.Max(0, m_Points.Length - 1);
+
+        /// <summary>The narrowest renderer bounds (half width) an added edge spans.</summary>
+        const float MinimumFittedHalfWidth = 5.025e-5f;
+
+        /// <summary>Added to an object with a renderer: a level edge across its bounds at their
+        /// centre, or the default edge when they are narrower than 0.0001 (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/spriteoutlines).</summary>
+        internal override void OnAddedByScript()
+        {
+            if (!RendererLocalBounds(out var b)) return;
+            Vector2 c = b.center, e = b.extents;
+            if (!(MinimumFittedHalfWidth <= e.x))
+            {
+                m_Points = new[] { new Vector2(-0.5f, 0f), new Vector2(0.5f, 0f) };
+            }
+            else
+            {
+                float y = (c.y + e.y + (c.y - e.y)) * 0.5f;
+                Vector2 Finite(Vector2 p) => float.IsFinite(p.x) && float.IsFinite(p.y) ? p : Vector2.zero;
+                m_Points = new[] { Finite(new Vector2(c.x - e.x, y)), Finite(new Vector2(c.x + e.x, y)) };
+            }
+            ShapeChanged();
+        }
 
         public int pointCount => m_Points.Length;
 

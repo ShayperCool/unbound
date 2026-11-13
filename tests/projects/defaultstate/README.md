@@ -117,7 +117,8 @@ Later SpriteUtility and hash utility declarations add three factory rows. The Sm
 preserving all 12,514 earlier raw rows, for 12,706 current rows. The comparison has
 12,439 exact rows, 267 differing reference rows, zero missing rows and zero extra implementation rows.
 Small resolves 107 existing queue entries and adds three exact initialized-context gaps,
-giving 269 entries with the same 50 variable policies. Two variable observations happen
+giving 269 entries with the same 50 variable policies. Q437 then matches the default
+polygon's two rows (12,441 exact, 265 differing, 267 entries). Two variable observations happen
 to equal this implementation snapshot; their policies remain unresolved.
 
 The five Q411 part 2 slices remove 764 existing queue entries and add 1,101
@@ -210,11 +211,14 @@ settings. The edge and box controls distinguish supported from unsupported sourc
 The existing measured Physics2D compatibility mechanism selects these rules; other
 releases retain their previous unmeasured contact and capability paths.
 
-Physics2D keeps five rows: two polygon initialization values, the initial substep count,
-and the two already-variable joint forces. Both scene values are valid/equal and report
-one after a real Script simulation, ruling out invalid-scene and constant-counter
-explanations for the earlier zero-versus-one discrepancy. The polygon radius and angular
-arithmetic still need one reconstructed initializer plus import/runtime controls.
+Physics2D keeps three rows: the initial substep count and the two already-variable joint
+forces. Both scene values are valid/equal and report one after a real Script simulation,
+ruling out invalid-scene and constant-counter explanations for the earlier zero-versus-one
+discrepancy. The two polygon initialization rows (points and bounds) match exactly since
+Q437: the default pentagon has radius one, from the top and anticlockwise, with the angle
+growing by one step per corner, the arithmetic `PolygonCollider2D.CreatePrimitive` has;
+tests/projects/spriteoutlines records CreatePrimitive and the pentagon an added collider
+takes around a renderer's bounds.
 No cache writer, cache schema or serialized output changes in this slice; the runtime
 reader applies the same capability rule to already parsed input.
 
