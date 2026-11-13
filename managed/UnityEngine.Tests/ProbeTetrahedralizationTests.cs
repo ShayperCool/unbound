@@ -226,6 +226,21 @@ namespace Unbound.Tests
             Assert.Empty(set.Cells);
         }
 
+        [Theory]
+        [InlineData(1.5e-5f, false)]
+        [InlineData(3e-5f, true)]
+        public void ProbesFlatByEitherPlaneMakeNoCells(float lift, bool cells)
+        {
+            // Within 2e-5 (1e-6 of the extent 20) of the plane z = 0 of probes 0, 1 and 2, though
+            // the plane through probe 0 and the probes farthest from it and from their line leaves
+            // one far probe 2 * lift from it; lifted twice as far, the probes make cells.
+            var positions = new[] { Vector3.zero, new Vector3(1, 0, 0), new Vector3(0, 1, 0),
+                new Vector3(10, 10, lift), new Vector3(10, -10, -lift), new Vector3(-10, 10, -lift) };
+            var set = new ProbeSet { Positions = positions };
+            ProbeTetrahedralization.Build(set);
+            Assert.Equal(cells, set.Cells.Length > 0);
+        }
+
         static void AssertGridTiled(int nx, int ny, int nz, float spacing, Quaternion rotation, Vector3 offset)
         {
             // A regular grid, as light probe groups usually are: every cube's corners are

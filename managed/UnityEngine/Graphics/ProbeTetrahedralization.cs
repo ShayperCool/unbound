@@ -121,7 +121,8 @@ namespace UnityEngine
 
             // Flatness: probe 0, the probe farthest from it, the probe farthest from their line and
             // the probe farthest from the plane of those three (the first of equals). Probes all
-            // within `flat` of that point, line or plane make no cells.
+            // within `flat` of that point, line or plane make no cells, and so do probes within
+            // `flat` of the first cell's plane below.
             double flat = PlaneTolerance * Math.Max(size, magnitude);
             int f1 = -1, f2 = -1, f3 = -1;
             double far = flat;

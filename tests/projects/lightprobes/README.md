@@ -373,8 +373,9 @@ earlier builder overlapped cells of a 6 x 6 x 3 grid rotated 30 degrees. Duplica
 no cell.
 Positions all within about eight float32 rounding steps (1e-6 of the largest extent or
 coordinate) of the plane through probe 0, the probe farthest from it and the probe farthest from
-their line make no cells, as positions exactly in one plane do; a 50 x 50 layer rotated and
-moved 1000 units away is one of the controls. The Editor's answer for such a
+their line, or of the plane through probe 0 and the first probes after it off its position and
+line, make no cells, as positions exactly in one plane do; a 50 x 50 layer rotated and moved
+1000 units away is one of the controls. The Editor's answer for such a
 nearly planar layer is unmeasured; the earlier builder made thin cells from it.
 
 The main comparison is 383/625 on Linux, previously 379/625, and 382/625 on macOS, previously
