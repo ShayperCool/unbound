@@ -122,6 +122,9 @@ namespace UnityEngine
         [Obsolete("Terrain thickness is no longer required by the physics engine. Set appropriate continuous collision detection modes to fast moving bodies.")]
         public float thickness { get; set; }
 
+        /// <summary>A heightmap sample as stored (0..32766) at a clamped grid point.</summary>
+        internal int RawHeight(int x, int y) => m_Heights[Mathf.Clamp(y, 0, m_Resolution - 1) * m_Resolution + Mathf.Clamp(x, 0, m_Resolution - 1)];
+
         /// <summary>A heightmap sample (0..1) at a clamped grid point.</summary>
         internal float Sample(int x, int y)
         {

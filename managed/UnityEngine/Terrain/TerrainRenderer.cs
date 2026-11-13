@@ -7,10 +7,10 @@ namespace UnityEngine
 {
     /// <summary>
     /// What draws a terrain: a renderer the camera collects like a mesh renderer's (lit, shadowed,
-    /// casting) but no component of its GameObject (a terrain's GameObject has no Renderer). Its mesh
-    /// is the heightmap at full resolution (cells split as the data's; normals as its interpolated
-    /// normals'), drawn with a copy of the terrain's material template carrying the splat maps and
-    /// four layers, and one material of the template's AddPassShader per four more layers.
+    /// casting) but no component of its GameObject (a terrain's GameObject has no Renderer). Its
+    /// meshes are the heightmap's patches at the camera's level of detail (TerrainPatches.cs),
+    /// drawn with a copy of the terrain's material template carrying the splat maps and four
+    /// layers, and one material of the template's AddPassShader per four more layers.
     /// </summary>
     /// <summary>A placed tree's part as the lights and shadows see it: its bounds in the terrain's
     /// space, the prefab renderer's materials and shadow settings.</summary>
@@ -24,9 +24,6 @@ namespace UnityEngine
     internal sealed partial class TerrainRenderer : Renderer
     {
         internal Terrain m_Terrain;
-        Mesh m_Mesh;
-        int m_MeshVersion = -1;
-        TerrainData m_MeshData;
         Material m_Template;
         Material[] m_Passes = Array.Empty<Material>();
         int m_SplatVersion = -1;
@@ -67,13 +64,12 @@ namespace UnityEngine
                     Unbound.Runtime.Stubs.Ignored("Terrain.realtimeLightmapIndex",
                         "realtime GI terrain charts and dynamic lightmap textures are not supported yet; only baked lightmaps are drawn");
                 m_PropertyBlock = terrain.SplatProperties;
-                var mesh = MeshOf(data);
                 UpdateMaterials(terrain, data);
                 if (m_Passes.Length > 0)
                 {
                     m_Materials = m_Passes;
-                    // Each material draws the whole mesh (its single submesh).
-                    FrameBuilder.AddMeshDraws(this, mesh, Matrix4x4.Translate(terrain.GetPosition()), Color.white, camera, into);
+                    // Each material draws every patch (its single submesh).
+                    CollectPatches(terrain, data, camera, into);
                 }
             }
             if (terrain.drawTreesAndFoliage)
@@ -221,55 +217,6 @@ namespace UnityEngine
             return result;
         }
 
-        Mesh MeshOf(TerrainData data)
-        {
-            if (m_Mesh != null && m_MeshData == data && m_MeshVersion == data.m_HeightsVersion) return m_Mesh;
-            m_MeshData = data;
-            m_MeshVersion = data.m_HeightsVersion;
-            int resolution = data.heightmapResolution;
-            var scale = data.heightmapScale;
-            var vertices = new Vector3[resolution * resolution];
-            var normals = new Vector3[vertices.Length];
-            var uvs = new Vector2[vertices.Length];
-            float inverse = 1f / (resolution - 1);
-            for (int z = 0; z < resolution; z++)
-                for (int x = 0; x < resolution; x++)
-                {
-                    int i = z * resolution + x;
-                    vertices[i] = new Vector3(x * scale.x, data.Sample(x, z) * scale.y, z * scale.z);
-                    normals[i] = data.GridNormal(x, z);
-                    uvs[i] = new Vector2(x * inverse, z * inverse);
-                }
-            // Two triangles a cell, across its (x, z)-(x + 1, z + 1) diagonal, clockwise from above.
-            var triangles = new int[(resolution - 1) * (resolution - 1) * 6];
-            int t = 0;
-            for (int z = 0; z < resolution - 1; z++)
-                for (int x = 0; x < resolution - 1; x++)
-                {
-                    int i00 = z * resolution + x, i10 = i00 + 1, i01 = i00 + resolution, i11 = i01 + 1;
-                    triangles[t++] = i00;
-                    triangles[t++] = i01;
-                    triangles[t++] = i11;
-                    triangles[t++] = i00;
-                    triangles[t++] = i11;
-                    triangles[t++] = i10;
-                }
-            if (m_Mesh == null)
-                m_Mesh = new Mesh { name = "Terrain", hideFlags = HideFlags.HideAndDontSave, indexFormat = IndexFormat.UInt32 };
-            m_Mesh.Clear();
-            m_Mesh.vertices = vertices;
-            m_Mesh.normals = normals;
-            m_Mesh.uv = uvs;
-            // Native terrain supplies normalized XZ coordinates in all four UV channels,
-            // including TEXCOORD1 used by the installed terrain lightmap shaders.
-            m_Mesh.uv2 = uvs;
-            m_Mesh.uv3 = uvs;
-            m_Mesh.uv4 = uvs;
-            m_Mesh.triangles = triangles;
-            m_Mesh.RecalculateBounds();
-            return m_Mesh;
-        }
-
         void UpdateMaterials(Terrain terrain, TerrainData data)
         {
             var template = terrain.materialTemplate;
@@ -399,9 +346,9 @@ namespace UnityEngine
             m_Trees.Clear();
             foreach (var m in m_Passes) if (m != null) DestroyImmediate(m);
             m_Passes = Array.Empty<Material>();
-            if (m_Mesh != null) DestroyImmediate(m_Mesh);
             if (m_Holes != null) DestroyImmediate(m_Holes);
             DestroyDetails();
+            DestroyPatches();
             foreach (var m in m_DetailMaterials) if (m != null) DestroyImmediate(m);
             if (m_DetailAtlas != null) DestroyImmediate(m_DetailAtlas);
         }
