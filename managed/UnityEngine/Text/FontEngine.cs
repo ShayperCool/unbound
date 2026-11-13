@@ -185,14 +185,12 @@ namespace UnityEngine.TextCore.LowLevel
 
         public static FontEngineError LoadFontFace(Font font, int pointSize) => LoadFontFace(font, (float)pointSize, 0);
 
-        /// <summary>The face of a Font asset (its font file), or of the first OS font it stands for.
-        /// A font without font data fails, as the Editor's built-in LegacyRuntime does: TextCore then
-        /// builds its asset from the OS fallback families (tests/projects/osfontfallback).</summary>
+        /// <summary>The face of a Font asset (its font file), or of the first OS font it stands for.</summary>
         public static FontEngineError LoadFontFace(Font font, float pointSize, int faceIndex)
         {
             if (font == null) return FontEngineError.Invalid_File;
             var source = font.m_Source as NativeGlyphSource ?? (font.m_Source as ChainGlyphSource)?.First as NativeGlyphSource;
-            if (source == null || !source.HasGlyphData) return FontEngineError.Invalid_File;
+            if (source == null) return FontEngineError.Invalid_File;
             return Load(new LoadedFace { Handle = source.Handle, FaceIndex = faceIndex }, pointSize);
         }
 

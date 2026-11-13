@@ -390,6 +390,11 @@ namespace UnityEngine.TextCore.Text
             {
                 // The built-in font falls back to the OS fonts Unity lists for it.
                 var fallbacks = Font.GetOSFallbacks();
+                if (BuildsFromOsFallbacks(font))
+                {
+                    var installed = CreateFontAssetWithOSFallbackList(fallbacks, samplingPointSize);
+                    if (installed != null) return installed;
+                }
                 if (FontEngine.LoadFontFace(font, samplingPointSize, faceIndex) == FontEngineError.Success)
                 {
                     var legacy = CreateFontAssetInstance(font, atlasPadding, renderMode, atlasWidth, atlasHeight, atlasPopulationMode, enableMultiAtlasSupport);
@@ -408,6 +413,14 @@ namespace UnityEngine.TextCore.Text
             }
             return CreateFontAssetInstance(font, atlasPadding, renderMode, atlasWidth, atlasHeight, atlasPopulationMode, enableMultiAtlasSupport);
         }
+
+        /// <summary>Whether TextCore makes the font's asset from the installed OS fallback families:
+        /// for the Editor's built-in LegacyRuntime, which holds no font data, on macOS (Unity
+        /// 6000.0.71f1 macOS Editor, tests/projects/osfontfallback: Arial, its fallback table the
+        /// installed families in order). Elsewhere (unmeasured), and when none of those families is
+        /// installed, the asset keeps the built-in face it has here.</summary>
+        internal static bool BuildsFromOsFallbacks(Font font) =>
+            OperatingSystem.IsMacOS() && font.m_Source is Unbound.Runtime.NativeGlyphSource { HasGlyphData: false };
 
         /// <summary>A font asset of the face the font engine has loaded: an empty atlas texture
         /// (1 x 1 until the first glyph), its material and a free rect of the whole atlas.</summary>

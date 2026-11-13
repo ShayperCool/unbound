@@ -51,6 +51,37 @@ namespace UnityEngine.Tests
             Assert.Equal("none", WithFaces(() => Lookup("Futura", null), faces));
         }
 
+        static Unbound.Runtime.NativeGlyphSource Source(bool glyphData)
+        {
+            var source = (Unbound.Runtime.NativeGlyphSource)Activator.CreateInstance(typeof(Unbound.Runtime.NativeGlyphSource),
+                BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] { 0UL }, null);
+            source.HasGlyphData = glyphData;
+            return source;
+        }
+
+        // The Editor's LegacyRuntime has no font data: on macOS its TextCore asset is made of the
+        // installed OS fallback families; elsewhere, and for a font with data, the font's own face.
+        [Fact]
+        public void OnlyAFontWithoutDataOnMacOsIsBuiltFromTheOsFallbacks()
+        {
+            var legacy = new Font { m_Source = Source(false) };
+            var withData = new Font { m_Source = Source(true) };
+            try
+            {
+                Assert.Equal(OperatingSystem.IsMacOS(), UnityEngine.TextCore.Text.FontAsset.BuildsFromOsFallbacks(legacy));
+                Assert.False(UnityEngine.TextCore.Text.FontAsset.BuildsFromOsFallbacks(withData));
+                Assert.False(UnityEngine.TextCore.Text.FontAsset.BuildsFromOsFallbacks(new Font()));
+                // With none of the families installed there is no OS asset, and the built-in face is kept.
+                Assert.Null(WithFaces(() => UnityEngine.TextCore.Text.FontAsset.CreateFontAssetWithOSFallbackList(Font.GetOSFallbacks()),
+                    Face("Liberation Sans", "Regular", "/fonts/LiberationSans-Regular.ttf")));
+            }
+            finally
+            {
+                Object.DestroyImmediate(legacy);
+                Object.DestroyImmediate(withData);
+            }
+        }
+
         // Unity 6000.0.71f1 macOS Editor, tests/projects/osfontfallback.
         [Fact]
         public void TheOsFallbackListIsTheEditorsOfThisOs()
