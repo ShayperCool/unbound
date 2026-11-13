@@ -1010,7 +1010,8 @@ impl Source {
         };
         Source::Builtin {
             which,
-            properties_first: name.starts_with("unity_"),
+            // A value set under the legacy trees' name wins over the camera's, as unity_ ones do.
+            properties_first: name.starts_with("unity_") || name == "_CameraToWorld",
         }
     }
 }

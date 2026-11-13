@@ -2103,9 +2103,9 @@ namespace Unbound.Runtime
                 {
                     var mode = info.LightMode(i);
                     forward |= mode == "ForwardBase" || mode == "ForwardAdd";
-                    // An untagged pass that turns lighting on gets the vertex lights too (the
-                    // Soft Occlusion tree shaders' mesh passes, tests/projects/treebillboards).
-                    vertex |= mode == "Vertex" || (mode == "SRPDefaultUnlit" && i < info.Lighting.Count && info.Lighting[i]);
+                    // An Always pass (untagged) that turns lighting on gets the vertex lights too
+                    // (the Soft Occlusion tree shaders' mesh passes, tests/projects/treebillboards).
+                    vertex |= mode == "Vertex" || (info.BuiltinLightMode(i) == "Always" && i < info.Lighting.Count && info.Lighting[i]);
                 }
                 vertexLit = vertex && !forward;
             }

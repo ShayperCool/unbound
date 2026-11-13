@@ -17,7 +17,7 @@ namespace UnityEngine
     /// facing the camera across the fade (_SquashAmount from 1 to 0.04 by a smoothstep);</item>
     /// <item>past that as billboards: camera-facing quads cut from an atlas into which each
     /// prototype is drawn with its BillboardShader copies, seen orthographically from the camera's
-    /// pitch and yaw, redrawn when either turns by more than 0.1 degree; drawn back to front with
+    /// pitch and yaw, redrawn when either turns by more than 0.1 degree or its lights change; drawn back to front with
     /// Hidden/TerrainEngine/BillboardTree, whose vertex program drops those past treeDistance.</item>
     /// </list>
     /// Unmeasured: wind zones (warned; trees drawn unbent), several lights (the first four
@@ -101,15 +101,14 @@ namespace UnityEngine
         readonly Dictionary<int, object> m_BillboardProperties = new Dictionary<int, object>(5);
         readonly BoxedVectors m_BillboardBoxes = new BoxedVectors(5);
         readonly List<(float Distance, int Index)> m_Billboards = new List<(float, int)>();
-        readonly List<Vector3> m_BillboardVertices = new List<Vector3>();
-        readonly List<Color32> m_BillboardColors = new List<Color32>();
-        readonly List<Vector2> m_BillboardUv = new List<Vector2>(), m_BillboardOffsets = new List<Vector2>();
-        readonly List<int> m_BillboardIndices = new List<int>();
+        int[] m_BillboardIndexArray = Array.Empty<int>();
         /// <summary>The trees the billboard mesh holds, in its order, and the color space it was
         /// filled in.</summary>
         readonly List<int> m_BillboardOrder = new List<int>();
         bool m_BillboardsLinear;
         static readonly Vector4[] s_LightDirections = new Vector4[4], s_LightColors = new Vector4[4];
+        /// <summary>The tree lights the atlas was last drawn with.</summary>
+        readonly Vector4[] m_AtlasLightDirections = new Vector4[4], m_AtlasLightColors = new Vector4[4];
         static readonly Comparison<(float Distance, int Index)> s_FarFirst =
             (a, b) => a.Distance != b.Distance ? b.Distance.CompareTo(a.Distance) : a.Index.CompareTo(b.Index);
 
@@ -121,7 +120,11 @@ namespace UnityEngine
             var renderer = prefab.GetComponent<MeshRenderer>();
             var filter = prefab.GetComponent<MeshFilter>();
             var mesh = filter != null ? filter.sharedMesh : null;
-            if (renderer == null || mesh == null) return null;
+            if (renderer == null || mesh == null)
+            {
+                Warn($"tree prototype '{prefab.name}' has materials made for billboards but no mesh on its root: Unbound draws it as its meshes at every distance, without billboards.");
+                return null;
+            }
             var bounds = mesh.bounds;
             Vector3 c = bounds.center, e = bounds.extents;
             float reach = Mathf.Max(Mathf.Max(Mathf.Abs(c.x + e.x), Mathf.Abs(c.x - e.x)), Mathf.Max(Mathf.Abs(c.z + e.z), Mathf.Abs(c.z - e.z)));
@@ -226,7 +229,7 @@ namespace UnityEngine
             m_AtlasPitch = m_AtlasYaw = float.NaN;
         }
 
-        /// <summary>The power of two nearest to <paramref name="n"/> (the lower one on a tie).</summary>
+        /// <summary>The power of two nearest to <paramref name="n"/> (the higher one on a tie).</summary>
         internal static int NearestPowerOfTwo(int n)
         {
             if (n <= 1) return 1;
@@ -243,7 +246,10 @@ namespace UnityEngine
             m_AtlasYaw = yaw;
             var rotation = Quaternion.Euler(pitch, yaw, 0f);
             var forward = rotation * Vector3.forward;
-            SetTreeLights();
+            Array.Copy(s_LightDirections, m_AtlasLightDirections, 4);
+            Array.Copy(s_LightColors, m_AtlasLightColors, 4);
+            Shader.SetGlobalVectorArray(s_TreeLightDirections, s_LightDirections);
+            Shader.SetGlobalVectorArray(s_TreeLightColors, s_LightColors);
             var saved = GfxStream.Current;
             GfxStream.SetTarget(m_Atlas.EnsureCreated());
             // A camera's clear color: made linear in a linear-space project.
@@ -276,24 +282,31 @@ namespace UnityEngine
             m_Atlas.GenerateMips();
         }
 
-        /// <summary>_TerrainTreeLightDirections and _TerrainTreeLightColors: the first four enabled
-        /// directional lights, each the direction towards it and its color times its intensity.</summary>
-        static void SetTreeLights()
+        /// <summary>The tree lights (_TerrainTreeLightDirections, _TerrainTreeLightColors): the
+        /// first four enabled directional lights, each the direction towards it and its final
+        /// color (as the vertex lights get it), the rest zero.</summary>
+        static void GatherTreeLights()
         {
             int n = 0;
+            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             foreach (var light in Light.s_Enabled)
             {
                 if (n == 4) break;
                 if (light == null || light.type != LightType.Directional) continue;
-                var toward = -(light.transform.rotation * Vector3.forward);
-                s_LightDirections[n] = toward;
-                var color = (QualitySettings.activeColorSpace == ColorSpace.Linear ? light.color.linear : light.color) * light.intensity;
-                s_LightColors[n] = color;
+                s_LightDirections[n] = -(light.transform.rotation * Vector3.forward);
+                s_LightColors[n] = (Vector4)light.FinalColor(linear);
                 n++;
             }
             for (int i = n; i < 4; i++) s_LightDirections[i] = s_LightColors[i] = Vector4.zero;
-            Shader.SetGlobalVectorArray(s_TreeLightDirections, s_LightDirections);
-            Shader.SetGlobalVectorArray(s_TreeLightColors, s_LightColors);
+        }
+
+        /// <summary>Whether the tree lights differ from those the atlas was drawn with.</summary>
+        bool TreeLightsChanged()
+        {
+            for (int i = 0; i < 4; i++)
+                if (!FloatBits.Same(s_LightDirections[i], m_AtlasLightDirections[i]) || !FloatBits.Same(s_LightColors[i], m_AtlasLightColors[i]))
+                    return true;
+            return false;
         }
 
         /// <summary>The billboard's turn factors for a pitch (degrees): how far its height leans
@@ -354,8 +367,11 @@ namespace UnityEngine
             if (m_Billboards.Count == 0) return;
             var cameraObject = camera.Camera;
             var euler = cameraObject != null ? cameraObject.transform.eulerAngles : Quaternion.LookRotation(camera.Forward).eulerAngles;
+            // Drawn again when the camera turns or the lights it was lit by change (measured: a
+            // sun's intensity alone, tests/projects/treebillboards sunonly).
+            GatherTreeLights();
             if (float.IsNaN(m_AtlasPitch) || Mathf.Abs(Mathf.DeltaAngle(euler.x, m_AtlasPitch)) >= AtlasTurn
-                || Mathf.Abs(Mathf.DeltaAngle(euler.y, m_AtlasYaw)) >= AtlasTurn || !m_Atlas.IsCreated())
+                || Mathf.Abs(Mathf.DeltaAngle(euler.y, m_AtlasYaw)) >= AtlasTurn || !m_Atlas.IsCreated() || TreeLightsChanged())
                 DrawAtlas(euler.x, euler.y);
             if (m_BillboardMaterial == null)
             {
@@ -404,14 +420,29 @@ namespace UnityEngine
             return false;
         }
 
+        /// <summary>Writes the billboards into the mesh's channel arrays, kept at a capacity
+        /// (streamed: only the billboards' share is uploaded), with bounds that hold every
+        /// billboard however it turns.</summary>
         void FillBillboardMesh()
         {
-            m_BillboardVertices.Clear();
-            m_BillboardColors.Clear();
-            m_BillboardUv.Clear();
-            m_BillboardOffsets.Clear();
-            m_BillboardIndices.Clear();
+            var mesh = m_BillboardMesh;
+            int vertices = m_Billboards.Count * 4, indices = m_Billboards.Count * 6;
+            int length = Mesh.StreamCapacity(mesh.m_Vertices?.Length ?? 0, vertices);
+            if (mesh.m_Vertices == null || mesh.m_Vertices.Length != length)
+            {
+                mesh.AdoptVertices(new Vector3[length]);
+                mesh.m_Colors = new Color32[length];
+                mesh.m_UVs[0] = new Vector4[length];
+                mesh.m_UVs[1] = new Vector4[length];
+                mesh.m_UVDimensions[0] = mesh.m_UVDimensions[1] = 2;
+            }
+            if (m_BillboardIndexArray.Length < indices) m_BillboardIndexArray = new int[Mesh.StreamCapacity(m_BillboardIndexArray.Length, indices)];
+            Vector3[] positions = mesh.m_Vertices;
+            Color32[] colors = mesh.m_Colors;
+            Vector4[] uv = mesh.m_UVs[0], offsets = mesh.m_UVs[1];
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
+            int v = 0, k = 0;
             foreach (var (_, index) in m_Billboards)
             {
                 var part = m_Trees[index];
@@ -429,36 +460,32 @@ namespace UnityEngine
                     var c = ((Color)color).linear;
                     color = new Color32((byte)(Mathf.Clamp01(c.r) * 255f + 0.5f), (byte)(Mathf.Clamp01(c.g) * 255f + 0.5f), (byte)(Mathf.Clamp01(c.b) * 255f + 0.5f), color.a);
                 }
-                int first = m_BillboardVertices.Count;
-                for (int v = 0; v < 4; v++)
+                for (int corner = 0; corner < 4; corner++)
                 {
-                    m_BillboardVertices.Add(part.Position);
-                    m_BillboardColors.Add(color);
-                    bool right = (v & 1) != 0, upper = v >= 2;
-                    m_BillboardUv.Add(new Vector2(right ? p.CellX + p.CellWidth : p.CellX, upper ? radius : -radius));
-                    m_BillboardOffsets.Add(new Vector2(right ? halfWidth : -halfWidth, upper ? top : bottom));
+                    bool right = (corner & 1) != 0, upper = corner >= 2;
+                    positions[v + corner] = part.Position;
+                    colors[v + corner] = color;
+                    uv[v + corner] = new Vector4(right ? p.CellX + p.CellWidth : p.CellX, upper ? radius : -radius, 0f, 0f);
+                    offsets[v + corner] = new Vector4(right ? halfWidth : -halfWidth, upper ? top : bottom, 0f, 0f);
                 }
-                m_BillboardIndices.Add(first);
-                m_BillboardIndices.Add(first + 1);
-                m_BillboardIndices.Add(first + 2);
-                m_BillboardIndices.Add(first + 2);
-                m_BillboardIndices.Add(first + 1);
-                m_BillboardIndices.Add(first + 3);
+                var indexArray = m_BillboardIndexArray;
+                indexArray[k] = v;
+                indexArray[k + 1] = v + 1;
+                indexArray[k + 2] = v + 2;
+                indexArray[k + 3] = v + 2;
+                indexArray[k + 4] = v + 1;
+                indexArray[k + 5] = v + 3;
+                // However it turns, the quad stays within its largest offset of its place (plus
+                // the push towards the camera, at most its half width).
+                float reach = Mathf.Max(Mathf.Max(Mathf.Abs(halfWidth) * 2f, Mathf.Abs(bottom)), Mathf.Max(Mathf.Abs(top), Mathf.Abs(radius)));
+                min = Vector3.Min(min, part.Position - new Vector3(reach, reach, reach));
+                max = Vector3.Max(max, part.Position + new Vector3(reach, reach, reach));
+                v += 4;
+                k += 6;
             }
-            var mesh = m_BillboardMesh;
-            mesh.Clear();
-            mesh.SetVertices(m_BillboardVertices);
-            mesh.SetColors(m_BillboardColors);
-            mesh.SetUVs(0, m_BillboardUv);
-            mesh.SetUVs(1, m_BillboardOffsets);
-            mesh.SetTriangles(m_BillboardIndices, 0);
-            // The billboards turn about their places: bounds that hold any turn.
-            var bounds = mesh.bounds;
-            float reach = 0f;
-            foreach (var p in m_Legacy)
-                if (p != null) reach = Mathf.Max(reach, Mathf.Max(p.Width, p.Height) * Mathf.Max(Mathf.Abs(p.Scale.x), Mathf.Abs(p.Scale.y)) * 2f);
-            bounds.Expand(reach * 2f);
-            mesh.bounds = bounds;
+            mesh.WriteStreamedTriangles(m_BillboardIndexArray, indices, vertices > ushort.MaxValue, streaming: true);
+            mesh.FinishStreamedWrite(vertices, indices, streaming: true);
+            if (vertices > 0) mesh.bounds = new Bounds((min + max) * 0.5f, max - min);
         }
 
         void DestroyBillboards()
