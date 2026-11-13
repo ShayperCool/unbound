@@ -377,14 +377,15 @@ their line make no cells, as positions exactly in one plane do; a 50 x 50 layer 
 moved 1000 units away is one of the controls. The Editor's answer for such a
 nearly planar layer is unmeasured; the earlier builder made thin cells from it.
 
-The main comparison on macOS is 382/625, previously 378/625 there, with no lost matches; the Linux
-capture of the previous build was 379/625, the same values except one rendered pixel key. The four
+The main comparison is 383/625 on Linux, previously 379/625, and 382/625 on macOS, previously
+378/625 there (one rendered pixel key apart), with no lost matches. The four
 hull/shared-count keys of `additive tetrahedralized` and `unloaded` now match: the combined mesh
 has 87 inner and 34 hull cells, 121 as in the reference. `mesh_diagnostics.py` finds the
 combined capture's 87 inner cells equal to the empty-circumsphere set, with nothing missing or
 extra; Main keeps its 45. The remaining strict differences are the unchanged 228 numeric-only
 keys, the twelve query-index keys and the two `occlusion at probes` rows (plus, on macOS only,
-rendered pixel keys). The diagnostic comparison is 48/298, previously 47/298, on both systems.
+rendered pixel keys). The diagnostic comparison is 48/298, previously 47/298 (measured on macOS;
+the previous build's diagnostics were identical on Linux and macOS).
 `combined mesh cells` matches, and `combined boundary seed 120` is now recorded. It still
 differs, like the other boundary seeds, because cell order differs.
 

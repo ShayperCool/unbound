@@ -58,8 +58,9 @@ namespace UnityEngine
         /// while building (it sorts after every probe).</summary>
         const int Infinite = int.MaxValue;
 
-        /// <summary>Distance below which a probe counts as on another's position, line or plane
-        /// when the first cell is chosen, relative to the largest of the probes' extent and
+        /// <summary>Distance below which a probe counts as on another's position, line or plane,
+        /// both for flatness (against probe 0 and the probes farthest from it and from their line)
+        /// and when the first cell is chosen, relative to the largest of the probes' extent and
         /// coordinates: about eight float32 rounding steps, the noise a probe layer keeps after a
         /// rotation or a far offset moves it. Probes all that close to one plane make no cells, as
         /// probes exactly in one plane do.</summary>
@@ -149,7 +150,7 @@ namespace UnityEngine
             if (f3 < 0) return;
 
             // The first tetrahedron: probe 0 and the first probes after it off its point, line and
-            // plane (those three extremes when no such probes are found).
+            // plane.
             int i1 = -1, i2 = -1, i3 = -1;
             for (int i = 1; i < n && i1 < 0; i++)
                 if (Distance(x, y, z, 0, i) > flat) i1 = i;
@@ -161,7 +162,8 @@ namespace UnityEngine
                 var normal = Cross(x, y, z, 0, i1, i2);
                 if (Math.Abs(normal.Dot(x[i] - x[0], y[i] - y[0], z[i] - z[0])) > flat * normal.Length()) i3 = i;
             }
-            if (i3 < 0) (i1, i2, i3) = (f1, f2, f3);
+            // Probes within `flat` of that plane are flat too.
+            if (i3 < 0) return;
             int[] firstCell = { 0, i1, i2, i3 };
 
             // Every test below is decided exactly (Predicates), so the probes a cell's replacement
