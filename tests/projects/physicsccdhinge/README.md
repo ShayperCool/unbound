@@ -569,7 +569,8 @@ bit for bit, matched the Linux reference (6714/6814, 0 unresolved) but moved
 those five families away from the macOS Editor. Exact division and square
 root in place of NEON's reciprocal refinement moved them away as well, while
 the summation order of dot products, the signed zero rules of min, max and
-negation, and flushing denormals made no difference to those families. So arm64
+negation, and flushing denormals made no difference to those families
+(floating-point contraction is already off for the whole vendored build). So arm64
 keeps NEON, and the Linux reference is not the target there.
 
 Open on macOS (measured, cause not found):
@@ -586,3 +587,8 @@ Open on macOS (measured, cause not found):
   away from it. Neither is used.
 - `rotation/contact/3/False/False/4/bullet/event/0/2`: a contact witness on the
   other side of the face (y = 0.150 against the Editor's −0.150).
+
+So `run.py gate` on macOS reports, against the committed reference, the 8
+unresolved default rows (the 5 `ccd/ghost/3` rows the macOS Editor shares and
+the 3 capsule rows), 4 `--geometry` content differences and 5 rotation
+differences; the land gate runs these probes on Linux.

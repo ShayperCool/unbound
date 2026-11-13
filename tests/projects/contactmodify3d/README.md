@@ -113,5 +113,5 @@ records 409/412 against the committed Linux reference. `edit/bounciness/final`,
 tolerances, and 98 values differ in raw form. Unbound built for arm64 matches
 that macOS capture 412/412, with those three records' values equal to it. So
 the three rows that fail against the reference on macOS are the Editor's own
-arm64 results. The capture is not committed; the reference stays the Linux
-Editor's.
+arm64 results, and `run.py check` on macOS reports exactly those three. The
+capture is not committed; the reference stays the Linux Editor's.
