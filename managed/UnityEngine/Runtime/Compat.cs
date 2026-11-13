@@ -24,6 +24,9 @@ namespace Unbound.Runtime
         /// <summary>Managed constructor defaults measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous, unmeasured initialization.</summary>
         internal static bool DefaultConstructorStateMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// <summary>Local file response status measured by defaultstate on 6000.0.71f1.
+        /// Other releases retain their previous, unmeasured status reporting.</summary>
+        internal static bool LocalFileRequestStatusMeasured => Release == (6000, 0, 71, 'f', 1);
         /// <summary>Collider-owned material copies measured by defaultstate on 6000.0.71f1.
         /// Other releases retain the previous, unmeasured reuse across colliders.</summary>
         internal static bool PhysicsMaterialInstancesMeasured => Release == (6000, 0, 71, 'f', 1);
@@ -60,7 +63,7 @@ namespace Unbound.Runtime
                 || type == typeof(UnityEngine.AnchoredJoint2D) || type == typeof(UnityEngine.Effector2D)
                 || type == typeof(UnityEngine.PhysicsUpdateBehaviour2D)
                 || type == typeof(UnityEngine.Collider) || type == typeof(UnityEngine.Joint)
-                || type == typeof(UnityEngine.AudioBehaviour));
+                || type == typeof(UnityEngine.AudioBehaviour) || type == typeof(UnityEngine.GridLayout));
 
         /// <summary>Runtime compressed channel formats and readback controls measured by
         /// tests/projects/texturecompression on 6000.0.71f1. Other releases keep their previous formats.</summary>

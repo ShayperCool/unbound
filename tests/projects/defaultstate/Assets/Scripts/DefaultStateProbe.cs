@@ -57,7 +57,7 @@ public sealed class DefaultStateProbe : MonoBehaviour
             PhysicsPayloadControls();
             EditorImporterControls();
             UiControls();
-            Core2Controls(); Core2MoreControls(); Core2TimeConstructorControl(); Core2MeshControls(); Core2LineCurveControls(); Core2RenderSettingControls(); Core2BindingControls(); Core2LayoutMutationControls(); SmallControls(); SmallMoreControls(); SmallOwnershipControls(); SmallBoundaryControls(); SmallWebControls(); SmallFinalControls(); SmallAnimationBoundaryControls(); Core2DefaultLayoutControls();
+            Core2Controls(); Core2MoreControls(); Core2TimeConstructorControl(); Core2MeshControls(); Core2LineCurveControls(); Core2RenderSettingControls(); Core2BindingControls(); Core2LayoutMutationControls(); SmallControls(); SmallMoreControls(); SmallOwnershipControls(); SmallBoundaryControls(); SmallWebControls(); SmallFinalControls(); SmallAnimationBoundaryControls(); SmallNavigationMarkupControls(); Core2DefaultLayoutControls();
             Emit("complete","value","1"); output.Dispose(); output=null;
             EditorApplication.Exit(0);
         }
@@ -1091,7 +1091,29 @@ public sealed class DefaultStateProbe : MonoBehaviour
         smallVideo = go.AddComponent<UnityEngine.Video.VideoPlayer>(); smallVideo.playOnAwake = false;
         smallVideo.renderMode = UnityEngine.Video.VideoRenderMode.APIOnly;
         smallVideo.audioOutputMode = UnityEngine.Video.VideoAudioOutputMode.None;
-        smallVideo.url = Path.Combine(Application.streamingAssetsPath, "control.webm");
+        var sourceClip = Resources.Load<UnityEngine.Video.VideoClip>("SmallVideoSource");
+        if (sourceClip == null) throw new InvalidOperationException("Missing video source control");
+        string path = Path.Combine(Application.streamingAssetsPath, "control.webm");
+        smallVideo.source = UnityEngine.Video.VideoSource.VideoClip;
+        smallVideo.url = path;
+        CoreValue("Small/video/source/url", smallVideo.source);
+        smallVideo.url = "";
+        CoreValue("Small/video/source/emptyUrl", smallVideo.source);
+        smallVideo.clip = null;
+        CoreValue("Small/video/source/nullClip", smallVideo.source);
+        smallVideo.url = path; smallVideo.clip = sourceClip;
+        CoreValue("Small/video/source/clipWins", new object[] { smallVideo.source, smallVideo.url == path, smallVideo.clip == sourceClip });
+        smallVideo.source = UnityEngine.Video.VideoSource.Url;
+        CoreValue("Small/video/source/storedUrl", smallVideo.url == path);
+        smallVideo.source = UnityEngine.Video.VideoSource.VideoClip;
+        CoreValue("Small/video/source/hiddenUrl", smallVideo.url == "");
+        smallVideo.url = path;
+        CoreValue("Small/video/source/urlWins", new object[] { smallVideo.source, smallVideo.clip == sourceClip });
+        smallVideo.clip = sourceClip;
+        CoreValue("Small/video/source/sameClipWins", smallVideo.source);
+        smallVideo.clip = null;
+        CoreValue("Small/video/source/changedNullClip", new object[] { smallVideo.source, smallVideo.clip == null, smallVideo.url == path });
+        smallVideo.url = path;
         smallVideo.Prepare();
         string folder = Application.streamingAssetsPath;
         smallWeb = new UnityEngine.Networking.UnityWebRequest[] {
@@ -1361,6 +1383,15 @@ public sealed class DefaultStateProbe : MonoBehaviour
             }
         }
         finally { UnityEngine.Object.DestroyImmediate(owner); UnityEngine.Object.DestroyImmediate(source); }
+    }
+    static void SmallNavigationMarkupControls()
+    {
+        var markup = new UnityEngine.AI.NavMeshBuildMarkup();
+        CoreValue("Small/navigation/markupInitial", new object[] { markup.overrideIgnore, markup.ignoreFromBuild, markup.overrideArea, markup.applyToChildren });
+        markup.overrideIgnore = false; markup.ignoreFromBuild = true;
+        CoreValue("Small/navigation/markupFalse", new object[] { markup.overrideIgnore, markup.ignoreFromBuild });
+        markup.overrideIgnore = true;
+        CoreValue("Small/navigation/markupTrue", new object[] { markup.overrideIgnore, markup.ignoreFromBuild });
     }
     static void UiControls()
     {

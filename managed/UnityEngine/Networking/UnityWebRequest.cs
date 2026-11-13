@@ -377,11 +377,26 @@ namespace UnityEngine.Networking
                 var target = new Uri(m_Url, UriKind.Absolute);
                 if (target.IsFile)
                 {
-                    using var file = new System.IO.FileStream(target.LocalPath, System.IO.FileMode.Open, System.IO.FileAccess.Read,
-                        System.IO.FileShare.Read, 4096, useAsync: true);
-                    m_ResponseCode = 0;
-                    m_ResponseHeaders = new Dictionary<string, string>();
-                    await ReceiveAsync(file, null, file.Length, token).ConfigureAwait(false);
+                    System.IO.FileStream file;
+                    try
+                    {
+                        file = new System.IO.FileStream(target.LocalPath, System.IO.FileMode.Open, System.IO.FileAccess.Read,
+                            System.IO.FileShare.Read, 4096, useAsync: true);
+                    }
+                    catch (System.IO.IOException e) when (Compat.LocalFileRequestStatusMeasured
+                        && (e is System.IO.FileNotFoundException || e is System.IO.DirectoryNotFoundException))
+                    {
+                        m_ResponseCode = 404;
+                        m_StatusLine = "HTTP/1.1 404 Not Found";
+                        Finish(Result.ProtocolError, m_StatusLine);
+                        return;
+                    }
+                    using (file)
+                    {
+                        m_ResponseCode = Compat.LocalFileRequestStatusMeasured ? 200 : 0;
+                        m_ResponseHeaders = new Dictionary<string, string>();
+                        await ReceiveAsync(file, null, file.Length, token).ConfigureAwait(false);
+                    }
                     Finish(Result.Success, null);
                     return;
                 }

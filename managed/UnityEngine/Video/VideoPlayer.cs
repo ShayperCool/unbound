@@ -254,8 +254,29 @@ namespace UnityEngine.Video
         internal static event Action<string> analyticsSent;
 
         public VideoSource source { get => m_Source; set => m_Source = value; }
-        public string url { get => m_Url; set { m_Url = value ?? ""; Release(); } }
-        public VideoClip clip { get => m_Clip; set { if (m_Clip != value) { m_Clip = value; Release(); } } }
+        public string url
+        {
+            get => m_Source == VideoSource.Url ? m_Url : "";
+            set
+            {
+                m_Url = value ?? "";
+                if (m_Url.Length > 0) m_Source = VideoSource.Url;
+                Release();
+            }
+        }
+        public VideoClip clip
+        {
+            get => m_Clip;
+            set
+            {
+                if (m_Clip != value)
+                {
+                    m_Clip = value;
+                    if (value != null) m_Source = VideoSource.VideoClip;
+                    Release();
+                }
+            }
+        }
         public VideoRenderMode renderMode { get => m_RenderMode; set => m_RenderMode = value; }
         public Camera targetCamera { get => m_TargetCamera; set => m_TargetCamera = value; }
         public RenderTexture targetTexture { get => m_TargetTexture; set => m_TargetTexture = value; }

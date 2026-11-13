@@ -264,8 +264,9 @@ and Physics resolves 89. Audio resolves 185 more; an independently integrated li
 fix resolves one additional row. The ParticleSystem slice resolves another 337 rows and the Editor slice resolves 132.
 UIElements resolves 59 values and shared JSON string transfer resolves two record strings.
 The remaining Core mechanisms resolve another 127 rows across their shared operation,
-component and renderer state. The default-state probe now has 12,165 exact rows and 373 queued rows, including
-the unchanged 50 variable rows. Its 12,511 canonical rows
+component and renderer state. Small mechanisms resolve 107 existing entries and retain three new exact contextual
+gaps. The default-state probe now has 12,432 exact rows and 269 queued rows, including
+the unchanged 50 variable rows. Its 12,699 canonical rows
 preserve every original line. Added controls
 cover exact removed-getter messages, valid and rejected factories, requirements,
 explicit constructor arguments, aliases, refresh-rate arithmetic, drive input ranges,
@@ -275,13 +276,17 @@ importer backing and constructor failures, window initialization, removed textur
 settings, collection validity, nullable paths, pointer conversion/cache order, text interfaces,
 atlas configuration ownership, logical/physical parents, JSON string transfer, exact component
 construction backing, valid operation capabilities, LOD membership, curve ownership, mesh
-view safety and physical-camera configuration.
+view safety and physical-camera configuration. Small adds 187 controls for style initialization,
+mesh and clip ownership, invalid animation state, terrain bounds, source selection,
+prepared-video capabilities, texture decoding and constructor-owned social images.
+The three new gaps are GUI mouse-event filtering and two full-range loop-window
+durations; all stay visible as exact comparisons.
 
 Fixed removed-getter exceptions come from the selected release assembly during stub
 generation. Conditional and computed getters retain their existing fallback. Core
 constructor, factory and refresh-rate mechanisms select exactly 6000.0.71f1; other
 profiles keep their previous unmeasured paths, recorded in the compatibility gaps.
-The generator format is version 10 after implementing Core configuration and operation state.
+The generator format is version 11 after implementing Small object state.
 TextElement implements its selected interface set, including rendered-text overrides through
 its existing rendering value, removing one exact interface exception. The atlas configuration
 retains private serialized fields and public mutable storage. Pointer and embedded-NUL string
@@ -290,7 +295,7 @@ API declarations and lookup checks retain the exact release exceptions listed ab
 with zero errors; no new exceptions are added by these default-state changes.
 
 The probe README lists remaining module counts and unresolved contexts. In particular,
-CoreModule keeps 36 rows requiring culling payloads, scene state, material ownership, rendering initialization
+CoreModule keeps 32 rows requiring culling payloads, scene state, material ownership, rendering initialization
 or imported/serialized state controls. Two TextCore instance IDs and one Canvas early
 layout value retain updated exact implementation payloads, without changing reference
 values or adding variable policies.

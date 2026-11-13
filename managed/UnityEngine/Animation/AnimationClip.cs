@@ -125,8 +125,17 @@ namespace UnityEngine
 
         public AnimationClip() { }
 
+        internal void ExtendRuntimeCurveRange(AnimationCurve curve)
+        {
+            if (!Compat.DefaultConstructorStateMeasured || m_HasRange || curve == null || curve.length == 0) return;
+            float end = curve[curve.length - 1].time;
+            m_RuntimeCurveEnd = m_RuntimeCurveRange ? Math.Max(m_RuntimeCurveEnd, end) : end;
+            m_RuntimeCurveRange = true;
+        }
+
         internal void UpdateRuntimeCurveRange()
         {
+            if (m_RuntimeCurveRange || m_HasRange || !Compat.DefaultConstructorStateMeasured) return;
             bool found = false;
             float end = float.NegativeInfinity;
             foreach (var c in m_Curves)
@@ -410,14 +419,15 @@ namespace UnityEngine
             relativePath ??= "";
             var attribute = CurveBinding.NormalizeScriptName(type, propertyName);
             RestoreImportedCurves();
+            UpdateRuntimeCurveRange();
             m_Curves.RemoveAll(c => c.Binding.Path == relativePath && c.Binding.Attribute == attribute && c.Binding.Matches(type));
             if (curve != null)
             {
                 var copy = new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
                 m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(relativePath, attribute, type), Curve = copy });
+                ExtendRuntimeCurveRange(copy);
                 if (!m_Legacy && typeof(Transform).IsAssignableFrom(type)) AddVectorCompanions(relativePath, attribute, type, copy);
             }
-            UpdateRuntimeCurveRange();
             m_Version++;
         }
 

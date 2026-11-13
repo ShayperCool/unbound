@@ -2,6 +2,45 @@
   "release": "6000.0.71f1",
   "entries": [
     {
+      "key": "CoreControl/Small/animation/wholeOtherLength/True",
+      "module": "UnityEngine.AnimationModule",
+      "reason": "A full-range AddClip request with addLoopFrame true produces an independent empty clip in this release capture. Renaming and ownership match; curve-window conversion remains warned and unresolved. Preserve this initialized-context discrepancy alongside the same-name control.",
+      "expected": {
+        "status": "value",
+        "value": "[2,1]"
+      },
+      "actual": {
+        "status": "value",
+        "value": "[2,2]"
+      }
+    },
+    {
+      "key": "CoreControl/Small/animation/wholeSameLength/True",
+      "module": "UnityEngine.AnimationModule",
+      "reason": "A full-range AddClip request with addLoopFrame true produces an independent empty clip in this release capture. The implementation retains its existing explicit warning and source-duration result; reconstruct finite, sentinel and out-of-range window conversion before replacing that path.",
+      "expected": {
+        "status": "value",
+        "value": "[2,1]"
+      },
+      "actual": {
+        "status": "value",
+        "value": "[2,2]"
+      }
+    },
+    {
+      "key": "CoreControl/Small/event/changed/mouseDown",
+      "module": "UnityEngine.IMGUIModule",
+      "reason": "The raw mouse-down observation is filtered to Ignore outside an active GUI event context. Constructor values and raw event storage are ruled out; GUI event acceptance and enabled-state controls inside OnGUI are still needed. Other event kinds remain independently recorded.",
+      "expected": {
+        "status": "value",
+        "value": "[enum:0,false,enum:11,0.699999988]"
+      },
+      "actual": {
+        "status": "value",
+        "value": "[enum:0,true,enum:0,0.699999988]"
+      }
+    },
+    {
       "key": "Unity.CodeEditor.CodeEditor/Property/Unity.CodeEditor.CodeEditor/CurrentCodeEditor",
       "module": "UnityEditor.CoreModule",
       "reason": "The selected code-editor provider comes from Editor integration discovery. Base object construction rules do not determine the active provider or installation list; provider registration controls remain needed.",
@@ -1135,7 +1174,7 @@
     {
       "key": "UnityEngine.AI.NavMeshAgent/Property/UnityEngine.AI.NavMeshAgent/destination",
       "module": "UnityEngine.AIModule",
-      "reason": "Q403 UnityEngine.AIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "Navigation agent queries need initialized NavMesh attachment controls. The obstacle height observation reflects half extents and shape-dependent size conversion; direct constructor-height storage is ruled out. Preserve these exact observations until query validity and shape transition rules are implemented together.",
       "expected": {
         "status": "value",
         "value": "UnityEngine.Vector3{x=Infinity;y=Infinity;z=Infinity}"
@@ -1148,7 +1187,7 @@
     {
       "key": "UnityEngine.AI.NavMeshAgent/Property/UnityEngine.AI.NavMeshAgent/pathStatus",
       "module": "UnityEngine.AIModule",
-      "reason": "Q403 UnityEngine.AIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "Navigation agent queries need initialized NavMesh attachment controls. The obstacle height observation reflects half extents and shape-dependent size conversion; direct constructor-height storage is ruled out. Preserve these exact observations until query validity and shape transition rules are implemented together.",
       "expected": {
         "status": "value",
         "value": "enum:2"
@@ -1161,7 +1200,7 @@
     {
       "key": "UnityEngine.AI.NavMeshAgent/Property/UnityEngine.AI.NavMeshAgent/remainingDistance",
       "module": "UnityEngine.AIModule",
-      "reason": "Q403 UnityEngine.AIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "Navigation agent queries need initialized NavMesh attachment controls. The obstacle height observation reflects half extents and shape-dependent size conversion; direct constructor-height storage is ruled out. Preserve these exact observations until query validity and shape transition rules are implemented together.",
       "expected": {
         "status": "value",
         "value": "Infinity"
@@ -1172,22 +1211,9 @@
       }
     },
     {
-      "key": "UnityEngine.AI.NavMeshBuildMarkup/Property/UnityEngine.AI.NavMeshBuildMarkup/overrideIgnore",
-      "module": "UnityEngine.AIModule",
-      "reason": "Q403 UnityEngine.AIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "true"
-      },
-      "actual": {
-        "status": "value",
-        "value": "false"
-      }
-    },
-    {
       "key": "UnityEngine.AI.NavMeshObstacle/Property/UnityEngine.AI.NavMeshObstacle/height",
       "module": "UnityEngine.AIModule",
-      "reason": "Q403 UnityEngine.AIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "Navigation agent queries need initialized NavMesh attachment controls. The obstacle height observation reflects half extents and shape-dependent size conversion; direct constructor-height storage is ruled out. Preserve these exact observations until query validity and shape transition rules are implemented together.",
       "expected": {
         "status": "value",
         "value": "0.5"
@@ -1195,188 +1221,6 @@
       "actual": {
         "status": "value",
         "value": "1"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationClip/Property/UnityEngine.AnimationClip/length",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "1"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationClip/Property/UnityEngine.Motion/averageDuration",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "1"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationState/Property/UnityEngine.AnimationState/blendMode",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationState/Property/UnityEngine.AnimationState/clip",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationState/Property/UnityEngine.AnimationState/enabled",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "false"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationState/Property/UnityEngine.AnimationState/layer",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationState/Property/UnityEngine.AnimationState/length",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationState/Property/UnityEngine.AnimationState/name",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "string:"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationState/Property/UnityEngine.AnimationState/normalizedSpeed",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationState/Property/UnityEngine.AnimationState/normalizedTime",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationState/Property/UnityEngine.AnimationState/speed",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "1"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationState/Property/UnityEngine.AnimationState/time",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationState/Property/UnityEngine.AnimationState/weight",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.AnimationState/Property/UnityEngine.AnimationState/wrapMode",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
       }
     },
     {
@@ -1458,32 +1302,6 @@
       }
     },
     {
-      "key": "UnityEngine.BillboardAsset/Property/UnityEngine.BillboardAsset/height",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "0"
-      },
-      "actual": {
-        "status": "value",
-        "value": "1"
-      }
-    },
-    {
-      "key": "UnityEngine.BillboardAsset/Property/UnityEngine.BillboardAsset/width",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "0"
-      },
-      "actual": {
-        "status": "value",
-        "value": "1"
-      }
-    },
-    {
       "key": "UnityEngine.BillboardRenderer/Property/UnityEngine.Renderer/materials",
       "module": "UnityEngine.CoreModule",
       "reason": "BillboardRenderer material-array ownership remains queued. An empty constructor array was ruled out because sharedMaterials retains one null slot, while materials is empty and the singular material getter creates the default instance. The material count and asset association need independent controls.",
@@ -1523,19 +1341,6 @@
       }
     },
     {
-      "key": "UnityEngine.Canvas/Property/UnityEngine.Canvas/normalizedSortingGridSize",
-      "module": "UnityEngine.UIModule",
-      "reason": "Q403 UnityEngine.UIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "0.100000001"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
       "key": "UnityEngine.Canvas/Property/UnityEngine.Canvas/renderingDisplaySize",
       "module": "UnityEngine.UIModule",
       "reason": "Q411 viewport context now matches the Editor at 640x480. The fresh Canvas renderingDisplaySize still disagrees before layout; keep this exact raw discrepancy for the UI initialization migration.",
@@ -1546,19 +1351,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.Vector2{x=640;y=480}"
-      }
-    },
-    {
-      "key": "UnityEngine.CanvasRenderer/Property/UnityEngine.CanvasRenderer/cullTransparentMesh",
-      "module": "UnityEngine.UIModule",
-      "reason": "Q403 UnityEngine.UIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "true"
-      },
-      "actual": {
-        "status": "value",
-        "value": "false"
       }
     },
     {
@@ -1588,32 +1380,6 @@
       }
     },
     {
-      "key": "UnityEngine.DetailPrototype/Property/UnityEngine.DetailPrototype/dryColor",
-      "module": "UnityEngine.TerrainModule",
-      "reason": "Q403 UnityEngine.TerrainModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Color{r=0.80392158;g=0.737254918;b=0.101960786;a=1}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Color{r=0.80392158;g=0.737254918;b=0.101960801;a=1}"
-      }
-    },
-    {
-      "key": "UnityEngine.DetailPrototype/Property/UnityEngine.DetailPrototype/healthyColor",
-      "module": "UnityEngine.TerrainModule",
-      "reason": "Q403 UnityEngine.TerrainModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Color{r=0.262745112;g=0.97647059;b=0.164705887;a=1}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Color{r=0.262745112;g=0.97647059;b=0.164705902;a=1}"
-      }
-    },
-    {
       "key": "UnityEngine.DistanceJoint2D/Property/UnityEngine.Joint2D/reactionForce",
       "module": "UnityEngine.Physics2DModule",
       "reason": "Q403 variable creation state: independent GPU Editor repeats differ in this value. The raw row remains visible; only the named numeric leaves are variable. Queue an initialized-context or relational control; this entry does not establish a default contract.",
@@ -1621,344 +1387,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.Vector2{x=0;y=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.Event/Property/UnityEngine.Event/isMouse",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "false"
-      },
-      "actual": {
-        "status": "value",
-        "value": "true"
-      }
-    },
-    {
-      "key": "UnityEngine.Event/Property/UnityEngine.Event/mouseRay",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Ray{direction=UnityEngine.Vector3{x=0;y=1;z=0};origin=UnityEngine.Vector3{x=0;y=1;z=0}}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Ray{direction=UnityEngine.Vector3{x=0;y=0;z=0};origin=UnityEngine.Vector3{x=0;y=0;z=0}}"
-      }
-    },
-    {
-      "key": "UnityEngine.Event/Property/UnityEngine.Event/pressure",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "1"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.Event/Property/UnityEngine.Event/rawType",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "enum:1003"
-      },
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
-      }
-    },
-    {
-      "key": "UnityEngine.Event/Property/UnityEngine.Event/type",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "enum:1003"
-      },
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/box",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:box;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/button",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:button;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/horizontalScrollbar",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:horizontalscrollbar;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/horizontalScrollbarLeftButton",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:horizontalscrollbarleftbutton;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/horizontalScrollbarRightButton",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:horizontalscrollbarrightbutton;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/horizontalScrollbarThumb",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:horizontalscrollbarthumb;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/horizontalSlider",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:horizontalslider;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/horizontalSliderThumb",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:horizontalsliderthumb;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/label",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:label;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/scrollView",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:scrollview;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/textArea",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:textarea;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/textField",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:textfield;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/toggle",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:toggle;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/verticalScrollbar",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:verticalscrollbar;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/verticalScrollbarDownButton",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:verticalscrollbardownbutton;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/verticalScrollbarThumb",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:verticalscrollbarthumb;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/verticalScrollbarUpButton",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:verticalscrollbarupbutton;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/verticalSlider",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:verticalslider;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/verticalSliderThumb",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:verticalsliderthumb;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUISkin/Property/UnityEngine.GUISkin/window",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:window;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.GUIStyle/Property/UnityEngine.GUIStyle/richText",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "true"
-      },
-      "actual": {
-        "status": "value",
-        "value": "false"
       }
     },
     {
@@ -1985,272 +1413,6 @@
       "actual": {
         "status": "value",
         "value": "18446744073709551615"
-      }
-    },
-    {
-      "key": "UnityEngine.Grid/Property/UnityEngine.Grid/cellSize",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=1;y=1;z=1}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=1;y=1;z=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/@factory",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule factory migration: the release rejects generic creation while the implementation constructs this type; match its supported creation context.",
-      "expected": {
-        "status": "factory-null",
-        "value": ""
-      },
-      "actual": {
-        "status": "value",
-        "value": "component"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Behaviour/enabled",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "true"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Behaviour/isActiveAndEnabled",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "true"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/animation",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/audio",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/camera",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/collider",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/collider2D",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/constantForce",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/gameObject",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.GameObject:default-UnityEngine.GridLayout"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/hingeJoint",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/light",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/networkView",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/particleSystem",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/renderer",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/rigidbody",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/rigidbody2D",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q411 UnityEngine.GridModule rejected-factory surface migration: the release returns null from the root factory and has no member row; Unbound still creates this root. The removed getter now throws, but the extra row remains queued until factory eligibility is fixed.",
-      "expected": null,
-      "actual": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/tag",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "string:Untagged"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Component/transform",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "object:UnityEngine.Transform:default-UnityEngine.GridLayout"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.GridLayout/cellGap",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=0;y=0;z=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.GridLayout/cellLayout",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.GridLayout/cellSize",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=1;y=1;z=1}"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.GridLayout/cellSwizzle",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Object/hideFlags",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
-      }
-    },
-    {
-      "key": "UnityEngine.GridLayout/Property/UnityEngine.Object/name",
-      "module": "UnityEngine.GridModule",
-      "reason": "Q403 UnityEngine.GridModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "string:default-UnityEngine.GridLayout"
       }
     },
     {
@@ -2362,84 +1524,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:0}"
-      }
-    },
-    {
-      "key": "UnityEngine.MeshFilter/Property/UnityEngine.MeshFilter/mesh",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "object:UnityEngine.Mesh:default-UnityEngine.MeshFilter"
-      },
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.Networking.DownloadHandlerBuffer/Property/UnityEngine.Networking.DownloadHandler/data",
-      "module": "UnityEngine.UnityWebRequestModule",
-      "reason": "Q403 UnityEngine.UnityWebRequestModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "null"
-      },
-      "actual": {
-        "status": "value",
-        "value": "[]"
-      }
-    },
-    {
-      "key": "UnityEngine.Networking.DownloadHandlerScript/Property/UnityEngine.Networking.DownloadHandler/text",
-      "module": "UnityEngine.UnityWebRequestModule",
-      "reason": "Q403 UnityEngine.UnityWebRequestModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "string:"
-      },
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.Networking.DownloadHandlerTexture/Property/UnityEngine.Networking.DownloadHandler/data",
-      "module": "UnityEngine.UnityWebRequestTextureModule",
-      "reason": "Q403 UnityEngine.UnityWebRequestTextureModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "null"
-      },
-      "actual": {
-        "status": "value",
-        "value": "[]"
-      }
-    },
-    {
-      "key": "UnityEngine.Networking.DownloadHandlerTexture/Property/UnityEngine.Networking.DownloadHandler/error",
-      "module": "UnityEngine.UnityWebRequestTextureModule",
-      "reason": "Q403 UnityEngine.UnityWebRequestTextureModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "string:Texture download hasn't finished yet"
-      },
-      "actual": {
-        "status": "value",
-        "value": "string:"
-      }
-    },
-    {
-      "key": "UnityEngine.Networking.DownloadHandlerTexture/Property/UnityEngine.Networking.DownloadHandlerTexture/texture",
-      "module": "UnityEngine.UnityWebRequestTextureModule",
-      "reason": "Q403 UnityEngine.UnityWebRequestTextureModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.InvalidOperationException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "null"
       }
     },
     {
@@ -2564,19 +1648,6 @@
       "actual": {
         "status": "value",
         "value": "[UnityEngine.Vector2{x=-2.18556941E-08;y=0.5},UnityEngine.Vector2{x=-0.4755283;y=0.154508397},UnityEngine.Vector2{x=-0.293892533;y=-0.404508561},UnityEngine.Vector2{x=0.293892741;y=-0.404508412},UnityEngine.Vector2{x=0.47552821;y=0.154508635}]"
-      }
-    },
-    {
-      "key": "UnityEngine.Projector/Property/UnityEngine.Projector/orthoGraphicSize",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "-1"
-      },
-      "actual": {
-        "status": "value",
-        "value": "10"
       }
     },
     {
@@ -2808,76 +1879,11 @@
       "actualPattern": "UnityEngine\\.SocialPlatforms\\.IScore\\{date=date:[0-9]+:Local;formattedValue=string:;leaderboardID=string:Invalid;rank=\\-1;userID=string:0;value=0\\}"
     },
     {
-      "key": "UnityEngine.SocialPlatforms.Impl.LocalUser/Property/UnityEngine.SocialPlatforms.Impl.UserProfile/image",
-      "module": "UnityEngine.GameCenterModule",
-      "reason": "Q403 UnityEngine.GameCenterModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "object:UnityEngine.Texture2D:"
-      },
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.SocialPlatforms.Impl.LocalUser/Property/UnityEngine.SocialPlatforms.Impl.UserProfile/legacyId",
-      "module": "UnityEngine.GameCenterModule",
-      "reason": "Q403 UnityEngine.GameCenterModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "string:0"
-      }
-    },
-    {
       "key": "UnityEngine.SocialPlatforms.Impl.Score/Property/UnityEngine.SocialPlatforms.Impl.Score/date",
       "module": "UnityEngine.GameCenterModule",
       "reason": "Q403 variable creation state: independent GPU Editor repeats differ in this value. The raw row remains visible; only the named numeric leaves are variable. Queue an initialized-context or relational control; this entry does not establish a default contract.",
       "expectedPattern": "date:[0-9]+:Local",
       "actualPattern": "date:[0-9]+:Local"
-    },
-    {
-      "key": "UnityEngine.SocialPlatforms.Impl.Score/Property/UnityEngine.SocialPlatforms.Impl.Score/leaderboardID",
-      "module": "UnityEngine.GameCenterModule",
-      "reason": "Q403 UnityEngine.GameCenterModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "string:unkown"
-      },
-      "actual": {
-        "status": "value",
-        "value": "string:unkown_score"
-      }
-    },
-    {
-      "key": "UnityEngine.SocialPlatforms.Impl.UserProfile/Property/UnityEngine.SocialPlatforms.Impl.UserProfile/image",
-      "module": "UnityEngine.GameCenterModule",
-      "reason": "Q403 UnityEngine.GameCenterModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "object:UnityEngine.Texture2D:"
-      },
-      "actual": {
-        "status": "value",
-        "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.SocialPlatforms.Impl.UserProfile/Property/UnityEngine.SocialPlatforms.Impl.UserProfile/legacyId",
-      "module": "UnityEngine.GameCenterModule",
-      "reason": "Q403 UnityEngine.GameCenterModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NotSupportedException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "string:0"
-      }
     },
     {
       "key": "UnityEngine.SpringJoint2D/Property/UnityEngine.Joint2D/reactionForce",
@@ -2887,19 +1893,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.Vector2{x=0;y=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.Terrain/Property/UnityEngine.Terrain/allowAutoConnect",
-      "module": "UnityEngine.TerrainModule",
-      "reason": "Q403 UnityEngine.TerrainModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "false"
-      },
-      "actual": {
-        "status": "value",
-        "value": "true"
       }
     },
     {
@@ -2913,19 +1906,6 @@
       }
     },
     {
-      "key": "UnityEngine.Terrain/Property/UnityEngine.Terrain/materialType",
-      "module": "UnityEngine.TerrainModule",
-      "reason": "Q403 UnityEngine.TerrainModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "enum:3"
-      },
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
-      }
-    },
-    {
       "key": "UnityEngine.TerrainCollider/Property/UnityEngine.Collider/GeometryHolder",
       "module": "UnityEngine.TerrainPhysicsModule",
       "reason": "Q403 UnityEngine.TerrainPhysicsModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
@@ -2936,55 +1916,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:0}"
-      }
-    },
-    {
-      "key": "UnityEngine.TerrainCollider/Property/UnityEngine.TerrainCollider/enableTreeColliders",
-      "module": "UnityEngine.TerrainPhysicsModule",
-      "reason": "Q403 UnityEngine.TerrainPhysicsModule surface migration: this implementation-only public member is absent from the matching release type; remove or restrict the extra declaration.",
-      "expected": null,
-      "actual": {
-        "status": "value",
-        "value": "true"
-      }
-    },
-    {
-      "key": "UnityEngine.TerrainData/Property/UnityEngine.TerrainData/baseMapResolution",
-      "module": "UnityEngine.TerrainModule",
-      "reason": "Q403 UnityEngine.TerrainModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "512"
-      },
-      "actual": {
-        "status": "value",
-        "value": "1024"
-      }
-    },
-    {
-      "key": "UnityEngine.TerrainData/Property/UnityEngine.TerrainData/bounds",
-      "module": "UnityEngine.TerrainModule",
-      "reason": "Q403 UnityEngine.TerrainModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=16;y=0;z=16};extents=UnityEngine.Vector3{x=16;y=9.99999975E-05;z=16};max=UnityEngine.Vector3{x=32;y=9.99999975E-05;z=32};min=UnityEngine.Vector3{x=0;y=-9.99999975E-05;z=0};size=UnityEngine.Vector3{x=32;y=0.000199999995;z=32}}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=500;y=0;z=500};extents=UnityEngine.Vector3{x=500;y=0;z=500};max=UnityEngine.Vector3{x=1000;y=0;z=1000};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=1000;y=0;z=1000}}"
-      }
-    },
-    {
-      "key": "UnityEngine.TerrainData/Property/UnityEngine.TerrainData/heightmapScale",
-      "module": "UnityEngine.TerrainModule",
-      "reason": "Q403 UnityEngine.TerrainModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=1;y=1;z=1}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=31.25;y=600;z=31.25}"
       }
     },
     {
@@ -3011,45 +1942,6 @@
       "actual": {
         "status": "value",
         "value": "null"
-      }
-    },
-    {
-      "key": "UnityEngine.TerrainData/Property/UnityEngine.TerrainData/maxDetailScatterPerRes",
-      "module": "UnityEngine.TerrainModule",
-      "reason": "Q403 UnityEngine.TerrainModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "255"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.TerrainData/Property/UnityEngine.TerrainData/size",
-      "module": "UnityEngine.TerrainModule",
-      "reason": "Q403 UnityEngine.TerrainModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=32;y=1;z=32}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=1000;y=600;z=1000}"
-      }
-    },
-    {
-      "key": "UnityEngine.TerrainLayer/Property/UnityEngine.TerrainLayer/tileSize",
-      "module": "UnityEngine.TerrainModule",
-      "reason": "Q403 UnityEngine.TerrainModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Vector2{x=2;y=2}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector2{x=15;y=15}"
       }
     },
     {
@@ -3094,14 +1986,14 @@
     {
       "key": "UnityEngine.TextCore.Text.FontAsset/Property/UnityEngine.TextCore.Text.TextAsset/instanceID",
       "module": "UnityEngine.TextCoreTextEngineModule",
-      "reason": "Q411 corrected component factory eligibility changes preceding allocations. This asset instanceID still differs from the recorded creation sequence; retain its exact raw value until a relational identity control replaces the unresolved default observation. Q410 visibility migration narrows the recorded public member surface; this remaining exact observation is retained with unchanged Native expectation and no wider variable policy.",
+      "reason": "Q411 object allocation now includes constructor-owned social textures and rejects unattached layout components. The exact implementation identity shifts with that creation sequence; retain the original reference identity and this exact raw difference until a relational asset identity control resolves it. No variable policy is added.",
       "expected": {
         "status": "value",
         "value": "-26654"
       },
       "actual": {
         "status": "value",
-        "value": "-22742"
+        "value": "-22634"
       }
     },
     {
@@ -3133,59 +2025,20 @@
     {
       "key": "UnityEngine.TextCore.Text.SpriteAsset/Property/UnityEngine.TextCore.Text.TextAsset/instanceID",
       "module": "UnityEngine.TextCoreTextEngineModule",
-      "reason": "Q411 corrected component factory eligibility changes preceding allocations. This asset instanceID still differs from the recorded creation sequence; retain its exact raw value until a relational identity control replaces the unresolved default observation. Q410 visibility migration narrows the recorded public member surface; this remaining exact observation is retained with unchanged Native expectation and no wider variable policy.",
+      "reason": "Q411 object allocation now includes constructor-owned social textures and rejects unattached layout components. The exact implementation identity shifts with that creation sequence; retain the original reference identity and this exact raw difference until a relational asset identity control resolves it. No variable policy is added.",
       "expected": {
         "status": "value",
         "value": "-26680"
       },
       "actual": {
         "status": "value",
-        "value": "-22768"
-      }
-    },
-    {
-      "key": "UnityEngine.TextCore.Text.TextSettings/Property/UnityEngine.TextCore.Text.TextSettings/fallbackSpriteAssets",
-      "module": "UnityEngine.TextCoreTextEngineModule",
-      "reason": "Q403 UnityEngine.TextCoreTextEngineModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "null"
-      },
-      "actual": {
-        "status": "value",
-        "value": "[]"
-      }
-    },
-    {
-      "key": "UnityEngine.TextEditor/Field/UnityEngine.TextEditor/style",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=false;stretchHeight=false;stretchWidth=true;wordWrap=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.TextEditor/Property/UnityEngine.TextEditor/content",
-      "module": "UnityEngine.IMGUIModule",
-      "reason": "Q403 UnityEngine.IMGUIModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NotImplementedException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.GUIContent{image=null;text=string:;tooltip=string:}"
+        "value": "-22660"
       }
     },
     {
       "key": "UnityEngine.Tilemaps.Tilemap/Property/UnityEngine.Tilemaps.Tilemap/localBounds",
       "module": "UnityEngine.TilemapModule",
-      "reason": "Q403 UnityEngine.TilemapModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "The bounds follow renderable tile geometry, not logical cellBounds: independent controls remain empty after resizing the map and after adding a tile without a sprite. The cached sprite-geometry bounds and renderer propagation still need implementation; do not substitute a zero constant for populated maps.",
       "expected": {
         "status": "value",
         "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0;y=0;z=0};max=UnityEngine.Vector3{x=0;y=0;z=0};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=0}}"
@@ -3198,7 +2051,7 @@
     {
       "key": "UnityEngine.Tilemaps.TilemapRenderer/Property/UnityEngine.Renderer/bounds",
       "module": "UnityEngine.TilemapModule",
-      "reason": "Q403 UnityEngine.TilemapModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "The bounds follow renderable tile geometry, not logical cellBounds: independent controls remain empty after resizing the map and after adding a tile without a sprite. The cached sprite-geometry bounds and renderer propagation still need implementation; do not substitute a zero constant for populated maps.",
       "expected": {
         "status": "value",
         "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0;y=0;z=0};max=UnityEngine.Vector3{x=0;y=0;z=0};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=0}}"
@@ -3211,7 +2064,7 @@
     {
       "key": "UnityEngine.Tilemaps.TilemapRenderer/Property/UnityEngine.Renderer/localBounds",
       "module": "UnityEngine.TilemapModule",
-      "reason": "Q403 UnityEngine.TilemapModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "The bounds follow renderable tile geometry, not logical cellBounds: independent controls remain empty after resizing the map and after adding a tile without a sprite. The cached sprite-geometry bounds and renderer propagation still need implementation; do not substitute a zero constant for populated maps.",
       "expected": {
         "status": "value",
         "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0;y=0;z=0};max=UnityEngine.Vector3{x=0;y=0;z=0};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=0}}"
@@ -3250,7 +2103,7 @@
     {
       "key": "UnityEngine.U2D.SpriteShapeRenderer/Property/UnityEngine.Renderer/bounds",
       "module": "UnityEngine.SpriteShapeModule",
-      "reason": "Q403 UnityEngine.SpriteShapeModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "The unprepared renderer retains conservative bounds before geometry is supplied. Explicit local-bounds storage and immediate reset are separate measured contexts; geometry preparation and reset timing remain unresolved. Returning only the fresh extent would hide the missing geometry-bound transition.",
       "expected": {
         "status": "value",
         "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=1048576;y=1048576;z=1048576};max=UnityEngine.Vector3{x=1048576;y=1048576;z=1048576};min=UnityEngine.Vector3{x=-1048576;y=-1048576;z=-1048576};size=UnityEngine.Vector3{x=2097152;y=2097152;z=2097152}}"
@@ -3263,7 +2116,7 @@
     {
       "key": "UnityEngine.U2D.SpriteShapeRenderer/Property/UnityEngine.Renderer/localBounds",
       "module": "UnityEngine.SpriteShapeModule",
-      "reason": "Q403 UnityEngine.SpriteShapeModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
+      "reason": "The unprepared renderer retains conservative bounds before geometry is supplied. Explicit local-bounds storage and immediate reset are separate measured contexts; geometry preparation and reset timing remain unresolved. Returning only the fresh extent would hide the missing geometry-bound transition.",
       "expected": {
         "status": "value",
         "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=1048576;y=1048576;z=1048576};max=UnityEngine.Vector3{x=1048576;y=1048576;z=1048576};min=UnityEngine.Vector3{x=-1048576;y=-1048576;z=-1048576};size=UnityEngine.Vector3{x=2097152;y=2097152;z=2097152}}"
@@ -3865,19 +2718,6 @@
       }
     },
     {
-      "key": "UnityEngine.UIElements.PanelTextSettings/Property/UnityEngine.TextCore.Text.TextSettings/fallbackSpriteAssets",
-      "module": "UnityEngine.UIElementsModule",
-      "reason": "Q411 UIElements remaining context: Plain and panel text settings share the unresolved TextCore fallback-list initialization; an empty-list replacement would change nullable serialization and requires shared round-trip controls.",
-      "expected": {
-        "status": "value",
-        "value": "null"
-      },
-      "actual": {
-        "status": "value",
-        "value": "[]"
-      }
-    },
-    {
       "key": "UnityEngine.UIElements.PointerCancelEvent/Property/UnityEngine.UIElements.EventBase/timestamp",
       "module": "UnityEngine.UIElementsModule",
       "reason": "Q403 variable creation state: independent GPU Editor repeats differ in this value. The raw row remains visible; only the named numeric leaves are variable. Queue an initialized-context or relational control; this entry does not establish a default contract.",
@@ -4306,123 +3146,6 @@
       "actual": {
         "status": "value",
         "value": "22"
-      }
-    },
-    {
-      "key": "UnityEngine.Video.VideoPlayer/Property/UnityEngine.Video.VideoPlayer/audioOutputMode",
-      "module": "UnityEngine.VideoModule",
-      "reason": "Q403 UnityEngine.VideoModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "enum:2"
-      },
-      "actual": {
-        "status": "value",
-        "value": "enum:1"
-      }
-    },
-    {
-      "key": "UnityEngine.Video.VideoPlayer/Property/UnityEngine.Video.VideoPlayer/canSetDirectAudioVolume",
-      "module": "UnityEngine.VideoModule",
-      "reason": "Q403 UnityEngine.VideoModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "false"
-      },
-      "actual": {
-        "status": "value",
-        "value": "true"
-      }
-    },
-    {
-      "key": "UnityEngine.Video.VideoPlayer/Property/UnityEngine.Video.VideoPlayer/canSetSkipOnDrop",
-      "module": "UnityEngine.VideoModule",
-      "reason": "Q403 UnityEngine.VideoModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "false"
-      },
-      "actual": {
-        "status": "value",
-        "value": "true"
-      }
-    },
-    {
-      "key": "UnityEngine.Video.VideoPlayer/Property/UnityEngine.Video.VideoPlayer/canSetTime",
-      "module": "UnityEngine.VideoModule",
-      "reason": "Q403 UnityEngine.VideoModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "false"
-      },
-      "actual": {
-        "status": "value",
-        "value": "true"
-      }
-    },
-    {
-      "key": "UnityEngine.Video.VideoPlayer/Property/UnityEngine.Video.VideoPlayer/canSetTimeSource",
-      "module": "UnityEngine.VideoModule",
-      "reason": "Q403 UnityEngine.VideoModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "false"
-      },
-      "actual": {
-        "status": "value",
-        "value": "true"
-      }
-    },
-    {
-      "key": "UnityEngine.Video.VideoPlayer/Property/UnityEngine.Video.VideoPlayer/canStep",
-      "module": "UnityEngine.VideoModule",
-      "reason": "Q403 UnityEngine.VideoModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "false"
-      },
-      "actual": {
-        "status": "value",
-        "value": "true"
-      }
-    },
-    {
-      "key": "UnityEngine.Video.VideoPlayer/Property/UnityEngine.Video.VideoPlayer/renderMode",
-      "module": "UnityEngine.VideoModule",
-      "reason": "Q403 UnityEngine.VideoModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "enum:2"
-      },
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
-      }
-    },
-    {
-      "key": "UnityEngine.Video.VideoPlayer/Property/UnityEngine.Video.VideoPlayer/targetMaterialProperty",
-      "module": "UnityEngine.VideoModule",
-      "reason": "Q403 UnityEngine.VideoModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "string:"
-      },
-      "actual": {
-        "status": "value",
-        "value": "string:_MainTex"
-      }
-    },
-    {
-      "key": "UnityEngine.Video.VideoPlayer/Property/UnityEngine.Video.VideoPlayer/timeUpdateMode",
-      "module": "UnityEngine.VideoModule",
-      "reason": "Q403 UnityEngine.VideoModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "enum:2"
-      },
-      "actual": {
-        "status": "value",
-        "value": "enum:1"
       }
     },
     {

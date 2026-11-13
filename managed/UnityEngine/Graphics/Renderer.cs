@@ -634,7 +634,6 @@ namespace UnityEngine
     public sealed partial class MeshFilter : Component
     {
         internal Mesh m_Mesh;
-        bool m_OwnsMesh;
 
         public MeshFilter() { }
 
@@ -644,7 +643,6 @@ namespace UnityEngine
             set
             {
                 m_Mesh = value;
-                m_OwnsMesh = false;
             }
         }
 
@@ -653,13 +651,19 @@ namespace UnityEngine
         {
             get
             {
-                if (m_Mesh == null) return null;
-                if (!m_OwnsMesh)
+                if (m_Mesh != null && m_Mesh.m_InstanceOwnerId == GetInstanceID()) return m_Mesh;
+                if (m_Mesh != null && m_Mesh.vertexCount > 0)
                 {
-                    m_Mesh = (Mesh)((Instantiation.ICloneable)m_Mesh).CloneObject();
-                    m_Mesh.name = m_Mesh.name + " Instance";
-                    m_OwnsMesh = true;
+                    var source = m_Mesh;
+                    m_Mesh = (Mesh)((Instantiation.ICloneable)source).CloneObject();
+                    m_Mesh.name = source.name + " Instance";
                 }
+                else
+                {
+                    m_Mesh ??= new Mesh();
+                    m_Mesh.name = gameObject.name;
+                }
+                m_Mesh.m_InstanceOwnerId = GetInstanceID();
                 return m_Mesh;
             }
             set => sharedMesh = value;

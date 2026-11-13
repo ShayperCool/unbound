@@ -201,7 +201,7 @@ namespace UnityEngine.AI
 
         public bool overrideArea { get => m_OverrideArea != 0; set => m_OverrideArea = value ? 1 : 0; }
         public int area { get => m_Area; set => m_Area = value; }
-        public bool overrideIgnore { get => m_OverrideIgnore != 0; set => m_OverrideIgnore = value ? 1 : 0; }
+        public bool overrideIgnore { get => m_OverrideIgnore == 0; set => m_OverrideIgnore = value ? 0 : 1; }
         public bool ignoreFromBuild { get => m_IgnoreFromBuild != 0; set => m_IgnoreFromBuild = value ? 1 : 0; }
         public bool overrideGenerateLinks { get => m_OverrideGenerateLinks != 0; set => m_OverrideGenerateLinks = value ? 1 : 0; }
         public bool generateLinks { get => m_GenerateLinks != 0; set => m_GenerateLinks = value ? 1 : 0; }
