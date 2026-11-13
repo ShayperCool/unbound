@@ -370,11 +370,18 @@ pub struct OsFont {
     pub index: u32,
 }
 
-/// The OS's fonts, listed once (fontconfig when available, else the font directories).
+/// The OS's fonts, listed once: on macOS every face in its font directories, named as FreeType
+/// names them, as the macOS Editor lists them (a fontconfig a package manager installed there
+/// would add other directories and localized names); elsewhere fontconfig when available, else
+/// the font directories.
 pub fn os_fonts() -> &'static [OsFont] {
     static FONTS: OnceLock<Vec<OsFont>> = OnceLock::new();
     FONTS.get_or_init(|| {
-        let mut fonts = fontconfig_list().unwrap_or_else(scan_font_dirs);
+        let mut fonts = if cfg!(target_os = "macos") {
+            scan_font_dirs()
+        } else {
+            fontconfig_list().unwrap_or_else(scan_font_dirs)
+        };
         fonts.sort_by(|a, b| a.family.cmp(&b.family).then(a.path.cmp(&b.path)));
         fonts
     })
@@ -431,17 +438,25 @@ fn fontconfig_list() -> Option<Vec<OsFont>> {
     (!fonts.is_empty()).then_some(fonts)
 }
 
+/// Every face of the font files (collections included) under the platform's font directories.
+/// Files are mapped, so only the tables naming each face are read.
 fn scan_font_dirs() -> Vec<OsFont> {
     let home = unbound_project::install::home();
-    let dirs = [
-        PathBuf::from("/usr/share/fonts"),
-        PathBuf::from("/usr/local/share/fonts"),
-        home.join(".local/share/fonts"),
-        home.join(".fonts"),
-        PathBuf::from("/System/Library/Fonts"),
-        PathBuf::from("/Library/Fonts"),
-        PathBuf::from("C:\\Windows\\Fonts"),
-    ];
+    let dirs = if cfg!(target_os = "macos") {
+        vec![
+            PathBuf::from("/System/Library/Fonts"),
+            PathBuf::from("/Library/Fonts"),
+            home.join("Library/Fonts"),
+        ]
+    } else {
+        vec![
+            PathBuf::from("/usr/share/fonts"),
+            PathBuf::from("/usr/local/share/fonts"),
+            home.join(".local/share/fonts"),
+            home.join(".fonts"),
+            PathBuf::from("C:\\Windows\\Fonts"),
+        ]
+    };
     let mut fonts = Vec::new();
     for dir in dirs {
         for entry in walkdir::WalkDir::new(dir)
@@ -453,21 +468,27 @@ fn scan_font_dirs() -> Vec<OsFont> {
                 .extension()
                 .and_then(|e| e.to_str())
                 .map(str::to_ascii_lowercase);
-            if !matches!(ext.as_deref(), Some("ttf" | "otf")) {
+            if !matches!(ext.as_deref(), Some("ttf" | "otf" | "ttc" | "otc")) {
                 continue;
             }
-            let Ok(data) = std::fs::read(path) else {
+            let Ok(file) = std::fs::File::open(path) else {
                 continue;
             };
-            let Ok(face) = FontFace::from_bytes(data, 0) else {
+            // SAFETY: the map is read while the file is open; OS font files are not rewritten in place.
+            let Ok(data) = (unsafe { memmap2::Mmap::map(&file) }) else {
                 continue;
             };
-            fonts.push(OsFont {
-                family: face.metrics().family.clone(),
-                style: face.metrics().style.clone(),
-                path: path.to_path_buf(),
-                index: 0,
-            });
+            for index in 0..unbound_assets::font::face_count(&data) {
+                if let Some((family, style)) = unbound_assets::font::face_family_style(&data, index)
+                {
+                    fonts.push(OsFont {
+                        family,
+                        style,
+                        path: path.to_path_buf(),
+                        index,
+                    });
+                }
+            }
         }
     }
     fonts
