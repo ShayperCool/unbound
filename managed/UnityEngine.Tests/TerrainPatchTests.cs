@@ -389,7 +389,9 @@ namespace UnityEngine.Tests
                 {
                     var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     m_Objects.Add(go);
-                    go.GetComponent<MeshRenderer>().sharedMaterial = new Material(shader);
+                    var material = new Material(shader);
+                    m_Objects.Add(material);
+                    go.GetComponent<MeshRenderer>().sharedMaterial = material;
                     if (lod) go.AddComponent<LODGroup>();
                     return go;
                 }
