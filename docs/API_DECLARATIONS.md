@@ -42,6 +42,42 @@ Serializable and NonSerialized are checked despite being stored as flags. Attrib
 Obsolete including its error flag, serialization attributes and user-visible Unity annotations
 are not excluded.
 
+The final tooling audit adds the following exact kinds. Searches cover engine,
+compiler, tooling and native integration consumers, including general reflection
+helpers. Existing declarations retain their annotations; these kinds are outside
+the declaration comparison policy. Reflection over excluded annotations may still
+differ. A new engine consumer requires another policy audit.
+
+| Exact attribute kind | Exclusion reason |
+| --- | --- |
+| `UnityEngine.NativeClassAttribute` | Reference platform type association. Engine object loading uses its own class-ID mapping and does not read this annotation. |
+| `System.Security.SecuritySafeCriticalAttribute` | Framework security-transparency metadata. CoreCLR does not apply this security model and the engine has no consumer. |
+| `System.Security.SecurityCriticalAttribute` | Framework security-transparency metadata, outside the CoreCLR execution model; no engine consumer. |
+| `UnityEngineInternal.TypeInferenceRuleAttribute` | Editor/IDE inference hints. The compiler uses declared signatures, defaults and constraints, which remain checked. |
+| `System.Diagnostics.DebuggerDisplayAttribute` | Debugger display text. No engine execution, serialization or job consumer. |
+| `System.Diagnostics.DebuggerTypeProxyAttribute` | Debugger proxy selection. No engine execution, serialization or job consumer. |
+| `Unity.IL2CPP.CompilerServices.Il2CppEagerStaticClassConstructionAttribute` | Initialization hints for the IL2CPP backend. This engine executes managed code on CoreCLR and has no consumer of the hint. |
+| `System.ComponentModel.EditorBrowsableAttribute` | IDE completion visibility. It does not change member accessibility or compilation; accessibility and Obsolete remain checked. |
+| `Unity.Profiling.IgnoredByDeepProfilerAttribute` | Reference deep-profiler instrumentation selection. The engine does not read the marker. |
+| `UnityEngine.ExtensionOfNativeClassAttribute` | Reference platform-wrapper classification. Engine construction and serialization do not use this marker. |
+| `Unity.Burst.BurstAuthorizedExternalMethodAttribute` | Reference Burst external-call authorization. This engine runs with Burst compilation disabled and has no consumer of this marker. |
+
+The actual type-inference namespace is `UnityEngineInternal`; the previous unused
+`UnityEngine.Internal.TypeInferenceRuleAttribute` exclusion is removed. Unknown
+attributes remain checked, including unknown types with similar short names.
+[SecurityCritical](https://learn.microsoft.com/en-us/dotnet/api/system.security.securitycriticalattribute)
+and [SecuritySafeCritical](https://learn.microsoft.com/en-us/dotnet/api/system.security.securitysafecriticalattribute)
+are framework compatibility annotations. [EditorBrowsable](https://learn.microsoft.com/en-us/dotnet/api/system.componentmodel.editorbrowsableattribute)
+and [DebuggerDisplay](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.debuggerdisplayattribute)
+control tooling presentation. These reasons do not apply to job safety, compiler
+protocol, serialization or UI registrations.
+
+Eleven checker fixtures remove one excluded kind at a time and still report exactly
+three independent unknown, Obsolete and Conditional differences. Separate controls
+retain tuple names, default members, container/pointer safety, job producers,
+BurstDiscard, UI interest and serialization markers. JobLayout and UnsafeUtility
+consume the job safety annotations, so those differences remain explicit debt.
+
 ## Initial declaration debt
 
 On the initial 6000.0.71f1 audit, the previous checker reported zero errors for 2,587 types.
@@ -76,9 +112,9 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After final declaration shapes |
+| Category | Before Q410 | After tooling policy |
 | --- | ---: | ---: |
-| Attributes | 938 | 188 |
+| Attributes | 938 | 55 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 4 |
@@ -87,7 +123,7 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 341 |
+| Total | 1,332 | 208 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -305,7 +341,7 @@ Fixed removed-getter exceptions come from the selected release assembly during s
 generation. Conditional and computed getters retain their existing fallback. Core
 constructor, factory and refresh-rate mechanisms select exactly 6000.0.71f1; other
 profiles keep their previous unmeasured paths, recorded in the compatibility gaps.
-The generator format is version 11 after implementing Small object state.
+The generator format is version 13 after the declaration tooling-policy change.
 TextElement implements its selected interface set, including rendered-text overrides through
 its existing rendering value, removing one exact interface exception. The atlas configuration
 retains private serialized fields and public mutable storage. Pointer and embedded-NUL string
@@ -334,3 +370,49 @@ constructor values reuse the existing initialization rule. The README records th
 
 The remaining Core renderer configuration resolves those five ParticleSystem renderer rows.
 Its four gradient aggregates and variable random seed remain queued.
+
+## Remaining declaration queue
+
+The tooling slice removes 133 exact policy-only entries after the final-shapes
+slice reduced the queue from 370 to 341. It retains 208 exact entries, each with a
+specific follow-up reason. No allow-list is regenerated from a passing report.
+The generator format changes with the comparison policy and the committed stubs
+are regenerated from the selected release. Existing probe references and strict
+comparison tolerances stay unchanged in this slice.
+
+| Follow-up | Exact entries | Required work |
+| --- | ---: | --- |
+| `Q410-Animator-animatePhysics` | 1 | Animated kinematic body synchronization with moving-body controls. |
+| `Q410-Core-built-in-serialization` | 3 | Harmonic/mask built-in payloads across root/nested JSON, YAML and cloning. |
+| `Q410-Editor-computed-setters` | 2 | Live focus state and assembly-cache invalidation before private setter alignment. |
+| `Q410-Editor-interfaces` | 11 | Window/menu/preview, request callbacks and connection/converter interface dispatch. |
+| `Q410-Editor-serialized-payloads` | 13 | Window/view/package/request fields and coupled Serializable classification. |
+| `Q410-FrameRate-serialization` | 1 | Nondefault scalar payload with root/nested overwrite controls. |
+| `Q410-GUI-serialized-payloads` | 32 | Shared GUIStyle/GUISkin wrapper serialization and clone schema. |
+| `Q410-ObjectIdentifier-serialization` | 1 | Empty composite eligibility that preserves initializer values during cloning. |
+| `Q410-UI-command-events` | 1 | Command/IME event pooling and propagation before the exact interest list. |
+| `Q410-UI-interfaces` | 12 | Binding notifications, panel/group ownership, animations and internal equality cleanup. |
+| `Q410-XR-value-payloads` | 4 | Distinct provider/handle payloads before equality and hashing interfaces. |
+| `Q410-animation-job-producer` | 1 | Animation producer payload and scheduling/lifetime controls. |
+| `Q410-asset-interface-adapters` | 33 | Move loading/cloning from implementation-only interfaces to external adapters; retain mixer subasset restrictions. |
+| `Q410-built-in-inspector-registration` | 3 | Target-specific single/multiple-object inspector behavior before registry annotations. |
+| `Q410-enumerator-current-state` | 1 | Writable cached Current integrated with MoveNext, Reset and completion. |
+| `Q410-generic-equality-interfaces` | 1 | Scene comparer migration preserving collection equality and hashing. |
+| `Q410-job-container-payloads` | 5 | Mesh/light-query ownership and safety metadata used by the job scheduler. |
+| `Q410-linked-pool-counter` | 1 | Counter state integrated with the existing shared pool implementation. |
+| `Q410-measured-lookup-policies` | 11 | Retain the eleven direct/inherited discovery policies and their controls. |
+| `Q410-slide-result-serialization` | 2 | Nondefault collision-hit backing payloads and overwrite controls. |
+| `Q410-unconstrained-pixel-data` | 1 | Shared allocation-free unconstrained array transfer and invalid/reference-containing input controls. |
+| `Q410-value-layout-payloads` | 8 | Eight value-payload/size migrations with field-order and nondefault-copy controls. |
+| `Q410-wrapper-layouts` | 60 | Sixty wrapper payload/base-layout migrations with interop and ownership controls. |
+
+The earlier strict navlinks run retained 325 value differences and the texture-pixel
+run retained three VolumeRGFloat rows per Gamma/Linear profile. Earlier parent/current
+captures were byte-identical for those residuals; this declaration policy does not
+change their references, comparators or tolerances. Device-specific observations in
+these declaration captures were recorded on the NVIDIA driver only.
+
+Further runtime work remains separate from declaration debt: ObjectFactory eligibility
+and window title/icon resource lookup, and NamedBuildTarget group conversion and
+constructor validation. Their presence in the public API is not a claim that the
+unmeasured runtime paths have been completed.

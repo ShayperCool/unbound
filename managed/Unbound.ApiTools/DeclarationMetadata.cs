@@ -35,7 +35,17 @@ public static class DeclarationMetadata
             or "UnityEngine.Scripting.UsedByNativeCodeAttribute"
             or "UnityEngine.Internal.ExcludeFromDocsAttribute"
             or "UnityEngine.Internal.DefaultValueAttribute"
-            or "UnityEngine.Internal.TypeInferenceRuleAttribute";
+            or "System.ComponentModel.EditorBrowsableAttribute"
+            or "System.Diagnostics.DebuggerDisplayAttribute"
+            or "System.Diagnostics.DebuggerTypeProxyAttribute"
+            or "System.Security.SecurityCriticalAttribute"
+            or "System.Security.SecuritySafeCriticalAttribute"
+            or "Unity.Burst.BurstAuthorizedExternalMethodAttribute"
+            or "Unity.IL2CPP.CompilerServices.Il2CppEagerStaticClassConstructionAttribute"
+            or "Unity.Profiling.IgnoredByDeepProfilerAttribute"
+            or "UnityEngine.ExtensionOfNativeClassAttribute"
+            or "UnityEngine.NativeClassAttribute"
+            or "UnityEngineInternal.TypeInferenceRuleAttribute";
 }
 
 sealed partial class StubBuilder
