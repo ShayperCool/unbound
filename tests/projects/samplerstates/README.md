@@ -91,8 +91,22 @@ DrawMesh (`commandBuffer`, `commandBufferCullBack`). On both devices the plain q
 front state and the mirrored one the back state, with inverted culling the other way round, and
 culling back faces culls the mirrored quad: DrawMeshNow and CommandBuffer.DrawMesh draw a
 mirrored matrix as it is (its faces turned round), while inverted culling turns which faces
-count as front. Unbound flips culling and the stencil faces for every mirrored draw (how renderers mirror is
-unmeasured): the five mirrored rows are declared residuals until mirroring follows the draw path.
+count as front. Unbound retains this winding for both mesh-call paths. `RendererFaces.*` adds MeshRenderer,
+SkinnedMeshRenderer and CommandBuffer.DrawRenderer, each under a reflected parent. Those paths
+correct the model's determinant for both culling and stencil. Controls include X/Y/Z reflections,
+two negative axes, a collapsed X axis, both culling modes and GL.invertCulling in both states,
+and the same transforms through DrawMeshNow and CommandBuffer.DrawMesh. The two independent
+captures per device keep all earlier rows unchanged. These observations are for Unity
+6000.0.71f1 on OpenGL Core and Vulkan, measured on the NVIDIA driver only.
+
+Unity 6000.0 contracts checked for these cases:
+
+| Contract | Control |
+|---|---|
+| [DrawMeshNow](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.DrawMeshNow.html) uses the current material pass and supplied transform, without normal lighting/shadows | Immediate rows select the stencil pass and use the same transforms as renderer rows. Determinant handling is a measured detail, not a documented guarantee. |
+| [CommandBuffer.DrawMesh](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.DrawMesh.html) records the supplied transform/pass; lighting data is undefined | Command mesh rows use an unlit shader. |
+| [GL.invertCulling](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GL-invertCulling.html) reverses the culling direction | Each path is rendered with inversion off/on; Cull Back changes the visible texels. Its effect on two-sided stencil is measured. |
+| [Cull](https://docs.unity3d.com/6000.0/Documentation/Manual/SL-Cull.html) Back discards back faces, Off retains both | Two-sided and Cull Back passes observe the same reflected geometry. |
 
 `Compute.<kernel>.<target>` (after those): compute kernels (`DepthCompute.compute`) reading each
 depth target: `Compare` compares both texels against 0.5 through the texture's own comparison

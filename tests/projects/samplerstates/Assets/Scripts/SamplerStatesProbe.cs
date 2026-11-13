@@ -191,6 +191,7 @@ public class UitkProbe : MonoBehaviour
             Stencils(rows);
             Computes(rows, depths);
             StencilFaces(rows);
+            RendererFaces(rows);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -348,6 +349,107 @@ public class UitkProbe : MonoBehaviour
             Record(name);
             RenderTexture.active = previous;
         }
+    }
+
+    // Negative renderer transforms, including a reflected parent, tested independently of
+    // the immediate/command-buffer mesh draws above. Both stencil faces and Cull Back are read.
+    static void RendererFaces(StringBuilder rows)
+    {
+        Material Material(string name) => new Material(Shader.Find("Probe/SamplerStates/" + name));
+        var faces = Material("StencilFaces");
+        var culled = Material("StencilFacesCullBack");
+        var equal = Material("StencilEqual");
+        var quad = new Mesh { vertices = new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(.5f, 1, 0), new Vector3(.5f, 0, 0) },
+            triangles = new[] { 0, 1, 2, 0, 2, 3 }, bindposes = new[] { Matrix4x4.identity } };
+        quad.boneWeights = new[] { new BoneWeight { boneIndex0 = 0, weight0 = 1 }, new BoneWeight { boneIndex0 = 0, weight0 = 1 },
+            new BoneWeight { boneIndex0 = 0, weight0 = 1 }, new BoneWeight { boneIndex0 = 0, weight0 = 1 } };
+        var full = new Mesh { vertices = new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 0, 0) },
+            triangles = new[] { 0, 1, 2, 0, 2, 3 } };
+        var cameraObject = new GameObject("Face camera");
+        var camera = cameraObject.AddComponent<Camera>();
+        camera.enabled = false;
+        camera.orthographic = true; camera.orthographicSize = .5f; camera.aspect = 1;
+        camera.transform.position = new Vector3(.5f, .5f, -2);
+        camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = new Color(0, 0, 0, 1);
+        camera.cullingMask = 1 << 30;
+        var target = new RenderTexture(2, 1, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        target.Create(); camera.targetTexture = target;
+        var readback = new Texture2D(2, 1, TextureFormat.RGBAFloat, false, true);
+        var scales = new[] { ("x", new Vector3(-1, 1, 1)), ("y", new Vector3(1, -1, 1)),
+            ("z", new Vector3(1, 1, -1)), ("xy", new Vector3(-1, -1, 1)), ("zero", new Vector3(0, 1, 1)) };
+        foreach (string path in new[] { "meshRenderer", "skinnedRenderer", "commandRenderer", "immediate", "commandMesh" })
+        foreach (var (axis, scale) in scales)
+        {
+            var objects = new GameObject[2];
+            var renderers = new Renderer[2];
+            var parent = new GameObject("Face parent");
+            for (int i = 0; i < 2; i++)
+            {
+                var go = objects[i] = new GameObject("Face quad"); go.layer = 30;
+                if (path == "skinnedRenderer")
+                {
+                    var skin = go.AddComponent<SkinnedMeshRenderer>(); skin.sharedMesh = quad;
+                    skin.bones = new[] { go.transform }; skin.rootBone = go.transform;
+                    skin.localBounds = new Bounds(new Vector3(.25f, .5f, 0), new Vector3(2, 2, 2));
+                    skin.updateWhenOffscreen = true; renderers[i] = skin;
+                }
+                else
+                {
+                    go.AddComponent<MeshFilter>().sharedMesh = quad;
+                    renderers[i] = go.AddComponent<MeshRenderer>();
+                }
+                if (i == 1)
+                {
+                    go.transform.SetParent(parent.transform, false);
+                    parent.transform.localScale = scale;
+                    parent.transform.position = new Vector3(scale.x < 0 ? 1 : .5f, scale.y < 0 ? 1 : 0, 0);
+                }
+            }
+            foreach (bool invert in new[] { false, true })
+            foreach (var (material, cull) in new[] { (faces, "twoSided"), (culled, "cullBack") })
+            {
+                foreach (var renderer in renderers) renderer.sharedMaterial = material;
+                GL.invertCulling = invert;
+                if (path == "immediate")
+                {
+                    var active = RenderTexture.active; RenderTexture.active = target;
+                    GL.Clear(true, true, new Color(0, 0, 0, 1));
+                    GL.PushMatrix(); GL.modelview = camera.worldToCameraMatrix; GL.LoadProjectionMatrix(camera.projectionMatrix);
+                    material.SetPass(0);
+                    foreach (var go in objects) Graphics.DrawMeshNow(quad, go.transform.localToWorldMatrix);
+                    GL.PopMatrix(); RenderTexture.active = active;
+                }
+                else if (path == "commandRenderer" || path == "commandMesh")
+                {
+                    using (var cmd = new UnityEngine.Rendering.CommandBuffer())
+                    {
+                        cmd.SetRenderTarget(target); cmd.ClearRenderTarget(true, true, new Color(0, 0, 0, 1));
+                        cmd.SetViewProjectionMatrices(camera.worldToCameraMatrix, camera.projectionMatrix);
+                        if (path == "commandRenderer") foreach (var renderer in renderers) cmd.DrawRenderer(renderer, material, 0, 0);
+                        else foreach (var go in objects) cmd.DrawMesh(quad, go.transform.localToWorldMatrix, material, 0, 0);
+                        Graphics.ExecuteCommandBuffer(cmd);
+                    }
+                }
+                else camera.Render();
+                GL.invertCulling = false;
+                var previous = RenderTexture.active; RenderTexture.active = target;
+                GL.PushMatrix(); GL.LoadOrtho();
+                equal.SetInt("_Ref", 1); equal.SetColor("_Color", Color.red); equal.SetPass(0); Graphics.DrawMeshNow(full, Matrix4x4.identity);
+                equal.SetInt("_Ref", 255); equal.SetColor("_Color", Color.green); equal.SetPass(0); Graphics.DrawMeshNow(full, Matrix4x4.identity);
+                GL.PopMatrix();
+                readback.ReadPixels(new Rect(0, 0, 2, 1), 0, 0); readback.Apply(); RenderTexture.active = previous;
+                string key = "RendererFaces." + path + "." + axis + "." + cull + (invert ? ".inverted" : ".plain");
+                Row(rows, key + ".normal", readback.GetPixel(0, 0));
+                Row(rows, key + ".transformed", readback.GetPixel(1, 0));
+            }
+            foreach (var go in objects) UnityEngine.Object.DestroyImmediate(go);
+            UnityEngine.Object.DestroyImmediate(parent);
+        }
+        camera.targetTexture = null;
+        UnityEngine.Object.DestroyImmediate(cameraObject);
+        target.Release(); UnityEngine.Object.DestroyImmediate(target);
+        UnityEngine.Object.DestroyImmediate(readback); UnityEngine.Object.DestroyImmediate(quad); UnityEngine.Object.DestroyImmediate(full);
+        UnityEngine.Object.DestroyImmediate(faces); UnityEngine.Object.DestroyImmediate(culled); UnityEngine.Object.DestroyImmediate(equal);
     }
 
     /// <summary>Recorded after the stencil rows: compute kernels reading each depth target (a

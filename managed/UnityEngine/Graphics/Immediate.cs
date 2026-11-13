@@ -203,7 +203,7 @@ namespace Unbound.Runtime
             EnsureActiveTarget();
             var saved = GfxStream.Current;
             GfxStream.Camera(ModelView, Projection, saved.Flags);
-            GfxStream.Draw(meshHandle, submesh, material, PassIndex, model, UnityEngine.Color.white);
+            GfxStream.Draw(meshHandle, submesh, material, PassIndex, model, UnityEngine.Color.white, rawWinding: Compat.ImmediateMeshKeepsWinding);
             GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
         }
 

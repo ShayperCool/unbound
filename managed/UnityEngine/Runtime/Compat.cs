@@ -400,6 +400,11 @@ namespace Unbound.Runtime
         /// docs/COMPATIBILITY_GAPS.md ("Rendering rules measured on one release").</summary>
         internal static bool RenderingMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>DrawMeshNow and CommandBuffer.DrawMesh keep the submitted winding, including
+        /// negative determinants (samplerstates StencilFaces/RendererFaces). Other releases retain
+        /// the renderer-style determinant correction until recorded.</summary>
+        internal static bool ImmediateMeshKeepsWinding => RenderingMeasured;
+
         /// <summary>A render pass subpass with several color outputs of which exactly one clears
         /// (its load action, first use in the pass) clears every output it binds to that color on
         /// the Editor's OpenGL Core device; two or more clear each to its own color and loading

@@ -52,6 +52,8 @@ pub struct Draw {
     pub main_texture: u64,
     /// Pixels, origin bottom-left: a scissor rectangle within the viewport.
     pub clip: Option<[f32; 4]>,
+    /// Keep the submitted winding instead of correcting a negative model determinant.
+    pub raw_winding: bool,
     /// Per-draw properties over the material's (`MaterialPropertyBlock`).
     pub properties: Vec<(String, PropertyValue)>,
 }
@@ -762,7 +764,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 let model = r.floats()?;
                 let color = r.floats()?;
                 let main_texture = r.texture("a draw's main texture")?;
-                let clip_enabled = r.u8()? != 0;
+                let draw_flags = r.u8()?;
                 let clip: [f32; 4] = r.floats()?;
                 let count = r.u32()? as usize;
                 let mut properties = Vec::with_capacity(count.min(64));
@@ -777,7 +779,8 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     model,
                     color,
                     main_texture,
-                    clip: clip_enabled.then_some(clip),
+                    clip: (draw_flags & 1 != 0).then_some(clip),
+                    raw_winding: draw_flags & 2 != 0,
                     properties,
                 }))
             }
@@ -1383,7 +1386,8 @@ impl Writer {
                 self.floats(&d.model);
                 self.floats(&d.color);
                 self.u64(d.main_texture);
-                self.bytes.push(d.clip.is_some() as u8);
+                self.bytes
+                    .push(d.clip.is_some() as u8 | ((d.raw_winding as u8) << 1));
                 self.floats(&d.clip.unwrap_or_default());
                 self.u32(d.properties.len() as u32);
                 for (name, value) in &d.properties {
@@ -1528,6 +1532,7 @@ mod tests {
                 color: [1.0; 4],
                 main_texture: 0,
                 clip: Some([1.0, 2.0, 3.0, 4.0]),
+                raw_winding: true,
                 properties: vec![
                     ("_Glow".into(), PropertyValue::Float(2.0)),
                     ("_M".into(), PropertyValue::Matrix([4.0; 16])),

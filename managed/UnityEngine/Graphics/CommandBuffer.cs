@@ -470,7 +470,7 @@ namespace UnityEngine.Rendering
             {
                 ulong meshHandle = mesh.Sync();
                 ulong materialHandle = material.Sync();
-                GfxStream.Draw(meshHandle, submeshIndex, materialHandle, shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, Color.white, properties: values);
+                GfxStream.Draw(meshHandle, submeshIndex, materialHandle, shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, Color.white, properties: values, rawWinding: Unbound.Runtime.Compat.ImmediateMeshKeepsWinding);
             });
         }
 

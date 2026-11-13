@@ -740,7 +740,7 @@ namespace Unbound.Runtime
         /// else that pass of the shader. <paramref name="properties"/> override the material's for
         /// this draw (a MaterialPropertyBlock's values).</summary>
         internal static void Draw(ulong mesh, int submesh, ulong material, int pass, in Matrix4x4 model, Color color,
-            ulong mainTexture = 0, Rect? clip = null, Dictionary<int, object> properties = null)
+            ulong mainTexture = 0, Rect? clip = null, Dictionary<int, object> properties = null, bool rawWinding = false)
         {
             if (s_State.Scissor is Rect scissor) clip = clip.HasValue ? Intersect(clip.Value, scissor) : scissor;
             Resolve(properties);
@@ -753,7 +753,8 @@ namespace Unbound.Runtime
             Matrix(model);
             Color(color);
             U64(mainTexture);
-            U8(clip.HasValue ? (byte)1 : (byte)0);
+            // Bit 1 keeps the submitted winding for immediate and command-buffer mesh draws.
+            U8((byte)((clip.HasValue ? 1 : 0) | (rawWinding ? 2 : 0)));
             Rect(clip ?? default);
             U32((uint)s_Properties.Count);
             foreach (var p in s_Properties)

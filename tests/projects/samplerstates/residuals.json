@@ -25,12 +25,5 @@
   "Compute.CompareLoad.splitLinear",
   "Compute.CompareLoad.map",
   "Compute.CompareLoad.mapLinear"
- ],
- "Graphics.DrawMeshNow and CommandBuffer.DrawMesh draw a matrix of negative determinant as it is in the Editor (its faces turn round: Cull Back culls them, a two-sided stencil takes its back state); Unbound flips culling and the stencil faces for every mirrored draw, as renderers are mirrored (follow-up: mirroring by draw path)": [
-  "StencilFaces.plain.mirrored",
-  "StencilFaces.invertCulling.mirrored",
-  "StencilFaces.cullBack.mirrored",
-  "StencilFaces.commandBuffer.mirrored",
-  "StencilFaces.commandBufferCullBack.mirrored"
  ]
 }

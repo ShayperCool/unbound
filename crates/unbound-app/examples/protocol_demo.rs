@@ -109,6 +109,7 @@ fn frame_commands(
                     d.clip.width,
                     d.clip.height,
                 ]),
+                raw_winding: false,
                 properties: Vec::new(),
             })));
         }

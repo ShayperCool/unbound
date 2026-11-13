@@ -316,7 +316,7 @@ before and after it, as on Unity's render thread) and a read back.
 7 Global      str name, property               // Shader.SetGlobal*
 8 Keyword     str name, u8 enabled             // Shader.EnableKeyword / DisableKeyword
 9 Draw        u64 mesh, i32 submesh, u64 material, i32 pass (-1: the forward passes),
-              mat model, f32x4 color, u64 main_texture, u8 clip_enabled, f32x4 clip,
+              mat model, f32x4 color, u64 main_texture, u8 flags (1: clip enabled, 2: raw winding), f32x4 clip,
               u32 count, property[count]       // per-draw properties (MaterialPropertyBlock)
 10 CopyTexture  u64 src, i32 slice, mip, i32x4 rect (width < 0: the whole level), u64 dst, i32 slice, mip, x, y
 11 CreateBuffer u64 handle, u64 size, u32 usage (GraphicsBuffer.Target flags)
