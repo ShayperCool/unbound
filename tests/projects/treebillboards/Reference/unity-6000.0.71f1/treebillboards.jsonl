@@ -1,8 +1,12 @@
 {"defaults":{"treeDistance":5000,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeMaximumFullLODCount":50}}
-{"image":"ground","treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"image":"ground","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
 {"atlas":"Tree Imposter Texture","width":256,"height":256,"graphicsFormat":"R8G8B8A8_UNorm","depth":16,"mipmaps":true,"sRGB":false,"filterMode":"Bilinear","wrapMode":"Clamp","mipMapBias":-1,"hideFlags":61}
-{"image":"pitch20","treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":13.24,"yaw":0.00}
-{"image":"pitch55","treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":54.78,"yaw":0.00}
-{"image":"start20","treeBillboardDistance":20,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
-{"image":"fade40","treeBillboardDistance":25,"treeCrossFadeLength":40,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
-{"image":"distance150","treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":150,"pitch":0.82,"yaw":0.00}
+{"image":"pitch20","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":13.24,"yaw":0.00}
+{"image":"pitch55","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":54.78,"yaw":0.00}
+{"image":"start20","treeMaximumFullLODCount":50,"treeBillboardDistance":20,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"image":"fade40","treeMaximumFullLODCount":50,"treeBillboardDistance":25,"treeCrossFadeLength":40,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"image":"distance150","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":150,"pitch":0.82,"yaw":0.00}
+{"image":"turned","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.78,"yaw":30.07}
+{"image":"brightsun","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"image":"maxmesh3","treeMaximumFullLODCount":3,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"image":"sunonly","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}

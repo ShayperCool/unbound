@@ -1,9 +1,9 @@
 # Tree billboards
 
-Terrain trees whose prototype materials' shaders name a BillboardShader: a tree prefab drawn with
-the Soft Occlusion shaders (one mesh, a trunk submesh with the bark material and a crown submesh
-with the leaves material, whose texture has holes; no LOD group) on a flat 400 × 400 terrain lit by
-one directional light. `TreeBillboardProbe` places the trees at run time in staggered rows from 30
+Terrain trees whose prototype materials' shaders name a BillboardShader: two tree prefabs drawn
+with the Soft Occlusion shaders (each one mesh, a trunk submesh with the bark material and a crown
+submesh with the leaves material, whose texture has holes; no LOD group; a round tree and a tall,
+narrow one, every fourth tree) on a flat 400 × 400 terrain lit by one directional light. `TreeBillboardProbe` places the trees at run time in staggered rows from 30
 to 380 units ahead of the cameras, of several width and height scales and colors, and records:
 
 - `defaults`: the terrain's tree settings as a new terrain has them;
@@ -11,14 +11,17 @@ to 380 units ahead of the cameras, of several width and height scales and colors
   with the default settings (billboards from 50 units, a fade of 5);
 - `atlas`: the render texture the billboards are cut from ("Tree Imposter Texture": size,
   format, sampler) as the ground view left it, and its first mip as `atlas.png`;
-- `start20` (billboards from 20 units), `fade40` (from 25 units, a fade of 40) and `distance150`
-  (tree distance 150): the ground view with other settings.
+- `start20` (billboards from 20 units), `fade40` (from 25 units, a fade of 40), `distance150`
+  (tree distance 150), `turned` (the camera turned 30 degrees about up), `brightsun` (the sun
+  tinted and at intensity 1.6), `maxmesh3` (treeMaximumFullLODCount 3) and `sunonly` (the sun's
+  intensity alone changed, the view unchanged): the ground view with other settings.
 
 What it shows (Unity 6000.0.71f1, NVIDIA): such trees are drawn as their meshes up to the billboard
 start plus the fade (distances across the ground), squashed towards the billboard across the fade,
 and as camera-facing billboards past it, cut from an atlas cell into which the prototype is drawn
-with its BillboardShader copies, seen orthographically from the camera's pitch and yaw. The mesh
-trees take the forward vertex lights (`Lighting On` passes without a LightMode).
+with its BillboardShader copies, seen orthographically from the camera's pitch and yaw, drawn
+again when the camera turns or the lights change. The mesh trees take the forward vertex lights
+(`Lighting On` passes without a LightMode). treeMaximumFullLODCount changes nothing here.
 
 Make the assets once and record Unity's reference (two GPU captures, published when they agree):
 

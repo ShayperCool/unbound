@@ -11,7 +11,9 @@ using UnityEngine;
 /// placed in staggered rows from 30 to 380 units ahead of the cameras, of several widths, heights
 /// and colors, drawn as meshes near the camera and as billboards past treeBillboardDistance.
 /// Images from the ground, from above at two pitches, with a nearer billboard start, a long cross
-/// fade and a short tree distance, and the billboard atlas as the ground view left it. Writes <c>treebillboards.jsonl</c> (the settings each image used)
+/// fade and a short tree distance, turned about up, under a brighter tinted sun and with at most
+/// three mesh trees, and the billboard atlas as the ground view left it. Every fourth tree is the
+/// tall prototype. Writes <c>treebillboards.jsonl</c> (the settings each image used)
 /// and PNGs into <c>TREE_BILLBOARD_PROBE_OUT</c>, then quits.
 /// </summary>
 public class TreeBillboardProbe : MonoBehaviour
@@ -41,7 +43,7 @@ public class TreeBillboardProbe : MonoBehaviour
                 int n = trees.Count;
                 trees.Add(new TreeInstance
                 {
-                    prototypeIndex = 0,
+                    prototypeIndex = n % 4 == 3 ? 1 : 0,
                     position = new Vector3((x + 200f) / 400f, 0f, z / 400f),
                     widthScale = 0.8f + 0.1f * (n % 5),
                     heightScale = 0.75f + 0.15f * (n % 4),
@@ -61,6 +63,24 @@ public class TreeBillboardProbe : MonoBehaviour
         Capture(dir, "start20", terrain, new Vector3(0f, 7f, -10f), new Vector3(0f, 4f, 200f), 20f, 5f, 5000f);
         Capture(dir, "fade40", terrain, new Vector3(0f, 7f, -10f), new Vector3(0f, 4f, 200f), 25f, 40f, 5000f);
         Capture(dir, "distance150", terrain, new Vector3(0f, 7f, -10f), new Vector3(0f, 4f, 200f), 50f, 5f, 150f);
+        // Turned 30 degrees about up: the atlas is drawn from the camera's yaw too.
+        Capture(dir, "turned", terrain, new Vector3(0f, 7f, -10f), new Vector3(110f, 4f, 180f), 50f, 5f, 5000f);
+        // A brighter, tinted sun: the atlas and the mesh trees are lit by its final color.
+        var sun = FindAnyObjectByType<Light>();
+        var (color, intensity) = (sun.color, sun.intensity);
+        sun.color = new Color(1f, 0.85f, 0.7f);
+        sun.intensity = 1.6f;
+        Capture(dir, "brightsun", terrain, new Vector3(0f, 7f, -10f), new Vector3(0f, 4f, 200f), 50f, 5f, 5000f);
+        sun.color = color;
+        sun.intensity = intensity;
+        // At most three mesh trees.
+        terrain.treeMaximumFullLODCount = 3;
+        Capture(dir, "maxmesh3", terrain, new Vector3(0f, 7f, -10f), new Vector3(0f, 4f, 200f), 50f, 5f, 5000f);
+        terrain.treeMaximumFullLODCount = 50;
+        // The sun alone changed, from the same view: is the atlas drawn again?
+        sun.intensity = 1.6f;
+        Capture(dir, "sunonly", terrain, new Vector3(0f, 7f, -10f), new Vector3(0f, 4f, 200f), 50f, 5f, 5000f);
+        sun.intensity = intensity;
         File.WriteAllText(Path.Combine(dir, "treebillboards.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -117,7 +137,7 @@ public class TreeBillboardProbe : MonoBehaviour
         camera.targetTexture = null;
         File.WriteAllBytes(Path.Combine(dir, name + ".png"), texture.EncodeToPNG());
         var euler = go.transform.eulerAngles;
-        m_Out.Append($"{{\"image\":\"{name}\",\"treeBillboardDistance\":{F(terrain.treeBillboardDistance)},\"treeCrossFadeLength\":{F(terrain.treeCrossFadeLength)},\"treeDistance\":{F(terrain.treeDistance)},\"pitch\":{euler.x.ToString("F2", CultureInfo.InvariantCulture)},\"yaw\":{euler.y.ToString("F2", CultureInfo.InvariantCulture)}}}\n");
+        m_Out.Append($"{{\"image\":\"{name}\",\"treeMaximumFullLODCount\":{terrain.treeMaximumFullLODCount},\"treeBillboardDistance\":{F(terrain.treeBillboardDistance)},\"treeCrossFadeLength\":{F(terrain.treeCrossFadeLength)},\"treeDistance\":{F(terrain.treeDistance)},\"pitch\":{euler.x.ToString("F2", CultureInfo.InvariantCulture)},\"yaw\":{euler.y.ToString("F2", CultureInfo.InvariantCulture)}}}\n");
         DestroyImmediate(targetTexture);
         DestroyImmediate(go);
         Destroy(texture);

@@ -5,9 +5,10 @@ using UnityEngine;
 
 /// <summary>
 /// `Unity -batchmode -quit -projectPath tests/projects/treebillboards -executeMethod ProbeRunner.Create`
-/// makes the probe's assets once: a tree prefab drawn with the Soft Occlusion shaders (one mesh,
-/// a trunk submesh with the bark material and a crown submesh with the leaves material, whose
-/// texture has holes), a flat 400 × 400 terrain with one layer and the tree as its prototype, and
+/// makes the probe's assets once: two tree prefabs drawn with the Soft Occlusion shaders (each one
+/// mesh, a trunk submesh with the bark material and a crown submesh with the leaves material, whose
+/// texture has holes: a round tree and a tall, narrow one), a flat 400 × 400 terrain with one layer
+/// and the two trees as its prototypes, and
 /// the scene with the terrain and a directional light. `-executeMethod ProbeRunner.Record` with
 /// <c>TREE_BILLBOARD_PROBE_OUT</c> set plays the scene, where <see cref="TreeBillboardProbe"/>
 /// places the trees and records.
@@ -47,11 +48,17 @@ public static class ProbeRunner
         leavesMaterial.SetFloat("_Cutoff", 0.4f);
         AssetDatabase.CreateAsset(leavesMaterial, "Assets/Tree/Leaves.mat");
 
-        var tree = new GameObject("Tree");
-        tree.AddComponent<MeshFilter>().sharedMesh = mesh;
-        tree.AddComponent<MeshRenderer>().sharedMaterials = new[] { barkMaterial, leavesMaterial };
-        var prefab = PrefabUtility.SaveAsPrefabAsset(tree, "Assets/Tree/Tree.prefab");
-        Object.DestroyImmediate(tree);
+        var prefab = Prefab("Tree", mesh, barkMaterial, leavesMaterial);
+        // A second, narrow prototype: a tall trunk under a capsule crown.
+        var tallMesh = new Mesh { name = "Tall" };
+        tallMesh.CombineMeshes(new[]
+        {
+            new CombineInstance { mesh = trunk, transform = Matrix4x4.TRS(new Vector3(0f, 3f, 0f), Quaternion.identity, new Vector3(0.35f, 3f, 0.35f)) },
+            new CombineInstance { mesh = Resources.GetBuiltinResource<Mesh>("Capsule.fbx"), transform = Matrix4x4.TRS(new Vector3(0f, 8f, 0f), Quaternion.identity, new Vector3(1.6f, 2.5f, 1.6f)) },
+        }, false, true);
+        tallMesh.RecalculateBounds();
+        AssetDatabase.CreateAsset(tallMesh, "Assets/Tree/Tall.asset");
+        var tall = Prefab("Tall", tallMesh, barkMaterial, leavesMaterial);
 
         var ground = Texture("Assets/Terrain/Ground.png", 32, (x, y) => new Color(0.36f, 0.42f + 0.05f * ((x / 8 + y / 8) & 1), 0.28f, 1f));
         var layer = new TerrainLayer { diffuseTexture = ground, tileSize = new Vector2(10f, 10f) };
@@ -62,7 +69,7 @@ public static class ProbeRunner
         data.size = new Vector3(400f, 50f, 400f);
         data.alphamapResolution = 32;
         data.terrainLayers = new[] { layer };
-        data.treePrototypes = new[] { new TreePrototype { prefab = prefab } };
+        data.treePrototypes = new[] { new TreePrototype { prefab = prefab }, new TreePrototype { prefab = tall } };
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var terrainObject = Terrain.CreateTerrainGameObject(data);
@@ -74,6 +81,16 @@ public static class ProbeRunner
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/Probe.unity");
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true) };
         AssetDatabase.SaveAssets();
+    }
+
+    static GameObject Prefab(string name, Mesh mesh, Material bark, Material leaves)
+    {
+        var tree = new GameObject(name);
+        tree.AddComponent<MeshFilter>().sharedMesh = mesh;
+        tree.AddComponent<MeshRenderer>().sharedMaterials = new[] { bark, leaves };
+        var prefab = PrefabUtility.SaveAsPrefabAsset(tree, $"Assets/Tree/{name}.prefab");
+        Object.DestroyImmediate(tree);
+        return prefab;
     }
 
     static Texture2D Texture(string path, int size, System.Func<int, int, Color> color)
