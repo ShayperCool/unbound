@@ -243,7 +243,7 @@ static partial class WideFloats
                 if (method.IsConstructor) Construction(method);
             }
             using var output = new System.IO.MemoryStream();
-            assembly.Write(output);
+            assembly.Write(output, new WriterParameters { DeterministicMvid = true });
             Image = output.ToArray();
         }
 
