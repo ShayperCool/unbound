@@ -350,9 +350,9 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
 - [x] Q403 declaration checking: `unbound api-check` compares release metadata, including custom
       attribute arguments, AttributeUsage, optional defaults, constants, modifiers, constraints,
       interfaces, accessors and storage metadata. See [declaration policy](API_DECLARATIONS.md).
-      The current 6000.0.71f1 audit has 1,321 exact migration exceptions in
-      `managed/UnityEngine/ApiCheckAllowList.json`: attributes 938, modifiers 87, parameters 74,
-      accessors 70, layout 68, interfaces 65, accessibility 18 and constraints 1. These remain open
+      The current 6000.0.71f1 audit has 407 exact migration exceptions in
+      `managed/UnityEngine/ApiCheckAllowList.json`: attributes 246, modifiers 13, accessors 4,
+      layout 68, interfaces 64, constraints 1 and eleven lookup policies. These remain open
       declaration repairs, with raw counts and individual reasons retained by the checker.
       Q403 lookup checks are done (`attributeinheritance`, 215 exact Editor records): thirty
       attribute-type declarations now match the release metadata; eleven direct-discovery lookup

@@ -2165,13 +2165,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEngine.UIElements.TextElement",
-    "Message": "type interfaces is UnityEngine.UIElements.INotifyValueChanged`1<System.String>,UnityEngine.UIElements.ITextEdition,UnityEngine.UIElements.ITextSelection, Unity's is UnityEngine.UIElements.IExperimentalFeatures,UnityEngine.UIElements.INotifyValueChanged`1<System.String>,UnityEngine.UIElements.ITextEdition,UnityEngine.UIElements.ITextElement,UnityEngine.UIElements.ITextElementExperimentalFeatures,UnityEngine.UIElements.ITextSelection",
-    "Reason": "Queued interface migration; supply implementations or explicit unsupported methods for the reference interface set. Owner: UnityEngine.UIElements.TextElement."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.UIElements.VisualElement",
     "Message": "type interfaces is UnityEngine.UIElements.Experimental.ITransitionAnimations,UnityEngine.UIElements.IExperimentalFeatures,UnityEngine.UIElements.IResolvedStyle,UnityEngine.UIElements.ITransform,UnityEngine.UIElements.IVisualElementScheduler, Unity's is UnityEngine.UIElements.Experimental.ITransitionAnimations,UnityEngine.UIElements.IExperimentalFeatures,UnityEngine.UIElements.IResolvedStyle,UnityEngine.UIElements.IStylePropertyAnimations,UnityEngine.UIElements.ITransform,UnityEngine.UIElements.IVisualElementScheduler",
     "Reason": "Queued interface migration; supply implementations or explicit unsupported methods for the reference interface set. Owner: UnityEngine.UIElements.VisualElement."

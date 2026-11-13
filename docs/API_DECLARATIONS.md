@@ -76,18 +76,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After user annotation slice |
+| Category | Before Q410 | After annotation and UI state slices |
 | --- | ---: | ---: |
 | Attributes | 938 | 246 |
 | Modifiers | 87 | 13 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 4 |
 | Layout | 68 | 68 |
-| Interfaces | 65 | 65 |
+| Interfaces | 65 | 64 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 408 |
+| Total | 1,332 | 407 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -238,23 +238,29 @@ Q411's shared removed-getter migration resolves 1,196 rows. The Core slice resol
 another 156 rows, including one Canvas viewport observation; Physics2D resolves 157
 and Physics resolves 89. Audio resolves 185 more; an independently integrated lighting
 fix resolves one additional row. The ParticleSystem slice resolves another 337 rows and the Editor slice resolves 132.
-The default-state probe now has 11,644 exact rows and 568 queued rows, including
-the unchanged 50 variable rows. Its 12,180 canonical rows
+UIElements resolves 59 values and shared JSON string transfer resolves two record strings.
+The default-state probe now has 11,808 exact rows and 500 queued rows, including
+the unchanged 50 variable rows. Its 12,281 canonical rows
 preserve every original line. Added controls
 cover exact removed-getter messages, valid and rejected factories, requirements,
 explicit constructor arguments, aliases, refresh-rate arithmetic, drive input ranges,
 material ownership, existing audio-provider requirements, module ownership after
 destruction, removed particle accessors, default curve key metadata, sprite slots,
 importer backing and constructor failures, window initialization, removed texture
-settings, collection validity and nullable paths.
+settings, collection validity, nullable paths, pointer conversion/cache order, text interfaces,
+atlas configuration ownership, logical/physical parents and JSON string transfer.
 
 Fixed removed-getter exceptions come from the selected release assembly during stub
 generation. Conditional and computed getters retain their existing fallback. Core
 constructor, factory and refresh-rate mechanisms select exactly 6000.0.71f1; other
 profiles keep their previous unmeasured paths, recorded in the compatibility gaps.
-The generator format is version 8 after adding backing checks to importer property
-stubs. API declarations and lookup checks retain the exact release exceptions listed above
-with zero errors; the Editor default-state changes add no exceptions.
+The generator format is version 9 after implementing atlas settings and text interfaces.
+TextElement implements its selected interface set, including rendered-text overrides through
+its existing rendering value, removing one exact interface exception. The atlas configuration
+retains private serialized fields and public mutable storage. Pointer and embedded-NUL string
+transfer select measured Compat mechanisms; prior profiles retain their unmeasured paths.
+API declarations and lookup checks retain the exact release exceptions listed above
+with zero errors; no new exceptions are added by these default-state changes.
 
 The probe README lists remaining module counts and unresolved contexts. In particular,
 CoreModule keeps 115 rows requiring operation/payload validity, rendering initialization
