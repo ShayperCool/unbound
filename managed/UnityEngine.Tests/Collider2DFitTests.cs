@@ -140,6 +140,11 @@ namespace UnityEngine.Tests
             var capsule = go.AddComponent<CapsuleCollider2D>();
             capsule.size = new Vector2(2, -1);
             Near(new Vector2(2, .0001f), capsule.size);
+            var circle = go.AddComponent<CircleCollider2D>();
+            circle.radius = 1e7f;
+            Assert.Equal(1e6f, circle.radius);
+            circle.radius = -3;
+            Assert.Equal(.0001f, circle.radius);
         }
 
         public void Dispose()

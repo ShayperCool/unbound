@@ -657,23 +657,22 @@ namespace UnityEngine
             get => m_Radius;
             set
             {
-                m_Radius = Mathf.Max(value, MinimumExtent);
+                m_Radius = value < MinimumExtent ? MinimumExtent : Mathf.Min(value, MaximumRadius);
                 ShapeChanged();
             }
         }
 
-        /// <summary>The largest radius an added circle takes from its renderer's bounds (measured with
-        /// bounds 4e6 wide; tests/projects/spriteoutlines).</summary>
-        const float MaximumFittedRadius = 1e6f;
+        /// <summary>The largest radius the setter keeps (measured: 1e7 keeps 1e6; an added circle
+        /// fitted to bounds 4e6 wide takes it too; tests/projects/spriteoutlines).</summary>
+        const float MaximumRadius = 1e6f;
 
         /// <summary>Added to an object with a renderer: the circle around its bounds (the larger
-        /// half extent, within 0.0001 and 1e6) at their centre (matches the Unity 6000.0.71f1
+        /// half extent, as the setter keeps it) at their centre (matches the Unity 6000.0.71f1
         /// Editor, tests/projects/spriteoutlines).</summary>
         internal override void OnAddedByScript()
         {
             if (!RendererLocalBounds(out var b)) return;
-            float r = b.extents.y <= b.extents.x ? b.extents.x : b.extents.y;
-            m_Radius = r < MinimumExtent ? MinimumExtent : Mathf.Min(r, MaximumFittedRadius);
+            radius = b.extents.y <= b.extents.x ? b.extents.x : b.extents.y;
             offset = FittedOffset(b.center);
         }
 
@@ -971,7 +970,7 @@ namespace UnityEngine
                 float radius = 1f;
                 if (RendererLocalBounds(out var b))
                 {
-                    centre = b.center;
+                    centre = FittedOffset(b.center);
                     float r = b.extents.y <= b.extents.x ? b.extents.x : b.extents.y;
                     if (r > 0f) radius = r;
                 }

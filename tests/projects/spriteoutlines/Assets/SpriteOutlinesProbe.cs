@@ -287,6 +287,8 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
             {
                 setBox.size = value; setCapsule.size = value; setCircle.radius = value.x;
                 setters.Add(setBox.size); setters.Add(setCapsule.size); setters.Add(new Vector2(setCircle.radius, 0));
+                setCircle.radius = value.y;
+                setters.Add(new Vector2(setCircle.radius, 0));
             }
             capture.setters = setters.ToArray();
 #if UNITY_EDITOR
