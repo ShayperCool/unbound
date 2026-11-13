@@ -20,8 +20,7 @@ namespace UnityEngine
 
     /// <summary>Passes the low frequencies of an AudioSource. Cutoff 10 to 22000 Hz (default 5000;
     /// the 6000.0 Manual gives 0.0 to 22000.0, the Scripting API 10.0 to 22000.0), resonance Q 1 to
-    /// 10 (default 1). On an AudioListener, and the custom cutoff curve, are unsupported and fail
-    /// loudly.</summary>
+    /// 10 (default 1). The custom cutoff curve is unsupported and fails loudly.</summary>
     [ClassId(169)]
     [RequireComponent(typeof(AudioBehaviour))]
     public sealed partial class AudioLowPassFilter : Behaviour
@@ -606,17 +605,18 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The hearing listener's components in Inspector order on the final mix.
-        /// They share the source/mixer kernels. Scripts interleaved with listener components and
-        /// a listener sharing a GameObject with a source still fail clearly until measured.</summary>
-        internal static int CollectListener(AudioListener listener, bool scripts, ref AudioFilterDescriptor[] table)
+        /// Components and scripts retain Inspector order. A listener sharing a GameObject with
+        /// a source still fails clearly until measured.</summary>
+        internal static int CollectListener(AudioListener listener, bool scripts, ref AudioFilterDescriptor[] table, int scriptOffset = 0)
         {
             var go = listener.m_GameObject;
             if (go == null) return 0;
             Retain(ref listener.m_FilterDescriptors, table);
-            int count = 0;
+            int count = 0, precedingScripts = scriptOffset;
             string error = null;
             foreach (var c in go.m_Components)
             {
+                if (AudioFilters.IsFilterScript(c)) { precedingScripts++; continue; }
                 if (!IsFilterComponent(c) || ((Behaviour)c).m_Destroyed) continue;
                 bool active = ((Behaviour)c).isActiveAndEnabled;
                 if (!active && !Compat.AudioComponentActivationMeasured) continue;
@@ -626,7 +626,7 @@ namespace Unbound.Runtime
                     error ??= c.GetType().Name + " on the AudioListener '" + go.m_Name + "' is not supported; it is not applied";
                     continue;
                 }
-                if (scripts)
+                if (scripts && !Compat.AudioListenerChainMeasured)
                 {
                     error ??= "Filter components next to OnAudioFilterRead scripts on the AudioListener '" + go.m_Name + "' is not supported; listener filter components are not applied";
                     count = 0;
@@ -645,7 +645,8 @@ namespace Unbound.Runtime
                     break;
                 }
                 d.Id = unchecked((ulong)(long)c.GetInstanceID());
-                d.Stage = active ? AudioFilterStage.BeforeScripts : AudioFilterStage.Bypassed;
+                d.Stage = AudioFilterStage.Listener(precedingScripts);
+                if (!active) d.Stage |= AudioFilterStage.Bypassed;
                 if (table == null || table.Length == count) Array.Resize(ref table, Math.Max(4, count * 2));
                 table[count++] = d;
             }

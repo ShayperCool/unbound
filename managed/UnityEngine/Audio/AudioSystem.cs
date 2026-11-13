@@ -522,6 +522,25 @@ namespace Unbound.Runtime
             SubmitFrame(realDelta, playing, motionDelta, fixedStep: false);
         }
 
+        // Listener pose selection and DSP membership are separate: every active listener
+        // contributes its components and scripts. Registration order is kept without sorting.
+        static int CollectListenerFilters()
+        {
+            int count = 0, scriptOffset = 0;
+            foreach (var listener in s_Listeners)
+            {
+                int scripts = AudioFilters.ScriptCount(listener.m_GameObject);
+                int local = AudioFilterChain.CollectListener(listener, scripts != 0, ref listener.m_FilterTable, scriptOffset);
+                if (s_ListenerFilters == null || s_ListenerFilters.Length < count + local)
+                    Array.Resize(ref s_ListenerFilters, Math.Max(4, Math.Max(count + local, (s_ListenerFilters?.Length ?? 0) * 2)));
+                if (local > 0) Array.Copy(listener.m_FilterTable, 0, s_ListenerFilters, count, local);
+                count += local;
+                scriptOffset += scripts;
+            }
+            if (s_ListenerFilters != null) Array.Clear(s_ListenerFilters, count, s_ListenerFilters.Length - count);
+            return count;
+        }
+
         // A fixed sample reaches the backend at the fixed node. Dynamic listener state remains
         // at its last frame sample; this submission neither samples it nor advances mixer time.
         static void SubmitFrame(float realDelta, int playing, double motionDelta, bool fixedStep)
@@ -549,10 +568,16 @@ namespace Unbound.Runtime
                 frame.ListenerUp = pose.Up;
                 frame.ListenerVelocity = listener.m_Velocity;
                 if (Compat.MixerEffectTransitionsMeasured) frame.Flags |= AudioFrameFlags.EffectTransitions;
+                if (Compat.AudioListenerChainMeasured) frame.Flags |= AudioFrameFlags.ListenerChain;
                 frame.Flags |= AudioFrameFlags.HasListener;
-                bool scripts = AudioFilters.Update(AudioFilters.ListenerKey, listener.m_GameObject);
+                bool scripts = Compat.AudioListenerChainMeasured
+                    ? AudioFilters.UpdateListeners(s_Listeners)
+                    : AudioFilters.Update(AudioFilters.ListenerKey, listener.m_GameObject);
                 if (scripts) frame.Flags |= AudioFrameFlags.ListenerFilter;
-                frame.FilterCount = AudioFilterChain.CollectListener(listener, scripts, ref s_ListenerFilters);
+                if (Compat.AudioListenerChainMeasured) frame.ListenerPlan = AudioFilters.ListenerPlan;
+                frame.FilterCount = Compat.AudioListenerChainMeasured
+                    ? CollectListenerFilters()
+                    : AudioFilterChain.CollectListener(listener, scripts, ref s_ListenerFilters);
                 s_WarnedNoListener = false;
             }
             else
@@ -590,6 +615,7 @@ namespace Unbound.Runtime
                 if (frame.FilterCount > 0) frame.Filters = filters;
                 s_Status = AudioBackend.Current.Frame(frame);
             }
+            AudioFilters.InstalledListenerPlan(frame.ListenerPlan);
             frame.Filters = null;
         }
 
@@ -611,6 +637,7 @@ namespace Unbound.Runtime
             s_WarnedListeners = 1;
             s_WarnedNoListener = false;
             AudioFilterChain.ResetForTests();
+            AudioFilters.ResetListenerPlansForTests();
         }
     }
 
@@ -624,6 +651,11 @@ namespace Unbound.Runtime
         internal const ulong ListenerKey = 0;
 
         static readonly ConcurrentDictionary<ulong, Action<float[], int>[]> s_Filters = new ConcurrentDictionary<ulong, Action<float[], int>[]>();
+        static readonly ConcurrentDictionary<uint, Action<float[], int>[]> s_ListenerPlans = new();
+        static Action<float[], int>[] s_ListenerPlanScripts;
+        static uint s_ListenerPlanGeneration, s_InstalledListenerPlan;
+        internal static uint ListenerPlan { get; private set; }
+
         static readonly ConcurrentDictionary<ulong, Action<float[], int>> s_GroupOutputs = new ConcurrentDictionary<ulong, Action<float[], int>>();
 
         internal static void ObserveGroup(AudioMixerGroup group, Action<float[], int> observer)
@@ -660,9 +692,8 @@ namespace Unbound.Runtime
             c is MonoBehaviour mb && !mb.m_Destroyed && mb.isActiveAndEnabled && MethodOf(mb.GetType()) != null;
 
         /// <summary>Rebuilds the filters of one key from its GameObject; true when there are some.</summary>
-        internal static bool Update(ulong key, GameObject go)
+        static void AppendScripts(GameObject go, ref List<Action<float[], int>> list)
         {
-            List<Action<float[], int>> list = null;
             if (go != null)
             {
                 foreach (var c in go.m_Components)
@@ -673,6 +704,90 @@ namespace Unbound.Runtime
                     (list ??= new List<Action<float[], int>>()).Add((Action<float[], int>)Delegate.CreateDelegate(typeof(Action<float[], int>), mb, method));
                 }
             }
+        }
+
+        internal static int ScriptCount(GameObject go)
+        {
+            int count = 0;
+            foreach (var component in go.m_Components)
+                if (IsFilterScript(component)) count++;
+            return count;
+        }
+
+        internal static bool Update(ulong key, GameObject go)
+        {
+            List<Action<float[], int>> list = null;
+            AppendScripts(go, ref list);
+            return Publish(key, list);
+        }
+
+        static bool SameScripts(Action<float[], int>[] current, GameObject go, ref int index)
+        {
+            foreach (var component in go.m_Components)
+            {
+                if (!IsFilterScript(component)) continue;
+                if (index == current.Length || !ReferenceEquals(current[index].Target, component)
+                    || current[index].Method != MethodOf(component.GetType())) return false;
+                index++;
+            }
+            return true;
+        }
+
+        internal static bool UpdateListeners(IReadOnlyList<AudioListener> listeners)
+        {
+            bool same = s_Filters.TryGetValue(ListenerKey, out var scripts);
+            int index = 0;
+            if (same)
+            {
+                for (int i = 0; i < listeners.Count && same; i++)
+                    same = SameScripts(scripts, listeners[i].m_GameObject, ref index);
+                same &= index == scripts.Length;
+            }
+            if (!same)
+            {
+                List<Action<float[], int>> list = null;
+                for (int i = 0; i < listeners.Count; i++) AppendScripts(listeners[i].m_GameObject, ref list);
+                scripts = Publish(ListenerKey, list) ? s_Filters[ListenerKey] : null;
+            }
+            if (!ReferenceEquals(scripts, s_ListenerPlanScripts))
+            {
+                s_ListenerPlanScripts = scripts;
+                ListenerPlan = 0;
+                if (scripts != null)
+                {
+                    unchecked { s_ListenerPlanGeneration++; }
+                    if (s_ListenerPlanGeneration == 0) s_ListenerPlanGeneration++;
+                    ListenerPlan = s_ListenerPlanGeneration;
+                    s_ListenerPlans[ListenerPlan] = scripts;
+                }
+            }
+            return scripts != null;
+        }
+
+        // Frame() returns after the previous audio callback finishes. A callback that starts
+        // after that uses the installed frame's plan, so the previous plan can now retire.
+        internal static void InstalledListenerPlan(uint plan)
+        {
+            uint previous = s_InstalledListenerPlan;
+            s_InstalledListenerPlan = plan;
+            if (previous != 0 && previous != plan) s_ListenerPlans.TryRemove(previous, out _);
+            if (plan == 0)
+            {
+                ListenerPlan = 0;
+                s_ListenerPlanScripts = null;
+            }
+        }
+
+        internal static void ResetListenerPlansForTests()
+        {
+            s_Filters.TryRemove(ListenerKey, out _);
+            s_ListenerPlans.Clear();
+            s_ListenerPlanScripts = null;
+            ListenerPlan = s_InstalledListenerPlan = 0;
+        }
+
+        static bool Publish(ulong key, List<Action<float[], int>> list)
+        {
             if (list == null)
             {
                 s_Filters.TryRemove(key, out _);
@@ -748,11 +863,18 @@ namespace Unbound.Runtime
                 case AudioCallbackKind.ListenerFilter:
                 {
                     var key = kind == AudioCallbackKind.ListenerFilter ? ListenerKey : handle;
-                    if (!s_Filters.TryGetValue(key, out var filters) || count <= 0) return;
+                    Action<float[], int>[] filters;
+                    bool found = kind == AudioCallbackKind.ListenerFilter && handle != 0
+                        ? s_ListenerPlans.TryGetValue((uint)handle, out filters)
+                        : s_Filters.TryGetValue(key, out filters);
+                    if (!found || count <= 0) return;
                     var buffer = Buffer(count);
                     new Span<float>(data, count).CopyTo(buffer);
-                    foreach (var filter in filters)
+                    int first = kind == AudioCallbackKind.ListenerFilter && arg != 0 ? (int)(uint)arg - 1 : 0;
+                    int end = kind == AudioCallbackKind.ListenerFilter && arg != 0 ? Math.Min(filters.Length, (int)(arg >> 32)) : filters.Length;
+                    for (int i = first; i < end; i++)
                     {
+                        var filter = filters[i];
                         try { filter(buffer, channels); }
                         catch (Exception e) { Debug.LogException(e, filter.Target as UnityEngine.Object); }
                     }

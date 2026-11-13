@@ -6,8 +6,8 @@ namespace UnityEngine
 {
     /// <summary>
     /// The ears of the scene. One should be active: with none nothing is heard, with several Unity
-    /// warns and the most recently enabled one hears (Unbound warns when the count changes rather
-    /// than every frame). <c>volume</c> starts at the project's global volume
+    /// warns. Unbound keeps the most recently enabled pose and warns when the count changes;
+    /// each active listener contributes its DSP chain. <c>volume</c> starts at the project's global volume
     /// (AudioManager.asset); <c>pause</c> pauses every source that does not ignore it.
     /// </summary>
     [ClassId(81)]
@@ -20,6 +20,7 @@ namespace UnityEngine
         internal Vector3 m_Velocity;
         internal bool m_HasLastPosition;
         internal Dictionary<ulong, AudioFilterDescriptor> m_FilterDescriptors;
+        internal AudioFilterDescriptor[] m_FilterTable;
         // The loop the last position was sampled in (false: the frame loop).
         internal bool m_MotionInFixedStep;
 

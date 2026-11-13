@@ -134,7 +134,7 @@ unsafe fn decode_filters(p: &AudioSourcePacket) -> anyhow::Result<Vec<AudioFilte
     // A clipless OnAudioFilterRead source plays its first script as the clip; what a component
     // above that script receives is unmeasured.
     let generator = p.clip == 0 && p.flags & source_flags::FILTER != 0;
-    unsafe { decode_descriptors(p.filter_count, p.filters, generator) }
+    unsafe { decode_descriptors(p.filter_count, p.filters, generator, false) }
 }
 
 /// The listener's component descriptors; placement/release validation is on the managed side.
@@ -144,13 +144,14 @@ unsafe fn decode_filters(p: &AudioSourcePacket) -> anyhow::Result<Vec<AudioFilte
 pub unsafe fn decode_listener_filters(
     p: &AudioFramePacket,
 ) -> anyhow::Result<Vec<AudioFilterDescriptor>> {
-    unsafe { decode_descriptors(p.filter_count, p.filters, false) }
+    unsafe { decode_descriptors(p.filter_count, p.filters, false, true) }
 }
 
 unsafe fn decode_descriptors(
     count: i32,
     pointer: *const AudioFilterDescriptor,
     generator: bool,
+    listener: bool,
 ) -> anyhow::Result<Vec<AudioFilterDescriptor>> {
     anyhow::ensure!(
         (0..=MAX_SOURCE_FILTERS).contains(&count),
@@ -170,14 +171,25 @@ unsafe fn decode_descriptors(
     // Copied before returning: the managed array is pinned for this call only.
     let filters = unsafe { std::slice::from_raw_parts(pointer, count as usize) }.to_vec();
     for (i, f) in filters.iter().enumerate() {
+        if listener && i > 0 {
+            anyhow::ensure!(
+                (filters[i - 1].stage & !filter_stage::BYPASSED)
+                    <= (f.stage & !filter_stage::BYPASSED),
+                "listener filter script positions are out of order"
+            );
+        }
         anyhow::ensure!(
             filter_kind::supported(f.kind),
             "unsupported AudioSource filter kind {}",
             f.kind
         );
         anyhow::ensure!(
-            f.stage & !(filter_stage::AFTER_SCRIPTS | filter_stage::BYPASSED) == 0,
-            "invalid AudioSource filter stage {}",
+            if listener {
+                filter_stage::valid_listener(f.stage)
+            } else {
+                f.stage & !(filter_stage::AFTER_SCRIPTS | filter_stage::BYPASSED) == 0
+            },
+            "invalid audio filter stage {}",
             f.stage
         );
         anyhow::ensure!(
@@ -299,6 +311,11 @@ struct SourceFilter {
     effect: Effect,
 }
 
+enum ListenerStep {
+    Scripts(std::ops::Range<usize>),
+    Components(std::ops::Range<usize>),
+}
+
 /// A source's filter components, each with its own channel histories: no state is shared with
 /// another source (or another mixer source of the same GameObject).
 #[derive(Default)]
@@ -380,17 +397,32 @@ impl FilterChain {
         bypass: bool,
         last: bool,
     ) {
+        let range = if last {
+            self.filters
+                .iter()
+                .rposition(|f| stage.is_none_or(|s| f.stage == s))
+                .map_or(0..0, |index| index..index + 1)
+        } else {
+            0..self.filters.len()
+        };
+        self.process_range_layout(lanes, samples, extra, range, stage, bypass);
+    }
+
+    fn process_range_layout(
+        &mut self,
+        lanes: &mut [FilterChain],
+        samples: &mut [f32],
+        extra: Option<&mut Lanes<'_>>,
+        range: std::ops::Range<usize>,
+        stage: Option<i32>,
+        bypass: bool,
+    ) {
         let frames = samples.len() / 2;
-        let selected = last
-            .then(|| {
-                self.filters
-                    .iter()
-                    .rposition(|f| stage.is_none_or(|s| f.stage == s))
-            })
-            .flatten();
         let mut blocks = extra.map(|e| e.pairs(frames));
-        for (index, filter) in self.filters.iter_mut().enumerate() {
-            if stage.is_some_and(|s| filter.stage != s) || (last && selected != Some(index)) {
+        let first = range.start;
+        for (offset, filter) in self.filters[range].iter_mut().enumerate() {
+            let index = first + offset;
+            if stage.is_some_and(|s| filter.stage != s) {
                 continue;
             }
             if let Some(blocks) = blocks
@@ -1079,6 +1111,8 @@ pub struct Mixer {
     zone_input: Vec<f32>,
     zone_extra: Vec<f32>,
     pub(crate) surround_effects: bool,
+    pub(crate) listener_chain_measured: bool,
+    pub(crate) listener_plan: u64,
     /// Unrouted sources with `bypassListenerEffects`, joined after the measured listener filters.
     listener_bypass: Vec<f32>,
     /// The listener scripts' block in the output layout's channel count.
@@ -1249,6 +1283,8 @@ impl Mixer {
             zone_input: vec![0.0; BLOCK * 2],
             zone_extra: vec![0.0; MAX_EXTRA_PAIRS * BLOCK * 2],
             surround_effects: false,
+            listener_chain_measured: false,
+            listener_plan: 0,
             listener_bypass: vec![0.0; BLOCK * 2],
             listener_layout: Vec::with_capacity(BLOCK * MAX_OUTPUT_CHANNELS),
             speakers: SpeakerLayout::of(config.output_channels()),
@@ -2291,6 +2327,113 @@ impl Mixer {
         }
     }
 
+    // Walk each component and script once, preserving Inspector order across DSP boundaries.
+    fn listener_pipeline(&mut self, mut apply: impl FnMut(&mut Self, ListenerStep)) {
+        let mut first = 0;
+        let mut script = 0;
+        while first < self.listener_chain.filters.len() {
+            let stage = self.listener_chain.filters[first].stage;
+            let before = filter_stage::preceding_scripts(stage);
+            if before > script {
+                apply(self, ListenerStep::Scripts(script..before));
+            }
+            let mut end = first + 1;
+            while end < self.listener_chain.filters.len()
+                && self.listener_chain.filters[end].stage == stage
+            {
+                end += 1;
+            }
+            apply(self, ListenerStep::Components(first..end));
+            first = end;
+            script = before;
+        }
+        apply(self, ListenerStep::Scripts(script..i32::MAX as usize));
+    }
+
+    fn capture_listener_pipeline(&mut self, block: &mut [f32]) {
+        let channels = self.config.output_channels();
+        self.listener_pipeline(|mixer, step| match step {
+            ListenerStep::Scripts(range) => {
+                if let Some(callback) = mixer.callback {
+                    callback(
+                        callback::LISTENER_FILTER,
+                        mixer.listener_plan,
+                        block.as_mut_ptr(),
+                        (block.len() / channels) as i32,
+                        channels as i32,
+                        listener_script_range(range.start, range.end),
+                    );
+                }
+            }
+            ListenerStep::Components(range) => {
+                for chunk in block.chunks_mut(BLOCK * channels) {
+                    let frames = chunk.len() / channels;
+                    let mut lanes = Lanes {
+                        samples: &mut mixer.mix_extra,
+                        stride: BLOCK * 2,
+                        offset: 0,
+                        channels: channels.saturating_sub(2),
+                    };
+                    fold(
+                        chunk,
+                        &mut mixer.mix[..frames * 2],
+                        (channels > 2).then_some(&mut lanes),
+                    );
+                    mixer.listener_chain.process_range_layout(
+                        &mut mixer.listener_lanes,
+                        &mut mixer.mix[..frames * 2],
+                        (channels > 2).then_some(&mut lanes),
+                        range.clone(),
+                        None,
+                        false,
+                    );
+                    spread(
+                        &mixer.mix[..frames * 2],
+                        (channels > 2).then(|| lanes.view()),
+                        chunk,
+                        channels == 1,
+                    );
+                }
+            }
+        });
+    }
+
+    fn live_listener_pipeline(&mut self, frames: usize) {
+        let channels = self.config.output_channels();
+        self.listener_pipeline(|mixer, step| {
+            let mut lanes = Lanes {
+                samples: &mut mixer.mix_extra,
+                stride: BLOCK * 2,
+                offset: 0,
+                channels: channels.saturating_sub(2),
+            };
+            match step {
+                ListenerStep::Scripts(range) => {
+                    if let Some(callback) = mixer.callback {
+                        call_in_layout_arg(
+                            callback,
+                            callback::LISTENER_FILTER,
+                            mixer.listener_plan,
+                            &mut mixer.mix[..frames * 2],
+                            (channels > 2).then_some(&mut lanes),
+                            channels,
+                            &mut mixer.listener_layout,
+                            listener_script_range(range.start, range.end),
+                        );
+                    }
+                }
+                ListenerStep::Components(range) => mixer.listener_chain.process_range_layout(
+                    &mut mixer.listener_lanes,
+                    &mut mixer.mix[..frames * 2],
+                    (channels > 2).then_some(&mut lanes),
+                    range,
+                    None,
+                    false,
+                ),
+            }
+        });
+    }
+
     /// Processes one complete offline output block in the output layout's channels, including
     /// the listener's borrowed buffer: its scripts see, and may write, every channel.
     pub fn render_capture_block(&mut self, block: &mut [f32]) {
@@ -2303,18 +2446,26 @@ impl Mixer {
         self.capture_listener_return_used = false;
         self.capture_listener_batch = true;
         self.render(block, channels);
-        if self.listener_filter
+        if self.listener_chain_measured
+            && self.listener_filter
             && self.has_listener
-            && let Some(cb) = self.callback
+            && !self.listener_chain.filters.is_empty()
         {
-            cb(
-                callback::LISTENER_FILTER,
-                0,
-                block.as_mut_ptr(),
-                (block.len() / channels) as i32,
-                channels as i32,
-                0,
-            );
+            self.capture_listener_pipeline(block);
+        } else {
+            if self.listener_filter
+                && self.has_listener
+                && let Some(cb) = self.callback
+            {
+                cb(
+                    callback::LISTENER_FILTER,
+                    self.listener_plan,
+                    block.as_mut_ptr(),
+                    (block.len() / channels) as i32,
+                    channels as i32,
+                    0,
+                );
+            }
         }
         if self.capture_listener_return_used {
             for (sample, value) in block.iter_mut().zip(&self.capture_listener_return) {
@@ -2517,6 +2668,8 @@ impl Mixer {
         let listener_components = !self.listener_chain.filters.is_empty();
         let script_active = self.listener_filter && has_listener && callback.is_some();
         let measured_script_route = self.surround_effects && script_active;
+        let measured_listener_pipeline =
+            self.listener_chain_measured && script_active && listener_components;
         let listener_effects = listener_components || measured_script_route;
         let mut listener_bypass_used = false;
         if listener_effects {
@@ -3125,7 +3278,7 @@ impl Mixer {
         if zone_on && !zone_after_listener {
             self.add_zone_return(n, pairs);
         }
-        if listener_components {
+        if listener_components && !measured_listener_pipeline {
             if has_listener {
                 let mut lanes = Lanes {
                     samples: &mut self.mix_extra,
@@ -3158,21 +3311,25 @@ impl Mixer {
             && has_listener
             && let Some(cb) = callback
         {
-            let mut extra = (pairs > 0).then(|| Lanes {
-                samples: &mut self.mix_extra[..],
-                stride: BLOCK * 2,
-                offset: 0,
-                channels: config.output_channels() - 2,
-            });
-            call_in_layout(
-                cb,
-                callback::LISTENER_FILTER,
-                0,
-                &mut self.mix[..n * 2],
-                extra.as_mut(),
-                config.output_channels(),
-                &mut self.listener_layout,
-            );
+            if measured_listener_pipeline {
+                self.live_listener_pipeline(n);
+            } else {
+                let mut extra = (pairs > 0).then(|| Lanes {
+                    samples: &mut self.mix_extra[..],
+                    stride: BLOCK * 2,
+                    offset: 0,
+                    channels: config.output_channels() - 2,
+                });
+                call_in_layout(
+                    cb,
+                    callback::LISTENER_FILTER,
+                    self.listener_plan,
+                    &mut self.mix[..n * 2],
+                    extra.as_mut(),
+                    config.output_channels(),
+                    &mut self.listener_layout,
+                );
+            }
         }
         let deferred = DeferredListenerReturn {
             bypass: measured_script_route && listener_bypass_used && self.capture_listener_batch,
@@ -3601,13 +3758,27 @@ fn call_in_layout(
     kind: i32,
     handle: u64,
     stereo: &mut [f32],
-    mut extra: Option<&mut Lanes<'_>>,
+    extra: Option<&mut Lanes<'_>>,
     channels: usize,
     scratch: &mut Vec<f32>,
 ) {
+    call_in_layout_arg(cb, kind, handle, stereo, extra, channels, scratch, 0);
+}
+
+#[allow(clippy::too_many_arguments)]
+fn call_in_layout_arg(
+    cb: Callback,
+    kind: i32,
+    handle: u64,
+    stereo: &mut [f32],
+    mut extra: Option<&mut Lanes<'_>>,
+    channels: usize,
+    scratch: &mut Vec<f32>,
+    arg: i64,
+) {
     let frames = stereo.len() / 2;
     if channels == 2 {
-        cb(kind, handle, stereo.as_mut_ptr(), frames as i32, 2, 0);
+        cb(kind, handle, stereo.as_mut_ptr(), frames as i32, 2, arg);
         return;
     }
     scratch.resize(frames * channels, 0.0);
@@ -3623,9 +3794,13 @@ fn call_in_layout(
         scratch.as_mut_ptr(),
         frames as i32,
         channels as i32,
-        0,
+        arg,
     );
     fold(scratch, stereo, extra.as_deref_mut());
+}
+
+fn listener_script_range(first: usize, end: usize) -> i64 {
+    ((end as i64) << 32) | (first as i64 + 1)
 }
 
 /// Gains `[output * 2 + input]` from a clip's (left, right) to up to eight output channels; the
@@ -4590,6 +4765,140 @@ mod tests {
         // The capture frontier does not alter the device/direct DSP callback path.
         m.render(&mut vec![0.0; 512], 2);
         SIZES.with(|sizes| assert_eq!(*sizes.borrow(), [1024, 1024, 256]));
+    }
+
+    #[test]
+    fn listener_components_interleave_three_scripts_without_changing_callback_periods() {
+        use std::cell::RefCell;
+        thread_local! { static CALLS: RefCell<Vec<(usize, i32)>> = const { RefCell::new(Vec::new()) }; }
+        extern "C" fn scripts(
+            kind: i32,
+            handle: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            arg: i64,
+        ) {
+            if kind != callback::LISTENER_FILTER {
+                return;
+            }
+            assert_eq!(handle, 73);
+            let first = if arg == 0 {
+                0
+            } else {
+                (arg as u32 - 1) as usize
+            };
+            let end = if arg == 0 {
+                3
+            } else {
+                ((arg >> 32) as usize).min(3)
+            };
+            let output =
+                unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+            for script in first..end {
+                CALLS.with(|calls| calls.borrow_mut().push((script, frames)));
+                match script {
+                    0 => {
+                        output.fill(0.0);
+                        for channel in 0..channels as usize {
+                            output[10 * channels as usize + channel] =
+                                if channel % 2 == 0 { 1.0 } else { 0.0 };
+                        }
+                    }
+                    1 => output.iter_mut().for_each(|value| *value = -*value + 1.0),
+                    2 => output
+                        .iter_mut()
+                        .for_each(|value| *value = *value * 0.25 - 0.03125),
+                    _ => unreachable!(),
+                }
+            }
+        }
+        for period in [97_usize, 600] {
+            for mode in [
+                speaker_mode::MONO,
+                speaker_mode::STEREO,
+                speaker_mode::MODE_5POINT1,
+            ] {
+                for capture in [false, true] {
+                    CALLS.with(|calls| calls.borrow_mut().clear());
+                    let mut mixer = Mixer::new(MixerConfig {
+                        sample_rate: 32000,
+                        buffer_size: period as u32,
+                        speaker_mode: mode,
+                        ..Default::default()
+                    });
+                    mixer.surround_effects = true;
+                    mixer.listener_chain_measured = true;
+                    mixer.listener_plan = 73;
+                    mixer.listener_filter = true;
+                    mixer.set_callback(Some(scripts));
+                    let descriptor = |id, before| AudioFilterDescriptor {
+                        delay: 1.0,
+                        decay: 0.0,
+                        dry_mix: 0.0,
+                        wet_mix: 1.0,
+                        ..component(id, filter_kind::ECHO, filter_stage::listener(before))
+                    };
+                    mixer.update_listener_filters(
+                        Ok(vec![descriptor(1, 1), descriptor(2, 2)]),
+                        true,
+                        true,
+                    );
+                    let channels = mixer.config.output_channels();
+                    let segments: Vec<usize> = if capture {
+                        vec![period]
+                    } else {
+                        (0..period)
+                            .step_by(BLOCK)
+                            .map(|first| BLOCK.min(period - first))
+                            .collect()
+                    };
+                    let mut output = vec![0.0; period * channels];
+                    for repeat in 0..2 {
+                        if capture {
+                            mixer.render_capture_block(&mut output);
+                        } else {
+                            mixer.render(&mut output, channels);
+                        }
+                        let mut first = 0;
+                        for &frames in &segments {
+                            for frame in 0..frames {
+                                for channel in 0..channels {
+                                    let baseline = if repeat == 0 && first + frame < 32 {
+                                        -0.03125
+                                    } else {
+                                        0.21875
+                                    };
+                                    let expected = baseline
+                                        - if frame == 74 && channel % 2 == 0 {
+                                            0.25
+                                        } else {
+                                            0.0
+                                        };
+                                    assert!(
+                                        (output[(first + frame) * channels + channel] - expected)
+                                            .abs()
+                                            < 1e-6,
+                                        "period {period}, mode {mode}, capture {capture}, repeat {repeat}, frame {}, channel {channel}: {} != {expected}",
+                                        first + frame,
+                                        output[(first + frame) * channels + channel]
+                                    );
+                                }
+                            }
+                            first += frames;
+                        }
+                    }
+                    let expected: Vec<_> = (0..2)
+                        .flat_map(|_| {
+                            segments.iter().flat_map(|&frames| {
+                                (0..3).map(move |script| (script, frames as i32))
+                            })
+                        })
+                        .collect();
+                    CALLS.with(|calls| assert_eq!(*calls.borrow(), expected));
+                }
+            }
+        }
     }
 
     /// The last output frame of a playing constant clip once the voice ramps are over.

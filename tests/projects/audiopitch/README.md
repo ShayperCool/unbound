@@ -154,3 +154,11 @@ not change. Scheduling controls run with
 [Fractional scheduling and audio-update publication](SCHEDULE.md) has a separate
 21-control reference at both rates, including post-reset recovery. Immediate
 reset publication and device-queue timing remain scoped by [RECOVERY.md](RECOVERY.md).
+
+[Listener components and scripts](LISTENER_CHAINS.md) adds 36 Stereo/Quad controls
+per rate, including all six filters around affine scripts and interleaved
+components. Its `listener-chain` recipe is independent of the earlier
+`listener-scripts` zone-return recipe. Ten additional `listener-diagnostics`
+controls record disabled, switched and simultaneous listeners. They retain full
+comparisons without promising an order for the unsupported simultaneous-listener
+configuration.

@@ -16,10 +16,10 @@ namespace UnityEngine.Tests
     /// keep what was set while the descriptor clamps to the documented ranges; chains Unbound cannot place
     /// (a component between two scripts, one above a clipless generator script), a custom cutoff
     /// curve and unread serialized fields fail loudly. Listener component order is measured by
-    /// tests/projects/audiodistortion; scripts interleaved there still fail clearly. The wire
+    /// tests/projects/audiodistortion; listener scripts and components are measured in audiopitch. The wire
     /// layout is NativeApi 18's (added at 16), checked against the same offsets in
     /// crates/unbound-runtime/src/audio/protocol.rs. These tests do not measure the DSP; the Rust
-    /// mixer tests check the kernel wiring and no capture establishes component parity.
+    /// mixer tests check kernel wiring; the named probes qualify their measured component paths.
     /// </summary>
     public sealed unsafe class AudioFilterComponentTests : IDisposable
     {
@@ -119,9 +119,10 @@ namespace UnityEngine.Tests
             // 23 adds Distortion, 24 adds Chorus, 25-27 mixer effects, 28 render protocol 12, 29
             // frame input versions, 30 the decoded-resampling flag and 31 the imported texture
             // format, 32 mesh colors, 33 component tail timing, 34 the instance multiplier, 35 deferred render-target mips, 36 source-loop listener poses 37 the downloaded audio decoder 38 prepared callback buffers and 39 retained MSAA resolves and 40 parameterised mixer Pitch Shifter FFT size, 41 native rendering plugins, 42 legacy glyph bearings, 43 the zone startup frame flag, 44 Pitch Shifter Max channels, 45 realtime GI, 46 driver capabilities, 47 component activation flags, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment and 52 directional realtime lightmaps; 60 BatchRendererGroup draws; 61 scripts' profiler markers for native plugins; 63 TextCore glyph loads; 65 mesh instances' call counts.
-            Assert.Equal(66u, NativeApi.CurrentVersion);
+            Assert.Equal(67u, NativeApi.CurrentVersion);
             var frame = default(AudioFramePacket);
             byte* f = (byte*)&frame;
+            Assert.Equal(68, (int)((byte*)&frame.ListenerPlan - f));
             Assert.Equal((64, 72, 80, 176), ((int)((byte*)&frame.FilterCount - f), (int)((byte*)&frame.Filters - f),
                 (int)((byte*)&frame.Zone - f), sizeof(AudioFramePacket)));
             var p = default(AudioSourcePacket);
@@ -785,8 +786,12 @@ namespace UnityEngine.Tests
             m_Objects.Add(scripted);
             var other = scripted.AddComponent<AudioListener>();
             scripted.AddComponent<AudioReverbFilter>();
+            Assert.Equal(1, AudioFilterChain.CollectListener(other, true, ref table));
+            Assert.Empty(Errors("OnAudioFilterRead scripts on the AudioListener 'scripted ears'"));
+            ProjectInfo.UnityVersion = "6000.0.70f1";
             Assert.Equal(0, AudioFilterChain.CollectListener(other, true, ref table));
             Assert.Contains("listener filter components are not applied", Assert.Single(Errors("OnAudioFilterRead scripts on the AudioListener 'scripted ears'")));
+            ProjectInfo.UnityVersion = "6000.0.71f1";
 
             var shared = new GameObject("source ears");
             m_Objects.Add(shared);
@@ -795,6 +800,120 @@ namespace UnityEngine.Tests
             shared.AddComponent<AudioReverbFilter>();
             Assert.Equal(0, AudioFilterChain.CollectListener(third, false, ref table));
             Assert.Contains("runs only in that source's chain", Assert.Single(Errors("AudioListener 'source ears'")));
+        }
+
+        sealed class AffineListenerScript : MonoBehaviour
+        {
+            internal float Gain = 1, Offset;
+            internal int Calls;
+            void OnAudioFilterRead(float[] data, int channels)
+            {
+                Calls++;
+                for (int i = 0; i < data.Length; i++) data[i] = data[i] * Gain + Offset;
+            }
+        }
+
+        [Fact]
+        public void ListenerComponentsKeepPositionsAcrossScriptsAndDisabledUnits()
+        {
+            var go = new GameObject("ordered listener"); m_Objects.Add(go);
+            var listener = go.AddComponent<AudioListener>();
+            var echo = go.AddComponent<AudioEchoFilter>();
+            var first = go.AddComponent<FilterScript>();
+            go.AddComponent<AudioDistortionFilter>();
+            go.AddComponent<FilterScript>();
+            go.AddComponent<AudioHighPassFilter>();
+            AudioFilterDescriptor[] table = null;
+            Assert.Equal(3, AudioFilterChain.CollectListener(listener, true, ref table));
+            Assert.Equal(new[] { 0, 1, 5 }, table.Take(3).Select(d => d.Stage));
+            echo.enabled = false;
+            Assert.Equal(3, AudioFilterChain.CollectListener(listener, true, ref table));
+            Assert.Equal(new[] { 2, 1, 5 }, table.Take(3).Select(d => d.Stage));
+            first.enabled = false;
+            Assert.Equal(3, AudioFilterChain.CollectListener(listener, true, ref table));
+            Assert.Equal(new[] { 2, 0, 1 }, table.Take(3).Select(d => d.Stage));
+            Assert.Equal(3, AudioFilterChain.CollectListener(listener, true, ref table, scriptOffset: 3));
+            Assert.Equal(new[] { 11, 9, 13 }, table.Take(3).Select(d => d.Stage));
+            Assert.Empty(m_Errors);
+        }
+
+        [Fact]
+        public void EveryActiveListenerContributesScriptsAndRangesPreserveTheirOrder()
+        {
+            var primary = new GameObject("primary scripts"); m_Objects.Add(primary);
+            var listener = primary.AddComponent<AudioListener>();
+            var first = primary.AddComponent<AffineListenerScript>(); first.Gain = 2;
+            primary.AddComponent<AudioEchoFilter>();
+            var second = primary.AddComponent<AffineListenerScript>(); second.Offset = 0.125f;
+            var alternate = new GameObject("alternate scripts"); m_Objects.Add(alternate);
+            var other = alternate.AddComponent<AudioListener>();
+            alternate.AddComponent<AudioHighPassFilter>();
+            var third = alternate.AddComponent<AffineListenerScript>(); third.Gain = -1;
+            UpdateWithoutAdvancing();
+            Assert.Equal(2, m_Backend.LastFrame.FilterCount);
+            Assert.NotEqual(0, m_Backend.LastFrame.Flags & AudioFrameFlags.ListenerChain);
+            Assert.Equal(5, other.m_FilterTable[0].Stage);
+            Assert.Single(m_Warnings.FindAll(message => message.Contains("2 audio listeners")));
+            var data = new[] { 0.25f, -0.25f };
+            fixed (float* pointer = data)
+            {
+                AudioFilters.Dispatch(AudioCallbackKind.ListenerFilter, 0, pointer, 1, 2, (1L << 32) | 1);
+                Assert.Equal(new[] { 0.5f, -0.5f }, data);
+                AudioFilters.Dispatch(AudioCallbackKind.ListenerFilter, 0, pointer, 1, 2, (3L << 32) | 2);
+                Assert.Equal(new[] { -0.625f, 0.375f }, data);
+            }
+            Assert.Equal(new[] { 1, 1, 1 }, new[] { first.Calls, second.Calls, third.Calls });
+            other.enabled = false;
+            UpdateWithoutAdvancing();
+            data = new[] { 0.25f, -0.25f };
+            fixed (float* pointer = data) AudioFilters.Dispatch(AudioCallbackKind.ListenerFilter, 0, pointer, 1, 2, 0);
+            Assert.Equal(new[] { 0.625f, -0.375f }, data);
+            Assert.Equal(1, third.Calls);
+            Assert.Empty(m_Errors);
+            alternate.GetComponent<AudioHighPassFilter>().enabled = false;
+            other.enabled = true;
+            ProjectInfo.UnityVersion = "6000.0.70f1";
+            UpdateWithoutAdvancing();
+            Assert.Equal(0, m_Backend.LastFrame.Flags & AudioFrameFlags.ListenerChain);
+            data = new[] { 0.25f, -0.25f };
+            fixed (float* pointer = data) AudioFilters.Dispatch(AudioCallbackKind.ListenerFilter, 0, pointer, 1, 2, 0);
+            Assert.Equal(new[] { -0.25f, 0.25f }, data);
+            Assert.Equal(new[] { 2, 2, 2 }, new[] { first.Calls, second.Calls, third.Calls });
+            Assert.Empty(m_Errors);
+        }
+
+        [Fact]
+        public void ListenerScriptPlansStayPairedWithTheirSubmittedComponentPositions()
+        {
+            var go = new GameObject("published listener plan"); m_Objects.Add(go);
+            go.AddComponent<AudioListener>();
+            var first = go.AddComponent<AffineListenerScript>(); first.Gain = 2;
+            go.AddComponent<AudioEchoFilter>();
+            var second = go.AddComponent<AffineListenerScript>(); second.Offset = 0.125f;
+            UpdateWithoutAdvancing();
+            uint previous = m_Backend.LastFrame.ListenerPlan;
+            Assert.NotEqual(0u, previous);
+            // Warm reflection/delegate metadata before measuring unchanged publications.
+            for (int i = 0; i < 8; i++) AudioFilters.UpdateListeners(AudioSystem.Listeners);
+            long allocated = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 32; i++) AudioFilters.UpdateListeners(AudioSystem.Listeners);
+            Assert.Equal(allocated, GC.GetAllocatedBytesForCurrentThread());
+            first.enabled = false;
+            Assert.True(AudioFilters.UpdateListeners(AudioSystem.Listeners));
+            uint next = AudioFilters.ListenerPlan;
+            Assert.NotEqual(previous, next);
+            var oldData = new[] { 0.25f, -0.25f };
+            var newData = (float[])oldData.Clone();
+            fixed (float* pointer = oldData) AudioFilters.Dispatch(AudioCallbackKind.ListenerFilter, previous, pointer, 1, 2, (1L << 32) | 1);
+            fixed (float* pointer = newData) AudioFilters.Dispatch(AudioCallbackKind.ListenerFilter, next, pointer, 1, 2, (1L << 32) | 1);
+            Assert.Equal(new[] { 0.5f, -0.5f }, oldData);
+            Assert.Equal(new[] { 0.375f, -0.125f }, newData);
+            UpdateWithoutAdvancing();
+            Assert.Equal(next, m_Backend.LastFrame.ListenerPlan);
+            var retired = new[] { 0.25f, -0.25f };
+            fixed (float* pointer = retired) AudioFilters.Dispatch(AudioCallbackKind.ListenerFilter, previous, pointer, 1, 2, (1L << 32) | 1);
+            Assert.Equal(new[] { 0.25f, -0.25f }, retired);
+            Assert.Empty(m_Errors);
         }
 
         [Fact]

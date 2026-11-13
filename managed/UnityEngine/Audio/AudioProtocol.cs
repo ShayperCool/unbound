@@ -107,6 +107,12 @@ namespace Unbound.Runtime
         internal const int AfterScripts = 1;
         // The disabled unit stays connected and retains its history.
         internal const int Bypassed = 2;
+
+        // Listener components carry how many preceding scripts have already processed the mix.
+        // Preserve the source chain's existing stage and bypass bits.
+        internal static int Listener(int precedingScripts) => precedingScripts == 0
+            ? BeforeScripts : ((precedingScripts - 1) << 2) | AfterScripts;
+
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -186,6 +192,7 @@ namespace Unbound.Runtime
         internal const int ZoneStartup = 1 << 3;
         internal const int EffectTransitions = 1 << 4;
         internal const int SurroundEffects = 1 << 5;
+        internal const int ListenerChain = 1 << 6;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -200,7 +207,8 @@ namespace Unbound.Runtime
         internal int Flags;
         /// <summary>The listener's AudioReverbFilter components (NativeApi 20); 0 when none.</summary>
         internal int FilterCount;
-        internal int Pad;
+        // Names the immutable script array used by this frame's component positions.
+        internal uint ListenerPlan;
         /// <summary><see cref="FilterCount"/> descriptors in component order; valid during the
         /// call only.</summary>
         internal AudioFilterDescriptor* Filters;

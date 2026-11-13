@@ -136,6 +136,28 @@ pub mod filter_stage {
     pub const AFTER_SCRIPTS: i32 = 1;
     /// A disabled component remains in the chain with frozen history.
     pub const BYPASSED: i32 = 2;
+
+    /// A listener component's position among Inspector-ordered scripts.
+    pub fn listener(preceding_scripts: usize) -> i32 {
+        if preceding_scripts == 0 {
+            BEFORE_SCRIPTS
+        } else {
+            (((preceding_scripts - 1) as i32) << 2) | AFTER_SCRIPTS
+        }
+    }
+
+    pub fn valid_listener(stage: i32) -> bool {
+        let position = stage & !BYPASSED;
+        position == BEFORE_SCRIPTS || (position >= 0 && position & 1 != 0)
+    }
+
+    pub fn preceding_scripts(stage: i32) -> usize {
+        if stage == BEFORE_SCRIPTS {
+            0
+        } else {
+            ((stage as u32 >> 2) + 1) as usize
+        }
+    }
 }
 
 /// The most filter components one source may send (a resource bound, not a Unity limit).
@@ -232,6 +254,8 @@ pub mod frame_flags {
     pub const EFFECT_TRANSITIONS: i32 = 1 << 4;
     /// Speaker-wide components and zone return selected by the compatibility profile.
     pub const SURROUND_EFFECTS: i32 = 1 << 5;
+    /// Listener components retain their positions among scripts.
+    pub const LISTENER_CHAIN: i32 = 1 << 6;
 }
 
 /// Sent once per frame from `PostLateUpdate.UpdateAudio`.
@@ -249,7 +273,8 @@ pub struct AudioFramePacket {
     pub flags: i32,
     /// The listener's filter components (NativeApi 20), in component order; null when none.
     pub filter_count: i32,
-    pub _pad: i32,
+    /// Immutable managed script plan paired with these component positions.
+    pub listener_plan: u32,
     /// Valid during the call only: the mixer copies them before it returns.
     pub filters: *const AudioFilterDescriptor,
     /// The reverb zones' blended SFX Reverb at the listener (NativeApi 21): kind
@@ -270,7 +295,7 @@ impl Default for AudioFramePacket {
             listener_volume: 0.0,
             flags: 0,
             filter_count: 0,
-            _pad: 0,
+            listener_plan: 0,
             filters: std::ptr::null(),
             zone: AudioFilterDescriptor::default(),
         }
@@ -353,6 +378,7 @@ mod tests {
         assert_eq!(size_of::<AudioSourceState>(), 24);
         assert_eq!(size_of::<AudioFramePacket>(), 176);
         assert_eq!(offset_of!(AudioFramePacket, filter_count), 64);
+        assert_eq!(offset_of!(AudioFramePacket, listener_plan), 68);
         assert_eq!(offset_of!(AudioFramePacket, filters), 72);
         assert_eq!(offset_of!(AudioFramePacket, zone), 80);
         assert_eq!(size_of::<AudioStatus>(), 32);
@@ -365,7 +391,7 @@ mod tests {
     /// The managed side pins the same version and refuses every other version.
     #[test]
     fn the_filter_descriptor_layout_is_native_api_61() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 66);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 67);
         assert_eq!(
             [
                 filter_kind::LOWPASS,
