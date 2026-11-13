@@ -224,16 +224,17 @@ In dependency order; each item ends with an Editor-reference probe.
       color/size/rotation modules, custom data, collisions with planes and the world, triggers,
       force fields, trails, the lights module, the render modes. Left: Unity's noise function,
       force field rotation, ribbon trails, sub-emitter timing in Simulate, Particle System jobs.
-- [ ] Terrain (leftovers deferred, the user's call 2026-10-27): TerrainData from the Editor's asset with its height, normal and steepness queries,
+- [ ] Terrain (leftovers back in scope 2026-11-12): TerrainData from the Editor's asset with its height, normal and steepness queries,
       the TerrainCollider (PhysX height field, holes, tree capsules), drawing with Unity's terrain
-      shaders and trees (`tests/projects/terrain`: 202/216 records, images within 2.6/255);
+      shaders and trees (`tests/projects/terrain`: 214/216 records, the two a float step of steepness apart, images within 2.3/255);
       details: the detail database, where instances go as ComputeDetailInstanceTransforms (instance
-      counts exact; coverage exact for samples three quarters of a footprint across and more),
-      drawn with Unity's detail shaders as the Editor builds the meshes (`tests/projects/grass`);
+      counts and coverage exact: `tests/projects/grass` 1205/1205 records), drawn with Unity's detail
+      shaders as the Editor builds the meshes;
       layerless terrains' checker; coverage mode's rule, ground-aligned turns, detailObjectDensity,
       drawn placement and the quality level's terrain overrides, heightmap LOD by pixel error and
-      the base map past basemapDistance (`tests/projects/terrainlod`) (Q421). Left: tree
-      billboards.
+      the base map past basemapDistance, the per-patch height errors and ranges
+      (`tests/projects/terrainlod`) (Q421). Left: billboards for tree prototypes whose materials'
+      shaders name a BillboardShader (Soft Occlusion, Tree Creator); other trees draw as meshes.
 - [x] AssetBundles the Editor builds (UnityFS: uncompressed, LZ4, LZMA): LoadFromFile, Memory,
       Stream and their async forms, LoadAsset (by path or name, sub-assets), LoadAllAssets, Unload,
       the manifest, scenes through SceneManager; player data read by its type trees (references
