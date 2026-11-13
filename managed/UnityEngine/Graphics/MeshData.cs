@@ -387,9 +387,7 @@ namespace UnityEngine
                     }
                     if (min <= max)
                     {
-                        var b = new Bounds();
-                        b.SetMinMax(lo, hi);
-                        desc.bounds = b;
+                        desc.bounds = Mesh.BoundsOf(lo, hi);
                         desc.firstVertex = min;
                         desc.vertexCount = max - min + 1;
                     }

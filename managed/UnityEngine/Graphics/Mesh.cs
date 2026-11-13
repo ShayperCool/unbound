@@ -72,9 +72,7 @@ namespace UnityEngine
                     FirstVertex = VertexCount = 0;
                     return;
                 }
-                var b = new Bounds();
-                b.SetMinMax(lo, hi);
-                Bounds = b;
+                Bounds = BoundsOf(lo, hi);
                 FirstVertex = min;
                 VertexCount = max - min + 1;
             }
@@ -722,10 +720,13 @@ namespace UnityEngine
                 min = Vector3.Min(min, v);
                 max = Vector3.Max(max, v);
             }
-            var b = new Bounds();
-            b.SetMinMax(min, max);
-            m_Bounds = b;
+            m_Bounds = BoundsOf(min, max);
         }
+
+        /// <summary>A mesh's (or sub-mesh's) box around the corners it spans: the centre is the
+        /// corners' mean, (min + max) * 0.5, not Bounds.SetMinMax's min + extents, which can differ
+        /// in the last bit (matches the Unity 6000.0.71f1 Editor, tests/projects/speedtree9).</summary>
+        internal static Bounds BoundsOf(Vector3 min, Vector3 max) => new Bounds((min + max) * 0.5f, max - min);
 
         public void RecalculateNormals() => RecalculateNormals(MeshUpdateFlags.Default);
 
