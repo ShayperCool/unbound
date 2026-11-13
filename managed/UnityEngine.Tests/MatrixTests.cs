@@ -89,7 +89,13 @@ namespace Unbound.Tests
             Near.Equal(Scl, m.lossyScale, 1e-5f);
             Matrix4x4 mirrored = Matrix4x4.TRS(Pos, Rot, new Vector3(-2f, 3f, 0.5f));
             Near.Equal(new Vector3(-2f, 3f, 0.5f), mirrored.lossyScale, 1e-5f);
-            Near.SameRotation(Rot, mirrored.rotation, 1e-3f);
+            // The rotation of a mirroring matrix leaves the reflection on the axis of the smallest
+            // scale (tests/projects/floatrounding, native/matrixDecompose and native/matrixEdge):
+            // here Z, so it is Rot turned half a turn about Y, and lossyScale does not rebuild it.
+            Near.SameRotation(Rot * new Quaternion(0f, 1f, 0f, 0f), mirrored.rotation, 1e-3f);
+            Matrix4x4 rebuilt = Matrix4x4.TRS(Pos, mirrored.rotation, new Vector3(2f, 3f, -0.5f));
+            for (int i = 0; i < 16; i++)
+                Near.Equal(mirrored[i], rebuilt[i], 1e-5f);
         }
 
         [Fact]

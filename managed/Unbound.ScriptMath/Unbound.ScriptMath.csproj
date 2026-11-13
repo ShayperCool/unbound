@@ -17,7 +17,7 @@
     <NoWarn>$(NoWarn);CS0436;CS0649;CS0169;CS0414;CS0108;CS0114;CS1591;CS0618</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../UnityEngine/Math/Mathf.cs;../UnityEngine/Math/Vector2.cs;../UnityEngine/Math/Vector3.cs;../UnityEngine/Math/Vector4.cs;../UnityEngine/Math/Vector2Int.cs;../UnityEngine/Math/Vector3Int.cs;../UnityEngine/Math/Quaternion.cs;../UnityEngine/Math/QuaternionMath.cs;../UnityEngine/Math/Matrix4x4.cs;../UnityEngine/Math/Color.cs;../UnityEngine/Math/Color32.cs;../UnityEngine/Math/Bounds.cs;../UnityEngine/Math/BoundsInt.cs;../UnityEngine/Math/Rect.cs;../UnityEngine/Math/RectInt.cs;../UnityEngine/Math/Plane.cs;../UnityEngine/Math/Ray.cs;../UnityEngine/Math/Pose.cs;../UnityEngine/Math/GeometryUtility.cs;../UnityEngine/Math/MathFormat.cs" />
+    <Compile Include="../UnityEngine/Math/Mathf.cs;../UnityEngine/Math/Vector2.cs;../UnityEngine/Math/Vector3.cs;../UnityEngine/Math/Vector4.cs;../UnityEngine/Math/Vector2Int.cs;../UnityEngine/Math/Vector3Int.cs;../UnityEngine/Math/Quaternion.cs;../UnityEngine/Math/QuaternionMath.cs;../UnityEngine/Math/RotationMatrix.cs;../UnityEngine/Math/PolarRotation.cs;../UnityEngine/Math/Matrix4x4.cs;../UnityEngine/Math/Color.cs;../UnityEngine/Math/Color32.cs;../UnityEngine/Math/Bounds.cs;../UnityEngine/Math/BoundsInt.cs;../UnityEngine/Math/Rect.cs;../UnityEngine/Math/RectInt.cs;../UnityEngine/Math/Plane.cs;../UnityEngine/Math/Ray.cs;../UnityEngine/Math/Pose.cs;../UnityEngine/Math/GeometryUtility.cs;../UnityEngine/Math/MathFormat.cs" />
     <ProjectReference Include="../UnityEngine/UnityEngine.csproj" />
   </ItemGroup>
 </Project>

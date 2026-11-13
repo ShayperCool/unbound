@@ -76,32 +76,46 @@ namespace UnityEngine
         /// </summary>
         public static Vector3 Slerp(Vector3 a, Vector3 b, float t) => SlerpUnclamped(a, b, Mathf.Clamp01(t));
 
+        /// <summary>
+        /// The direction rotates along the great arc while the length moves linearly; vectors shorter
+        /// than 1e-5 or closer than a dot product of 0.99999 interpolate linearly, opposite ones turn
+        /// half a turn per unit t about an axis orthogonal to <paramref name="a"/>. Single precision
+        /// in the order of the Unity 6000.0.71f1 Editor (tests/projects/floatrounding, native/vector3Slerp).
+        /// </summary>
         public static Vector3 SlerpUnclamped(Vector3 a, Vector3 b, float t)
         {
-            float aMag = Magnitude(a);
-            float bMag = Magnitude(b);
-            if (aMag < kEpsilon || bMag < kEpsilon)
-                return LerpUnclamped(a, b, t);
-
-            float mag = aMag + (bMag - aMag) * t;
-            Vector3 aDir = a / aMag;
-            Vector3 bDir = b / bMag;
-            float dot = Mathf.Clamp(Dot(aDir, bDir), -1F, 1F);
-            if (dot > 1F - kEpsilon)
-                return LerpUnclamped(a, b, t);
-
-            Vector3 perp;
-            if (dot < -1F + kEpsilon)
-                perp = OrthoNormalVectorFast(aDir);
+            float aLength = RotationMatrix.Length(a.x, a.y, a.z);
+            float bLength = RotationMatrix.Length(b.x, b.y, b.z);
+            float u = 1F - t;
+            if (aLength < RotationMatrix.MinimumLength || bLength < RotationMatrix.MinimumLength)
+                return new Vector3(a.x * u + b.x * t, a.y * u + b.y * t, a.z * u + b.z * t);
+            float dot = (a.x * b.x + a.y * b.y + a.z * b.z) / (aLength * bLength);
+            if (dot > ParallelDot)
+                return new Vector3(a.x * u + b.x * t, a.y * u + b.y * t, a.z * u + b.z * t);
+            float length = u * aLength + bLength * t;
+            var direction = new Vector3(a.x / aLength, a.y / aLength, a.z / aLength);
+            Vector3 axis;
+            float angle;
+            if (dot < -ParallelDot)
+            {
+                axis = OrthoNormalVectorFast(direction);
+                angle = t * MathF.PI;
+            }
             else
-                perp = Normalize(bDir - aDir * dot);
-
-            double angle = Math.Acos(dot) * t;
-            float c = (float)Math.Cos(angle);
-            float s = (float)Math.Sin(angle);
-            Vector3 dir = aDir * c + perp * s;
-            return dir * mag;
+            {
+                float cx = a.y * b.z - a.z * b.y, cy = a.z * b.x - a.x * b.z, cz = a.x * b.y - a.y * b.x;
+                float crossLength = RotationMatrix.Length(cx, cy, cz);
+                axis = new Vector3(cx / crossLength, cy / crossLength, cz / crossLength);
+                angle = MathF.Acos(dot) * t;
+            }
+            Span<float> m = stackalloc float[9];
+            RotationMatrix.AxisAngle(axis, angle, m);
+            Vector3 v = RotationMatrix.Multiply(m, direction);
+            return new Vector3(v.x * length, v.y * length, length * v.z);
         }
+
+        // Cosine above which two directions count as parallel in Slerp and RotateTowards.
+        private const float ParallelDot = 0.99999F;
 
         public static void OrthoNormalize(ref Vector3 normal, ref Vector3 tangent)
         {
@@ -140,61 +154,78 @@ namespace UnityEngine
             const float k1OverSqrt2 = 0.7071067811865475244008443621048490F;
             if (Math.Abs(n.z) > k1OverSqrt2)
             {
-                float a = n.y * n.y + n.z * n.z;
-                float k = 1F / (float)Math.Sqrt(a);
-                return new Vector3(0F, -n.z * k, n.y * k);
+                float k = 1F / MathF.Sqrt(n.z * n.z + n.y * n.y);
+                return new Vector3(0F, k * -n.z, k * n.y);
             }
             else
             {
-                float a = n.x * n.x + n.y * n.y;
-                float k = 1F / (float)Math.Sqrt(a);
-                return new Vector3(-n.y * k, n.x * k, 0F);
+                float k = 1F / MathF.Sqrt(n.x * n.x + n.y * n.y);
+                return new Vector3(k * -n.y, k * n.x, 0F);
             }
         }
 
         /// <summary>
         /// Rotates <paramref name="current"/> towards <paramref name="target"/> by at most
         /// <paramref name="maxRadiansDelta"/> radians while moving its length towards the target's
-        /// length by at most <paramref name="maxMagnitudeDelta"/>.
+        /// length by at most <paramref name="maxMagnitudeDelta"/>; vectors shorter than 1e-5 or
+        /// closer than a dot product of 0.99999 move straight towards the target instead. Single
+        /// precision in the order of the Unity 6000.0.71f1 Editor (tests/projects/floatrounding,
+        /// native/vector3RotateTowards).
         /// </summary>
         public static Vector3 RotateTowards(Vector3 current, Vector3 target, float maxRadiansDelta, float maxMagnitudeDelta)
         {
-            float currentMag = Magnitude(current);
-            float targetMag = Magnitude(target);
-            if (currentMag > kEpsilon && targetMag > kEpsilon)
+            float currentLength = RotationMatrix.Length(current.x, current.y, current.z);
+            float targetLength = RotationMatrix.Length(target.x, target.y, target.z);
+            if (!(currentLength > RotationMatrix.MinimumLength && targetLength > RotationMatrix.MinimumLength))
+                return MoveTowardsStraight(current, target, maxMagnitudeDelta);
+            var from = new Vector3(current.x / currentLength, current.y / currentLength, current.z / currentLength);
+            var to = new Vector3(target.x / targetLength, target.y / targetLength, target.z / targetLength);
+            float dot = from.x * to.x + from.y * to.y + from.z * to.z;
+            if (dot > ParallelDot)
+                return MoveTowardsStraight(current, target, maxMagnitudeDelta);
+            Vector3 axis;
+            float angle;
+            if (dot < -ParallelDot)
             {
-                Vector3 currentDir = current / currentMag;
-                Vector3 targetDir = target / targetMag;
-                float dot = Dot(currentDir, targetDir);
-                if (dot > 1F - kEpsilon)
-                    return MoveTowards(current, target, maxMagnitudeDelta);
-
-                float newMag = ClampedMove(currentMag, targetMag, maxMagnitudeDelta);
-                Vector3 perp;
-                float angle;
-                if (dot < -1F + kEpsilon)
-                {
-                    perp = OrthoNormalVectorFast(currentDir);
-                    angle = maxRadiansDelta;
-                }
-                else
-                {
-                    perp = Normalize(targetDir - currentDir * dot);
-                    angle = Math.Min(maxRadiansDelta, (float)Math.Acos(Mathf.Clamp(dot, -1F, 1F)));
-                }
-                float c = (float)Math.Cos(angle);
-                float s = (float)Math.Sin(angle);
-                return (currentDir * c + perp * s) * newMag;
+                axis = OrthoNormalVectorFast(from);
+                angle = maxRadiansDelta;
             }
-            return MoveTowards(current, target, maxMagnitudeDelta);
+            else
+            {
+                float between = MathF.Acos(dot);
+                float cx = from.y * to.z - from.z * to.y, cy = from.z * to.x - from.x * to.z, cz = from.x * to.y - from.y * to.x;
+                float crossLength = RotationMatrix.Length(cx, cy, cz);
+                axis = new Vector3(cx / crossLength, cy / crossLength, cz / crossLength);
+                angle = between < maxRadiansDelta ? between : maxRadiansDelta;
+            }
+            Span<float> m = stackalloc float[9];
+            RotationMatrix.AxisAngle(axis, angle, m);
+            Vector3 v = RotationMatrix.Multiply(m, from);
+            float delta = targetLength - currentLength;
+            float length;
+            if (delta > 0F)
+                length = currentLength + (delta > maxMagnitudeDelta ? maxMagnitudeDelta : delta);
+            else
+            {
+                delta = -delta;
+                length = currentLength - (delta > maxMagnitudeDelta ? maxMagnitudeDelta : delta);
+            }
+            return new Vector3(v.x * length, v.y * length, v.z * length);
         }
 
-        private static float ClampedMove(float lhs, float rhs, float clampedDelta)
+        // RotateTowards' straight move: the target when within maxDistanceDelta, current when the
+        // difference is not longer than 1e-5, else a step of maxDistanceDelta along the difference.
+        private static Vector3 MoveTowardsStraight(Vector3 current, Vector3 target, float maxDistanceDelta)
         {
-            float delta = rhs - lhs;
-            if (delta > 0F)
-                return lhs + Math.Min(delta, clampedDelta);
-            return lhs - Math.Min(-delta, clampedDelta);
+            float dx = target.x - current.x, dy = target.y - current.y, dz = target.z - current.z;
+            float squared = dx * dx + dy * dy + dz * dz;
+            if (!(squared > maxDistanceDelta * maxDistanceDelta))
+                return target;
+            float distance = MathF.Sqrt(squared);
+            if (!(distance > RotationMatrix.MinimumLength))
+                return current;
+            return new Vector3(current.x + dx / distance * maxDistanceDelta, current.y + dy / distance * maxDistanceDelta,
+                current.z + dz / distance * maxDistanceDelta);
         }
 
         public static Vector3 Lerp(Vector3 a, Vector3 b, float t)

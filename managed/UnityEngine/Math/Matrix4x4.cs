@@ -362,62 +362,69 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>The inverse matrix; a singular matrix gives Matrix4x4.zero.</summary>
+        /// <summary>
+        /// The inverse matrix by Gauss-Jordan elimination with partial pivoting on [m | I], in
+        /// single precision in the order of the Unity 6000.0.71f1 Editor (tests/projects/floatrounding,
+        /// native/matrixInverse). A zero pivot (a singular matrix) gives Matrix4x4.zero.
+        /// </summary>
         public static Matrix4x4 Inverse(Matrix4x4 m)
         {
-            // t is the transpose of m in row-major order (t[i * 4 + j] = m[j, i]); the inverse of the
-            // transpose, written back column-major, is the inverse of m. Cofactors are built from
-            // the 2x2 determinants of the top two and bottom two rows.
-            Span<double> t = stackalloc double[16];
-            for (int i = 0; i < 4; i++)
-                for (int j = 0; j < 4; j++)
-                    t[i * 4 + j] = m[j, i];
-
-            double s0 = t[0 * 4 + 0] * t[1 * 4 + 1] - t[1 * 4 + 0] * t[0 * 4 + 1];
-            double s1 = t[0 * 4 + 0] * t[1 * 4 + 2] - t[1 * 4 + 0] * t[0 * 4 + 2];
-            double s2 = t[0 * 4 + 0] * t[1 * 4 + 3] - t[1 * 4 + 0] * t[0 * 4 + 3];
-            double s3 = t[0 * 4 + 1] * t[1 * 4 + 2] - t[1 * 4 + 1] * t[0 * 4 + 2];
-            double s4 = t[0 * 4 + 1] * t[1 * 4 + 3] - t[1 * 4 + 1] * t[0 * 4 + 3];
-            double s5 = t[0 * 4 + 2] * t[1 * 4 + 3] - t[1 * 4 + 2] * t[0 * 4 + 3];
-
-            double c5 = t[2 * 4 + 2] * t[3 * 4 + 3] - t[3 * 4 + 2] * t[2 * 4 + 3];
-            double c4 = t[2 * 4 + 1] * t[3 * 4 + 3] - t[3 * 4 + 1] * t[2 * 4 + 3];
-            double c3 = t[2 * 4 + 1] * t[3 * 4 + 2] - t[3 * 4 + 1] * t[2 * 4 + 2];
-            double c2 = t[2 * 4 + 0] * t[3 * 4 + 3] - t[3 * 4 + 0] * t[2 * 4 + 3];
-            double c1 = t[2 * 4 + 0] * t[3 * 4 + 2] - t[3 * 4 + 0] * t[2 * 4 + 2];
-            double c0 = t[2 * 4 + 0] * t[3 * 4 + 1] - t[3 * 4 + 0] * t[2 * 4 + 1];
-
-            double det = s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0;
-            if (det == 0.0 || double.IsNaN(det) || double.IsInfinity(det))
+            // Four rows of eight: the matrix row, then the identity row.
+            Span<float> w = stackalloc float[32];
+            for (int r = 0; r < 4; r++)
+            {
+                for (int c = 0; c < 4; c++)
+                    w[r * 8 + c] = m[r, c];
+                w[r * 8 + 4 + r] = 1F;
+            }
+            // Row offsets into w; swapping two rows swaps their offsets.
+            Span<int> row = stackalloc int[4] { 0, 8, 16, 24 };
+            Span<float> factor = stackalloc float[4];
+            for (int column = 0; column < 3; column++)
+            {
+                for (int r = 3; r > column; r--)
+                    if (MathF.Abs(w[row[r] + column]) > MathF.Abs(w[row[r - 1] + column]))
+                        (row[r], row[r - 1]) = (row[r - 1], row[r]);
+                float pivot = w[row[column] + column];
+                if (pivot == 0F)
+                    return zeroMatrix;
+                // The rows below take their multiple of the pivot row; the identity half skips a
+                // zero entry of the pivot row in the first two columns.
+                for (int r = column + 1; r < 4; r++)
+                    factor[r] = w[row[r] + column] / pivot;
+                for (int c = column + 1; c < 8; c++)
+                {
+                    float s = w[row[column] + c];
+                    if (c >= 4 && column < 2 && s == 0F)
+                        continue;
+                    for (int r = column + 1; r < 4; r++)
+                        w[row[r] + c] -= factor[r] * s;
+                }
+            }
+            if (w[row[3] + 3] == 0F)
                 return zeroMatrix;
-            double inv = 1.0 / det;
-
-            Span<double> b = stackalloc double[16];
-            b[0 * 4 + 0] = (t[1 * 4 + 1] * c5 - t[1 * 4 + 2] * c4 + t[1 * 4 + 3] * c3) * inv;
-            b[0 * 4 + 1] = (-t[0 * 4 + 1] * c5 + t[0 * 4 + 2] * c4 - t[0 * 4 + 3] * c3) * inv;
-            b[0 * 4 + 2] = (t[3 * 4 + 1] * s5 - t[3 * 4 + 2] * s4 + t[3 * 4 + 3] * s3) * inv;
-            b[0 * 4 + 3] = (-t[2 * 4 + 1] * s5 + t[2 * 4 + 2] * s4 - t[2 * 4 + 3] * s3) * inv;
-
-            b[1 * 4 + 0] = (-t[1 * 4 + 0] * c5 + t[1 * 4 + 2] * c2 - t[1 * 4 + 3] * c1) * inv;
-            b[1 * 4 + 1] = (t[0 * 4 + 0] * c5 - t[0 * 4 + 2] * c2 + t[0 * 4 + 3] * c1) * inv;
-            b[1 * 4 + 2] = (-t[3 * 4 + 0] * s5 + t[3 * 4 + 2] * s2 - t[3 * 4 + 3] * s1) * inv;
-            b[1 * 4 + 3] = (t[2 * 4 + 0] * s5 - t[2 * 4 + 2] * s2 + t[2 * 4 + 3] * s1) * inv;
-
-            b[2 * 4 + 0] = (t[1 * 4 + 0] * c4 - t[1 * 4 + 1] * c2 + t[1 * 4 + 3] * c0) * inv;
-            b[2 * 4 + 1] = (-t[0 * 4 + 0] * c4 + t[0 * 4 + 1] * c2 - t[0 * 4 + 3] * c0) * inv;
-            b[2 * 4 + 2] = (t[3 * 4 + 0] * s4 - t[3 * 4 + 1] * s2 + t[3 * 4 + 3] * s0) * inv;
-            b[2 * 4 + 3] = (-t[2 * 4 + 0] * s4 + t[2 * 4 + 1] * s2 - t[2 * 4 + 3] * s0) * inv;
-
-            b[3 * 4 + 0] = (-t[1 * 4 + 0] * c3 + t[1 * 4 + 1] * c1 - t[1 * 4 + 2] * c0) * inv;
-            b[3 * 4 + 1] = (t[0 * 4 + 0] * c3 - t[0 * 4 + 1] * c1 + t[0 * 4 + 2] * c0) * inv;
-            b[3 * 4 + 2] = (-t[3 * 4 + 0] * s3 + t[3 * 4 + 1] * s1 - t[3 * 4 + 2] * s0) * inv;
-            b[3 * 4 + 3] = (t[2 * 4 + 0] * s3 - t[2 * 4 + 1] * s1 + t[2 * 4 + 2] * s0) * inv;
-
-            Matrix4x4 res = default;
-            for (int i = 0; i < 4; i++)
-                for (int j = 0; j < 4; j++)
-                    res[j, i] = (float)b[i * 4 + j];
-            return res;
+            // Back substitution, last row first.
+            float inverse = 1F / w[row[3] + 3];
+            for (int c = 4; c < 8; c++)
+                w[row[3] + c] *= inverse;
+            for (int k = 2; k >= 0; k--)
+            {
+                float multiple = w[row[k] + k + 1];
+                inverse = 1F / w[row[k] + k];
+                for (int c = 4; c < 8; c++)
+                    w[row[k] + c] = inverse * (w[row[k] + c] - w[row[k + 1] + c] * multiple);
+                for (int r = k - 1; r >= 0; r--)
+                {
+                    multiple = w[row[r] + k + 1];
+                    for (int c = 4; c < 8; c++)
+                        w[row[r] + c] -= w[row[k + 1] + c] * multiple;
+                }
+            }
+            Matrix4x4 result = default;
+            for (int r = 0; r < 4; r++)
+                for (int c = 0; c < 4; c++)
+                    result[r, c] = w[row[r] + 4 + c];
+            return result;
         }
 
         public Matrix4x4 inverse => Inverse(this);
@@ -541,59 +548,54 @@ namespace UnityEngine
 
         // ---- Decomposition -------------------------------------------------------------------
 
-        /// <summary>The rotation part, with the scale removed (a reflection is assigned to the X axis).</summary>
+        /// <summary>
+        /// The rotation of the upper 3x3 part: the part itself when its determinant is within 1e-6 of
+        /// 1, else its columns normalized when that makes it so, else the rotation of its polar
+        /// decomposition (a reflection or a degenerate scale). Matches the Unity 6000.0.71f1 Editor
+        /// (tests/projects/floatrounding, native/matrixDecompose).
+        /// </summary>
         public Quaternion rotation
         {
             get
             {
-                Span<double> c0 = stackalloc double[3] { m00, m10, m20 };
-                Span<double> c1 = stackalloc double[3] { m01, m11, m21 };
-                Span<double> c2 = stackalloc double[3] { m02, m12, m22 };
-                if (!NormalizeColumn(c0) || !NormalizeColumn(c1) || !NormalizeColumn(c2))
-                    return Quaternion.identity;
-                double det = c0[0] * (c1[1] * c2[2] - c2[1] * c1[2]) -
-                             c1[0] * (c0[1] * c2[2] - c2[1] * c0[2]) +
-                             c2[0] * (c0[1] * c1[2] - c1[1] * c0[2]);
-                if (det < 0.0)
+                const float unitTolerance = 1e-6f;
+                Span<float> m = stackalloc float[9] { m00, m10, m20, m01, m11, m21, m02, m12, m22 };
+                float determinant = ColumnDeterminant(m);
+                if (MathF.Abs(1F - determinant) < unitTolerance)
+                    return RotationMatrix.ToQuaternion(m);
+                if (MathF.Abs(determinant) > unitTolerance)
                 {
-                    c0[0] = -c0[0];
-                    c0[1] = -c0[1];
-                    c0[2] = -c0[2];
+                    for (int c = 0; c < 9; c += 3)
+                    {
+                        float inverseLength = 1F / MathF.Sqrt(m[c] * m[c] + m[c + 1] * m[c + 1] + m[c + 2] * m[c + 2]);
+                        m[c] *= inverseLength;
+                        m[c + 1] *= inverseLength;
+                        m[c + 2] *= inverseLength;
+                    }
+                    if (MathF.Abs(1F - ColumnDeterminant(m)) < unitTolerance)
+                        return RotationMatrix.ToQuaternion(m);
+                    m[0] = m00; m[1] = m10; m[2] = m20; m[3] = m01; m[4] = m11; m[5] = m21; m[6] = m02; m[7] = m12; m[8] = m22;
                 }
-                Span<double> m = stackalloc double[9]
-                {
-                    c0[0], c1[0], c2[0],
-                    c0[1], c1[1], c2[1],
-                    c0[2], c1[2], c2[2],
-                };
-                return Quaternion.FromMatrix(m);
+                PolarRotation.ToMatrix(m);
+                return RotationMatrix.ToQuaternion(m);
             }
         }
 
-        private static bool NormalizeColumn(Span<double> c)
-        {
-            double mag = Math.Sqrt(c[0] * c[0] + c[1] * c[1] + c[2] * c[2]);
-            if (mag < 1e-20)
-                return false;
-            c[0] /= mag;
-            c[1] /= mag;
-            c[2] /= mag;
-            return true;
-        }
+        // The determinant of three columns as (column 0 x column 1) . column 2.
+        private static float ColumnDeterminant(ReadOnlySpan<float> m) =>
+            m[6] * (m[1] * m[5] - m[2] * m[4]) + m[7] * (m[2] * m[3] - m[0] * m[5]) + m[8] * (m[0] * m[4] - m[1] * m[3]);
 
         /// <summary>The scale part: the length of each basis column, negated on X when the matrix mirrors.</summary>
         public Vector3 lossyScale
         {
             get
             {
-                Vector3 s = new Vector3(
-                    new Vector3(m00, m10, m20).magnitude,
-                    new Vector3(m01, m11, m21).magnitude,
-                    new Vector3(m02, m12, m22).magnitude);
-                float det3 = m00 * (m11 * m22 - m21 * m12) - m01 * (m10 * m22 - m20 * m12) + m02 * (m10 * m21 - m20 * m11);
-                if (det3 < 0F)
-                    s.x = -s.x;
-                return s;
+                Span<float> m = stackalloc float[9] { m00, m10, m20, m01, m11, m21, m02, m12, m22 };
+                var scale = new Vector3(RotationMatrix.Length(m00, m10, m20), RotationMatrix.Length(m01, m11, m21),
+                    RotationMatrix.Length(m02, m12, m22));
+                if (RotationMatrix.Determinant(m) < 0F)
+                    scale.x = -scale.x;
+                return scale;
             }
         }
 
@@ -680,14 +682,21 @@ namespace UnityEngine
             return m;
         }
 
-        /// <summary>A perspective projection; <paramref name="fov"/> is the vertical field of view in degrees.</summary>
+        /// <summary>
+        /// A perspective projection; <paramref name="fov"/> is the vertical field of view in degrees.
+        /// The cotangent is the cosine over the sine of the half angle (converted as degrees / 360
+        /// doubled times PI), in single precision as in the Unity 6000.0.71f1 Editor
+        /// (tests/projects/floatrounding, native/matrixEdge).
+        /// </summary>
         public static Matrix4x4 Perspective(float fov, float aspect, float zNear, float zFar)
         {
-            double cotangent = 1.0 / Math.Tan(fov * Mathf.Deg2Rad * 0.5);
+            float turns = fov * 0.5f / 360f;
+            var (sin, cos) = MathF.SinCos((turns + turns) * MathF.PI);
+            float cotangent = cos / sin;
             float deltaZ = zNear - zFar;
             Matrix4x4 m = zeroMatrix;
-            m.m00 = (float)(cotangent / aspect);
-            m.m11 = (float)cotangent;
+            m.m00 = cotangent / aspect;
+            m.m11 = cotangent;
             m.m22 = (zFar + zNear) / deltaZ;
             m.m23 = 2F * zNear * zFar / deltaZ;
             m.m32 = -1F;

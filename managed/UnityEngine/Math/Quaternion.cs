@@ -158,47 +158,29 @@ namespace UnityEngine
                 cy * cx * cz + sy * sx * sz);
         }
 
-        // Inverse of FromEulerRad, in radians, each angle in (-PI, PI]. In gimbal lock (x = +-90
-        // degrees) z is 0 and y carries the whole remaining rotation.
+        // Inverse of FromEulerRad, in radians, from the normalized rotation (identity when its length is
+        // below 1e-5). Outside gimbal lock X comes from the Y axis's Z component and Y and Z from two
+        // arctangents; in gimbal lock (|yz - xw| >= 0.499999) Z is 0 and Y carries the whole
+        // remaining rotation. Single precision in the order of the Unity 6000.0.71f1 Editor
+        // (tests/projects/floatrounding, native/quaternionEulerAngles).
         internal static Vector3 ToEulerRad(Quaternion rotation)
         {
-            double qx = rotation.x, qy = rotation.y, qz = rotation.z, qw = rotation.w;
-            double n = qx * qx + qy * qy + qz * qz + qw * qw;
-            if (n < 1e-30)
-                return Vector3.zero;
-            double s = 2.0 / n;
-
-            // Rotation matrix elements (row, column) needed for the ZXY extraction.
-            double m00 = 1.0 - s * (qy * qy + qz * qz);
-            double m01 = s * (qx * qy - qw * qz);
-            double m02 = s * (qx * qz + qw * qy);
-            double m10 = s * (qx * qy + qw * qz);
-            double m11 = 1.0 - s * (qx * qx + qz * qz);
-            double m12 = s * (qy * qz - qw * qx);
-            double m22 = 1.0 - s * (qx * qx + qy * qy);
-
-            double sinX = Math.Clamp(-m12, -1.0, 1.0);
-            double cosX = Math.Sqrt(m10 * m10 + m11 * m11);
-            double ex, ey, ez;
-            if (cosX > 1e-6)
+            const float gimbalLock = 0.499999f;
+            float length = MathF.Sqrt(rotation.x * rotation.x + rotation.y * rotation.y + rotation.z * rotation.z + rotation.w * rotation.w);
+            Quaternion q = length < RotationMatrix.MinimumLength ? identity
+                : new Quaternion(rotation.x / length, rotation.y / length, rotation.z / length, rotation.w / length);
+            float xx = q.x * q.x, yy = q.y * q.y, zz = q.z * q.z, ww = q.w * q.w;
+            float xy = q.x * q.y, xz = q.x * q.z, xw = q.x * q.w;
+            float yz = q.y * q.z, yw = q.y * q.w, zw = q.z * q.w;
+            float sinX = yz - xw;
+            float ex = -MathF.Asin(Math.Clamp(sinX + sinX, -1f, 1f));
+            if (MathF.Abs(sinX) < gimbalLock)
             {
-                ex = Math.Atan2(sinX, cosX);
-                ey = Math.Atan2(m02, m22);
-                ez = Math.Atan2(m10, m11);
+                float y = xz + yw, z = xy + zw;
+                return new Vector3(ex, MathF.Atan2(y + y, ww + (zz - xx - yy)), MathF.Atan2(z + z, ww + (yy - zz - xx)));
             }
-            else if (sinX > 0)
-            {
-                ex = Math.PI * 0.5;
-                ey = Math.Atan2(m01, m00);
-                ez = 0.0;
-            }
-            else
-            {
-                ex = -Math.PI * 0.5;
-                ey = Math.Atan2(-m01, m00);
-                ez = 0.0;
-            }
-            return new Vector3((float)ex, (float)ey, (float)ez);
+            float a = xy + zw, b = xw - yz, c = yz + xw, d = xy - zw;
+            return new Vector3(ex, MathF.Atan2(a * c + b * d, b * c - a * d), 0f);
         }
 
         // Maps angles into [0, 360), leaving tiny negative values (above -0.0001 rad) untouched,
@@ -224,16 +206,19 @@ namespace UnityEngine
 
         // ---- Axis / angle ------------------------------------------------------------------
 
-        public static Quaternion AngleAxis(float angle, Vector3 axis) => AxisAngleRad(axis, angle * Mathf.Deg2Rad);
-
-        private static Quaternion AxisAngleRad(Vector3 axis, float radians)
+        /// <summary>The rotation by <paramref name="angle"/> degrees about <paramref name="axis"/>;
+        /// identity when the axis is not longer than 1e-6.</summary>
+        public static Quaternion AngleAxis(float angle, Vector3 axis)
         {
-            float mag = axis.magnitude;
-            if (mag <= Vector3.kEpsilon)
+            const float minimumAxisLength = 1e-6f;
+            float length = RotationMatrix.Length(axis.x, axis.y, axis.z);
+            if (!(length > minimumAxisLength))
                 return identity;
-            double half = radians * 0.5;
-            float s = (float)Math.Sin(half) / mag;
-            return new Quaternion(axis.x * s, axis.y * s, axis.z * s, (float)Math.Cos(half));
+            // Degrees to radians as angle / 360 doubled times PI, then halved.
+            float turns = angle / 360f;
+            var (sin, cos) = MathF.SinCos((turns + turns) * MathF.PI * 0.5f);
+            float scale = sin / length;
+            return new Quaternion(axis.x * scale, axis.y * scale, axis.z * scale, cos);
         }
 
         public void ToAngleAxis(out float angle, out Vector3 axis)
@@ -267,15 +252,19 @@ namespace UnityEngine
 
         // ---- Look / from-to ----------------------------------------------------------------
 
+        /// <summary>The rotation from one direction to another; identity when either is shorter
+        /// than 1e-5.</summary>
         public static Quaternion FromToRotation(Vector3 fromDirection, Vector3 toDirection)
         {
-            Vector3 from = Vector3.Normalize(fromDirection);
-            Vector3 to = Vector3.Normalize(toDirection);
-            if (from == Vector3.zero || to == Vector3.zero)
+            float fromLength = RotationMatrix.Length(fromDirection.x, fromDirection.y, fromDirection.z);
+            float toLength = RotationMatrix.Length(toDirection.x, toDirection.y, toDirection.z);
+            if (fromLength < RotationMatrix.MinimumLength || toLength < RotationMatrix.MinimumLength)
                 return identity;
-            Span<double> m = stackalloc double[9];
-            FromToMatrix(from, to, m);
-            return FromMatrix(m);
+            var from = new Vector3(fromDirection.x / fromLength, fromDirection.y / fromLength, fromDirection.z / fromLength);
+            var to = new Vector3(toDirection.x / toLength, toDirection.y / toLength, toDirection.z / toLength);
+            Span<float> m = stackalloc float[9];
+            RotationMatrix.FromTo(from, to, m);
+            return RotationMatrix.ToQuaternion(m);
         }
 
         public void SetFromToRotation(Vector3 fromDirection, Vector3 toDirection) => this = FromToRotation(fromDirection, toDirection);
@@ -284,43 +273,20 @@ namespace UnityEngine
 
         /// <summary>
         /// The rotation whose Z axis points along <paramref name="forward"/> and whose Y axis lies in
-        /// the plane of forward and <paramref name="upwards"/>. A zero forward gives identity; a
-        /// forward parallel to upwards gives the shortest rotation from Z to forward.
+        /// the plane of forward and <paramref name="upwards"/>. A forward not longer than 1e-5 gives
+        /// identity; when no such frame exists (forward parallel to upwards) the shortest rotation
+        /// from Z to forward.
         /// </summary>
         public static Quaternion LookRotation(Vector3 forward, Vector3 upwards)
         {
-            double fx = forward.x, fy = forward.y, fz = forward.z;
-            double fMag = Math.Sqrt(fx * fx + fy * fy + fz * fz);
-            if (fMag <= Vector3.kEpsilon)
+            Span<float> m = stackalloc float[9];
+            if (RotationMatrix.Look(forward, upwards, m))
+                return RotationMatrix.ToQuaternion(m);
+            float length = RotationMatrix.Length(forward.x, forward.y, forward.z);
+            if (!(length > RotationMatrix.MinimumLength))
                 return identity;
-            fx /= fMag;
-            fy /= fMag;
-            fz /= fMag;
-
-            // right = up x forward
-            double rx = upwards.y * fz - upwards.z * fy;
-            double ry = upwards.z * fx - upwards.x * fz;
-            double rz = upwards.x * fy - upwards.y * fx;
-            double rMag = Math.Sqrt(rx * rx + ry * ry + rz * rz);
-            double upMag = Math.Sqrt((double)upwards.x * upwards.x + (double)upwards.y * upwards.y + (double)upwards.z * upwards.z);
-            if (rMag <= Vector3.kEpsilon * Math.Max(upMag, 1.0))
-                return FromToRotation(Vector3.forward, new Vector3((float)fx, (float)fy, (float)fz));
-            rx /= rMag;
-            ry /= rMag;
-            rz /= rMag;
-
-            // up' = forward x right
-            double ux = fy * rz - fz * ry;
-            double uy = fz * rx - fx * rz;
-            double uz = fx * ry - fy * rx;
-
-            Span<double> m = stackalloc double[9]
-            {
-                rx, ux, fx,
-                ry, uy, fy,
-                rz, uz, fz,
-            };
-            return FromMatrix(m);
+            RotationMatrix.FromTo(Vector3.forward, new Vector3(forward.x / length, forward.y / length, forward.z / length), m);
+            return RotationMatrix.ToQuaternion(m);
         }
 
         public void SetLookRotation(Vector3 view)
@@ -331,163 +297,50 @@ namespace UnityEngine
 
         public void SetLookRotation(Vector3 view, Vector3 up) => this = LookRotation(view, up);
 
-        // Rotation matrix taking unit vector 'from' to unit vector 'to' (Moller & Hughes, "Efficiently
-        // Building a Matrix to Rotate One Vector to Another", 1999).
-        /// <summary>The rotation matrix from <paramref name="from"/> to <paramref name="to"/>, row-major into <paramref name="m"/> (nine values).</summary>
-        private static void FromToMatrix(Vector3 from, Vector3 to, Span<double> m)
-        {
-            Span<double> f = stackalloc double[3] { from.x, from.y, from.z };
-            Span<double> t = stackalloc double[3] { to.x, to.y, to.z };
-            double e = f[0] * t[0] + f[1] * t[1] + f[2] * t[2];
-            m.Clear();
-            if (Math.Abs(e) > 1.0 - 1e-6)
-            {
-                // Nearly parallel: reflect through the plane of a coordinate axis far from 'from'.
-                Span<double> axis = stackalloc double[3];
-                double ax = Math.Abs(f[0]), ay = Math.Abs(f[1]), az = Math.Abs(f[2]);
-                if (ax < ay)
-                {
-                    if (ax < az)
-                        axis[0] = 1.0;
-                    else
-                        axis[2] = 1.0;
-                }
-                else
-                {
-                    if (ay < az)
-                        axis[1] = 1.0;
-                    else
-                        axis[2] = 1.0;
-                }
-                Span<double> u = stackalloc double[3], v = stackalloc double[3];
-                for (int i = 0; i < 3; i++)
-                {
-                    u[i] = axis[i] - f[i];
-                    v[i] = axis[i] - t[i];
-                }
-                double c1 = 2.0 / (u[0] * u[0] + u[1] * u[1] + u[2] * u[2]);
-                double c2 = 2.0 / (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-                double c3 = c1 * c2 * (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]);
-                for (int i = 0; i < 3; i++)
-                {
-                    for (int j = 0; j < 3; j++)
-                        m[i * 3 + j] = -c1 * u[i] * u[j] - c2 * v[i] * v[j] + c3 * v[i] * u[j];
-                    m[i * 3 + i] += 1.0;
-                }
-            }
-            else
-            {
-                double vx = f[1] * t[2] - f[2] * t[1];
-                double vy = f[2] * t[0] - f[0] * t[2];
-                double vz = f[0] * t[1] - f[1] * t[0];
-                double h = 1.0 / (1.0 + e);
-                double hvx = h * vx;
-                double hvz = h * vz;
-                double hvxy = hvx * vy;
-                double hvxz = hvx * vz;
-                double hvyz = h * vy * vz;
-                m[0 * 3 + 0] = e + hvx * vx;
-                m[0 * 3 + 1] = hvxy - vz;
-                m[0 * 3 + 2] = hvxz + vy;
-                m[1 * 3 + 0] = hvxy + vz;
-                m[1 * 3 + 1] = e + h * vy * vy;
-                m[1 * 3 + 2] = hvyz - vx;
-                m[2 * 3 + 0] = hvxz - vy;
-                m[2 * 3 + 1] = hvyz + vx;
-                m[2 * 3 + 2] = e + hvz * vz;
-            }
-        }
-
-        // Rotation matrix (row, column) to quaternion (Shoemake). The trace branch yields w > 0.
-        /// <summary>The rotation of a row-major 3×3 matrix (nine values).</summary>
-        internal static Quaternion FromMatrix(ReadOnlySpan<double> m)
-        {
-            double trace = m[0 * 3 + 0] + m[1 * 3 + 1] + m[2 * 3 + 2];
-            double qx, qy, qz, qw;
-            if (trace > 0.0)
-            {
-                double s = Math.Sqrt(trace + 1.0);
-                qw = 0.5 * s;
-                s = 0.5 / s;
-                qx = (m[2 * 3 + 1] - m[1 * 3 + 2]) * s;
-                qy = (m[0 * 3 + 2] - m[2 * 3 + 0]) * s;
-                qz = (m[1 * 3 + 0] - m[0 * 3 + 1]) * s;
-            }
-            else
-            {
-                int i = 0;
-                if (m[1 * 3 + 1] > m[0 * 3 + 0])
-                    i = 1;
-                if (m[2 * 3 + 2] > m[i * 3 + i])
-                    i = 2;
-                int j = (i + 1) % 3;
-                int k = (j + 1) % 3;
-                double s = Math.Sqrt(m[i * 3 + i] - m[j * 3 + j] - m[k * 3 + k] + 1.0);
-                Span<double> q = stackalloc double[3];
-                q[i] = 0.5 * s;
-                s = 0.5 / s;
-                qw = (m[k * 3 + j] - m[j * 3 + k]) * s;
-                q[j] = (m[j * 3 + i] + m[i * 3 + j]) * s;
-                q[k] = (m[k * 3 + i] + m[i * 3 + k]) * s;
-                qx = q[0];
-                qy = q[1];
-                qz = q[2];
-            }
-            double n = Math.Sqrt(qx * qx + qy * qy + qz * qz + qw * qw);
-            return new Quaternion((float)(qx / n), (float)(qy / n), (float)(qz / n), (float)(qw / n));
-        }
-
         // ---- Interpolation -----------------------------------------------------------------
 
         public static Quaternion Slerp(Quaternion a, Quaternion b, float t) => SlerpUnclamped(a, b, Mathf.Clamp01(t));
 
-        /// <summary>Spherical interpolation along the shorter arc; the result is normalized.</summary>
+        /// <summary>
+        /// Spherical interpolation along the shorter arc. Rotations closer than a dot product of 0.95
+        /// are interpolated linearly and normalized instead; the spherical result is not normalized.
+        /// Single precision in the order of the Unity 6000.0.71f1 Editor (tests/projects/floatrounding,
+        /// native/quaternionSlerp).
+        /// </summary>
         public static Quaternion SlerpUnclamped(Quaternion a, Quaternion b, float t)
         {
-            double dot = (double)a.x * b.x + (double)a.y * b.y + (double)a.z * b.z + (double)a.w * b.w;
-            double bx = b.x, by = b.y, bz = b.z, bw = b.w;
-            if (dot < 0.0)
+            const float linearDot = 0.95f;
+            float dot = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+            if (dot < 0f)
             {
                 dot = -dot;
-                bx = -bx;
-                by = -by;
-                bz = -bz;
-                bw = -bw;
+                b = new Quaternion(-b.x, -b.y, -b.z, -b.w);
             }
-
-            double wa, wb;
-            if (dot > 0.9999)
+            if (dot < linearDot)
             {
-                wa = 1.0 - t;
-                wb = t;
+                float angle = MathF.Acos(dot);
+                float inverseSin = 1f / MathF.Sin(angle);
+                float wb = MathF.Sin(angle * t);
+                float wa = MathF.Sin((1f - t) * angle);
+                return new Quaternion((a.x * wa + b.x * wb) * inverseSin, (a.y * wa + b.y * wb) * inverseSin,
+                    (a.z * wa + b.z * wb) * inverseSin, (a.w * wa + b.w * wb) * inverseSin);
             }
-            else
-            {
-                double theta = Math.Acos(Math.Min(dot, 1.0));
-                double sinTheta = Math.Sin(theta);
-                wa = Math.Sin((1.0 - t) * theta) / sinTheta;
-                wb = Math.Sin(t * theta) / sinTheta;
-            }
-            double rx = wa * a.x + wb * bx;
-            double ry = wa * a.y + wb * by;
-            double rz = wa * a.z + wb * bz;
-            double rw = wa * a.w + wb * bw;
-            double n = Math.Sqrt(rx * rx + ry * ry + rz * rz + rw * rw);
-            if (n < 1e-30)
-                return identity;
-            return new Quaternion((float)(rx / n), (float)(ry / n), (float)(rz / n), (float)(rw / n));
+            return LerpNormalized(a, b, t);
         }
 
         public static Quaternion Lerp(Quaternion a, Quaternion b, float t) => LerpUnclamped(a, b, Mathf.Clamp01(t));
 
         /// <summary>Normalized linear interpolation along the shorter arc.</summary>
-        public static Quaternion LerpUnclamped(Quaternion a, Quaternion b, float t)
+        public static Quaternion LerpUnclamped(Quaternion a, Quaternion b, float t) => LerpNormalized(a, b, t);
+
+        // a + (b - a) * t, b negated when the dot product is negative, divided by its length.
+        private static Quaternion LerpNormalized(Quaternion a, Quaternion b, float t)
         {
-            float sign = QuaternionMath.Dot(a, b) < 0F ? -1F : 1F;
-            float u = 1F - t;
-            float st = sign * t;
-            Quaternion r = new Quaternion(a.x * u + b.x * st, a.y * u + b.y * st, a.z * u + b.z * st, a.w * u + b.w * st);
-            return QuaternionMath.Normalize(r);
+            if (a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w < 0f)
+                b = new Quaternion(-b.x, -b.y, -b.z, -b.w);
+            float x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t, z = a.z + (b.z - a.z) * t, w = a.w + (b.w - a.w) * t;
+            float length = MathF.Sqrt(x * x + y * y + z * z + w * w);
+            return new Quaternion(x / length, y / length, z / length, w / length);
         }
 
         public static Quaternion RotateTowards(Quaternion from, Quaternion to, float maxDegreesDelta)
@@ -558,9 +411,9 @@ namespace UnityEngine
         public Vector3 ToEulerAngles() => ToEulerRad(this);
 
         [Obsolete("Use Quaternion.AngleAxis instead. This function was deprecated because it uses radians instead of degrees.")]
-        public void SetAxisAngle(Vector3 axis, float angle) => this = AxisAngleRad(axis, angle);
+        public void SetAxisAngle(Vector3 axis, float angle) => this = AxisAngle(axis, angle);
 
         [Obsolete("Use Quaternion.AngleAxis instead. This function was deprecated because it uses radians instead of degrees")]
-        public static Quaternion AxisAngle(Vector3 axis, float angle) => AxisAngleRad(axis, angle);
+        public static Quaternion AxisAngle(Vector3 axis, float angle) => AngleAxis(Mathf.Rad2Deg * angle, axis);
     }
 }
