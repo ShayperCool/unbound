@@ -186,6 +186,9 @@ namespace UnityEngine
             return Array.ConvertAll(paths, p => Array.ConvertAll(p, v => new Vector2(v[0], v[1])));
         }
 
+        /// <summary>How many collider outlines were traced (a trace reads the texture's texels).</summary>
+        internal static int s_ColliderOutlineTraces;
+
         /// <summary>The outlines a PolygonCollider2D or a sprite tile's collider takes: the physics
         /// shape, else the outline traced as a generated physics shape would be (also for Full Rect
         /// sprites: matches the Unity 6000.0.71f1 Editor, tests/projects/spriteoutlines); empty when
@@ -197,6 +200,7 @@ namespace UnityEngine
             // Kept only while nothing rewrote the texels it was traced from.
             bool imported = texture != null && texture.TexelsAsImported;
             if (m_FallbackOutline != null && imported) return m_FallbackOutline;
+            s_ColliderOutlineTraces++;
             var request = TexelSource(texture, m_Rect);
             var geometry = request == null ? null : TraceRequest(request, false, true);
             var outline = Paths(geometry?.Physics) ?? Array.Empty<Vector2[]>();
