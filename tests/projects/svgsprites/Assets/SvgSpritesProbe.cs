@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,7 @@ using UnityEngine.U2D;
 /// the sprite outputs.</summary>
 public sealed class SvgSpritesProbe : MonoBehaviour
 {
-    static readonly string[] Names = { "shapes", "pivot", "gradients", "frame", "strokes", "clip" };
+    static readonly string[] Names = { "shapes", "pivot", "gradients", "frame", "strokes", "clip", "physics", "physicsTextured" };
 
     [Serializable] public sealed class Capture
     {
@@ -46,7 +47,10 @@ public sealed class SvgSpritesProbe : MonoBehaviour
         public Color32[] colors;
         public string[] channels;
         public int physicsShapes;
+        public Path[] physics;
     }
+
+    [Serializable] public sealed class Path { public Vector2[] points; }
 
     [Serializable] public sealed class TextureInfo
     {
@@ -107,6 +111,9 @@ public sealed class SvgSpritesProbe : MonoBehaviour
             triangles = s.triangles, physicsShapes = s.GetPhysicsShapeCount(),
             channels = Channels.Where(s.HasVertexAttribute).Select(c => c.ToString()).ToArray(),
         };
+        var points = new List<Vector2>();
+        info.physics = new Path[info.physicsShapes];
+        for (int i = 0; i < info.physics.Length; i++) { s.GetPhysicsShape(i, points); info.physics[i] = new Path { points = points.ToArray() }; }
         if (s.HasVertexAttribute(VertexAttribute.Color)) info.colors = s.GetVertexAttribute<Color32>(VertexAttribute.Color).ToArray();
         if (s.HasVertexAttribute(VertexAttribute.TexCoord2)) info.settingIndices = s.GetVertexAttribute<Vector2>(VertexAttribute.TexCoord2).ToArray();
         return info;

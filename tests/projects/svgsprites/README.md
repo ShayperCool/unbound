@@ -4,7 +4,9 @@ What the `com.unity.vectorgraphics` 2.0.0-preview.25 package's own SVG importer 
 Unity 6000.0.71f1 Editor for its other output types, and the engine compared with it. The package
 code runs on both sides; nothing of it is ported.
 
-`Assets/Resources/Svg/` holds six imports of the uitkvector fixtures: `shapes` (Vector Sprite),
+`Assets/Resources/Svg/` holds six imports of the uitkvector fixtures and two of a circle and a
+triangle on a transparent background with `generatePhysicsShape` (`physics`, a Vector Sprite,
+and `physicsTextured`, a Textured Sprite of 64 pixels): `shapes` (Vector Sprite),
 `pivot` (the same file as a Vector Sprite with 50 pixels per unit and a bottom-left pivot),
 `gradients` (Vector Sprite with gradients: an atlas texture and setting indices),
 `frame` (UI SVGImage, aspect preserved), `strokes` (Textured Sprite, 64 pixels) and `clip`
@@ -12,7 +14,7 @@ code runs on both sides; nothing of it is ported.
 two texture-imported sprites' textures (Single and Multiple mode, from spriteimport), whose
 `SpriteEditorExtension.GetSpriteID` the capture records (the .meta's spriteIDs). The capture records each asset's
 main object and objects, every sprite's rect, pivot, pixels per unit, bounds, vertices, UVs,
-triangles, channels (`HasVertexAttribute`), colours and setting indices, every texture's size,
+triangles, physics shape paths, channels (`HasVertexAttribute`), colours and setting indices, every texture's size,
 format, filtering, wrapping and texels (read through a render texture), the GameObject outputs'
 components, sprites and materials, and a 240x96 render of copies of the three vector sprites'
 GameObjects and the textured sprite, placed so that none overlaps another (the draw order of
@@ -47,7 +49,10 @@ During an import, a copy instantiated with no parent or under an asset GameObjec
 another asset, and also when a scene is named) becomes an asset GameObject; Unbound's model,
 unmeasured for those cases.
 
-Not covered: the physics shape the importer can generate (`generatePhysicsShape`, which traces a
-rendered texture through `SpriteUtility.GenerateOutline`), the UI SVGImage drawn on a canvas, and
+The generated physics shapes come from the package tracing its rendered texture through
+`SpriteUtility.GenerateOutline` and setting them with `Sprite.OverridePhysicsShape`
+(tests/projects/spriteoutlines measures both on their own).
+
+Not covered: the UI SVGImage drawn on a canvas, and
 the 2D Sprite package's sprite editor window (Unbound has no editor windows; registering it still
 warns as unimplemented, while hyperlink-click listeners are kept).
