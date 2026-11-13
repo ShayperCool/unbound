@@ -53,6 +53,24 @@ namespace UnityEngine.Tests
         }
 
         [Serializable, SupportedOnRenderPipeline(typeof(ProbeAsset))]
+        public sealed class AlsoMissing : IRenderPipelineGraphicsSettings
+        {
+            AlsoMissing() => s_Events.Add("new AlsoMissing");
+            public int version => 0;
+            public bool isAvailableInPlayerBuild => false;
+            public void Reset() => s_Events.Add("reset AlsoMissing");
+        }
+
+        /// <summary>Paths of an array: a missing array is made, a null element loaded.</summary>
+        [Serializable, SupportedOnRenderPipeline(typeof(ProbeAsset))]
+        public sealed class ArrayResources : IRenderPipelineResources
+        {
+            public int version => 0;
+            public bool isAvailableInPlayerBuild => false;
+            [ResourcePaths(new[] { "Cube.fbx", "Quad.fbx" }, SearchType.BuiltinPath)] public Mesh[] meshes;
+        }
+
+        [Serializable, SupportedOnRenderPipeline(typeof(ProbeAsset))]
         public sealed class Resources : IRenderPipelineResources
         {
             public int version => 0;
@@ -113,7 +131,16 @@ namespace UnityEngine.Tests
 
             Assert.True(settings.TryGet(typeof(Missing), out var missing));
             Assert.NotNull(missing);
-            Assert.Equal(new[] { "new Missing", "reset Missing" }, s_Events);
+            Assert.True(settings.TryGet(typeof(AlsoMissing), out _));
+            // Every created setting is reset after all are added.
+            Assert.Equal(4, s_Events.Count);
+            Assert.StartsWith("new ", s_Events[0]);
+            Assert.StartsWith("new ", s_Events[1]);
+            Assert.StartsWith("reset ", s_Events[2]);
+            Assert.StartsWith("reset ", s_Events[3]);
+            Assert.True(settings.TryGet(typeof(ArrayResources), out var array));
+            var meshes = ((ArrayResources)array).meshes;
+            Assert.Equal(new[] { "Cube", "Quad" }, Array.ConvertAll(meshes, m => m.name));
             Assert.False(settings.TryGet(typeof(OtherPipelines), out _));
             Assert.False(settings.TryGet(removedType, out _));
             Assert.True(settings.TryGet(typeof(Resources), out var resources));
@@ -123,6 +150,53 @@ namespace UnityEngine.Tests
             Assert.Equal("Cube", stored.mesh.name);
             Assert.Same(quad, stored.kept);
             Object.DestroyImmediate(settings);
+        }
+
+        [Serializable, SupportedOnRenderPipeline(typeof(OtherAsset))]
+        public sealed class Unfound : IRenderPipelineResources
+        {
+            public int version => 0;
+            public bool isAvailableInPlayerBuild => false;
+            [ResourcePath("Nope.fbx", SearchType.BuiltinPath)] public Mesh mesh;
+        }
+
+        [Fact]
+        public void AResourcePathThatNamesNothingIsReported()
+        {
+            var logs = new List<string>();
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            logger.logHandler = new Capture(previous, logs);
+            try
+            {
+                var result = UnityEditor.Rendering.RenderPipelineResourcesEditorUtils.TryReloadContainedNullFields(new Unfound());
+                Assert.Equal(UnityEditor.Rendering.RenderPipelineResourcesEditorUtils.ResultStatus.InvalidPathOrNameFound, result);
+            }
+            finally
+            {
+                logger.logHandler = previous;
+            }
+            Assert.Contains("Error: Failed to find Nope.fbx in BuiltinPath.", logs);
+        }
+
+        sealed class Capture : ILogHandler
+        {
+            readonly ILogHandler m_Inner;
+            readonly List<string> m_Logs;
+
+            internal Capture(ILogHandler inner, List<string> logs)
+            {
+                m_Inner = inner;
+                m_Logs = logs;
+            }
+
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                m_Logs.Add(type + ": " + (args == null || args.Length == 0 ? format : string.Format(format, args)));
+                m_Inner.LogFormat(type, context, format, args);
+            }
+
+            public void LogException(Exception exception, Object context) => m_Inner.LogException(exception, context);
         }
 
         [Fact]
