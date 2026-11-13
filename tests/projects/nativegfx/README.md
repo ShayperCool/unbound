@@ -130,3 +130,22 @@ at exit. Unmeasured: multithreaded rendering, the Metal device, MSAA and HDR cam
 intermediates, the Game view of a windowed Editor as the target, the rendering extension
 queries under a render pipeline, with other cameras or with XR, events sent to the queue from
 other threads, a custom player loop.
+
+## macOS
+
+`run.py engine --label L` also runs on macOS arm64: the libraries are built as `.dylib` files in
+`Assets/Plugins/macOS` with the importer settings OS OSX and CPU ARM64. There is no
+macOS reference: the macOS Editor's device is Metal, which this OpenGL plugin does not draw with,
+and `check` stays Linux-only. Compared with the Linux reference (`run.py verify`), an Unbound run
+on macOS 26 matches 46/195 records: the interfaces found by GUID, `load.logs`, `event.base`, the
+device answers (OpenGL Core, 17: Unbound draws macOS with Metal but does not report a Metal device
+yet, so `IUnityGraphicsMetal`/`V1`/`V2` are absent as on Linux), the profiler's categories and
+script markers, the event queue's load records, the native pointers' identities and the CPU copy.
+Unbound gives plugins no graphics context there (one error at startup in the engine log; the
+probe's own OpenGL loader opens the Linux libraries only, so its `gl=` fields are 0 on macOS
+whatever is current), rendering callbacks are skipped with a warning, textures are not shared (their pointers are no texture
+names), and `Texture2D.CreateExternalTexture` with the null texture the plugin could not make
+throws `ArgumentException`, so the scripts stop in their second frame (`complete` false; the
+records after it are missing). `IUnityGraphicsVulkan`/`V2` are null on macOS (Linux answers them
+on OpenGL Core). Nothing re-checks this run: the count is a measurement, not a gate. Open: the Metal device and `IUnityGraphicsMetal` (device, command buffer and
+encoder, textures as Metal textures), and the macOS Editor's answers to the other interfaces.

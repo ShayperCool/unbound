@@ -21,8 +21,11 @@ scripts call, libNativeGfxPreload.so (its importer's "Load on startup", isPreloa
 libGfxPluginNativeGfxPrefix.so (only the GfxPlugin name prefix), which no script calls. The
 plugins' records continue in a file after the scripts wrote theirs: what the first records from
 then on (device events and UnityPluginUnload at shutdown) becomes `plugin.exit`, everything the
-others record `plugin.preloaded` and `plugin.prefixed`. Linux x86_64 only: the plugin draws with
-OpenGL.
+others record `plugin.preloaded` and `plugin.prefixed`. The plugin draws with OpenGL: the Editor
+captures and `check` run on Linux x86_64 only. `engine` also runs on macOS arm64, where the
+libraries are .dylib files in Assets/Plugins/macOS with the importer settings OS OSX, CPU
+ARM64; Unbound gives plugins no graphics context there, so that capture shows what works
+without one (README.md, "macOS").
 
 The release is $UNBOUND_PROBE_UNITY_VERSION (else tests/probe_paths.py's default). Run output
 stays under $XDG_CACHE_HOME/unbound/validation/runs/nativegfx/.
@@ -56,9 +59,27 @@ VULKAN_LIBRARY = 'libNativeGfxVulkan.so'
 DEVICE = 'opengl'
 
 
-def require_platform():
-    if sys.platform != 'linux' or platform.machine() not in ('x86_64', 'AMD64'):
-        raise SystemExit('nativegfx: the probe plugin draws with OpenGL on Linux x86_64 only')
+LINUX = sys.platform == 'linux' and platform.machine() in ('x86_64', 'AMD64')
+MACOS = sys.platform == 'darwin' and platform.machine() == 'arm64'
+
+
+def require_platform(engine=False):
+    if LINUX or (engine and MACOS and DEVICE == 'opengl'):
+        return
+    raise SystemExit('nativegfx: the probe plugin draws with OpenGL on Linux x86_64 only '
+                     '(an engine run of the OpenGL probe also runs on macOS arm64)')
+
+
+def library_file(name):
+    """The file of a probe library on this OS: libX.so on Linux, libX.dylib on macOS."""
+    return name[:-len('.so')] + '.dylib' if MACOS else name
+
+
+def plugin_meta(name):
+    """The importer settings of a probe library: as committed (Linux), or with OS OSX and CPU ARM64
+    (macOS)."""
+    text = (ROOT/'Plugins'/(name + '.meta')).read_text()
+    return text.replace('CPU: x86_64', 'CPU: ARM64').replace('OS: Linux', 'OS: OSX') if MACOS else text
 
 
 def copy_project(target):
@@ -67,7 +88,7 @@ def copy_project(target):
     for folder in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(ROOT/folder, target/folder)
     (target/'ProjectSettings/ProjectVersion.txt').write_text(f'm_EditorVersion: {unity_version()}\n')
-    plugins = target/'Assets/Plugins/x86_64'
+    plugins = target/'Assets/Plugins'/('macOS' if MACOS else 'x86_64')
     plugins.mkdir(parents=True)
     # $CC may be a command with arguments (a compiler cache before the compiler).
     compiler = shlex.split(os.environ.get('CC') or 'cc')
@@ -78,9 +99,16 @@ def copy_project(target):
                     '-fno-rtti', '-o', str(events), str(ROOT/'Plugins/nativegfx_events.cpp')], check=True)
     for library, prefix in LIBRARIES:
         defines = [f'-DNATIVEGFX_PRELOAD="{prefix} "'] if prefix else []
-        subprocess.run([*compiler, *defines, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/library),
-                        str(ROOT/'Plugins/nativegfx_probe.c'), *([] if prefix else [str(events)]), '-ldl', '-lpthread'], check=True)
-        shutil.copyfile(ROOT/'Plugins'/(library + '.meta'), plugins/(library + '.meta'))
+        # On macOS the C++ event part needs libc++ (Linux links it through the C++ object).
+        if MACOS:
+            libraries = [] if prefix else ['-lc++']
+        else:
+            libraries = ['-ldl']
+        file = library_file(library)
+        subprocess.run([*compiler, *defines, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/file),
+                        str(ROOT/'Plugins/nativegfx_probe.c'), *([] if prefix else [str(events)]), *libraries, '-lpthread'],
+                       check=True)
+        (plugins/(file + '.meta')).write_text(plugin_meta(library))
     events.unlink()
     if DEVICE == 'vulkan':
         subprocess.run([*compiler, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/VULKAN_LIBRARY),
@@ -149,15 +177,17 @@ def native(label):
 
 
 def engine(label):
-    require_platform()
+    require_platform(engine=True)
     out = WORK/label
     if out.exists():
         raise SystemExit(f'refusing to overwrite {out}')
     copy_project(out/'project')
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = dict(os.environ, **environment(out))
+    # macOS has one device (the default); Linux selects the probe's.
+    device = [] if MACOS else ['--force-' + ('vulkan' if DEVICE == 'vulkan' else 'glcore')]
     command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(out/'project'),
-               '--no-watch', '--frames', '400', '--size', '64x32', '--force-' + ('vulkan' if DEVICE == 'vulkan' else 'glcore')]
+               '--no-watch', '--frames', '400', '--size', '64x32', *device]
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print(label, 'exit', code)
@@ -210,6 +240,7 @@ def main():
     if args.mode == 'publish':
         return publish(args.labels)
     if args.mode == 'check':
+        require_platform()
         label = time.strftime('check-%Y%m%d-%H%M%S-') + str(os.getpid())
         return engine(label) or verify(WORK/label/OUT)
     if not args.candidate:
