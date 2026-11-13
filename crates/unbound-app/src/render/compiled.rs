@@ -116,12 +116,17 @@ fn uniform_bindings_refused(program: &Compiled, limits: &wgpu::Limits) -> Option
     })
 }
 
-/// Why a device cannot bind a program's textures: each texture variable and its own sampler, and
-/// each further variable of a texture (`texture_aliases`), are bindings of both stages, over the
-/// device's sampled textures or samplers of a stage.
+/// The textures (and samplers) of the renderer's main texture group, which every program's
+/// pipeline layout carries beside its own (`main_texture_layout`: one of each, both stages).
+const MAIN_TEXTURE_BINDINGS: u32 = 1;
+
+/// Why a device cannot bind a program's textures: each texture variable and its own sampler, each
+/// further variable of a texture (`texture_aliases`) and the main texture group are bindings of
+/// both stages, over the device's sampled textures or samplers of a stage.
 fn texture_bindings_refused(program: &Compiled, limits: &wgpu::Limits) -> Option<String> {
-    let textures = (program.textures.len() + program.texture_aliases.len()) as u32;
-    let samplers = program.textures.len() as u32;
+    let textures =
+        (program.textures.len() + program.texture_aliases.len()) as u32 + MAIN_TEXTURE_BINDINGS;
+    let samplers = program.textures.len() as u32 + MAIN_TEXTURE_BINDINGS;
     if textures > limits.max_sampled_textures_per_shader_stage {
         return Some(format!(
             "it binds {textures} textures, over the {} the device binds in a stage",
@@ -1664,8 +1669,8 @@ mod tests {
         program.uniform_bindings.pop();
         assert_eq!(uniform_bindings_refused(&program, &desktop), None);
 
-        // Textures: each with its sampler, aliases as further textures (URP Lit with probe
-        // volumes binds 21; WebGPU's defaults bind 16 of each).
+        // Textures: each with its sampler, aliases as further textures, and the main texture
+        // group's one (WebGPU's defaults bind 16 of each).
         program.textures = (0..20).map(|k| format!("_T{k}")).collect();
         program.texture_aliases = vec![0];
         let gl = wgpu::Limits {
@@ -1676,13 +1681,22 @@ mod tests {
         assert_eq!(texture_bindings_refused(&program, &gl), None);
         let webgpu = wgpu::Limits::default();
         let why = texture_bindings_refused(&program, &webgpu).unwrap();
-        assert!(why.contains("21 textures, over the 16"), "{why}");
+        assert!(why.contains("22 textures, over the 16"), "{why}");
         let few_samplers = wgpu::Limits {
             max_sampled_textures_per_shader_stage: 32,
-            ..webgpu
+            ..webgpu.clone()
         };
         let why = texture_bindings_refused(&program, &few_samplers).unwrap();
-        assert!(why.contains("20 samplers, over the 16"), "{why}");
+        assert!(why.contains("21 samplers, over the 16"), "{why}");
+        // At the limit: 15 textures and the main one bind; one more does not.
+        program.textures = (0..15).map(|k| format!("_T{k}")).collect();
+        program.texture_aliases.clear();
+        assert_eq!(texture_bindings_refused(&program, &webgpu), None);
+        program.texture_aliases = vec![3];
+        assert!(texture_bindings_refused(&program, &webgpu).is_some());
+        program.texture_aliases.clear();
+        program.textures.push("_T15".into());
+        assert!(texture_bindings_refused(&program, &webgpu).is_some());
     }
 
     fn uniform(name: &str, offset: u32, rows: u32, columns: u32) -> Uniform {

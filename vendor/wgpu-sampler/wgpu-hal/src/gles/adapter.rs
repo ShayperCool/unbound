@@ -825,11 +825,18 @@ impl super::Adapter {
             0
         };
 
-        // Unbound: the texture units of a stage that the context also binds at once.
+        // Unbound: the texture units of every stage (compute's too, where kernels run) that the
+        // context also binds at once.
         let texture_units = unsafe {
-            gl.get_parameter_i32(glow::MAX_TEXTURE_IMAGE_UNITS)
+            let units = gl
+                .get_parameter_i32(glow::MAX_TEXTURE_IMAGE_UNITS)
                 .min(gl.get_parameter_i32(glow::MAX_VERTEX_TEXTURE_IMAGE_UNITS))
-                .min(gl.get_parameter_i32(glow::MAX_COMBINED_TEXTURE_IMAGE_UNITS))
+                .min(gl.get_parameter_i32(glow::MAX_COMBINED_TEXTURE_IMAGE_UNITS));
+            if supports_compute {
+                units.min(gl.get_parameter_i32(glow::MAX_COMPUTE_TEXTURE_IMAGE_UNITS))
+            } else {
+                units
+            }
         }
         .max(0) as u32;
 

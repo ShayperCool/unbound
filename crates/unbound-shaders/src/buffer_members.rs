@@ -263,7 +263,8 @@ pub(crate) fn buffer_members(source: &str) -> String {
             continue;
         }
         edits.push((member.declaration.clone(), String::new()));
-        edits.extend(writes.into_iter().map(|r| (r, String::new())));
+        // A write becomes an empty statement, so a statement it was the body of keeps one.
+        edits.extend(writes.into_iter().map(|r| (r, ";".to_string())));
         edits.extend(reads.into_iter().map(|r| (r, global.clone())));
         removed.insert(member.declaration.start);
     }
@@ -339,6 +340,19 @@ mod tests {
         // The texture member and the other struct's `index` are left alone.
         assert!(fixed.contains("apvRes.L0 = _APVResL0;"), "{fixed}");
         assert!(fixed.contains("o.index = 2;"), "{fixed}");
+        compiles(&fixed).unwrap();
+    }
+
+    #[test]
+    fn a_write_that_is_a_statement_body_leaves_an_empty_one() {
+        let guarded = APV.replace(
+            " apvRes.index = _APVResIndex;\n apvRes.L0 = _APVResL0;",
+            " if (_APVResL0.Load(int4(0, 0, 0, 0)).x > 0) apvRes.index = _APVResIndex;\n apvRes.L0 = _APVResL0;",
+        );
+        assert_ne!(guarded, APV);
+        let fixed = buffer_members(&guarded);
+        // The texture assignment stays unconditional.
+        assert!(fixed.contains(") ;\n apvRes.L0 = _APVResL0;"), "{fixed}");
         compiles(&fixed).unwrap();
     }
 
