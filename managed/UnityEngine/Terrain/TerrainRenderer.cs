@@ -136,6 +136,9 @@ namespace UnityEngine
             m_TreesOrigin = origin;
             var prototypes = data.treePrototypes;
             var size = data.size;
+            foreach (var prototype in prototypes)
+                if (prototype?.prefab != null && NamesBillboardShader(prototype.prefab))
+                    Warn($"tree prototype '{prototype.prefab.name}' has materials made for billboards: Unbound draws it as its meshes at every distance, without billboards past treeBillboardDistance.");
             foreach (var tree in data.treeInstances)
             {
                 if (tree.prototypeIndex < 0 || tree.prototypeIndex >= prototypes.Length) continue;
@@ -180,6 +183,17 @@ namespace UnityEngine
                     });
                 }
             }
+        }
+
+        /// <summary>Whether a tree prefab's materials name a BillboardShader (the Soft Occlusion and
+        /// Tree Creator shaders do): the Editor draws such trees as billboards from a distance.</summary>
+        static bool NamesBillboardShader(GameObject prefab)
+        {
+            foreach (var renderer in prefab.GetComponentsInChildren<Renderer>(true))
+                foreach (var material in renderer.sharedMaterials)
+                    if (material != null && material.shader != null && material.shader.GetDependency("BillboardShader") != null)
+                        return true;
+            return false;
         }
 
         /// <summary>A tree prefab's drawn mesh renderers with the LOD levels each is in: its LOD

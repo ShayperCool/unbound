@@ -226,15 +226,17 @@ In dependency order; each item ends with an Editor-reference probe.
       force field rotation, ribbon trails, sub-emitter timing in Simulate, Particle System jobs.
 - [ ] Terrain (leftovers back in scope 2026-11-12): TerrainData from the Editor's asset with its height, normal and steepness queries,
       the TerrainCollider (PhysX height field, holes, tree capsules), drawing with Unity's terrain
-      shaders and trees (`tests/projects/terrain`: 214/216 records, the two a float step of steepness apart, images within 2.3/255);
+      shaders and trees (`tests/projects/terrain`: 214/216 records, two steepness values a float step
+      apart; worst image mean 2.3/255);
       details: the detail database, where instances go as ComputeDetailInstanceTransforms (instance
       counts and coverage exact: `tests/projects/grass` 1205/1205 records), drawn with Unity's detail
       shaders as the Editor builds the meshes;
       layerless terrains' checker; coverage mode's rule, ground-aligned turns, detailObjectDensity,
       drawn placement and the quality level's terrain overrides, heightmap LOD by pixel error and
       the base map past basemapDistance, the per-patch height errors and ranges
-      (`tests/projects/terrainlod`) (Q421). Left: billboards for tree prototypes whose materials'
-      shaders name a BillboardShader (Soft Occlusion, Tree Creator); other trees draw as meshes.
+      (`tests/projects/terrainlod`) (Q421). Left in drawing: billboards for tree prototypes whose
+      materials' shaders name a BillboardShader (Soft Occlusion, Tree Creator); the rest is in the
+      Terrain rows of COMPATIBILITY_GAPS.md (LOD overrides, heightmap textures, realtime GI).
 - [x] AssetBundles the Editor builds (UnityFS: uncompressed, LZ4, LZMA): LoadFromFile, Memory,
       Stream and their async forms, LoadAsset (by path or name, sub-assets), LoadAllAssets, Unload,
       the manifest, scenes through SceneManager; player data read by its type trees (references
