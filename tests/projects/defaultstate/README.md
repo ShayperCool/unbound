@@ -113,9 +113,9 @@ The Editor slice adds 223 controls while preserving all 11,957 previous rows,
 giving 12,180 rows before UIElements. UIElements adds 95 controls and six atlas-settings
 rows, preserving all earlier raw rows, for 12,281 rows before the remaining Core work.
 Declaration work adds one more factory row. Core adds 229 controls, giving 12,511 rows.
-A later SpriteUtility declaration adds one factory row. The Small slice adds 187 controls,
-preserving all 12,512 earlier raw rows, for 12,699 current rows. The comparison has
-12,432 exact rows, 267 differing reference rows, zero missing rows and zero extra implementation rows.
+A later SpriteUtility declaration adds one factory row. The Small slice adds 192 controls,
+preserving all 12,512 earlier raw rows, for 12,704 current rows. The comparison has
+12,437 exact rows, 267 differing reference rows, zero missing rows and zero extra implementation rows.
 Small resolves 107 existing queue entries and adds three exact initialized-context gaps,
 giving 269 entries with the same 50 variable policies. Two variable observations happen
 to equal this implementation snapshot; their policies remain unresolved.
@@ -415,7 +415,7 @@ Pointer angle and JSON string transfer select measured Compat mechanisms for
 embedded-NUL handling, which remain unmeasured. Constructor defaults reuse the
 existing initialization mechanism.
 
-UIElements retains 100 entries. Forty-two are timestamps and 41 are registration
+The UIElements slice initially retained 100 entries. Forty-two are timestamps and 41 are registration
 identifiers. Relational controls establish stable identifiers within a type and
 different identifiers across types; the API does not promise their absolute
 numbers. The 50 existing variable policies remain unchanged. The remaining
@@ -425,8 +425,8 @@ and specialized text asset initialization. Constructor and write controls rule o
 fixing these through one font-height constant, empty draw callbacks or sorting
 all attribute lists. Every remaining raw value stays in the queue.
 
-The Small slice has 187 independent controls from two GPU Editor repeats on
-6000.0.71f1. Unbound matches 184. The other three remain exact queue entries: GUI
+The Small slice has 192 independent controls from two GPU Editor repeats on
+6000.0.71f1. Unbound matches 189. The other three remain exact queue entries: GUI
 mouse-event filtering outside an active GUI context, and two full-range
 `AddClip(addLoopFrame: true)` duration observations. The latter still produce the
 existing unsupported-window warning. No comparison tolerance changes.
@@ -438,7 +438,7 @@ existing unsupported-window warning. No comparison tolerance changes.
 | Animation storage and ownership | 14 | Invalid/removed state access, zero and negative normalization, curve/event range changes, cleared curves, reused versus independently named clips. Full-range loop-window duration remains queued. |
 | Terrain and terrain collider state | 11 | Fresh size/scale, flat and non-flat bounds, detail count/coverage modes, layer tiling, color precision and selected public declarations. |
 | Video initialization and preparation | 9 | Fresh, prepared and stopped capabilities; URL and clip selection after a real source-mode divergence; both payloads survive mode changes. Captures cover the NVIDIA backend, not live streams or other devices. |
-| Downloads and social constructors | 10 | Empty and populated buffers, successful/missing/directory file requests, unfinished/valid/invalid texture decoding, constructor-owned images and explicit image aliases. |
+| Downloads and social constructors | 10 | Empty and populated buffers, empty/valid/invalid texture payloads without logged exceptions, successful/missing/directory file requests, unfinished/valid/invalid texture decoding, constructor-owned images and explicit image aliases. |
 | Shared object state | 9 | Empty/populated/cleared mesh ownership across filters, billboard/projector values, TextCore fallback storage, Canvas inheritance and NavMeshBuildMarkup writes. |
 
 The Unity 6000.0 contracts and the controls distinguish these guarantees from

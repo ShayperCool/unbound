@@ -12698,4 +12698,9 @@
 {"key":"CoreControl/Small/navigation/markupInitial","status":"value","value":"[true,false,false,true]"}
 {"key":"CoreControl/Small/navigation/markupFalse","status":"value","value":"[false,true]"}
 {"key":"CoreControl/Small/navigation/markupTrue","status":"value","value":"[true,true]"}
+{"key":"CoreControl/Small/web/requests/exceptions","status":"value","value":"[0,null]"}
+{"key":"CoreControl/Small/web/request/7","status":"value","value":"[enum:4,string:Data Processing Error, see Download Handler error]"}
+{"key":"CoreControl/Small/web/responseCode/7","status":"value","value":"200"}
+{"key":"CoreControl/Small/web/completed/7","status":"value","value":"[-1,false,string:Failed to create texture from downloaded bytes,true,false]"}
+{"key":"CoreControl/Small/web/decoded/7","status":"value","value":"null"}
 {"key":"complete","status":"value","value":"1"}

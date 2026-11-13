@@ -43,6 +43,8 @@ public sealed class DefaultStateProbe : MonoBehaviour
         if (index<candidates.Length) return;
         if (!core2Waiting) { Core2Begin(); Core2BeginMore(); SmallBegin(); core2Waiting = true; return; }
         if (!core2Resource.isDone || !core2Bundle.isDone || !core2Instantiation.isDone || !core2MissingResource.isDone || !smallVideo.isPrepared || smallWeb.Any(r => !r.isDone)) return;
+        Debug.unityLogger.logHandler = smallWebLogBefore;
+        CoreValue("Small/web/requests/exceptions", new object[] { smallWebLog.errors, smallWebLog.lastException });
         Capture(new Candidate { type=typeof(FreshStateControl).FullName, module=typeof(FreshStateControl).Assembly.GetName().Name,
             category="class", status="candidate" });
         try
@@ -1052,6 +1054,8 @@ public sealed class DefaultStateProbe : MonoBehaviour
         finally { UnityEngine.Object.DestroyImmediate(go); UnityEngine.Object.DestroyImmediate(clip); }
     }
     static UnityEngine.Networking.UnityWebRequest[] smallWeb;
+    static ILogHandler smallWebLogBefore;
+    static Core2ExceptionLogHandler smallWebLog;
     static void SmallWebControls()
     {
         var go = new GameObject("SmallCanvas");
@@ -1124,7 +1128,11 @@ public sealed class DefaultStateProbe : MonoBehaviour
             UnityEngine.Networking.UnityWebRequestTexture.GetTexture(new Uri(Path.Combine(folder, "missing-control.png")).AbsoluteUri),
             UnityEngine.Networking.UnityWebRequestTexture.GetTexture(new Uri(Path.Combine(folder, "missing-directory/missing-control.png")).AbsoluteUri),
             UnityEngine.Networking.UnityWebRequest.Get(new Uri(Path.Combine(folder, "missing-control.txt")).AbsoluteUri),
+            UnityEngine.Networking.UnityWebRequestTexture.GetTexture(new Uri(Path.Combine(folder, "small-empty.txt")).AbsoluteUri),
         };
+        smallWebLogBefore = Debug.unityLogger.logHandler;
+        smallWebLog = new Core2ExceptionLogHandler(smallWebLogBefore);
+        Debug.unityLogger.logHandler = smallWebLog;
         foreach (var request in smallWeb) request.SendWebRequest();
     }
     static void SmallMoreControls()

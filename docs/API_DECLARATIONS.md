@@ -265,8 +265,8 @@ fix resolves one additional row. The ParticleSystem slice resolves another 337 r
 UIElements resolves 59 values and shared JSON string transfer resolves two record strings.
 The remaining Core mechanisms resolve another 127 rows across their shared operation,
 component and renderer state. Small mechanisms resolve 107 existing entries and retain three new exact contextual
-gaps. The default-state probe now has 12,432 exact rows and 269 queued rows, including
-the unchanged 50 variable rows. Its 12,699 canonical rows
+gaps. The default-state probe now has 12,437 exact rows and 269 queued rows, including
+the unchanged 50 variable rows. Its 12,704 canonical rows
 preserve every original line. Added controls
 cover exact removed-getter messages, valid and rejected factories, requirements,
 explicit constructor arguments, aliases, refresh-rate arithmetic, drive input ranges,
@@ -276,7 +276,7 @@ importer backing and constructor failures, window initialization, removed textur
 settings, collection validity, nullable paths, pointer conversion/cache order, text interfaces,
 atlas configuration ownership, logical/physical parents, JSON string transfer, exact component
 construction backing, valid operation capabilities, LOD membership, curve ownership, mesh
-view safety and physical-camera configuration. Small adds 187 controls for style initialization,
+view safety and physical-camera configuration. Small adds 192 controls for style initialization,
 mesh and clip ownership, invalid animation state, terrain bounds, source selection,
 prepared-video capabilities, texture decoding and constructor-owned social images.
 The three new gaps are GUI mouse-event filtering and two full-range loop-window

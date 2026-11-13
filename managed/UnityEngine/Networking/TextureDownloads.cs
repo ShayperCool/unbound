@@ -96,8 +96,10 @@ namespace UnityEngine.Networking
                 if (!m_Decoded)
                 {
                     m_Decoded = true;
+                    byte[] bytes = Bytes();
+                    if (bytes == null || bytes.Length == 0) return null;
                     var texture = new Texture2D(2, 2, TextureFormat.RGBA32, m_Params.mipmapChain, m_Params.linearColorSpace);
-                    if (!texture.LoadImage(Bytes(), !m_Params.readable))
+                    if (!texture.LoadImage(bytes, !m_Params.readable))
                     {
                         Object.DestroyImmediate(texture);
                         texture = null;
