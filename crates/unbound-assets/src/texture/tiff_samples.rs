@@ -6,8 +6,8 @@
 //! `Tiff*`; gray measured with 8-bit samples and an unspecified extra sample, 16-bit gray with
 //! extra samples is refused). Layouts not read here (tiles, planes, float or other sample depths,
 //! other compressions or predictors) go to the image crate for an RGB file with one alpha sample
-//! (or four samples without ExtraSamples), which it reads correctly, and are refused otherwise. The tiff
-//! crate copies such rows with the stride of the colour samples alone, which shears every row, so
+//! (or four samples without ExtraSamples), which it reads correctly, and are refused otherwise.
+//! The tiff crate copies such rows with the stride of the colour samples alone, which shears every row, so
 //! their strips are read here. Other TIFF files return `None` and go through the image crate.
 use super::narrow_u16;
 use anyhow::{Context, Result, bail};
@@ -447,8 +447,13 @@ mod tests {
 
     /// The file with its Compression tag set to `value` (data untouched: only the choice of
     /// reader is tested).
-    fn with_compression(mut file: Vec<u8>, value: u16) -> Vec<u8> {
-        let at = entry(&file, 259);
+    fn with_compression(file: Vec<u8>, value: u16) -> Vec<u8> {
+        with_tag_value(file, 259, value)
+    }
+
+    /// The file with the inline value of `tag` set to `value`.
+    fn with_tag_value(mut file: Vec<u8>, tag: u16, value: u16) -> Vec<u8> {
+        let at = entry(&file, tag);
         file[at + 8..at + 10].copy_from_slice(&value.to_le_bytes());
         file
     }
@@ -576,6 +581,12 @@ mod tests {
         let jpeg = tiff((5, 7), PHOTOMETRIC_RGB, 8, &[2], &v, PLAIN);
         let jpeg = with_compression(jpeg, 7);
         assert!(decode(&jpeg).unwrap().is_none());
+        let float_predictor =
+            with_tag_value(tiff((5, 7), PHOTOMETRIC_RGB, 8, &[2], &v, PLAIN), 317, 3);
+        assert!(decode(&float_predictor).unwrap().is_none());
+        let float_predictor =
+            with_tag_value(tiff((5, 7), PHOTOMETRIC_RGB, 8, &[0], &v, PLAIN), 317, 3);
+        assert!(decode(&float_predictor).is_err());
         let jpeg = with_compression(tiff((5, 7), PHOTOMETRIC_RGB, 8, &[0], &v, PLAIN), 7);
         assert!(decode(&jpeg).is_err());
         assert!(
