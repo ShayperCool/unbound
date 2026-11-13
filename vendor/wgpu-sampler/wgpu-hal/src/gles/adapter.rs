@@ -825,6 +825,14 @@ impl super::Adapter {
             0
         };
 
+        // Unbound: the texture units of a stage that the context also binds at once.
+        let texture_units = unsafe {
+            gl.get_parameter_i32(glow::MAX_TEXTURE_IMAGE_UNITS)
+                .min(gl.get_parameter_i32(glow::MAX_VERTEX_TEXTURE_IMAGE_UNITS))
+                .min(gl.get_parameter_i32(glow::MAX_COMBINED_TEXTURE_IMAGE_UNITS))
+        }
+        .max(0) as u32;
+
         let max_color_attachments = unsafe {
             gl.get_parameter_i32(glow::MAX_COLOR_ATTACHMENTS)
                 .min(gl.get_parameter_i32(glow::MAX_DRAW_BUFFERS)) as u32
@@ -848,8 +856,11 @@ impl super::Adapter {
             max_bindings_per_bind_group: u32::MAX,
             max_dynamic_uniform_buffers_per_pipeline_layout: max_uniform_buffers_per_shader_stage,
             max_dynamic_storage_buffers_per_pipeline_layout: max_storage_buffers_per_shader_stage,
-            max_sampled_textures_per_shader_stage: super::MAX_TEXTURE_SLOTS as u32,
-            max_samplers_per_shader_stage: super::MAX_SAMPLERS as u32,
+            // Unbound: the texture units a stage may use and the context binds at once, up to
+            // the backend's slots; samplers bind to those units (before: 16 each).
+            max_sampled_textures_per_shader_stage: texture_units
+                .min(super::MAX_TEXTURE_SLOTS as u32),
+            max_samplers_per_shader_stage: texture_units.min(super::MAX_SAMPLERS as u32),
             max_storage_buffers_per_shader_stage,
             max_storage_textures_per_shader_stage,
             max_uniform_buffers_per_shader_stage,

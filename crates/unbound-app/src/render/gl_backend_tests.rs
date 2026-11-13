@@ -992,3 +992,161 @@ fn the_sampler_lod_bias_selects_a_coarser_level() {
         );
     }
 }
+
+#[test]
+fn a_stage_binds_the_contexts_texture_units() {
+    let Some((device, queue)) = gl_device() else {
+        return;
+    };
+    // The measured driver gives each stage 32 units (and binds 192 at once): the backend binds
+    // 32 textures and samplers, as URP's Lit with probe volumes needs more than 16.
+    let limits = device.limits();
+    assert_eq!(limits.max_sampled_textures_per_shader_stage, 32);
+    assert_eq!(limits.max_samplers_per_shader_stage, 32);
+    const COUNT: u32 = 32;
+    let sampler = device.create_sampler(&Default::default());
+    let views: Vec<wgpu::TextureView> = (0..COUNT)
+        .map(|k| {
+            let texture = device.create_texture_with_data(
+                &queue,
+                &wgpu::TextureDescriptor {
+                    label: None,
+                    size: wgpu::Extent3d {
+                        width: 1,
+                        height: 1,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: TARGET,
+                    usage: wgpu::TextureUsages::TEXTURE_BINDING,
+                    view_formats: &[],
+                },
+                wgpu::util::TextureDataOrder::LayerMajor,
+                &[(k * 8) as u8, 0, 0, 255],
+            );
+            texture.create_view(&Default::default())
+        })
+        .collect();
+    let mut entries = Vec::new();
+    let mut resources = Vec::new();
+    let mut declarations = String::new();
+    for k in 0..COUNT {
+        entries.push(wgpu::BindGroupLayoutEntry {
+            binding: 2 * k,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Texture {
+                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                view_dimension: wgpu::TextureViewDimension::D2,
+                multisampled: false,
+            },
+            count: None,
+        });
+        entries.push(wgpu::BindGroupLayoutEntry {
+            binding: 2 * k + 1,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+            count: None,
+        });
+        resources.push(wgpu::BindGroupEntry {
+            binding: 2 * k,
+            resource: wgpu::BindingResource::TextureView(&views[k as usize]),
+        });
+        resources.push(wgpu::BindGroupEntry {
+            binding: 2 * k + 1,
+            resource: wgpu::BindingResource::Sampler(&sampler),
+        });
+        declarations.push_str(&format!(
+            "@group(0) @binding({}) var t{k}: texture_2d<f32>;\n@group(0) @binding({}) var s{k}: sampler;\n",
+            2 * k,
+            2 * k + 1
+        ));
+    }
+    // Every texture is read; the first, the 17th and the last land in the channels.
+    let reads: Vec<String> = (0..COUNT)
+        .map(|k| format!("textureSampleLevel(t{k}, s{k}, vec2<f32>(0.5), 0.0).r"))
+        .collect();
+    let code = format!(
+        "{declarations}\
+         @vertex fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {{\n\
+         let uv = vec2<f32>(f32((i << 1u) & 2u), f32(i & 2u));\n\
+         return vec4<f32>(uv * 2.0 - 1.0, 0.0, 1.0);\n}}\n\
+         @fragment fn fs() -> @location(0) vec4<f32> {{\n\
+         let all = {};\n\
+         return vec4<f32>(textureSampleLevel(t{last}, s{last}, vec2<f32>(0.5), 0.0).r, \
+         textureSampleLevel(t16, s16, vec2<f32>(0.5), 0.0).r, all / {COUNT}.0, 1.0);\n}}",
+        reads.join(" + "),
+        last = COUNT - 1
+    );
+    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: None,
+        source: wgpu::ShaderSource::Wgsl(code.into()),
+    });
+    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: None,
+        entries: &entries,
+    });
+    let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: None,
+        layout: Some(
+            &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: None,
+                bind_group_layouts: &[Some(&layout)],
+                immediate_size: 0,
+            }),
+        ),
+        vertex: wgpu::VertexState {
+            module: &module,
+            entry_point: Some("vs"),
+            compilation_options: Default::default(),
+            buffers: &[],
+        },
+        fragment: Some(wgpu::FragmentState {
+            module: &module,
+            entry_point: Some("fs"),
+            compilation_options: Default::default(),
+            targets: &[Some(TARGET.into())],
+        }),
+        primitive: Default::default(),
+        depth_stencil: None,
+        multisample: Default::default(),
+        multiview_mask: None,
+        cache: None,
+    });
+    let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: None,
+        layout: &layout,
+        entries: &resources,
+    });
+    let target = texture(
+        &device,
+        (4, 4, 1),
+        1,
+        1,
+        wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+        &[],
+    );
+    let target_view = target.create_view(&Default::default());
+    let mut encoder = device.create_command_encoder(&Default::default());
+    {
+        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &target_view,
+                depth_slice: None,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            ..Default::default()
+        });
+        pass.set_pipeline(&pipeline);
+        pass.set_bind_group(0, &group, &[]);
+        pass.draw(0..3, 0..1);
+    }
+    queue.submit([encoder.finish()]);
+    // Texture k holds 8k: the last 248, the 17th 128, the mean of 0..248 is 124.
+    assert_eq!(read(&device, &queue, &target)[5], [248, 128, 124, 255]);
+}

@@ -132,8 +132,12 @@ pub struct Api;
 
 //Note: we can support more samplers if not every one of them is used at a time,
 // but it probably doesn't worth it.
-const MAX_TEXTURE_SLOTS: usize = 16;
-const MAX_SAMPLERS: usize = 16;
+// Unbound: 32 texture units, what desktop OpenGL contexts give each stage (the device reports
+// the context's own count up to this, `Adapter::expose`), and what the command encoder's 32-bit
+// dirty-texture masks hold; before: 16.
+const MAX_TEXTURE_SLOTS: usize = 32;
+// Unbound: a sampler object is bound to a texture unit, so as many as there are units; before: 16.
+const MAX_SAMPLERS: usize = 32;
 const MAX_VERTEX_ATTRIBUTES: usize = 16;
 const ZERO_BUFFER_SIZE: usize = 256 << 10;
 const MAX_IMMEDIATES: usize = 64;

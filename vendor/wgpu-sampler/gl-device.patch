@@ -161,7 +161,36 @@
          let is_mali = renderer.to_lowercase().contains("mali");
          let debug_fns_enabled = match backend_options.debug_fns {
              wgt::GlDebugFns::Auto => gl.supports_debug() && !is_mali,
-@@ -958,6 +1025,11 @@
+@@ -758,6 +825,14 @@
+             0
+         };
+ 
++        // Unbound: the texture units of a stage that the context also binds at once.
++        let texture_units = unsafe {
++            gl.get_parameter_i32(glow::MAX_TEXTURE_IMAGE_UNITS)
++                .min(gl.get_parameter_i32(glow::MAX_VERTEX_TEXTURE_IMAGE_UNITS))
++                .min(gl.get_parameter_i32(glow::MAX_COMBINED_TEXTURE_IMAGE_UNITS))
++        }
++        .max(0) as u32;
++
+         let max_color_attachments = unsafe {
+             gl.get_parameter_i32(glow::MAX_COLOR_ATTACHMENTS)
+                 .min(gl.get_parameter_i32(glow::MAX_DRAW_BUFFERS)) as u32
+@@ -781,8 +856,11 @@
+             max_bindings_per_bind_group: u32::MAX,
+             max_dynamic_uniform_buffers_per_pipeline_layout: max_uniform_buffers_per_shader_stage,
+             max_dynamic_storage_buffers_per_pipeline_layout: max_storage_buffers_per_shader_stage,
+-            max_sampled_textures_per_shader_stage: super::MAX_TEXTURE_SLOTS as u32,
+-            max_samplers_per_shader_stage: super::MAX_SAMPLERS as u32,
++            // Unbound: the texture units a stage may use and the context binds at once, up to
++            // the backend's slots; samplers bind to those units (before: 16 each).
++            max_sampled_textures_per_shader_stage: texture_units
++                .min(super::MAX_TEXTURE_SLOTS as u32),
++            max_samplers_per_shader_stage: texture_units.min(super::MAX_SAMPLERS as u32),
+             max_storage_buffers_per_shader_stage,
+             max_storage_textures_per_shader_stage,
+             max_uniform_buffers_per_shader_stage,
+@@ -958,6 +1036,11 @@
                      program_cache: Default::default(),
                      es: es_ver.is_some(),
                      max_msaa_samples: max_samples,
@@ -173,7 +202,7 @@
                  }),
              },
              info: Self::make_info(vendor, renderer, version),
-@@ -1243,41 +1315,58 @@
+@@ -1243,41 +1326,58 @@
              storage,
          );
  
@@ -594,7 +623,22 @@
                  gl.get_parameter_i32(glow::MAX_LABEL_LENGTH)
 --- a/wgpu-hal/src/gles/mod.rs
 +++ b/wgpu-hal/src/gles/mod.rs
-@@ -301,7 +301,23 @@
+@@ -132,8 +132,12 @@
+ 
+ //Note: we can support more samplers if not every one of them is used at a time,
+ // but it probably doesn't worth it.
+-const MAX_TEXTURE_SLOTS: usize = 16;
+-const MAX_SAMPLERS: usize = 16;
++// Unbound: 32 texture units, what desktop OpenGL contexts give each stage (the device reports
++// the context's own count up to this, `Adapter::expose`), and what the command encoder's 32-bit
++// dirty-texture masks hold; before: 16.
++const MAX_TEXTURE_SLOTS: usize = 32;
++// Unbound: a sampler object is bound to a texture unit, so as many as there are units; before: 16.
++const MAX_SAMPLERS: usize = 32;
+ const MAX_VERTEX_ATTRIBUTES: usize = 16;
+ const ZERO_BUFFER_SIZE: usize = 256 << 10;
+ const MAX_IMMEDIATES: usize = 64;
+@@ -301,7 +305,23 @@
      /// Cached here so it doesn't need to be queried every time texture format capabilities are requested.
      /// (this has been shown to be a significant enough overhead)
      max_msaa_samples: i32,
@@ -619,7 +663,7 @@
  
  impl fmt::Debug for AdapterShared {
      fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-@@ -316,6 +332,11 @@
+@@ -316,6 +336,11 @@
              next_shader_id,
              program_cache: _,
              es,
@@ -631,7 +675,7 @@
              max_msaa_samples,
          } = self;
          f.debug_struct("AdapterShared")
-@@ -519,6 +540,8 @@
+@@ -519,6 +544,8 @@
              wgt::TextureDimension::D2 => {
                  // HACK: detect a cube map; forces cube compatible textures to be cube textures
                  match (desc.is_cube_compatible(), desc.size.depth_or_array_layers) {
@@ -640,7 +684,7 @@
                      (false, 1) => glow::TEXTURE_2D,
                      (false, _) => glow::TEXTURE_2D_ARRAY,
                      (true, 6) => glow::TEXTURE_CUBE_MAP,
-@@ -530,8 +553,14 @@
+@@ -530,8 +557,14 @@
      }
  
      /// More information can be found in issues #1614 and #1574
@@ -656,7 +700,7 @@
              wgt::TextureViewDimension::D1 => glow::TEXTURE_2D,
              wgt::TextureViewDimension::D2 => glow::TEXTURE_2D,
              wgt::TextureViewDimension::D2Array => glow::TEXTURE_2D_ARRAY,
-@@ -587,6 +616,9 @@
+@@ -587,6 +620,9 @@
      mip_levels: Range<u32>,
      array_layers: Range<u32>,
      format: wgt::TextureFormat,
