@@ -9,6 +9,12 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Pointer angle conversion and lazy reads measured by defaultstate on 6000.0.71f1.
+        /// Other releases retain their previous independent angle values.</summary>
+        internal static bool PointerAnglesMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// <summary>JSON string transfer measured by defaultstate on 6000.0.71f1.
+        /// Other releases retain their previous embedded-null handling.</summary>
+        internal static bool JsonStringTransferMeasured => Release == (6000, 0, 71, 'f', 1);
         /// <summary>Uncreated object wrappers measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous unmeasured wrapper state.</summary>
         internal static bool UncreatedObjectWrappersMeasured => Release == (6000, 0, 71, 'f', 1);

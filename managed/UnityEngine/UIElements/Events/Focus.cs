@@ -471,7 +471,7 @@ namespace UnityEngine.UIElements
             for (int i = 0; i < count; i++)
             {
                 var child = ve.hierarchy[i];
-                bool slot = child.parent != null && child == child.parent.contentContainer;
+                bool slot = child.hierarchy.parent != null && child == child.hierarchy.parent.contentContainer;
                 if (child.isCompositeRoot || slot)
                 {
                     var record = new Record { AutoIndex = index++, Focusable = child, IsSlot = slot, Scope = new List<Record>() };

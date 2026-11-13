@@ -7309,6 +7309,12 @@
       "type": "UnityEngine.UIElements.DropdownMenuSeparator"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.DynamicAtlasSettings"
+    },
+    {
       "category": "struct",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",

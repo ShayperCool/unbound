@@ -275,7 +275,7 @@ namespace Unbound.UIElements
                 {
                     if (index < complex.selectors.Length - 1 && complex.selectors[index + 1].previousRelationship == StyleSelectorRelationship.Descendent)
                     {
-                        current = current.parent;
+                        current = current.hierarchy.parent;
                         continue;
                     }
                     if (retryElement != null)
@@ -288,11 +288,11 @@ namespace Unbound.UIElements
                 }
                 if (index < complex.selectors.Length - 1 && complex.selectors[index + 1].previousRelationship == StyleSelectorRelationship.Descendent)
                 {
-                    retryElement = current.parent;
+                    retryElement = current.hierarchy.parent;
                     retryIndex = index;
                 }
                 if (--index < 0) return true;
-                current = current.parent;
+                current = current.hierarchy.parent;
             }
             return false;
         }

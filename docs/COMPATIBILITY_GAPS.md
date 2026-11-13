@@ -361,11 +361,11 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
 
 - [x] Q403 default-state capture and comparison: [defaultstate](../tests/projects/defaultstate/README.md)
       covers 1,032 constructible matching types. Q411's shared mechanism resolves 1,196 rows;
-      its Core slice resolves another 156, Physics2D resolves 157, Physics resolves 89 and Audio resolves 185. ParticleSystem resolves 337 more and Editor resolves 132. A separate integrated lighting fix resolves one more. The 12,180-row reference preserves all original
+      its Core slice resolves another 156, Physics2D resolves 157, Physics resolves 89 and Audio resolves 185. ParticleSystem resolves 337 more, Editor resolves 132 and UIElements resolves 61 more across its values and shared JSON string transfer. A separate integrated lighting fix resolves one more. The 12,281-row reference preserves all original
       rows and adds independently repeated message, constructor, requirement, collision and arithmetic
-      controls. The comparison has 11,644 exact rows, 536 differing reference rows, 30 extra
-      implementation rows and the unchanged 50 variable observations inside 568 exact,
-      reasoned migration entries. Editor retains 87 rows, ParticleSystem ten, CoreModule 115, Physics2D five, Physics five and Audio four; the README lists every module
+      controls. The comparison has 11,808 exact rows, 473 differing reference rows, 25 extra
+      implementation rows and the unchanged 50 variable observations inside 500 exact,
+      reasoned migration entries. UIElements retains 100 rows, Editor 87, ParticleSystem ten, CoreModule 112, Physics2D five, Physics five and Audio four; the README lists every module
       and the unresolved payload, rendering and import contexts. Static constructor comparison
       remains separate, including its queued rendering split-index default.
 - [ ] Q411 other-release initialization: constructor, factory eligibility and refresh-rate
@@ -386,6 +386,10 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       measured mechanism. Other releases keep their previous wrapper and setting paths.
       Window scalar initialization, default collection Count and nullable paths reuse
       the initialization mechanism; other releases retain their earlier fallbacks.
+      Pointer conversion caches and JSON embedded-NUL transfer select the measured release;
+      other releases retain their previous independent angles and string handling. Text rendering
+      callbacks, font geometry, UXML schema metadata and absolute event registration identifiers
+      remain queued. Atlas configurations retain independent mutable and serialized storage.
 
 - [x] `Stubs.Ignored(member)` (warn once, like `NotImplemented`) for knowingly ignored members,
       and an `[EditorFaithful("why")]` marker for real no-ops; every hand-written empty body,

@@ -10,10 +10,20 @@ namespace UnityEngine.UIElements
         void SetValueWithoutNotify(T newValue);
     }
 
+    internal partial interface ITextElement
+    {
+        string text { get; set; }
+    }
+
+    public partial interface ITextElementExperimentalFeatures : IExperimentalFeatures
+    {
+        void SetRenderedText(string renderedText);
+    }
+
     /// <summary>An element that shows text: measured and drawn with the TextCore text engine. Made
     /// selectable (and editable, inside text fields) it keeps a cursor and selection and handles
     /// pointer and keyboard editing as Unity's text manipulators do.</summary>
-    public partial class TextElement : BindableElement, INotifyValueChanged<string>, ITextEdition, ITextSelection
+    public partial class TextElement : BindableElement, INotifyValueChanged<string>, ITextEdition, ITextSelection, ITextElement, ITextElementExperimentalFeatures
     {
         public static readonly string ussClassName = "unity-text-element";
         public static readonly string selectableUssClassName = ussClassName + "__selectable";
@@ -212,6 +222,10 @@ namespace UnityEngine.UIElements
                 return m_RenderedText ?? string.Empty;
             }
         }
+
+        public new ITextElementExperimentalFeatures experimental => this;
+
+        void ITextElementExperimentalFeatures.SetRenderedText(string renderedText) => m_RenderedText = renderedText;
 
         internal string originalText => m_OriginalText;
 

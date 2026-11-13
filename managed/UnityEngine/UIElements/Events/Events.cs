@@ -190,10 +190,67 @@ namespace UnityEngine.UIElements
         public int clickCount { get; protected set; }
         public float pressure { get; protected set; }
         public float tangentialPressure { get; protected set; }
-        public float altitudeAngle { get; protected set; }
-        public float azimuthAngle { get; protected set; }
+        float m_AltitudeAngle, m_AzimuthAngle;
+        Vector2 m_Tilt;
+        bool m_AltitudeNeedsConversion = true, m_AzimuthNeedsConversion = true, m_TiltNeedsConversion = true;
+        // Radian turn constants used by the conversions recorded in defaultstate, 6000.0.71f1.
+        const float QuarterTurn = Mathf.PI / 2f, ThreeQuarterTurn = Mathf.PI * 1.5f, FullTurn = Mathf.PI * 2f;
+
+        public float altitudeAngle
+        {
+            get
+            {
+                if (Unbound.Runtime.Compat.PointerAnglesMeasured && m_AltitudeNeedsConversion)
+                {
+                    var value = tilt;
+                    m_AltitudeAngle = QuarterTurn - Mathf.Acos(Mathf.Cos(value.x) * Mathf.Cos(value.y));
+                    m_AltitudeNeedsConversion = false;
+                }
+                return m_AltitudeAngle;
+            }
+            protected set { m_AltitudeAngle = value; m_AltitudeNeedsConversion = true; }
+        }
+        public float azimuthAngle
+        {
+            get
+            {
+                if (Unbound.Runtime.Compat.PointerAnglesMeasured && m_AzimuthNeedsConversion)
+                {
+                    var value = tilt;
+                    var result = 0f;
+                    if (value.x != 0f)
+                    {
+                        result = QuarterTurn - Mathf.Atan2(-Mathf.Cos(value.x) * Mathf.Sin(value.y), Mathf.Cos(value.y) * Mathf.Sin(value.x));
+                        if (result < 0f) result += FullTurn;
+                        result = result >= QuarterTurn ? result - QuarterTurn : result + ThreeQuarterTurn;
+                    }
+                    m_AzimuthAngle = result;
+                    m_AzimuthNeedsConversion = false;
+                }
+                return m_AzimuthAngle;
+            }
+            protected set { m_AzimuthAngle = value; m_AzimuthNeedsConversion = true; }
+        }
         public float twist { get; protected set; }
-        public Vector2 tilt { get; protected set; }
+        public Vector2 tilt
+        {
+            get
+            {
+                if (Unbound.Runtime.Compat.PointerAnglesMeasured && m_TiltNeedsConversion && pointerType == PointerType.touch
+                    && Application.platform != RuntimePlatform.WindowsEditor && Application.platform != RuntimePlatform.WindowsPlayer)
+                {
+                    var cosine = Mathf.Cos(m_AzimuthAngle);
+                    var sine = Mathf.Sin(m_AzimuthAngle);
+                    // Keep the multiply/divide chain at double precision until its float argument
+                    // (defaultstate touch conversion controls, 6000.0.71f1).
+                    m_Tilt = new Vector2(Mathf.Atan((float)((double)cosine * Mathf.Cos(m_AltitudeAngle) / sine)),
+                        Mathf.Atan((float)((double)cosine * Mathf.Sin(m_AltitudeAngle) / sine)));
+                    m_TiltNeedsConversion = false;
+                }
+                return m_Tilt;
+            }
+            protected set { m_Tilt = value; m_TiltNeedsConversion = true; }
+        }
         public PenStatus penStatus { get; protected set; }
         public Vector2 radius { get; protected set; }
         public Vector2 radiusVariance { get; protected set; }

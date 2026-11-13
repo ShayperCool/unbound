@@ -35,6 +35,23 @@ namespace UnityEngine.UIElements
         /// <summary>The panel's text settings (null: the default panel text settings).</summary>
         [global::UnityEngine.@SerializeField] public PanelTextSettings textSettings;
 
+        [SerializeField, HideInInspector] DynamicAtlasSettings m_DynamicAtlasSettings = Unbound.Runtime.Compat.DefaultConstructorStateMeasured
+            ? DynamicAtlasSettings.defaults : null;
+
+        public DynamicAtlasSettings dynamicAtlasSettings
+        {
+            get
+            {
+                if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured) return m_DynamicAtlasSettings;
+                Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.dynamicAtlasSettings"); return null;
+            }
+            set
+            {
+                if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured) m_DynamicAtlasSettings = value;
+                else Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PanelSettings.dynamicAtlasSettings");
+            }
+        }
+
         BaseRuntimePanel m_Panel;
         ThemeStyleSheet m_OldThemeUss;
         Rect m_TargetRect;

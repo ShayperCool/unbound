@@ -324,7 +324,7 @@ namespace UnityEngine.UIElements
             get
             {
                 bool ancestorsFocusable = true;
-                for (var p = hierarchy.parent; p != null; p = p.parent)
+                for (var p = hierarchy.parent; p != null; p = p.hierarchy.parent)
                 {
                     if (p.isCompositeRoot)
                     {
@@ -450,7 +450,7 @@ namespace UnityEngine.UIElements
 
         public Hierarchy hierarchy { get; }
 
-        public VisualElement parent => m_PhysicalParent;
+        public VisualElement parent => m_LogicalParent;
 
         public virtual VisualElement contentContainer => this;
 

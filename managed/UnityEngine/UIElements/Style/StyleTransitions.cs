@@ -220,7 +220,7 @@ namespace Unbound.UIElements
             if (from is Length a && to is Length b)
             {
                 bool vertical = p.name.Contains("height") || p.id == StylePropertyId.Top || p.id == StylePropertyId.Bottom;
-                float size = vertical ? owner.parent?.resolvedStyle.height ?? 0 : owner.parent?.resolvedStyle.width ?? 0;
+                float size = vertical ? owner.hierarchy.parent?.resolvedStyle.height ?? 0 : owner.hierarchy.parent?.resolvedStyle.width ?? 0;
                 if (!ConvertLength(ref a, b, size)) return false;
                 from = a;
             }

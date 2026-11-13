@@ -123,6 +123,7 @@ namespace UnityEngine.UIElements
         public MinMaxSlider(string label, float minValue = 0f, float maxValue = 10f, float minLimit = float.MinValue, float maxLimit = float.MaxValue) : base(label, null)
         {
             AddToClassList(ussClassName);
+            if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured) pickingMode = PickingMode.Ignore;
             labelElement.AddToClassList(labelUssClassName);
             visualInput.AddToClassList(inputUssClassName);
             visualInput.pickingMode = PickingMode.Position;

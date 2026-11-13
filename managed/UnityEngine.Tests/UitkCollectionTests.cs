@@ -193,8 +193,10 @@ namespace UnityEngine.Tests
             Layout(panel);
             var foldout = list.Q<Foldout>(BaseListView.foldoutHeaderUssClassName);
             Assert.Equal("Things", foldout.text);
-            Assert.Same(foldout.contentContainer, list.Q<ScrollView>().parent);
+            Assert.Same(foldout, list.Q<ScrollView>().parent);
+            Assert.Same(foldout.contentContainer, list.Q<ScrollView>().hierarchy.parent);
             Assert.Same(foldout.contentContainer, list.Q(BaseListView.footerUssClassName).parent);
+            Assert.Same(foldout.contentContainer, list.Q(BaseListView.footerUssClassName).hierarchy.parent);
             var size = list.Q<TextField>(BaseListView.arraySizeFieldUssClassName);
             Assert.Equal("2", size.value);
             Assert.True(size.ClassListContains(BaseListView.arraySizeFieldWithHeaderUssClassName));

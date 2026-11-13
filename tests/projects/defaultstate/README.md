@@ -110,10 +110,11 @@ for 11,517 rows at that stage. Physics2D adds 17 controls and Physics adds 31,
 for 11,565 rows before Audio. Audio adds 25 controls, giving 11,590 rows before ParticleSystem.
 The ParticleSystem slice adds 362 controls. Declaration slices add five inventory rows.
 The Editor slice adds 223 controls while preserving all 11,957 previous rows,
-giving 12,180 current rows. The comparison now has 11,644 exact rows, 536 differing
-reference rows, zero missing rows and 30 extra implementation rows. Its 568 queue
-entries retain the same 50 variable rows; two happen to equal the implementation
-snapshot. Variable rows remain unresolved comparisons.
+giving 12,180 rows before UIElements. UIElements adds 95 controls and six atlas-settings
+rows, preserving all earlier raw rows, for 12,281 current rows. The comparison now
+has 11,808 exact rows, 473 differing reference rows, zero missing rows and 25 extra
+implementation rows. Its 500 queue entries retain the same 50 variable rows; two
+happen to equal the implementation snapshot. Variable rows remain unresolved comparisons.
 
 | Core cause | Resolved rows | Controls and rule |
 | --- | ---: | --- |
@@ -345,20 +346,67 @@ event interests; view hierarchies; preview stages; and code-editor provider disc
 Base constructor controls rule out borrowing one set of scalar defaults for those
 contexts. The exact values and per-row follow-ups remain in the queue.
 
+## UIElements constructor and data controls
+
+The UIElements slice adds 95 independent controls and the six raw rows for
+DynamicAtlasSettings. Both NVIDIA Editor repeats agree, and the engine matches all
+101 rows. The slice resolves 59 UIElements entries and two record-string entries
+in Event and jvalue, reducing its branch baseline from 561 to 500 queue entries.
+
+| Cause | Controls and measured rule |
+| --- | --- |
+| Pointer conversion | Unknown and pen pointers derive altitude and azimuth from tilt. Touch pointers lazily derive tilt from angles. Setter/read order, pooled reset, public Touch/Pen factories, copied events, NaN and nine additional angle pairs exercise conversion caches and float argument rounding. |
+| UXML descriptions | Attribute descriptions start Optional. Color descriptions start opaque black and use Color's RGBA string representation; writes preserve independent channels and usage values. |
+| Text interfaces | TextElement, Label, Button and RepeatButton return themselves as experimental features. Rendered-text overrides affect the existing rendering value while logical text stays independent; a later text write resets the rendered value. |
+| Containers | IMGUIContainer retains its callback without invoking it during construction, defaults to Editor context and accepts context/focus changes. RadioButtonGroup separates generated choices from manually added children. MinMaxSlider starts with Ignore picking. |
+| Atlas settings | A plain DynamicAtlasSettings has zero storage; defaults creates a fresh 64/4096/64 configuration with all five measured filters. Setters retain raw integers, flags and delegates. Four private marked fields round-trip through JSON, while delegates stay excluded. Panels own distinct initial settings and preserve assigned references or null. |
+| Hierarchy | Public Add/Insert track logical parents, while hierarchy.parent retains physical containment. Reparent, direct hierarchy insertion and removal change the relationships. ListView's foldout holds its scroll view logically and physically through its content container; the footer's logical parent is that container, both before and after panel attachment. |
+| JSON strings | JsonUtility and EditorJsonUtility stop a string at its first embedded NUL on write and read. Overwrite starts from different text; literal backslash-zero and Unicode remain distinct. This also fixes the recorder's empty-character strings without changing character values or its formatter. |
+
+The [pointer API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.PointerEventBase_1.html)
+describes radians and pen/touch inputs. The cache invalidation and intermediate
+rounding above are release observations, not an added normalization guarantee.
+The [visual tree Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/UIE-VisualTree.html)
+and [parent API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.VisualElement-parent.html)
+describe parent-child relationships. Controls distinguish logical ownership from
+physical placement, including after reparenting. Style matching, percentage lengths
+and focus traversal continue through physical parents.
+[JsonUtility](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/JsonUtility.html)
+supports serializable classes and structs; these string controls use wrapped fields
+rather than unsupported root strings. Embedded-NUL transfer is a measured detail.
+No persistent cache calls this JSON path; Undo and CopySerialized keep their state
+in memory. Generated declarations use format 9 after implementing the added atlas
+class and text interfaces.
+
+Pointer angle and JSON string transfer select measured Compat mechanisms for
+6000.0.71f1. Other releases keep their previous independent pointer values and
+embedded-NUL handling, which remain unmeasured. Constructor defaults reuse the
+existing initialization mechanism.
+
+UIElements retains 100 entries. Forty-two are timestamps and 41 are registration
+identifiers. Relational controls establish stable identifiers within a type and
+different identifiers across types; the API does not promise their absolute
+numbers. The 50 existing variable policies remain unchanged. The remaining
+entries cover font-dependent cursor/selection geometry, real Image and IMGUI draw
+callbacks, UXML schema metadata and trait initialization, TextCore fallback assets,
+and MonoBehaviour factory/attribute state. Constructor and write controls rule out
+fixing these through one font-height constant, empty draw callbacks or sorting
+all attribute lists. Every remaining raw value stays in the queue.
+
 | Release module | Queued rows |
 | --- | ---: |
+| UnityEngine.CoreModule | 112 |
+| UnityEngine.UIElementsModule | 100 |
 | UnityEditor.CoreModule | 87 |
-| UnityEngine.UIElementsModule | 159 |
-| UnityEngine.CoreModule | 115 |
-| UnityEngine.IMGUIModule | 29 |
+| UnityEngine.IMGUIModule | 28 |
 | UnityEngine.GridModule | 26 |
 | UnityEngine.AssetBundleModule | 24 |
 | UnityEngine.AnimationModule | 20 |
 | UnityEngine.TerrainModule | 13 |
 | UnityEngine.ParticleSystemModule | 10 |
-| UnityEngine.TextCoreTextEngineModule | 10 |
 | UnityEngine.TilemapModule | 10 |
 | UnityEngine.VideoModule | 9 |
+| UnityEngine.TextCoreTextEngineModule | 8 |
 | UnityEngine.GameCenterModule | 7 |
 | UnityEngine.SpriteShapeModule | 7 |
 | UnityEngine.UnityWebRequestModule | 6 |
@@ -370,8 +418,6 @@ contexts. The exact values and per-row follow-ups remain in the queue.
 | UnityEngine.UIModule | 3 |
 | UnityEngine.UnityWebRequestTextureModule | 3 |
 | UnityEngine.TerrainPhysicsModule | 2 |
-| UnityEngine.TextCoreFontEngineModule | 2 |
-| UnityEngine.AndroidJNIModule | 1 |
 | UnityEngine.VehiclesModule | 1 |
 
 The separate static scan compares direct literal field stores in straight-line

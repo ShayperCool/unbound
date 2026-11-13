@@ -1,3 +1,4 @@
+using UnityEngine.UIElements;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -52,6 +53,7 @@ public sealed class DefaultStateProbe : MonoBehaviour
             ParticleModuleControls();
             PhysicsPayloadControls();
             EditorImporterControls();
+            UiControls();
             Emit("complete","value","1"); output.Dispose(); output=null;
             EditorApplication.Exit(0);
         }
@@ -515,6 +517,232 @@ public sealed class DefaultStateProbe : MonoBehaviour
             }
         }
         CoreValue("Particles/defaultIsolated", default(ParticleSystem.MainModule).startSpeed);
+    }
+    static void UiControls()
+    {
+        foreach (var descriptor in new UnityEngine.UIElements.UxmlAttributeDescription[] {
+            new UnityEngine.UIElements.UxmlBoolAttributeDescription(), new UnityEngine.UIElements.UxmlColorAttributeDescription(),
+            new UnityEngine.UIElements.UxmlDoubleAttributeDescription(), new UnityEngine.UIElements.UxmlFloatAttributeDescription(),
+            new UnityEngine.UIElements.UxmlHash128AttributeDescription(), new UnityEngine.UIElements.UxmlIntAttributeDescription(),
+            new UnityEngine.UIElements.UxmlLongAttributeDescription(), new UnityEngine.UIElements.UxmlStringAttributeDescription(),
+            new UnityEngine.UIElements.UxmlUnsignedIntAttributeDescription(), new UnityEngine.UIElements.UxmlUnsignedLongAttributeDescription() })
+        {
+            var initial = descriptor.use;
+            descriptor.use = UnityEngine.UIElements.UxmlAttributeDescription.Use.Required;
+            var changed = descriptor.use;
+            descriptor.use = UnityEngine.UIElements.UxmlAttributeDescription.Use.None;
+            CoreValue("UI/attribute/" + descriptor.GetType().Name + "/use", new object[] { initial, changed, descriptor.use });
+        }
+        var color = new UnityEngine.UIElements.UxmlColorAttributeDescription();
+        CoreValue("UI/color/default", new object[] { color.defaultValue, color.defaultValueAsString });
+        color.defaultValue = new Color(-0.25f, 0.5f, 1.5f, 0.125f);
+        CoreValue("UI/color/written", new object[] { color.defaultValue, color.defaultValueAsString });
+        var imgui = new UnityEngine.UIElements.IMGUIContainer();
+        CoreValue("UI/imgui/default", new object[] { imgui.focusable, imgui.contextType });
+        imgui.focusable = false; imgui.contextType = UnityEngine.UIElements.ContextType.Player;
+        CoreValue("UI/imgui/written", new object[] { imgui.focusable, imgui.contextType });
+        imgui.Dispose();
+        var slider = new UnityEngine.UIElements.MinMaxSlider();
+        CoreValue("UI/minmax/default", slider.pickingMode);
+        slider.pickingMode = UnityEngine.UIElements.PickingMode.Position;
+        CoreValue("UI/minmax/written", slider.pickingMode);
+        var radio = new UnityEngine.UIElements.RadioButtonGroup();
+        CoreValue("UI/radio/container", new object[] { ReferenceEquals(radio, radio.contentContainer), radio.contentContainer.focusable,
+            radio.contentContainer.name, radio.contentContainer.childCount });
+        foreach (var text in new UnityEngine.UIElements.TextElement[] { new UnityEngine.UIElements.TextElement(),
+            new UnityEngine.UIElements.Label(), new UnityEngine.UIElements.Button(), new UnityEngine.UIElements.RepeatButton() })
+        {
+            text.text = "logical";
+            var field = typeof(UnityEngine.UIElements.TextElement).GetField("m_RenderedText", BindingFlags.Instance | BindingFlags.NonPublic);
+            CoreValue("UI/text/" + text.GetType().Name + "/identity", ReferenceEquals(text, text.experimental));
+            text.experimental.SetRenderedText("painted");
+            CoreValue("UI/text/" + text.GetType().Name + "/override", new object[] { text.text, field.GetValue(text) });
+            text.text = "next";
+            CoreValue("UI/text/" + text.GetType().Name + "/restored", new object[] { text.text, field.GetValue(text) });
+        }
+        UiAtlasControls();
+        UiPointerControls();
+        UiJsonControls();
+        UiAdditionalControls();
+    }
+    static void UiAtlasControls()
+    {
+        var empty = new UnityEngine.UIElements.DynamicAtlasSettings();
+        CoreValue("UI/atlas/new", AtlasValues(empty));
+        var first = UnityEngine.UIElements.DynamicAtlasSettings.defaults;
+        var second = UnityEngine.UIElements.DynamicAtlasSettings.defaults;
+        CoreValue("UI/atlas/defaults", AtlasValues(first));
+        CoreValue("UI/atlas/fresh", ReferenceEquals(first, second));
+        first.minAtlasSize = -2; first.maxAtlasSize = 17; first.maxSubTextureSize = 3;
+        first.activeFilters = (UnityEngine.UIElements.DynamicAtlasFilters)129;
+        first.customFilter = UiAtlasFilter;
+        CoreValue("UI/atlas/written", AtlasValues(first));
+        CoreValue("UI/atlas/isolated", AtlasValues(second));
+        var encoded = JsonUtility.ToJson(first);
+        CoreValue("UI/atlas/serialized", encoded);
+        CoreValue("UI/atlas/restored", AtlasValues(JsonUtility.FromJson<UnityEngine.UIElements.DynamicAtlasSettings>(encoded)));
+        var a = ScriptableObject.CreateInstance<UnityEngine.UIElements.PanelSettings>();
+        var b = ScriptableObject.CreateInstance<UnityEngine.UIElements.PanelSettings>();
+        try
+        {
+            CoreValue("UI/atlas/panelDefault", AtlasValues(a.dynamicAtlasSettings));
+            var saved = a.dynamicAtlasSettings;
+            saved.minAtlasSize = 128;
+            CoreValue("UI/atlas/panelOwnership", new object[] { ReferenceEquals(saved, a.dynamicAtlasSettings),
+                ReferenceEquals(saved, b.dynamicAtlasSettings), a.dynamicAtlasSettings.minAtlasSize, b.dynamicAtlasSettings.minAtlasSize });
+            a.dynamicAtlasSettings = first;
+            CoreValue("UI/atlas/panelAssigned", new object[] { ReferenceEquals(first, a.dynamicAtlasSettings), a.dynamicAtlasSettings.maxAtlasSize });
+            a.dynamicAtlasSettings = null;
+            CoreValue("UI/atlas/panelNull", a.dynamicAtlasSettings == null);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(a); UnityEngine.Object.DestroyImmediate(b); }
+    }
+    static object[] AtlasValues(UnityEngine.UIElements.DynamicAtlasSettings settings)
+        => new object[] { settings.minAtlasSize, settings.maxAtlasSize, settings.maxSubTextureSize, settings.activeFilters, settings.customFilter != null };
+    static bool UiAtlasFilter(Texture2D texture, ref UnityEngine.UIElements.DynamicAtlasFilters flags)
+    { flags = UnityEngine.UIElements.DynamicAtlasFilters.Size; return true; }
+    static void UiPointerControls()
+    {
+        foreach (var pointer in new[] { "unknown", "pen", "touch" })
+        {
+            var e = UnityEngine.UIElements.PointerMoveEvent.GetPooled();
+            SetPointer(e, "pointerType", pointer == "unknown" ? UnityEngine.UIElements.PointerType.unknown : pointer);
+            SetPointer(e, "tilt", new Vector2(0.2f, -0.3f));
+            CoreValue("UI/pointer/" + pointer + "/first", PointerAngles(e));
+            SetPointer(e, "tilt", new Vector2(-0.4f, 0.1f));
+            CoreValue("UI/pointer/" + pointer + "/cached", PointerAngles(e));
+            SetPointer(e, "altitudeAngle", 0.7f); SetPointer(e, "azimuthAngle", 1.2f);
+            CoreValue("UI/pointer/" + pointer + "/anglesWritten", PointerAngles(e));
+            e.Dispose();
+            var reset = UnityEngine.UIElements.PointerMoveEvent.GetPooled();
+            CoreValue("UI/pointer/" + pointer + "/reset", PointerAngles(reset));
+            reset.Dispose();
+        }
+        var a = new UnityEngine.UIElements.PointerMoveEvent();
+        var b = new UnityEngine.UIElements.PointerMoveEvent();
+        var c = new UnityEngine.UIElements.PointerDownEvent();
+        CoreValue("UI/eventIds/relations", new object[] { a.eventTypeId == b.eventTypeId,
+            a.eventTypeId == UnityEngine.UIElements.PointerMoveEvent.TypeId(), a.eventTypeId != c.eventTypeId });
+        a.Dispose(); b.Dispose(); c.Dispose();
+    }
+    static void SetPointer(UnityEngine.UIElements.PointerMoveEvent e, string name, object value)
+        => e.GetType().GetProperty(name).SetValue(e, value, null);
+    static object[] PointerAngles(UnityEngine.UIElements.PointerMoveEvent e)
+        => new object[] { e.altitudeAngle, e.azimuthAngle, e.tilt };
+    [Serializable] sealed class UiJsonText { public string text; public string[] items; }
+    static void UiJsonControls()
+    {
+        var inputs = new[] { "ordinary", "\0", "before\0after", "trailing\0", "literal\\0", "é🤍\u0001" };
+        for (var i = 0; i < inputs.Length; i++)
+        {
+            var data = new UiJsonText { text = inputs[i], items = new[] { inputs[i], "tail" } };
+            CoreValue("UI/json/write/" + i, JsonUtility.ToJson(data));
+            CoreValue("UI/json/editorWrite/" + i, UnityEditor.EditorJsonUtility.ToJson(data));
+        }
+        foreach (var input in new[] { "before\\u0000after", "\\u0000", "literal\\\\0" })
+        {
+            var json = "{\"text\":\"" + input + "\"}";
+            var parsed = JsonUtility.FromJson<UiJsonText>(json);
+            CoreValue("UI/json/read/" + input, parsed.text.Select(c => (int)c).ToArray());
+            parsed.text = "previous"; JsonUtility.FromJsonOverwrite(json, parsed);
+            CoreValue("UI/json/overwrite/" + input, parsed.text.Select(c => (int)c).ToArray());
+        }
+    }
+    sealed class UiContentHost : VisualElement
+    {
+        readonly VisualElement container;
+        public UiContentHost() { container = new VisualElement(); hierarchy.Add(container); }
+        public override VisualElement contentContainer => container;
+    }
+    static void UiListHierarchyControls()
+    {
+        var list = new ListView(new List<string> { "one", "two" }, 20);
+        list.showFoldoutHeader = true; list.showAddRemoveFooter = true;
+        var foldout = list.Q<Foldout>(BaseListView.foldoutHeaderUssClassName);
+        var scroll = list.Q<ScrollView>();
+        var footer = list.Q(BaseListView.footerUssClassName);
+        CoreValue("UI/hierarchy/listUnattached", new[] { ReferenceEquals(scroll.parent, foldout),
+            ReferenceEquals(scroll.hierarchy.parent, foldout.contentContainer),
+            ReferenceEquals(footer.parent, foldout.contentContainer), ReferenceEquals(footer.hierarchy.parent, foldout.contentContainer) });
+        var settings = ScriptableObject.CreateInstance<PanelSettings>();
+        var owner = new GameObject("UiHierarchyPanel"); owner.SetActive(false);
+        try
+        {
+            var document = owner.AddComponent<UIDocument>(); document.panelSettings = settings;
+            owner.SetActive(true); document.rootVisualElement.Add(list);
+            CoreValue("UI/hierarchy/listAttached", new[] { ReferenceEquals(scroll.parent, foldout),
+                ReferenceEquals(scroll.hierarchy.parent, foldout.contentContainer),
+                ReferenceEquals(footer.parent, foldout.contentContainer), ReferenceEquals(footer.hierarchy.parent, foldout.contentContainer) });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(owner); UnityEngine.Object.DestroyImmediate(settings); }
+    }
+    static void UiHierarchyControls()
+    {
+        var host = new UiContentHost(); var leaf = new VisualElement(); host.Add(leaf);
+        CoreValue("UI/hierarchy/add", new[] { ReferenceEquals(leaf.parent, host),
+            ReferenceEquals(leaf.hierarchy.parent, host.contentContainer), host.childCount == 1 });
+        var inserted = new VisualElement(); host.Insert(0, inserted);
+        CoreValue("UI/hierarchy/insert", new[] { ReferenceEquals(inserted.parent, host),
+            ReferenceEquals(inserted.hierarchy.parent, host.contentContainer), ReferenceEquals(host[0], inserted) });
+        var direct = new VisualElement(); host.hierarchy.Add(direct);
+        CoreValue("UI/hierarchy/direct", new[] { ReferenceEquals(direct.parent, host), ReferenceEquals(direct.hierarchy.parent, host) });
+        var other = new UiContentHost(); other.Add(leaf);
+        CoreValue("UI/hierarchy/reparent", new[] { ReferenceEquals(leaf.parent, other),
+            ReferenceEquals(leaf.hierarchy.parent, other.contentContainer), host.childCount == 1 });
+        leaf.RemoveFromHierarchy();
+        CoreValue("UI/hierarchy/remove", new[] { leaf.parent == null, leaf.hierarchy.parent == null, other.childCount == 0 });
+    }
+    static void UiPointerMatrixControls()
+    {
+        int index = 0;
+        foreach (var pair in new[] { new Vector2(.7f,1.2f), new Vector2(-.4f,.1f), new Vector2(1,0),
+            new Vector2(0,1), new Vector2(Mathf.PI/2,Mathf.PI/2), new Vector2(.1f,-1.7f),
+            new Vector2(2.3f,3.7f), new Vector2(-2.7f,-.9f), new Vector2(.001f,.001f) })
+        {
+            var e = new PointerMoveEvent();
+            SetPointer(e,"pointerType",UnityEngine.UIElements.PointerType.touch);
+            SetPointer(e,"altitudeAngle",pair.x); SetPointer(e,"azimuthAngle",pair.y);
+            CoreValue("UI/pointer/matrix/" + index++, PointerAngles(e));
+            e.Dispose();
+        }
+    }
+    static void UiAdditionalControls()
+    {
+        UiHierarchyControls();
+        UiListHierarchyControls();
+        UiPointerMatrixControls();
+        var touch = new Touch { fingerId = 0, phase = TouchPhase.Moved, altitudeAngle = 0.7f, azimuthAngle = 1.2f,
+            position = new Vector2(3, 4), pressure = 1f, maximumPossiblePressure = 1f };
+        var fromTouch = UnityEngine.UIElements.PointerMoveEvent.GetPooled(touch);
+        try
+        {
+            CoreValue("UI/pointer/fromTouch", PointerAngles(fromTouch));
+            var copy = UnityEngine.UIElements.PointerMoveEvent.GetPooled((UnityEngine.UIElements.IPointerEvent)fromTouch);
+            try { CoreValue("UI/pointer/fromTouchCopy", PointerAngles(copy)); }
+            finally { copy.Dispose(); }
+        }
+        finally { fromTouch.Dispose(); }
+        var pen = new PenData { tilt = new Vector2(0.2f, -0.3f), pressure = 0.75f };
+        var fromPen = UnityEngine.UIElements.PointerMoveEvent.GetPooled(pen);
+        try { CoreValue("UI/pointer/fromPen", PointerAngles(fromPen)); }
+        finally { fromPen.Dispose(); }
+        var calls = 0; Action action = () => calls++;
+        var container = new UnityEngine.UIElements.IMGUIContainer(action);
+        CoreValue("UI/imgui/actionConstructor", new object[] { container.focusable, container.contextType,
+            ReferenceEquals(action, container.onGUIHandler), calls });
+        container.onGUIHandler = null;
+        CoreValue("UI/imgui/actionCleared", container.onGUIHandler == null);
+        container.Dispose();
+        var radio = new UnityEngine.UIElements.RadioButtonGroup("group", new List<string> { "a", "b" });
+        var manual = new UnityEngine.UIElements.RadioButton(); radio.Add(manual);
+        CoreValue("UI/radio/choiceAndManual", new object[] { radio.contentContainer.childCount,
+            radio.Query<UnityEngine.UIElements.RadioButton>().ToList().Count, ReferenceEquals(manual.parent, radio.contentContainer), radio.value });
+        radio.choices = new[] { "c" };
+        CoreValue("UI/radio/replacedChoices", new object[] { radio.contentContainer.childCount,
+            radio.Query<UnityEngine.UIElements.RadioButton>().ToList().Count, ReferenceEquals(manual.parent, radio.contentContainer), radio.value });
+        var data = new UiJsonText { text = "previous" };
+        UnityEditor.EditorJsonUtility.FromJsonOverwrite("{\"text\":\"before\\u0000after\"}", data);
+        CoreValue("UI/json/editorOverwrite", data.text.Select(c => (int)c).ToArray());
     }
     static void EditorImporterControls()
     {

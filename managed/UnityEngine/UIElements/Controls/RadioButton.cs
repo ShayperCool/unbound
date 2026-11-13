@@ -196,7 +196,7 @@ namespace UnityEngine.UIElements
         public new static readonly string ussClassName = "unity-radio-button-group";
         public static readonly string containerUssClassName = ussClassName + "__container";
 
-        readonly VisualElement m_Container;
+        readonly VisualElement m_Container, m_ChoicesContainer;
         readonly List<RadioButton> m_CreatedOptions = new List<RadioButton>();
         List<string> m_Choices = new List<string>();
         bool m_Rebuilding;
@@ -218,7 +218,7 @@ namespace UnityEngine.UIElements
                     {
                         var option = new RadioButton { text = m_Choices[i] };
                         m_CreatedOptions.Add(option);
-                        m_Container.Insert(i, option);
+                        m_ChoicesContainer.Insert(i, option);
                     }
                 }
                 finally
@@ -236,12 +236,36 @@ namespace UnityEngine.UIElements
         public RadioButtonGroup(string label, List<string> radioButtonChoices = null) : base(label, null)
         {
             AddToClassList(ussClassName);
-            m_Container = visualInput;
-            m_Container.AddToClassList(containerUssClassName);
-            m_Container.elementAdded += OnElementAdded;
-            m_Container.elementRemoved += OnElementRemoved;
+            if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured)
+            {
+                m_ChoicesContainer = CreateOptionsContainer("choicesContentContainer");
+                m_Container = CreateOptionsContainer("contentContainer");
+                visualInput.Add(m_ChoicesContainer);
+                visualInput.Add(m_Container);
+                visualInput.focusable = false;
+                delegatesFocus = true;
+            }
+            else
+            {
+                m_ChoicesContainer = m_Container = visualInput;
+                ConfigureOptionsContainer(m_Container);
+            }
             SetValueWithoutNotify(-1);
             choices = radioButtonChoices;
+        }
+
+        VisualElement CreateOptionsContainer(string name)
+        {
+            var container = new VisualElement { name = name };
+            ConfigureOptionsContainer(container);
+            return container;
+        }
+
+        void ConfigureOptionsContainer(VisualElement container)
+        {
+            container.AddToClassList(containerUssClassName);
+            container.elementAdded += OnElementAdded;
+            container.elementRemoved += OnElementRemoved;
         }
 
         public override void SetValueWithoutNotify(int newValue)

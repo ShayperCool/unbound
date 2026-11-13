@@ -97,7 +97,54 @@ namespace UnityEngine.UIElements
 
     public partial class IMGUIContainer : VisualElement, IDisposable
     {
-        public IMGUIContainer() { isIMGUIContainer = true; }
+        Action m_OnGUIHandler;
+        ContextType m_ContextType;
+
+        public IMGUIContainer() { InitializeContainer(); }
+        public IMGUIContainer(Action onGUIHandler)
+        {
+            if (!Unbound.Runtime.Compat.DefaultConstructorStateMeasured)
+            { Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.ctor"); return; }
+            InitializeContainer();
+            m_OnGUIHandler = onGUIHandler;
+        }
+
+        void InitializeContainer()
+        {
+            isIMGUIContainer = true;
+            if (!Unbound.Runtime.Compat.DefaultConstructorStateMeasured) return;
+            focusable = true;
+            m_ContextType = ContextType.Editor;
+        }
+
+        public Action onGUIHandler
+        {
+            get
+            {
+                if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured) return m_OnGUIHandler;
+                Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.onGUIHandler"); return null;
+            }
+            set
+            {
+                if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured) m_OnGUIHandler = value;
+                else Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.onGUIHandler");
+            }
+        }
+
+        [Unity.Properties.CreateProperty]
+        public ContextType contextType
+        {
+            get
+            {
+                if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured) return m_ContextType;
+                Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.contextType"); return default;
+            }
+            set
+            {
+                if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured) m_ContextType = value;
+                else Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.contextType");
+            }
+        }
         [Unbound.EditorFaithful("this container keeps no IMGUI state to release")]
         public void Dispose() { }
     }

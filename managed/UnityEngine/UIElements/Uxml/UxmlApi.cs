@@ -139,7 +139,10 @@ namespace UnityEngine.UIElements
     {
         protected const string xmlSchemaNamespace = "http://www.w3.org/2001/XMLSchema";
 
-        protected UxmlAttributeDescription() { }
+        protected UxmlAttributeDescription()
+        {
+            if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured) use = Use.Optional;
+        }
 
         public string name { get; set; }
 
@@ -342,11 +345,13 @@ namespace UnityEngine.UIElements
     {
         public UxmlColorAttributeDescription()
         {
+            if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured) defaultValue = Color.black;
             type = "string";
             typeNamespace = xmlSchemaNamespace;
         }
 
-        public override string defaultValueAsString => "#" + ColorUtility.ToHtmlStringRGBA(defaultValue);
+        public override string defaultValueAsString => Unbound.Runtime.Compat.DefaultConstructorStateMeasured
+            ? defaultValue.ToString() : "#" + ColorUtility.ToHtmlStringRGBA(defaultValue);
 
         public override Color GetValueFromBag(IUxmlAttributes bag, CreationContext cc) => GetValueFromBag(bag, cc, Read, defaultValue);
 

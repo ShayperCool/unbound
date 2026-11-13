@@ -29,7 +29,7 @@ namespace Unbound.ApiTools;
 public static class StubGenerator
 {
     /// <summary>Bump when the output for the same inputs would differ.</summary>
-    public const string FormatVersion = "unbound-stubs-8";
+    public const string FormatVersion = "unbound-stubs-9";
 
     /// <param name="implSourceDir">The implementation's sources (<c>managed/UnityEngine</c>): the
     /// generator reads which hand-written types are partial and declare constructors.</param>

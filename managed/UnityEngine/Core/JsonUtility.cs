@@ -125,6 +125,13 @@ namespace UnityEngine
             }
         }
 
+        static string TransferString(string value)
+        {
+            if (value == null || !Compat.JsonStringTransferMeasured) return value;
+            var end = value.IndexOf('\0');
+            return end < 0 ? value : value.Substring(0, end);
+        }
+
         static bool IsObjectType(Type type) =>
             !type.IsPrimitive && type != typeof(string) && !type.IsEnum && !type.IsArray
             && !(type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>));
@@ -420,8 +427,10 @@ namespace UnityEngine
             void WriteString(string s)
             {
                 m_Out.Append('"');
+                var terminateAtNull = Compat.JsonStringTransferMeasured;
                 foreach (var ch in s)
                 {
+                    if (terminateAtNull && ch == '\0') break;
                     switch (ch)
                     {
                         case '"': m_Out.Append("\\\""); break;
@@ -570,7 +579,7 @@ namespace UnityEngine
                     case Shape.Char: return (char)(int)node.Number;
                     case Shape.Float: return (float)node.Number;
                     case Shape.Double: return node.Number;
-                    case Shape.String: return node.Kind == JsonKind.String ? node.Text : node.Kind == JsonKind.Null ? "" : node.Text;
+                    case Shape.String: return TransferString(node.Kind == JsonKind.String ? node.Text : node.Kind == JsonKind.Null ? "" : node.Text);
                     case Shape.Enum: return Enum.ToObject(type, node.Integer);
                     case Shape.LazyReference:
                     {
