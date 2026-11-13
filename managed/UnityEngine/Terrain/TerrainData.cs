@@ -607,6 +607,7 @@ namespace UnityEngine
             {
                 m_DetailPrototypes = value != null ? (DetailPrototype[])value.Clone() : new DetailPrototype[0];
                 if (m_DetailLayers.Length > m_DetailPrototypes.Length) Array.Resize(ref m_DetailLayers, m_DetailPrototypes.Length);
+                RemovePatchLayers(-1, m_DetailPrototypes.Length);
                 m_DetailsVersion++;
             }
         }
@@ -622,6 +623,7 @@ namespace UnityEngine
                 layers.RemoveAt(index);
                 m_DetailLayers = layers.ToArray();
             }
+            RemovePatchLayers(index);
             m_DetailsVersion++;
         }
 
@@ -655,6 +657,7 @@ namespace UnityEngine
             m_DetailResolutionPerPatch = resolutionPerPatch;
             // A new resolution starts the layers empty.
             m_DetailLayers = new byte[m_DetailPrototypes.Length][];
+            ResetPatchLayers();
             m_DetailsVersion++;
         }
 

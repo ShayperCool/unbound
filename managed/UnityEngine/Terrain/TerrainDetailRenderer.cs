@@ -223,8 +223,8 @@ namespace UnityEngine
             var prototypes = data.detailPrototypes;
             if (prototypes.Length == 0 || data.detailResolution == 0) return;
             var rects = BuildDetailAtlas(prototypes, out var white);
-            var size = data.size;
             int patches = data.detailPatchCount;
+            bool legacy = QualitySettings.useLegacyDetailDistribution;
             var layers = new TerrainData.DetailLayerSetup[prototypes.Length];
             for (int layer = 0; layer < prototypes.Length; layer++) layers[layer] = data.PrepareDetailLayer(layer);
             var placements = m_Placements;
@@ -232,52 +232,38 @@ namespace UnityEngine
                 for (int px = 0; px < patches; px++)
                 {
                     var builders = new MeshBuilder[3];
-                    for (int layer = 0; layer < prototypes.Length; layer++)
+                    var order = data.PatchLayers(px, py);
+                    if (order != null)
                     {
-                        var prototype = prototypes[layer];
-                        data.PlaceDetails(layers[layer], px, py, terrain.detailObjectDensity, placements, out _);
-                        if (placements.Count == 0) continue;
-                        if (prototype.usePrototypeMesh)
+                        float density = terrain.detailObjectDensity;
+                        // Instanced meshes, layer after layer in the patch's order, the sequence's
+                        // row numbering running on from layer to layer.
+                        int rows = 0;
+                        foreach (var index in order)
                         {
-                            if (prototype.useInstancing) AddInstancedDetails(terrain, prototype, placements, origin);
-                            else BakeMeshDetails(builders[(int)DetailKind.Mesh] ??= new MeshBuilder(), prototype, placements, white);
-                            continue;
+                            var setup = layers[index];
+                            if (!setup.IsValid || !setup.Prototype.usePrototypeMesh || !setup.Prototype.useInstancing) continue;
+                            data.PlaceDetails(setup, px, py, density, placements, out _, rows);
+                            rows += data.detailResolutionPerPatch;
+                            AddInstancedDetails(terrain, setup.Prototype, placements, origin);
                         }
-                        var kind = prototype.renderMode == DetailRenderMode.GrassBillboard ? DetailKind.Billboard : DetailKind.Grass;
-                        var builder = builders[(int)kind] ??= new MeshBuilder();
-                        var rect = rects[layer];
-                        foreach (var model in placements)
+                        // The patch's mesh of each render mode, its layers in the patch's order.
+                        foreach (var mode in s_PatchMeshModes)
                         {
-                            Vector3 position = model.GetColumn(3);
-                            // The quad spans the transform's x axis (its width) and rises along
-                            // its y axis (its height): turned, and tilted to the ground.
-                            Vector3 axis = model.GetColumn(0) * 0.5f, height = model.GetColumn(1);
-                            float noise = Mathf.PerlinNoise(position.x * prototype.noiseSpread, position.z * prototype.noiseSpread);
-                            var top = Color.Lerp(prototype.dryColor, prototype.healthyColor, noise);
-                            var topColor = ToColor32(new Color(top.r, top.g, top.b, 1f));
-                            var bottomColor = ToColor32(new Color(top.r * 0.625f, top.g * 0.625f, top.b * 0.625f, 0f));
-                            var normal = data.GetInterpolatedNormal(position.x / size.x, position.z / size.z);
-                            int first = builder.Vertices.Count;
-                            var u0 = new Vector2(rect.xMin, rect.yMin);
-                            var u1 = new Vector2(rect.xMax, rect.yMax);
-                            if (kind == DetailKind.Grass)
+                            int placed = 0, used = 0;
+                            foreach (var index in order)
                             {
-                                var tangent = new Vector4(1f, 0f, 0f, 1f);
-                                builder.Add(position - axis, normal, tangent, bottomColor, new Vector2(u0.x, u0.y));
-                                builder.Add(position - axis + height, normal, tangent, topColor, new Vector2(u0.x, u1.y));
-                                builder.Add(position + axis + height, normal, tangent, topColor, new Vector2(u1.x, u1.y));
-                                builder.Add(position + axis, normal, tangent, bottomColor, new Vector2(u1.x, u0.y));
+                                var setup = layers[index];
+                                var prototype = setup.Prototype;
+                                if (!setup.IsValid || prototype.useInstancing || prototype.renderMode != mode) continue;
+                                var mesh = prototype.usePrototypeMesh ? PrototypeMesh(prototype.prototype, out _) : null;
+                                int perInstance = mesh != null ? mesh.vertexCount : 4;
+                                if (data.PlacePatchMeshDetails(setup, px, py, density, placed, perInstance, ref used, placements) && !legacy)
+                                    placed++;
+                                if (placements.Count == 0) continue;
+                                if (mesh != null) BakeMeshDetails(builders[(int)DetailKind.Mesh] ??= new MeshBuilder(), prototype, placements, white);
+                                else AddQuads(data, prototype, placements, mode == DetailRenderMode.GrassBillboard, rects[index], builders);
                             }
-                            else
-                            {
-                                // Billboards face the camera: only their size counts.
-                                float half = axis.magnitude, tall = height.magnitude;
-                                builder.Add(position, normal, new Vector4(-half, 0f, 0f, 0f), bottomColor, new Vector2(u0.x, u0.y));
-                                builder.Add(position, normal, new Vector4(-half, tall, 0f, 0f), topColor, new Vector2(u0.x, u1.y));
-                                builder.Add(position, normal, new Vector4(half, tall, 0f, 0f), topColor, new Vector2(u1.x, u1.y));
-                                builder.Add(position, normal, new Vector4(half, 0f, 0f, 0f), bottomColor, new Vector2(u1.x, u0.y));
-                            }
-                            builder.Quad(first);
                         }
                     }
                     var patch = new DetailPatch();
@@ -314,6 +300,49 @@ namespace UnityEngine
                     m_DetailPatches.Add(patch);
                 }
         }
+
+        /// <summary>Grass and billboard quads of a texture prototype's instances.</summary>
+        static void AddQuads(TerrainData data, DetailPrototype prototype, List<Matrix4x4> placements, bool billboard, Rect rect, MeshBuilder[] builders)
+        {
+            var size = data.size;
+            var builder = builders[(int)(billboard ? DetailKind.Billboard : DetailKind.Grass)] ??= new MeshBuilder();
+            var u0 = new Vector2(rect.xMin, rect.yMin);
+            var u1 = new Vector2(rect.xMax, rect.yMax);
+            foreach (var model in placements)
+            {
+                Vector3 position = model.GetColumn(3);
+                // The quad spans the transform's x axis (its width) and rises along its y axis
+                // (its height): turned, and tilted to the ground.
+                Vector3 axis = model.GetColumn(0) * 0.5f, height = model.GetColumn(1);
+                float noise = Mathf.PerlinNoise(position.x * prototype.noiseSpread, position.z * prototype.noiseSpread);
+                var top = Color.Lerp(prototype.dryColor, prototype.healthyColor, noise);
+                var topColor = ToColor32(new Color(top.r, top.g, top.b, 1f));
+                var bottomColor = ToColor32(new Color(top.r * 0.625f, top.g * 0.625f, top.b * 0.625f, 0f));
+                var normal = data.GetInterpolatedNormal(position.x / size.x, position.z / size.z);
+                int first = builder.Vertices.Count;
+                if (!billboard)
+                {
+                    var tangent = new Vector4(1f, 0f, 0f, 1f);
+                    builder.Add(position - axis, normal, tangent, bottomColor, new Vector2(u0.x, u0.y));
+                    builder.Add(position - axis + height, normal, tangent, topColor, new Vector2(u0.x, u1.y));
+                    builder.Add(position + axis + height, normal, tangent, topColor, new Vector2(u1.x, u1.y));
+                    builder.Add(position + axis, normal, tangent, bottomColor, new Vector2(u1.x, u0.y));
+                }
+                else
+                {
+                    // Billboards face the camera: only their size counts.
+                    float half = axis.magnitude, tall = height.magnitude;
+                    builder.Add(position, normal, new Vector4(-half, 0f, 0f, 0f), bottomColor, new Vector2(u0.x, u0.y));
+                    builder.Add(position, normal, new Vector4(-half, tall, 0f, 0f), topColor, new Vector2(u0.x, u1.y));
+                    builder.Add(position, normal, new Vector4(half, tall, 0f, 0f), topColor, new Vector2(u1.x, u1.y));
+                    builder.Add(position, normal, new Vector4(half, 0f, 0f, 0f), bottomColor, new Vector2(u1.x, u0.y));
+                }
+                builder.Quad(first);
+            }
+        }
+
+        /// <summary>The render modes with a mesh per patch, in the order they are built.</summary>
+        static readonly DetailRenderMode[] s_PatchMeshModes = { DetailRenderMode.GrassBillboard, DetailRenderMode.VertexLit, DetailRenderMode.Grass };
 
         static Mesh PrototypeMesh(GameObject prototype, out Material[] materials)
         {

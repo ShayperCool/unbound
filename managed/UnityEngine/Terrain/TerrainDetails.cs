@@ -13,8 +13,48 @@ namespace UnityEngine
         DetailScatterMode m_DetailScatterMode = DetailScatterMode.CoverageMode;
         /// <summary>Per prototype, the values row by row (z), detailResolution squared; null: none.</summary>
         byte[][] m_DetailLayers = new byte[0][];
+        /// <summary>Per patch (patch rows z, then columns x), its layers in the order they got values
+        /// there: a layer joins at the end when it gets a value and leaves when all its values in
+        /// the patch are zero again. The order decides how the patch's meshes are built.</summary>
+        List<byte>[] m_PatchLayers = new List<byte>[0];
         /// <summary>Bumped when the details or their prototypes change.</summary>
         internal int m_DetailsVersion;
+
+        /// <summary>A patch's layers in order; null when it has none.</summary>
+        internal List<byte> PatchLayers(int patchX, int patchY)
+        {
+            int patches = detailPatchCount, index = patchY * patches + patchX;
+            return patchX >= 0 && patchY >= 0 && patchX < patches && patchY < patches && index < m_PatchLayers.Length ? m_PatchLayers[index] : null;
+        }
+
+        /// <summary>A layer's place in a patch's order, or -1.</summary>
+        int PatchLayerSlot(int patchX, int patchY, int layer)
+        {
+            var list = PatchLayers(patchX, patchY);
+            return list != null ? list.IndexOf((byte)layer) : -1;
+        }
+
+        /// <summary>Starts every patch without layers (a new resolution).</summary>
+        void ResetPatchLayers()
+        {
+            int patches = detailPatchCount;
+            m_PatchLayers = new List<byte>[patches * patches];
+        }
+
+        /// <summary>Drops a removed prototype's layer from every patch and renumbers the later ones;
+        /// with keep, drops layers from keep on.</summary>
+        void RemovePatchLayers(int index, int keep = int.MaxValue)
+        {
+            foreach (var list in m_PatchLayers)
+            {
+                if (list == null) continue;
+                for (int i = list.Count - 1; i >= 0; i--)
+                {
+                    if (list[i] == index || list[i] >= keep) list.RemoveAt(i);
+                    else if (list[i] > index) list[i]--;
+                }
+            }
+        }
 
         public DetailScatterMode detailScatterMode => m_DetailScatterMode;
 
@@ -67,15 +107,38 @@ namespace UnityEngine
                 throw new ArgumentException($"Invalid detail layer index {layer}", nameof(layer));
             var values = DetailLayer(layer, true);
             int height = details.GetLength(0), width = details.GetLength(1);
+            // Instance counts keep at most 16 a sample, coverage at most 255.
+            int max = m_DetailScatterMode == DetailScatterMode.InstanceCountMode ? MaxInstancesPerSample : 255;
             for (int y = 0; y < height; y++)
                 for (int x = 0; x < width; x++)
                 {
                     int gx = xBase + x, gy = yBase + y;
                     if (gx >= 0 && gy >= 0 && gx < m_DetailResolution && gy < m_DetailResolution)
-                        values[gy * m_DetailResolution + gx] = (byte)Mathf.Clamp(details[y, x], 0, 255);
+                        values[gy * m_DetailResolution + gx] = (byte)Mathf.Clamp(details[y, x], 0, max);
+                }
+            // Each patch the area touches keeps the layer in its order while it has values there.
+            int perPatch = m_DetailResolutionPerPatch, patches = detailPatchCount;
+            if (perPatch <= 0 || patches <= 0 || width <= 0 || height <= 0) { m_DetailsVersion++; return; }
+            if (m_PatchLayers.Length != patches * patches) ResetPatchLayers();
+            int fromX = Math.Clamp(xBase / perPatch, 0, patches - 1), toX = Math.Clamp((xBase + width) / perPatch, 0, patches - 1);
+            int fromY = Math.Clamp(yBase / perPatch, 0, patches - 1), toY = Math.Clamp((yBase + height) / perPatch, 0, patches - 1);
+            for (int py = fromY; py <= toY; py++)
+                for (int px = fromX; px <= toX; px++)
+                {
+                    bool any = false;
+                    for (int y = py * perPatch; y < (py + 1) * perPatch && !any; y++)
+                        for (int x = px * perPatch; x < (px + 1) * perPatch; x++)
+                            if (values[y * m_DetailResolution + x] != 0) { any = true; break; }
+                    var list = m_PatchLayers[py * patches + px] ??= new List<byte>();
+                    int slot = list.IndexOf((byte)layer);
+                    if (any && slot < 0) list.Add((byte)layer);
+                    else if (!any && slot >= 0) list.RemoveAt(slot);
                 }
             m_DetailsVersion++;
         }
+
+        /// <summary>An instance count sample's largest value.</summary>
+        const int MaxInstancesPerSample = 16;
 
         public void SetDetailLayer(Vector2Int basePosition, int layer, int[,] details) => SetDetailLayer(basePosition.x, basePosition.y, layer, details);
 
@@ -177,14 +240,16 @@ namespace UnityEngine
         internal readonly struct DetailLayerSetup
         {
             internal readonly DetailPrototype Prototype;
+            internal readonly int Index;
             internal readonly byte[] Values;
             internal readonly Bounds Shape;
             /// <summary>Coverage mode: the prototype's instances per unit (density over footprint).</summary>
             internal readonly float PerUnit;
 
-            internal DetailLayerSetup(DetailPrototype prototype, byte[] values, Bounds shape, float perUnit)
+            internal DetailLayerSetup(DetailPrototype prototype, int index, byte[] values, Bounds shape, float perUnit)
             {
                 Prototype = prototype;
+                Index = index;
                 Values = values;
                 Shape = shape;
                 PerUnit = perUnit;
@@ -207,7 +272,7 @@ namespace UnityEngine
                 float footprint = Footprint(prototype, shape);
                 perUnit = footprint > 0f ? 1f / footprint * prototype.m_Density : 0f;
             }
-            return new DetailLayerSetup(prototype, values, shape, perUnit);
+            return new DetailLayerSetup(prototype, layer, values, shape, perUnit);
         }
 
         public DetailInstanceTransform[] ComputeDetailInstanceTransforms(int patchX, int patchY, int layer, float density, out Bounds bounds)
@@ -220,36 +285,64 @@ namespace UnityEngine
         }
 
         /// <summary>
-        /// A patch's instances of a layer, sample by sample (rows of the patch, then columns), as
-        /// terrain-relative transforms. A sample's generator is seeded by noiseSeed + the sample's
+        /// A patch's instances of a layer as ComputeDetailInstanceTransforms reports them (and
+        /// instanced meshes are drawn), as terrain-relative transforms, sample by sample (rows of
+        /// the patch, then columns). A sample's generator is seeded by noiseSeed (or, when it is
+        /// zero, the samples a patch holds × the layer's place in the patch's order) + the sample's
         /// index in the patch + 1013 × the patch's index (patches column by column). Instance count
-        /// mode: the sample's value (at most 16) is its count. Coverage mode: the count comes from
+        /// mode: the sample's value is its count. Coverage mode: the count comes from
         /// <see cref="CoverageCandidates"/>, and each candidate is kept when a draw is at most the
         /// coverage squared. Each instance then draws three numbers: its place in the sample, and
         /// its turn. The place is a point of the R2 sequence (numbered from (seed mod 4095) + 2 +
-        /// 255 × the sample's row, one more per candidate) jittered by positionJitter × (draw -
-        /// 0.5) / √count in x and z, or with QualitySettings.useLegacyDetailDistribution the two
-        /// draws themselves. Sizes follow Mathf.PerlinNoise of the position × noiseSpread; the
-        /// transform turns the instance by the third draw × 2π about y, then tilts it from up
-        /// towards the terrain's normal by alignToGround. The bounds hold every instance's
-        /// transformed shape.
+        /// 255 × (rowOffset + the sample's row), one more per candidate) moved by positionJitter ×
+        /// (draw - 0.5) / √count in x and z and wrapped into the sample, or with
+        /// QualitySettings.useLegacyDetailDistribution the two draws themselves. Sizes follow
+        /// Mathf.PerlinNoise of the position × noiseSpread; the transform turns the instance by the
+        /// third draw × 2π about y, then tilts it from up towards the terrain's normal by
+        /// alignToGround. The bounds hold every instance's transformed shape.
         /// </summary>
-        internal void PlaceDetails(in DetailLayerSetup layer, int patchX, int patchY, float density, List<Matrix4x4> into, out Bounds bounds)
+        internal void PlaceDetails(in DetailLayerSetup layer, int patchX, int patchY, float density, List<Matrix4x4> into, out Bounds bounds, int rowOffset = 0)
+        {
+            int used = 0;
+            Place(layer, patchX, patchY, density, false, rowOffset, 0, ref used, into, out bounds);
+        }
+
+        /// <summary>
+        /// A patch's instances of a layer as the patch's mesh of its render mode is built (grass,
+        /// billboards and meshes drawn without instancing): as <see cref="PlaceDetails"/> but for
+        /// the place, numbered from (seed mod 1000) + 2 + 255 × the number of the mesh's layers
+        /// placed before this one, and moved from the sequence's point towards the draws by
+        /// positionJitter; billboards draw no turn. The mesh holds at most 65536 vertices: a sample
+        /// gets no more candidates than the room left, and the layer stops at a sample with no room
+        /// for one more. False when it stopped so.
+        /// </summary>
+        internal bool PlacePatchMeshDetails(in DetailLayerSetup layer, int patchX, int patchY, float density, int placedLayers, int verticesPerInstance, ref int usedVertices, List<Matrix4x4> into)
+            => Place(layer, patchX, patchY, density, true, placedLayers, verticesPerInstance, ref usedVertices, into, out _);
+
+        /// <summary>A patch mesh's largest vertex count.</summary>
+        const int MaxPatchMeshVertices = 0x10000;
+
+        bool Place(in DetailLayerSetup layer, int patchX, int patchY, float density, bool patchMesh, int offset, int verticesPerInstance,
+            ref int usedVertices, List<Matrix4x4> into, out Bounds bounds)
         {
             bounds = default;
             into.Clear();
             int patches = detailPatchCount, perPatch = m_DetailResolutionPerPatch;
             if (!layer.IsValid || layer.Values.Length != m_DetailResolution * m_DetailResolution
                 || patchX < 0 || patchY < 0 || patchX >= patches || patchY >= patches)
-                return;
+                return true;
             var prototype = layer.Prototype;
+            int slot = PatchLayerSlot(patchX, patchY, layer.Index);
+            if (slot < 0) return true;
             var values = layer.Values;
             var size = this.size;
             bool coverage = m_DetailScatterMode == DetailScatterMode.CoverageMode;
             bool legacy = QualitySettings.useLegacyDetailDistribution;
+            bool turns = !patchMesh || prototype.renderMode != DetailRenderMode.GrassBillboard;
             float cellX = size.x * (1f / perPatch / patches), cellZ = size.z * (1f / perPatch / patches);
             float sampleUv = 1f / (patches * perPatch);
             int patchTerm = 1013 * (patchX * patches + patchY);
+            int seedBase = prototype.m_NoiseSeed != 0 ? prototype.m_NoiseSeed : perPatch * perPatch * slot;
             Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
             for (int ly = 0; ly < perPatch; ly++)
                 for (int lx = 0; lx < perPatch; lx++)
@@ -258,7 +351,8 @@ namespace UnityEngine
                     if (gx >= m_DetailResolution || gy >= m_DetailResolution) continue;
                     int value = values[gy * m_DetailResolution + gx];
                     if (value == 0) continue;
-                    int seed = prototype.m_NoiseSeed + lx + ly * perPatch + patchTerm;
+                    if (patchMesh && usedVertices + verticesPerInstance > MaxPatchMeshVertices) return false;
+                    int seed = seedBase + lx + ly * perPatch + patchTerm;
                     var random = new Rand((uint)seed);
                     float keep = 0f;
                     int count;
@@ -267,28 +361,51 @@ namespace UnityEngine
                         keep = value / 255f * (value / 255f);
                         count = CoverageCandidates(layer.PerUnit, cellX, cellZ, ref random, lx, ly);
                     }
-                    else count = Math.Min(16, value);
+                    else count = value;
+                    if (patchMesh && verticesPerInstance > 0)
+                        count = Math.Min(count, (MaxPatchMeshVertices - usedVertices) / verticesPerInstance);
                     if (count <= 0) continue;
                     float spread = (float)Math.Sqrt(count);
                     float cornerU = ((float)lx / perPatch + patchX) / patches;
                     float cornerV = ((float)ly / perPatch + patchY) / patches;
-                    int point = (int)((uint)seed % 4095u) + 2 + 255 * ly;
+                    int point = patchMesh
+                        ? (int)((uint)seed % 1000u) + 2 + 255 * offset
+                        : (int)((uint)seed % 4095u) + 2 + 255 * (offset + ly);
                     for (int c = 0; c < count; c++, point++)
                     {
                         if (coverage && !(random.Float() <= keep)) continue;
-                        float u = random.Float(), v = random.Float(), w = random.Float();
-                        float fx = u, fz = v;
-                        if (!legacy)
+                        float u = random.Float(), v = random.Float();
+                        float w = turns ? random.Float() : 0f;
+                        float fx = u, fz = v, x, z;
+                        if (patchMesh)
                         {
-                            fx = Frac(Frac(point * s_R2X + 0.5f) - prototype.m_PositionJitter * ((u - 0.5f) / spread));
-                            fz = Frac(Frac(point * s_R2Z + 0.5f) - prototype.m_PositionJitter * ((v - 0.5f) / spread));
+                            if (!legacy)
+                            {
+                                float sx = Frac(point * s_R2X + 0.5f), sz = Frac(point * s_R2Z + 0.5f);
+                                fx = (u - sx) * prototype.m_PositionJitter + sx;
+                                fz = (v - sz) * prototype.m_PositionJitter + sz;
+                            }
+                            x = fx * sampleUv + cornerU;
+                            z = fz * sampleUv + cornerV;
                         }
-                        var model = Placement(prototype, Frac(fx * sampleUv + cornerU), Frac(fz * sampleUv + cornerV), w);
+                        else
+                        {
+                            if (!legacy)
+                            {
+                                fx = Frac(Frac(point * s_R2X + 0.5f) - prototype.m_PositionJitter * ((u - 0.5f) / spread));
+                                fz = Frac(Frac(point * s_R2Z + 0.5f) - prototype.m_PositionJitter * ((v - 0.5f) / spread));
+                            }
+                            x = Frac(fx * sampleUv + cornerU);
+                            z = Frac(fz * sampleUv + cornerV);
+                        }
+                        var model = Placement(prototype, x, z, w);
                         into.Add(model);
-                        Encapsulate(model, layer.Shape, ref min, ref max);
+                        usedVertices += verticesPerInstance;
+                        if (!patchMesh) Encapsulate(model, layer.Shape, ref min, ref max);
                     }
                 }
-            if (into.Count > 0) bounds = new Bounds { center = (min + max) * 0.5f, extents = (max - min) * 0.5f };
+            if (!patchMesh && into.Count > 0) bounds = new Bounds { center = (min + max) * 0.5f, extents = (max - min) * 0.5f };
+            return true;
         }
 
         /// <summary>
@@ -414,12 +531,19 @@ namespace UnityEngine
             m_DetailResolutionPerPatch = detail.Int("m_PatchSamples", 32);
             m_DetailResolution = patchCount * m_DetailResolutionPerPatch;
             m_DetailLayers = new byte[m_DetailPrototypes.Length][];
+            ResetPatchLayers();
             int samples = m_DetailResolutionPerPatch * m_DetailResolutionPerPatch, index = 0;
             foreach (var patch in detail.Get("m_Patches")?.Seq() ?? Array.Empty<YNode>())
             {
                 int px = index % Math.Max(1, patchCount), py = index / Math.Max(1, patchCount);
-                index++;
                 var layers = Bytes(patch.Get("layerIndices"));
+                if (index < m_PatchLayers.Length)
+                {
+                    var order = m_PatchLayers[index] = new List<byte>(layers.Length);
+                    foreach (var l in layers)
+                        if (l < m_DetailPrototypes.Length && !order.Contains(l)) order.Add(l);
+                }
+                index++;
                 var coverage = Bytes(patch.Get("coverage") ?? patch.Get("numberOfObjects"));
                 for (int l = 0; l < layers.Length; l++)
                 {
