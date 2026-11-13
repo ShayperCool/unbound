@@ -72,8 +72,10 @@ The two idle controls stay at zero.
 
 These matching pairs retain the same callback, renderer restart and control
 order as the earlier 48000 Hz counterexample. They do not explain or supersede
-its delayed source publication. The complete earlier repeat failures remain
-part of the diagnostic record. No canonical reset PCM, fixed startup delay,
-sample alignment or additional tolerance is introduced. Q416-R1 remains open
+its delayed source publication. The earlier failure counts remain documented
+here, but cache cleanup removed the Q390 raw outputs after that session. Their
+full PCM can no longer be independently rechecked from that cache. The fresh
+Q416 captures are retained separately. No canonical reset PCM, fixed startup
+delay, sample alignment or additional tolerance is introduced. Q416-R1 remains open
 for a rule that accounts for both the matching and delayed histories, including
 scheduled recovery and the device queue.
