@@ -1694,7 +1694,12 @@ impl UnityRenderer {
                 key.aniso = self.effective_aniso(key.aniso);
             }
             if slot.comparison {
-                key.compare = 4;
+                let state = self
+                    .textures
+                    .get(h)
+                    .filter(|t| t.depth_texture.is_some())
+                    .and_then(|t| t.depth_compare);
+                key.compare = resources::depth_comparison_mode(state, slot.inline.is_some(), true);
             }
             if slot.inline.is_none() {
                 key.lod_bias_bits = self.sampler_lod_bias(*h);
@@ -4163,6 +4168,7 @@ impl UnityRenderer {
                 defer_mips: false,
                 retain_resolve: false,
                 bind_ms: false,
+                depth_compare: None,
                 samples: 1,
                 depth_bits: 0,
                 layers: 1,

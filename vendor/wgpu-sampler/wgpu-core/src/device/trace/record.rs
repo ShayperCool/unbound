@@ -990,6 +990,7 @@ fn action_to_owned(action: Action<'_, PointerReferences>) -> Action<'static, Poi
                 lod_bias: desc.lod_bias,
                 native_mip_filter: desc.native_mip_filter,
                 mirror_clamp: desc.mirror_clamp,
+                non_comparing_depth: desc.non_comparing_depth,
                 compare: desc.compare,
                 anisotropy_clamp: desc.anisotropy_clamp,
                 border_color: desc.border_color,

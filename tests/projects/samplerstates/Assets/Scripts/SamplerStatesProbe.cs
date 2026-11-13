@@ -229,6 +229,7 @@ public class UitkProbe : MonoBehaviour
             RendererFaces(rows);
             MirrorWrap(rows);
             D16Controls(rows);
+            DepthStateControls(rows);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -580,5 +581,40 @@ public class UitkProbe : MonoBehaviour
         DestroyImmediate(material); DestroyImmediate(cpu); DestroyImmediate(target);
         foreach (var (_, texture) in textures) DestroyImmediate(texture);
         DestroyImmediate(source);
+    }
+    static void DepthStateControls(StringBuilder rows)
+    {
+        var previous = RenderTexture.active;
+        var source = Pair(.25f, .75f, FilterMode.Point);
+        var target = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear); target.Create();
+        var cpu = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
+        var fill = new Material(Shader.Find("Probe/SamplerStates/Fill"));
+        var material = new Material(Shader.Find("Probe/SamplerStates/DepthState"));
+        var other = Split(RenderTextureFormat.Shadowmap, FilterMode.Point, source);
+        material.SetTexture("_OtherDepth", other);
+        foreach (var format in new[] {UnityEngine.Experimental.Rendering.GraphicsFormat.D16_UNorm,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.D24_UNorm_S8_UInt,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.D32_SFloat})
+        foreach (var filter in new[] {FilterMode.Point, FilterMode.Bilinear})
+        {
+            var textures = new RenderTexture[3];
+            var modes = new[] {UnityEngine.Rendering.ShadowSamplingMode.None, UnityEngine.Rendering.ShadowSamplingMode.CompareDepths, UnityEngine.Rendering.ShadowSamplingMode.RawDepth};
+            for (int i=0;i<3;i++)
+            {
+                var descriptor = new RenderTextureDescriptor(2,1) {graphicsFormat=UnityEngine.Experimental.Rendering.GraphicsFormat.None,depthStencilFormat=format,shadowSamplingMode=modes[i],msaaSamples=1};
+                textures[i]=new RenderTexture(descriptor) {filterMode=filter,wrapMode=TextureWrapMode.Clamp};textures[i].Create();
+                Graphics.Blit(source,textures[i],fill);
+            }
+            int step=0;
+            foreach(int index in new[]{0,1,0,2})
+            {
+                material.SetTexture("_Depth",textures[index]);
+                Graphics.Blit(null,target,material);
+                Row(rows,"DepthState."+format+"."+filter+"."+(step++)+"."+modes[index],Read(target,cpu));
+            }
+            foreach(var texture in textures) DestroyImmediate(texture);
+        }
+        RenderTexture.active = previous;
+        DestroyImmediate(other);DestroyImmediate(material);DestroyImmediate(fill);DestroyImmediate(cpu);DestroyImmediate(target);DestroyImmediate(source);
     }
 }

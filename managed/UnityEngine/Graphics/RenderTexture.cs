@@ -437,7 +437,7 @@ namespace UnityEngine
         };
 
         // Texture packet flag: process automatic mip updates at attachment transitions.
-        const int DeferredMipUpdates = 8, RetainedMsaaResolve = 16, BindMultisampled = 32;
+        const int DeferredMipUpdates = 8, RetainedMsaaResolve = 16, BindMultisampled = 32, CompareDepth = 64, DepthSamplerState = 128;
 
         internal unsafe ulong EnsureCreated()
         {
@@ -468,7 +468,7 @@ namespace UnityEngine
                 WrapW = (int)wrapModeW,
                 AnisoLevel = anisoLevel,
                 // 1: drawn into; 2: written by kernels (a storage binding).
-                RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates | RetainedMsaaResolve | (m_Descriptor.bindMS ? BindMultisampled : 0) : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
+                RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates | RetainedMsaaResolve | DepthSamplerState | (m_Descriptor.bindMS ? BindMultisampled : 0) | (m_Descriptor.shadowSamplingMode == ShadowSamplingMode.CompareDepths ? CompareDepth : 0) : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
                 DepthBits = depthBits,
                 Layers = layers,
                 Dimension = dimension != TextureDimension.Tex2D || layers > 1 ? (int)dimension : 0,

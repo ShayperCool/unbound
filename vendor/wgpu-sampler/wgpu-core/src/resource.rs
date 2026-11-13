@@ -2259,6 +2259,9 @@ pub struct SamplerDescriptor<'a> {
     /// Native Vulkan mirror-clamp axes; ordinary samplers leave all false.
     #[cfg_attr(feature = "serde", serde(default))]
     pub mirror_clamp: [bool; 3],
+    /// Native texture state reads stored depth through a declared comparison binding.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub non_comparing_depth: bool,
     /// If this is enabled, this is a comparison sampler using the given comparison function.
     pub compare: Option<wgt::CompareFunction>,
     /// Must be at least 1. If this is not 1, all filter modes must be linear.
@@ -2326,6 +2329,10 @@ pub enum CreateSamplerError {
     UnsupportedLodBias,
     #[error("Native sampler mirror-clamp-to-edge is unsupported on this backend/device")]
     UnsupportedMirrorClamp,
+    #[error(
+        "Texture-controlled comparison-disabled depth reads require a declared comparison sampler on an NVIDIA OpenGL or Vulkan device"
+    )]
+    UnsupportedDepthComparison,
     #[error("Invalid sampler LOD bias {bias}; it must be finite and within +/-{limit}")]
     InvalidLodBias { bias: f32, limit: f32 },
     #[error("Invalid lodMinClamp: {0}. Must be greater or equal to 0.0")]
@@ -2414,6 +2421,7 @@ impl WebGpuError for CreateSamplerError {
 
             Self::UnsupportedLodBias
             | Self::UnsupportedMirrorClamp
+            | Self::UnsupportedDepthComparison
             | Self::InvalidLodBias { .. }
             | Self::InvalidLodMinClamp(_)
             | Self::InvalidLodMaxClamp { .. }

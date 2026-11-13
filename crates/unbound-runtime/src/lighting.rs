@@ -182,6 +182,7 @@ pub fn load_texture_object(
             defer_mips: false,
             retain_resolve: false,
             bind_ms: false,
+            depth_compare: None,
             samples: 1,
             depth_bits: 0,
             layers: t.image_count,

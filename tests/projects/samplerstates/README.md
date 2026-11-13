@@ -70,8 +70,10 @@ are drawn alone, and a program without colors leaves the target as it was.
 
 Unbound: `run.py check` compares an Unbound capture (`--force-glcore`, or `--force-vulkan` with
 `--device vulkan`) with the device's reference. `residuals.json` and `residuals-vulkan.json`
-list the cases that differ with their cause: Unbound compares where the Editor's comparison
-reads the depth of a texture whose state does not compare. D16 uses a normalized 16-bit
+list the remaining cases and their causes. Texture-owned non-comparing depth state now reads
+stored depth on the measured NVIDIA devices. Vulkan has no remaining scalar residuals; OpenGL
+Core retains three compute comparisons, four unsupported comparison-plus-Load cases, and three
+MirrorOnce controls. D16 uses a normalized 16-bit
 color copy so its linear filtering keeps the measured depth precision. OpenGL Core retains the existing `MirrorOnce` approximation as `Mirror`; Vulkan uses
 native mirror-clamp-to-edge where the device enables it. A depth buffer of 16 bits is stored as 16 bits
 without stencil, as in the Editor.
@@ -151,3 +153,20 @@ The Unity 6000.0 [RenderTexture.depth contract](https://docs.unity3d.com/6000.0/
 lists 16-bit depth precision; the existing Stencil controls check the absence of stencil.
 [Texture.filterMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture-filterMode.html)
 selects the sampling filter. The interpolation precision above is a measured device result.
+
+`DepthState.*` adds 24 controls per device, preserving every earlier 525 reference row. D16,
+D24-with-stencil and D32 targets use point and bilinear filters. One material alternates
+None, CompareDepths, the first None target again, and RawDepth. Its four channels read through
+the target's own sampler, another target's comparing sampler, an inline comparing sampler,
+and that other target's own sampler. The same bound texture therefore distinguishes stored
+depth from a comparison, and changing bindings checks reused sampler and bind-group state.
+All controls match: OpenGL Core 539/549 with ten declared residuals; Vulkan 549/549.
+
+Unity 6000.0 documents [shadowSamplingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTextureDescriptor-shadowSamplingMode.html),
+[RawDepth](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.ShadowSamplingMode.RawDepth.html)
+and [CompareDepths](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.ShadowSamplingMode.CompareDepths.html)
+as selecting depth sampling or comparison sampling. The result of a comparison expression
+through non-comparing state is observed behavior in these captures, not a portable shader
+guarantee. The native sampler opt-in is limited to NVIDIA OpenGL and Vulkan; other drivers
+are rejected. The release profile carries explicit texture state; unmeasured releases retain
+the legacy comparison path. OpenGL compute histories remain separate and unresolved.

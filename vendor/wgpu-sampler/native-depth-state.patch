@@ -1,0 +1,83 @@
+diff --git a/wgpu-core/src/device/resource.rs b/wgpu-core/src/device/resource.rs
+index 46e6716c4..2fe063fdd 100644
+--- a/wgpu-core/src/device/resource.rs
++++ b/wgpu-core/src/device/resource.rs
+@@ -2281,0 +2282,12 @@ impl Device {
++        // PCI vendor ID of NVIDIA. Other drivers have no measured contract for this opt-in.
++        const NVIDIA_VENDOR_ID: u32 = 0x10de;
++        if desc.non_comparing_depth
++            && (desc.compare.is_none()
++                || self.adapter.raw.info.vendor != NVIDIA_VENDOR_ID
++                || !matches!(
++                    self.adapter.backend(),
++                    wgt::Backend::Gl | wgt::Backend::Vulkan
++                ))
++        {
++            return Err(resource::CreateSamplerError::UnsupportedDepthComparison);
++        }
+@@ -2378 +2390,5 @@ impl Device {
+-            compare: desc.compare,
++            compare: if desc.non_comparing_depth {
++                None
++            } else {
++                desc.compare
++            },
+diff --git a/wgpu-core/src/device/trace/record.rs b/wgpu-core/src/device/trace/record.rs
+index 1005180c3..1748b3def 100644
+--- a/wgpu-core/src/device/trace/record.rs
++++ b/wgpu-core/src/device/trace/record.rs
+@@ -992,0 +993 @@ fn action_to_owned(action: Action<'_, PointerReferences>) -> Action<'static, Poi
++                non_comparing_depth: desc.non_comparing_depth,
+diff --git a/wgpu-core/src/resource.rs b/wgpu-core/src/resource.rs
+index 4607b476a..3a29b0ac2 100644
+--- a/wgpu-core/src/resource.rs
++++ b/wgpu-core/src/resource.rs
+@@ -2261,0 +2262,3 @@ pub struct SamplerDescriptor<'a> {
++    /// Native texture state reads stored depth through a declared comparison binding.
++    #[cfg_attr(feature = "serde", serde(default))]
++    pub non_comparing_depth: bool,
+@@ -2328,0 +2332,4 @@ pub enum CreateSamplerError {
++    #[error(
++        "Texture-controlled comparison-disabled depth reads require a declared comparison sampler on an NVIDIA OpenGL or Vulkan device"
++    )]
++    UnsupportedDepthComparison,
+@@ -2416,0 +2424 @@ impl WebGpuError for CreateSamplerError {
++            | Self::UnsupportedDepthComparison
+diff --git a/wgpu/src/api/device.rs b/wgpu/src/api/device.rs
+index 5328f14f1..7baff5e56 100644
+--- a/wgpu/src/api/device.rs
++++ b/wgpu/src/api/device.rs
+@@ -533,0 +534,13 @@ impl Device {
++    ) -> Option<Sampler> {
++        self.create_sampler_with_texture_comparison(desc, lod_bias, mirror_clamp, false)
++    }
++
++    /// Native texture-owned depth state, measured on NVIDIA OpenGL and Vulkan. The
++    /// comparison binding remains declared, while the native sampler reads stored depth.
++    /// Unsupported devices reject this opt-in; ordinary samplers retain their validation.
++    pub fn create_sampler_with_texture_comparison(
++        &self,
++        desc: &SamplerDescriptor<'_>,
++        lod_bias: f32,
++        mirror_clamp: [bool; 3],
++        non_comparing_depth: bool,
+@@ -537 +550,5 @@ impl Device {
+-        if lod_bias == 0.0 && !native_mip_filter && !mirror_clamp.contains(&true) {
++        if lod_bias == 0.0
++            && !native_mip_filter
++            && !mirror_clamp.contains(&true)
++            && !non_comparing_depth
++        {
+@@ -547,0 +565 @@ impl Device {
++                    non_comparing_depth,
+diff --git a/wgpu/src/backend/wgpu_core.rs b/wgpu/src/backend/wgpu_core.rs
+index 35b786c2e..6b4472bb0 100644
+--- a/wgpu/src/backend/wgpu_core.rs
++++ b/wgpu/src/backend/wgpu_core.rs
+@@ -487,0 +488 @@ impl CoreDevice {
++        non_comparing_depth: bool,
+@@ -503,0 +505 @@ impl CoreDevice {
++            non_comparing_depth,
+@@ -1779 +1781 @@ impl dispatch::DeviceInterface for CoreDevice {
+-        self.create_sampler_with_native_options(desc, 0.0, false, [false; 3])
++        self.create_sampler_with_native_options(desc, 0.0, false, [false; 3], false)

@@ -480,6 +480,8 @@ pub mod owned {
         pub retain_resolve: bool,
         /// Native pointers expose the MSAA images.
         pub bind_ms: bool,
+        /// The render texture's own depth sampler compares (`ShadowSamplingMode.CompareDepths`).
+        pub depth_compare: Option<bool>,
         /// A render target's MSAA samples (1: none).
         pub samples: u32,
         pub depth_bits: i32,
@@ -510,6 +512,7 @@ pub mod owned {
                 defer_mips: p.render_target & 8 != 0,
                 retain_resolve: p.render_target & 16 != 0,
                 bind_ms: p.render_target & 32 != 0,
+                depth_compare: (p.render_target & 128 != 0).then_some(p.render_target & 64 != 0),
                 // Bits 8..15: the MSAA sample count.
                 samples: ((p.render_target >> 8) & 0xff).max(1) as u32,
                 depth_bits: p.depth_bits,
@@ -850,6 +853,22 @@ mod tests {
     use std::mem::{offset_of, size_of};
 
     /// The managed side's layouts (checked by a matching test there).
+    #[test]
+    fn texture_depth_sampler_state_is_independent_of_samples_and_legacy_packets() {
+        // A zero-data packet needs no pointer; sample count occupies the following byte.
+        let mut packet: TexturePacket = unsafe { std::mem::zeroed() };
+        packet.render_target = 1 | 128 | 64 | (4 << 8);
+        let read = |p: &TexturePacket| unsafe { owned::Texture::from_packet(p) };
+        let texture = read(&packet);
+        assert_eq!(texture.depth_compare, Some(true));
+        assert_eq!(texture.samples, 4);
+        packet.render_target &= !64;
+        assert_eq!(read(&packet).depth_compare, Some(false));
+        packet.render_target &= !128;
+        assert_eq!(read(&packet).depth_compare, None);
+        assert_eq!(read(&packet).samples, 4);
+    }
+
     #[test]
     fn layouts() {
         assert_eq!(size_of::<Matrix4x4>(), 64);

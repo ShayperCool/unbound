@@ -128,6 +128,8 @@ pub struct DeviceConventions {
     pub clip_depth_zero_to_one: bool,
     /// Depth resolve selections for 1, 2, 4 and 8 samples, from the device profile.
     pub depth_resolve_samples: [u32; 4],
+    /// Whether measured compute comparisons follow the texture-owned sampler state.
+    pub compute_depth_sampler_state: bool,
 }
 
 impl DeviceConventions {
@@ -142,6 +144,7 @@ impl DeviceConventions {
             reversed_z: c.reversed_z,
             clip_depth_zero_to_one: c.clip_depth_zero_to_one,
             depth_resolve_samples: [1, 2, 4, 8].map(|samples| device.depth_resolve_sample(samples)),
+            compute_depth_sampler_state: device.compute_depth_sampler_state(),
         }
     }
 }

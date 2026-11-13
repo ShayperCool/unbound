@@ -2279,6 +2279,18 @@ impl Device {
         desc: &resource::SamplerDescriptor,
     ) -> Result<Arc<Sampler>, resource::CreateSamplerError> {
         self.check_is_valid()?;
+        // PCI vendor ID of NVIDIA. Other drivers have no measured contract for this opt-in.
+        const NVIDIA_VENDOR_ID: u32 = 0x10de;
+        if desc.non_comparing_depth
+            && (desc.compare.is_none()
+                || self.adapter.raw.info.vendor != NVIDIA_VENDOR_ID
+                || !matches!(
+                    self.adapter.backend(),
+                    wgt::Backend::Gl | wgt::Backend::Vulkan
+                ))
+        {
+            return Err(resource::CreateSamplerError::UnsupportedDepthComparison);
+        }
         if desc.mirror_clamp.contains(&true) && self.native_sampler_mirror_clamp() != Some(true) {
             return Err(resource::CreateSamplerError::UnsupportedMirrorClamp);
         }
@@ -2375,7 +2387,11 @@ impl Device {
             lod_bias: desc.lod_bias,
             mirror_clamp: desc.mirror_clamp,
             lod_clamp: desc.lod_min_clamp..desc.lod_max_clamp,
-            compare: desc.compare,
+            compare: if desc.non_comparing_depth {
+                None
+            } else {
+                desc.compare
+            },
             anisotropy_clamp,
             border_color: desc.border_color,
         };

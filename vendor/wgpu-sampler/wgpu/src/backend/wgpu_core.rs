@@ -485,6 +485,7 @@ impl CoreDevice {
         lod_bias: f32,
         native_mip_filter: bool,
         mirror_clamp: [bool; 3],
+        non_comparing_depth: bool,
     ) -> dispatch::DispatchSampler {
         let descriptor = wgc::resource::SamplerDescriptor {
             label: desc.label.map(Borrowed),
@@ -501,6 +502,7 @@ impl CoreDevice {
             lod_bias,
             native_mip_filter,
             mirror_clamp,
+            non_comparing_depth,
             compare: desc.compare,
             anisotropy_clamp: desc.anisotropy_clamp,
             border_color: desc.border_color,
@@ -1776,7 +1778,7 @@ impl dispatch::DeviceInterface for CoreDevice {
     }
 
     fn create_sampler(&self, desc: &crate::SamplerDescriptor<'_>) -> dispatch::DispatchSampler {
-        self.create_sampler_with_native_options(desc, 0.0, false, [false; 3])
+        self.create_sampler_with_native_options(desc, 0.0, false, [false; 3], false)
     }
 
     fn create_query_set(&self, desc: &crate::QuerySetDescriptor<'_>) -> dispatch::DispatchQuerySet {

@@ -532,9 +532,26 @@ impl Device {
         lod_bias: f32,
         mirror_clamp: [bool; 3],
     ) -> Option<Sampler> {
+        self.create_sampler_with_texture_comparison(desc, lod_bias, mirror_clamp, false)
+    }
+
+    /// Native texture-owned depth state, measured on NVIDIA OpenGL and Vulkan. The
+    /// comparison binding remains declared, while the native sampler reads stored depth.
+    /// Unsupported devices reject this opt-in; ordinary samplers retain their validation.
+    pub fn create_sampler_with_texture_comparison(
+        &self,
+        desc: &SamplerDescriptor<'_>,
+        lod_bias: f32,
+        mirror_clamp: [bool; 3],
+        non_comparing_depth: bool,
+    ) -> Option<Sampler> {
         let native_mip_filter =
             desc.anisotropy_clamp > 1 && desc.mipmap_filter == MipmapFilterMode::Nearest;
-        if lod_bias == 0.0 && !native_mip_filter && !mirror_clamp.contains(&true) {
+        if lod_bias == 0.0
+            && !native_mip_filter
+            && !mirror_clamp.contains(&true)
+            && !non_comparing_depth
+        {
             return Some(self.create_sampler(desc));
         }
         #[cfg(wgpu_core)]
@@ -545,6 +562,7 @@ impl Device {
                     lod_bias,
                     native_mip_filter,
                     mirror_clamp,
+                    non_comparing_depth,
                 ),
             });
         }

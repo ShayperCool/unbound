@@ -49,6 +49,12 @@ pub struct Conventions {
 }
 
 impl GraphicsDevice {
+    /// Measured Unity 6000.0.71f1 compute comparisons follow texture state on Vulkan.
+    /// OpenGL Core histories remain unresolved (tests/projects/samplerstates Compute.*).
+    pub fn compute_depth_sampler_state(self) -> bool {
+        matches!(self, Self::Vulkan)
+    }
+
     /// Depth resolves on the measured Unity 6000.0.71f1 NVIDIA device. The OpenGL
     /// selection depends on the sample count (tests/projects/nativegfx device.sampleResolve);
     /// Vulkan uses sample zero (tests/projects/rtdepth). Other drivers remain unmeasured.

@@ -180,6 +180,14 @@ select the sample specified by the graphics compatibility profile. Native pointe
 publication controls are in tests/projects/nativegfx, measured on NVIDIA for Unity 6000.0.71f1.
 A destination resolve copies color only.
 
+NativeApi 74 adds texture-packet flags 64 (CompareDepths) and 128 (the depth sampler state is
+known). The measured release profile supplies both independently of color resolve behavior.
+A native comparison binding can read stored depth when the texture-owned state does not
+compare, as recorded in samplerstates DepthState controls on NVIDIA OpenGL and Vulkan.
+Inline Vulkan samplers keep their declared comparison. Vulkan compute follows texture-owned
+state; OpenGL compute histories remain unresolved. Other drivers reject the native opt-in,
+and profiles without explicit state retain legacy comparison behavior.
+
 ### Render protocol 6: texture handle element bits (NativeApi 13)
 
 NativeApi 14 appends `wrap_w` to `TexturePacket` and `ImportedTextureInfo`, and the
@@ -275,6 +283,7 @@ TexturePacket {
   i32 filter_mode, wrap_u, wrap_v, aniso_level;
   i32 render_target;   // bits: 1 render attachment, 2 storage binding, 4 auto-generate mips;
                        // 8 deferred mip updates, 16 retained resolve, 32 bind native MSAA;
+                       // 64 compares depth, 128 carries depth sampler state;
                        // bits 8..15 contain the MSAA sample count
   i32 depth_bits;      // 0 none, 16 depth, 24 depth+stencil, 32 float depth, -32 float depth+stencil
   i32 layers, dimension; // each layer has a mip chain; dimension is Unity's TextureDimension

@@ -115,3 +115,21 @@ use the NVIDIA driver only. OpenGL Core keeps its previous sampler path.
 
 References: [Unity MirrorOnce](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureWrapMode.MirrorOnce.html),
 [Vulkan sampler valid usage](https://docs.vulkan.org/refpages/latest/refpages/source/VkSamplerCreateInfo.html).
+
+## Texture-owned depth comparisons (`native-depth-state.patch`)
+
+The native creation opt-in keeps a comparison binding in Core while applying a disabled
+comparison mode to the native sampler. NVIDIA OpenGL and Vulkan return stored depth through
+that state in the Unity 6000.0.71f1 samplerstates controls. This is a measured driver behavior,
+not a portable WebGPU contract. Core rejects the opt-in for other vendors or backends and
+when the descriptor does not declare a comparison. Ordinary sampler creation is unchanged.
+
+`wgpu/src/api/device.rs` exposes the opt-in; `wgpu/src/backend/wgpu_core.rs` passes it to
+Core's sampler descriptor. `wgpu-core/src/device/resource.rs` validates the context and
+selects the native mode. Core retains the declared binding type and the sampler's normal
+ownership. Descriptor traces preserve the option. The renderer caches each sampler mode
+and carries render-texture state through the release compatibility profile.
+
+References: tests/projects/samplerstates `DepthState.*` and existing `Cmp*`/`Compute.*`
+controls, captured twice on each device, NVIDIA only. OpenGL compute histories remain
+unresolved and do not use this opt-in.

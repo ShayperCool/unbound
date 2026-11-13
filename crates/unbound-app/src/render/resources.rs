@@ -233,7 +233,7 @@ pub struct SamplerKey {
     /// Along W (a Texture3D's depth); the default samplers repeat there.
     pub wrap_w: i32,
     pub aniso: i32,
-    /// A comparison sampler's function (Unity's CompareFunction; 0: none).
+    /// A comparison function (Unity's CompareFunction; 0: none), or STORED_DEPTH.
     pub compare: i32,
     /// Native sampler LOD bias, as bits so cache identity includes its exact value.
     pub lod_bias_bits: u32,
@@ -264,6 +264,18 @@ impl SamplerKey {
             aniso: state.aniso,
             ..SamplerKey::LINEAR_CLAMP
         }
+    }
+}
+
+/// Internal sampler mode: a shader declares a comparison while native texture state reads depth.
+pub const STORED_DEPTH: i32 = -1;
+
+/// Texture-owned state controls graphics comparisons; measured OpenGL compute state remains separate.
+pub fn depth_comparison_mode(state: Option<bool>, inline: bool, texture_state: bool) -> i32 {
+    if state == Some(false) && !inline && texture_state {
+        STORED_DEPTH
+    } else {
+        4
     }
 }
 
@@ -304,7 +316,9 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey, reversed_z: bool) 
         min_filter: mag,
         mipmap_filter: mip,
         anisotropy_clamp: aniso,
-        compare: compare_function(if reversed_z {
+        compare: compare_function(if key.compare == STORED_DEPTH {
+            4
+        } else if reversed_z {
             i32::from(super::device::mirror_compare(key.compare as u8))
         } else {
             key.compare
@@ -315,12 +329,21 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey, reversed_z: bool) 
     let native_mirror_clamp = device.native_sampler_mirror_clamp() == Some(true);
     let mirror_clamp =
         [key.wrap_u, key.wrap_v, key.wrap_w].map(|mode| mode == 3 && native_mirror_clamp);
-    if bias == 0.0 && !native_nearest && !mirror_clamp.contains(&true) {
+    if bias == 0.0
+        && !native_nearest
+        && !mirror_clamp.contains(&true)
+        && key.compare != STORED_DEPTH
+    {
         device.create_sampler(&descriptor)
     } else {
         device
-            .create_sampler_with_native_options(&descriptor, bias, mirror_clamp)
-            .expect("nonzero texture mipMapBias requires native Vulkan sampler LOD bias support")
+            .create_sampler_with_texture_comparison(
+                &descriptor,
+                bias,
+                mirror_clamp,
+                key.compare == STORED_DEPTH,
+            )
+            .expect("the texture's native sampler options require a supported graphics device")
     }
 }
 
@@ -457,6 +480,8 @@ pub struct GpuTexture {
     pub msaa: Option<(wgpu::TextureView, Option<wgpu::TextureView>)>,
     pub samples: u32,
     pub bind_ms: bool,
+    /// Texture-owned comparison state for measured render textures; absent for other releases.
+    pub depth_compare: Option<bool>,
     /// Published single-sample depth for native plugins. Clears, shader reads and explicit
     /// self-resolves publish it; ordinary draws leave it unchanged (tests/projects/nativegfx).
     pub native_depth: Option<NativeDepthResolve>,
@@ -1446,6 +1471,7 @@ pub fn upload_texture_with(
     let mut gpu = match reuse {
         Some(mut e) => {
             e.sampler_key = sampler_key;
+            e.depth_compare = t.depth_compare;
             e.bind_groups = [None, None];
             e
         }
@@ -1695,6 +1721,7 @@ pub fn upload_texture_with(
                 msaa,
                 samples,
                 bind_ms: t.bind_ms,
+                depth_compare: t.depth_compare,
                 native_depth,
                 layers,
                 cube,
@@ -1889,6 +1916,7 @@ pub fn default_textures(
         defer_mips: false,
         retain_resolve: false,
         bind_ms: false,
+        depth_compare: None,
         samples: 1,
         depth_bits: 0,
         layers: 1,

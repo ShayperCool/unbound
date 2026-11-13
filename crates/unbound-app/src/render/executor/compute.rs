@@ -1335,7 +1335,15 @@ fn main() {
                         // A comparison sampler compares less-or-equal through the texture's state,
                         // as a graphics program's does (mirrored with a reversed depth buffer).
                         let key = if *comparison {
-                            super::SamplerKey { compare: 4, ..key }
+                            let state = texture
+                                .filter(|t| t.depth_texture.is_some())
+                                .and_then(|t| t.depth_compare);
+                            let compare = super::resources::depth_comparison_mode(
+                                state,
+                                texture.is_none(),
+                                self.conventions.compute_depth_sampler_state,
+                            );
+                            super::SamplerKey { compare, ..key }
                         } else {
                             key
                         };
