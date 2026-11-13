@@ -15,7 +15,12 @@ def verify(root, release, rate, contexts=False, selected=None):
                     assert isinstance(meta[f'{case}.{mode}.{field}'], int), (case, mode, field)
                 assert meta[f'{case}.{mode}.channels'] > 0, (case, mode)
             continue
-        if case.startswith(('context_live_reset_', 'context_recovery_')):
+        if case.startswith('context_schedule_'):
+            assert meta[case+'.schedule_lead_frames'] == 8 * meta[case+'.buffer'], case
+            expected_fraction = 1061158912 if case.endswith('threequarters') else 1048576000
+            assert meta[case+'.schedule_fraction_bits'] == expected_fraction, case
+            if '_late_' in case: assert meta[case+'.schedule_edit_block'] == 2, case
+        if case.startswith(('context_live_reset_', 'context_recovery_', 'context_schedule_reset_')):
             after_width = {1:1,2:2,3:4,4:5,5:6,6:8}[meta[case+'.after_mode']]
             for segment, count, width in [('', 8, meta[case+'.render_channels']), ('.after', 24, after_width), ('.drain', 8, after_width)]:
                 for suffix in SUFFIXES:
@@ -34,7 +39,7 @@ def verify(root, release, rate, contexts=False, selected=None):
                     assert isinstance(meta[f'{case}.source_frames_{block}'], int) and meta[f'{case}.source_frames_{block}'] >= 0, (case, block)
             assert meta[case+'.before_playing'] and meta[case+'.callbacks'] == 1
             assert not meta[case+'.callback_device'] and not meta[case+'.callback_playing']
-            assert meta[case+'.before_clip_bits'] == 1048576000 and meta[case+'.callback_clip_bits'] == 0
+            assert meta[case+'.before_clip_bits'] == (1056964608 if case.startswith('context_schedule_') else 1048576000) and meta[case+'.callback_clip_bits'] == 0
             continue
         if case.startswith('context_scriptzone_'):
             width = int(case.split('_')[2])

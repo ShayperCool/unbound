@@ -12,6 +12,40 @@ public partial class EffectProbe
         : mode == AudioSpeakerMode.Quad ? 4 : mode == AudioSpeakerMode.Surround ? 5
         : mode == AudioSpeakerMode.Mode5point1 ? 6 : mode == AudioSpeakerMode.Mode7point1 ? 8 : 2;
 
+    double m_SampleScheduleStart;
+
+    void ScheduleSampleFrames(string key, AudioSource source, List<string> records)
+    {
+        var config = AudioSettings.GetConfiguration();
+        double fraction = double.Parse(Option(key, "schedule_fraction=", "0"), System.Globalization.CultureInfo.InvariantCulture);
+        // Anchor to an integer DSP frame so the requested fraction is independent of clock rounding.
+        long origin = (long)Math.Round(AudioSettings.dspTime * config.sampleRate);
+        double startFrame = origin + 8.0 * config.dspBufferSize + fraction;
+        double start = startFrame / config.sampleRate;
+        string action = Option(key, "sample_schedule=", "play");
+        m_SampleScheduleStart = start;
+        if (action == "unscheduled") source.SetScheduledStartTime(start);
+        else if (action == "delay") source.PlayDelayed((float)((8.0 * config.dspBufferSize + fraction) / config.sampleRate));
+        else {
+            double initial = action == "start" ? (startFrame + 4.0 * config.dspBufferSize) / config.sampleRate : start;
+            source.PlayScheduled(initial);
+            if (Option(key, "schedule_restart=", "0") == "1") source.PlayScheduled(initial);
+            if (action == "start" && Option(key, "schedule_edit_block=", "") == "") source.SetScheduledStartTime(start);
+        }
+        if (action == "end") source.SetScheduledEndTime((startFrame + 2048.0) / config.sampleRate);
+        records.Add("\"" + key + ".schedule_lead_frames\":" + (8 * config.dspBufferSize));
+        records.Add("\"" + key + ".schedule_fraction_bits\":" + BitConverter.SingleToInt32Bits((float)fraction));
+    }
+
+    void EditSampleSchedule(string key, AudioSource source, int block, List<string> records)
+    {
+        string edit = Option(key, "schedule_edit_block=", "");
+        if (edit != "" && block == int.Parse(edit)) {
+            source.SetScheduledStartTime(m_SampleScheduleStart);
+            records.Add("\"" + key + ".schedule_edit_block\":" + block);
+        }
+    }
+
     System.Collections.IEnumerator CaptureLayoutReset(string key, AudioSource source, AudioClip clip,
         AudioMixer mixer, AudioConfiguration config, string output, List<string> records,
         List<NativeArray<float>> sinks)
@@ -35,7 +69,8 @@ public partial class EffectProbe
             if (!recovered.SetData(Signal(Option(key, "music=", "dc:0.25"), config.sampleRate), 0))
                 throw new Exception("recovered SetData failed");
             source.clip = recovered;
-            if (Option(key, "scheduled=", "0") == "1") {
+            if (Option(key, "sample_schedule=", "") != "") ScheduleSampleFrames(key, source, records);
+            else if (Option(key, "scheduled=", "0") == "1") {
                 double fraction = double.Parse(Option(key, "schedule_fraction=", "0"), System.Globalization.CultureInfo.InvariantCulture);
                 double start = AudioSettings.dspTime + (8.0 * config.dspBufferSize + fraction) / config.sampleRate;
                 string edit = Option(key, "schedule_edit=", "");
@@ -84,9 +119,9 @@ public partial class EffectProbe
             var sink = new NativeArray<float>(buffer.Length, Allocator.Persistent); sinks.Add(sink);
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, name + ".f32"))))
             using (var masterWriter = new BinaryWriter(File.Create(Path.Combine(output, name + ".master.f32")))) {
-                if (Engine) FlushEngine();
                 for (int block = 0; block < blocks; block++) {
-                    if (!Engine) yield return null;
+                    if (!Engine) yield return null; else FlushEngine();
+                    if (segment == 1) EditSampleSchedule(key, source, block, records);
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("reset sink failed");
                     double beforeRender = controlled ? AudioSettings.dspTime : 0;
                     if (!AudioRenderer.Render(buffer)) throw new Exception("reset render failed");

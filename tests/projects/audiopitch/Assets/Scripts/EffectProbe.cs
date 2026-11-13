@@ -324,6 +324,27 @@ public partial class EffectProbe : MonoBehaviour
         new[] { "context_live_71_chorus_listener", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att", "component=chorus:listener", "component_live=1" },
         new[] { "context_live_71_reverb_source", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att", "component=reverb:source", "component_live=1" },
         new[] { "context_live_71_reverb_listener", "mode=Mode7point1", "music=generator", "gen=burst", "Music:Att", "component=reverb:listener", "component_live=1" },
+        new[] { "context_schedule_ordinary_play_quarter", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=play", "schedule_fraction=0.25" },
+        new[] { "context_schedule_ordinary_play_threequarters", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=play", "schedule_fraction=0.75" },
+        new[] { "context_schedule_ordinary_start_quarter", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=start", "schedule_fraction=0.25" },
+        new[] { "context_schedule_ordinary_start_threequarters", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=start", "schedule_fraction=0.75" },
+        new[] { "context_schedule_ordinary_end_quarter", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=end", "schedule_fraction=0.25" },
+        new[] { "context_schedule_ordinary_end_threequarters", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=end", "schedule_fraction=0.75" },
+        new[] { "context_schedule_reset_play_quarter", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=play", "schedule_fraction=0.25", "reset_to=Quad", "recover=1", "recovery_renderer=1" },
+        new[] { "context_schedule_reset_play_threequarters", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=play", "schedule_fraction=0.75", "reset_to=Quad", "recover=1", "recovery_renderer=1" },
+        new[] { "context_schedule_reset_start_quarter", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=start", "schedule_fraction=0.25", "reset_to=Quad", "recover=1", "recovery_renderer=1" },
+        new[] { "context_schedule_reset_start_threequarters", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=start", "schedule_fraction=0.75", "reset_to=Quad", "recover=1", "recovery_renderer=1" },
+        new[] { "context_schedule_reset_end_quarter", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=end", "schedule_fraction=0.25", "reset_to=Quad", "recover=1", "recovery_renderer=1" },
+        new[] { "context_schedule_reset_end_threequarters", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=end", "schedule_fraction=0.75", "reset_to=Quad", "recover=1", "recovery_renderer=1" },
+        new[] { "context_schedule_ordinary_start_late_quarter", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=start", "schedule_fraction=0.25", "schedule_edit_block=2" },
+        new[] { "context_schedule_ordinary_start_late_threequarters", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=start", "schedule_fraction=0.75", "schedule_edit_block=2" },
+        new[] { "context_schedule_reset_start_late_quarter", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=start", "schedule_fraction=0.25", "schedule_edit_block=2", "reset_to=Quad", "recover=1", "recovery_renderer=1" },
+        new[] { "context_schedule_reset_start_late_threequarters", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=start", "schedule_fraction=0.75", "schedule_edit_block=2", "reset_to=Quad", "recover=1", "recovery_renderer=1" },
+        new[] { "context_schedule_ordinary_restart_quarter", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=start", "schedule_fraction=0.25", "schedule_restart=1" },
+        new[] { "context_schedule_ordinary_restart_threequarters", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=start", "schedule_fraction=0.75", "schedule_restart=1" },
+        new[] { "context_schedule_ordinary_delay_quarter", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=delay", "schedule_fraction=0.25" },
+        new[] { "context_schedule_ordinary_delay_threequarters", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=delay", "schedule_fraction=0.75" },
+        new[] { "context_schedule_ordinary_unscheduled_threequarters", "asset=context_live_reset_stereo_quad_idle", "music=dc0", "Music:Att", "mode=Stereo", "preflight=4", "sample_schedule=unscheduled", "schedule_fraction=0.75" },
         new[] { "context_recovery_quad_mode7point1_dry", "mode=Quad", "reset_to=Mode7point1", "music=dc:0.25", "Music:Att", "recover=1", "preflight=4", "recovery_renderer=1", "asset=context_live_reset_quad_mode7point1_dry" },
         new[] { "context_recovery_quad_mode7point1_chorus_source", "mode=Quad", "reset_to=Mode7point1", "music=dc:0.25", "Music:Att", "recover=1", "component=chorus:source", "preflight=4", "recovery_renderer=1", "asset=context_live_reset_quad_mode7point1_chorus_source" },
         new[] { "context_recovery_quad_mode7point1_reverb_listener", "mode=Quad", "reset_to=Mode7point1", "music=dc:0.25", "Music:Att", "recover=1", "component=reverb:listener", "preflight=4", "recovery_renderer=1", "asset=context_live_reset_quad_mode7point1_reverb_listener" },
@@ -1497,7 +1518,9 @@ public partial class EffectProbe : MonoBehaviour
                     component = reverb;
                 }
             }
-            source.Play();
+            if (Option(key, "sample_schedule=", "") != "" && Option(key, "reset_to=", "") == "")
+                ScheduleSampleFrames(key, source, records);
+            else source.Play();
             if (Option(key, "reset_to=", "") != "") {
                 var resetting = CaptureLayoutReset(key, source, clip, mixer, config, output, records, sinks);
                 while (resetting.MoveNext()) yield return resetting.Current;
@@ -1512,6 +1535,7 @@ public partial class EffectProbe : MonoBehaviour
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key+".f32")))) {
                 if (Engine) FlushEngine();
                 for (int block = 0; block < BlockCount; block++) {
+                    EditSampleSchedule(key, source, block, records);
                     foreach (var token in Tokens(key)) if (token.StartsWith("live:"+block+":")) {
                         var pair = token.Substring(token.IndexOf(':', 5)+1).Split('=');
                         bool ok = mixer.SetFloat(pair[0], float.Parse(pair[1], System.Globalization.CultureInfo.InvariantCulture));
