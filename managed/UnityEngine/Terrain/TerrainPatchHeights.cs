@@ -20,6 +20,57 @@ namespace UnityEngine
             internal int[][] Low, High;
 
             internal int Side(int level) => 1 << (Levels - level);
+
+            /// <summary>Heights changed in samples x0..x1, z0..z1 without the levels of detail being
+            /// worked out: the patches over them (a sample on a border is in both) take an endless
+            /// error and their height ranges again.</summary>
+            internal void Touch(TerrainData data, int x0, int z0, int x1, int z1)
+            {
+                for (int level = 0; level <= Levels; level++)
+                {
+                    int span = Cells << level, side = Side(level);
+                    int px0 = Math.Max(0, (x0 - 1) / span), px1 = Math.Min(side - 1, x1 / span);
+                    int pz0 = Math.Max(0, (z0 - 1) / span), pz1 = Math.Min(side - 1, z1 / span);
+                    for (int z = pz0; z <= pz1; z++)
+                        for (int x = px0; x <= px1; x++)
+                        {
+                            if (x1 < x * span || x0 > (x + 1) * span || z1 < z * span || z0 > (z + 1) * span) continue;
+                            int i = z * side + x;
+                            Error[level][i] = float.PositiveInfinity;
+                            Range(data, level, x, z);
+                        }
+                }
+            }
+
+            /// <summary>A node's lowest and highest raw heights: its samples' at the finest level, its
+            /// four children's above.</summary>
+            internal void Range(TerrainData data, int level, int x, int z)
+            {
+                int side = Side(level), span = Cells << level, i = z * side + x;
+                int low = int.MaxValue, high = int.MinValue;
+                if (level == 0)
+                {
+                    for (int sz = z * span; sz <= (z + 1) * span; sz++)
+                        for (int sx = x * span; sx <= (x + 1) * span; sx++)
+                        {
+                            int h = data.RawHeight(sx, sz);
+                            low = Math.Min(low, h);
+                            high = Math.Max(high, h);
+                        }
+                }
+                else
+                {
+                    int childSide = Side(level - 1);
+                    for (int c = 0; c < 4; c++)
+                    {
+                        int child = (z * 2 + (c >> 1)) * childSide + x * 2 + (c & 1);
+                        low = Math.Min(low, Low[level - 1][child]);
+                        high = Math.Max(high, High[level - 1][child]);
+                    }
+                }
+                Low[level][i] = low;
+                High[level][i] = high;
+            }
         }
 
         PatchHeights m_PatchHeights;
@@ -34,12 +85,12 @@ namespace UnityEngine
             return levels;
         }
 
-        /// <summary>The patches of the current heights; null when the heightmap is not a power of
-        /// two plus one samples a side, from 17 on.</summary>
+        /// <summary>The patches of the heights as of the last change the levels of detail follow;
+        /// null when the heightmap is not a power of two plus one samples a side, from 17 on.</summary>
         internal PatchHeights Patches()
         {
-            if (m_PatchHeightsVersion == m_HeightsVersion) return m_PatchHeights;
-            m_PatchHeightsVersion = m_HeightsVersion;
+            if (m_PatchHeightsVersion == m_LodVersion) return m_PatchHeights;
+            m_PatchHeightsVersion = m_LodVersion;
             int cells = m_Resolution - 1;
             if (cells < PatchHeights.Cells || (cells & (cells - 1)) != 0) return m_PatchHeights = null;
             int levels = PatchLevels(m_Resolution);
@@ -54,37 +105,13 @@ namespace UnityEngine
             {
                 int side = patches.Side(level), count = side * side, span = PatchHeights.Cells << level;
                 var error = patches.Error[level] = new float[count];
-                var lowest = patches.Low[level] = new int[count];
-                var highest = patches.High[level] = new int[count];
+                patches.Low[level] = new int[count];
+                patches.High[level] = new int[count];
                 for (int z = 0; z < side; z++)
                     for (int x = 0; x < side; x++)
                     {
-                        int i = z * side + x;
-                        error[i] = MaximumHeightError(x * span, z * span, level);
-                        int low = int.MaxValue, high = int.MinValue;
-                        if (level == 0)
-                        {
-                            for (int sz = z * span; sz <= (z + 1) * span; sz++)
-                                for (int sx = x * span; sx <= (x + 1) * span; sx++)
-                                {
-                                    int h = RawHeight(sx, sz);
-                                    low = Math.Min(low, h);
-                                    high = Math.Max(high, h);
-                                }
-                        }
-                        else
-                        {
-                            // A node's heights are its four children's.
-                            int childSide = patches.Side(level - 1);
-                            for (int c = 0; c < 4; c++)
-                            {
-                                int child = (z * 2 + (c >> 1)) * childSide + x * 2 + (c & 1);
-                                low = Math.Min(low, patches.Low[level - 1][child]);
-                                high = Math.Max(high, patches.High[level - 1][child]);
-                            }
-                        }
-                        lowest[i] = low;
-                        highest[i] = high;
+                        error[z * side + x] = MaximumHeightError(x * span, z * span, level);
+                        patches.Range(this, level, x, z);
                     }
             }
             return m_PatchHeights = patches;

@@ -317,5 +317,29 @@ namespace UnityEngine.Tests
             Assert.Equal(0.5f, extents[20].max, 4);
             Assert.Equal(0f, extents[20].min);
         }
+
+        /// <summary>SetHeights updates the patches' errors and ranges at once; SetHeightsDelayLOD
+        /// gives the patches it touches an endless error until SyncHeightmap, and their ranges at
+        /// once.</summary>
+        [Fact]
+        public void DelayedHeightsReachThePatchesOnSync()
+        {
+            var data = new TerrainData { heightmapResolution = 33 };
+            m_Objects.Add(data);
+            Assert.Equal(0f, data.GetPatchMinMaxHeights()[^1].max);
+            data.SetHeights(5, 7, new float[,] { { 0.25f } });
+            Assert.Equal(0.25f, data.GetPatchMinMaxHeights()[^1].max, 4);
+            data.SetHeightsDelayLOD(9, 9, new float[,] { { 0.75f } });
+            Assert.Equal(0.75f, data.GetHeight(9, 9) / data.size.y, 4);
+            Assert.Equal(0.75f, data.GetPatchMinMaxHeights()[^1].max, 4);
+            Assert.Equal(float.PositiveInfinity, data.GetMaximumHeightError()[^1]);
+            // (9, 9) lies in the finest patch (0, 0) only; the others keep their errors.
+            var errors = data.GetMaximumHeightError();
+            Assert.Equal(float.PositiveInfinity, errors[0]);
+            Assert.Equal(new[] { 0f, 0f, 0f }, errors[1..4]);
+            data.SyncHeightmap();
+            Assert.Equal(0.75f, data.GetPatchMinMaxHeights()[^1].max, 4);
+            Assert.Equal(0.75f, data.GetMaximumHeightError()[^1], 4);
+        }
     }
 }

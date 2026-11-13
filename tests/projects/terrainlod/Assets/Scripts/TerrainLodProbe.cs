@@ -59,17 +59,14 @@ public class TerrainLodProbe : MonoBehaviour
         Capture(dir, "layers5splat", layered, new Vector3(5050f, 70f, 4975f), new Vector3(5050f, 0f, 5050f), 5f, 1000f, 0, 0);
         AppendBaseMaps();
         // The per-patch height errors and height ranges the levels of detail are worked out from.
-        foreach (var tile in new[] { terrain, east })
-        {
-            var data = tile.terrainData;
-            var line = new StringBuilder($"{{\"patches\":\"{tile.name}\",\"errors\":[");
-            var errors = data.GetMaximumHeightError();
-            for (int i = 0; i < errors.Length; i++) line.Append(i == 0 ? "" : ",").Append(F(errors[i]));
-            line.Append("],\"extents\":[");
-            var extents = data.GetPatchMinMaxHeights();
-            for (int i = 0; i < extents.Length; i++) line.Append(i == 0 ? "" : ",").Append(F(extents[i].min)).Append(',').Append(F(extents[i].max));
-            m_Out.Append(line.Append("]}\n"));
-        }
+        AppendPatches(terrain.name, terrain.terrainData);
+        AppendPatches(east.name, east.terrainData);
+        // SetHeightsDelayLOD leaves them as they were until SyncHeightmap.
+        var flat = layered.terrainData;
+        flat.SetHeightsDelayLOD(5, 7, new float[,] { { 0.4f } });
+        AppendPatches("delayed", flat);
+        flat.SyncHeightmap();
+        AppendPatches("synced", flat);
         File.WriteAllText(Path.Combine(dir, "terrainlod.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -91,6 +88,17 @@ public class TerrainLodProbe : MonoBehaviour
             maps[row] = count + 1;
         }
         foreach (var pair in maps) m_Out.Append(pair.Key).Append($",\"count\":{pair.Value}}}\n");
+    }
+
+    void AppendPatches(string label, TerrainData data)
+    {
+        var line = new StringBuilder($"{{\"patches\":\"{label}\",\"errors\":[");
+        var errors = data.GetMaximumHeightError();
+        for (int i = 0; i < errors.Length; i++) line.Append(i == 0 ? "" : ",").Append(F(errors[i]));
+        line.Append("],\"extents\":[");
+        var extents = data.GetPatchMinMaxHeights();
+        for (int i = 0; i < extents.Length; i++) line.Append(i == 0 ? "" : ",").Append(F(extents[i].min)).Append(',').Append(F(extents[i].max));
+        m_Out.Append(line.Append("]}\n"));
     }
 
     /// <summary>A flat terrain far from the others with five plain-coloured layers in stripes,

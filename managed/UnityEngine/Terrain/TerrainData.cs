@@ -42,6 +42,9 @@ namespace UnityEngine
         Color m_WavingGrassTint = new Color(0.7f, 0.6f, 0.5f, 0f);
         /// <summary>Bumped when the heights or holes change: colliders and meshes rebuild.</summary>
         internal int m_HeightsVersion;
+        /// <summary>Bumped when the levels of detail follow the heights (all but SetHeightsDelayLOD).</summary>
+        internal int m_LodVersion;
+        int m_DelayingLod;
         /// <summary>Bumped when the splat maps or layers change.</summary>
         internal int m_SplatVersion;
         /// <summary>Bumped when the trees or their prototypes change.</summary>
@@ -157,10 +160,22 @@ namespace UnityEngine
             for (int y = 0; y < height; y++)
                 for (int x = 0; x < width; x++)
                     m_Heights[(yBase + y) * m_Resolution + xBase + x] = (ushort)Mathf.RoundToInt(Mathf.Clamp01(heights[y, x]) * MaxHeight);
-            HeightsChanged();
+            HeightsChanged(m_DelayingLod == 0);
         }
 
-        public void SetHeightsDelayLOD(int xBase, int yBase, float[,] heights) => SetHeights(xBase, yBase, heights);
+        /// <summary>SetHeights without working out the levels of detail again: the patches the
+        /// heights touch take an endless error (drawn at their finest) until SyncHeightmap, their
+        /// height ranges follow at once (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/terrainlod).</summary>
+        public void SetHeightsDelayLOD(int xBase, int yBase, float[,] heights)
+        {
+            var patches = heights != null ? Patches() : null;
+            m_DelayingLod++;
+            try { SetHeights(xBase, yBase, heights); }
+            finally { m_DelayingLod--; }
+            if (patches != null && heights.Length > 0)
+                patches.Touch(this, xBase, yBase, xBase + heights.GetLength(1) - 1, yBase + heights.GetLength(0) - 1);
+        }
 
         public void SyncHeightmap() => HeightsChanged();
 
@@ -177,9 +192,11 @@ namespace UnityEngine
                 if (user is TerrainCollider collider) collider.ShapeChanged();
         }
 
-        internal void HeightsChanged()
+        /// <summary>The heights changed; with <paramref name="lod"/> the levels of detail follow.</summary>
+        internal void HeightsChanged(bool lod = true)
         {
             m_HeightsVersion++;
+            if (lod) m_LodVersion++;
             foreach (var user in m_Users.ToArray())
                 if (user is TerrainCollider collider) collider.ShapeChanged();
         }
@@ -771,6 +788,7 @@ namespace UnityEngine
                 ReadDetails(detail, resolver);
             }
             m_HeightsVersion++;
+            m_LodVersion++;
             m_SplatVersion++;
             m_TreesVersion++;
         }
