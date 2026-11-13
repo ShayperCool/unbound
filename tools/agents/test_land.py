@@ -1410,9 +1410,11 @@ class AutomaticProbeTests(unittest.TestCase):
 class ApiGateTests(unittest.TestCase):
     def test_gate_configuration_changes_select_managed_api_checks(self):
         for path in ['managed/UnityEngine/Core/Attributes.cs', 'crates/unbound-compat/src/lib.rs',
-                     'tools/agents/land.py', 'tools/agents/test_land.py']:
+                     'crates/unbound-project/src/install.rs', 'crates/unbound-project/src/editor_archive.rs',
+                     'crates/unbound/src/commands.rs', 'tools/agents/land.py', 'tools/agents/test_land.py']:
             self.assertIsNotNone(land.STUB_INPUTS.match(path), path)
-        self.assertIsNone(land.STUB_INPUTS.match('docs/API_DECLARATIONS.md'))
+        for path in ['docs/API_DECLARATIONS.md', 'crates/unbound-project/src/packages.rs', 'crates/unbound/src/main.rs']:
+            self.assertIsNone(land.STUB_INPUTS.match(path), path)
 
     def test_declaration_failures_stop_managed_gate_after_generation(self):
         with tempfile.TemporaryDirectory() as directory:

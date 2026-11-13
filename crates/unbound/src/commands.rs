@@ -893,16 +893,18 @@ pub fn api_check(args: &ProjectArgs, json_output: bool) -> Result<()> {
 }
 
 /// Inventories hand-written types for release Editor default-state captures and compares literal
-/// managed constructor stores. The JSON retains undecidable and unmatched coverage counts.
+/// managed constructor stores, against the same Unity declarations as `api-check`. The JSON retains
+/// undecidable and unmatched coverage counts.
 pub fn api_defaults(args: &ProjectArgs) -> Result<()> {
     let project = open(args)?;
+    let reference = project.install.api_reference()?;
     let NoStubsBuild { dll, .. } = build_without_stubs(&project.profile.data.family)?;
     let runtime = unbound_host::ManagedRuntime::start()?;
     let mut report: serde_json::Value = runtime.call(
         "api-defaults",
         &json!({
-            "unityManagedEngineDir": project.install.managed_engine_dir(),
-            "platformModules": project.install.platform_modules(),
+            "unityManagedEngineDir": reference.managed_engine_dir,
+            "platformModules": reference.platform_modules,
             "implAssembly": dll,
         }),
     )?;

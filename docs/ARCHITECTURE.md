@@ -91,11 +91,11 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   parts adding the missing members to hand-written types (which must therefore be `partial`).
   Generated code is marked `[Unbound.Stub]`; bodies call `Unbound.Runtime.Stubs.NotImplemented`
   and return defaults. Implementing a member by hand and regenerating drops its stub.
-  Both commands read the release's **API reference**, the same files on every machine: the
-  release's Linux Editor with the Android and iOS modules (`PlaybackEngines/AndroidPlayer`,
-  `LinuxStandaloneSupport`, `iOSSupport`; other installed players are left out). On Linux that is
-  the Hub installation when it has those modules; otherwise (macOS, a missing module) the files
-  are downloaded once into `<cache>/editors/`. Editor builds for other OSes declare the same API
+  Both commands, and `api-defaults` below, read the release's **API reference**, the same files on
+  every machine: the release's Linux Editor with the Android and iOS modules
+  (`PlaybackEngines/AndroidPlayer`, `LinuxStandaloneSupport`, `iOSSupport`; other installed
+  players are left out). On Linux that is the Hub installation when it has those modules;
+  otherwise (macOS, a missing module) the files are downloaded once into `<cache>/editors/`. Editor builds for other OSes declare the same API
   in a different metadata order and ship other players, so generating from them would rewrite the
   committed stubs. `Unbound.Assembly.g.cs` lists every Unity assembly read with its module version
   id, so output generated from other files shows as a change of that list.

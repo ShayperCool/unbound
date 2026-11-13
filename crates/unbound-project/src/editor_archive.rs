@@ -106,7 +106,8 @@ pub fn fetch(release: UnityVersion) -> Result<PathBuf> {
 /// `Editor/Data` of the release's Linux Editor files with exactly the default modules
 /// ([`DEFAULT_MODULES`], whatever `UNBOUND_EDITOR_MODULES` says), downloaded first when they are not
 /// cached: the API reference (`UnityInstall::api_reference`). A module that cannot be had is an
-/// error, as the stubs generated without it would lose its API.
+/// error, as the stubs generated without it would lose its API. The modules land in the same cache
+/// as [`fetch`]'s, so later runs on these cached files also see them.
 pub fn fetch_api_reference(release: UnityVersion) -> Result<PathBuf> {
     let modules: Vec<String> = DEFAULT_MODULES.iter().map(|m| m.to_string()).collect();
     fetch_with(release, &modules, true)
