@@ -12,7 +12,8 @@ and report from the packed pages there. Unity 6000.0.71f1 authors two projects (
   textures), `Dilated` (padding 8, alpha dilation, mipmaps, a compressed page), `Blocks`
   (block offset 2) and `Late` (not included in builds: late binding). Also `Sheets` (two sprite
   sheets of equal 32 x 32 cells), `Folder` (a folder packable, point filtering), `Picked`
-  (sprites as packables, one 9-sliced, drawn Sliced and Tiled), `PagedHalf` (a variant of
+  (sprites as packables, one 9-sliced, drawn Sliced and Tiled; a flipped sheet cell is drawn
+  Sliced too), `PagedHalf` (a variant of
   `Paged` at scale 0.5) and `Hd` (left out of builds) with its variant `Sd` (in builds, scale
   0.5: the Manual's way to use a variant); `Unpicked` and `Loose` (a trimmed Tight sprite) are
   in no atlas.

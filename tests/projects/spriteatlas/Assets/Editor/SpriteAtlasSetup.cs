@@ -230,7 +230,7 @@ public static class SpriteAtlasSetup
 
             // Drawn: a flipped and a tightly packed sprite, a Full Rect sprite on a second page, a
             // folder sprite on a point-filtered page and a late-binding sprite.
-            Scene(atlases, late, new[] { "SheetACell2", "TightInset", "PagedTiny", "FolderBig", "LateRing", "TightBig", "HdRing", "Sliced", "Sliced" });
+            Scene(atlases, late, new[] { "SheetACell2", "TightInset", "PagedTiny", "FolderBig", "LateRing", "TightBig", "HdRing", "Sliced", "Sliced", "SheetBCell1" });
             EditorApplication.Exit(0);
         }
         catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
@@ -344,11 +344,18 @@ public static class SpriteAtlasSetup
             renderer.transform.position = new Vector3(-1.5f + 1.0f * (i % 4), i < 4 ? .5f : -.6f, 0);
             // The 9-sliced sprite: once Sliced, once Tiled, larger than its rect, apart from the
             // other renderers (their order at equal depth is not part of the probe).
-            if (i >= 7)
+            if (i == 7 || i == 8)
             {
                 renderer.drawMode = i == 7 ? SpriteDrawMode.Sliced : SpriteDrawMode.Tiled;
                 renderer.size = new Vector2(.8f, .4f);
                 renderer.transform.position = new Vector3(1.5f, i == 7 ? -.45f : -.95f, 0);
+            }
+            // A sprite the packer flipped, drawn Sliced (stretched).
+            if (i == 9)
+            {
+                renderer.drawMode = SpriteDrawMode.Sliced;
+                renderer.size = new Vector2(.4f, .25f);
+                renderer.transform.position = new Vector3(.6f, -1.05f, 0);
             }
         }
         EditorSceneManager.SaveScene(scene, "Assets/Probe.unity");

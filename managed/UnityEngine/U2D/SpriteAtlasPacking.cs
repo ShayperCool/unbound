@@ -139,10 +139,16 @@ namespace UnityEngine.U2D
             }
             // A master left out of builds with a variant in them: its sprites bind to the variant
             // (measured: tests/projects/spriteatlas, the Manual's way to use a variant).
+            var variantOf = new Dictionary<string, string>();
             foreach (var atlas in s_Atlases.Values)
                 if (atlas.Master != null && atlas.IncludeInBuild && s_Atlases.TryGetValue(atlas.Master, out var master) && !master.IncludeInBuild)
+                {
+                    if (variantOf.TryGetValue(master.Guid, out var other))
+                        Debug.LogWarning($"Unbound: sprite atlas {master.Name} has several variants in builds ({other}, {atlas.Name}); its sprites bind to {atlas.Name} (the Editor's choice is not reproduced)");
+                    variantOf[master.Guid] = atlas.Name;
                     foreach (var pair in atlas.ByKey)
                         s_Bindings[pair.Key] = pair.Value;
+                }
             foreach (var ((first, second), n) in shared)
                 Debug.LogWarning($"Unbound: {n} sprites are in sprite atlases {first} and {second}; they bind to {second} (the Editor's choice among several atlases is not reproduced)");
         }
@@ -211,6 +217,8 @@ namespace UnityEngine.U2D
             if (!s_Waiting.TryGetValue(atlas.Tag, out var waiting)) return;
             s_Waiting.Remove(atlas.Tag);
             // A registered variant binds the sprites to its own pages (unmeasured).
+            if (atlas.Master != null)
+                Debug.LogWarning($"Unbound: variant atlas {atlas.Name} registered for late-binding sprites binds them to its pages (unmeasured)");
             foreach (var sprite in waiting)
                 if (sprite != null && sprite.m_AtlasBinding is (string Texture, long FileId) key
                     && (atlas.ByKey.TryGetValue(key, out var binding) || s_Bindings.TryGetValue(key, out binding)))

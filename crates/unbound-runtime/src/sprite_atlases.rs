@@ -16,6 +16,10 @@ use unbound_yaml::{Guid, Value};
 /// The file id of a texture's Texture2D, which stands for all its sprites as a packable.
 const TEXTURE_FILE_ID: i64 = 2800000;
 
+/// Extensions of files whose sprites scripted importers make (PSD Importer, Vector Graphics,
+/// Aseprite Importer): such packables are not packed.
+const SCRIPTED_SPRITE_EXTENSIONS: &[&str] = &["psb", "svg", "aseprite", "ase"];
+
 /// How the managed side names an atlas page to import: `atlas:<atlas guid>:<page>`.
 pub const PAGE_KEY_PREFIX: &str = "atlas:";
 
@@ -193,6 +197,38 @@ fn definition(source: &Path, bytes: &[u8], meta: &Value) -> Result<AtlasDefiniti
 }
 
 impl AtlasImporter<'_> {
+    /// Packables Unbound does not pack: neither textures nor folders (scripted importers'
+    /// sprites, `.psb`, `.svg`, ...), and such files inside folder packables.
+    fn skipped(&self, packables: &[(Guid, i64)]) -> Vec<String> {
+        let mut out = Vec::new();
+        for &(guid, _) in packables {
+            let Some(asset) = self.db.by_guid(guid) else {
+                continue;
+            };
+            if asset.is_folder {
+                let prefix = format!("{}/", asset.path);
+                out.extend(
+                    self.db
+                        .iter()
+                        .filter(|a| !a.is_folder && a.path.starts_with(&prefix))
+                        .filter(|a| {
+                            a.file
+                                .extension()
+                                .and_then(|e| e.to_str())
+                                .is_some_and(|e| {
+                                    SCRIPTED_SPRITE_EXTENSIONS
+                                        .contains(&e.to_ascii_lowercase().as_str())
+                                })
+                        })
+                        .map(|a| a.path.clone()),
+                );
+            } else if AssetKind::from_path(&asset.file) != Some(AssetKind::Texture) {
+                out.push(asset.path.clone());
+            }
+        }
+        out
+    }
+
     /// The textures a packable stands for, with the sprite it names (`None`: all of them).
     fn textures(&self, packables: &[(Guid, i64)]) -> Vec<(Guid, PathBuf, Option<i64>)> {
         let mut out = Vec::new();
@@ -296,6 +332,17 @@ impl AtlasImporter<'_> {
         packed.uv_sizes = master.uv_sizes.clone();
         let mut settings = self.textures.settings(&def.texture_meta);
         settings.format_alpha = Some(true);
+        if master
+            .pages
+            .iter()
+            .any(|p| p.blocks.is_some() || p.crunched.is_some())
+        {
+            packed.warnings.push(format!(
+                "variant atlas {}: its master's pages are compressed; it scales their decoded \
+                 texels (unmeasured)",
+                def.name
+            ));
+        }
         for (i, page) in master.pages.iter().enumerate() {
             let (w, h) = (page.width, page.height);
             let size = |v: u32| ((v as f32 * scale) as u32).max(1);
@@ -318,7 +365,8 @@ impl AtlasImporter<'_> {
 impl Importer for AtlasImporter<'_> {
     type Output = PackedAtlas;
     const KIND: &'static str = "sprite-atlases";
-    const VERSION: u32 = 1;
+    // 2: warnings for skipped packables and compressed variant masters.
+    const VERSION: u32 = 2;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<PathBuf>> {
         let bytes = std::fs::read(source)?;
@@ -376,6 +424,15 @@ impl Importer for AtlasImporter<'_> {
         };
         if let Some((master, scale)) = def.variant {
             return self.variant(source, packed, &def, master, scale);
+        }
+        let skipped = self.skipped(&def.packables);
+        if !skipped.is_empty() {
+            packed.warnings.push(format!(
+                "atlas {}: packables that are not textures are not packed (their sprites keep their \
+                 own textures, and the other sprites are laid out without them): {}",
+                def.name,
+                skipped.join(", ")
+            ));
         }
         if def.alpha_splitting {
             packed.warnings.push(format!(

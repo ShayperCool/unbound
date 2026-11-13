@@ -94,9 +94,9 @@ impl PlayModeAtlases {
     /// mode, where the Editor packs them.
     pub fn edit_mode_message(&self) -> String {
         format!(
-            "Sprite Packer mode \"{}\" packs sprite atlases before entering Play mode; Unbound packs \
-             them for Play-mode sessions only: sprites this Edit-mode session loads stay unpacked \
-             (their own textures, not the atlas pages) when it enters Play mode. Atlases ({}): {}",
+            "Sprite Packer mode \"{}\" packs sprite atlases before entering Play mode; in this \
+             Edit-mode session, sprites loaded before it enters Play mode stay unpacked (their own \
+             textures), and sprites loaded in Play mode stay packed after it leaves. Atlases ({}): {}",
             self.mode,
             self.paths.len(),
             self.names(Self::WARNING_SHOWN)

@@ -17,6 +17,9 @@ namespace UnityEngine
     [RequireComponent(typeof(Transform))]
     public sealed partial class ParticleSystemRenderer : Renderer
     {
+        /// <summary>A flipped packed sprite in Texture Sheet Animation was reported.</summary>
+        static bool s_WarnedFlippedSheetSprite;
+
         ParticleSystemRenderMode m_RenderMode;
         ParticleSystemSortMode m_SortMode;
         float m_MinParticleSize;
@@ -1100,7 +1103,14 @@ namespace UnityEngine
                     var tex = sprite != null ? sprite.texture : null;
                     if (tex == null || tex.width == 0 || tex.height == 0) return new Rect(0f, 0f, 1f, 1f);
                     var tr = sprite.textureRect;
-                    return new Rect(tr.x / tex.width, tr.y / tex.height, tr.width / tex.width, tr.height / tex.height);
+                    // In the page's rect space (a variant's scaled page keeps its master's rects).
+                    var space = sprite.RectSpace;
+                    if (sprite.packed && sprite.packingRotation != SpritePackingRotation.None && !s_WarnedFlippedSheetSprite)
+                    {
+                        s_WarnedFlippedSheetSprite = true;
+                        Debug.LogWarning($"Unbound: Texture Sheet Animation sprite {sprite.name} is flipped in its sprite atlas; particles draw it unflipped (unmeasured)");
+                    }
+                    return new Rect(tr.x / space.x, tr.y / space.y, tr.width / space.x, tr.height / space.y);
                 }
 
                 int tilesX = Math.Max(1, T.numTilesX), tilesY = Math.Max(1, T.numTilesY);
