@@ -300,6 +300,18 @@ public class ClipProbe : MonoBehaviour
                 Keys(model);
                 TransformCurves(model);
             }
+            // Then the rotation signs of the HumanTwist rig imported as Legacy and of static
+            // models whose axes are converted (modelaxis' Signed set: Z-up and Y-up files with a
+            // reversed front axis, with and without Bake Axis Conversion and Preserve
+            // Hierarchy), and the reduction's constant case of a rotation curve (RigRotLoose:
+            // Rig under a rotation error of 45 degrees, where Spine turns up to 40 degrees from
+            // its first key and ends 10 degrees from it).
+            Nodes("HumanTwistLegacy");
+            Imported("HumanTwistLegacy", true);
+            foreach (var model in new[] { "U2S1B0H0", "U2S1B0H1", "U2S1B1H0", "U2S1B1H1", "U1S1B0H0", "U1S1B1H0" })
+                Nodes("AxisSigned/" + model);
+            Imported("RigRotLoose", false);
+            CurveKeys("RigRotLoose");
         }
         catch (Exception e)
         {
