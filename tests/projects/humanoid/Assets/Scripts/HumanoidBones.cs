@@ -38,6 +38,16 @@ public partial class HumanoidProbe
         Put((s_JobKey ?? "job") + ".bones." + tag, "{" + string.Join(",", parts) + "}");
     }
 
+    /// <summary>What a job reads through the stream handle of an object added under the left
+    /// hand (bone.prop): validity, the local position (times 100), rotation, and the world
+    /// position and rotation.</summary>
+    internal static void PropRecord(AnimationStream stream, TransformStreamHandle prop)
+    {
+        bool valid = prop.IsValid(stream);
+        Put((s_JobKey ?? "job") + ".prop", !valid ? "{\"valid\":false}" : "{\"valid\":true,\"local\":[" + V(prop.GetLocalPosition(stream) * 100f) + ","
+            + Q(prop.GetLocalRotation(stream)) + "],\"world\":[" + V(prop.GetPosition(stream)) + "," + Q(prop.GetRotation(stream)) + "]}");
+    }
+
     /// <summary>The stance job of the stream controls (<c>stream.stance</c>: a job resets the
     /// stream to the stance pose each update above HumanA's clip playable, whose Foot IK then
     /// pulls the legs to the clip's foot goals) without root motion applied, so the Animator
@@ -59,7 +69,8 @@ public partial class HumanoidProbe
     /// clip, one per <see cref="HumanBoneJob.Mode"/>, each step with what the job reads before and
     /// after its change, the human stream's body and muscles after it, and the final pose with
     /// the transforms' locals every fourth step. RotateThenHuman turns the lower arm, reads the
-    /// human stream and the bones again (humanBetween, between), then turns the head.</summary>
+    /// human stream and the bones again (humanBetween, between), then turns the head. Prop only
+    /// reads, also the handle of an object added under the left hand (<see cref="PropRecord"/>).</summary>
     static void BoneHandles()
     {
         foreach (HumanBoneJob.Mode mode in System.Enum.GetValues(typeof(HumanBoneJob.Mode)))
@@ -72,6 +83,16 @@ public partial class HumanoidProbe
                 {
                     var job = new HumanBoneJob { mode = mode };
                     for (int i = 0; i < s_BoneNames.Length; i++) job.Bind(i, bound.BindStreamTransform(FindBone(bound.transform, s_BoneNames[i])));
+                    if (mode == HumanBoneJob.Mode.Prop)
+                    {
+                        // An object under the left hand that is not in the avatar, offset in the
+                        // hand's frame (rig units are 0.01 of the world's).
+                        var prop = new GameObject("Prop").transform;
+                        prop.SetParent(FindBone(bound.transform, "LeftHand"), false);
+                        prop.localPosition = new Vector3(0.001f, 0.002f, 0f);
+                        prop.localRotation = Quaternion.Euler(0f, 0f, 30f);
+                        job.BindProp(bound.BindStreamTransform(prop));
+                    }
                     var playable = AnimationScriptPlayable.Create(g, job, 1);
                     g.Connect(AnimationClipPlayable.Create(g, ControllerClip("HumanA")), 0, playable, 0);
                     playable.SetInputWeight(0, 1f);
@@ -86,10 +107,13 @@ public partial class HumanoidProbe
 /// one of them.</summary>
 public struct HumanBoneJob : IAnimationJob
 {
-    public enum Mode { Read, RotateLocal, RotateWorld, MoveHips, MoveArm, Scale, RotateThenHuman, HumanThenRead }
+    public enum Mode { Read, RotateLocal, RotateWorld, MoveHips, MoveArm, Scale, RotateThenHuman, HumanThenRead, Prop }
 
     public Mode mode;
-    TransformStreamHandle hips, spine, arm, head, hand;
+    TransformStreamHandle hips, spine, arm, head, hand, prop;
+
+    /// <summary>Mode Prop: the handle of an object added under the left hand.</summary>
+    public void BindProp(TransformStreamHandle handle) => prop = handle;
 
     public void Bind(int i, TransformStreamHandle handle)
     {
@@ -138,6 +162,7 @@ public struct HumanBoneJob : IAnimationJob
                 break;
         }
         HumanoidProbe.BoneRecord("after", stream, ref this);
+        if (mode == Mode.Prop) HumanoidProbe.PropRecord(stream, prop);
         HumanoidProbe.JobRecord("human", stream);
     }
 }
