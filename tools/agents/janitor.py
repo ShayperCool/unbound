@@ -232,6 +232,8 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                 try:
                     entries = index.entries(directory, info)
                 except OSError as error:
+                    if watcher and gone(error):
+                        continue
                     if watcher and str(error).startswith('run-cache directory changed during indexing:'):
                         pending.append(directory)
                         continue

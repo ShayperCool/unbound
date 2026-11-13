@@ -296,6 +296,27 @@ class JanitorTests(unittest.TestCase):
         self.assertTrue(changed)
         self.assertIn(run/'output', references)
 
+    def test_directory_removed_during_index_read_is_tolerated_under_watch(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        temporary = self.cache/'temporary-package'
+        temporary.mkdir()
+        (self.cache/'existing-reference').symlink_to(run/'output')
+        watcher = janitor.ReferenceWatch()
+        self.addCleanup(watcher.close)
+        original = janitor.DirectoryIndex.entries
+        removed = False
+        def disappearing_entries(index, directory, info):
+            nonlocal removed
+            if directory == temporary and not removed:
+                removed = True
+                temporary.rmdir()
+                raise FileNotFoundError(janitor.errno.ENOENT, 'concurrent cleanup', str(temporary))
+            return original(index, directory, info)
+        with patch.object(janitor.DirectoryIndex, 'entries', disappearing_entries):
+            references = janitor.reference_paths([self.cache], watcher=watcher)
+        self.assertTrue(removed)
+        self.assertIn(run/'output', references)
+
     def test_reference_watch_overflow_fails_closed(self):
         run = self.directory('unbound-validation/runs/probe-20261101-old')
         with self.guards():
