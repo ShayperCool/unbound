@@ -31,6 +31,7 @@ namespace UnityEngine
             internal (string Name, ObjectRef Texture)[] Secondary;
             internal int Settings;
             internal uint Extrude;
+            internal bool IsPolygon;
         }
 
         static SavedSprite ReadSpriteData(YNode body)
@@ -110,6 +111,7 @@ namespace UnityEngine
                 Transform = transform, Vertices = vertices, Triangles = triangles, Attributes = attributes,
                 Shapes = shapes.ToArray(), Bones = bones, BindPoses = bindPoses, Texture = Ref(rd, "texture"),
                 Secondary = secondary, Settings = settings, Extrude = checked((uint)Integer(body, "m_Extrude")),
+                IsPolygon = body.Get("m_IsPolygon") != null && Integer(body, "m_IsPolygon") != 0,
             };
         }
 
@@ -156,6 +158,7 @@ namespace UnityEngine
             m_Border = data.Border;
             m_MeshType = (SpriteMeshType)((data.Settings >> 6) & 1);
             m_Extrude = data.Extrude;
+            m_IsPolygon = data.IsPolygon;
             m_TextureRect = textureRect;
             m_SerializedTextureRectOffset = data.Offset;
             m_Vertices = data.Vertices;

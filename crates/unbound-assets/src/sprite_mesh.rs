@@ -1139,6 +1139,20 @@ impl Region {
         Some(alpha)
     }
 
+    /// A traced shape's outlines from the pivot, times `scale`.
+    fn place(&self, shape: &Shape, scale: f32) -> Vec<Vec<[f32; 2]>> {
+        let [ox, oy] = self.offset;
+        shape
+            .outlines()
+            .into_iter()
+            .map(|p| {
+                p.into_iter()
+                    .map(|v| [(v[0] - ox) * scale, (v[1] - oy) * scale])
+                    .collect()
+            })
+            .collect()
+    }
+
     /// The traced outline of the texture: `quality` as [`make_shape`] takes it.
     fn trace(&self, texture: &Texture, detail: f32, tolerance: u8, extrude: u32) -> Option<Shape> {
         self.trace_holes(texture, detail, tolerance, true, extrude)
@@ -1180,18 +1194,60 @@ pub fn rect_outline(
     tolerance: u8,
     holes: bool,
 ) -> Vec<Vec<[f32; 2]>> {
-    let Some(region) = Region::new(texture, rect, [0.0, 0.0]) else {
+    traced_outline(texture, rect, [0.0, 0.0], 1.0, detail, tolerance, holes)
+}
+
+/// `SpriteUtility.GenerateOutlineFromSprite` for a sprite that is not in Polygon mode: its rect
+/// traced as [`rect_outline`] traces it, in units from the pivot (`pivot` normalized in the rect),
+/// as its generated physics shape is (matches the Unity 6000.0.71f1 Editor,
+/// tests/projects/spriteoutlines).
+pub fn sprite_outline(
+    texture: &Texture,
+    rect: [f32; 4],
+    pivot: [f32; 2],
+    pixels_per_unit: f32,
+    detail: f32,
+    tolerance: u8,
+    holes: bool,
+) -> Vec<Vec<[f32; 2]>> {
+    let pivot = pivot_from_centre(rect, pivot);
+    traced_outline(
+        texture,
+        rect,
+        pivot,
+        1.0 / pixels_per_unit,
+        detail,
+        tolerance,
+        holes,
+    )
+}
+
+/// A rect's traced outlines, from `pivot_from_centre` (pixels from the rect's centre), times `scale`.
+fn traced_outline(
+    texture: &Texture,
+    rect: [f32; 4],
+    pivot_from_centre: [f32; 2],
+    scale: f32,
+    detail: f32,
+    tolerance: u8,
+    holes: bool,
+) -> Vec<Vec<[f32; 2]>> {
+    let Some(region) = Region::new(texture, rect, pivot_from_centre) else {
         return Vec::new();
     };
-    let Some(shape) = region.trace_holes(texture, detail, tolerance, holes, 0) else {
-        return Vec::new();
-    };
-    let [ox, oy] = region.offset;
-    shape
-        .outlines()
-        .into_iter()
-        .map(|p| p.into_iter().map(|v| [v[0] - ox, v[1] - oy]).collect())
-        .collect()
+    match region.trace_holes(texture, detail, tolerance, holes, 0) {
+        Some(shape) => region.place(&shape, scale),
+        None => Vec::new(),
+    }
+}
+
+/// A normalized pivot as pixels from the rect's centre.
+fn pivot_from_centre(rect: [f32; 4], pivot: [f32; 2]) -> [f32; 2] {
+    let [rx, ry, rw, rh] = rect;
+    [
+        (pivot[0] * rw + rx) - (rw * 0.5 + rx),
+        (pivot[1] * rh + ry) - (rh * 0.5 + ry),
+    ]
 }
 
 /// The Tight mesh, texture rect and physics shape of a sprite. `polygon`: Polygon sprite mode,
@@ -1200,10 +1256,7 @@ pub fn rect_outline(
 pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, polygon: bool) -> SpriteGeometry {
     let round = !polygon;
     let [rx, ry, rw, rh] = s.rect;
-    let pivot_from_centre = [
-        (s.pivot[0] * rw + rx) - (rw * 0.5 + rx),
-        (s.pivot[1] * rh + ry) - (rh * 0.5 + ry),
-    ];
+    let pivot_from_centre = pivot_from_centre(s.rect, s.pivot);
     let ppu = s.pixels_per_unit;
     let mut out = SpriteGeometry {
         mesh: None,
@@ -1298,17 +1351,7 @@ pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, polygon: bool) -> Sp
         && let Some(region) = &region
         && let Some(shape) = region.trace(texture, 0.25, 200, 0)
     {
-        let scale = 1.0 / ppu;
-        let [ox, oy] = region.offset;
-        out.physics = shape
-            .outlines()
-            .into_iter()
-            .map(|p| {
-                p.into_iter()
-                    .map(|v| [(v[0] - ox) * scale, (v[1] - oy) * scale])
-                    .collect()
-            })
-            .collect();
+        out.physics = region.place(&shape, 1.0 / ppu);
     }
     out
 }
@@ -1760,5 +1803,45 @@ mod tests {
             rect_outline(&texture, inner, 0.25, 0, true)
         );
         assert!(rect_outline(&part, [8.0, 16.0, 33.0, 32.0], 0.25, 0, true).is_empty());
+    }
+
+    #[test]
+    fn sprite_outline_is_the_generated_physics_shape_from_the_pivot() {
+        // A disc in an off-centre fractional rect, pivot (0.2, 0.7), 32 pixels per unit.
+        let (w, h) = (64usize, 48usize);
+        let rgba: Vec<u8> = (0..w * h)
+            .flat_map(|i| {
+                let (x, y) = ((i % w) as f32 + 0.5, (i / w) as f32 + 0.5);
+                let (u, v) = ((x - 30.0) / 20.0, (y - 22.0) / 16.0);
+                [1, 2, 3, if u * u + v * v <= 1.0 { 255 } else { 0 }]
+            })
+            .collect();
+        let texture = Texture::whole(w as i32, h as i32, Some(&rgba));
+        let (rect, pivot, ppu) = ([6.5, 3.0, 50.0, 40.5], [0.2, 0.7], 32.0);
+        let outline = sprite_outline(&texture, rect, pivot, ppu, 0.25, 200, true);
+        let geometry = sprite_geometry(
+            &texture,
+            &SpriteSource {
+                rect,
+                pivot,
+                pixels_per_unit: ppu,
+                extrude: 1,
+                tight: false,
+                detail: -1.0,
+                outline: &[],
+                physics_shape: &[],
+                generate_physics_shape: true,
+            },
+            false,
+        );
+        assert_eq!(outline, geometry.physics);
+        // The rect's outline moved from its centre to the pivot, in units.
+        let centred = rect_outline(&texture, rect, 0.25, 200, true);
+        let [px, py] = pivot_from_centre(rect, pivot);
+        assert_eq!(centred.len(), outline.len());
+        for (a, b) in centred[0].iter().zip(&outline[0]) {
+            assert!(((a[0] - px) / ppu - b[0]).abs() < 1e-5, "{a:?} {b:?}");
+            assert!(((a[1] - py) / ppu - b[1]).abs() < 1e-5, "{a:?} {b:?}");
+        }
     }
 }

@@ -16,6 +16,8 @@ namespace UnityEngine
         internal Vector4 m_Border;         // left, bottom, right, top (pixels)
         internal SpriteMeshType m_MeshType = SpriteMeshType.Tight;
         internal uint m_Extrude;
+        /// <summary>Polygon sprite mode: its outline is its mesh's boundary.</summary>
+        internal bool m_IsPolygon;
         internal Vector2[] m_Vertices;
         internal Vector2[] m_UV;
         internal ushort[] m_Triangles;
@@ -96,7 +98,7 @@ namespace UnityEngine
 
         /// <summary>The texture an imported sprite was made from (its page replaces m_Texture when an
         /// atlas packs it); null for sprites made otherwise.</summary>
-        Texture2D m_SourceTexture;
+        internal Texture2D m_SourceTexture;
         /// <summary>The outline colliders take when the sprite has no physics shape, once traced
         /// from an imported texture's import.</summary>
         Vector2[][] m_FallbackOutline;

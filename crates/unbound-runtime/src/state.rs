@@ -59,6 +59,8 @@ pub struct RuntimeState {
 struct TextureSprites {
     name: String,
     sprites: Vec<SpriteDef>,
+    /// Polygon sprite mode: each sprite's outline is its mesh's boundary.
+    polygon: bool,
 }
 
 static STATE: OnceLock<RuntimeState> = OnceLock::new();
@@ -883,7 +885,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             .to_string())
         }
         "sprite-outline" => {
-            // SpriteUtility.GenerateOutline.
+            // SpriteUtility.GenerateOutline; with a sprite's pivot and pixels per unit,
+            // SpriteUtility.GenerateOutlineFromSprite.
             #[derive(Deserialize)]
             #[serde(rename_all = "camelCase")]
             struct Request {
@@ -893,18 +896,47 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 detail: f32,
                 tolerance: u8,
                 holes: bool,
+                sprite: Option<SpriteFrame>,
+            }
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct SpriteFrame {
+                pivot: [f32; 2],
+                pixels_per_unit: f32,
             }
             let r: Request = serde_json::from_str(request)?;
             let texels = texel_source(s, &r.texels)?;
             let texture = texels.texture();
-            let paths = unbound_assets::sprite_mesh::rect_outline(
-                &texture,
-                r.rect,
-                r.detail,
-                r.tolerance,
-                r.holes,
-            );
+            let paths = match r.sprite {
+                Some(sprite) => unbound_assets::sprite_mesh::sprite_outline(
+                    &texture,
+                    r.rect,
+                    sprite.pivot,
+                    sprite.pixels_per_unit,
+                    r.detail,
+                    r.tolerance,
+                    r.holes,
+                ),
+                None => unbound_assets::sprite_mesh::rect_outline(
+                    &texture,
+                    r.rect,
+                    r.detail,
+                    r.tolerance,
+                    r.holes,
+                ),
+            };
             Ok(json!({ "paths": paths }).to_string())
+        }
+        "sprite-mesh-boundary" => {
+            // A Polygon-mode sprite's SpriteUtility.GenerateOutlineFromSprite: its mesh's boundary.
+            #[derive(Deserialize)]
+            struct Request {
+                vertices: Vec<[f32; 2]>,
+                triangles: Vec<u16>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let path = unbound_assets::sprite_mesh::mesh_boundary(&r.vertices, &r.triangles);
+            Ok(json!({ "paths": [path] }).to_string())
         }
         "texture-sprites" => {
             #[derive(Deserialize)]
@@ -915,6 +947,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let guid = Guid::parse(&r.guid).context("bad guid")?;
             let textures = s.textures.read().unwrap();
             let texture = textures.get(&guid).context("the texture is not imported")?;
+            let polygon = texture.polygon;
             let sprites: Vec<_> = texture
                 .sprites
                 .iter()
@@ -927,6 +960,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                         "border": sp.border,
                         "pixelsPerUnit": sp.texture_pixels_per_unit,
                         "meshType": sp.mesh_type as i32,
+                        "polygon": polygon,
                         "mesh": sp.mesh,
                         "textureRectBounds": sp.texture_rect_bounds,
                         "physics": sp.physics,
@@ -1562,6 +1596,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         TextureSprites {
             name: texture.name.clone(),
             sprites: std::mem::take(&mut texture.sprites),
+            polygon: texture.settings.sprite.mode == unbound_assets::sprite::SpriteMode::Polygon,
         },
     );
     let sprite_count = s.textures.read().unwrap()[&guid].sprites.len();

@@ -122,6 +122,8 @@ namespace Unbound.Runtime
             public float[] Border { get; set; }
             public float PixelsPerUnit { get; set; }
             public int MeshType { get; set; }
+            /// <summary>Polygon sprite mode.</summary>
+            public bool Polygon { get; set; }
             public MeshJson Mesh { get; set; }
             public float[] TextureRectBounds { get; set; }
             public float[][][] Physics { get; set; }
@@ -235,6 +237,7 @@ namespace Unbound.Runtime
                         Paths(s.Physics));
                     ImportSkin(sprite, s);
                     if (!string.IsNullOrEmpty(s.SpriteId)) sprite.m_SpriteID = new UnityEditor.GUID(s.SpriteId);
+                    sprite.m_IsPolygon = s.Polygon;
                     if (s.SecondaryTextures != null && s.SecondaryTextures.Count > 0)
                         sprite.SetImportedSecondaryTextures(s.SecondaryTextures.ConvertAll(t => (t.Name, t.Guid)).ToArray());
                     file.Objects[s.FileId] = sprite;
