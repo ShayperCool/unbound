@@ -484,6 +484,8 @@ public class TextureCompressionProbe : MonoBehaviour
         foreach (var item in new[]
         {
             ("seed.r8", TextureFormat.R8, 8, 8, false),
+            ("partial.row.r8", TextureFormat.R8, 7, 3, false),
+            ("partial.rows.rg16", TextureFormat.RG16, 15, 7, false),
             ("seed.rg16", TextureFormat.RG16, 8, 8, false),
             ("rect.nomips.r8", TextureFormat.R8, 12, 8, false),
             ("rect.short.rg16", TextureFormat.RG16, 12, 4, true),

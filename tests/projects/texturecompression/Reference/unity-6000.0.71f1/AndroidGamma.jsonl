@@ -7585,6 +7585,82 @@
 {"k":"compress.seed.r8.high.gpu","v":"AAAAAAAAAAAAAAAAAACAP58Unz4AAAAAAAAAAAAAgD+fFJ8+AAAAAAAAAAAAAIA/nxSfPgAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD/VGtU+AAAAAAAAAAAAAIA/1RrVPgAAAAAAAAAAAACAP9Ua1T4AAAAAAAAAAAAAgD+fFJ8+AAAAAAAAAAAAAIA/nxSfPgAAAAAAAAAAAACAP58Unz4AAAAAAAAAAAAAgD+fFJ8+AAAAAAAAAAAAAIA/1RrVPgAAAAAAAAAAAACAP9Ua1T4AAAAAAAAAAAAAgD/VGtU+AAAAAAAAAAAAAIA/1RrVPgAAAAAAAAAAAACAP58Unz4AAAAAAAAAAAAAgD+fFJ8+AAAAAAAAAAAAAIA/nxSfPgAAAAAAAAAAAACAP58Unz4AAAAAAAAAAAAAgD/VGtU+AAAAAAAAAAAAAIA/1RrVPgAAAAAAAAAAAACAP9Ua1T4AAAAAAAAAAAAAgD/VGtU+AAAAAAAAAAAAAIA/nxSfPgAAAAAAAAAAAACAP58Unz4AAAAAAAAAAAAAgD+fFJ8+AAAAAAAAAAAAAIA/nxSfPgAAAAAAAAAAAACAP9Ua1T4AAAAAAAAAAAAAgD/VGtU+AAAAAAAAAAAAAIA/1RrVPgAAAAAAAAAAAACAP9Ua1T4AAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/tRa1PgAAAAAAAAAAAACAP7UWtT4AAAAAAAAAAAAAgD+1FrU+AAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAACAP+8c7z4AAAAAAAAAAAAAgD/vHO8+AAAAAAAAAAAAAIA/7xzvPgAAAAAAAAAAAACAP7UWtT4AAAAAAAAAAAAAgD+1FrU+AAAAAAAAAAAAAIA/tRa1PgAAAAAAAAAAAACAP7UWtT4AAAAAAAAAAAAAgD/vHO8+AAAAAAAAAAAAAIA/7xzvPgAAAAAAAAAAAACAP+8c7z4AAAAAAAAAAAAAgD/vHO8+AAAAAAAAAAAAAIA/tRa1PgAAAAAAAAAAAACAP7UWtT4AAAAAAAAAAAAAgD+1FrU+AAAAAAAAAAAAAIA/tRa1PgAAAAAAAAAAAACAP+8c7z4AAAAAAAAAAAAAgD/vHO8+AAAAAAAAAAAAAIA/7xzvPgAAAAAAAAAAAACAP+8c7z4AAAAAAAAAAAAAgD+1FrU+AAAAAAAAAAAAAIA/tRa1PgAAAAAAAAAAAACAP7UWtT4AAAAAAAAAAAAAgD+1FrU+AAAAAAAAAAAAAIA/7xzvPgAAAAAAAAAAAACAP+8c7z4AAAAAAAAAAAAAgD/vHO8+AAAAAAAAAAAAAIA/7xzvPgAAAAAAAAAAAACAPw=="}
 {"k":"compress.seed.r8.high.gpu.throws","v":"none"}
 {"k":"compress.seed.r8.high.gpu.errors","v":"none"}
+{"k":"compress.partial.row.r8.fast.input","v":"AE5OTgBpaU5OTk5paWlOTk5OaWlp"}
+{"k":"compress.partial.row.r8.fast.throws","v":"none"}
+{"k":"compress.partial.row.r8.fast.errors","v":"none"}
+{"k":"compress.partial.row.r8.fast.info","v":"7x3 mips 1 R8 R8_UNorm readable True"}
+{"k":"compress.partial.row.r8.fast.raw","v":"AE5OTgBpaU5OTk5paWlOTk5OaWlp"}
+{"k":"compress.partial.row.r8.fast.raw.throws","v":"none"}
+{"k":"compress.partial.row.r8.fast.raw.errors","v":"none"}
+{"k":"compress.partial.row.r8.fast.levels","v":"21"}
+{"k":"compress.partial.row.r8.fast.levels.throws","v":"none"}
+{"k":"compress.partial.row.r8.fast.levels.errors","v":"none"}
+{"k":"compress.partial.row.r8.fast.pixels0","v":"AP///07///9O////Tv///wD///9p////af///07///9O////Tv///07///9p////af///2n///9O////Tv///07///9O////af///2n///9p////"}
+{"k":"compress.partial.row.r8.fast.pixels0.throws","v":"none"}
+{"k":"compress.partial.row.r8.fast.pixels0.errors","v":"none"}
+{"k":"compress.partial.row.r8.fast.pixel","v":"0.4117647 1 1 1 / 0.305882365 1 1 1"}
+{"k":"compress.partial.row.r8.fast.pixel.throws","v":"none"}
+{"k":"compress.partial.row.r8.fast.pixel.errors","v":"none"}
+{"k":"compress.partial.row.r8.fast.gpu","v":"AAAAAAAAAAAAAAAAAACAP52cnD4AAAAAAAAAAAAAgD+dnJw+AAAAAAAAAAAAAIA/nZycPgAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD/T0tI+AAAAAAAAAAAAAIA/09LSPgAAAAAAAAAAAACAP52cnD4AAAAAAAAAAAAAgD+dnJw+AAAAAAAAAAAAAIA/nZycPgAAAAAAAAAAAACAP52cnD4AAAAAAAAAAAAAgD/T0tI+AAAAAAAAAAAAAIA/09LSPgAAAAAAAAAAAACAP9PS0j4AAAAAAAAAAAAAgD+dnJw+AAAAAAAAAAAAAIA/nZycPgAAAAAAAAAAAACAP52cnD4AAAAAAAAAAAAAgD+dnJw+AAAAAAAAAAAAAIA/09LSPgAAAAAAAAAAAACAP9PS0j4AAAAAAAAAAAAAgD/T0tI+AAAAAAAAAAAAAIA/"}
+{"k":"compress.partial.row.r8.fast.gpu.throws","v":"none"}
+{"k":"compress.partial.row.r8.fast.gpu.errors","v":"none"}
+{"k":"compress.partial.row.r8.high.input","v":"AE5OTgBpaU5OTk5paWlOTk5OaWlp"}
+{"k":"compress.partial.row.r8.high.throws","v":"none"}
+{"k":"compress.partial.row.r8.high.errors","v":"none"}
+{"k":"compress.partial.row.r8.high.info","v":"7x3 mips 1 R8 R8_UNorm readable True"}
+{"k":"compress.partial.row.r8.high.raw","v":"AE5OTgBpaU5OTk5paWlOTk5OaWlp"}
+{"k":"compress.partial.row.r8.high.raw.throws","v":"none"}
+{"k":"compress.partial.row.r8.high.raw.errors","v":"none"}
+{"k":"compress.partial.row.r8.high.levels","v":"21"}
+{"k":"compress.partial.row.r8.high.levels.throws","v":"none"}
+{"k":"compress.partial.row.r8.high.levels.errors","v":"none"}
+{"k":"compress.partial.row.r8.high.pixels0","v":"AP///07///9O////Tv///wD///9p////af///07///9O////Tv///07///9p////af///2n///9O////Tv///07///9O////af///2n///9p////"}
+{"k":"compress.partial.row.r8.high.pixels0.throws","v":"none"}
+{"k":"compress.partial.row.r8.high.pixels0.errors","v":"none"}
+{"k":"compress.partial.row.r8.high.pixel","v":"0.4117647 1 1 1 / 0.305882365 1 1 1"}
+{"k":"compress.partial.row.r8.high.pixel.throws","v":"none"}
+{"k":"compress.partial.row.r8.high.pixel.errors","v":"none"}
+{"k":"compress.partial.row.r8.high.gpu","v":"AAAAAAAAAAAAAAAAAACAP52cnD4AAAAAAAAAAAAAgD+dnJw+AAAAAAAAAAAAAIA/nZycPgAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD/T0tI+AAAAAAAAAAAAAIA/09LSPgAAAAAAAAAAAACAP52cnD4AAAAAAAAAAAAAgD+dnJw+AAAAAAAAAAAAAIA/nZycPgAAAAAAAAAAAACAP52cnD4AAAAAAAAAAAAAgD/T0tI+AAAAAAAAAAAAAIA/09LSPgAAAAAAAAAAAACAP9PS0j4AAAAAAAAAAAAAgD+dnJw+AAAAAAAAAAAAAIA/nZycPgAAAAAAAAAAAACAP52cnD4AAAAAAAAAAAAAgD+dnJw+AAAAAAAAAAAAAIA/09LSPgAAAAAAAAAAAACAP9PS0j4AAAAAAAAAAAAAgD/T0tI+AAAAAAAAAAAAAIA/"}
+{"k":"compress.partial.row.r8.high.gpu.throws","v":"none"}
+{"k":"compress.partial.row.r8.high.gpu.errors","v":"none"}
+{"k":"compress.partial.rows.rg16.fast.input","v":"AAFOgk6CToIAAWmLaYtpiwABhJSElISUAAGfnZ+dToJOgk6CToJpi2mLaYtpi4SUhJSElISUn52fnZ+dToJOgk6CToJpi2mLaYtpi4SUhJSElISUn52fnZ+dToJOgk6CToJpi2mLaYtpi4SUhJSElISUn52fnZ+dAAFbk1uTW5MAAXacdpx2nAABkaWRpZGlAAGsrqyuW5Nbk1uTW5N2nHacdpx2nJGlkaWRpZGlrK6srqyuW5Nbk1uTW5N2nHacdpx2nJGlkaWRpZGlrK6srqyu"}
+{"k":"compress.partial.rows.rg16.fast.throws","v":"none"}
+{"k":"compress.partial.rows.rg16.fast.errors","v":"none"}
+{"k":"compress.partial.rows.rg16.fast.info","v":"15x7 mips 1 RG16 R8G8_UNorm readable True"}
+{"k":"compress.partial.rows.rg16.fast.raw","v":"AAFOgk6CToIAAWmLaYtpiwABhJSElISUAAGfnZ+dToJOgk6CToJpi2mLaYtpi4SUhJSElISUn52fnZ+dToJOgk6CToJpi2mLaYtpi4SUhJSElISUn52fnZ+dToJOgk6CToJpi2mLaYtpi4SUhJSElISUn52fnZ+dAAFbk1uTW5MAAXacdpx2nAABkaWRpZGlAAGsrqyuW5Nbk1uTW5N2nHacdpx2nJGlkaWRpZGlrK6srqyuW5Nbk1uTW5N2nHacdpx2nJGlkaWRpZGlrK6srqyu"}
+{"k":"compress.partial.rows.rg16.fast.raw.throws","v":"none"}
+{"k":"compress.partial.rows.rg16.fast.raw.errors","v":"none"}
+{"k":"compress.partial.rows.rg16.fast.levels","v":"210"}
+{"k":"compress.partial.rows.rg16.fast.levels.throws","v":"none"}
+{"k":"compress.partial.rows.rg16.fast.levels.errors","v":"none"}
+{"k":"compress.partial.rows.rg16.fast.pixels0","v":"AAH//06C//9Ogv//ToL//wAB//9pi///aYv//2mL//8AAf//hJT//4SU//+ElP//AAH//5+d//+fnf//ToL//06C//9Ogv//ToL//2mL//9pi///aYv//2mL//+ElP//hJT//4SU//+ElP//n53//5+d//+fnf//ToL//06C//9Ogv//ToL//2mL//9pi///aYv//2mL//+ElP//hJT//4SU//+ElP//n53//5+d//+fnf//ToL//06C//9Ogv//ToL//2mL//9pi///aYv//2mL//+ElP//hJT//4SU//+ElP//n53//5+d//+fnf//AAH//1uT//9bk///W5P//wAB//92nP//dpz//3ac//8AAf//kaX//5Gl//+Rpf//AAH//6yu//+srv//W5P//1uT//9bk///W5P//3ac//92nP//dpz//3ac//+Rpf//kaX//5Gl//+Rpf//rK7//6yu//+srv//W5P//1uT//9bk///W5P//3ac//92nP//dpz//3ac//+Rpf//kaX//5Gl//+Rpf//rK7//6yu//+srv//"}
+{"k":"compress.partial.rows.rg16.fast.pixels0.throws","v":"none"}
+{"k":"compress.partial.rows.rg16.fast.pixels0.errors","v":"none"}
+{"k":"compress.partial.rows.rg16.fast.pixel","v":"0.4117647 0.545098066 1 1 / 0.277647138 0.368627548 1 1"}
+{"k":"compress.partial.rows.rg16.fast.pixel.throws","v":"none"}
+{"k":"compress.partial.rows.rg16.fast.pixel.errors","v":"none"}
+{"k":"compress.partial.rows.rg16.fast.gpu","v":"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"}
+{"k":"compress.partial.rows.rg16.fast.gpu.throws","v":"none"}
+{"k":"compress.partial.rows.rg16.fast.gpu.errors","v":"none"}
+{"k":"compress.partial.rows.rg16.high.input","v":"AAFOgk6CToIAAWmLaYtpiwABhJSElISUAAGfnZ+dToJOgk6CToJpi2mLaYtpi4SUhJSElISUn52fnZ+dToJOgk6CToJpi2mLaYtpi4SUhJSElISUn52fnZ+dToJOgk6CToJpi2mLaYtpi4SUhJSElISUn52fnZ+dAAFbk1uTW5MAAXacdpx2nAABkaWRpZGlAAGsrqyuW5Nbk1uTW5N2nHacdpx2nJGlkaWRpZGlrK6srqyuW5Nbk1uTW5N2nHacdpx2nJGlkaWRpZGlrK6srqyu"}
+{"k":"compress.partial.rows.rg16.high.throws","v":"none"}
+{"k":"compress.partial.rows.rg16.high.errors","v":"none"}
+{"k":"compress.partial.rows.rg16.high.info","v":"15x7 mips 1 RG16 R8G8_UNorm readable True"}
+{"k":"compress.partial.rows.rg16.high.raw","v":"AAFOgk6CToIAAWmLaYtpiwABhJSElISUAAGfnZ+dToJOgk6CToJpi2mLaYtpi4SUhJSElISUn52fnZ+dToJOgk6CToJpi2mLaYtpi4SUhJSElISUn52fnZ+dToJOgk6CToJpi2mLaYtpi4SUhJSElISUn52fnZ+dAAFbk1uTW5MAAXacdpx2nAABkaWRpZGlAAGsrqyuW5Nbk1uTW5N2nHacdpx2nJGlkaWRpZGlrK6srqyuW5Nbk1uTW5N2nHacdpx2nJGlkaWRpZGlrK6srqyu"}
+{"k":"compress.partial.rows.rg16.high.raw.throws","v":"none"}
+{"k":"compress.partial.rows.rg16.high.raw.errors","v":"none"}
+{"k":"compress.partial.rows.rg16.high.levels","v":"210"}
+{"k":"compress.partial.rows.rg16.high.levels.throws","v":"none"}
+{"k":"compress.partial.rows.rg16.high.levels.errors","v":"none"}
+{"k":"compress.partial.rows.rg16.high.pixels0","v":"AAH//06C//9Ogv//ToL//wAB//9pi///aYv//2mL//8AAf//hJT//4SU//+ElP//AAH//5+d//+fnf//ToL//06C//9Ogv//ToL//2mL//9pi///aYv//2mL//+ElP//hJT//4SU//+ElP//n53//5+d//+fnf//ToL//06C//9Ogv//ToL//2mL//9pi///aYv//2mL//+ElP//hJT//4SU//+ElP//n53//5+d//+fnf//ToL//06C//9Ogv//ToL//2mL//9pi///aYv//2mL//+ElP//hJT//4SU//+ElP//n53//5+d//+fnf//AAH//1uT//9bk///W5P//wAB//92nP//dpz//3ac//8AAf//kaX//5Gl//+Rpf//AAH//6yu//+srv//W5P//1uT//9bk///W5P//3ac//92nP//dpz//3ac//+Rpf//kaX//5Gl//+Rpf//rK7//6yu//+srv//W5P//1uT//9bk///W5P//3ac//92nP//dpz//3ac//+Rpf//kaX//5Gl//+Rpf//rK7//6yu//+srv//"}
+{"k":"compress.partial.rows.rg16.high.pixels0.throws","v":"none"}
+{"k":"compress.partial.rows.rg16.high.pixels0.errors","v":"none"}
+{"k":"compress.partial.rows.rg16.high.pixel","v":"0.4117647 0.545098066 1 1 / 0.277647138 0.368627548 1 1"}
+{"k":"compress.partial.rows.rg16.high.pixel.throws","v":"none"}
+{"k":"compress.partial.rows.rg16.high.pixel.errors","v":"none"}
+{"k":"compress.partial.rows.rg16.high.gpu","v":"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"}
+{"k":"compress.partial.rows.rg16.high.gpu.throws","v":"none"}
+{"k":"compress.partial.rows.rg16.high.gpu.errors","v":"none"}
 {"k":"compress.seed.rg16.fast.input","v":"AAFOgk6CToIAAWmLaYtpi06CToJOgk6CaYtpi2mLaYtOgk6CToJOgmmLaYtpi2mLToJOgk6CToJpi2mLaYtpiwABW5Nbk1uTAAF2nHacdpxbk1uTW5Nbk3acdpx2nHacW5Nbk1uTW5N2nHacdpx2nFuTW5Nbk1uTdpx2nHacdpw="}
 {"k":"compress.seed.rg16.fast.throws","v":"none"}
 {"k":"compress.seed.rg16.fast.errors","v":"none"}

@@ -229,7 +229,14 @@ fn gather_tiled(
         } else {
             (width, height)
         };
-        let x = (bx * 4 + (i % 4) % tw) % width;
+        // A three-texel runtime row repeats its middle texel in the fourth slot.
+        // One- and two-texel rows tile normally (texturecompression partial controls).
+        let column = if partial_tile && tw == 3 && i % 4 == 3 {
+            1
+        } else {
+            (i % 4) % tw
+        };
+        let x = (bx * 4 + column) % width;
         let y = (by * 4 + (i / 4) % th) % height;
         texel.copy_from_slice(&rgba[(y * width + x) * 4..][..4]);
     }
@@ -1091,6 +1098,39 @@ mod tests {
                 255, 0, 65, 0, 195, 142, 19, 199, 141, 222, 8, 179, 221, 187, 170, 34
             ]
         );
+    }
+
+    #[test]
+    fn runtime_three_column_levels_repeat_the_middle_column() {
+        // Unity 6000.0.71f1, texturecompression rectangular R8/RG16 levels.
+        // These 3x2 and 3x1 levels differ from a modulo-three tile at column three.
+        for (height, expected) in [
+            (
+                2,
+                [
+                    255, 0, 177, 109, 219, 177, 109, 219, 255, 1, 33, 73, 146, 33, 73, 146,
+                ],
+            ),
+            (
+                1,
+                [
+                    255, 0, 177, 29, 219, 177, 29, 219, 255, 1, 33, 25, 146, 33, 25, 146,
+                ],
+            ),
+        ] {
+            let mut rgba = vec![78, 130, 0, 255].repeat(3 * height);
+            rgba[..4].copy_from_slice(&[0, 1, 0, 255]);
+            for high in [false, true] {
+                assert_eq!(
+                    compress_runtime_level(BlockFormat::Bc5, &rgba, 3, height as u32, high),
+                    expected
+                );
+                assert_eq!(
+                    compress_runtime_level(BlockFormat::Bc4, &rgba, 3, height as u32, high),
+                    expected[..8]
+                );
+            }
+        }
     }
 
     #[test]

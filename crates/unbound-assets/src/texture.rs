@@ -1206,7 +1206,8 @@ impl Importer for TextureImporter {
     // 36: release-scoped Crunch archives and transcoded blocks, runtime EAC and compressed GPU uploads.
     // 37: Polygon-mode sprites are always Tight and get their mesh's boundary as the default
     //     physics shape.
-    const VERSION: u32 = 37;
+    // 38: runtime three-column block padding repeats the middle texel.
+    const VERSION: u32 = 38;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
