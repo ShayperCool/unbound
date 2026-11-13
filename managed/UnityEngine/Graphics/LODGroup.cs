@@ -44,7 +44,11 @@ namespace UnityEngine
         int m_Forced = -1;
         static float s_CrossFadeAnimationDuration = 0.5f;
 
-        public LODGroup() { }
+        public LODGroup()
+        {
+            if (Compat.DefaultConstructorStateMeasured)
+                m_LODs = new[] { new LOD(0.6f, Array.Empty<Renderer>()), new LOD(0.3f, Array.Empty<Renderer>()), new LOD(0.1f, Array.Empty<Renderer>()) };
+        }
 
         public Vector3 localReferencePoint { get => m_LocalReferencePoint; set => m_LocalReferencePoint = value; }
         public float size { get => m_Size; set => m_Size = value; }
@@ -95,14 +99,19 @@ namespace UnityEngine
                 m_LODs[i] = lods[i];
                 m_LODs[i].renderers = lods[i].renderers != null ? (Renderer[])lods[i].renderers.Clone() : Array.Empty<Renderer>();
             }
-            foreach (var lod in m_LODs) Attach(lod.renderers, this);
+            for (int level = m_LODs.Length - 1; level >= 0; level--)
+                Attach(m_LODs[level].renderers, this, level == 0);
         }
 
-        void Attach(Renderer[] renderers, LODGroup group)
+        void Attach(Renderer[] renderers, LODGroup group, bool first = true)
         {
             if (renderers == null) return;
             foreach (var r in renderers)
-                if (r) r.m_LODGroup = group;
+                if (r && (group != null || r.m_LODGroup == this))
+                {
+                    r.m_LODGroup = group;
+                    r.m_FirstLOD = first;
+                }
         }
 
         public void ForceLOD(int index) => m_Forced = index;

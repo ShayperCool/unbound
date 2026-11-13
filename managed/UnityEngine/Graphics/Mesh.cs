@@ -132,6 +132,7 @@ namespace UnityEngine
             }
             m_UnmeasuredSkinBoundsMutation = source.m_UnmeasuredSkinBoundsMutation;
             m_Layout = (VertexAttributeDescriptor[])source.m_Layout?.Clone();
+            m_HasPositionChannel = source.m_HasPositionChannel;
             m_IndexBuffer = (int[])source.m_IndexBuffer?.Clone();
             m_BoneWeights = (BoneWeight[])source.m_BoneWeights?.Clone();
             m_Bindposes = (Matrix4x4[])source.m_Bindposes?.Clone();
@@ -234,6 +235,7 @@ namespace UnityEngine
         internal void AdoptVertices(Vector3[] value)
         {
             m_Vertices = value;
+            m_HasPositionChannel = true;
             m_PositionsVersion++;
             if (m_Layout != null && !LayoutHas(VertexAttribute.Position))
             {
@@ -676,6 +678,8 @@ namespace UnityEngine
 
         public void Clear([Internal.DefaultValue("true")] bool keepVertexLayout)
         {
+            if (keepVertexLayout) m_Layout = Layout();
+            else m_HasPositionChannel = false;
             m_PackedChannels = null;
             m_Vertices = Array.Empty<Vector3>();
             m_Normals = null;

@@ -101,7 +101,7 @@ namespace UnityEngine
 
         static AssetBundleCreateRequest Request(AssetBundle bundle)
         {
-            var request = new AssetBundleCreateRequest { m_AssetBundle = bundle };
+            var request = AsyncOperation.Bind(new AssetBundleCreateRequest { m_AssetBundle = bundle }, completionProgress: bundle == null ? 0f : 1f);
             AsyncOperations.CompleteNextFrame(request);
             return request;
         }
@@ -420,7 +420,7 @@ namespace UnityEngine
 
         public AssetBundleCreateRequest() { }
 
-        public AssetBundle assetBundle => m_AssetBundle;
+        public AssetBundle assetBundle { get { RequireOperation(); return m_AssetBundle; } }
 
         internal void DisableCompatibilityChecks() { }
     }
@@ -431,18 +431,18 @@ namespace UnityEngine
 
         public AssetBundleRequest() { }
 
-        protected override Object GetResult() => m_Asset;
+        protected override Object GetResult() { RequireOperation(); return m_Asset; }
 
         public new Object asset => GetResult();
 
-        public Object[] allAssets => m_AllAssets;
+        public Object[] allAssets { get { RequireOperation(); return m_AllAssets; } }
     }
 
     public partial class AssetBundleUnloadOperation : AsyncOperation
     {
         public AssetBundleUnloadOperation() { }
 
-        public void WaitForCompletion() => Complete();
+        public void WaitForCompletion() { RequireOperation(); Complete(); }
     }
 
     public partial class AssetBundleRecompressOperation : AsyncOperation
@@ -452,11 +452,11 @@ namespace UnityEngine
 
         public AssetBundleRecompressOperation() { }
 
-        public string humanReadableResult => m_Result.ToString();
-        public string inputPath => m_InputPath;
-        public string outputPath => m_OutputPath;
-        public AssetBundleLoadResult result => m_Result;
-        public bool success => m_Result == AssetBundleLoadResult.Success;
+        public string humanReadableResult { get { RequireOperation(); return m_Result.ToString(); } }
+        public string inputPath { get { RequireOperation(); return m_InputPath; } }
+        public string outputPath { get { RequireOperation(); return m_OutputPath; } }
+        public AssetBundleLoadResult result { get { RequireOperation(); return m_Result; } }
+        public bool success { get { RequireOperation(); return m_Result == AssetBundleLoadResult.Success; } }
     }
 
     /// <summary>A bundle build's manifest: the bundles, their hashes and dependencies.</summary>

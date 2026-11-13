@@ -36,10 +36,13 @@ public sealed class DefaultStateProbe : MonoBehaviour
         candidates = manifest.types;
         new GameObject("DefaultStateRecorder").AddComponent<DefaultStateProbe>();
     }
+    static bool core2Waiting;
     void Update()
     {
         for (int step=0;step<4 && index<candidates.Length;step++,index++) Capture(candidates[index]);
         if (index<candidates.Length) return;
+        if (!core2Waiting) { Core2Begin(); Core2BeginMore(); core2Waiting = true; return; }
+        if (!core2Resource.isDone || !core2Bundle.isDone || !core2Instantiation.isDone || !core2MissingResource.isDone) return;
         Capture(new Candidate { type=typeof(FreshStateControl).FullName, module=typeof(FreshStateControl).Assembly.GetName().Name,
             category="class", status="candidate" });
         try
@@ -54,6 +57,7 @@ public sealed class DefaultStateProbe : MonoBehaviour
             PhysicsPayloadControls();
             EditorImporterControls();
             UiControls();
+            Core2Controls(); Core2MoreControls(); Core2TimeConstructorControl(); Core2MeshControls(); Core2LineCurveControls(); Core2RenderSettingControls(); Core2BindingControls();
             Emit("complete","value","1"); output.Dispose(); output=null;
             EditorApplication.Exit(0);
         }
@@ -517,6 +521,375 @@ public sealed class DefaultStateProbe : MonoBehaviour
             }
         }
         CoreValue("Particles/defaultIsolated", default(ParticleSystem.MainModule).startSpeed);
+    }
+    static ResourceRequest core2Resource;
+    static AssetBundleCreateRequest core2Bundle;
+    static AsyncInstantiateOperation<GameObject> core2Instantiation;
+    static GameObject core2Original;
+    static void Core2Begin()
+    {
+        core2Resource = Resources.LoadAsync<TextAsset>("CoreDefaultStateControl");
+        var old = Debug.unityLogger.logHandler;
+        try
+        {
+            Debug.unityLogger.logHandler = new FactoryControlLogHandler(old);
+            core2Bundle = AssetBundle.LoadFromMemoryAsync(new byte[] { 0, 1, 2, 3 });
+        }
+        finally { Debug.unityLogger.logHandler = old; }
+        core2Original = new GameObject("CoreAsyncDefaultControl"); core2Original.SetActive(false);
+        core2Instantiation = UnityEngine.Object.InstantiateAsync(core2Original);
+    }
+    sealed class Core2ManagedRequest : ResourceRequest
+    {
+        protected override UnityEngine.Object GetResult() => null;
+    }
+    static object Core2Read(Func<object> read)
+    {
+        try { return read(); } catch (Exception error) { return Error(error); }
+    }
+    static object Core2Write(Action write)
+    {
+        try { write(); return "ok"; } catch (Exception error) { return Error(error); }
+    }
+    static void Core2Controls()
+    {
+        foreach (var op in new AsyncOperation[] { new AsyncOperation(), new ResourceRequest(),
+            new AssetBundleCreateRequest(), new AssetBundleRequest(), new AsyncInstantiateOperation(), new Core2ManagedRequest(), new AssetBundleRecompressOperation(), new AssetBundleUnloadOperation() })
+        {
+            string key = "Core2/async/bare/" + op.GetType().Name;
+            CoreValue(key, new object[] { Core2Read(() => op.isDone), Core2Read(() => op.progress),
+                Core2Read(() => op.priority), Core2Read(() => op.allowSceneActivation),
+                Core2Write(() => op.priority = 7), Core2Write(() => op.allowSceneActivation = false) });
+            Action<AsyncOperation> handler = _ => {};
+            CoreValue(key + "/callbacks", new object[] { Core2Write(() => op.completed += handler), Core2Write(() => op.completed -= handler) });
+            if (op is AssetBundleRecompressOperation)
+                foreach (var property in op.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                    CoreValue(key + "/" + property.Name, Core2Read(() => property.GetValue(op, null)));
+            if (op is AsyncInstantiateOperation instantiate)
+                CoreValue(key + "/methods", new[] { Core2Read(() => instantiate.IsWaitingForSceneActivation()),
+                    Core2Write(() => instantiate.WaitForCompletion()), Core2Write(() => instantiate.Cancel()) });
+            if (op is ResourceRequest request) CoreValue(key + "/asset", Core2Read(() => request.asset));
+            if (op is AssetBundleCreateRequest bundle) CoreValue(key + "/bundle", Core2Read(() => bundle.assetBundle));
+            if (op is AssetBundleRequest assets) CoreValue(key + "/all", Core2Read(() => assets.allAssets));
+        }
+        foreach (var op in new AsyncOperation[] { core2Resource, core2Bundle, core2Instantiation })
+        {
+            if (!op.isDone) throw new InvalidOperationException("Core default operation did not complete.");
+            int callbacks = 0; bool same = false;
+            op.completed += value => { callbacks++; same = ReferenceEquals(value, op); };
+            op.priority = 9; op.allowSceneActivation = false;
+            CoreValue("Core2/async/factory/" + op.GetType().Name, new object[] { op.isDone, op.progress,
+                op.priority, op.allowSceneActivation, callbacks, same });
+            op.allowSceneActivation = true;
+        }
+        CoreValue("Core2/async/resourceAsset", new object[] { core2Resource.asset != null, ((TextAsset)core2Resource.asset).text });
+        CoreValue("Core2/async/failedBundle", core2Bundle.assetBundle == null);
+        CoreValue("Core2/async/instantiated", new object[] { core2Instantiation.Result.Length, core2Instantiation.Result[0].activeSelf });
+        foreach (var item in core2Instantiation.Result) UnityEngine.Object.DestroyImmediate(item);
+        UnityEngine.Object.DestroyImmediate(core2Original);
+        Core2Renderers();
+        Core2CameraAndLight();
+        Core2EditModeControls();
+    }
+    static void Core2Renderers()
+    {
+        var root = new GameObject("CoreRendererState"); root.SetActive(false);
+        try
+        {
+            foreach (var type in new[] { typeof(MeshRenderer), typeof(SkinnedMeshRenderer), typeof(SpriteRenderer),
+                typeof(LineRenderer), typeof(TrailRenderer), typeof(BillboardRenderer), typeof(ParticleSystemRenderer),
+                Type.GetType("UnityEngine.Tilemaps.TilemapRenderer, UnityEngine.TilemapModule", true) })
+            {
+                var go = new GameObject(type.Name); go.transform.SetParent(root.transform);
+                var renderer = type == typeof(ParticleSystemRenderer) ? go.AddComponent<ParticleSystem>().GetComponent<ParticleSystemRenderer>() : (Renderer)go.AddComponent(type);
+                CoreValue("Core2/renderer/" + type.Name + "/initial", new object[] { renderer.isLOD0,
+                    renderer.shadowCastingMode, renderer.receiveShadows, renderer.lightProbeUsage,
+                    renderer.reflectionProbeUsage, renderer.motionVectorGenerationMode,
+                    renderer.rayTracingAccelerationStructureBuildFlags, renderer.rayTracingMode });
+                foreach (var alias in new[] { "castShadows", "motionVectors", "useLightProbes" })
+                {
+                    var property = typeof(Renderer).GetProperty(alias);
+                    var initial = property.GetValue(renderer, null);
+                    property.SetValue(renderer, false, null); var disabled = property.GetValue(renderer, null);
+                    property.SetValue(renderer, true, null);
+                    CoreValue("Core2/renderer/" + type.Name + "/" + alias, new[] { initial, disabled, property.GetValue(renderer, null) });
+                }
+            }
+            var group = root.AddComponent<LODGroup>();
+            CoreValue("Core2/lod/initial", group.GetLODs());
+            var a = root.GetComponentInChildren<MeshRenderer>(true);
+            var b = root.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            group.SetLODs(new[] { new LOD(.8f, new Renderer[] { a }), new LOD(.2f, new Renderer[] { b }) });
+            CoreValue("Core2/lod/distinct", new[] { a.isLOD0, b.isLOD0 });
+            group.SetLODs(new[] { new LOD(.8f, new Renderer[] { a }), new LOD(.2f, new Renderer[] { a, b }) });
+            CoreValue("Core2/lod/repeated", new[] { a.isLOD0, b.isLOD0 });
+            group.enabled = false; CoreValue("Core2/lod/disabled", new[] { a.isLOD0, b.isLOD0 });
+            group.SetLODs(Array.Empty<LOD>()); CoreValue("Core2/lod/removed", new object[] { a.isLOD0, b.isLOD0, group.lodCount });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+    static void Core2CameraAndLight()
+    {
+        var go = new GameObject("CoreOpticalState"); go.SetActive(false);
+        try
+        {
+            var camera = go.AddComponent<Camera>();
+            foreach (var name in new[] { "aperture", "barrelClipping", "bladeCount", "curvature", "focusDistance", "iso",
+                "renderCloudsInSceneView", "shutterSpeed", "stereoActiveEye", "stereoTargetEye" })
+            {
+                var p = typeof(Camera).GetProperty(name);
+                CoreValue("Core2/camera/" + name + "/initial", p.GetValue(camera, null));
+                if (!p.CanWrite) continue;
+                var values = p.PropertyType == typeof(bool) ? new object[] { false, true }
+                    : p.PropertyType == typeof(Vector2) ? new object[] { new Vector2(-3, 100), new Vector2(4, 7), new Vector2(7, 4) }
+                    : p.PropertyType == typeof(int) ? new object[] { -3, 0, 4, 1000 }
+                    : p.PropertyType.IsEnum ? new object[] { Enum.ToObject(p.PropertyType, 0), Enum.ToObject(p.PropertyType, 1) }
+                    : new object[] { -3f, 0f, 4f, 1000f, float.NaN, float.PositiveInfinity };
+                for (int i = 0; i < values.Length; i++) CoreValue("Core2/camera/" + name + "/write/" + i,
+                    new[] { Core2Write(() => p.SetValue(camera, values[i], null)), Core2Read(() => p.GetValue(camera, null)) });
+            }
+            var light = go.AddComponent<Light>();
+            foreach (var name in new[] { "attenuate", "enableSpotReflector", "lightUnit", "lightmappingMode", "luxAtDistance", "shadowSoftness", "shadowSoftnessFade" })
+            {
+                var p = typeof(Light).GetProperty(name); CoreValue("Core2/light/" + name + "/initial", p.GetValue(light, null));
+                var values = p.PropertyType == typeof(bool) ? new object[] { false, true }
+                    : p.PropertyType.IsEnum ? new object[] { Enum.ToObject(p.PropertyType, 0), Enum.ToObject(p.PropertyType, 7) }
+                    : new object[] { -3f, 0f, 4f, float.NaN };
+                for (int i = 0; i < values.Length; i++) CoreValue("Core2/light/" + name + "/write/" + i,
+                    new[] { Core2Write(() => p.SetValue(light, values[i], null)), Core2Read(() => p.GetValue(light, null)) });
+            }
+
+        }
+        finally { UnityEngine.Object.DestroyImmediate(go); }
+    }
+    static void Core2EditModeControls()
+    {
+        foreach (var name in new[] { "DefaultStatePlainEditControl", "DefaultStateAlwaysEditControl",
+            "DefaultStateInheritedEditControl", "DefaultStateInEditControl" })
+        {
+            var type = typeof(DefaultStateProbe).Assembly.GetType(name);
+            var owner = new GameObject("edit-mode-control"); owner.SetActive(false);
+            try
+            {
+                var attached = (MonoBehaviour)owner.AddComponent(type);
+                Core2EditModeState("Core2/editMode/attached/" + name, attached);
+                CoreValue("Core2/editMode/attachedCtor/" + name, type.GetField("constructorRunMode").GetValue(attached));
+                var manual = (MonoBehaviour)Activator.CreateInstance(type);
+                try { Core2EditModeState("Core2/editMode/manual/" + name, manual);
+                    CoreValue("Core2/editMode/manualCtor/" + name, type.GetField("constructorRunMode").GetValue(manual)); }
+                finally { if (manual != null) UnityEngine.Object.DestroyImmediate(manual); }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(owner); }
+        }
+    }
+    static void Core2EditModeState(string key, MonoBehaviour target)
+    {
+        try
+        {
+            var initial = target.runInEditMode; target.runInEditMode = true;
+            var enabled = target.runInEditMode; target.runInEditMode = false;
+            CoreValue(key, new object[] { initial, enabled, target.runInEditMode });
+        }
+        catch (Exception error) { CoreValue(key, Error(error)); }
+    }
+    static GameObject core2LodRoot;
+    static Renderer core2LodFirst, core2LodSecond;
+    static LODGroup core2LodGroup;
+    static ResourceRequest core2MissingResource;
+    static void Core2BeginMore()
+    {
+        core2MissingResource = Resources.LoadAsync<TextAsset>("NoSuchCoreDefaultStateControl");
+        core2LodRoot = new GameObject("ActiveCoreLodControl"); core2LodRoot.SetActive(false);
+        var a = new GameObject("first"); a.transform.SetParent(core2LodRoot.transform);
+        var b = new GameObject("second"); b.transform.SetParent(core2LodRoot.transform);
+        core2LodFirst = a.AddComponent<MeshRenderer>(); core2LodSecond = b.AddComponent<MeshRenderer>();
+        core2LodGroup = core2LodRoot.AddComponent<LODGroup>();
+        core2LodGroup.SetLODs(new[] { new LOD(.8f, new[] { core2LodFirst }), new LOD(.2f, new[] { core2LodSecond }) });
+        core2LodRoot.SetActive(true);
+    }
+    sealed class Core2ExceptionLogHandler : ILogHandler
+    {
+        readonly ILogHandler before;
+        internal int errors;
+        internal string lastException;
+        internal Core2ExceptionLogHandler(ILogHandler before) { this.before = before; }
+        public void LogException(Exception error, UnityEngine.Object context)
+        { errors++; lastException = error.GetType().FullName; before.LogException(error,context); }
+        public void LogFormat(LogType type, UnityEngine.Object context, string format, params object[] args)
+        { before.LogFormat(type,context,format,args); }
+    }
+    static void Core2TimeConstructorControl()
+    {
+        var owner = new GameObject("TimeConstructorControl"); owner.SetActive(false);
+        var before = Debug.unityLogger.logHandler; var handler = new Core2ExceptionLogHandler(before);
+        try
+        {
+            Debug.unityLogger.logHandler = handler;
+            DefaultStateTimeFailingEditControl result = null;
+            var error = Core2Write(() => result = owner.AddComponent<DefaultStateTimeFailingEditControl>());
+            CoreValue("Core2/editMode/timeFailingCtor", new object[] { error, result != null,
+                handler.errors, handler.lastException, Time.time >= 0 });
+            owner.SetActive(true);
+            CoreValue("Core2/editMode/timeFailingCtorCallbacks", new object[] { result != null && result.awakened,
+                handler.errors, handler.lastException });
+        }
+        finally { Debug.unityLogger.logHandler = before; UnityEngine.Object.DestroyImmediate(owner); }
+    }
+    static object[] Core2MeshState(Mesh mesh) => new object[] { mesh.vertexCount, mesh.vertexAttributeCount,
+        mesh.vertexBufferCount, mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.Position) };
+    static void Core2MeshControls()
+    {
+        var mesh = new Mesh();
+        try
+        {
+            CoreValue("Core2/mesh/new", Core2MeshState(mesh));
+            mesh.vertices = Array.Empty<Vector3>(); CoreValue("Core2/mesh/emptyVertices", Core2MeshState(mesh));
+            mesh.vertices = new[] { Vector3.zero, Vector3.one }; CoreValue("Core2/mesh/populated", Core2MeshState(mesh));
+            var read = Mesh.AcquireReadOnlyMeshData(mesh); var data = read[0];
+            CoreValue("Core2/mesh/dataRead", new object[] { data.vertexCount, data.vertexBufferCount, data.subMeshCount, data.indexFormat });
+            read.Dispose();
+            CoreValue("Core2/mesh/dataDisposed", Core2Read(() => data.vertexCount));
+            mesh.Clear(); CoreValue("Core2/mesh/clearRetainingLayout", Core2MeshState(mesh));
+            mesh.Clear(false); CoreValue("Core2/mesh/clearDroppingLayout", Core2MeshState(mesh));
+            mesh.SetVertexBufferParams(0, new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Position));
+            CoreValue("Core2/mesh/explicitEmpty", Core2MeshState(mesh));
+            CoreValue("Core2/mesh/streamGapRejected", Core2Write(() => mesh.SetVertexBufferParams(3,
+                new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Position,
+                    UnityEngine.Rendering.VertexAttributeFormat.Float32, 3, 2))));
+            CoreValue("Core2/mesh/afterInvalidStream", Core2MeshState(mesh));
+        }
+        finally { UnityEngine.Object.DestroyImmediate(mesh); }
+        var empty = default(Mesh.MeshData);
+        CoreValue("Core2/mesh/defaultData", new[] { Core2Read(() => empty.vertexCount), Core2Read(() => empty.vertexBufferCount),
+            Core2Read(() => empty.subMeshCount), Core2Read(() => empty.indexFormat) });
+        var writable = Mesh.AllocateWritableMeshData(1);
+        try
+        {
+            var data = writable[0];
+            CoreValue("Core2/mesh/writableEmpty", new object[] { data.vertexCount, data.vertexBufferCount, data.subMeshCount, data.indexFormat });
+            data.SetVertexBufferParams(2, new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Position));
+            CoreValue("Core2/mesh/writablePopulated", new object[] { data.vertexCount, data.vertexBufferCount, data.subMeshCount, data.indexFormat });
+        }
+        finally { writable.Dispose(); }
+    }
+    static void Core2LineCurveControls()
+    {
+        var root = new GameObject("CoreLineCurveControl"); root.SetActive(false);
+        try
+        {
+            foreach (var type in new[] { typeof(LineRenderer), typeof(TrailRenderer) })
+            {
+                var owner = new GameObject(type.Name); owner.transform.SetParent(root.transform);
+                var renderer = owner.AddComponent(type); var property = type.GetProperty("widthCurve");
+                var initial = (AnimationCurve)property.GetValue(renderer, null);
+                CoreValue("Core2/line/" + type.Name + "/initial", initial);
+                initial.MoveKey(0, new Keyframe(0, 7));
+                CoreValue("Core2/line/" + type.Name + "/getterCopy", ((AnimationCurve)property.GetValue(renderer, null)).Evaluate(0));
+                var assigned = new AnimationCurve(new Keyframe(0, 2), new Keyframe(1, 4));
+                property.SetValue(renderer, assigned, null); assigned.MoveKey(0, new Keyframe(0, 9));
+                CoreValue("Core2/line/" + type.Name + "/setterCopy", ((AnimationCurve)property.GetValue(renderer, null)).Evaluate(0));
+                CoreValue("Core2/line/" + type.Name + "/null", Core2Write(() => property.SetValue(renderer, null, null)));
+            }
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+        CoreValue("Core2/line/publicKeyframe", new Keyframe(0, 1));
+    }
+    static void Core2RenderSettingControls()
+    {
+        var go = new GameObject("CoreRenderSettingControl"); go.SetActive(false);
+        try
+        {
+            var renderer = go.AddComponent<MeshRenderer>();
+            foreach (int flag in new[] { 0, 6, 129, -1 })
+            {
+                renderer.rayTracingAccelerationStructureBuildFlags = (UnityEngine.Rendering.RayTracingAccelerationStructureBuildFlags)flag;
+                CoreValue("Core2/renderer/flags/" + flag, new object[] { renderer.rayTracingAccelerationStructureBuildFlags,
+                    renderer.rayTracingAccelerationStructureBuildFlagsOverride });
+            }
+            renderer.rayTracingAccelerationStructureBuildFlagsOverride = true;
+            CoreValue("Core2/renderer/flagsOverride", new object[] { renderer.rayTracingAccelerationStructureBuildFlags,
+                renderer.rayTracingAccelerationStructureBuildFlagsOverride });
+            foreach (int mode in new[] { 0, 1, 3, 7, -3, -1, 4, 5, 255 })
+            {
+                renderer.rayTracingMode = (UnityEngine.Experimental.Rendering.RayTracingMode)mode;
+                CoreValue("Core2/renderer/rayMode/" + mode, renderer.rayTracingMode);
+            }
+            renderer.stitchLightmapSeams = false;
+            CoreValue("Core2/renderer/stitchOff", renderer.stitchLightmapSeams);
+            renderer.stitchLightmapSeams = true;
+            CoreValue("Core2/renderer/stitchOn", renderer.stitchLightmapSeams);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(go); }
+    }
+    static void Core2MoreControls()
+    {
+        CoreValue("Core2/lod/activeAfterUpdates", new[] { core2LodFirst.isLOD0, core2LodSecond.isLOD0 });
+        core2LodGroup.ForceLOD(1);
+        CoreValue("Core2/lod/forced", new[] { core2LodFirst.isLOD0, core2LodSecond.isLOD0 });
+        core2LodGroup.SetLODs(new[] { new LOD(.8f, new[] { core2LodFirst, core2LodSecond }),
+            new LOD(.2f, new[] { core2LodSecond }) });
+        CoreValue("Core2/lod/activeRepeated", new[] { core2LodFirst.isLOD0, core2LodSecond.isLOD0 });
+        core2LodGroup.enabled = false;
+        CoreValue("Core2/lod/activeDisabled", new[] { core2LodFirst.isLOD0, core2LodSecond.isLOD0 });
+        UnityEngine.Object.DestroyImmediate(core2LodGroup);
+        CoreValue("Core2/lod/groupDestroyed", new[] { core2LodFirst.isLOD0, core2LodSecond.isLOD0 });
+        UnityEngine.Object.DestroyImmediate(core2LodRoot);
+        core2MissingResource.allowSceneActivation = false; core2MissingResource.priority = -2;
+        CoreValue("Core2/async/missingResource", new object[] { core2MissingResource.isDone, core2MissingResource.progress,
+            core2MissingResource.asset == null, core2MissingResource.priority, core2MissingResource.allowSceneActivation });
+        var owner = new GameObject("NestedComponentConstructor"); owner.SetActive(false);
+        try
+        {
+            var added = owner.AddComponent<DefaultStateNestedEditControl>();
+            var nested = added.nested;
+            CoreValue("Core2/editMode/nestedCtor", new object[] { added.constructorRunMode,
+                nested.constructorRunMode, nested == null, nested.GetInstanceID() == 0,
+                Core2Read(() => nested.name), Core2Read(() => nested.hideFlags) });
+            var before = Debug.unityLogger.logHandler; var logs = new FactoryControlLogHandler(before);
+            try
+            {
+                Debug.unityLogger.logHandler = logs;
+                DefaultStateFailingEditControl failed = null;
+                var result = Core2Write(() => failed = owner.AddComponent<DefaultStateFailingEditControl>());
+                CoreValue("Core2/editMode/failingCtor", new object[] { result, failed != null,
+                    failed == null ? false : failed.entered, logs.errors });
+                owner.SetActive(true);
+                CoreValue("Core2/editMode/failingCtorCallbacks", new object[] { failed != null && failed.awakened,
+                    failed != null && failed.enabledCallback, logs.errors });
+            }
+            finally { Debug.unityLogger.logHandler = before; }
+        }
+        finally { UnityEngine.Object.DestroyImmediate(owner); }
+    }
+    static void Core2BindingControls()
+    {
+        var go = new GameObject("CoreBindingControl"); go.SetActive(false);
+        try
+        {
+            var attached = go.AddComponent<DefaultStatePlainEditControl>();
+            CoreValue("Core2/bindings/constructor", attached.constructorBindings);
+            CoreValue("Core2/bindings/attachedInactive", new[] { attached.useGUILayout, attached.didAwake, attached.didStart });
+            attached.useGUILayout = false; CoreValue("Core2/bindings/layoutWrite", attached.useGUILayout);
+            go.SetActive(true);
+            CoreValue("Core2/bindings/attachedAwake", new[] { attached.didAwake, attached.didStart });
+            var old = Debug.unityLogger.logHandler;
+            try
+            {
+                Debug.unityLogger.logHandler = new FactoryControlLogHandler(old);
+                var manual = new DefaultStatePlainEditControl();
+                CoreValue("Core2/bindings/manual", new[] { Core2Read(() => manual.useGUILayout), Core2Read(() => manual.didAwake), Core2Read(() => manual.didStart), Core2Write(() => manual.useGUILayout = false) });
+            }
+            finally { Debug.unityLogger.logHandler = old; }
+            var camera = go.AddComponent<Camera>(); camera.aperture = 3.2f; camera.focusDistance = 17; camera.curvature = new Vector2(7, 4); camera.iso = 731;
+            var other = new GameObject("CoreCameraCopy");
+            try
+            {
+                var copied = other.AddComponent<Camera>(); copied.CopyFrom(camera);
+                CoreValue("Core2/camera/copied", new object[] { copied.aperture, copied.focusDistance, copied.curvature, copied.iso });
+            }
+            finally { UnityEngine.Object.DestroyImmediate(other); }
+        }
+        finally { UnityEngine.Object.DestroyImmediate(go); }
     }
     static void UiControls()
     {

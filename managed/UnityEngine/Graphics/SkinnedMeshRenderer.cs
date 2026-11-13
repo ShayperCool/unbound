@@ -112,7 +112,10 @@ namespace UnityEngine
         }
         Matrix4x4[] m_Matrices = Array.Empty<Matrix4x4>();
 
-        public SkinnedMeshRenderer() { }
+        public SkinnedMeshRenderer()
+        {
+            if (Compat.DefaultConstructorStateMeasured) rayTracingMode = UnityEngine.Experimental.Rendering.RayTracingMode.DynamicGeometry;
+        }
 
         public Mesh sharedMesh
         {

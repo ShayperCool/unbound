@@ -14,13 +14,43 @@ namespace UnityEngine
         internal bool m_DidStart;
         CancellationTokenSource m_CancellationTokenSource;
 
-        public bool useGUILayout { get; set; } = true;
+        bool m_UseGUILayout = true, m_RunInEditMode;
 
-        public bool runInEditMode { get; set; }
+        public MonoBehaviour()
+        {
+            if (Compat.UncreatedObjectWrappersMeasured && m_InstanceID == 0 && m_Destroyed)
+                WarnManualMonoBehaviour();
+        }
 
-        public bool didStart => m_DidStart;
+        void CheckState(string binding)
+        {
+            if (!Compat.UncreatedObjectWrappersMeasured) return;
+            ThrowIfUncreated();
+            MainThreadCheck.Check(binding);
+        }
 
-        public bool didAwake => m_DidAwake;
+        public bool useGUILayout
+        {
+            get { CheckState("get_useGUILayout"); return m_UseGUILayout; }
+            set { CheckState("set_useGUILayout"); m_UseGUILayout = value; }
+        }
+
+        public bool runInEditMode
+        {
+            get
+            {
+                if (Compat.UncreatedObjectWrappersMeasured) CheckState("get_runInEditMode");
+                return m_RunInEditMode || (Compat.UncreatedObjectWrappersMeasured && ScriptMessages.For(GetType()).RunsInEditMode);
+            }
+            set
+            {
+                if (Compat.UncreatedObjectWrappersMeasured) CheckState("set_runInEditMode");
+                m_RunInEditMode = value;
+            }
+        }
+
+        public bool didStart { get { CheckState("get_didStart"); return m_DidStart; } }
+        public bool didAwake { get { CheckState("get_didAwake"); return m_DidAwake; } }
 
         /// <summary>Cancelled when the behaviour is destroyed.</summary>
         public CancellationToken destroyCancellationToken

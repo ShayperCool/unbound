@@ -168,7 +168,12 @@ namespace UnityEngine
 
         public Object asset => GetResult();
 
-        protected virtual Object GetResult() => m_Asset;
+        protected virtual Object GetResult()
+        {
+            // The public result getter remains virtual, including on a zero-constructed request.
+            if (Compat.UncreatedObjectWrappersMeasured && m_Path == null) throw new ArgumentNullException("path");
+            return m_Asset;
+        }
     }
 }
 
@@ -186,6 +191,7 @@ namespace Unbound.Runtime
 
         internal static void CompleteNextFrame(UnityEngine.AsyncOperation op)
         {
+            if (!op.HasOperation) UnityEngine.AsyncOperation.Bind(op);
             op.m_Progress = 0.9f;
             s_Pending.Add(op);
         }

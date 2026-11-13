@@ -41,6 +41,8 @@ namespace UnityEngine.SceneManagement
 
         internal void Enqueue(AsyncOperation operation, SceneData scene, Action work, bool load, bool async, int frame, Action prepare = null)
         {
+            AsyncOperation.Bind(operation, AsyncOperation.OperationCapabilities.Priority
+                | (load ? AsyncOperation.OperationCapabilities.SceneActivation : AsyncOperation.OperationCapabilities.None));
             bool forced = load && !async;
             // The LoadScene API forces earlier asynchronous work, including held activations,
             // to complete at its next-frame load. Keep allowSceneActivation's public value.

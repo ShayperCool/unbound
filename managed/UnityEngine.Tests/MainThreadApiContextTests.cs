@@ -82,7 +82,15 @@ namespace UnityEngine.Tests
                 asset = ScriptableObject.CreateInstance<ConstructorAssetReader>();
                 Assert.Contains("ScriptableObject constructor", asset.Field);
                 Assert.True(asset.EnabledReadTime);
-                Assert.Throws<UnityException>(() => go.AddComponent<ThrowingApiConstructor>());
+                var previous = Debug.unityLogger.logHandler;
+                var log = new ConstructorLogHandler();
+                try
+                {
+                    Debug.unityLogger.logHandler = log;
+                    Assert.NotNull(go.AddComponent<ThrowingApiConstructor>());
+                    Assert.IsType<UnityException>(Assert.Single(log.Exceptions));
+                }
+                finally { Debug.unityLogger.logHandler = previous; }
                 _ = Time.time;
                 Assert.False(JobsUtility.IsExecutingJob);
             }
@@ -91,6 +99,13 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(asset);
                 Object.DestroyImmediate(go);
             }
+        }
+
+        sealed class ConstructorLogHandler : ILogHandler
+        {
+            internal readonly System.Collections.Generic.List<Exception> Exceptions = new();
+            public void LogException(Exception exception, UnityEngine.Object context) => Exceptions.Add(exception);
+            public void LogFormat(LogType type, UnityEngine.Object context, string format, params object[] args) { }
         }
 
         static Exception s_RootFailure, s_AnimationFailure;

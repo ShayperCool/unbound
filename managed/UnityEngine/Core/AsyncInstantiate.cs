@@ -51,17 +51,19 @@ namespace UnityEngine
         public Object[] Result => m_Result;
 
         /// <summary>True while the copies are ready but held by allowSceneActivation = false.</summary>
-        public bool IsWaitingForSceneActivation() => !m_IsDone && !m_Cancelled && !allowSceneActivation;
+        public bool IsWaitingForSceneActivation() { RequireOperation(); return !m_IsDone && !m_Cancelled && !allowSceneActivation; }
 
         /// <summary>Integrates now, unless allowSceneActivation holds the operation.</summary>
         public void WaitForCompletion()
         {
+            RequireOperation();
             if (!m_IsDone && allowSceneActivation) AsyncInstantiation.Integrate(this);
         }
 
         /// <summary>The operation completes with no result when it is next integrated.</summary>
         public void Cancel()
         {
+            RequireOperation();
             if (!m_IsDone) m_Cancelled = true;
         }
 
@@ -185,7 +187,7 @@ namespace UnityEngine
             if (count <= 0) throw new ArgumentException("Cannot call instantiate multiple with count less or equal to zero");
             if (original is ScriptableObject) throw new ArgumentException("Cannot call instantiate multiple for a ScriptableObject");
             ThrowIfDestroyedArgument(original, "original");
-            var op = new AsyncInstantiateOperation<T>(IntPtr.Zero, cancellationToken);
+            var op = AsyncOperation.Bind(new AsyncInstantiateOperation<T>(IntPtr.Zero, cancellationToken), AsyncOperation.OperationCapabilities.SceneActivation);
             AsyncInstantiation.Start(op, original, count, positions, rotations, parameters);
             return op;
         }

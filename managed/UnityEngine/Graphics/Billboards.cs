@@ -77,7 +77,7 @@ namespace UnityEngine
         Mesh m_Mesh;
         (BillboardAsset, int, Vector3) m_MeshKey;
 
-        public BillboardRenderer() { }
+        public BillboardRenderer() { InitializeBillboardDefaults(); }
 
         /// <summary>The asset; its material becomes the renderer's when it has one.</summary>
         public BillboardAsset billboard

@@ -11,7 +11,23 @@ namespace UnityEngine
     internal sealed class LineParameters
     {
         internal float WidthMultiplier = 1f;
-        internal AnimationCurve WidthCurve = new AnimationCurve(new Keyframe(0f, 1f));
+        internal AnimationCurve WidthCurve = DefaultWidthCurve();
+        static AnimationCurve DefaultWidthCurve()
+        {
+            var key = new Keyframe(0f, 1f);
+            // The constant stroke key has normalized tangent weights (defaultstate, 6000.0.71f1).
+            if (Compat.DefaultConstructorStateMeasured) key.inWeight = key.outWeight = 1f / 3f;
+            return new AnimationCurve(key);
+        }
+
+        internal AnimationCurve GetWidthCurve() => CopyCurve(WidthCurve);
+        internal void SetWidthCurve(AnimationCurve value)
+        {
+            if (value == null) throw new ArgumentNullException("curve");
+            WidthCurve = CopyCurve(value);
+        }
+        static AnimationCurve CopyCurve(AnimationCurve value) =>
+            new AnimationCurve(value.keys) { preWrapMode = value.preWrapMode, postWrapMode = value.postWrapMode };
         internal Gradient ColorGradient = new Gradient();
         /// <summary>Kept as set (negative counts read back unchanged); the strip uses at least 0.</summary>
         internal int NumCornerVertices;
@@ -42,7 +58,7 @@ namespace UnityEngine
         internal LineParameters Clone() => new LineParameters
         {
             WidthMultiplier = WidthMultiplier,
-            WidthCurve = new AnimationCurve(WidthCurve.keys) { preWrapMode = WidthCurve.preWrapMode, postWrapMode = WidthCurve.postWrapMode },
+            WidthCurve = CopyCurve(WidthCurve),
             ColorGradient = CloneGradient(ColorGradient),
             NumCornerVertices = NumCornerVertices,
             NumCapVertices = NumCapVertices,
@@ -185,7 +201,7 @@ namespace UnityEngine
         readonly List<Vector3> m_World = new List<Vector3>();
         readonly Dictionary<Camera, Mesh> m_Meshes = new Dictionary<Camera, Mesh>();
 
-        public LineRenderer() { }
+        public LineRenderer() { InitializeStripDefaults(); }
 
         public float startWidth { get => m_Parameters.StartWidth; set => m_Parameters.StartWidth = value; }
         public float endWidth { get => m_Parameters.EndWidth; set => m_Parameters.EndWidth = value; }
@@ -203,7 +219,7 @@ namespace UnityEngine
         public LineAlignment alignment { get => m_Parameters.Alignment; set => m_Parameters.Alignment = value; }
         public SpriteMaskInteraction maskInteraction { get => m_MaskInteraction; set => m_MaskInteraction = value; }
         internal override SpriteMaskInteraction MaskInteraction => m_MaskInteraction;
-        public AnimationCurve widthCurve { get => m_Parameters.WidthCurve; set => m_Parameters.WidthCurve = value ?? new AnimationCurve(new Keyframe(0f, 1f)); }
+        public AnimationCurve widthCurve { get => m_Parameters.GetWidthCurve(); set => m_Parameters.SetWidthCurve(value); }
         public Gradient colorGradient { get => m_Parameters.ColorGradient; set => m_Parameters.ColorGradient = value ?? new Gradient(); }
 
         public int positionCount
@@ -452,7 +468,7 @@ namespace UnityEngine
         readonly List<float> m_DrawWidths = new List<float>();
         readonly Dictionary<Camera, Mesh> m_Meshes = new Dictionary<Camera, Mesh>();
 
-        public TrailRenderer() { }
+        public TrailRenderer() { InitializeStripDefaults(); }
 
         public float time { get => m_Time; set => m_Time = value; }
         internal float previewTimeScale { get => m_PreviewTimeScale; set => m_PreviewTimeScale = value; }
@@ -472,7 +488,7 @@ namespace UnityEngine
         public LineAlignment alignment { get => m_Parameters.Alignment; set => m_Parameters.Alignment = value; }
         public SpriteMaskInteraction maskInteraction { get => m_MaskInteraction; set => m_MaskInteraction = value; }
         internal override SpriteMaskInteraction MaskInteraction => m_MaskInteraction;
-        public AnimationCurve widthCurve { get => m_Parameters.WidthCurve; set => m_Parameters.WidthCurve = value ?? new AnimationCurve(new Keyframe(0f, 1f)); }
+        public AnimationCurve widthCurve { get => m_Parameters.GetWidthCurve(); set => m_Parameters.SetWidthCurve(value); }
         public Gradient colorGradient { get => m_Parameters.ColorGradient; set => m_Parameters.ColorGradient = value ?? new Gradient(); }
 
         public bool emitting { get => m_Emitting; set => m_Emitting = value; }

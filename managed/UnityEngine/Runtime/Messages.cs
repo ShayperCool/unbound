@@ -26,6 +26,7 @@ namespace Unbound.Runtime
         internal Func<MonoBehaviour, IEnumerator> StartCoroutine;
         internal Action<MonoBehaviour, bool> OnApplicationPause, OnApplicationFocus;
         internal int ExecutionOrder;
+        internal bool RunsInEditMode;
 
         static readonly ConcurrentDictionary<Type, ScriptMessages> s_Cache = new ConcurrentDictionary<Type, ScriptMessages>();
 
@@ -61,6 +62,8 @@ namespace Unbound.Runtime
         static ScriptMessages Build(Type type)
         {
             var m = new ScriptMessages();
+            m.RunsInEditMode = type.IsDefined(typeof(ExecuteAlways), inherit: true)
+                || type.IsDefined(typeof(ExecuteInEditMode), inherit: true);
             m.Awake = Action(type, "Awake");
             m.OnEnable = Action(type, "OnEnable");
             m.Update = Action(type, "Update");

@@ -123,6 +123,7 @@ namespace UnityEngine
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var o = (Light)source;
+            lightUnit = o.lightUnit; luxAtDistance = o.luxAtDistance; enableSpotReflector = o.enableSpotReflector;
             m_Type = o.m_Type;
             m_Color = o.m_Color;
             m_Intensity = o.m_Intensity;
@@ -206,6 +207,9 @@ namespace UnityEngine
             var cookie = body.Ref("m_Cookie");
             m_Cookie = cookie.IsNull ? null : resolver.Resolve(cookie, typeof(Texture)) as Texture;
             m_CookieSize = body.Float("m_CookieSize", 10f);
+            lightUnit = (LightUnit)body.Int("m_LightUnit", (int)lightUnit);
+            luxAtDistance = body.Float("m_LuxAtDistance", luxAtDistance);
+            enableSpotReflector = body.Bool("m_EnableSpotReflector", enableSpotReflector);
         }
 
         /// <summary>The light's color times its intensity (and color temperature), in the project's

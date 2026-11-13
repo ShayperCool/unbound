@@ -24,7 +24,7 @@ namespace Unbound.Runtime
             return true;
         }
 
-        internal static Object CreateWithBacking(Type type)
+        internal static Object CreateWithBacking(Type type, string gameObjectName = null)
         {
             if (!Compat.UncreatedObjectWrappersMeasured)
                 return (Object)Activator.CreateInstance(type, nonPublic: true);
@@ -38,7 +38,9 @@ namespace Unbound.Runtime
             t_Request = new Request(instance);
             try
             {
-                using var construction = MainThreadCheck.Construct(type);
+                var context = typeof(UnityEngine.Component).IsAssignableFrom(type)
+                    && !typeof(UnityEngine.MonoBehaviour).IsAssignableFrom(type) ? null : type;
+                using var construction = MainThreadCheck.Construct(context, gameObjectName);
                 constructor.Invoke(instance, BindingFlags.Default, binder: null, Array.Empty<object>(), culture: null);
                 return instance;
             }

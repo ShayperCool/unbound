@@ -21,9 +21,14 @@ namespace Unbound.Runtime
             Component c;
             try
             {
-                using var construction = MainThreadCheck.Construct(typeof(MonoBehaviour).IsAssignableFrom(type) ? type : null,
-                    deserializing ? null : go?.m_Name);
-                c = (Component)Activator.CreateInstance(type, nonPublic: true);
+                if (Compat.UncreatedObjectWrappersMeasured)
+                    c = (Component)ObjectConstruction.CreateWithBacking(type, deserializing ? null : go?.m_Name);
+                else
+                {
+                    using var construction = MainThreadCheck.Construct(typeof(MonoBehaviour).IsAssignableFrom(type) ? type : null,
+                        deserializing ? null : go?.m_Name);
+                    c = (Component)Activator.CreateInstance(type, nonPublic: true);
+                }
             }
             catch (TargetInvocationException e)
             {

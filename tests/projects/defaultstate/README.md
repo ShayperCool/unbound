@@ -111,9 +111,10 @@ for 11,565 rows before Audio. Audio adds 25 controls, giving 11,590 rows before 
 The ParticleSystem slice adds 362 controls. Declaration slices add five inventory rows.
 The Editor slice adds 223 controls while preserving all 11,957 previous rows,
 giving 12,180 rows before UIElements. UIElements adds 95 controls and six atlas-settings
-rows, preserving all earlier raw rows, for 12,281 current rows. The comparison now
-has 11,808 exact rows, 473 differing reference rows, zero missing rows and 25 extra
-implementation rows. Its 500 queue entries retain the same 50 variable rows; two
+rows, preserving all earlier raw rows, for 12,281 rows before the remaining Core work.
+Core adds 217 controls, giving 12,498 current rows. The comparison now has 12,152 exact
+rows, 346 differing reference rows, zero missing rows and 25 extra implementation rows.
+Its 373 queue entries retain the same 50 variable rows; two
 happen to equal the implementation snapshot. Variable rows remain unresolved comparisons.
 
 | Core cause | Resolved rows | Controls and rule |
@@ -125,18 +126,46 @@ happen to equal the implementation snapshot. Variable rows remain unresolved com
 | Refresh-rate arithmetic | 2 | Zero-denominator values, exact rational comparisons, integer rounding/overflow and 15-digit display formatting are recorded separately from finite normal rates. |
 | Legacy UV getter | 1 | Mesh.uv1 remains null after writes and leaves uv2 unchanged. The generated member remains a compatibility stub. |
 
-The Core slice removes 155 CoreModule rows and one Canvas row. CoreModule retains
-116 rows. The three compatibility mechanisms for constructor initialization, factory
+The first Core slice removes 155 CoreModule rows and one Canvas row. CoreModule retained
+116 rows at that stage. The three compatibility mechanisms for constructor initialization, factory
 eligibility and refresh-rate arithmetic select exactly 6000.0.71f1. Other releases
 retain their previous, unmeasured paths; their initialization and invalid-rate behavior
 remain gaps. The generator format is now version 4 after adding the UV return rule.
 
-Outstanding Core causes include physical-camera initialization; renderer/material and
-light state; wrappers created without live operation, culling or mesh-data payloads;
-invalid bare Object state; and imported or serialized defaults such as billboard
-size. Runtime literals alone do not settle those contexts. No rendering effect,
-serialized fallback or valid-handle contract is inferred from one creation snapshot.
-Those exact rows remain queued for initialized-context and import controls.
+The remaining Core work resolves 127 more queue entries, including 76 CoreModule,
+24 AssetBundle, five each ParticleSystem, SpriteMask and SpriteShape, seven Tilemap,
+four web-request and one UIElements entry. Two independent NVIDIA Editor captures
+and Unbound match all 217 added controls. All 12,281 previous reference lines are
+preserved byte for byte. Generator format 10 suppresses the newly implemented
+members and moves their required enum declarations into the implementation.
+
+| Remaining Core mechanism | Controls and scope |
+| --- | --- |
+| Component factory backing | Nested construction of the same type cannot borrow the factory's backing. A constructor error is logged while the attached partial component survives and receives Awake/OnEnable. Uncreated wrappers reject their bound properties; attached constructor bindings reject that context. Attribute-driven edit mode and explicit instance writes share cached type metadata. |
+| Operation backing and capabilities | Bare operations and derived bundle requests reject access. Completed resources and bundle requests store priority and ignore activation writes; async instantiation stores activation and ignores priority. A failed bundle can complete with progress zero. Late completion handlers run immediately on the same operation. A custom ResourceRequest result override remains callable. |
+| Renderer configuration | Deprecated aliases read and write the modern state. Initial shadow/probe/motion/ray configuration is recorded for eight renderer families. Ray mode and build flags retain their measured low bits. LOD membership survives duplicate renderer entries, forced selection, inactive/disabled groups and removal. Billboard material slots retain their previous shape. |
+| Curve ownership | Line and trail width curves have one weighted default key. Gets and sets copy the curve; later mutations do not change the renderer. Null assignments reject. |
+| Mesh layout and view validity | Empty meshes have no vertex buffers, while an explicitly created empty position channel remains present. Clear retains or removes the layout as requested. Missing streams reject before changing data. Default and disposed MeshData views reject; valid read-only and writable views still work. |
+| Camera and light configuration | Physical-camera fields clamp independently, preserve NaN where measured, and copy with the camera. Reversed curvature endpoints remain independent. Light units, reflector and lux-distance state remain writable; removed light settings ignore writes. These controls establish configuration storage, not unimplemented optical or lighting effects. |
+
+The [AsyncOperation completion event](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AsyncOperation-completed.html)
+documents immediate invocation for a completed operation; the new control subscribes
+after actual completion. The [runInEditMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour-runInEditMode.html)
+API is Editor-only. The [isLOD0](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-isLOD0.html)
+controls put a renderer in the second level before changing group state. The
+[MeshData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.MeshData.html)
+controls use populated views before disposal and verify that read-only views reject writes.
+
+CoreModule retains 36 rows. Scene handles and culling masks need scene/rendering
+context; six culling-result getters and their two nested aggregates need actual
+cull payloads. Bare Object identity, empty MeshFilter ownership, probe-volume defaults,
+format selection, readback and acceleration-build state remain separate mechanisms.
+Billboard dimensions and the removed projector alias have additional small-module
+controls pending. Singular-matrix rotation and conservative empty trail bounds need
+general numeric and lifetime rules. Three light-distance observations are retained
+outside the canonical reference because storing distances alone would not implement
+shadow-caster culling. No fallback textures, culling results or ray-tracing behavior
+are inferred from configuration defaults.
 
 Correct factory rejection removes 121 extra member rows. Two queued TextCore instance
 IDs therefore have new exact implementation values because earlier allocations changed;
@@ -389,31 +418,29 @@ different identifiers across types; the API does not promise their absolute
 numbers. The 50 existing variable policies remain unchanged. The remaining
 entries cover font-dependent cursor/selection geometry, real Image and IMGUI draw
 callbacks, UXML schema metadata and trait initialization, TextCore fallback assets,
-and MonoBehaviour factory/attribute state. Constructor and write controls rule out
+and specialized text asset initialization. Constructor and write controls rule out
 fixing these through one font-height constant, empty draw callbacks or sorting
 all attribute lists. Every remaining raw value stays in the queue.
 
 | Release module | Queued rows |
 | --- | ---: |
-| UnityEngine.CoreModule | 112 |
-| UnityEngine.UIElementsModule | 100 |
+| UnityEngine.CoreModule | 36 |
+| UnityEngine.UIElementsModule | 99 |
 | UnityEditor.CoreModule | 87 |
 | UnityEngine.IMGUIModule | 28 |
 | UnityEngine.GridModule | 26 |
-| UnityEngine.AssetBundleModule | 24 |
 | UnityEngine.AnimationModule | 20 |
 | UnityEngine.TerrainModule | 13 |
-| UnityEngine.ParticleSystemModule | 10 |
-| UnityEngine.TilemapModule | 10 |
+| UnityEngine.ParticleSystemModule | 5 |
+| UnityEngine.TilemapModule | 3 |
 | UnityEngine.VideoModule | 9 |
 | UnityEngine.TextCoreTextEngineModule | 8 |
 | UnityEngine.GameCenterModule | 7 |
-| UnityEngine.SpriteShapeModule | 7 |
-| UnityEngine.UnityWebRequestModule | 6 |
+| UnityEngine.SpriteShapeModule | 2 |
+| UnityEngine.UnityWebRequestModule | 2 |
 | UnityEngine.AIModule | 5 |
 | UnityEngine.Physics2DModule | 5 |
 | UnityEngine.PhysicsModule | 5 |
-| UnityEngine.SpriteMaskModule | 5 |
 | UnityEngine.AudioModule | 4 |
 | UnityEngine.UIModule | 3 |
 | UnityEngine.UnityWebRequestTextureModule | 3 |

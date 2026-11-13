@@ -11,15 +11,19 @@ namespace UnityEngine
 
         public Component()
         {
-            // A component exists only on a GameObject. `new MyBehaviour()` makes an object that
-            // compares equal to null, as Unity does (with its warning).
-            if (!ComponentFactory.IsCreating)
+            if (Compat.UncreatedObjectWrappersMeasured)
+            {
+                if (!ObjectConstruction.TakeBacking(this)) MarkUncreated();
+            }
+            else if (!ComponentFactory.IsCreating)
             {
                 m_Destroyed = true;
-                if (this is MonoBehaviour)
-                    Debug.LogWarning($"You are trying to create a MonoBehaviour using the 'new' keyword.  This is not allowed.  MonoBehaviours can only be added using AddComponent(). Alternatively, your script can inherit from ScriptableObject or no base class at all");
+                if (this is MonoBehaviour) WarnManualMonoBehaviour();
             }
         }
+
+        internal static void WarnManualMonoBehaviour() =>
+            Debug.LogWarning("You are trying to create a MonoBehaviour using the 'new' keyword.  This is not allowed.  MonoBehaviours can only be added using AddComponent(). Alternatively, your script can inherit from ScriptableObject or no base class at all");
 
         internal override string GetName() => m_GameObject != null ? m_GameObject.m_Name : m_Name;
 
@@ -33,6 +37,7 @@ namespace UnityEngine
         {
             get
             {
+                ThrowIfUncreated();
                 MainThreadCheck.Check("get_transform");
                 ThrowIfDestroyed();
                 return m_GameObject.m_Transform;
@@ -43,6 +48,7 @@ namespace UnityEngine
         {
             get
             {
+                ThrowIfUncreated();
                 MainThreadCheck.Check("get_gameObject");
                 ThrowIfDestroyed();
                 return m_GameObject;

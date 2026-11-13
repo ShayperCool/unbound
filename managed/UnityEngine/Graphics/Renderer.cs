@@ -586,11 +586,16 @@ namespace UnityEngine
             m_Materials = list.ToArray();
             m_SortingLayerID = body.Int("m_SortingLayerID");
             m_SortingOrder = (short)body.Int("m_SortingOrder");
-            m_CastShadows = (ShadowCastingMode)body.Int("m_CastShadows", 1);
-            m_ReceiveShadows = body.Bool("m_ReceiveShadows", true);
+            m_CastShadows = (ShadowCastingMode)body.Int("m_CastShadows", (int)m_CastShadows);
+            m_ReceiveShadows = body.Bool("m_ReceiveShadows", m_ReceiveShadows);
             m_RenderingLayerMask = (uint)body.Long("m_RenderingLayerMask", 1);
-            lightProbeUsage = (LightProbeUsage)body.Int("m_LightProbeUsage", (int)LightProbeUsage.BlendProbes);
-            reflectionProbeUsage = (ReflectionProbeUsage)body.Int("m_ReflectionProbeUsage", (int)ReflectionProbeUsage.BlendProbes);
+            lightProbeUsage = (LightProbeUsage)body.Int("m_LightProbeUsage", (int)lightProbeUsage);
+            reflectionProbeUsage = (ReflectionProbeUsage)body.Int("m_ReflectionProbeUsage", (int)reflectionProbeUsage);
+            motionVectorGenerationMode = (MotionVectorGenerationMode)body.Int("m_MotionVectors", (int)motionVectorGenerationMode);
+            rayTracingMode = (UnityEngine.Experimental.Rendering.RayTracingMode)body.Int("m_RayTracingMode", (int)rayTracingMode);
+            rayTracingAccelerationStructureBuildFlags = (RayTracingAccelerationStructureBuildFlags)body.Int(
+                "m_RayTracingAccelStructBuildFlags", (int)rayTracingAccelerationStructureBuildFlags);
+            rayTracingAccelerationStructureBuildFlagsOverride = body.Bool("m_RayTracingAccelStructBuildFlagsOverride");
             var anchor = body.Ref("m_ProbeAnchor");
             if (!anchor.IsNull) probeAnchor = resolver.Resolve(anchor, typeof(Transform)) as Transform;
         }
@@ -610,6 +615,10 @@ namespace UnityEngine
                 foreach (var pair in source.m_MaterialBlocks) (m_MaterialBlocks ??= new Dictionary<int, MaterialPropertyBlock>())[pair.Key] = pair.Value.Copy();
             lightProbeUsage = source.lightProbeUsage;
             reflectionProbeUsage = source.reflectionProbeUsage;
+            motionVectorGenerationMode = source.motionVectorGenerationMode;
+            rayTracingMode = source.rayTracingMode;
+            rayTracingAccelerationStructureBuildFlags = source.rayTracingAccelerationStructureBuildFlags;
+            rayTracingAccelerationStructureBuildFlagsOverride = source.rayTracingAccelerationStructureBuildFlagsOverride;
             probeAnchor = source.probeAnchor;
             lightmapIndex = source.lightmapIndex;
             lightmapScaleOffset = source.lightmapScaleOffset;
@@ -669,7 +678,10 @@ namespace UnityEngine
     [ClassId(23)]
     public partial class MeshRenderer : Renderer
     {
-        public MeshRenderer() { }
+        public MeshRenderer()
+        {
+            if (Compat.DefaultConstructorStateMeasured) rayTracingMode = UnityEngine.Experimental.Rendering.RayTracingMode.DynamicTransform;
+        }
 
         /// <summary>A mesh whose channels (colors, normals, tangents, uvs) replace the mesh's for
         /// this renderer (vertex painting; measured: tests/projects/builtinfx vertex_streams).</summary>
@@ -737,7 +749,7 @@ namespace UnityEngine
         /// vertex streams over it (null without a mesh).</summary>
         internal Mesh RealtimeGIMesh() =>
             m_GameObject.GetComponent<MeshFilter>()?.m_Mesh is Mesh mesh ? Streamed(mesh) : null;
-        public bool stitchLightmapSeams { get; set; }
+        public bool stitchLightmapSeams { get; set; } = Compat.DefaultConstructorStateMeasured;
 
         internal override Bounds GetLocalBounds()
         {
@@ -778,6 +790,7 @@ namespace UnityEngine
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             CopyRendererData((Renderer)source);
+            stitchLightmapSeams = ((MeshRenderer)source).stitchLightmapSeams;
             var s = (MeshRenderer)source;
             scaleInLightmap = s.scaleInLightmap;
             m_PreserveUVs = s.m_PreserveUVs;
@@ -808,7 +821,12 @@ namespace UnityEngine
         Mesh m_FlippedMesh;
         (Mesh, int, bool, bool) m_FlippedKey;
 
-        public SpriteRenderer() { }
+        public SpriteRenderer()
+        {
+            if (!Compat.DefaultConstructorStateMeasured) return;
+            shadowCastingMode = ShadowCastingMode.Off;
+            receiveShadows = false;
+        }
 
         public Sprite sprite
         {

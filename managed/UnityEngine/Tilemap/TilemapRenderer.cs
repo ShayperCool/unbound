@@ -28,7 +28,7 @@ namespace UnityEngine.Tilemaps
         readonly List<(Mesh Mesh, Texture Texture, Vector3 Center)> m_Batches = new List<(Mesh, Texture, Vector3)>();
         (int Tilemap, int Grid, SortOrder Order, Mode Mode) m_BuiltFor = (-1, -1, default, default);
 
-        public TilemapRenderer() { }
+        public TilemapRenderer() { InitializeBillboardDefaults(); }
 
         public Vector3Int chunkSize { get => m_ChunkSize; set => m_ChunkSize = value; }
         public Vector3 chunkCullingBounds { get => m_ChunkCullingBounds; set => m_ChunkCullingBounds = value; }

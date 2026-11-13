@@ -718,6 +718,7 @@ namespace UnityEngine
 
         void CopySettings(Camera other)
         {
+            CopyPhysicalSettings(other);
             m_ClearFlags = other.m_ClearFlags;
             m_BackgroundColor = other.m_BackgroundColor;
             m_NormalizedViewPortRect = other.m_NormalizedViewPortRect;
@@ -771,6 +772,14 @@ namespace UnityEngine
             // m_projectionMatrixMode 2 is "physical properties based".
             m_UsePhysicalProperties = body.Int("m_projectionMatrixMode", 1) == 2;
             m_FocalLength = body.Float("m_FocalLength", 50f);
+            aperture = body.Float("m_Aperture", m_Aperture);
+            barrelClipping = body.Float("m_BarrelClipping", m_BarrelClipping);
+            bladeCount = body.Int("m_BladeCount", m_BladeCount);
+            if (body.Get("m_Curvature") != null) curvature = body.Vector2("m_Curvature");
+            focusDistance = body.Float("m_FocusDistance", m_FocusDistance);
+            iso = body.Int("m_Iso", m_Iso);
+            shutterSpeed = body.Float("m_ShutterSpeed", m_ShutterSpeed);
+            stereoTargetEye = (StereoTargetEyeMask)body.Int("m_TargetEye", (int)m_StereoTargetEye);
             if (body.Get("m_SensorSize") != null) m_SensorSize = body.Vector2("m_SensorSize");
             m_LensShift = body.Vector2("m_LensShift");
             m_GateFit = (GateFitMode)body.Int("m_GateFitMode", (int)GateFitMode.Horizontal);

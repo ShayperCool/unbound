@@ -45,6 +45,7 @@ namespace UnityEngine
     {
         /// <summary>The layout SetVertexBufferParams gave; null: the channels' default layout.</summary>
         VertexAttributeDescriptor[] m_Layout;
+        bool m_HasPositionChannel;
         /// <summary>The index buffer SetIndexBufferParams made; null: the submeshes' indices in turn.</summary>
         int[] m_IndexBuffer;
 
@@ -58,9 +59,10 @@ namespace UnityEngine
 
         bool ChannelPresent(VertexAttribute attr)
         {
+            if (m_Layout != null) return LayoutHas(attr);
             switch (attr)
             {
-                case VertexAttribute.Position: return m_Layout != null ? LayoutHas(attr) : m_Vertices.Length > 0;
+                case VertexAttribute.Position: return m_Layout != null ? LayoutHas(attr) : m_HasPositionChannel || m_Vertices.Length > 0;
                 case VertexAttribute.Normal: return m_Normals != null;
                 case VertexAttribute.Tangent: return m_Tangents != null;
                 case VertexAttribute.Color: return m_Colors != null;
@@ -125,9 +127,11 @@ namespace UnityEngine
         {
             get
             {
-                int count = 0;
-                foreach (var d in Layout()) count = Math.Max(count, d.stream + 1);
-                return Math.Max(count, 1);
+                if (vertexCount == 0) return 0;
+                Span<VertexAttributeDescriptor> attributes = stackalloc VertexAttributeDescriptor[MaxVertexAttributes];
+                int length = FillLayout(attributes), count = 0;
+                for (int i = 0; i < length; i++) count = Math.Max(count, attributes[i].stream + 1);
+                return count;
             }
         }
 
@@ -237,6 +241,7 @@ namespace UnityEngine
             }
             m_BoneWeights = Resize(m_BoneWeights, Has(VertexAttribute.BlendWeight) || Has(VertexAttribute.BlendIndices));
             m_Layout = layout;
+            m_HasPositionChannel = Has(VertexAttribute.Position);
             ResizePackedChannels(vertexCount, layout);
             Changed();
         }
@@ -259,6 +264,11 @@ namespace UnityEngine
                 if (FormatSize(d.format) * d.dimension % 4 != 0)
                     throw new ArgumentException($"Vertex attribute {d.attribute} with format {d.format} and dimension {d.dimension} is not a multiple of 4 bytes");
             }
+            int streamMask = 0;
+            foreach (var d in layout) streamMask |= 1 << d.stream;
+            // Each stream up to the highest stream must be present.
+            if ((streamMask & (streamMask + 1)) != 0)
+                throw new ArgumentException("Vertex streams must be contiguous, starting at stream 0", nameof(attributes));
             return layout;
         }
 

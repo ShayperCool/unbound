@@ -209,6 +209,7 @@ namespace UnityEngine
             {
                 get
                 {
+                    AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
                     if (m_Ptr == IntPtr.Zero) throw new InvalidOperationException("The MeshData is not valid (its MeshDataArray was disposed or never made).");
                     return (MeshDataStore)GCHandle.FromIntPtr(m_Ptr).Target;
                 }
@@ -218,7 +219,8 @@ namespace UnityEngine
             {
                 get
                 {
-                    var store = Store;
+                    AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
+                    var store = (MeshDataStore)GCHandle.FromIntPtr(m_Ptr).Target;
                     if (store.ReadOnly) throw new InvalidOperationException("Not allowed to modify MeshData from Mesh.AcquireReadOnlyMeshData");
                     return store;
                 }
@@ -230,8 +232,10 @@ namespace UnityEngine
             {
                 get
                 {
+                    var store = Store;
+                    if (store.VertexCount == 0) return 0;
                     int count = 0;
-                    foreach (var d in Store.Layout) count = Math.Max(count, d.stream + 1);
+                    foreach (var d in store.Layout) count = Math.Max(count, d.stream + 1);
                     return count;
                 }
             }
@@ -409,7 +413,8 @@ namespace UnityEngine
                 {
                     if (m_Ptrs == null) throw new ObjectDisposedException("MeshDataArray", "The MeshDataArray has been disposed.");
                     if (index < 0 || index >= m_Length) throw new IndexOutOfRangeException($"Index {index} is out of range of '{m_Length}' Length.");
-                    return new MeshData { m_Ptr = m_Ptrs[index] };
+                    var store = (MeshDataStore)GCHandle.FromIntPtr(m_Ptrs[index]).Target;
+                    return new MeshData { m_Ptr = m_Ptrs[index], m_Safety = store.Safety };
                 }
             }
 

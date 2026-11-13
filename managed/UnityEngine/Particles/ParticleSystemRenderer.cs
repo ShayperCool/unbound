@@ -69,6 +69,11 @@ namespace UnityEngine
         {
             shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             receiveShadows = false;
+            if (Compat.DefaultConstructorStateMeasured)
+            {
+                lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+                reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+            }
         }
 
         public ParticleSystemRenderSpace alignment { get => m_RenderAlignment; set => m_RenderAlignment = value; }
