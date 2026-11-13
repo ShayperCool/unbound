@@ -659,6 +659,9 @@ namespace Unbound.Runtime
             public long MainFileId { get; set; }
             /// <summary>The script GUID of the asset's ScriptedImporter, for kind "scripted".</summary>
             public string Importer { get; set; }
+            /// <summary>The file id of that script (11500000 for a project's script; the Editor's
+            /// own importers have theirs).</summary>
+            public long ImporterFileId { get; set; }
         }
 
         static readonly JsonSerializerOptions s_Json = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };

@@ -583,6 +583,8 @@ namespace Unbound.Runtime
             [19104] = "UnityEngine.UIElements.UIRenderer",
             [19105] = "UnityEngine.UIElements.InputSystem.InputSystemEventSystem",
             [19202] = "UnityEngine.UIElements.ThemeStyleSheet",
+            // The Editor's own scripted importers Unbound runs (crates/unbound-assets meta.rs).
+            [12405] = "UnityEditor.SpeedTree.Importer.SpeedTree9Importer",
         };
 
         internal static Type Resolve(string guid, long fileId)

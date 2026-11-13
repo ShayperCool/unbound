@@ -117,11 +117,11 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
                 .extension()
                 .is_some_and(|e| e.eq_ignore_ascii_case("asset"));
             if !is_asset {
-                // Assets of the Editor's own scripted importers (SpeedTree 9 trees) are not
-                // imported: say so instead of reading the file as a serialized one.
-                return unbound_assets::meta::unsupported_importer_of(file).map(|importer| {
+                // A scene's prefab instance of a ScriptedImporter's asset (a SpeedTree 9 tree):
+                // the importer runs in managed code, which the scene's expansion cannot use yet.
+                return unbound_assets::meta::scripted_importer_of(file).map(|_| {
                     Err(anyhow::anyhow!(
-                        "{} is imported by Unity's {importer}, which Unbound does not implement (`unbound doctor` lists such assets)",
+                        "{} is imported by a ScriptedImporter: prefab instances of its objects in scenes and prefabs are not supported yet",
                         file.display()
                     ))
                 });
@@ -226,23 +226,6 @@ fn asset_kind(path: &str) -> &'static str {
         "dll" => "plugin",
         _ => "unknown",
     }
-}
-
-/// The script GUID of the ScriptedImporter that imports a file, from its `.meta`.
-fn scripted_importer(file: &std::path::Path) -> Option<String> {
-    let meta = std::fs::read_to_string(format!("{}.meta", file.display())).ok()?;
-    if !meta.lines().any(|l| l == "ScriptedImporter:") {
-        return None;
-    }
-    meta.lines()
-        .find_map(|l| l.strip_prefix("  script: {fileID: 11500000, guid: "))
-        .map(|rest| {
-            rest.split([',', '}'])
-                .next()
-                .unwrap_or("")
-                .trim()
-                .to_string()
-        })
 }
 
 /// The file id of an asset file's first object: its main object.
@@ -485,7 +468,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 )
             })?;
             let importer = (!asset.is_folder)
-                .then(|| scripted_importer(&asset.file))
+                .then(|| unbound_assets::meta::scripted_importer_of(&asset.file))
                 .flatten();
             let kind = if asset.is_folder {
                 "folder"
@@ -505,7 +488,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 "file": asset.file,
                 "kind": kind,
                 "mainFileId": main,
-                "importer": importer,
+                "importer": importer.as_ref().map(|(guid, _)| guid),
+                "importerFileId": importer.as_ref().map_or(0, |(_, id)| *id),
             })
             .to_string())
         }

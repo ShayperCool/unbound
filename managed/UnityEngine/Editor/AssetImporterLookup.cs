@@ -40,7 +40,8 @@ namespace UnityEditor
             {
                 if (doc.TypeName == "ScriptedImporter")
                 {
-                    importer = ScriptedImports.CreateImporter(doc.Body.Ref("script").Guid, path, guid, doc.Body);
+                    var script = doc.Body.Ref("script");
+                    importer = ScriptedImports.CreateImporter(script.Guid, script.FileId, path, guid, doc.Body);
                 }
                 else
                 {
