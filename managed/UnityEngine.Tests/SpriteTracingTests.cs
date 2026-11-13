@@ -46,7 +46,9 @@ namespace UnityEngine.Tests
             var e = Assert.Throws<System.ArgumentException>(() => sprite.OverridePhysicsShape(mixed));
             Assert.Equal("Physics Shape at 1 has less than 3 vertices (1).", e.Message);
             Assert.Equal(1, sprite.GetPhysicsShapeCount());
-            Assert.Throws<System.ArgumentException>(() => sprite.OverridePhysicsShape(new List<Vector2[]> { null }));
+            var nullPath = Assert.Throws<System.ArgumentNullException>(() => sprite.OverridePhysicsShape(new List<Vector2[]> { mixed[0], null }));
+            Assert.Equal("physicsShape", nullPath.ParamName);
+            Assert.StartsWith("Physics Shape at 1 is null.", nullPath.Message);
             Assert.Equal("physicsShapes", Assert.Throws<System.ArgumentNullException>(() => sprite.OverridePhysicsShape(null)).ParamName);
             sprite.OverridePhysicsShape(new List<Vector2[]>());
             Assert.Equal(0, sprite.GetPhysicsShapeCount());

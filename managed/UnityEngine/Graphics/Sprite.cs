@@ -84,10 +84,15 @@ namespace UnityEngine
             };
             sprite.BuildGeometry();
             // A Tight rect under 32 pixels on a side stays a quad: nothing to trace for its mesh.
-            bool tight = meshType == SpriteMeshType.Tight && rect.width >= 32 && rect.height >= 32;
+            bool tight = meshType == SpriteMeshType.Tight && rect.width >= TightMinimumSide && rect.height >= TightMinimumSide;
             if (tight || generateFallbackPhysicsShape) sprite.Trace(tight, generateFallbackPhysicsShape);
             return sprite;
         }
+
+        /// <summary>A Tight sprite's rect needs this many pixels on both sides to get a traced mesh
+        /// (`TIGHT_MINIMUM_SIDE` in crates/unbound-assets/src/sprite_mesh.rs; matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/spriteoutlines).</summary>
+        const float TightMinimumSide = 32f;
 
         /// <summary>The texture an imported sprite was made from (its page replaces m_Texture when an
         /// atlas packs it); null for sprites made otherwise.</summary>
@@ -502,8 +507,10 @@ namespace UnityEngine
             // Every path is checked before any replaces the shape (tests/projects/spriteoutlines).
             if (physicsShapes == null) throw new ArgumentNullException(nameof(physicsShapes));
             for (int i = 0; i < physicsShapes.Count; i++)
-                if ((physicsShapes[i]?.Length ?? 0) < 3)
-                    throw new ArgumentException($"Physics Shape at {i} has less than 3 vertices ({physicsShapes[i]?.Length ?? 0}).");
+            {
+                if (physicsShapes[i] == null) throw new ArgumentNullException("physicsShape", $"Physics Shape at {i} is null.");
+                if (physicsShapes[i].Length < 3) throw new ArgumentException($"Physics Shape at {i} has less than 3 vertices ({physicsShapes[i].Length}).");
+            }
             var shapes = new Vector2[physicsShapes.Count][];
             for (int i = 0; i < shapes.Length; i++)
                 shapes[i] = Array.ConvertAll(physicsShapes[i], p => new Vector2((p.x - m_Pivot.x) / m_PixelsPerUnit, (p.y - m_Pivot.y) / m_PixelsPerUnit));

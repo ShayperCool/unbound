@@ -14,6 +14,7 @@ namespace UnityEditor.Sprites
         /// physics shape traces its rendered texture this way. Without texels to trace, no paths.</summary>
         internal static void GenerateOutline(Texture2D texture, Rect rect, float detail, byte alphaTolerance, bool holeDetection, out Vector2[][] paths)
         {
+            if (texture == null) throw new ArgumentNullException(nameof(texture));
             paths = Array.Empty<Vector2[]>();
             var request = Sprite.TexelSource(texture, rect);
             if (request == null) return;

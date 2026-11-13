@@ -1057,6 +1057,11 @@ impl<'a> Texture<'a> {
     }
 }
 
+/// The pixels a Tight sprite's rect needs on both sides to get a traced mesh (without a custom
+/// outline); a smaller one renders its quad (matches the Unity 6000.0.71f1 Editor,
+/// tests/projects/spriteimport and tests/projects/spriteoutlines).
+pub const TIGHT_MINIMUM_SIDE: f32 = 32.0;
+
 /// A sprite as the importer hands it to [`sprite_geometry`].
 pub struct SpriteSource<'a> {
     /// In texture pixels, origin bottom-left.
@@ -1209,7 +1214,7 @@ pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, polygon: bool) -> Sp
     let tight = if polygon {
         true
     } else if s.outline.is_empty() {
-        s.tight && 32.0 <= rw && 32.0 <= rh
+        s.tight && TIGHT_MINIMUM_SIDE <= rw && TIGHT_MINIMUM_SIDE <= rh
     } else {
         s.tight
     };
