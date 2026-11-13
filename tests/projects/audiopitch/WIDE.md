@@ -24,8 +24,9 @@ The full `wide` profile is diagnostic. Its two original independent captures
 compare 1,010,860,222 metadata/sample values and disagree at eight values:
 wrapped Flange at 32000 Hz / 340 frames in Surround and 5.1, and device-only
 source Chorus output at 48000 Hz / 256 frames in 5.1 and 7.1. Current-case Master
-floats in the latter controls agree. These failures remain in the complete raw
-repeat and engine reports; no original reference or tolerance is changed.
+floats in the latter controls agree. Those historical counts remain recorded here; cache cleanup after Q390 removed
+its raw captures and reports. They cannot now be independently rechecked from
+that cache. No original reference or tolerance is changed.
 
 `wide-pcm` keeps the original per-cell startup and control order. It excludes
 the complete 32000 Hz / 340-frame and 48000 Hz / 256-frame pairs across all five
@@ -39,8 +40,8 @@ It removed the two device-only source Chorus disagreements in paired 48000 Hz /
 256-frame controls, but the wider diagnostic still disagreed at 32000 Hz / 340
 frames and introduced device-only repeat differences at 32000 Hz / 512 frames
 in 7.1. It was stopped with partial captures and coverage recorded outside Git.
-This does not establish a general reset or retained-history rule. The original
-full 3080-control repeats and engine comparisons remain complete and unfiltered.
+This does not establish a general reset or retained-history rule. The original full 3080-control comparisons were complete and unfiltered when
+recorded. Their historical counts are retained, subject to the cache loss above.
 
 Record two independent projects with `native.py --release 6000.0.71f1 --rate
 48000 --set wide-pcm --work FRESH_CACHE_DIRECTORY`. Verify every GPU renderer
@@ -88,3 +89,55 @@ engine diagnostic retains nine gate failures across the excluded pairs, down
 from 85 before the shared ramp corrections. The full original Native repeat
 retains eight differences. No excluded diagnostic is treated as an accepted
 residual or substituted into the canonical reference.
+
+## Q416 excluded-history check
+
+Fresh captures cover both excluded pairs in full: 140 controls, all five layouts
+and fourteen mechanisms, with the same authored inputs and control order. Each
+history has two independent GPU Editor projects, ten sessions per project, with
+no callback-buffer assertions. The existing Reset and effect contracts above
+do not promise a fixed startup or retained-history PCM sequence.
+
+The original per-cell history compares 46,024,812 values and retains four exact
+differences. Surround Flange at 32000 Hz / 340 frames differs in both Master and
+device output at interleaved sample 142914. Its Master sample changes from
+-0.0034420912 to -0.60471344. The other differences are device-only: 5.1 Pitch
+Shifter at that pair, sample 61211, and 7.1 source Chorus at 48000 Hz / 256
+frames, sample 143365. These are large finite spikes, not precision residuals.
+
+The separate per-case Reset history compares 46,024,813 values and retains
+15,872 exact differences: seven Master floats and 15,865 device values. All
+occur at 32000 Hz / 340 frames, including Surround and 7.1 listener Reverb.
+The 48000 Hz / 256-frame Reset subset agrees exactly. Neither result replaces
+the original history or proves that Reset generally stabilizes playback.
+
+Both entire pairs remain outside new Normalize/static-wet admission. No engine
+PCM pass or canonical reference is published for these 140 controls. Existing
+admission guards, authored inputs, references and comparator bounds are
+unchanged. Q416-R2 remains open for repeatable original and Reset histories and
+a rule explaining their differences. All fresh captures and complete reports
+are retained separately from the unavailable Q390 cache.
+
+Reproduce each independent project from a clean checkout with the existing
+runner and a fresh cache directory. Run this twice without `--reset-cases` for
+the original history and twice with it for the separate Reset history:
+
+```bash
+cases=$(python3 - <<'PYCASES'
+import sys
+sys.path.insert(0, 'tests/projects/audiopitch')
+from common import wide_rows
+print(','.join(k for k in wide_rows() if k.startswith(
+    ('context_wide_32000_340_', 'context_wide_48000_256_'))))
+PYCASES
+)
+python3 tests/projects/audiopitch/native.py --release 6000.0.71f1 \
+  --rate 48000 --set wide --cases "$cases" --work FRESH_CACHE_DIRECTORY
+```
+
+Compare each pair with `compare.compare(A / 'capture', B / 'capture', REPORT,
+keys, exact=True)`, using `keys = dict.fromkeys(cases.split(','))` and `Path`
+objects for A, B and a fresh `.jsonl.gz` REPORT. No frame limit, PCM-step
+allowance or residual is supplied. Keep the two histories and their reports
+separate. Verify every session's GPU renderer and absence of assertions before
+using its results.
