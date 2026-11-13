@@ -38,7 +38,7 @@ def all_cases():
 
 
 def cases(contexts=False):
-    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_prologic_', 'context_zone_', 'context_monofx_', 'context_recovery_', 'context_wide_', 'context_scriptzone_', 'context_encoding_', 'context_schedule_', 'context_listenerchain_', 'context_listenerdiag_')) and key.startswith('context_') == contexts]
+    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_prologic_', 'context_zone_', 'context_monofx_', 'context_recovery_', 'context_wide_', 'context_scriptzone_', 'context_encoding_', 'context_schedule_', 'context_listenerchain_', 'context_listenerdiag_', 'context_monolive_', 'context_topologydiag_')) and key.startswith('context_') == contexts]
 
 
 def surround_cases():
@@ -136,6 +136,8 @@ def profile(name, rate):
     if name == 'wide-pcm': return dict.fromkeys(wide_pcm_rows())
     if name == 'prologic': return dict.fromkeys(prologic_cases())
     if name == 'encoding': return dict.fromkeys(encoding_cases())
+    if name == 'topology-diagnostics': return dict.fromkeys(key for key in all_cases() if key.startswith('context_topologydiag_'))
+    if name == 'mono-live': return dict.fromkeys(key for key in all_cases() if key.startswith('context_monolive_'))
     if name in ('listener-chain', 'listener-diagnostics'):
         prefix = 'context_listenerchain_' if name == 'listener-chain' else 'context_listenerdiag_'
         return dict.fromkeys(key for key in all_cases() if key.startswith(prefix))

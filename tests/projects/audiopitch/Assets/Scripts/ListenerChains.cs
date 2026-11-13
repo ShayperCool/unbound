@@ -4,6 +4,44 @@ using UnityEngine;
 
 public partial class EffectProbe
 {
+    static Component AddConfiguredFilter(GameObject owner, string unit)
+    {
+        Component component;
+        switch (unit) {
+            case "low": {
+                var effect = owner.AddComponent<AudioLowPassFilter>();
+                effect.cutoffFrequency = 4000; effect.lowpassResonanceQ = 1.7f; component = effect; break;
+            }
+            case "high": {
+                var effect = owner.AddComponent<AudioHighPassFilter>();
+                effect.cutoffFrequency = 800; effect.highpassResonanceQ = 1.2f; component = effect; break;
+            }
+            case "dist": {
+                var effect = owner.AddComponent<AudioDistortionFilter>();
+                effect.distortionLevel = 0.6f; component = effect; break;
+            }
+            case "echo": {
+                var effect = owner.AddComponent<AudioEchoFilter>();
+                effect.delay = 11; effect.decayRatio = 0.4f; effect.dryMix = 0.3f; effect.wetMix = 0.7f;
+                component = effect; break;
+            }
+            case "chorus": {
+                var effect = owner.AddComponent<AudioChorusFilter>();
+                effect.dryMix = 0.2f; effect.wetMix1 = 0.2f; effect.wetMix2 = 0.5f; effect.wetMix3 = 0.9f;
+                effect.delay = 11; effect.rate = 3; effect.depth = 0.7f; component = effect; break;
+            }
+            case "reverb": {
+                var effect = owner.AddComponent<AudioReverbFilter>();
+                effect.reverbPreset = AudioReverbPreset.User;
+                effect.dryLevel = -600; effect.room = -500; effect.roomHF = -300;
+                effect.decayTime = 0.3f; effect.reflectionsLevel = -500; effect.reflectionsDelay = 0.007f;
+                effect.reverbLevel = -500; effect.reverbDelay = 0.011f; component = effect; break;
+            }
+            default: throw new Exception("Unknown filter unit " + unit);
+        }
+        return component;
+    }
+
     sealed class ListenerChainControl : IDisposable
     {
         readonly List<Component> components = new List<Component>();
@@ -32,47 +70,14 @@ public partial class EffectProbe
 
         void Add(GameObject owner, string unit)
         {
+            if (unit == "") return;
             Component component;
-            switch (unit) {
-                case "gain":
-                case "gain2": {
-                    var gain = owner.AddComponent<ProbeListenerAffine>();
-                    gain.Gain = unit == "gain" ? 0.5f : -1f;
-                    gain.Offset = unit == "gain" ? 0.0625f : 0.03125f;
-                    scripts.Add(gain); component = gain; break;
-                }
-                case "low": {
-                    var effect = owner.AddComponent<AudioLowPassFilter>();
-                    effect.cutoffFrequency = 4000; effect.lowpassResonanceQ = 1.7f; component = effect; break;
-                }
-                case "high": {
-                    var effect = owner.AddComponent<AudioHighPassFilter>();
-                    effect.cutoffFrequency = 800; effect.highpassResonanceQ = 1.2f; component = effect; break;
-                }
-                case "dist": {
-                    var effect = owner.AddComponent<AudioDistortionFilter>();
-                    effect.distortionLevel = 0.6f; component = effect; break;
-                }
-                case "echo": {
-                    var effect = owner.AddComponent<AudioEchoFilter>();
-                    effect.delay = 11; effect.decayRatio = 0.4f; effect.dryMix = 0.3f; effect.wetMix = 0.7f;
-                    component = effect; break;
-                }
-                case "chorus": {
-                    var effect = owner.AddComponent<AudioChorusFilter>();
-                    effect.dryMix = 0.2f; effect.wetMix1 = 0.2f; effect.wetMix2 = 0.5f; effect.wetMix3 = 0.9f;
-                    effect.delay = 11; effect.rate = 3; effect.depth = 0.7f; component = effect; break;
-                }
-                case "reverb": {
-                    var effect = owner.AddComponent<AudioReverbFilter>();
-                    effect.reverbPreset = AudioReverbPreset.User;
-                    effect.dryLevel = -600; effect.room = -500; effect.roomHF = -300;
-                    effect.decayTime = 0.3f; effect.reflectionsLevel = -500; effect.reflectionsDelay = 0.007f;
-                    effect.reverbLevel = -500; effect.reverbDelay = 0.011f; component = effect; break;
-                }
-                case "": return;
-                default: throw new Exception("Unknown listener chain unit " + unit);
-            }
+            if (unit == "gain" || unit == "gain2") {
+                var gain = owner.AddComponent<ProbeListenerAffine>();
+                gain.Gain = unit == "gain" ? 0.5f : -1f;
+                gain.Offset = unit == "gain" ? 0.0625f : 0.03125f;
+                scripts.Add(gain); component = gain;
+            } else component = AddConfiguredFilter(owner, unit);
             components.Add(component);
         }
 
