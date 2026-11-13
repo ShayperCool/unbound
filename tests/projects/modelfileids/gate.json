@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/modelfileids/run.py gate"],
+  "summary": "modelfileids: .*",
+  "engine_paths": ["crates/unbound-assets/src/model.rs", "crates/unbound-assets/src/meta.rs", "managed/UnityEngine/Runtime/Loading.cs", "managed/UnityEngine/Editor/AssetDatabase.cs"]
+}

@@ -1,0 +1,255 @@
+{"k":"ids/Nested/./GameObject","v":"919132149155446097"}
+{"k":"ids/Nested/./LODGroup","v":"4742473837712756890"}
+{"k":"ids/Nested/./Transform","v":"-8679921383154817045"}
+{"k":"ids/Nested/Body/Arm/GameObject","v":"-5403003479635379108"}
+{"k":"ids/Nested/Body/Arm/Hand/GameObject","v":"8468409968487002305"}
+{"k":"ids/Nested/Body/Arm/Hand/MeshFilter","v":"6796594745199167358"}
+{"k":"ids/Nested/Body/Arm/Hand/MeshRenderer","v":"1464151670041615703"}
+{"k":"ids/Nested/Body/Arm/Hand/Transform","v":"-222566165846855763"}
+{"k":"ids/Nested/Body/Arm/MeshFilter","v":"8314604871480564757"}
+{"k":"ids/Nested/Body/Arm/MeshRenderer","v":"-6620424926994764731"}
+{"k":"ids/Nested/Body/Arm/Transform","v":"3247691482623825318"}
+{"k":"ids/Nested/Body/GameObject","v":"635547659545568360"}
+{"k":"ids/Nested/Body/Leaf 1/GameObject","v":"-1751941390922508624"}
+{"k":"ids/Nested/Body/Leaf 1/MeshFilter","v":"-977001615450722827"}
+{"k":"ids/Nested/Body/Leaf 1/MeshRenderer","v":"8778488173958327992"}
+{"k":"ids/Nested/Body/Leaf 1/Transform","v":"2008346041212674697"}
+{"k":"ids/Nested/Body/Leaf/GameObject","v":"7002992317116448777"}
+{"k":"ids/Nested/Body/Leaf/MeshFilter","v":"5675520632232038155"}
+{"k":"ids/Nested/Body/Leaf/MeshRenderer","v":"9147564316461482851"}
+{"k":"ids/Nested/Body/Leaf/Transform","v":"-6159643602752606219"}
+{"k":"ids/Nested/Body/MeshFilter","v":"-3387599253219119134"}
+{"k":"ids/Nested/Body/MeshRenderer","v":"-6652725513331149018"}
+{"k":"ids/Nested/Body/Transform","v":"4167280743394806330"}
+{"k":"ids/Nested/Empty/Deep/GameObject","v":"-7644396786735465373"}
+{"k":"ids/Nested/Empty/Deep/MeshFilter","v":"-3974777216665003536"}
+{"k":"ids/Nested/Empty/Deep/MeshRenderer","v":"661842733980052880"}
+{"k":"ids/Nested/Empty/Deep/Transform","v":"5831780787284662097"}
+{"k":"ids/Nested/Empty/GameObject","v":"8821623529969584324"}
+{"k":"ids/Nested/Empty/Transform","v":"-1253996098385199550"}
+{"k":"ids/Nested/ImportLog:Import Logs","v":"2400844187752362338"}
+{"k":"ids/Nested/Material:M_Probe","v":"3480482350670412624"}
+{"k":"ids/Nested/Mesh:Arm","v":"816343263715038232"}
+{"k":"ids/Nested/Mesh:Body","v":"2959467708922500008"}
+{"k":"ids/Nested/Mesh:Deep","v":"-3156703003768306859"}
+{"k":"ids/Nested/Mesh:Hand","v":"2524342215456974474"}
+{"k":"ids/Nested/Mesh:Leaf","v":"240824333094594727,6268752110573383620"}
+{"k":"ids/Nested/Mesh:Tree_LOD0","v":"1584698017712070401"}
+{"k":"ids/Nested/Mesh:Tree_LOD1","v":"-9162321718629426354"}
+{"k":"ids/Nested/Tree_LOD0/GameObject","v":"-5240141239643042284"}
+{"k":"ids/Nested/Tree_LOD0/MeshFilter","v":"-6444049224069087074"}
+{"k":"ids/Nested/Tree_LOD0/MeshRenderer","v":"-5393707556033817107"}
+{"k":"ids/Nested/Tree_LOD0/Transform","v":"3424725367599607882"}
+{"k":"ids/Nested/Tree_LOD1/GameObject","v":"8102941671085511639"}
+{"k":"ids/Nested/Tree_LOD1/MeshFilter","v":"-7204590908123031163"}
+{"k":"ids/Nested/Tree_LOD1/MeshRenderer","v":"-2191763634202495206"}
+{"k":"ids/Nested/Tree_LOD1/Transform","v":"706417823918466991"}
+{"k":"ids/Single/./GameObject","v":"919132149155446097"}
+{"k":"ids/Single/./MeshFilter","v":"-5754084199372789682"}
+{"k":"ids/Single/./MeshRenderer","v":"-7511558181221131132"}
+{"k":"ids/Single/./Transform","v":"-8679921383154817045"}
+{"k":"ids/Single/ImportLog:Import Logs","v":"2400844187752362338"}
+{"k":"ids/Single/Material:M_Probe","v":"3480482350670412624"}
+{"k":"ids/Single/Mesh:Only","v":"4171625828175932478"}
+{"k":"ids/NamedTable/./GameObject","v":"919132149155446097"}
+{"k":"ids/NamedTable/./LODGroup","v":"4742473837712756890"}
+{"k":"ids/NamedTable/./Transform","v":"-8679921383154817045"}
+{"k":"ids/NamedTable/Body/Arm/GameObject","v":"100004"}
+{"k":"ids/NamedTable/Body/Arm/Hand/GameObject","v":"8468409968487002305"}
+{"k":"ids/NamedTable/Body/Arm/Hand/MeshFilter","v":"6796594745199167358"}
+{"k":"ids/NamedTable/Body/Arm/Hand/MeshRenderer","v":"1464151670041615703"}
+{"k":"ids/NamedTable/Body/Arm/Hand/Transform","v":"-222566165846855763"}
+{"k":"ids/NamedTable/Body/Arm/MeshFilter","v":"8314604871480564757"}
+{"k":"ids/NamedTable/Body/Arm/MeshRenderer","v":"2300004"}
+{"k":"ids/NamedTable/Body/Arm/Transform","v":"3247691482623825318"}
+{"k":"ids/NamedTable/Body/GameObject","v":"635547659545568360"}
+{"k":"ids/NamedTable/Body/Leaf 1/GameObject","v":"-1751941390922508624"}
+{"k":"ids/NamedTable/Body/Leaf 1/MeshFilter","v":"-977001615450722827"}
+{"k":"ids/NamedTable/Body/Leaf 1/MeshRenderer","v":"8778488173958327992"}
+{"k":"ids/NamedTable/Body/Leaf 1/Transform","v":"2008346041212674697"}
+{"k":"ids/NamedTable/Body/Leaf/GameObject","v":"7002992317116448777"}
+{"k":"ids/NamedTable/Body/Leaf/MeshFilter","v":"5675520632232038155"}
+{"k":"ids/NamedTable/Body/Leaf/MeshRenderer","v":"9147564316461482851"}
+{"k":"ids/NamedTable/Body/Leaf/Transform","v":"-6159643602752606219"}
+{"k":"ids/NamedTable/Body/MeshFilter","v":"-3387599253219119134"}
+{"k":"ids/NamedTable/Body/MeshRenderer","v":"-6652725513331149018"}
+{"k":"ids/NamedTable/Body/Transform","v":"4167280743394806330"}
+{"k":"ids/NamedTable/Empty/Deep/GameObject","v":"-7644396786735465373"}
+{"k":"ids/NamedTable/Empty/Deep/MeshFilter","v":"-3974777216665003536"}
+{"k":"ids/NamedTable/Empty/Deep/MeshRenderer","v":"661842733980052880"}
+{"k":"ids/NamedTable/Empty/Deep/Transform","v":"5831780787284662097"}
+{"k":"ids/NamedTable/Empty/GameObject","v":"8821623529969584324"}
+{"k":"ids/NamedTable/Empty/Transform","v":"-1253996098385199550"}
+{"k":"ids/NamedTable/ImportLog:Import Logs","v":"2400844187752362338"}
+{"k":"ids/NamedTable/Material:M_Probe","v":"3480482350670412624"}
+{"k":"ids/NamedTable/Mesh:Arm","v":"816343263715038232"}
+{"k":"ids/NamedTable/Mesh:Body","v":"2959467708922500008"}
+{"k":"ids/NamedTable/Mesh:Deep","v":"-3156703003768306859"}
+{"k":"ids/NamedTable/Mesh:Hand","v":"2524342215456974474"}
+{"k":"ids/NamedTable/Mesh:Leaf","v":"240824333094594727,6268752110573383620"}
+{"k":"ids/NamedTable/Mesh:Tree_LOD0","v":"1584698017712070401"}
+{"k":"ids/NamedTable/Mesh:Tree_LOD1","v":"-9162321718629426354"}
+{"k":"ids/NamedTable/Tree_LOD0/GameObject","v":"-5240141239643042284"}
+{"k":"ids/NamedTable/Tree_LOD0/MeshFilter","v":"-6444049224069087074"}
+{"k":"ids/NamedTable/Tree_LOD0/MeshRenderer","v":"-5393707556033817107"}
+{"k":"ids/NamedTable/Tree_LOD0/Transform","v":"3424725367599607882"}
+{"k":"ids/NamedTable/Tree_LOD1/GameObject","v":"8102941671085511639"}
+{"k":"ids/NamedTable/Tree_LOD1/MeshFilter","v":"-7204590908123031163"}
+{"k":"ids/NamedTable/Tree_LOD1/MeshRenderer","v":"-2191763634202495206"}
+{"k":"ids/NamedTable/Tree_LOD1/Transform","v":"706417823918466991"}
+{"k":"ids/OldMeta/./GameObject","v":"-927199367670048503"}
+{"k":"ids/OldMeta/./LODGroup","v":"5551014577142218206"}
+{"k":"ids/OldMeta/./Transform","v":"-4216859302048453862"}
+{"k":"ids/OldMeta/Body/Arm/GameObject","v":"5004207433397427991"}
+{"k":"ids/OldMeta/Body/Arm/Hand/GameObject","v":"8464279683605963394"}
+{"k":"ids/OldMeta/Body/Arm/Hand/MeshFilter","v":"-970956655985981312"}
+{"k":"ids/OldMeta/Body/Arm/Hand/MeshRenderer","v":"2143138739172897099"}
+{"k":"ids/OldMeta/Body/Arm/Hand/Transform","v":"4560416852423371491"}
+{"k":"ids/OldMeta/Body/Arm/MeshFilter","v":"2664012269328454228"}
+{"k":"ids/OldMeta/Body/Arm/MeshRenderer","v":"-3255900542514075061"}
+{"k":"ids/OldMeta/Body/Arm/Transform","v":"767299664919104908"}
+{"k":"ids/OldMeta/Body/GameObject","v":"5133913965574556032"}
+{"k":"ids/OldMeta/Body/Leaf 1/GameObject","v":"-4614330038098349570"}
+{"k":"ids/OldMeta/Body/Leaf 1/MeshFilter","v":"1669670716708848857"}
+{"k":"ids/OldMeta/Body/Leaf 1/MeshRenderer","v":"-3517076375208308646"}
+{"k":"ids/OldMeta/Body/Leaf 1/Transform","v":"2014050324946621386"}
+{"k":"ids/OldMeta/Body/Leaf/GameObject","v":"-6374528589357692267"}
+{"k":"ids/OldMeta/Body/Leaf/MeshFilter","v":"1424623974887250657"}
+{"k":"ids/OldMeta/Body/Leaf/MeshRenderer","v":"2213885413763836315"}
+{"k":"ids/OldMeta/Body/Leaf/Transform","v":"-9130483795320877555"}
+{"k":"ids/OldMeta/Body/MeshFilter","v":"2296859116527160386"}
+{"k":"ids/OldMeta/Body/MeshRenderer","v":"-6874540395504895234"}
+{"k":"ids/OldMeta/Body/Transform","v":"5574657383665397177"}
+{"k":"ids/OldMeta/Empty/Deep/GameObject","v":"3963281400172713605"}
+{"k":"ids/OldMeta/Empty/Deep/MeshFilter","v":"3581938622318219899"}
+{"k":"ids/OldMeta/Empty/Deep/MeshRenderer","v":"7070815989171142699"}
+{"k":"ids/OldMeta/Empty/Deep/Transform","v":"8618338328518045593"}
+{"k":"ids/OldMeta/Empty/GameObject","v":"-111590980385802690"}
+{"k":"ids/OldMeta/Empty/Transform","v":"-6429571183000230263"}
+{"k":"ids/OldMeta/ImportLog:Import Logs","v":"2400844187752362338"}
+{"k":"ids/OldMeta/Material:M_Probe","v":"3480482350670412624"}
+{"k":"ids/OldMeta/Mesh:Arm","v":"816343263715038232"}
+{"k":"ids/OldMeta/Mesh:Body","v":"2959467708922500008"}
+{"k":"ids/OldMeta/Mesh:Deep","v":"-3156703003768306859"}
+{"k":"ids/OldMeta/Mesh:Hand","v":"2524342215456974474"}
+{"k":"ids/OldMeta/Mesh:Leaf","v":"240824333094594727,6268752110573383620"}
+{"k":"ids/OldMeta/Mesh:Tree_LOD0","v":"1584698017712070401"}
+{"k":"ids/OldMeta/Mesh:Tree_LOD1","v":"-9162321718629426354"}
+{"k":"ids/OldMeta/Tree_LOD0/GameObject","v":"-5646856740779323082"}
+{"k":"ids/OldMeta/Tree_LOD0/MeshFilter","v":"-6680306943562815627"}
+{"k":"ids/OldMeta/Tree_LOD0/MeshRenderer","v":"3786779890904295842"}
+{"k":"ids/OldMeta/Tree_LOD0/Transform","v":"5285577656013795639"}
+{"k":"ids/OldMeta/Tree_LOD1/GameObject","v":"8867808206772505664"}
+{"k":"ids/OldMeta/Tree_LOD1/MeshFilter","v":"6332563715925105081"}
+{"k":"ids/OldMeta/Tree_LOD1/MeshRenderer","v":"652921633296322217"}
+{"k":"ids/OldMeta/Tree_LOD1/Transform","v":"-1362708978493644602"}
+{"k":"ids/OldMetaGen2/./GameObject","v":"919132149155446097"}
+{"k":"ids/OldMetaGen2/./LODGroup","v":"4742473837712756890"}
+{"k":"ids/OldMetaGen2/./Transform","v":"-8679921383154817045"}
+{"k":"ids/OldMetaGen2/Body/Arm/GameObject","v":"-5403003479635379108"}
+{"k":"ids/OldMetaGen2/Body/Arm/Hand/GameObject","v":"8468409968487002305"}
+{"k":"ids/OldMetaGen2/Body/Arm/Hand/MeshFilter","v":"6796594745199167358"}
+{"k":"ids/OldMetaGen2/Body/Arm/Hand/MeshRenderer","v":"1464151670041615703"}
+{"k":"ids/OldMetaGen2/Body/Arm/Hand/Transform","v":"-222566165846855763"}
+{"k":"ids/OldMetaGen2/Body/Arm/MeshFilter","v":"8314604871480564757"}
+{"k":"ids/OldMetaGen2/Body/Arm/MeshRenderer","v":"-6620424926994764731"}
+{"k":"ids/OldMetaGen2/Body/Arm/Transform","v":"3247691482623825318"}
+{"k":"ids/OldMetaGen2/Body/GameObject","v":"635547659545568360"}
+{"k":"ids/OldMetaGen2/Body/Leaf 1/GameObject","v":"-1751941390922508624"}
+{"k":"ids/OldMetaGen2/Body/Leaf 1/MeshFilter","v":"-977001615450722827"}
+{"k":"ids/OldMetaGen2/Body/Leaf 1/MeshRenderer","v":"8778488173958327992"}
+{"k":"ids/OldMetaGen2/Body/Leaf 1/Transform","v":"2008346041212674697"}
+{"k":"ids/OldMetaGen2/Body/Leaf/GameObject","v":"7002992317116448777"}
+{"k":"ids/OldMetaGen2/Body/Leaf/MeshFilter","v":"5675520632232038155"}
+{"k":"ids/OldMetaGen2/Body/Leaf/MeshRenderer","v":"9147564316461482851"}
+{"k":"ids/OldMetaGen2/Body/Leaf/Transform","v":"-6159643602752606219"}
+{"k":"ids/OldMetaGen2/Body/MeshFilter","v":"-3387599253219119134"}
+{"k":"ids/OldMetaGen2/Body/MeshRenderer","v":"-6652725513331149018"}
+{"k":"ids/OldMetaGen2/Body/Transform","v":"4167280743394806330"}
+{"k":"ids/OldMetaGen2/Empty/Deep/GameObject","v":"-7644396786735465373"}
+{"k":"ids/OldMetaGen2/Empty/Deep/MeshFilter","v":"-3974777216665003536"}
+{"k":"ids/OldMetaGen2/Empty/Deep/MeshRenderer","v":"661842733980052880"}
+{"k":"ids/OldMetaGen2/Empty/Deep/Transform","v":"5831780787284662097"}
+{"k":"ids/OldMetaGen2/Empty/GameObject","v":"8821623529969584324"}
+{"k":"ids/OldMetaGen2/Empty/Transform","v":"-1253996098385199550"}
+{"k":"ids/OldMetaGen2/ImportLog:Import Logs","v":"2400844187752362338"}
+{"k":"ids/OldMetaGen2/Material:M_Probe","v":"3480482350670412624"}
+{"k":"ids/OldMetaGen2/Mesh:Arm","v":"816343263715038232"}
+{"k":"ids/OldMetaGen2/Mesh:Body","v":"2959467708922500008"}
+{"k":"ids/OldMetaGen2/Mesh:Deep","v":"-3156703003768306859"}
+{"k":"ids/OldMetaGen2/Mesh:Hand","v":"2524342215456974474"}
+{"k":"ids/OldMetaGen2/Mesh:Leaf","v":"240824333094594727,6268752110573383620"}
+{"k":"ids/OldMetaGen2/Mesh:Tree_LOD0","v":"1584698017712070401"}
+{"k":"ids/OldMetaGen2/Mesh:Tree_LOD1","v":"-9162321718629426354"}
+{"k":"ids/OldMetaGen2/Tree_LOD0/GameObject","v":"-5240141239643042284"}
+{"k":"ids/OldMetaGen2/Tree_LOD0/MeshFilter","v":"-6444049224069087074"}
+{"k":"ids/OldMetaGen2/Tree_LOD0/MeshRenderer","v":"-5393707556033817107"}
+{"k":"ids/OldMetaGen2/Tree_LOD0/Transform","v":"3424725367599607882"}
+{"k":"ids/OldMetaGen2/Tree_LOD1/GameObject","v":"8102941671085511639"}
+{"k":"ids/OldMetaGen2/Tree_LOD1/MeshFilter","v":"-7204590908123031163"}
+{"k":"ids/OldMetaGen2/Tree_LOD1/MeshRenderer","v":"-2191763634202495206"}
+{"k":"ids/OldMetaGen2/Tree_LOD1/Transform","v":"706417823918466991"}
+{"k":"state/NestedVariant/./active","v":"True"}
+{"k":"state/NestedVariant/./local","v":"(0.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/NestedVariant/./lodgroup","v":"CrossFade 2"}
+{"k":"state/NestedVariant/Body/active","v":"True"}
+{"k":"state/NestedVariant/Body/local","v":"(0.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/NestedVariant/Body/renderer","v":"True On True M_Probe"}
+{"k":"state/NestedVariant/Body/Arm/active","v":"True"}
+{"k":"state/NestedVariant/Body/Arm/local","v":"(1.000, 2.000, 3.000) (1.000, 1.000, 1.000)"}
+{"k":"state/NestedVariant/Body/Arm/renderer","v":"True On True M_Probe"}
+{"k":"state/NestedVariant/Body/Arm/Hand/active","v":"True"}
+{"k":"state/NestedVariant/Body/Arm/Hand/local","v":"(-3.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/NestedVariant/Body/Arm/Hand/renderer","v":"True On True Override"}
+{"k":"state/NestedVariant/Body/Leaf/active","v":"True"}
+{"k":"state/NestedVariant/Body/Leaf/local","v":"(-4.500, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/NestedVariant/Body/Leaf/renderer","v":"True On True M_Probe"}
+{"k":"state/NestedVariant/Body/Leaf 1/active","v":"True"}
+{"k":"state/NestedVariant/Body/Leaf 1/local","v":"(-6.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/NestedVariant/Body/Leaf 1/renderer","v":"True ShadowsOnly True M_Probe"}
+{"k":"state/NestedVariant/Empty/active","v":"True"}
+{"k":"state/NestedVariant/Empty/local","v":"(-7.500, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/NestedVariant/Empty/Deep/active","v":"False"}
+{"k":"state/NestedVariant/Empty/Deep/local","v":"(-9.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/NestedVariant/Empty/Deep/renderer","v":"True On True M_Probe"}
+{"k":"state/NestedVariant/Tree_LOD0/active","v":"True"}
+{"k":"state/NestedVariant/Tree_LOD0/local","v":"(-10.500, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/NestedVariant/Tree_LOD0/renderer","v":"True On True M_Probe"}
+{"k":"state/NestedVariant/Tree_LOD1/active","v":"True"}
+{"k":"state/NestedVariant/Tree_LOD1/local","v":"(-12.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/NestedVariant/Tree_LOD1/renderer","v":"False On True M_Probe"}
+{"k":"state/Outer/./active","v":"True"}
+{"k":"state/Outer/./local","v":"(0.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/Outer/NestedVariant/active","v":"True"}
+{"k":"state/Outer/NestedVariant/local","v":"(0.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/Outer/NestedVariant/lodgroup","v":"CrossFade 2"}
+{"k":"state/Outer/NestedVariant/Body/active","v":"True"}
+{"k":"state/Outer/NestedVariant/Body/local","v":"(0.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/Outer/NestedVariant/Body/renderer","v":"True Off True M_Probe"}
+{"k":"state/Outer/NestedVariant/Body/Arm/active","v":"True"}
+{"k":"state/Outer/NestedVariant/Body/Arm/local","v":"(1.000, 2.000, 3.000) (1.000, 1.000, 1.000)"}
+{"k":"state/Outer/NestedVariant/Body/Arm/renderer","v":"True On True M_Probe"}
+{"k":"state/Outer/NestedVariant/Body/Arm/Hand/active","v":"True"}
+{"k":"state/Outer/NestedVariant/Body/Arm/Hand/local","v":"(-3.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/Outer/NestedVariant/Body/Arm/Hand/renderer","v":"True On True Override"}
+{"k":"state/Outer/NestedVariant/Body/Leaf/active","v":"True"}
+{"k":"state/Outer/NestedVariant/Body/Leaf/local","v":"(-4.500, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/Outer/NestedVariant/Body/Leaf/renderer","v":"True On False M_Probe"}
+{"k":"state/Outer/NestedVariant/Body/Leaf 1/active","v":"True"}
+{"k":"state/Outer/NestedVariant/Body/Leaf 1/local","v":"(-6.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/Outer/NestedVariant/Body/Leaf 1/renderer","v":"True ShadowsOnly True Override"}
+{"k":"state/Outer/NestedVariant/Empty/active","v":"True"}
+{"k":"state/Outer/NestedVariant/Empty/local","v":"(-7.500, 0.000, 0.000) (2.000, 2.000, 2.000)"}
+{"k":"state/Outer/NestedVariant/Empty/Deep/active","v":"False"}
+{"k":"state/Outer/NestedVariant/Empty/Deep/local","v":"(-9.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/Outer/NestedVariant/Empty/Deep/renderer","v":"True On True M_Probe"}
+{"k":"state/Outer/NestedVariant/Tree_LOD0/active","v":"True"}
+{"k":"state/Outer/NestedVariant/Tree_LOD0/local","v":"(-10.500, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/Outer/NestedVariant/Tree_LOD0/renderer","v":"True On True M_Probe"}
+{"k":"state/Outer/NestedVariant/Tree_LOD1/active","v":"True"}
+{"k":"state/Outer/NestedVariant/Tree_LOD1/local","v":"(-12.000, 0.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/Outer/NestedVariant/Tree_LOD1/renderer","v":"False On True M_Probe"}
+{"k":"state/Outer/Single/active","v":"True"}
+{"k":"state/Outer/Single/local","v":"(0.000, 5.000, 0.000) (1.000, 1.000, 1.000)"}
+{"k":"state/Outer/Single/renderer","v":"True TwoSided True M_Probe"}
+{"k":"complete","v":true}

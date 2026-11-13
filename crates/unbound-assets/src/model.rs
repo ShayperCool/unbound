@@ -27,9 +27,9 @@
 //! the tables do not list, Unity 2019.3+ derives IDs from a hash of the object's type and name
 //! ([`crate::meta::hashed_file_id`]): meshes, materials and clips always, and with
 //! `fileIdsGeneration: 1` the hierarchy's objects too (the root's under `//RootNode`). With
-//! generation 2 the hierarchy's IDs come from elsewhere (not reproduced): the root objects get the
-//! values every such model has (observed), others a free legacy-style ID and
-//! [`FileIdSource::Derived`].
+//! generation 2 a hierarchy object hashes its path instead of its name: a GameObject's path is
+//! its parent's path, `/` and its name (the root's is `//RootNode/root`), a component's the path
+//! of its GameObject, `/` and its class name (tests/projects/modelfileids).
 //!
 //! **Blend shapes.** Each blend channel of a mesh is a shape named after the channel, its
 //! keyframes the frames (full weight × 100); a mesh with shapes gets a SkinnedMeshRenderer, whose
@@ -65,14 +65,13 @@ pub const ROOT_NODE_NAME: &str = "//RootNode";
 /// The class ID of the legacy `Animation` component.
 const ANIMATION: i32 = 111;
 
-/// IDs Unity 2019.3+ gives the root objects of every model when its meta does not list them
-/// (identical across all models in Unity's packages; the derivation itself is not known).
-const ROOT_GAME_OBJECT_ID: i64 = 919_132_149_155_446_097;
-const ROOT_TRANSFORM_ID: i64 = -8_679_921_383_154_817_045;
-const ROOT_MESH_RENDERER_ID: i64 = -7_511_558_181_221_131_132;
-const ROOT_MESH_FILTER_ID: i64 = -5_754_084_199_372_789_682;
-const ROOT_SKINNED_MESH_RENDERER_ID: i64 = -3_887_185_075_125_053_422;
-const ROOT_ANIMATOR_ID: i64 = 5_866_666_021_909_216_657;
+/// The newest `ModelImporter` serializedVersion whose metas, when they omit `fileIdsGeneration`,
+/// keep name-hashed hierarchy ids (generation 1).
+const LAST_NAME_HASH_IMPORTER_VERSION: i64 = 20100;
+
+/// The hierarchy path of the root GameObject under `fileIdsGeneration: 2`: the root takes part
+/// as `root`, whatever the file is called, so every model's root objects share their IDs.
+const STABLE_ROOT_PATH: &str = "//RootNode/root";
 
 /// `tangentSpace.normalImportMode`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -291,12 +290,22 @@ impl ModelSettings {
             is_readable: boolean(imp, "meshes.isReadable")
                 .or_else(|| boolean(imp, "animations.isReadable"))
                 .unwrap_or(false),
-            file_ids_generation: int(imp, "meshes.fileIdsGeneration").unwrap_or(2),
+            // A meta without `fileIdsGeneration` hashes names (generation 1) when its importer
+            // version is 20100 or older, else paths (measured: tests/projects/modelfileids OldMeta,
+            // OldMetaGen2); a model without a meta is imported as new.
+            file_ids_generation: int(imp, "meshes.fileIdsGeneration").unwrap_or(
+                if int(imp, "serializedVersion")
+                    .is_some_and(|v| v <= LAST_NAME_HASH_IMPORTER_VERSION)
+                {
+                    1
+                } else {
+                    2
+                },
+            ),
             weld_vertices: boolean(imp, "meshes.weldVertices").unwrap_or(true),
             keep_unused_vertices: mesh_optimization_flags(imp) & MESH_OPTIMIZATION_VERTEX_ORDER
                 == 0,
-            optimize_polygon_order: mesh_optimization_flags(imp)
-                & MESH_OPTIMIZATION_POLYGON_ORDER
+            optimize_polygon_order: mesh_optimization_flags(imp) & MESH_OPTIMIZATION_POLYGON_ORDER
                 != 0,
             optimize_vertex_order: mesh_optimization_flags(imp) & MESH_OPTIMIZATION_VERTEX_ORDER
                 != 0,
@@ -821,7 +830,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 49;
+    const VERSION: u32 = 50;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1145,7 +1154,13 @@ pub fn import_model(
     let animator = match settings.animation_type {
         1 => Some(
             builder
-                .hierarchy_id(&mut ids, ANIMATION, "Animation", ROOT_NODE_NAME, None)
+                .hierarchy_id(
+                    &mut ids,
+                    ANIMATION,
+                    "Animation",
+                    ROOT_NODE_NAME,
+                    STABLE_ROOT_PATH,
+                )
                 .into(),
         ),
         // Without an avatar the Editor adds no Animator (measured: tests/projects/modelimport).
@@ -1156,7 +1171,7 @@ pub fn import_model(
                     class::ANIMATOR,
                     "Animator",
                     ROOT_NODE_NAME,
-                    Some(ROOT_ANIMATOR_ID),
+                    STABLE_ROOT_PATH,
                 )
                 .into(),
         ),
@@ -1252,22 +1267,38 @@ struct Builder<'a> {
 }
 
 impl<'a> Builder<'a> {
-    /// The ID of a hierarchy object (`key`: `//RootNode` for the root, else the node's name).
+    /// The ID of a hierarchy object (`key`: `//RootNode` for the root, else the node's name;
+    /// `path`: its GameObject's [`Self::stable_path`]).
     fn hierarchy_id(
         &self,
         ids: &mut FileIdAllocator,
         class_id: i32,
         class_name: &str,
         key: &str,
-        root_id: Option<i64>,
+        path: &str,
     ) -> (i64, FileIdSource) {
-        if !self.legacy && self.settings.file_ids_generation == 1 {
+        if self.legacy {
+            return ids.id(class_id, key, None);
+        }
+        if self.settings.file_ids_generation == 1 {
             return ids.hashed(class_id, class_name, key);
         }
-        let derived = (key == ROOT_NODE_NAME && !self.legacy)
-            .then_some(root_id)
-            .flatten();
-        ids.id(class_id, key, derived)
+        if class_id == class::GAME_OBJECT {
+            ids.hashed(class_id, class_name, path)
+        } else {
+            ids.hashed(class_id, class_name, &format!("{path}/{class_name}"))
+        }
+    }
+
+    /// A node's hierarchy path under `fileIdsGeneration: 2`: [`STABLE_ROOT_PATH`], then the
+    /// unique names of its ancestors below the root and its own, each after a `/`.
+    fn stable_path(&self, index: u32) -> String {
+        let below = self.path_of(index);
+        if below.is_empty() {
+            STABLE_ROOT_PATH.to_string()
+        } else {
+            format!("{STABLE_ROOT_PATH}/{below}")
+        }
     }
 
     /// The ID of a named asset (mesh, material, clip): Unity's hash of its class and name.
@@ -1311,20 +1342,12 @@ impl<'a> Builder<'a> {
             let name = self.unique_names[&node.element.element_id].clone();
             (name.clone(), name)
         };
-        let game_object = self.hierarchy_id(
-            ids,
-            class::GAME_OBJECT,
-            "GameObject",
-            &key,
-            Some(ROOT_GAME_OBJECT_ID),
-        );
-        let transform = self.hierarchy_id(
-            ids,
-            class::TRANSFORM,
-            "Transform",
-            &key,
-            Some(ROOT_TRANSFORM_ID),
-        );
+        let path = match parent {
+            None => STABLE_ROOT_PATH.to_string(),
+            Some(p) => format!("{}/{name}", self.stable_path(p)),
+        };
+        let game_object = self.hierarchy_id(ids, class::GAME_OBJECT, "GameObject", &key, &path);
+        let transform = self.hierarchy_id(ids, class::TRANSFORM, "Transform", &key, &path);
         let evaluated;
         let t = match self.rest_pose {
             Some((anim, time)) => {
@@ -1945,6 +1968,7 @@ impl<'a> Builder<'a> {
             } else {
                 self.model.nodes[index].name.clone()
             };
+            let path = self.stable_path(index as u32);
             // Rig type None imports no skinning: the mesh keeps its file vertices under a
             // MeshRenderer (measured: tests/projects/modelaxis Rigged NoneSwing).
             let skin = mesh
@@ -1959,11 +1983,10 @@ impl<'a> Builder<'a> {
                 .or_insert_with(|| pivots::GeometryOffset::of(node, pivot))
                 .clone();
             let (built, slots, warning) = self.build_mesh(mesh, node, skin, &offset)?;
-            let mesh_name = if is_root {
-                node.element.name.to_string()
-            } else {
-                key.clone()
-            };
+            // The node's own name, also where siblings share it (their GameObjects get unique
+            // names, their meshes keep the name and hash with increasing indices; measured:
+            // tests/projects/modelfileids).
+            let mesh_name = node.element.name.to_string();
             if let Some(warning) = warning {
                 self.model
                     .warnings
@@ -2040,7 +2063,7 @@ impl<'a> Builder<'a> {
                             class::SKINNED_MESH_RENDERER,
                             "SkinnedMeshRenderer",
                             &key,
-                            Some(ROOT_SKINNED_MESH_RENDERER_ID),
+                            &path,
                         )
                         .into(),
                     filter: None,
@@ -2056,23 +2079,11 @@ impl<'a> Builder<'a> {
                     mesh: mesh_index,
                     materials,
                     renderer: self
-                        .hierarchy_id(
-                            ids,
-                            class::MESH_RENDERER,
-                            "MeshRenderer",
-                            &key,
-                            Some(ROOT_MESH_RENDERER_ID),
-                        )
+                        .hierarchy_id(ids, class::MESH_RENDERER, "MeshRenderer", &key, &path)
                         .into(),
                     filter: Some(
-                        self.hierarchy_id(
-                            ids,
-                            class::MESH_FILTER,
-                            "MeshFilter",
-                            &key,
-                            Some(ROOT_MESH_FILTER_ID),
-                        )
-                        .into(),
+                        self.hierarchy_id(ids, class::MESH_FILTER, "MeshFilter", &key, &path)
+                            .into(),
                     ),
                     bones: Vec::new(),
                     root_bone: None,
@@ -2175,7 +2186,13 @@ impl<'a> Builder<'a> {
             })
             .collect();
         let file_id = self
-            .hierarchy_id(ids, class::LOD_GROUP, "LODGroup", ROOT_NODE_NAME, None)
+            .hierarchy_id(
+                ids,
+                class::LOD_GROUP,
+                "LODGroup",
+                ROOT_NODE_NAME,
+                STABLE_ROOT_PATH,
+            )
             .into();
         self.model.lod_group = Some(ModelLodGroup {
             file_id,
@@ -3098,7 +3115,11 @@ impl<'a> Builder<'a> {
         let mut at = Some(index);
         while let Some(i) = at {
             let node = &self.model.nodes[i as usize];
-            if node.scale.iter().any(|&s| f64::from(s).abs() < f64::MIN_POSITIVE) {
+            if node
+                .scale
+                .iter()
+                .any(|&s| f64::from(s).abs() < f64::MIN_POSITIVE)
+            {
                 return true;
             }
             at = node.parent;
@@ -3326,7 +3347,10 @@ impl ClipMask {
 fn body_parts_off(mask: Option<&str>) -> bool {
     mask.is_some_and(|mask| {
         mask.len() % 8 == 0
-            && mask.as_bytes().chunks(8).any(|part| part.iter().all(|&digit| digit == b'0'))
+            && mask
+                .as_bytes()
+                .chunks(8)
+                .any(|part| part.iter().all(|&digit| digit == b'0'))
     })
 }
 

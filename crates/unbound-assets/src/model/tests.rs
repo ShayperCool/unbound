@@ -1,4 +1,5 @@
 use super::*;
+use crate::meta::hashed_file_id;
 
 fn meta(text: &str) -> Value {
     unbound_yaml::parse_value(text).unwrap()
@@ -150,9 +151,24 @@ fn an_obj_mesh_is_a_child_named_after_its_group() {
         .unwrap();
     let names: Vec<&str> = model.nodes.iter().map(|n| n.name.as_str()).collect();
     assert_eq!(names, ["Single", "default"]);
-    // A new-format meta without tables: the root objects get Unity's fixed IDs.
-    assert_eq!(model.nodes[0].game_object.id, ROOT_GAME_OBJECT_ID);
-    assert_eq!(model.nodes[0].transform.id, ROOT_TRANSFORM_ID);
+    // A new-format meta without tables: the root objects hash `//RootNode/root`, giving the IDs
+    // every such model's root has in the Unity 6000.0.71f1 Editor.
+    assert_eq!(model.nodes[0].game_object.id, 919_132_149_155_446_097);
+    assert_eq!(model.nodes[0].transform.id, -8_679_921_383_154_817_045);
+    // A child hashes its path below the root, its components their class after it.
+    assert_eq!(
+        model.nodes[1].game_object.id,
+        hashed_file_id("GameObject", "//RootNode/root/default", 0)
+    );
+    let child = model.nodes[1].renderer.as_ref().unwrap();
+    assert_eq!(
+        child.renderer.id,
+        hashed_file_id("MeshRenderer", "//RootNode/root/default/MeshRenderer", 0)
+    );
+    assert_eq!(
+        child.filter.unwrap().id,
+        hashed_file_id("MeshFilter", "//RootNode/root/default/MeshFilter", 0)
+    );
     assert!(model.nodes[0].renderer.is_none());
     assert!(model.nodes[1].renderer.is_some());
     assert_eq!(model.meshes[0].name, "default");
@@ -180,11 +196,23 @@ fn siblings_sort_by_name_without_case_and_with_numbers_as_numbers() {
     names.sort_by(|a, b| hierarchy_name_order(a, b));
     assert_eq!(names, expected);
     // Outside the capture: numbers too long for an integer, and a name that is another's start.
-    let mut names = ["x100000000000000000000000", "x99999999999999999999999", "x", "X1y", "x1"];
+    let mut names = [
+        "x100000000000000000000000",
+        "x99999999999999999999999",
+        "x",
+        "X1y",
+        "x1",
+    ];
     names.sort_by(|a, b| hierarchy_name_order(a, b));
     assert_eq!(
         names,
-        ["x", "x1", "X1y", "x99999999999999999999999", "x100000000000000000000000"]
+        [
+            "x",
+            "x1",
+            "X1y",
+            "x99999999999999999999999",
+            "x100000000000000000000000"
+        ]
     );
 }
 
@@ -229,8 +257,14 @@ fn mesh_optimization_reorders_triangles_and_vertices_by_its_flags() {
     // No flags in the meta is everything; the setting before the flags is the vertex order
     // alone (lightmapuvs OldOptOff and OldOptOn).
     assert_eq!(with("    isReadable: 1\n").meshes[0], both.meshes[0]);
-    assert_eq!(with("    optimizeMeshForGPU: 0\n").meshes[0], polygons.meshes[0]);
-    assert_eq!(with("    optimizeMeshForGPU: 1\n").meshes[0], both.meshes[0]);
+    assert_eq!(
+        with("    optimizeMeshForGPU: 0\n").meshes[0],
+        polygons.meshes[0]
+    );
+    assert_eq!(
+        with("    optimizeMeshForGPU: 1\n").meshes[0],
+        both.meshes[0]
+    );
 }
 
 #[test]
@@ -745,7 +779,10 @@ fn a_mesh_the_unwrap_cannot_take_keeps_its_faces_and_warns() {
     let obj = "g Far\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 1e39 1 0\nf 1 2 3\nf 1 3 4\n";
     let on = "ModelImporter:\n  meshes:\n    generateSecondaryUV: 1\n";
     let off = "ModelImporter:\n  meshes:\n    generateSecondaryUV: 0\n";
-    let (with, without) = (import_obj("Far.obj", obj, on), import_obj("Far.obj", obj, off));
+    let (with, without) = (
+        import_obj("Far.obj", obj, on),
+        import_obj("Far.obj", obj, off),
+    );
     assert!(
         with.warnings
             .iter()
@@ -1667,7 +1704,10 @@ fn a_clip_range_of_no_frames_is_an_empty_clip() {
         let clip = reversed.clips.iter().find(|c| !c.preview).unwrap();
         assert!(clip.curves.is_empty(), "{name}");
         assert!(
-            reversed.warnings.iter().any(|w| w.contains("ends before it starts")),
+            reversed
+                .warnings
+                .iter()
+                .any(|w| w.contains("ends before it starts")),
             "{name}: {:?}",
             reversed.warnings
         );
@@ -1682,4 +1722,38 @@ fn a_clip_range_of_no_frames_is_an_empty_clip() {
             "{name}"
         );
     }
+}
+
+#[test]
+fn old_importer_versions_without_a_generation_hash_hierarchy_names() {
+    // Measured: tests/projects/modelfileids OldMeta (importer serializedVersion 20100 without
+    // fileIdsGeneration), OldMetaGen2 (19301 with fileIdsGeneration 2) and Nested (22200, 2).
+    let obj = "g Box\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
+    let import = |version: u32, generation: Option<u32>| {
+        let meshes = generation.map_or(String::new(), |g| {
+            format!("  meshes:\n    fileIdsGeneration: {g}\n")
+        });
+        let text = format!(
+            "fileFormatVersion: 2\nModelImporter:\n  serializedVersion: {version}\n{meshes}"
+        );
+        ModelImporter::default()
+            .import(Path::new("Box.obj"), obj.as_bytes(), &meta(&text))
+            .unwrap()
+    };
+    let old = import(20100, None);
+    assert_eq!(
+        old.nodes[0].game_object.id,
+        hashed_file_id("GameObject", "//RootNode", 0)
+    );
+    assert_eq!(
+        old.nodes[1].game_object.id,
+        hashed_file_id("GameObject", "Box", 0)
+    );
+    let path = hashed_file_id("GameObject", "//RootNode/root/Box", 0);
+    assert_eq!(import(19301, Some(2)).nodes[1].game_object.id, path);
+    assert_eq!(import(20101, None).nodes[1].game_object.id, path);
+    assert_eq!(
+        import(22200, Some(1)).nodes[1].game_object.id,
+        hashed_file_id("GameObject", "Box", 0)
+    );
 }

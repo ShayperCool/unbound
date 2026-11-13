@@ -42,6 +42,7 @@ const PROJECTS: &[&str] = &[
     "lightmapuvs",
     "modelaxis",
     "modelclips",
+    "modelfileids",
     "modelimport",
     "modelroot",
     "modeltoproot",

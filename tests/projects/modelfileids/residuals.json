@@ -1,0 +1,9 @@
+{
+  "The Editor lists an ImportLog sub-object (\"Import Logs\") in each model asset; Unbound does not create ImportLog objects (follow-up in docs/COMPATIBILITY_GAPS.md)": [
+    "ids/Nested/ImportLog:Import Logs",
+    "ids/Single/ImportLog:Import Logs",
+    "ids/NamedTable/ImportLog:Import Logs",
+    "ids/OldMeta/ImportLog:Import Logs",
+    "ids/OldMetaGen2/ImportLog:Import Logs"
+  ]
+}
