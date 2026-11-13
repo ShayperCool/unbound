@@ -50,6 +50,48 @@ pub struct Settings {
     pub graphics_apis: BTreeMap<String, Vec<i32>>,
     /// `GraphicsSettings.m_TierSettings` the project sets by hand, by (BuildTargetGroup, tier).
     pub tier_settings: BTreeMap<(i64, i64), TierSettings>,
+    /// `EditorSettings.spritePackerMode` (`SpritePackerMode`; 0, Disabled, when unset).
+    pub sprite_packer_mode: i64,
+}
+
+/// `SpritePackerMode.AlwaysOnAtlas` ("Sprite Atlas V1 - Always Enabled").
+const ALWAYS_ON_ATLAS: i64 = 4;
+/// `SpritePackerMode.SpriteAtlasV2` ("Sprite Atlas V2 - Enabled").
+const SPRITE_ATLAS_V2: i64 = 5;
+
+/// The sprite atlases the Editor packs before it enters Play mode, by the project's Sprite
+/// Packer mode: documented for "Sprite Atlas V1 - Always Enabled" (`.spriteatlas` assets) and
+/// "Sprite Atlas V2 - Enabled" (`.spriteatlasv2`) in the Editor settings Manual. Unbound does
+/// not pack them yet; their sprites draw from their own textures.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlayModeAtlases {
+    /// The mode's name in the Editor settings.
+    pub mode: &'static str,
+    /// The atlases' asset paths, sorted.
+    pub paths: Vec<String>,
+}
+
+impl PlayModeAtlases {
+    /// One line naming the mode and the first atlases (`a, b +3`), for the one-time warning
+    /// and `unbound doctor`.
+    pub fn message(&self) -> String {
+        const SHOWN: usize = 5;
+        let mut names = self
+            .paths
+            .iter()
+            .take(SHOWN)
+            .map(String::as_str)
+            .collect::<Vec<_>>()
+            .join(", ");
+        if self.paths.len() > SHOWN {
+            names.push_str(&format!(" +{}", self.paths.len() - SHOWN));
+        }
+        format!(
+            "Sprite Packer mode \"{}\" packs sprite atlases before entering Play mode; Unbound does not pack them, so their sprites draw and report from their own textures, not from the packed atlas (texture, UVs, packed rects, Sprite.packed). {} atlases: {names}",
+            self.mode,
+            self.paths.len()
+        )
+    }
 }
 
 /// A graphics tier's settings, which choose the built-in shader defines.
@@ -290,6 +332,16 @@ impl Settings {
                 }
             }
         }
+        // Only the Sprite Packer mode is read here, for a warning: an unreadable file leaves it
+        // unset instead of failing the project.
+        match first_document(&dir.join("EditorSettings.asset")) {
+            Ok(editor) => {
+                settings.sprite_packer_mode = editor
+                    .and_then(|editor| editor.body.get("m_SpritePackerMode")?.as_i64())
+                    .unwrap_or(0)
+            }
+            Err(error) => tracing::warn!("{error:#}: the Sprite Packer mode is not read"),
+        }
         if let Some(tags) = first_document(&dir.join("TagManager.asset"))? {
             settings.tags = string_list(tags.body.get("tags"));
             settings.layers = string_list(tags.body.get("layers"));
@@ -395,6 +447,30 @@ impl Settings {
         self.application_identifiers.get(key).map(String::as_str)
     }
 
+    /// The atlases among `asset_paths` the Editor packs before Play mode under the project's
+    /// Sprite Packer mode, or `None` when the mode packs none in Play mode.
+    pub fn play_mode_atlases<'a>(
+        &self,
+        asset_paths: impl IntoIterator<Item = &'a str>,
+    ) -> Option<PlayModeAtlases> {
+        let (mode, extension) = match self.sprite_packer_mode {
+            ALWAYS_ON_ATLAS => ("Sprite Atlas V1 - Always Enabled", ".spriteatlas"),
+            SPRITE_ATLAS_V2 => ("Sprite Atlas V2 - Enabled", ".spriteatlasv2"),
+            _ => return None,
+        };
+        let mut paths: Vec<String> = asset_paths
+            .into_iter()
+            .filter(|path| {
+                path.len() > extension.len()
+                    && path.is_char_boundary(path.len() - extension.len())
+                    && path[path.len() - extension.len()..].eq_ignore_ascii_case(extension)
+            })
+            .map(String::from)
+            .collect();
+        paths.sort();
+        (!paths.is_empty()).then_some(PlayModeAtlases { mode, paths })
+    }
+
     /// API compatibility level of the group is .NET Standard 2.1 (6), not .NET Framework (3).
     pub fn uses_net_standard(&self, group: &str) -> bool {
         let key = if group == "iOS" { "iPhone" } else { group };
@@ -408,7 +484,71 @@ impl Settings {
 
 #[cfg(test)]
 mod tests {
-    use super::{Settings, TierSettings};
+    use super::{PlayModeAtlases, Settings, TierSettings};
+
+    #[test]
+    fn play_mode_atlases_follow_the_sprite_packer_mode() {
+        let paths = [
+            "Assets/UI/b.spriteatlas",
+            "Assets/UI/a.spriteatlas",
+            "Assets/UI/c.spriteatlasv2",
+            "Assets/UI/C.SPRITEATLASV2",
+            "Assets/UI/d.spriteatlasv2.png",
+            "Assets/UI/e.png",
+            ".spriteatlas",
+        ];
+        let with_mode = |mode| Settings {
+            sprite_packer_mode: mode,
+            ..Settings::default()
+        };
+        assert_eq!(
+            with_mode(4).play_mode_atlases(paths),
+            Some(PlayModeAtlases {
+                mode: "Sprite Atlas V1 - Always Enabled",
+                paths: vec![
+                    "Assets/UI/a.spriteatlas".into(),
+                    "Assets/UI/b.spriteatlas".into()
+                ],
+            })
+        );
+        assert_eq!(
+            with_mode(5).play_mode_atlases(paths).unwrap().paths,
+            ["Assets/UI/C.SPRITEATLASV2", "Assets/UI/c.spriteatlasv2"]
+        );
+        // Disabled, packing for builds only, and the legacy packer: nothing packed in Play mode.
+        for mode in [0, 1, 2, 3, 6] {
+            assert_eq!(with_mode(mode).play_mode_atlases(paths), None, "{mode}");
+        }
+        // A packing mode without atlases warns about nothing.
+        assert_eq!(with_mode(5).play_mode_atlases(["Assets/a.png"]), None);
+        let many: Vec<String> = (0..7).map(|i| format!("Assets/{i}.spriteatlas")).collect();
+        let message = with_mode(4)
+            .play_mode_atlases(many.iter().map(String::as_str))
+            .unwrap()
+            .message();
+        assert!(
+            message.contains("7 atlases: Assets/0.spriteatlas, "),
+            "{message}"
+        );
+        assert!(message.ends_with("Assets/4.spriteatlas +2"), "{message}");
+    }
+
+    #[test]
+    fn sprite_packer_mode_reads_editor_settings() {
+        let dir = std::env::temp_dir().join(format!("unbound-packer-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("ProjectSettings")).unwrap();
+        let settings = Settings::read(&dir).unwrap();
+        assert_eq!(settings.sprite_packer_mode, 0);
+        std::fs::write(
+            dir.join("ProjectSettings/EditorSettings.asset"),
+            "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!159 &1\nEditorSettings:\n  \
+             m_ObjectHideFlags: 0\n  serializedVersion: 12\n  m_SpritePackerMode: 5\n",
+        )
+        .unwrap();
+        let settings = Settings::read(&dir).unwrap();
+        std::fs::remove_dir_all(&dir).ok();
+        assert_eq!(settings.sprite_packer_mode, 5);
+    }
 
     fn with_orientation(default_orientation: i64, autorotate: [bool; 4]) -> Settings {
         Settings {

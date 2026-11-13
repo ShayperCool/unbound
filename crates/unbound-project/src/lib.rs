@@ -28,7 +28,7 @@ pub use compile::CodeOptimization;
 pub use assetdb::AssetDb;
 pub use install::UnityInstall;
 pub use packages::{Package, PackageSource};
-pub use settings::Settings;
+pub use settings::{PlayModeAtlases, Settings};
 
 /// The global cache: `UNBOUND_CACHE`, else `$XDG_CACHE_HOME/unbound`, else `~/.cache/unbound`.
 pub fn cache_root() -> PathBuf {

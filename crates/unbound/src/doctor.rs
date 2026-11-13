@@ -277,6 +277,9 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             }
         }
     }
+    let play_mode_atlases = project
+        .settings
+        .play_mode_atlases(db.iter().map(|asset| asset.path.as_str()));
     let inventory_seconds = start.elapsed().as_secs_f64();
     let message_start = Instant::now();
     let request: Vec<FoundRequest> = found
@@ -335,6 +338,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "unreadInRelease": coverage.unread_in_release,
             "renderingLimitations": RENDERING_LIMITATIONS,
             "audioLimitations": AUDIO_LIMITATIONS,
+            "unpackedSpriteAtlases": play_mode_atlases.as_ref().map(|a| json!({"mode": a.mode, "atlases": a.paths})),
             "unsupportedMessages": messages.messages,
             "messageAnalysisFailedAssemblies": messages.failed_assemblies,
         });
@@ -414,6 +418,9 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
     println!("\nRendering limitations:");
     for limitation in RENDERING_LIMITATIONS {
         println!("  {limitation}");
+    }
+    if let Some(atlases) = &play_mode_atlases {
+        println!("\nSprite atlases:\n  {}", atlases.message());
     }
     let read =
         by_reading.get("Read").map_or(0, Vec::len) + by_reading.get("Loader").map_or(0, Vec::len);

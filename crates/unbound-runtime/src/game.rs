@@ -174,7 +174,14 @@ impl Game {
     ) -> Result<Self> {
         let project = Project::open(&project.root)?;
         let runtime = ManagedRuntime::start()?;
-        state::initialize(&project)?;
+        let runtime_state = state::initialize(&project)?;
+        if !options.edit_mode
+            && let Some(atlases) = project
+                .settings
+                .play_mode_atlases(runtime_state.db.iter().map(|asset| asset.path.as_str()))
+        {
+            tracing::warn!("{}", atlases.message());
+        }
         let normal_maps_xyz = project
             .settings
             .shader_defines(&options.target)
