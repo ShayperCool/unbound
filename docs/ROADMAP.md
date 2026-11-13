@@ -230,9 +230,9 @@ In dependency order; each item ends with an Editor-reference probe.
       details: the detail database, where instances go as ComputeDetailInstanceTransforms (instance
       counts exact; coverage exact for samples three quarters of a footprint across and more),
       drawn with Unity's detail shaders as the Editor builds the meshes (`tests/projects/grass`);
-      layerless terrains' checker. Left: coverage mode's rule for narrower samples and low
-      coverage, ground-aligned meshes' turns, the base map past basemapDistance, heightmap LOD by
-      pixel error, tree billboards, detailObjectDensity.
+      layerless terrains' checker; coverage mode's rule, ground-aligned turns, detailObjectDensity,
+      drawn placement and the quality level's terrain overrides (Q421). Left: the base map past
+      basemapDistance, heightmap LOD by pixel error, tree billboards.
 - [x] AssetBundles the Editor builds (UnityFS: uncompressed, LZ4, LZMA): LoadFromFile, Memory,
       Stream and their async forms, LoadAsset (by path or name, sub-assets), LoadAllAssets, Unload,
       the manifest, scenes through SceneManager; player data read by its type trees (references

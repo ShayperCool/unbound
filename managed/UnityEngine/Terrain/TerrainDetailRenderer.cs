@@ -55,14 +55,15 @@ namespace UnityEngine
         int m_DetailsVersion = -1, m_DetailsHeights = -1;
         Vector3 m_DetailsOrigin;
         bool m_DetailsLegacy;
-        float m_DetailsDensity = float.NaN;
+        // float.Equals(float) treats NaN as equal, so a NaN density does not rebuild every frame.
+        float m_DetailsDensity;
 
         /// <summary>Whether the built details no longer match what they were built from: the data,
         /// its heights, the terrain's place, the legacy distribution or the detail density (the
         /// terrain's, or the quality level's).</summary>
         internal bool DetailsStale(Terrain terrain, TerrainData data, Vector3 origin) =>
             m_DetailsData != data || m_DetailsVersion != data.m_DetailsVersion || m_DetailsHeights != data.m_HeightsVersion || m_DetailsOrigin != origin
-            || m_DetailsLegacy != QualitySettings.useLegacyDetailDistribution || !(m_DetailsDensity == terrain.detailObjectDensity);
+            || m_DetailsLegacy != QualitySettings.useLegacyDetailDistribution || !m_DetailsDensity.Equals(terrain.detailObjectDensity);
         Texture2D m_DetailAtlas;
         readonly Material[] m_DetailMaterials = new Material[3];
         static readonly string[] s_DetailShaders =
