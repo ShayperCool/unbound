@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="OutputPath;OutDir">
   <!-- The engine's sources of the UnityEngine math structs Unity implements in C#, built without IL
        optimization, so every local they declare is a store: in the Editor each such local rounds
        (tests/projects/floatrounding). Never loaded: Unbound.Host embeds it and copies its method
@@ -6,6 +6,10 @@
        (WideFloats.EngineMath.cs). UNBOUND_SCRIPT_MATH leaves out the overloads that take engine
        classes (their math types are the engine's). -->
   <PropertyGroup>
+    <!-- Its own output directory even when a build names one (`dotnet build -o`): the runtime's
+         directory must not hold a second set of UnityEngine math types. -->
+    <OutputPath>$(BaseOutputPath)$(Configuration)/</OutputPath>
+    <OutDir>$(BaseOutputPath)$(Configuration)/$(TargetFramework)/</OutDir>
     <Optimize>false</Optimize>
     <Nullable>disable</Nullable>
     <DefineConstants>$(DefineConstants);UNITY_ASSERTIONS;ENABLE_UNITY_COLLECTIONS_CHECKS;ENABLE_PROFILER;UNBOUND_SCRIPT_MATH</DefineConstants>
