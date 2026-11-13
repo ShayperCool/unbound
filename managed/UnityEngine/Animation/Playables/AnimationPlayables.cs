@@ -114,7 +114,7 @@ namespace Unbound.Runtime.Playables
                 float w = m_Pose.Weight[c];
                 if (w <= 0f) continue;
                 into.Values[c] = m_Pose.Value[c] / w;
-                into.Animated[c] = true;
+                into.Set(c);
             }
             if (wholeHuman) WholeHuman(e, into, (float)ClipTime(t));
             if (!e.ReferencePose && e.MotionMode != RootMotionMode.Unsupported)
@@ -173,7 +173,7 @@ namespace Unbound.Runtime.Playables
                 int c = b.HumanChannel(curve);
                 if (c < 0 || c >= into.FloatCount) continue;
                 into.Values[c] = Unbound.Runtime.Humanoid.AnimatorHuman.DefaultValue(curve);
-                into.Animated[c] = true;
+                into.Set(c);
             }
         }
 
@@ -936,7 +936,7 @@ namespace Unbound.Runtime.Playables
             {
                 if (!g.Alive || g.IsObject) continue;
                 g.Read(into.Values, g.First);
-                for (int i = 0; i < g.Width; i++) into.Animated[g.First + i] = true;
+                for (int i = 0; i < g.Width; i++) into.Set(g.First + i);
             }
         }
     }

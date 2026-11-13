@@ -4,6 +4,7 @@ using System.Linq;
 using Unbound.Runtime;
 using Unbound.Tests;
 using UnityEngine.Animations;
+using UnityEngine.Experimental.Animations;
 using UnityEngine.Playables;
 using Xunit;
 
@@ -623,6 +624,84 @@ namespace UnityEngine.Tests
                 graph.Evaluate(0.25f);
                 Assert.Equal(weight > 0f ? blended : Vector3.zero, HandJob.Read);
                 Assert.Equal(weight > 0f ? blended : new Vector3(0f, 0f, 1f), leg.localPosition);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        static AnimationClip LegClip(Vector3 at)
+        {
+            var clip = new AnimationClip();
+            clip.SetCurve("Rig/Hips/Leg", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Constant(0f, 1f, at.x));
+            clip.SetCurve("Rig/Hips/Leg", typeof(Transform), "m_LocalPosition.y", AnimationCurve.Constant(0f, 1f, at.y));
+            clip.SetCurve("Rig/Hips/Leg", typeof(Transform), "m_LocalPosition.z", AnimationCurve.Constant(0f, 1f, at.z));
+            return clip;
+        }
+
+        /// <summary>A mixer's channel that only an input of weight 0 animates stays unset for a
+        /// job above a layer mixer that holds the mixer at weight 1 (the mark goes through
+        /// layers where nothing below set the channel; Unbound's rule, the Editor measured the
+        /// mixer alone). Control: a clip of weight 1 in the other layer sets it.</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AWeightZeroMixerChannelStaysUnsetThroughALayerMixer(bool setBelow)
+        {
+            var root = Rig(out var animator, out _);
+            var leg = root.transform.Find("Rig/Hips/Leg");
+            leg.localPosition = new Vector3(0f, 0f, 1f);
+            var graph = PlayableGraph.Create("layers");
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            var mixer = AnimationMixerPlayable.Create(graph, 1);
+            mixer.ConnectInput(0, AnimationClipPlayable.Create(graph, LegClip(new Vector3(0.5f, -1f, -0.5f))), 0, 0f);
+            var layers = AnimationLayerMixerPlayable.Create(graph, 2);
+            layers.ConnectInput(0, AnimationClipPlayable.Create(graph, setBelow ? LegClip(new Vector3(1f, 2f, 3f)) : Clip()), 0, 1f);
+            layers.ConnectInput(1, mixer, 0, 1f);
+            var playable = AnimationScriptPlayable.Create(graph, new HandJob { Hand = animator.BindStreamTransform(leg) }, 1);
+            playable.ConnectInput(0, layers, 0, 1f);
+            AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
+            try
+            {
+                graph.Evaluate(0f);
+                // The layer over the clip below blends the clip's value with the bound one, weight 1.
+                Assert.Equal(setBelow ? new Vector3(0f, 0f, 1f) : Vector3.zero, HandJob.Read);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>A clip sampled into a stream that starts as the outputs before
+        /// (AnimationStreamSource.PreviousInputs) sets its channels for the job above, also where
+        /// the output before only filled them with default values (a mixer input of weight 0).
+        /// Control: without the clip the job reads the default pose.</summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void AClipOverPreviousInputsSetsTheChannelsAnOutputBeforeLeftUnset(bool clip)
+        {
+            var root = Rig(out var animator, out _);
+            var leg = root.transform.Find("Rig/Hips/Leg");
+            leg.localPosition = new Vector3(0f, 0f, 1f);
+            var graph = PlayableGraph.Create("previous");
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            var mixer = AnimationMixerPlayable.Create(graph, 1);
+            mixer.ConnectInput(0, AnimationClipPlayable.Create(graph, LegClip(new Vector3(0.5f, -1f, -0.5f))), 0, 0f);
+            AnimationPlayableOutput.Create(graph, "first", animator).SetSourcePlayable(mixer);
+            var playable = AnimationScriptPlayable.Create(graph, new HandJob { Hand = animator.BindStreamTransform(leg) }, 1);
+            if (clip) playable.ConnectInput(0, AnimationClipPlayable.Create(graph, LegClip(new Vector3(1f, 2f, 3f))), 0, 1f);
+            var second = AnimationPlayableOutput.Create(graph, "second", animator);
+            second.SetSourcePlayable(playable);
+            second.SetAnimationStreamSource(AnimationStreamSource.PreviousInputs);
+            try
+            {
+                graph.Evaluate(0f);
+                Assert.Equal(clip ? new Vector3(1f, 2f, 3f) : Vector3.zero, HandJob.Read);
             }
             finally
             {

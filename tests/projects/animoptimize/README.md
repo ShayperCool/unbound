@@ -133,14 +133,12 @@ What the Editor does (measured):
   bound from the scene; at weight 0 the job reads the default pose again and the output writes
   the bound value to the transform (`jobUnanimatedMixer`), in every evaluation from the first
   one, undoing the script's move (`jobUnanimatedIdle`).
-- A destroyed ancestor that is neither animated nor a node of the avatar's skeleton is read
-  with the values it last held (not covered here).
 - A property handle of a Transform property is valid but never resolves: before the first
   evaluation's record the Editor logs the assertion `Transform bound type not supported,
   binding: 'Rig/Hips/Spine/Hand.m_LocalPosition.z'` and the warning `Could not resolve
   'Rig/Hips/Spine/Hand' for property m_LocalPosition.z`, once, and every `GetFloat` throws `The
   PropertyStreamHandle cannot be resolved.` (`jobTransformProperty`).
-- The controls `jobParentDestroyed` to `jobTransformProperty` were recorded with the macOS Editor (two
+- The controls `jobParentDestroyed` to `jobTransformProperty` and `jobUnanimatedIdle` were recorded with the macOS Editor (two
   identical captures); every other record of that capture matches the Linux reference within the
   comparator's tolerance, so the reference keeps its Linux records and adds these.
 - A manual graph plays the take on a rig without its controller, optimized or not, generic
@@ -166,3 +164,8 @@ the graph control on the optimized generic rig with its exposed hand bound, whos
 bakes the skin. The Editor logs `The input bones do not match the skeleton of the Avatar`
 there and the skin's vertices differ between two captures; the job controls on that rig,
 which do not bake the skin, log nothing.
+
+Unmeasured, Unbound's choices: a destroyed ancestor that is neither animated nor a node of the
+avatar's skeleton is read with the values it last held; a layer or an output of weight 0 over a
+channel nothing set reads as set; a channel the output keeps bound reads as set for a job through
+`AnimationStreamSource.PreviousInputs`.

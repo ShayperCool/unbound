@@ -19,8 +19,10 @@ namespace Unbound.Runtime.Playables
         internal AnimationBindings Bindings;
         internal float[] Values = Array.Empty<float>();
         internal bool[] Animated = Array.Empty<bool>();
-        /// <summary>An animated channel that only default values fill: one that only inputs of
-        /// weight 0 animate, or that the output keeps bound (<see cref="IsSet"/>).</summary>
+        /// <summary>An animated channel that only default values fill: a mixer's channel that only
+        /// inputs of weight 0 animate, carried through layers and outputs where nothing below set
+        /// it (<see cref="IsSet"/>). Channels the output keeps bound are not marked (unmeasured
+        /// for a job reading them through AnimationStreamSource.PreviousInputs).</summary>
         internal bool[] DefaultOnly = Array.Empty<bool>();
         internal Object[] Objects = Array.Empty<Object>();
         internal bool[] ObjectAnimated = Array.Empty<bool>();
@@ -487,6 +489,13 @@ namespace Unbound.Runtime.Playables
             return true;
         }
 
+        /// <summary>Whether a channel <paramref name="from"/> animates holds only default values
+        /// once it is blended or added over <paramref name="to"/>: when it does in
+        /// <paramref name="from"/> (a mixer's channel only inputs of weight 0 animate) and
+        /// nothing set it in <paramref name="to"/>. A layer's or an output's own weight does not
+        /// decide (unmeasured: a layer of weight 0 reads as set, as before).</summary>
+        static bool DefaultOnlyOver(AnimStream to, AnimStream from, int c) => from.DefaultOnly[c] && !to.IsSet(c);
+
         /// <summary>to = lerp(to, from, w) on the channels <paramref name="from"/> animates
         /// (quaternions by normalized lerp in the same hemisphere); marks them animated.</summary>
         internal static void BlendOver(AnimStream to, AnimStream from, float w, bool[] mask = null)
@@ -499,7 +508,7 @@ namespace Unbound.Runtime.Playables
                 {
                     if (c + 3 < n && from.Animated[c] && (mask == null || mask[c]))
                     {
-                        bool defaultOnly = !(from.IsSet(c) && w > 0f) && !(to.IsSet(c) && w < 1f);
+                        bool defaultOnly = DefaultOnlyOver(to, from, c);
                         Nlerp(to.Values, c, from.Values, c, w);
                         for (int i = 0; i < 4; i++)
                         {
@@ -511,7 +520,7 @@ namespace Unbound.Runtime.Playables
                     continue;
                 }
                 if (!from.Animated[c] || (mask != null && !mask[c])) continue;
-                to.DefaultOnly[c] = !(from.IsSet(c) && w > 0f) && !(to.IsSet(c) && w < 1f);
+                to.DefaultOnly[c] = DefaultOnlyOver(to, from, c);
                 to.Values[c] = w >= 1f ? from.Values[c] : to.Values[c] + (from.Values[c] - to.Values[c]) * w;
                 to.Animated[c] = true;
             }
@@ -540,7 +549,7 @@ namespace Unbound.Runtime.Playables
                         var delta = Quaternion.Inverse(Q(reference.Values, c)) * Q(from.Values, c);
                         var r = q * Quaternion.Slerp(Quaternion.identity, delta, w);
                         SetQ(to.Values, c, r);
-                        bool defaultOnly = !(from.IsSet(c) && w > 0f) && !to.IsSet(c);
+                        bool defaultOnly = DefaultOnlyOver(to, from, c);
                         for (int i = 0; i < 4; i++)
                         {
                             to.Animated[c + i] = true;
@@ -551,7 +560,7 @@ namespace Unbound.Runtime.Playables
                     continue;
                 }
                 if (!from.Animated[c] || (mask != null && !mask[c])) continue;
-                to.DefaultOnly[c] = !(from.IsSet(c) && w > 0f) && !to.IsSet(c);
+                to.DefaultOnly[c] = DefaultOnlyOver(to, from, c);
                 to.Values[c] += w * (from.Values[c] - reference.Values[c]);
                 to.Animated[c] = true;
             }
@@ -1162,7 +1171,6 @@ namespace Unbound.Runtime.Playables
                 {
                     s.Values[c] = defaults[c];
                     s.Animated[c] = true;
-                    s.DefaultOnly[c] = true;
                 }
             }
             for (int c = 0; c < s.ObjectCount; c++)
