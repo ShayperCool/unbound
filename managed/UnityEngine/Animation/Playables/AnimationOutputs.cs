@@ -20,9 +20,9 @@ namespace Unbound.Runtime.Playables
         internal float[] Values = Array.Empty<float>();
         internal bool[] Animated = Array.Empty<bool>();
         /// <summary>An animated channel that only default values fill: a mixer's channel that only
-        /// inputs of weight 0 animate, carried through layers and outputs where nothing below set
-        /// it (<see cref="IsSet"/>). Channels the output keeps bound are not marked (unmeasured
-        /// for a job reading them through AnimationStreamSource.PreviousInputs).</summary>
+        /// inputs of weight 0 animate, carried through layers and additive layers where nothing
+        /// below set it (<see cref="IsSet"/>), and not into the next output's stream
+        /// (<see cref="CopyFrom"/>). Channels the output keeps bound are not marked.</summary>
         internal bool[] DefaultOnly = Array.Empty<bool>();
         internal Object[] Objects = Array.Empty<Object>();
         internal bool[] ObjectAnimated = Array.Empty<bool>();
@@ -141,7 +141,9 @@ namespace Unbound.Runtime.Playables
             }
             Array.Copy(o.Values, Values, FloatCount);
             Array.Copy(o.Animated, Animated, FloatCount);
-            Array.Copy(o.DefaultOnly, DefaultOnly, FloatCount);
+            // The default-only mark stays with the output that made it: a stream starting as
+            // the outputs before (PreviousInputs) reads their channels as set (unmeasured).
+            Array.Clear(DefaultOnly, 0, FloatCount);
             Array.Copy(o.Objects, Objects, ObjectCount);
             Array.Copy(o.ObjectAnimated, ObjectAnimated, ObjectCount);
         }

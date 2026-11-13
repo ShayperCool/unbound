@@ -644,7 +644,9 @@ namespace UnityEngine.Tests
         /// <summary>A mixer's channel that only an input of weight 0 animates stays unset for a
         /// job above a layer mixer that holds the mixer at weight 1 (the mark goes through
         /// layers where nothing below set the channel; Unbound's rule, the Editor measured the
-        /// mixer alone). Control: a clip of weight 1 in the other layer sets it.</summary>
+        /// mixer alone). Control: over a clip of weight 1 in the layer below, the layer
+        /// replaces the clip's value with the value bound from the scene, set (unmeasured: the
+        /// default pose would be the other reading).</summary>
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
@@ -676,10 +678,10 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>A clip sampled into a stream that starts as the outputs before
-        /// (AnimationStreamSource.PreviousInputs) sets its channels for the job above, also where
-        /// the output before only filled them with default values (a mixer input of weight 0).
-        /// Control: without the clip the job reads the default pose.</summary>
+        /// <summary>A stream that starts as the outputs before (AnimationStreamSource.PreviousInputs)
+        /// reads their channels as set, also one the output before only filled with default
+        /// values (a mixer input of weight 0): the job reads the bound value there (Unbound's
+        /// choice, unmeasured), and a clip below the job sets its own.</summary>
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
@@ -701,7 +703,7 @@ namespace UnityEngine.Tests
             try
             {
                 graph.Evaluate(0f);
-                Assert.Equal(clip ? new Vector3(1f, 2f, 3f) : Vector3.zero, HandJob.Read);
+                Assert.Equal(clip ? new Vector3(1f, 2f, 3f) : new Vector3(0f, 0f, 1f), HandJob.Read);
             }
             finally
             {

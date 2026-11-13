@@ -167,5 +167,9 @@ which do not bake the skin, log nothing.
 
 Unmeasured, Unbound's choices: a destroyed ancestor that is neither animated nor a node of the
 avatar's skeleton is read with the values it last held; a layer or an output of weight 0 over a
-channel nothing set reads as set; a channel the output keeps bound reads as set for a job through
-`AnimationStreamSource.PreviousInputs`.
+channel nothing set reads as set; a channel the output keeps bound, or one only weight-0 inputs
+animate in an output before, reads as set for a job through `AnimationStreamSource.PreviousInputs`;
+a mixer's channel only weight-0 inputs animate stays unset through layers and additive layers where
+nothing below set it, and a layer holding it at weight 1 over a set channel replaces that with the
+value bound from the scene (the default pose would be the other reading; the transform the game
+sees differs between the two).
