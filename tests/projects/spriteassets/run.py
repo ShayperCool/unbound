@@ -82,7 +82,7 @@ def compare(reference, candidate, out):
                     problems.append(f'{key}[{i}]: reference={a[i] if i < len(a) else "<missing>"} candidate={b[i] if i < len(b) else "<missing>"}')
                 else:
                     walk(a[i], b[i], f'{key}[{i}]')
-        elif key in ('.image', '.layoutImage') and isinstance(a, str) and isinstance(b, str):
+        elif key in ('.image', '.layoutImage', '.laterLayoutImage') and isinstance(a, str) and isinstance(b, str):
             pa, pb = bytes.fromhex(a), bytes.fromhex(b)
             if len(pa) != len(pb):
                 problems.append(f'{key[1:]}: byte counts {len(pa)} vs {len(pb)}')

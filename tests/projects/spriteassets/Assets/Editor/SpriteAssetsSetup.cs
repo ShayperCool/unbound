@@ -48,6 +48,7 @@ public static class SpriteAssetsSetup
             polygon.name = "Polygon";
             AssetDatabase.CreateAsset(polygon, "Assets/Resources/Polygon.asset");
             var layouts = AuthorLayouts(rectangle);
+            var later = AuthorLaterLayouts(rectangle);
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var runner = new GameObject("Probe").AddComponent<SpriteAssetsProbe>();
             runner.sceneSprite = rectangle;
@@ -58,6 +59,7 @@ public static class SpriteAssetsSetup
             embedded.name = "Embedded";
             runner.embeddedSprite = embedded;
             AuthorLayoutScene(layouts, embedded);
+            AuthorLaterLayoutScene(later);
             var camera = new GameObject("Camera").AddComponent<Camera>();
             camera.transform.position = new Vector3(0, 0, -10);
             camera.orthographic = true;
@@ -194,6 +196,101 @@ public static class SpriteAssetsSetup
         AssetDatabase.ImportAsset("Assets/Resources/Layouts/VertexV2.asset");
         var v2 = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Resources/Layouts/VertexV2.asset");
         return new[] { atlasTight, atlasStrip, skinned, attributes, downscaled, secondary, v2 };
+    }
+
+    /// <summary>Layouts of a later probe slice: scriptable objects (one of them deleted after the
+    /// save), texture coordinate channels 1 to 7, custom texture coordinates 0, and clones of a
+    /// variant atlas member (its atlas render data downscaled) and of a split-alpha atlas member
+    /// packed for Android (its atlas render data has an alpha texture).</summary>
+    static Sprite[] AuthorLaterLayouts(Sprite rectangle)
+    {
+        SpriteAssetsHolder Holder(string name, int value)
+        {
+            var holder = ScriptableObject.CreateInstance<SpriteAssetsHolder>();
+            holder.value = value;
+            AssetDatabase.CreateAsset(holder, "Assets/Resources/Layouts/" + name + ".asset");
+            return holder;
+        }
+        var scripted = UnityEngine.Object.Instantiate(rectangle);
+        scripted.name = "Scripted";
+        scripted.AddScriptableObject(Holder("HolderA", 3));
+        scripted.AddScriptableObject(Holder("HolderGone", 5));
+        scripted.AddScriptableObject(Holder("HolderB", 8));
+        AssetDatabase.CreateAsset(scripted, "Assets/Resources/Layouts/Scripted.asset");
+        AssetDatabase.SaveAssets();
+        AssetDatabase.DeleteAsset("Assets/Resources/Layouts/HolderGone.asset");
+
+        var imported = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Resources/Imported.png");
+        var texCoords = UnityEngine.Object.Instantiate(imported);
+        texCoords.name = "TexCoords";
+        int count = texCoords.GetVertexCount();
+        for (int channel = 1; channel <= 7; channel++)
+        {
+            var values = new NativeArray<Vector2>(count, Allocator.Temp);
+            for (int i = 0; i < count; i++) values[i] = new Vector2(channel + i * .25f, channel * .5f - i);
+            texCoords.SetVertexAttribute(VertexAttribute.TexCoord0 + channel, values);
+        }
+        AssetDatabase.CreateAsset(texCoords, "Assets/Resources/Layouts/TexCoords.asset");
+        var texCoord0 = UnityEngine.Object.Instantiate(imported);
+        texCoord0.name = "TexCoord0";
+        var uv = new NativeArray<Vector2>(count, Allocator.Temp);
+        for (int i = 0; i < count; i++) uv[i] = new Vector2(.05f + i * .1f, .9f - i * .05f);
+        texCoord0.SetVertexAttribute(VertexAttribute.TexCoord0, uv);
+        AssetDatabase.CreateAsset(texCoord0, "Assets/Resources/Layouts/TexCoord0.asset");
+
+        Color32 Ring(int x, int y) => new Color32((byte)(x * 6), (byte)(y * 6), 200,
+            (byte)((x - 20) * (x - 20) + (y - 16) * (y - 16) < 200 ? 255 : 0));
+        ImportSprite("Assets/Resources/Variant.png", 40, 32, Ring, SpriteMeshType.Tight);
+        ImportSprite("Assets/Resources/Split.png", 40, 32, Ring, SpriteMeshType.Tight);
+        var packerMode = EditorSettings.spritePackerMode;
+        EditorSettings.spritePackerMode = SpritePackerMode.AlwaysOnAtlas;
+        var split = new SpriteAtlas();
+        split.SetPackingSettings(new SpriteAtlasPackingSettings { enableRotation = true, enableTightPacking = true, padding = 2, blockOffset = 1 });
+        var android = split.GetPlatformSettings("Android");
+        android.overridden = true;
+        android.format = TextureImporterFormat.ETC_RGB4;
+        android.allowsAlphaSplitting = true;
+        split.SetPlatformSettings(android);
+        split.Add(new UnityEngine.Object[] { AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/Split.png") });
+        AssetDatabase.CreateAsset(split, "Assets/Split.spriteatlas");
+        AssetDatabase.SaveAssets();
+        SpriteAtlasUtility.PackAllAtlases(BuildTarget.Android);
+        var splitClone = Save(AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Resources/Split.png"), "Split");
+        var master = new SpriteAtlas();
+        master.Add(new UnityEngine.Object[] { AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/Variant.png") });
+        master.SetIncludeInBuild(false);
+        AssetDatabase.CreateAsset(master, "Assets/Master.spriteatlas");
+        var variant = new SpriteAtlas();
+        variant.SetIsVariant(true);
+        variant.SetMasterAtlas(master);
+        variant.SetVariantScale(.5f);
+        AssetDatabase.CreateAsset(variant, "Assets/Variant.spriteatlas");
+        AssetDatabase.SaveAssets();
+        SpriteAtlasUtility.PackAllAtlases(EditorUserBuildSettings.activeBuildTarget);
+        var variantClone = Save(AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Resources/Variant.png"), "Variant");
+        EditorSettings.spritePackerMode = packerMode;
+        return new[] { scripted, texCoords, texCoord0, variantClone, splitClone };
+    }
+
+    /// <summary>The later layouts' renderers, seen by a third camera.</summary>
+    static void AuthorLaterLayoutScene(Sprite[] layouts)
+    {
+        var camera = new GameObject("LaterLayoutCamera").AddComponent<Camera>();
+        camera.transform.position = new Vector3(40, 0, -10);
+        camera.orthographic = true;
+        camera.orthographicSize = 1f;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color32(52, 40, 70, 255);
+        camera.allowHDR = false;
+        camera.allowMSAA = false;
+        for (int i = 0; i < layouts.Length; i++)
+        {
+            var renderer = new GameObject(layouts[i].name + "Renderer").AddComponent<SpriteRenderer>();
+            renderer.sprite = layouts[i];
+            // Apart, so that no two overlap (their order would be unspecified).
+            renderer.transform.position = new Vector3(37.2f + 1.4f * i, 0, 0);
+            renderer.transform.localScale = new Vector3(.45f, .45f, 1);
+        }
     }
 
     /// <summary>The layout sprites' renderers, seen by a second camera away from the first one's view.</summary>

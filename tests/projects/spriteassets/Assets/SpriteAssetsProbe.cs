@@ -19,6 +19,8 @@ public sealed class SpriteAssetsProbe : MonoBehaviour
         public string image;
         public Layout[] layouts;
         public string layoutImage;
+        public Layout[] laterLayouts;
+        public string laterLayoutImage;
     }
 
     [Serializable] public sealed class Bone
@@ -45,7 +47,13 @@ public sealed class SpriteAssetsProbe : MonoBehaviour
         public Vector3[] normals;
         public Vector4[] tangents;
         public Secondary[] secondary;
+        public TexCoords[] texCoords;
+        public uint scriptableObjectCount;
+        public Holder[] scriptableObjects;
     }
+
+    [Serializable] public sealed class TexCoords { public string channel; public Vector2[] values; }
+    [Serializable] public sealed class Holder { public string name; public int value; }
 
     [Serializable] public sealed class Shape { public Vector2[] points; }
 
@@ -72,7 +80,9 @@ public sealed class SpriteAssetsProbe : MonoBehaviour
         var layouts = layoutNames.Select(n => Resources.Load<Sprite>("Layouts/" + n)).Append(embeddedSprite).Select(DescribeLayout).ToArray();
         var capture = new Capture { complete = true, sprites = entries,
             sceneResourceIdentity = sceneSprite == Resources.Load<Sprite>("Rectangle"), image = Render("Camera", 160, 96),
-            layouts = layouts, layoutImage = Render("LayoutCamera", 192, 128) };
+            layouts = layouts, layoutImage = Render("LayoutCamera", 192, 128),
+            laterLayouts = new[] { "Scripted", "TexCoords", "TexCoord0", "Variant", "Split" }.Select(n => Resources.Load<Sprite>("Layouts/" + n)).Select(DescribeLayout).ToArray(),
+            laterLayoutImage = Render("LaterLayoutCamera", 224, 64) };
         File.WriteAllText(Environment.GetEnvironmentVariable("SPRITE_ASSETS_OUT"), JsonUtility.ToJson(capture, true));
     }
 
@@ -110,6 +120,13 @@ public sealed class SpriteAssetsProbe : MonoBehaviour
         var secondary = new SecondarySpriteTexture[s.GetSecondaryTextureCount()];
         s.GetSecondaryTextures(secondary);
         layout.secondary = secondary.Select(t => new Secondary { name = t.name, texture = t.texture != null ? t.texture.name : "<null>" }).ToArray();
+        layout.texCoords = Enumerable.Range(0, 8).Select(i => VertexAttribute.TexCoord0 + i).Where(s.HasVertexAttribute)
+            .Select(c => new TexCoords { channel = c.ToString(), values = s.GetVertexAttribute<Vector2>(c).ToArray() }).ToArray();
+        layout.scriptableObjectCount = s.GetScriptableObjectsCount();
+        var held = new ScriptableObject[layout.scriptableObjectCount];
+        s.GetScriptableObjects(held);
+        layout.scriptableObjects = held.Select(h => h is SpriteAssetsHolder holder ? new Holder { name = holder.name, value = holder.value }
+            : new Holder { name = h == null ? "<null>" : h.GetType().Name }).ToArray();
         return layout;
     }
 
