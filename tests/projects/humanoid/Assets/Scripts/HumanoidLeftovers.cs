@@ -237,12 +237,13 @@ public partial class HumanoidProbe
     /// of the spine (rising), of the left arm and of the left hand (constant), the body's height
     /// and a turn of the body, through AnimationClip.SetCurve ("setCurve"), through
     /// AnimationUtility.SetEditorCurve ("editorCurve"), and through SetCurve with the clip's
-    /// Mirror setting on ("mirror"). Each clip's humanMotion, length and curve bindings, then
-    /// three evaluations of a manual graph (0, 0.5 and 0.25 s) of the clip without foot IK on
-    /// HumanA without root motion, each with the transforms' rotations and the human pose.</summary>
+    /// Mirror setting on ("mirror"; "mirrorFootIK" with foot IK). Each clip's humanMotion, length
+    /// and curve bindings, then three evaluations of a manual graph (0, 0.5 and 0.25 s) of the
+    /// clip, without foot IK but for "mirrorFootIK", on HumanA without root motion, each with the
+    /// transforms' rotations and the human pose.</summary>
     static void ApiCurves()
     {
-        foreach (var mode in new[] { "setCurve", "editorCurve", "mirror" })
+        foreach (var mode in new[] { "setCurve", "editorCurve", "mirror", "mirrorFootIK" })
         {
             string key = "apiCurves." + mode;
             var clip = new AnimationClip { name = key };
@@ -269,7 +270,7 @@ public partial class HumanoidProbe
             Set("RootQ.z", AnimationCurve.Constant(0f, 1f, turn.z));
             Set("RootQ.w", AnimationCurve.Constant(0f, 1f, turn.w));
 #if UNITY_EDITOR
-            if (mode == "mirror")
+            if (mode.StartsWith("mirror", StringComparison.Ordinal))
             {
                 var settings = UnityEditor.AnimationUtility.GetAnimationClipSettings(clip);
                 settings.mirror = true;
@@ -288,7 +289,7 @@ public partial class HumanoidProbe
             graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
             // Without foot IK: the legs follow their (absent) muscle curves, not goals.
             var playable = AnimationClipPlayable.Create(graph, clip);
-            playable.SetApplyFootIK(false);
+            playable.SetApplyFootIK(mode == "mirrorFootIK");
             AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
             graph.Play();
             var handler = new HumanPoseHandler(animator.avatar, instance.transform);

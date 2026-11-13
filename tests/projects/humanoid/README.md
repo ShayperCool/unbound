@@ -277,19 +277,19 @@ ResetToStancePose on an Animator root motion has moved from the origin, where th
 stance values step with the distance (body up to 3.3e-3, a straight leg's twist muscle up to
 1.5e-2 by update 28). `stream.stanceInPlace` (recorded last, built in `HumanoidBones.cs`) is
 the same job without root motion applied, so that the Animator stays at the origin: there every
-value matches.
+value matches. `mirror-no-goals`: `apiCurves.mirrorFootIK`, see below.
 
 `apiCurves.*` (recorded after it, built in `HumanoidLeftovers.cs`): a clip made at run time whose
 humanoid curves (a spine, a left arm and a left thumb muscle, the body's height and turn) are set
 through `AnimationClip.SetCurve` (`setCurve`), `AnimationUtility.SetEditorCurve` (`editorCurve`)
 and `SetCurve` with the clip's Mirror setting on (`mirror`), played without foot IK in a manual
-graph on HumanA. The Editor takes them as the clip's humanoid curves: `humanMotion` is true, the
+graph on HumanA, and the mirrored clip with foot IK (`mirrorFootIK`). The Editor takes them as the clip's humanoid curves: `humanMotion` is true, the
 bindings are the Animator's, the muscles and the body play, and the mirrored clip moves the right
 arm and thumb. These records come from two identical captures of the macOS Editor; the rest of
 those captures differ from the Linux reference in 287 values beyond the comparator's tolerance
 (root motion velocities, IK, the stance drift, one pivot), so only these records were added. With
-foot IK on, the mirrored clip's legs (it has no goal curves) differ from Unbound's in an
-exploratory capture; they are left out (see docs/COMPATIBILITY_GAPS.md).
+foot IK on, the mirrored clip's legs (it has no goal curves) differ from Unbound's: those values
+are the known class `mirror-no-goals`.
 
 After changing the rigs, regenerate them (`blender -b --factory-startup --python
 tests/projects/humanoid/make_models.py`), let the Editor configure them in a copy of the project
