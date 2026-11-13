@@ -40,7 +40,7 @@ const READ_COMPRESSIONS: [u16; 5] = [
 const PREDICTOR_HORIZONTAL: u16 = 2;
 
 /// The values of an unsigned tag, whatever its stored type (SHORT or LONG) and count: writers
-/// store `SampleFormat` once per sample and some store SHORT tags as LONG.
+/// other than Photoshop store `SampleFormat` once per sample.
 fn values<R: std::io::Read + std::io::Seek>(
     decoder: &mut Decoder<R>,
     tag: Tag,
