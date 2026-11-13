@@ -6877,6 +6877,12 @@
       "type": "UnityEngine.U2D.SpriteAtlas"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.U2D.SpriteAtlasManager"
+    },
+    {
       "category": "struct",
       "module": "UnityEngine.CoreModule",
       "status": "candidate",

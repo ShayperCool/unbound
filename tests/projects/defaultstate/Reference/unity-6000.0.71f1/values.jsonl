@@ -7823,6 +7823,7 @@
 {"key":"UnityEngine.U2D.SpriteAtlas/Property/UnityEngine.U2D.SpriteAtlas/isVariant","status":"value","value":"false"}
 {"key":"UnityEngine.U2D.SpriteAtlas/Property/UnityEngine.U2D.SpriteAtlas/spriteCount","status":"value","value":"0"}
 {"key":"UnityEngine.U2D.SpriteAtlas/Property/UnityEngine.U2D.SpriteAtlas/tag","status":"value","value":"string:"}
+{"key":"UnityEngine.U2D.SpriteAtlasManager/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.U2D.SpriteBone/@factory","status":"value","value":"struct"}
 {"key":"UnityEngine.U2D.SpriteBone/Property/UnityEngine.U2D.SpriteBone/color","status":"value","value":"UnityEngine.Color32{a=0;b=0;g=0;r=0}"}
 {"key":"UnityEngine.U2D.SpriteBone/Property/UnityEngine.U2D.SpriteBone/guid","status":"value","value":"null"}
