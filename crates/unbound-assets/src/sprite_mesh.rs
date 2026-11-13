@@ -1112,6 +1112,18 @@ impl Region {
 
     /// The traced outline of the texture: `quality` as [`make_shape`] takes it.
     fn trace(&self, texture: &Texture, detail: f32, tolerance: u8, extrude: u32) -> Option<Shape> {
+        self.trace_holes(texture, detail, tolerance, true, extrude)
+    }
+
+    /// [`Region::trace`], with or without holes.
+    fn trace_holes(
+        &self,
+        texture: &Texture,
+        detail: f32,
+        tolerance: u8,
+        holes: bool,
+        extrude: u32,
+    ) -> Option<Shape> {
         let quality = if detail >= 0.0 {
             1.0 - if detail <= 1.0 { detail } else { 1.0 }
         } else {
@@ -1124,8 +1136,33 @@ impl Region {
             height: self.h as usize,
             alpha: &alpha,
         };
-        Some(make_shape(&image, quality, tolerance, true, extrude))
+        Some(make_shape(&image, quality, tolerance, holes, extrude))
     }
+}
+
+/// `SpriteUtility.GenerateOutline`: the traced outlines of a texture rect with a detail, alpha
+/// tolerance and hole detection, in pixels from the rect's centre (matches the Unity
+/// 6000.0.71f1 Editor, tests/projects/spriteoutlines). Empty when the rect is outside the texture
+/// or the texture has no 8-bit alpha.
+pub fn rect_outline(
+    texture: &Texture,
+    rect: [f32; 4],
+    detail: f32,
+    tolerance: u8,
+    holes: bool,
+) -> Vec<Vec<[f32; 2]>> {
+    let Some(region) = Region::new(texture, rect, [0.0, 0.0]) else {
+        return Vec::new();
+    };
+    let Some(shape) = region.trace_holes(texture, detail, tolerance, holes, 0) else {
+        return Vec::new();
+    };
+    let [ox, oy] = region.offset;
+    shape
+        .outlines()
+        .into_iter()
+        .map(|p| p.into_iter().map(|v| [v[0] - ox, v[1] - oy]).collect())
+        .collect()
 }
 
 /// The Tight mesh, texture rect and physics shape of a sprite. `polygon`: Polygon sprite mode,
@@ -1650,5 +1687,43 @@ mod tests {
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
         sorted.dedup();
         assert_eq!(sorted.len(), n as usize);
+    }
+
+    #[test]
+    fn rect_outline_traces_holes_from_the_rect_centre() {
+        // A 64 x 64 ring: an outer outline and, with hole detection, the hole's.
+        let (w, h) = (64usize, 64usize);
+        let rgba: Vec<u8> = (0..w * h)
+            .flat_map(|i| {
+                let (x, y) = ((i % w) as f32 + 0.5, (i / w) as f32 + 0.5);
+                let (u, v) = (x / 32.0 - 1.0, y / 32.0 - 1.0);
+                let d = u * u + v * v;
+                let a = if (0.3..=1.0).contains(&d) { 255 } else { 0 };
+                [10, 20, 30, a]
+            })
+            .collect();
+        let texture = Texture {
+            width: w as i32,
+            height: h as i32,
+            rgba: Some(&rgba),
+        };
+        let rect = [0.0, 0.0, 64.0, 64.0];
+        let holes = rect_outline(&texture, rect, 0.25, 0, true);
+        assert_eq!(holes.len(), 2);
+        let solid = rect_outline(&texture, rect, 0.25, 0, false);
+        assert_eq!(solid.len(), 1);
+        // Centred: the outer outline reaches about 32 pixels on every side.
+        let max = solid[0]
+            .iter()
+            .fold(0f32, |m, p| m.max(p[0].abs()).max(p[1].abs()));
+        assert!((31.0..=32.0).contains(&max), "{max}");
+        // A rect outside the texture, or no 8-bit alpha: nothing.
+        assert!(rect_outline(&texture, [60.0, 0.0, 20.0, 20.0], 0.25, 0, true).is_empty());
+        let none = Texture {
+            width: 64,
+            height: 64,
+            rgba: None,
+        };
+        assert!(rect_outline(&none, rect, 0.25, 0, true).is_empty());
     }
 }

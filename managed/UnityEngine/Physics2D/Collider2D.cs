@@ -888,6 +888,20 @@ namespace UnityEngine
 
         public PolygonCollider2D() { }
 
+        /// <summary>Added to a sprite's object: the sprite's collider outline (its physics shape,
+        /// else its traced outline), as the Unity 6000.0.71f1 Editor initializes it in Play mode
+        /// (tests/projects/spriteoutlines).</summary>
+        internal override void OnAddedByScript()
+        {
+            var sprite = GetComponent<SpriteRenderer>()?.sprite;
+            if (sprite == null) return;
+            var outline = sprite.ColliderOutline();
+            if (outline.Length == 0) return;
+            m_Paths = new List<Vector2[]>(outline.Length);
+            foreach (var path in outline) m_Paths.Add((Vector2[])path.Clone());
+            ShapeChanged();
+        }
+
         public bool useDelaunayMesh
         {
             get => m_UseDelaunayMesh;

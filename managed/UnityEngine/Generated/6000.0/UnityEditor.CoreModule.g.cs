@@ -48245,17 +48245,14 @@ namespace UnityEditor.Sprites
         [global::Unbound.Stub] public void AddAtlas(string atlasName, global::UnityEditor.Sprites.AtlasSettings settings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.PackerJob.AddAtlas"); }
         [global::Unbound.Stub] public void AssignToAtlas(string atlasName, global::UnityEngine.Sprite sprite, global::UnityEngine.SpritePackingMode packingMode, global::UnityEngine.SpritePackingRotation packingRotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.PackerJob.AssignToAtlas"); }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class SpriteUtility
+    unsafe partial class SpriteUtility
     {
         [global::Unbound.Stub] public static global::UnityEngine.Texture2D GetSpriteTexture(global::UnityEngine.Sprite sprite, bool getAtlasData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteTexture"); return default; }
         [global::System.Obsolete("Use Sprite.vertices API instead. This data is the same for packed and unpacked sprites.")] [global::Unbound.Stub] public static global::UnityEngine.Vector2[] GetSpriteMesh(global::UnityEngine.Sprite sprite, bool getAtlasData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteMesh"); return global::System.Array.Empty<global::UnityEngine.Vector2>(); }
         [global::Unbound.Stub] public static global::UnityEngine.Vector2[] GetSpriteUVs(global::UnityEngine.Sprite sprite, bool getAtlasData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteUVs"); return global::System.Array.Empty<global::UnityEngine.Vector2>(); }
         [global::System.Obsolete("Use Sprite.triangles API instead. This data is the same for packed and unpacked sprites.")] [global::Unbound.Stub] public static ushort[] GetSpriteIndices(global::UnityEngine.Sprite sprite, bool getAtlasData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteIndices"); return global::System.Array.Empty<ushort>(); }
-        [global::Unbound.Stub] internal static void GenerateOutline(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, float detail, byte alphaTolerance, bool holeDetection, out global::UnityEngine.Vector2[][] paths) { paths = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GenerateOutline"); }
         [global::Unbound.Stub] internal static void GenerateOutlineFromSprite(global::UnityEngine.Sprite sprite, float detail, byte alphaTolerance, bool holeDetection, out global::UnityEngine.Vector2[][] paths) { paths = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GenerateOutlineFromSprite"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Vector2[] GeneratePolygonOutlineVerticesOfSize(int sides, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GeneratePolygonOutlineVerticesOfSize"); return global::System.Array.Empty<global::UnityEngine.Vector2>(); }
-        [global::Unbound.Stub] public SpriteUtility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.ctor"); }
     }
 }
 namespace UnityEditor.StyleSheets

@@ -50,6 +50,9 @@ pub struct RuntimeState {
     pub play_mode_atlases: Option<unbound_project::PlayModeAtlases>,
     /// Those atlases packed (on first use, in Play mode).
     atlases: OnceLock<crate::sprite_atlases::AtlasSet>,
+    /// The texels of the imported texture traced last (Sprite.Create often cuts many sprites
+    /// from one texture).
+    traced_texels: std::sync::Mutex<Option<(String, Arc<Texels>)>>,
 }
 
 /// What stays of an imported texture after its upload.
@@ -143,6 +146,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         ),
         play_mode_atlases,
         atlases: OnceLock::new(),
+        traced_texels: std::sync::Mutex::new(None),
     };
     if STATE.set(state).is_err() {
         bail!("the runtime state is already initialized");
@@ -830,6 +834,79 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             .to_string())
         }
         "sprite-atlases" => Ok(crate::sprite_atlases::to_json(page_set(s)).to_string()),
+        "sprite-geometry" => {
+            // A sprite made at runtime (Sprite.Create), or an imported sprite's fallback outline:
+            // its Tight mesh, texture rect and fallback physics shape, traced as the importer
+            // traces them.
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                #[serde(flatten)]
+                texels: TexelSource,
+                rect: [f32; 4],
+                pivot: [f32; 2],
+                pixels_per_unit: f32,
+                extrude: u32,
+                tight: bool,
+                physics: bool,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let texels = texel_source(s, &r.texels)?;
+            let texture = unbound_assets::sprite_mesh::Texture {
+                width: texels.width as i32,
+                height: texels.height as i32,
+                rgba: texels.rgba.as_deref(),
+            };
+            let geometry = unbound_assets::sprite_mesh::sprite_geometry(
+                &texture,
+                &unbound_assets::sprite_mesh::SpriteSource {
+                    rect: r.rect,
+                    pivot: r.pivot,
+                    pixels_per_unit: r.pixels_per_unit,
+                    extrude: r.extrude,
+                    tight: r.tight,
+                    detail: -1.0,
+                    outline: &[],
+                    physics_shape: &[],
+                    generate_physics_shape: r.physics,
+                },
+                false,
+            );
+            Ok(json!({
+                "mesh": geometry.mesh,
+                "textureRect": geometry.texture_rect,
+                "physics": geometry.physics,
+            })
+            .to_string())
+        }
+        "sprite-outline" => {
+            // SpriteUtility.GenerateOutline.
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                #[serde(flatten)]
+                texels: TexelSource,
+                rect: [f32; 4],
+                detail: f32,
+                tolerance: u8,
+                holes: bool,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let texels = texel_source(s, &r.texels)?;
+            let texture = unbound_assets::sprite_mesh::Texture {
+                width: texels.width as i32,
+                height: texels.height as i32,
+                rgba: texels.rgba.as_deref(),
+            };
+            let paths = unbound_assets::sprite_mesh::rect_outline(
+                &texture,
+                r.rect,
+                r.detail,
+                r.tolerance,
+                r.holes,
+            );
+            Ok(json!({ "paths": paths }).to_string())
+        }
         "texture-sprites" => {
             #[derive(Deserialize)]
             struct Request {
@@ -1464,6 +1541,16 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         let texture = crate::sprite_atlases::page(page_set(s), page)?;
         return upload_imported(s, handle, texture, None, 0);
     }
+    // A (re)import replaces the texels a trace may have kept.
+    {
+        let mut recent = s.traced_texels.lock().unwrap_or_else(|e| e.into_inner());
+        if recent
+            .as_ref()
+            .is_some_and(|(key, _)| key.eq_ignore_ascii_case(guid))
+        {
+            *recent = None;
+        }
+    }
     let guid = Guid::parse(guid).context("bad guid")?;
     let asset = s.db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
@@ -1482,6 +1569,60 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     upload_imported(s, handle, texture, Some((&asset.file, &meta)), sprite_count)
 }
 
+/// Where a request's texels come from: an imported texture (its GUID) or the caller's RGBA8
+/// texels (base64, rows bottom-up).
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TexelSource {
+    guid: Option<String>,
+    rgba: Option<String>,
+    width: Option<u32>,
+    height: Option<u32>,
+}
+
+struct Texels {
+    width: u32,
+    height: u32,
+    /// `None`: no 8-bit texels to trace (a floating-point texture).
+    rgba: Option<Vec<u8>>,
+}
+
+fn texel_source(s: &RuntimeState, source: &TexelSource) -> Result<Arc<Texels>> {
+    if let Some(guid) = &source.guid {
+        let mut recent = s.traced_texels.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some((key, texels)) = recent.as_ref()
+            && key == guid
+        {
+            return Ok(texels.clone());
+        }
+        let texture = imported_texture(s, guid)?;
+        let mip = texture.mips.first().context("the texture has no texels")?;
+        let rgba = (texture.format == unbound_assets::texture::TextureFormat::Rgba8)
+            .then(|| mip.data.clone());
+        let texels = Arc::new(Texels {
+            width: mip.width,
+            height: mip.height,
+            rgba,
+        });
+        *recent = Some((guid.clone(), texels.clone()));
+        return Ok(texels);
+    }
+    let (Some(rgba), Some(width), Some(height)) = (&source.rgba, source.width, source.height)
+    else {
+        bail!("no texels: a texture GUID or RGBA texels with their size are needed");
+    };
+    let rgba = crate::fonts::decode_base64(rgba).context("texels are not base64")?;
+    anyhow::ensure!(
+        rgba.len() == width as usize * height as usize * 4,
+        "the texels do not fill a {width}x{height} texture"
+    );
+    Ok(Arc::new(Texels {
+        width,
+        height,
+        rgba: Some(rgba),
+    }))
+}
+
 /// An imported texture by its asset GUID, or a sprite atlas page by its key.
 fn imported_texture(
     s: &RuntimeState,
@@ -1493,7 +1634,8 @@ fn imported_texture(
     let guid = Guid::parse(key).context("bad guid")?;
     let asset = s.db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
-    s.imports.get_or_import(&texture_importer(s), &asset.file, &meta)
+    s.imports
+        .get_or_import(&texture_importer(s), &asset.file, &meta)
 }
 
 /// The Play-mode sprite atlases, packed on first use.

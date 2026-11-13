@@ -106,7 +106,7 @@ namespace UnityEngine.Tilemaps
         }
 
         /// <summary>The collider outlines of one cell, around its center before its transform:
-        /// the cell's shape (Grid), or the sprite's physics shapes, else its rectangle (Sprite).</summary>
+        /// the cell's shape (Grid), or the sprite's collider outline, else its rectangle (Sprite).</summary>
         void Outline(Tilemap map, Vector3Int position, Tilemap.Cell cell)
         {
             if (cell.Tile == null || cell.Collider == Tile.ColliderType.None) return;
@@ -119,12 +119,9 @@ namespace UnityEngine.Tilemaps
             {
                 var sprite = cell.Sprite;
                 if (sprite == null) return;
-                var shape = new List<Vector2>();
-                for (int s = 0; s < sprite.GetPhysicsShapeCount(); s++)
-                {
-                    sprite.GetPhysicsShape(s, shape);
-                    if (shape.Count >= 3) outlines.Add(shape.ToArray());
-                }
+                // The physics shape, else the traced outline (measured: tests/projects/spriteoutlines).
+                foreach (var shape in sprite.ColliderOutline())
+                    if (shape.Length >= 3) outlines.Add(shape);
                 if (outlines.Count == 0)
                 {
                     var r = sprite.rect;

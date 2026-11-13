@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unbound.Runtime;
 
 namespace UnityEngine
@@ -82,7 +83,102 @@ namespace UnityEngine
                 m_Name = texture.name,
             };
             sprite.BuildGeometry();
+            if (meshType == SpriteMeshType.Tight || generateFallbackPhysicsShape)
+                sprite.Trace(meshType == SpriteMeshType.Tight, generateFallbackPhysicsShape);
             return sprite;
+        }
+
+        /// <summary>The texture an imported sprite was made from (its page replaces m_Texture when an
+        /// atlas packs it); null for sprites made otherwise.</summary>
+        Texture2D m_SourceTexture;
+        /// <summary>The outline colliders take when the sprite has no physics shape, once traced.</summary>
+        Vector2[][] m_FallbackOutline;
+
+        sealed class GeometryJson
+        {
+            public SpriteMeshJson Mesh { get; set; }
+            public float[] TextureRect { get; set; }
+            public float[][][] Physics { get; set; }
+        }
+
+        sealed class SpriteMeshJson
+        {
+            public float[][] Vertices { get; set; }
+            public float[][] Uv { get; set; }
+            public int[] Triangles { get; set; }
+        }
+
+        static readonly System.Text.Json.JsonSerializerOptions s_Json = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+
+        /// <summary>The texels a trace reads: an imported texture by its GUID, else a readable
+        /// texture's own texels; null when there are none (the sprite stays a quad).</summary>
+        internal static Dictionary<string, object> TexelSource(Texture2D texture)
+        {
+            if (texture == null || !Native.IsReady) return null;
+            if (texture.m_AssetGuid != null) return new Dictionary<string, object> { ["guid"] = texture.m_AssetGuid };
+            if (!texture.isReadable) return null;
+            var texels = texture.GetPixels32();
+            var bytes = new byte[texels.Length * 4];
+            for (int i = 0; i < texels.Length; i++)
+            {
+                bytes[i * 4] = texels[i].r; bytes[i * 4 + 1] = texels[i].g; bytes[i * 4 + 2] = texels[i].b; bytes[i * 4 + 3] = texels[i].a;
+            }
+            return new Dictionary<string, object> { ["rgba"] = Convert.ToBase64String(bytes), ["width"] = texture.width, ["height"] = texture.height };
+        }
+
+        /// <summary>Traces the texture as the importer does: the Tight mesh (a rect under 32 pixels
+        /// on a side stays a quad) and the fallback physics shape (matches the Unity 6000.0.71f1
+        /// Editor's Sprite.Create, tests/projects/spriteoutlines).</summary>
+        void Trace(bool tight, bool physics)
+        {
+            var request = TexelSource(m_Texture);
+            if (request == null) return;
+            var geometry = TraceRequest(request, tight, physics);
+            if (geometry == null) return;
+            if (tight && geometry.Mesh?.Triangles is { Length: > 0 } triangles)
+            {
+                m_Vertices = Array.ConvertAll(geometry.Mesh.Vertices, v => new Vector2(v[0], v[1]));
+                m_UV = Array.ConvertAll(geometry.Mesh.Uv, v => new Vector2(v[0], v[1]));
+                m_Triangles = Array.ConvertAll(triangles, i => (ushort)i);
+                var t = geometry.TextureRect;
+                m_TextureRect = new Rect(t[0], t[1], t[2], t[3]);
+            }
+            if (physics) m_PhysicsShape = Paths(geometry.Physics);
+        }
+
+        GeometryJson TraceRequest(Dictionary<string, object> request, bool tight, bool physics)
+        {
+            request["rect"] = new[] { m_Rect.x, m_Rect.y, m_Rect.width, m_Rect.height };
+            request["pivot"] = new[] { m_Rect.width > 0 ? m_Pivot.x / m_Rect.width : 0f, m_Rect.height > 0 ? m_Pivot.y / m_Rect.height : 0f };
+            request["pixelsPerUnit"] = m_PixelsPerUnit;
+            request["extrude"] = m_Extrude;
+            request["tight"] = tight;
+            request["physics"] = physics;
+            try { return System.Text.Json.JsonSerializer.Deserialize<GeometryJson>(Native.Call("sprite-geometry", System.Text.Json.JsonSerializer.Serialize(request)), s_Json); }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: the texture of sprite {m_Name} could not be traced: {e.Message}");
+                return null;
+            }
+        }
+
+        static Vector2[][] Paths(float[][][] paths)
+        {
+            if (paths == null || paths.Length == 0) return null;
+            return Array.ConvertAll(paths, p => Array.ConvertAll(p, v => new Vector2(v[0], v[1])));
+        }
+
+        /// <summary>The outlines a PolygonCollider2D or a sprite tile's collider takes: the physics
+        /// shape, else the outline traced as a generated physics shape would be (also for Full Rect
+        /// sprites: matches the Unity 6000.0.71f1 Editor, tests/projects/spriteoutlines); empty when
+        /// the texture cannot be traced.</summary>
+        internal Vector2[][] ColliderOutline()
+        {
+            if (m_PhysicsShape is { Length: > 0 }) return m_PhysicsShape;
+            if (m_FallbackOutline != null) return m_FallbackOutline;
+            var request = TexelSource(m_SourceTexture ?? m_Texture);
+            var geometry = request == null ? null : TraceRequest(request, false, true);
+            return m_FallbackOutline = Paths(geometry?.Physics) ?? Array.Empty<Vector2[]>();
         }
 
         public static Sprite Create(Texture2D texture, Rect rect, Vector2 pivot, float pixelsPerUnit, uint extrude, SpriteMeshType meshType,
@@ -137,6 +233,7 @@ namespace UnityEngine
             using (ObjectRegistry.AsAssets())
                 sprite = new Sprite { IsPersistentAsset = true };
             sprite.m_Texture = texture;
+            sprite.m_SourceTexture = texture;
             sprite.m_Name = name;
             sprite.m_Rect = rect;
             sprite.m_Pivot = new Vector2(normalizedPivot.x * rect.width, normalizedPivot.y * rect.height);
