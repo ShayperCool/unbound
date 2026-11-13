@@ -399,8 +399,10 @@ namespace UnityEngine.Tests
         /// is placed under the bone of the stream's pose: after a muscle is set in the job its
         /// world values have moved with the arm (control: the read before), they are the hand
         /// handle's composed with the prop's local values, the hand's scale included, and they
-        /// are where the prop is once the update is done (tests/projects/humanoid bone.prop). A
-        /// world position written on it is read back.</summary>
+        /// are where the prop is once the update is done. The Editor's bone.prop
+        /// (tests/projects/humanoid) measures the placement in a job that only reads; after a
+        /// change in the job it is Unbound's rule, unmeasured, as is the world position written
+        /// on it, which is read back.</summary>
         [Fact]
         public void AnObjectUnderABoneIsPlacedByTheStreamsPose()
         {

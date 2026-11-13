@@ -579,21 +579,22 @@ namespace Unbound.Runtime.Playables
         }
 
         /// <summary>The nearest of <paramref name="t"/> and its ancestors below the Animator that
-        /// is a bone of a humanoid stream's human pose (the hips or a bone below them; 0: none,
-        /// also on a generic rig and an optimized hierarchy), and that bone's world values in
-        /// the pose. A transform the avatar's skeleton does not hold (a prop under a hand) is
+        /// is a bone of a humanoid stream's human pose (the hips or a bone below them; null:
+        /// none, also on a generic rig and an optimized hierarchy), and that bone's world values
+        /// in the pose. A transform the avatar's skeleton does not hold (a prop under a hand) is
         /// placed under the bone as the stream's pose has it this update, its own and the
         /// transforms' values between through the stream: the prop's world values follow the
         /// hand's handle, its scale included (6000.0.71f1, tests/projects/humanoid bone.prop,
-        /// recorded with the macOS Editor).</summary>
-        int HumanBoneAbove(Transform t, out Transform bone, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        /// recorded with the macOS Editor, a job that only reads; after the job changed the pose
+        /// or read it back the same placement is taken, unmeasured).</summary>
+        void HumanBoneAbove(Transform t, out Transform bone, out Vector3 position, out Quaternion rotation, out Vector3 scale)
         {
             bone = null;
             position = Vector3.zero;
             rotation = Quaternion.identity;
             scale = Vector3.one;
             var animator = Handles.Animator;
-            if (animator.m_NoHierarchy || !animator.IsHuman || animator.Human is not { } human) return 0;
+            if (animator.m_NoHierarchy || !animator.IsHuman || animator.Human is not { } human) return;
             var root = animator.transform;
             for (var p = t; p != null && p != root; p = p.m_Parent)
             {
@@ -601,9 +602,8 @@ namespace Unbound.Runtime.Playables
                 if (node <= 0) continue;
                 bone = p;
                 HumanPose().BoneWorld(node, out position, out rotation, out scale);
-                return node;
+                return;
             }
-            return 0;
         }
 
         /// <summary>Where the stream's walk down to a transform starts: the bone of the human pose
