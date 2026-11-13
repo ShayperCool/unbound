@@ -175,6 +175,7 @@ public sealed class FloatRoundingProbe : MonoBehaviour
         Control("api/vector3Components", Controls.Vector3Components, Wide);
 
         Fuzz();
+        ApiRows();
 
         foreach (var method in typeof(Controls).GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
         {
@@ -257,6 +258,177 @@ public sealed class FloatRoundingProbe : MonoBehaviour
             }
         }
         return text.ToString();
+    }
+
+    // ------------------------------------------------------------------ the math API
+
+    /// <summary>24 results of <paramref name="function"/>, each on <paramref name="arity"/> fresh
+    /// random floats (exponents in [-8, 8]); each result's floats are joined with commas.</summary>
+    void Api(string key, int arity, Func<float[], float[]> function)
+    {
+        var values = new List<string>();
+        var input = new float[arity];
+        for (int i = 0; i < Samples; i++)
+        {
+            for (int j = 0; j < arity; j++) input[j] = RandomFloat();
+            var result = function(input);
+            var text = new StringBuilder();
+            foreach (var value in result) text.Append(text.Length > 0 ? "," : "").Append(Bits(value));
+            values.Add(text.ToString());
+        }
+        Value(key, string.Join(" ", values));
+    }
+
+    static Vector2 V2(float[] f, int at) => new Vector2(f[at], f[at + 1]);
+    static Vector3 V3(float[] f, int at) => new Vector3(f[at], f[at + 1], f[at + 2]);
+    static Vector4 V4(float[] f, int at) => new Vector4(f[at], f[at + 1], f[at + 2], f[at + 3]);
+    static Quaternion Q(float[] f, int at) => new Quaternion(f[at], f[at + 1], f[at + 2], f[at + 3]);
+    static Color C(float[] f, int at) => new Color(f[at], f[at + 1], f[at + 2], f[at + 3]);
+    static Matrix4x4 M(float[] f, int at) => new Matrix4x4(V4(f, at), V4(f, at + 4), V4(f, at + 8), V4(f, at + 12));
+    static float[] F(Vector2 v) => new[] { v.x, v.y };
+    static float[] F(Vector3 v) => new[] { v.x, v.y, v.z };
+    static float[] F(Vector4 v) => new[] { v.x, v.y, v.z, v.w };
+    static float[] F(Quaternion q) => new[] { q.x, q.y, q.z, q.w };
+    static float[] F(Color c) => new[] { c.r, c.g, c.b, c.a };
+    static float[] F(Plane p) => new[] { p.normal.x, p.normal.y, p.normal.z, p.distance };
+    static float[] F(Matrix4x4 m)
+    {
+        var result = new float[16];
+        for (int i = 0; i < 16; i++) result[i] = m[i];
+        return result;
+    }
+    static float Unit(float v) => Mathf.Abs(v) % 1f;
+
+    /// <summary>
+    /// Unity's math API on random operands. The `api/` rows call methods Unity implements in C#
+    /// (they run on the Editor's Mono like script code); the `native/` rows call methods bound to
+    /// Unity's native code.
+    /// </summary>
+    void ApiRows()
+    {
+        Api("api/mathfLerpAngle", 3, f => new[] { Mathf.LerpAngle(f[0] * 40f, f[1] * 40f, Unit(f[2])) });
+        Api("api/mathfDeltaAngle", 2, f => new[] { Mathf.DeltaAngle(f[0] * 40f, f[1] * 40f) });
+        Api("api/mathfMoveTowardsAngle", 3, f => new[] { Mathf.MoveTowardsAngle(f[0] * 40f, f[1] * 40f, Mathf.Abs(f[2])) });
+        Api("api/mathfSmoothDampAngle", 4, f =>
+        {
+            float velocity = f[3];
+            float value = Mathf.SmoothDampAngle(f[0] * 40f, f[1] * 40f, ref velocity, Mathf.Abs(f[2]) + 0.01f, Mathf.Infinity, 0.02f);
+            return new[] { value, velocity };
+        });
+        Api("api/mathfLerpUnclamped", 3, f => new[] { Mathf.LerpUnclamped(f[0], f[1], f[2]) });
+        Api("api/mathfGamma", 3, f => new[] { Mathf.Gamma(f[0], f[1], Mathf.Abs(f[2])) });
+        Api("api/mathfApproximately", 2, f => new[] { Mathf.Approximately(f[0], f[0] + f[1] * 1e-6f) ? 1f : 0f });
+        Api("api/vector2", 5, f =>
+        {
+            Vector2 u = V2(f, 0), v = V2(f, 2);
+            return new[] { Vector2.Dot(u, v), u.magnitude, u.sqrMagnitude, Vector2.Distance(u, v), Vector2.Angle(u, v), Vector2.SignedAngle(u, v),
+                Vector2.Lerp(u, v, Unit(f[4])).x, Vector2.Reflect(u, v).y, u.normalized.x, Vector2.ClampMagnitude(u, Mathf.Abs(f[4])).y,
+                Vector2.MoveTowards(u, v, Mathf.Abs(f[4])).x };
+        });
+        Api("api/vector3", 7, f =>
+        {
+            Vector3 u = V3(f, 0), v = V3(f, 3);
+            return new[] { Vector3.Angle(u, v), Vector3.SignedAngle(u, v, Vector3.Cross(u, v) + Vector3.up), Vector3.ClampMagnitude(u, Mathf.Abs(f[6])).x,
+                Vector3.MoveTowards(u, v, Mathf.Abs(f[6])).y, Vector3.ProjectOnPlane(u, v).z, Vector3.LerpUnclamped(u, v, f[6]).x,
+                Vector3.Distance(u, v), Vector3.SqrMagnitude(u - v), Vector3.Magnitude(u), (u == v * (1f + f[6] * 1e-7f)) ? 1f : 0f };
+        });
+        Api("api/vector3SmoothDamp", 10, f =>
+        {
+            var velocity = V3(f, 6);
+            var value = Vector3.SmoothDamp(V3(f, 0), V3(f, 3), ref velocity, Mathf.Abs(f[9]) + 0.01f, Mathf.Infinity, 0.02f);
+            return new[] { value.x, value.y, value.z, velocity.x, velocity.y, velocity.z };
+        });
+        Api("api/vector4", 9, f =>
+        {
+            Vector4 u = V4(f, 0), v = V4(f, 4);
+            return new[] { Vector4.Dot(u, v), u.magnitude, u.sqrMagnitude, Vector4.Distance(u, v), u.normalized.w, Vector4.Lerp(u, v, Unit(f[8])).x,
+                Vector4.Project(u, v).y, Vector4.MoveTowards(u, v, Mathf.Abs(f[8])).z };
+        });
+        Api("api/quaternionMultiply", 8, f => F(Q(f, 0) * Q(f, 4)));
+        Api("api/quaternionScalars", 8, f =>
+        {
+            Quaternion p = Q(f, 0), q = Q(f, 4);
+            return new[] { Quaternion.Dot(p, q), Quaternion.Angle(p.normalized, q.normalized), (p.normalized == q.normalized) ? 1f : 0f };
+        });
+        Api("api/quaternionNormalize", 4, f => F(Quaternion.Normalize(Q(f, 0))));
+        Api("api/matrixMultiply", 32, f => F(M(f, 0) * M(f, 16)));
+        Api("api/matrixVector", 20, f =>
+        {
+            var m = M(f, 0);
+            var point = V3(f, 16);
+            var result = new List<float>();
+            result.AddRange(F(m.MultiplyPoint(point)));
+            result.AddRange(F(m.MultiplyPoint3x4(point)));
+            result.AddRange(F(m.MultiplyVector(point)));
+            result.AddRange(F(m * V4(f, 16)));
+            result.AddRange(F(m.TransformPlane(new Plane(V3(f, 16), f[19]))));
+            return result.ToArray();
+        });
+        Api("api/color", 9, f =>
+        {
+            Color a = C(f, 0), b = C(f, 4);
+            Color.RGBToHSV(new Color(Mathf.Abs(f[0]) % 1f, Mathf.Abs(f[1]) % 1f, Mathf.Abs(f[2]) % 1f), out float h, out float s, out float v);
+            var rgb = Color.HSVToRGB(Unit(f[4]), Unit(f[5]), Unit(f[6]));
+            var c32 = Color32.Lerp(new Color32(10, 200, 30, 255), new Color32(250, 3, 128, 0), Unit(f[8]));
+            return new[] { Color.Lerp(a, b, Unit(f[8])).r, Color.LerpUnclamped(a, b, f[8]).g, a.grayscale, h, s, v, rgb.r, rgb.g, rgb.b,
+                c32.r, c32.g, c32.b, c32.a };
+        });
+        Api("api/plane", 10, f =>
+        {
+            var plane = new Plane(V3(f, 0), V3(f, 3));
+            var three = new Plane(V3(f, 0), V3(f, 3), V3(f, 6));
+            var point = V3(f, 6);
+            bool hit = plane.Raycast(new Ray(point, V3(f, 3) + Vector3.one), out float enter);
+            var result = new List<float>();
+            result.AddRange(F(plane));
+            result.AddRange(F(three));
+            result.Add(plane.GetDistanceToPoint(point));
+            result.AddRange(F(plane.ClosestPointOnPlane(point)));
+            result.Add(hit ? enter : -enter);
+            return result.ToArray();
+        });
+        Api("api/rect", 6, f =>
+        {
+            var rect = new Rect(f[0], f[1], Mathf.Abs(f[2]), Mathf.Abs(f[3]));
+            var point = new Vector2(f[4], f[5]);
+            return new[] { Rect.NormalizedToPoint(rect, point).x, Rect.PointToNormalized(rect, point).y, rect.center.x, rect.xMax };
+        });
+
+        Api("native/quaternionSlerp", 9, f => F(Quaternion.Slerp(Q(f, 0).normalized, Q(f, 4).normalized, Unit(f[8]))));
+        Api("native/quaternionLerp", 9, f => F(Quaternion.Lerp(Q(f, 0), Q(f, 4), Unit(f[8]))));
+        Api("native/quaternionEuler", 3, f => F(Quaternion.Euler(f[0] * 40f, f[1] * 40f, f[2] * 40f)));
+        Api("native/quaternionEulerAngles", 4, f => F(Q(f, 0).normalized.eulerAngles));
+        Api("native/quaternionLookRotation", 6, f => F(Quaternion.LookRotation(V3(f, 0), V3(f, 3))));
+        Api("native/quaternionAngleAxis", 4, f => F(Quaternion.AngleAxis(f[0] * 40f, V3(f, 1))));
+        Api("native/quaternionFromToRotation", 6, f => F(Quaternion.FromToRotation(V3(f, 0), V3(f, 3))));
+        Api("native/quaternionInverse", 4, f => F(Quaternion.Inverse(Q(f, 0))));
+        Api("native/vector3Slerp", 7, f => F(Vector3.Slerp(V3(f, 0), V3(f, 3), Unit(f[6]))));
+        Api("native/vector3RotateTowards", 8, f => F(Vector3.RotateTowards(V3(f, 0), V3(f, 3), Mathf.Abs(f[6]), Mathf.Abs(f[7]))));
+        Api("native/vector3OrthoNormalize", 6, f =>
+        {
+            Vector3 u = V3(f, 0), v = V3(f, 3);
+            Vector3.OrthoNormalize(ref u, ref v);
+            return new[] { u.x, u.y, u.z, v.x, v.y, v.z };
+        });
+        Api("native/matrixTRS", 10, f => F(Matrix4x4.TRS(V3(f, 0), Q(f, 3).normalized, V3(f, 7))));
+        Api("native/matrixInverse", 16, f => F(Matrix4x4.Inverse(M(f, 0))));
+        Api("native/matrixDeterminant", 16, f => new[] { M(f, 0).determinant });
+        Api("native/matrixDecompose", 10, f =>
+        {
+            var m = Matrix4x4.TRS(V3(f, 0), Q(f, 3).normalized, V3(f, 7));
+            var result = new List<float>();
+            result.AddRange(F(m.rotation));
+            result.AddRange(F(m.lossyScale));
+            return result.ToArray();
+        });
+        Api("native/boundsPoint", 9, f =>
+        {
+            var bounds = new Bounds(V3(f, 0), V3(f, 3));
+            var point = V3(f, 6);
+            var result = new List<float> { bounds.SqrDistance(point), bounds.Contains(point) ? 1f : 0f };
+            result.AddRange(F(bounds.ClosestPoint(point)));
+            return result.ToArray();
+        });
     }
 
     // ------------------------------------------------------------------ randomized operands
