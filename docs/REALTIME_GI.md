@@ -27,9 +27,11 @@ the realtime lightmap with an exponent of 1/2.2 (`unity_DynamicLightmap_HDR` (1,
 of (1, 1)), `DynamicGI.SetEmissive` takes its color as a gamma color in both, and the sky the
 environment and the ambient probe are drawn from writes gamma-encoded colors, which are taken
 as such (tests/projects/realtimegi `--color-space gamma`: the Room's lightmaps, frames and
-probes match, as loaded, with its point light moved, in the three emission cases and with the
-ambient color, a procedural sky and a gradient as the environment; its other cases are not
-measured there).
+probes match, as loaded, with its point light moved, brighter, with bounce intensity 3, with
+the indirect scale 2, in the three emission cases, with an albedo change, with a spot and a
+directional light, and with the ambient color, a procedural sky at ambient intensities 1 and 2,
+a gradient and a script's cube as the environment; the update threshold's and indirect scale's
+defaults are a linear project's; the rest of the linear sequence is not measured there).
 
 ## Documented contract (6000.0)
 
@@ -408,7 +410,8 @@ it takes a cube still kept).
 
 Not measured: sky materials other than the procedural one
 (they are drawn by the same capture), and in gamma-space projects every environment case but
-the ambient color, a procedural sky and a gradient ([Open](#open)).
+the ambient color, a procedural sky at ambient intensities 1 and 2, a gradient and a script's
+cube ([Open](#open)).
 
 Unbound (`Graphics/RealtimeGIEnvironment.cs`) keeps the cube and what it was made from (the
 ambient mode and colors, or the skybox material and its change count, the ambient intensity and
@@ -1026,11 +1029,10 @@ measure):
   merged from several scenes, and systems that reference another scene's systems.
 - Directionality: texel copies, several directional systems, a lightmaps mode a script changes
   ([Directionality](#directionality)).
-- Gamma-space projects: what the gamma sequence of the probe does not record (it has the Room as
-  loaded, with its point light moved, the three emission cases, the ambient color, a procedural
-  sky and a gradient: not the light intensity, bounce intensity, indirect scale, albedo, update
-  threshold, spot and directional cases, the sky's ambient intensity, a script's cube, nor any
-  other case or scene of the linear sequence), directionality, and a render pipeline.
+- Gamma-space projects: what the gamma sequence of the probe does not record (it has the Room's
+  light, emission, albedo and environment cases: not the cases without UpdateGIMaterials or
+  UpdateEnvironment, the other skybox, environment-data and ambient-probe cases, nor the other
+  scenes of the linear sequence), directionality, and a render pipeline.
 - Devices: drawn through Vulkan the material textures lack each chart's last corner texel, and
   the Editor's own Vulkan capture differs from its OpenGL Core one; no rule covers both yet
   ([Material inputs](#material-inputs)).
