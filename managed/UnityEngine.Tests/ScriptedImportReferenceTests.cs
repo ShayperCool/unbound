@@ -70,7 +70,8 @@ namespace UnityEngine.Tests
             {
                 var added = new List<(string, Object)> { ("Top", tree), ("Extra", extra), ("Second", second), ("Mesh", mesh) };
                 var ids = new Dictionary<long, Object>();
-                var given = ScriptedImports.HierarchyFileIds(added, ids);
+                var repeated = new List<(string, string)>();
+                var given = ScriptedImports.HierarchyFileIds(added, ids, repeated);
                 Assert.Same(tree, ids[-5627406255049210624L]);
                 Assert.Same(tree.transform, ids[7289620436457526320L]);
                 Assert.Same(body, ids[-484973370338017211L]);
@@ -90,6 +91,8 @@ namespace UnityEngine.Tests
                 Assert.Contains(extra, given);
                 Assert.DoesNotContain(mesh, given);
                 Assert.Equal(18, ids.Count);
+                // The paths the Editor warns about ("Identifier uniqueness violation"), once each.
+                Assert.Equal(new List<(string, string)> { ("Top/Tree/Twin", "GameObject"), ("Top/Tree/Twin/Transform", "Transform") }, repeated);
                 Assert.Equal(-5523277661179574252L, ScriptedImports.FileId("Mesh", mesh));
             }
             finally
