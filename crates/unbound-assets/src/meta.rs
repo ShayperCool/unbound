@@ -296,6 +296,31 @@ mod tests {
     use super::*;
 
     #[test]
+    fn reads_the_importer_from_an_assets_meta_file() {
+        let dir = std::env::temp_dir().join(format!("unbound-meta-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let tree = dir.join("Tree.st9");
+        std::fs::write(&tree, [0xff, 0xfe, 0x00]).unwrap();
+        std::fs::write(
+            dir.join("Tree.st9.meta"),
+            format!("fileFormatVersion: 2\nScriptedImporter:\n  script: {{fileID: 12405, guid: {BUILTIN_SCRIPT_GUID}, type: 0}}\n"),
+        )
+        .unwrap();
+        assert_eq!(unsupported_importer_of(&tree), Some("SpeedTree9Importer"));
+        // Without a meta, or with another importer's.
+        assert_eq!(unsupported_importer_of(&dir.join("Missing.st9")), None);
+        let sheet = dir.join("Style.uss");
+        std::fs::write(&sheet, "a {}").unwrap();
+        std::fs::write(
+            dir.join("Style.uss.meta"),
+            format!("fileFormatVersion: 2\nScriptedImporter:\n  script: {{fileID: 12385, guid: {BUILTIN_SCRIPT_GUID}, type: 0}}\n"),
+        )
+        .unwrap();
+        assert_eq!(unsupported_importer_of(&sheet), None);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn names_the_editors_own_importers_unbound_does_not_implement() {
         let meta = |guid: &str, id: i64| {
             unbound_yaml::parse_value(&format!(
