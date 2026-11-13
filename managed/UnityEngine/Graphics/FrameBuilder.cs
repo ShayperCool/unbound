@@ -2305,6 +2305,8 @@ namespace UnityEngine
         public static bool softVegetation { get; set; }
         public static bool realtimeReflectionProbes { get; set; }
         public static bool billboardsFaceCameraPosition { get; set; }
+        /// <summary>Details at random points of their samples instead of the R2 sequence's.</summary>
+        public static bool useLegacyDetailDistribution { get; set; }
         public static int particleRaycastBudget { get; set; } = 4096;
         public static int realtimeGICPUUsage { get; set; } = 25;
         public static SkinWeights skinWeights { get; set; } = SkinWeights.FourBones;
@@ -2362,6 +2364,7 @@ namespace UnityEngine
             softVegetation = B("softVegetation", softVegetation);
             realtimeReflectionProbes = B("realtimeReflectionProbes", realtimeReflectionProbes);
             billboardsFaceCameraPosition = B("billboardsFaceCameraPosition", billboardsFaceCameraPosition);
+            useLegacyDetailDistribution = B("useLegacyDetailDistribution", useLegacyDetailDistribution);
             vSyncCount = I("vSyncCount", vSyncCount);
             realtimeGICPUUsage = I("realtimeGICPUUsage", realtimeGICPUUsage);
             lodBias = F("lodBias", lodBias);
