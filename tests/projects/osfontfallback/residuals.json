@@ -1,0 +1,8 @@
+{
+  "A family without a Regular face: the Editor takes a face in the order its own font listing happens to hold (Avenir Medium, Futura Condensed ExtraBold, Hiragino Sans W8, Al Bayan Bold), which no documented rule fixes; Unbound takes the first face it lists. Open until a rule is known.": [
+    "enginefont/Al Bayan",
+    "enginefont/Avenir",
+    "enginefont/Futura",
+    "enginefont/Hiragino Sans"
+  ]
+}
