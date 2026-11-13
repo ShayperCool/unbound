@@ -797,6 +797,23 @@ public static class TexFormatsProbe
         }
     }
 
+    static void OpaquePadding()
+    {
+        var rgb = Target(Descriptor(GraphicsFormat.R16G16B16_SNorm));
+        var rgba = Target(Descriptor(GraphicsFormat.R16G16B16A16_SNorm));
+        rgb.Create(); rgba.Create();
+        var previous = RenderTexture.active;
+        Graphics.SetRenderTarget(new[] { rgb.colorBuffer, rgba.colorBuffer }, rgb.depthBuffer);
+        GL.Viewport(new Rect(0, 0, 2, 1));
+        GL.Clear(false, true, new Color(.5f, .25f, -.5f, .25f));
+        RenderTexture.active = previous;
+        Try("rt.padding.mrt.rgb", () => Sampled(rgb, false));
+        Try("rt.padding.mrt.rgba", () => Sampled(rgba, false));
+        var grab = Own(new Material(Shader.Find("Probe/TexFormatsGrab")));
+        Graphics.Blit(null, rgb, grab);
+        Try("rt.padding.grab", () => Sampled(rgb, false));
+    }
+
     public static void Record()
     {
         Rows.Clear();
@@ -829,6 +846,7 @@ public static class TexFormatsProbe
                          ("tex.R32_UInt", GraphicsFormat.R32_UInt, false), ("tex.R32G32B32A32_SInt", GraphicsFormat.R32G32B32A32_SInt, true) })
                 if (Runs(key)) IntTexture(key, format, signed);
             Q58Cases();
+            if (Runs("rt.padding")) OpaquePadding();
         }
         catch (Exception e)
         {

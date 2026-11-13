@@ -2929,10 +2929,7 @@ impl UnityRenderer {
                     if clear_color {
                         self.mark_msaa_written(&target);
                     }
-                    let mut color = resources::unorm8_clear(target.format, color);
-                    if target.alpha_one {
-                        color[3] = 1.0;
-                    }
+                    let color = resources::unorm8_clear(target.format, color);
                     let clear_depth =
                         flags & (commands::clear::DEPTH | commands::clear::STENCIL) != 0;
                     let viewport = self.state.viewport;
@@ -2976,6 +2973,10 @@ impl UnityRenderer {
                                 clear_depth,
                             },
                         );
+                        let mut color = color;
+                        if target.alpha_one {
+                            color[3] = 1.0;
+                        }
                         let color = if integer {
                             let c = resources::integer_clear(
                                 target.format,

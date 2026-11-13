@@ -1400,7 +1400,7 @@ pub fn upload_texture_with(
             let mut usage = wgpu::TextureUsages::TEXTURE_BINDING
                 | wgpu::TextureUsages::COPY_DST
                 | wgpu::TextureUsages::COPY_SRC;
-            if render_target {
+            if render_target || t.format == texture_format::RGB16_SNORM {
                 usage |= wgpu::TextureUsages::RENDER_ATTACHMENT;
             }
             if t.random_write {
