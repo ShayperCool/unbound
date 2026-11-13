@@ -352,6 +352,15 @@ class LandTrain:
                 automatic = self.api.automatic_checks(path, self.commit_paths(entry['head']),
                                                        entry['probes'], entry.get('probe_environment', {}),
                                                        full=entry['full'])
+                # Candidate metadata includes earlier branches. Keep new checks
+                # attached to their owner, while retaining this branch's original
+                # and inherited requirements across failure isolation.
+                own = {self.api.automatic_key(row[1], row[3]) for row in entry.get('automatic', [])}
+                earlier = {self.api.automatic_key(row[1], row[3]) for item in accepted
+                           for row in item.get('automatic', [])}
+                automatic = [row for row in automatic
+                             if self.api.automatic_key(row[1], row[3]) not in earlier
+                             or self.api.automatic_key(row[1], row[3]) in own]
                 automatic = self.api.automatic_union([entry.get('automatic', []), automatic])
             except (SystemExit, ValueError) as error:
                 self.reject(entry, 2, f'automatic probe selection failed: {error}')

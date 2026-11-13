@@ -10,6 +10,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from unittest import mock
@@ -409,6 +410,10 @@ def gate(root, base, probes, full, branch, **options):
         real = land.Gate(root, base, probes, full, log, releases=options['releases'],
                          probe_owners=options.get('probe_owners'))
         real.run_probes()
+    automatic = [row for row in options.get('automatic', []) if row[1].startswith('python3 -c ')]
+    if automatic:
+        real = land.Gate(root, base, [], full, log, automatic=automatic)
+        real.run_automatic_probes()
     marker = land.STATE/'gate-running'
     marker.write_text('running')
     if (land.STATE/'pause-gate').exists():
@@ -994,6 +999,34 @@ class TrainIntegrationTests(unittest.TestCase):
         combined_logs = list((self.state/'logs').glob('*.probes/003.log'))
         self.assertTrue(any('last finished' in path.read_text() for path in combined_logs))
 
+    def test_parallel_automatic_failure_returns_only_its_requesting_branch(self):
+        for name in ('left', 'right'):
+            project = self.repo/'tests/projects'/name
+            (project/'Reference').mkdir(parents=True)
+            (project/'Reference/control.json').write_text('{}\n')
+            (project/'gate.json').write_text(json.dumps({'commands': ['true']}))
+        self.git('add', '.')
+        self.git('commit', '-qm', 'test(agents): automatic parallel fixtures')
+        commands = [shlex.join(['python3', '-c', source]) for source in
+                    ('print("first automatic finished")',
+                     'import sys; print("automatic failure detail"); sys.exit(23)',
+                     'import time; time.sleep(.1); print("last automatic finished")')]
+        paths = [self.branch(branch, {f'tests/projects/{project}/gate.json': json.dumps(
+                    {'commands': ['true'], 'fast_commands': [command]})})
+                 for branch, project, command in zip(('first', 'broken', 'last'),
+                                                     ('left', 'control', 'right'), commands)]
+        with self.hold():
+            workers = []
+            for count, path in enumerate(paths, 1):
+                workers.append(self.start(path))
+                self.registered(count)
+        results = self.finish(workers)
+        self.assertEqual([code for code, _ in results], [0, 5, 0], results)
+        self.assertEqual([row['branch'] for row in self.rows()], ['first', 'last'])
+        logs = [path.read_text() for path in (self.state/'logs').glob('*.automatic/*.log')]
+        self.assertTrue(any('automatic failure detail' in text for text in logs))
+        self.assertTrue(any('last automatic finished' in text for text in logs))
+
     def test_rejected_ancestor_checks_follow_its_commits_in_a_stacked_branch(self):
         first = self.branch('first', {'a.txt': 'ok'})
         bad = self.branch('bad', {'bad-probe.txt': 'fail'})
@@ -1312,6 +1345,59 @@ class AutomaticProbeTests(unittest.TestCase):
                 self.gate.run_automatic_probes()
         self.assertEqual(error.exception.code, 5)
         self.assertEqual(step.call_count, 1)
+
+    def test_automatic_drivers_overlap_with_separate_logs_and_releases(self):
+        checks = []
+        for name, peer, release in [('a', 'b', '6000.0.71f1'), ('b', 'a', '2022.3.10f1')]:
+            source = (f'from pathlib import Path; import time,os; Path("{name}.started").touch(); '
+                      f'end=time.monotonic()+3\n'
+                      f'while not Path("{peer}.started").exists() and time.monotonic()<end: time.sleep(.01)\n'
+                      f'assert Path("{peer}.started").exists(), "no overlap"\n'
+                      f'print("{name}:"+os.environ["UNBOUND_PROBE_UNITY_VERSION"])')
+            checks.append((name, shlex.join([sys.executable, '-c', source]), 'fast check', release))
+        self.gate.automatic = checks
+        self.gate.run_automatic_probes()
+        logs = self.gate.log.with_suffix('.automatic')
+        first, second = (logs/'001.log').read_text(), (logs/'002.log').read_text()
+        self.assertIn('\na:6000.0.71f1\n', first)
+        self.assertNotIn('\nb:2022.3.10f1\n', first)
+        self.assertIn('\nb:2022.3.10f1\n', second)
+
+    def test_automatic_exclusive_metadata_drains_both_sides(self):
+        self.probe('c', {'commands': ['true'], 'exclusive': True})
+        self.gate.automatic = [(name, name+'-command', 'fast check') for name in ('a', 'b', 'c', 'd')]
+        barrier, lock, done = threading.Barrier(2), threading.Lock(), set()
+        def step(label, *args, **kwargs):
+            name = label.split()[1]
+            if name in ('a', 'b'):
+                barrier.wait(3)
+            elif name == 'c':
+                self.assertTrue({'a', 'b'} <= done)
+            else:
+                self.assertIn('c', done)
+            with lock:
+                done.add(name)
+            return 0
+        with mock.patch.object(self.gate, 'step', side_effect=step):
+            self.gate.run_automatic_probes()
+        self.assertEqual(done, {'a', 'b', 'c', 'd'})
+
+    def test_automatic_budget_includes_queued_time(self):
+        commands = [shlex.join([sys.executable, '-c',
+                    f'from pathlib import Path; import time; Path("{name}.started").touch(); time.sleep(30)'])
+                    for name in ('first', 'second', 'third')]
+        self.gate.automatic = [(name, command, 'fast check')
+                               for name, command in zip(('first', 'second', 'third'), commands)]
+        began = time.monotonic()
+        with mock.patch.object(land, 'EXPLICIT_PROBE_WORKERS', 1), \
+             mock.patch.object(land, 'AUTO_PROBE_BUDGET_SECONDS', .15), \
+             mock.patch.object(land, 'AUTO_PROBE_TIMEOUT_SECONDS', .08), \
+             self.assertRaises(SystemExit) as error:
+            self.gate.run_automatic_probes()
+        self.assertEqual(error.exception.code, 5)
+        self.assertLess(time.monotonic()-began, 3)
+        self.assertFalse((self.root/'third.started').exists())
+        self.assertIn('budget exhausted', (self.gate.log.with_suffix('.automatic')/'003.log').read_text())
 
     def test_timeout_stops_the_process_tree_and_reports_failure(self):
         command = shlex.join([sys.executable, '-c', 'import time; time.sleep(30)'])

@@ -130,7 +130,7 @@ tools/validation/README.md for why that is unsafe).
      run through the suite against the current sheriff baseline when present, preserving its
      existing failures and regression rules. Without a baseline every check must pass.
      Recipe lookup uses the candidate checkout in a guarded process with a printed 10 s budget.
-     Automatic checks stay sequential and share a printed 600 s wall-clock budget, at most 300 s each. A timeout or
+     Automatic checks run in bounded parallel groups with declared exclusivity barriers and share a printed 600 s wall-clock budget, at most 300 s each. A timeout or
      exhausted budget fails the gate. Supply a complete declared recipe as explicit `--probe`
      commands, or a suite `--only` command, for longer checks. Exact explicit commands are not
      repeated. A train selects checks for each branch, then unites them by command and release
@@ -185,7 +185,7 @@ request makes the train run the full gate. Explicit probe commands run with at m
 drivers. Each driver still sends its own engine and build jobs through the heavy-job pool; do
 not wrap a whole driver in another heavy-job lease. No worker command changes are needed.
 
-Each command gets a separate `<gate-log>.probes/NNN.log`. Suite defaults include the process
+Each explicit command gets a separate `<gate-log>.probes/NNN.log`; automatic commands use `<gate-log>.automatic/NNN.log`. Suite defaults include the process
 ID and current nanosecond timestamp, so concurrent suites cannot share their default output
 paths. Explicit labels keep their requested paths and must be unique. The gate log lists the full command,
 release, requesting branches and log path, then its exit code and the tail of any failed command.
@@ -221,7 +221,7 @@ refused, as in `contactevents3d`.
 Other private X display helpers and the audio reference recorder's named PulseAudio sink belong
 to reference recording. Gate commands cannot run those paths because the Editor guard refuses
 them. Audio gate captures use private run directories and virtual engine device layouts.
-Automatic checks remain sequential, with the same total 600 s wall-clock budget and 300 s limit
+Automatic checks use the same bounded driver pool and exclusivity barriers, with the same total 600 s wall-clock budget and 300 s limit
 per check. A touched recipe exceeding 300 s still fails with exit 5 unless every declared command
 is supplied explicitly, or an explicit suite invocation covers it. These jobs retain landing priority in the shared
 job pool. A passing train fast-forwards main through each branch, records one `landed.jsonl`

@@ -33,7 +33,8 @@ Gate:
     Guarded probes require Linux /proc and pidfd support; unsupported platforms fail explicitly.
 Automatic checks select affected probes through their files and gate.json engine_paths, plus
 static/short fast_commands on every code landing. Each train unites its branch selections and
-runs them within one printed 600s budget, at most 300s per check. Explicit --probe commands
+runs them in bounded parallel groups within one printed 600s budget, at most 300s per check.
+Exclusive recipes remain barriers. Each automatic check gets a separate log. Explicit --probe commands
 retain their existing time limits. Suite recipes keep the sheriff baseline's regression policy.
 Changes that touch only Markdown/docs skip the build and tests. --full forces every step
 (all Rust crates).
@@ -463,11 +464,8 @@ class Gate:
             libraries += os.pathsep+self.env['LD_LIBRARY_PATH']
         self.env.update(UNBOUND=str(runtime/'unbound'), UNBOUND_CLI=str(runtime/'unbound'), UNBOUND_RUNTIME=str(runtime),
                         UNBOUND_MANAGED_DIR=str(runtime/'managed'), LD_LIBRARY_PATH=libraries)
-    def run_probes(self):
-        """Bounded parallel drivers; exclusive recipes drain the batch on either side."""
-        if not self.probes:
-            return
-        require_process_watch()
+
+    def probe_specs(self):
         from suite import gate_spec, NoRecipe
         projects = self.worktree/'tests/projects'
         specs = {}
@@ -476,6 +474,33 @@ class Gate:
             if isinstance(spec, NoRecipe):
                 die(2, f'{path}: {spec.reason}')
             specs[path.parent.name] = spec
+        return specs
+
+    def probe_exclusive(self, probe, specs, names=()):
+        names = set(names) | set(PROBE_DIR.findall(probe))
+        names.update(name for name, spec in specs.items() if probe in spec.get('commands', []))
+        argv = suite_arguments(probe)
+        if argv is not None:
+            # Inspect only selection flags, leaving shell redirection, expansions and
+            # unrelated options to the command itself. Unknown selections are conservative.
+            selection = None
+            for position, token in enumerate(argv):
+                if token == '--only':
+                    selection = argv[position+1] if position+1 < len(argv) else None
+                elif token.startswith('--only='):
+                    selection = token.split('=', 1)[1]
+            names.update(selection.split(',') if selection and re.fullmatch(r'[A-Za-z0-9_.-]+(?:,[A-Za-z0-9_.-]+)*', selection) else specs)
+        elif 'tools/agents/suite.py' in probe:
+            # Shell-wrapped suites may select any declared exclusive recipe.
+            names.update(specs)
+        return any(specs.get(name, {}).get('exclusive', False) for name in names)
+
+    def run_probes(self):
+        """Bounded parallel drivers; exclusive recipes drain the batch on either side."""
+        if not self.probes:
+            return
+        require_process_watch()
+        specs = self.probe_specs()
         commands = []
         logs = self.log.with_suffix('.probes')
         logs.mkdir(parents=True, exist_ok=True)
@@ -484,38 +509,38 @@ class Gate:
                 release = self.releases[index-1] if self.releases is not None else probe_release(probe, self.worktree, self.env)
             except ValueError as error:
                 die(2, str(error))
-            names = set(PROBE_DIR.findall(probe))
-            names.update(name for name, spec in specs.items() if probe in spec.get('commands', []))
-            argv = suite_arguments(probe)
-            if argv is not None:
-                # Inspect only selection flags, leaving shell redirection, expansions and
-                # unrelated options to the command itself. Unknown selections are conservative.
-                selection = None
-                for position, token in enumerate(argv):
-                    if token == '--only':
-                        selection = argv[position+1] if position+1 < len(argv) else None
-                    elif token.startswith('--only='):
-                        selection = token.split('=', 1)[1]
-                names.update(selection.split(',') if selection and re.fullmatch(r'[A-Za-z0-9_.-]+(?:,[A-Za-z0-9_.-]+)*', selection) else specs)
-            elif 'tools/agents/suite.py' in probe:
-                # Shell-wrapped suites may select any declared exclusive recipe.
-                names.update(specs)
-            exclusive = any(specs.get(name, {}).get('exclusive', False) for name in names)
+            exclusive = self.probe_exclusive(probe, specs)
             command = probe
             owners = self.probe_owners[index-1] if self.probe_owners else []
             name = f'probe {index} ({release})' + (f' [{", ".join(owners)}]' if owners else '')
             log = logs/f'{index:03d}.log'
             commands.append((name, command, release, log, exclusive))
+        self.execute_probe_commands(commands)
+
+    def execute_probe_commands(self, commands, *, deadline=None):
+        """Shared bounded drivers; engine jobs keep their existing pool admission."""
+        if not commands:
+            return
+        require_process_watch()
+        for name, command, _, log, exclusive in commands:
+            log.touch(exist_ok=True)
             with self.log.open('a') as out:
-                out.write(f'\n=== {name}: {probe}\nlog: {log}'
+                out.write(f'\n=== {name}: {command}\nlog: {log}'
                           + (' (exclusive)' if exclusive else '') + '\n')
-            print(f'land: {name}: {probe}; log {log}' + (' (exclusive)' if exclusive else ''), flush=True)
+            print(f'land: {name}: {command}; log {log}' + (' (exclusive)' if exclusive else ''), flush=True)
 
         def execute(row):
             name, command, release, log, _ = row
+            options = {}
+            if deadline is not None:
+                remaining = deadline-time.monotonic()
+                if remaining <= 0:
+                    log.write_text(f'automatic probe budget exhausted before {name}\n')
+                    return 124
+                options['timeout'] = min(remaining, AUTO_PROBE_TIMEOUT_SECONDS)
             return self.step(name, command, shell=True,
                              env=dict(self.env, **{RELEASE_VARIABLE: release, NO_EDITOR: '1'}),
-                             guard_editor=True, log=log)
+                             guard_editor=True, log=log, **options)
 
         results = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=EXPLICIT_PROBE_WORKERS) as pool:
@@ -544,29 +569,30 @@ class Gate:
                     failed.append(name)
                     out.write(tail(log)+'\n')
         if failed:
-            self.fail('; '.join(failed))
+            advice = '; longer checks can be supplied with --probe' if deadline is not None else ''
+            self.fail('; '.join(failed)+advice)
 
     def run_automatic_probes(self):
-        """Short checks and affected recipes share one enforced wall-clock budget."""
+        """Parallel checks share wall-clock and per-command limits, with barriers."""
         print(f'land: automatic probes: {len(self.automatic)} checks, '
               f'budget {AUTO_PROBE_BUDGET_SECONDS}s total, '
               f'{AUTO_PROBE_TIMEOUT_SECONDS}s per check; explicit --probe commands are separate', flush=True)
-        deadline = time.monotonic() + AUTO_PROBE_BUDGET_SECONDS
-        for row in self.automatic:
+        deadline = time.monotonic()+AUTO_PROBE_BUDGET_SECONDS
+        specs = self.probe_specs()
+        logs = self.log.with_suffix('.automatic')
+        logs.mkdir(parents=True, exist_ok=True)
+        commands = []
+        for index, row in enumerate(self.automatic, 1):
             name, command, reason = row[:3]
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                die(5, f'automatic probe budget exhausted before {name}; '
-                       'run the full recipe with --probe to validate a longer check explicitly')
             release = row[3] if len(row) > 3 else probe_release(f'tests/projects/{name}', self.worktree)
+            exclusive = self.probe_exclusive(command, specs, (name,))
             argv = suite_arguments(command)
             if argv is not None:
                 command = shlex.join([sys.executable, 'tools/agents/suite.py', *without_suite_label(argv),
                                       '--label', f'land-{os.getpid()}-{time.time_ns()}-{name}'])
-            if self.step(f'auto {name} ({reason}, {release})', command, shell=True,
-                         env=dict(self.env, **{RELEASE_VARIABLE: release, NO_EDITOR: '1'}),
-                         guard_editor=True, timeout=min(remaining, AUTO_PROBE_TIMEOUT_SECONDS)):
-                self.fail(f'automatic probe {name}; longer checks can be supplied with --probe')
+            commands.append((f'auto {name} ({reason}, {release})', command, release,
+                             logs/f'{index:03d}.log', exclusive))
+        self.execute_probe_commands(commands, deadline=deadline)
 
     def stubs(self, cli):
         """gen-stubs with the gate's build: the hand-written code must build without stubs and the
