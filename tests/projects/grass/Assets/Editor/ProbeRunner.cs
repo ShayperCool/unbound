@@ -122,6 +122,7 @@ public static class ProbeRunner
 
         var data = new TerrainData();
         AssetDatabase.CreateAsset(data, "Assets/Grass/Refusals.asset");
+        SmallMaps(data);
         data.terrainLayers = new[] { AssetDatabase.LoadAssetAtPath<TerrainLayer>("Assets/Grass/Ground.terrainlayer") };
         data.heightmapResolution = 33;
         data.size = new Vector3(32f, 2f, 32f);
@@ -159,6 +160,14 @@ public static class ProbeRunner
         terrain.transform.position = new Vector3(-400f, 0f, 0f);
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/Density.unity");
         AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>One layer covers the whole terrain at any splat resolution: the smallest maps keep
+    /// the assets small.</summary>
+    static void SmallMaps(TerrainData data)
+    {
+        data.alphamapResolution = 16;
+        data.baseMapResolution = 16;
     }
 
     /// <summary>The added terrains' one layer: a smooth earthy gradient in 8 m tiles (so that
@@ -212,6 +221,7 @@ public static class ProbeRunner
     {
         var data = new TerrainData();
         AssetDatabase.CreateAsset(data, $"Assets/Grass/{name}.asset");
+        SmallMaps(data);
         data.terrainLayers = new[] { ground };
         data.heightmapResolution = 33;
         data.size = new Vector3(32f, 6f, 32f);

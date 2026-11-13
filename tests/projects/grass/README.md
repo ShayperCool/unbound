@@ -1,16 +1,17 @@
 # Grass (terrain details) probe
 
-Two terrains with the same detail prototypes (a grass texture, the same as billboards, a cube
-mesh drawn without and with instancing) and painted layers: `Counts` scatters by instance counts,
+Two terrains with the same detail prototypes (a grass texture, the same as billboards, a cube mesh
+drawn without and with instancing) and painted layers: `Counts` scatters by instance counts,
 `Coverage` by coverage. After their images the probe loads the scene `Density` additively (so that
 nothing of it reaches those images): `DensityCounts` and `DensityCoverage` hold prototypes scaled by
 detailObjectDensity (also recorded at a third density), a lopsided slab mesh fully and partly
 ground-aligned, and two prototypes the Editor refuses; `Refusals` holds one refused prototype per
-check; these three terrains have one terrain layer. What `Validate` says of each prototype is recorded, the density terrains' instances again
-with QualitySettings.useLegacyDetailDistribution, and the messages the terrain API logs. `GrassProbe` records Mathf.PerlinNoise samples, each terrain's detail data
-(resolution, patches, prototypes, layers read back, coverage), every patch's and layer's
-instances from `ComputeDetailInstanceTransforms` at two densities, and an image of each terrain
-(waving off in the data).
+check; these three terrains have one terrain layer. What `Validate` says of each prototype is
+recorded, the density terrains' instances again with QualitySettings.useLegacyDetailDistribution,
+and the messages the terrain API logs. `GrassProbe` records Mathf.PerlinNoise samples, each
+terrain's detail data (resolution, patches, prototypes, layers read back, coverage), every patch's
+and layer's instances from `ComputeDetailInstanceTransforms` at two densities, and an image of each
+terrain (waving off in the data).
 
 `Assets/Editor/GrassExperiments.cs` holds the edit-mode experiments that measured the placement
 (`-executeMethod GrassExperiments.Run` with `GRASS_EXPERIMENT_OUT`, and `GrassExperiments.Perlin`).
@@ -36,6 +37,7 @@ Run Unbound and compare:
 
 Instance counts and coverage match exactly (positions, sizes, turns, bounds) but for ground-aligned
 meshes' turns and bounds, the bounds of meshes drawn without instancing, and prototypes scaled by
-detailObjectDensity (the listed expected differences). The images of the first two terrains differ mostly in the layerless terrains' shading: the
-Editor's checker comes out bluer and a little darker than Unbound's (the ambient probe is the same; how the Editor
-lights a terrain without layers is not known yet).
+detailObjectDensity (the listed expected differences). The images of the first two terrains differ
+mostly in the layerless terrains' shading: the Editor's checker comes out bluer and a little darker
+than Unbound's (the ambient probe is the same; how the Editor lights a terrain without layers is not
+known yet).
