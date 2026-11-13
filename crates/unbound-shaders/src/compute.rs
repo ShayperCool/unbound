@@ -500,6 +500,7 @@ fn fit_kernel(
             }
         }
     }
+    crate::fit::order_types(&mut module);
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
         naga::valid::Capabilities::all(),

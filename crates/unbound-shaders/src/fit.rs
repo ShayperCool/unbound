@@ -1361,6 +1361,8 @@ pub(crate) fn fit(
 
     name_deep_expressions(&mut vertex);
     name_deep_expressions(&mut fragment);
+    order_types(&mut vertex);
+    order_types(&mut fragment);
     let vertex_wgsl = to_wgsl(&vertex).context("vertex program")?;
     let fragment_wgsl = to_wgsl(&fragment).context("fragment program")?;
     let vertex_entry = wgsl_entry(&vertex_wgsl, naga::ShaderStage::Vertex)?;
@@ -2418,6 +2420,147 @@ fn name_deep_expressions(module: &mut Module) {
     }
 }
 
+/// Puts the module's types in dependency order when a fitting pass made one refer to a later one
+/// (a uniform block padded with an array type inserted after the block): naga requires every type
+/// to come after the types it uses. Every type handle in the module is remapped; a module already
+/// in order is left as it is.
+pub(crate) fn order_types(module: &mut Module) {
+    let deps = |inner: &TypeInner| -> Vec<Handle<Type>> {
+        match *inner {
+            TypeInner::Pointer { base, .. }
+            | TypeInner::Array { base, .. }
+            | TypeInner::BindingArray { base, .. } => vec![base],
+            TypeInner::Struct { ref members, .. } => members.iter().map(|m| m.ty).collect(),
+            _ => Vec::new(),
+        }
+    };
+    if module
+        .types
+        .iter()
+        .all(|(h, ty)| deps(&ty.inner).iter().all(|d| d.index() < h.index()))
+    {
+        return;
+    }
+    // Depth first, each type after the types it uses, otherwise in the original order.
+    let count = module.types.len();
+    let mut order = Vec::with_capacity(count);
+    let mut state = vec![0u8; count]; // 0 unvisited, 1 on the stack, 2 placed
+    fn visit(
+        h: Handle<Type>,
+        types: &naga::UniqueArena<Type>,
+        deps: &dyn Fn(&TypeInner) -> Vec<Handle<Type>>,
+        state: &mut [u8],
+        order: &mut Vec<Handle<Type>>,
+    ) {
+        if state[h.index()] != 0 {
+            return;
+        }
+        state[h.index()] = 1;
+        for d in deps(&types[h].inner) {
+            visit(d, types, deps, state, order);
+        }
+        state[h.index()] = 2;
+        order.push(h);
+    }
+    let handles: Vec<Handle<Type>> = module.types.iter().map(|(h, _)| h).collect();
+    for &h in &handles {
+        visit(h, &module.types, &deps, &mut state, &mut order);
+    }
+    let mut map: Vec<Option<Handle<Type>>> = vec![None; count];
+    let mut types = naga::UniqueArena::new();
+    for old in order {
+        let mut ty = module.types[old].clone();
+        let remap = |h: &mut Handle<Type>| *h = map[h.index()].expect("dependency placed first");
+        match ty.inner {
+            TypeInner::Pointer { ref mut base, .. }
+            | TypeInner::Array { ref mut base, .. }
+            | TypeInner::BindingArray { ref mut base, .. } => remap(base),
+            TypeInner::Struct {
+                ref mut members, ..
+            } => members.iter_mut().for_each(|m| remap(&mut m.ty)),
+            _ => {}
+        }
+        let span = module.types.get_span(old);
+        map[old.index()] = Some(types.insert(ty, span));
+    }
+    module.types = types;
+    let m = |h: &mut Handle<Type>| *h = map[h.index()].unwrap();
+    let expressions = |exprs: &mut naga::Arena<Expression>| {
+        for (_, e) in exprs.iter_mut() {
+            match e {
+                Expression::ZeroValue(ty)
+                | Expression::Compose { ty, .. }
+                | Expression::AtomicResult { ty, .. }
+                | Expression::WorkGroupUniformLoadResult { ty }
+                | Expression::SubgroupOperationResult { ty } => m(ty),
+                _ => {}
+            }
+        }
+    };
+    let function = |f: &mut naga::Function| {
+        f.arguments.iter_mut().for_each(|a| m(&mut a.ty));
+        if let Some(r) = f.result.as_mut() {
+            m(&mut r.ty);
+        }
+        for (_, l) in f.local_variables.iter_mut() {
+            m(&mut l.ty);
+        }
+        expressions(&mut f.expressions);
+    };
+    for (_, c) in module.constants.iter_mut() {
+        m(&mut c.ty);
+    }
+    for (_, o) in module.overrides.iter_mut() {
+        m(&mut o.ty);
+    }
+    for (_, g) in module.global_variables.iter_mut() {
+        m(&mut g.ty);
+    }
+    expressions(&mut module.global_expressions);
+    for (_, f) in module.functions.iter_mut() {
+        function(f);
+    }
+    for e in module.entry_points.iter_mut() {
+        function(&mut e.function);
+        if let Some(mesh) = e.mesh_info.as_mut() {
+            m(&mut mesh.vertex_output_type);
+            m(&mut mesh.primitive_output_type);
+        }
+    }
+    let special = &mut module.special_types;
+    for h in [
+        &mut special.ray_desc,
+        &mut special.ray_intersection,
+        &mut special.ray_vertex_return,
+        &mut special.external_texture_params,
+        &mut special.external_texture_transfer_function,
+    ]
+    .into_iter()
+    .flatten()
+    {
+        m(h);
+    }
+    for (_, h) in special.predeclared_types.iter_mut() {
+        m(h);
+    }
+    if let Some(docs) = module.doc_comments.as_mut() {
+        docs.types = std::mem::take(&mut docs.types)
+            .into_iter()
+            .map(|(mut h, v)| {
+                m(&mut h);
+                (h, v)
+            })
+            .collect();
+        docs.struct_members = std::mem::take(&mut docs.struct_members)
+            .into_iter()
+            .map(|((mut h, i), v)| {
+                m(&mut h);
+                ((h, i), v)
+            })
+            .collect();
+    }
+}
+
 /// WGSL for a fitted module, checked by reading it back: validation, and the uniform block at
 /// the offsets the uniforms are filled at.
 fn to_wgsl(module: &Module) -> Result<String> {
@@ -2838,6 +2981,53 @@ pub(crate) fn without_depth_output(wgsl: &str) -> Result<Option<(String, String)
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A uniform block whose second member lies 44 bytes after the first ends: the padding needs a
+    /// `vec4` array type the module does not have yet, which naga appends after the block's
+    /// struct; the types must be put back in dependency order before the module validates.
+    #[test]
+    fn padding_with_new_types_keeps_the_types_in_dependency_order() {
+        let mut module = naga::front::wgsl::parse_str(
+            "struct U { a: f32, b: vec4<f32> }
+             @group(0) @binding(0) var<uniform> u: U;
+             @fragment fn main() -> @location(0) vec4<f32> { return u.b * u.a; }",
+        )
+        .unwrap();
+        let (block, members, _) = module
+            .types
+            .iter()
+            .find_map(|(h, t)| match &t.inner {
+                TypeInner::Struct { members, span } => Some((h, members.clone(), *span)),
+                _ => None,
+            })
+            .unwrap();
+        let mut members = members;
+        members[1].offset = 48;
+        module.types.replace(
+            block,
+            Type {
+                name: Some("U".into()),
+                inner: TypeInner::Struct { members, span: 64 },
+            },
+        );
+        pad_member_gaps(&mut module).unwrap();
+        let padded = module.types.iter().find_map(|(h, t)| match t.inner {
+            TypeInner::Array { .. } => Some(h),
+            _ => None,
+        });
+        assert!(
+            padded.unwrap().index() > block.index(),
+            "the padding type comes after the block"
+        );
+        assert!(to_wgsl(&module).is_err());
+        order_types(&mut module);
+        let wgsl = to_wgsl(&module).unwrap();
+        assert!(wgsl.contains("array<vec4<f32>, 2>"), "{wgsl}");
+        // A module already in order is left as it is.
+        let before = format!("{:?}", module.types);
+        order_types(&mut module);
+        assert_eq!(before, format!("{:?}", module.types));
+    }
 
     fn fragment_spirv(source: &str) -> Vec<u32> {
         let compiler = shaderc::Compiler::new().unwrap();
