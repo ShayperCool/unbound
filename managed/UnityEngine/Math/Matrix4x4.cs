@@ -756,12 +756,6 @@ namespace UnityEngine
             return m;
         }
 
-        /// <summary>
-        /// A perspective projection; <paramref name="fov"/> is the vertical field of view in degrees.
-        /// The cotangent is the cosine over the sine of the half angle (converted as degrees / 360
-        /// doubled times PI), in single precision as in the Unity 6000.0.71f1 Editor
-        /// (tests/projects/floatrounding, native/matrixEdge).
-        /// </summary>
         /// <summary>The engine's own cameras', lights' and projectors' perspective, with a double-precision
         /// cotangent; Unity's scripting Matrix4x4.Perspective is <see cref="Perspective"/>.</summary>
         internal static Matrix4x4 PerspectiveDoublePrecision(float fov, float aspect, float zNear, float zFar)
@@ -773,6 +767,12 @@ namespace UnityEngine
             return m;
         }
 
+        /// <summary>
+        /// A perspective projection; <paramref name="fov"/> is the vertical field of view in degrees.
+        /// The cotangent is the cosine over the sine of the half angle (converted as degrees / 360
+        /// doubled times PI), in single precision as in the Unity 6000.0.71f1 Editor
+        /// (tests/projects/floatrounding, native/matrixEdge).
+        /// </summary>
         public static Matrix4x4 Perspective(float fov, float aspect, float zNear, float zFar)
         {
             float turns = fov * 0.5f / 360f;

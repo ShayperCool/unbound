@@ -294,7 +294,7 @@ namespace Unbound.Runtime.Playables
                 scale.z != 0f ? local.z / scale.z : 0f);
             float speed = angularVelocity.magnitude;
             var turn = speed == 0f || deltaTime == 0f ? Quaternion.identity
-                : Quaternion.Inverse(rotation) * Quaternion.AngleAxis(speed * deltaTime * Mathf.Rad2Deg, angularVelocity / speed) * rotation;
+                : Quaternion.Inverse(rotation) * QuaternionMath.AngleAxis(speed * deltaTime * Mathf.Rad2Deg, angularVelocity / speed) * rotation;
             return new RootMotionStep { Known = true, Delta = delta, Turn = turn };
         }
     }

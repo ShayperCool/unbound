@@ -955,7 +955,7 @@ namespace UnityEngine
                         // meshrot/* and bake/mesh, particlestreams mesh.*).
                         var meshRotation = rotation3D || p.m_Rotation.x != 0f || p.m_Rotation.y != 0f
                             ? Quaternion.Euler(p.m_Rotation * Mathf.Rad2Deg)
-                            : Quaternion.AngleAxis(p.m_Rotation.z * Mathf.Rad2Deg, p.m_AxisOfRotation);
+                            : QuaternionMath.AngleAxis(p.m_Rotation.z * Mathf.Rad2Deg, p.m_AxisOfRotation);
                         var meshTransform = AddMesh(r, m, position, streamSize, scale, localFrame, meshRotation, color, uvRect, toWorld.MultiplyVector(p.m_Velocity + p.m_AnimatedVelocity), view);
                         NoteMeshParticle(meshTransform);
                     }

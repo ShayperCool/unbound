@@ -552,7 +552,7 @@ namespace UnityEngine
                 var prefabScale = prefab.transform.localScale;
                 var scale = new Vector3(prefabScale.x * tree.widthScale, prefabScale.y * tree.heightScale, prefabScale.z * tree.widthScale);
                 var world = origin + Vector3.Scale(tree.position, data.size);
-                var rotation = Quaternion.AngleAxis(tree.rotation * Mathf.Rad2Deg, Vector3.up);
+                var rotation = QuaternionMath.AngleAxis(tree.rotation * Mathf.Rad2Deg, Vector3.up);
                 var axis = capsule.m_Direction == 0 ? Vector3.right : capsule.m_Direction == 2 ? Vector3.forward : Vector3.up;
                 float along = Mathf.Abs(Vector3.Dot(axis, scale));
                 float across = capsule.m_Direction == 1 ? Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z))

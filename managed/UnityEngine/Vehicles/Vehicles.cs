@@ -176,8 +176,8 @@ namespace Unbound.Runtime
             var local = BodyLocalTop(c, rb) - Up * maxCompression + Up * jounce;
             position = t.position + t.rotation * local;
             float steer = c.m_Simulated ? c.m_PoseSteer : 0f;
-            var q3 = Quaternion.AngleAxis(steer * Mathf.Rad2Deg, Up);
-            var q4 = Quaternion.AngleAxis(c.m_RotationAngle * Mathf.Rad2Deg, q3 * Right);
+            var q3 = QuaternionMath.AngleAxis(steer * Mathf.Rad2Deg, Up);
+            var q4 = QuaternionMath.AngleAxis(c.m_RotationAngle * Mathf.Rad2Deg, q3 * Right);
             rotation = t.rotation * (q4 * q3);
         }
 

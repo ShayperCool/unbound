@@ -504,14 +504,14 @@ namespace UnityEngine
 
         internal void RotateAroundInternal(Vector3 worldAxis, float radians)
         {
-            var q = Quaternion.AngleAxis(radians * Mathf.Rad2Deg, worldAxis);
+            var q = QuaternionMath.AngleAxis(radians * Mathf.Rad2Deg, worldAxis);
             rotation = q * rotation;
         }
 
         public void RotateAround(Vector3 point, Vector3 axis, float angle)
         {
             var worldPos = position;
-            var q = Quaternion.AngleAxis(angle, axis);
+            var q = QuaternionMath.AngleAxis(angle, axis);
             var dif = worldPos - point;
             dif = q * dif;
             worldPos = point + dif;

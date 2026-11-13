@@ -354,7 +354,7 @@ namespace Unbound.Runtime
             var at = p.position;
             var simulated = new Vector3(rb.m_CurrentPosition.x, rb.m_CurrentPosition.y, at.z);
             if (ReferenceEquals(p, t)) return simulated;
-            var turn = Quaternion.AngleAxis((rb.m_CurrentAngle - rb.m_SyncAngle) * Mathf.Rad2Deg, Vector3.forward);
+            var turn = QuaternionMath.AngleAxis((rb.m_CurrentAngle - rb.m_SyncAngle) * Mathf.Rad2Deg, Vector3.forward);
             return simulated + turn * (t.position - at);
         }
 

@@ -200,6 +200,37 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void EngineCallersKeepTheirOwnInverseAndPerspective()
+        {
+            // The camera stands for Unity's internals: its matrices come from the double-precision
+            // forms, while the scripting API returns the Editor's single-precision results.
+            var go = new GameObject("camera");
+            try
+            {
+                go.transform.SetPositionAndRotation(new Vector3(1.3f, -2.7f, 4.1f), Quaternion.Euler(17f, -29f, 13f));
+                var camera = go.AddComponent<Camera>();
+                camera.fieldOfView = 47.3f;
+                camera.aspect = 1.37f;
+                camera.nearClipPlane = 0.31f;
+                camera.farClipPlane = 917f;
+                Matrix4x4 world = Matrix4x4.Scale(new Vector3(1, 1, -1)) * go.transform.localToWorldMatrix.inverseDoublePrecision;
+                Assert.Equal(world, camera.worldToCameraMatrix);
+                Assert.Equal(world.inverseDoublePrecision, camera.cameraToWorldMatrix);
+                Assert.Equal(Matrix4x4.PerspectiveDoublePrecision(47.3f, 1.37f, 0.31f, 917f), camera.projectionMatrix);
+                Assert.NotEqual(Matrix4x4.Perspective(47.3f, 1.37f, 0.31f, 917f), camera.projectionMatrix);
+                bool inverseDiffers = false;
+                Matrix4x4 single = world.inverse, exact = world.inverseDoublePrecision;
+                for (int i = 0; i < 16; i++)
+                    inverseDiffers |= single[i] != exact[i];
+                Assert.True(inverseDiffers);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
         public void LogsTheEditorsDiagnosticsForDegenerateOperands()
         {
             var logs = new List<string>();

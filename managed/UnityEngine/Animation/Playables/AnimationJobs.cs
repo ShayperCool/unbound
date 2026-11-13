@@ -848,7 +848,7 @@ namespace Unbound.Runtime.Playables
         {
             float speed = AngularVelocity.magnitude;
             if (speed == 0f || deltaTime == 0f) return StartRotation;
-            return Quaternion.AngleAxis(speed * deltaTime * Mathf.Rad2Deg, AngularVelocity / speed) * StartRotation;
+            return QuaternionMath.AngleAxis(speed * deltaTime * Mathf.Rad2Deg, AngularVelocity / speed) * StartRotation;
         }
 
         /// <summary>The motion of the stream an input playable produced (just evaluated): a

@@ -128,7 +128,7 @@ namespace Unbound.Runtime
             if (Kind == ConstraintKind.LookAt)
             {
                 if (UseUpObject) up = (UpObject != null ? UpObject.position : Vector3.zero) - Owner.transform.position;
-                var look = Quaternion.LookRotationSilent(forward, up) * Quaternion.AngleAxis(-Roll, Vector3.forward);
+                var look = Quaternion.LookRotationSilent(forward, up) * QuaternionMath.AngleAxis(-Roll, Vector3.forward);
                 return LocalRotation(look) * Quaternion.Euler(RotationOffset);
             }
             switch (UpType)

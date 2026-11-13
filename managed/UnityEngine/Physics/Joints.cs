@@ -468,7 +468,7 @@ namespace UnityEngine
             else if (m_UseSpring)
             {
                 B3.ua3_d6_set_drive(m_Joint, 4, Mathf.Max(0f, m_Spring.spring), Mathf.Max(0f, m_Spring.damper), float.MaxValue, DriveFlags(m_UseAcceleration));
-                B3.ua3_d6_set_drive_target(m_Joint, Vector3.zero, Quaternion.AngleAxis(-m_Spring.targetPosition, Vector3.right), Vector3.zero, Vector3.zero);
+                B3.ua3_d6_set_drive_target(m_Joint, Vector3.zero, QuaternionMath.AngleAxis(-m_Spring.targetPosition, Vector3.right), Vector3.zero, Vector3.zero);
             }
             else
             {

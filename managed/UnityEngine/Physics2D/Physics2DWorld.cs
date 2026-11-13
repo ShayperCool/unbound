@@ -854,7 +854,7 @@ namespace Unbound.Runtime
             var p = t.position;
             if (!position.Equals(rb.m_SyncPosition)) t.position = new Vector3(position.x, position.y, p.z);
             float delta = angle - rb.m_SyncAngle;
-            if (delta != 0f) t.rotation = Quaternion.AngleAxis(delta * Mathf.Rad2Deg, Vector3.forward) * t.rotation;
+            if (delta != 0f) t.rotation = QuaternionMath.AngleAxis(delta * Mathf.Rad2Deg, Vector3.forward) * t.rotation;
             rb.m_SyncPosition = position;
             rb.m_SyncAngle = angle;
             rb.m_TransformVersion = t.m_Version;

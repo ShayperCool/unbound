@@ -1566,7 +1566,7 @@ namespace Unbound.Runtime
                     position = rb.m_CurrentPosition + B3.ua3_body_get_linear_velocity(rb.m_Body) * ahead;
                     var w = B3.ua3_body_get_angular_velocity(rb.m_Body);
                     float angle = w.magnitude * ahead;
-                    rotation = angle > 0f ? Quaternion.AngleAxis(angle * Mathf.Rad2Deg, w / w.magnitude) * rb.m_CurrentRotation : rb.m_CurrentRotation;
+                    rotation = angle > 0f ? QuaternionMath.AngleAxis(angle * Mathf.Rad2Deg, w / w.magnitude) * rb.m_CurrentRotation : rb.m_CurrentRotation;
                 }
                 SetTransformPose(rb, position, rotation);
             }

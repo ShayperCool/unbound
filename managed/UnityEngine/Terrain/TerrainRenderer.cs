@@ -186,7 +186,7 @@ namespace UnityEngine
                     m_Trees.Add(LegacyPart(terrain, legacy, prefab, tree, world, origin));
                     continue;
                 }
-                var placement = Matrix4x4.TRS(world, Quaternion.AngleAxis(tree.rotation * Mathf.Rad2Deg, Vector3.up), new Vector3(tree.widthScale, tree.heightScale, tree.widthScale))
+                var placement = Matrix4x4.TRS(world, QuaternionMath.AngleAxis(tree.rotation * Mathf.Rad2Deg, Vector3.up), new Vector3(tree.widthScale, tree.heightScale, tree.widthScale))
                     * Matrix4x4.TRS(Vector3.zero, root.rotation, root.localScale);
                 var group = prefab.GetComponent<LODGroup>();
                 var reference = group != null ? placement.MultiplyPoint3x4(group.localReferencePoint) : world;

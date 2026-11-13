@@ -86,6 +86,20 @@ namespace UnityEngine
             return new Quaternion((float)(rx / n), (float)(ry / n), (float)(rz / n), (float)(rw / n));
         }
 
+        /// <summary>The rotation by <paramref name="degrees"/> about <paramref name="axis"/> with a
+        /// double-precision half angle (identity for an axis not longer than 1e-5): the engine's own
+        /// turning of bodies, transforms, vehicles, terrain trees and particles, which the physics and
+        /// 2D probes measure. Unity's scripting Quaternion.AngleAxis has its own single-precision order.</summary>
+        internal static Quaternion AngleAxis(float degrees, Vector3 axis)
+        {
+            float mag = axis.magnitude;
+            if (mag <= Vector3.kEpsilon)
+                return Quaternion.identity;
+            double half = degrees * Mathf.Deg2Rad * 0.5;
+            float s = (float)Math.Sin(half) / mag;
+            return new Quaternion(axis.x * s, axis.y * s, axis.z * s, (float)Math.Cos(half));
+        }
+
         /// <summary>Normalized linear interpolation along the shorter arc with the weights summed in
         /// single precision: the engine's constraint blending, which tests/projects/constraints measures.</summary>
         internal static Quaternion LerpUnclamped(Quaternion a, Quaternion b, float t)
