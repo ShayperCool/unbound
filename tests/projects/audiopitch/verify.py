@@ -4,7 +4,7 @@ from common import blocks, SUFFIXES, cases, devices, header, samples
 MODES = ('Mono', 'Stereo', 'Quad', 'Surround', 'Mode5point1', 'Mode7point1', 'Prologic')
 
 
-def verify(root, release, rate, contexts=False, selected=None):
+def verify(root, release, rate, contexts=False, selected=None, device_channels=8):
     meta = header(root)
     assert meta['release'] == release and meta['rate'] == rate
     for case in selected if selected is not None else cases(contexts):
@@ -60,16 +60,16 @@ def verify(root, release, rate, contexts=False, selected=None):
             for block in phases: assert isinstance(meta[f'{case}.zone_update_{block}'], dict), (case, block)
             if case.endswith('_radius_reference'):
                 for block in phases: assert isinstance(meta[f'{case}.zone_refs_{block}'], dict), (case, block)
-        if case.startswith(('context_prologic_', 'context_encoding_')):
+        if case.startswith(('context_prologic_', 'context_encoding_', 'context_voiceinput_')):
             requested_mode = int(case.split('_')[2])
             assert meta[case+'.mode'] == requested_mode, case
             assert meta[case+'.render_channels'] == 2, case
             assert meta[case+'.rate'] == rate and meta[case+'.buffer'] == 1024, case
-        if case.startswith('context_encoding_'):
+        if case.startswith('context_encoding_') or (case.startswith('context_voiceinput_') and case+'.input' in meta):
             assert meta[case+'.input_channels'] == 6, case
             assert meta[case+'.input_frames'] == 32768, case
             assert meta[case+'.input_roundtrip'] is True, case
-            assert meta[case+'.driver_caps'] == 6, case
+            assert meta[case+'.driver_caps'] == {2: 2, 4: 3, 6: 5, 8: 6}[device_channels], case
             record = meta[case+'.input']
             assert record == dict(file=case+'.input.f32', frames=32768, channels=6), case
             values = samples(root, record)
@@ -82,6 +82,17 @@ def verify(root, release, rate, contexts=False, selected=None):
                 columns = [values[channel::6] for channel in range(6)]
                 assert all(sum(value != 0 for value in column) > 32000 for column in columns), case
                 assert len({hashlib.sha256(column.tobytes()).digest() for column in columns}) == 6, case
+        if case.startswith('context_voiceinput_') and case.endswith('_untapped'):
+            assert case+'.source_float' not in meta, case
+        if case.startswith('context_voiceinput_') and not case.endswith('_untapped'):
+            assert not meta[case+'.source_overflow'] and not meta[case+'.source_width_changed'], case
+            channels = meta[case+'.source_channels']
+            record = meta[case+'.source_float']
+            assert channels == 2 and meta[case+'.source_callbacks'] == blocks(case), case
+            assert record == dict(file=case+'.source_float.f32',
+                                  frames=blocks(case)*meta[case+'.buffer'], channels=channels), case
+            values = samples(root, record)
+            assert len(values) == record['frames']*channels and all(map(math.isfinite, values)), case
         if case.startswith(('context_settings_', 'context_wide_')):
             _, _, requested_rate, requested_buffer, _ = case.split('_', 4)
             assert meta[case+'.rate'] == int(requested_rate), (case, 'unsupported requested sample rate')

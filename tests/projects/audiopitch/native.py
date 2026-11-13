@@ -16,9 +16,11 @@ p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--buffer', type=int, choices=(256, 512, 1024, 2048), default=1024)
 p.add_argument('--cases', help='Comma-separated subset of one set, for diagnostics and part sessions')
 p.add_argument('--reset-cases', action='store_true', help='Reset output before each case, then run its normal preflight')
-p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm'), default='all',
+p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'voice-input'), default='all',
                help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
+p.add_argument('--device-channels', type=int, choices=(2, 4, 6, 8), default=8, help='Private device width for encoding and voice-input captures')
 a = p.parse_args()
+if a.device_channels != 8 and a.set not in ('encoding', 'voice-input'): p.error('--device-channels requires encoding or voice-input')
 if a.set == 'wide-pcm' and a.reset_cases:
     p.error('wide-pcm uses per-cell startup; --reset-cases is diagnostic with --set wide')
 fixture = Path(__file__).resolve().parent
@@ -26,7 +28,7 @@ if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] !=
     p.error('release does not match fixture')
 a.work.mkdir(parents=True, exist_ok=False)
 project = a.work/'project'
-if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm'):
+if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'voice-input'):
     import sys
     sys.path.insert(0, str(fixture.parents[1]))
     from authored_project import assemble
@@ -34,10 +36,10 @@ if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts
     if a.set in ('wide', 'wide-pcm', 'configurations'):
         from wide_boot import prepare
         prepare(project)
-    if a.set in ('listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm'):
+    if a.set in ('listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'voice-input'):
         # Only the alias used by this independent private capture project is imported.
         source = (fixture/'Assets/Scripts/EffectProbe.cs').read_text()
-        prefix = {'listener-scripts': 'context_scriptzone_', 'encoding': 'context_encoding_', 'schedule': 'context_schedule_', 'listener-chain': 'context_listenerchain_', 'listener-diagnostics': 'context_listenerdiag_', 'mono-live': 'context_monolive_', 'topology-diagnostics': 'context_topologydiag_', 'topology-pcm': 'context_monolive_'}[a.set]
+        prefix = {'listener-scripts': 'context_scriptzone_', 'encoding': 'context_encoding_', 'schedule': 'context_schedule_', 'listener-chain': 'context_listenerchain_', 'listener-diagnostics': 'context_listenerdiag_', 'mono-live': 'context_monolive_', 'topology-diagnostics': 'context_topologydiag_', 'topology-pcm': 'context_monolive_', 'voice-input': 'context_voiceinput_'}[a.set]
         keep = set(re.findall(r'new\[\] \{ "'+prefix+r'[^"]+", "asset=([^"]+)"', source))
         assert keep, 'prepared controls have no mixer aliases'
         for mixer in (project/'Assets/Resources').glob('*.mixer'):
@@ -111,7 +113,7 @@ def part(work, selected, prepared=False, buffer=None):
     if kind(selected[0]) == 'stereo':
         capture(work, selected, prepared=prepared, buffer=buffer)
         return
-    channels = dict(devices()).get(selected[0], 8)
+    channels = dict(devices()).get(selected[0], a.device_channels)
     server, address = surround_server(work/'pulse', channels)
     try:
         capture(work, selected, dict(PULSE_SERVER=address), prepared=prepared, buffer=buffer)
@@ -159,7 +161,7 @@ if a.set in ('wide', 'wide-pcm'):
         work.mkdir()
         part(work, selected, prepared=True, buffer=8192)
         assert 'Assertion failed on expression:' not in (work/'editor.log').read_text(), 'Editor assertion'
-        verify(work/'capture', a.release, a.rate, contexts=True, selected=selected)
+        verify(work/'capture', a.release, a.rate, contexts=True, selected=selected, device_channels=a.device_channels)
         for key, value in header(work/'capture').items():
             if key in ('release', 'rate', 'reset_cases'): assert merged.get(key, value) == value, key
             else: assert key not in merged, key
@@ -173,10 +175,10 @@ if a.cases:
     selected = a.cases.split(',')
     if len({kind(key) for key in selected}) != 1 or (kind(selected[0]) == 'device' and len(selected) != 1):
         p.error('select controls of one set (one device control per session)')
-    part(a.work, selected, prepared=a.set == 'encoding')
+    part(a.work, selected, prepared=a.set in ('encoding', 'voice-input'))
     if any(key.startswith(('context_settings_', 'context_prologic_', 'context_encoding_')) for key in selected):
         assert 'Assertion failed on expression:' not in (a.work/'editor.log').read_text(), 'Editor assertion; see '+str(a.work/'editor.log')
-    verify(a.work/'capture', a.release, a.rate, contexts=kind(selected[0]) == 'layout', selected=selected)
+    verify(a.work/'capture', a.release, a.rate, contexts=kind(selected[0]) == 'layout', selected=selected, device_channels=a.device_channels)
     raise SystemExit
 if a.set == 'devices':
     if a.rate != 48000: p.error('device controls are recorded at 48000 Hz')
@@ -187,16 +189,16 @@ if a.set == 'layouts':
     part(a.work, cases(True))
     verify(a.work/'capture', a.release, a.rate, contexts=True)
     raise SystemExit
-if a.set in ('settings', 'prologic', 'encoding'):
+if a.set in ('settings', 'prologic', 'encoding', 'voice-input'):
     if a.set == 'settings' and a.rate != 48000: p.error('settings controls use a 48000 Hz session with per-case configurations')
     merged = {}
     for index, (session, selected) in enumerate(context_sessions(a.set).items()):
         work = a.work/session
         work.mkdir()
         buffer = int(session.split('_')[1]) if a.set == 'settings' else 1024
-        part(work, selected, prepared=a.set == 'encoding' or index > 0, buffer=buffer)
+        part(work, selected, prepared=a.set in ('encoding', 'voice-input') or index > 0, buffer=buffer)
         assert 'Assertion failed on expression:' not in (work/'editor.log').read_text(), 'Editor assertion; see '+str(work/'editor.log')
-        verify(work/'capture', a.release, a.rate, contexts=True, selected=selected)
+        verify(work/'capture', a.release, a.rate, contexts=True, selected=selected, device_channels=a.device_channels)
         for key, value in header(work/'capture').items():
             if key in ('release', 'rate'):
                 assert merged.get(key, value) == value, key
@@ -206,8 +208,8 @@ if a.set in ('settings', 'prologic', 'encoding'):
         (a.work/'capture').mkdir(exist_ok=True)
         for f in (work/'capture').glob('*.f32'): shutil.copy2(f, a.work/'capture'/f.name)
     (a.work/'capture/capture.json').write_text(json.dumps(merged, indent=2)+'\n')
-    verify(a.work/'capture', a.release, a.rate, contexts=True, selected=list(__import__('common').profile(a.set, a.rate)))
-    if a.set == 'encoding':
+    verify(a.work/'capture', a.release, a.rate, contexts=True, selected=list(__import__('common').profile(a.set, a.rate)), device_channels=a.device_channels)
+    if a.set == 'encoding' and a.device_channels == 8:
         from encoding_pairs import compare_encoding_pairs
         assert compare_encoding_pairs(a.work/'capture', a.work/'paired-six-input-modes.jsonl.gz', a.release, a.rate) == 0
     if a.set == 'prologic':
@@ -218,7 +220,7 @@ if a.set in ('zones', 'mono', 'recovery', 'listener-scripts', 'schedule', 'liste
     selected = list(__import__('common').profile(a.set, a.rate)) if a.set in ('listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm') else schedule_cases() if a.set == 'schedule' else listener_script_cases() if a.set == 'listener-scripts' else recovery_cases() if a.set == 'recovery' else zone_cases() if a.set == 'zones' else mono_cases()
     part(a.work, selected, prepared=a.set in ('recovery', 'listener-scripts', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm'))
     assert 'Assertion failed on expression:' not in (a.work/'editor.log').read_text(), 'Editor assertion'
-    verify(a.work/'capture', a.release, a.rate, contexts=True, selected=selected)
+    verify(a.work/'capture', a.release, a.rate, contexts=True, selected=selected, device_channels=a.device_channels)
     raise SystemExit
 if a.set == 'wet-edges':
     part(a.work, wet_edge_cases())

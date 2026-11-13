@@ -12,7 +12,15 @@
   "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile listener-scripts",
   "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile schedule",
   "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile listener-chain",
-  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile topology-pcm"
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile topology-pcm",
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile voice-input",
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile encoding --device-channels 2",
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile encoding --device-channels 4",
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile encoding --device-channels 6",
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile encoding --device-channels 8"
  ],
- "summary": "\"tested\": \\d+, \"failed\": \\d+(?=.*\"pcm_steps\": 1\\b)"
+ "summary": "\"tested\": \\d+, \"failed\": \\d+(?=.*\"pcm_steps\": 1\\b)",
+ "fast_commands": [
+  "python3 -m unittest discover -s tests/projects/audiopitch -p test_compare.py"
+ ]
 }

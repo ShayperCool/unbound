@@ -1,0 +1,100 @@
+{
+  "release": "6000.0.71f1",
+  "rate": 44100,
+  "context_encoding_2_impulses.preflight_blocks": 4,
+  "context_encoding_2_impulses.buffer": 1024,
+  "context_encoding_2_impulses.mode": 2,
+  "context_encoding_2_impulses.rate": 44100,
+  "context_encoding_2_impulses.render_channels": 2,
+  "context_encoding_2_impulses.input_channels": 6,
+  "context_encoding_2_impulses.input_frames": 32768,
+  "context_encoding_2_impulses.input_roundtrip": true,
+  "context_encoding_2_impulses.driver_caps": 2,
+  "context_encoding_2_impulses.input": {
+    "file": "context_encoding_2_impulses.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_encoding_2_impulses": {
+    "file": "context_encoding_2_impulses.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_encoding_2_impulses.master": {
+    "file": "context_encoding_2_impulses.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_encoding_2_noise.preflight_blocks": 4,
+  "context_encoding_2_noise.buffer": 1024,
+  "context_encoding_2_noise.mode": 2,
+  "context_encoding_2_noise.rate": 44100,
+  "context_encoding_2_noise.render_channels": 2,
+  "context_encoding_2_noise.input_channels": 6,
+  "context_encoding_2_noise.input_frames": 32768,
+  "context_encoding_2_noise.input_roundtrip": true,
+  "context_encoding_2_noise.driver_caps": 2,
+  "context_encoding_2_noise.input": {
+    "file": "context_encoding_2_noise.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_encoding_2_noise": {
+    "file": "context_encoding_2_noise.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_encoding_2_noise.master": {
+    "file": "context_encoding_2_noise.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_encoding_7_impulses.preflight_blocks": 4,
+  "context_encoding_7_impulses.buffer": 1024,
+  "context_encoding_7_impulses.mode": 7,
+  "context_encoding_7_impulses.rate": 44100,
+  "context_encoding_7_impulses.render_channels": 2,
+  "context_encoding_7_impulses.input_channels": 6,
+  "context_encoding_7_impulses.input_frames": 32768,
+  "context_encoding_7_impulses.input_roundtrip": true,
+  "context_encoding_7_impulses.driver_caps": 2,
+  "context_encoding_7_impulses.input": {
+    "file": "context_encoding_7_impulses.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_encoding_7_impulses": {
+    "file": "context_encoding_7_impulses.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_encoding_7_impulses.master": {
+    "file": "context_encoding_7_impulses.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_encoding_7_noise.preflight_blocks": 4,
+  "context_encoding_7_noise.buffer": 1024,
+  "context_encoding_7_noise.mode": 7,
+  "context_encoding_7_noise.rate": 44100,
+  "context_encoding_7_noise.render_channels": 2,
+  "context_encoding_7_noise.input_channels": 6,
+  "context_encoding_7_noise.input_frames": 32768,
+  "context_encoding_7_noise.input_roundtrip": true,
+  "context_encoding_7_noise.driver_caps": 2,
+  "context_encoding_7_noise.input": {
+    "file": "context_encoding_7_noise.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_encoding_7_noise": {
+    "file": "context_encoding_7_noise.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_encoding_7_noise.master": {
+    "file": "context_encoding_7_noise.master.f32",
+    "frames": 32768,
+    "channels": 2
+  }
+}

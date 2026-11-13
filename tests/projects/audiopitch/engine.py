@@ -45,4 +45,4 @@ with (a.work/'engine.log').open('w') as log:
 (a.work/'exit.json').write_text(json.dumps({'returncode': result.returncode})+'\n')
 if result.returncode: raise SystemExit(result.returncode)
 from verify import verify
-verify(output, a.release, a.rate, selected=a.cases.split(',') if a.cases else None)
+verify(output, a.release, a.rate, selected=a.cases.split(',') if a.cases else None, device_channels=a.device_channels)

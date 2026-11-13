@@ -7,8 +7,8 @@ from prologic_pairs import compare_mode_pairs
 from verify import verify
 
 
-def compare_encoding_pairs(root, report, release, rate):
-    verify(root, release, rate, contexts=True, selected=encoding_cases())
+def compare_encoding_pairs(root, report, release, rate, device_channels=8):
+    verify(root, release, rate, contexts=True, selected=encoding_cases(), device_channels=device_channels)
     pairs = [(key, key.replace('context_encoding_2_', 'context_encoding_7_', 1))
              for key in encoding_cases() if key.startswith('context_encoding_2_')]
     failed = compare_mode_pairs(root, report, release, rate, pairs, SUFFIXES+('.input',))
@@ -34,5 +34,6 @@ if __name__ == '__main__':
     p.add_argument('--report', type=Path, required=True)
     p.add_argument('--release', required=True)
     p.add_argument('--rate', type=int, choices=(48000, 44100), required=True)
+    p.add_argument('--device-channels', type=int, choices=(2, 4, 6, 8), default=8)
     a = p.parse_args()
-    raise SystemExit(bool(compare_encoding_pairs(a.root, a.report, a.release, a.rate)))
+    raise SystemExit(bool(compare_encoding_pairs(a.root, a.report, a.release, a.rate, a.device_channels)))

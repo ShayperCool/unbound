@@ -170,3 +170,5 @@ independently captured 74-control `topology-pcm` recipe qualifies Echo/Chorus
 history changes and live zones in Mono, Stereo and Quad. The full diagnostic
 commands retain the startup, composition, callback and simultaneous-listener
 differences outside that PCM scope.
+
+The [six-input voice profile](VOICE_INPUT.md) adds source callback streams, static/live pan and volume, source/group Distortion, pitch and one-shot controls in Stereo/Prologic. Separate encoding gates compare private 2-, 4-, 6- and 8-channel device references. Both profiles compare every value with the existing bounds; other six-input contexts remain explicitly queued.

@@ -38,7 +38,7 @@ def all_cases():
 
 
 def cases(contexts=False):
-    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_prologic_', 'context_zone_', 'context_monofx_', 'context_recovery_', 'context_wide_', 'context_scriptzone_', 'context_encoding_', 'context_schedule_', 'context_listenerchain_', 'context_listenerdiag_', 'context_monolive_', 'context_topologydiag_')) and key.startswith('context_') == contexts]
+    return [key for key in all_cases() if not key.startswith(('device_', 'context_fx_', 'context_live_', 'context_wet_', 'context_wetedge_', 'context_settings_', 'context_prologic_', 'context_zone_', 'context_monofx_', 'context_recovery_', 'context_wide_', 'context_scriptzone_', 'context_encoding_', 'context_schedule_', 'context_listenerchain_', 'context_listenerdiag_', 'context_monolive_', 'context_topologydiag_', 'context_voiceinput_')) and key.startswith('context_') == contexts]
 
 
 def surround_cases():
@@ -81,9 +81,10 @@ def context_sessions(name):
         for key in (wide_pcm_rows() if name == 'wide-pcm' else wide_rows()):
             sessions.setdefault('_'.join(key.split('_')[2:5]), []).append(key)
         return sessions
-    if name in ('prologic', 'encoding'):
-        selected = prologic_cases() if name == 'prologic' else encoding_cases()
-        return {str(mode): [key for key in selected if key.startswith(f'context_{name}_{mode}_')] for mode in (2, 7)}
+    if name in ('prologic', 'encoding', 'voice-input'):
+        selected = prologic_cases() if name == 'prologic' else encoding_cases() if name == 'encoding' else list(profile(name, 48000))
+        prefix = 'voiceinput' if name == 'voice-input' else name
+        return {str(mode): [key for key in selected if key.startswith(f'context_{prefix}_{mode}_')] for mode in (2, 7)}
     return {'': list(profile(name, 48000))}
 
 
@@ -142,6 +143,7 @@ def profile(name, rate):
     if name == 'wide': return dict.fromkeys(wide_rows())
     if name == 'wide-pcm': return dict.fromkeys(wide_pcm_rows())
     if name == 'prologic': return dict.fromkeys(prologic_cases())
+    if name == 'voice-input': return dict.fromkeys(key for key in all_cases() if key.startswith('context_voiceinput_'))
     if name == 'encoding': return dict.fromkeys(encoding_cases())
     if name == 'topology-diagnostics': return dict.fromkeys(key for key in all_cases() if key.startswith('context_topologydiag_'))
     if name == 'mono-live': return dict.fromkeys(key for key in all_cases() if key.startswith('context_monolive_'))

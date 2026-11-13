@@ -45,7 +45,7 @@ def compare(reference, candidate, report, keys, exact=False, before=None, pcm_st
             nonlocal tested, failed
             tested += 1
             sample = index is not None
-            steps = 0 if key.endswith('.master') else pcm_steps
+            steps = 0 if key.endswith(('.master', '.source_float')) else pcm_steps
             residual = RESIDUALS.get(key, 0) if residuals else 0
             wrong = [bad(values[0], v, sample, exact, steps, residual) for v in values[1:]]
             if not any(wrong): return
@@ -76,7 +76,7 @@ def compare(reference, candidate, report, keys, exact=False, before=None, pcm_st
                     wrong = arrays[0].view(np.uint32) != arrays[1].view(np.uint32)
                 else:
                     first, second = (v.astype(np.float64) for v in arrays)
-                    slack = max((0 if key.endswith('.master') else pcm_steps)/32768,
+                    slack = max((0 if key.endswith(('.master', '.source_float')) else pcm_steps)/32768,
                                 RESIDUALS.get(key, 0) if residuals else 0)
                     wrong = np.abs(first-second) > np.maximum(ATOL+RTOL*np.abs(first), slack)
                 wrong |= ~np.isfinite(arrays[0]) | ~np.isfinite(arrays[1])
@@ -100,14 +100,14 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--release', required=True)
     p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
-    p.add_argument('--profile', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm'), default='all')
+    p.add_argument('--profile', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'voice-input'), default='all')
     p.add_argument('--reference', type=Path, help='Override only for independent Native agreement')
     p.add_argument('--candidate', type=Path, required=True)
     p.add_argument('--before', type=Path)
     p.add_argument('--report', type=Path, required=True, help='Fresh .jsonl.gz report, plus summary JSON')
     p.add_argument('--exact', action='store_true')
     p.add_argument('--pcm-steps', type=int, choices=(0, 1), default=0,
-                   help='Admit one 1/32768 step of device PCM (never master floats)')
+                   help='Admit one 1/32768 step of device PCM (never Master or source floats)')
     p.add_argument('--residuals', action='store_true',
                    help='Admit the recorded RESIDUALS bounds of common.py (gate only)')
     a = p.parse_args()

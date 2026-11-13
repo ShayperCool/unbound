@@ -34,7 +34,10 @@ p.add_argument('--listener-diagnostics', action='store_true', help='Publish sepa
 p.add_argument('--mono-live', action='store_true', help='Publish live Mono and component topology controls')
 p.add_argument('--topology-diagnostics', action='store_true', help='Publish separate multiple-listener topology diagnostics')
 p.add_argument('--topology-pcm', action='store_true', help='Publish live Echo/Chorus and zone PCM controls')
+p.add_argument('--voice-input', action='store_true', help='Publish source callback width and processing diagnostics')
+p.add_argument('--device-channels', type=int, choices=(2, 4, 6, 8), default=8, help='Private device width for encoding diagnostics')
 a = p.parse_args()
+if a.device_channels != 8 and not a.encoding: p.error('--device-channels requires --encoding')
 if a.settings and a.rate != 48000: p.error('settings controls use a 48000 Hz session with per-case configurations')
 selected = mono_cases() if a.mono else zone_cases() if a.zones else prologic_cases() if a.prologic else settings_cases() if a.settings else wet_edge_cases() if a.wet_edges else wet_cases() if a.wet else transition_cases() if a.transitions else surround_cases() if a.surround else [key for key, _ in devices()] if a.devices else None
 if a.listener_chain or a.listener_diagnostics:
@@ -52,6 +55,9 @@ if a.mono_live:
 if a.schedule:
     from common import schedule_cases
     selected = schedule_cases()
+if a.voice_input:
+    from common import profile
+    selected = list(profile('voice-input', a.rate))
 if a.encoding:
     from common import encoding_cases
     selected = encoding_cases()
@@ -63,8 +69,8 @@ if a.wide or a.wide_pcm:
     assert a.rate == 48000
     selected = list(profile('wide-pcm' if a.wide_pcm else 'wide', a.rate))
     assert not a.wide_pcm or not header(a.capture).get('reset_cases', False)
-verify(a.capture, a.release, a.rate, contexts=a.contexts, selected=selected)
-verify(a.repeat, a.release, a.rate, contexts=a.contexts, selected=selected)
+verify(a.capture, a.release, a.rate, contexts=a.contexts, selected=selected, device_channels=a.device_channels)
+verify(a.repeat, a.release, a.rate, contexts=a.contexts, selected=selected, device_channels=a.device_channels)
 assert header(a.capture) == header(a.repeat), 'independent capture metadata differs'
 for key, record in header(a.capture).items():
     if isinstance(record, dict) and 'file' in record:
@@ -95,7 +101,8 @@ if a.topology_diagnostics: target = target/'topology-diagnostics'
 if a.topology_pcm: target = target/'topology-pcm'
 if a.listener_chain: target = target/'listener-chain'
 if a.listener_diagnostics: target = target/'listener-diagnostics'
-if a.encoding: target = target/'encoding'
+if a.voice_input: target = target/'voice-input'
+if a.encoding: target = target/'encoding' if a.device_channels == 8 else target/'encoding-devices'/('device-'+str(a.device_channels))
 if a.wide: target = target/'wide'
 if a.wide_pcm: target = target/'wide-pcm'
 target = target/('rate-'+str(a.rate))
@@ -116,6 +123,6 @@ for f in sorted(a.capture.glob('*.f32')):
         continue
     if not (target/(f.name+'.gz')).exists():
         with gzip.GzipFile(target/(f.name+'.gz'), 'wb', mtime=0) as out: out.write(f.read_bytes())
-verify(target, a.release, a.rate, contexts=a.contexts, selected=selected)
+verify(target, a.release, a.rate, contexts=a.contexts, selected=selected, device_channels=a.device_channels)
 assert header(target) == header(a.capture)
 print('Published', target)

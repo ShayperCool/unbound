@@ -9,6 +9,42 @@ using Unity.Collections;
 public partial class EffectProbe : MonoBehaviour
 {
     public static readonly string[][] Cases = {
+        new[] { "context_voiceinput_2_1_none", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=1", "six_signal=noise", "voice_effect=none" },
+        new[] { "context_voiceinput_2_1_before", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=1", "six_signal=noise", "voice_effect=before" },
+        new[] { "context_voiceinput_2_1_after", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=1", "six_signal=noise", "voice_effect=after" },
+        new[] { "context_voiceinput_2_2_none", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=2", "six_signal=noise", "voice_effect=none" },
+        new[] { "context_voiceinput_2_2_before", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=2", "six_signal=noise", "voice_effect=before" },
+        new[] { "context_voiceinput_2_2_after", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=2", "six_signal=noise", "voice_effect=after" },
+        new[] { "context_voiceinput_2_6_none", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_effect=none" },
+        new[] { "context_voiceinput_2_6_before", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_effect=before" },
+        new[] { "context_voiceinput_2_6_after", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_effect=after" },
+        new[] { "context_voiceinput_2_6_group", "asset=context_monofx_1_dist_full", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att,Dist", "clip_channels=6", "six_signal=noise" },
+        new[] { "context_voiceinput_2_6_pan_left", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "pan=-0.65" },
+        new[] { "context_voiceinput_2_6_pan_right", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "pan=0.65" },
+        new[] { "context_voiceinput_2_6_volume", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_volume=0.35" },
+        new[] { "context_voiceinput_2_6_pitch", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_pitch=0.75" },
+        new[] { "context_voiceinput_2_6_oneshot", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "topology_oneshot=1" },
+        new[] { "context_voiceinput_7_1_none", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=1", "six_signal=noise", "voice_effect=none" },
+        new[] { "context_voiceinput_7_1_before", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=1", "six_signal=noise", "voice_effect=before" },
+        new[] { "context_voiceinput_7_1_after", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=1", "six_signal=noise", "voice_effect=after" },
+        new[] { "context_voiceinput_7_2_none", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=2", "six_signal=noise", "voice_effect=none" },
+        new[] { "context_voiceinput_7_2_before", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=2", "six_signal=noise", "voice_effect=before" },
+        new[] { "context_voiceinput_7_2_after", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=2", "six_signal=noise", "voice_effect=after" },
+        new[] { "context_voiceinput_7_6_none", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_effect=none" },
+        new[] { "context_voiceinput_7_6_before", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_effect=before" },
+        new[] { "context_voiceinput_7_6_after", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_effect=after" },
+        new[] { "context_voiceinput_7_6_group", "asset=context_monofx_1_dist_full", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att,Dist", "clip_channels=6", "six_signal=noise" },
+        new[] { "context_voiceinput_7_6_pan_left", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "pan=-0.65" },
+        new[] { "context_voiceinput_7_6_pan_right", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "pan=0.65" },
+        new[] { "context_voiceinput_7_6_volume", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_volume=0.35" },
+        new[] { "context_voiceinput_7_6_pitch", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_pitch=0.75" },
+        new[] { "context_voiceinput_7_6_oneshot", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "topology_oneshot=1" },
+        new[] { "context_voiceinput_2_6_live_pan", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_live=pan" },
+        new[] { "context_voiceinput_2_6_live_volume", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_live=volume", "voice_effect=before" },
+        new[] { "context_voiceinput_7_6_live_pan", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_live=pan" },
+        new[] { "context_voiceinput_7_6_live_volume", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_live=volume", "voice_effect=before" },
+        new[] { "context_voiceinput_2_6_dist_untapped", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_effect=before", "voice_tap=0" },
+        new[] { "context_voiceinput_7_6_dist_untapped", "asset=context_zone_2_listener_dry", "mode=Prologic", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "clip_channels=6", "six_signal=noise", "voice_effect=before", "voice_tap=0" },
         new[] { "context_listenerchain_2_low_before", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=low,gain" },
         new[] { "context_listenerchain_2_low_after", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=gain,low" },
         new[] { "context_listenerchain_2_high_before", "asset=context_zone_2_listener_dry", "mode=Stereo", "preflight=4", "blocks=32", "music=noise_full:0.2", "Music:Att", "listener_chain=high,gain" },
@@ -1614,7 +1650,7 @@ public partial class EffectProbe : MonoBehaviour
             if (key.StartsWith("context_prologic_"))
                 gameObject.transform.rotation = Quaternion.Euler(0, float.Parse(Option(key, "listener_yaw=", "0"), inv), 0);
             var source = go.AddComponent<AudioSource>();
-            if (key.StartsWith("context_monolive_") || key.StartsWith("context_topologydiag_")) source.playOnAwake = false;
+            if (key.StartsWith("context_monolive_") || key.StartsWith("context_topologydiag_") || key.StartsWith("context_voiceinput_")) source.playOnAwake = false;
             source.bypassEffects = Option(key, "bypass=", "0") == "1";
             source.bypassListenerEffects = Option(key, "listener_bypass=", "0") == "1";
             source.outputAudioMixerGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Music");
@@ -1711,6 +1747,7 @@ public partial class EffectProbe : MonoBehaviour
                 }
             }
             if (Option(key, "duplicate_filters=", "0") == "1") RecordFilterUniqueness(key, records);
+            VoiceInputControl voiceControl = key.StartsWith("context_voiceinput_") ? new VoiceInputControl(key, source, BlockCount * actualBuffer) : null;
             LiveTopologyControl topologyControl = Option(key, "topology=", "") != "" ? new LiveTopologyControl(key, source, gameObject) : null;
             if (Option(key, "sample_schedule=", "") != "" && Option(key, "reset_to=", "") == "")
                 ScheduleSampleFrames(key, source, records);
@@ -1731,6 +1768,7 @@ public partial class EffectProbe : MonoBehaviour
                 if (Engine) FlushEngine();
                 for (int block = 0; block < BlockCount; block++) {
                     EditSampleSchedule(key, source, block, records);
+                    if (voiceControl != null && voiceControl.Change(block) && Engine) FlushEngine();
                     if (topologyControl != null && topologyControl.Change(key, block, records) && Engine) FlushEngine();
                     if (listenerControl != null && listenerControl.Change(block) && Engine) FlushEngine();
                     foreach (var token in Tokens(key)) if (token.StartsWith("live:"+block+":")) {
@@ -1768,6 +1806,7 @@ public partial class EffectProbe : MonoBehaviour
             if (Option(key, "music=", "") == "generator") records.Add("\""+key+".generator_channels\":"+ProbeGenerator.Channels);
             if (listenerWrite != "") records.Add("\""+key+".listener_channels\":"+OutputLayoutProbe.Channels);
             if (listenerControl != null) listenerControl.Record(key, records);
+            voiceControl?.Record(key, output, records);
             if (gainProbe != null) records.Add("\""+key+".listener_gain_channels\":"+gainProbe.Channels);
             foreach (string suffix in new[] { "", ".master" })
                 records.Add("\""+key+suffix+"\":{\"file\":\""+key+suffix+".f32\",\"frames\":"+(BlockCount*actualBuffer)+",\"channels\":"+outputChannels+"}");

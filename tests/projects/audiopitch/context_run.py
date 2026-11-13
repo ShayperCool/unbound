@@ -89,12 +89,14 @@ def merge_sessions(part, sessions, *, hardlink):
 def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument('--release', required=True)
-    p.add_argument('--profile', choices=('transitions', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'wide', 'wide-pcm', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm'), default='transitions')
+    p.add_argument('--profile', choices=('transitions', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'wide', 'wide-pcm', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'voice-input'), default='transitions')
     p.add_argument('--unbound', type=Path, default=os.environ.get('UNBOUND'))
     p.add_argument('--rate', type=int, choices=(48000, 44100), action='append')
     p.add_argument('--work', type=Path)
     p.add_argument('--jobs', type=int, default=DEFAULT_CAPTURE_JOBS, help='Maximum concurrent capture drivers; each engine takes its own heavy-job lease')
+    p.add_argument('--device-channels', type=int, choices=(2, 4, 6, 8), default=8, help='Private encoding-reference device width')
     a = p.parse_args(argv)
+    if a.device_channels != 8 and a.profile != 'encoding': p.error('--device-channels requires --profile encoding')
     if a.jobs < 1:
         p.error('--jobs must be positive')
     if a.profile in ('settings', 'wide', 'wide-pcm') and a.rate and a.rate != [48000]:
@@ -112,11 +114,13 @@ def main(argv=None):
         prepare(work/'project')
     failed = False
     for rate in a.rate or ((48000,) if a.profile in ('settings', 'wide', 'wide-pcm') else (48000, 44100)):
-        if a.profile == 'prologic':
+        if a.profile in ('prologic', 'encoding'):
             from encoding_pairs import compare_encoding_pairs
-            availability = fixture/'Reference'/('unity-'+a.release)/'encoding'/('rate-'+str(rate))
-            if compare_encoding_pairs(availability, work/('native-six-input-pairs-'+str(rate)+'.jsonl.gz'), a.release, rate):
-                raise SystemExit('the recorded six-input availability relationship differs')
+            for width in ((2, 4, 6, 8) if a.profile == 'prologic' else (a.device_channels,)):
+                base = fixture/'Reference'/('unity-'+a.release)
+                availability = (base/'encoding' if width == 8 else base/'encoding-devices'/('device-'+str(width)))/('rate-'+str(rate))
+                if compare_encoding_pairs(availability, work/f'native-six-input-device-{width}-pairs-{rate}.jsonl.gz', a.release, rate, width):
+                    raise SystemExit('the recorded six-input availability relationship differs')
         if a.profile == 'prologic':
             from prologic_pairs import compare_pairs
             reference = fixture/'Reference'/('unity-'+a.release)/'prologic'/('rate-'+str(rate))
@@ -129,15 +133,17 @@ def main(argv=None):
             target = part/session if session else part
             command = [sys.executable, str(fixture/'engine.py'), '--release', a.release, '--rate', str(rate),
                        '--native-project', str(work/'project'), '--runtime', str(runtime), '--cases', ','.join(selected),
-                       '--device-channels', '8', '--work', str(target),
+                       '--device-channels', str(a.device_channels), '--work', str(target),
                        *(['--buffer', '8192'] if a.profile in ('wide', 'wide-pcm') else [])]
             captures.append((command, work/'drivers'/f'{rate}-{index:03d}.log'))
         run_captures(captures, a.jobs)
         merge_sessions(part, sessions, hardlink=a.profile in ('wide', 'wide-pcm'))
+        reference = fixture/'Reference'/('unity-'+a.release)
+        reference = (reference/'encoding-devices'/('device-'+str(a.device_channels)) if a.profile == 'encoding' and a.device_channels != 8 else reference/a.profile)/('rate-'+str(rate))
         for name, extra in [('strict', []), ('gate', ['--pcm-steps', '1'])]:
             result = subprocess.run([sys.executable, str(fixture/'compare.py'), '--release', a.release,
                                      '--rate', str(rate), '--profile', a.profile, '--candidate', str(part/'capture'),
-                                     '--report', str(work/(name+'-'+str(rate)+'.jsonl.gz')), *extra])
+                                     '--report', str(work/(name+'-'+str(rate)+'.jsonl.gz')), '--reference', str(reference), *extra])
             if name == 'gate':
                 failed |= bool(result.returncode)
     print('reports:', work)
