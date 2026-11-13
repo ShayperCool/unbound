@@ -341,5 +341,29 @@ namespace UnityEngine.Tests
             Assert.Equal(0.75f, data.GetPatchMinMaxHeights()[^1].max, 4);
             Assert.Equal(0.75f, data.GetMaximumHeightError()[^1], 4);
         }
+
+        /// <summary>A delayed write marks only the patches over it, at every level: one quadrant's
+        /// nodes and the root for a sample inside it, both neighbours for a sample on their border.</summary>
+        [Fact]
+        public void DelayedHeightsMarkOnlyThePatchesOverThem()
+        {
+            var data = new TerrainData { heightmapResolution = 65 };
+            m_Objects.Add(data);
+            data.SetHeightsDelayLOD(40, 10, new float[,] { { 0.5f } });
+            var errors = data.GetMaximumHeightError();
+            // Level 0 (4 × 4): only patch (2, 0); level 1 (2 × 2): only node (1, 0); the root.
+            for (int i = 0; i < 16; i++) Assert.Equal(i == 2 ? float.PositiveInfinity : 0f, errors[i]);
+            for (int i = 0; i < 4; i++) Assert.Equal(i == 1 ? float.PositiveInfinity : 0f, errors[16 + i]);
+            Assert.Equal(float.PositiveInfinity, errors[20]);
+
+            data.SyncHeightmap();
+            data.SetHeightsDelayLOD(32, 5, new float[,] { { 0.25f } });
+            errors = data.GetMaximumHeightError();
+            // x = 32 lies on the border of patches 1 and 2 and of level-1 nodes 0 and 1.
+            for (int i = 0; i < 16; i++) Assert.Equal(i == 1 || i == 2 ? float.PositiveInfinity : 0f, errors[i]);
+            Assert.Equal(float.PositiveInfinity, errors[16]);
+            Assert.Equal(float.PositiveInfinity, errors[17]);
+            Assert.NotEqual(float.PositiveInfinity, errors[18]);
+        }
     }
 }
