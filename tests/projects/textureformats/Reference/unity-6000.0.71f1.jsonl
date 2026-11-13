@@ -1036,4 +1036,7 @@
 {"k":"feedback.integer.A2B10G10R10_UIntPack32.draw1","v":"000003ff,00000003,00000003,00000000;00000003,00000003,00000001,00000002"}
 {"k":"rt.partial.float.gl.depth","v":"3e800000,3e800000,3e800000,3f800000;3f400000,3f400000,3f400000,3f800000"}
 {"k":"rt.partial.float.command.depth","v":"3e800000,3e800000,3e800000,3f800000;3f400000,3f400000,3f400000,3f800000"}
+{"k":"rt.padding.mrt.rgb","v":"3efffe00,3e800100,befffe00,3f800000;3efffe00,3e800100,befffe00,3f800000"}
+{"k":"rt.padding.mrt.rgba","v":"3efffe00,3e800100,befffe00,3e800100;3efffe00,3e800100,befffe00,3e800100"}
+{"k":"rt.padding.grab","v":"3f008101,3f008101,3f008101,3f800000;3f008101,3f008101,3f008101,3f800000"}
 {"k":"complete","v":true}
