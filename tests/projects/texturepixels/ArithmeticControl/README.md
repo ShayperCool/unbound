@@ -31,5 +31,5 @@ strict VolumeRGFloat rows per color space remain open. A general compatibility
 implementation must preserve input conversions, casts, stores, call boundaries
 and optimized expressions across game and precompiled assemblies. That compiler
 and runtime work is deferred; no expression-name or texture-name patch is applied.
-Other optimization modes, async state machines, additional operators and platform
-runtimes remain unmeasured.
+The Operations supplement now measures Debug/Release modes and more operators;
+async state machines and other platform runtimes remain unmeasured.

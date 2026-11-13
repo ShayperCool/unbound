@@ -2942,3 +2942,11 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - inputframes remains 3785/3786. The existing 16 configuration controls distinguish
   metadata queries from process-local keymap notifications. An OS notification
   bridge and layout refresh remain separate work; no first-key event is invented.
+
+Q402 float scope: texturepixels/ArithmeticControl/Operations adds byte-identical
+repeated Unity 6000.0.71f1 GPU references for Release and Debug (58 each). CoreCLR
+Release retains five raw differences (53/58), including a boolean branch. Debug
+local stores and explicit cast/field/array/call boundaries discriminate rounding.
+The original 62 records and texturepixels gate stay unchanged. Same-IL runtime
+controls rule out a simple compiler-mode correction in the tested contexts;
+a general typed-IL/runtime policy spanning precompiled assemblies remains M.
