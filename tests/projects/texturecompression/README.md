@@ -189,7 +189,9 @@ Other releases retain the previous approximation, including its missing highQual
 
 Alpha8 keeps one CPU byte per texel and samples (0,0,0,a), as the channel controls record.
 It still uses RGBA8 GPU storage. [wgpu-types 30.0.1's texture view descriptor](https://docs.rs/wgpu-types/30.0.1/wgpu_types/struct.TextureViewDescriptor.html)
-has no component mapping, and its format set has no alpha-only format. An R8 view supplies
+has no component mapping, and its format set has no alpha-only format.
+The Q404 check follows the vendored vendor/wgpu-sampler/wgpu/src/api/texture_view.rs alias to the
+wgpu-types version locked in Cargo.lock, 30.0.1. The sampler fork adds no view mapping. An R8 view supplies
 red and an alpha of one. Consequently, a one-channel upload cannot preserve Alpha8 sampling
 through the current view API; a shader-side component mapping is a separate renderer change.
 
@@ -206,13 +208,15 @@ These are texel payload sizes; device allocation alignment can add overhead. The
 also needs a CPU conversion and temporary four-byte output. This part records the cost and
 does not change renderer storage.
 
-Two ordinary UI/effect Alpha8 images, recorded twice with the GPU Editor in Gamma and
-AndroidGamma, match all 37 values per image. Their two complete mip chains contain 43690
-one-byte texels per profile, with exact raw bytes and GPU samples. Block counts do not apply
-to this uncompressed format. Fresh repeats of the complete six-profile reference are identical
-to all 8229 canonical rows. The part's 4397-texture clean-cache runs have zero failures:
-20.18 s before and 19.58 s after, total process CPU 94.45 s before and 96.45 s after.
-There is no encoder or storage change; shared-machine timings do not isolate Alpha8 cost.
+Two ordinary UI/effect Alpha8 images have two identical GPU Editor recordings in Gamma and
+AndroidGamma. A fresh engine replay matches all 37 values per image against those unchanged
+recordings, including complete raw mip chains and GPU samples. Together the images contain
+43690 one-byte texels per profile. Block counts do not apply to this uncompressed format.
+The six-profile canonical reference now contains 8663 values, with both GPU repeats identical.
+This capability check changes documentation only. Its clean-cache import processes 4397
+ordinary-project textures without failures, 17.46 s before and 20.43 s after. Total process CPU
+including the cached second pass is 98.27/89.40 s. Both runs use the same importer executable;
+their shared-machine wall-time variation does not measure an implementation change.
 
 Measured runtime blocks (Gamma and Linear are identical):
 
