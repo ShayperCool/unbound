@@ -11,12 +11,12 @@ namespace UnityEditor
     /// </summary>
     public partial class AssetPostprocessor
     {
-        string m_AssetPath = "";
+        string m_AssetPath = Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? null : "";
 
         public AssetPostprocessor() { }
 
         /// <summary>The path of the asset being imported.</summary>
-        public string assetPath { get => m_AssetPath; set => m_AssetPath = value ?? ""; }
+        public string assetPath { get => m_AssetPath; set => m_AssetPath = Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? value : value ?? ""; }
 
         /// <summary>The import context of the asset being imported.</summary>
         public AssetImporters.AssetImportContext context { get; internal set; }

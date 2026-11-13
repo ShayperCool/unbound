@@ -740,6 +740,16 @@ sealed partial class StubBuilder
 
     static string Prefix(List<string> attributes) => attributes.Count == 0 ? "" : string.Join(" ", attributes) + " ";
 
+    bool HasImporterStateGuard(INamedTypeSymbol type)
+    {
+        for (var current = type; current != null; current = current.BaseType)
+            if (current.ToDisplayString() == "UnityEditor.AssetImporter")
+                return _implAssembly.GetTypeByMetadataName("UnityEditor.AssetImporter")?
+                    .GetMembers("CheckImporterState").OfType<IMethodSymbol>().Any(m => !m.IsStatic
+                        && m.Parameters.Length == 1 && m.Parameters[0].Type.SpecialType == SpecialType.System_String) == true;
+        return false;
+    }
+
     void EmitProperty(CodeWriter w, TypeContext ctx, IPropertySymbol property, bool isExplicit)
     {
         var getter = isExplicit ? property.GetMethod : Visible(property.GetMethod) ? property.GetMethod : null;
@@ -805,17 +815,19 @@ sealed partial class StubBuilder
                 continue;
             }
             string body;
+            var importerGuard = !property.IsStatic && HasImporterStateGuard(ctx.Unity)
+                ? $"this.CheckImporterState({Quote(keyword + "_" + property.Name)}); " : "";
             if (keyword == "get")
             {
                 var fixedThrow = FixedGetterThrow(accessor);
                 var ret = property.ReturnsByRef || property.ReturnsByRefReadonly
                     ? $"return ref global::Unbound.Runtime.Stubs.Ref<{Render(property.Type)}>();"
                     : stored ? $"return {backing};" : ReturnDefault(property.Type, id);
-                body = fixedThrow != null ? $"{{ {fixedThrow} }}" : $"{{ {NotImplemented}({Quote(id)}); {ret} }}";
+                body = fixedThrow != null ? $"{{ {fixedThrow} }}" : $"{{ {importerGuard}{NotImplemented}({Quote(id)}); {ret} }}";
             }
             else
             {
-                body = $"{{ {NotImplemented}({Quote(id)});{(stored ? $" {backing} = {configured!.SetExpression};" : "")} }}";
+                body = $"{{ {importerGuard}{NotImplemented}({Quote(id)});{(stored ? $" {backing} = {configured!.SetExpression};" : "")} }}";
             }
             accessors.Add($"{Stub} {accessorAccess}{keyword} {body}");
         }

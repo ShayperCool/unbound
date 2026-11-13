@@ -47,8 +47,8 @@ namespace UnityEditor
                     var type = typeof(AssetImporter).Assembly.GetType("UnityEditor." + doc.TypeName)
                         ?? typeof(AssetImporter).Assembly.GetType("UnityEditor.AssetImporters." + doc.TypeName);
                     importer = type != null && typeof(AssetImporter).IsAssignableFrom(type) && !type.IsAbstract
-                        ? (AssetImporter)Activator.CreateInstance(type, nonPublic: true)
-                        : new AssetImporter();
+                        ? (AssetImporter)ObjectConstruction.CreateWithBacking(type)
+                        : (AssetImporter)ObjectConstruction.CreateWithBacking(typeof(AssetImporter));
                 }
             }
             if (importer == null) return null;
@@ -205,9 +205,17 @@ namespace UnityEditor
             return true;
         }
 
-        public bool isPreloaded { get => m_IsPreloaded; set => m_IsPreloaded = value; }
+        public bool isPreloaded
+        {
+            get { CheckImporterState("get_isPreloaded"); return m_IsPreloaded; }
+            set { CheckImporterState("set_isPreloaded"); m_IsPreloaded = value; }
+        }
 
-        public string[] DefineConstraints { get => m_DefineConstraints; set => m_DefineConstraints = value ?? Array.Empty<string>(); }
+        public string[] DefineConstraints
+        {
+            get { CheckImporterState("get_DefineConstraints"); return m_DefineConstraints; }
+            set { CheckImporterState("set_DefineConstraints"); m_DefineConstraints = value ?? Array.Empty<string>(); }
+        }
 
         /// <summary>Not a .NET assembly: a native library (.so, .a, .aar, a native .dll, ...).</summary>
         public bool isNativePlugin

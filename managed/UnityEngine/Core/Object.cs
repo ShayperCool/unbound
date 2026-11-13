@@ -81,12 +81,14 @@ namespace UnityEngine
         {
             get
             {
+                ThrowIfUncreated();
                 MainThreadCheck.Check("GetName");
                 ThrowIfDestroyed();
                 return GetName();
             }
             set
             {
+                ThrowIfUncreated();
                 MainThreadCheck.Check("SetName");
                 ThrowIfDestroyed();
                 SetName(value ?? "");
@@ -100,11 +102,13 @@ namespace UnityEngine
         {
             get
             {
+                ThrowIfUncreated();
                 MainThreadCheck.Check("get_hideFlags");
                 return m_SharedIdentity?.Flags ?? m_HideFlags;
             }
             set
             {
+                ThrowIfUncreated();
                 MainThreadCheck.Check("set_hideFlags");
                 var previous = m_SharedIdentity?.Flags ?? m_HideFlags;
                 if (m_SharedIdentity == null) m_HideFlags = value;

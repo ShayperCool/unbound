@@ -9,6 +9,12 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Uncreated object wrappers measured by defaultstate on 6000.0.71f1.
+        /// Other releases retain their previous unmeasured wrapper state.</summary>
+        internal static bool UncreatedObjectWrappersMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// <summary>Removed window settings measured by defaultstate on 6000.0.71f1.
+        /// Other releases retain their previous unmeasured setting storage.</summary>
+        internal static bool RemovedEditorSettingsMeasured => Release == (6000, 0, 71, 'f', 1);
         /// <summary>Managed constructor defaults measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous, unmeasured initialization.</summary>
         internal static bool DefaultConstructorStateMeasured => Release == (6000, 0, 71, 'f', 1);

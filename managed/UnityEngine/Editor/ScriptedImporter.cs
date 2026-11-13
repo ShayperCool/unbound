@@ -12,18 +12,43 @@ namespace UnityEditor
     {
         internal string m_AssetPath = "";
 
-        public AssetImporter() { }
+        public AssetImporter()
+        {
+            if (Compat.UncreatedObjectWrappersMeasured && !ObjectConstruction.TakeBacking(this)) MarkUncreated();
+        }
 
-        public string assetPath => m_AssetPath;
+        static string NormalizeString(string value) => value ?? (Compat.UncreatedObjectWrappersMeasured ? "" : null);
+
+        internal void CheckImporterState(string binding)
+        {
+            if (!Compat.UncreatedObjectWrappersMeasured) return;
+            ThrowIfUncreated();
+            MainThreadCheck.Check(binding);
+        }
+
+        public string assetPath { get { CheckImporterState("get_assetPath"); return NormalizeString(m_AssetPath); } }
 
         [Unbound.EditorFaithful("every asset has its .meta once the Editor imported it")]
-        public bool importSettingsMissing => false;
+        public bool importSettingsMissing { get { CheckImporterState("get_importSettingsMissing"); return false; } }
 
-        public string userData { get; set; } = "";
+        string m_UserData = "", m_AssetBundleName = "", m_AssetBundleVariant = "";
+        public string userData
+        {
+            get { CheckImporterState("get_userData"); return NormalizeString(m_UserData); }
+            set { CheckImporterState("set_userData"); m_UserData = NormalizeString(value); }
+        }
 
-        public string assetBundleName { get; set; } = "";
+        public string assetBundleName
+        {
+            get { CheckImporterState("get_assetBundleName"); return NormalizeString(m_AssetBundleName); }
+            set { CheckImporterState("set_assetBundleName"); m_AssetBundleName = NormalizeString(value); }
+        }
 
-        public string assetBundleVariant { get; set; } = "";
+        public string assetBundleVariant
+        {
+            get { CheckImporterState("get_assetBundleVariant"); return NormalizeString(m_AssetBundleVariant); }
+            set { CheckImporterState("set_assetBundleVariant"); m_AssetBundleVariant = NormalizeString(value); }
+        }
     }
 }
 
@@ -179,7 +204,7 @@ namespace Unbound.Runtime
                 throw new InvalidOperationException($"its ScriptedImporter (script {script}) is not a loaded importer class");
             ScriptedImporter importer;
             using (ObjectRegistry.AsAssets())
-                importer = (ScriptedImporter)Activator.CreateInstance(type, nonPublic: true);
+                importer = (ScriptedImporter)ObjectConstruction.CreateWithBacking(type);
             importer.m_AssetPath = path;
             if (settings != null)
             {

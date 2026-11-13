@@ -132,7 +132,7 @@ namespace UnityEditor
 
             Type[] Items => m_Items ?? Array.Empty<Type>();
 
-            public int Count => Items.Length;
+            public int Count => Compat.DefaultConstructorStateMeasured ? m_Items.Length : Items.Length;
             [Unbound.EditorFaithful("Unity's answer too")] public bool IsReadOnly => true;
             [Unbound.EditorFaithful("Unity's answer too")] public bool IsFixedSize => true;
             [Unbound.EditorFaithful("Unity's answer too")] public bool IsSynchronized => true;
@@ -198,7 +198,7 @@ namespace UnityEditor
 
             MethodInfo[] Items => m_Items ?? Array.Empty<MethodInfo>();
 
-            public int Count => Items.Length;
+            public int Count => Compat.DefaultConstructorStateMeasured ? m_Items.Length : Items.Length;
             [Unbound.EditorFaithful("Unity's answer too")] public bool IsReadOnly => true;
             [Unbound.EditorFaithful("Unity's answer too")] public bool IsFixedSize => true;
             [Unbound.EditorFaithful("Unity's answer too")] public bool IsSynchronized => true;
@@ -264,7 +264,7 @@ namespace UnityEditor
 
             FieldInfo[] Items => m_Items ?? Array.Empty<FieldInfo>();
 
-            public int Count => Items.Length;
+            public int Count => Compat.DefaultConstructorStateMeasured ? m_Items.Length : Items.Length;
             [Unbound.EditorFaithful("Unity's answer too")] public bool IsReadOnly => true;
             [Unbound.EditorFaithful("Unity's answer too")] public bool IsFixedSize => true;
             [Unbound.EditorFaithful("Unity's answer too")] public bool IsSynchronized => true;

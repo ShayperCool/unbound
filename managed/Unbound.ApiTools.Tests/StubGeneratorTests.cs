@@ -230,6 +230,77 @@ public class StubGeneratorTests
     }
 
     [Fact]
+    public void ImporterAccessorsCheckBackingBeforeTheirStubBodies()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            const string reference = """
+                namespace UnityEngine { public class Object {} }
+                namespace UnityEditor
+                {
+                    public class AssetImporter : UnityEngine.Object
+                    {
+                        public int count { get; set; }
+                        public static int staticCount => 0;
+                        public int removed => throw new System.NotSupportedException("removed");
+                    }
+                    public class TextureImporter : AssetImporter { public bool isReadable { get; set; } }
+                }
+                """;
+            const string implementation = """
+                namespace UnityEngine { public partial class Object {} }
+                namespace UnityEditor
+                {
+                    public partial class AssetImporter : UnityEngine.Object
+                    {
+                        public bool bound;
+                        internal void CheckImporterState(string binding)
+                        { if (!bound) throw new System.NullReferenceException(); }
+                    }
+                    public partial class TextureImporter : AssetImporter {}
+                }
+                """;
+            var unity = Path.Combine(root, "Managed", "UnityEngine");
+            var (referenceImage, referenceErrors) = Compile("UnityEngine.CoreModule", new[] { reference });
+            Assert.Empty(referenceErrors);
+            Write(unity, "UnityEngine.CoreModule", referenceImage);
+            var source = Path.Combine(root, "impl"); Directory.CreateDirectory(source);
+            File.WriteAllText(Path.Combine(source, "Importer.cs"), implementation);
+            var (implImage, implErrors) = Compile("UnityEngine.CoreModule", new[] { implementation, StubSupport });
+            Assert.Empty(implErrors);
+            var impl = Write(Path.Combine(root, "nostubs"), "UnityEngine.CoreModule", implImage);
+            var output = Path.Combine(source, "Generated");
+            var report = StubGenerator.Generate(unity, impl, output, source, returns: NoReturns);
+            Assert.Empty(report.Errors); Assert.Empty(report.Conflicts);
+            var (image, errors) = Compile("UnityEngine.CoreModule", Directory.GetFiles(output, "*.g.cs")
+                .Select(File.ReadAllText).Append(implementation).Append(StubSupport));
+            Assert.True(errors.Count == 0, string.Join("\n", errors));
+            var context = new AssemblyLoadContext("importer-stubs", isCollectible: true);
+            try
+            {
+                var assembly = context.LoadFromStream(new MemoryStream(image));
+                var type = assembly.GetType("UnityEditor.TextureImporter")!;
+                var instance = Activator.CreateInstance(type)!;
+                foreach (var name in new[] { "count", "isReadable" })
+                {
+                    var property = type.GetProperty(name)!;
+                    Assert.IsType<NullReferenceException>(Assert.Throws<TargetInvocationException>(() => property.GetValue(instance)).InnerException);
+                    Assert.IsType<NullReferenceException>(Assert.Throws<TargetInvocationException>(() => property.SetValue(instance,
+                        property.PropertyType == typeof(bool) ? (object)true : 7)).InnerException);
+                }
+                Assert.Equal(0, type.BaseType!.GetProperty("staticCount")!.GetValue(null));
+                Assert.IsType<NotSupportedException>(Assert.Throws<TargetInvocationException>(() => type.GetProperty("removed")!.GetValue(instance)).InnerException);
+                type.GetField("bound")!.SetValue(instance, true);
+                Assert.Equal(0, type.GetProperty("count")!.GetValue(instance));
+                Assert.Equal(false, type.GetProperty("isReadable")!.GetValue(instance));
+            }
+            finally { context.Unload(); }
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public void NonPartialHandWrittenTypesFailBeforeWritingOutput()
     {
         var root = TestAssemblies.TempDir();

@@ -64,10 +64,13 @@ namespace UnityEngine
         /// <summary>Awake then OnEnable, as for a new or loaded instance.</summary>
         internal void RunCreationCallbacks()
         {
+            PrepareCreationCallbacks();
             Call("Awake");
             m_Enabled = true;
             Call("OnEnable");
         }
+
+        internal virtual void PrepareCreationCallbacks() { }
 
         internal void RunDestroyCallbacks()
         {

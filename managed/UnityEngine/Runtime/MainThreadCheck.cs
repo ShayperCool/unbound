@@ -44,6 +44,9 @@ namespace Unbound.Runtime
             if (type != null)
             {
                 bool behaviour = typeof(MonoBehaviour).IsAssignableFrom(type);
+                if (!behaviour && !typeof(ScriptableObject).IsAssignableFrom(type))
+                    throw new UnityException(binding + " is not allowed to be called from a script constructor (or instance field initializer). Called from '"
+                        + type.Name + "'.\nSee \"Script Serialization\" page in the Unity Manual for further details.");
                 string kind = behaviour ? "MonoBehaviour" : "ScriptableObject";
                 string callback = behaviour ? "Awake or Start" : "OnEnable";
                 string owner = t_ConstructingObject == null ? "" : " on game object '" + t_ConstructingObject + "'";

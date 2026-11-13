@@ -22,7 +22,26 @@ namespace UnityEditor
         internal GUIContent m_TitleContent = new GUIContent();
         bool m_Shown;
 
-        public EditorWindow() { }
+        // Creation-time values recorded by defaultstate on 6000.0.71f1.
+        const float DefaultWindowWidth = 320f, DefaultWindowHeight = 550f, DefaultMinimumSize = 50f;
+        const int DefaultDepthBufferBits = 24;
+
+        public EditorWindow()
+        {
+            if (!Compat.DefaultConstructorStateMeasured) return;
+            m_Position = new Rect(0f, 0f, DefaultWindowWidth, DefaultWindowHeight);
+            m_MinSize = new Vector2(DefaultMinimumSize, DefaultMinimumSize);
+            depthBufferBits = DefaultDepthBufferBits;
+            var typeName = GetType().ToString();
+            m_TitleContent.text = typeName;
+            saveChangesMessage = typeName + " has unsaved changes.";
+        }
+
+        internal override void PrepareCreationCallbacks()
+        {
+            base.PrepareCreationCallbacks();
+            if (Compat.DefaultConstructorStateMeasured) hideFlags = HideFlags.DontSave;
+        }
 
         public static event Action windowFocusChanged;
 
@@ -71,7 +90,12 @@ namespace UnityEditor
         [Unbound.EditorFaithful("windows are never shown, so none is docked")]
         public bool docked => false;
         public int depthBufferBits { get; set; }
-        [global::System.@ObsoleteAttribute("AA is not supported on EditorWindows", false)] public int antiAlias { get; set; }
+        int m_AntiAlias;
+        [global::System.@ObsoleteAttribute("AA is not supported on EditorWindows", false)] public int antiAlias
+        {
+            get => Compat.RemovedEditorSettingsMeasured ? 1 : m_AntiAlias;
+            set { if (!Compat.RemovedEditorSettingsMeasured) m_AntiAlias = value; }
+        }
         public bool hasUnsavedChanges { get; protected set; }
         public string saveChangesMessage { get; protected set; }
 

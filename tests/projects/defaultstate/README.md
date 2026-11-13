@@ -108,9 +108,10 @@ contexts. Both independent GPU repeats and Unbound match all 54 controls. The or
 The Core slice adds another 42 independent controls while preserving all prior rows,
 for 11,517 rows at that stage. Physics2D adds 17 controls and Physics adds 31,
 for 11,565 rows before Audio. Audio adds 25 controls, giving 11,590 rows before ParticleSystem.
-The ParticleSystem slice adds 362 controls, giving 11,952 current rows.
-The comparison now has 11,284 exact rows, 668 differing reference rows, zero
-missing rows and 30 extra implementation rows. Its 700 queue
+The ParticleSystem slice adds 362 controls. Declaration slices add five inventory rows.
+The Editor slice adds 154 controls while preserving all 11,957 previous rows,
+giving 12,111 current rows. The comparison now has 11,575 exact rows, 536 differing
+reference rows, zero missing rows and 30 extra implementation rows. Its 568 queue
 entries retain the same 50 variable rows; two happen to equal the implementation
 snapshot. Variable rows remain unresolved comparisons.
 
@@ -282,9 +283,66 @@ velocity correction therefore does not remove the still-differing MainModule agg
 The inherited renderer rows remain part of the Core renderer follow-up. All 50 variable
 policies and all earlier canonical rows remain unchanged.
 
+The Editor slice resolves 132 rows: 91 importer-wrapper reads, three removed
+texture settings, 32 window scalar/flag observations, three default collection counts
+and three unset paths. Both independent NVIDIA captures and Unbound match all 154
+new controls; all 531 earlier controls remain unchanged.
+
+The Editor slice records [AssetImporter.GetAtPath](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetImporter.GetAtPath.html)
+for MonoImporter, TextureImporter and a project ScriptedImporter, alongside manually
+constructed wrappers. These are distinct contexts: manual wrappers have no object
+identity and native-backed property reads throw NullReferenceException; the factory
+returns a cached live importer. Property access from its constructor still follows
+the constructor restriction. Same-type nested field initializers construct separate
+unbacked wrappers. A constructor exception is logged once while the factory retains
+the partially initialized live object. Common string settings normalize null to empty.
+These exception, identity and initialization details are observations of 6000.0.71f1,
+not release-independent guarantees. Controls modify settings and read the cached
+importer again, distinguish nested instances, and capture constructor errors through
+the managed log handler.
+
+Three removed TextureImporter settings bypass backing checks: correctGamma and
+generateMipsInLinearSpace return true, and spritePackingTag returns empty. Writes
+of both boolean values, a nonempty tag and null leave these answers unchanged on
+bare and factory-created importers. AssetBundle-setting validation diagnostics and
+other importer methods are outside these value controls.
+
+Default TypeCache collection Count reads throw without storage, while empty query
+results return zero and populated results return positive counts. The
+[Count documentation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TypeCache.TypeCollection.Count.html)
+describes collection size; it does not promise a valid result for a zero-constructed
+collection. Other operations on zero-constructed collections remain unmeasured.
+[AssetPostprocessor.assetPath](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetPostprocessor-assetPath.html)
+and [ObjectIdentifier.filePath](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Build.Content.ObjectIdentifier-filePath.html)
+retain null until assigned; empty, nonempty and null assignments remain distinct in
+the controls. Their documentation describes paths in initialized import/build
+contexts, rather than a universal non-null default. These raw constructor values
+reuse the initialization compatibility mechanism.
+
+EditorWindow scalar defaults are observed both in a derived constructor and in
+Awake; DontSave flags are applied before user Awake. Explicit writes change size,
+position, depth, title and save message, while the removed antiAlias setting keeps
+one. The [minSize](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorWindow-minSize.html)
+limit applies to floating windows, and setting
+[position](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorWindow-position.html)
+can undock a window. Docking and size constraint enforcement are outside these
+scalar controls. [ScriptableObject.Awake](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ScriptableObject.Awake.html)
+describes initialization; the precise flag phase here is a release observation.
+Importer backing and removed window settings select measured Compat mechanisms;
+window constructor values reuse the initialization mechanism. Other releases retain
+the prior unmeasured wrapper, constructor and antiAlias paths. Importer property
+stub output changes bump generator format to 6. Scripted import objects are retained
+in memory; this slice changes no persistent importer cache format.
+
+Editor keeps 87 rows: targetless inspectors and serialized state; window UI trees,
+data-mode controllers and overlays; built-in window-specific titles, cameras and
+event interests; view hierarchies; preview stages; and code-editor provider discovery.
+Base constructor controls rule out borrowing one set of scalar defaults for those
+contexts. The exact values and per-row follow-ups remain in the queue.
+
 | Release module | Queued rows |
 | --- | ---: |
-| UnityEditor.CoreModule | 219 |
+| UnityEditor.CoreModule | 87 |
 | UnityEngine.UIElementsModule | 159 |
 | UnityEngine.CoreModule | 115 |
 | UnityEngine.IMGUIModule | 29 |

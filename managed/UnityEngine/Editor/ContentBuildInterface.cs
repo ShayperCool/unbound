@@ -29,7 +29,7 @@ namespace UnityEditor.Build.Content
 
         public FileType fileType { get => m_FileType; internal set => m_FileType = value; }
 
-        public string filePath { get => m_FilePath ?? ""; internal set => m_FilePath = value; }
+        public string filePath { get => Compat.DefaultConstructorStateMeasured ? m_FilePath : m_FilePath ?? ""; internal set => m_FilePath = value; }
 
         public override string ToString() => $"{{guid: {m_GUID}, fileID: {m_LocalIdentifierInFile}, type: {m_FileType}, path: {filePath}}}";
 

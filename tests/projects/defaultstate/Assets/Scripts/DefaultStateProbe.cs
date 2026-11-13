@@ -51,6 +51,7 @@ public sealed class DefaultStateProbe : MonoBehaviour
             AudioControls();
             ParticleModuleControls();
             PhysicsPayloadControls();
+            EditorImporterControls();
             Emit("complete","value","1"); output.Dispose(); output=null;
             EditorApplication.Exit(0);
         }
@@ -180,7 +181,7 @@ public sealed class DefaultStateProbe : MonoBehaviour
         finally { UnityEngine.Object.DestroyImmediate(mesh); }
     }
     static void CoreValue(string key, object value)
-    { Emit("CoreControl/" + key, "value", Format(value, value.GetType(), new HashSet<object>(identity), 0)); }
+    { Emit("CoreControl/" + key, "value", Format(value, value == null ? typeof(object) : value.GetType(), new HashSet<object>(identity), 0)); }
     static Type ProbeType(string name)
     { var entry = candidates.First(c => c.type == "UnityEngine." + name); return Type.GetType(entry.type + ", " + entry.module, true); }
     static void Physics2DControls()
@@ -514,6 +515,121 @@ public sealed class DefaultStateProbe : MonoBehaviour
             }
         }
         CoreValue("Particles/defaultIsolated", default(ParticleSystem.MainModule).startSpeed);
+    }
+    static void EditorImporterControls()
+    {
+        EditorSmallWrapperControls();
+        var previousHandler = Debug.unityLogger.logHandler;
+        var failureHandler = new FactoryControlLogHandler(previousHandler);
+        try
+        {
+            Debug.unityLogger.logHandler = failureHandler;
+            var failed = UnityEditor.AssetImporter.GetAtPath("Assets/DefaultStateControl.defaultstatefail");
+            CoreValue("Editor/importer/failedConstructor", new object[] { failed != null,
+                failed == null ? false : (bool)failed.GetType().GetField("entered").GetValue(failed),
+                failed == null ? false : failed.GetInstanceID() != 0, failureHandler.errors });
+        }
+        finally { Debug.unityLogger.logHandler = previousHandler; }
+        var scriptedType = UnityEditor.AssetImporter.GetAtPath("Assets/DefaultStateControl.defaultstate").GetType();
+        var windowType = scriptedType.Assembly.GetType("DefaultStateWindow");
+        var basicWindow = ScriptableObject.CreateInstance<UnityEditor.EditorWindow>();
+        var customWindow = (UnityEditor.EditorWindow)ScriptableObject.CreateInstance(windowType);
+        try
+        {
+            CoreValue("Editor/window/base", new object[] { basicWindow.minSize, basicWindow.position, basicWindow.depthBufferBits,
+                typeof(UnityEditor.EditorWindow).GetProperty("antiAlias").GetValue(basicWindow, null), basicWindow.titleContent.text,
+                basicWindow.saveChangesMessage, basicWindow.hideFlags });
+            CoreValue("Editor/window/customConstructor", windowType.GetField("constructorValues").GetValue(customWindow));
+            CoreValue("Editor/window/customAwake", windowType.GetField("awakeValues").GetValue(customWindow));
+            windowType.GetMethod("ChangeDefaults").Invoke(customWindow, null);
+            CoreValue("Editor/window/customWritten", new object[] { customWindow.minSize, customWindow.position, customWindow.depthBufferBits,
+                typeof(UnityEditor.EditorWindow).GetProperty("antiAlias").GetValue(customWindow, null), customWindow.titleContent.text,
+                customWindow.saveChangesMessage, customWindow.hideFlags });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(basicWindow); UnityEngine.Object.DestroyImmediate(customWindow); }
+
+        foreach (var type in new[] { typeof(UnityEditor.AssetImporter), typeof(UnityEditor.TextureImporter),
+            typeof(UnityEditor.MonoImporter), typeof(UnityEditor.PluginImporter), scriptedType })
+        {
+            var importer = (UnityEditor.AssetImporter)Activator.CreateInstance(type);
+            CoreValue("Editor/importer/bare/" + type.Name + "/identity", new object[] { importer == null, importer.GetInstanceID() });
+            foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.CanRead && p.GetIndexParameters().Length == 0).OrderBy(p => p.Name, StringComparer.Ordinal))
+            {
+                var key = "CoreControl/Editor/importer/bare/" + type.Name + "/" + property.Name;
+                try { Emit(key, "value", Format(property.GetValue(importer, null), property.PropertyType, new HashSet<object>(identity), 0)); }
+                catch (Exception error) { Emit(key, "getter-threw", Error(error)); }
+            }
+            if (type == scriptedType)
+            {
+                CoreValue("Editor/importer/manualConstructor", new object[] { type.GetField("constructorState").GetValue(importer),
+                    type.GetField("nestedConstructorState").GetValue(importer) });
+                CoreValue("Editor/importer/manualFieldInitializer", type.GetField("fieldInitializerState").GetValue(importer));
+            }
+            if (type == typeof(UnityEditor.TextureImporter)) RemovedTextureSettings(importer, "bare");
+            UnityEngine.Object.DestroyImmediate(importer);
+        }
+        foreach (var path in new[] { "Assets/Scripts/FactoryControlBehaviour.cs", "Assets/DefaultStateControl.png", "Assets/DefaultStateControl.defaultstate" })
+        {
+            var importer = UnityEditor.AssetImporter.GetAtPath(path);
+            CoreValue("Editor/importer/bound/" + path, new object[] { importer.GetType().Name, importer.assetPath,
+                importer.name, importer.hideFlags, importer.userData, importer.GetInstanceID() != 0, importer != null });
+            importer.userData = "changed-control";
+            CoreValue("Editor/importer/written/" + path, new object[] { importer.userData,
+                ReferenceEquals(importer, UnityEditor.AssetImporter.GetAtPath(path)) });
+            importer.userData = null; importer.assetBundleName = null; importer.assetBundleVariant = null;
+            CoreValue("Editor/importer/nullStrings/" + path, new object[] { importer.userData, importer.assetBundleName, importer.assetBundleVariant });
+            if (importer is UnityEditor.TextureImporter) RemovedTextureSettings(importer, "bound");
+            if (importer.GetType() == scriptedType)
+            {
+                CoreValue("Editor/importer/boundConstructor", new object[] { scriptedType.GetField("constructorState").GetValue(importer),
+                    scriptedType.GetField("nestedConstructorState").GetValue(importer) });
+                CoreValue("Editor/importer/boundConstructorMessage", scriptedType.GetField("constructorMessage").GetValue(importer));
+                CoreValue("Editor/importer/boundFieldInitializer", scriptedType.GetField("fieldInitializerState").GetValue(importer));
+            }
+        }
+    }
+    [AttributeUsage(AttributeTargets.All)]
+    sealed class EmptyEditorControlAttribute : Attribute { }
+    static void EditorSmallWrapperControls()
+    {
+        foreach (var item in new[] {
+            new KeyValuePair<string, Func<int>>("types", () => default(UnityEditor.TypeCache.TypeCollection).Count),
+            new KeyValuePair<string, Func<int>>("methods", () => default(UnityEditor.TypeCache.MethodCollection).Count),
+            new KeyValuePair<string, Func<int>>("fields", () => default(UnityEditor.TypeCache.FieldInfoCollection).Count) })
+        {
+            var key = "CoreControl/Editor/collection/default/" + item.Key;
+            try { Emit(key, "value", item.Value().ToString(CultureInfo.InvariantCulture)); }
+            catch (Exception error) { Emit(key, "getter-threw", Error(error)); }
+        }
+        CoreValue("Editor/collection/empty/types", UnityEditor.TypeCache.GetTypesWithAttribute<EmptyEditorControlAttribute>().Count);
+        CoreValue("Editor/collection/empty/methods", UnityEditor.TypeCache.GetMethodsWithAttribute<EmptyEditorControlAttribute>().Count);
+        CoreValue("Editor/collection/empty/fields", UnityEditor.TypeCache.GetFieldsWithAttribute<EmptyEditorControlAttribute>().Count);
+        CoreValue("Editor/collection/live/types", UnityEditor.TypeCache.GetTypesDerivedFrom<ScriptableObject>().Count > 0);
+        CoreValue("Editor/collection/live/methods", UnityEditor.TypeCache.GetMethodsWithAttribute<ObsoleteAttribute>().Count > 0);
+        CoreValue("Editor/collection/live/fields", UnityEditor.TypeCache.GetFieldsWithAttribute<ObsoleteAttribute>().Count > 0);
+        var processor = new UnityEditor.AssetPostprocessor();
+        CoreValue("Editor/postprocessor/default", processor.assetPath);
+        processor.assetPath = "Assets/explicit.asset"; CoreValue("Editor/postprocessor/written", processor.assetPath);
+        processor.assetPath = ""; CoreValue("Editor/postprocessor/empty", processor.assetPath);
+        processor.assetPath = null; CoreValue("Editor/postprocessor/null", processor.assetPath);
+        object identifier = default(UnityEditor.Build.Content.ObjectIdentifier);
+        var path = identifier.GetType().GetProperty("filePath");
+        CoreValue("Editor/identifier/default", path.GetValue(identifier, null));
+        path.SetValue(identifier, "explicit-path", null); CoreValue("Editor/identifier/written", path.GetValue(identifier, null));
+        path.SetValue(identifier, null, null); CoreValue("Editor/identifier/null", path.GetValue(identifier, null));
+    }
+    static void RemovedTextureSettings(UnityEditor.AssetImporter importer, string context)
+    {
+        foreach (var name in new[] { "correctGamma", "generateMipsInLinearSpace", "spritePackingTag" })
+        {
+            var property = importer.GetType().GetProperty(name);
+            foreach (var changed in new[] { false, true })
+            {
+                property.SetValue(importer, property.PropertyType == typeof(bool) ? (object)changed : changed ? null : "changed-tag", null);
+                CoreValue("Editor/importer/removed/" + context + "/" + name + "/" + changed, property.GetValue(importer, null));
+            }
+        }
     }
     static void RemovedGetterControls()
     {

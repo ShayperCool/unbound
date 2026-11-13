@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: 11f2e8d13ff941a8a1dd9672dcbd4983
+ScriptedImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  userData: failed-control
+  assetBundleName:
+  assetBundleVariant:
+  script: {fileID: 11500000, guid: 4352532d2c6b4b529e4a90b623cce4c2, type: 3}
