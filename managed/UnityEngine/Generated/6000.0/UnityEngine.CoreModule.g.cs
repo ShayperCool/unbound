@@ -1921,15 +1921,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static void GetAllRenderPipelineAssetsForPlatform(string buildTargetGroupName, ref global::System.Collections.Generic.List<global::UnityEngine.Rendering.RenderPipelineAsset> renderPipelineAssets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.GetAllRenderPipelineAssetsForPlatform"); }
         [global::Unbound.Stub] internal static bool SamePipelineAssetsForPlatform(string buildTargetGroupName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.SamePipelineAssetsForPlatform"); return default; }
         [global::System.Obsolete("Use GetQualityLevel and SetQualityLevel")] public static global::UnityEngine.QualityLevel currentLevel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.currentLevel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.currentLevel"); } }
-        public static global::UnityEngine.TerrainQualityOverrides terrainQualityOverrides { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainQualityOverrides"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainQualityOverrides"); } }
-        public static float terrainPixelError { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainPixelError"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainPixelError"); } }
-        public static float terrainDetailDensityScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainDetailDensityScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainDetailDensityScale"); } }
-        public static float terrainBasemapDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainBasemapDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainBasemapDistance"); } }
-        public static float terrainDetailDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainDetailDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainDetailDistance"); } }
-        public static float terrainTreeDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainTreeDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainTreeDistance"); } }
-        public static float terrainBillboardStart { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainBillboardStart"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainBillboardStart"); } }
-        public static float terrainFadeLength { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainFadeLength"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainFadeLength"); } }
-        public static float terrainMaxTrees { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainMaxTrees"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.terrainMaxTrees"); } }
         [global::System.Obsolete("blendWeights is obsolete. Use skinWeights instead (UnityUpgradable) -> skinWeights")] public static global::UnityEngine.BlendWeights blendWeights { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.blendWeights"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.blendWeights"); } }
         public static bool streamingMipmapsActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.streamingMipmapsActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.streamingMipmapsActive"); } }
         public static float streamingMipmapsMemoryBudget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.streamingMipmapsMemoryBudget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.streamingMipmapsMemoryBudget"); } }
@@ -2537,19 +2528,6 @@ namespace UnityEngine
         public virtual bool supportsIndirectArgumentsBuffer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfoShimBase.supportsIndirectArgumentsBuffer"); return default; } }
         public virtual bool supportsDepthFetchInRenderPass { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfoShimBase.supportsDepthFetchInRenderPass"); return default; } }
         public virtual bool supportsDynamicResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfoShimBase.supportsDynamicResolution"); return default; } }
-    }
-    [global::System.Flags]
-    public enum TerrainQualityOverrides
-    {
-        None = 0,
-        PixelError = 1,
-        BasemapDistance = 2,
-        DetailDensity = 4,
-        DetailDistance = 8,
-        TreeDistance = 16,
-        BillboardStart = 32,
-        FadeLength = 64,
-        MaxTrees = 128,
     }
     public enum TexGenMode
     {

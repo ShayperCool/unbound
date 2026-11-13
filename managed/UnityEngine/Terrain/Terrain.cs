@@ -98,16 +98,20 @@ namespace UnityEngine
             }
         }
 
-        public float treeDistance { get => m_TreeDistance; set => m_TreeDistance = value; }
-        public float treeBillboardDistance { get => m_TreeBillboardDistance; set => m_TreeBillboardDistance = value; }
-        public float treeCrossFadeLength { get => m_TreeCrossFadeLength; set => m_TreeCrossFadeLength = value; }
-        public int treeMaximumFullLODCount { get => m_TreeMaximumFullLODCount; set => m_TreeMaximumFullLODCount = value; }
-        public float detailObjectDistance { get => m_DetailObjectDistance; set => m_DetailObjectDistance = value; }
-        public float detailObjectDensity { get => m_DetailObjectDensity; set => m_DetailObjectDensity = Mathf.Clamp01(value); }
-        public float heightmapPixelError { get => m_HeightmapPixelError; set => m_HeightmapPixelError = Mathf.Clamp(value, 1f, 200f); }
+        // These read the quality level's value when it overrides the setting and the terrain does
+        // not ignore quality settings (matches the Unity 6000.0.71f1 Editor, tests/projects/grass).
+        public float treeDistance { get => Overridden(TerrainQualityOverrides.TreeDistance) ? QualitySettings.terrainTreeDistance : m_TreeDistance; set => m_TreeDistance = value; }
+        public float treeBillboardDistance { get => Overridden(TerrainQualityOverrides.BillboardStart) ? QualitySettings.terrainBillboardStart : m_TreeBillboardDistance; set => m_TreeBillboardDistance = value; }
+        public float treeCrossFadeLength { get => Overridden(TerrainQualityOverrides.FadeLength) ? QualitySettings.terrainFadeLength : m_TreeCrossFadeLength; set => m_TreeCrossFadeLength = value; }
+        public int treeMaximumFullLODCount { get => Overridden(TerrainQualityOverrides.MaxTrees) ? (int)QualitySettings.terrainMaxTrees : m_TreeMaximumFullLODCount; set => m_TreeMaximumFullLODCount = value; }
+        public float detailObjectDistance { get => Overridden(TerrainQualityOverrides.DetailDistance) ? QualitySettings.terrainDetailDistance : m_DetailObjectDistance; set => m_DetailObjectDistance = value; }
+        public float detailObjectDensity { get => Overridden(TerrainQualityOverrides.DetailDensity) ? QualitySettings.terrainDetailDensityScale : m_DetailObjectDensity; set => m_DetailObjectDensity = Mathf.Clamp01(value); }
+        public float heightmapPixelError { get => Overridden(TerrainQualityOverrides.PixelError) ? QualitySettings.terrainPixelError : m_HeightmapPixelError; set => m_HeightmapPixelError = Mathf.Clamp(value, 1f, 200f); }
+
+        bool Overridden(TerrainQualityOverrides setting) => !m_IgnoreQualitySettings && (QualitySettings.terrainQualityOverrides & setting) != 0;
         public int heightmapMaximumLOD { get => m_HeightmapMaximumLOD; set => m_HeightmapMaximumLOD = value; }
         public int heightmapMinimumLODSimplification { get => m_HeightmapMinimumLODSimplification; set => m_HeightmapMinimumLODSimplification = value; }
-        public float basemapDistance { get => m_SplatMapDistance; set => m_SplatMapDistance = Mathf.Clamp(value, 0f, 20000f); }
+        public float basemapDistance { get => Overridden(TerrainQualityOverrides.BasemapDistance) ? QualitySettings.terrainBasemapDistance : m_SplatMapDistance; set => m_SplatMapDistance = Mathf.Clamp(value, 0f, 20000f); }
 
         [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("splatmapDistance is deprecated, please use basemapDistance instead. (UnityUpgradable) -> basemapDistance", true)]
         public float splatmapDistance { get => basemapDistance; set => basemapDistance = value; }

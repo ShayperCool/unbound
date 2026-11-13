@@ -2307,6 +2307,17 @@ namespace UnityEngine
         public static bool billboardsFaceCameraPosition { get; set; }
         /// <summary>Details at random points of their samples instead of the R2 sequence's.</summary>
         public static bool useLegacyDetailDistribution { get; set; }
+        /// <summary>Which terrain settings the level overrides for terrains that do not ignore
+        /// quality settings, and the values it gives them.</summary>
+        public static TerrainQualityOverrides terrainQualityOverrides { get; set; }
+        public static float terrainPixelError { get; set; } = 1f;
+        public static float terrainDetailDensityScale { get; set; } = 1f;
+        public static float terrainBasemapDistance { get; set; } = 1000f;
+        public static float terrainDetailDistance { get; set; } = 80f;
+        public static float terrainTreeDistance { get; set; } = 5000f;
+        public static float terrainBillboardStart { get; set; } = 50f;
+        public static float terrainFadeLength { get; set; } = 5f;
+        public static float terrainMaxTrees { get; set; } = 50f;
         public static int particleRaycastBudget { get; set; } = 4096;
         public static int realtimeGICPUUsage { get; set; } = 25;
         public static SkinWeights skinWeights { get; set; } = SkinWeights.FourBones;
@@ -2367,6 +2378,15 @@ namespace UnityEngine
             realtimeReflectionProbes = B("realtimeReflectionProbes", realtimeReflectionProbes);
             billboardsFaceCameraPosition = B("billboardsFaceCameraPosition", billboardsFaceCameraPosition);
             useLegacyDetailDistribution = B("useLegacyDetailDistribution", useLegacyDetailDistribution);
+            terrainQualityOverrides = (TerrainQualityOverrides)I("terrainQualityOverrides", (int)terrainQualityOverrides);
+            terrainPixelError = F("terrainPixelError", terrainPixelError);
+            terrainDetailDensityScale = F("terrainDetailDensityScale", terrainDetailDensityScale);
+            terrainBasemapDistance = F("terrainBasemapDistance", terrainBasemapDistance);
+            terrainDetailDistance = F("terrainDetailDistance", terrainDetailDistance);
+            terrainTreeDistance = F("terrainTreeDistance", terrainTreeDistance);
+            terrainBillboardStart = F("terrainBillboardStart", terrainBillboardStart);
+            terrainFadeLength = F("terrainFadeLength", terrainFadeLength);
+            terrainMaxTrees = F("terrainMaxTrees", terrainMaxTrees);
             vSyncCount = I("vSyncCount", vSyncCount);
             realtimeGICPUUsage = I("realtimeGICPUUsage", realtimeGICPUUsage);
             lodBias = F("lodBias", lodBias);
