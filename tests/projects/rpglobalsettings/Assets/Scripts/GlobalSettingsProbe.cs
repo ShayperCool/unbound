@@ -23,6 +23,20 @@ public class GlobalSettingsProbe : MonoBehaviour
     static void Row(string key, string value) =>
         output.Write("{\"k\":\"" + key + "\",\"v\":\"" + value + "\"}\n");
 
+    static readonly System.Collections.Generic.List<string> s_Errors = new System.Collections.Generic.List<string>();
+
+    /// <summary>The errors logged from the start of Play mode on (the pipeline is made meanwhile).</summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void Listen()
+    {
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RP_GLOBAL_SETTINGS_OUT"))) return;
+        Application.logMessageReceived += (message, stack, type) =>
+        {
+            if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
+                s_Errors.Add(type + ": " + message.Split('\n')[0]);
+        };
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Launch()
     {
@@ -81,6 +95,12 @@ public class GlobalSettingsProbe : MonoBehaviour
                 var dynamic = Settings("UnityEngine.Rendering.Universal.ScreenSpaceAmbientOcclusionDynamicResources", out found);
                 Row("ssaoDynamic.found", found);
                 Row("ssaoDynamic.m_BlueNoise256Textures", Field(dynamic, "m_BlueNoise256Textures"));
+                // The core package's model URP's global settings reference (ProbeVolumeDebugResources):
+                // its slot without a material of its own has the pipeline's default.
+                var debugMesh = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/com.unity.render-pipelines.core/Runtime/Debug/ProbeSamplingDebugMesh.fbx");
+                var debugRenderer = debugMesh != null ? debugMesh.GetComponentInChildren<Renderer>() : null;
+                Row("debugMesh.material", debugRenderer != null ? Name(debugRenderer.sharedMaterial) : "no renderer");
+                Row("errors", s_Errors.Count + (s_Errors.Count > 0 ? " " + string.Join(" | ", s_Errors).Replace("\"", "'") : ""));
                 output.Write("{\"k\":\"complete\",\"v\":true}\n");
             }
             EditorApplication.Exit(0);

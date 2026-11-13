@@ -7,4 +7,6 @@
 {"k":"runtimeShaders.m_BlitHDROverlay","v":"Hidden/Universal/BlitHDROverlay"}
 {"k":"ssaoDynamic.found","v":"True"}
 {"k":"ssaoDynamic.m_BlueNoise256Textures","v":"7 LDR_LLL1_0,LDR_LLL1_1,LDR_LLL1_2,LDR_LLL1_3,LDR_LLL1_4,LDR_LLL1_5,LDR_LLL1_6"}
+{"k":"debugMesh.material","v":"Lit"}
+{"k":"errors","v":"0"}
 {"k":"complete","v":true}
