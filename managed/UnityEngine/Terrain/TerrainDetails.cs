@@ -113,31 +113,32 @@ namespace UnityEngine
             }
             var p = m_DetailPrototypes[detailPrototypeIndex];
             if (!p.Validate()) return 0f;
-            float footprint = Footprint(p);
+            float footprint = Footprint(p, PrototypeShape(p));
             return footprint > 0f ? p.m_Density / footprint : 0f;
         }
 
         /// <summary>The width an instance covers: the average width times the prototype's width
-        /// across x (<see cref="PrototypeExtentX"/> twice).</summary>
-        static float Footprint(DetailPrototype p)
+        /// across x (its shape's extent twice).</summary>
+        static float Footprint(DetailPrototype p, in Bounds shape)
         {
-            float extent = PrototypeExtentX(p);
+            float extent = shape.extents.x;
             return (p.m_MaxWidth + p.m_MinWidth) * (extent + extent) * 0.5f;
         }
 
-        /// <summary>Half the prototype's width across x as the Editor sizes it: a grass texture is
-        /// a unit quad (0.5); a mesh drawn without instancing, any turn of its vertices (their
-        /// largest distance from the y axis); a mesh drawn with instancing, its bounds.</summary>
-        static float PrototypeExtentX(DetailPrototype p)
+        /// <summary>The prototype's shape as the Editor sizes it, centered on the instance: a grass
+        /// texture is a unit quad and a mesh drawn without instancing any turn of its vertices,
+        /// both a segment along x as long as their largest distance from the y axis on each side;
+        /// a mesh drawn with instancing, its bounds.</summary>
+        static Bounds PrototypeShape(DetailPrototype p)
         {
-            if (!p.usePrototypeMesh || p.m_Prototype == null) return 0.5f;
+            if (!p.usePrototypeMesh || p.m_Prototype == null) return new Bounds { extents = new Vector3(0.5f, 0f, 0f) };
             var mesh = p.m_Prototype.GetComponent<MeshFilter>() is MeshFilter filter ? filter.sharedMesh : null;
-            if (mesh == null) return 0f;
-            if (p.useInstancing) return mesh.bounds.extents.x;
+            if (mesh == null) return default;
+            if (p.useInstancing) return mesh.bounds;
             float radius = 0f;
             foreach (var v in mesh.m_Vertices)
                 radius = Math.Max(radius, (float)Math.Sqrt(v.z * v.z + v.x * v.x));
-            return radius;
+            return new Bounds { extents = new Vector3(radius, 0f, 0f) };
         }
 
         // ------------------------------------------------------------ instances
@@ -172,40 +173,84 @@ namespace UnityEngine
 
         static float Frac(float v) => v - (float)Math.Floor(v);
 
+        /// <summary>What a layer's instances take from its prototype, found once for all patches.</summary>
+        internal readonly struct DetailLayerSetup
+        {
+            internal readonly DetailPrototype Prototype;
+            internal readonly byte[] Values;
+            internal readonly Bounds Shape;
+            /// <summary>Coverage mode: the prototype's instances per unit (density over footprint).</summary>
+            internal readonly float PerUnit;
+
+            internal DetailLayerSetup(DetailPrototype prototype, byte[] values, Bounds shape, float perUnit)
+            {
+                Prototype = prototype;
+                Values = values;
+                Shape = shape;
+                PerUnit = perUnit;
+            }
+
+            internal bool IsValid => Values != null;
+        }
+
+        /// <summary>A layer's setup; not valid without values or with a refused prototype.</summary>
+        internal DetailLayerSetup PrepareDetailLayer(int layer)
+        {
+            if (layer < 0 || layer >= m_DetailPrototypes.Length) return default;
+            var prototype = m_DetailPrototypes[layer];
+            var values = DetailLayer(layer, false);
+            if (values == null || !prototype.Validate()) return default;
+            var shape = PrototypeShape(prototype);
+            float perUnit = 0f;
+            if (m_DetailScatterMode == DetailScatterMode.CoverageMode)
+            {
+                float footprint = Footprint(prototype, shape);
+                perUnit = footprint > 0f ? 1f / footprint * prototype.m_Density : 0f;
+            }
+            return new DetailLayerSetup(prototype, values, shape, perUnit);
+        }
+
+        public DetailInstanceTransform[] ComputeDetailInstanceTransforms(int patchX, int patchY, int layer, float density, out Bounds bounds)
+        {
+            var placements = new List<Matrix4x4>();
+            PlaceDetails(PrepareDetailLayer(layer), patchX, patchY, density, placements, out bounds);
+            var result = new DetailInstanceTransform[placements.Count];
+            for (int i = 0; i < result.Length; i++) result[i] = InstanceTransform(placements[i]);
+            return result;
+        }
+
         /// <summary>
-        /// A patch's instances of a layer, sample by sample (rows of the patch, then columns). A
-        /// sample's generator is seeded by noiseSeed + the sample's index in the patch + 1013 × the
-        /// patch's index (patches column by column). Instance count mode: the sample's value (at
-        /// most 16) is its count. Coverage mode: the count comes from
-        /// <see cref="CoverageCandidates"/>, and each candidate is kept when a draw is at most
-        /// the coverage squared. Each instance then draws three numbers: its place in the sample, and
+        /// A patch's instances of a layer, sample by sample (rows of the patch, then columns), as
+        /// terrain-relative transforms. A sample's generator is seeded by noiseSeed + the sample's
+        /// index in the patch + 1013 × the patch's index (patches column by column). Instance count
+        /// mode: the sample's value (at most 16) is its count. Coverage mode: the count comes from
+        /// <see cref="CoverageCandidates"/>, and each candidate is kept when a draw is at most the
+        /// coverage squared. Each instance then draws three numbers: its place in the sample, and
         /// its turn. The place is a point of the R2 sequence (numbered from (seed mod 4095) + 2 +
         /// 255 × the sample's row, one more per candidate) jittered by positionJitter × (draw -
         /// 0.5) / √count in x and z, or with QualitySettings.useLegacyDetailDistribution the two
-        /// draws themselves. Sizes follow Mathf.PerlinNoise of the position × noiseSpread.
+        /// draws themselves. Sizes follow Mathf.PerlinNoise of the position × noiseSpread; the
+        /// transform turns the instance by the third draw × 2π about y, then tilts it from up
+        /// towards the terrain's normal by alignToGround. The bounds hold every instance's
+        /// transformed shape.
         /// </summary>
-        public DetailInstanceTransform[] ComputeDetailInstanceTransforms(int patchX, int patchY, int layer, float density, out Bounds bounds)
+        internal void PlaceDetails(in DetailLayerSetup layer, int patchX, int patchY, float density, List<Matrix4x4> into, out Bounds bounds)
         {
             bounds = default;
-            var list = new List<DetailInstanceTransform>();
-            if (layer < 0 || layer >= m_DetailPrototypes.Length) return list.ToArray();
-            var prototype = m_DetailPrototypes[layer];
-            var values = DetailLayer(layer, false);
+            into.Clear();
             int patches = detailPatchCount, perPatch = m_DetailResolutionPerPatch;
-            if (values == null || !prototype.Validate() || patchX < 0 || patchY < 0 || patchX >= patches || patchY >= patches)
-                return list.ToArray();
+            if (!layer.IsValid || layer.Values.Length != m_DetailResolution * m_DetailResolution
+                || patchX < 0 || patchY < 0 || patchX >= patches || patchY >= patches)
+                return;
+            var prototype = layer.Prototype;
+            var values = layer.Values;
             var size = this.size;
             bool coverage = m_DetailScatterMode == DetailScatterMode.CoverageMode;
             bool legacy = QualitySettings.useLegacyDetailDistribution;
             float cellX = size.x * (1f / perPatch / patches), cellZ = size.z * (1f / perPatch / patches);
-            float perUnit = 0f;
-            if (coverage)
-            {
-                float footprint = Footprint(prototype);
-                perUnit = footprint > 0f ? 1f / footprint * prototype.m_Density : 0f;
-            }
             float sampleUv = 1f / (patches * perPatch);
             int patchTerm = 1013 * (patchX * patches + patchY);
+            Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
             for (int ly = 0; ly < perPatch; ly++)
                 for (int lx = 0; lx < perPatch; lx++)
                 {
@@ -220,7 +265,7 @@ namespace UnityEngine
                     if (coverage)
                     {
                         keep = value / 255f * (value / 255f);
-                        count = CoverageCandidates(perUnit, cellX, cellZ, ref random, lx, ly);
+                        count = CoverageCandidates(layer.PerUnit, cellX, cellZ, ref random, lx, ly);
                     }
                     else count = Math.Min(16, value);
                     if (count <= 0) continue;
@@ -238,11 +283,12 @@ namespace UnityEngine
                             fx = Frac(Frac(point * s_R2X + 0.5f) - prototype.m_PositionJitter * ((u - 0.5f) / spread));
                             fz = Frac(Frac(point * s_R2Z + 0.5f) - prototype.m_PositionJitter * ((v - 0.5f) / spread));
                         }
-                        list.Add(Instance(prototype, Frac(fx * sampleUv + cornerU), Frac(fz * sampleUv + cornerV), w));
+                        var model = Placement(prototype, Frac(fx * sampleUv + cornerU), Frac(fz * sampleUv + cornerV), w);
+                        into.Add(model);
+                        Encapsulate(model, layer.Shape, ref min, ref max);
                     }
                 }
-            bounds = InstanceBounds(prototype, list);
-            return list.ToArray();
+            if (into.Count > 0) bounds = new Bounds { center = (min + max) * 0.5f, extents = (max - min) * 0.5f };
         }
 
         /// <summary>
@@ -271,57 +317,61 @@ namespace UnityEngine
 
         static float Round(float v) => MathF.Round(v, MidpointRounding.AwayFromZero);
 
-        /// <summary>An instance at the terrain's normalized position (u, v).</summary>
-        DetailInstanceTransform Instance(DetailPrototype prototype, float u, float v, float turn)
+        /// <summary>An instance's terrain-relative transform at the terrain's normalized position
+        /// (u, v): its height there, its size from the noise, turned by the turn draw (a fraction
+        /// of a full turn) and then tilted from up towards the terrain's normal by alignToGround.</summary>
+        Matrix4x4 Placement(DetailPrototype prototype, float u, float v, float turn)
         {
             var size = this.size;
             float x = size.x * u, z = size.z * v;
             float noise = Mathf.PerlinNoise(x * prototype.m_NoiseSpread, z * prototype.m_NoiseSpread);
+            float width = prototype.m_MinWidth * (1f - noise) + prototype.m_MaxWidth * noise;
+            float height = prototype.m_MinHeight * (1f - noise) + prototype.m_MaxHeight * noise;
+            float half = turn * Mathf.PI;
+            var rotation = new Quaternion(0f, (float)Math.Sin(half), 0f, (float)Math.Cos(half));
+            if (prototype.m_AlignToGround != 0f)
+            {
+                var up = Vector3.up;
+                var aligned = Vector3.Slerp(up, GetInterpolatedNormal(u, v), prototype.m_AlignToGround);
+                rotation = Quaternion.FromToRotation(up, aligned) * rotation;
+            }
+            return Matrix4x4.TRS(new Vector3(x, GetInterpolatedHeight(u, v), z), rotation, new Vector3(width, height, width));
+        }
+
+        /// <summary>What ComputeDetailInstanceTransforms reports of a transform: its position, the
+        /// lengths of its x and y axes, and a turn about y read back from its x axis (the half angle
+        /// whose sine is √((1 - cos) / 2), past half a turn when the axis points to +z), which
+        /// for a tilted instance includes the tilt.</summary>
+        internal static DetailInstanceTransform InstanceTransform(in Matrix4x4 m)
+        {
+            float scaleXZ = (float)Math.Sqrt(m.m20 * m.m20 + m.m10 * m.m10 + m.m00 * m.m00);
+            float scaleY = (float)Math.Sqrt(m.m21 * m.m21 + m.m11 * m.m11 + m.m01 * m.m01);
+            float sine = (float)Math.Sqrt((1f - m.m00 / scaleXZ) * 0.5f);
+            float angle = (float)Math.Asin(sine);
+            if (m.m20 / sine > 0f) angle = Mathf.PI - angle;
             return new DetailInstanceTransform
             {
-                posX = x,
-                posY = GetInterpolatedHeight(u, v),
-                posZ = z,
-                scaleXZ = prototype.m_MinWidth * (1f - noise) + prototype.m_MaxWidth * noise,
-                scaleY = prototype.m_MinHeight * (1f - noise) + prototype.m_MaxHeight * noise,
-                rotationY = turn * 2f * Mathf.PI,
+                posX = m.m03,
+                posY = m.m13,
+                posZ = m.m23,
+                scaleXZ = scaleXZ,
+                scaleY = scaleY,
+                rotationY = angle + angle,
             };
         }
 
-        /// <summary>The instances' bounds (measured): a grass quad spans its width along its
-        /// turned x axis, at its position's height only; a mesh, its mesh's bounds turned and
-        /// scaled.</summary>
-        static Bounds InstanceBounds(DetailPrototype prototype, List<DetailInstanceTransform> instances)
+        /// <summary>Grows min and max by the shape transformed: its center moved, its extents
+        /// through the transform's absolute values.</summary>
+        static void Encapsulate(in Matrix4x4 m, in Bounds shape, ref Vector3 min, ref Vector3 max)
         {
-            if (instances.Count == 0) return default;
-            Bounds? mesh = null;
-            if (prototype.usePrototypeMesh && prototype.m_Prototype != null && prototype.m_Prototype.GetComponent<MeshFilter>() is MeshFilter filter && filter.sharedMesh != null)
-                mesh = filter.sharedMesh.bounds;
-            Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
-            foreach (var i in instances)
-            {
-                float c = Mathf.Cos(i.rotationY), s = Mathf.Sin(i.rotationY);
-                var position = new Vector3(i.posX, i.posY, i.posZ);
-                if (mesh is Bounds b)
-                {
-                    // The turned box: center turned, extents by |cos| and |sin|.
-                    var center = Vector3.Scale(b.center, new Vector3(i.scaleXZ, i.scaleY, i.scaleXZ));
-                    var e = Vector3.Scale(b.extents, new Vector3(i.scaleXZ, i.scaleY, i.scaleXZ));
-                    var turned = new Vector3(c * center.x + s * center.z, center.y, -s * center.x + c * center.z);
-                    var extent = new Vector3(Math.Abs(c) * e.x + Math.Abs(s) * e.z, e.y, Math.Abs(s) * e.x + Math.Abs(c) * e.z);
-                    min = Vector3.Min(min, position + turned - extent);
-                    max = Vector3.Max(max, position + turned + extent);
-                }
-                else
-                {
-                    var extent = new Vector3(Math.Abs(c) * i.scaleXZ * 0.5f, 0f, Math.Abs(s) * i.scaleXZ * 0.5f);
-                    min = Vector3.Min(min, position - extent);
-                    max = Vector3.Max(max, position + extent);
-                }
-            }
-            var bounds = new Bounds();
-            bounds.SetMinMax(min, max);
-            return bounds;
+            var center = m.MultiplyPoint3x4(shape.center);
+            var e = shape.extents;
+            var extent = new Vector3(
+                Math.Abs(m.m00) * e.x + Math.Abs(m.m01) * e.y + Math.Abs(m.m02) * e.z,
+                Math.Abs(m.m10) * e.x + Math.Abs(m.m11) * e.y + Math.Abs(m.m12) * e.z,
+                Math.Abs(m.m20) * e.x + Math.Abs(m.m21) * e.y + Math.Abs(m.m22) * e.z);
+            min = Vector3.Min(min, center - extent);
+            max = Vector3.Max(max, center + extent);
         }
 
         // ------------------------------------------------------------ serialized

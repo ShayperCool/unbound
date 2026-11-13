@@ -19,14 +19,15 @@ namespace UnityEngine
     // camera less the terrain's position), drawn with Unity's detail shaders
     // (Hidden/TerrainEngine/Details/...) and a texture atlas of the prototypes; meshes drawn with
     // instancing are their prototype's meshes and materials at each instance. As the Editor builds
-    // them (measured: a project overriding the detail shaders dumped the vertices it draws):
-    // a grass quad spans its width along its turned x axis (uv's left at -x), from its position's
+    // them (measured: a project overriding the detail shaders dumped the vertices it draws): a
+    // grass quad spans its width along its turned x axis (uv's left at -x), from its position's
     // height up, its colour the dry colour lerped to the healthy one by the size noise (top; the
     // bottom 0.625 of it, alpha 0 for no waving), its normal the terrain's; a billboard's four
-    // corners sit at the instance with their offsets in the tangent; meshes are baked turned and
-    // scaled, coloured the instance's colour. The shaders' globals: _WaveAndDistance (frame time ×
-    // speed × 0.04, strength × 0.5, amount × 6, distance²), _CameraPosition (the camera less the
-    // terrain's position, 1 / distance²), the camera's right and up, the waving tint.
+    // corners sit at the instance with their offsets in the tangent; meshes are baked through their
+    // instance's transform (turned, tilted to the ground, scaled), coloured its colour. The
+    // shaders' globals: _WaveAndDistance (frame time × speed × 0.04, strength × 0.5, amount × 6,
+    // distance²), _CameraPosition (the camera less the terrain's position, 1 / distance²), the
+    // camera's right and up, the waving tint.
     internal sealed partial class TerrainRenderer
     {
         enum DetailKind { Grass, Billboard, Mesh }
@@ -49,6 +50,8 @@ namespace UnityEngine
 
         readonly List<DetailPatch> m_DetailPatches = new List<DetailPatch>();
         readonly List<InstancedDetail> m_InstancedDetails = new List<InstancedDetail>();
+        readonly List<Matrix4x4> m_Placements = new List<Matrix4x4>();
+        MaterialPropertyBlock m_DetailBlock;
         TerrainData m_DetailsData;
         int m_DetailsVersion = -1, m_DetailsHeights = -1;
         Vector3 m_DetailsOrigin;
@@ -76,7 +79,7 @@ namespace UnityEngine
             var up = cam != null ? cam.transform.up : Vector3.up;
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             var tint = linear ? data.wavingGrassTint.linear : data.wavingGrassTint;
-            var block = new MaterialPropertyBlock();
+            var block = m_DetailBlock ??= new MaterialPropertyBlock();
             block.SetVector("_WaveAndDistance", new Vector4(Time.deltaTime * data.wavingGrassSpeed * 0.04f, data.wavingGrassStrength * 0.5f, data.wavingGrassAmount * 6f, squared));
             var relative = camera.Position - origin;
             block.SetVector("_CameraPosition", new Vector4(relative.x, relative.y, relative.z, 1f / squared));
@@ -223,6 +226,9 @@ namespace UnityEngine
             var rects = BuildDetailAtlas(prototypes, out var white);
             var size = data.size;
             int patches = data.detailPatchCount;
+            var layers = new TerrainData.DetailLayerSetup[prototypes.Length];
+            for (int layer = 0; layer < prototypes.Length; layer++) layers[layer] = data.PrepareDetailLayer(layer);
+            var placements = m_Placements;
             for (int py = 0; py < patches; py++)
                 for (int px = 0; px < patches; px++)
                 {
@@ -230,20 +236,20 @@ namespace UnityEngine
                     for (int layer = 0; layer < prototypes.Length; layer++)
                     {
                         var prototype = prototypes[layer];
-                        var instances = data.ComputeDetailInstanceTransforms(px, py, layer, terrain.detailObjectDensity, out _);
-                        if (instances.Length == 0) continue;
+                        data.PlaceDetails(layers[layer], px, py, terrain.detailObjectDensity, placements, out _);
+                        if (placements.Count == 0) continue;
                         if (prototype.usePrototypeMesh)
                         {
-                            if (prototype.prototype == null) continue;
-                            if (prototype.useInstancing) AddInstancedDetails(terrain, prototype, instances, origin);
-                            else BakeMeshDetails(builders[(int)DetailKind.Mesh] ??= new MeshBuilder(), prototype, instances, white);
+                            if (prototype.useInstancing) AddInstancedDetails(terrain, prototype, placements, origin);
+                            else BakeMeshDetails(builders[(int)DetailKind.Mesh] ??= new MeshBuilder(), prototype, placements, white);
                             continue;
                         }
                         var kind = prototype.renderMode == DetailRenderMode.GrassBillboard ? DetailKind.Billboard : DetailKind.Grass;
                         var builder = builders[(int)kind] ??= new MeshBuilder();
                         var rect = rects[layer];
-                        foreach (var i in instances)
+                        foreach (var model in placements)
                         {
+                            var i = TerrainData.InstanceTransform(model);
                             float noise = Mathf.PerlinNoise(i.posX * prototype.noiseSpread, i.posZ * prototype.noiseSpread);
                             var top = Color.Lerp(prototype.dryColor, prototype.healthyColor, noise);
                             var topColor = ToColor32(new Color(top.r, top.g, top.b, 1f));
@@ -319,47 +325,49 @@ namespace UnityEngine
             return filter.sharedMesh;
         }
 
-        static Matrix4x4 DetailPlacement(Vector3 origin, DetailInstanceTransform i) =>
-            Matrix4x4.TRS(origin + new Vector3(i.posX, i.posY, i.posZ), Quaternion.Euler(0f, i.rotationY * Mathf.Rad2Deg, 0f), new Vector3(i.scaleXZ, i.scaleY, i.scaleXZ));
-
-        /// <summary>Meshes drawn without instancing: each instance's mesh turned, scaled and placed,
-        /// coloured the instance's colour, sampling the atlas's white (or the material's texture
-        /// would be packed: not yet).</summary>
-        static void BakeMeshDetails(MeshBuilder builder, DetailPrototype prototype, DetailInstanceTransform[] instances, Rect white)
+        /// <summary>Meshes drawn without instancing: each instance's mesh through its transform
+        /// (turned, tilted to the ground, scaled), its normals turned and tilted, coloured the
+        /// instance's colour, sampling the atlas's white (or the material's texture would be
+        /// packed: not yet).</summary>
+        static void BakeMeshDetails(MeshBuilder builder, DetailPrototype prototype, List<Matrix4x4> placements, Rect white)
         {
             var mesh = PrototypeMesh(prototype.prototype, out _);
             if (mesh == null) return;
             var vertices = mesh.m_Vertices;
             var normals = mesh.normals;
             var triangles = mesh.triangles;
-            foreach (var i in instances)
+            foreach (var model in placements)
             {
-                float noise = Mathf.PerlinNoise(i.posX * prototype.noiseSpread, i.posZ * prototype.noiseSpread);
+                var position = model.GetColumn(3);
+                float noise = Mathf.PerlinNoise(position.x * prototype.noiseSpread, position.z * prototype.noiseSpread);
                 var c = Color.Lerp(prototype.dryColor, prototype.healthyColor, noise);
                 var color = ToColor32(new Color(c.r, c.g, c.b, 1f));
-                var model = DetailPlacement(Vector3.zero, i);
-                var turn = Quaternion.Euler(0f, i.rotationY * Mathf.Rad2Deg, 0f);
+                Vector3 ax = model.GetColumn(0), ay = model.GetColumn(1), az = model.GetColumn(2);
+                ax = ax.normalized; ay = ay.normalized; az = az.normalized;
                 int first = builder.Vertices.Count;
                 for (int v = 0; v < vertices.Length; v++)
-                    builder.Add(model.MultiplyPoint3x4(vertices[v]), v < normals.Length ? turn * normals[v] : Vector3.up, new Vector4(1f, 0f, 0f, 1f), color, white.position);
+                {
+                    var n = v < normals.Length ? normals[v] : Vector3.up;
+                    builder.Add(model.MultiplyPoint3x4(vertices[v]), ax * n.x + ay * n.y + az * n.z, new Vector4(1f, 0f, 0f, 1f), color, white.position);
+                }
                 foreach (var t in triangles) builder.Indices.Add(first + t);
             }
         }
 
-        void AddInstancedDetails(Terrain terrain, DetailPrototype prototype, DetailInstanceTransform[] instances, Vector3 origin)
+        void AddInstancedDetails(Terrain terrain, DetailPrototype prototype, List<Matrix4x4> placements, Vector3 origin)
         {
             var mesh = PrototypeMesh(prototype.prototype, out var materials);
             if (mesh == null || materials == null) return;
-            foreach (var i in instances)
+            foreach (var placement in placements)
             {
                 var renderer = (DetailRenderer)ComponentFactory.Create(typeof(DetailRenderer), terrain.gameObject);
                 renderer.hideFlags = HideFlags.HideAndDontSave;
                 renderer.m_Materials = materials;
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = true;
-                var model = DetailPlacement(origin, i);
-                renderer.m_LocalBounds = Transformed(Matrix4x4.Translate(-origin) * model, mesh.bounds);
-                m_InstancedDetails.Add(new InstancedDetail { Renderer = renderer, Mesh = mesh, Model = model, Position = origin + new Vector3(i.posX, i.posY, i.posZ) });
+                renderer.m_LocalBounds = Transformed(placement, mesh.bounds);
+                var model = Matrix4x4.Translate(origin) * placement;
+                m_InstancedDetails.Add(new InstancedDetail { Renderer = renderer, Mesh = mesh, Model = model, Position = origin + (Vector3)placement.GetColumn(3) });
             }
         }
     }
