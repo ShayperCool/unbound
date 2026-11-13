@@ -130,6 +130,7 @@ class ReferenceWatch:
     outside watched roots invalidates discovery and stops cleanup. Existing destinations stay
     protected even if their original link disappears during this run.
     """
+    # Linux inotify event masks.
     CREATE, MOVED_FROM, MOVED_TO, ISDIR = 0x100, 0x40, 0x80, 0x40000000
     DELETE_SELF, MOVE_SELF, OVERFLOW, IGNORED = 0x400, 0x800, 0x4000, 0x8000
     ONLYDIR, NOFOLLOW = 0x1000000, 0x2000000
@@ -203,6 +204,12 @@ class ReferenceWatch:
                     if mask & self.ISDIR:
                         self.moves[cookie] = path
                     continue
+                # The destination may have moved again or been deleted by now.
+                # Pair recorded directory events before inspecting current paths.
+                if mask & self.MOVED_TO and mask & self.ISDIR:
+                    source = self.moves.pop(cookie, None)
+                    if source is not None:
+                        self.relocate(source, path)
                 try:
                     if path.is_symlink():
                         raw = path.readlink()
@@ -211,9 +218,6 @@ class ReferenceWatch:
                         if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
                             pending.add(target.resolve())
                     elif path.is_dir() and not any(inside(path, p) for p in self.excluded):
-                        source = self.moves.pop(cookie, None) if mask & self.MOVED_TO else None
-                        if source is not None:
-                            self.relocate(source, path)
                         self.add(path)
                         pending.add(path)
                 except OSError as error:

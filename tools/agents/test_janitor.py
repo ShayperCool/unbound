@@ -375,6 +375,31 @@ class JanitorTests(unittest.TestCase):
             self.assertFalse(self.j.remove(run, kind='run', hours=72))
         self.assertTrue(run.is_dir())
 
+    def test_multiple_directory_moves_before_poll_rescan_final_location(self):
+        run, source, destination = self.movable_relative_link()
+        intermediate = self.cache/'intermediate'
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            source.rename(intermediate)
+            intermediate.rename(destination)
+            self.j.refresh_links()
+            self.assertIn(run/'output', self.j.links)
+
+    def test_directory_moved_then_deleted_before_poll_does_not_block_scan(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        source = self.cache/'source'
+        source.mkdir()
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            destination = self.cache/'temporary'
+            source.rename(destination)
+            destination.rmdir()
+            self.j.refresh_links()
+            self.assertTrue(self.j.remove(run, kind='run', hours=72))
+        self.assertTrue(run.is_dir())
+
     def test_directory_move_outside_watched_roots_defers_cleanup(self):
         run = self.directory('unbound-validation/runs/probe-20261101-old')
         source = self.cache/'source'
