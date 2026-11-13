@@ -1413,7 +1413,7 @@ namespace UnityEngine
         /// <summary>Measured in materialcolortransfer: Color converts unless HDR; [Gamma]
         /// requests conversion for Color, Vector and Float, including HDR Color. CPU storage
         /// retains the assigned value. Packets carry working-space values just like draw overrides.</summary>
-        bool ConvertsProperty(int id)
+        internal bool ConvertsProperty(int id)
         {
             if (QualitySettings.activeColorSpace != ColorSpace.Linear || m_RawBindings.Contains(id)) return false;
             // Built-in Shader objects have only a minimal managed property list. Use the

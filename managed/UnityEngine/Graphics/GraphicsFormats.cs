@@ -296,12 +296,12 @@ namespace UnityEngine.Experimental.Rendering
         internal const GraphicsFormat Texture2DARGB32SRGB = (GraphicsFormat)87;
         internal const GraphicsFormat Texture2DAlpha8 = (GraphicsFormat)54;
 
-        /// <summary>Whether a texture format holds alpha in the Editor's sense: the formats with an
-        /// alpha channel, Alpha8 and the RGBA compressed ones, but not DXT1 (whose graphics format
-        /// is an RGBA one) or the other RGB block formats. What decides a terrain layer's
-        /// smoothness source in the Unity 6000.0.71f1 Editor (tests/projects/terrain: DXT1 diffuse
-        /// maps keep the slider; tests/projects/defaultreflection: RGBA32 ones take the alpha).</summary>
-        internal static bool TextureFormatHasAlpha(TextureFormat format) => format switch
+        /// <summary>Whether a texture format holds alpha: the formats with an alpha channel, Alpha8
+        /// and the RGBA compressed ones, but not DXT1 (whose graphics format is an RGBA one) or the
+        /// other RGB block formats. It decides a terrain layer's smoothness source as in the Unity
+        /// 6000.0.71f1 Editor (tests/projects/terrain: DXT1 diffuse maps keep the slider;
+        /// tests/projects/defaultreflection: RGBA32 ones take the alpha).</summary>
+        public static bool HasAlphaChannel(TextureFormat format) => format switch
         {
             TextureFormat.Alpha8 or TextureFormat.ARGB4444 or TextureFormat.RGBA32 or TextureFormat.ARGB32
                 or TextureFormat.DXT5 or TextureFormat.RGBA4444 or TextureFormat.BGRA32 or TextureFormat.RGBAHalf

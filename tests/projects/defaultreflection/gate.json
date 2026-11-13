@@ -1,5 +1,6 @@
 {
   "commands": ["python3 tests/projects/defaultreflection/run.py check"],
   "summary": "defaultreflection: \\d+/\\d+ records, \\d+/\\d+ images",
-  "engine_paths": ["crates/unbound-shaders/src/surface.rs", "managed/UnityEngine/Graphics/ReflectionProbe.cs"]
+  "engine_paths": ["crates/unbound-shaders/src/surface.rs", "managed/UnityEngine/Graphics/ReflectionProbe.cs",
+    "managed/UnityEngine/Terrain/TerrainRenderer.cs", "managed/UnityEngine/Graphics/GraphicsFormats.cs"]
 }

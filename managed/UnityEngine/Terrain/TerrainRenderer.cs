@@ -281,7 +281,7 @@ namespace UnityEngine
 
         /// <summary>A pass's four layers: the control (splat) map, each layer's textures, tiling
         /// (the terrain's size over the tile size, the offset over it) and surface values.</summary>
-        static void SetLayers(Material material, TerrainData data, TerrainLayer[] layers, int first, Texture2D control)
+        internal static void SetLayers(Material material, TerrainData data, TerrainLayer[] layers, int first, Texture2D control)
         {
             var size = data.size;
             material.SetTexture("_Control", control);
@@ -325,7 +325,11 @@ namespace UnityEngine
                 }
                 material.SetFloat("_NormalScale" + n, layer.normalScale);
                 material.SetTexture("_Mask" + n, layer.maskMapTexture);
-                material.SetFloat("_Metallic" + n, LayerMetallic(layer));
+                // Already in the working color space: the material passes it on as it is, whatever
+                // the shader's [Gamma] flags (URP's terrain shaders flag _Metallic0-3).
+                int metallic = Shader.PropertyToID("_Metallic" + n);
+                material.SetFloat(metallic, LayerMetallic(layer));
+                material.m_RawBindings.Add(metallic);
                 material.SetFloat("_Smoothness" + n, LayerSmoothness(layer));
                 material.SetVector("_DiffuseRemapScale" + n, layer.diffuseRemapMax - layer.diffuseRemapMin);
                 material.SetVector("_MaskMapRemapOffset" + n, layer.maskMapRemapMin);
@@ -344,13 +348,13 @@ namespace UnityEngine
         /// <summary>A layer's smoothness as its splat material gets it: the shaders multiply it by
         /// the diffuse texture's alpha, so with the smoothness taken from that alpha
         /// (<see cref="TerrainLayerSmoothnessSource.DiffuseAlphaChannel"/>, a new layer's) and a
-        /// diffuse format with alpha (<see cref="GraphicsFormatUtility.TextureFormatHasAlpha"/>) it
+        /// diffuse format with alpha (<see cref="GraphicsFormatUtility.HasAlphaChannel(TextureFormat)"/>) it
         /// is at least 1 (the alpha alone), else the layer's smoothness; as in the Unity
         /// 6000.0.71f1 Editor (tests/projects/defaultreflection, terrain, terrainlod layers5*).</summary>
         internal static float LayerSmoothness(TerrainLayer layer)
         {
             bool fromAlpha = layer.smoothnessSource == TerrainLayerSmoothnessSource.DiffuseAlphaChannel
-                && layer.diffuseTexture is Texture2D diffuse && GraphicsFormatUtility.TextureFormatHasAlpha(diffuse.format);
+                && layer.diffuseTexture is Texture2D diffuse && GraphicsFormatUtility.HasAlphaChannel(diffuse.format);
             return Mathf.Max(layer.smoothness, fromAlpha ? 1f : 0f);
         }
 
