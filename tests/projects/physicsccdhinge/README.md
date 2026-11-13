@@ -534,3 +534,55 @@ construction 3842/4554 with zero consistency failures, constraints 613/633 and
 rotation controls 665/718. No missing/extra constraint or rotation rows, or new lifetime/count failures.
 The broad report still includes 65 missing and 65 extra raw contact slots within
 its 485 complete-payload permutations.
+
+## macOS arm64
+
+Measured on an arm64 Mac (macOS 26) with the Unity 6000.0.71f1 macOS arm64
+Editor in batch mode (`-nographics`) and Unbound built for arm64. These
+captures are not committed; the canonical reference stays the Linux Editor's.
+Two Editor captures of the default suite were byte-identical. Counts use this
+probe's own comparators and verifiers, with the macOS Editor capture in place
+of the reference where named.
+
+| Suite | macOS Editor against the reference | Unbound (macOS) against the macOS Editor | Unbound (macOS) against the reference |
+| --- | --- | --- | --- |
+| default | 6809/6814, 5 unresolved | 6711/6814, 3 unresolved | 6706/6814, 8 unresolved |
+| `--geometry-controls` | 1167/1167 | 1167/1167, every value equal | 1167/1167 |
+| `--geometry` | 12331/12335, 4 content differences | 11915/12400, no motion or content difference | 11911/12400, 4 content differences |
+| `--geometry-ordering` | 4554/4554 | 3842/4554, no consistency failure | 3842/4554, no consistency failure |
+| `--geometry-constraints` | 633/633 | 613/633, none unexpected | 613/633, none unexpected |
+| `--geometry-rotation` | 714/718, 4 unexpected | 665/718, 1 unexpected | 661/718, 5 unexpected |
+
+The Unity Editor itself computes different physics on arm64: 1955 of the
+6814 default values differ from the Linux reference, and five of them,
+`ccd/ghost/3/{1..5}/body` (an angular velocity of opposite sign), exceed the
+tolerances. Unbound on macOS gives those five values exactly as the macOS
+Editor does. In `ccd/rotating`, `ccd/ghost`, `ccd/kinematic-moving`,
+`ccd/fixed` and `query/*`, every value Unbound records on macOS equals the
+macOS Editor's, just as Unbound on Linux equals the Linux reference there.
+The four `--geometry` content differences and four of the five rotation
+differences are likewise the macOS Editor's own.
+
+Unbound compiles PhysX's NEON vector math on arm64. A build that ran PhysX's
+SSE2 vector math there instead, with every SSE2 operation reproduced
+bit for bit, matched the Linux reference (6714/6814, 0 unresolved) but moved
+those five families away from the macOS Editor. Exact division and square
+root in place of NEON's reciprocal refinement moved them away as well, while
+the summation order of dot products, the signed zero rules of min, max and
+negation, and flushing denormals made no difference to those families. So arm64
+keeps NEON, and the Linux reference is not the target there.
+
+Open on macOS (measured, cause not found):
+
+- `ccd/thin/2/{False/1,False/2,True/2}/0/event/0/0`: the capsule's Continuous
+  and ContinuousDynamic sweep against the wall. The sweep's first support
+  point comes from the other end of the capsule segment, so Unbound reports one
+  contact at y = 0 where both Editors report y = −0.0952381. The end is
+  decided by the sign of a rotation matrix entry of about 1e-7 for the Y-axis
+  capsule frame, which PhysX's NEON and SSE2 quaternion-to-matrix formulas give
+  with opposite signs. Using the SSE2 formula on arm64 fixes these rows but
+  changes `contactmodify3d` away from the macOS Editor, and a capsule frame
+  that fixes them changes capsule query and contact rows of `contactevents3d`
+  away from it. Neither is used.
+- `rotation/contact/3/False/False/4/bullet/event/0/2`: a contact witness on the
+  other side of the face (y = 0.150 against the Editor's −0.150).
