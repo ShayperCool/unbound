@@ -438,7 +438,7 @@ namespace UnityEngine
 
         public T GetComponentAtIndex<T>(int index) where T : Component => (T)GetComponentAtIndex(index);
 
-        public int GetComponentIndex(Component component) => m_Components.IndexOf(component);
+        public int GetComponentIndex(Component component) => Unbound.Runtime.IdentityLists.IndexOf(m_Components, component);
 
         // ------------------------------------------------------------------ messages
 

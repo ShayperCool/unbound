@@ -10,7 +10,15 @@ namespace UnityEngine
     internal static unsafe partial class SpookyHash
     {
         public static void Hash(void* message, ulong length, ulong* hash1, ulong* hash2) =>
-            Hash(new ReadOnlySpan<byte>(message, checked((int)length)), ref *hash1, ref *hash2);
+            Hash(Bytes(message, length), ref *hash1, ref *hash2);
+
+        /// <summary>Raw memory as a span: Unbound hashes at most int.MaxValue bytes in one call.</summary>
+        internal static ReadOnlySpan<byte> Bytes(void* data, ulong size)
+        {
+            if (size > int.MaxValue)
+                throw new ArgumentException($"Unbound hashes at most {int.MaxValue} bytes in one call ({size} given).", nameof(size));
+            return new ReadOnlySpan<byte>(data, (int)size);
+        }
 
         /// <summary>The algorithm's constant: odd, not too regular (0xdeadbeefdeadbeef).</summary>
         const ulong Constant = 0xdeadbeefdeadbeefUL;

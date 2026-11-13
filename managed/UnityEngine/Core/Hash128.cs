@@ -101,7 +101,7 @@ namespace UnityEngine
         }
 
         public void Append<T>(ref T val) where T : unmanaged => AppendBytes(MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref val, 1)));
-        public unsafe void Append(void* data, ulong size) => AppendBytes(new ReadOnlySpan<byte>(data, checked((int)size)));
+        public unsafe void Append(void* data, ulong size) => AppendBytes(SpookyHash.Bytes(data, size));
 
         /// <summary>Strings up to this many UTF-8 bytes are encoded on the stack.</summary>
         const int StackLimit = 256;

@@ -743,7 +743,7 @@ namespace Unbound.Runtime
                             if (s.Touched[g.First + i]) s.Current[g.First + i] = s.Result[g.First + i];
                         changed = g.Write(s.Current, g.First);
                     }
-                    if (changed && g.Script != null && !s.Scripts.Contains(g.Script)) s.Scripts.Add(g.Script);
+                    if (changed && g.Script != null && !IdentityLists.Contains(s.Scripts, g.Script)) s.Scripts.Add(g.Script);
                 }
                 catch (Exception e)
                 {

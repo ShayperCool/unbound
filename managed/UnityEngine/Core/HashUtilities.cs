@@ -7,10 +7,10 @@ namespace UnityEngine
     public static unsafe partial class HashUnsafeUtilities
     {
         public static void ComputeHash128(void* data, ulong dataSize, ulong* hash1, ulong* hash2) =>
-            SpookyHash.Hash(new ReadOnlySpan<byte>(data, checked((int)dataSize)), ref *hash1, ref *hash2);
+            SpookyHash.Hash(SpookyHash.Bytes(data, dataSize), ref *hash1, ref *hash2);
 
         public static void ComputeHash128(void* data, ulong dataSize, Hash128* hash) =>
-            SpookyHash.Hash(new ReadOnlySpan<byte>(data, checked((int)dataSize)), ref hash->u64_0, ref hash->u64_1);
+            SpookyHash.Hash(SpookyHash.Bytes(data, dataSize), ref hash->u64_0, ref hash->u64_1);
     }
 
     /// <summary>Hashes of values continuing from an existing Hash128.</summary>

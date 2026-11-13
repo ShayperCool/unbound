@@ -493,7 +493,7 @@ namespace Unbound.Runtime
             }
             return curve >= 0 && curve < m_HumanChannels.Length ? m_HumanChannels[curve] : -1;
         }
-        readonly Dictionary<(Object, string), PropertyGroup> m_Index = new Dictionary<(Object, string), PropertyGroup>();
+        readonly Dictionary<(Object, string), PropertyGroup> m_Index = new Dictionary<(Object, string), PropertyGroup>(IdentityKeyComparer<Object>.Instance);
         readonly Dictionary<AnimationClip, BoundClip> m_Clips = new Dictionary<AnimationClip, BoundClip>();
 
         /// <summary>The bound properties by target and key.</summary>

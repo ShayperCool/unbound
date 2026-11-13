@@ -39,7 +39,7 @@ namespace UnityEngine
 
         internal static void Untrack(Object obj)
         {
-            if (obj is MonoBehaviour script && s_Tracked.Remove(script)) s_Scripts.Remove(script);
+            if (obj is MonoBehaviour script && s_Tracked.Remove(script)) IdentityLists.Remove(s_Scripts, script);
         }
 
         internal static void Render(Camera camera)

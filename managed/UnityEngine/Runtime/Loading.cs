@@ -222,7 +222,7 @@ namespace Unbound.Runtime
                 }
                 // Components the list does not name (added by prefab overrides) keep document order.
                 foreach (var (c, _) in components)
-                    if (c.m_GameObject == go && !go.m_Components.Contains(c))
+                    if (c.m_GameObject == go && !IdentityLists.Contains(go.m_Components, c))
                         go.m_Components.Add(c);
                 if (go.m_Transform == null)
                 {
