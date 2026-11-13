@@ -228,6 +228,7 @@ public class UitkProbe : MonoBehaviour
             StencilFaces(rows);
             RendererFaces(rows);
             MirrorWrap(rows);
+            D16Controls(rows);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -554,4 +555,30 @@ public class UitkProbe : MonoBehaviour
     }
 
     static string F(float value) { return value.ToString("R", CultureInfo.InvariantCulture); }
+    static void D16Controls(StringBuilder rows)
+    {
+        var source = Pair(.25f, .75f, FilterMode.Point);
+        var d16 = Split(RenderTextureFormat.Depth, FilterMode.Bilinear, source);
+        var normalized = new Texture2D(2, 1, TextureFormat.R16, false, true);
+        normalized.SetPixelData(new ushort[] { 16384, 49151 }, 0); normalized.Apply(false);
+        var floats = Pair(16384f / 65535f, 49151f / 65535f, FilterMode.Bilinear);
+        var unquantized = Pair(.25f, .75f, FilterMode.Bilinear);
+        normalized.filterMode = FilterMode.Bilinear;
+        normalized.wrapMode = TextureWrapMode.Clamp;
+        d16.wrapMode = TextureWrapMode.Clamp;
+        var target = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear); target.Create();
+        var cpu = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
+        var material = new Material(Shader.Find("Probe/SamplerStates/D16Filter"));
+        var textures = new (string, Texture)[] { ("depth16", d16), ("unorm16", normalized), ("floatQuantized", floats), ("floatExact", unquantized) };
+        foreach (var (name, texture) in textures)
+        foreach (float u in new[] { .25f, .3f, .4f, .45f, .5f, .55f, .6f, .7f, .75f })
+        {
+            material.SetTexture("_Source", texture); material.SetVector("_P", new Vector4(u, .5f, 0, 0));
+            Graphics.Blit(source, target, material);
+            Row(rows, "D16Filter." + name + "." + F(u), Read(target, cpu));
+        }
+        DestroyImmediate(material); DestroyImmediate(cpu); DestroyImmediate(target);
+        foreach (var (_, texture) in textures) DestroyImmediate(texture);
+        DestroyImmediate(source);
+    }
 }

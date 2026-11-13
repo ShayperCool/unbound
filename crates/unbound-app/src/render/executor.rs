@@ -251,6 +251,9 @@ enum CopyKind {
     /// A multisampled depth buffer's sample `DeviceConventions::depth_resolve_sample` into
     /// floats.
     DepthMultisampled,
+    /// Depth into normalized 16-bit storage, preserving D16 interpolation precision.
+    Depth16,
+    Depth16Multisampled,
     /// Floats as unsigned integer bits.
     UintBits,
     /// Floats as signed integer bits.
@@ -261,7 +264,7 @@ enum CopyKind {
 }
 
 impl CopyKind {
-    const COUNT: usize = 6;
+    const COUNT: usize = 8;
 
     fn index(self) -> usize {
         self as usize
@@ -1787,23 +1790,27 @@ impl UnityRenderer {
         }
     }
 
-    /// The copy of a render target's depth into its float color copy.
+    /// The copy of a render target's depth into its filterable color copy.
     fn depth_copy_op(&self, handle: u64) -> Option<DepthCopy> {
         let t = self.textures.get(&handle)?;
         let target = t.depth_copy.clone()?;
-        match (&t.depth_sample, &t.depth_msaa) {
-            (Some(depth), _) => Some(DepthCopy {
-                depth: depth.clone(),
-                target,
-                kind: CopyKind::Depth,
-            }),
-            (None, Some(depth)) => Some(DepthCopy {
-                depth: depth.clone(),
-                target,
-                kind: CopyKind::DepthMultisampled,
-            }),
-            _ => None,
-        }
+        let (depth, multisampled) = match (&t.depth_sample, &t.depth_msaa) {
+            (Some(depth), _) => (depth, false),
+            (None, Some(depth)) => (depth, true),
+            _ => return None,
+        };
+        let normalized = target.texture().format() == wgpu::TextureFormat::R16Unorm;
+        let kind = match (multisampled, normalized) {
+            (false, false) => CopyKind::Depth,
+            (true, false) => CopyKind::DepthMultisampled,
+            (false, true) => CopyKind::Depth16,
+            (true, true) => CopyKind::Depth16Multisampled,
+        };
+        Some(DepthCopy {
+            depth: depth.clone(),
+            target,
+            kind,
+        })
     }
 
     /// A render target's depth element for a float slot: its depth copy, made the first time
@@ -1838,7 +1845,8 @@ impl UnityRenderer {
             return Some(view);
         }
         let (width, height) = (t.width, t.height);
-        let view = resources::depth_copy_view(&self.device, width, height);
+        let depth_format = t.depth_format()?;
+        let view = resources::depth_copy_view(&self.device, width, height, depth_format);
         self.generation += 1;
         let generation = self.generation;
         let t = self.textures.get_mut(&handle).unwrap();
@@ -1976,8 +1984,8 @@ impl UnityRenderer {
         }
         let device = &self.device;
         let source = match kind {
-            CopyKind::Depth => DEPTH_COPY_WGSL.to_string(),
-            CopyKind::DepthMultisampled => DEPTH_COPY_WGSL
+            CopyKind::Depth | CopyKind::Depth16 => DEPTH_COPY_WGSL.to_string(),
+            CopyKind::DepthMultisampled | CopyKind::Depth16Multisampled => DEPTH_COPY_WGSL
                 .replace("texture_2d<f32>", "texture_multisampled_2d<f32>")
                 .replace(
                     "vec2<i32>(p.xy), 0)",
@@ -1993,7 +2001,11 @@ impl UnityRenderer {
         let (sample_type, target_format) = match kind {
             CopyKind::Depth | CopyKind::DepthMultisampled => (
                 wgpu::TextureSampleType::Float { filterable: false },
-                resources::depth_copy_format(device),
+                resources::float_depth_copy_format(device),
+            ),
+            CopyKind::Depth16 | CopyKind::Depth16Multisampled => (
+                wgpu::TextureSampleType::Float { filterable: false },
+                wgpu::TextureFormat::R16Unorm,
             ),
             CopyKind::UintBits => (
                 wgpu::TextureSampleType::Float { filterable: false },
@@ -2012,7 +2024,10 @@ impl UnityRenderer {
                 wgpu::TextureFormat::Rgba8Unorm,
             ),
         };
-        let multisampled = kind == CopyKind::DepthMultisampled;
+        let multisampled = matches!(
+            kind,
+            CopyKind::DepthMultisampled | CopyKind::Depth16Multisampled
+        );
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("unbound depth copy"),
             source: wgpu::ShaderSource::Wgsl(source.into()),

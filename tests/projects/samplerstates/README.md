@@ -71,9 +71,8 @@ are drawn alone, and a program without colors leaves the target as it was.
 Unbound: `run.py check` compares an Unbound capture (`--force-glcore`, or `--force-vulkan` with
 `--device vulkan`) with the device's reference. `residuals.json` and `residuals-vulkan.json`
 list the cases that differ with their cause: Unbound compares where the Editor's comparison
-reads the depth of a texture whose state does not compare, filters a 16-bit depth buffer
-linearly to 0.400392 where the Editor reads 26240/65535 (suspected: Unbound filters a float copy
-of it). OpenGL Core retains the existing `MirrorOnce` approximation as `Mirror`; Vulkan uses
+reads the depth of a texture whose state does not compare. D16 uses a normalized 16-bit
+color copy so its linear filtering keeps the measured depth precision. OpenGL Core retains the existing `MirrorOnce` approximation as `Mirror`; Vulkan uses
 native mirror-clamp-to-edge where the device enables it. A depth buffer of 16 bits is stored as 16 bits
 without stencil, as in the Editor.
 
@@ -138,3 +137,17 @@ Contract: [TextureWrapMode.MirrorOnce](https://docs.unity3d.com/6000.0/Documenta
 defines reflection around zero followed by edge clamping and requires checking device support.
 The native Vulkan opt-in requires the enabled mirror-clamp extension; other backend creation
 rejects that option. The zero-option path and ordinary samplers retain their validation.
+
+`D16Filter.*` compares D16 depth, R16 UNorm holding the same stored integers, and float
+textures holding either the quantized endpoints or the original endpoints. Nine coordinates
+include texel centers and seven interpolation positions. The normalized formats agree on both
+measured devices; the float copies differ between the texel centers. A D16 color copy therefore
+uses R16 UNorm where the device can render and filter it, with the existing float fallback and
+a warning elsewhere. Depth-copy pipelines distinguish normalized storage and multisampling.
+The 525-row references retain all 489 earlier records unchanged, with two matching captures
+per device on Unity 6000.0.71f1, NVIDIA only. Other drivers remain unmeasured.
+
+The Unity 6000.0 [RenderTexture.depth contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture-depth.html)
+lists 16-bit depth precision; the existing Stencil controls check the absence of stencil.
+[Texture.filterMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture-filterMode.html)
+selects the sampling filter. The interpolation precision above is a measured device result.

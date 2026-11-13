@@ -341,7 +341,7 @@ pub fn compare_function(f: i32) -> Option<wgpu::CompareFunction> {
 
 /// The format of a depth-only render target's depth copy: filterable 32-bit floats where the
 /// device filters them, else half floats.
-pub fn depth_copy_format(device: &wgpu::Device) -> wgpu::TextureFormat {
+pub fn float_depth_copy_format(device: &wgpu::Device) -> wgpu::TextureFormat {
     if device
         .features()
         .contains(wgpu::Features::FLOAT32_FILTERABLE)
@@ -352,8 +352,37 @@ pub fn depth_copy_format(device: &wgpu::Device) -> wgpu::TextureFormat {
     }
 }
 
-/// A float color texture of a depth buffer's size, which the depth copy writes.
-pub fn depth_copy_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::TextureView {
+/// A filterable color copy of a depth buffer: normalized 16-bit storage for D16 where supported,
+/// otherwise the device's float copy format.
+pub fn depth_copy_view(
+    device: &wgpu::Device,
+    width: u32,
+    height: u32,
+    depth_format: wgpu::TextureFormat,
+) -> wgpu::TextureView {
+    // Normalized 16-bit filtering retains the depth format's interpolation precision.
+    // Measured on Unity 6000.0.71f1 OpenGL Core and Vulkan, NVIDIA: samplerstates D16Filter.*.
+    let normalized = depth_format == wgpu::TextureFormat::Depth16Unorm
+        && norm_format_caps().r16.is_some_and(|caps| {
+            caps.allowed_usages.contains(
+                wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            ) && caps
+                .flags
+                .contains(wgpu::TextureFormatFeatureFlags::FILTERABLE)
+        })
+        && device
+            .features()
+            .contains(wgpu::Features::TEXTURE_FORMAT_16BIT_NORM);
+    let format = if normalized {
+        wgpu::TextureFormat::R16Unorm
+    } else {
+        float_depth_copy_format(device)
+    };
+    if depth_format == wgpu::TextureFormat::Depth16Unorm && !normalized {
+        tracing::warn!(
+            "D16 sampled depth uses a float copy: the device cannot filter a normalized 16-bit render target"
+        );
+    }
     device
         .create_texture(&wgpu::TextureDescriptor {
             label: Some("unbound render texture depth copy"),
@@ -365,7 +394,7 @@ pub fn depth_copy_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: depth_copy_format(device),
+            format,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         })
@@ -397,7 +426,7 @@ pub struct GpuTexture {
     pub depth: Option<wgpu::TextureView>,
     /// The depth buffer's depth, for shaders that sample it.
     pub depth_sample: Option<wgpu::TextureView>,
-    /// A render target's depth as a float color texture, copied after the passes that draw into
+    /// A render target's depth in a filterable color texture, copied after the passes that draw into
     /// it: what sampling a depth-only target reads (Unity's depth textures read as their depth),
     /// and what its depth element reads (`render_protocol::handle::DEPTH_ELEMENT`; made the first
     /// time a draw samples it for a target with color).
@@ -1603,7 +1632,7 @@ pub fn upload_texture_with(
                 })
             });
             let depth_copy = (t.format == 5 && layers == 1 && depth_sample.is_some())
-                .then(|| depth_copy_view(device, width, height));
+                .then(|| depth_copy_view(device, width, height, depth_format(t.depth_bits)));
             GpuTexture {
                 texture,
                 view,
