@@ -6,6 +6,8 @@
   "engine_paths": [
     "managed/Unbound.Host/WideFloats.cs",
     "managed/Unbound.Host/WideFloats.Expressions.cs",
+    "managed/Unbound.Host/WideFloats.EngineMath.cs",
+    "managed/Unbound.ScriptMath/",
     "managed/Unbound.Host/DeltaMetadata.cs",
     "managed/Unbound.Host/AccessChecks.cs",
     "managed/Unbound.Host/Game.cs",

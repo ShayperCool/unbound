@@ -8,8 +8,13 @@ it is rounded to float there. Others use operands that overflow or underflow flo
 a quotient one float step from its float result (20 / 37), or a square root of a value float
 cannot hold. Randomized rows (`fuzz/`) record 24 results each of common expression shapes and of
 Unity's managed math API (Mathf, Vector3, Quaternion, Matrix4x4), with operands built from random
-bits. `il/` rows record each control's compiled instructions, with tokens shown as the names they
-resolve to.
+bits. `api/` rows record 24 results each of more of the math methods Unity implements in C# (Mathf,
+Vector2/3/4, Quaternion, Matrix4x4, Color, Color32, Plane, Rect, Pose, GeometryUtility), `native/`
+rows of the math methods Unity binds to native code (Quaternion Slerp, Lerp, Euler, eulerAngles,
+LookRotation, AngleAxis, FromToRotation, Inverse; Vector3 Slerp, RotateTowards, OrthoNormalize;
+Matrix4x4 TRS, inverse, determinant, rotation, lossyScale; Bounds SqrDistance, Contains,
+ClosestPoint). `il/` rows record each control's compiled instructions, with tokens shown as the names
+they resolve to.
 
 ```bash
 python3 tests/projects/floatrounding/run.py record --profile release --label native1   # this host's Editor
@@ -47,8 +52,11 @@ The two modes differ only where the compiler's output does: Debug keeps a store 
 local, so `float t = a + b; return t + c;` rounds `t` in Debug and not in Release, where the local
 is gone from the IL. The `il/` rows show each case.
 
-Unity's own C# for Mathf, Vector3, Quaternion and Matrix4x4 follows the same rule in the Editor
-(`Vector3.Dot` and `sqrMagnitude` sum double products, for example).
+Unity's own C# for its math structs follows the same rule in the Editor (`Vector3.Dot` and
+`sqrMagnitude` sum double products, for example), and every local these methods declare rounds:
+`Vector3.Distance` rounds each coordinate difference, `ClampMagnitude` each normalized coordinate.
+The methods bound to native code do not follow this rule (`native/` rows); in these captures they
+give the same values on both hosts.
 
 ## Engine
 
@@ -62,7 +70,14 @@ precision), so it is left as it is. The runtime rounds a double stored into a fl
 passed as a float argument (ECMA-335 III.1.1.1, III.1.6). `[BurstCompile]` methods and the
 `Execute` of `[BurstCompile]` job structs keep float arithmetic; the other methods of such types
 are script code and are converted. A hot-reload edit is patched in place unless an edited method
-needs conversions; then the session restarts (the conversions do not fit the edit's method bodies).
+needs conversions or calls converted math (below); then the session restarts (the conversions do
+not fit the edit's method bodies).
+
+A game assembly's calls to the math methods Unity implements in C# go to copies of those methods
+added to the assembly, converted as script code is (`managed/Unbound.Host/WideFloats.EngineMath.cs`);
+the engine's own calls keep float32. The copies come from a second build of the engine's math
+sources without IL optimization (`managed/Unbound.ScriptMath`), where every declared local is a
+store as in the Editor. Methods Unity binds to native code keep the engine's float32 implementation.
 
 The gate matches every control in both modes. Its residuals (`residuals.json`):
 
@@ -70,14 +85,18 @@ The gate matches every control in both modes. Its residuals (`residuals.json`):
   loaded, with the conversions. In the measured runs the instructions apart from them (and the
   shifted branch offsets) were the Editor's; the gate lists these rows as residuals and does not
   compare them further.
-- Rows of Unity's managed math API: Unbound's engine evaluates these in float, and the follow-up
-  to evaluate Unity's C# as the Editor does is queued.
+- `il/` rows of controls that call converted math: their calls name the copies.
+- `native/` rows: Unbound's float32 implementations of Unity's native math do not round in the
+  Editor's order (queued), and the two C# methods that use a native result (`TransformPlane` uses
+  the inverse, `Quaternion.RotateTowards` uses `SlerpUnclamped`).
 
 A float-heavy benchmark on macOS arm64 (best of 7 runs, tiered JIT warm): a particle-style loop over
 a three-float struct with operators, `Dot` and `sqrMagnitude` takes 16 ms instead of 10.4 ms; a
 scalar polynomial-and-lerp loop 108 ms instead of 89 ms. Converting every float load of every
-method would take 34 ms and 124 ms: the larger operators then no longer get inlined.
+method would take 34 ms and 124 ms: the larger operators then no longer get inlined. A per-object
+update loop over Unity's math API (normalize, Lerp, quaternion products, TRS, MultiplyPoint3x4,
+Dot, Distance, Cross) takes 32.6 ms with the copies instead of 25 ms.
 
 Not measured: other Unity releases, NaN payloads, code Burst compiles in the Editor (and the
-methods such code calls, which are converted like any other), and the Editor's managed code other
-than Mathf, Vector3, Quaternion and Matrix4x4.
+methods such code calls, which are converted like any other), and Unity's managed code outside its
+math structs (RectTransformUtility, UI Toolkit, ...), which stays engine code in float32.
