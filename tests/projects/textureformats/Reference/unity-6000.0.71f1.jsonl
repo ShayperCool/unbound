@@ -1039,4 +1039,6 @@
 {"k":"rt.padding.mrt.rgb","v":"3efffe00,3e800100,befffe00,3f800000;3efffe00,3e800100,befffe00,3f800000"}
 {"k":"rt.padding.mrt.rgba","v":"3efffe00,3e800100,befffe00,3e800100;3efffe00,3e800100,befffe00,3e800100"}
 {"k":"rt.padding.grab","v":"3f008101,3f008101,3f008101,3f800000;3f008101,3f008101,3f008101,3f800000"}
+{"k":"rt.padding.grab.command","v":"3f008101,3f008101,3f008101,3f800000;3f008101,3f008101,3f008101,3f800000"}
+{"k":"rt.padding.grab.renderer","v":"3efffe00,3e800100,befffe00,3f800000;3efffe00,3e800100,befffe00,3f800000"}
 {"k":"complete","v":true}

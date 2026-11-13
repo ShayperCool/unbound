@@ -117,7 +117,7 @@ are cached when the target is uploaded.
 
 ## Integer and signed 16-bit targets
 
-Q58 adds 276 OpenGL Core records to the existing 763 without changing them, and a
+Q58 adds 281 OpenGL Core records to the existing 763 without changing them, and a
 separate 255-record Vulkan reference. Both references were captured twice on the
 Unity 6000.0.71f1 Editor with NVIDIA RTX 4060. Other drivers are unmeasured.
 Use `--device vulkan` with `editor`, `publish` and `verify` to select that device.
@@ -162,3 +162,11 @@ feedback copy. Performance work on that copy remains on hold.
 Descriptor construction rejects non-None color formats without Render usage on the
 measured release. The signed RGB16 Vulkan failure and supported RG16 control
 exercise that validation, as distinct from later GPU allocation.
+
+`rt.padding.*` keeps opaque RGB alpha separate from an RGBA MRT attachment's
+quarter alpha and draws a renderer with GrabPass into the signed RGB target.
+Graphics and CommandBuffer blits execute the shader passes without capturing a
+GrabPass on this measured release; the renderer control captures the framebuffer.
+These controls preserve different source colors so a skipped or stale grab is
+visible. The shared rendering compatibility flag selects blit pass selection;
+other releases retain the earlier selection until recorded.
