@@ -13,6 +13,8 @@
   "managed/UnityEngine/Graphics/RenderTexture.cs",
   "managed/UnityEngine/Graphics/Texture2D.cs",
   "managed/UnityEngine/Graphics/AsyncReadback.cs",
-  "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs"
+  "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs",
+  "crates/unbound-app/src/render/executor/compute.rs",
+  "crates/unbound-shaders/src/compute.rs"
  ]
 }

@@ -794,6 +794,7 @@ RWStructuredBuffer<uint> _Out;
         assert_eq!(storage_format("Rg16Unorm"), Some(F::Rg16Unorm));
         assert_eq!(storage_format("Rgba16Unorm"), Some(F::Rgba16Unorm));
         assert_eq!(storage_format("R16Unorm"), Some(F::R16Unorm));
+        assert_eq!(storage_format("Rgb10a2Uint"), Some(F::Rgb10a2Uint));
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
         for (name, wgsl) in [
             ("R16Unorm", "r16unorm"),

@@ -158,3 +158,7 @@ both measured devices. This is an observation, not a portable guarantee.
 [Graphics.Blit](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.Blit.html)
 leaves same-source/destination behavior undefined. Unbound retains its existing
 feedback copy. Performance work on that copy remains on hold.
+
+Descriptor construction rejects non-None color formats without Render usage on the
+measured release. The signed RGB16 Vulkan failure and supported RG16 control
+exercise that validation, as distinct from later GPU allocation.
