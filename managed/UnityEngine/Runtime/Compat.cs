@@ -103,6 +103,10 @@ namespace Unbound.Runtime
         /// <summary>Created clip stream memory follows the creation option and two truncated
         /// buffers, tests/projects/clipmemory on 6000.0.71f1. Other releases remain unmeasured.</summary>
         internal static bool CreatedClipStreamMemoryMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// <summary>Created text and binary payload allocation accounting, Unity 6000.0.71f1
+        /// (tests/projects/textassetmemory).</summary>
+        internal static bool TextAssetMemoryMeasured => Release == (6000, 0, 71, 'f', 1);
+
 
         /// <summary>CRT loading, callback delivery and render-cycle scheduling,
         /// tests/projects/crtload on 6000.0.71f1. Other releases retain unmeasured prior behavior.</summary>

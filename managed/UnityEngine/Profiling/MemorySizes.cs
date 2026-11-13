@@ -28,6 +28,8 @@ namespace Unbound.Runtime
         // (tests/projects/clipmemory, Unity 6000.0.71f1).
         const int CreatedStreamBuffers = 2, CreatedStreamBufferMilliseconds = 400;
         const long GameObjectHeader = 240, GameObjectPerComponent = 24;
+        // Unity 6000.0.71f1, tests/projects/textassetmemory: byte storage changes past 31 bytes.
+        const long TextAssetHeader = 160, TextAssetInlineBytes = 31;
 
         /// <summary>The size, or null for a kind of object whose size was not measured.</summary>
         internal static long? RuntimeSize(UnityEngine.Object o)
@@ -41,9 +43,16 @@ namespace Unbound.Runtime
                 case RenderTexture rt: return RenderTextureSize(rt);
                 case Mesh m: return MeshSize(m);
                 case AudioClip clip: return clip.m_IsAsset ? null : AudioClipSize(clip);
+                case TextAsset text when Compat.TextAssetMemoryMeasured: return TextAssetSize(text);
                 case GameObject go: return GameObjectHeader + GameObjectPerComponent * go.GetComponentCount();
                 default: return null;
             }
+        }
+
+        static long TextAssetSize(TextAsset text)
+        {
+            long bytes = text.dataSize;
+            return TextAssetHeader + (bytes > TextAssetInlineBytes ? bytes + 1 : 0);
         }
 
         static long Both(int w, int h, int d, bool volume, int mips, TextureFormat format, int faces) =>

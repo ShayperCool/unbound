@@ -2925,3 +2925,20 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Structural ownership changes, null/foreign component references, multi-target
   structural edits and JSON hierarchy-link writes remain outside the measured scope.
   The probe README records the boundaries; existing references and tolerances are unchanged.
+
+
+### Q402: TextAsset memory and remaining allocation scope
+
+- Unity 6000.0.71f1, textassetmemory: 1/40 to 40/40 exact values, from two
+  identical GPU Editor repeats. UTF-8 byte length selects inline or separately
+  allocated storage; binary data, clone lifetime and names/read access are controlled.
+- appfacts improves from 521/555 to 525/555. The 30 remaining differences retain
+  their original reference and strict comparison: ten stack values and twenty
+  memory/creation values. clipmemory retains 81/81.
+- appfacts/MemoryControl adds 61 exact Editor observations. Transform hierarchy
+  capacity/ownership and material property/copy state rule out fixed type sizes.
+  Their allocation models remain queued. NoAlloc current-frame/source metadata
+  and raw byte counts remain runtime work; no canonical path or length is fitted.
+- inputframes remains 3785/3786. The existing 16 configuration controls distinguish
+  metadata queries from process-local keymap notifications. An OS notification
+  bridge and layout refresh remain separate work; no first-key event is invented.
