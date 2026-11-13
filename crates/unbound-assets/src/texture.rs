@@ -1398,7 +1398,8 @@ impl Importer for TextureImporter {
     // 40: RGBM retains high/nonfinite radiance and the authored colour-flag transform.
     // 41: RGBM multiplier normalization preserves division rounding.
     // 42: gray and RGB TIFFs with extra samples read their first extra sample as alpha.
-    const VERSION: u32 = 42;
+    // 43: TIFF tags stored as LONG or once per sample are read (such files failed to import).
+    const VERSION: u32 = 43;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let settings = self.settings(meta);

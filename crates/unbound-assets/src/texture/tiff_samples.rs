@@ -39,16 +39,34 @@ const READ_COMPRESSIONS: [u16; 5] = [
 /// `Predictor` horizontal differencing.
 const PREDICTOR_HORIZONTAL: u16 = 2;
 
+/// The values of an unsigned tag, whatever its stored type (SHORT or LONG) and count: writers
+/// store `SampleFormat` once per sample and some store SHORT tags as LONG.
+fn values<R: std::io::Read + std::io::Seek>(
+    decoder: &mut Decoder<R>,
+    tag: Tag,
+) -> Result<Option<Vec<u64>>> {
+    Ok(decoder.find_tag_unsigned_vec::<u64>(tag)?)
+}
+
+/// A tag's first value as a 16-bit number (the tags read here hold small codes and counts).
+fn first<R: std::io::Read + std::io::Seek>(
+    decoder: &mut Decoder<R>,
+    tag: Tag,
+) -> Result<Option<u16>> {
+    match values(decoder, tag)?.and_then(|v| v.first().copied()) {
+        Some(v) => Ok(Some(
+            u16::try_from(v).with_context(|| format!("TIFF tag {tag:?} value {v}"))?,
+        )),
+        None => Ok(None),
+    }
+}
+
 /// RGBA8 rows (top row first) of a gray or RGB TIFF with extra samples; `None` for every other
 /// TIFF.
 pub(super) fn decode(bytes: &[u8]) -> Result<Option<(u32, u32, Vec<u8>)>> {
     let mut decoder = Decoder::new(Cursor::new(bytes))?;
-    let samples = usize::from(
-        decoder
-            .find_tag_unsigned::<u16>(Tag::SamplesPerPixel)?
-            .unwrap_or(1),
-    );
-    let colour = match decoder.find_tag_unsigned::<u16>(Tag::PhotometricInterpretation)? {
+    let samples = usize::from(first(&mut decoder, Tag::SamplesPerPixel)?.unwrap_or(1));
+    let colour = match first(&mut decoder, Tag::PhotometricInterpretation)? {
         Some(PHOTOMETRIC_RGB) => 3,
         Some(PHOTOMETRIC_GRAY) => 1,
         _ => return Ok(None),
@@ -57,42 +75,30 @@ pub(super) fn decode(bytes: &[u8]) -> Result<Option<(u32, u32, Vec<u8>)>> {
         return Ok(None);
     }
     let what = "TIFF with extra samples";
-    let extra: Vec<u16> = decoder
-        .find_tag_unsigned_vec(Tag::ExtraSamples)?
-        .unwrap_or_default();
+    let extra: Vec<u64> = values(&mut decoder, Tag::ExtraSamples)?.unwrap_or_default();
     // The image crate reads an RGB file with one extra sample marked as alpha (or without the
     // ExtraSamples tag) correctly, in every layout; the other files with extra samples it shears.
     let crate_reads_it = colour == 3
         && samples == 4
         && extra
             .first()
-            .is_none_or(|e| ALPHA_EXTRA_SAMPLES.contains(e));
-    let planar = decoder
-        .find_tag_unsigned::<u16>(Tag::PlanarConfiguration)?
-        .unwrap_or(PLANAR_CHUNKY);
-    let depths: Vec<u16> = decoder
-        .find_tag_unsigned_vec(Tag::BitsPerSample)?
-        .unwrap_or_else(|| vec![1]);
+            .is_none_or(|&e| ALPHA_EXTRA_SAMPLES.iter().any(|&a| u64::from(a) == e));
+    let planar = first(&mut decoder, Tag::PlanarConfiguration)?.unwrap_or(PLANAR_CHUNKY);
+    let depths: Vec<u64> = values(&mut decoder, Tag::BitsPerSample)?.unwrap_or_else(|| vec![1]);
     let depth = depths[0];
-    let format = decoder
-        .find_tag_unsigned::<u16>(Tag::SampleFormat)?
-        .unwrap_or(1);
-    let strips: Option<Vec<u64>> = decoder.find_tag_unsigned_vec(Tag::StripOffsets)?;
-    let compression = decoder
-        .find_tag_unsigned::<u16>(Tag::Compression)?
-        .unwrap_or(COMPRESSION_NONE);
-    let predictor = decoder
-        .find_tag_unsigned::<u16>(Tag::Predictor)?
-        .unwrap_or(1);
+    let formats: Vec<u64> = values(&mut decoder, Tag::SampleFormat)?.unwrap_or_else(|| vec![1]);
+    let strips: Option<Vec<u64>> = values(&mut decoder, Tag::StripOffsets)?;
+    let compression = first(&mut decoder, Tag::Compression)?.unwrap_or(COMPRESSION_NONE);
+    let predictor = first(&mut decoder, Tag::Predictor)?.unwrap_or(1);
     let unsupported = if planar != PLANAR_CHUNKY {
         Some(format!("planar configuration {planar}"))
     } else if !matches!(depth, 8 | 16) || depths.iter().any(|&d| d != depth) {
         Some(format!(
             "{depths:?} bits per sample (8 or 16 for every sample are read)"
         ))
-    } else if format != 1 {
+    } else if formats.iter().any(|&f| f != 1) {
         Some(format!(
-            "sample format {format} (unsigned integers are read)"
+            "sample formats {formats:?} (unsigned integers are read)"
         ))
     } else if colour == 1 && depth != 8 {
         Some(format!(
@@ -115,12 +121,11 @@ pub(super) fn decode(bytes: &[u8]) -> Result<Option<(u32, u32, Vec<u8>)>> {
     }
     let offsets = strips.unwrap_or_default();
     let (width, height) = decoder.dimensions()?;
-    let counts: Vec<u64> = decoder
-        .find_tag_unsigned_vec(Tag::StripByteCounts)?
+    let counts: Vec<u64> = values(&mut decoder, Tag::StripByteCounts)?
         .with_context(|| format!("{what}: no strip byte counts"))?;
-    let rows_per_strip = decoder
-        .find_tag_unsigned::<u32>(Tag::RowsPerStrip)?
-        .unwrap_or(height)
+    let rows_per_strip = values(&mut decoder, Tag::RowsPerStrip)?
+        .and_then(|v| v.first().copied())
+        .map_or(height, |v| u32::try_from(v).unwrap_or(u32::MAX))
         .clamp(1, height.max(1));
     let needed = height.div_ceil(rows_per_strip) as usize;
     if offsets.len() != counts.len() || offsets.len() < needed {
@@ -132,7 +137,7 @@ pub(super) fn decode(bytes: &[u8]) -> Result<Option<(u32, u32, Vec<u8>)>> {
     }
     let big_endian = decoder.byte_order() == tiff::tags::ByteOrder::BigEndian;
 
-    let bytes_per_sample = usize::from(depth / 8);
+    let bytes_per_sample = (depth / 8) as usize;
     let row_len = width as usize * samples * bytes_per_sample;
     let mut raw = vec![0u8; row_len * height as usize];
     for (strip, (&offset, &count)) in offsets.iter().zip(&counts).enumerate() {
@@ -286,6 +291,9 @@ mod tests {
         compression: u16,
         predictor: u16,
         tiled: bool,
+        /// Every SHORT tag stored as LONG, with a SampleFormat value per sample (as some
+        /// writers other than Photoshop do).
+        long_tags: bool,
     }
 
     const PLAIN: Layout = Layout {
@@ -294,6 +302,7 @@ mod tests {
         compression: COMPRESSION_NONE,
         predictor: 1,
         tiled: false,
+        long_tags: false,
     };
 
     /// A TIFF of `values` (samples of each pixel in order, rows top first) stored as `layout`
@@ -380,6 +389,12 @@ mod tests {
             (277, 3, vec![samples as u32]),
             (317, 3, vec![u32::from(layout.predictor)]),
         ];
+        if layout.long_tags {
+            tags.push((339, 3, vec![1; samples]));
+            for (_, kind, _) in tags.iter_mut() {
+                *kind = 4;
+            }
+        }
         if layout.tiled {
             tags.extend([
                 (322, 3, vec![u32::from(width)]),
@@ -548,19 +563,23 @@ mod tests {
                         COMPRESSION_DEFLATE,
                         COMPRESSION_PACKBITS,
                     ] {
-                        for predictor in [1, PREDICTOR_HORIZONTAL] {
+                        for (predictor, long_tags) in [1, PREDICTOR_HORIZONTAL]
+                            .into_iter()
+                            .flat_map(|p| [(p, false), (p, true)])
+                        {
                             let layout = Layout {
                                 big_endian,
                                 rows_per_strip,
                                 compression,
                                 predictor,
                                 tiled: false,
+                                long_tags,
                             };
                             let file = tiff((5, 7), PHOTOMETRIC_RGB, depth, &[0], &v, layout);
                             assert_eq!(
                                 rgba(&file),
                                 expected,
-                                "{depth} bits, {big_endian}, {rows_per_strip} rows, {compression}, {predictor}"
+                                "{depth} bits, {big_endian}, {rows_per_strip} rows, {compression}, {predictor}, {long_tags}"
                             );
                         }
                     }
