@@ -155,6 +155,8 @@ namespace UnityEngine
             // are the sprite's own (settingsRaw bit 7) or there is no texture: then they are the
             // stored ones, zero for an ordinary save (measured: tests/projects/spriteassets).
             var uv = data.Attributes.Uv;
+            foreach (var stored in uv)
+                if (!float.IsFinite(stored.x) || !float.IsFinite(stored.y)) throw new FormatException("Sprite UV is not finite");
             if (texture != null && (data.Settings & OwnTexCoordsSetting) == 0)
                 for (int i = 0; i < uv.Length; i++)
                 {

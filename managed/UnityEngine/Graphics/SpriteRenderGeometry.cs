@@ -89,8 +89,10 @@ namespace Unbound.Runtime
         /// <summary>The channels of a saved Sprite asset's vertex data besides its positions, in the
         /// formats the 6000.0.71f1 Editor saves (tests/projects/spriteassets): normals and tangents
         /// as floats, colours as four bytes, blend weights as four floats with four 32-bit bone
-        /// indices. The texture coordinates are saved empty (all zero): the Editor derives them
-        /// from the sprite's UV transform. Any other channel, format or stream size is rejected.</summary>
+        /// indices, texture coordinates 1 to 7 as two floats. Texture coordinates 0 are kept as
+        /// stored: zero in an ordinary save (the Editor derives the UVs from the sprite's UV
+        /// transform), the sprite's own when SetVertexAttribute wrote them. Any other channel,
+        /// format or stream size is rejected.</summary>
         internal static Attributes SavedAttributes(int count, byte[] data,
             List<(int Stream, int Offset, int Format, int Dimension)> channels)
         {
@@ -119,7 +121,8 @@ namespace Unbound.Runtime
             if (end != data.Length) throw new NotSupportedException($"Sprite vertex streams take {end} bytes, not {data.Length}");
             int At(int channel, int vertex, int component) =>
                 checked((int)(starts[channels[channel].Stream] + (long)vertex * strides[channels[channel].Stream] + channels[channel].Offset + component * 4));
-            // Values are kept as saved (the API returns them; drawing uses only positions and UVs).
+            // Values are kept as saved (the API returns them; drawing uses positions, colours and
+            // texture coordinates).
             float F(int channel, int vertex, int component) => BitConverter.ToSingle(data, At(channel, vertex, component));
             var attributes = new Attributes { Uv = new Vector2[count] };
             for (int v = 0; v < count; v++) attributes.Uv[v] = new Vector2(F(UvChannel, v, 0), F(UvChannel, v, 1));
