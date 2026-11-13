@@ -1282,6 +1282,12 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.HyperLinkClickedEventArgs"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.IMGUI.Controls.MultiColumnHeader"
     },
     {
@@ -1697,6 +1703,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.TypeCache+TypeCollection+Enumerator"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.U2D.SpriteEditorExtension"
     },
     {
       "category": "class",

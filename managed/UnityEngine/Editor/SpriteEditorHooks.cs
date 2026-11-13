@@ -1,43 +1,9 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace UnityEditor
 {
-    /// <summary>The Sprite Editor window hooks packages register when their editor code loads
-    /// (the 2D Sprite package, the SVG importer). Unbound has no editor windows, so the
-    /// registrations are kept and never called.</summary>
-    [UIFramework(UIFrameworkUsage.IMGUI)]
-    internal partial class SpriteUtilityWindow : EditorWindow
-    {
-        const string NoWindows = "Unbound has no editor windows: a Sprite Editor window is never opened, so the registered callback is kept and never called";
-
-        static Func<Object, bool> s_ShowSpriteEditorWindow;
-
-        [Unbound.EditorFaithful(NoWindows)]
-        internal static void SetShowSpriteEditorWindowWithObject(Func<Object, bool> spriteEditorWindow) =>
-            s_ShowSpriteEditorWindow = spriteEditorWindow;
-    }
-
-    /// <summary>The UI framework an editor window draws with.</summary>
-    [AttributeUsage(AttributeTargets.Class)]
-    internal partial class UIFrameworkAttribute : Attribute
-    {
-        public UIFrameworkAttribute(UIFrameworkUsage frameworkUsage) => this.frameworkUsage = frameworkUsage;
-
-        public UIFrameworkUsage frameworkUsage { get; private set; }
-    }
-
-    internal enum UIFrameworkUsage
-    {
-        AutoDetected = 0,
-        IMGUI = 1,
-        UITK = 2,
-        Mixed = 3,
-        Excluded = 4,
-    }
-
     /// <summary>The hyperlink an editor label's click names.</summary>
     public partial class HyperLinkClickedEventArgs
     {

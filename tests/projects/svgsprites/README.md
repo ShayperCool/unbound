@@ -49,4 +49,5 @@ unmeasured for those cases.
 
 Not covered: the physics shape the importer can generate (`generatePhysicsShape`, which traces a
 rendered texture through `SpriteUtility.GenerateOutline`), the UI SVGImage drawn on a canvas, and
-the 2D Sprite package's editor windows (Unbound has none; their registration hooks are kept).
+the 2D Sprite package's sprite editor window (Unbound has no editor windows; registering it still
+warns as unimplemented, while hyperlink-click listeners are kept).

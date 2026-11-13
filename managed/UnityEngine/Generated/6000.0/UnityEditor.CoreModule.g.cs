@@ -24632,7 +24632,8 @@ namespace UnityEditor
         internal static global::UnityEngine.Material previewSpriteDefaultMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtility.previewSpriteDefaultMaterial"); return default; } }
         public unsafe delegate string ShowFileDialogDelegate(string title, string defaultName, string extension, string message, string defaultPath);
     }
-    unsafe partial class SpriteUtilityWindow
+    [global::Unbound.Stub]
+    internal unsafe partial class SpriteUtilityWindow : global::UnityEditor.EditorWindow
     {
         [global::Unbound.Stub] protected global::UnityEditor.SpriteUtilityWindow.Styles m_Styles;
         protected const float k_BorderMargin = 10f;
@@ -24671,9 +24672,11 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void DrawToolBarWidget(ref global::UnityEngine.Rect drawRect, ref global::UnityEngine.Rect toolbarRect, global::System.Action<global::UnityEngine.Rect> drawAction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.DrawToolBarWidget"); }
         [global::Unbound.Stub] internal static bool DoOpenSpriteEditorWindowUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.DoOpenSpriteEditorWindowUI"); return default; }
         [global::System.Obsolete("Use SpriteUtility.SetShowSpriteEditorWindowWithObject instead")] [global::Unbound.Stub] internal static void SetShowSpriteEditorWindow(global::System.Func<bool> spriteEditorWindow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.SetShowSpriteEditorWindow"); }
+        [global::Unbound.Stub] internal static void SetShowSpriteEditorWindowWithObject(global::System.Func<global::UnityEngine.Object, bool> spriteEditorWindow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.SetShowSpriteEditorWindowWithObject"); }
         [global::Unbound.Stub] internal static void SetApplySpriteEditorWindow(global::System.Action action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.SetApplySpriteEditorWindow"); }
         [global::Unbound.Stub] internal static bool ShowSpriteEditorWindow(global::UnityEngine.Object obj = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.ShowSpriteEditorWindow"); return default; }
         [global::Unbound.Stub] internal static void ApplySpriteEditorWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.ApplySpriteEditorWindow"); }
+        [global::Unbound.Stub] public SpriteUtilityWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.ctor"); }
         protected global::UnityEngine.Rect maxScrollRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.maxScrollRect"); return default; } }
         protected global::UnityEngine.Rect maxRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SpriteUtilityWindow.maxRect"); return default; } }
         [global::Unbound.Stub]
@@ -26609,6 +26612,21 @@ namespace UnityEditor
     {
         [global::Unbound.Stub] public TypeSelectionList(global::UnityEngine.Object[] objects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeSelectionList.ctor"); }
         public global::System.Collections.Generic.List<global::UnityEditor.TypeSelection> typeSelections { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeSelectionList.typeSelections"); return new global::System.Collections.Generic.List<global::UnityEditor.TypeSelection>(); } }
+    }
+    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
+    [global::Unbound.Stub]
+    internal unsafe partial class UIFrameworkAttribute : global::System.Attribute
+    {
+        [global::Unbound.Stub] public UIFrameworkAttribute(global::UnityEditor.UIFrameworkUsage frameworkUsage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIFrameworkAttribute.ctor"); }
+        public global::UnityEditor.UIFrameworkUsage frameworkUsage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIFrameworkAttribute.frameworkUsage"); return default; } }
+    }
+    internal enum UIFrameworkUsage
+    {
+        AutoDetected = 0,
+        IMGUI = 1,
+        UITK = 2,
+        Mixed = 3,
+        Excluded = 4,
     }
     public enum UIOrientation
     {

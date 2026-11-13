@@ -540,6 +540,7 @@
 {"key":"UnityEditor.Handles+DrawingScope/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.Handles+DrawingScope/Property/UnityEditor.Handles+DrawingScope/originalColor","status":"value","value":"UnityEngine.Color{r=0;g=0;b=0;a=0}"}
 {"key":"UnityEditor.Handles+DrawingScope/Property/UnityEditor.Handles+DrawingScope/originalMatrix","status":"value","value":"UnityEngine.Matrix4x4{m00=0;m10=0;m20=0;m30=0;m01=0;m11=0;m21=0;m31=0;m02=0;m12=0;m22=0;m32=0;m03=0;m13=0;m23=0;m33=0}"}
+{"key":"UnityEditor.HyperLinkClickedEventArgs/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.IMGUI.Controls.MultiColumnHeader/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.IMGUI.Controls.MultiColumnHeader+DefaultGUI/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.IMGUI.Controls.MultiColumnHeaderState/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
@@ -890,6 +891,7 @@
 {"key":"UnityEditor.TypeCache+TypeCollection/Property/UnityEditor.TypeCache+TypeCollection/Item(System.Int32)","status":"not-readable","value":"indexer-requires-arguments"}
 {"key":"UnityEditor.TypeCache+TypeCollection+Enumerator/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.TypeCache+TypeCollection+Enumerator/Property/UnityEditor.TypeCache+TypeCollection+Enumerator/Current","status":"getter-threw","value":"System.NullReferenceException"}
+{"key":"UnityEditor.U2D.SpriteEditorExtension/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.UIElements.UxmlAttributeConverter`1/@factory","status":"excluded","value":"open-generic"}
 {"key":"UnityEditor.Undo/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.UndoRedoInfo/@factory","status":"value","value":"struct"}
