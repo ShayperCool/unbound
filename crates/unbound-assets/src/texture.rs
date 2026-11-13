@@ -156,12 +156,16 @@ pub struct TextureSettings {
     /// colour-space flag while their GPU format stays linear.
     #[serde(default)]
     pub single_channel_mip_srgb: bool,
-    /// Enable the measured RGBA8 fallback for an ASTC mip chain with non-power-of-two sides.
+    /// Byte fallback for an ineligible compressed size: Some(true) keeps RGBA32, Some(false)
+    /// keeps RGB24. None keeps the selected compressed or float representation.
     #[serde(default)]
-    pub astc_mip_fallback: bool,
+    pub compressed_fallback_alpha: Option<bool>,
     /// Set by the importer in a gamma-space project: HDR colour is stored gamma-encoded.
     #[serde(default)]
     pub gamma_hdr: bool,
+    /// The measured Android 2D colour compression path stores HDR radiance as RGBM bytes.
+    #[serde(default)]
+    pub rgbm_encoding: bool,
     /// Set by the importer for a build target whose normal maps are encoded XYZ (what
     /// `UNITY_NO_DXT5nm` shaders read) instead of DXT5nm (1, y, y, x).
     #[serde(default)]
@@ -359,8 +363,9 @@ impl TextureSettings {
             srgb,
             srgb_flag,
             single_channel_mip_srgb: false,
-            astc_mip_fallback: false,
+            compressed_fallback_alpha: None,
             gamma_hdr: false,
+            rgbm_encoding: false,
             normal_maps_xyz: false,
             alpha_source,
             alpha_is_transparency: boolean(imp, "alphaIsTransparency").unwrap_or(false),
@@ -414,7 +419,7 @@ impl TextureSettings {
     }
 
     fn output_format(&self, source: TextureFormat) -> TextureFormat {
-        if self.astc_mip_fallback {
+        if self.compressed_fallback_alpha.is_some() {
             TextureFormat::Rgba8
         } else {
             source
@@ -717,7 +722,7 @@ impl ProjectCompression {
 /// the `.meta`'s sRGB flag is on (normal maps too, whose flag stays on); an explicit one stays
 /// uncompressed unless both sides are powers of two (20x12 without mips: RGB24 in Gamma,
 /// ETC2_RGB in Linear). Other targets and default formats, automatic ETC_RGB4 at sizes that are
-/// not powers of two, Split Alpha Channel, HDR Crunch sources, automatic HDR on Android, EAC imports, cubemaps,
+/// not powers of two, Split Alpha Channel, automatic HDR without Crunch on Android, EAC imports, cubemaps,
 /// arrays, volumes and the other texture types are unmeasured. The 6000.0.71f1 profile
 /// supports all six square LDR/HDR ASTC footprints and importer quality settings. Android
 /// ASTC defaults use 4x4 at High, 8x8 at Low and 6x6 at Normal, including Single Channel
@@ -731,6 +736,13 @@ pub fn storage(
     let s = &texture.settings;
     let unsupported = |why: &str| Storage::Unsupported(why.to_string());
     let hdr = texture.format == TextureFormat::Rgba32F;
+    if let Some(alpha) = s.compressed_fallback_alpha {
+        return if alpha {
+            Storage::UncompressedRgba
+        } else {
+            Storage::Uncompressed
+        };
+    }
     let automatic_astc = || match s.compression {
         2 => BlockFormat::Astc4x4,
         3 => BlockFormat::Astc8x8,
@@ -769,6 +781,7 @@ pub fn storage(
         }
         Some(_) if s.uncompressed => return Storage::Uncompressed,
         Some(f) => return unsupported(&format!("TextureImporterFormat {f}")),
+        None if android && hdr && s.rgbm_encoding => BlockFormat::Etc2Rgba8,
         None if android && hdr => return unsupported("HDR textures of the Android target"),
         None if hdr => BlockFormat::Bc6h,
         None => match s.texture_type {
@@ -853,7 +866,8 @@ pub fn storage(
                 format,
                 BlockFormat::Bc1 | BlockFormat::Bc3 | BlockFormat::Etc1 | BlockFormat::Etc2Rgba8
             ));
-    if (format == BlockFormat::Bc6h) != hdr {
+    let rgbm_encoding = hdr && s.rgbm_encoding && format == BlockFormat::Etc2Rgba8;
+    if (format == BlockFormat::Bc6h) != hdr && !rgbm_encoding {
         return unsupported(&format!("{format:?} from {:?} data", texture.format));
     }
     if format == BlockFormat::Etc1 && s.split_alpha {
@@ -1021,6 +1035,14 @@ impl ImportedTexture {
         if let Some(format) = self.explicit_byte_format() {
             return Some(format);
         }
+        if self.uncompressed && self.format == TextureFormat::Rgba8 {
+            if s.compressed_fallback_alpha == Some(false) {
+                return Some(unity_format::RGB24);
+            }
+            if s.rgbm_encoding {
+                return Some(unity_format::RGBA32);
+            }
+        }
         if self.opaque_fallback() {
             return Some(unity_format::RGB24);
         }
@@ -1079,19 +1101,19 @@ impl ImportedTexture {
         }
     }
 
-    /// An 8-bit import stored uncompressed although its build target names an ETC format
-    /// without alpha (a size the format does not take); other block formats are unmeasured.
+    /// An RGB block format's uncompressed byte fallback has opaque alpha too.
     fn opaque_fallback(&self) -> bool {
-        self.format == TextureFormat::Rgba8
-            && self.uncompressed
-            && self.settings.format_alpha == Some(false)
-            && self.settings.explicit_format.is_some_and(|f| {
-                BlockFormat::from_unity_format(f as i32).is_some_and(BlockFormat::is_etc)
-                    || matches!(
-                        crunch::CrunchFormat::from_unity(f as i32),
-                        Some(crunch::CrunchFormat::Dxt1 | crunch::CrunchFormat::Etc1)
-                    )
-            })
+        self.uncompressed
+            && self.format == TextureFormat::Rgba8
+            && (self.settings.compressed_fallback_alpha == Some(false)
+                || (self.settings.format_alpha == Some(false)
+                    && self.settings.explicit_format.is_some_and(|f| {
+                        BlockFormat::from_unity_format(f as i32).is_some_and(BlockFormat::is_etc)
+                            || matches!(
+                                crunch::CrunchFormat::from_unity(f as i32),
+                                Some(crunch::CrunchFormat::Dxt1 | crunch::CrunchFormat::Etc1)
+                            )
+                    })))
     }
 
     /// The format of an 8-bit import whose build target names an uncompressed byte format
@@ -1207,7 +1229,8 @@ impl Importer for TextureImporter {
     // 37: Polygon-mode sprites are always Tight and get their mesh's boundary as the default
     //     physics shape.
     // 38: runtime three-column block padding repeats the middle texel.
-    const VERSION: u32 = 38;
+    // 39: Android HDR colour sources and their uncompressed fallbacks retain RGBM bytes.
+    const VERSION: u32 = 39;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -1246,7 +1269,7 @@ impl Importer for TextureImporter {
                 || (self.project.encoders.measured_import_encoders
                     && settings.shape == TextureShape::Texture2D
                     && settings.texture_type == TextureType::Default));
-        settings.astc_mip_fallback = self.project.encoders.measured_astc_encoders
+        let astc_fallback = self.project.encoders.measured_astc_encoders
             && settings.shape == TextureShape::Texture2D
             && match settings.explicit_format {
                 Some(format) => {
@@ -1258,9 +1281,48 @@ impl Importer for TextureImporter {
                         && self.project.default_format(&self.build_target) == Some(COMPRESSION_ASTC)
                 }
             };
+        let bc6h_fallback = self.project.encoders.measured_import_encoders
+            && settings.shape == TextureShape::Texture2D
+            && settings.texture_type == TextureType::Default
+            && (settings.explicit_format == Some(24)
+                || (self.build_target == "Standalone"
+                    && settings.explicit_format.is_none()
+                    && !settings.uncompressed));
+        settings.compressed_fallback_alpha = if astc_fallback {
+            Some(true)
+        } else if bc6h_fallback {
+            Some(false)
+        } else {
+            None
+        };
+        settings.rgbm_encoding = self.project.encoders.measured_import_encoders
+            && self.build_target == "Android"
+            && settings.shape == TextureShape::Texture2D
+            && settings.texture_type == TextureType::Default
+            && (settings.explicit_format == Some(65)
+                || (settings.explicit_format.is_none() && !settings.uncompressed));
         settings.normal_maps_xyz = self.normal_maps_xyz;
         let mut texture = import_texture(source, bytes, meta, settings)?;
-        match storage(&texture, &self.build_target, &self.project, self.gamma) {
+        let selected = storage(&texture, &self.build_target, &self.project, self.gamma);
+        if texture.format == TextureFormat::Rgba32F
+            && texture.settings.rgbm_encoding
+            && matches!(
+                selected,
+                Storage::Uncompressed
+                    | Storage::Crunched(crunch::CrunchFormat::Etc2Rgba8)
+                    | Storage::Blocks(BlockFormat::Etc2Rgba8)
+            )
+        {
+            for mip in &mut texture.mips {
+                mip.data = rgbm::encode(&mip.data);
+            }
+            texture.format = TextureFormat::Rgba8;
+            texture.srgb = texture.settings.srgb_flag;
+            texture.has_alpha = true;
+            texture.settings.format_alpha = Some(true);
+            texture.import_settings_hash = texture.settings.hash();
+        }
+        match selected {
             fallback @ (Storage::Uncompressed | Storage::UncompressedRgba) => {
                 if fallback == Storage::UncompressedRgba {
                     // ASTC's non-power-of-two mip fallback retains RGBA32, including opaque
@@ -1411,20 +1473,32 @@ pub fn import_texture(
     mut settings: TextureSettings,
 ) -> Result<ImportedTexture> {
     let mut image = decode(source, bytes, settings.remove_matte).context("decoding")?;
+    settings.rgbm_encoding &= image.format == TextureFormat::Rgba32F;
+    if settings.rgbm_encoding {
+        // RGBM conversion consumes filtered linear radiance in either project colour space.
+        settings.gamma_hdr = false;
+    }
     let (original_width, original_height) = (image.width, image.height);
     let (w, h) = npot_size(image.width, image.height, settings.npot_scale);
     let (w, h) = fit_max_size(w, h, settings.max_size);
-    settings.astc_mip_fallback = settings.astc_mip_fallback
-        && settings.mipmaps
-        && (!w.is_power_of_two() || !h.is_power_of_two())
-        // Automatic HDR uses the Android ETC path, even with an ASTC project default.
-        && (image.format == TextureFormat::Rgba8 || settings.explicit_format.is_some());
-    if settings.astc_mip_fallback {
-        // Filter the source precision, then clamp each level to RGBA32. An HDR source's
-        // radiance contributes to its mips, but this byte output has no HDR gamma conversion.
-        // HdrNpotASTC6 distinguishes both orders from converting the source to bytes first.
+    settings.compressed_fallback_alpha = settings.compressed_fallback_alpha.filter(|alpha| {
+        let invalid_mips = settings.mipmaps && (!w.is_power_of_two() || !h.is_power_of_two());
+        if *alpha {
+            // Automatic HDR remains ETC2 rather than following an ASTC project default.
+            invalid_mips
+                && (image.format == TextureFormat::Rgba8 || settings.explicit_format.is_some())
+        } else {
+            image.format == TextureFormat::Rgba32F && (invalid_mips || w % 4 != 0 || h % 4 != 0)
+        }
+    });
+    if let Some(alpha) = settings.compressed_fallback_alpha {
+        // Filter full radiance before narrowing each level; compressed HDR size fallbacks
+        // do not apply HDR gamma conversion. ASTC keeps alpha; BC6H's RGB fallback drops it.
         settings.gamma_hdr = false;
-        settings.format_alpha = Some(true);
+        if image.format == TextureFormat::Rgba32F {
+            settings.srgb = false;
+        }
+        settings.format_alpha = Some(alpha);
     }
     // HDR colour in a gamma project is gamma-encoded: a 2D texture's per level after resizing and
     // filtering (measured with tests/projects/textureimport), a cubemap's here before its faces
@@ -2597,6 +2671,7 @@ mod cubemap;
 mod mipmaps;
 mod psd;
 mod resize;
+mod rgbm;
 mod specular;
 #[cfg(test)]
 mod tests;

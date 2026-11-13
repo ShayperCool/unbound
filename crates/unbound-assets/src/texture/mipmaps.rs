@@ -213,7 +213,7 @@ fn srgb_to_linear() -> &'static [f32; 256] {
 }
 
 /// Linear to sRGB gamma of one channel, in float.
-fn linear_to_gamma(v: f32) -> f32 {
+pub(super) fn linear_to_gamma(v: f32) -> f32 {
     // The exponents are one float step above the nearest to 1/2.4 and 1/2.2 (as measured).
     const LDR: f32 = f32::from_bits(0x3ed5_5556);
     const HDR: f32 = f32::from_bits(0x3ee8_ba2f);

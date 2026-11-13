@@ -178,3 +178,11 @@ NpotCrunchRgbMips format=DXT1Crunched npot=none android=ETC_RGB4Crunched
 NpotCrunchRgbaNoMips format=DXT5Crunched npot=none mips=0 android=ETC2_RGBA8Crunched
 NoiseCrunchLinearNoMips format=DXT5Crunched android=ETC2_RGBA8Crunched srgb=0 mips=0
 NoiseCrunchSrgbNoMips format=DXT5Crunched android=ETC2_RGBA8Crunched srgb=1 mips=0
+HdrCrunchQ0 compression=normal crunch=1 quality=0
+HdrCrunchQ100 compression=normal crunch=1 quality=100
+HdrCrunchLinear compression=normal crunch=1 srgb=0
+HdrCrunchNoMips compression=normal crunch=1 mips=0
+HdrCrunchOpaque compression=normal crunch=1 alpha=none
+HdrSpecialCrunch compression=normal crunch=1 mips=0
+HdrNpotCrunch compression=normal crunch=1 npot=none
+HdrNpotNormal compression=normal npot=none

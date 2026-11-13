@@ -271,6 +271,19 @@ CASES['NoiseCrunchSrgbNoMips'] = ('Noise', 'format=DXT5Crunched android=ETC2_RGB
 CASES['NpotCrunchRgbMips'] = ('Npot', 'format=DXT1Crunched npot=none android=ETC_RGB4Crunched')
 CASES['NpotCrunchRgbaNoMips'] = ('Npot', 'format=DXT5Crunched npot=none mips=0 android=ETC2_RGBA8Crunched')
 
+for name, source, settings in [
+    ('HdrCrunchQ0', 'Hdr', 'compression=normal crunch=1 quality=0'),
+    ('HdrCrunchQ100', 'Hdr', 'compression=normal crunch=1 quality=100'),
+    ('HdrCrunchLinear', 'Hdr', 'compression=normal crunch=1 srgb=0'),
+    ('HdrCrunchNoMips', 'Hdr', 'compression=normal crunch=1 mips=0'),
+    ('HdrCrunchOpaque', 'Hdr', 'compression=normal crunch=1 alpha=none'),
+    ('HdrSpecialCrunch', 'HdrSpecial', 'compression=normal crunch=1 mips=0'),
+    ('HdrNpotCrunch', 'HdrNpot', 'compression=normal crunch=1 npot=none'),
+]:
+    CASES[name] = (source, settings)
+
+CASES['HdrNpotNormal'] = ('HdrNpot', 'compression=normal npot=none')
+
 def main():
     textures = PROBE/'Assets/Textures'
     textures.mkdir(parents=True, exist_ok=True)

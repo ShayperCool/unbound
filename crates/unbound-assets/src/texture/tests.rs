@@ -1784,3 +1784,128 @@ fn individual_block_reads_match_bulk_decoding_without_a_pixel_buffer() {
         assert!(decode_block_texel(format, &block[..block.len() - 1], 0).is_none());
     }
 }
+
+#[test]
+fn hdr_crunch_uses_rgbm_in_both_project_colour_spaces() {
+    let probe =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/texturecompression");
+    let source = probe.join("Assets/Textures/HdrCrunchAuto.exr");
+    let bytes = std::fs::read(&source).unwrap();
+    let meta = unbound_yaml::parse_value(
+        &std::fs::read_to_string(source.with_extension("exr.meta")).unwrap(),
+    )
+    .unwrap();
+    let reference =
+        std::fs::read_to_string(probe.join("Reference/unity-6000.0.71f1/AndroidGamma.jsonl"))
+            .unwrap();
+    let expected = reference
+        .lines()
+        .map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap())
+        .find(|v| v["k"] == "tex.HdrCrunchAuto.raw")
+        .unwrap();
+    let expected = decode_base64(expected["v"].as_str().unwrap());
+    for gamma in [false, true] {
+        let mut importer = TextureImporter {
+            build_target: "Android".into(),
+            gamma,
+            project: ProjectCompression {
+                encoders: unbound_compat::TextureCompressionRules::for_version(
+                    unbound_compat::UnityVersion::new(6000, 0, 71),
+                ),
+                ..ProjectCompression::default()
+            },
+            ..TextureImporter::default()
+        };
+        let texture = importer.import(&source, &bytes, &meta).unwrap();
+        assert_eq!(texture.format, TextureFormat::Rgba8);
+        assert_eq!(
+            texture.crunched.as_ref().unwrap().data.as_ref(),
+            expected.as_slice()
+        );
+        assert_eq!(
+            texture.blocks.as_ref().unwrap().format,
+            BlockFormat::Etc2Rgba8
+        );
+        importer.project.encoders = Default::default();
+        let other = importer.import(&source, &bytes, &meta).unwrap();
+        assert!(other.crunched.is_none());
+        assert_eq!(other.format, TextureFormat::Rgba32F);
+        assert!(other.approximation.is_some());
+    }
+}
+
+#[test]
+fn hdr_size_fallbacks_filter_before_encoding_rgb_or_rgbm_bytes() {
+    let probe =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/texturecompression");
+    for case in ["HdrNpotCrunch", "HdrNpotNormal"] {
+        let source = probe.join(format!("Assets/Textures/{case}.exr"));
+        let bytes = std::fs::read(&source).unwrap();
+        let meta = unbound_yaml::parse_value(
+            &std::fs::read_to_string(source.with_extension("exr.meta")).unwrap(),
+        )
+        .unwrap();
+        for (profile, target, gamma, channels) in [
+            ("Gamma", "Standalone", true, 3),
+            ("Linear", "Standalone", false, 3),
+            ("AndroidGamma", "Android", true, 4),
+            ("AndroidLinear", "Android", false, 4),
+        ] {
+            let importer = TextureImporter {
+                build_target: target.into(),
+                gamma,
+                project: ProjectCompression {
+                    encoders: unbound_compat::TextureCompressionRules::for_version(
+                        unbound_compat::UnityVersion::new(6000, 0, 71),
+                    ),
+                    ..ProjectCompression::default()
+                },
+                ..TextureImporter::default()
+            };
+            let texture = importer.import(&source, &bytes, &meta).unwrap();
+            assert_eq!(texture.format, TextureFormat::Rgba8);
+            assert_eq!(texture.srgb, target == "Android", "{profile} {case}");
+            assert!(texture.blocks.is_none() && texture.crunched.is_none());
+            if channels == 3 {
+                assert!(!texture.has_alpha);
+                assert!(
+                    texture
+                        .mips
+                        .iter()
+                        .all(|m| m.data.chunks_exact(4).all(|p| p[3] == 255))
+                );
+            }
+            assert_eq!(
+                texture.reported_format(),
+                Some(if channels == 3 {
+                    unity_format::RGB24
+                } else {
+                    unity_format::RGBA32
+                })
+            );
+            let reference = std::fs::read_to_string(
+                probe.join(format!("Reference/unity-6000.0.71f1/{profile}.jsonl")),
+            )
+            .unwrap();
+            let expected = reference
+                .lines()
+                .map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap())
+                .find(|v| v["k"] == format!("tex.{case}.raw"))
+                .unwrap();
+            let actual: Vec<u8> = texture
+                .mips
+                .iter()
+                .flat_map(|m| {
+                    m.data
+                        .chunks_exact(4)
+                        .flat_map(|p| p[..channels].iter().copied())
+                })
+                .collect();
+            assert_eq!(
+                actual,
+                decode_base64(expected["v"].as_str().unwrap()),
+                "{profile}"
+            );
+        }
+    }
+}
