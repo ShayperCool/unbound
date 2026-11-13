@@ -1,0 +1,17 @@
+{
+ "commands": [
+  "python3 tests/projects/residentdrawer/run.py check",
+  "python3 tests/projects/residentdrawer/run.py check --profile occlusion"
+ ],
+ "summary": "\\d+/\\d+ records match.*",
+ "engine_paths": [
+  "managed/UnityEngine/Graphics/Srp/GPUDrivenProcessor.cs",
+  "managed/UnityEngine/Graphics/Srp/ObjectDispatcher.cs",
+  "managed/UnityEngine/Graphics/Srp/BatchRendererGroup.cs",
+  "managed/UnityEngine/Graphics/Srp/BatchCulling.cs",
+  "managed/UnityEngine/Jobs/JobLayout.cs",
+  "crates/unbound-app/src/render/dots.rs",
+  "crates/unbound-shaders/src/exponents.rs",
+  "crates/unbound-shaders/src/matrix_swizzles.rs"
+ ]
+}

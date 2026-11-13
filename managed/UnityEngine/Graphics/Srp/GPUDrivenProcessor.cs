@@ -274,7 +274,7 @@ namespace UnityEngine.Rendering
             var go = renderer.m_GameObject;
             if (go == null || !go.activeInHierarchy || !renderer.m_Enabled) return false;
             if (renderer.GetComponent<MeshFilter>() is not MeshFilter filter || filter.sharedMesh == null) return false;
-            if (!renderer.allowGPUDrivenRendering || RequiresAnimationVisibility(renderer)) return false;
+            if (!renderer.allowGPUDrivenRendering || AnimationCullsByVisibility(renderer)) return false;
             var probes = renderer.lightProbeUsage;
             if (probes == LightProbeUsage.UseProxyVolume || renderer.additionalVertexStreams != null) return false;
             if (probes == LightProbeUsage.BlendProbes && renderer.probeAnchor != null) return false;
@@ -289,7 +289,7 @@ namespace UnityEngine.Rendering
         /// <summary>Whether an Animator or Animation of the renderer's hierarchy culls by its
         /// renderers' visibility (an Animator not always animating, an Animation culling based on
         /// renderers): the nearest one up the hierarchy decides.</summary>
-        static bool RequiresAnimationVisibility(Renderer renderer)
+        static bool AnimationCullsByVisibility(Renderer renderer)
         {
             for (var t = renderer.transform; t != null; t = t.parent)
             {
