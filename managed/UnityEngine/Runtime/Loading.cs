@@ -18,9 +18,8 @@ namespace Unbound.Runtime
         // construction traversal: Unity does not specify relative callbacks across objects.
         internal IReadOnlyList<GameObject> SceneRoots;
         internal Object MainObject;
-        /// <summary>A ScriptedImporter's objects: their file ids are derived from their identifiers
-        /// (ScriptedImports.FileId); a reference no object answers to is empty, unless it may name a
-        /// component or child of an added GameObject (<see cref="AssetDatabaseRuntime.ByProducedObjects"/>).</summary>
+        /// <summary>A ScriptedImporter's objects: their file ids are derived (ScriptedImports.Import),
+        /// no document of the file holds them; a reference no object answers to is empty.</summary>
         internal bool UnknownFileIds;
         /// <summary>The identifiers a ScriptedImporter gave its objects.</summary>
         internal readonly Dictionary<Object, string> Identifiers = new Dictionary<Object, string>(ReferenceEqualityComparer.Instance);
@@ -698,52 +697,7 @@ namespace Unbound.Runtime
             if (s_Objects.TryGetValue((guid, fileId), out var cached) && !cached.m_Destroyed) return cached;
             var file = LoadFile(guid);
             if (file == null) return null;
-            if (file.Objects.TryGetValue(fileId, out var obj)) return obj;
-            if (file.UnknownFileIds && fileId != 0)
-            {
-                obj = ByProducedObjects(file, expected);
-                if (obj != null) s_Objects[(guid, fileId)] = obj;
-            }
-            return obj;
-        }
-
-        /// <summary>The object a reference into a ScriptedImporter's asset means when no object has its
-        /// file id. Unity resolves such references by file id alone: one naming no object of the
-        /// asset is empty, silently, also when several objects (or none) of the expected type exist
-        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/uxmlattributes arrayScripted*).
-        /// Unbound derives file ids only for the objects the importer added, not for the components
-        /// and children of an added GameObject: a reference that may name one of those (a GameObject,
-        /// Component or untyped reference into an asset holding a GameObject) takes the one object
-        /// fitting its type, and reports when it cannot tell which.</summary>
-        internal static Object ByProducedObjects(LoadedFile file, Type expected)
-        {
-            if (!MayNameUnderivedObject(file, expected)) return null;
-            Object match = null;
-            int count = 0;
-            foreach (var o in file.Objects.Values)
-            {
-                if (expected != null && expected != typeof(Object) && !expected.IsInstanceOfType(o)) continue;
-                match = o;
-                count++;
-            }
-            if (count == 1) return match;
-            if (file.Objects.Count == 1)
-                foreach (var o in file.Objects.Values) return o;
-            Debug.LogError($"Unbound: a reference into {file.Path} matches {count} of the objects its importer made " +
-                $"({string.Join(", ", file.Identifiers.Values)}); Unbound cannot tell which one Unity's file id names.");
-            return null;
-        }
-
-        /// <summary>Whether a reference of type <paramref name="expected"/> may name an object Unbound
-        /// gives no file id: a component or child of a GameObject the importer added.</summary>
-        static bool MayNameUnderivedObject(LoadedFile file, Type expected)
-        {
-            bool gameObjectOrComponent = expected == null || expected == typeof(Object) || expected == typeof(GameObject)
-                || typeof(Component).IsAssignableFrom(expected);
-            if (!gameObjectOrComponent) return false;
-            foreach (var o in file.Objects.Values)
-                if (o is GameObject) return true;
-            return false;
+            return file.Objects.TryGetValue(fileId, out var obj) ? obj : null;
         }
 
         /// <summary>The main object of an asset (Resources.Load, AssetDatabase.LoadAssetAtPath).</summary>

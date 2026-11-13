@@ -4,61 +4,15 @@ using Unbound.Runtime;
 using Xunit;
 using Object = UnityEngine.Object;
 
-// References into a ScriptedImporter's asset whose file id names none of its objects. Measured in
-// the Unity 6000.0.71f1 Editor (tests/projects/uxmlattributes, arrayScripted*: an asset of two
-// ProbeData objects): such a reference is empty, silently, whether no object or several objects
-// of the expected type exist. Unbound's choice: a reference that may name a component or child of
-// an added GameObject (which Unbound gives no file id) takes the one fitting object, or reports.
+// The file ids of a ScriptedImporter's objects: leaf objects by identifier and class (and the
+// .meta's name tables), the hierarchies of added GameObjects by path. Measured in the Unity
+// 6000.0.71f1 Editor (tests/projects/scriptedfileids and its HierarchyControl, tests/projects/shadergraph).
 
 namespace UnityEngine.Tests
 {
     public class ScriptedImportReferenceTests
     {
         sealed class Data : ScriptableObject { }
-
-        sealed class Logs : ILogHandler
-        {
-            public readonly List<string> Lines = new List<string>();
-            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
-                Lines.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
-            public void LogException(Exception exception, Object context) => Lines.Add(exception.Message);
-        }
-
-        static LoadedFile File(params Object[] objects)
-        {
-            var file = new LoadedFile { Path = "Assets/UI/Probe.probedata", UnknownFileIds = true };
-            for (int i = 0; i < objects.Length; i++)
-            {
-                file.Objects[100 + i] = objects[i];
-                file.Identifiers[objects[i]] = "o" + i;
-            }
-            return file;
-        }
-
-        [Fact]
-        public void AnUnknownFileIdIsEmptyWithoutAMessage()
-        {
-            var handler = Debug.unityLogger.logHandler;
-            var logs = new Logs();
-            Debug.unityLogger.logHandler = logs;
-            try
-            {
-                Data a = ScriptableObject.CreateInstance<Data>(), b = ScriptableObject.CreateInstance<Data>();
-                var two = File(a, b);
-                // None of the expected type, then two of it.
-                Assert.Null(AssetDatabaseRuntime.ByProducedObjects(two, typeof(Texture2D)));
-                Assert.Null(AssetDatabaseRuntime.ByProducedObjects(two, typeof(Data)));
-                // One of the expected type among others, and an asset of a single object: still
-                // resolved by file id alone.
-                Assert.Null(AssetDatabaseRuntime.ByProducedObjects(File(a, b, new Texture2D(1, 1)), typeof(Texture2D)));
-                Assert.Null(AssetDatabaseRuntime.ByProducedObjects(File(a), typeof(Data)));
-                Assert.Empty(logs.Lines);
-            }
-            finally
-            {
-                Debug.unityLogger.logHandler = handler;
-            }
-        }
 
         // The .meta's name tables give an added object its file id when the entry names its identifier
         // and its class (matches the Unity 6000.0.71f1 Editor with a texture and a script object,
@@ -89,29 +43,60 @@ namespace UnityEngine.Tests
             Assert.Equal(-6465566751694194690L, (long)ScriptedImports.XxHash64(System.Text.Encoding.UTF8.GetBytes("Type:Shader->MainAsset0")));
         }
 
-        // A reference that may name a component of an added GameObject (no derived file id): the one
-        // fitting object, else a report.
+        // A hierarchy as tests/projects/scriptedfileids HierarchyControl's Deep importer builds it,
+        // with the ids the Editor gives each object.
         [Fact]
-        public void AReferenceThatMayNameAComponentFallsBackOrReports()
+        public void AnAddedHierarchyTakesIdsByPath()
         {
-            var handler = Debug.unityLogger.logHandler;
-            var logs = new Logs();
-            Debug.unityLogger.logHandler = logs;
+            GameObject Child(GameObject parent, string name)
+            {
+                var go = new GameObject(name);
+                go.transform.SetParent(parent.transform, false);
+                return go;
+            }
+            var tree = new GameObject("Tree");
+            var body = tree.AddComponent<Rigidbody>();
+            var group = tree.AddComponent<LODGroup>();
+            var lod0 = Child(tree, "LOD0");
+            var renderer = lod0.AddComponent<MeshRenderer>();
+            var leaf = Child(lod0, "Leaf");
+            var twin0 = Child(tree, "Twin");
+            var twin1 = Child(tree, "Twin");
+            var extra = Child(tree, "Extra");
+            var capsule = extra.AddComponent<CapsuleCollider>();
+            var second = new GameObject("Second");
+            var mesh = new Mesh { name = "Mesh" };
             try
             {
-                var root = new GameObject("Root");
-                var data = ScriptableObject.CreateInstance<Data>();
-                var file = File(root, data);
-                Assert.Same(root, AssetDatabaseRuntime.ByProducedObjects(file, typeof(GameObject)));
-                Assert.Empty(logs.Lines);
-                Assert.Null(AssetDatabaseRuntime.ByProducedObjects(file, typeof(MeshRenderer)));
-                Assert.Single(logs.Lines);
-                Assert.Contains("cannot tell which one", logs.Lines[0]);
-                Object.DestroyImmediate(root);
+                var added = new List<(string, Object)> { ("Top", tree), ("Extra", extra), ("Second", second), ("Mesh", mesh) };
+                var ids = new Dictionary<long, Object>();
+                var given = ScriptedImports.HierarchyFileIds(added, ids);
+                Assert.Same(tree, ids[-5627406255049210624L]);
+                Assert.Same(tree.transform, ids[7289620436457526320L]);
+                Assert.Same(body, ids[-484973370338017211L]);
+                Assert.Same(group, ids[3140244981883374007L]);
+                Assert.Same(renderer, ids[1796223597023407233L]);
+                Assert.Same(leaf, ids[-6962124031331360859L]);
+                // Same-named siblings take the next index in order, their components too.
+                Assert.Same(twin0, ids[-5667160776855022005L]);
+                Assert.Same(twin1, ids[4441893058563902596L]);
+                Assert.Same(twin0.transform, ids[3966244616355061162L]);
+                Assert.Same(twin1.transform, ids[-5302503290530769749L]);
+                // A child added under its own identifier keeps its path in the hierarchy.
+                Assert.Same(extra, ids[-1544261197067733884L]);
+                Assert.Same(capsule, ids[-1365718517604799137L]);
+                Assert.Same(second, ids[-1440060632856835699L]);
+                Assert.Same(second.transform, ids[4593882995610042022L]);
+                Assert.Contains(extra, given);
+                Assert.DoesNotContain(mesh, given);
+                Assert.Equal(18, ids.Count);
+                Assert.Equal(-5523277661179574252L, ScriptedImports.FileId("Mesh", mesh));
             }
             finally
             {
-                Debug.unityLogger.logHandler = handler;
+                Object.DestroyImmediate(tree);
+                Object.DestroyImmediate(second);
+                Object.DestroyImmediate(mesh);
             }
         }
     }

@@ -171,11 +171,11 @@ namespace Unbound.Runtime
 
     /// <summary>
     /// Imports assets whose .meta names a ScriptedImporter by running the project's importer, as the
-    /// Editor does. Each object's file id is Unity's: the one the .meta's name table lists for its
-    /// identifier and class (tests/projects/shadergraph), else xxHash64 of <c>"Type:" + class +
-    /// "->" + identifier + "0"</c> (measured in tests/projects/input, tests/projects/uxmlattributes); a
-    /// reference no object answers to is empty, unless it may name a component or child of an added
-    /// GameObject (AssetDatabaseRuntime.ByProducedObjects).
+    /// Editor does. Each object's file id is Unity's: an added GameObject's hierarchy (its own
+    /// GameObject, components and children) by <see cref="HierarchyFileIds"/>; another object the one
+    /// the .meta's name table lists for its identifier and class (tests/projects/shadergraph), else
+    /// xxHash64 of <c>"Type:" + class + "->" + identifier + "0"</c> (measured in tests/projects/input,
+    /// tests/projects/uxmlattributes). A reference no object answers to is empty.
     /// </summary>
     internal static class ScriptedImports
     {
@@ -224,29 +224,89 @@ namespace Unbound.Runtime
             using (Scope())
             using (ObjectRegistry.AsAssets())
                 importer.OnImportAsset(ctx);
-            // The main object takes the asset's file name, whatever the importer named it
-            // (measured: tests/projects/svgsprites, a GameObject the importer names "transform"). A
-            // Shader keeps the name its source declares, which Shader.Find looks up
-            // (tests/projects/shadergraph).
-            if (ctx.mainObject != null && !(ctx.mainObject is Shader))
-                ctx.mainObject.m_Name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
             var file = new LoadedFile { MainObject = ctx.mainObject, UnknownFileIds = true };
             var table = settings.Count > 0 ? NameTable(settings[0].Body) : null;
+            var inHierarchy = HierarchyFileIds(ctx.m_Objects, file.Objects);
             foreach (var (identifier, obj) in ctx.m_Objects)
             {
-                file.Objects[FileId(identifier, obj, table)] = obj;
+                if (!inHierarchy.Contains(obj)) file.Objects[FileId(identifier, obj, table)] = obj;
                 file.Identifiers[obj] = identifier;
             }
+            // The main object takes the asset's file name, whatever the importer named it
+            // (measured: tests/projects/svgsprites, a GameObject the importer names "transform"), after
+            // its hierarchy's file ids are derived from the importer's names. A Shader keeps the name
+            // its source declares, which Shader.Find looks up (tests/projects/shadergraph).
+            if (ctx.mainObject != null && !(ctx.mainObject is Shader))
+                ctx.mainObject.m_Name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
             return file;
         }
 
-        /// <summary>The derived leaf-asset file id for an import identifier; hierarchy ids remain separate.</summary>
-        internal static long FileId(string identifier, Object obj)
+        /// <summary>
+        /// File ids of the hierarchies of the added GameObjects, into <paramref name="into"/>; returns
+        /// the objects given one. Each added GameObject without an added ancestor roots a hierarchy
+        /// whose path is its identifier and name (<c>"Top/Tree"</c>); a child's path adds its name, a
+        /// component's its class name (<c>"Top/Tree/LOD0/MeshRenderer"</c>). An object's id is xxHash64
+        /// of <c>"Type:" + class + "->" + path + index</c>, the index the first one (from 0) not taken
+        /// yet, in depth-first order: the GameObject, its components, then its children. Names are
+        /// those when the importer returns (before the main object takes the asset's name); a child
+        /// added under its own identifier keeps its hierarchy id and the name table does not apply.
+        /// Matches the Unity 6000.0.71f1 Editor (tests/projects/scriptedfileids HierarchyControl).
+        /// </summary>
+        internal static HashSet<Object> HierarchyFileIds(List<(string Identifier, Object Obj)> added, Dictionary<long, Object> into)
         {
-            // The native class name: scripts' objects are MonoBehaviours to the serializer.
-            var type = IsScriptObject(obj) ? "MonoBehaviour" : obj.GetType().Name;
-            return (long)XxHash64(System.Text.Encoding.UTF8.GetBytes("Type:" + type + "->" + identifier + "0"));
+            var given = new HashSet<Object>(ReferenceEqualityComparer.Instance);
+            var addedObjects = new HashSet<Object>(ReferenceEqualityComparer.Instance);
+            foreach (var (_, obj) in added) addedObjects.Add(obj);
+            foreach (var (identifier, obj) in added)
+            {
+                if (!(obj is GameObject go) || given.Contains(go) || HasAddedAncestor(go.transform, addedObjects)) continue;
+                Walk(go.transform, identifier + "/" + go.m_Name, into, given);
+            }
+            return given;
         }
+
+        static bool HasAddedAncestor(Transform t, HashSet<Object> added)
+        {
+            for (var p = t.parent; p != null; p = p.parent)
+                if (added.Contains(p.gameObject)) return true;
+            return false;
+        }
+
+        static void Walk(Transform t, string path, Dictionary<long, Object> into, HashSet<Object> given)
+        {
+            var go = t.gameObject;
+            Assign(go, "GameObject", path, into, given);
+            foreach (var component in go.GetComponents<Component>())
+            {
+                if (component == null) continue;
+                var type = NativeClassName(component);
+                Assign(component, type, path + "/" + type, into, given);
+            }
+            for (int i = 0; i < t.childCount; i++)
+            {
+                var child = t.GetChild(i);
+                Walk(child, path + "/" + child.gameObject.m_Name, into, given);
+            }
+        }
+
+        static void Assign(Object obj, string type, string key, Dictionary<long, Object> into, HashSet<Object> given)
+        {
+            for (int index = 0; ; index++)
+            {
+                long id = (long)XxHash64(System.Text.Encoding.UTF8.GetBytes("Type:" + type + "->" + key + index.ToString(CultureInfo.InvariantCulture)));
+                if (into.ContainsKey(id)) continue;
+                into[id] = obj;
+                given.Add(obj);
+                return;
+            }
+        }
+
+        /// <summary>The derived leaf-asset file id for an import identifier; hierarchy ids remain separate.</summary>
+        internal static long FileId(string identifier, Object obj) =>
+            (long)XxHash64(System.Text.Encoding.UTF8.GetBytes("Type:" + NativeClassName(obj) + "->" + identifier + "0"));
+
+        /// <summary>The native class name: scripts' objects are MonoBehaviours to the serializer.</summary>
+        static string NativeClassName(Object obj) => IsScriptObject(obj) ? "MonoBehaviour" : obj.GetType().Name;
 
         /// <summary>
         /// The file id of an object added under <paramref name="identifier"/> when the asset's .meta
