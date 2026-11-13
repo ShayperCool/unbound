@@ -12,6 +12,16 @@ Rect without one (`NoPhysFull`). In Play mode the probe records:
   with a sprite tile of each convex shape (its shape types and vertices).
 - `UnityEditor.Sprites.SpriteUtility.GenerateOutline` (internal, called through reflection) on the
   readable textures with four detail, alpha tolerance and hole-detection combinations.
+- Textures written by the probe, traced by `Sprite.Create` (Tight, fallback physics shape) and
+  `GenerateOutline` over the whole texture and an off-centre fractional sub-rect: a new readable
+  texture after `Apply`, after `SetPixels32` without `Apply`, after `Apply(false, true)` made it
+  non-readable, and an imported readable texture rewritten by `SetPixels32` before and after
+  `Apply`. Each traces the texels the CPU holds at that moment.
+- `Sprite.OverridePhysicsShape` on a Full Rect sprite with an off-centre pivot: two paths (one
+  with points outside the rect), a path of two points and a list with a one-point path (each
+  throws `ArgumentException` and keeps the shape), an empty list (clears it) and null
+  (`ArgumentNullException`, its type and parameter only); the physics shape and the paths of a
+  PolygonCollider2D added after each.
 
 The comparator compares every value exactly (floats within 1e-5 relative). The gate assembles
 the committed `Authored/` set and runs only the engine; outputs stay under

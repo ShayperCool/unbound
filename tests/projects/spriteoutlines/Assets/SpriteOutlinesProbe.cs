@@ -41,6 +41,35 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
         public Created[] created;
         public Collider[] colliders;
         public Outline[] outlines;
+        public Created[] runtime;
+        public Outline[] runtimeOutlines;
+        public Created[] overridden;
+        public Collider[] overriddenColliders;
+        public string[] logs;
+    }
+
+    static readonly List<string> s_Logs = new List<string>();
+
+    /// <summary>A ring of the given radii (fractions of the half size) at a centre, as the
+    /// authored textures draw shapes (texels outside transparent).</summary>
+    static Color32[] Ring(int w, int h, float cx, float cy, float inner, float outer)
+    {
+        var px = new Color32[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float u = (x + .5f - cx) / (w * .5f), v = (y + .5f - cy) / (h * .5f), d = u * u + v * v;
+                px[y * w + x] = d <= outer && d >= inner ? new Color32((byte)(x * 5), (byte)(y * 3), 40, 255) : new Color32(0, 0, 0, 0);
+            }
+        return px;
+    }
+
+    static Sprite TightSprite(Texture2D t, Rect rect) => Sprite.Create(t, rect, new Vector2(.4f, .6f), 50, 1, SpriteMeshType.Tight, Vector4.zero, true);
+
+    static string Try(Action action)
+    {
+        try { action(); return "ok"; }
+        catch (Exception e) { return e.GetType().Name + ": " + e.Message; }
     }
 
     static Path[] Physics(Sprite s)
@@ -56,6 +85,10 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
         var capture = new Capture();
         try
         {
+#if UNITY_EDITOR
+            var generate = typeof(UnityEditor.EditorApplication).Assembly.GetType("UnityEditor.Sprites.SpriteUtility")
+                .GetMethod("GenerateOutline", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+#endif
             var created = new List<Created>();
             foreach (var t in textures.Where(t => t.name.EndsWith("R") || t.name.EndsWith("N")))
                 foreach (var physics in new[] { false, true })
@@ -109,8 +142,6 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
             capture.colliders = colliders.ToArray();
 
 #if UNITY_EDITOR
-            var generate = typeof(UnityEditor.EditorApplication).Assembly.GetType("UnityEditor.Sprites.SpriteUtility")
-                .GetMethod("GenerateOutline", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
             var outlines = new List<Outline>();
             foreach (var t in textures.Where(t => t.name.EndsWith("R")))
                 foreach (var (detail, tolerance, holes) in new[] { (0.25f, (byte)0, true), (1f, (byte)0, true), (0.5f, (byte)128, false), (-1f, (byte)0, true) })
@@ -121,6 +152,74 @@ public sealed class SpriteOutlinesProbe : MonoBehaviour
                 }
             capture.outlines = outlines.ToArray();
 #endif
+            Application.logMessageReceived += (message, stack, type) => s_Logs.Add(type + ": " + message);
+
+            // Textures made by scripts: readable, then made non-readable by Apply; sprites over the
+            // whole texture and an off-centre sub-rect.
+            var runtime = new List<Created>();
+            var runtimeOutlines = new List<Outline>();
+            var made = new Texture2D(80, 48, TextureFormat.RGBA32, false) { name = "Made" };
+            made.SetPixels32(Ring(80, 48, 44, 22, .2f, .8f));
+            made.Apply();
+            void Record(string label, Texture2D t)
+            {
+                foreach (var rect in new[] { new Rect(0, 0, t.width, t.height), new Rect(6.5f, 3, t.width - 10, t.height - 7.75f) })
+                {
+                    string name = $"{label}-{rect.x}-{rect.y}";
+                    Sprite sprite = null;
+                    string result = Try(() => sprite = TightSprite(t, rect));
+                    runtime.Add(sprite != null ? Describe(name, sprite) : new Created { name = name + " " + result });
+#if UNITY_EDITOR
+                    var args = new object[] { t, rect, .25f, (byte)0, true, null };
+                    result = Try(() => generate.Invoke(null, args));
+                    runtimeOutlines.Add(new Outline { name = name + " " + result, paths = (args[5] as Vector2[][] ?? new Vector2[0][]).Select(p => new Path { points = p }).ToArray() });
+#endif
+                }
+            }
+            Record("made-readable", made);
+            // Written but not applied yet: the texels the CPU holds.
+            made.SetPixels32(Ring(80, 48, 30, 26, 0f, .5f));
+            Record("made-unapplied", made);
+            made.Apply(false, true);
+            Record("made-unreadable", made);
+            // An imported readable texture a script rewrote (last: it changes the asset in memory).
+            var imported = textures.First(t => t.name == "EllipseR");
+            imported.SetPixels32(Ring(imported.width, imported.height, 20, 18, .1f, .6f));
+            Record("imported-unapplied", imported);
+            imported.Apply();
+            Record("imported-applied", imported);
+            capture.runtime = runtime.ToArray();
+            capture.runtimeOutlines = runtimeOutlines.ToArray();
+
+            // Sprite.OverridePhysicsShape: points in rect space (also outside the rect), then a
+            // path of two points, then no paths; a PolygonCollider2D added after each.
+            var overridden = new List<Created>();
+            var overriddenColliders = new List<Collider>();
+            var tri = textures.First(t => t.name == "TriR");
+            var target = Sprite.Create(tri, new Rect(2, 3, 40, 42), new Vector2(.25f, .75f), 64, 1, SpriteMeshType.FullRect, Vector4.zero, false);
+            var overrides = new (string, List<Vector2[]>)[]
+            {
+                ("two", new List<Vector2[]> { new[] { new Vector2(0, 0), new Vector2(40, 0), new Vector2(20, 42) }, new[] { new Vector2(-5, 10), new Vector2(45.5f, 10), new Vector2(45.5f, 50), new Vector2(1.25f, 50) } }),
+                ("short", new List<Vector2[]> { new[] { new Vector2(1, 1), new Vector2(30, 30) } }),
+                ("mixed", new List<Vector2[]> { new[] { new Vector2(0, 0), new Vector2(10, 0), new Vector2(0, 10) }, new[] { new Vector2(1, 1) } }),
+                ("empty", new List<Vector2[]>()),
+            };
+            foreach (var (label, list) in overrides)
+            {
+                s_Logs.Add("override " + label);
+                string result = Try(() => target.OverridePhysicsShape(list));
+                overridden.Add(Describe($"{label} {result}", target));
+                var go = new GameObject("Overridden" + label);
+                go.AddComponent<SpriteRenderer>().sprite = target;
+                var polygon = go.AddComponent<PolygonCollider2D>();
+                overriddenColliders.Add(new Collider { sprite = label, polygon = Enumerable.Range(0, polygon.pathCount).Select(i => new Path { points = polygon.GetPath(i) }).ToArray() });
+            }
+            // The exception type only: its message is the runtime's wording.
+            try { target.OverridePhysicsShape(null); s_Logs.Add("override null ok"); }
+            catch (Exception e) { s_Logs.Add("override null " + e.GetType().Name + " " + ((ArgumentException)e).ParamName); }
+            capture.overridden = overridden.ToArray();
+            capture.overriddenColliders = overriddenColliders.ToArray();
+            capture.logs = s_Logs.ToArray();
             capture.complete = true;
             File.WriteAllText(Environment.GetEnvironmentVariable("SPRITE_OUTLINES_OUT"), JsonUtility.ToJson(capture, true));
         }
