@@ -35,7 +35,8 @@ def outputs(directory):
 def complete(directory):
     path = directory/'terrainlod.jsonl'
     lines = path.read_text().splitlines() if path.is_file() else []
-    if sum('"image"' in line for line in lines) != 16 or not any('"basemap"' in line for line in lines):
+    if sum('"image"' in line for line in lines) != 16 or not any('"basemap"' in line for line in lines) \
+            or sum('"patches"' in line for line in lines) != 2:
         return 'missing or incomplete terrainlod.jsonl'
     return None
 

@@ -58,6 +58,18 @@ public class TerrainLodProbe : MonoBehaviour
         Capture(dir, "layers5base", layered, new Vector3(5050f, 70f, 4975f), new Vector3(5050f, 0f, 5050f), 5f, 0f, 0, 0);
         Capture(dir, "layers5splat", layered, new Vector3(5050f, 70f, 4975f), new Vector3(5050f, 0f, 5050f), 5f, 1000f, 0, 0);
         AppendBaseMaps();
+        // The per-patch height errors and height ranges the levels of detail are worked out from.
+        foreach (var tile in new[] { terrain, east })
+        {
+            var data = tile.terrainData;
+            var line = new StringBuilder($"{{\"patches\":\"{tile.name}\",\"errors\":[");
+            var errors = data.GetMaximumHeightError();
+            for (int i = 0; i < errors.Length; i++) line.Append(i == 0 ? "" : ",").Append(F(errors[i]));
+            line.Append("],\"extents\":[");
+            var extents = data.GetPatchMinMaxHeights();
+            for (int i = 0; i < extents.Length; i++) line.Append(i == 0 ? "" : ",").Append(F(extents[i].min)).Append(',').Append(F(extents[i].max));
+            m_Out.Append(line.Append("]}\n"));
+        }
         File.WriteAllText(Path.Combine(dir, "terrainlod.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);

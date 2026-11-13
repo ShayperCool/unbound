@@ -271,23 +271,11 @@ namespace UnityEngine
 
         public void CopyActiveRenderTextureToHeightmap(RectInt sourceRect, Vector2Int dest, TerrainHeightmapSyncControl syncControl) => ReportUnsupported("CopyActiveRenderTextureToHeightmap");
 
-        public PatchExtents[] GetPatchMinMaxHeights()
-        {
-            ReportUnsupported("GetPatchMinMaxHeights");
-            return new PatchExtents[0];
-        }
-
         public void OverrideMinMaxPatchHeights(PatchExtents[] minMaxHeights) =>
-            Unbound.Runtime.Stubs.Ignored("TerrainData.OverrideMinMaxPatchHeights", "is not honoured yet: terrain patches have no LOD data");
-
-        public float[] GetMaximumHeightError()
-        {
-            ReportUnsupported("GetMaximumHeightError");
-            return new float[0];
-        }
+            Unbound.Runtime.Stubs.Ignored("TerrainData.OverrideMinMaxPatchHeights", "is not honoured yet: the levels of detail use the heights of the heightmap");
 
         public void OverrideMaximumHeightError(float[] maxError) =>
-            Unbound.Runtime.Stubs.Ignored("TerrainData.OverrideMaximumHeightError", "is not honoured yet: terrain patches have no LOD data");
+            Unbound.Runtime.Stubs.Ignored("TerrainData.OverrideMaximumHeightError", "is not honoured yet: the levels of detail use the errors of the heightmap");
 
         // ------------------------------------------------------------ holes
 

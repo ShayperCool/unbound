@@ -292,5 +292,30 @@ namespace UnityEngine.Tests
         [InlineData("7", GraphicsFormat.None)]
         [InlineData("", GraphicsFormat.None)]
         public void TheFormatTagNamesALinearFormat(string tag, GraphicsFormat expected) => Assert.Equal(expected, TerrainRenderer.BaseMapFormat(tag));
+
+        /// <summary>GetMaximumHeightError and GetPatchMinMaxHeights list every patch level by level
+        /// from the finest, row by row, in heights of 0 to 1: the finest patches have no error, a
+        /// parent's range spans its children's, and a peak in one corner shows in that corner's
+        /// patches only.</summary>
+        [Fact]
+        public void PatchErrorsAndRangesListEveryLevelFromTheFinest()
+        {
+            var data = new TerrainData { heightmapResolution = 65 };
+            m_Objects.Add(data);
+            var heights = new float[65, 65];
+            heights[60, 3] = 0.5f; // a peak at x = 3, z = 60: the finest patch (0, 3)
+            data.SetHeights(0, 0, heights);
+            var errors = data.GetMaximumHeightError();
+            var extents = data.GetPatchMinMaxHeights();
+            Assert.Equal(16 + 4 + 1, errors.Length);
+            Assert.Equal(errors.Length, extents.Length);
+            for (int i = 0; i < 16; i++) Assert.Equal(0f, errors[i]);
+            for (int i = 0; i < 16; i++) Assert.Equal(i == 3 * 4 + 0 ? 0.5f : 0f, extents[i].max, 4);
+            // Level 1: the peak lies in node (0, 1), between its vertices; level 2: the root.
+            for (int i = 0; i < 4; i++) Assert.Equal(i == 2 ? 0.5f : 0f, errors[16 + i], 4);
+            Assert.Equal(0.5f, errors[20], 4);
+            Assert.Equal(0.5f, extents[20].max, 4);
+            Assert.Equal(0f, extents[20].min);
+        }
     }
 }

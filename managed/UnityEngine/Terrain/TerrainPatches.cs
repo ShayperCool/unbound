@@ -20,7 +20,7 @@ namespace UnityEngine
     // a node's edge next to a coarser one keeps only its even vertices, so the edges meet.
     internal sealed partial class TerrainRenderer
     {
-        const int PatchCells = 16, PatchVertices = PatchCells + 1;
+        const int PatchCells = TerrainData.PatchHeights.Cells, PatchVertices = PatchCells + 1;
         internal const byte Hidden = 0, Split = 1, Drawn = 2;
 
         /// <summary>The quadtree of one heightmap: per level (0 the finest) its nodes row by row,
@@ -322,30 +322,21 @@ namespace UnityEngine
             return mask;
         }
 
-        /// <summary>The quadtree levels above the finest patches of a heightmap of that many samples
-        /// a side.</summary>
-        internal static int PatchLevels(int resolution)
-        {
-            int levels = 0;
-            while ((PatchCells << levels) < resolution - 1) levels++;
-            return levels;
-        }
-
         internal PatchTree PatchesOf(TerrainData data)
         {
             if (m_PatchData == data && m_PatchVersion == data.m_HeightsVersion) return m_Patches;
             DestroyPatches();
             m_PatchData = data;
             m_PatchVersion = data.m_HeightsVersion;
-            int cells = data.heightmapResolution - 1;
-            if (cells < PatchCells || (cells & (cells - 1)) != 0)
+            var heights = data.Patches();
+            if (heights == null)
             {
                 if (!m_PatchWarned)
                     Warn($"terrain data '{data.name}' has a heightmap of {data.heightmapResolution} samples a side, not a power of two plus one from 17 on: it is not drawn.");
                 m_PatchWarned = true;
                 return null;
             }
-            int levels = PatchLevels(data.heightmapResolution);
+            int levels = heights.Levels;
             var tree = new PatchTree
             {
                 Levels = levels,
@@ -355,78 +346,24 @@ namespace UnityEngine
             };
             var scale = data.heightmapScale;
             float heightUnit = data.size.y / TerrainData.MaxHeight;
-            var lowest = new int[levels + 1][];
-            var highest = new int[levels + 1][];
             for (int level = 0; level <= levels; level++)
             {
-                int side = tree.Side(level), count = side * side;
+                int side = tree.Side(level), count = side * side, span = PatchCells << level;
                 tree.Error[level] = new float[count];
                 tree.Bounds[level] = new Bounds[count];
                 tree.State[level] = new byte[count];
-                lowest[level] = new int[count];
-                highest[level] = new int[count];
-                int span = PatchCells << level;
                 for (int z = 0; z < side; z++)
                     for (int x = 0; x < side; x++)
                     {
                         int i = z * side + x;
-                        tree.Error[level][i] = MaximumHeightError(data, x * span, z * span, level) * heightUnit;
-                        int low = int.MaxValue, high = int.MinValue;
-                        if (level == 0)
-                        {
-                            for (int sz = z * span; sz <= (z + 1) * span; sz++)
-                                for (int sx = x * span; sx <= (x + 1) * span; sx++)
-                                {
-                                    int h = data.RawHeight(sx, sz);
-                                    low = Math.Min(low, h);
-                                    high = Math.Max(high, h);
-                                }
-                        }
-                        else
-                        {
-                            // A node's heights are its four children's.
-                            int childSide = tree.Side(level - 1);
-                            for (int c = 0; c < 4; c++)
-                            {
-                                int child = (z * 2 + (c >> 1)) * childSide + x * 2 + (c & 1);
-                                low = Math.Min(low, lowest[level - 1][child]);
-                                high = Math.Max(high, highest[level - 1][child]);
-                            }
-                        }
-                        lowest[level][i] = low;
-                        highest[level][i] = high;
+                        tree.Error[level][i] = heights.Error[level][i] * heightUnit;
                         var bounds = new Bounds();
-                        bounds.SetMinMax(new Vector3(x * span * scale.x, low * heightUnit, z * span * scale.z),
-                            new Vector3((x + 1) * span * scale.x, high * heightUnit, (z + 1) * span * scale.z));
+                        bounds.SetMinMax(new Vector3(x * span * scale.x, heights.Low[level][i] * heightUnit, z * span * scale.z),
+                            new Vector3((x + 1) * span * scale.x, heights.High[level][i] * heightUnit, (z + 1) * span * scale.z));
                         tree.Bounds[level][i] = bounds;
                     }
             }
             return m_Patches = tree;
-        }
-
-        /// <summary>A node's largest height error in raw heights: the largest distance of the
-        /// samples it covers from the bilinear surface through its vertices (every 2^level samples).</summary>
-        static float MaximumHeightError(TerrainData data, int x0, int z0, int level)
-        {
-            if (level == 0) return 0f;
-            int step = 1 << level;
-            float inverse = 1f / step, worst = 0f;
-            for (int cz = 0; cz < PatchCells; cz++)
-                for (int cx = 0; cx < PatchCells; cx++)
-                {
-                    int ax = x0 + cx * step, az = z0 + cz * step;
-                    float h00 = data.RawHeight(ax, az), h10 = data.RawHeight(ax + step, az);
-                    float h01 = data.RawHeight(ax, az + step), h11 = data.RawHeight(ax + step, az + step);
-                    float dz = (h01 - h00) * inverse, dx = (h10 - h00) * inverse;
-                    float dxz = (h11 - h10 - (h01 - h00)) * inverse * inverse;
-                    for (int v = 0; v <= step; v++)
-                        for (int u = 0; u <= step; u++)
-                        {
-                            float error = Math.Abs(u * v * dxz + u * dx + h00 + v * dz - data.RawHeight(ax + u, az + v));
-                            if (error > worst) worst = error;
-                        }
-                }
-            return worst;
         }
 
         /// <summary>A node's mesh for an edge mask: its 17 × 17 vertices (positions, the heightmap's
