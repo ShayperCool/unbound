@@ -33,6 +33,8 @@ DEFAULT_RUN_DAYS = 3
 DEFAULT_IDLE_HOURS = 24
 DEFAULT_MIN_FREE_GIB = 20
 DEFAULT_SCAN_SECONDS = 1200
+DEFAULT_RUN_SECONDS = 1800
+MAX_REDISCOVERIES = 2
 # Keep land's lock independent of a service manager or a historical backlog.
 GATE_HANDOFF_SECONDS = 2
 HARD_STOP_FREE_GIB = 10
@@ -163,6 +165,15 @@ def gone(error):
     return error.errno in (errno.ENOENT, errno.ESRCH, errno.ENOTDIR)
 
 
+def children(path):
+    try:
+        return sorted(path.iterdir())
+    except OSError as error:
+        if gone(error):
+            return []
+        raise
+
+
 def process_paths(proc=Path('/proc'), *, uid=None, privileged=True, exclude_pid=None):
     """Open descriptors, mapped files, cwd, executables and pending commands.
 
@@ -215,6 +226,10 @@ def process_paths(proc=Path('/proc'), *, uid=None, privileged=True, exclude_pid=
                 raise OSError(f'cannot inspect live process {process.name}; read-only helper failed: {result.stderr.strip()}') from error
             raise OSError(f'cannot inspect live process {process.name}: {error}') from error
     return found
+
+
+class ReferenceChanged(OSError):
+    """Monitoring lost its current view; no deletion until discovery succeeds."""
 
 
 class ReferenceWatch:
@@ -280,7 +295,7 @@ class ReferenceWatch:
                 name = os.fsdecode(data[offset+16:offset+16+length].split(b'\0', 1)[0])
                 offset += 16+length
                 if mask & self.OVERFLOW:
-                    raise OSError('reference change queue overflowed; cleanup deferred')
+                    raise ReferenceChanged('reference change queue overflowed; batch deferred')
                 directory = self.directories.get(descriptor)
                 if directory is None or any(inside(directory, p) for p in self.retired):
                     continue
@@ -295,7 +310,7 @@ class ReferenceWatch:
                     if descriptor in self.handled_moves:
                         self.handled_moves.remove(descriptor)
                         continue
-                    raise OSError(f'reference directory moved: {directory}; cleanup deferred')
+                    raise ReferenceChanged(f'reference directory moved: {directory}; batch deferred')
                 if mask & self.IGNORED:
                     self.directories.pop(descriptor, None)
                     continue
@@ -441,7 +456,8 @@ def inventory(path, directory_ctimes=None):
 
 class Janitor:
     def __init__(self, repo, *, apply=False, idle_hours=DEFAULT_IDLE_HOURS,
-                 run_days=DEFAULT_RUN_DAYS, log=None, extra_protected=(), scan_seconds=DEFAULT_SCAN_SECONDS):
+                 run_days=DEFAULT_RUN_DAYS, log=None, extra_protected=(), scan_seconds=DEFAULT_SCAN_SECONDS,
+                 run_seconds=DEFAULT_RUN_SECONDS):
         self.repo = Path(repo).resolve()
         self.cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound'
         self.builds = build.build_root()
@@ -454,6 +470,10 @@ class Janitor:
         self.watch = None
         self.suite_paths, self.suite_roots = set(), set()
         self.baseline_signature = None
+        self.run_seconds, self.deadline = run_seconds, None
+        self.partial = self.stopped = False
+        self.needs_discovery = True
+        self.discovery_attempts = self.batch_number = 0
 
     def emit(self, action, **fields):
         line = json.dumps({'time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -473,14 +493,16 @@ class Janitor:
         self.protected += [main, slots, slots.parent/'land-trains', self.repo,
                            *checkouts, *(build.default_target(p, self.builds) for p in [main, self.repo, *checkouts]),
                            *(build.default_target(slots/f'slot-{n:02}', self.builds) for n in range(1, 11))]
+        self.protected = list(dict.fromkeys(self.protected))
         self.scan_roots = [self.cache, self.volume, *checkouts, *self.suite_roots]
         self.excluded = [self.builds/'kache', self.runtimes/'snapshots', self.cache/'editors',
                          self.cache/'tools', self.volume/'editors', self.volume/'tools',
                          Path.home()/'Unity/Hub/Editor']
         self.emit('scan', roots=[str(p) for p in self.scan_roots], seconds=self.scan_seconds)
         self.watch = ReferenceWatch(self.excluded, self.suite_roots)
-        self.links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_seconds,
+        links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_budget(),
                                      watcher=self.watch, index_root=self.cache)
+        self.links = getattr(self, 'links', set()) | links
         self.refresh_baseline(force=True)
         self.emit('references_ready', watched_directories=len(self.watch.directories), references=len(self.links))
         self.processes = process_paths()
@@ -497,24 +519,24 @@ class Janitor:
         # Probe-named runs/<probe>/ remain live regardless of their age.
         for root in [self.volume/'unbound-validation/runs']:
             if root.is_dir():
-                for path in sorted(root.iterdir()):
+                for path in children(root):
                     if path.is_dir() and not path.is_symlink() and (
                             re.search(r'(?<!\d)20\d{6}(?!\d)', path.name) or
                             re.search(r'-t3-[0-9a-f]+', path.name)):
                         yield path, 'run', self.run_days*24
         for root in dict.fromkeys([self.volume, self.cache.resolve()]):
-            for path in sorted(root.iterdir()):
+            for path in children(root):
                 if not re.fullmatch(r'q\d+', path.name, re.I) or path.is_symlink() or not path.is_dir():
                     continue
                 if self.states.get(path.name.lower()) != 'landed':
                     self.emit('keep', path=str(path), reason='task is not landed')
                     continue
                 # Keep notes at any depth, including their parent directories.
-                for child in sorted(path.iterdir()):
+                for child in children(path):
                     yield from self.task_children(child)
         targets = self.builds/'targets'
         if targets.is_dir():
-            for path in sorted(targets.iterdir()):
+            for path in children(targets):
                 if path.is_dir() and not path.is_symlink():
                     yield path, 'target', self.idle_hours
 
@@ -523,7 +545,7 @@ class Janitor:
             return
         if path.is_dir() and not path.is_symlink() and any(
                 re.fullmatch(r'NOTES.*\.md', p.name, re.I) for p in path.rglob('NOTES*.md')):
-            for child in sorted(path.iterdir()):
+            for child in children(path):
                 yield from self.task_children(child)
         else:
             yield path, 'task', self.idle_hours
@@ -567,7 +589,7 @@ class Janitor:
             self.baseline_signature = signature
             if self.watch and new_roots:
                 self.watch.metadata_roots.update(new_roots)
-                self.links.update(reference_paths(new_roots, excluded=self.excluded, seconds=self.scan_seconds,
+                self.links.update(reference_paths(new_roots, excluded=self.excluded, seconds=self.scan_budget(),
                                                   watcher=self.watch, index_root=self.cache, prune=False))
                 for directory in list(self.watch.directories.values()):
                     if any(inside(directory, root) for root in new_roots):
@@ -578,7 +600,7 @@ class Janitor:
             return
         pending = self.watch.poll()
         if pending:
-            self.links.update(reference_paths(pending, excluded=self.excluded, seconds=self.scan_seconds,
+            self.links.update(reference_paths(pending, excluded=self.excluded, seconds=self.scan_budget(),
                                               watcher=self.watch, index_root=self.cache, prune=False))
         self.links.update(self.watch.references)
         self.refresh_baseline(force=self.watch.metadata_dirty)
@@ -702,10 +724,75 @@ class Janitor:
         """Runtime collector callback, with a fresh single-entry guard batch."""
         return bool(self.remove_batch([(path, kind, hours)]))
 
-    def collect(self):
+    def scan_budget(self):
+        remaining = self.deadline-time.monotonic() if self.deadline is not None else self.scan_seconds
+        if remaining <= 0:
+            raise TimeoutError('janitor run budget exhausted')
+        return min(self.scan_seconds, remaining)
+
+    def stop_batches(self, reason):
+        self.partial = self.stopped = True
+        self.emit('batch_limit', reason=reason, batches=self.batch_number, removals=self.removed)
+        return False
+
+    def ensure_discovery(self):
+        while self.needs_discovery:
+            if self.discovery_attempts >= 1+MAX_REDISCOVERIES:
+                return self.stop_batches('reference recovery limit reached; remaining work retained')
+            if self.deadline is not None and time.monotonic() >= self.deadline:
+                return self.stop_batches('run budget exhausted; remaining work retained')
+            if self.watch:
+                self.watch.close()
+                self.watch = None
+            self.discovery_attempts += 1
+            self.emit('discovery_start', attempt=self.discovery_attempts)
+            try:
+                self.discover()
+            except (ReferenceChanged, TimeoutError) as error:
+                self.emit('discovery_deferred', attempt=self.discovery_attempts, error=str(error))
+            else:
+                self.needs_discovery = False
+                self.emit('discovery_finish', attempt=self.discovery_attempts)
+        return True
+
+    def run_batch(self, candidates):
+        if self.stopped or not self.ensure_discovery():
+            return None
+        if self.deadline is not None and time.monotonic() >= self.deadline:
+            self.stop_batches('run budget exhausted; remaining work retained')
+            return None
+        self.batch_number += 1
+        number, started, before = self.batch_number, time.monotonic(), self.removed
+        self.emit('batch_start', batch=number, candidates=len(candidates))
+        status, error = 'complete', None
         try:
-            self.discover()
-            self.collect_candidates()
+            self.remove_batch(candidates)
+        except (ReferenceChanged, TimeoutError) as problem:
+            # Retain the unsafe remainder of this batch. Later batches require a
+            # complete fresh scan; previously discovered destinations stay kept.
+            self.partial = self.needs_discovery = True
+            status, error = 'deferred', str(problem)
+        except BaseException as problem:
+            status, error = 'failed', str(problem)
+            raise
+        finally:
+            self.emit('batch_finish', batch=number, status=status, error=error,
+                      removals=self.removed-before, total_removals=self.removed,
+                      seconds=round(time.monotonic()-started, 3))
+        return self.removed-before
+
+    def collect(self):
+        self.deadline = time.monotonic()+self.run_seconds
+        try:
+            if self.ensure_discovery():
+                self.collect_candidates()
+                if not self.stopped:
+                    runtime_snapshot.cleanup(days=self.idle_hours/24, cache=self.runtimes, repo=self.repo,
+                                             remove=lambda path: bool(self.run_batch([(path, 'runtime', None)])),
+                                             dry_run=not self.apply)
+            # Cache GC has independent publication locks and held-output rules.
+            # A partial directory pass must not starve this phase indefinitely.
+            self.kache_gc()
         finally:
             if self.watch:
                 self.watch.close()
@@ -716,17 +803,19 @@ class Janitor:
             if kind != 'target':
                 pending.append((path, kind, hours))
                 if len(pending) >= REMOVAL_BATCH_SIZE:
-                    self.remove_batch(pending)
+                    if self.run_batch(pending) is None:
+                        return
                     pending.clear()
                 continue
             if pending:
-                self.remove_batch(pending)
+                if self.run_batch(pending) is None:
+                    return
                 pending.clear()
-            if kind == 'target':
-                marker = path/'.unbound-source-root'
-                if not marker.is_file() or marker.is_symlink():
-                    self.emit('keep', path=str(path), reason='no trustworthy checkout marker')
-                    continue
+            marker = path/'.unbound-source-root'
+            if not marker.is_file() or marker.is_symlink():
+                self.emit('keep', path=str(path), reason='no trustworthy checkout marker')
+                continue
+            try:
                 with marker.open() as stream:
                     try:
                         fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -737,14 +826,12 @@ class Janitor:
                     if not owner or not Path(owner).is_absolute() or Path(owner).exists():
                         self.emit('keep', path=str(path), reason='checkout exists or marker is invalid')
                         continue
-                    self.remove(path, kind=kind, hours=hours)
+                    if self.run_batch([(path, kind, hours)]) is None:
+                        return
+            except FileNotFoundError:
+                continue
         if pending:
-            self.remove_batch(pending)
-        # The collector owns its publication lock and pin/reference rules. The same
-        # age, process and external-link guards apply to each of its removals.
-        runtime_snapshot.cleanup(days=self.idle_hours/24, cache=self.runtimes, repo=self.repo,
-                                 remove=lambda path: self.remove(path), dry_run=not self.apply)
-        self.kache_gc()
+            self.run_batch(pending)
 
     def kache_gc(self):
         pinned = Path.home()/'.cache/unbound/tools/kache-2.0.0/kache'
@@ -808,12 +895,13 @@ def main(argv=None):
     parser.add_argument('--idle-hours', type=float, default=DEFAULT_IDLE_HOURS)
     parser.add_argument('--run-days', type=float, default=DEFAULT_RUN_DAYS)
     parser.add_argument('--scan-seconds', type=float, default=DEFAULT_SCAN_SECONDS)
+    parser.add_argument('--run-seconds', type=float, default=DEFAULT_RUN_SECONDS)
     parser.add_argument('--protect', type=Path, action='append', default=[])
     args = parser.parse_args(argv)
     if args.process_paths_only is not None:
         print(json.dumps(sorted(str(p) for p in process_paths(uid=args.process_paths_only, privileged=False, exclude_pid=args.exclude_process))))
         return 0
-    if args.apply and args.dry_run or min(args.idle_hours, args.run_days, args.scan_seconds) <= 0:
+    if args.apply and args.dry_run or min(args.idle_hours, args.run_days, args.scan_seconds, args.run_seconds) <= 0:
         parser.error('choose one mode and positive retention/scan limits')
     cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound'
     logs = cache/'agents/janitor'
@@ -827,7 +915,7 @@ def main(argv=None):
         path = logs/f'{time.strftime("%Y%m%d-%H%M%S")}-{os.getpid()}.jsonl'
         with path.open('x') as log:
             janitor = Janitor(args.repo, apply=args.apply, idle_hours=args.idle_hours, run_days=args.run_days,
-                              log=log, extra_protected=args.protect, scan_seconds=args.scan_seconds)
+                              log=log, extra_protected=args.protect, scan_seconds=args.scan_seconds, run_seconds=args.run_seconds)
             before = free_space(args.repo, args.protect)
             janitor.emit('start', apply=args.apply, log=str(path), free_bytes=before)
             failed = False
@@ -837,10 +925,11 @@ def main(argv=None):
                 janitor.emit('error', error=str(error))
                 failed = True
             after = free_space(args.repo, args.protect)
-            janitor.emit('summary', apply=args.apply, failed=failed, removals=janitor.removed,
+            janitor.emit('summary', apply=args.apply, failed=failed, partial=janitor.partial, batches=janitor.batch_number,
+                          removals=janitor.removed,
                           reclaimable_bytes=janitor.reclaimable, free_bytes=after,
                           free_change_bytes={p: after[p]-value for p, value in before.items() if p in after})
-    return int(failed)
+    return 1 if failed else 3 if janitor.partial else 0
 
 
 if __name__ == '__main__':

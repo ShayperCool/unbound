@@ -8,6 +8,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -42,7 +43,8 @@ class JanitorTests(unittest.TestCase):
         self.j.active = set()
         self.j.protected = []
         self.j.links = self.j.processes = set()
-        self.silence = contextlib.redirect_stdout(io.StringIO())
+        self.output = io.StringIO()
+        self.silence = contextlib.redirect_stdout(self.output)
         self.silence.__enter__()
         self.addCleanup(self.silence.__exit__, None, None, None)
 
@@ -577,6 +579,96 @@ class JanitorTests(unittest.TestCase):
         value = {'command': 'tool '+('x'*389)+' /home', 'summary': '3/10 values; /home'}
         self.assertEqual(len(value['command']), 400)
         self.assertEqual(list(janitor.suite_references(value)), [])
+
+    def test_continuous_directory_churn_finishes_with_logged_batch_progress(self):
+        root = self.directory('q1')
+        for n in range(96):
+            (root/f'old-{n:03d}').write_text('old')
+        keep = root/'retained'
+        keep.write_text('reference')
+        moving = self.directory('moving')
+        (moving/'link').symlink_to(keep)
+        outside = self.root/'outside'
+        start, moved, stop = threading.Event(), threading.Event(), threading.Event()
+        def churn():
+            start.wait()
+            while not stop.is_set():
+                moving.rename(outside)
+                moved.set()
+                time.sleep(0.002)
+                outside.rename(moving)
+                time.sleep(0.002)
+        thread = threading.Thread(target=churn)
+        thread.start()
+        emit = self.j.emit
+        def progress(action, **fields):
+            emit(action, **fields)
+            if action == 'batch_finish' and fields['batch'] == 1:
+                start.set()
+                self.assertTrue(moved.wait(2))
+        began = time.monotonic()
+        try:
+            with self.guards(), patch.object(self.j, 'emit', side_effect=progress):
+                self.j.apply = True
+                self.j.run_seconds = 0.5
+                self.j.collect()
+        finally:
+            stop.set()
+            start.set()
+            thread.join(2)
+        self.assertFalse(thread.is_alive())
+        self.assertLess(time.monotonic()-began, 5)
+        self.assertTrue(self.j.partial)
+        self.assertGreaterEqual(self.j.removed, 32)
+        self.assertTrue(keep.exists())
+        rows = [json.loads(line) for line in self.output.getvalue().splitlines()]
+        batches = [row for row in rows if row['action'] == 'batch_finish']
+        self.assertTrue(any(row['status'] == 'deferred' for row in batches))
+        self.assertEqual(sum(row['removals'] for row in batches), self.j.removed)
+        self.assertTrue(all(row['candidates'] <= janitor.REMOVAL_BATCH_SIZE for row in rows
+                            if row['action'] == 'batch_start'))
+
+    def test_failed_batch_recovers_before_later_batches(self):
+        root = self.directory('q1')
+        for n in range(96):
+            (root/f'old-{n:03d}').write_text('old')
+        original = self.j.remove_batch
+        calls = 0
+        def invalidated(candidates):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise janitor.ReferenceChanged('lost monitoring')
+            return original(candidates)
+        with self.guards(), patch.object(self.j, 'remove_batch', side_effect=invalidated):
+            self.j.apply = True
+            self.j.collect()
+        self.assertTrue(self.j.partial)
+        self.assertEqual(self.j.discovery_attempts, 2)
+        self.assertEqual(self.j.removed, 65)
+        self.assertFalse(self.j.stopped)
+
+    def test_persistent_monitoring_loss_is_bounded_and_still_runs_cache_gc(self):
+        with self.guards(), patch.object(self.j, 'discover', side_effect=janitor.ReferenceChanged('overflow')) as discover, \
+             patch.object(self.j, 'kache_gc') as gc:
+            self.j.collect()
+        self.assertEqual(discover.call_count, 1+janitor.MAX_REDISCOVERIES)
+        self.assertTrue(self.j.partial)
+        self.assertTrue(self.j.stopped)
+        self.assertEqual(self.j.removed, 0)
+        gc.assert_called_once()
+
+    def test_run_budget_returns_explicit_partial_summary(self):
+        with self.guards():
+            code = janitor.main(['--repo', str(self.repo), '--dry-run', '--run-seconds', '0.000001'])
+        self.assertEqual(code, 3)
+        logs = list((self.cache/'agents/janitor').glob('*.jsonl'))
+        row = json.loads(logs[0].read_text().splitlines()[-1])
+        self.assertEqual(row['action'], 'summary')
+        self.assertTrue(row['partial'])
+        self.assertFalse(row['failed'])
+        self.assertEqual(row['removals'], 0)
+        self.assertIn('SuccessExitStatus=3', install_janitor.units(self.repo, {})['unbound-janitor.service'])
 
     def test_before_gate_threshold_and_protection(self):
         for free in (1, 19*janitor.GIB):

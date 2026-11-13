@@ -20,6 +20,7 @@ Description=Unbound disk janitor
 
 [Service]
 Type=oneshot
+SuccessExitStatus=3
 WorkingDirectory={str(repo).replace('%', '%%')}
 {env}
 ExecStart={quote(sys.executable)} {quote(repo/'tools/agents/janitor.py')} --apply --repo {quote(repo)}
