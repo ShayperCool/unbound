@@ -109,8 +109,13 @@ namespace UnityEngine
         public float heightmapPixelError { get => Overridden(TerrainQualityOverrides.PixelError) ? QualitySettings.terrainPixelError : m_HeightmapPixelError; set => m_HeightmapPixelError = Mathf.Clamp(value, 1f, 200f); }
 
         bool Overridden(TerrainQualityOverrides setting) => !m_IgnoreQualitySettings && (QualitySettings.terrainQualityOverrides & setting) != 0;
-        public int heightmapMaximumLOD { get => m_HeightmapMaximumLOD; set => m_HeightmapMaximumLOD = value; }
-        public int heightmapMinimumLODSimplification { get => m_HeightmapMinimumLODSimplification; set => m_HeightmapMinimumLODSimplification = value; }
+        // Each keeps the two within the heightmap's levels (11 without terrain data): set below
+        // zero it is zero, else at most the levels less the other (matches the Unity 6000.0.71f1
+        // Editor, tests/projects/terrainlod).
+        public int heightmapMaximumLOD { get => m_HeightmapMaximumLOD; set => m_HeightmapMaximumLOD = value < 0 ? 0 : Math.Min(value, PatchLevels() - m_HeightmapMinimumLODSimplification); }
+        public int heightmapMinimumLODSimplification { get => m_HeightmapMinimumLODSimplification; set => m_HeightmapMinimumLODSimplification = value < 0 ? 0 : Math.Min(value, PatchLevels() - m_HeightmapMaximumLOD); }
+
+        int PatchLevels() => m_TerrainData != null ? TerrainRenderer.PatchLevels(m_TerrainData.heightmapResolution) : 11;
         public float basemapDistance { get => Overridden(TerrainQualityOverrides.BasemapDistance) ? QualitySettings.terrainBasemapDistance : m_SplatMapDistance; set => m_SplatMapDistance = Mathf.Clamp(value, 0f, 20000f); }
 
         [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("splatmapDistance is deprecated, please use basemapDistance instead. (UnityUpgradable) -> basemapDistance", true)]
