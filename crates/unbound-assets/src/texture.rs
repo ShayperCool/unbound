@@ -1397,7 +1397,8 @@ impl Importer for TextureImporter {
     // 39: Android HDR colour sources and their uncompressed fallbacks retain RGBM bytes.
     // 40: RGBM retains high/nonfinite radiance and the authored colour-flag transform.
     // 41: RGBM multiplier normalization preserves division rounding.
-    const VERSION: u32 = 41;
+    // 42: gray and RGB TIFFs with extra samples read their first extra sample as alpha.
+    const VERSION: u32 = 42;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let settings = self.settings(meta);
@@ -2188,6 +2189,12 @@ struct Image {
     data: Vec<u8>,
 }
 
+/// A 16-bit sample as the byte nearest v / 257, as the Editor narrows deep channels
+/// (tests/projects/textureimport Psd16*, TiffDeepExtra).
+fn narrow_u16(v: u16) -> u8 {
+    ((u32::from(v) + 128) / 257) as u8
+}
+
 /// Decodes an image file; `remove_matte` applies to Photoshop files ([`psd::decode`]).
 fn decode(source: &Path, bytes: &[u8], remove_matte: bool) -> Result<Image> {
     let ext = source
@@ -2213,6 +2220,16 @@ fn decode(source: &Path, bytes: &[u8], remove_matte: bool) -> Result<Image> {
             None => bail!("unrecognized image format"),
         },
     };
+    if format == image::ImageFormat::Tiff
+        && let Some((width, height, data)) = tiff_samples::decode(bytes)?
+    {
+        return Ok(Image {
+            width,
+            height,
+            format: TextureFormat::Rgba8,
+            data,
+        });
+    }
     let image = match image::load_from_memory_with_format(bytes, format) {
         Ok(image) => image,
         // The image crate reads only RGB(A) EXR layers; Unity also imports single-channel and
@@ -2720,3 +2737,4 @@ mod rgbm;
 mod specular;
 #[cfg(test)]
 mod tests;
+mod tiff_samples;

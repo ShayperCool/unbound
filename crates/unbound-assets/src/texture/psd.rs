@@ -178,7 +178,7 @@ pub(super) fn decode(bytes: &[u8], remove_matte: bool) -> Result<(u32, u32, Vec<
         if sample == 1 {
             v as u8
         } else {
-            ((v + 128) / 257) as u8
+            super::narrow_u16(v as u16)
         }
     };
     let mut rgba = Vec::with_capacity(w * h * 4);

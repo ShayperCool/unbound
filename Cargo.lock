@@ -6525,6 +6525,7 @@ dependencies = [
  "cc",
  "crc32fast",
  "exr",
+ "flate2",
  "freetype-sys",
  "image",
  "intel_tex_2",
@@ -6540,6 +6541,7 @@ dependencies = [
  "serde_json",
  "symphonia",
  "texture2ddecoder",
+ "tiff",
  "tracing",
  "ttf-parser",
  "twox-hash",
@@ -6548,6 +6550,7 @@ dependencies = [
  "unbound-project",
  "unbound-yaml",
  "walkdir",
+ "weezl",
 ]
 
 [[package]]
