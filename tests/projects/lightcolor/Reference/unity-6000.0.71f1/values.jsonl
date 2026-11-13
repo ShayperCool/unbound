@@ -201,7 +201,14 @@
 {"k":"light.gamma.plain.warmOff","v":"4093088d 3fd120bf 3e5b2d9a 3ff00000"}
 {"k":"light.gamma.plain.white4000","v":"451be4e6 451be4e6 451be4e6 420c0000"}
 {"k":"light.gamma.plain.count","v":"6"}
-{"k":"light.gamma.plain.culls","v":"1"}
+{"k":"light.gamma.plain.fresh.cool12000","v":"3ded99df 3fa5dc8a 3b3e377a 3fa00000"}
+{"k":"light.gamma.plain.fresh.dark2000","v":"3c8e7396 3d85788c 3d85cd7f 40e00000"}
+{"k":"light.gamma.plain.fresh.hdr6570","v":"3f4993dd 3cdeeb40 3fbf2a48 3f19999a"}
+{"k":"light.gamma.plain.fresh.warm4000","v":"4093088d 3fd120bf 3e5b2d9a 3ff00000"}
+{"k":"light.gamma.plain.fresh.warmOff","v":"4093088d 3fd120bf 3e5b2d9a 3ff00000"}
+{"k":"light.gamma.plain.fresh.white4000","v":"451be4e6 451be4e6 451be4e6 420c0000"}
+{"k":"light.gamma.plain.fresh.count","v":"6"}
+{"k":"light.gamma.plain.culls","v":"2"}
 {"k":"light.gamma.temperature.cool12000","v":"3ded99df 3fa5dc8a 3b3e377a 3fa00000"}
 {"k":"light.gamma.temperature.dark2000","v":"3c8e7396 3d85788c 3d85cd7f 40e00000"}
 {"k":"light.gamma.temperature.hdr6570","v":"3f4993dd 3cdeeb40 3fbf2a48 3f19999a"}
@@ -209,7 +216,14 @@
 {"k":"light.gamma.temperature.warmOff","v":"4093088d 3fd120bf 3e5b2d9a 3ff00000"}
 {"k":"light.gamma.temperature.white4000","v":"451be4e6 451be4e6 451be4e6 420c0000"}
 {"k":"light.gamma.temperature.count","v":"6"}
-{"k":"light.gamma.temperature.culls","v":"1"}
+{"k":"light.gamma.temperature.fresh.cool12000","v":"3ded99df 3fa5dc8a 3b3e377a 3fa00000"}
+{"k":"light.gamma.temperature.fresh.dark2000","v":"3c8e7396 3d85788c 3d85cd7f 40e00000"}
+{"k":"light.gamma.temperature.fresh.hdr6570","v":"3f4993dd 3cdeeb40 3fbf2a48 3f19999a"}
+{"k":"light.gamma.temperature.fresh.warm4000","v":"4093088d 3fd120bf 3e5b2d9a 3ff00000"}
+{"k":"light.gamma.temperature.fresh.warmOff","v":"4093088d 3fd120bf 3e5b2d9a 3ff00000"}
+{"k":"light.gamma.temperature.fresh.white4000","v":"451be4e6 451be4e6 451be4e6 420c0000"}
+{"k":"light.gamma.temperature.fresh.count","v":"6"}
+{"k":"light.gamma.temperature.culls","v":"2"}
 {"k":"light.linear.plain.cool12000","v":"3d42e588 3f244e6e 3b3e377a 3fa00000"}
 {"k":"light.linear.plain.dark2000","v":"3c31891d 3bb64d3a 39990782 40e00000"}
 {"k":"light.linear.plain.hdr6570","v":"3fbb6590 3d2b4d58 40302494 3f19999a"}
@@ -217,7 +231,14 @@
 {"k":"light.linear.plain.warmOff","v":"3fc1398b 3f08fc80 3da97f13 3ff00000"}
 {"k":"light.linear.plain.white4000","v":"420c0000 41b1c275 414d5ce1 420c0000"}
 {"k":"light.linear.plain.count","v":"6"}
-{"k":"light.linear.plain.culls","v":"1"}
+{"k":"light.linear.plain.fresh.cool12000","v":"3d42e588 3f244e6e 3b3e377a 3fa00000"}
+{"k":"light.linear.plain.fresh.dark2000","v":"3c31891d 3bb64d3a 39990782 40e00000"}
+{"k":"light.linear.plain.fresh.hdr6570","v":"3fbb6590 3d2b4d58 40302494 3f19999a"}
+{"k":"light.linear.plain.fresh.warm4000","v":"3fc1398b 3eadeee0 3cf8a161 3ff00000"}
+{"k":"light.linear.plain.fresh.warmOff","v":"3fc1398b 3f08fc80 3da97f13 3ff00000"}
+{"k":"light.linear.plain.fresh.white4000","v":"420c0000 41b1c275 414d5ce1 420c0000"}
+{"k":"light.linear.plain.fresh.count","v":"6"}
+{"k":"light.linear.plain.culls","v":"2"}
 {"k":"light.linear.temperature.cool12000","v":"3d42e588 3f244e6e 3b3e377a 3fa00000"}
 {"k":"light.linear.temperature.dark2000","v":"3c31891d 3bb64d3a 39990782 40e00000"}
 {"k":"light.linear.temperature.hdr6570","v":"3fbb6590 3d2b4d58 40302494 3f19999a"}
@@ -225,5 +246,12 @@
 {"k":"light.linear.temperature.warmOff","v":"3fc1398b 3f08fc80 3da97f13 3ff00000"}
 {"k":"light.linear.temperature.white4000","v":"420c0000 41b1c275 414d5ce1 420c0000"}
 {"k":"light.linear.temperature.count","v":"6"}
-{"k":"light.linear.temperature.culls","v":"1"}
+{"k":"light.linear.temperature.fresh.cool12000","v":"3d42e588 3f244e6e 3b3e377a 3fa00000"}
+{"k":"light.linear.temperature.fresh.dark2000","v":"3c31891d 3bb64d3a 39990782 40e00000"}
+{"k":"light.linear.temperature.fresh.hdr6570","v":"3fbb6590 3d2b4d58 40302494 3f19999a"}
+{"k":"light.linear.temperature.fresh.warm4000","v":"3fc1398b 3eadeee0 3cf8a161 3ff00000"}
+{"k":"light.linear.temperature.fresh.warmOff","v":"3fc1398b 3f08fc80 3da97f13 3ff00000"}
+{"k":"light.linear.temperature.fresh.white4000","v":"420c0000 41b1c275 414d5ce1 420c0000"}
+{"k":"light.linear.temperature.fresh.count","v":"6"}
+{"k":"light.linear.temperature.culls","v":"2"}
 {"k":"complete","v":true}

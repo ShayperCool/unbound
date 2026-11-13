@@ -91,21 +91,7 @@ public sealed class LightColorProbe : MonoBehaviour
             new Spec { name = "hdr6570", color = new Color(1.5f, 0.3f, 2f, 1f), intensity = 0.6f, useTemperature = true, temperature = 6570f, type = LightType.Point },
             new Spec { name = "zero5000", color = new Color(0.4f, 0.6f, 0.8f, 1f), intensity = 0f, useTemperature = true, temperature = 5000f, type = LightType.Point },
         };
-        var lights = new List<Light>();
-        foreach (var spec in specs)
-        {
-            var go = new GameObject(spec.name);
-            go.transform.SetPositionAndRotation(new Vector3(0f, 1f, 3f), Quaternion.Euler(60f, 0f, 0f));
-            var light = go.AddComponent<Light>();
-            light.type = spec.type;
-            light.range = 50f;
-            light.spotAngle = 120f;
-            light.color = spec.color;
-            light.intensity = spec.intensity;
-            light.useColorTemperature = spec.useTemperature;
-            light.colorTemperature = spec.temperature;
-            lights.Add(light);
-        }
+        var lights = Make(specs, "");
 
         var target = new RenderTexture(32, 32, 24);
         var camera = new GameObject("Camera").AddComponent<Camera>();
@@ -127,6 +113,7 @@ public sealed class LightColorProbe : MonoBehaviour
                 GraphicsSettings.lightsUseColorTemperature = temperature;
                 string mode = (linear ? "linear" : "gamma") + "." + (temperature ? "temperature" : "plain");
                 int culls = 0;
+                string pass = "";
                 ProbePipelineAsset.OnCull = (cam, results) =>
                 {
                     if (cam != camera) return;
@@ -136,12 +123,18 @@ public sealed class LightColorProbe : MonoBehaviour
                     for (int i = 0; i < visible.Length; i++)
                     {
                         var light = visible[i].light;
-                        if (light != null) rows[light.name] = C(visible[i].finalColor);
+                        if (light != null && light.name.StartsWith(pass, StringComparison.Ordinal))
+                            rows[light.name] = C(visible[i].finalColor);
                     }
                     foreach (var row in rows) Rec("light." + mode + "." + row.Key, row.Value);
-                    Rec("light." + mode + ".count", rows.Count.ToString());
+                    Rec("light." + mode + "." + pass + "count", rows.Count.ToString());
                 };
                 camera.Render();
+                // The same lights made after the settings changed: no colour kept from before.
+                pass = "fresh.";
+                var fresh = Make(specs, pass);
+                camera.Render();
+                foreach (var light in fresh) DestroyImmediate(light.gameObject);
                 ProbePipelineAsset.OnCull = null;
                 Rec("light." + mode + ".culls", culls.ToString());
             }
@@ -154,5 +147,25 @@ public sealed class LightColorProbe : MonoBehaviour
             camera.targetTexture = null;
             target.Release();
         }
+    }
+
+    static List<Light> Make(Spec[] specs, string prefix)
+    {
+        var lights = new List<Light>();
+        foreach (var spec in specs)
+        {
+            var go = new GameObject(prefix + spec.name);
+            go.transform.SetPositionAndRotation(new Vector3(0f, 1f, 3f), Quaternion.Euler(60f, 0f, 0f));
+            var light = go.AddComponent<Light>();
+            light.type = spec.type;
+            light.range = 50f;
+            light.spotAngle = 120f;
+            light.color = spec.color;
+            light.intensity = spec.intensity;
+            light.useColorTemperature = spec.useTemperature;
+            light.colorTemperature = spec.temperature;
+            lights.Add(light);
+        }
+        return lights;
     }
 }

@@ -7,7 +7,8 @@ of 1000 K, 6570 K and 40000 K, negative values, the infinities and NaN), and the
 white, coloured, HDR and dark colours (channels on both sides of the sRGB curve's 0.04045 knee),
 with and without a colour temperature, a zero intensity, a colour alpha below 1. Each light is
 recorded under every combination of `GraphicsSettings.lightsUseLinearIntensity` and
-`GraphicsSettings.lightsUseColorTemperature`. Floats are the hex of their bits; values compare
+`GraphicsSettings.lightsUseColorTemperature`, then again as new lights (`fresh.*`) made after the
+settings changed. Floats are the hex of their bits; values compare
 exactly. The project is in the linear colour space.
 
 Measured in the Unity 6000.0.71f1 Editor (two identical captures, NVIDIA driver):
@@ -23,7 +24,8 @@ Measured in the Unity 6000.0.71f1 Editor (two identical captures, NVIDIA driver)
 * `GraphicsSettings.lightsUseColorTemperature` does not change the final colour either way.
 * A light of zero intensity is not visible.
 
-Not measured: a gamma-space project.
+Not measured: a gamma-space project; the built-in pipeline's light colours (`_LightColor0`,
+which Unbound takes from the same rule; built-in shaders read only their RGB).
 
     python3 tests/projects/lightcolor/run.py record --label A   # Editor capture (GPU)
     python3 tests/projects/lightcolor/run.py publish A B        # two identical captures
