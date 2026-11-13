@@ -187,6 +187,8 @@ namespace UnityEngine.Tests
             var renderer = Renderer("held", m_Dots);
             var other = Renderer("other", m_Dots);
             int id = renderer.GetInstanceID();
+            // A mesh with vertices: the filter's first access clones it.
+            renderer.GetComponent<MeshFilter>().sharedMesh.vertices = new[] { Vector3.zero, Vector3.up, Vector3.right };
             Changed<MeshRenderer>();
             Changed<Material>();
             // The filter's own instance of its mesh, made on first access: a new mesh drawn.
