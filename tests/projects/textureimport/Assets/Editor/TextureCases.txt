@@ -94,3 +94,12 @@ PsdMatte5On mips=0 srgb=0 matte=1
 PsdMatteBelowOn mips=0 srgb=0 matte=1
 PsdMatte16On mips=0 srgb=0 matte=1
 PsdGrayAlphaMarked mips=0 srgb=0 matte=1
+TiffExtraLzw mips=0 srgb=0
+TiffExtraLzwMips
+TiffExtraRaw mips=0 srgb=0
+TiffUnassociated mips=0 srgb=0
+TiffAssociated mips=0 srgb=0
+TiffRgb mips=0 srgb=0
+TiffTwoExtra mips=0 srgb=0
+TiffDeepExtra mips=0 srgb=0
+TiffGrayExtra mips=0 srgb=0

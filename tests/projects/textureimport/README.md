@@ -16,7 +16,10 @@ whatever extra channels it has). Flattened colour over white with Photoshop's me
 mark (a negative layer count) shows Remove Matte (`pSDRemoveMatte`, default off, also when the
 `.meta` lacks the key: `ProbeRunner.Create` removes PsdMatteNoKey's line), files without the
 mark, with 5 channels (the first extra channel is alpha), with colour below the white blend, with
-16 bits, and gray with alpha (read opaque).
+16 bits, and gray with alpha (read opaque). TIFF files (`make_textures.py` writes them; 32x32 noise)
+cover RGB with an extra sample of unspecified meaning (LZW with the horizontal differencing
+predictor, with and without mipmaps, and uncompressed), unassociated and associated alpha, plain
+RGB, two unspecified extra samples, 16 bits, and gray with an extra sample.
 Every case is readable and
 stored as RGBA32, the float case as RGBAFloat (platform overrides; uncompressed default platform),
 so compression hides nothing.
@@ -83,6 +86,11 @@ order given; Unbound matches every level of every profile byte for byte.
   component times 0.5 plus 0.5. With flip green the DXT5nm texel is (1, -y, y, x).
 * **Alpha from grayscale**: the mean of the colour channels, rounded down. **Alpha source None**
   only makes an automatic format alpha-less: an explicit RGBA32 keeps the input alpha.
+* **TIFF extra samples**: the first extra sample is alpha whatever `ExtraSamples` calls it
+  (unspecified, associated alpha kept as stored, unassociated alpha); further ones are dropped; 16
+  bits become the byte nearest v / 257. Gray fills red, green and blue, and a gray file keeps one
+  alpha per gray value, that of the last pixel of that value in file order (rows top first; only
+  8-bit gray with an unspecified extra sample is measured).
 * **Resize** (NPOT scaling, max size with Mitchell): stb_image_resize 0.97 on the bottom-up stored
   values (no colour-space conversion, no alpha weighting, edges clamped): Mitchell-Netravali
   (B = C = 1/3) on an axis that shrinks, the cubic B-spline otherwise; bytes decode as v / 255 and

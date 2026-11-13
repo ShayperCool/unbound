@@ -322,6 +322,93 @@ def psd(path, width, height, pixels, depth, rle, merged_alpha=False):
     path.write_bytes(header + struct.pack('>II', 0, 0) + struct.pack('>I', len(layers)) + layers + data)
 
 
+def lzw(data):
+    """TIFF LZW (MSB-first codes, Clear at the start and before the code width would grow)."""
+    out, acc, bits = bytearray(), 0, 0
+
+    def put(code):
+        nonlocal acc, bits
+        acc = acc << 9 | code
+        bits += 9
+        while bits >= 8:
+            bits -= 8
+            out.append(acc >> bits & 0xff)
+    table = {bytes([i]): i for i in range(256)}
+    put(256)
+    w = b''
+    for c in data:
+        wc = w + bytes([c])
+        if wc in table:
+            w = wc
+            continue
+        put(table[w])
+        table[wc] = len(table) + 2
+        w = bytes([c])
+        if len(table) + 2 >= 510:
+            put(256)
+            table = {bytes([i]): i for i in range(256)}
+    if w:
+        put(table[w])
+    put(257)
+    if bits:
+        out.append(acc << (8 - bits) & 0xff)
+    return bytes(out)
+
+
+def tiff(path, width, height, pixels, depth=8, extra=(), photometric=2, compression=1, predictor=1):
+    """A little-endian baseline TIFF of one strip: pixels rows top-down of sample tuples, 8 or 16
+    bits, `extra` the ExtraSamples values (0 unspecified, 1 associated alpha, 2 unassociated),
+    photometric 2 (RGB) or 1 (gray), uncompressed (1) or LZW (5) with the horizontal differencing
+    predictor (2) or none (1)."""
+    samples = len(pixels[0][0])
+    fmt = '<H' if depth == 16 else 'B'
+    mask = 0xffff if depth == 16 else 0xff
+    rows = []
+    for row in pixels:
+        values = [list(p) for p in row]
+        if predictor == 2:
+            for x in range(width - 1, 0, -1):
+                values[x] = [(a - b) & mask for a, b in zip(values[x], values[x - 1])]
+        rows.append(b''.join(struct.pack(fmt, v) for p in values for v in p))
+    data = b''.join(rows)
+    if compression == 5:
+        data = lzw(data)
+    entries = []
+    def entry(tag, kind, values):
+        entries.append((tag, kind, values if isinstance(values, (list, tuple)) else [values]))
+    entry(256, 3, width)
+    entry(257, 3, height)
+    entry(258, 3, [depth] * samples)
+    entry(259, 3, compression)
+    entry(262, 3, photometric)
+    entry(273, 4, 0)
+    entry(277, 3, samples)
+    entry(278, 3, height)
+    entry(279, 4, len(data))
+    entry(284, 3, 1)
+    if predictor != 1:
+        entry(317, 3, predictor)
+    if extra:
+        entry(338, 3, list(extra))
+    entries.sort()
+    ifd_offset = 8 + len(data) + (len(data) & 1)
+    extra_area = ifd_offset + 2 + 12 * len(entries) + 4
+    blobs = b''
+    ifd = struct.pack('<H', len(entries))
+    for tag, kind, values in entries:
+        size = 2 if kind == 3 else 4
+        packed = b''.join(struct.pack('<H' if kind == 3 else '<I', v) for v in values)
+        if tag == 273:
+            packed = struct.pack('<I', 8)
+        if len(packed) <= 4:
+            ifd += struct.pack('<HHI', tag, kind, len(values)) + packed.ljust(4, b'\0')
+        else:
+            ifd += struct.pack('<HHII', tag, kind, len(values), extra_area + len(blobs))
+            blobs += packed
+    ifd += struct.pack('<I', 0)
+    path.write_bytes(b'II*\0' + struct.pack('<I', ifd_offset) + data + b'\0' * (len(data) & 1) + ifd + blobs)
+
+
 def png16(path, width, height, pixels):
     """A 16-bit RGBA PNG; pixels rows top-down of (r, g, b, a) 16-bit values."""
     raw = b''.join(b'\0' + b''.join(struct.pack('>4H', *p) for p in row) for row in pixels)
@@ -370,6 +457,14 @@ FILE_SOURCES = {
     'DeepGray': ('psd', 16, False),
     'PsdRle': ('psd', 8, True),
     'Deep16Png': ('png16',),
+    'TiffExtraLzw': ('tiff', dict(extra=(0,), compression=5, predictor=2)),
+    'TiffExtraRaw': ('tiff', dict(extra=(0,))),
+    'TiffUnassociated': ('tiff', dict(extra=(2,), compression=5, predictor=2)),
+    'TiffAssociated': ('tiff', dict(extra=(1,))),
+    'TiffRgb': ('tiff', dict(compression=5, predictor=2)),
+    'TiffTwoExtra': ('tiff', dict(extra=(0, 0))),
+    'TiffDeepExtra': ('tiff', dict(depth=16, extra=(0,))),
+    'TiffGrayExtra': ('tiff', dict(photometric=1, extra=(0,))),
 }
 SOURCES.update({
     'Matte': lambda: matted(32, 32, 25, 4),
@@ -384,6 +479,14 @@ SOURCES.update({
     'DeepGray': lambda: deep(32, 32, 23, 1),
     'PsdRle': lambda: noise(32, 32, 24),
     'Deep16Png': lambda: deep(32, 32, 22, 4),
+    'TiffExtraLzw': lambda: noise(32, 32, 30),
+    'TiffExtraRaw': lambda: noise(32, 32, 30),
+    'TiffUnassociated': lambda: noise(32, 32, 30),
+    'TiffAssociated': lambda: noise(32, 32, 30),
+    'TiffRgb': lambda: (32, 32, [[p[:3] for p in row] for row in noise(32, 32, 30)[2]]),
+    'TiffTwoExtra': lambda: (32, 32, [[p + (p[0] ^ 0x5a,) for p in row] for row in noise(32, 32, 30)[2]]),
+    'TiffDeepExtra': lambda: deep(32, 32, 31, 4),
+    'TiffGrayExtra': lambda: (32, 32, [[p[:1] + p[3:] for p in row] for row in noise(32, 32, 30)[2]]),
 })
 
 # name: (source, settings). Settings default to a Default-type, sRGB, box-filtered texture with
@@ -494,6 +597,18 @@ CASES = {
     'PsdMatteBelowOn': ('MatteBelow', 'mips=0 srgb=0 matte=1'),
     'PsdMatte16On': ('Matte16', 'mips=0 srgb=0 matte=1'),
     'PsdGrayAlphaMarked': ('GrayAlphaMarked', 'mips=0 srgb=0 matte=1'),
+    # TIFF files: RGB with an extra sample of unspecified meaning, LZW with the horizontal
+    # differencing predictor (also with mipmaps) and uncompressed; unassociated and associated
+    # alpha; plain RGB; two unspecified extra samples; 16 bits; gray with an extra sample.
+    'TiffExtraLzw': ('TiffExtraLzw', 'mips=0 srgb=0'),
+    'TiffExtraLzwMips': ('TiffExtraLzw', ''),
+    'TiffExtraRaw': ('TiffExtraRaw', 'mips=0 srgb=0'),
+    'TiffUnassociated': ('TiffUnassociated', 'mips=0 srgb=0'),
+    'TiffAssociated': ('TiffAssociated', 'mips=0 srgb=0'),
+    'TiffRgb': ('TiffRgb', 'mips=0 srgb=0'),
+    'TiffTwoExtra': ('TiffTwoExtra', 'mips=0 srgb=0'),
+    'TiffDeepExtra': ('TiffDeepExtra', 'mips=0 srgb=0'),
+    'TiffGrayExtra': ('TiffGrayExtra', 'mips=0 srgb=0'),
 }
 
 
@@ -506,6 +621,8 @@ def main():
             kind, *args = FILE_SOURCES[source]
             if kind == 'psd':
                 psd(textures/f'{name}.psd', *images[source], *args)
+            elif kind == 'tiff':
+                tiff(textures/f'{name}.tif', *images[source], **args[0])
             else:
                 png16(textures/f'{name}.png', *images[source])
         elif source in FLOAT_SOURCES:
