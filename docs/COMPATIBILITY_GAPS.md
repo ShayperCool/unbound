@@ -329,11 +329,11 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
 
 - [x] Q403 default-state capture and comparison: [defaultstate](../tests/projects/defaultstate/README.md)
       covers 1,032 constructible matching types. Q411's shared mechanism resolves 1,196 rows;
-      its Core slice resolves another 156, Physics2D resolves 157 and Physics resolves 89. The 11,565-row reference preserves all original
+      its Core slice resolves another 156, Physics2D resolves 157, Physics resolves 89 and Audio resolves 185. A separate integrated lighting fix resolves one more. The 11,590-row reference preserves all original
       rows and adds independently repeated message, constructor, requirement, collision and arithmetic
-      controls. The comparison has 10,551 exact rows, 1,014 differing reference rows, 207 extra
-      implementation rows and the unchanged 50 variable observations inside 1,223 exact,
-      reasoned migration entries. CoreModule retains 116 rows, Physics2D five and Physics five; the README lists every module
+      controls. The comparison has 10,585 exact rows, 1,005 differing reference rows, 30 extra
+      implementation rows and the unchanged 50 variable observations inside 1,037 exact,
+      reasoned migration entries. CoreModule retains 115 rows, Physics2D five, Physics five and Audio four; the README lists every module
       and the unresolved payload, rendering and import contexts. Static constructor comparison
       remains separate, including its queued rendering split-index default.
 - [ ] Q411 other-release initialization: constructor, factory eligibility and refresh-rate
@@ -343,6 +343,9 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       ranges also select exactly 6000.0.71f1. Other releases retain their previous material reuse,
       null fallbacks, maxHits storage and drive values. Typed GeometryHolder payloads, destroyed
       callback targets, articulation bodies and serialized drive edge controls remain open.
+      Audio base-factory requirements reuse the factory mechanism; removed reverb settings select
+      the measured warning and value rule. Other releases retain the prior stub response.
+      WebCamTexture device/resource state and UnityEditor importer/window contexts remain queued.
 
 - [x] `Stubs.Ignored(member)` (warn once, like `NotImplemented`) for knowingly ignored members,
       and an `[EditorFaithful("why")]` marker for real no-ops; every hand-written empty body,

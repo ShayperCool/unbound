@@ -29,7 +29,6 @@ namespace UnityEngine
     }
     unsafe partial class AudioReverbZone
     {
-        [global::System.Obsolete("Warning! roomRolloffFactor is no longer supported.")] public float roomRolloffFactor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbZone.roomRolloffFactor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbZone.roomRolloffFactor"); } }
         internal bool active { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbZone.active"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbZone.active"); } }
     }
     unsafe partial class AudioSettings

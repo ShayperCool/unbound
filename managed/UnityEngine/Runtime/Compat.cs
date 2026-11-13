@@ -24,6 +24,9 @@ namespace Unbound.Runtime
         /// <summary>Joint-drive input ranges measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous, unmeasured stored drive values.</summary>
         internal static bool PhysicsJointDrivesMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// <summary>Removed reverb settings and warnings measured by defaultstate on 6000.0.71f1.
+        /// Other releases retain the previous, unmeasured stub response.</summary>
+        internal static bool RemovedAudioSettingsMeasured => Release == (6000, 0, 71, 'f', 1);
         // Shared result code of Unity exception constructors in the defaultstate 6000.0.71f1 reference.
         internal const int UnityExceptionResult = -2147467261;
         /// <summary>Refresh-rate fractions, invalid-rate ordering and rounded integer conversion,
@@ -38,7 +41,8 @@ namespace Unbound.Runtime
                 || type == typeof(UnityEngine.Collider2D) || type == typeof(UnityEngine.Joint2D)
                 || type == typeof(UnityEngine.AnchoredJoint2D) || type == typeof(UnityEngine.Effector2D)
                 || type == typeof(UnityEngine.PhysicsUpdateBehaviour2D)
-                || type == typeof(UnityEngine.Collider) || type == typeof(UnityEngine.Joint));
+                || type == typeof(UnityEngine.Collider) || type == typeof(UnityEngine.Joint)
+                || type == typeof(UnityEngine.AudioBehaviour));
 
         /// <summary>Runtime compressed channel formats and readback controls measured by
         /// tests/projects/texturecompression on 6000.0.71f1. Other releases keep their previous formats.</summary>

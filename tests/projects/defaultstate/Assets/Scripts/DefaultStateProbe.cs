@@ -46,6 +46,7 @@ public sealed class DefaultStateProbe : MonoBehaviour
         Physics2DControls();
         Physics2DPayloadControls();
         PhysicsControls();
+        AudioControls();
         PhysicsPayloadControls();
         Emit("complete","value","1"); output.Dispose(); output=null;
         EditorApplication.Exit(0);
@@ -384,6 +385,47 @@ public sealed class DefaultStateProbe : MonoBehaviour
         }
         finally { UnityEngine.Object.DestroyImmediate(jointOwner); }
     }
+    static void AudioControls()
+    {
+        foreach (var provider in new[] { "empty", "AudioSource", "AudioListener" })
+        {
+            foreach (var filter in new[] { "AudioLowPassFilter", "AudioHighPassFilter", "AudioEchoFilter", "AudioDistortionFilter", "AudioChorusFilter", "AudioReverbFilter" })
+            {
+                var owner = new GameObject("AudioRequirementControl");
+                try
+                {
+                    owner.SetActive(false);
+                    if (provider != "empty") owner.AddComponent(ProbeType(provider));
+                    var value = owner.AddComponent(ProbeType(filter));
+                    CoreValue("Audio/filter/" + provider + "/" + filter, new object[] { value != null,
+                        owner.GetComponents<Component>().Select(c => c.GetType().Name).OrderBy(n => n, StringComparer.Ordinal).ToArray() });
+                }
+                finally { UnityEngine.Object.DestroyImmediate(owner); }
+            }
+            var requiredOwner = new GameObject("RequiredAudioControl");
+            try
+            {
+                requiredOwner.SetActive(false);
+                if (provider != "empty") requiredOwner.AddComponent(ProbeType(provider));
+                CoreValue("Audio/base/" + provider, requiredOwner.AddComponent(ProbeType("AudioBehaviour")) == null);
+                CoreValue("Audio/required/" + provider, requiredOwner.AddComponent<AudioRequiredControlBehaviour>() != null);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(requiredOwner); }
+        }
+        var zoneOwner = new GameObject("ReverbRemovedSettingControl");
+        var previous = Debug.unityLogger.logHandler; var handler = new RemovedAudioSettingLogHandler(previous);
+        try
+        {
+            zoneOwner.SetActive(false); var zone = zoneOwner.AddComponent<AudioReverbZone>();
+            var removed = typeof(AudioReverbZone).GetProperty("roomRolloffFactor");
+            Debug.unityLogger.logHandler = handler;
+            removed.SetValue(zone, 2.5f, null); var first = removed.GetValue(zone, null);
+            zone.reverbPreset = AudioReverbPreset.Cave;
+            removed.SetValue(zone, -4f, null); var second = removed.GetValue(zone, null);
+            CoreValue("Audio/removedReverbSetting", new object[] { first, second, handler.warnings.ToArray() });
+        }
+        finally { Debug.unityLogger.logHandler = previous; UnityEngine.Object.DestroyImmediate(zoneOwner); }
+    }
     static void RemovedGetterControls()
     {
         foreach (var populated in new[] { false, true })
@@ -616,4 +658,14 @@ public class NestedStateBase
 public sealed class NestedStateDerived : NestedStateBase
 {
     public int field=2;
+}
+
+public sealed class RemovedAudioSettingLogHandler : ILogHandler
+{
+    readonly ILogHandler previous;
+    public readonly List<string> warnings = new List<string>();
+    public RemovedAudioSettingLogHandler(ILogHandler previous) { this.previous = previous; }
+    public void LogFormat(LogType type, UnityEngine.Object context, string format, params object[] args)
+    { if (type == LogType.Warning) warnings.Add(string.Format(format, args)); previous.LogFormat(type, context, format, args); }
+    public void LogException(Exception error, UnityEngine.Object context) { previous.LogException(error, context); }
 }

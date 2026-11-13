@@ -107,8 +107,9 @@ contexts. Both independent GPU repeats and Unbound match all 54 controls. The or
 
 The Core slice adds another 42 independent controls while preserving all prior rows,
 for 11,517 rows at that stage. Physics2D adds 17 controls and Physics adds 31,
-for 11,565 current rows. The comparison now has 10,551 exact rows, 1,014 differing
-reference rows, zero missing rows and 207 extra implementation rows. Its 1,223 queue
+for 11,565 rows before Audio. Audio adds 25 controls, giving 11,590 current rows.
+The comparison now has 10,585 exact rows, 1,005 differing reference rows, zero
+missing rows and 30 extra implementation rows. Its 1,037 queue
 entries retain the same 50 variable rows; two happen to equal the implementation
 snapshot. Variable rows remain unresolved comparisons.
 
@@ -214,13 +215,43 @@ mechanisms. Other releases retain the previous unmeasured behavior. Runtime driv
 reads share normalization with assignments; no importer/cache writer, schema or
 serialized output changes. Stub table output changes bump the generator format to 5.
 
+The Audio slice resolves 185 rows: 184 from AudioBehaviour and the six filter
+factories, plus the removed AudioReverbZone roomRolloffFactor setting. Its 25 controls
+preserve all 11,565 prior canonical rows byte for byte. Both independent NVIDIA GPU
+Editor captures and the engine match the new controls, including all 144 prior
+removed-getter, Core, Physics2D and Physics controls.
+
+| Audio cause | Resolved rows | Rule and controls |
+| --- | ---: | --- |
+| Factory requirements | 184 | AudioBehaviour rejects direct creation on empty, source and listener hosts. Each of the six filters rejects an empty host and accepts either an existing AudioSource or AudioListener. A script requiring AudioBehaviour follows the same requirement rule. Controls use inactive hosts and retain their concrete providers. |
+| Removed setting | 1 | roomRolloffFactor returns 10 and ignores assignments under Generic and Cave presets. Each of the two writes and two reads emits the release's exact warning. Its attribute declaration uses the selected release's constructor signature. |
+
+Unity 6000.0 documents [filters](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioLowPassFilter.html)
+in relation to sources and listeners, and [RequireComponent](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RequireComponent.html)
+as a dependency constraint. Exact base-factory rejection, acceptable providers and
+removed-setting warnings are observations of 6000.0.71f1. Existing concrete providers
+change the factory result; the reverb writes change the requested value without
+changing the returned value. The shared factory compatibility mechanism covers the
+base type, and a removed-audio-settings mechanism selects the warning/value behavior.
+Other releases retain their earlier unmeasured response. No audio processing algorithm,
+importer, cache output or format changes in this slice.
+
+Four WebCamTexture rows remain exact migration entries. Empty constructor arguments
+do not settle device discovery, the no-device name, readability or backing graphics
+resource state. The existing 16x16 placeholder lacks capture backing. Device/resource
+lifecycle controls are needed; these NVIDIA-only observations must not become general
+format or device-name constants. The optional UnityEditor.CoreModule work remains
+queued: 94 importer rows, 97 window rows and 28 other editor-context rows. Remaining
+ParticleSystem, UIElements, Animation and small-module rows are listed below.
+All 50 variable policies and the constructor-store discrepancy remain unchanged.
+The final counts include one lighting row resolved independently during integration.
+
 | Release module | Queued rows |
 | --- | ---: |
 | UnityEngine.ParticleSystemModule | 347 |
 | UnityEditor.CoreModule | 219 |
-| UnityEngine.AudioModule | 189 |
 | UnityEngine.UIElementsModule | 159 |
-| UnityEngine.CoreModule | 116 |
+| UnityEngine.CoreModule | 115 |
 | UnityEngine.IMGUIModule | 29 |
 | UnityEngine.GridModule | 26 |
 | UnityEngine.AssetBundleModule | 24 |
@@ -236,6 +267,7 @@ serialized output changes. Stub table output changes bump the generator format t
 | UnityEngine.Physics2DModule | 5 |
 | UnityEngine.PhysicsModule | 5 |
 | UnityEngine.SpriteMaskModule | 5 |
+| UnityEngine.AudioModule | 4 |
 | UnityEngine.UIModule | 3 |
 | UnityEngine.UnityWebRequestTextureModule | 3 |
 | UnityEngine.TerrainPhysicsModule | 2 |
