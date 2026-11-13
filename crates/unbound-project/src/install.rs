@@ -146,7 +146,8 @@ pub const API_REFERENCE_PLATFORMS: &[&str] =
 pub struct ApiReference {
     /// `Editor/Data/Managed/UnityEngine`
     pub managed_engine_dir: PathBuf,
-    /// [`UnityInstall::platform_modules`] of the [`API_REFERENCE_PLATFORMS`] only.
+    /// [`UnityInstall::platform_modules`] without other platforms than [`API_REFERENCE_PLATFORMS`]
+    /// (`Managed/UnityEditor.Graphs.dll` and those platforms' assemblies).
     pub platform_modules: Vec<PathBuf>,
 }
 

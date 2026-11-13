@@ -79,7 +79,7 @@ GENERATED = 'managed/UnityEngine/Generated'
 # What the generated stubs are made from: the hand-written API and the generator (managed/), the
 # profile's stub family and platform modules (unbound-compat), and the choice of Unity's files the
 # generator reads (the API reference, its download and the command). Gate changes exercise this step too.
-STUB_INPUTS = re.compile(r'^(managed/|crates/unbound-compat/|crates/unbound-project/src/(?:install|editor_archive)\.rs$'
+STUB_INPUTS = re.compile(r'^(managed/|crates/unbound-compat/|crates/unbound-project/src/(?:install|editor_archive|compile)\.rs$'
                          r'|crates/unbound/src/commands\.rs$|tools/agents/(?:land|test_land)\.py$)')
 STUB_PROJECT = 'tests/projects/packages'
 HERE = Path(__file__).resolve().parent
