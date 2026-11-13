@@ -103,6 +103,7 @@ namespace UnityEngine.AI
 
     /// <summary>The legacy link component: a link between two transforms.</summary>
     [global::System.@ObsoleteAttribute("The OffMeshLink component is no longer supported and will be removed. Use NavMeshLink instead.")] [global::UnityEngine.@HelpURLAttribute("https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/OffMeshLink.html")]
+    [ClassId(191)]
     public sealed partial class OffMeshLink : Behaviour
     {
         Transform m_Start;
