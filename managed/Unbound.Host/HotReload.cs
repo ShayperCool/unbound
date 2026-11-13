@@ -101,6 +101,11 @@ internal static class HotReload
                 var delta = s_Enc.Emit(spec.Name, current);
                 if (delta != null)
                 {
+                    // Edited float arithmetic would need the conversions the loaded code got (see
+                    // WideFloats); they do not fit a delta's bodies.
+                    var (image, applied) = s_Applied[spec.Name];
+                    if (Unbound.Runtime.Compat.ScriptFloatsWide && WideFloats.DeltaHandlesFloats(image, applied.Append(delta.Metadata).ToList(), delta.IL))
+                        return Restart(response, $"{spec.Name}: the edit changes float arithmetic, which Unbound converts when the assembly loads", watch);
                     deltas.Add((assembly, delta));
                     response.Changes.AddRange(delta.Changed.Select(c => $"{spec.Name}: {c}"));
                 }

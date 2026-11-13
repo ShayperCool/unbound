@@ -5,6 +5,9 @@
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="UnityEngine.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../Unbound.ApiTools/Unbound.ApiTools.csproj" />
     <ProjectReference Include="../Unbound.Compiler/Unbound.Compiler.csproj" />
     <ProjectReference Include="../UnityEngine/UnityEngine.csproj" />

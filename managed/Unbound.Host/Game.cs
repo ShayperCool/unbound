@@ -318,6 +318,7 @@ public static unsafe class Game
             try
             {
                 var filtered = NumberFormatShims.TryRedirect(FrameworkShims.Redirect(NativeCallbacks.KeepAlive(AccessChecks.Relax(image))));
+                if (Unbound.Runtime.Compat.ScriptFloatsWide) filtered = WideFloats.TryWiden(filtered);
                 return (filtered, AccessChecks.Symbols);
             }
             finally
@@ -327,7 +328,8 @@ public static unsafe class Game
         };
         // The filters' code and the engine they redirect to: a rebuild of either adapts again.
         GameDomain.ImageFilterVersion = typeof(Game).Assembly.ManifestModule.ModuleVersionId + "|"
-            + typeof(UnityEngine.Object).Assembly.ManifestModule.ModuleVersionId;
+            + typeof(UnityEngine.Object).Assembly.ManifestModule.ModuleVersionId
+            + (Unbound.Runtime.Compat.ScriptFloatsWide ? "|wide-floats" : "");
         System.IO.Directory.CreateDirectory(c.PersistentDataPath);
         ProjectInfo.BuildScenes.Clear();
         foreach (var s in c.BuildScenes) ProjectInfo.BuildScenes.Add((s.Path, s.Guid));

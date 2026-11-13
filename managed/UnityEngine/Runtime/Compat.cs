@@ -91,6 +91,13 @@ namespace Unbound.Runtime
         /// unmeasured immediate stop.</summary>
         internal static bool NavMeshStoppingDistanceMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Script code evaluates float32 expressions with double intermediates and rounds them
+        /// where its IL stores a float32 (locals, arguments, fields, array elements, boxes, call
+        /// arguments and returns), as the Editor's Mono does: measured by tests/projects/floatrounding
+        /// on 6000.0.71f1 in both code optimization modes. Other releases keep CoreCLR's float32
+        /// evaluation, unmeasured.</summary>
+        internal static bool ScriptFloatsWide => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Quaternion API accumulation and axis-conversion intermediates, measured by
         /// tests/projects/quaternioneuler on 6000.0.71f1. Other releases retain their unmeasured
         /// single-precision arithmetic.</summary>

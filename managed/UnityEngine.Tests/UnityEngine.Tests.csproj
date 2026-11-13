@@ -16,6 +16,8 @@
 
   <ItemGroup>
     <ProjectReference Include="../UnityEngine/UnityEngine.csproj" />
+    <!-- The host's load-time rewrites of game assemblies (WideFloatsTests). -->
+    <ProjectReference Include="../Unbound.Host/Unbound.Host.csproj" />
   </ItemGroup>
 
   <ItemGroup>
