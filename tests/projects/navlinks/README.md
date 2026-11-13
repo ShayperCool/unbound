@@ -260,14 +260,15 @@ and their first differing frames:
 
 Remaining causes after Q401, by case:
 
-- `endatlink` (81, every frame's corners): the reference's straight path keeps the
+- `endatlink` (81, the corners of frames 1 to 81): the reference's straight path keeps the
   link's end at z = 40.0000038 and the path's end at z = 40 as two corners. Unbound's
   crossing point is exactly the path's end and merges into it. Merging only exactly
   equal points was tried and changes nothing, because Unbound's crossing is exact.
 - `crosstile` (118): from frame 103, when the occupied link frees and the waiting
   agent starts its approach, the approach direction differs by about 1e-4.
-- `areamask` (54): the trajectory differs below a millimetre from frame 6 and an
-  avoidance sample choice flips at frame 102.
+- `areamask` (54): the trajectory differs below a millimetre from frame 6; the desired
+  velocity differs beyond tolerance from frame 102 (a flipped avoidance sample choice is
+  a hypothesis, not traced).
 - `waitrebuild.*` (59): path, endpoint and staleness reports after disabling the
   occupied link, as described above.
 - `redirectmid`, `completeauto`, `disableagent`, `resetmid` and three staleness values

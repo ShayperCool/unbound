@@ -126,10 +126,11 @@ Q401 (Unity 6000.0.71f1 reference, Unbound on macOS arm64) leaves these scenario
 unchanged; its post-step corner reports change no navmesh value. Walker's divergence
 is a tie. At frame 32 Unbound's walker steers straight at the corner
 (-3.667, -8.5), which is also where the next NavMesh edge it avoids begins. Its
-desired velocity's ray therefore meets that edge at the edge's end point, and
+desired velocity's ray therefore meets that edge at the vertex where it starts, and
 rounding places the meeting just inside the edge. The time to impact falls just below
 the prediction time, and a ring sample wins over the desired velocity. The reference
-keeps the desired velocity for one more update (frame 33 still moves at 3.499, 0.099).
+keeps the desired velocity for one more update (frame 33 still moves at 3.499, 0.099);
+how Unity treats a hit exactly at an edge's end point is inferred from that alone.
 No constant or tolerance is changed for this, and the sampling weights are unchanged.
 The other agents' residuals (blocked corners from 191, left hasPath at 222, right
 arrival at 241, climber rounding) remain as described above.
