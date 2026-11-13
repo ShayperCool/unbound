@@ -45,7 +45,10 @@ grandparent `Hips` (`jobBranchDestroyed`) or with the whole skeleton under the u
 node `Rig`, raised by 3 before the handles are bound (`jobRootDestroyed`), between the first two;
 the same with `Animator.Rebind` after the raise (`jobRootRebound`) and with `Rig` raised before
 the Animator is first enabled (`jobRootInactive`); and the handles of the unanimated `Leg`, moved
-by 1 along z before they are bound (`jobUnanimated`). Graph controls on a rig without
+by 1 along z before they are bound (`jobUnanimated`), also over a mixer whose one input, a clip
+holding `Leg` elsewhere, has weight 0.5 and then 0 (`jobUnanimatedMixer`). Last of all, a job
+reads a property handle of the hand's z position bound with `BindStreamProperty`
+(`jobTransformProperty`). Graph controls on a rig without
 its controller, three evaluations of a manual graph each with the whole pose: the take as the
 output's source on `Rig`, `RigOpt`, `Human` and `HumanOpt` (`graphOnly.*`), and on the two
 humanoids under a job that does nothing (`graphJob.*`) or reads a stream handle of the left
@@ -125,7 +128,15 @@ What the Editor does (measured):
   the transform include it, whether `Rig` was raised before the handles were bound, before
   `Animator.Rebind` or before the Animator was first enabled (`jobRootDestroyed`,
   `jobRootRebound`, `jobRootInactive`).
-- The controls `jobParentDestroyed` to `jobUnanimated` were recorded with the macOS Editor (two
+- Where a mixer input animates the moved `Leg` at weight 0.5 the stream blends with the value
+  bound from the scene; at weight 0 the job reads the default pose again and the output writes
+  the bound value to the transform (`jobUnanimatedMixer`).
+- A property handle of a Transform property is valid but never resolves: before the first
+  evaluation's record the Editor logs the assertion `Transform bound type not supported,
+  binding: 'Rig/Hips/Spine/Hand.m_LocalPosition.z'` and the warning `Could not resolve
+  'Rig/Hips/Spine/Hand' for property m_LocalPosition.z`, once, and every `GetFloat` throws `The
+  PropertyStreamHandle cannot be resolved.` (`jobTransformProperty`).
+- The controls `jobParentDestroyed` to `jobTransformProperty` were recorded with the macOS Editor (two
   identical captures); every other record of that capture matches the Linux reference within the
   comparator's tolerance, so the reference keeps its Linux records and adds these.
 - A manual graph plays the take on a rig without its controller, optimized or not, generic

@@ -142,7 +142,7 @@ public class AnimOptimizeProbe : MonoBehaviour
                 Handles(name, mode);
             foreach (string mode in new[] { "jobResolve", "jobResolveAll", "jobEarly", "jobTop", "jobIdle", "jobIdleResolveAll", "jobProp", "jobReoptimize", "jobDestroyed" })
                 Handles("Rig", mode);
-            foreach (string mode in new[] { "jobDestroyedRead", "jobParentDestroyed", "jobBranchDestroyed", "jobRootDestroyed", "jobRootRebound", "jobRootInactive", "jobUnanimated" })
+            foreach (string mode in new[] { "jobDestroyedRead", "jobParentDestroyed", "jobBranchDestroyed", "jobRootDestroyed", "jobRootRebound", "jobRootInactive", "jobUnanimated", "jobUnanimatedMixer" })
                 Handles("Rig", mode);
             foreach (var name in new[] { "Rig", "RigOpt", "Human", "HumanOpt" }) GraphOnly(name, "graphOnly");
             foreach (string mode in new[] { "graphJob", "graphJobHand" })
@@ -152,6 +152,8 @@ public class AnimOptimizeProbe : MonoBehaviour
             GraphOnly("HumanOpt", "graphJobAdded");
             Updated("HumanOpt", false);
             Updated("HumanOpt", true);
+            // Last: its messages come after every other control's.
+            Handles("Rig", "jobTransformProperty");
         }
         catch (Exception e)
         {
@@ -380,7 +382,11 @@ public class AnimOptimizeProbe : MonoBehaviour
     /// the whole skeleton there; "jobRootRebound": the same, with Animator.Rebind after Rig
     /// is raised; "jobRootInactive": the same, Rig raised before the Animator is first enabled;
     /// "jobUnanimated": the handles are of Leg, which the take does not animate, moved by 1
-    /// along z before they are bound.
+    /// along z before they are bound; "jobUnanimatedMixer": the same over a mixer with one
+    /// input at weight 0.5, a clip that holds Leg at (0.5, -1, -0.5), instead of the take; the
+    /// input's weight is 0 in the third evaluation. "jobTransformProperty": as "jobRead", the
+    /// job also reading a property handle of the hand's z position bound with
+    /// BindStreamProperty (its validity and the message GetFloat throws).
     /// On the plain rig only: "jobEarly" binds the hand's stream
     /// handle, then optimizes the hierarchy exposing the hand; "jobTop" optimizes exposing the
     /// top node Rig and the hand, and binds the stream handle of the exposed Rig, which the job
@@ -393,14 +399,25 @@ public class AnimOptimizeProbe : MonoBehaviour
         var go = Spawn(name, out var animator, mode == "jobRootInactive" ? raise : null);
         var clip = animator.runtimeAnimatorController.animationClips[0];
         animator.runtimeAnimatorController = null;
-        string boneName = mode == "jobUnanimated" ? "Leg" : "Hand";
+        string boneName = mode == "jobUnanimated" || mode == "jobUnanimatedMixer" ? "Leg" : "Hand";
         Transform Hand() => go.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == boneName);
         bool idle = mode == "jobIdle" || mode == "jobIdleResolveAll" || mode == "jobProp";
         var job = new HandleJob { write = mode == "job" || mode == "jobEarly" || mode == "jobTop", resolve = mode == "jobResolve",
             idle = idle, readProperty = mode == "jobProp", readUnresolved = mode == "jobDestroyed" };
         var bone = Hand();
         if (mode == "jobRootDestroyed" || mode == "jobRootRebound") raise(go);
-        if (mode == "jobUnanimated") bone.localPosition += new Vector3(0f, 0f, 1f);
+        if (mode == "jobUnanimated" || mode == "jobUnanimatedMixer") bone.localPosition += new Vector3(0f, 0f, 1f);
+        if (mode == "jobTransformProperty")
+        {
+            job.axis = animator.BindStreamProperty(bone, typeof(Transform), "m_LocalPosition.z");
+            job.readAxis = true;
+        }
+        if (mode == "jobUnanimatedMixer")
+        {
+            clip = new AnimationClip();
+            foreach (var (axis, value) in new[] { ("x", .5f), ("y", -1f), ("z", -.5f) })
+                clip.SetCurve("Rig/Hips/Leg", typeof(Transform), "m_LocalPosition." + axis, AnimationCurve.Constant(0f, 1f, value));
+        }
         if (mode == "jobRootRebound") animator.Rebind();
         if (idle) job.property = animator.BindCustomStreamProperty("probeValue", CustomStreamPropertyType.Float);
         if (mode == "jobEarly")
@@ -425,13 +442,21 @@ public class AnimOptimizeProbe : MonoBehaviour
         var graph = PlayableGraph.Create("handles." + key);
         graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
         var playable = AnimationScriptPlayable.Create(graph, job, 1);
-        playable.ConnectInput(0, AnimationClipPlayable.Create(graph, clip), 0, 1f);
+        var mixer = AnimationMixerPlayable.Null;
+        if (mode == "jobUnanimatedMixer")
+        {
+            mixer = AnimationMixerPlayable.Create(graph, 1);
+            mixer.ConnectInput(0, AnimationClipPlayable.Create(graph, clip), 0, .5f);
+            playable.ConnectInput(0, mixer, 0, 1f);
+        }
+        else playable.ConnectInput(0, AnimationClipPlayable.Create(graph, clip), 0, 1f);
         AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
         graph.Play();
         for (int step = 0; step < 3; step++)
         {
             s_Job.Clear();
             if (mode == "jobIdleResolveAll" && step == 1) animator.ResolveAllStreamHandles();
+            if (mode == "jobUnanimatedMixer" && step == 2) mixer.SetInputWeight(0, 0f);
             if (mode == "jobReoptimize" && step == 1)
             {
                 AnimatorUtility.OptimizeTransformHierarchy(go, new[] { "Rig/Hips/Spine/Hand" });
@@ -555,8 +580,8 @@ public class AnimOptimizeProbe : MonoBehaviour
     {
         public TransformStreamHandle stream;
         public TransformSceneHandle scene;
-        public PropertyStreamHandle property;
-        public bool write, resolve, idle, readProperty, readUnresolved;
+        public PropertyStreamHandle property, axis;
+        public bool write, resolve, idle, readProperty, readUnresolved, readAxis;
 
         public void ProcessRootMotion(AnimationStream s) { }
 
@@ -580,6 +605,12 @@ public class AnimOptimizeProbe : MonoBehaviour
             if (valid && !(readUnresolved && resolved))
                 json += ",\"p\":" + V(stream.GetLocalPosition(s)) + ",\"r\":" + Q(stream.GetLocalRotation(s)) + ",\"w\":" + V(stream.GetPosition(s));
             if (sceneValid) json += ",\"sp\":" + V(scene.GetLocalPosition(s)) + ",\"sw\":" + V(scene.GetPosition(s));
+            if (readAxis)
+            {
+                json += ",\"axisValid\":" + B(axis.IsValid(s));
+                try { json += ",\"axis\":" + F(axis.GetFloat(s)); }
+                catch (InvalidOperationException e) { json += ",\"axisError\":" + S(e.Message); }
+            }
             JobRecord(json + "}");
             if (valid && write) stream.SetLocalRotation(s, stream.GetLocalRotation(s) * Quaternion.Euler(0f, 0f, 30f));
         }
