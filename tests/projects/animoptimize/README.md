@@ -46,7 +46,8 @@ node `Rig`, raised by 3 before the handles are bound (`jobRootDestroyed`), betwe
 the same with `Animator.Rebind` after the raise (`jobRootRebound`) and with `Rig` raised before
 the Animator is first enabled (`jobRootInactive`); and the handles of the unanimated `Leg`, moved
 by 1 along z before they are bound (`jobUnanimated`), also over a mixer whose one input, a clip
-holding `Leg` elsewhere, has weight 0.5 and then 0 (`jobUnanimatedMixer`). Last of all, a job
+holding `Leg` elsewhere, has weight 0.5 and then 0 (`jobUnanimatedMixer`), or 0 from the start
+with `Leg` moved to z = 2 by the script before the second evaluation (`jobUnanimatedIdle`). Last of all, a job
 reads a property handle of the hand's z position bound with `BindStreamProperty`
 (`jobTransformProperty`). Graph controls on a rig without
 its controller, three evaluations of a manual graph each with the whole pose: the take as the
@@ -130,7 +131,10 @@ What the Editor does (measured):
   `jobRootRebound`, `jobRootInactive`).
 - Where a mixer input animates the moved `Leg` at weight 0.5 the stream blends with the value
   bound from the scene; at weight 0 the job reads the default pose again and the output writes
-  the bound value to the transform (`jobUnanimatedMixer`).
+  the bound value to the transform (`jobUnanimatedMixer`), in every evaluation from the first
+  one, undoing the script's move (`jobUnanimatedIdle`).
+- A destroyed ancestor that is neither animated nor a node of the avatar's skeleton is read
+  with the values it last held (not covered here).
 - A property handle of a Transform property is valid but never resolves: before the first
   evaluation's record the Editor logs the assertion `Transform bound type not supported,
   binding: 'Rig/Hips/Spine/Hand.m_LocalPosition.z'` and the warning `Could not resolve
