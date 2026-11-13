@@ -128,9 +128,9 @@ namespace UnityEngine
 
         internal float SqrDistanceUnchecked(Vector3 point)
         {
-            float dx = MathF.Max(MathF.Abs(point.x - m_Center.x), m_Extents.x) - m_Extents.x;
-            float dy = MathF.Max(MathF.Abs(point.y - m_Center.y), m_Extents.y) - m_Extents.y;
-            float dz = MathF.Max(MathF.Abs(point.z - m_Center.z), m_Extents.z) - m_Extents.z;
+            float dx = Unbound.Runtime.Compat.NativeMax(MathF.Abs(point.x - m_Center.x), m_Extents.x) - m_Extents.x;
+            float dy = Unbound.Runtime.Compat.NativeMax(MathF.Abs(point.y - m_Center.y), m_Extents.y) - m_Extents.y;
+            float dz = Unbound.Runtime.Compat.NativeMax(MathF.Abs(point.z - m_Center.z), m_Extents.z) - m_Extents.z;
             return dx * dx + dy * dy + dz * dz;
         }
 

@@ -138,6 +138,14 @@ namespace Unbound.Runtime
         /// release, though measured with 6000.0.71f1 only (as the x86_64 order).</summary>
         internal static bool TransformArithmeticArm64 => System.Runtime.Intrinsics.Arm.AdvSimd.IsSupported;
 
+        /// <summary>The larger of two floats in Unity's native math: NaN when either is NaN on arm64
+        /// hosts (as the macOS arm64 Editor computes it), the second operand when either is NaN on
+        /// x86_64 hosts (as the Linux x86_64 Editor does). Measured by tests/projects/floatrounding
+        /// (native/degenerate, Bounds.SqrDistance of a NaN point and of a box with a NaN centre) with
+        /// 6000.0.71f1; chosen by the host's architecture for every release.</summary>
+        internal static float NativeMax(float a, float b) =>
+            System.Runtime.Intrinsics.Arm.AdvSimd.IsSupported ? MathF.Max(a, b) : (a > b ? a : b);
+
         /// <summary>Quaternion API accumulation and axis-conversion intermediates, measured by
         /// tests/projects/quaternioneuler on 6000.0.71f1. Other releases retain their unmeasured
         /// single-precision arithmetic.</summary>

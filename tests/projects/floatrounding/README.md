@@ -91,7 +91,7 @@ store as in the Editor. The engine's implementations of the methods Unity binds 
 compute in single precision with the Editor's algorithms and order of operations
 (`managed/UnityEngine/Math/RotationMatrix.cs`, `PolarRotation.cs`, and the Quaternion, Vector3,
 Matrix4x4 and Bounds sources); their sines, cosines and inverse trigonometric functions come from
-the platform's C library, as the Editor's do, which is where the hosts differ. They log the
+the platform's C library, as the Editor's do, which is where the hosts differ, apart from Bounds.SqrDistance of a NaN coordinate: NaN on arm64, the coordinate ignored on x86_64 (`Compat.NativeMax`). They log the
 Editor's messages (`native/log`): "Look rotation viewing vector is zero" for a forward not longer
 than 1e-5, and assertions for a zero-length normalization, a non-affine matrix's rotation or
 lossyScale, a rotation matrix that is not orthonormal, a rotation that is not normalized or gives
