@@ -1642,6 +1642,12 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.Sprites.SpriteUtility"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.TextureImporter"
     },
     {

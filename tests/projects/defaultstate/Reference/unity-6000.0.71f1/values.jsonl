@@ -766,6 +766,7 @@
 {"key":"UnityEditor.ShaderMessage/Property/UnityEditor.ShaderMessage/severity","status":"value","value":"enum:0"}
 {"key":"UnityEditor.ShaderUtil/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.ShortcutManagement.ShortcutManager/@factory","status":"excluded","value":"static"}
+{"key":"UnityEditor.Sprites.SpriteUtility/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.TextureImporter/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.TextureImporter/Property/UnityEditor.AssetImporter/assetBundleName","status":"getter-threw","value":"System.NullReferenceException"}
 {"key":"UnityEditor.TextureImporter/Property/UnityEditor.AssetImporter/assetBundleVariant","status":"getter-threw","value":"System.NullReferenceException"}
