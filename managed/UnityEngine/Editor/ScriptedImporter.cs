@@ -49,6 +49,63 @@ namespace UnityEditor
             get { CheckImporterState("get_assetBundleVariant"); return NormalizeString(m_AssetBundleVariant); }
             set { CheckImporterState("set_assetBundleVariant"); m_AssetBundleVariant = NormalizeString(value); }
         }
+
+        /// <summary>The .meta's <c>externalObjects</c>: imported objects by class and name, remapped
+        /// to project assets.</summary>
+        readonly Dictionary<SourceAssetIdentifier, Object> m_ExternalObjects = new Dictionary<SourceAssetIdentifier, Object>();
+
+        public Dictionary<SourceAssetIdentifier, Object> GetExternalObjectMap() => new Dictionary<SourceAssetIdentifier, Object>(m_ExternalObjects);
+
+        public void AddRemap(SourceAssetIdentifier identifier, Object externalObject) => m_ExternalObjects[identifier] = externalObject;
+
+        public bool RemoveRemap(SourceAssetIdentifier identifier) => m_ExternalObjects.Remove(identifier);
+
+        /// <summary>Reads the .meta's <c>externalObjects</c> entries (<c>first: {type: "Namespace:Class",
+        /// assembly, name}</c>, <c>second: {fileID, guid}</c>); an entry naming a class Unbound does not
+        /// know is skipped.</summary>
+        internal void ReadExternalObjects(YNode settings)
+        {
+            var entries = settings?.Get("externalObjects");
+            if (entries == null || entries.Kind != YKind.Seq) return;
+            foreach (var entry in entries.Items)
+            {
+                var first = entry.Get("first");
+                var type = ExternalType(first?.Get("type")?.AsString());
+                var name = first?.Get("name")?.AsString();
+                if (type == null || string.IsNullOrEmpty(name)) continue;
+                var target = entry.Ref("second");
+                m_ExternalObjects[new SourceAssetIdentifier(type, name)] = target.IsNull ? null : AssetDatabaseRuntime.Load(target.Guid, target.FileId, type);
+            }
+        }
+
+        static Type ExternalType(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            var full = name.Replace(':', '.');
+            return typeof(Object).Assembly.GetType(full) ?? GameDomain.FindTypeByName(full);
+        }
+
+        public partial struct SourceAssetIdentifier
+        {
+            public Type type;
+            public string name;
+
+            public SourceAssetIdentifier(Object asset)
+            {
+                if (asset == null) throw new ArgumentNullException(nameof(asset));
+                type = asset.GetType();
+                name = asset.name;
+            }
+
+            public SourceAssetIdentifier(Type type, string name)
+            {
+                if (type == null) throw new ArgumentNullException(nameof(type));
+                if (name == null) throw new ArgumentNullException(nameof(name));
+                if (string.IsNullOrEmpty(name)) throw new ArgumentException("The name is empty", nameof(name));
+                this.type = type;
+                this.name = name;
+            }
+        }
     }
 }
 
@@ -197,15 +254,16 @@ namespace Unbound.Runtime
         }
 
         /// <summary>An instance of a ScriptedImporter class with the settings its .meta stores.</summary>
-        internal static ScriptedImporter CreateImporter(string script, string path, string guid, YNode settings)
+        internal static ScriptedImporter CreateImporter(string script, long scriptFileId, string path, string guid, YNode settings)
         {
-            var type = string.IsNullOrEmpty(script) ? null : GameDomain.ResolveScript(script, 11500000);
+            var type = string.IsNullOrEmpty(script) ? null : GameDomain.ResolveScript(script, scriptFileId);
             if (type == null || !typeof(ScriptedImporter).IsAssignableFrom(type) || type.IsAbstract)
                 throw new InvalidOperationException($"its ScriptedImporter (script {script}) is not a loaded importer class");
             ScriptedImporter importer;
             using (ObjectRegistry.AsAssets())
                 importer = (ScriptedImporter)ObjectConstruction.CreateWithBacking(type);
             importer.m_AssetPath = path;
+            importer.ReadExternalObjects(settings);
             if (settings != null)
             {
                 new YamlReader(new LoadedFile { Guid = guid, Path = path }, metaNames: true).ReadScriptObject(importer, settings);
@@ -219,7 +277,7 @@ namespace Unbound.Runtime
         internal static LoadedFile Import(AssetDatabaseRuntime.AssetInfo info)
         {
             var settings = Native.LoadDocuments("meta:" + info.Guid);
-            var importer = CreateImporter(info.Importer, info.Path, info.Guid, settings.Count > 0 ? settings[0].Body : null);
+            var importer = CreateImporter(info.Importer, info.ImporterFileId, info.Path, info.Guid, settings.Count > 0 ? settings[0].Body : null);
             var ctx = new AssetImportContext(info.Path);
             using (Scope())
             using (ObjectRegistry.AsAssets())
