@@ -176,6 +176,7 @@ public sealed class FloatRoundingProbe : MonoBehaviour
 
         Fuzz();
         ApiRows();
+        NativeLogRow();
 
         foreach (var method in typeof(Controls).GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
         {
@@ -565,6 +566,122 @@ public sealed class FloatRoundingProbe : MonoBehaviour
             result.Add(flat.Contains(new Vector3(center.x, center.y, center.z)) ? 1f : 0f);
             return result.ToArray();
         });
+        Api("native/degenerate", 9, f =>
+        {
+            Quaternion a = Q(f, 0).normalized;
+            Vector3 v = V3(f, 4), w = V3(f, 1);
+            float t = Unit(f[7]);
+            var result = new List<float>();
+            // Zero-length interpolations, zero and rank-1 matrices.
+            result.AddRange(N(F(Quaternion.Lerp(default, default, t))));
+            result.AddRange(N(F(Quaternion.LerpUnclamped(a, default, 1f))));
+            result.AddRange(N(F(Quaternion.Slerp(default, default, t))));
+            result.AddRange(N(F(Quaternion.SlerpUnclamped(a, default, t))));
+            result.AddRange(N(F(Matrix4x4.TRS(v, a, Vector3.zero).rotation)));
+            result.AddRange(N(F(Matrix4x4.zero.rotation)));
+            result.AddRange(N(F(Matrix4x4.zero.lossyScale)));
+            result.AddRange(N(F(Matrix4x4.TRS(v, a, new Vector3(f[8], 0f, 0f)).rotation)));
+            result.AddRange(N(F(Matrix4x4.TRS(v, a, new Vector3(f[8], f[8] * 1e-4f, 0f)).rotation)));
+            result.AddRange(N(F(Vector3.Slerp(Vector3.zero, v, t))));
+            result.AddRange(N(F(Quaternion.LookRotation(v, Vector3.zero))));
+            // Negative deltas turn away from the target and shrink; repeated from a general and a nearly opposite start.
+            Vector3 current = w;
+            Vector3 opposite = -v + Vector3.Cross(v, w) * 1e-3f;
+            for (int i = 0; i < 6; i++)
+            {
+                current = Vector3.RotateTowards(current, v, -0.4f * Mathf.Abs(f[8]), -0.01f);
+                opposite = Vector3.RotateTowards(opposite, v, -0.3f, 0.5f);
+                result.AddRange(F(current));
+                result.AddRange(F(opposite));
+            }
+            // NaN operands.
+            var nan = new Vector3(float.NaN, v.y, v.z);
+            var box = new Bounds(v, w);
+            result.Add(box.Contains(nan) ? 1f : 0f);
+            result.Add(N(box.SqrDistance(nan)));
+            result.AddRange(N(F(box.ClosestPoint(nan))));
+            var nanBox = new Bounds(nan, w);
+            result.Add(nanBox.Contains(v) ? 1f : 0f);
+            result.Add(N(nanBox.SqrDistance(v)));
+            result.AddRange(N(F(nanBox.ClosestPoint(v))));
+            result.AddRange(N(F(new Quaternion(float.NaN, a.y, a.z, a.w).eulerAngles)));
+            result.AddRange(N(F(Quaternion.LookRotation(nan, w))));
+            result.AddRange(N(F(Quaternion.FromToRotation(nan, w))));
+            result.AddRange(N(F(Vector3.RotateTowards(nan, w, 1f, 1f))));
+            result.AddRange(N(F(Vector3.Slerp(nan, w, t))));
+            return result.ToArray();
+        });
+    }
+
+    // A NaN of any payload as 999, so hosts and runtimes compare NaN-ness only.
+    static float N(float v) => float.IsNaN(v) ? 999f : v;
+    static float[] N(float[] values) { for (int i = 0; i < values.Length; i++) values[i] = N(values[i]); return values; }
+
+    /// <summary>The messages Unity's native math logs for degenerate operands: type and text per case.</summary>
+    void NativeLogRow()
+    {
+        var logs = new List<string>();
+        Application.LogCallback handler = (message, stack, type) => logs.Add(type + ": " + message.Replace("\\", "/").Replace("\"", "'").Replace("\n", " / "));
+        Application.logMessageReceived += handler;
+        try
+        {
+            var nan = new Vector3(float.NaN, 0f, 1f);
+            var box = new Bounds(Vector3.one, Vector3.one);
+            var trs = Matrix4x4.TRS(Vector3.one, Quaternion.Euler(10f, 20f, 30f), new Vector3(1f, 2f, 3f));
+            var negativeW = trs;
+            negativeW.m33 = -1f;
+            var doubledW = trs;
+            doubledW.m33 = 2f;
+            var sheared = trs;
+            sheared.m30 = 1f;
+            var nanMatrix = trs;
+            nanMatrix.m12 = float.NaN;
+            var cases = new (string, Action)[]
+            {
+                ("lookZero", () => Quaternion.LookRotation(Vector3.zero, Vector3.up)),
+                ("lookTiny", () => Quaternion.LookRotation(new Vector3(1e-6f, 0f, 0f), Vector3.up)),
+                ("lookParallel", () => Quaternion.LookRotation(Vector3.up, Vector3.up)),
+                ("lookNaN", () => Quaternion.LookRotation(nan, Vector3.up)),
+                ("fromToZero", () => Quaternion.FromToRotation(Vector3.zero, Vector3.up)),
+                ("fromToNaN", () => Quaternion.FromToRotation(nan, Vector3.up)),
+                ("angleAxisNaN", () => Quaternion.AngleAxis(float.NaN, Vector3.up)),
+                ("lerpZero", () => Quaternion.Lerp(default, default, 0.5f)),
+                ("lerpToZero", () => Quaternion.LerpUnclamped(Quaternion.identity, default, 1f)),
+                ("slerpZero", () => Quaternion.Slerp(default, default, 0.5f)),
+                ("slerpNearToZero", () => Quaternion.SlerpUnclamped(Quaternion.identity, new Quaternion(0f, 0f, 0f, 1e-3f), 1f)),
+                ("eulerZero", () => { _ = default(Quaternion).eulerAngles; }),
+                ("eulerNaN", () => { _ = new Quaternion(float.NaN, 0f, 0f, 1f).eulerAngles; }),
+                ("rotationZero", () => { _ = Matrix4x4.zero.rotation; }),
+                ("lossyScaleZero", () => { _ = Matrix4x4.zero.lossyScale; }),
+                ("rotationZeroScale", () => { _ = Matrix4x4.TRS(Vector3.one, Quaternion.identity, Vector3.zero).rotation; }),
+                ("rotationNegativeW", () => { _ = negativeW.rotation; }),
+                ("rotationDoubledW", () => { _ = doubledW.rotation; }),
+                ("lossyScaleSheared", () => { _ = sheared.lossyScale; }),
+                ("rotationNaN", () => { _ = nanMatrix.rotation; }),
+                ("inverseNaN", () => { _ = nanMatrix.inverse; }),
+                ("inverseZero", () => { _ = Matrix4x4.zero.inverse; }),
+                ("vectorSlerpZero", () => Vector3.Slerp(Vector3.zero, Vector3.zero, 0.5f)),
+                ("vectorSlerpNaN", () => Vector3.Slerp(nan, Vector3.up, 0.5f)),
+                ("rotateTowardsNaN", () => Vector3.RotateTowards(nan, Vector3.up, 1f, 1f)),
+                ("boundsContainsNaN", () => box.Contains(nan)),
+                ("boundsSqrDistanceNaN", () => box.SqrDistance(nan)),
+                ("boundsClosestNaN", () => box.ClosestPoint(nan)),
+                ("boundsNaNCentre", () => new Bounds(nan, Vector3.one).Contains(Vector3.one)),
+                ("boundsNaNCentreDistance", () => new Bounds(nan, Vector3.one).SqrDistance(Vector3.one)),
+                ("boundsNaNCentreClosest", () => new Bounds(nan, Vector3.one).ClosestPoint(Vector3.one)),
+                ("boundsNaNExtents", () => new Bounds(Vector3.one, nan).Contains(Vector3.one)),
+            };
+            foreach (var (name, action) in cases)
+            {
+                logs.Add("#" + name);
+                action();
+            }
+        }
+        finally
+        {
+            Application.logMessageReceived -= handler;
+        }
+        Value("native/log", string.Join(" | ", logs));
     }
 
     // ------------------------------------------------------------------ randomized operands
