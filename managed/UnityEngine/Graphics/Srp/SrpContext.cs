@@ -284,8 +284,9 @@ namespace UnityEngine.Rendering
         /// axis. The light's camera looks along the light from 1.2 radii before the sphere's center,
         /// snapped to whole texels across, with an orthographic size of the radius (plus 5 texels
         /// each side with several cascades), far at 2.3 radii and near at 0.1 radii minus ten times
-        /// the near plane offset (none when negative; measured: tests/projects/urp with an offset of
-        /// 3, tests/projects/brg with URP's 0.2, through the cascades' culling matrices).
+        /// the near plane offset (measured: tests/projects/urp with an offset of 3, tests/projects/brg
+        /// with URP's 0.2, through the cascades' culling matrices; a negative offset is taken as none,
+        /// unmeasured).
         /// </summary>
         public bool ComputeDirectionalShadowMatricesAndCullingPrimitives(int activeLightIndex, int splitIndex, int splitCount, Vector3 splitRatio, int shadowResolution,
             float shadowNearPlaneOffset, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out ShadowSplitData shadowSplitData)
@@ -498,6 +499,7 @@ namespace UnityEngine.Rendering
                 }
                 scale += step;
             }
+            // The centre's coordinates are kept within a million units (no probe reaches the limit).
             const float Bound = 1e6f;
             best = new Vector3(Mathf.Clamp(best.x, -Bound, Bound), Mathf.Clamp(best.y, -Bound, Bound), Mathf.Clamp(best.z, -Bound, Bound));
             var world = camera.cameraToWorldMatrix.MultiplyPoint(best);
