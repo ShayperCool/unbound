@@ -9,6 +9,7 @@ const LEGACY_MINIMUM_BUFFER: u32 = 64;
 pub struct AudioOutputRules {
     pub requested_buffer_sizes: bool,
     pub scheduled_start_times: bool,
+    pub six_channel_stereo_voices: bool,
 }
 
 impl AudioOutputRules {
@@ -18,6 +19,7 @@ impl AudioOutputRules {
         Self {
             requested_buffer_sizes: version == UnityVersion::new(6000, 0, 71),
             scheduled_start_times: version == UnityVersion::new(6000, 0, 71),
+            six_channel_stereo_voices: version == UnityVersion::new(6000, 0, 71),
         }
     }
 
@@ -70,6 +72,7 @@ mod tests {
     fn positive_buffer_requests_are_preserved_only_on_the_measured_release() {
         let measured = AudioOutputRules::for_version(UnityVersion::new(6000, 0, 71));
         assert!(measured.scheduled_start_times);
+        assert!(measured.six_channel_stereo_voices);
         for size in [1, 16, 31, 32, 33, 64, 340, 8192] {
             assert_eq!(measured.buffer_size(size), size);
         }
@@ -81,6 +84,7 @@ mod tests {
         ] {
             let other = AudioOutputRules::for_version(version);
             assert!(!other.scheduled_start_times);
+            assert!(!other.six_channel_stereo_voices);
             assert_eq!(other.buffer_size(32), 64);
             assert_eq!(other.buffer_size(340), 340);
         }
