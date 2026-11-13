@@ -14,7 +14,8 @@ using UnityEngine.SceneManagement;
 /// from ComputeDetailInstanceTransforms at two densities, the coverage; then images of the grass
 /// from a camera. Then the same for the terrains of the scene `Density`, loaded additively, with
 /// their prototypes' validation, a third density, the legacy distribution and the logged messages;
-/// then for the scene `Aligned`. Writes <c>grass.jsonl</c> and PNGs into <c>GRASS_PROBE_OUT</c>, then quits.
+/// then for the scene `Aligned`; then a terrain made here (zero noise seeds, a count over 16, a
+/// scatter mode switch). Writes <c>grass.jsonl</c> and PNGs into <c>GRASS_PROBE_OUT</c>, then quits.
 /// </summary>
 public class GrassProbe : MonoBehaviour
 {
@@ -86,6 +87,51 @@ public class GrassProbe : MonoBehaviour
         yield return null;
         foreach (var terrain in aligned)
             Render(camera, target, terrain, dir);
+
+        // Made here: two grass textures of noiseSeed 0 written in different orders per
+        // patch, a count over 16, and a scatter mode switch after coverage values.
+        var blade = terrains[0].terrainData.detailPrototypes[0].prototypeTexture;
+        var seeds = new TerrainData { heightmapResolution = 33 };
+        seeds.size = new Vector3(32f, 4f, 32f);
+        seeds.SetDetailScatterMode(DetailScatterMode.InstanceCountMode);
+        seeds.SetDetailResolution(32, 16);
+        DetailPrototype Zero(float scale, Color color) => new DetailPrototype
+        {
+            prototypeTexture = blade, renderMode = DetailRenderMode.Grass, minWidth = 0.6f * scale, maxWidth = 0.9f * scale,
+            minHeight = 0.7f * scale, maxHeight = 1.1f * scale, noiseSeed = 0, positionJitter = 0.5f,
+            healthyColor = color, dryColor = color * 0.8f,
+        };
+        seeds.detailPrototypes = new[] { Zero(1f, new Color(0.3f, 0.9f, 0.2f)), Zero(1.3f, new Color(0.9f, 0.8f, 0.2f)) };
+        int[,] Pattern(int phase)
+        {
+            var values = new int[16, 16];
+            for (int y = 0; y < 16; y++)
+                for (int x = 0; x < 16; x++)
+                    values[y, x] = (x + 2 * y + phase) % 5 == 0 ? 1 + (x + y) % 2 : 0;
+            return values;
+        }
+        seeds.SetDetailLayer(0, 0, 1, Pattern(0));
+        seeds.SetDetailLayer(0, 0, 0, Pattern(1));
+        seeds.SetDetailLayer(16, 0, 0, Pattern(2));
+        seeds.SetDetailLayer(16, 0, 1, Pattern(3));
+        seeds.SetDetailLayer(0, 16, 1, Pattern(4));
+        seeds.SetDetailLayer(31, 31, 0, new int[,] { { 40 } });
+        Record("detail_clamp", $"\"value\":{seeds.GetDetailLayer(31, 31, 1, 1, 0)[0, 0]}");
+        var seedsObject = Terrain.CreateTerrainGameObject(seeds);
+        seedsObject.name = "Seeds";
+        seedsObject.transform.position = new Vector3(-600f, 0f, 0f);
+        var seedsTerrain = seedsObject.GetComponent<Terrain>();
+        RecordInstances("seeds", seedsTerrain, 1f);
+        var modes = new TerrainData { heightmapResolution = 33 };
+        modes.SetDetailResolution(32, 16);
+        modes.detailPrototypes = new[] { Zero(1f, Color.green) };
+        modes.SetDetailScatterMode(DetailScatterMode.CoverageMode);
+        modes.SetDetailLayer(0, 0, 0, new int[,] { { 200, 30 }, { 0, 255 } });
+        modes.SetDetailScatterMode(DetailScatterMode.InstanceCountMode);
+        long left = 0;
+        foreach (var v in modes.GetDetailLayer(0, 0, 32, 32, 0)) left += v;
+        Record("mode_switch", $"\"sum\":{left},\"supported\":[{string.Join(",", modes.GetSupportedLayers(0, 0, 32, 32))}]");
+        // No image of it: a terrain made here does not render byte-identically from run to run.
 
         File.WriteAllText(Path.Combine(dir, "grass.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR

@@ -7,7 +7,9 @@ nothing of it reaches those images): `DensityCounts` and `DensityCoverage` hold 
 detailObjectDensity (also recorded at a third density), a lopsided slab mesh fully and partly
 ground-aligned, and two prototypes the Editor refuses; `Refusals` holds one refused prototype per
 check; these three terrains have one terrain layer. Last the probe loads the scene `Aligned`: `Tilted`
-is steep, with grass textures fully and half aligned to the ground and one of zero width. What `Validate` says of each prototype is
+is steep, with grass textures fully and half aligned to the ground and one of zero width. Then it
+makes a terrain itself (no image): two grass textures of noiseSeed 0 written in different orders
+per patch, a count over 16, and a scatter mode switch after coverage values. What `Validate` says of each prototype is
 recorded, the density terrains' instances again with QualitySettings.useLegacyDetailDistribution,
 and the messages the terrain API logs. `GrassProbe` records Mathf.PerlinNoise samples, each
 terrain's detail data (resolution, patches, prototypes, layers read back, coverage), every patch's
