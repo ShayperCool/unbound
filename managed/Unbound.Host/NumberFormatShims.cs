@@ -213,7 +213,7 @@ static class NumberFormatShims
         }
         if (targets.Count == 0) return il;
         var patched = (byte[])il.Clone();
-        foreach (var (_, offset) in metadata.Bodies())
+        foreach (var (_, offset, _) in metadata.Bodies())
             PatchBody(patched, offset, token => Redirection(view, targets, token));
         return patched;
     }

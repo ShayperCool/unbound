@@ -87,17 +87,20 @@ Gamma and Linear read the same floats.
 * Changing a bound Texture3D's `wrapModeW` takes effect on the next draw: Clamp repeats the edge
   slice beyond the depth, Repeat wraps again, with or without an `Apply` in between.
 
-## Remaining game arithmetic difference
+## Game arithmetic
 
-The three VolumeRGFloat rows per color space retain 366 differing bytes. The
+The VolumeRGFloat rows depend on how the game script evaluates float expressions. The
 [ArithmeticControl](ArithmeticControl/README.md) isolates values before texture
 storage: both compilers emit the same four Single method bodies in Release mode,
-but the measured runtimes round intermediate arithmetic differently. Its 62-value
-reference includes cast, storage, call, optimized-local and large-input controls.
-Unbound currently matches 55/62; its manual check prints every difference and exits
-nonzero. The parent reference, zero tolerance and strict comparisons stay unchanged.
+but CoreCLR rounds intermediate arithmetic where the Editor's Mono keeps it wider.
+Its 62-value reference includes cast, storage, call, optimized-local and large-input
+controls. Without the script float rule the three VolumeRGFloat rows per color space
+kept 366 differing bytes and the control matched 55/62. With it
+(tests/projects/floatrounding) the VolumeRGFloat rows match in both color spaces on
+macOS and the control matches every numeric value (59/62, the rest being method
+bodies that now carry the inserted conversions). The parent reference, zero
+tolerance and strict comparisons stay unchanged.
 
 [C# floating-point types](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/types#837-floating-point-types)
 allows extra intermediate precision and describes explicit casts as a rounding
-boundary. The captured behavior is specific to this runtime and optimization
-context. A general runtime compatibility implementation remains open.
+boundary.

@@ -74,8 +74,19 @@ public static class Probe
     public static float Overflow(float a, float b, float c) => a * a * c;
 }
 public static class Plain { public static int Sum(int x, int y) => x + y; }
-[Unity.Burst.BurstCompile] public struct Job { public static float Chain(float a, float b, float c) => a + b + c; public struct Inner { public static float Chain(float a, float b, float c) => a + b + c; } }
-public static class BurstMethods { [Unity.Burst.BurstCompile] public static float Chain(float a, float b, float c) => a + b + c; }
+namespace Unity.Jobs { public interface IJob { void Execute(); } }
+[Unity.Burst.BurstCompile] public struct Job : Unity.Jobs.IJob
+{
+    public float A, B, C, Result;
+    public void Execute() { Result = A + B + C; }
+    public static float Chain(float a, float b, float c) => a + b + c;
+    public struct Inner { public static float Chain(float a, float b, float c) => a + b + c; }
+}
+[Unity.Burst.BurstCompile] public class BurstOwner
+{
+    public static float Update(float a, float b, float c) => a + b + c;
+    [Unity.Burst.BurstCompile] public static float Compiled(float a, float b, float c) => a + b + c;
+}
 ";
 
         static readonly MetadataReference[] s_References = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
@@ -166,9 +177,17 @@ public static class BurstMethods { [Unity.Burst.BurstCompile] public static floa
         public void BurstCompiledCodeKeepsFloatArithmetic()
         {
             var probe = Widened(OptimizationLevel.Release);
-            Assert.Equal(0f, Run(probe, "Job", "Chain"));
-            Assert.Equal(0f, Run(probe, "Job+Inner", "Chain"));
-            Assert.Equal(0f, Run(probe, "BurstMethods", "Chain"));
+            // What Burst compiles: a [BurstCompile] job's Execute and [BurstCompile] methods.
+            var job = Activator.CreateInstance(probe.GetType("Job")!)!;
+            foreach (var (field, value) in new[] { ("A", 16777216f), ("B", 1f), ("C", -16777216f) })
+                job.GetType().GetField(field)!.SetValue(job, value);
+            job.GetType().GetMethod("Execute")!.Invoke(job, null);
+            Assert.Equal(0f, job.GetType().GetField("Result")!.GetValue(job));
+            Assert.Equal(0f, Run(probe, "BurstOwner", "Compiled"));
+            // The rest of those types is script code.
+            Assert.Equal(1f, Run(probe, "Job", "Chain"));
+            Assert.Equal(1f, Run(probe, "Job+Inner", "Chain"));
+            Assert.Equal(1f, Run(probe, "BurstOwner", "Update"));
         }
 
         [Fact]
@@ -285,24 +304,30 @@ public static class Game
     public static string Name() => ""game"";
 }";
 
-        static bool EditHandlesFloats(string before, string after)
+        /// <summary>Whether a hot-reload edit of <see cref="Edited"/> needs the conversions (a restart).</summary>
+        static bool EditNeedsWidening(string before, string after)
         {
             var original = Compilation(Edited, OptimizationLevel.Debug, "EditedGame");
             var (image, pdb) = Emit(original);
             var loaded = WideFloats.Widen(image);
             var session = new Unbound.Compiler.EditAndContinue();
             session.Begin("EditedGame", original, loaded, pdb);
-            var delta = session.Emit("EditedGame", Compilation(Edited.Replace(before, after), OptimizationLevel.Debug, "EditedGame"));
+            var current = Compilation(Edited.Replace(before, after), OptimizationLevel.Debug, "EditedGame");
+            var delta = session.Emit("EditedGame", current);
             Assert.NotNull(delta);
-            return WideFloats.DeltaHandlesFloats(loaded, new[] { delta!.Metadata }, delta.IL);
+            return WideFloats.DeltaNeedsWidening(loaded, new[] { delta!.Metadata }, delta.IL, () => Emit(current).Image);
         }
 
         [Fact]
-        public void EditsOfFloatCodeAreRecognisedInDeltas()
+        public void HotReloadRestartsOnlyForEditsThatNeedConversions()
         {
-            Assert.True(EditHandlesFloats("a + b;\n    public static int", "a * b;\n    public static int"));
-            Assert.False(EditHandlesFloats("=> a + b;\n    public static string", "=> a * b;\n    public static string"));
-            Assert.False(EditHandlesFloats("\"game\"", "\"edited\""));
+            // A float edit whose single operation is rounded straight away is patched in place.
+            Assert.False(EditNeedsWidening("a + b;\n    public static int", "a * b;\n    public static int"));
+            // One that chains operations needs the conversions.
+            Assert.True(EditNeedsWidening("a + b;\n    public static int", "a * b + a;\n    public static int"));
+            Assert.True(EditNeedsWidening("a + b;\n    public static int", "a + b > a ? 1f : 0f;\n    public static int"));
+            Assert.False(EditNeedsWidening("=> a + b;\n    public static string", "=> a * b;\n    public static string"));
+            Assert.False(EditNeedsWidening("\"game\"", "\"edited\""));
         }
     }
 }

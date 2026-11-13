@@ -57,14 +57,42 @@ sealed class DeltaMetadata : IDisposable
         return reader.GetBlobReader((BlobHandle)local);
     }
 
-    /// <summary>The offsets in a delta's IL of the bodies of the methods it adds or replaces.</summary>
-    internal IEnumerable<(MethodDefinition Method, int Offset)> Bodies()
+    /// <summary>The methods a delta adds or replaces: the delta's row, the offset of its body in the
+    /// delta's IL and its token in the aggregated metadata (the delta's rows follow the order of
+    /// their tokens in its EnC map).</summary>
+    internal IEnumerable<(MethodDefinition Method, int Offset, MethodDefinitionHandle Token)> Bodies()
     {
+        var tokens = Delta.GetEditAndContinueMapEntries().Where(h => h.Kind == HandleKind.MethodDefinition).ToList();
+        int row = 0;
         foreach (var handle in Delta.MethodDefinitions)
         {
             var method = Delta.GetMethodDefinition(handle);
-            if (method.RelativeVirtualAddress != 0) yield return (method, method.RelativeVirtualAddress);
+            var token = row < tokens.Count ? (MethodDefinitionHandle)tokens[row] : default;
+            row++;
+            if (method.RelativeVirtualAddress != 0) yield return (method, method.RelativeVirtualAddress, token);
         }
+    }
+
+    /// <summary>A loaded method's declaring type (Cecil's full name: nested types after '/'), name and
+    /// parameter count; null for a method a delta added or an unknown token.</summary>
+    internal (string Type, string Name, int Parameters)? Identity(MethodDefinitionHandle token)
+    {
+        if (token.IsNil || MetadataTokens.GetRowNumber(token) > Baseline.MethodDefinitions.Count) return null;
+        var method = Baseline.GetMethodDefinition(token);
+        var blob = Baseline.GetBlobReader(method.Signature);
+        var header = blob.ReadSignatureHeader();
+        if (header.IsGeneric) blob.ReadCompressedInteger();
+        int parameters = blob.ReadCompressedInteger();
+        string TypeName(TypeDefinitionHandle handle)
+        {
+            var type = Baseline.GetTypeDefinition(handle);
+            var name = Baseline.GetString(type.Name);
+            var declaring = type.GetDeclaringType();
+            if (!declaring.IsNil) return TypeName(declaring) + "/" + name;
+            var ns = Baseline.GetString(type.Namespace);
+            return ns.Length == 0 ? name : ns + "." + name;
+        }
+        return (TypeName(method.GetDeclaringType()), Baseline.GetString(method.Name), parameters);
     }
 
     public void Dispose()

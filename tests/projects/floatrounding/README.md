@@ -59,15 +59,17 @@ change: an operation on another operation's result, or a result that is compared
 used in any other way than rounding it to float. A single operation on float values that is
 rounded straight away gives the same float either way (double has more than twice float's
 precision), so it is left as it is. The runtime rounds a double stored into a float location or
-passed as a float argument (ECMA-335 III.1.1.1, III.1.6). Methods of `[BurstCompile]` types and
-`[BurstCompile]` methods keep float arithmetic. A hot-reload edit that changes float code restarts
-the session instead of patching it.
+passed as a float argument (ECMA-335 III.1.1.1, III.1.6). `[BurstCompile]` methods and the
+`Execute` of `[BurstCompile]` job structs keep float arithmetic; the other methods of such types
+are script code and are converted. A hot-reload edit is patched in place unless an edited method
+needs conversions; then the session restarts (the conversions do not fit the edit's method bodies).
 
 The gate matches every control in both modes. Its residuals (`residuals.json`):
 
 - `il/` rows of the expressions that were converted: reflection on a method body shows the IL as
-  loaded, with the conversions. Apart from them (and the shifted branch offsets) the instructions
-  are the Editor's.
+  loaded, with the conversions. In the measured runs the instructions apart from them (and the
+  shifted branch offsets) were the Editor's; the gate lists these rows as residuals and does not
+  compare them further.
 - Rows of Unity's managed math API: Unbound's engine evaluates these in float, and the follow-up
   to evaluate Unity's C# as the Editor does is queued.
 

@@ -66,12 +66,9 @@ static partial class WideFloats
         using var assembly = AccessChecks.Read(input);
         bool changed = false;
         foreach (var type in assembly.MainModule.GetTypes())
-        {
-            if (CompiledByBurst(type)) continue;
             foreach (var method in type.Methods)
-                if (method.HasBody && !HasAttribute(method, BurstCompile))
+                if (method.HasBody && !CompiledByBurst(method))
                     changed |= WidenBody(method, whole);
-        }
         if (!changed) return image;
         using var output = new MemoryStream();
         AccessChecks.Write(assembly, output);
@@ -81,12 +78,15 @@ static partial class WideFloats
     static bool HasAttribute(ICustomAttributeProvider provider, string name) =>
         provider.HasCustomAttributes && provider.CustomAttributes.Any(a => a.AttributeType.FullName == name);
 
-    /// <summary>A [BurstCompile] type (a job) or one nested in it.</summary>
-    static bool CompiledByBurst(TypeDefinition type)
+    /// <summary>A method Burst compiles: a [BurstCompile] method, or the Execute of a [BurstCompile]
+    /// job struct (Unity's job interfaces, IJob*). The other methods of such types run as script
+    /// code, as do the methods Burst-compiled code calls when script code calls them.</summary>
+    static bool CompiledByBurst(MethodDefinition method)
     {
-        for (var t = type; t != null; t = t.DeclaringType)
-            if (HasAttribute(t, BurstCompile)) return true;
-        return false;
+        if (HasAttribute(method, BurstCompile)) return true;
+        var type = method.DeclaringType;
+        return (method.Name == "Execute" || method.Name.EndsWith(".Execute", StringComparison.Ordinal)) && type.IsValueType
+            && HasAttribute(type, BurstCompile) && type.Interfaces.Any(i => i.InterfaceType.Name.StartsWith("IJob", StringComparison.Ordinal));
     }
 
     /// <summary>Inserts the conversions into one method body; false when it needs none.</summary>
@@ -241,26 +241,61 @@ static partial class WideFloats
     // ------------------------------------------------------------------ hot-reload deltas
 
     /// <summary>
-    /// Whether a hot-reload delta has a method handling float32 values: its signature or locals,
-    /// a float32 opcode, or a member or type it references names float32. Such an edit cannot be
-    /// patched in place: its bodies would need the conversions <see cref="Widen"/> inserts, which
-    /// change their size. <paramref name="baseline"/> is the loaded image and
-    /// <paramref name="deltas"/> the metadata of every delta applied to it, this one last.
+    /// Whether a hot-reload delta changes a method that <see cref="Widen"/> would convert: such an
+    /// edit cannot be patched in place, as the conversions change the size of the delta's bodies.
+    /// A body that handles no float32 value (in its signature, locals, opcodes or the members and
+    /// types it references) needs none; the others are looked up by type, name and parameter count
+    /// in <paramref name="edited"/> (the edited compilation's image, made when first needed) and
+    /// analysed as <see cref="Widen"/> does. A method that cannot be looked up counts as needing
+    /// conversions. <paramref name="baseline"/> is the loaded image and <paramref name="deltas"/>
+    /// the metadata of every delta applied to it, this one last.
     /// </summary>
-    internal static bool DeltaHandlesFloats(byte[] baseline, IReadOnlyList<byte[]> deltas, byte[] il)
+    internal static bool DeltaNeedsWidening(byte[] baseline, IReadOnlyList<byte[]> deltas, byte[] il, Func<byte[]?> edited)
     {
         using var metadata = new DeltaMetadata(baseline, deltas);
         var names = new SingleNames(metadata);
-        foreach (var (method, offset) in metadata.Bodies())
+        Mono.Cecil.ModuleDefinition? module = null;
+        ILookup<(string, string, int), MethodDefinition>? methods = null;
+        try
         {
-            if (names.Method(method.Signature)) return true;
-            var (start, end, locals) = DeltaMetadata.Body(il, offset);
-            if (locals != 0 && names.Token(locals)) return true;
-            foreach (var (opcode, _, operand) in DeltaMetadata.Instructions(il, start, end))
+            foreach (var (method, offset, token) in metadata.Bodies())
             {
-                if (s_SingleOpCodes.Contains(opcode)) return true;
-                if (DeltaMetadata.HasToken(opcode) && opcode != 0x72 && names.Token(BitConverter.ToInt32(il, operand))) return true; // not ldstr
+                if (!HandlesFloats(names, method, il, offset)) continue;
+                var identity = metadata.Identity(token);
+                if (identity == null) return true;
+                if (methods == null)
+                {
+                    var image = edited();
+                    if (image == null) return true;
+                    module = Mono.Cecil.ModuleDefinition.ReadModule(new MemoryStream(image));
+                    methods = module.GetTypes().SelectMany(t => t.Methods).Where(m => m.HasBody)
+                        .ToLookup(m => (m.DeclaringType.FullName, m.Name, m.Parameters.Count));
+                }
+                var candidates = methods[identity.Value].ToList();
+                if (candidates.Count == 0) return true;
+                foreach (var candidate in candidates)
+                {
+                    if (CompiledByBurst(candidate)) continue;
+                    if (WideExpressions(candidate) is not var (loads, unboxed) || loads.Count > 0 || unboxed.Count > 0) return true;
+                }
             }
+            return false;
+        }
+        finally
+        {
+            module?.Dispose();
+        }
+    }
+
+    static bool HandlesFloats(SingleNames names, System.Reflection.Metadata.MethodDefinition method, byte[] il, int offset)
+    {
+        if (names.Method(method.Signature)) return true;
+        var (start, end, locals) = DeltaMetadata.Body(il, offset);
+        if (locals != 0 && names.Token(locals)) return true;
+        foreach (var (opcode, _, operand) in DeltaMetadata.Instructions(il, start, end))
+        {
+            if (s_SingleOpCodes.Contains(opcode)) return true;
+            if (DeltaMetadata.HasToken(opcode) && opcode != 0x72 && names.Token(BitConverter.ToInt32(il, operand))) return true; // not ldstr
         }
         return false;
     }

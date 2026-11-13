@@ -92,7 +92,8 @@ internal static class HotReload
                         return Restart(response, $"the sources {spec.Name} was loaded from are not stored", watch);
                     // The baseline is the image the runtime loaded: Unbound may have adapted the
                     // compiler's output (see GameDomain.ImageFilter), and a delta's rows follow the
-                    // loaded image's. Its symbols are the compiler's (adapting keeps IL offsets).
+                    // loaded image's. Its symbols are the compiler's: Edit and Continue finds locals
+                    // and lambdas in them by syntax offsets, which adapting does not change.
                     var pdb = Path.ChangeExtension(loadedDll, ".pdb");
                     var image = File.ReadAllBytes(string.IsNullOrEmpty(assembly.Location) ? loadedDll : assembly.Location);
                     s_Enc.Begin(spec.Name, loadedCompilation, image, File.ReadAllBytes(pdb));
@@ -104,7 +105,8 @@ internal static class HotReload
                     // Edited float arithmetic would need the conversions the loaded code got (see
                     // WideFloats); they do not fit a delta's bodies.
                     var (image, applied) = s_Applied[spec.Name];
-                    if (Unbound.Runtime.Compat.ScriptFloatsWide && WideFloats.DeltaHandlesFloats(image, applied.Append(delta.Metadata).ToList(), delta.IL))
+                    if (Unbound.Runtime.Compat.ScriptFloatsWide
+                        && WideFloats.DeltaNeedsWidening(image, applied.Append(delta.Metadata).ToList(), delta.IL, () => Image(current)))
                         return Restart(response, $"{spec.Name}: the edit changes float arithmetic, which Unbound converts when the assembly loads", watch);
                     deltas.Add((assembly, delta));
                     response.Changes.AddRange(delta.Changed.Select(c => $"{spec.Name}: {c}"));
@@ -141,6 +143,13 @@ internal static class HotReload
         response.Status = "applied";
         response.Milliseconds = watch.ElapsedMilliseconds;
         return response;
+    }
+
+    /// <summary>The image of a compilation (null when it does not emit).</summary>
+    static byte[]? Image(Microsoft.CodeAnalysis.CSharp.CSharpCompilation compilation)
+    {
+        using var stream = new MemoryStream();
+        return compilation.Emit(stream).Success ? stream.ToArray() : null;
     }
 
     static HotReloadResponse Restart(HotReloadResponse response, string reason, System.Diagnostics.Stopwatch watch, bool optimized = false)
