@@ -39,20 +39,20 @@ the known differences (`{profile: {key or glob: why}}`).
 
 ## Current results
 
-The canonical reference contains 8229 values per profile for Unity 6000.0.71f1. Both independent
+The canonical reference contains 8429 values per profile for Unity 6000.0.71f1. Both independent
 GPU Editor recordings match it. The strict gate passes with these explicitly listed residuals;
 exact values, exact compressed blocks and visually close values are separate measurements.
 
 | Profile | Exact values / total | Listed residual values |
 |---|---:|---:|
-| Gamma | 8107 / 8229 | 122 |
-| Linear | 8107 / 8229 | 122 |
-| AndroidGamma | 7492 / 8229 | 737 |
-| AndroidLinear | 7473 / 8229 | 756 |
-| AndroidETC2 | 7447 / 8229 | 782 |
-| AndroidASTC | 7842 / 8229 | 387 |
+| Gamma | 8321 / 8429 | 108 |
+| Linear | 8321 / 8429 | 108 |
+| AndroidGamma | 7664 / 8429 | 765 |
+| AndroidLinear | 7645 / 8429 | 784 |
+| AndroidETC2 | 7619 / 8429 | 810 |
+| AndroidASTC | 8014 / 8429 | 415 |
 
-Texture cache v36 includes the encoder, source-processing and archive changes. NativeApi 64
+Texture cache v38 includes the encoder, source-processing, archive and runtime padding changes. NativeApi 65
 provides the compressed-texel callback and ASTC packet formats. The sections below retain
 per-format and per-quality block counts, ordinary-content controls and each part's import timings.
 Raw discrepancies and comparator tolerances are unchanged.
@@ -405,7 +405,7 @@ uncompressed source mip chains also match; private images and repeats stay outsi
 
 Android runtime Compress now selects unsigned EAC_R/EAC_RG for direct R8/RG16 textures.
 Its independent encoder reuses the existing channel fitter; exact ETC encoding remains outside
-scope. It produces 0/20 exact EAC_R blocks and 0/22 EAC_RG blocks across both qualities in this
+scope. It produces 0/46 exact EAC_R blocks and 0/60 EAC_RG blocks across both qualities in this
 corpus. Manual EAC storage controls retain 2055/2055 red blocks and 7/7 red/green blocks exactly.
 The CPU decoder reads eight-bit base-plus-modifier values; GPU decoding retains eleven-bit
 channel values in normalized 16-bit textures, rather than narrowing them to bytes. The complete
@@ -416,9 +416,7 @@ use the renderer's existing diagnosed fallback.
 The measured Android runtime mechanism checks intermediate mip dimensions while both sides
 still span at least three texels. A non-block-aligned level there leaves the source uncompressed:
 12x8 with mips is unchanged, while 12x8 without mips and 12x4 with mips compress. This resolves
-the older rectangular RGB/RGBA controls as well. Standalone runtime BC4/BC5 still have 2/726 and
-4/728 differing blocks across both qualities, all in partial 3x2/3x1 levels. A decoded channel
-can differ by 145/255 there; these remain unresolved padding/fitting differences.
+the older rectangular RGB/RGBA controls as well. Standalone runtime BC4/BC5 partial 3x2/3x1 levels now match. The padding rule and current block totals are recorded below.
 
 ASTC packets retain all six LDR/HDR footprints. The renderer uploads native blocks only when
 the enabled device features include that channel's ASTC capability and the base extent fits its
@@ -470,7 +468,7 @@ still use diagnosed uncompressed storage. Ordinary ETC remains a second lossy BC
 devices with BC support, or RGBA8 otherwise. Native ETC uploads are still open.
 
 The unresolved work includes BC6H fitting/CPU float reads, BC7 alpha-heavy fitting, runtime
-partial-mip channel/colour fitting, the old ISPC Fast ASTC slice, Android HDR-to-Crunch source
+partial-mip colour fitting, the old ISPC Fast ASTC slice, Android HDR-to-Crunch source
 preparation, exact distributable ETC/EAC fitting, and EAC's 45 one-step normalized-GPU differences.
 Split Alpha Channel, mipless automatic ETC1 at non-power-of-two sizes, native ASTC hardware
 execution, macOS compilation and other-release profiles remain outside the measured claim.
@@ -483,3 +481,35 @@ BC, ASTC and Crunch results retain their per-format counts above. This documenta
 changes no encoder, oracle, residual declaration or tolerance. Its 4397-texture clean-cache
 imports have zero failures, 18.85 s before and 17.63 s after, total process CPU 96.44 s before
 and 93.08 s after on the shared machine.
+
+
+## Runtime partial rows, Q404
+
+For the measured 6000.0.71f1 runtime encoder, a partial three-texel row fills its fourth slot
+with the middle texel. One- and two-texel rows tile; partial rows repeat vertically. Importer
+padding is unchanged. The existing rectangular 3x2/3x1 mips and additional mipless 7x3 R8 and
+15x7 RG16 controls check rejection. Additional 24x4 R8 and 24x8 RG16 mip chains reach
+compressed three-column levels and distinguish the padding rule from modulo-three tiling. Both
+quality modes are recorded twice on the GPU. Every prior 8229 reference value is unchanged;
+200 values per profile are additive. Fourteen formerly differing values now match in each Standalone colour space.
+Android controls retain the measured intermediate-dimension rejection rule. The two additional
+mip chains compress to EAC on Android, with 28 new exact-key fitting residuals per profile;
+their raw, CPU and GPU discrepancies remain visible.
+
+No import encoder changes in this part. BC7 retains 6904/6964 exact blocks, BC6H 2712/2744
+in Gamma and 2729/2744 in Linear. These fitting residuals are unresolved, including BC7's
+large alpha-heavy errors; they are not classified as invisible ties. The existing Fast ASTC
+and non-Crunch ETC/EAC tables retain every differing block. Two ordinary images again match
+2734/2734 BC4 blocks, 2734/2734 BC5 blocks and 2732/2734 BC7 blocks, with identical source mips.
+
+Clean-cache imports process 4397 textures with zero failures. Initial first passes take
+33.67 s before and 20.03 s after; a subsequent pair takes 14.97 s before and 23.34 s after.
+Total process CPU, including the cached second pass, is 89.53/97.69 s for the initial pair
+and 94.93/99.81 s for the subsequent pair. Shared-machine wall time varies across these runs;
+this runtime-only change leaves the import encoders unchanged.
+
+Current runtime blocks per quality are BC4 376/376, BC5 383/383 and DXT1 351/353.
+DXT5 remains 621/628 at Fast and 626/628 at High. Across both qualities, unsigned EAC red
+is 0/46 and red/green 0/60. The strict results are 8321/8429 in Gamma and Linear, 7664/8429
+in AndroidGamma, 7645/8429 in AndroidLinear, 7619/8429 in AndroidETC2 and 8014/8429 in
+AndroidASTC. All 108/108/765/784/810/415 residual values remain declared and printed.
