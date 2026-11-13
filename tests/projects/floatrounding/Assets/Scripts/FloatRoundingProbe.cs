@@ -472,6 +472,99 @@ public sealed class FloatRoundingProbe : MonoBehaviour
             result.AddRange(F(second));
             return result.ToArray();
         });
+
+        // The branches random operands rarely reach: nearly equal and opposite rotations and
+        // directions, degenerate lengths, gimbal lock, singular and pivoting matrices, and points
+        // on a box's faces.
+        Api("native/quaternionSlerpNear", 10, f =>
+        {
+            Quaternion a = Q(f, 0).normalized;
+            Quaternion near = new Quaternion(a.x + f[4] * 1e-3f, a.y + f[5] * 1e-3f, a.z + f[6] * 1e-3f, a.w + f[7] * 1e-3f).normalized;
+            Quaternion b = f[8] < 0f ? new Quaternion(-near.x, -near.y, -near.z, -near.w) : near;
+            var result = new List<float>();
+            result.AddRange(F(Quaternion.Slerp(a, b, Unit(f[9]))));
+            result.AddRange(F(Quaternion.SlerpUnclamped(a, Q(f, 4).normalized, f[9])));
+            result.AddRange(F(Quaternion.LerpUnclamped(a, new Quaternion(-a.x, -a.y, -a.z, -a.w), f[9])));
+            result.AddRange(F(Quaternion.Lerp(Q(f, 0), Q(f, 4), f[9])));
+            return result.ToArray();
+        });
+        Api("native/quaternionEdge", 8, f =>
+        {
+            Vector3 v = V3(f, 0), w = V3(f, 3);
+            Vector3 perpendicular = Vector3.Cross(v, w) * 1e-4f;
+            var result = new List<float>();
+            result.AddRange(F(Quaternion.LookRotation(v, v * f[6])));
+            result.AddRange(F(Quaternion.LookRotation(v * 1e-6f, w)));
+            result.AddRange(F(Quaternion.LookRotation(Vector3.zero, w)));
+            result.AddRange(F(Quaternion.FromToRotation(v, v * -Mathf.Abs(f[6]))));
+            result.AddRange(F(Quaternion.FromToRotation(v, v * Mathf.Abs(f[6]))));
+            result.AddRange(F(Quaternion.FromToRotation(v, -v + perpendicular)));
+            result.AddRange(F(Quaternion.FromToRotation(v * 1e-6f, w)));
+            result.AddRange(F(Quaternion.AngleAxis(f[7] * 40f, v * 1e-7f)));
+            result.AddRange(F(Quaternion.AngleAxis(f[7] * 40f, Vector3.zero)));
+            result.AddRange(F(Quaternion.Euler(90f + f[7] * 1e-3f, f[0] * 40f, f[1] * 40f).eulerAngles));
+            result.AddRange(F(Quaternion.Euler(-90f + f[7] * 1e-5f, f[2] * 40f, f[3] * 40f).eulerAngles));
+            result.AddRange(F(new Quaternion(f[0] * 1e-7f, f[1] * 1e-7f, f[2] * 1e-7f, f[3] * 1e-7f).eulerAngles));
+            return result.ToArray();
+        });
+        Api("native/vector3Edge", 8, f =>
+        {
+            Vector3 v = V3(f, 0), w = V3(f, 3);
+            float k = Mathf.Abs(f[6]), t = Unit(f[7]);
+            var result = new List<float>();
+            result.AddRange(F(Vector3.Slerp(v, v * -k, t)));
+            result.AddRange(F(Vector3.Slerp(v, v * k, t)));
+            result.AddRange(F(Vector3.Slerp(v * 1e-6f, w, t)));
+            result.AddRange(F(Vector3.SlerpUnclamped(v, w, f[7])));
+            result.AddRange(F(Vector3.RotateTowards(v, v * -k, t, k)));
+            result.AddRange(F(Vector3.RotateTowards(v, v * k, t, k)));
+            result.AddRange(F(Vector3.RotateTowards(v, w, 10f, k)));
+            result.AddRange(F(Vector3.RotateTowards(v * 1e-6f, w, t, k)));
+            result.AddRange(F(Vector3.RotateTowards(v, w * 1e-3f, t, k * 1e-3f)));
+            return result.ToArray();
+        });
+        Api("native/matrixEdge", 16, f =>
+        {
+            Matrix4x4 m = M(f, 0);
+            Matrix4x4 singular = m;
+            singular.SetRow(2, Vector4.zero);
+            Matrix4x4 pivoting = m;
+            pivoting.m00 = 0f;
+            pivoting.m11 = 0f;
+            Quaternion q = Q(f, 4).normalized;
+            Vector3 t = V3(f, 8);
+            float s = Mathf.Abs(f[11]);
+            var result = new List<float>();
+            result.AddRange(F(singular.inverse));
+            result.AddRange(F(pivoting.inverse));
+            result.AddRange(F(Matrix4x4.TRS(t, q, V3(f, 12)).inverse));
+            result.AddRange(F(Matrix4x4.Perspective(f[15] * 10f + 60f, 1.5f, 0.3f, 1000f).inverse));
+            result.AddRange(F(Matrix4x4.TRS(t, q, Vector3.one).rotation));
+            result.AddRange(F(Matrix4x4.TRS(t, q, new Vector3(s, s, s)).rotation));
+            result.AddRange(F(Matrix4x4.TRS(t, q, new Vector3(s, 0f, s)).rotation));
+            result.AddRange(F(Matrix4x4.TRS(t, q, new Vector3(-s, -s, -s)).rotation));
+            result.AddRange(F(m.rotation));
+            result.AddRange(F(m.lossyScale));
+            result.AddRange(F(singular.rotation));
+            return result.ToArray();
+        });
+        Api("native/boundsEdge", 9, f =>
+        {
+            Vector3 center = V3(f, 0), extents = V3(f, 3), offset = V3(f, 6);
+            var box = new Bounds(center, extents * 2f);
+            var flat = new Bounds(center, new Vector3(extents.x * 2f, 0f, extents.z * 2f));
+            var result = new List<float>();
+            foreach (var point in new[] { box.max, box.min, center + extents * 0.5f, center + new Vector3(offset.x, extents.y, offset.z) })
+            {
+                result.Add(box.SqrDistance(point));
+                result.Add(box.Contains(point) ? 1f : 0f);
+                result.AddRange(F(box.ClosestPoint(point)));
+            }
+            result.Add(flat.SqrDistance(center + offset));
+            result.AddRange(F(flat.ClosestPoint(center + offset)));
+            result.Add(flat.Contains(new Vector3(center.x, center.y, center.z)) ? 1f : 0f);
+            return result.ToArray();
+        });
     }
 
     // ------------------------------------------------------------------ randomized operands
