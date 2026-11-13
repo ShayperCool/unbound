@@ -865,6 +865,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                             "color": b.color,
                         })).collect::<Vec<_>>(),
                         "secondaryTextures": sp.secondary_textures.iter().map(|t| json!({ "name": t.name, "guid": t.guid })).collect::<Vec<_>>(),
+                        "spriteId": sp.sprite_id,
                     })
                 })
                 .collect();

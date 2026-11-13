@@ -521,6 +521,10 @@ namespace UnityEngine
             m_DeformMesh.uv = m_Sprite.m_UV;
             // The sprite's colours, as its undeformed mesh draws them (unmeasured for deformed sprites).
             if (m_Sprite.m_Colors != null && m_Sprite.m_Colors.Length == count) m_DeformMesh.colors32 = m_Sprite.m_Colors;
+            if (m_Sprite.m_TexCoords != null)
+                for (int channel = 1; channel < m_Sprite.m_TexCoords.Length; channel++)
+                    if (m_Sprite.m_TexCoords[channel] != null && m_Sprite.m_TexCoords[channel].Length == count)
+                        m_DeformMesh.SetUVs(channel, m_Sprite.m_TexCoords[channel]);
             var triangles = new int[m_Sprite.m_Triangles.Length];
             for (int i = 0; i < triangles.Length; i++) triangles[i] = m_Sprite.m_Triangles[i];
             m_DeformMesh.triangles = triangles;

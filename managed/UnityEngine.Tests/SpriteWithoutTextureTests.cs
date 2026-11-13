@@ -75,9 +75,33 @@ namespace UnityEngine.Tests
             Assert.Null(texture);
             Assert.Equal(4, mesh.vertexCount);
             renderer.drawMode = SpriteDrawMode.Sliced;
-            Assert.False(renderer.MaskShape(out _, out _, out _));
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            var warnings = new Warnings(previous);
+            logger.logHandler = warnings;
+            try
+            {
+                Assert.False(renderer.MaskShape(out _, out _, out _));
+                Assert.False(renderer.MaskShape(out _, out _, out _));
+            }
+            finally { logger.logHandler = previous; }
+            Assert.Single(warnings.Messages, m => m.Contains("a sprite without a texture, in Sliced mode"));
             Object.DestroyImmediate(go);
             Object.DestroyImmediate(sprite);
+        }
+
+        sealed class Warnings : ILogHandler
+        {
+            readonly ILogHandler m_Inner;
+            internal readonly System.Collections.Generic.List<string> Messages = new System.Collections.Generic.List<string>();
+            internal Warnings(ILogHandler inner) { m_Inner = inner; }
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning)
+                    Messages.Add(args == null || args.Length == 0 ? format : string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args));
+                m_Inner.LogFormat(type, context, format, args);
+            }
+            public void LogException(System.Exception exception, Object context) => m_Inner.LogException(exception, context);
         }
 
         [Fact]

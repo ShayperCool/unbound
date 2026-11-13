@@ -115,6 +115,8 @@ namespace Unbound.Runtime
         {
             public long FileId { get; set; }
             public string Name { get; set; }
+            /// <summary>The .meta's spriteID (the GUID of the sprite's Sprite Editor rect).</summary>
+            public string SpriteId { get; set; }
             public float[] Rect { get; set; }
             public float[] Pivot { get; set; }
             public float[] Border { get; set; }
@@ -232,6 +234,7 @@ namespace Unbound.Runtime
                         s.TextureRectBounds is { Length: 4 } t ? new Rect(t[0], t[1], t[2], t[3]) : (Rect?)null,
                         Paths(s.Physics));
                     ImportSkin(sprite, s);
+                    if (!string.IsNullOrEmpty(s.SpriteId)) sprite.m_SpriteID = new UnityEditor.GUID(s.SpriteId);
                     if (s.SecondaryTextures != null && s.SecondaryTextures.Count > 0)
                         sprite.SetImportedSecondaryTextures(s.SecondaryTextures.ConvertAll(t => (t.Name, t.Guid)).ToArray());
                     file.Objects[s.FileId] = sprite;

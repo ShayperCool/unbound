@@ -64,7 +64,7 @@ namespace UnityEngine
             go.CheckMainThreadCreation("Internal_CreateGameObject");
             // A GameObject a project's importer makes is part of the asset it imports, as a loaded
             // prefab's are: in no scene, never awake (measured: tests/projects/svgsprites).
-            if (Unbound.Runtime.ScriptedImports.Importing)
+            if (scene == null && Unbound.Runtime.ScriptedImports.Importing)
             {
                 go.m_IsPrefabAsset = true;
                 go.AddTransform(typeof(Transform));

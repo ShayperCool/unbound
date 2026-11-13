@@ -26610,21 +26610,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public TypeSelectionList(global::UnityEngine.Object[] objects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeSelectionList.ctor"); }
         public global::System.Collections.Generic.List<global::UnityEditor.TypeSelection> typeSelections { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TypeSelectionList.typeSelections"); return new global::System.Collections.Generic.List<global::UnityEditor.TypeSelection>(); } }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
-    [global::Unbound.Stub]
-    internal unsafe partial class UIFrameworkAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public UIFrameworkAttribute(global::UnityEditor.UIFrameworkUsage frameworkUsage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIFrameworkAttribute.ctor"); }
-        public global::UnityEditor.UIFrameworkUsage frameworkUsage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIFrameworkAttribute.frameworkUsage"); return default; } }
-    }
-    internal enum UIFrameworkUsage
-    {
-        AutoDetected = 0,
-        IMGUI = 1,
-        UITK = 2,
-        Mixed = 3,
-        Excluded = 4,
-    }
     public enum UIOrientation
     {
         Portrait = 0,

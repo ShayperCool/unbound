@@ -912,6 +912,8 @@ namespace UnityEngine
         }
 
         /// <summary>The geometry the renderer draws (also what a mask beside it masks with).</summary>
+        bool m_WarnedTexturelessLayout;
+
         internal bool MaskShape(out Mesh mesh, out Matrix4x4 model, out Texture texture)
         {
             mesh = null;
@@ -919,8 +921,16 @@ namespace UnityEngine
             texture = null;
             if (m_Sprite == null || m_Sprite.texture == null && !m_Sprite.m_DrawnWithoutTexture) return false;
             // Sliced and tiled drawing lays the texture out; a sprite without one has none to lay out
-            // (unmeasured).
-            if (m_Sprite.texture == null && m_DrawMode != SpriteDrawMode.Simple) return false;
+            // (unmeasured): it is not drawn, with a warning.
+            if (m_Sprite.texture == null && m_DrawMode != SpriteDrawMode.Simple)
+            {
+                if (!m_WarnedTexturelessLayout)
+                {
+                    m_WarnedTexturelessLayout = true;
+                    Debug.LogWarning($"Unbound: the sprite renderer '{name}' draws '{m_Sprite.name}', a sprite without a texture, in {m_DrawMode} mode, which is not supported; it is not drawn.");
+                }
+                return false;
+            }
             mesh = m_DrawMode == SpriteDrawMode.Simple ? DeformedMesh() ?? m_Sprite.RenderMesh() : SlicedMesh();
             model = UnityEngine.U2D.PixelPerfectRendering.Snap(transform.localToWorldMatrix);
             if (Unbound.Runtime.Compat.RenderingMeasured && (!float.IsFinite(model.m03) || !float.IsFinite(model.m13) || !float.IsFinite(model.m23))) return false;

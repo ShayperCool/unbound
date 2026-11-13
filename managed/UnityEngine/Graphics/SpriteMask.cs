@@ -108,7 +108,8 @@ namespace UnityEngine
             if (m_MaskSource == MaskSource.SupportedRenderers)
             {
                 var source = cachedSupportedRenderer as SpriteRenderer;
-                if (source != null && source.MaskShape(out mesh, out model, out texture)) return true;
+                // A sprite drawn without a texture does not mask (unmeasured).
+                if (source != null && source.MaskShape(out mesh, out model, out texture) && texture != null) return true;
             }
             else if (m_Sprite != null && m_Sprite.texture != null)
             {

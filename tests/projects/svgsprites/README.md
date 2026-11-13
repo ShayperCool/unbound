@@ -36,6 +36,11 @@ pixels at the focus of a radial gradient, by at most 5/255); they stay printed i
 | [6000.0 Sprite API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Sprite.html), [OverrideGeometry](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Sprite.OverrideGeometry.html) | Documented: vertices in pixels within the rect; vertex attributes through the data access API. | Keep colour and texture coordinate channels with the sprite and in its render mesh. |
 | Native repeats, 6000.0.71f1 | Observed: the sprites the importer makes without a texture are drawn (vertex colours, `Unlit/Vector`), their UVs are zero; a sprite whose texture is missing is not drawn (tests/projects/spriteassets). The main object of each import is named after the file, although the importer names its GameObject `transform`. The importer's GameObjects are part of the asset, in no scene. | Draw sprites made without a texture; name the main object after the file (Shaders keep their declared name); make an importer's GameObjects assets. |
 
+Unbound's choices, unmeasured: a sprite without a texture in Sliced or Tiled mode is not drawn
+(with a warning) and does not mask; OverrideGeometry drops the colour, normal, tangent, blend and
+extra texture coordinate channels of the old vertices; a pixels per unit of 0 or less given to the
+internal Create keeps 100.
+
 Not covered: the physics shape the importer can generate (`generatePhysicsShape`, which traces a
 rendered texture through `SpriteUtility.GenerateOutline`), the UI SVGImage drawn on a canvas, and
 the 2D Sprite package's editor windows (Unbound has none; their registration hooks are kept).

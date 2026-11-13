@@ -103,7 +103,7 @@ namespace UnityEngine
 
         /// <summary>A Tight sprite with a rect, a normalized pivot and an optional texture but no
         /// geometry yet (OverrideGeometry gives it some), as the SVG importer makes its sprites.
-        /// A pixels per unit of 0 or less keeps the default of 100.</summary>
+        /// A pixels per unit of 0 or less keeps the sprite's default (Unbound's 100; unmeasured).</summary>
         internal static Sprite Create(Rect rect, Vector2 pivot, float pixelsToUnits, Texture2D texture) => new Sprite
         {
             m_Texture = texture,
@@ -305,7 +305,8 @@ namespace UnityEngine
                 if (m_Texture != null)
                     m_UV[i] = new Vector2((m_Rect.x + vertices[i].x) / m_Texture.width, (m_Rect.y + vertices[i].y) / m_Texture.height);
             }
-            // The other per-vertex channels no longer match the new vertices.
+            // The other per-vertex channels described the old vertices; they are dropped (Unbound's
+            // choice, unmeasured: the SVG importer overrides only empty sprites).
             m_Normals = null;
             m_Tangents = null;
             m_Colors = null;
