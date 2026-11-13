@@ -34,6 +34,26 @@ Recorded:
   texture that is not created (it is not created by the call); `GetNativeDepthBufferPtr` is a
   GL_DEPTH24_STENCIL8 texture (the color texture's name for a render texture without depth); render
   buffer pointers are neither of these.
+* **Multisampled native images** (device.msaa, device.depthOnly):
+  1, 2 and 4 samples, with 0, 16 or 24 depth bits, and both values of bindTextureMS.
+  The depth-only controls check that color and depth pointer calls name the same resource.
+  Explicit D32 and D32-with-stencil formats distinguish precision and stencil presence.
+  Creating a texture with one sample and bindTextureMS fails without a log. Default
+  pointers name single-sample images; bound pointers name the samples themselves.
+  OpenGL without depth returns its multisampled color for the depth pointer; Vulkan returns
+  its resolved color. On OpenGL, depth clears publish current depth, including outside
+  a partial clear; drawing retains that image until an explicit self-resolve or shader
+  depth read. A resolve into another target leaves source depth unchanged.
+  The device.sampleResolve and device.depthRead controls write different depths per sample
+  at 2, 4 and 8 samples, distinguishing selected depth, retained state and publication.
+  Content controls are OpenGL measurements; Vulkan records pointer identity and image
+  metadata. Both devices were captured twice on NVIDIA only, Unity 6000.0.71f1.
+  The [bindTextureMS contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture-bindTextureMS.html)
+  describes disabled automatic resolves, and
+  [ResolveAntiAliasedSurface](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture.ResolveAntiAliasedSurface.html)
+  describes explicit self and destination resolves. Separate retained depth publication
+  is observed behavior in these controls. Managed multisampled shader resources remain
+  outside this native-plugin measurement.
 * **External textures** (`external.*`): `Texture2D.CreateExternalTexture` and
   `UpdateExternalTexture` with textures the plugin made, and with another texture's pointer
   (the same texture), also a render texture with depth and mips, which works on after the

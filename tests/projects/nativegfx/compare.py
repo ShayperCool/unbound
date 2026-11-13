@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare a native rendering plugin probe capture with the Editor's reference.
 
-    compare.py REFERENCE.jsonl ACTUAL.jsonl
+    compare.py REFERENCE.jsonl ACTUAL.jsonl [--device opengl|vulkan]
 
 Every value compares exactly over the union of keys (pixels as runs, plugin records, pointer
 relations, log messages); Mono's argument exception messages are compared in
@@ -9,6 +9,7 @@ CoreCLR's wording. Every missing, extra and failing value is printed; the exit s
 when anything differs, except for the keys `residuals.json` (next to this file) lists with their
 cause and follow-up: those are printed with their reason, and printed as resolved once they match.
 """
+import argparse
 import json
 import re
 import sys
@@ -37,16 +38,22 @@ def rows(path):
     return result
 
 
-def residuals():
+def residuals(device):
     """{key: reason} of the known residuals."""
-    if not RESIDUALS.exists():
+    path = RESIDUALS if device == "opengl" else RESIDUALS.with_name("residuals-vulkan.json")
+    if not path.exists():
         return {}
-    return {key: reason for reason, keys in json.loads(RESIDUALS.read_text()).items() for key in keys}
+    return {key: reason for reason, keys in json.loads(path.read_text()).items() for key in keys}
 
 
 def main():
-    ref, act = rows(sys.argv[1]), rows(sys.argv[2])
-    known = residuals()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("reference")
+    parser.add_argument("actual")
+    parser.add_argument("--device", choices=("opengl", "vulkan"), default="opengl")
+    args = parser.parse_args()
+    ref, act = rows(args.reference), rows(args.actual)
+    known = residuals(args.device)
     bad = residual = 0
     for key in sorted(set(ref) | set(act)):
         if key not in act:

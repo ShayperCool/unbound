@@ -506,3 +506,32 @@ EXPORT int NativeGfxVk_Record(char* buffer, int capacity)
     pthread_mutex_unlock(&s_lock);
     return length;
 }
+
+static void* s_device[2];
+static void* s_device_buffer;
+static void on_msaa_device_event(int id)
+{
+    (void)id;
+    VkImage color = VK_NULL_HANDLE;
+    for (int i = 0; i < 2; i++) {
+        UnityVulkanImage image;
+        memset(&image, 0, sizeof image);
+        int ok = s_vulkan && s_device[i] && s_vulkan->AccessTexture(s_device[i], NULL, VK_IMAGE_LAYOUT_GENERAL,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_ACCESS_MEMORY_READ_BIT, ObserveOnly, &image);
+        char key[160]; snprintf(key, sizeof key, "%s.%s", s_step, i ? "depth" : "color");
+        record_image(key, ok, &image, s_device[i]);
+        if (i == 0 && ok) color = image.image;
+    }
+    if (s_device_buffer) {
+        UnityVulkanImage image;
+        memset(&image, 0, sizeof image);
+        int ok = s_vulkan && s_vulkan->AccessRenderBufferResolveTexture(s_device_buffer, NULL, VK_IMAGE_LAYOUT_GENERAL,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_ACCESS_MEMORY_READ_BIT, ObserveOnly, &image);
+        char key[160]; snprintf(key, sizeof key, "%s.resolve", s_step);
+        record_image(key, ok, &image, NULL);
+        record("%s.resolve.samecolor=%d", s_step, ok && image.image == color && color != VK_NULL_HANDLE);
+    }
+}
+EXPORT void NativeGfxVk_SetDeviceBuffer(void* pointer) { s_device_buffer = pointer; }
+EXPORT void* NativeGfxVk_DeviceEvent(void) { return (void*)on_msaa_device_event; }
+EXPORT void NativeGfxVk_SetDevice(int index, void* pointer) { if (index >= 0 && index < 2) s_device[index] = pointer; }

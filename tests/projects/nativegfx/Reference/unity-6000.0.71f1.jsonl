@@ -186,6 +186,200 @@
 {"k":"profiler.script","v":["marker name=NativeGfx.Script flags=2 category.own=0 callback=0 user=2 thread=main","register.event.script=0 (NativeGfx.Script)","event marker=NativeGfx.Script type=0 count=0 data=0 user=8 thread=main","event marker=NativeGfx.Script type=1 count=0 data=0 user=8 thread=main"]}
 {"k":"profiler.finish","v":["finish frame=0 marker=0 thread=0 flow=0 frames=3"]}
 {"k":"screen.target","v":["screen framebuffer=own color=none depth=none viewport=screen"]}
+{"k":"device.msaa.1.0.False.created","v":true}
+{"k":"device.msaa.1.0.False.equal","v":true}
+{"k":"device.msaa.1.0.False.images","v":["shape color 2d 8x4x1 format=0x8058 levels=1 samples=0","shape depth 2d 8x4x1 format=0x8058 levels=1 samples=0"]}
+{"k":"device.msaa.1.0.True.created","v":false}
+{"k":"device.msaa.1.0.True.equal","v":true}
+{"k":"device.msaa.1.0.True.images","v":["shape color zero","shape depth zero"]}
+{"k":"device.msaa.1.16.False.created","v":true}
+{"k":"device.msaa.1.16.False.equal","v":false}
+{"k":"device.msaa.1.16.False.images","v":["shape color 2d 8x4x1 format=0x8058 levels=1 samples=0","shape depth 2d 8x4x1 format=0x81a5 levels=1 samples=0"]}
+{"k":"device.msaa.1.16.False.depth","v":["depth value=0.375005722 error=0x0","depth right=0.375005722 error=0x0"]}
+{"k":"device.msaa.1.16.False.drawDepth","v":["depth value=0.250003815 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.msaa.1.16.False.destinationDepth","v":["depth value=0.250003815 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.msaa.1.16.False.destinationRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.1.16.False.partialDepth","v":["depth value=0.250003815 error=0x0","depth right=0.624994278 error=0x0"]}
+{"k":"device.msaa.1.16.False.beforeResolveDepth","v":["depth value=0.250003815 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.msaa.1.16.False.resolveDepth","v":["depth value=0.250003815 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.msaa.1.16.False.sampleDepth","v":["depth value=0.250003815 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.msaa.1.16.True.created","v":false}
+{"k":"device.msaa.1.16.True.equal","v":true}
+{"k":"device.msaa.1.16.True.images","v":["shape color zero","shape depth zero"]}
+{"k":"device.msaa.1.16.True.depth","v":["depth unavailable"]}
+{"k":"device.msaa.1.24.False.created","v":true}
+{"k":"device.msaa.1.24.False.equal","v":false}
+{"k":"device.msaa.1.24.False.images","v":["shape color 2d 8x4x1 format=0x8058 levels=1 samples=0","shape depth 2d 8x4x1 format=0x88f0 levels=1 samples=0"]}
+{"k":"device.msaa.1.24.False.depth","v":["depth value=0.37500006 error=0x0","depth right=0.37500006 error=0x0"]}
+{"k":"device.msaa.1.24.False.drawDepth","v":["depth value=0.25000003 error=0x0","depth right=0.75 error=0x0"]}
+{"k":"device.msaa.1.24.False.destinationDepth","v":["depth value=0.25000003 error=0x0","depth right=0.75 error=0x0"]}
+{"k":"device.msaa.1.24.False.destinationRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.1.24.False.partialDepth","v":["depth value=0.25000003 error=0x0","depth right=0.625 error=0x0"]}
+{"k":"device.msaa.1.24.False.beforeResolveDepth","v":["depth value=0.25000003 error=0x0","depth right=0.75 error=0x0"]}
+{"k":"device.msaa.1.24.False.resolveDepth","v":["depth value=0.25000003 error=0x0","depth right=0.75 error=0x0"]}
+{"k":"device.msaa.1.24.False.sampleDepth","v":["depth value=0.25000003 error=0x0","depth right=0.75 error=0x0"]}
+{"k":"device.msaa.1.24.True.created","v":false}
+{"k":"device.msaa.1.24.True.equal","v":true}
+{"k":"device.msaa.1.24.True.images","v":["shape color zero","shape depth zero"]}
+{"k":"device.msaa.1.24.True.depth","v":["depth unavailable"]}
+{"k":"device.msaa.2.0.False.created","v":true}
+{"k":"device.msaa.2.0.False.equal","v":false}
+{"k":"device.msaa.2.0.False.images","v":["shape color 2d 8x4x1 format=0x8058 levels=1 samples=0","shape depth multisample 8x4x1 format=0x8058 levels=1 samples=2"]}
+{"k":"device.msaa.2.0.False.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.2.0.True.created","v":true}
+{"k":"device.msaa.2.0.True.equal","v":true}
+{"k":"device.msaa.2.0.True.images","v":["shape color multisample 8x4x1 format=0x8058 levels=1 samples=2","shape depth multisample 8x4x1 format=0x8058 levels=1 samples=2"]}
+{"k":"device.msaa.2.16.False.created","v":true}
+{"k":"device.msaa.2.16.False.equal","v":false}
+{"k":"device.msaa.2.16.False.images","v":["shape color 2d 8x4x1 format=0x8058 levels=1 samples=0","shape depth 2d 8x4x1 format=0x81a5 levels=1 samples=0"]}
+{"k":"device.msaa.2.16.False.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.2.16.False.depth","v":["depth value=0.375005722 error=0x0","depth right=0.375005722 error=0x0"]}
+{"k":"device.msaa.2.16.False.drawDepth","v":["depth value=0.375005722 error=0x0","depth right=0.375005722 error=0x0"]}
+{"k":"device.msaa.2.16.False.destinationDepth","v":["depth value=0.375005722 error=0x0","depth right=0.375005722 error=0x0"]}
+{"k":"device.msaa.2.16.False.destinationRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.2.16.False.partialDepth","v":["depth value=0.250003815 error=0x0","depth right=0.624994278 error=0x0"]}
+{"k":"device.msaa.2.16.False.partialRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.2.16.False.beforeResolveDepth","v":["depth value=0.250003815 error=0x0","depth right=0.624994278 error=0x0"]}
+{"k":"device.msaa.2.16.False.resolveDepth","v":["depth value=0.250003815 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.msaa.2.16.False.resolveRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.2.16.False.sampleDepth","v":["depth value=0.250003815 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.msaa.2.16.False.sampleRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.2.16.True.created","v":true}
+{"k":"device.msaa.2.16.True.equal","v":false}
+{"k":"device.msaa.2.16.True.images","v":["shape color multisample 8x4x1 format=0x8058 levels=1 samples=2","shape depth multisample 8x4x1 format=0x81a5 levels=1 samples=2"]}
+{"k":"device.msaa.2.24.False.created","v":true}
+{"k":"device.msaa.2.24.False.equal","v":false}
+{"k":"device.msaa.2.24.False.images","v":["shape color 2d 8x4x1 format=0x8058 levels=1 samples=0","shape depth 2d 8x4x1 format=0x88f0 levels=1 samples=0"]}
+{"k":"device.msaa.2.24.False.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.2.24.False.depth","v":["depth value=0.37500006 error=0x0","depth right=0.37500006 error=0x0"]}
+{"k":"device.msaa.2.24.False.drawDepth","v":["depth value=0.37500006 error=0x0","depth right=0.37500006 error=0x0"]}
+{"k":"device.msaa.2.24.False.destinationDepth","v":["depth value=0.37500006 error=0x0","depth right=0.37500006 error=0x0"]}
+{"k":"device.msaa.2.24.False.destinationRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.2.24.False.partialDepth","v":["depth value=0.25000003 error=0x0","depth right=0.625 error=0x0"]}
+{"k":"device.msaa.2.24.False.partialRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.2.24.False.beforeResolveDepth","v":["depth value=0.25000003 error=0x0","depth right=0.625 error=0x0"]}
+{"k":"device.msaa.2.24.False.resolveDepth","v":["depth value=0.25000003 error=0x0","depth right=0.75 error=0x0"]}
+{"k":"device.msaa.2.24.False.resolveRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.2.24.False.sampleDepth","v":["depth value=0.25000003 error=0x0","depth right=0.75 error=0x0"]}
+{"k":"device.msaa.2.24.False.sampleRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.2.24.True.created","v":true}
+{"k":"device.msaa.2.24.True.equal","v":false}
+{"k":"device.msaa.2.24.True.images","v":["shape color multisample 8x4x1 format=0x8058 levels=1 samples=2","shape depth multisample 8x4x1 format=0x88f0 levels=1 samples=2"]}
+{"k":"device.msaa.4.0.False.created","v":true}
+{"k":"device.msaa.4.0.False.equal","v":false}
+{"k":"device.msaa.4.0.False.images","v":["shape color 2d 8x4x1 format=0x8058 levels=1 samples=0","shape depth multisample 8x4x1 format=0x8058 levels=1 samples=4"]}
+{"k":"device.msaa.4.0.False.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.4.0.True.created","v":true}
+{"k":"device.msaa.4.0.True.equal","v":true}
+{"k":"device.msaa.4.0.True.images","v":["shape color multisample 8x4x1 format=0x8058 levels=1 samples=4","shape depth multisample 8x4x1 format=0x8058 levels=1 samples=4"]}
+{"k":"device.msaa.4.16.False.created","v":true}
+{"k":"device.msaa.4.16.False.equal","v":false}
+{"k":"device.msaa.4.16.False.images","v":["shape color 2d 8x4x1 format=0x8058 levels=1 samples=0","shape depth 2d 8x4x1 format=0x81a5 levels=1 samples=0"]}
+{"k":"device.msaa.4.16.False.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.4.16.False.depth","v":["depth value=0.375005722 error=0x0","depth right=0.375005722 error=0x0"]}
+{"k":"device.msaa.4.16.False.drawDepth","v":["depth value=0.375005722 error=0x0","depth right=0.375005722 error=0x0"]}
+{"k":"device.msaa.4.16.False.destinationDepth","v":["depth value=0.375005722 error=0x0","depth right=0.375005722 error=0x0"]}
+{"k":"device.msaa.4.16.False.destinationRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.4.16.False.partialDepth","v":["depth value=0.250003815 error=0x0","depth right=0.624994278 error=0x0"]}
+{"k":"device.msaa.4.16.False.partialRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.4.16.False.beforeResolveDepth","v":["depth value=0.250003815 error=0x0","depth right=0.624994278 error=0x0"]}
+{"k":"device.msaa.4.16.False.resolveDepth","v":["depth value=0.250003815 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.msaa.4.16.False.resolveRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.4.16.False.sampleDepth","v":["depth value=0.250003815 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.msaa.4.16.False.sampleRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.4.16.True.created","v":true}
+{"k":"device.msaa.4.16.True.equal","v":false}
+{"k":"device.msaa.4.16.True.images","v":["shape color multisample 8x4x1 format=0x8058 levels=1 samples=4","shape depth multisample 8x4x1 format=0x81a5 levels=1 samples=4"]}
+{"k":"device.msaa.4.24.False.created","v":true}
+{"k":"device.msaa.4.24.False.equal","v":false}
+{"k":"device.msaa.4.24.False.images","v":["shape color 2d 8x4x1 format=0x8058 levels=1 samples=0","shape depth 2d 8x4x1 format=0x88f0 levels=1 samples=0"]}
+{"k":"device.msaa.4.24.False.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.4.24.False.depth","v":["depth value=0.37500006 error=0x0","depth right=0.37500006 error=0x0"]}
+{"k":"device.msaa.4.24.False.drawDepth","v":["depth value=0.37500006 error=0x0","depth right=0.37500006 error=0x0"]}
+{"k":"device.msaa.4.24.False.destinationDepth","v":["depth value=0.37500006 error=0x0","depth right=0.37500006 error=0x0"]}
+{"k":"device.msaa.4.24.False.destinationRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.4.24.False.partialDepth","v":["depth value=0.25000003 error=0x0","depth right=0.625 error=0x0"]}
+{"k":"device.msaa.4.24.False.partialRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.4.24.False.beforeResolveDepth","v":["depth value=0.25000003 error=0x0","depth right=0.625 error=0x0"]}
+{"k":"device.msaa.4.24.False.resolveDepth","v":["depth value=0.25000003 error=0x0","depth right=0.75 error=0x0"]}
+{"k":"device.msaa.4.24.False.resolveRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.4.24.False.sampleDepth","v":["depth value=0.25000003 error=0x0","depth right=0.75 error=0x0"]}
+{"k":"device.msaa.4.24.False.sampleRead.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.msaa.4.24.True.created","v":true}
+{"k":"device.msaa.4.24.True.equal","v":false}
+{"k":"device.msaa.4.24.True.images","v":["shape color multisample 8x4x1 format=0x8058 levels=1 samples=4","shape depth multisample 8x4x1 format=0x88f0 levels=1 samples=4"]}
+{"k":"device.depthOnly.1.False.created","v":true}
+{"k":"device.depthOnly.1.False.equal","v":true}
+{"k":"device.depthOnly.1.False.images","v":["shape color 2d 8x4x1 format=0x81a5 levels=1 samples=0","shape depth 2d 8x4x1 format=0x81a5 levels=1 samples=0"]}
+{"k":"device.depthOnly.1.True.created","v":false}
+{"k":"device.depthOnly.1.True.equal","v":true}
+{"k":"device.depthOnly.1.True.images","v":["shape color zero","shape depth zero"]}
+{"k":"device.depthOnly.2.False.created","v":true}
+{"k":"device.depthOnly.2.False.equal","v":true}
+{"k":"device.depthOnly.2.False.images","v":["shape color 2d 8x4x1 format=0x81a5 levels=1 samples=0","shape depth 2d 8x4x1 format=0x81a5 levels=1 samples=0"]}
+{"k":"device.depthOnly.2.True.created","v":true}
+{"k":"device.depthOnly.2.True.equal","v":true}
+{"k":"device.depthOnly.2.True.images","v":["shape color multisample 8x4x1 format=0x81a5 levels=1 samples=2","shape depth multisample 8x4x1 format=0x81a5 levels=1 samples=2"]}
+{"k":"device.depthOnly.4.False.created","v":true}
+{"k":"device.depthOnly.4.False.equal","v":true}
+{"k":"device.depthOnly.4.False.images","v":["shape color 2d 8x4x1 format=0x81a5 levels=1 samples=0","shape depth 2d 8x4x1 format=0x81a5 levels=1 samples=0"]}
+{"k":"device.depthOnly.4.True.created","v":true}
+{"k":"device.depthOnly.4.True.equal","v":true}
+{"k":"device.depthOnly.4.True.images","v":["shape color multisample 8x4x1 format=0x81a5 levels=1 samples=4","shape depth multisample 8x4x1 format=0x81a5 levels=1 samples=4"]}
+{"k":"device.depthFormat.D32_SFloat.1.False.created","v":true}
+{"k":"device.depthFormat.D32_SFloat.1.False.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat.1.False.images","v":["shape color 2d 8x4x1 format=0x8cac levels=1 samples=0","shape depth 2d 8x4x1 format=0x8cac levels=1 samples=0"]}
+{"k":"device.depthFormat.D32_SFloat.1.True.created","v":false}
+{"k":"device.depthFormat.D32_SFloat.1.True.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat.1.True.images","v":["shape color zero","shape depth zero"]}
+{"k":"device.depthFormat.D32_SFloat.4.False.created","v":true}
+{"k":"device.depthFormat.D32_SFloat.4.False.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat.4.False.images","v":["shape color 2d 8x4x1 format=0x8cac levels=1 samples=0","shape depth 2d 8x4x1 format=0x8cac levels=1 samples=0"]}
+{"k":"device.depthFormat.D32_SFloat.4.True.created","v":true}
+{"k":"device.depthFormat.D32_SFloat.4.True.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat.4.True.images","v":["shape color multisample 8x4x1 format=0x8cac levels=1 samples=4","shape depth multisample 8x4x1 format=0x8cac levels=1 samples=4"]}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.False.created","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.False.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.False.images","v":["shape color 2d 8x4x1 format=0x8cad levels=1 samples=0","shape depth 2d 8x4x1 format=0x8cad levels=1 samples=0"]}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.True.created","v":false}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.True.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.True.images","v":["shape color zero","shape depth zero"]}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.False.created","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.False.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.False.images","v":["shape color 2d 8x4x1 format=0x8cad levels=1 samples=0","shape depth 2d 8x4x1 format=0x8cad levels=1 samples=0"]}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.True.created","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.True.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.True.images","v":["shape color multisample 8x4x1 format=0x8cad levels=1 samples=4","shape depth multisample 8x4x1 format=0x8cad levels=1 samples=4"]}
+{"k":"device.sampleResolve.2.beforeDepth","v":["depth value=0.749996185 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.sampleResolve.2.before.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.sampleResolve.2.afterDepth","v":["depth value=0.250003815 error=0x0","depth right=0.250003815 error=0x0"]}
+{"k":"device.sampleResolve.2.after.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.sampleResolve.2.sampled","v":"0.250003815"}
+{"k":"device.sampleResolve.4.beforeDepth","v":["depth value=0.749996185 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.sampleResolve.4.before.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.sampleResolve.4.afterDepth","v":["depth value=0.125001907 error=0x0","depth right=0.125001907 error=0x0"]}
+{"k":"device.sampleResolve.4.after.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.sampleResolve.4.sampled","v":"0.125001907"}
+{"k":"device.sampleResolve.8.beforeDepth","v":["depth value=0.749996185 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.sampleResolve.8.before.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.sampleResolve.8.afterDepth","v":["depth value=0.499992371 error=0x0","depth right=0.499992371 error=0x0"]}
+{"k":"device.sampleResolve.8.after.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.sampleResolve.8.sampled","v":"0.499992371"}
+{"k":"device.depthRead.2.beforeDepth","v":["depth value=0.749996185 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.depthRead.2.before.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.depthRead.2.sampled","v":"0.250003815"}
+{"k":"device.depthRead.2.afterDepth","v":["depth value=0.250003815 error=0x0","depth right=0.250003815 error=0x0"]}
+{"k":"device.depthRead.2.after.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.depthRead.4.beforeDepth","v":["depth value=0.749996185 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.depthRead.4.before.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.depthRead.4.sampled","v":"0.125001907"}
+{"k":"device.depthRead.4.afterDepth","v":["depth value=0.125001907 error=0x0","depth right=0.125001907 error=0x0"]}
+{"k":"device.depthRead.4.after.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.depthRead.8.beforeDepth","v":["depth value=0.749996185 error=0x0","depth right=0.749996185 error=0x0"]}
+{"k":"device.depthRead.8.before.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
+{"k":"device.depthRead.8.sampled","v":"0.499992371"}
+{"k":"device.depthRead.8.afterDepth","v":["depth value=0.499992371 error=0x0","depth right=0.499992371 error=0x0"]}
+{"k":"device.depthRead.8.after.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state"]}
 {"k":"plugin.exit","v":["device event=1 renderer=17 thread=main gl=1","device event=1 renderer=17 thread=main gl=1"]}
 {"k":"plugin.preloaded","v":["preload load thread=main gl=1","preload device event=1 renderer=17 thread=main gl=1","preload device event=1 renderer=17 thread=main gl=1"]}
 {"k":"plugin.prefixed","v":[]}

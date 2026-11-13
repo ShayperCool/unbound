@@ -1836,6 +1836,7 @@ fn upload_imported(
             auto_generate_mips: false,
             defer_mips: false,
             retain_resolve: false,
+            bind_ms: false,
             samples: 1,
             depth_bits: 0,
             layers: texture.layers as i32,

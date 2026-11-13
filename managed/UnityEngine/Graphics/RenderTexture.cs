@@ -297,21 +297,8 @@ namespace UnityEngine
         internal override IntPtr NativePointer()
         {
             if (!m_Created) return IntPtr.Zero;
-            WarnBindTextureMS();
             return NativePlugins.TexturePointer(m_NativeHandle, false);
         }
-
-        /// <summary>The Editor's pointers of a render texture with <see cref="bindTextureMS"/> name
-        /// its multisampled textures (tests/projects/nativegfx shape.rt.msaa.bound*); here it
-        /// resolves like any multisampled one: said once.</summary>
-        void WarnBindTextureMS()
-        {
-            if (!m_Descriptor.bindMS || m_Descriptor.msaaSamples <= 1 || s_WarnedBindTextureMS) return;
-            s_WarnedBindTextureMS = true;
-            Debug.LogWarning($"Unbound: RenderTexture.bindTextureMS is not supported: the native pointers of '{name}' name its resolved image and its samples' depth is not shared, not its multisampled textures.");
-        }
-
-        static bool s_WarnedBindTextureMS;
 
         /// <summary>The depth buffer's OpenGL texture; a texture without depth gives its color
         /// texture (a multisampled one its samples), as in the Editor (tests/projects/nativegfx
@@ -319,7 +306,6 @@ namespace UnityEngine
         public IntPtr GetNativeDepthBufferPtr()
         {
             if (!m_Created) return IntPtr.Zero;
-            WarnBindTextureMS();
             return NativePlugins.TexturePointer(m_NativeHandle, true, depth > 0);
         }
 
@@ -451,7 +437,7 @@ namespace UnityEngine
         };
 
         // Texture packet flag: process automatic mip updates at attachment transitions.
-        const int DeferredMipUpdates = 8, RetainedMsaaResolve = 16;
+        const int DeferredMipUpdates = 8, RetainedMsaaResolve = 16, BindMultisampled = 32;
 
         internal unsafe ulong EnsureCreated()
         {
@@ -462,6 +448,7 @@ namespace UnityEngine
                 Debug.LogError("RenderTexture.Create failed: 3D textures with depth are not supported.");
                 return 0;
             }
+            if (Compat.RenderingMeasured && m_Descriptor.bindMS && m_Descriptor.msaaSamples <= 1) return 0;
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             var dimension = m_Descriptor.dimension;
             int layers = GpuLayers;
@@ -481,7 +468,7 @@ namespace UnityEngine
                 WrapW = (int)wrapModeW,
                 AnisoLevel = anisoLevel,
                 // 1: drawn into; 2: written by kernels (a storage binding).
-                RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates | RetainedMsaaResolve : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
+                RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates | RetainedMsaaResolve | (m_Descriptor.bindMS ? BindMultisampled : 0) : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
                 DepthBits = depthBits,
                 Layers = layers,
                 Dimension = dimension != TextureDimension.Tex2D || layers > 1 ? (int)dimension : 0,
@@ -636,12 +623,12 @@ namespace UnityEngine
         }
 
         /// <summary>The depth bits of the buffer the renderer stores for a depth-stencil format;
-        /// a 16-bit format with stencil gets 24 bits, as the renderer has no 16-bit buffer with
-        /// stencil (16 bits alone are stored as 16, without stencil: the renderer's depth format
-        /// by bits, crates/unbound-app/src/render/resources.rs depth_format).</summary>
+        /// a 16-bit format with stencil gets 24 bits. A 32-bit stencil format uses the packet's
+        /// dedicated tag, keeping 32-bit depth without stencil distinct.</summary>
         internal static int StoredDepthBits(GraphicsFormat format)
         {
             int bits = GraphicsFormatUtility.GetDepthBits(format);
+            if (bits == 32 && GraphicsFormatUtility.IsStencilFormat(format)) return TexturePacket.Depth32StencilBits;
             return bits == 16 && GraphicsFormatUtility.IsStencilFormat(format) ? 24 : bits;
         }
 

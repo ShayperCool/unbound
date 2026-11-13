@@ -394,6 +394,7 @@ struct TextureImages {
     texture: ImageEntry,
     msaa: Option<ImageEntry>,
     depth: Option<ImageEntry>,
+    bind_ms: bool,
 }
 
 /// A subresource's layout while a callback runs, and the one it is moved back to.
@@ -935,7 +936,8 @@ fn render_buffer_image(scope: &Scope, pointer: *mut c_void, resolve: bool) -> Op
         (true, false) => images.depth,
         (true, true) => None,
         (false, false) => Some(images.msaa.unwrap_or(images.texture)),
-        (false, true) => images.msaa.map(|_| images.texture),
+        (false, true) if !images.bind_ms => images.msaa.map(|_| images.texture),
+        (false, true) => None,
     }
 }
 
@@ -1425,14 +1427,18 @@ impl UnityRenderer {
     /// the texture (`depth`: its depth buffer's). 0 for an unknown texture.
     pub(super) fn vulkan_native_texture(&mut self, handle: u64, depth: bool) -> u64 {
         // A texture without a depth buffer gives its color image for it.
-        let depth = depth
-            && self
-                .textures
-                .get(&handle)
-                .is_some_and(|t| t.depth_texture.is_some());
+        let depth = self
+            .textures
+            .get(&handle)
+            .is_some_and(|t| (depth || t.format == 5) && t.depth_texture.is_some());
         let image = self.textures.get(&handle).and_then(|t| {
             let texture = if depth {
-                t.depth_texture.as_ref()?
+                t.native_depth
+                    .as_ref()
+                    .map(|r| r.view.texture())
+                    .or(t.depth_texture.as_ref())?
+            } else if t.bind_ms {
+                t.msaa.as_ref().map_or(&t.texture, |m| m.0.texture())
             } else {
                 &t.texture
             };
@@ -1525,7 +1531,19 @@ impl UnityRenderer {
                 .depth_texture
                 .as_ref()
                 .and_then(|d| image_entry(&self.adapter, d, d.format(), &mut candidates));
-            for (is_depth, entry) in [(false, Some(texture)), (true, depth)] {
+            let published_depth = gpu.native_depth.as_ref().and_then(|r| {
+                let t = r.view.texture();
+                image_entry(&self.adapter, t, t.format(), &mut candidates)
+            });
+            let pointer_color = if gpu.bind_ms {
+                msaa.unwrap_or(texture)
+            } else {
+                texture
+            };
+            for (is_depth, entry) in [
+                (false, Some(pointer_color)),
+                (true, published_depth.or(depth)),
+            ] {
                 if let (Some(entry), Some(slot)) =
                     (entry, plugins.slots.get_mut(&(handle, is_depth)))
                 {
@@ -1539,6 +1557,7 @@ impl UnityRenderer {
                     texture,
                     msaa,
                     depth,
+                    bind_ms: gpu.bind_ms,
                 },
             );
         }

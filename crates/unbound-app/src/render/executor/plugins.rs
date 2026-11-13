@@ -271,10 +271,14 @@ impl UnityRenderer {
             return self.vulkan_native_texture(handle, depth);
         }
         let shared = self.share(handle).and_then(|names| {
-            if depth {
+            if depth || (self.textures[&handle].format == 5 && !self.textures[&handle].cube) {
                 self.depth_pointer(handle, names)
             } else {
-                Ok(names.color)
+                Ok(if self.textures[&handle].bind_ms {
+                    names.samples.map_or(names.color, |s| s.0)
+                } else {
+                    names.color
+                })
             }
         });
         match shared {
@@ -288,20 +292,24 @@ impl UnityRenderer {
         }
     }
 
-    /// What `RenderTexture.GetNativeDepthBufferPtr` names: the depth texture; without one, and
-    /// for a cube, the color texture, a multisampled target's samples there (the Editor's:
-    /// tests/projects/nativegfx `name nodepth`, `shape.rt.cube.depth`,
-    /// `shape.rt.msaa.color.depth`). The Editor gives a multisampled target with depth a
-    /// single-sample depth texture, which the renderer has none of.
+    /// Native depth names the published depth image, or the samples when bindTextureMS is set.
+    /// Without depth, OpenGL returns the multisampled color image (tests/projects/nativegfx).
     fn depth_pointer(&self, handle: u64, names: Names) -> Result<u32, String> {
+        let gpu = &self.textures[&handle];
+        if gpu.bind_ms {
+            return Ok(names
+                .samples
+                .map_or(names.depth.unwrap_or(names.color), |(color, depth)| {
+                    depth.unwrap_or(color)
+                }));
+        }
         match names.samples {
-            None if self.textures[&handle].cube => Ok(names.color),
+            None if gpu.cube => Ok(names.color),
             None => Ok(names.depth.unwrap_or(names.color)),
             Some((samples, None)) => Ok(samples),
-            Some((_, Some(_))) => Err(
-                "the depth buffer of a multisampled render texture is not shared (Unity gives a single-sample depth texture)"
-                    .into(),
-            ),
+            Some((_, Some(_))) => names
+                .depth
+                .ok_or_else(|| "the layered multisampled depth image cannot be shared".into()),
         }
     }
 
@@ -396,7 +404,11 @@ impl UnityRenderer {
                         // A multisampled target: its samples, and their depth buffer as it is.
                         Some(samples) => Names {
                             color,
-                            depth: None,
+                            depth: gpu
+                                .native_depth
+                                .as_ref()
+                                .map(|r| gl_name(r.view.texture()))
+                                .transpose()?,
                             samples: Some((name(1, samples, None, true)?, depth)),
                         },
                         None => Names {
@@ -988,6 +1000,10 @@ fn descriptor(gpu: &GpuTexture) -> owned::Texture {
         samples: gpu.samples,
         depth_bits: match gpu.depth_format() {
             Some(wgpu::TextureFormat::Depth16Unorm) => 16,
+            Some(wgpu::TextureFormat::Depth32Float) => 32,
+            Some(wgpu::TextureFormat::Depth32FloatStencil8) => {
+                unbound_runtime::render_protocol::DEPTH32_STENCIL_BITS
+            }
             Some(_) => 24,
             None => 0,
         },

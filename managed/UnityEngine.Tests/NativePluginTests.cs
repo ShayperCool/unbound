@@ -268,33 +268,30 @@ namespace Unbound.Tests
         }
 
         [Fact]
-        public void ARenderTextureBindingItsSamplesSaysOnceWhatItsPointersName()
+        public void MultisampledBindingRequiresSamplesAndDoesNotWarnWhenPointersAreRequested()
         {
-            typeof(RenderTexture).GetField("s_WarnedBindTextureMS", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).SetValue(null, false);
+            var previousVersion = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
             var resolved = new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
             var single = new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32) { bindTextureMS = true };
             var bound = new RenderTexture(4, 4, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4, bindTextureMS = true };
             try
             {
-                foreach (var rt in new[] { resolved, single, bound }) rt.Create();
+                Assert.True(resolved.Create());
+                Assert.False(single.Create());
+                Assert.False(single.IsCreated());
+                Assert.Equal(IntPtr.Zero, single.GetNativeTexturePtr());
+                Assert.Equal(IntPtr.Zero, single.GetNativeDepthBufferPtr());
+                Assert.True(bound.Create());
                 using var log = new ErrorCapture();
-                Func<int> said = () => log.Warnings.FindAll(w => w.Contains("bindTextureMS")).Count;
-                // A multisampled texture that resolves, and one sample: their pointers are theirs.
-                foreach (var rt in new[] { resolved, single })
-                {
-                    rt.GetNativeTexturePtr();
-                    rt.GetNativeDepthBufferPtr();
-                }
-                Assert.Equal(0, said());
-                bound.GetNativeTexturePtr();
-                Assert.Equal(1, said());
-                bound.GetNativeDepthBufferPtr();
-                bound.GetNativeTexturePtr();
-                Assert.Equal(1, said());
+                resolved.GetNativeTexturePtr(); resolved.GetNativeDepthBufferPtr();
+                bound.GetNativeTexturePtr(); bound.GetNativeDepthBufferPtr();
+                Assert.DoesNotContain(log.Warnings, warning => warning.Contains("bindTextureMS"));
             }
             finally
             {
                 foreach (var t in new Object[] { resolved, single, bound }) Object.DestroyImmediate(t);
+                ProjectInfo.UnityVersion = previousVersion;
             }
         }
 

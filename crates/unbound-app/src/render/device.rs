@@ -126,24 +126,22 @@ pub struct DeviceConventions {
     pub reversed_z: bool,
     /// Clip depth from 0 to w: the GPU projection maps [-1, 1] there.
     pub clip_depth_zero_to_one: bool,
-    /// The sample a multisampled depth buffer's resolved copy reads, as the Editor's device
-    /// resolves depth (measured at 2 samples, tests/projects/rtdepth `fmt.msaa2.depth.*`, in
-    /// Vulkan's standard positions): OpenGL Core the one a quarter pixel left of the center
-    /// (sample 1), Vulkan sample 0.
-    pub depth_resolve_sample: u32,
+    /// Depth resolve selections for 1, 2, 4 and 8 samples, from the device profile.
+    pub depth_resolve_samples: [u32; 4],
 }
 
 impl DeviceConventions {
+    pub fn depth_resolve_sample(&self, samples: u32) -> u32 {
+        self.depth_resolve_samples[samples.max(1).min(8).trailing_zeros() as usize]
+    }
+
     pub fn of(device: GraphicsDevice) -> Self {
         let c = device.conventions();
         Self {
             screen_top_down: c.uv_starts_at_top,
             reversed_z: c.reversed_z,
             clip_depth_zero_to_one: c.clip_depth_zero_to_one,
-            depth_resolve_sample: match device {
-                GraphicsDevice::OpenGLCore => 1,
-                GraphicsDevice::Vulkan | GraphicsDevice::Metal => 0,
-            },
+            depth_resolve_samples: [1, 2, 4, 8].map(|samples| device.depth_resolve_sample(samples)),
         }
     }
 }

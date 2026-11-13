@@ -1279,6 +1279,33 @@ static void describe_bound(int grey)
 /// textures, 2 writes into three shapes, 3 describes the bound target and draws into it, 4 the
 /// same with half grey for an sRGB target; any other does nothing (what Unity itself reports
 /// around a callback).
+static void read_device_depth(void)
+{
+    typedef void (*GetTextureSubImageFn)(GLuint, GLint, GLint, GLint, GLint, GLsizei, GLsizei, GLsizei, GLenum, GLenum, GLsizei, void*);
+    void* lib = dlopen("libOpenGL.so.0", RTLD_NOW | RTLD_GLOBAL);
+    if (!lib) lib = dlopen("libGL.so.1", RTLD_NOW | RTLD_GLOBAL);
+    GetTextureSubImageFn get = lib ? (GetTextureSubImageFn)dlsym(lib, "glGetTextureSubImage") : NULL;
+    GLuint name = (GLuint)shape_named("depth");
+    if (!get || !name) { texture_note("depth unavailable"); return; }
+    GLint buffer = 0;
+    gl.GetIntegerv(0x88ed, &buffer);
+    gl.BindBuffer(0x88eb, 0);
+    const GLenum states[] = {0x0d05, 0x0d02, 0x0d03, 0x0d04, 0x806c, 0x806b};
+    GLint saved[6];
+    for (int i = 0; i < 6; i++) { gl.GetIntegerv(states[i], &saved[i]); gl.PixelStorei(states[i], i == 0 ? 4 : 0); }
+    while (gl.GetError()) {}
+    float depth = -99.0f;
+    get(name, 0, 0, 0, 0, 1, 1, 1, 0x1902, 0x1406, sizeof depth, &depth);
+    GLenum error = gl.GetError();
+    texture_note("depth value=%.9g error=0x%x", depth, error);
+    get(name, 0, 6, 0, 0, 1, 1, 1, 0x1902, 0x1406, sizeof depth, &depth);
+    error = gl.GetError();
+    texture_note("depth right=%.9g error=0x%x", depth, error);
+    for (int i = 0; i < 6; i++) gl.PixelStorei(states[i], saved[i]);
+    gl.BindBuffer(0x88eb, (GLuint)buffer);
+    if (lib) dlclose(lib);
+}
+
 static void on_texture_event(int id)
 {
     if (!gl_current()) {
@@ -1298,6 +1325,7 @@ static void on_texture_event(int id)
     case 2: write_shapes(); break;
     case 3: describe_bound(0); break;
     case 4: describe_bound(1); break;
+    case 5: read_device_depth(); break;
     default: break;
     }
 }

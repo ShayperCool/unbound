@@ -49,6 +49,17 @@ pub struct Conventions {
 }
 
 impl GraphicsDevice {
+    /// Depth resolves on the measured Unity 6000.0.71f1 NVIDIA device. The OpenGL
+    /// selection depends on the sample count (tests/projects/nativegfx device.sampleResolve);
+    /// Vulkan uses sample zero (tests/projects/rtdepth). Other drivers remain unmeasured.
+    pub fn depth_resolve_sample(self, samples: u32) -> u32 {
+        match (self, samples) {
+            (Self::OpenGLCore, 2) => 1,
+            (Self::OpenGLCore, 8) => 3,
+            _ => 0,
+        }
+    }
+
     /// Every device, in the discriminant's order.
     pub const ALL: [GraphicsDevice; 3] = [Self::Metal, Self::OpenGLCore, Self::Vulkan];
 

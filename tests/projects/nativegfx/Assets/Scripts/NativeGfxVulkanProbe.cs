@@ -17,7 +17,7 @@ using UnityEngine.Rendering;
 /// Last, the images behind the pointers of a Cubemap, a Texture2DArray, a Texture3D and a
 /// CubemapArray (plugin.shape.*: a 2D image of 6, 3 and 12 layers, a 3D image).
 /// </summary>
-public class NativeGfxVulkanProbe : MonoBehaviour
+public partial class NativeGfxVulkanProbe : MonoBehaviour
 {
     const string Plugin = "NativeGfxVulkan";
     [DllImport(Plugin)] static extern IntPtr NativeGfxVk_Event();
@@ -280,6 +280,7 @@ public class NativeGfxVulkanProbe : MonoBehaviour
             try { Finish(); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
         }
+        DeviceControls();
         PluginRecord();
         if (logs.Count > 0) Value("logs", L(logs));
         Value("complete", B(code == 0));

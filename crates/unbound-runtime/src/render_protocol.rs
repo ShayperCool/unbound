@@ -4,6 +4,10 @@
 
 pub use crate::render_commands as commands;
 
+/// TexturePacket.depth_bits tag for 32-bit floating depth with an 8-bit stencil.
+/// Positive 32 means depth without stencil; 16 and 24 retain their existing meanings.
+pub const DEPTH32_STENCIL_BITS: i32 = -32;
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Vector3 {
@@ -474,6 +478,8 @@ pub mod owned {
         pub defer_mips: bool,
         /// Readback and compute retain the preceding published MSAA resolve.
         pub retain_resolve: bool,
+        /// Native pointers expose the MSAA images; automatic resolves are disabled.
+        pub bind_ms: bool,
         /// A render target's MSAA samples (1: none).
         pub samples: u32,
         pub depth_bits: i32,
@@ -503,6 +509,7 @@ pub mod owned {
                 auto_generate_mips: p.render_target & 4 != 0,
                 defer_mips: p.render_target & 8 != 0,
                 retain_resolve: p.render_target & 16 != 0,
+                bind_ms: p.render_target & 32 != 0,
                 // Bits 8..15: the MSAA sample count.
                 samples: ((p.render_target >> 8) & 0xff).max(1) as u32,
                 depth_bits: p.depth_bits,

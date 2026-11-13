@@ -216,6 +216,7 @@ public partial class NativeGfxProbe : MonoBehaviour
         PluginRecord();
         if (logs.Count > 0) Value("logs", L(logs));
         NotesRecord();
+        DeviceControls();
         NativeGfx_Mark("exit");
         Value("complete", B(code == 0));
         File.WriteAllText(output, records.ToString());

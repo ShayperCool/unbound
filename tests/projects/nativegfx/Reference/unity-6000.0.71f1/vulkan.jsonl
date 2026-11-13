@@ -7,6 +7,134 @@
 {"k":"inner.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
 {"k":"outer.pixels","v":["0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8"]}
 {"k":"buffer.words","v":["01020304","01020304","01020304","01020304"]}
+{"k":"device.msaa.1.0.False.created","v":true}
+{"k":"device.msaa.1.0.False.create.logs","v":[]}
+{"k":"device.msaa.1.0.False.equal","v":true}
+{"k":"device.msaa.1.0.False.logs","v":[]}
+{"k":"device.msaa.1.0.True.created","v":false}
+{"k":"device.msaa.1.0.True.create.logs","v":[]}
+{"k":"device.msaa.1.0.True.equal","v":true}
+{"k":"device.msaa.1.0.True.logs","v":[]}
+{"k":"device.msaa.1.16.False.created","v":true}
+{"k":"device.msaa.1.16.False.create.logs","v":[]}
+{"k":"device.msaa.1.16.False.equal","v":false}
+{"k":"device.msaa.1.16.False.logs","v":[]}
+{"k":"device.msaa.1.16.True.created","v":false}
+{"k":"device.msaa.1.16.True.create.logs","v":[]}
+{"k":"device.msaa.1.16.True.equal","v":true}
+{"k":"device.msaa.1.16.True.logs","v":[]}
+{"k":"device.msaa.1.24.False.created","v":true}
+{"k":"device.msaa.1.24.False.create.logs","v":[]}
+{"k":"device.msaa.1.24.False.equal","v":false}
+{"k":"device.msaa.1.24.False.logs","v":[]}
+{"k":"device.msaa.1.24.True.created","v":false}
+{"k":"device.msaa.1.24.True.create.logs","v":[]}
+{"k":"device.msaa.1.24.True.equal","v":true}
+{"k":"device.msaa.1.24.True.logs","v":[]}
+{"k":"device.msaa.2.0.False.created","v":true}
+{"k":"device.msaa.2.0.False.create.logs","v":[]}
+{"k":"device.msaa.2.0.False.equal","v":true}
+{"k":"device.msaa.2.0.False.logs","v":[]}
+{"k":"device.msaa.2.0.True.created","v":true}
+{"k":"device.msaa.2.0.True.create.logs","v":[]}
+{"k":"device.msaa.2.0.True.equal","v":true}
+{"k":"device.msaa.2.0.True.logs","v":[]}
+{"k":"device.msaa.2.16.False.created","v":true}
+{"k":"device.msaa.2.16.False.create.logs","v":[]}
+{"k":"device.msaa.2.16.False.equal","v":false}
+{"k":"device.msaa.2.16.False.logs","v":[]}
+{"k":"device.msaa.2.16.True.created","v":true}
+{"k":"device.msaa.2.16.True.create.logs","v":[]}
+{"k":"device.msaa.2.16.True.equal","v":false}
+{"k":"device.msaa.2.16.True.logs","v":[]}
+{"k":"device.msaa.2.24.False.created","v":true}
+{"k":"device.msaa.2.24.False.create.logs","v":[]}
+{"k":"device.msaa.2.24.False.equal","v":false}
+{"k":"device.msaa.2.24.False.logs","v":[]}
+{"k":"device.msaa.2.24.True.created","v":true}
+{"k":"device.msaa.2.24.True.create.logs","v":[]}
+{"k":"device.msaa.2.24.True.equal","v":false}
+{"k":"device.msaa.2.24.True.logs","v":[]}
+{"k":"device.msaa.4.0.False.created","v":true}
+{"k":"device.msaa.4.0.False.create.logs","v":[]}
+{"k":"device.msaa.4.0.False.equal","v":true}
+{"k":"device.msaa.4.0.False.logs","v":[]}
+{"k":"device.msaa.4.0.True.created","v":true}
+{"k":"device.msaa.4.0.True.create.logs","v":[]}
+{"k":"device.msaa.4.0.True.equal","v":true}
+{"k":"device.msaa.4.0.True.logs","v":[]}
+{"k":"device.msaa.4.16.False.created","v":true}
+{"k":"device.msaa.4.16.False.create.logs","v":[]}
+{"k":"device.msaa.4.16.False.equal","v":false}
+{"k":"device.msaa.4.16.False.logs","v":[]}
+{"k":"device.msaa.4.16.True.created","v":true}
+{"k":"device.msaa.4.16.True.create.logs","v":[]}
+{"k":"device.msaa.4.16.True.equal","v":false}
+{"k":"device.msaa.4.16.True.logs","v":[]}
+{"k":"device.msaa.4.24.False.created","v":true}
+{"k":"device.msaa.4.24.False.create.logs","v":[]}
+{"k":"device.msaa.4.24.False.equal","v":false}
+{"k":"device.msaa.4.24.False.logs","v":[]}
+{"k":"device.msaa.4.24.True.created","v":true}
+{"k":"device.msaa.4.24.True.create.logs","v":[]}
+{"k":"device.msaa.4.24.True.equal","v":false}
+{"k":"device.msaa.4.24.True.logs","v":[]}
+{"k":"device.depthOnly.1.False.created","v":true}
+{"k":"device.depthOnly.1.False.create.logs","v":[]}
+{"k":"device.depthOnly.1.False.equal","v":true}
+{"k":"device.depthOnly.1.False.logs","v":[]}
+{"k":"device.depthOnly.1.True.created","v":false}
+{"k":"device.depthOnly.1.True.create.logs","v":[]}
+{"k":"device.depthOnly.1.True.equal","v":true}
+{"k":"device.depthOnly.1.True.logs","v":[]}
+{"k":"device.depthOnly.2.False.created","v":true}
+{"k":"device.depthOnly.2.False.create.logs","v":[]}
+{"k":"device.depthOnly.2.False.equal","v":true}
+{"k":"device.depthOnly.2.False.logs","v":[]}
+{"k":"device.depthOnly.2.True.created","v":true}
+{"k":"device.depthOnly.2.True.create.logs","v":[]}
+{"k":"device.depthOnly.2.True.equal","v":true}
+{"k":"device.depthOnly.2.True.logs","v":[]}
+{"k":"device.depthOnly.4.False.created","v":true}
+{"k":"device.depthOnly.4.False.create.logs","v":[]}
+{"k":"device.depthOnly.4.False.equal","v":true}
+{"k":"device.depthOnly.4.False.logs","v":[]}
+{"k":"device.depthOnly.4.True.created","v":true}
+{"k":"device.depthOnly.4.True.create.logs","v":[]}
+{"k":"device.depthOnly.4.True.equal","v":true}
+{"k":"device.depthOnly.4.True.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat.1.False.created","v":true}
+{"k":"device.depthFormat.D32_SFloat.1.False.create.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat.1.False.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat.1.False.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat.1.True.created","v":false}
+{"k":"device.depthFormat.D32_SFloat.1.True.create.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat.1.True.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat.1.True.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat.4.False.created","v":true}
+{"k":"device.depthFormat.D32_SFloat.4.False.create.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat.4.False.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat.4.False.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat.4.True.created","v":true}
+{"k":"device.depthFormat.D32_SFloat.4.True.create.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat.4.True.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat.4.True.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.False.created","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.False.create.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.False.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.False.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.True.created","v":false}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.True.create.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.True.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.1.True.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.False.created","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.False.create.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.False.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.False.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.True.created","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.True.create.logs","v":[]}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.True.equal","v":true}
+{"k":"device.depthFormat.D32_SFloat_S8_UInt.4.True.logs","v":[]}
 {"k":"plugin.load","v":"load renderer=21 vulkan=1 vulkanV2=1"}
 {"k":"plugin.interfaces","v":"interfaces profilerCallbacks=1 profilerCallbacksV2=1 eventQueue=1"}
 {"k":"plugin.intercept.late","v":"intercept.late=0"}
@@ -58,4 +186,80 @@
 {"k":"plugin.shape.array","v":"shape.array ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=7 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
 {"k":"plugin.shape.volume","v":"shape.volume ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=7 format=37 extent=4x4x2 tiling=0 type=2 samples=1 layers=1 mips=1"}
 {"k":"plugin.shape.cubearray","v":"shape.cubearray ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=7 format=43 extent=4x4x1 tiling=0 type=1 samples=1 layers=12 mips=1"}
+{"k":"plugin.device.msaa.1.0.False.color","v":"device.msaa.1.0.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.1.0.False.depth","v":"device.msaa.1.0.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.1.0.True.color","v":"device.msaa.1.0.True.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.device.msaa.1.0.True.depth","v":"device.msaa.1.0.True.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.device.msaa.1.16.False.color","v":"device.msaa.1.16.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.1.16.False.depth","v":"device.msaa.1.16.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.1.16.True.color","v":"device.msaa.1.16.True.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.device.msaa.1.16.True.depth","v":"device.msaa.1.16.True.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.device.msaa.1.24.False.color","v":"device.msaa.1.24.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.1.24.False.depth","v":"device.msaa.1.24.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.1.24.True.color","v":"device.msaa.1.24.True.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.device.msaa.1.24.True.depth","v":"device.msaa.1.24.True.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.device.msaa.2.0.False.color","v":"device.msaa.2.0.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.0.False.depth","v":"device.msaa.2.0.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.0.False.resolve","v":"device.msaa.2.0.False.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.0.False.resolve.samecolor","v":"device.msaa.2.0.False.resolve.samecolor=1"}
+{"k":"plugin.device.msaa.2.0.True.color","v":"device.msaa.2.0.True.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.0.True.depth","v":"device.msaa.2.0.True.depth ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.16.False.color","v":"device.msaa.2.16.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.16.False.depth","v":"device.msaa.2.16.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.16.False.resolve","v":"device.msaa.2.16.False.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.16.False.resolve.samecolor","v":"device.msaa.2.16.False.resolve.samecolor=1"}
+{"k":"plugin.device.msaa.2.16.True.color","v":"device.msaa.2.16.True.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.16.True.depth","v":"device.msaa.2.16.True.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.24.False.color","v":"device.msaa.2.24.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.24.False.depth","v":"device.msaa.2.24.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.24.False.resolve","v":"device.msaa.2.24.False.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.24.False.resolve.samecolor","v":"device.msaa.2.24.False.resolve.samecolor=1"}
+{"k":"plugin.device.msaa.2.24.True.color","v":"device.msaa.2.24.True.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.device.msaa.2.24.True.depth","v":"device.msaa.2.24.True.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.0.False.color","v":"device.msaa.4.0.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.0.False.depth","v":"device.msaa.4.0.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.0.False.resolve","v":"device.msaa.4.0.False.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.0.False.resolve.samecolor","v":"device.msaa.4.0.False.resolve.samecolor=1"}
+{"k":"plugin.device.msaa.4.0.True.color","v":"device.msaa.4.0.True.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.0.True.depth","v":"device.msaa.4.0.True.depth ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.16.False.color","v":"device.msaa.4.16.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.16.False.depth","v":"device.msaa.4.16.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.16.False.resolve","v":"device.msaa.4.16.False.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.16.False.resolve.samecolor","v":"device.msaa.4.16.False.resolve.samecolor=1"}
+{"k":"plugin.device.msaa.4.16.True.color","v":"device.msaa.4.16.True.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.16.True.depth","v":"device.msaa.4.16.True.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.24.False.color","v":"device.msaa.4.24.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.24.False.depth","v":"device.msaa.4.24.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.24.False.resolve","v":"device.msaa.4.24.False.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.24.False.resolve.samecolor","v":"device.msaa.4.24.False.resolve.samecolor=1"}
+{"k":"plugin.device.msaa.4.24.True.color","v":"device.msaa.4.24.True.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.device.msaa.4.24.True.depth","v":"device.msaa.4.24.True.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.device.depthOnly.1.False.color","v":"device.depthOnly.1.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthOnly.1.False.depth","v":"device.depthOnly.1.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthOnly.1.True.color","v":"device.depthOnly.1.True.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.device.depthOnly.1.True.depth","v":"device.depthOnly.1.True.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.device.depthOnly.2.False.color","v":"device.depthOnly.2.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthOnly.2.False.depth","v":"device.depthOnly.2.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthOnly.2.True.color","v":"device.depthOnly.2.True.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.device.depthOnly.2.True.depth","v":"device.depthOnly.2.True.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.device.depthOnly.4.False.color","v":"device.depthOnly.4.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthOnly.4.False.depth","v":"device.depthOnly.4.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthOnly.4.True.color","v":"device.depthOnly.4.True.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.device.depthOnly.4.True.depth","v":"device.depthOnly.4.True.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=124 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.device.depthFormat.D32_SFloat.1.False.color","v":"device.depthFormat.D32_SFloat.1.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=126 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthFormat.D32_SFloat.1.False.depth","v":"device.depthFormat.D32_SFloat.1.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=126 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthFormat.D32_SFloat.1.True.color","v":"device.depthFormat.D32_SFloat.1.True.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.device.depthFormat.D32_SFloat.1.True.depth","v":"device.depthFormat.D32_SFloat.1.True.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.device.depthFormat.D32_SFloat.4.False.color","v":"device.depthFormat.D32_SFloat.4.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=126 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthFormat.D32_SFloat.4.False.depth","v":"device.depthFormat.D32_SFloat.4.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=126 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthFormat.D32_SFloat.4.True.color","v":"device.depthFormat.D32_SFloat.4.True.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=126 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.device.depthFormat.D32_SFloat.4.True.depth","v":"device.depthFormat.D32_SFloat.4.True.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=126 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.device.depthFormat.D32_SFloat_S8_UInt.1.False.color","v":"device.depthFormat.D32_SFloat_S8_UInt.1.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthFormat.D32_SFloat_S8_UInt.1.False.depth","v":"device.depthFormat.D32_SFloat_S8_UInt.1.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthFormat.D32_SFloat_S8_UInt.1.True.color","v":"device.depthFormat.D32_SFloat_S8_UInt.1.True.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.device.depthFormat.D32_SFloat_S8_UInt.1.True.depth","v":"device.depthFormat.D32_SFloat_S8_UInt.1.True.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.device.depthFormat.D32_SFloat_S8_UInt.4.False.color","v":"device.depthFormat.D32_SFloat_S8_UInt.4.False.color ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthFormat.D32_SFloat_S8_UInt.4.False.depth","v":"device.depthFormat.D32_SFloat_S8_UInt.4.False.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.device.depthFormat.D32_SFloat_S8_UInt.4.True.color","v":"device.depthFormat.D32_SFloat_S8_UInt.4.True.color ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.device.depthFormat.D32_SFloat_S8_UInt.4.True.depth","v":"device.depthFormat.D32_SFloat_S8_UInt.4.True.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
 {"k":"complete","v":true}

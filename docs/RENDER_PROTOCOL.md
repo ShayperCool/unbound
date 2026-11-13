@@ -171,6 +171,14 @@ writes remain ordered; the cbuffer's own uniform properties are then not used. A
 skips the dispatch with a warning. Shader cache format 19 also records active instanced-property
 declarations so only their scalar overrides fall back after instance zero.
 
+A render texture with packet flag 32 exposes its multisampled images to native plugins and
+publishes resolved color only when explicitly requested. Without that flag, native depth
+pointers use a retained single-sample depth image. Depth clears, explicit self-resolves and
+graphics shader depth reads publish its content; ordinary drawing leaves it unchanged. Depth resolves
+select the sample specified by the graphics compatibility profile. Native pointer shape and
+publication controls are in tests/projects/nativegfx, measured on NVIDIA for Unity 6000.0.71f1.
+A destination resolve copies color only.
+
 ### Render protocol 6: texture handle element bits (NativeApi 13)
 
 NativeApi 14 appends `wrap_w` to `TexturePacket` and `ImportedTextureInfo`, and the
@@ -265,8 +273,9 @@ TexturePacket {
   *const u8 data; i64 data_length;   // null: uninitialized (render targets); float formats: RGBA f32 wire data
   i32 filter_mode, wrap_u, wrap_v, aniso_level;
   i32 render_target;   // bits: 1 render attachment, 2 storage binding, 4 auto-generate mips;
+                       // 8 deferred mip updates, 16 retained resolve, 32 bind native MSAA;
                        // bits 8..15 contain the MSAA sample count
-  i32 depth_bits;      // render targets: 0, 16, 24 (with stencil)
+  i32 depth_bits;      // 0 none, 16 depth, 24 depth+stencil, 32 float depth, -32 float depth+stencil
   i32 layers, dimension; // each layer has a mip chain; dimension is Unity's TextureDimension
   i32 wrap_w;          // TextureWrapMode along W (NativeApi 14): a Texture3D's depth
 }

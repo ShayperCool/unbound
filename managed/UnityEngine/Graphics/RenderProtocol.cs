@@ -40,6 +40,9 @@ namespace Unbound.Runtime
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct TexturePacket
     {
+        // Packet tag for 32-bit floating depth with stencil; positive 32 has no stencil.
+        internal const int Depth32StencilBits = -32;
+
         internal int Width;
         internal int Height;
         internal int Format;

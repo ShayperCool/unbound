@@ -404,16 +404,33 @@ pub fn depth_copy_view(
 /// `UnityEngine.Rendering.TextureDimension.Tex2DArray` in the texture packet.
 pub const TEX2D_ARRAY: i32 = 5;
 
-/// The depth buffer of a render texture of `bits` depth bits: 16 bits without stencil, any
-/// other depth with 24 bits and stencil (`RenderTexture.depth`; Unity 6000.0.71f1 stores a 16-bit
-/// buffer as D16, tests/projects/samplerstates and nativegfx). A 16-bit format with stencil
-/// arrives with 24 bits (managed RenderTexture.StoredDepthBits).
-pub fn depth_format(bits: i32) -> wgpu::TextureFormat {
-    if bits == 16 {
-        wgpu::TextureFormat::Depth16Unorm
-    } else {
-        wgpu::TextureFormat::Depth24PlusStencil8
+/// A texture packet's depth storage. The managed compatibility profile chooses the requested
+/// format; the 32-bit stencil tag preserves the distinction from depth without stencil.
+pub fn depth_format(device: &wgpu::Device, bits: i32) -> wgpu::TextureFormat {
+    use unbound_runtime::render_protocol::DEPTH32_STENCIL_BITS;
+    match bits {
+        16 => wgpu::TextureFormat::Depth16Unorm,
+        32 => wgpu::TextureFormat::Depth32Float,
+        DEPTH32_STENCIL_BITS
+            if device
+                .features()
+                .contains(wgpu::Features::DEPTH32FLOAT_STENCIL8) =>
+        {
+            wgpu::TextureFormat::Depth32FloatStencil8
+        }
+        DEPTH32_STENCIL_BITS => {
+            static WARNED: std::sync::Once = std::sync::Once::new();
+            WARNED.call_once(|| tracing::warn!("32-bit depth with stencil uses 24-bit storage: this device lacks DEPTH32FLOAT_STENCIL8"));
+            wgpu::TextureFormat::Depth24PlusStencil8
+        }
+        _ => wgpu::TextureFormat::Depth24PlusStencil8,
     }
+}
+
+pub struct NativeDepthResolve {
+    pub view: wgpu::TextureView,
+    pub sample: wgpu::TextureView,
+    pub group: Option<wgpu::BindGroup>,
 }
 
 pub struct GpuTexture {
@@ -439,6 +456,10 @@ pub struct GpuTexture {
     /// texture, and its sample count (1: none).
     pub msaa: Option<(wgpu::TextureView, Option<wgpu::TextureView>)>,
     pub samples: u32,
+    pub bind_ms: bool,
+    /// Published single-sample depth for native plugins. Clears, shader reads and explicit
+    /// self-resolves publish it; ordinary draws leave it unchanged (tests/projects/nativegfx).
+    pub native_depth: Option<NativeDepthResolve>,
     /// Images (6 for a cubemap) and whether the views are a cube's.
     pub layers: u32,
     pub cube: bool,
@@ -1417,9 +1438,10 @@ pub fn upload_texture_with(
             && e.volume == volume
             && e.array == (t.dimension == TEX2D_ARRAY)
             && e.samples == samples
+            && e.bind_ms == t.bind_ms
             && e.render_target == render_target
             && e.random_write == t.random_write
-            && e.depth_format() == (t.depth_bits > 0).then(|| depth_format(t.depth_bits))
+            && e.depth_format() == (t.depth_bits != 0).then(|| depth_format(device, t.depth_bits))
     });
     let mut gpu = match reuse {
         Some(mut e) => {
@@ -1515,7 +1537,7 @@ pub fn upload_texture_with(
             } else {
                 Vec::new()
             };
-            let depth_texture = (render_target && t.depth_bits > 0).then(|| {
+            let depth_texture = (render_target && t.depth_bits != 0).then(|| {
                 allocate(&wgpu::TextureDescriptor {
                     label: Some("unbound render texture depth"),
                     size: wgpu::Extent3d {
@@ -1526,7 +1548,7 @@ pub fn upload_texture_with(
                     mip_level_count: if samples == 1 { mip_count } else { 1 },
                     sample_count: samples,
                     dimension: wgpu::TextureDimension::D2,
-                    format: depth_format(t.depth_bits),
+                    format: depth_format(device, t.depth_bits),
                     // A multisampled one is read by the depth copy only.
                     usage: wgpu::TextureUsages::RENDER_ATTACHMENT
                         | wgpu::TextureUsages::TEXTURE_BINDING,
@@ -1631,8 +1653,35 @@ pub fn upload_texture_with(
                     ..Default::default()
                 })
             });
-            let depth_copy = (t.format == 5 && layers == 1 && depth_sample.is_some())
-                .then(|| depth_copy_view(device, width, height, depth_format(t.depth_bits)));
+            let depth_copy = (t.format == 5 && layers == 1 && depth_sample.is_some()).then(|| {
+                depth_copy_view(device, width, height, depth_format(device, t.depth_bits))
+            });
+            let native_depth = (t.retain_resolve && !t.bind_ms && samples > 1 && layers == 1)
+                .then(|| depth_texture.as_ref())
+                .flatten()
+                .map(|depth| {
+                    let texture = device.create_texture(&wgpu::TextureDescriptor {
+                        label: Some("unbound published native depth"),
+                        size: depth.size(),
+                        mip_level_count: 1,
+                        sample_count: 1,
+                        dimension: wgpu::TextureDimension::D2,
+                        format: depth.format(),
+                        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                            | wgpu::TextureUsages::TEXTURE_BINDING
+                            | wgpu::TextureUsages::COPY_SRC
+                            | wgpu::TextureUsages::COPY_DST,
+                        view_formats: &[],
+                    });
+                    NativeDepthResolve {
+                        view: texture.create_view(&Default::default()),
+                        sample: texture.create_view(&wgpu::TextureViewDescriptor {
+                            aspect: wgpu::TextureAspect::DepthOnly,
+                            ..Default::default()
+                        }),
+                        group: None,
+                    }
+                });
             GpuTexture {
                 texture,
                 view,
@@ -1645,6 +1694,8 @@ pub fn upload_texture_with(
                 depth_texture,
                 msaa,
                 samples,
+                bind_ms: t.bind_ms,
+                native_depth,
                 layers,
                 cube,
                 cube_array,
@@ -1837,6 +1888,7 @@ pub fn default_textures(
         auto_generate_mips: false,
         defer_mips: false,
         retain_resolve: false,
+        bind_ms: false,
         samples: 1,
         depth_bits: 0,
         layers: 1,
