@@ -61,4 +61,27 @@ namespace UnityEngine.Tests
             Assert.Equal(0, HashesItsTransform.Calls);
         }
     }
+
+    public class RawMemoryHashTests
+    {
+        /// <summary>Unbound hashes at most int.MaxValue bytes of raw memory in one call and says so;
+        /// nothing is read before the check.</summary>
+        [Fact]
+        public unsafe void HashingMoreThanTheLimitFailsClearly()
+        {
+            var memory = (byte*)System.Runtime.InteropServices.NativeMemory.Alloc(16);
+            var hash = (Hash128*)(memory + 0);
+            *hash = new Hash128();
+            System.ArgumentException e;
+            try
+            {
+                e = Assert.Throws<System.ArgumentException>(() => HashUnsafeUtilities.ComputeHash128(memory, (ulong)int.MaxValue + 1, hash));
+            }
+            finally
+            {
+                System.Runtime.InteropServices.NativeMemory.Free(memory);
+            }
+            Assert.Contains("at most", e.Message);
+        }
+    }
 }
