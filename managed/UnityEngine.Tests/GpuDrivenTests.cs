@@ -231,19 +231,27 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void LightmappedRenderersStayOnTheOrdinaryPathWithAWarning()
+        public void LightmappedAndRealtimeGIRenderersStayOnTheOrdinaryPathWithAWarningEach()
         {
+            GPUDrivenProcessor.s_WarnedRefusals = 0;
             var processor = new GPUDrivenProcessor();
             var lightmapped = Renderer("lightmapped", m_Dots);
             lightmapped.lightmapIndex = 0;
+            var lightmapped2 = Renderer("lightmapped2", m_Dots);
+            lightmapped2.lightmapIndex = 1;
             var influence = Renderer("influence", m_Dots);
             influence.lightmapIndex = 0xFFFE;
+            var realtime = Renderer("realtime", m_Dots);
+            realtime.realtimeLightmapIndex = 0;
             var none = Renderer("none", m_Dots);
             Assert.Equal(-1, none.lightmapIndex);
-            var taken = Taken(processor, lightmapped, influence, none);
+            Assert.Equal(-1, none.realtimeLightmapIndex);
+            var taken = Taken(processor, lightmapped, lightmapped2, influence, realtime, none);
             Assert.Equal(new[] { influence.GetInstanceID(), none.GetInstanceID() }, taken);
             Assert.False(lightmapped.m_GpuDriven);
-            Assert.Contains(m_Logs, m => m.StartsWith("Warning: Unbound: GPU-driven rendering does not take lightmapped renderers yet"));
+            Assert.False(realtime.m_GpuDriven);
+            Assert.Single(m_Logs, m => m.StartsWith("Warning: Unbound: GPU-driven rendering does not take lightmapped renderers yet"));
+            Assert.Single(m_Logs, m => m.StartsWith("Warning: Unbound: GPU-driven rendering leaves renderers with realtime GI lightmaps to the normal rendering path"));
             processor.Dispose();
         }
 
