@@ -276,7 +276,7 @@ downscale multipliers other than 1, scriptable objects and texture coordinates 1
 Sprites stay rejected (none produced by the Editor in these
 probes); the SpriteAtlas cases its row lists as not reproduced (with warnings); the SVGImage drawn
 on a canvas. Measured on 6000.0.71f1 with the NVIDIA driver only, except spriteoutlines (macOS
-Editor, Metal; equal to its earlier Linux reference in every value that had).
+Editor, Metal; equal to its earlier Linux reference in every value it had).
 
 Seen beside these, tracked elsewhere and not classified again: coreapis, humanfirstpose,
 humanoid, indirectspec, modelimport, particles and shaderkeywords have open tasks, deferred

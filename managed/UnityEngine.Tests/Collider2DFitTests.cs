@@ -123,6 +123,10 @@ namespace UnityEngine.Tests
             Near(Vector2.zero, nan.AddComponent<BoxCollider2D>().offset);
             Near(Vector2.zero, nan.AddComponent<CircleCollider2D>().offset);
             Near(Vector2.zero, nan.AddComponent<EdgeCollider2D>().points[1]);
+            // Without the engine host the sprite has no outline: the pentagon around the origin.
+            var pentagon = nan.AddComponent<PolygonCollider2D>().GetPath(0);
+            Near(new Vector2(0, 1), pentagon[0]);
+            Near(new Vector2(-Mathf.Sin(2f * Mathf.PI / 5), Mathf.Cos(2f * Mathf.PI / 5)), pentagon[1]);
         }
 
         [Fact]
