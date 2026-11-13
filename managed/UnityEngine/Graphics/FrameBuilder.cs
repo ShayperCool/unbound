@@ -1038,7 +1038,7 @@ namespace Unbound.Runtime
             {
                 if (item.Dots is BatchCulling.DrawRef dots) BatchCulling.Draw(item, dots, material, pass, properties);
                 else GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
-                    item.ClipEnabled ? item.Clip : (Rect?)null, properties);
+                    item.ClipEnabled ? item.Clip : (Rect?)null, properties, flipWinding: item.Renderer?.DrawFlipWinding(item.Model) ?? false);
             }
             finally
             {

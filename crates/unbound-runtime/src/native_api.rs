@@ -75,7 +75,7 @@ use std::ffi::c_void;
 /// 64: allocation-free individual compressed texels and ASTC texture packets.
 /// 65: the `MeshInstance` render command carries its call's instance count.
 /// 67: listener components among scripts, immutable frame script plans and callback ranges.
-/// 67: the Draw render command flags distinguish raw winding from renderer correction.
+/// 68: the Draw render command flags distinguish raw winding and baked renderer reflections.
 pub const NATIVE_API_VERSION: u32 = 67;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.

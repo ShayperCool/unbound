@@ -688,6 +688,11 @@ namespace UnityEngine
         /// (tests/projects/particlemeshshape <c>skinned/bone</c>).</summary>
         internal Mesh CurrentGeometry(out Matrix4x4 model) => Geometry(out model, now: true, reuse: true);
 
+        // World-space skinning submits an identity model. Keep the renderer's winding even
+        // when its transform was applied to the vertices; local-buffer skinning already has it.
+        internal override bool DrawFlipWinding(in Matrix4x4 model) => Compat.RenderingMeasured
+            && ((transform.localToWorldMatrix.determinant < 0) != (model.determinant < 0));
+
         internal override Mesh DrawGeometry(out Matrix4x4 model) => Geometry(out model, forceMatrixRecalculationPerRender, false);
 
         Mesh Geometry(out Matrix4x4 model, bool now, bool reuse)

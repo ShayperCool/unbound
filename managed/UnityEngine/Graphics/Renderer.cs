@@ -471,6 +471,9 @@ namespace UnityEngine
         internal virtual void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into) { }
 
         /// <summary>The current mesh and its matrix, also used by command buffer draws.</summary>
+        /// <summary>A renderer reflection already baked into its submitted geometry.</summary>
+        internal virtual bool DrawFlipWinding(in Matrix4x4 model) => false;
+
         internal virtual Mesh DrawGeometry(out Matrix4x4 model)
         {
             model = RenderMatrix;

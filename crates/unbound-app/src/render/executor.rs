@@ -3727,7 +3727,7 @@ impl UnityRenderer {
             (state, stencil_ref) = self.draw_state(
                 state,
                 stencil_ref,
-                ((!draw.raw_winding && mirrored) != top_down) != flip,
+                (((!draw.raw_winding && mirrored) != draw.flip_winding) != top_down) != flip,
             );
             let key = PipelineKey {
                 state,

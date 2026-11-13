@@ -517,7 +517,7 @@ namespace UnityEngine.Rendering
                 if (mesh != null)
                 {
                     GfxStream.Draw(mesh.Sync(), submeshIndex, material.Sync(), pass, model, Color.white,
-                        properties: Unbound.Runtime.FrameBuilder.WithRenderingLayer(renderer.renderingLayerMask, renderer.BlockFor(submeshIndex)?.m_Values));
+                        properties: Unbound.Runtime.FrameBuilder.WithRenderingLayer(renderer.renderingLayerMask, renderer.BlockFor(submeshIndex)?.m_Values), flipWinding: renderer.DrawFlipWinding(model));
                     return;
                 }
                 // Other renderers (sprites, lines, ...) draw the geometry they draw for a camera,

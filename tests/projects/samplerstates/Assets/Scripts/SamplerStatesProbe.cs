@@ -377,7 +377,7 @@ public class UitkProbe : MonoBehaviour
         var readback = new Texture2D(2, 1, TextureFormat.RGBAFloat, false, true);
         var scales = new[] { ("x", new Vector3(-1, 1, 1)), ("y", new Vector3(1, -1, 1)),
             ("z", new Vector3(1, 1, -1)), ("xy", new Vector3(-1, -1, 1)), ("zero", new Vector3(0, 1, 1)) };
-        foreach (string path in new[] { "meshRenderer", "skinnedRenderer", "commandRenderer", "immediate", "commandMesh", "commandMultiple" })
+        foreach (string path in new[] { "meshRenderer", "skinnedRenderer", "commandRenderer", "immediate", "commandMesh", "commandMultiple", "skinnedRendererGpu", "commandSkinned", "commandSkinnedGpu" })
         foreach (var (axis, scale) in scales)
         {
             var objects = new GameObject[2];
@@ -386,12 +386,13 @@ public class UitkProbe : MonoBehaviour
             for (int i = 0; i < 2; i++)
             {
                 var go = objects[i] = new GameObject("Face quad"); go.layer = 30;
-                if (path == "skinnedRenderer")
+                if (path == "skinnedRenderer" || path == "skinnedRendererGpu" || path == "commandSkinned" || path == "commandSkinnedGpu")
                 {
                     var skin = go.AddComponent<SkinnedMeshRenderer>(); skin.sharedMesh = quad;
                     skin.bones = new[] { go.transform }; skin.rootBone = go.transform;
                     skin.localBounds = new Bounds(new Vector3(.25f, .5f, 0), new Vector3(2, 2, 2));
                     skin.updateWhenOffscreen = true; renderers[i] = skin;
+                    if (path.EndsWith("Gpu", StringComparison.Ordinal)) skin.GetVertexBuffer()?.Dispose();
                 }
                 else
                 {
@@ -419,13 +420,13 @@ public class UitkProbe : MonoBehaviour
                     foreach (var go in objects) Graphics.DrawMeshNow(quad, go.transform.localToWorldMatrix);
                     GL.PopMatrix(); RenderTexture.active = active;
                 }
-                else if (path == "commandRenderer" || path == "commandMesh" || path == "commandMultiple")
+                else if (path == "commandRenderer" || path == "commandMesh" || path == "commandMultiple" || path == "commandSkinned" || path == "commandSkinnedGpu")
                 {
                     using (var cmd = new UnityEngine.Rendering.CommandBuffer())
                     {
                         cmd.SetRenderTarget(target); cmd.ClearRenderTarget(true, true, new Color(0, 0, 0, 1));
                         cmd.SetViewProjectionMatrices(camera.worldToCameraMatrix, camera.projectionMatrix);
-                        if (path == "commandRenderer") foreach (var renderer in renderers) cmd.DrawRenderer(renderer, material, 0, 0);
+                        if (path == "commandRenderer" || path == "commandSkinned" || path == "commandSkinnedGpu") foreach (var renderer in renderers) cmd.DrawRenderer(renderer, material, 0, 0);
                         else if (path == "commandMultiple") cmd.DrawMultipleMeshes(new[] { objects[0].transform.localToWorldMatrix, objects[1].transform.localToWorldMatrix },
                             new[] { quad, quad }, new[] { 0, 0 }, 2, material, 0, null);
                         else foreach (var go in objects) cmd.DrawMesh(quad, go.transform.localToWorldMatrix, material, 0, 0);

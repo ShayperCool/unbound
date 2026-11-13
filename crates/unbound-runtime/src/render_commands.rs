@@ -54,6 +54,8 @@ pub struct Draw {
     pub clip: Option<[f32; 4]>,
     /// Keep the submitted winding instead of correcting a negative model determinant.
     pub raw_winding: bool,
+    /// A model reflection already baked into the submitted vertices.
+    pub flip_winding: bool,
     /// Per-draw properties over the material's (`MaterialPropertyBlock`).
     pub properties: Vec<(String, PropertyValue)>,
 }
@@ -781,6 +783,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     main_texture,
                     clip: (draw_flags & 1 != 0).then_some(clip),
                     raw_winding: draw_flags & 2 != 0,
+                    flip_winding: draw_flags & 4 != 0,
                     properties,
                 }))
             }
@@ -1386,8 +1389,11 @@ impl Writer {
                 self.floats(&d.model);
                 self.floats(&d.color);
                 self.u64(d.main_texture);
-                self.bytes
-                    .push(d.clip.is_some() as u8 | ((d.raw_winding as u8) << 1));
+                self.bytes.push(
+                    d.clip.is_some() as u8
+                        | ((d.raw_winding as u8) << 1)
+                        | ((d.flip_winding as u8) << 2),
+                );
                 self.floats(&d.clip.unwrap_or_default());
                 self.u32(d.properties.len() as u32);
                 for (name, value) in &d.properties {
@@ -1533,6 +1539,7 @@ mod tests {
                 main_texture: 0,
                 clip: Some([1.0, 2.0, 3.0, 4.0]),
                 raw_winding: true,
+                flip_winding: true,
                 properties: vec![
                     ("_Glow".into(), PropertyValue::Float(2.0)),
                     ("_M".into(), PropertyValue::Matrix([4.0; 16])),
