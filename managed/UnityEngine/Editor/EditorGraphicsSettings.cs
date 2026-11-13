@@ -10,6 +10,8 @@ namespace UnityEditor.Rendering
         public static void SetRenderPipelineGlobalSettingsAsset(Type renderPipelineType, RenderPipelineGlobalSettings newSettings)
         {
 #pragma warning disable CS0618
+            // As the Editor: the asset gets the settings its pipeline supports before it is registered.
+            if (newSettings != null) PopulateRenderPipelineGraphicsSettings(newSettings);
             if (newSettings != null) GraphicsSettings.RegisterRenderPipelineSettings(renderPipelineType, newSettings);
             else GraphicsSettings.UnregisterRenderPipelineSettings(renderPipelineType);
 #pragma warning restore CS0618

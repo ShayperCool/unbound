@@ -44046,7 +44046,6 @@ namespace UnityEditor.Rendering
         [global::Unbound.Stub] internal static void RegisterUndo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.RegisterUndo"); }
         [global::Unbound.Stub] internal static int Internal_GetSettingsInstanceIDForRenderPipeline(string renderpipelineName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.Internal_GetSettingsInstanceIDForRenderPipeline"); return default; }
         [global::Unbound.Stub] public static global::System.Collections.Generic.IEnumerable<global::System.Type> GetSupportedRenderPipelineGraphicsSettingsTypesForPipeline<T>() where T : global::UnityEngine.Rendering.RenderPipelineAsset { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.GetSupportedRenderPipelineGraphicsSettingsTypesForPipeline"); return global::System.Array.Empty<global::System.Type>(); }
-        [global::Unbound.Stub] public static void PopulateRenderPipelineGraphicsSettings(global::UnityEngine.Rendering.RenderPipelineGlobalSettings settings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.PopulateRenderPipelineGraphicsSettings"); }
         [global::Unbound.Stub] public static void SetTierSettings(global::UnityEditor.BuildTargetGroup target, global::UnityEngine.Rendering.GraphicsTier tier, global::UnityEditor.Rendering.TierSettings settings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.SetTierSettings"); }
         [global::Unbound.Stub] public static void SetTierSettings(global::UnityEditor.Build.NamedBuildTarget target, global::UnityEngine.Rendering.GraphicsTier tier, global::UnityEditor.Rendering.TierSettings settings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.SetTierSettings"); }
         [global::System.Obsolete("Use GetTierSettings() instead (UnityUpgradable) -> GetTierSettings(*)")] [global::Unbound.Stub] public static global::UnityEditor.Rendering.PlatformShaderSettings GetShaderSettingsForPlatform(global::UnityEditor.BuildTargetGroup target, global::UnityEngine.Rendering.ShaderHardwareTier tier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.GetShaderSettingsForPlatform"); return default; }
@@ -44151,19 +44150,6 @@ namespace UnityEditor.Rendering
         [global::Unbound.Stub] public static void RecreateRenderPipelineMatchingSettings(global::UnityEngine.Rendering.IRenderPipelineGraphicsSettings settings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.RenderPipelineGraphicsSettingsEditorUtility.RecreateRenderPipelineMatchingSettings"); }
         [global::Unbound.Stub] public static void RemoveRenderPipelineGraphicsSettingsWithMissingScript() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.RenderPipelineGraphicsSettingsEditorUtility.RemoveRenderPipelineGraphicsSettingsWithMissingScript"); }
         [global::Unbound.Stub] public static void Rebind(global::UnityEngine.Rendering.IRenderPipelineGraphicsSettings settings, global::System.Type renderPipelineType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.RenderPipelineGraphicsSettingsEditorUtility.Rebind"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class RenderPipelineResourcesEditorUtils
-    {
-        [global::Unbound.Stub] internal static bool TryReloadContainedNullFields(global::UnityEngine.Rendering.IRenderPipelineResources resource, out global::UnityEditor.Rendering.RenderPipelineResourcesEditorUtils.ResultStatus result, out string message) { result = default; message = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.RenderPipelineResourcesEditorUtils.TryReloadContainedNullFields"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Rendering.RenderPipelineResourcesEditorUtils.ResultStatus TryReloadContainedNullFields(global::UnityEngine.Rendering.IRenderPipelineResources resource) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.RenderPipelineResourcesEditorUtils.TryReloadContainedNullFields"); return default; }
-        public enum ResultStatus
-        {
-            NothingToUpdate = 0,
-            InvalidPathOrNameFound = 1,
-            ResourceReloaded = 2,
-            SkipedDueToNotMainThread = 3,
-        }
     }
     [global::Unbound.Stub]
     public unsafe abstract partial class RenderingLayersLimitSettings : global::UnityEngine.Rendering.IRenderPipelineGraphicsSettings
