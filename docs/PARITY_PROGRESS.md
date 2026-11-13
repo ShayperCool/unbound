@@ -2959,3 +2959,12 @@ entries, whose fallback order is numeric ID; schema 2 ignores legacy entries.
 Original scriptedfileids 184/184 and its reference remain unchanged. The separate
 four-record HierarchyControl retains one root-ID difference (3/4) and records
 the M-sized hierarchy-identity follow-up rather than applying the leaf rule.
+
+Q402/Q417 closure records the remaining work explicitly: one host keyboard
+configuration event, 30 appfacts records (20 memory/creation and 10 stack),
+game-code arithmetic across runtime rounding boundaries, and imported hierarchy
+IDs. The fixes close the 18 prefab metadata fields, four TextAsset accounting
+records and all 44 differences in the new 136-record leaf-identity control.
+The original input, lifecycle, scripted-import and float oracles/tolerances stay
+strict. See the Q402/Q417 residual-scope table in COMPATIBILITY_GAPS.md; each open
+mechanism is M-sized and has a reproducer, rather than a fixed-value workaround.
