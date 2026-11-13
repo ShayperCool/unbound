@@ -5,10 +5,16 @@ each missing, extra or differing value with its largest difference, the number o
 bytes and the first differing texel; exits non-zero on any.
 
     compare.py Reference/unity-6000.0.71f1/Gamma.jsonl <capture>/Gamma.jsonl [--tolerance N]
+    compare.py ... --overlay Reference/unity-6000.0.71f1/macOS.jsonl   # the macOS Editor's values
+
+An overlay holds the 4-byte words in which another OS's Editor differs from the reference, per
+profile (the reference file's name) and key: rows {"profile", "k", "words": {index: "0x<u32>"}},
+each word little-endian. The comparison then uses that Editor's values.
 """
 import argparse
 import base64
 import json
+from pathlib import Path
 import sys
 
 
@@ -20,14 +26,30 @@ def load(path):
     return values
 
 
+def apply_overlay(values, overlay, profile):
+    """The reference values with the overlay's words of `profile` in place."""
+    rows = [json.loads(line) for line in open(overlay, encoding='utf-8') if line.strip()]
+    for row in (row for row in rows if row['profile'] == profile):
+        if row['k'] not in values:
+            sys.exit(f'{overlay}: {profile} {row["k"]} is not in the reference')
+        width, height, data = mip(values[row['k']])
+        data = bytearray(data)
+        for index, word in row['words'].items():
+            data[int(index) * 4:int(index) * 4 + 4] = int(word, 16).to_bytes(4, 'little')
+        values[row['k']] = f'{width}x{height}:' + base64.b64encode(bytes(data)).decode()
+    return values
+
+
 def mip(value):
     size, data = value.split(':', 1)
     width, height = map(int, size.split('x'))
     return width, height, base64.b64decode(data)
 
 
-def compare(reference, actual, tolerance):
+def compare(reference, actual, tolerance, overlay=None):
     a, b = load(reference), load(actual)
+    if overlay:
+        a = apply_overlay(a, overlay, Path(reference).stem)
     failures = 0
     mips = exact_mips = values = exact_values = 0
     for key in sorted(a.keys() | b.keys()):
@@ -75,8 +97,9 @@ def main():
     parser.add_argument('reference')
     parser.add_argument('actual')
     parser.add_argument('--tolerance', type=int, default=0)
+    parser.add_argument('--overlay', help="another OS's Editor values (see above)")
     args = parser.parse_args()
-    return compare(args.reference, args.actual, args.tolerance)
+    return compare(args.reference, args.actual, args.tolerance, args.overlay)
 
 
 if __name__ == '__main__':

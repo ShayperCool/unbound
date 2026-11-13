@@ -37,6 +37,12 @@ cache.
     R=tests/projects/textureimport/Reference/unity-6000.0.71f1 W=~/.cache/unbound/validation/runs/textureimport/<L>
     python3 tests/projects/textureimport/compare.py $R/Gamma.jsonl $W/unbound/Gamma.jsonl [--tolerance 1]
 
+On macOS, `editor` runs the macOS Editor directly and `publish` writes
+`Reference/<release>/macOS.jsonl`: the 4-byte words in which the macOS Editor's captures differ
+from the Linux reference (it refuses any other difference). `gate` on macOS, and the importer test
+there, compare with the Linux reference under that overlay
+(`compare.py ... --overlay $R/macOS.jsonl`).
+
 `compare.py` compares sizes, mip counts and formats exactly and every byte within the tolerance
 (default 0), and lists each differing mip with its largest difference. After changing the cases,
 run `python3 make_textures.py`, then let the Editor apply the settings and remake the scene:
@@ -118,6 +124,15 @@ is byte-identical to its canonical reference and two independent Editor recordin
 Explicit RGBAFloat overrides retain float32 precision through the runtime descriptor;
 default and explicit RGBAHalf imports retain their existing format. The importer test
 `hdr_max_size_resize_matches_the_editor` also checks the HDR values bit for bit.
+
+**Which OS.** `Gamma.jsonl`, `Linear.jsonl` and `Android.jsonl` were recorded with the Linux
+Editor (x86_64, on the GPU). `macOS.jsonl` comes from the macOS arm64 Editor (batchmode, Metal),
+four captures per profile, all identical: every value equals the Linux reference except 322
+floats of the HDR case's first level in Gamma and the same 322 in Android (gamma-encoded
+values, at most 4 float steps apart); Linear is identical. Unbound's gamma encoding uses `powf` of
+the platform's math library and reproduces each OS's values on that OS (the Linux gate; on macOS
+all three profiles under the overlay). Which part of the Editor's encoding makes the difference
+is not measured.
 
 Runners select the Editor release explicitly and write it into disposable project copies.
 Use a fresh label for each run; existing projects and captures are preserved. Only the
