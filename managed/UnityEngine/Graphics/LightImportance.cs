@@ -73,7 +73,7 @@ namespace Unbound.Runtime
         /// <summary>Whether a light's range reaches bounds (a directional light's always does);
         /// a spot light also needs <see cref="SpotReaches"/>.</summary>
         internal static bool Reaches(LightType type, Vector3 position, float range, in Bounds bounds) =>
-            type == LightType.Directional || bounds.SqrDistance(position) <= range * range;
+            type == LightType.Directional || bounds.SqrDistanceUnchecked(position) <= range * range;
 
         /// <summary>Whether bounds touch a spot light's pyramid (from <paramref name="localToWorld"/>,
         /// looking along its z).</summary>

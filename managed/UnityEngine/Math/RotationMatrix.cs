@@ -14,6 +14,15 @@ namespace UnityEngine
         /// <summary>Length below which a direction counts as zero.</summary>
         internal const float MinimumLength = 1e-5f;
 
+        // The Editor's console messages for degenerate operands (tests/projects/floatrounding,
+        // native/log), logged as assertions.
+        internal const string ZeroLengthAssertion = "Assertion failed on expression: '!CompareApproximately(aScalar, 0.0F)'";
+        const string DeterminantAssertion = "Assertion failed on expression: 'CompareApproximately(det, 1.0F, .005f)'";
+        const string RootAssertion = "Assertion failed on expression: 'fRoot >= Vector3f::epsilon'";
+
+        /// <summary>Lengths not above this make a normalization log <see cref="ZeroLengthAssertion"/>.</summary>
+        internal const float MinimumNormalizedLength = 1e-6f;
+
         /// <summary>The next axis after each axis, cyclically.</summary>
         static ReadOnlySpan<byte> NextAxis => new byte[] { 1, 2, 0 };
 
@@ -165,6 +174,9 @@ namespace UnityEngine
         /// </summary>
         internal static Quaternion ToQuaternion(ReadOnlySpan<float> m)
         {
+            const float determinantTolerance = 0.005f;
+            if (!(MathF.Abs(Determinant(m) - 1f) <= determinantTolerance))
+                Debug.LogAssertion(DeterminantAssertion);
             Span<float> q = stackalloc float[4];
             float trace = m[0] + m[4] + m[8];
             if (trace > 0f)
@@ -186,6 +198,8 @@ namespace UnityEngine
                 int j = NextAxis[i];
                 int k = NextAxis[j];
                 float root = MathF.Sqrt(m[i * 4] - m[j * 4] - m[k * 4] + 1f);
+                if (!(root >= MinimumLength))
+                    Debug.LogAssertion(RootAssertion);
                 q[i] = root * 0.5f;
                 float s = 0.5f / root;
                 q[3] = s * (m[j * 3 + k] - m[k * 3 + j]);
@@ -193,6 +207,8 @@ namespace UnityEngine
                 q[k] = s * (m[i * 3 + k] + m[k * 3 + i]);
             }
             float length = MathF.Sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+            if (length <= MinimumNormalizedLength)
+                Debug.LogAssertion(ZeroLengthAssertion);
             return new Quaternion(q[0] / length, q[1] / length, q[2] / length, q[3] / length);
         }
     }

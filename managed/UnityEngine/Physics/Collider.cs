@@ -127,7 +127,7 @@ namespace UnityEngine
             var forward = new Vector3(m.m02, m.m12, m.m22);
             var up = new Vector3(m.m01, m.m11, m.m21);
             if (forward.sqrMagnitude < 1e-20f || up.sqrMagnitude < 1e-20f) return Quaternion.identity;
-            return Quaternion.LookRotation(forward, up);
+            return Quaternion.LookRotationSilent(forward, up);
         }
 
         internal static int ReadMask(YNode body, string key, int fallback)
@@ -307,7 +307,7 @@ namespace UnityEngine
             return PhysicsQueries.ClosestPoint(this, position);
         }
 
-        public Vector3 ClosestPointOnBounds(Vector3 position) => bounds.ClosestPoint(position);
+        public Vector3 ClosestPointOnBounds(Vector3 position) => bounds.ClosestPointUnchecked(position);
 
         public bool Raycast(Ray ray, out RaycastHit hitInfo, float maxDistance)
         {

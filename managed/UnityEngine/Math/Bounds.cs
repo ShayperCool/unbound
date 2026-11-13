@@ -98,9 +98,17 @@ namespace UnityEngine
         // Contains, SqrDistance and ClosestPoint compare and round in the order of the Unity
         // 6000.0.71f1 Editor (tests/projects/floatrounding, native/boundsPoint).
 
+        // A box with a NaN centre or extent logs the Editor's assertion (tests/projects/floatrounding,
+        // native/log): Contains names it "*this", SqrDistance and ClosestPoint "rkBox". The engine's
+        // own callers use the unchecked forms.
+        private bool IsNaN => float.IsNaN(m_Center.x) || float.IsNaN(m_Center.y) || float.IsNaN(m_Center.z)
+            || float.IsNaN(m_Extents.x) || float.IsNaN(m_Extents.y) || float.IsNaN(m_Extents.z);
+
         /// <summary>True if the point is inside or on the surface of the box.</summary>
         public bool Contains(Vector3 point)
         {
+            if (IsNaN)
+                Debug.LogAssertion("Invalid AABB *this");
             float x = m_Center.x, y = m_Center.y, z = m_Center.z;
             float ex = m_Extents.x, ey = m_Extents.y, ez = m_Extents.z;
             if (point.x < x - ex || point.x > x + ex || point.y < y - ey || point.y > y + ey || point.z < z - ez)
@@ -111,6 +119,15 @@ namespace UnityEngine
         /// <summary>Squared distance from the point to the box; 0 inside.</summary>
         public float SqrDistance(Vector3 point)
         {
+            if (IsNaN)
+                Debug.LogAssertion(InvalidBoxAssertion);
+            return SqrDistanceUnchecked(point);
+        }
+
+        private const string InvalidBoxAssertion = "Invalid AABB rkBox";
+
+        internal float SqrDistanceUnchecked(Vector3 point)
+        {
             float dx = MathF.Max(MathF.Abs(point.x - m_Center.x), m_Extents.x) - m_Extents.x;
             float dy = MathF.Max(MathF.Abs(point.y - m_Center.y), m_Extents.y) - m_Extents.y;
             float dz = MathF.Max(MathF.Abs(point.z - m_Center.z), m_Extents.z) - m_Extents.z;
@@ -119,6 +136,13 @@ namespace UnityEngine
 
         /// <summary>The closest point on or in the box; a point inside is returned unchanged.</summary>
         public Vector3 ClosestPoint(Vector3 point)
+        {
+            if (IsNaN)
+                Debug.LogAssertion(InvalidBoxAssertion);
+            return ClosestPointUnchecked(point);
+        }
+
+        internal Vector3 ClosestPointUnchecked(Vector3 point)
         {
             float squared = 0F;
             float x = ClosestOffset(point.x - m_Center.x, m_Extents.x, ref squared);
@@ -129,20 +153,23 @@ namespace UnityEngine
             return new Vector3(m_Center.x + x, m_Center.y + y, m_Center.z + z);
         }
 
-        // The offset from the centre clamped to [-extent, extent], adding the squared overshoot.
+        // The offset from the centre clamped to [-extent, extent], adding the squared overshoot; a
+        // NaN offset stays as it is and adds nothing.
         private static float ClosestOffset(float offset, float extent, ref float squared)
         {
             if (offset < -extent)
             {
-                float d = offset + extent;
-                squared += d * d;
+                float under = offset + extent;
+                squared += under * under;
                 return -extent;
             }
-            if (offset <= extent)
-                return offset;
-            float over = offset - extent;
-            squared += over * over;
-            return extent;
+            if (offset > extent)
+            {
+                float over = offset - extent;
+                squared += over * over;
+                return extent;
+            }
+            return offset;
         }
 
         // Slab test against the three axis-aligned slab pairs.

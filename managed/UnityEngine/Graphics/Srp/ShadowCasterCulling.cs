@@ -77,7 +77,7 @@ namespace Unbound.Runtime
                 if (!renderer || renderer.shadowCastingMode == ShadowCastingMode.Off) continue;
                 if ((mask & (1 << renderer.gameObject.layer)) == 0) continue;
                 var b = renderer.bounds;
-                if (light.type == LightType.Point && b.SqrDistance(position) > light.range * light.range) continue;
+                if (light.type == LightType.Point && b.SqrDistanceUnchecked(position) > light.range * light.range) continue;
                 if (volume != null && BoxOutside(volume, b)) continue;
                 if (BoxOutside(hull, b)) continue;
                 if (!any) { bounds = b; any = true; }

@@ -324,7 +324,7 @@ namespace Unbound.Runtime
                 if (light.type != LightType.Directional)
                 {
                     float range = light.range;
-                    return bounds.SqrDistance(light.transform.position) <= range * range;
+                    return bounds.SqrDistanceUnchecked(light.transform.position) <= range * range;
                 }
                 var d = light.transform.forward;
                 var c = bounds.center;

@@ -539,7 +539,7 @@ namespace UnityEngine
         {
             var forward = worldPosition - position;
             if (forward.sqrMagnitude < 1e-12f) return;
-            rotation = Quaternion.LookRotation(forward, worldUp);
+            rotation = Quaternion.LookRotationSilent(forward, worldUp);
         }
 
         public void LookAt(Vector3 worldPosition) => LookAt(worldPosition, Vector3.up);

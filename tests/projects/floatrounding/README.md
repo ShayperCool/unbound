@@ -15,7 +15,10 @@ LookRotation, AngleAxis, FromToRotation, Inverse; Vector3 Slerp, RotateTowards, 
 Matrix4x4 TRS, inverse, determinant, rotation, lossyScale; Bounds SqrDistance, Contains,
 ClosestPoint), and five `native/` rows of the branches random operands rarely reach (nearly equal and
 opposite rotations and directions, degenerate lengths, gimbal lock, singular and pivoting matrices,
-mirroring and degenerate scales, Matrix4x4.Perspective, points on a box's faces). `il/` rows record each control's compiled instructions, with tokens shown as the names
+mirroring and degenerate scales, Matrix4x4.Perspective, points on a box's faces), `native/degenerate`
+of zero-length interpolations, zero and rank-1 matrices, negative RotateTowards deltas and NaN
+operands (whether a result is NaN, not its payload), and `native/log` of the type and text of every
+message the native math logs for degenerate operands. `il/` rows record each control's compiled instructions, with tokens shown as the names
 they resolve to.
 
 ```bash
@@ -88,8 +91,14 @@ store as in the Editor. The engine's implementations of the methods Unity binds 
 compute in single precision with the Editor's algorithms and order of operations
 (`managed/UnityEngine/Math/RotationMatrix.cs`, `PolarRotation.cs`, and the Quaternion, Vector3,
 Matrix4x4 and Bounds sources); their sines, cosines and inverse trigonometric functions come from
-the platform's C library, as the Editor's do, which is where the hosts differ. They match every
-`native/` row on both hosts in both modes.
+the platform's C library, as the Editor's do, which is where the hosts differ. They log the
+Editor's messages (`native/log`): "Look rotation viewing vector is zero" for a forward not longer
+than 1e-5, and assertions for a zero-length normalization, a non-affine matrix's rotation or
+lossyScale, a rotation matrix that is not orthonormal, a rotation that is not normalized or gives
+angles that are not finite, and a box with a NaN centre or extent; the engine's own callers use
+variants without these messages. Two measured details differ from the Scripting API's text: with a
+negative maxRadiansDelta, RotateTowards does not stop at the opposite direction but keeps turning
+about an axis orthogonal to it, and Bounds.Contains is true for a point with a NaN coordinate.
 
 The gate matches every control in both modes. Its residuals (`residuals.json`):
 
@@ -107,6 +116,6 @@ update loop over Unity's math API (normalize, Lerp, quaternion products, TRS, Mu
 Dot, Distance, Cross) takes 33.6 ms with the converted copies instead of 25.4 ms when the game code is
 compiled in Release, and 72.2 ms instead of 70.4 ms in Debug.
 
-Not measured: other Unity releases, NaN payloads and NaN operands of the natively bound methods, code Burst compiles in the Editor (and the
+Not measured: other Unity releases, NaN payloads, code Burst compiles in the Editor (and the
 methods such code calls, which are converted like any other), and Unity's managed code outside its
 math structs (RectTransformUtility, UI Toolkit, ...), which stays engine code in float32.

@@ -103,7 +103,7 @@ namespace UnityEngine
                 {
                     RenderSky(n, forward, up, readback);
                     var pixels = readback.GetPixels();
-                    var rotation = Quaternion.LookRotation(forward, up);
+                    var rotation = Quaternion.LookRotationSilent(forward, up);
                     var right = rotation * Vector3.right;
                     var cameraUp = rotation * Vector3.up;
                     for (int y = 0; y < n; y++)
@@ -150,7 +150,7 @@ namespace UnityEngine
                 s_SkyTargets[n] = target = new RenderTexture(n, n, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear)
                     { hideFlags = HideFlags.HideAndDontSave };
             camera.targetTexture = target;
-            camera.transform.SetPositionAndRotation(Vector3.zero, Quaternion.LookRotation(forward, up));
+            camera.transform.SetPositionAndRotation(Vector3.zero, Quaternion.LookRotationSilent(forward, up));
             // The engine's own draw of the sky, whatever the render pipeline: a pipeline's
             // camera would send its events and draw the sky its way (the Editor's ambient probe
             // and realtime GI environment under the Universal Render Pipeline are the built-in

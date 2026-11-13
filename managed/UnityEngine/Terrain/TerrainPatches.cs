@@ -84,7 +84,7 @@ namespace UnityEngine
         /// <summary>Whether a patch draws the splat passes: its bounds' nearest point is closer to
         /// the camera than the base map distance.</summary>
         internal static bool DrawsSplats(Bounds worldBounds, Vector3 camera, float sqrBaseMapDistance) =>
-            worldBounds.SqrDistance(camera) < sqrBaseMapDistance;
+            worldBounds.SqrDistanceUnchecked(camera) < sqrBaseMapDistance;
 
         struct PatchDraw
         {
@@ -226,7 +226,7 @@ namespace UnityEngine
             else
             {
                 float seen = lod.Factor * error;
-                whole = seen * seen < bounds.SqrDistance(lod.Camera) || level == lod.Finest;
+                whole = seen * seen < bounds.SqrDistanceUnchecked(lod.Camera) || level == lod.Finest;
             }
             bool outside = !whole && !FrameBuilder.InFrustum(lod.Frustum, bounds);
             if (((whole || outside) && level <= lod.Coarsest) || level == 0)

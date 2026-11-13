@@ -95,7 +95,7 @@ namespace UnityEngine
             block.SetColor("_WavingTint", tint);
             foreach (var patch in m_DetailPatches)
             {
-                if (!patch.HasBounds || patch.Bounds.SqrDistance(camera.Position) > squared) continue;
+                if (!patch.HasBounds || patch.Bounds.SqrDistanceUnchecked(camera.Position) > squared) continue;
                 for (int kind = 0; kind < 3; kind++)
                 {
                     var renderer = patch.Renderers[kind];

@@ -170,18 +170,32 @@ namespace UnityEngine
             Quaternion q = length < RotationMatrix.MinimumLength ? identity
                 : new Quaternion(rotation.x / length, rotation.y / length, rotation.z / length, rotation.w / length);
             float xx = q.x * q.x, yy = q.y * q.y, zz = q.z * q.z, ww = q.w * q.w;
+            if (!(MathF.Abs(xx + yy + zz + ww - 1f) < RotationMatrix.MinimumLength))
+                Debug.LogAssertion(NotNormalizedMessage);
             float xy = q.x * q.y, xz = q.x * q.z, xw = q.x * q.w;
             float yz = q.y * q.z, yw = q.y * q.w, zw = q.z * q.w;
             float sinX = yz - xw;
             float ex = -MathF.Asin(Math.Clamp(sinX + sinX, -1f, 1f));
+            Vector3 euler;
             if (MathF.Abs(sinX) < gimbalLock)
             {
                 float y = xz + yw, z = xy + zw;
-                return new Vector3(ex, MathF.Atan2(y + y, ww + (zz - xx - yy)), MathF.Atan2(z + z, ww + (yy - zz - xx)));
+                euler = new Vector3(ex, MathF.Atan2(y + y, ww + (zz - xx - yy)), MathF.Atan2(z + z, ww + (yy - zz - xx)));
             }
-            float a = xy + zw, b = xw - yz, c = yz + xw, d = xy - zw;
-            return new Vector3(ex, MathF.Atan2(a * c + b * d, b * c - a * d), 0f);
+            else
+            {
+                float a = xy + zw, b = xw - yz, c = yz + xw, d = xy - zw;
+                euler = new Vector3(ex, MathF.Atan2(a * c + b * d, b * c - a * d), 0f);
+            }
+            if (!float.IsFinite(euler.x) || !float.IsFinite(euler.y) || !float.IsFinite(euler.z))
+                Debug.LogAssertion(NotFiniteMessage);
+            return euler;
         }
+
+        // The Editor's console messages for a rotation that is not normalized or gives angles that
+        // are not finite (tests/projects/floatrounding, native/log).
+        private const string NotNormalizedMessage = "QuaternionToEuler: Input quaternion was not normalized";
+        private const string NotFiniteMessage = "Assertion failed on expression: 'IsFinite(rot)'";
 
         // Maps angles into [0, 360), leaving tiny negative values (above -0.0001 rad) untouched,
         // as Unity's eulerAngles does.
@@ -279,14 +293,41 @@ namespace UnityEngine
         /// </summary>
         public static Quaternion LookRotation(Vector3 forward, Vector3 upwards)
         {
+            if (!TryLookRotation(forward, upwards, out Quaternion rotation))
+                Debug.Log(ZeroViewingVectorMessage);
+            return rotation;
+        }
+
+        // The Editor's console message for a forward too short to look along (tests/projects/floatrounding, native/log).
+        private const string ZeroViewingVectorMessage = "Look rotation viewing vector is zero";
+
+        /// <summary>LookRotation without its console message, for the engine's own callers (identity
+        /// for a forward not longer than 1e-5).</summary>
+        internal static Quaternion LookRotationSilent(Vector3 forward, Vector3 upwards)
+        {
+            TryLookRotation(forward, upwards, out Quaternion rotation);
+            return rotation;
+        }
+
+        internal static Quaternion LookRotationSilent(Vector3 forward) => LookRotationSilent(forward, Vector3.up);
+
+        private static bool TryLookRotation(Vector3 forward, Vector3 upwards, out Quaternion rotation)
+        {
             Span<float> m = stackalloc float[9];
             if (RotationMatrix.Look(forward, upwards, m))
-                return RotationMatrix.ToQuaternion(m);
+            {
+                rotation = RotationMatrix.ToQuaternion(m);
+                return true;
+            }
             float length = RotationMatrix.Length(forward.x, forward.y, forward.z);
             if (!(length > RotationMatrix.MinimumLength))
-                return identity;
+            {
+                rotation = identity;
+                return false;
+            }
             RotationMatrix.FromTo(Vector3.forward, new Vector3(forward.x / length, forward.y / length, forward.z / length), m);
-            return RotationMatrix.ToQuaternion(m);
+            rotation = RotationMatrix.ToQuaternion(m);
+            return true;
         }
 
         public void SetLookRotation(Vector3 view)
@@ -340,6 +381,8 @@ namespace UnityEngine
                 b = new Quaternion(-b.x, -b.y, -b.z, -b.w);
             float x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t, z = a.z + (b.z - a.z) * t, w = a.w + (b.w - a.w) * t;
             float length = MathF.Sqrt(x * x + y * y + z * z + w * w);
+            if (length <= RotationMatrix.MinimumNormalizedLength)
+                Debug.LogAssertion(RotationMatrix.ZeroLengthAssertion);
             return new Quaternion(x / length, y / length, z / length, w / length);
         }
 

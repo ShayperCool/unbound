@@ -1252,7 +1252,7 @@ namespace UnityEngine
                     }
                     case ParticleSystemRenderSpace.Velocity when velocity.sqrMagnitude > 1e-10f:
                     {
-                        var q = Quaternion.LookRotation(velocity);
+                        var q = Quaternion.LookRotationSilent(velocity);
                         right = q * Vector3.right;
                         up = q * Vector3.up;
                         return;
@@ -1469,16 +1469,16 @@ namespace UnityEngine
                 switch (r.m_RenderAlignment)
                 {
                     case ParticleSystemRenderSpace.View:
-                        orientation = Quaternion.LookRotation(view.Forward, view.Up);
+                        orientation = Quaternion.LookRotationSilent(view.Forward, view.Up);
                         break;
                     case ParticleSystemRenderSpace.Local:
                         orientation = Quaternion.identity;
                         break;
                     case ParticleSystemRenderSpace.Facing:
-                        orientation = Quaternion.LookRotation(position - view.Position, view.Up);
+                        orientation = Quaternion.LookRotationSilent(position - view.Position, view.Up);
                         break;
                     case ParticleSystemRenderSpace.Velocity when velocity.sqrMagnitude > 1e-10f:
-                        orientation = Quaternion.LookRotation(velocity);
+                        orientation = Quaternion.LookRotationSilent(velocity);
                         break;
                     default:
                         orientation = Quaternion.identity;

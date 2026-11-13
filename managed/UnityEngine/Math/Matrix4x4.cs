@@ -559,6 +559,7 @@ namespace UnityEngine
             get
             {
                 const float unitTolerance = 1e-6f;
+                AssertAffine();
                 Span<float> m = stackalloc float[9] { m00, m10, m20, m01, m11, m21, m02, m12, m22 };
                 float determinant = ColumnDeterminant(m);
                 if (MathF.Abs(1F - determinant) < unitTolerance)
@@ -581,6 +582,14 @@ namespace UnityEngine
             }
         }
 
+        // rotation and lossyScale log the Editor's assertion (tests/projects/floatrounding,
+        // native/log) unless the bottom row is (0, 0, 0, 1) or (0, 0, 0, -1).
+        private void AssertAffine()
+        {
+            if (!(m30 == 0F && m31 == 0F && m32 == 0F && MathF.Abs(m33) == 1F))
+                Debug.LogAssertion("Assertion failed on expression: 'ValidTRS()'");
+        }
+
         // The determinant of three columns as (column 0 x column 1) . column 2.
         private static float ColumnDeterminant(ReadOnlySpan<float> m) =>
             m[6] * (m[1] * m[5] - m[2] * m[4]) + m[7] * (m[2] * m[3] - m[0] * m[5]) + m[8] * (m[0] * m[4] - m[1] * m[3]);
@@ -590,6 +599,7 @@ namespace UnityEngine
         {
             get
             {
+                AssertAffine();
                 Span<float> m = stackalloc float[9] { m00, m10, m20, m01, m11, m21, m02, m12, m22 };
                 var scale = new Vector3(RotationMatrix.Length(m00, m10, m20), RotationMatrix.Length(m01, m11, m21),
                     RotationMatrix.Length(m02, m12, m22));
@@ -730,7 +740,7 @@ namespace UnityEngine
             Vector3 x = Vector3.Cross(up, z);
             float xMag = x.magnitude;
             if (zMag <= Vector3.kEpsilon || xMag <= Vector3.kEpsilon * Math.Max(1F, up.magnitude) * zMag)
-                return TRS(from, Quaternion.LookRotation(z, up), Vector3.one);
+                return TRS(from, Quaternion.LookRotationSilent(z, up), Vector3.one);
             z /= zMag;
             x /= xMag;
             Vector3 y = Vector3.Cross(z, x);

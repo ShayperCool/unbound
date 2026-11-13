@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Xunit;
@@ -164,6 +165,75 @@ namespace Unbound.Tests
             Assert.False(box.Contains(outside));
             Assert.Equal(1f + 1f, box.SqrDistance(outside));
             Assert.Equal(new Vector3(2f, 2f, 0f), box.ClosestPoint(outside));
+        }
+
+        [Fact]
+        public void RotateTowardsWithANegativeAngleSwingsAroundTheOppositeDirection()
+        {
+            // The Scripting API says the vector stops once it points away from the target; the
+            // Editor's values (native/degenerate) keep turning by the angle about an axis
+            // orthogonal to it, so the angle to the target alternates.
+            var target = new Vector3(0.3f, -1.2f, 2f);
+            Vector3 current = -target + Vector3.Cross(target, new Vector3(1f, 0.5f, 0.2f)) * 1e-3f;
+            var angles = new List<float>();
+            for (int i = 0; i < 4; i++)
+            {
+                current = Vector3.RotateTowards(current, target, -0.3f, 0.5f);
+                angles.Add(Vector3.Angle(current, target));
+            }
+            Near.Equal(180f - 0.3f * Mathf.Rad2Deg, angles[0], 0.1f);
+            Assert.True(angles[1] > 179.9f);
+            Near.Equal(angles[0], angles[2], 0.01f);
+            Near.Equal(target.magnitude, current.magnitude, 1e-4f);
+        }
+
+        [Fact]
+        public void LogsTheEditorsDiagnosticsForDegenerateOperands()
+        {
+            var logs = new List<string>();
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            bool wasEnabled = logger.logEnabled;
+            var filter = logger.filterLogType;
+            logger.logHandler = new Capture(logs);
+            logger.logEnabled = true;
+            logger.filterLogType = LogType.Log;
+            try
+            {
+                Assert.Equal(Quaternion.identity, Quaternion.LookRotation(Vector3.zero, Vector3.up));
+                Assert.Equal(Quaternion.identity, Quaternion.LookRotationSilent(Vector3.zero, Vector3.up));
+                Quaternion lerp = Quaternion.Lerp(default, default, 0.5f);
+                Assert.True(float.IsNaN(lerp.w));
+                _ = Matrix4x4.zero.rotation;
+                _ = Matrix4x4.TRS(Vector3.one, Quaternion.identity, Vector3.zero).rotation;
+                var box = new Bounds(new Vector3(float.NaN, 0f, 0f), Vector3.one);
+                Assert.True(box.Contains(Vector3.zero));
+                _ = box.SqrDistance(Vector3.zero);
+                _ = box.SqrDistanceUnchecked(Vector3.zero);
+            }
+            finally
+            {
+                logger.logHandler = previous;
+                logger.logEnabled = wasEnabled;
+                logger.filterLogType = filter;
+            }
+            Assert.Equal(new[]
+            {
+                "Log: Look rotation viewing vector is zero",
+                "Assert: Assertion failed on expression: '!CompareApproximately(aScalar, 0.0F)'",
+                "Assert: Assertion failed on expression: 'ValidTRS()'",
+                "Assert: Invalid AABB *this",
+                "Assert: Invalid AABB rkBox",
+            }, logs.Where(l => !l.StartsWith("Exception", StringComparison.Ordinal)).ToArray());
+        }
+
+        sealed class Capture : ILogHandler
+        {
+            readonly List<string> m_Logs;
+            internal Capture(List<string> logs) => m_Logs = logs;
+            public void LogFormat(LogType type, UnityEngine.Object context, string format, params object[] args) =>
+                m_Logs.Add($"{type}: {(args == null || args.Length == 0 ? format : string.Format(format, args))}");
+            public void LogException(Exception exception, UnityEngine.Object context) => m_Logs.Add("Exception: " + exception);
         }
     }
 }
