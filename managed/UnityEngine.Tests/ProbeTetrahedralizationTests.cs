@@ -211,6 +211,21 @@ namespace Unbound.Tests
             AssertGridTiled(nx, ny, nz, 1f, rotation, new Vector3(offset, 2f * offset / 100f, offset / 2f));
         }
 
+        [Fact]
+        public void ALargeRotatedLayerFarAwayMakesNoCells()
+        {
+            // 50 x 50 probes 1 apart, rotated and moved to (1000, 20, 500): within float rounding of
+            // one plane, though probes 0, 1 and 50 alone span a plane tilted by their own rounding.
+            var rotation = Quaternion.Euler(0.1f * Mathf.Rad2Deg, 0.3f * Mathf.Rad2Deg, 0f);
+            var positions = new List<Vector3>();
+            for (int j = 0; j < 50; j++)
+                for (int i = 0; i < 50; i++)
+                    positions.Add(rotation * new Vector3(i, j, 0) + new Vector3(1000, 20, 500));
+            var set = new ProbeSet { Positions = positions.ToArray() };
+            ProbeTetrahedralization.Build(set);
+            Assert.Empty(set.Cells);
+        }
+
         static void AssertGridTiled(int nx, int ny, int nz, float spacing, Quaternion rotation, Vector3 offset)
         {
             // A regular grid, as light probe groups usually are: every cube's corners are

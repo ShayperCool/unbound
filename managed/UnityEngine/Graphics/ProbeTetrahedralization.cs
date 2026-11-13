@@ -118,10 +118,39 @@ namespace UnityEngine
 
             var tets = new List<Tet>();
 
-            // The first tetrahedron: probe 0 and the first probes after it off its point, line and
-            // plane. Without four such probes there are no cells.
-            int i1 = -1, i2 = -1, i3 = -1;
+            // Flatness: probe 0, the probe farthest from it, the probe farthest from their line and
+            // the probe farthest from the plane of those three (the first of equals). Probes all
+            // within `flat` of that point, line or plane make no cells.
             double flat = PlaneTolerance * Math.Max(size, magnitude);
+            int f1 = -1, f2 = -1, f3 = -1;
+            double far = flat;
+            for (int i = 1; i < n; i++)
+            {
+                double d = Distance(x, y, z, 0, i);
+                if (d > far) (far, f1) = (d, i);
+            }
+            if (f1 < 0) return;
+            double baseline = Distance(x, y, z, 0, f1);
+            far = flat;
+            for (int i = 1; i < n; i++)
+            {
+                double d = Cross(x, y, z, 0, f1, i).Length() / baseline;
+                if (d > far) (far, f2) = (d, i);
+            }
+            if (f2 < 0) return;
+            var plane = Cross(x, y, z, 0, f1, f2);
+            double area = plane.Length();
+            far = flat;
+            for (int i = 1; i < n; i++)
+            {
+                double d = Math.Abs(plane.Dot(x[i] - x[0], y[i] - y[0], z[i] - z[0])) / area;
+                if (d > far) (far, f3) = (d, i);
+            }
+            if (f3 < 0) return;
+
+            // The first tetrahedron: probe 0 and the first probes after it off its point, line and
+            // plane (those three extremes when no such probes are found).
+            int i1 = -1, i2 = -1, i3 = -1;
             for (int i = 1; i < n && i1 < 0; i++)
                 if (Distance(x, y, z, 0, i) > flat) i1 = i;
             for (int i = 1; i < n && i1 >= 0 && i2 < 0; i++)
@@ -132,7 +161,7 @@ namespace UnityEngine
                 var normal = Cross(x, y, z, 0, i1, i2);
                 if (Math.Abs(normal.Dot(x[i] - x[0], y[i] - y[0], z[i] - z[0])) > flat * normal.Length()) i3 = i;
             }
-            if (i3 < 0) return;
+            if (i3 < 0) (i1, i2, i3) = (f1, f2, f3);
             int[] firstCell = { 0, i1, i2, i3 };
 
             // Every test below is decided exactly (Predicates), so the probes a cell's replacement
@@ -569,7 +598,6 @@ namespace UnityEngine
                 return (adz * (bdx * cdy - cdx * bdy) + bdz * (cdx * ady - adx * cdy) + cdz * (adx * bdy - bdx * ady)).Sign;
             }
 
-            /// <summary>The in-sphere sign of points v[a..a+2] … v[e..e+2], as <see cref="InSphere"/>.</summary>
             /// <summary><see cref="InSphereExact"/> for five points below 2^SmallBits.</summary>
             static int InSphereSmall(ReadOnlySpan<long> v)
             {
@@ -587,22 +615,6 @@ namespace UnityEngine
             }
 
             /// <summary>The in-sphere sign of points v[a..a+2] … v[e..e+2], as <see cref="InSphere"/>.</summary>
-            /// <summary><see cref="InSphereExact"/> for integers below <see cref="Small"/>.</summary>
-            static int InSphereSmall(BigInteger[] v, int a, int b, int c, int d, int e)
-            {
-                Int128 aex = (long)v[a] - (long)v[e], aey = (long)v[a + 1] - (long)v[e + 1], aez = (long)v[a + 2] - (long)v[e + 2];
-                Int128 bex = (long)v[b] - (long)v[e], bey = (long)v[b + 1] - (long)v[e + 1], bez = (long)v[b + 2] - (long)v[e + 2];
-                Int128 cex = (long)v[c] - (long)v[e], cey = (long)v[c + 1] - (long)v[e + 1], cez = (long)v[c + 2] - (long)v[e + 2];
-                Int128 dex = (long)v[d] - (long)v[e], dey = (long)v[d + 1] - (long)v[e + 1], dez = (long)v[d + 2] - (long)v[e + 2];
-                Int128 ab = aex * bey - bex * aey, bc = bex * cey - cex * bey, cd = cex * dey - dex * cey;
-                Int128 da = dex * aey - aex * dey, ac = aex * cey - cex * aey, bd = bex * dey - dex * bey;
-                Int128 abc = aez * bc - bez * ac + cez * ab, bcd = bez * cd - cez * bd + dez * bc;
-                Int128 cda = cez * da + dez * ac + aez * cd, dab = dez * ab + aez * bd + bez * da;
-                Int128 alift = aex * aex + aey * aey + aez * aez, blift = bex * bex + bey * bey + bez * bez;
-                Int128 clift = cex * cex + cey * cey + cez * cez, dlift = dex * dex + dey * dey + dez * dez;
-                return Int128.Sign((dlift * abc - clift * dab) + (blift * cda - alift * bcd));
-            }
-
             static int InSphereExact(BigInteger[] v, int a, int b, int c, int d, int e)
             {
                 BigInteger aex = v[a] - v[e], aey = v[a + 1] - v[e + 1], aez = v[a + 2] - v[e + 2];
