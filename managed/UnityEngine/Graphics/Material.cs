@@ -171,7 +171,7 @@ namespace UnityEngine
             m_InheritedVersion = source.m_InheritedVersion;
         }
 
-        [Obsolete("Creating materials from shader source string is no longer supported. Use Shader assets instead.", false)]
+        [global::System.@ObsoleteAttribute("Creating materials from shader source string is no longer supported. Use Shader assets instead.", false)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public Material(string contents) : this(Shader.Find("Unlit/Color")) { }
 
         void CopyFrom(Material source)

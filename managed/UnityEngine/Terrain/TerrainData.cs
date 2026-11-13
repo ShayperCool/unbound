@@ -85,9 +85,9 @@ namespace UnityEngine
             return Mathf.ClosestPowerOfTwo(n) + 1;
         }
 
-        [Obsolete("Please use heightmapResolution instead. (UnityUpgradable) -> heightmapResolution")]
+        [global::System.@ObsoleteAttribute("Please use heightmapResolution instead. (UnityUpgradable) -> heightmapResolution", false)]
         public int heightmapWidth => m_Resolution;
-        [Obsolete("Please use heightmapResolution instead. (UnityUpgradable) -> heightmapResolution")]
+        [global::System.@ObsoleteAttribute("Please use heightmapResolution instead. (UnityUpgradable) -> heightmapResolution", false)]
         public int heightmapHeight => m_Resolution;
 
         public Vector3 heightmapScale => m_Scale;
@@ -163,7 +163,7 @@ namespace UnityEngine
 
         public void DirtyHeightmapRegion(RectInt region, TerrainHeightmapSyncControl syncControl) => HeightsChanged();
 
-        [Obsolete("Please use DirtyHeightmapRegion instead.")]
+        [global::System.@ObsoleteAttribute("Please use DirtyHeightmapRegion instead.", false)]
         public void UpdateDirtyRegion(int x, int y, int width, int height, bool syncHeightmapTextureImmediately) => HeightsChanged();
 
         /// <summary>The trees changed: the terrains redraw them, the colliders rebuild theirs.</summary>
@@ -413,7 +413,7 @@ namespace UnityEngine
 
         public void SetTerrainLayersRegisterUndo(TerrainLayer[] terrainLayers, string undoName) => this.terrainLayers = terrainLayers;
 
-        [Obsolete("TerrainData.splatPrototypes is obsolete. Use TerrainData.terrainLayers instead.")]
+        [global::System.@ObsoleteAttribute("TerrainData.splatPrototypes is obsolete. Use TerrainData.terrainLayers instead.", false)]
         public SplatPrototype[] splatPrototypes
         {
             get

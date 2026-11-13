@@ -109,7 +109,7 @@ namespace UnityEngine
         public int heightmapMinimumLODSimplification { get => m_HeightmapMinimumLODSimplification; set => m_HeightmapMinimumLODSimplification = value; }
         public float basemapDistance { get => m_SplatMapDistance; set => m_SplatMapDistance = Mathf.Clamp(value, 0f, 20000f); }
 
-        [Obsolete("splatmapDistance is deprecated, please use basemapDistance instead. (UnityUpgradable) -> basemapDistance")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("splatmapDistance is deprecated, please use basemapDistance instead. (UnityUpgradable) -> basemapDistance", true)]
         public float splatmapDistance { get => basemapDistance; set => basemapDistance = value; }
 
         public int lightmapIndex { get => m_LightmapIndex; set => m_LightmapIndex = NormalizeLightmapIndex(value); }
@@ -346,7 +346,7 @@ namespace UnityEngine
 
         public void GetClosestReflectionProbes(List<ReflectionProbeBlendInfo> result) => result?.Clear();
 
-        [Obsolete("Use TerrainData.SyncHeightmap to notify all Terrain instances using the TerrainData.")]
+        [global::System.@ObsoleteAttribute("Use TerrainData.SyncHeightmap to notify all Terrain instances using the TerrainData.", false)]
         public void ApplyDelayedHeightmapModification() => m_TerrainData?.SyncHeightmap();
 
         /// <summary>A GameObject with a Terrain and a TerrainCollider of the data.</summary>
@@ -359,13 +359,13 @@ namespace UnityEngine
             return go;
         }
 
-        [Obsolete("Property materialType is not used any more. Set materialTemplate directly.")]
+        [global::System.@ObsoleteAttribute("Property materialType is not used any more. Set materialTemplate directly.", false)]
         public MaterialType materialType { get; set; } = MaterialType.BuiltInStandard;
 
-        [Obsolete("Property legacySpecular is not used any more. Set materialTemplate directly.")]
+        [global::System.@ObsoleteAttribute("Property legacySpecular is not used any more. Set materialTemplate directly.", false)]
         public Color legacySpecular { get; set; } = new Color(0.5f, 0.5f, 0.5f, 1f);
 
-        [Obsolete("Property legacyShininess is not used any more. Set materialTemplate directly.")]
+        [global::System.@ObsoleteAttribute("Property legacyShininess is not used any more. Set materialTemplate directly.", false)]
         public float legacyShininess { get; set; } = 0.078125f;
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)

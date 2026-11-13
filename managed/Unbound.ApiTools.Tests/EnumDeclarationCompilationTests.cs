@@ -9,17 +9,13 @@ namespace Unbound.ApiTools.Tests;
 
 public class EnumDeclarationCompilationTests
 {
-    static Diagnostic[] Diagnostics(string source) => TestAssemblies.Compilation("Consumer", source,
-        Path.Combine(AppContext.BaseDirectory, "declaration-reference", "UnityEngine.CoreModule.dll")).GetDiagnostics()
-        .Where(d => d.Severity is DiagnosticSeverity.Error or DiagnosticSeverity.Warning).ToArray();
-
     [Theory]
     [InlineData("UnityEditor.BuildTarget.MetroPlayer", "CS0619", "Use WSAPlayer instead (UnityUpgradable) -> WSAPlayer", DiagnosticSeverity.Error)]
     [InlineData("UnityEditor.BuildTarget.BB10", "CS0618", "BlackBerry has been removed in 5.4", DiagnosticSeverity.Warning)]
     public void RemovedAndDeprecatedEnumFieldsProduceTheReleaseDiagnostic(string expression, string id,
         string message, DiagnosticSeverity severity)
     {
-        var diagnostic = Assert.Single(Diagnostics("public class Consumer { public object Value => " + expression + "; }"));
+        var diagnostic = Assert.Single(TestAssemblies.EngineDiagnostics("public class Consumer { public object Value => " + expression + "; }"));
         Assert.Equal(id, diagnostic.Id);
         Assert.Equal(severity, diagnostic.Severity);
         Assert.Contains(message, diagnostic.GetMessage(CultureInfo.InvariantCulture));
@@ -28,7 +24,7 @@ public class EnumDeclarationCompilationTests
     [Fact]
     public void RemovedEnumTypeIsAnError()
     {
-        var diagnostic = Assert.Single(Diagnostics("public class Consumer { public UnityEngine.BlendWeights Value { get; set; } }"));
+        var diagnostic = Assert.Single(TestAssemblies.EngineDiagnostics("public class Consumer { public UnityEngine.BlendWeights Value { get; set; } }"));
         Assert.Equal("CS0619", diagnostic.Id);
         Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
         Assert.Contains("BlendWeights is obsolete. Use SkinWeights instead", diagnostic.GetMessage(CultureInfo.InvariantCulture));
@@ -37,6 +33,6 @@ public class EnumDeclarationCompilationTests
     [Fact]
     public void SupportedEnumFieldStillCompiles()
     {
-        Assert.Empty(Diagnostics("public class Consumer { public object Value => UnityEngine.RuntimePlatform.WindowsPlayer; }"));
+        Assert.Empty(TestAssemblies.EngineDiagnostics("public class Consumer { public object Value => UnityEngine.RuntimePlatform.WindowsPlayer; }"));
     }
 }

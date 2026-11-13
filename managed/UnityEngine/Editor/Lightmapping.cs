@@ -64,14 +64,14 @@ namespace UnityEditor
             set => GetOrCreateLightingsSettings().realtimeGI = value;
         }
 
-        [Obsolete("Lightmapping.indirectOutputScale is obsolete, use LightingSettings.indirectScale instead. ")]
+        [global::System.@ObsoleteAttribute("Lightmapping.indirectOutputScale is obsolete, use LightingSettings.indirectScale instead. ", false)]
         public static float indirectOutputScale
         {
             get => GetLightingSettingsOrDefaultsFallback().indirectScale;
             set => GetOrCreateLightingsSettings().indirectScale = value;
         }
 
-        [Obsolete("Lightmapping.bounceBoost is obsolete, use LightingSettings.albedoBoost instead. ")]
+        [global::System.@ObsoleteAttribute("Lightmapping.bounceBoost is obsolete, use LightingSettings.albedoBoost instead. ", false)]
         public static float bounceBoost
         {
             get => GetLightingSettingsOrDefaultsFallback().albedoBoost;

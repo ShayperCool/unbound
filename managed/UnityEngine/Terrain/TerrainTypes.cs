@@ -155,8 +155,7 @@ namespace UnityEngine
         public float noiseSpread { get => m_NoiseSpread; set => m_NoiseSpread = value; }
         public float density { get => m_Density; set => m_Density = value; }
 
-        [Obsolete("bendFactor has no effect and is deprecated.")]
-        [Unbound.EditorFaithful("obsolete: Unity says it has no effect")]
+        [global::System.@ObsoleteAttribute("bendFactor has no effect and is deprecated.", false)] [Unbound.EditorFaithful("obsolete: Unity says it has no effect")]
         public float bendFactor { get => 0f; set { } }
 
         public float holeEdgePadding { get => m_HoleEdgePadding; set => m_HoleEdgePadding = value; }
@@ -204,7 +203,7 @@ namespace UnityEngine
         }
     }
 
-    public sealed partial class SplatPrototype
+    [global::System.@ObsoleteAttribute("SplatPrototype is obsolete. Use TerrainLayer instead.", false)] public sealed partial class SplatPrototype
     {
         internal Texture2D m_Texture;
         internal Texture2D m_NormalMap;

@@ -200,14 +200,14 @@ namespace UnityEngine
 
         // Legacy overloads pass the layer mask through QueryParameters. The measured profile
         // ignores per-command maxHits storage; other profiles retain their unmeasured behavior.
-        [Obsolete("This struct signature is no longer supported. Use struct with a QueryParameters instead")]
+        [global::System.@ObsoleteAttribute("This struct signature is no longer supported. Use struct with a QueryParameters instead", false)]
         public RaycastCommand(Vector3 from, Vector3 direction, float distance = float.MaxValue, int layerMask = -5, int maxHits = 1)
             : this(Physics.defaultPhysicsScene, from, direction, new QueryParameters(layerMask), distance)
         {
             m_MaxHits = maxHits;
         }
 
-        [Obsolete("This struct signature is no longer supported. Use struct with a QueryParameters instead")]
+        [global::System.@ObsoleteAttribute("This struct signature is no longer supported. Use struct with a QueryParameters instead", false)]
         public RaycastCommand(PhysicsScene physicsScene, Vector3 from, Vector3 direction, float distance = float.MaxValue, int layerMask = -5, int maxHits = 1)
             : this(physicsScene, from, direction, new QueryParameters(layerMask), distance)
         {
@@ -224,14 +224,14 @@ namespace UnityEngine
 
         /// <summary>Kept for the obsolete signature only: ScheduleBatch takes maxHits as its
         /// argument (1 in the overload without it) and does not read this.</summary>
-        [Obsolete("maxHits property was moved to be a part of RaycastCommand.ScheduleBatch.")]
+        [global::System.@ObsoleteAttribute("maxHits property was moved to be a part of RaycastCommand.ScheduleBatch.", false)]
         public int maxHits
         {
             get => Compat.RemovedPhysicsSettingsMeasured ? 1 : m_MaxHits;
             set { if (!Compat.RemovedPhysicsSettingsMeasured) m_MaxHits = value; }
         }
 
-        [Obsolete("Layer Mask is now a part of QueryParameters struct")]
+        [global::System.@ObsoleteAttribute("Layer Mask is now a part of QueryParameters struct", false)]
         public int layerMask
         {
             get => queryParameters.layerMask;
@@ -266,13 +266,13 @@ namespace UnityEngine
             this.distance = distance;
         }
 
-        [Obsolete("This struct signature is no longer supported. Use struct with a QueryParameters instead")]
+        [global::System.@ObsoleteAttribute("This struct signature is no longer supported. Use struct with a QueryParameters instead", false)]
         public SpherecastCommand(Vector3 origin, float radius, Vector3 direction, float distance = float.MaxValue, int layerMask = -5)
             : this(Physics.defaultPhysicsScene, origin, radius, direction, new QueryParameters(layerMask), distance)
         {
         }
 
-        [Obsolete("This struct signature is no longer supported. Use struct with a QueryParameters instead")]
+        [global::System.@ObsoleteAttribute("This struct signature is no longer supported. Use struct with a QueryParameters instead", false)]
         public SpherecastCommand(PhysicsScene physicsScene, Vector3 origin, float radius, Vector3 direction, float distance = float.MaxValue, int layerMask = -5)
             : this(physicsScene, origin, radius, direction, new QueryParameters(layerMask), distance)
         {
@@ -288,7 +288,7 @@ namespace UnityEngine
 
         public PhysicsScene physicsScene { get; set; }
 
-        [Obsolete("Layer Mask is now a part of QueryParameters struct")]
+        [global::System.@ObsoleteAttribute("Layer Mask is now a part of QueryParameters struct", false)]
         public int layerMask
         {
             get => queryParameters.layerMask;
@@ -324,13 +324,13 @@ namespace UnityEngine
             this.distance = distance;
         }
 
-        [Obsolete("This struct signature is no longer supported. Use struct with a QueryParameters instead")]
+        [global::System.@ObsoleteAttribute("This struct signature is no longer supported. Use struct with a QueryParameters instead", false)]
         public BoxcastCommand(Vector3 center, Vector3 halfExtents, Quaternion orientation, Vector3 direction, float distance = float.MaxValue, int layerMask = -5)
             : this(Physics.defaultPhysicsScene, center, halfExtents, orientation, direction, new QueryParameters(layerMask), distance)
         {
         }
 
-        [Obsolete("This struct signature is no longer supported. Use struct with a QueryParameters instead")]
+        [global::System.@ObsoleteAttribute("This struct signature is no longer supported. Use struct with a QueryParameters instead", false)]
         public BoxcastCommand(PhysicsScene physicsScene, Vector3 center, Vector3 halfExtents, Quaternion orientation, Vector3 direction, float distance = float.MaxValue, int layerMask = -5)
             : this(physicsScene, center, halfExtents, orientation, direction, new QueryParameters(layerMask), distance)
         {
@@ -348,7 +348,7 @@ namespace UnityEngine
 
         public PhysicsScene physicsScene { get; set; }
 
-        [Obsolete("Layer Mask is now a part of QueryParameters struct")]
+        [global::System.@ObsoleteAttribute("Layer Mask is now a part of QueryParameters struct", false)]
         public int layerMask
         {
             get => queryParameters.layerMask;
@@ -384,13 +384,13 @@ namespace UnityEngine
             this.distance = distance;
         }
 
-        [Obsolete("This struct signature is no longer supported. Use struct with a QueryParameters instead")]
+        [global::System.@ObsoleteAttribute("This struct signature is no longer supported. Use struct with a QueryParameters instead", false)]
         public CapsulecastCommand(Vector3 p1, Vector3 p2, float radius, Vector3 direction, float distance = float.MaxValue, int layerMask = -5)
             : this(Physics.defaultPhysicsScene, p1, p2, radius, direction, new QueryParameters(layerMask), distance)
         {
         }
 
-        [Obsolete("This struct signature is no longer supported. Use struct with a QueryParameters instead")]
+        [global::System.@ObsoleteAttribute("This struct signature is no longer supported. Use struct with a QueryParameters instead", false)]
         public CapsulecastCommand(PhysicsScene physicsScene, Vector3 p1, Vector3 p2, float radius, Vector3 direction, float distance = float.MaxValue, int layerMask = -5)
             : this(physicsScene, p1, p2, radius, direction, new QueryParameters(layerMask), distance)
         {
@@ -408,7 +408,7 @@ namespace UnityEngine
 
         public PhysicsScene physicsScene { get; set; }
 
-        [Obsolete("Layer Mask is now a part of QueryParameters struct")]
+        [global::System.@ObsoleteAttribute("Layer Mask is now a part of QueryParameters struct", false)]
         public int layerMask
         {
             get => queryParameters.layerMask;

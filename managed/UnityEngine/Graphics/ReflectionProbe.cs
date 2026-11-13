@@ -41,7 +41,7 @@ namespace UnityEngine
 
         public ReflectionProbe() { }
 
-        public ReflectionProbeType type { get => m_Type; set => m_Type = value; }
+        [global::System.@ObsoleteAttribute("type property has been deprecated. Starting with Unity 5.4, the only supported reflection probe type is Cube.", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] public ReflectionProbeType type { get => m_Type; set => m_Type = value; }
         public ReflectionProbeMode mode { get => m_Mode; set => m_Mode = value; }
         public ReflectionProbeRefreshMode refreshMode { get => m_RefreshMode; set => m_RefreshMode = value; }
         public ReflectionProbeTimeSlicingMode timeSlicingMode { get => m_TimeSlicingMode; set => m_TimeSlicingMode = value; }

@@ -297,7 +297,7 @@ namespace UnityEngine
             set { MainThreadCheck.Check("set_fireEvents"); m_FireEvents = value; }
         }
 
-        [Obsolete("keepAnimatorControllerStateOnDisable is obsolete. Use keepAnimatorStateOnDisable instead (UnityUpgradable) -> keepAnimatorStateOnDisable", false)]
+        [global::System.@ObsoleteAttribute("keepAnimatorControllerStateOnDisable is deprecated, use keepAnimatorStateOnDisable instead. (UnityUpgradable) -> keepAnimatorStateOnDisable", false)]
         public bool keepAnimatorControllerStateOnDisable
         {
             get { MainThreadCheck.Check("get_keepAnimatorStateOnDisable"); return m_KeepAnimatorStateOnDisable; }

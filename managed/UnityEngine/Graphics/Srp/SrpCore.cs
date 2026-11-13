@@ -578,7 +578,7 @@ namespace UnityEngine.Rendering
         public static bool useScriptableRenderPipelineBatching { get; set; }
         public static TransparencySortMode transparencySortMode { get; set; }
         public static Vector3 transparencySortAxis { get; set; } = new Vector3(0f, 0f, 1f);
-        public static uint defaultRenderingLayerMask { get; set; } = 1;
+        [global::System.@ObsoleteAttribute("This property is obsolete. Use RenderingLayerMask API and Tags & Layers project settings instead. #from(23.3)")] public static uint defaultRenderingLayerMask { get; set; } = 1;
         public static bool realtimeDirectRectangularAreaLights { get; set; }
         public static bool logWhenShaderIsCompiled { get; set; }
         public static bool disableBuiltinCustomRenderTextureUpdate { get; set; }
@@ -643,11 +643,11 @@ namespace UnityEngine.Rendering
             s_GlobalSettings[renderPipelineType.FullName] = settings;
         }
 
-        [Obsolete("Please use EditorGraphicsSettings.SetRenderPipelineGlobalSettingsAsset<T>(settings). #from(23.2)", false)]
+        [global::System.@ObsoleteAttribute("Please use EditorGraphicsSettings.SetRenderPipelineGlobalSettingsAsset<TRenderPipelineType>(settings). #from(23.2)", false)]
         public static void RegisterRenderPipelineSettings<T>(RenderPipelineGlobalSettings settings) where T : RenderPipeline =>
             s_GlobalSettings[typeof(T).FullName] = settings;
 
-        [Obsolete("Please use EditorGraphicsSettings.SetRenderPipelineGlobalSettingsAsset<T>(null). #from(23.2)", false)]
+        [global::System.@ObsoleteAttribute("Please use EditorGraphicsSettings.SetRenderPipelineGlobalSettingsAsset<TRenderPipelineType>(null). #from(23.2)", false)]
         public static void UnregisterRenderPipelineSettings<T>() where T : RenderPipeline => s_GlobalSettings.Remove(typeof(T).FullName);
 
         [Obsolete("Please use EditorGraphicsSettings.SetRenderPipelineGlobalSettingsAsset(renderPipelineType, null). #from(23.2)", false)]

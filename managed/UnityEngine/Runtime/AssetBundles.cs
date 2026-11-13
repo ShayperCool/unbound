@@ -106,13 +106,13 @@ namespace UnityEngine
             return request;
         }
 
-        [Obsolete("Method CreateFromFile has been renamed to LoadFromFile (UnityUpgradable) -> LoadFromFile(*)")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Method CreateFromFile has been renamed to LoadFromFile (UnityUpgradable) -> LoadFromFile(*)", true)]
         public static AssetBundle CreateFromFile(string path) => LoadFromFile(path);
 
-        [Obsolete("Method CreateFromMemory has been renamed to LoadFromMemoryAsync (UnityUpgradable) -> LoadFromMemoryAsync(*)")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Method CreateFromMemory has been renamed to LoadFromMemoryAsync (UnityUpgradable) -> LoadFromMemoryAsync(*)", true)]
         public static AssetBundleCreateRequest CreateFromMemory(byte[] binary) => LoadFromMemoryAsync(binary);
 
-        [Obsolete("Method CreateFromMemoryImmediate has been renamed to LoadFromMemory (UnityUpgradable) -> LoadFromMemory(*)")]
+        [global::System.@ObsoleteAttribute("Method CreateFromMemoryImmediate has been renamed to LoadFromMemory (UnityUpgradable) -> LoadFromMemory(*)", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public static AssetBundle CreateFromMemoryImmediate(byte[] binary) => LoadFromMemory(binary);
 
         /// <summary>Opens an archive on the native side and reads its AssetBundle object. A nonzero
@@ -332,20 +332,16 @@ namespace UnityEngine
             return request;
         }
 
-        [Obsolete("Method Load has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAsset instead and check the documentation for details.")]
-        [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Method Load has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAsset instead and check the documentation for details.", true)] [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
         public Object Load(string name) => null;
 
-        [Obsolete("Method Load has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAsset instead and check the documentation for details.")]
-        [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
+        [global::System.@ObsoleteAttribute("Method Load has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAsset instead and check the documentation for details.", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
         public Object Load<T>(string name) => null;
 
-        [Obsolete("Method LoadAll has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAllAssets instead and check the documentation for details.")]
-        [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Method LoadAll has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAllAssets instead and check the documentation for details.", true)] [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
         public T[] LoadAll<T>() where T : Object => null;
 
-        [Obsolete("Method LoadAll has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAllAssets instead and check the documentation for details.")]
-        [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
+        [global::System.@ObsoleteAttribute("Method LoadAll has been deprecated. Script updater cannot update it as the loading behaviour has changed. Please use LoadAllAssets instead and check the documentation for details.", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [Unbound.EditorFaithful("obsolete: Unity's body answers null (bundles since 5.0 have no main asset)")]
         public Object[] LoadAll() => null;
 
         [Obsolete("mainAsset has been made obsolete. Please use the new AssetBundle build system introduced in 5.0 and check BuildAssetBundles documentation for details.")]
@@ -354,7 +350,7 @@ namespace UnityEngine
 
         internal static Object returnMainAsset(AssetBundle bundle) => null;
 
-        [Obsolete("This method is deprecated.Use GetAllAssetNames() instead.")]
+        [global::System.@ObsoleteAttribute("This method is deprecated.Use GetAllAssetNames() instead.", false)]
         public string[] AllAssetNames() => GetAllAssetNames();
 
         public string[] GetAllAssetNames() => m_IsStreamedScene ? Array.Empty<string>() : m_Container.Select(c => c.Name).Distinct().ToArray();

@@ -90,7 +90,7 @@ namespace UnityEditor
             return true;
         }
 
-        [Obsolete("UpdateIfDirtyOrScript has been deprecated. Use UpdateIfRequiredOrScript instead.")]
+        [global::System.@ObsoleteAttribute("UpdateIfDirtyOrScript has been deprecated. Use UpdateIfRequiredOrScript instead.", false)]
         public void UpdateIfDirtyOrScript() => UpdateIfRequiredOrScript();
 
         public bool ApplyModifiedProperties() => Apply();

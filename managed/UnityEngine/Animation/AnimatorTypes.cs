@@ -164,7 +164,7 @@ namespace UnityEngine
     }
 
     /// <summary>An original clip of a controller and the clip that replaces it.</summary>
-    public partial class AnimationClipPair
+    [global::System.@ObsoleteAttribute("This class is not used anymore. See AnimatorOverrideController.GetOverrides() and AnimatorOverrideController.ApplyOverrides()")] public partial class AnimationClipPair
     {
         public AnimationClip originalClip;
         public AnimationClip overrideClip;
@@ -173,7 +173,7 @@ namespace UnityEngine
     }
 
     /// <summary>Obsolete clip-and-weight pair of the old Animator API.</summary>
-    public partial struct AnimationInfo
+    [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Use AnimatorClipInfo instead (UnityUpgradable) -> AnimatorClipInfo", true)] public partial struct AnimationInfo
     {
         internal AnimationClip m_Clip;
         internal float m_Weight;

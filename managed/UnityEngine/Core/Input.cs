@@ -329,7 +329,7 @@ namespace UnityEngine
                 ? default
                 : new RefreshRate { numerator = json.GetProperty("numerator").GetUInt32(), denominator = json.GetProperty("denominator").GetUInt32() };
 
-        [Obsolete("Property lockCursor has been deprecated. Use Cursor.lockState and Cursor.visible instead.")]
+        [global::System.@ObsoleteAttribute("Use Cursor.lockState and Cursor.visible instead.", false)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public static bool lockCursor
         {
             get => Cursor.lockState == CursorLockMode.Locked;
@@ -338,7 +338,7 @@ namespace UnityEngine
 
         public static void SetResolution(int width, int height, FullScreenMode fullscreenMode, RefreshRate preferredRefreshRate) => SetResolution(width, height, fullscreenMode);
 
-        public static void SetResolution(int width, int height, FullScreenMode fullscreenMode, [Internal.DefaultValue("0")] int preferredRefreshRate) => SetResolution(width, height, fullscreenMode);
+        [global::System.@ObsoleteAttribute("SetResolution(int, int, FullScreenMode, int) is obsolete. Use SetResolution(int, int, FullScreenMode, RefreshRate) instead.")] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] public static void SetResolution(int width, int height, FullScreenMode fullscreenMode, [Internal.DefaultValue("0")] int preferredRefreshRate) => SetResolution(width, height, fullscreenMode);
 
         public static void SetResolution(int width, int height, FullScreenMode fullscreenMode)
         {
@@ -346,7 +346,7 @@ namespace UnityEngine
             Native.Log((int)LogType.Log, $"[Unbound] Screen.SetResolution({width}x{height}) ignored: the window keeps its size");
         }
 
-        public static void SetResolution(int width, int height, bool fullscreen, [Internal.DefaultValue("0")] int preferredRefreshRate) => SetResolution(width, height, fullscreen ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed);
+        [global::System.@ObsoleteAttribute("SetResolution(int, int, bool, int) is obsolete. Use SetResolution(int, int, FullScreenMode, RefreshRate) instead.")] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] public static void SetResolution(int width, int height, bool fullscreen, [Internal.DefaultValue("0")] int preferredRefreshRate) => SetResolution(width, height, fullscreen ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed);
 
         public static void SetResolution(int width, int height, bool fullscreen) => SetResolution(width, height, fullscreen, 0);
 
@@ -370,7 +370,7 @@ namespace UnityEngine
         public int height { get => m_Height; set => m_Height = value; }
         public RefreshRate refreshRateRatio { get => m_RefreshRate; set => m_RefreshRate = value; }
 
-        [Obsolete("Resolution.refreshRate is obsolete. Use refreshRateRatio instead.", false)]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Resolution.refreshRate is obsolete. Use refreshRateRatio instead.", false)]
         public int refreshRate
         {
             get
@@ -880,7 +880,7 @@ namespace UnityEngine
             return s_Touches[index];
         }
 
-        [Unbound.EditorFaithful("the desktop Editor has no gyroscope; measured: tests/projects/platform")]
+        [global::System.@ObsoleteAttribute("isGyroAvailable property is deprecated. Please use SystemInfo.supportsGyroscope instead.")] [Unbound.EditorFaithful("the desktop Editor has no gyroscope; measured: tests/projects/platform")]
         public static bool isGyroAvailable => false;
         [Unbound.EditorFaithful("the desktop Editor has no accelerometer; measured: tests/projects/platform")]
         public static Vector3 acceleration => Vector3.zero;

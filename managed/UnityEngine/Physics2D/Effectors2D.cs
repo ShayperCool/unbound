@@ -55,13 +55,13 @@ namespace UnityEngine
         public float surfaceArc { get => m_SurfaceArc; set { m_SurfaceArc = Mathf.Clamp(value, 0f, 360f); Changed(); } }
         public float sideArc { get => m_SideArc; set { m_SideArc = Mathf.Clamp(value, 0f, 180f); Changed(); } }
         public float rotationalOffset { get => m_RotationalOffset; set { m_RotationalOffset = Mathf.Clamp(value, -359.9999f, 359.9999f); Changed(); } }
-        [Obsolete("PlatformEffector2D.oneWay has been deprecated. Use PlatformEffector2D.useOneWay instead (UnityUpgradable) -> useOneWay")]
+        [global::System.@ObsoleteAttribute("PlatformEffector2D.oneWay has been deprecated. Use PlatformEffector2D.useOneWay instead (UnityUpgradable) -> useOneWay", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public bool oneWay { get => useOneWay; set => useOneWay = value; }
-        [Obsolete("PlatformEffector2D.sideFriction has been deprecated. Use PlatformEffector2D.useSideFriction instead (UnityUpgradable) -> useSideFriction")]
+        [global::System.@ObsoleteAttribute("PlatformEffector2D.sideFriction has been deprecated. Use PlatformEffector2D.useSideFriction instead (UnityUpgradable) -> useSideFriction", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public bool sideFriction { get => useSideFriction; set => useSideFriction = value; }
-        [Obsolete("PlatformEffector2D.sideBounce has been deprecated. Use PlatformEffector2D.useSideBounce instead (UnityUpgradable) -> useSideBounce")]
+        [global::System.@ObsoleteAttribute("PlatformEffector2D.sideBounce has been deprecated. Use PlatformEffector2D.useSideBounce instead (UnityUpgradable) -> useSideBounce", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public bool sideBounce { get => useSideBounce; set => useSideBounce = value; }
-        [Obsolete("PlatformEffector2D.sideAngleVariance has been deprecated. Use PlatformEffector2D.sideArc instead (UnityUpgradable) -> sideArc")]
+        [global::System.@ObsoleteAttribute("PlatformEffector2D.sideAngleVariance has been deprecated. Use PlatformEffector2D.sideArc instead (UnityUpgradable) -> sideArc", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public float sideAngleVariance { get => sideArc; set => sideArc = value; }
         internal void ClearContacts() { m_Ignored.Clear(); m_Bodies.Clear(); m_IgnoredGroups.Clear(); }
         internal override void Changed() { ClearContacts(); base.Changed(); }

@@ -24,7 +24,7 @@ namespace UnityEngine.Android
 
         public event Action<string> PermissionGranted;
         public event Action<string> PermissionDenied;
-        [Obsolete("Unreliable. Query ShouldShowRequestPermissionRationale and use PermissionDenied event.")]
+        [global::System.@ObsoleteAttribute("Unreliable. Query ShouldShowRequestPermissionRationale and use PermissionDenied event.", false)]
         public event Action<string> PermissionDeniedAndDontAskAgain;
         public event Action<string> PermissionRequestDismissed;
 

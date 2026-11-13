@@ -1006,10 +1006,10 @@ namespace UnityEngine
             return g;
         }
 
-        [Unbound.EditorFaithful("an empty legacy method in Unity too")]
+        [global::System.@ObsoleteAttribute("BeginGroup has no effect and will be removed", false)] [Unbound.EditorFaithful("an empty legacy method in Unity too")]
         public static void BeginGroup(string GroupName) { }
 
-        [Unbound.EditorFaithful("an empty legacy method in Unity too")]
+        [global::System.@ObsoleteAttribute("EndGroup has no effect and will be removed", false)] [Unbound.EditorFaithful("an empty legacy method in Unity too")]
         public static void EndGroup(string groupName) { }
 
         public static Rect GetRect(GUIContent content, GUIStyle style) => DoGetRect(content, style, null);

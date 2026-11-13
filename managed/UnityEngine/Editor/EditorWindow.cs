@@ -71,7 +71,7 @@ namespace UnityEditor
         [Unbound.EditorFaithful("windows are never shown, so none is docked")]
         public bool docked => false;
         public int depthBufferBits { get; set; }
-        public int antiAlias { get; set; }
+        [global::System.@ObsoleteAttribute("AA is not supported on EditorWindows", false)] public int antiAlias { get; set; }
         public bool hasUnsavedChanges { get; protected set; }
         public string saveChangesMessage { get; protected set; }
 

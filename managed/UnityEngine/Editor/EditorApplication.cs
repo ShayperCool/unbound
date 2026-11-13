@@ -256,7 +256,7 @@ namespace UnityEditor
         public static string GetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget buildTarget) =>
             s_SetDefines.TryGetValue(buildTarget.TargetName ?? "", out var set) ? set : string.Join(";", ProjectInfo.Defines);
 
-        public static string GetScriptingDefineSymbolsForGroup(BuildTargetGroup targetGroup) =>
+        [global::System.@ObsoleteAttribute("Use GetScriptingDefineSymbols(NamedBuildTarget buildTarget) instead")] public static string GetScriptingDefineSymbolsForGroup(BuildTargetGroup targetGroup) =>
             GetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(targetGroup));
 
         public static void SetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget buildTarget, string defines)
@@ -265,10 +265,10 @@ namespace UnityEditor
             s_SetDefines[buildTarget.TargetName ?? ""] = defines ?? "";
         }
 
-        public static void SetScriptingDefineSymbolsForGroup(BuildTargetGroup targetGroup, string defines) =>
+        [global::System.@ObsoleteAttribute("Use SetScriptingDefineSymbols(NamedBuildTarget buildTarget, string defines) instead")] public static void SetScriptingDefineSymbolsForGroup(BuildTargetGroup targetGroup, string defines) =>
             SetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(targetGroup), defines);
 
-        public static string GetApplicationIdentifier(BuildTargetGroup targetGroup) => ProjectInfo.Identifier;
+        [global::System.@ObsoleteAttribute("Use GetApplicationIdentifier(NamedBuildTarget buildTarget) instead")] public static string GetApplicationIdentifier(BuildTargetGroup targetGroup) => ProjectInfo.Identifier;
 
         public static string GetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget buildTarget) => ProjectInfo.Identifier;
 

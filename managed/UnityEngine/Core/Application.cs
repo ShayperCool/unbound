@@ -118,7 +118,7 @@ namespace UnityEngine
         public static bool runInBackground { get; set; } = true;
         /// <summary>True from a LoadScene/LoadSceneAsync call (held loads too) until the scene is
         /// integrated; already false in sceneLoaded (measured: tests/projects/appfacts).</summary>
-        public static bool isLoadingLevel => SceneManagement.SceneManagerInternal.IsLoading;
+        [global::System.@ObsoleteAttribute("This property is deprecated, please use LoadLevelAsync to detect if a specific scene is currently loading.")] public static bool isLoadingLevel => SceneManagement.SceneManagerInternal.IsLoading;
         [Unbound.EditorFaithful("the Editor is not a tampered player build")]
         public static bool genuine => true;
         [Unbound.EditorFaithful("the genuine check exists in player builds only")]
@@ -178,10 +178,10 @@ namespace UnityEngine
         /// <c>~/Library/Application Support/&lt;company&gt;/&lt;product&gt;</c> on macOS.</summary>
         public static string persistentDataPath { get { MainThreadCheck.Check("get_persistentDataPath"); return ProjectInfo.PersistentDataPath; } }
 
-        [Obsolete("This property is deprecated, please use LoadLevelAsync to detect if a specific scene is currently loading.")]
+        [global::System.@ObsoleteAttribute("Use SceneManager to determine what scenes have been loaded")]
         public static int loadedLevel => SceneManagement.SceneManager.GetActiveScene().buildIndex;
 
-        [Obsolete("Use SceneManager.GetActiveScene instead.")]
+        [global::System.@ObsoleteAttribute("Use SceneManager to determine what scenes have been loaded")]
         public static string loadedLevelName => SceneManagement.SceneManager.GetActiveScene().name;
 
         public static void Quit() => Quit(0);
@@ -220,9 +220,9 @@ namespace UnityEngine
 
         public static bool CanStreamedLevelBeLoaded(string levelName) => SceneManagement.SceneManagerInternal.FindBuildScene(levelName) >= 0;
 
-        public static float GetStreamProgressForLevel(int levelIndex) => CanStreamedLevelBeLoaded(levelIndex) ? 1f : 0f;
+        [global::System.@ObsoleteAttribute("Streaming was a Unity Web Player feature, and is removed. This function is deprecated and always returns 1.0 for valid level indices.")] public static float GetStreamProgressForLevel(int levelIndex) => CanStreamedLevelBeLoaded(levelIndex) ? 1f : 0f;
 
-        [Unbound.EditorFaithful("obsolete: Unity always returns 1 (streaming was a Web Player feature)")]
+        [global::System.@ObsoleteAttribute("Streaming was a Unity Web Player feature, and is removed. This function is deprecated and always returns 1.0.")] [Unbound.EditorFaithful("obsolete: Unity always returns 1 (streaming was a Web Player feature)")]
         public static float GetStreamProgressForLevel(string levelName) => 1f;
 
         public static StackTraceLogType GetStackTraceLogType(LogType logType) =>
@@ -243,16 +243,16 @@ namespace UnityEngine
         /// tests/projects/appfacts).</summary>
         public static bool HasProLicense() => Unbound.Runtime.EditorLicense.HasPro;
 
-        [Unbound.EditorFaithful("obsolete WebGL browser call: nothing to call outside a web player")]
+        [global::System.@ObsoleteAttribute("Application.ExternalCall is deprecated. See https://docs.unity3d.com/Manual/webgl-interactingwithbrowserscripting.html for alternatives.")] [Unbound.EditorFaithful("obsolete WebGL browser call: nothing to call outside a web player")]
         public static void ExternalCall(string functionName, params object[] args) { }
 
-        [Unbound.EditorFaithful("obsolete WebGL browser call: nothing to call outside a web player")]
+        [global::System.@ObsoleteAttribute("Application.ExternalEval is deprecated. See https://docs.unity3d.com/Manual/webgl-interactingwithbrowserscripting.html for alternatives.")] [Unbound.EditorFaithful("obsolete WebGL browser call: nothing to call outside a web player")]
         public static void ExternalEval(string script) { }
 
-        [Unbound.EditorFaithful("obsolete: \"no longer supported\"; a project has no build tags")]
+        [global::System.@ObsoleteAttribute("Application.GetBuildTags is no longer supported and will be removed.", false)] [Unbound.EditorFaithful("obsolete: \"no longer supported\"; a project has no build tags")]
         public static string[] GetBuildTags() => Array.Empty<string>();
 
-        [Unbound.EditorFaithful("obsolete: \"no longer supported and will be removed\"")]
+        [global::System.@ObsoleteAttribute("Application.SetBuildTags is no longer supported and will be removed.", false)] [Unbound.EditorFaithful("obsolete: \"no longer supported and will be removed\"")]
         public static void SetBuildTags(string[] buildTags) { }
 
         public static bool IsPlaying(Object obj) => obj != null && !obj.IsPersistentAsset;

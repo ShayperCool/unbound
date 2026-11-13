@@ -151,7 +151,6 @@ namespace UnityEngine.Tests
             Assert.Equal(64, AudioFilterDescriptor.MaxPerSource);
         }
 
-#pragma warning disable CS0618 // the obsolete resonance spellings are part of the API
         [Fact]
         public void ComponentsStartAtTheScriptingApiDefaults()
         {
@@ -159,16 +158,17 @@ namespace UnityEngine.Tests
             var lowPass = go.AddComponent<AudioLowPassFilter>();
             var highPass = go.AddComponent<AudioHighPassFilter>();
             var echo = go.AddComponent<AudioEchoFilter>();
-            Assert.Equal((5000f, 1f, 1f), (lowPass.cutoffFrequency, lowPass.lowpassResonanceQ, lowPass.lowpassResonaceQ));
-            Assert.Equal((5000f, 1f, 1f), (highPass.cutoffFrequency, highPass.highpassResonanceQ, highPass.highpassResonaceQ));
+            var legacyLow = typeof(AudioLowPassFilter).GetProperty("lowpassResonaceQ");
+            var legacyHigh = typeof(AudioHighPassFilter).GetProperty("highpassResonaceQ");
+            Assert.Equal((5000f, 1f, 1f), (lowPass.cutoffFrequency, lowPass.lowpassResonanceQ, (float)legacyLow.GetValue(lowPass)));
+            Assert.Equal((5000f, 1f, 1f), (highPass.cutoffFrequency, highPass.highpassResonanceQ, (float)legacyHigh.GetValue(highPass)));
             Assert.Equal((500f, 0.5f, 1f, 1f), (echo.delay, echo.decayRatio, echo.dryMix, echo.wetMix));
-            lowPass.lowpassResonaceQ = 4f;
-            highPass.highpassResonaceQ = 6f;
+            legacyLow.SetValue(lowPass, 4f);
+            legacyHigh.SetValue(highPass, 6f);
             Assert.Equal((4f, 6f), (lowPass.lowpassResonanceQ, highPass.highpassResonanceQ));
             Assert.Equal(new[] { AudioFilterKind.LowPass, AudioFilterKind.HighPass, AudioFilterKind.Echo },
                 Array.ConvertAll(Collected(go.GetComponent<AudioSource>()), f => f.Kind));
         }
-#pragma warning restore CS0618
 
         [Fact]
         public void DescriptorsClampToTheDocumentedRangesAndOnlyTheLowPassCutoffClampsOnSet()
@@ -264,7 +264,6 @@ namespace UnityEngine.Tests
 #pragma warning disable CS0618
             filter.feedback = 1; Assert.Equal(0, filter.feedback);
             Assert.Equal(2, m_Warnings.FindAll(w => w == "Warning! Feedback is deprecated. This property does nothing.").Count);
-#pragma warning restore CS0618
             filter.enabled = false; Assert.Equal(AudioFilterStage.Bypassed, Assert.Single(Collected(source)).Stage); filter.enabled = true;
             filter.depth = float.NaN;
             Assert.Empty(Collected(source)); Assert.Empty(Collected(source));

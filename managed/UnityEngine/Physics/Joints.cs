@@ -20,9 +20,9 @@ namespace UnityEngine
     {
         float m_Min, m_Max, m_Bounciness, m_BounceMinVelocity, m_ContactDistance;
 
-        [Obsolete("minBounce and maxBounce are replaced by a single JointLimits.bounciness for both limit ends.")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("minBounce and maxBounce are replaced by a single JointLimits.bounciness for both limit ends.", true)]
         public float minBounce;
-        [Obsolete("minBounce and maxBounce are replaced by a single JointLimits.bounciness for both limit ends.")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("minBounce and maxBounce are replaced by a single JointLimits.bounciness for both limit ends.", true)]
         public float maxBounce;
 
         public float min { get => m_Min; set => m_Min = value; }

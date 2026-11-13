@@ -377,7 +377,7 @@ namespace UnityEngine
             set { m_Size = value; ShapeChanged(); }
         }
 
-        [Obsolete("Use BoxCollider.size instead. (UnityUpgradable) -> size")]
+        [global::System.@ObsoleteAttribute("Use BoxCollider.size instead. (UnityUpgradable) -> size")] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public Vector3 extents
         {
             get => m_Size * 0.5f;

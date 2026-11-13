@@ -95,15 +95,15 @@ namespace UnityEngine
         public bool isCollisionExit => (m_Events & CollisionPairEventFlags.NotifyTouchLost) != 0;
         public bool isCollisionStay => (m_Events & CollisionPairEventFlags.NotifyTouchPersists) != 0;
         internal bool hasRemovedCollider => (m_Flags & (CollisionPairFlags.RemovedShape | CollisionPairFlags.RemovedOtherShape)) != 0;
-        [global::System.Obsolete("Please use ContactPair.colliderInstanceID instead. (UnityUpgradable) -> colliderInstanceID")] public int ColliderInstanceID => colliderInstanceID;
-        [global::System.Obsolete("Please use ContactPair.otherColliderInstanceID instead. (UnityUpgradable) -> otherColliderInstanceID")] public int OtherColliderInstanceID => otherColliderInstanceID;
-        [global::System.Obsolete("Please use ContactPair.collider instead. (UnityUpgradable) -> collider")] public global::UnityEngine.Collider Collider => collider;
-        [global::System.Obsolete("Please use ContactPair.otherCollider instead. (UnityUpgradable) -> otherCollider")] public global::UnityEngine.Collider OtherCollider => otherCollider;
-        [global::System.Obsolete("Please use ContactPair.contactCount instead. (UnityUpgradable) -> contactCount")] public int ContactCount => contactCount;
-        [global::System.Obsolete("Please use ContactPair.impulseSum instead. (UnityUpgradable) -> impulseSum")] public global::UnityEngine.Vector3 ImpulseSum => impulseSum;
-        [global::System.Obsolete("Please use ContactPair.isCollisionEnter instead. (UnityUpgradable) -> isCollisionEnter")] public bool IsCollisionEnter => isCollisionEnter;
-        [global::System.Obsolete("Please use ContactPair.isCollisionExit instead. (UnityUpgradable) -> isCollisionExit")] public bool IsCollisionExit => isCollisionExit;
-        [global::System.Obsolete("Please use ContactPair.isCollisionStay instead. (UnityUpgradable) -> isCollisionStay")] public bool IsCollisionStay => isCollisionStay;
+        [global::System.@ObsoleteAttribute("Please use ContactPair.colliderInstanceID instead. (UnityUpgradable) -> colliderInstanceID", false)] public int ColliderInstanceID => colliderInstanceID;
+        [global::System.@ObsoleteAttribute("Please use ContactPair.otherColliderInstanceID instead. (UnityUpgradable) -> otherColliderInstanceID", false)] public int OtherColliderInstanceID => otherColliderInstanceID;
+        [global::System.@ObsoleteAttribute("Please use ContactPair.collider instead. (UnityUpgradable) -> collider", false)] public global::UnityEngine.Collider Collider => collider;
+        [global::System.@ObsoleteAttribute("Please use ContactPair.otherCollider instead. (UnityUpgradable) -> otherCollider", false)] public global::UnityEngine.Collider OtherCollider => otherCollider;
+        [global::System.@ObsoleteAttribute("Please use ContactPair.contactCount instead. (UnityUpgradable) -> contactCount", false)] public int ContactCount => contactCount;
+        [global::System.@ObsoleteAttribute("Please use ContactPair.impulseSum instead. (UnityUpgradable) -> impulseSum", false)] public global::UnityEngine.Vector3 ImpulseSum => impulseSum;
+        [global::System.@ObsoleteAttribute("Please use ContactPair.isCollisionEnter instead. (UnityUpgradable) -> isCollisionEnter", false)] public bool IsCollisionEnter => isCollisionEnter;
+        [global::System.@ObsoleteAttribute("Please use ContactPair.isCollisionExit instead. (UnityUpgradable) -> isCollisionExit", false)] public bool IsCollisionExit => isCollisionExit;
+        [global::System.@ObsoleteAttribute("Please use ContactPair.isCollisionStay instead. (UnityUpgradable) -> isCollisionStay", false)] public bool IsCollisionStay => isCollisionStay;
     }
     public unsafe readonly partial struct ContactPairHeader
     {
@@ -128,11 +128,11 @@ namespace UnityEngine
         public global::UnityEngine.Component otherBody => Unbound.Runtime.ObjectRegistry.FindById(m_OtherBodyID) as Component;
         public int pairCount => (int)m_NbPairs;
         internal bool hasRemovedBody => m_Flags != 0;
-        [global::System.Obsolete("Please use ContactPairHeader.bodyInstanceID instead. (UnityUpgradable) -> bodyInstanceID")] public int BodyInstanceID => bodyInstanceID;
-        [global::System.Obsolete("Please use ContactPairHeader.otherBodyInstanceID instead. (UnityUpgradable) -> otherBodyInstanceID")] public int OtherBodyInstanceID => otherBodyInstanceID;
-        [global::System.Obsolete("Please use ContactPairHeader.body instead. (UnityUpgradable) -> body")] public global::UnityEngine.Component Body => body;
-        [global::System.Obsolete("Please use ContactPairHeader.otherBody instead. (UnityUpgradable) -> otherBody")] public global::UnityEngine.Component OtherBody => otherBody;
-        [global::System.Obsolete("Please use ContactPairHeader.pairCount instead. (UnityUpgradable) -> pairCount")] public int PairCount => pairCount;
+        [global::System.@ObsoleteAttribute("Please use ContactPairHeader.bodyInstanceID instead. (UnityUpgradable) -> bodyInstanceID", false)] public int BodyInstanceID => bodyInstanceID;
+        [global::System.@ObsoleteAttribute("Please use ContactPairHeader.otherBodyInstanceID instead. (UnityUpgradable) -> otherBodyInstanceID", false)] public int OtherBodyInstanceID => otherBodyInstanceID;
+        [global::System.@ObsoleteAttribute("Please use ContactPairHeader.body instead. (UnityUpgradable) -> body", false)] public global::UnityEngine.Component Body => body;
+        [global::System.@ObsoleteAttribute("Please use ContactPairHeader.otherBody instead. (UnityUpgradable) -> otherBody", false)] public global::UnityEngine.Component OtherBody => otherBody;
+        [global::System.@ObsoleteAttribute("Please use ContactPairHeader.pairCount instead. (UnityUpgradable) -> pairCount", false)] public int PairCount => pairCount;
     }
     public unsafe readonly partial struct ContactPairPoint
     {
@@ -146,9 +146,9 @@ namespace UnityEngine
         public float separation => m_Separation;
         public global::UnityEngine.Vector3 normal => m_Normal;
         public global::UnityEngine.Vector3 impulse => m_Impulse;
-        [global::System.Obsolete("Please use ContactPairPoint.position instead. (UnityUpgradable) -> position")] public global::UnityEngine.Vector3 Position => position;
-        [global::System.Obsolete("Please use ContactPairPoint.separation instead. (UnityUpgradable) -> separation")] public float Separation => separation;
-        [global::System.Obsolete("Please use ContactPairPoint.normal instead. (UnityUpgradable) -> normal")] public global::UnityEngine.Vector3 Normal => normal;
-        [global::System.Obsolete("Please use ContactPairPoint.impulse instead. (UnityUpgradable) -> impulse")] public global::UnityEngine.Vector3 Impulse => impulse;
+        [global::System.@ObsoleteAttribute("Please use ContactPairPoint.position instead. (UnityUpgradable) -> position", false)] public global::UnityEngine.Vector3 Position => position;
+        [global::System.@ObsoleteAttribute("Please use ContactPairPoint.separation instead. (UnityUpgradable) -> separation", false)] public float Separation => separation;
+        [global::System.@ObsoleteAttribute("Please use ContactPairPoint.normal instead. (UnityUpgradable) -> normal", false)] public global::UnityEngine.Vector3 Normal => normal;
+        [global::System.@ObsoleteAttribute("Please use ContactPairPoint.impulse instead. (UnityUpgradable) -> impulse", false)] public global::UnityEngine.Vector3 Impulse => impulse;
     }
 }

@@ -187,7 +187,7 @@ namespace UnityEngine
             }
         }
 
-        [Obsolete("gameObject.active is obsolete. Use GameObject.SetActive(), GameObject.activeSelf or GameObject.activeInHierarchy.")]
+        [global::System.@ObsoleteAttribute("GameObject.active is obsolete. Use GameObject.SetActive(), GameObject.activeSelf or GameObject.activeInHierarchy.")]
         public bool active
         {
             get => activeInHierarchy;
@@ -254,7 +254,7 @@ namespace UnityEngine
 
         public T AddComponent<T>() where T : Component => (T)AddComponent(typeof(T));
 
-        [Obsolete("GameObject.AddComponent with string argument has been deprecated. Use GameObject.AddComponent<T>() instead.", true)]
+        [global::System.@ObsoleteAttribute("GameObject.AddComponent with string argument has been deprecated. Use GameObject.AddComponent<T>() instead. (UnityUpgradable).", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public Component AddComponent(string className) => throw new NotSupportedException("AddComponent(string) is not supported.");
 
         /// <summary>Throws on a destroyed GameObject (measured for the generic overload in the

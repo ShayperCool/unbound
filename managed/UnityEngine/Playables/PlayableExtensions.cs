@@ -13,7 +13,7 @@ namespace UnityEngine.Playables
 
         public static PlayableGraph GetGraph<U>(this U playable) where U : struct, IPlayable => playable.GetHandle().GetGraph();
 
-        [Obsolete("SetPlayState() has been deprecated. Use Play(), Pause() or SetDelay() instead")]
+        [global::System.@ObsoleteAttribute("SetPlayState() has been deprecated. Use Play(), Pause() or SetDelay() instead", false)]
         public static void SetPlayState<U>(this U playable, PlayState value) where U : struct, IPlayable
         {
             if (value == PlayState.Delayed) throw new ArgumentException("Can't set Delayed: use SetDelay() instead");
@@ -101,13 +101,13 @@ namespace UnityEngine.Playables
             return inputCount;
         }
 
-        [Obsolete("SetDelay is obsolete; use a custom ScriptPlayable to implement this feature")]
+        [global::System.@ObsoleteAttribute("SetDelay is obsolete; use a custom ScriptPlayable to implement this feature", false)]
         public static void SetDelay<U>(this U playable, double delay) where U : struct, IPlayable => playable.GetHandle().SetDelay(delay);
 
-        [Obsolete("GetDelay is obsolete; use a custom ScriptPlayable to implement this feature")]
+        [global::System.@ObsoleteAttribute("GetDelay is obsolete; use a custom ScriptPlayable to implement this feature", false)]
         public static double GetDelay<U>(this U playable) where U : struct, IPlayable => playable.GetHandle().GetDelay();
 
-        [Obsolete("IsDelayed is obsolete; use a custom ScriptPlayable to implement this feature")]
+        [global::System.@ObsoleteAttribute("IsDelayed is obsolete; use a custom ScriptPlayable to implement this feature", false)]
         public static bool IsDelayed<U>(this U playable) where U : struct, IPlayable => playable.GetHandle().IsDelayed();
 
         public static void SetLeadTime<U>(this U playable, float value) where U : struct, IPlayable => playable.GetHandle().SetLeadTime(value);
@@ -170,13 +170,13 @@ namespace UnityEngine.Playables
 
         public static void RemoveNotificationReceiver<U>(this U output, INotificationReceiver receiver) where U : struct, IPlayableOutput => output.GetHandle().RemoveNotificationReceiver(receiver);
 
-        [Obsolete("Method GetSourceInputPort has been renamed to GetSourceOutputPort (UnityUpgradable) -> GetSourceOutputPort<U>(*)")]
+        [global::System.@ObsoleteAttribute("Method GetSourceInputPort has been renamed to GetSourceOutputPort (UnityUpgradable) -> GetSourceOutputPort<U>(*)", false)]
         public static int GetSourceInputPort<U>(this U output) where U : struct, IPlayableOutput => output.GetHandle().GetSourceOutputPort();
 
-        [Obsolete("Method SetSourceInputPort has been deprecated. Use SetSourcePlayable(Playable, Port) instead.")]
+        [global::System.@ObsoleteAttribute("Method SetSourceInputPort has been deprecated. Use SetSourcePlayable(Playable, Port) instead.", false)]
         public static void SetSourceInputPort<U>(this U output, int value) where U : struct, IPlayableOutput => output.SetSourcePlayable(output.GetSourcePlayable(), value);
 
-        [Obsolete("Method SetSourceOutputPort has been deprecated. Use SetSourcePlayable(Playable, Port) instead.")]
+        [global::System.@ObsoleteAttribute("Method SetSourceOutputPort has been deprecated. Use SetSourcePlayable(Playable, Port) instead.", false)]
         public static void SetSourceOutputPort<U>(this U output, int value) where U : struct, IPlayableOutput => output.SetSourcePlayable(output.GetSourcePlayable(), value);
     }
 
@@ -195,7 +195,7 @@ namespace UnityEngine.Playables
 
         public virtual void OnPlayableDestroy(Playable playable) { }
 
-        [Obsolete("OnBehaviourDelay is obsolete; use a custom ScriptPlayable to implement this feature")]
+        [global::System.@ObsoleteAttribute("OnBehaviourDelay is obsolete; use a custom ScriptPlayable to implement this feature", false)]
         public virtual void OnBehaviourDelay(Playable playable, FrameData info) { }
 
         public virtual void OnBehaviourPlay(Playable playable, FrameData info) { }

@@ -138,7 +138,7 @@ namespace UnityEngine
         public Vector2 textureCoord => TextureCoordinate(0);
         public Vector2 textureCoord2 => TextureCoordinate(1);
 
-        [Obsolete("Use textureCoord2 instead. (UnityUpgradable) -> textureCoord2")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Use textureCoord2 instead. (UnityUpgradable) -> textureCoord2")]
         public Vector2 textureCoord1 => textureCoord2;
 
         Vector2 TextureCoordinate(int channel)
@@ -325,17 +325,16 @@ namespace UnityEngine
             return m_ContactCount;
         }
 
-        [Obsolete("Do not use Collision.GetEnumerator(), enumerate using non-allocating array returned by Collision.GetContacts() or enumerate using Collision.GetContact(index) instead.", false)]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Do not use Collision.GetEnumerator(), enumerate using non-allocating array returned by Collision.GetContacts() or enumerate using Collision.GetContact(index) instead.", false)]
         public virtual IEnumerator GetEnumerator() => contacts.GetEnumerator();
 
-        [Obsolete("Use Collision.relativeVelocity instead. (UnityUpgradable) -> relativeVelocity", false)]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Use Collision.relativeVelocity instead. (UnityUpgradable) -> relativeVelocity", false)]
         public Vector3 impactForceSum => m_RelativeVelocity;
 
-        [Obsolete("Will always return zero.", false)]
-        [Unbound.EditorFaithful("obsolete: Unity always returns zero")]
+        [global::System.@ObsoleteAttribute("Will always return zero.", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [Unbound.EditorFaithful("obsolete: Unity always returns zero")]
         public Vector3 frictionForceSum => Vector3.zero;
 
-        [Obsolete("Please use Collision.rigidbody, Collision.transform or Collision.collider instead", false)]
+        [global::System.@ObsoleteAttribute("Please use Collision.rigidbody, Collision.transform or Collision.collider instead", false)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public Component other => m_Rigidbody != null ? m_Rigidbody : m_Collider;
     }
 }

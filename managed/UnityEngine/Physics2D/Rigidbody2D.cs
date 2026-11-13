@@ -366,19 +366,19 @@ namespace UnityEngine
             set => linearVelocity = new Vector2(linearVelocity.x, value);
         }
 
-        public Vector2 velocity
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Please use Rigidbody2D.linearVelocity instead. (UnityUpgradable) -> linearVelocity", false)] public Vector2 velocity
         {
             get => linearVelocity;
             set => linearVelocity = value;
         }
 
-        public float velocityX
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Please use Rigidbody2D.linearVelocityX instead. (UnityUpgradable) -> linearVelocityX", false)] public float velocityX
         {
             get => linearVelocityX;
             set => linearVelocityX = value;
         }
 
-        public float velocityY
+        [global::System.@ObsoleteAttribute("Please use Rigidbody2D.linearVelocityY instead. (UnityUpgradable) -> linearVelocityY", false)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] public float velocityY
         {
             get => linearVelocityY;
             set => linearVelocityY = value;
@@ -548,13 +548,13 @@ namespace UnityEngine
             }
         }
 
-        public float drag
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Please use Rigidbody2D.linearDamping instead. (UnityUpgradable) -> linearDamping", false)] public float drag
         {
             get => linearDamping;
             set => linearDamping = value;
         }
 
-        public float angularDrag
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Please use Rigidbody2D.angularDamping instead. (UnityUpgradable) -> angularDamping", false)] public float angularDrag
         {
             get => angularDamping;
             set => angularDamping = value;
@@ -586,7 +586,7 @@ namespace UnityEngine
             }
         }
 
-        public bool isKinematic
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Please use Rigidbody2D.bodyType instead.", false)] public bool isKinematic
         {
             get => m_BodyType == RigidbodyType2D.Kinematic;
             set => bodyType = value ? RigidbodyType2D.Kinematic : RigidbodyType2D.Dynamic;
@@ -703,7 +703,7 @@ namespace UnityEngine
             }
         }
 
-        public bool fixedAngle
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Rigidbody2D.fixedAngle is deprecated. Use Rigidbody2D.constraints instead.", true)] public bool fixedAngle
         {
             get => freezeRotation;
             set => freezeRotation = value;
@@ -1001,9 +1001,9 @@ namespace UnityEngine
             return Physics2DQueries.CopyColliders(Physics2DQueries.OverlapColliders(AttachedColliders(true), pose, contactFilter, this), results);
         }
 
-        public int OverlapCollider(ContactFilter2D contactFilter, Collider2D[] results) => Overlap(contactFilter, results);
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("OverlapCollider has been renamed to Overlap (UnityUpgradable) -> Overlap(*)", false)] public int OverlapCollider(ContactFilter2D contactFilter, Collider2D[] results) => Overlap(contactFilter, results);
 
-        public int OverlapCollider(ContactFilter2D contactFilter, List<Collider2D> results) => Overlap(contactFilter, results);
+        [global::System.@ObsoleteAttribute("OverlapCollider has been renamed to Overlap (UnityUpgradable) -> Overlap(*)", false)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] public int OverlapCollider(ContactFilter2D contactFilter, List<Collider2D> results) => Overlap(contactFilter, results);
 
         // ------------------------------------------------------------------ slide
 

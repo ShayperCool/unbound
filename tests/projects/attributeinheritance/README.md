@@ -98,3 +98,28 @@ one field while retaining another omitted from the JSON, as documented by
 The [EventInterest contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.EventInterestAttribute.html)
 guarantees listed events reach the method but permits unlisted events too; the
 probe makes no assertion that an unlisted event is filtered.
+
+## Member obsolete declarations
+
+The member expansion records 299 exact type, property, method and accessor
+annotations from Unity 6000.0.71f1 and 26 TextEditor state controls, bringing the
+reference from 496 to 821 rows.
+Two independent GPU Editor captures match. Every earlier raw row is unchanged.
+Overloads are selected by their complete signatures, including generic and
+reference parameter types. The shared formatter records constructor identity,
+message and error flag.
+
+Compiler controls use the engine assembly as metadata. They distinguish a removed
+Cloth property from an error-free component overload, verify the exact deprecated
+string-overload message, and check that the XR enabled setter warns while its
+getter remains supported. Existing enum compilation controls share the same
+metadata helper. No reference engine assembly is executed by these tooling tests.
+
+The TextEditor controls put legacy fields and replacement properties into different
+states. Legacy writes leave the new properties unchanged, and changing the new
+properties leaves legacy storage unchanged. Focus controls start with a partial
+selection in both text modes; the measured release selects all and reveals the
+cursor. Moving the cursor alone does not reveal it, and losing focus does not
+clear the reveal state. These focus answers are release measurements. Other
+releases retain the previous unmeasured field linkage through the compatibility
+profile, pending equivalent controls for those releases.

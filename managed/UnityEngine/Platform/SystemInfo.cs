@@ -149,9 +149,9 @@ namespace UnityEngine
         public static bool supportsRawShadowDepthSampling => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer draws camera and object motion vectors (tests/projects/builtinrp)")]
         public static bool supportsMotionVectors => true;
-        [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
+        [global::System.@ObsoleteAttribute("supportsRenderToCubemap always returns true, no need to call it")] [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supportsRenderToCubemap => true;
-        [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
+        [global::System.@ObsoleteAttribute("supportsImageEffects always returns true, no need to call it")] [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supportsImageEffects => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supports3DTextures => true;
@@ -250,7 +250,7 @@ namespace UnityEngine
             return (usages[i] & (long)usage) == (long)usage;
         }
 
-        [Obsolete("Use overload with a GraphicsFormatUsage parameter instead")]
+        [global::System.@ObsoleteAttribute("Use overload with a GraphicsFormatUsage parameter instead", false)]
         public static bool IsFormatSupported(GraphicsFormat format, FormatUsage usage) => IsFormatSupported(format, (GraphicsFormatUsage)(1 << (int)usage));
 
         public static GraphicsFormat GetCompatibleFormat(GraphicsFormat format, GraphicsFormatUsage usage)
@@ -268,7 +268,7 @@ namespace UnityEngine
             return i > 0 && i < table.Length ? (GraphicsFormat)table[i] : GraphicsFormat.None;
         }
 
-        [Obsolete("Use overload with a GraphicsFormatUsage parameter instead")]
+        [global::System.@ObsoleteAttribute("Use overload with a GraphicsFormatUsage parameter instead", false)]
         public static GraphicsFormat GetCompatibleFormat(GraphicsFormat format, FormatUsage usage) => GetCompatibleFormat(format, (GraphicsFormatUsage)(1 << (int)usage));
 
         public static GraphicsFormat GetGraphicsFormat(DefaultFormat format) => format switch

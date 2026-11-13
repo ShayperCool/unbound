@@ -37,10 +37,10 @@ namespace UnityEngine
         public int ignoreLayers { get => m_IgnoreLayers; set => m_IgnoreLayers = value; }
         public Material material { get => m_Material; set => m_Material = value; }
 
-        [Obsolete("Property isOrthoGraphic has been deprecated. Use orthographic instead (UnityUpgradable) -> orthographic")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Property isOrthoGraphic has been deprecated. Use orthographic instead (UnityUpgradable) -> orthographic", true)]
         public bool isOrthoGraphic { get => m_Orthographic; set => m_Orthographic = value; }
 
-        [Obsolete("Property orthoGraphicSize has been deprecated. Use orthographicSize instead (UnityUpgradable) -> orthographicSize")]
+        [global::System.@ObsoleteAttribute("Property orthoGraphicSize has been deprecated. Use orthographicSize instead (UnityUpgradable) -> orthographicSize", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public float orthoGraphicSize { get => m_OrthographicSize; set => m_OrthographicSize = value; }
 
         internal override void OnEngineEnable()

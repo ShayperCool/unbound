@@ -30,7 +30,7 @@ namespace UnityEditor
     public sealed partial class PlayerSettings
     {
         /// <summary>The scripting runtime: .NET 4.x equivalent, the only one Unity 6 has.</summary>
-        [Unbound.EditorFaithful("Unity's obsolete property answers Latest and ignores what is set too")]
+        [global::System.@ObsoleteAttribute("ScriptingRuntimeVersion has been deprecated in 2019.3 due to the removal of legacy mono")] [Unbound.EditorFaithful("Unity's obsolete property answers Latest and ignores what is set too")]
         public static ScriptingRuntimeVersion scriptingRuntimeVersion
         {
             get => ScriptingRuntimeVersion.Latest;

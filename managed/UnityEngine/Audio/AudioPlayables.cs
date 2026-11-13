@@ -338,7 +338,7 @@ namespace UnityEngine.Audio
             Kind.SpatialBlend = value;
         }
 
-        [Obsolete("IsPlaying() has been deprecated. Use IsChannelPlaying() instead (UnityUpgradable) -> IsChannelPlaying()")]
+        [global::System.@ObsoleteAttribute("IsPlaying() has been deprecated. Use IsChannelPlaying() instead (UnityUpgradable) -> IsChannelPlaying()", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public bool IsPlaying() => IsChannelPlaying();
 
         public bool IsChannelPlaying() => Kind.IsChannelPlaying();

@@ -79,8 +79,7 @@ namespace UnityEngine.Networking
 #pragma warning restore CS0618
         }
 
-        [Unbound.EditorFaithful("as Unity: an overridable notification, empty in the base handler")]
-        [Obsolete("Use ReceiveContentLengthHeader", false)]
+        [global::System.@ObsoleteAttribute("Use ReceiveContentLengthHeader")] [Unbound.EditorFaithful("as Unity: an overridable notification, empty in the base handler")]
         protected virtual void ReceiveContentLength(int contentLength) { }
 
         [Unbound.EditorFaithful("as Unity: an overridable notification, empty in the base handler")]

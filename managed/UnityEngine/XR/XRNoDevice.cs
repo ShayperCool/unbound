@@ -29,7 +29,7 @@ namespace UnityEngine.XR
 
         /// <summary>XR stays off: no device can start.</summary>
         [Unbound.EditorFaithful("measured: tests/projects/xr (no XR device or provider)")]
-        public static bool enabled { get => false; set { } }
+        public static bool enabled { get => false; [global::System.@ObsoleteAttribute("XRSettings.enabled{set;} is deprecated and should no longer be used. Instead, call Start() and Stop() on an XRDisplaySubystem instance.")] set { } }
         [Unbound.EditorFaithful("measured: tests/projects/xr (no XR device or provider)")]
         public static bool isDeviceActive => false;
         public static string loadedDeviceName => s_LoadedDevice;
@@ -58,10 +58,10 @@ namespace UnityEngine.XR
         public static bool useOcclusionMesh { get => s_UseOcclusionMesh; set => s_UseOcclusionMesh = value; }
         public static StereoRenderingMode stereoRenderingMode => StereoRenderingMode.MultiPass;
 
-        public static void LoadDeviceByName(string deviceName) => LoadDeviceByName(new[] { deviceName });
+        [global::System.@ObsoleteAttribute("XRSettings.LoadDeviceByName is deprecated and should no longer be used. Instead, use the SubsystemManager to load XR devices by querying subsystem descriptors to create and start the subsystems of your choice.")] public static void LoadDeviceByName(string deviceName) => LoadDeviceByName(new[] { deviceName });
 
         /// <summary>The first name the Editor knows (its built-in MockHMD) loads; it is never active.</summary>
-        public static void LoadDeviceByName(string[] prioritizedDeviceNameList)
+        [global::System.@ObsoleteAttribute("XRSettings.LoadDeviceByName is deprecated and should no longer be used. Instead, use the SubsystemManager to load XR devices by querying subsystem descriptors to create and start the subsystems of your choice.")] public static void LoadDeviceByName(string[] prioritizedDeviceNameList)
         {
             if (prioritizedDeviceNameList == null) return;
             foreach (var name in prioritizedDeviceNameList)
@@ -93,8 +93,8 @@ namespace UnityEngine.XR
         public static event Action<string> deviceLoaded;
         internal static void RaiseDeviceLoaded(string name) => deviceLoaded?.Invoke(name);
         public static IntPtr GetNativePtr() => IntPtr.Zero;
-        public static TrackingSpaceType GetTrackingSpaceType() => TrackingSpaceType.Stationary;
-        public static bool SetTrackingSpaceType(TrackingSpaceType trackingSpaceType) => false;
+        [global::System.@ObsoleteAttribute("This is obsolete, and should no longer be used.  Please use XRInputSubsystem.GetTrackingOriginMode.")] public static TrackingSpaceType GetTrackingSpaceType() => TrackingSpaceType.Stationary;
+        [global::System.@ObsoleteAttribute("This is obsolete, and should no longer be used.  Please use XRInputSubsystem.TrySetTrackingOriginMode.")] public static bool SetTrackingSpaceType(TrackingSpaceType trackingSpaceType) => false;
         public static void DisableAutoXRCameraTracking(Camera camera, bool disabled) { }
         public static void UpdateEyeTextureMSAASetting() { }
     }
@@ -312,14 +312,14 @@ namespace UnityEngine.XR
         public static InputFeatureUsage<Quaternion> colorCameraRotation = new InputFeatureUsage<Quaternion>("CameraRotation");
         public static InputFeatureUsage<Hand> handData = new InputFeatureUsage<Hand>("HandData");
         public static InputFeatureUsage<Eyes> eyesData = new InputFeatureUsage<Eyes>("EyesData");
-        public static InputFeatureUsage<Vector2> dPad = new InputFeatureUsage<Vector2>("DPad");
-        public static InputFeatureUsage<float> indexFinger = new InputFeatureUsage<float>("IndexFinger");
-        public static InputFeatureUsage<float> middleFinger = new InputFeatureUsage<float>("MiddleFinger");
-        public static InputFeatureUsage<float> ringFinger = new InputFeatureUsage<float>("RingFinger");
-        public static InputFeatureUsage<float> pinkyFinger = new InputFeatureUsage<float>("PinkyFinger");
-        public static InputFeatureUsage<bool> thumbrest = new InputFeatureUsage<bool>("Thumbrest");
-        public static InputFeatureUsage<float> indexTouch = new InputFeatureUsage<float>("IndexTouch");
-        public static InputFeatureUsage<float> thumbTouch = new InputFeatureUsage<float>("ThumbTouch");
+        [global::System.@ObsoleteAttribute("CommonUsages.dPad is not used by any XR platform and will be removed.")] public static InputFeatureUsage<Vector2> dPad = new InputFeatureUsage<Vector2>("DPad");
+        [global::System.@ObsoleteAttribute("CommonUsages.indexFinger is not used by any XR platform and will be removed.")] public static InputFeatureUsage<float> indexFinger = new InputFeatureUsage<float>("IndexFinger");
+        [global::System.@ObsoleteAttribute("CommonUsages.MiddleFinger is not used by any XR platform and will be removed.")] public static InputFeatureUsage<float> middleFinger = new InputFeatureUsage<float>("MiddleFinger");
+        [global::System.@ObsoleteAttribute("CommonUsages.RingFinger is not used by any XR platform and will be removed.")] public static InputFeatureUsage<float> ringFinger = new InputFeatureUsage<float>("RingFinger");
+        [global::System.@ObsoleteAttribute("CommonUsages.PinkyFinger is not used by any XR platform and will be removed.")] public static InputFeatureUsage<float> pinkyFinger = new InputFeatureUsage<float>("PinkyFinger");
+        [global::System.@ObsoleteAttribute("CommonUsages.thumbrest is Oculus only, and is being moved to their package. Please use OculusUsages.thumbrest. These will still function until removed.")] public static InputFeatureUsage<bool> thumbrest = new InputFeatureUsage<bool>("Thumbrest");
+        [global::System.@ObsoleteAttribute("CommonUsages.indexTouch is Oculus only, and is being moved to their package.  Please use OculusUsages.indexTouch. These will still function until removed.")] public static InputFeatureUsage<float> indexTouch = new InputFeatureUsage<float>("IndexTouch");
+        [global::System.@ObsoleteAttribute("CommonUsages.thumbTouch is Oculus only, and is being moved to their package.  Please use OculusUsages.thumbTouch. These will still function until removed.")] public static InputFeatureUsage<float> thumbTouch = new InputFeatureUsage<float>("ThumbTouch");
     }
 
     public static partial class InputTracking
@@ -442,7 +442,7 @@ namespace UnityEngine
         public static void GetSubsystemDescriptors<T>(List<T> descriptors) where T : ISubsystemDescriptor => descriptors?.Clear();
         public static void GetSubsystems<T>(List<T> subsystems) where T : ISubsystem => subsystems?.Clear();
 
-        [Obsolete("Use GetSubsystems instead. (UnityUpgradable) -> GetSubsystems<T>(*)")]
+        [global::System.@ObsoleteAttribute("Use GetSubsystems instead. (UnityUpgradable) -> GetSubsystems<T>(*)", false)]
         public static void GetInstances<T>(List<T> subsystems) where T : ISubsystem => subsystems?.Clear();
     }
 }

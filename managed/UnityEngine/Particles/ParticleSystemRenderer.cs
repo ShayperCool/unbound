@@ -197,16 +197,16 @@ namespace UnityEngine
         }
 
 #pragma warning disable CS0618
-        [Obsolete("EnableVertexStreams is deprecated.Use SetActiveVertexStreams instead.", false)]
+        [global::System.@ObsoleteAttribute("EnableVertexStreams is deprecated. Use SetActiveVertexStreams instead.", false)]
         public void EnableVertexStreams(ParticleSystemVertexStreams streams) => Stubs.Ignored("ParticleSystemRenderer.EnableVertexStreams", "is not honoured: use SetActiveVertexStreams");
 
-        [Obsolete("DisableVertexStreams is deprecated.Use SetActiveVertexStreams instead.", false)]
+        [global::System.@ObsoleteAttribute("DisableVertexStreams is deprecated. Use SetActiveVertexStreams instead.", false)]
         public void DisableVertexStreams(ParticleSystemVertexStreams streams) => Stubs.Ignored("ParticleSystemRenderer.DisableVertexStreams", "is not honoured: use SetActiveVertexStreams");
 
-        [Obsolete("AreVertexStreamsEnabled is deprecated.Use GetActiveVertexStreams instead.", false)]
+        [global::System.@ObsoleteAttribute("AreVertexStreamsEnabled is deprecated. Use GetActiveVertexStreams instead.", false)]
         public bool AreVertexStreamsEnabled(ParticleSystemVertexStreams streams) => (GetEnabledVertexStreams(streams) & streams) == streams;
 
-        [Obsolete("GetEnabledVertexStreams is deprecated.Use GetActiveVertexStreams instead.", false)]
+        [global::System.@ObsoleteAttribute("GetEnabledVertexStreams is deprecated. Use GetActiveVertexStreams instead.", false)]
         public ParticleSystemVertexStreams GetEnabledVertexStreams(ParticleSystemVertexStreams streams) =>
             streams & (ParticleSystemVertexStreams.Position | ParticleSystemVertexStreams.Normal | ParticleSystemVertexStreams.Color | ParticleSystemVertexStreams.UV);
 #pragma warning restore CS0618

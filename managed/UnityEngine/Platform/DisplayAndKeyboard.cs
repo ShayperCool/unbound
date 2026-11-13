@@ -40,8 +40,7 @@ namespace UnityEngine
         [Unbound.EditorFaithful("the Editor has one display, its Game view: activating and sizing displays is player-only")]
         public void Activate(int width, int height, RefreshRate refreshRate) { }
 
-        [Obsolete("Activate(int, int, int) is deprecated. Use Activate(int, int, RefreshRate) instead.", false)]
-        [Unbound.EditorFaithful("the Editor has one display, its Game view: activating and sizing displays is player-only")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Activate(int, int, int) is deprecated. Use Activate(int, int, RefreshRate) instead.", false)] [Unbound.EditorFaithful("the Editor has one display, its Game view: activating and sizing displays is player-only")]
         public void Activate(int width, int height, int refreshRate) { }
 
         [Unbound.EditorFaithful("the Editor has one display, its Game view: activating and sizing displays is player-only")]
@@ -195,10 +194,10 @@ namespace UnityEngine
             set => m_Status = value ? Status.Visible : Status.LostFocus;
         }
 
-        [Obsolete("Property done is deprecated, use status instead", false)]
+        [global::System.@ObsoleteAttribute("Property done is deprecated, use status instead")]
         public bool done => m_Status != Status.Visible;
 
-        [Obsolete("Property wasCanceled is deprecated, use status instead.", false)]
+        [global::System.@ObsoleteAttribute("Property wasCanceled is deprecated, use status instead.")]
         public bool wasCanceled => m_Status == Status.Canceled;
 
         public Status status => m_Status;

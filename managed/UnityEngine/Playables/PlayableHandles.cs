@@ -599,16 +599,14 @@ namespace UnityEngine.Playables
 
         public Type outputTargetType => m_SourceBindingType;
 
-        [Obsolete("sourceBindingType is no longer supported on PlayableBinding. Use outputBindingType instead to get the required output target type, and the appropriate binding create method (e.g. AnimationPlayableBinding.Create(name, key)) to create PlayableBindings")]
-        [Unbound.EditorFaithful("obsolete: Unity ignores the value too")]
+        [global::System.@ObsoleteAttribute("sourceBindingType is no longer supported on PlayableBinding. Use outputBindingType instead to get the required output target type, and the appropriate binding create method (e.g. AnimationPlayableBinding.Create(name, key)) to create PlayableBindings", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [Unbound.EditorFaithful("obsolete: Unity ignores the value too")]
         public Type sourceBindingType
         {
             get => m_SourceBindingType;
             set { }
         }
 
-        [Obsolete("streamType is no longer supported on PlayableBinding. Use the appropriate binding create method (e.g. AnimationPlayableBinding.Create(name, key)) instead.")]
-        [Unbound.EditorFaithful("obsolete: Unity answers None and ignores the value too")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("streamType is no longer supported on PlayableBinding. Use the appropriate binding create method (e.g. AnimationPlayableBinding.Create(name, key)) instead.", true)] [Unbound.EditorFaithful("obsolete: Unity answers None and ignores the value too")]
         public DataStreamType streamType
         {
             get => DataStreamType.None;
@@ -659,7 +657,7 @@ namespace UnityEngine.Playables
 
         public float effectiveWeight => m_EffectiveWeight;
 
-        [Obsolete("effectiveParentDelay is obsolete; use a custom ScriptPlayable to implement this feature")]
+        [global::System.@ObsoleteAttribute("effectiveParentDelay is obsolete; use a custom ScriptPlayable to implement this feature", false)]
         public double effectiveParentDelay => m_EffectiveParentDelay;
 
         public float effectiveParentSpeed => m_EffectiveParentSpeed;

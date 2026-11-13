@@ -49,7 +49,7 @@ namespace UnityEngine
             ? m_Joint != null ? W.ToUnity(m_Joint.GetReactionForce(1f / timeStep)) : m_SuspendedImpulse / timeStep : Vector2.zero;
         public float GetReactionTorque(float timeStep) => timeStep > 0f && isActiveAndEnabled
             ? m_Joint != null ? m_Joint.GetReactionTorque(1f / timeStep) : m_SuspendedTorque / timeStep : 0f;
-        [Obsolete("Joint2D.collideConnected has been deprecated. Use Joint2D.enableCollision instead (UnityUpgradable) -> enableCollision")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Joint2D.collideConnected has been deprecated. Use Joint2D.enableCollision instead (UnityUpgradable) -> enableCollision", true)]
         public bool collideConnected { get => enableCollision; set => enableCollision = value; }
 
         internal void Changed() => m_JointDirty = true;

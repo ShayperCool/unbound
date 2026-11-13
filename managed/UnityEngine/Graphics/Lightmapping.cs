@@ -16,16 +16,16 @@ namespace UnityEngine
 
         public LightmapData() { }
 
-        [Obsolete("Use lightmapColor property (UnityUpgradable) -> lightmapColor")]
+        [global::System.@ObsoleteAttribute("Use lightmapColor property (UnityUpgradable) -> lightmapColor", false)]
         public Texture2D lightmapLight { get => m_Light; set => m_Light = value; }
         public Texture2D lightmapColor { get => m_Light; set => m_Light = value; }
         public Texture2D lightmapDir { get => m_Dir; set => m_Dir = value; }
         public Texture2D shadowMask { get => m_ShadowMask; set => m_ShadowMask = value; }
-        [Obsolete("Property LightmapData.lightmap has been deprecated. Use LightmapData.lightmapColor instead (UnityUpgradable) -> lightmapColor")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Property LightmapData.lightmap has been deprecated. Use LightmapData.lightmapColor instead (UnityUpgradable) -> lightmapColor", true)]
         public Texture2D lightmap { get => m_Light; set => m_Light = value; }
-        [Obsolete("Property LightmapData.lightmapFar has been deprecated. Use LightmapData.lightmapColor instead (UnityUpgradable) -> lightmapColor")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Property LightmapData.lightmapFar has been deprecated. Use LightmapData.lightmapColor instead (UnityUpgradable) -> lightmapColor", true)]
         public Texture2D lightmapFar { get => m_Light; set => m_Light = value; }
-        [Obsolete("Property LightmapData.lightmapNear has been deprecated. Use LightmapData.lightmapDir instead (UnityUpgradable) -> lightmapDir")]
+        [global::System.@ObsoleteAttribute("Property LightmapData.lightmapNear has been deprecated. Use LightmapData.lightmapDir instead (UnityUpgradable) -> lightmapDir", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public Texture2D lightmapNear { get => m_Dir; set => m_Dir = value; }
 
         internal LightmapData Copy() => new LightmapData { m_Light = m_Light, m_Dir = m_Dir, m_ShadowMask = m_ShadowMask };

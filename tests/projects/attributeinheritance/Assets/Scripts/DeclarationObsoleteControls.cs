@@ -203,14 +203,15 @@ public static class DeclarationObsoleteControls
         string text = Convert.ToString(argument.Value, CultureInfo.InvariantCulture);
         return argument.ArgumentType.FullName + ":" + text.Length + ":" + text;
     }
+    public static string Value(MemberInfo member) => string.Join(";", member.CustomAttributes.Where(a => a.AttributeType == typeof(ObsoleteAttribute))
+                .Select(a => a.ConstructorArguments.Count + ":" + string.Join("|", a.ConstructorArguments.Select(v => Argument(v)).ToArray())).ToArray());
     public static void Record(Action<string, object> row)
     {
         foreach (var declaration in Declarations)
         {
             Type type = Type.GetType(declaration[0] + ", " + declaration[1], true);
             MemberInfo member = declaration[2] == "" ? (MemberInfo)type : type.GetField(declaration[2], BindingFlags.Public | BindingFlags.Static);
-            string value = string.Join(";", member.CustomAttributes.Where(a => a.AttributeType == typeof(ObsoleteAttribute))
-                .Select(a => a.ConstructorArguments.Count + ":" + string.Join("|", a.ConstructorArguments.Select(v => Argument(v)).ToArray())).ToArray());
+            string value = Value(member);
             row("obsolete.enum." + declaration[0] + "." + (declaration[2] == "" ? "type" : declaration[2]), value);
         }
     }

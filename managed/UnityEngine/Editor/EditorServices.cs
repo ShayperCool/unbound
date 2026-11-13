@@ -38,15 +38,15 @@ namespace UnityEditor
             return AnalyticsResult.Ok;
         }
 
-        public static AnalyticsResult RegisterEventWithLimit(string eventName, int maxEventPerHour, int maxItems, string vendorKey) => AnalyticsResult.Ok;
+        [global::System.@ObsoleteAttribute("Editor Analytics APIs have changed significantly, please see: https://docs.editor-data.unity3d.com/Contribute/EditorAnalytics/cs_guide/")] public static AnalyticsResult RegisterEventWithLimit(string eventName, int maxEventPerHour, int maxItems, string vendorKey) => AnalyticsResult.Ok;
 
-        public static AnalyticsResult RegisterEventWithLimit(string eventName, int maxEventPerHour, int maxItems, string vendorKey, int ver) => AnalyticsResult.Ok;
+        [global::System.@ObsoleteAttribute("Editor Analytics APIs have changed significantly, please see: https://docs.editor-data.unity3d.com/Contribute/EditorAnalytics/cs_guide/")] public static AnalyticsResult RegisterEventWithLimit(string eventName, int maxEventPerHour, int maxItems, string vendorKey, int ver) => AnalyticsResult.Ok;
 
-        public static AnalyticsResult SendEventWithLimit(string eventName, object parameters) => AnalyticsResult.Ok;
+        [global::System.@ObsoleteAttribute("Editor Analytics APIs have changed significantly, please see: https://docs.editor-data.unity3d.com/Contribute/EditorAnalytics/cs_guide/")] public static AnalyticsResult SendEventWithLimit(string eventName, object parameters) => AnalyticsResult.Ok;
 
-        public static AnalyticsResult SendEventWithLimit(string eventName, object parameters, int ver) => AnalyticsResult.Ok;
+        [global::System.@ObsoleteAttribute("Editor Analytics APIs have changed significantly, please see: https://docs.editor-data.unity3d.com/Contribute/EditorAnalytics/cs_guide/")] public static AnalyticsResult SendEventWithLimit(string eventName, object parameters, int ver) => AnalyticsResult.Ok;
 
-        public static AnalyticsResult SetEventWithLimitEndPoint(string eventName, string endPoint, int ver) => AnalyticsResult.Ok;
+        [global::System.@ObsoleteAttribute("Editor Analytics APIs have changed significantly, please see: https://docs.editor-data.unity3d.com/Contribute/EditorAnalytics/cs_guide/")] public static AnalyticsResult SetEventWithLimitEndPoint(string eventName, string endPoint, int ver) => AnalyticsResult.Ok;
     }
 
     /// <summary>

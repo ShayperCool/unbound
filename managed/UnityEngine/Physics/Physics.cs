@@ -177,7 +177,7 @@ namespace UnityEngine
             set { EnsureSettings(); s_SimulationMode = value; }
         }
 
-        [Obsolete("Physics.autoSimulation has been replaced by Physics.simulationMode", false)]
+        [global::System.@ObsoleteAttribute("Physics.autoSimulation has been replaced by Physics.simulationMode", false)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public static bool autoSimulation
         {
             get => simulationMode != SimulationMode.Script;

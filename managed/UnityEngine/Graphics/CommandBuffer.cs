@@ -1015,8 +1015,8 @@ namespace UnityEngine.Rendering
         });
 
 #pragma warning disable 618
-        public void IssuePluginCustomTextureUpdate(IntPtr callback, Texture targetTexture, uint userData) => TextureUpdate(callback, targetTexture, userData, false);
-        public void IssuePluginCustomTextureUpdateV1(IntPtr callback, Texture targetTexture, uint userData) => TextureUpdate(callback, targetTexture, userData, false);
+        [global::System.@ObsoleteAttribute("Use IssuePluginCustomTextureUpdateV2 to register TextureUpdate callbacks instead. Callbacks will be passed event IDs kUnityRenderingExtEventUpdateTextureBeginV2 or kUnityRenderingExtEventUpdateTextureEndV2, and data parameter of type UnityRenderingExtTextureUpdateParamsV2.", false)] public void IssuePluginCustomTextureUpdate(IntPtr callback, Texture targetTexture, uint userData) => TextureUpdate(callback, targetTexture, userData, false);
+        [global::System.@ObsoleteAttribute("Use IssuePluginCustomTextureUpdateV2 to register TextureUpdate callbacks instead. Callbacks will be passed event IDs kUnityRenderingExtEventUpdateTextureBeginV2 or kUnityRenderingExtEventUpdateTextureEndV2, and data parameter of type UnityRenderingExtTextureUpdateParamsV2.", false)] public void IssuePluginCustomTextureUpdateV1(IntPtr callback, Texture targetTexture, uint userData) => TextureUpdate(callback, targetTexture, userData, false);
 #pragma warning restore 618
         public void IssuePluginCustomTextureUpdateV2(IntPtr callback, Texture targetTexture, uint userData) => TextureUpdate(callback, targetTexture, userData, true);
 

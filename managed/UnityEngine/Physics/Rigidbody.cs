@@ -334,7 +334,7 @@ namespace UnityEngine
             return velocity;
         }
 
-        [Obsolete("Please use Rigidbody.linearVelocity instead. (UnityUpgradable) -> linearVelocity")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Please use Rigidbody.linearVelocity instead. (UnityUpgradable) -> linearVelocity")]
         public Vector3 velocity { get => linearVelocity; set => linearVelocity = value; }
 
         public float linearDamping
@@ -349,10 +349,10 @@ namespace UnityEngine
             set { m_AngularDamping = value; Changed(); }
         }
 
-        [Obsolete("Please use Rigidbody.linearDamping instead. (UnityUpgradable) -> linearDamping")]
+        [global::System.@ObsoleteAttribute("Please use Rigidbody.linearDamping instead. (UnityUpgradable) -> linearDamping")] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public float drag { get => linearDamping; set => linearDamping = value; }
 
-        [Obsolete("Please use Rigidbody.angularDamping instead. (UnityUpgradable) -> angularDamping")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Please use Rigidbody.angularDamping instead. (UnityUpgradable) -> angularDamping")]
         public float angularDrag { get => angularDamping; set => angularDamping = value; }
 
         public float mass

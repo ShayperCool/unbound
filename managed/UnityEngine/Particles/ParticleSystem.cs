@@ -299,7 +299,7 @@ namespace UnityEngine
         [Obsolete("scalingMode property is deprecated. Use main.scalingMode instead.", false)]
         public ParticleSystemScalingMode scalingMode { get => m_Main.scalingMode; set => ModifiedByScript().m_Main.scalingMode = value; }
 
-        [Obsolete("automaticCullingEnabled property is deprecated. Use proceduralSimulationSupported instead (UnityUpgradable) -> proceduralSimulationSupported", false)]
+        [global::System.@ObsoleteAttribute("automaticCullingEnabled property is deprecated. Use proceduralSimulationSupported instead (UnityUpgradable) -> proceduralSimulationSupported", true)]
         public bool automaticCullingEnabled => proceduralSimulationSupported;
 
         internal void SetSimulationSpace(ParticleSystemSimulationSpace space) => m_Main.simulationSpace = space;

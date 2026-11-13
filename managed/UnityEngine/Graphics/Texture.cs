@@ -113,8 +113,8 @@ namespace UnityEngine
 
         public void IncrementUpdateCount() => updateCount++;
 
-        public static int masterTextureLimit { get; set; }
-        public static int globalMipmapLimit { get; set; }
+        [global::System.@ObsoleteAttribute("masterTextureLimit has been deprecated. Use globalMipmapLimit instead (UnityUpgradable) -> globalMipmapLimit", false)] public static int masterTextureLimit { get; set; }
+        [global::System.@ObsoleteAttribute("globalMipmapLimit is not supported. Use QualitySettings.globalTextureMipmapLimit or Mipmap Limit Groups instead.", false)] public static int globalMipmapLimit { get; set; }
         static AnisotropicFiltering s_Anisotropic = AnisotropicFiltering.Enable;
         static int s_ForcedMinAniso = 9, s_GlobalMaxAniso = 16;
 

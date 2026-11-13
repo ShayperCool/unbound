@@ -36,7 +36,7 @@ namespace UnityEngine.Rendering
         public LightmapMixedBakeModes mixedLightingModes { get; set; } = LightmapMixedBakeModes.IndirectOnly | LightmapMixedBakeModes.Subtractive | LightmapMixedBakeModes.Shadowmask;
         public LightmapBakeType lightmapBakeTypes { get; set; } = LightmapBakeType.Realtime | LightmapBakeType.Baked | LightmapBakeType.Mixed;
         public LightmapsMode lightmapsModes { get; set; } = LightmapsMode.CombinedDirectional;
-        [Obsolete("Bake with the Progressive Lightmapper. The backend that uses Enlighten to bake is obsolete.")]
+        [global::System.@ObsoleteAttribute("Bake with the Progressive Lightmapper. The backend that uses Enlighten to bake is obsolete.", true)]
         public bool enlightenLightmapper { get; set; }
         public bool enlighten { get; set; } = true;
         public bool skyOcclusion { get; set; }
@@ -58,10 +58,10 @@ namespace UnityEngine.Rendering
         public bool rendererProbes { get; set; } = true;
         public bool particleSystemInstancing { get; set; } = true;
 
-        [Obsolete("autoAmbientProbeBaking is obsolete. To enable or disable baking of the ambient probe, use ambientProbeBaking instead. (UnityUpgradable) -> ambientProbeBaking")]
+        [global::System.@ObsoleteAttribute("autoAmbientProbeBaking is obsolete. To enable or disable baking of the ambient probe, use ambientProbeBaking instead. (UnityUpgradable) -> ambientProbeBaking", false)]
         public bool autoAmbientProbeBaking { get => ambientProbeBaking; set => ambientProbeBaking = value; }
 
-        [Obsolete("autoDefaultReflectionProbeBaking is obsolete. To enable or disable baking of the default reflection probe, use defaultReflectionProbeBaking instead. (UnityUpgradable) -> defaultReflectionProbeBaking")]
+        [global::System.@ObsoleteAttribute("autoDefaultReflectionProbeBaking is obsolete. To enable or disable baking of the default reflection probe, use defaultReflectionProbeBaking instead. (UnityUpgradable) -> defaultReflectionProbeBaking", false)]
         public bool autoDefaultReflectionProbeBaking { get => defaultReflectionProbeBaking; set => defaultReflectionProbeBaking = value; }
 
         public bool ambientProbeBaking { get; set; } = true;

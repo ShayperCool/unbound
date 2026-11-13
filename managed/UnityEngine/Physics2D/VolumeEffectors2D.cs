@@ -22,7 +22,7 @@ namespace UnityEngine
         public float drag { get => m_Drag; set => m_Drag = Mathf.Clamp(value, 0f, 1000000f); }
         public float angularDrag { get => m_AngularDrag; set => m_AngularDrag = Mathf.Clamp(value, 0f, 1000000f); }
         public EffectorSelection2D forceTarget { get => m_Target; set => m_Target = value; }
-        [Obsolete("AreaEffector2D.forceDirection has been deprecated. Use AreaEffector2D.forceAngle instead (UnityUpgradable) -> forceAngle")]
+        [global::System.@ObsoleteAttribute("AreaEffector2D.forceDirection has been deprecated. Use AreaEffector2D.forceAngle instead (UnityUpgradable) -> forceAngle", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public float forceDirection { get => forceAngle; set => forceAngle = value; }
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
         {

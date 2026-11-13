@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using Unbound.Runtime;
 
 namespace UnityEngine
 {
@@ -19,11 +20,11 @@ namespace UnityEngine
         public TouchScreenKeyboard keyboardOnScreen;
         public int controlID;
         public GUIStyle style = GUIStyle.none;
-        public bool multiline;
-        public bool hasHorizontalCursorPos;
+        [global::System.@ObsoleteAttribute("'multiline' has been deprecated. Changes to this member will not be observed. Use 'isMultiline' instead.", true)] public bool multiline;
+        [global::System.@ObsoleteAttribute("'hasHorizontalCursorPos' has been deprecated. Changes to this member will not be observed. Use 'hasHorizontalCursor' instead.", true)] public bool hasHorizontalCursorPos;
         public bool isPasswordField;
         public Vector2 scrollOffset;
-        public bool revealCursor;
+        [global::System.@ObsoleteAttribute("'revealCursor' has been deprecated. Changes to this member will not be observed. Use 'showCursor' instead.", true)] public bool revealCursor;
         public Vector2 graphicalCursorPos;
         public Vector2 graphicalSelectCursorPos;
 
@@ -32,6 +33,8 @@ namespace UnityEngine
         int m_CursorIndex;
         int m_SelectIndex;
         bool m_Focused;
+        bool m_IsMultiline;
+        bool m_HasHorizontalCursor;
         bool m_MouseDragSelectsWholeWords;
         int m_DblClickInitPos;
         DblClickSnapping m_DblClickSnap = DblClickSnapping.WORDS;
@@ -69,7 +72,7 @@ namespace UnityEngine
             set
             {
                 m_CursorIndex = Mathf.Clamp(value, 0, m_Text.Length);
-                revealCursor = true;
+                if (!GuiCompat.TextEditorStateMeasured) LegacyRevealCursor(this) = true;
             }
         }
 
@@ -91,17 +94,32 @@ namespace UnityEngine
 
         public bool isMultiline
         {
-            get => multiline;
-            set => multiline = value;
+            get => GuiCompat.TextEditorStateMeasured ? m_IsMultiline : LegacyMultiline(this);
+            set
+            {
+                if (GuiCompat.TextEditorStateMeasured) m_IsMultiline = value;
+                else LegacyMultiline(this) = value;
+            }
         }
 
         public bool hasHorizontalCursor
         {
-            get => hasHorizontalCursorPos;
-            set => hasHorizontalCursorPos = value;
+            get => GuiCompat.TextEditorStateMeasured ? m_HasHorizontalCursor : LegacyHorizontalCursor(this);
+            set
+            {
+                if (GuiCompat.TextEditorStateMeasured) m_HasHorizontalCursor = value;
+                else LegacyHorizontalCursor(this) = value;
+            }
         }
 
         public bool showCursor { get; set; }
+
+        [Obsolete("Compatibility access to legacy TextEditor storage.")]
+        static ref bool LegacyMultiline(TextEditor editor) => ref editor.multiline;
+        [Obsolete("Compatibility access to legacy TextEditor storage.")]
+        static ref bool LegacyHorizontalCursor(TextEditor editor) => ref editor.hasHorizontalCursorPos;
+        [Obsolete("Compatibility access to legacy TextEditor storage.")]
+        static ref bool LegacyRevealCursor(TextEditor editor) => ref editor.revealCursor;
 
         internal bool m_HasFocus
         {
@@ -128,7 +146,12 @@ namespace UnityEngine
         public void OnFocus()
         {
             m_Focused = true;
-            if (multiline) m_CursorIndex = m_SelectIndex = 0;
+            if (GuiCompat.TextEditorStateMeasured)
+            {
+                SelectAll();
+                showCursor = true;
+            }
+            else if (isMultiline) m_CursorIndex = m_SelectIndex = 0;
             else SelectAll();
         }
 
@@ -607,11 +630,11 @@ namespace UnityEngine
             if (style == null || style == GUIStyle.none) return;
             var shown = new GUIContent(isPasswordField ? new string('*', m_Text.Length) : m_Text);
             var inner = style.padding.Remove(m_Position);
-            var unscrolled = new Rect(m_Position.x, m_Position.y, multiline ? m_Position.width : 100000f, m_Position.height);
+            var unscrolled = new Rect(m_Position.x, m_Position.y, isMultiline ? m_Position.width : 100000f, m_Position.height);
             var cursor = style.GetCursorPixelPosition(unscrolled, shown, m_CursorIndex);
             graphicalCursorPos = cursor;
             graphicalSelectCursorPos = style.GetCursorPixelPosition(unscrolled, shown, m_SelectIndex);
-            if (multiline)
+            if (isMultiline)
             {
                 scrollOffset.x = 0f;
                 return;
@@ -624,7 +647,7 @@ namespace UnityEngine
             if (textWidth <= view) scrollOffset.x = 0f;
             scrollOffset.x = Math.Max(0f, scrollOffset.x);
             scrollOffset.y = 0f;
-            revealCursor = false;
+            if (!GuiCompat.TextEditorStateMeasured) LegacyRevealCursor(this) = false;
         }
 
         public void DrawCursor(string newText)
@@ -674,7 +697,7 @@ namespace UnityEngine
         {
             var pasted = GUIUtility.systemCopyBuffer;
             if (pasted.Length == 0) return false;
-            if (!multiline) pasted = ReplaceNewlinesWithSpaces(pasted);
+            if (!isMultiline) pasted = ReplaceNewlinesWithSpaces(pasted);
             ReplaceSelection(pasted);
             return true;
         }

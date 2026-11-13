@@ -233,8 +233,7 @@ namespace UnityEngine
         [Obsolete("useContinuousCollision is no longer supported, use enableContinuousCollision instead")]
         public float useContinuousCollision { get; set; }
 
-        [Obsolete("Deprecated.Cloth.selfCollisions is no longer supported since Unity 5.0.")]
-        [Unbound.EditorFaithful("obsolete since Unity 5.0: Unity answers false too")]
+        [global::System.@ObsoleteAttribute("Deprecated.Cloth.selfCollisions is no longer supported since Unity 5.0.", true)] [Unbound.EditorFaithful("obsolete since Unity 5.0: Unity answers false too")]
         public bool selfCollision => false;
 
         public ClothSkinningCoefficient[] coefficients

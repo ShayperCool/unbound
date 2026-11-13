@@ -9,7 +9,7 @@ using UnityEngine.SocialPlatforms.Impl;
 
 namespace UnityEngine
 {
-    [Obsolete("Social is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("Social is deprecated and will be removed in a future release.", false)]
     public static partial class Social
     {
         public static ISocialPlatform Active
@@ -35,7 +35,7 @@ namespace UnityEngine
 
 namespace UnityEngine.SocialPlatforms
 {
-    [Obsolete("IAchievement is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("IAchievement is deprecated and will be removed in a future release.", false)]
     public partial interface IAchievement
     {
         void ReportProgress(Action<bool> callback);
@@ -45,7 +45,7 @@ namespace UnityEngine.SocialPlatforms
         bool hidden { get; }
         DateTime lastReportedDate { get; }
     }
-    [Obsolete("IAchievementDescription is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("IAchievementDescription is deprecated and will be removed in a future release.", false)]
     public partial interface IAchievementDescription
     {
         string id { get; set; }
@@ -56,7 +56,7 @@ namespace UnityEngine.SocialPlatforms
         bool hidden { get; }
         int points { get; }
     }
-    [Obsolete("ILeaderboard is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("ILeaderboard is deprecated and will be removed in a future release.", false)]
     public partial interface ILeaderboard
     {
         void SetUserFilter(string[] userIDs);
@@ -71,7 +71,7 @@ namespace UnityEngine.SocialPlatforms
         IScore[] scores { get; }
         string title { get; }
     }
-    [Obsolete("ILocalUser is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("ILocalUser is deprecated and will be removed in a future release.", false)]
     public partial interface ILocalUser : IUserProfile
     {
         void Authenticate(Action<bool> callback);
@@ -81,7 +81,7 @@ namespace UnityEngine.SocialPlatforms
         bool authenticated { get; }
         bool underage { get; }
     }
-    [Obsolete("IScore is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("IScore is deprecated and will be removed in a future release.", false)]
     public partial interface IScore
     {
         void ReportScore(Action<bool> callback);
@@ -92,7 +92,7 @@ namespace UnityEngine.SocialPlatforms
         string userID { get; }
         int rank { get; }
     }
-    [Obsolete("ISocialPlatform is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("ISocialPlatform is deprecated and will be removed in a future release.", false)]
     public partial interface ISocialPlatform
     {
         void LoadUsers(string[] userIDs, Action<IUserProfile[]> callback);
@@ -112,7 +112,7 @@ namespace UnityEngine.SocialPlatforms
         bool GetLoading(ILeaderboard board);
         ILocalUser localUser { get; }
     }
-    [Obsolete("IUserProfile is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("IUserProfile is deprecated and will be removed in a future release.", false)]
     public partial interface IUserProfile
     {
         string userName { get; }
@@ -144,7 +144,7 @@ namespace UnityEngine.SocialPlatforms
         Playing = 4,
     }
 
-    [Obsolete("ActivePlatform is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("ActivePlatform is deprecated and will be removed in a future release.", false)]
     internal static partial class ActivePlatform
     {
         static ISocialPlatform s_Active;
@@ -156,7 +156,7 @@ namespace UnityEngine.SocialPlatforms
         }
     }
 
-    [Obsolete("Range is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("Range is deprecated and will be removed in a future release.", false)]
     public partial struct Range
     {
         public int from;
@@ -169,7 +169,7 @@ namespace UnityEngine.SocialPlatforms
         }
     }
 
-    [Obsolete("Local is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("Local is deprecated and will be removed in a future release.", false)]
     public partial class Local : ISocialPlatform
     {
         static LocalUser m_LocalUser;
@@ -376,7 +376,7 @@ namespace UnityEngine.SocialPlatforms
 
 namespace UnityEngine.SocialPlatforms.Impl
 {
-    [Obsolete("UserProfile is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("UserProfile is deprecated and will be removed in a future release.", false)]
     public partial class UserProfile : IUserProfile
     {
         protected string m_UserName;
@@ -422,7 +422,7 @@ namespace UnityEngine.SocialPlatforms.Impl
 
         public string userName => m_UserName;
         public string id => m_ID;
-        [Obsolete("legacyId returns playerID from GKPlayer, which became obsolete in iOS 12.4 . id returns playerID for devices running versions before iOS 12.4, and the newer teamPlayerID for later versions. Please use IUserProfile.id or UserProfile.gameId instead.")]
+        [global::System.@ObsoleteAttribute("legacyId returns playerID from GKPlayer, which became obsolete in iOS 12.4 . id returns playerID for devices running versions before iOS 12.4, and the newer teamPlayerID for later versions. Please use IUserProfile.id or UserProfile.id instead (UnityUpgradable) -> id", true)]
         public string legacyId => m_LegacyID;
         public string gameId => m_GameID;
         public bool isFriend => m_IsFriend;
@@ -430,7 +430,7 @@ namespace UnityEngine.SocialPlatforms.Impl
         public Texture2D image => m_Image;
     }
 
-    [Obsolete("LocalUser is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("LocalUser is deprecated and will be removed in a future release.", false)]
     public partial class LocalUser : UserProfile, ILocalUser
     {
         IUserProfile[] m_Friends;
@@ -456,7 +456,7 @@ namespace UnityEngine.SocialPlatforms.Impl
         public bool underage => m_Underage;
     }
 
-    [Obsolete("Achievement is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("Achievement is deprecated and will be removed in a future release.", false)]
     public partial class Achievement : IAchievement
     {
         bool m_Completed;
@@ -497,7 +497,7 @@ namespace UnityEngine.SocialPlatforms.Impl
         public DateTime lastReportedDate => m_LastReportedDate;
     }
 
-    [Obsolete("AchievementDescription is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("AchievementDescription is deprecated and will be removed in a future release.", false)]
     public partial class AchievementDescription : IAchievementDescription
     {
         string m_Title;
@@ -531,7 +531,7 @@ namespace UnityEngine.SocialPlatforms.Impl
         public int points => m_Points;
     }
 
-    [Obsolete("Score is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("Score is deprecated and will be removed in a future release.", false)]
     public partial class Score : IScore
     {
         DateTime m_Date;
@@ -570,7 +570,7 @@ namespace UnityEngine.SocialPlatforms.Impl
         public int rank => m_Rank;
     }
 
-    [Obsolete("Leaderboard is deprecated and will be removed in a future release.")]
+    [global::System.@ObsoleteAttribute("Leaderboard is deprecated and will be removed in a future release.", false)]
     public partial class Leaderboard : ILeaderboard
     {
         bool m_Loading;

@@ -21,7 +21,7 @@ namespace UnityEditor
 
         public static Action<SceneView, SceneView> lastActiveSceneViewChanged;
 
-        [Obsolete("onSceneGUIDelegate has been deprecated. Use duringSceneGui instead.")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("onSceneGUIDelegate has been deprecated. Use duringSceneGui instead.")]
         public static OnSceneFunc onSceneGUIDelegate;
 
         public static ArrayList sceneViews => s_SceneViews;
@@ -43,7 +43,7 @@ namespace UnityEditor
         public static event Action<SceneView> duringSceneGui;
 #pragma warning restore CS0067
 
-        public delegate void OnSceneFunc(SceneView sceneView);
+        [global::System.@ObsoleteAttribute("OnSceneFunc() has been deprecated. Use System.Action instead.")] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] public delegate void OnSceneFunc(SceneView sceneView);
     }
 
     public sealed partial class Handles

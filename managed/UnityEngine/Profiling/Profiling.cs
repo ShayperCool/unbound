@@ -691,7 +691,7 @@ namespace UnityEngine.Profiling
         public static string logFile { get; set; }
         public static int maxUsedMemory { get; set; }
         public static long usedHeapSizeLong => GC.GetTotalMemory(false);
-        public static uint usedHeapSize => (uint)Math.Min(uint.MaxValue, GC.GetTotalMemory(false));
+        [global::System.@ObsoleteAttribute("usedHeapSize has been deprecated since it is limited to 4GB. Please use usedHeapSizeLong instead.")] public static uint usedHeapSize => (uint)Math.Min(uint.MaxValue, GC.GetTotalMemory(false));
 
         [ThreadStatic] static Stack<IntPtr> t_Samples;
 

@@ -463,13 +463,13 @@ namespace UnityEngine
         public static void DrawMeshNow(Mesh mesh, Vector3 position, Quaternion rotation) => DrawMeshNow(mesh, position, rotation, -1);
         public static void DrawMeshNow(Mesh mesh, Matrix4x4 matrix) => DrawMeshNow(mesh, matrix, -1);
 
-        [Obsolete("Method DrawMesh has been deprecated. Use Graphics.DrawMeshNow instead (UnityUpgradable) -> DrawMeshNow(*)")]
+        [global::System.@ObsoleteAttribute("Method DrawMesh has been deprecated. Use Graphics.DrawMeshNow instead (UnityUpgradable) -> DrawMeshNow(*)", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation) => DrawMeshNow(mesh, position, rotation);
-        [Obsolete("Method DrawMesh has been deprecated. Use Graphics.DrawMeshNow instead (UnityUpgradable) -> DrawMeshNow(*)")]
+        [global::System.@ObsoleteAttribute("Method DrawMesh has been deprecated. Use Graphics.DrawMeshNow instead (UnityUpgradable) -> DrawMeshNow(*)", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public static void DrawMesh(Mesh mesh, Vector3 position, Quaternion rotation, int materialIndex) => DrawMeshNow(mesh, position, rotation, materialIndex);
-        [Obsolete("Method DrawMesh has been deprecated. Use Graphics.DrawMeshNow instead (UnityUpgradable) -> DrawMeshNow(*)")]
+        [global::System.@ObsoleteAttribute("Method DrawMesh has been deprecated. Use Graphics.DrawMeshNow instead (UnityUpgradable) -> DrawMeshNow(*)", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix) => DrawMeshNow(mesh, matrix);
-        [Obsolete("Method DrawMesh has been deprecated. Use Graphics.DrawMeshNow instead (UnityUpgradable) -> DrawMeshNow(*)")]
+        [global::System.@ObsoleteAttribute("Method DrawMesh has been deprecated. Use Graphics.DrawMeshNow instead (UnityUpgradable) -> DrawMeshNow(*)", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, int materialIndex) => DrawMeshNow(mesh, matrix, materialIndex);
         public static void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int layer, Camera camera, int submeshIndex, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, Transform probeAnchor, LightProbeUsage lightProbeUsage) =>
@@ -684,7 +684,7 @@ namespace UnityEngine
         }
 
         /// <summary>Every loaded plugin's <c>UnityRenderEvent</c> export.</summary>
-        [Obsolete("IssuePluginEvent(eventID) is deprecated. Use IssuePluginEvent(callback, eventID) instead.")]
+        [global::System.@ObsoleteAttribute("IssuePluginEvent(eventID) is deprecated. Use IssuePluginEvent(callback, eventID) instead.", false)]
         public static void IssuePluginEvent(int eventID) => NativePlugins.IssueLegacyEvent(eventID);
 
         public static void PushMatrix() => Immediate.MatrixStack.Push((Immediate.Projection, Immediate.ModelView));

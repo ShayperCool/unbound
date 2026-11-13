@@ -215,7 +215,7 @@ namespace UnityEngine
             set => m_CompositeOrder = value;
         }
 
-        public bool usedByComposite
+        [global::System.@ObsoleteAttribute("usedByComposite has been deprecated. Use Collider2D.compositeOperation instead", false)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] public bool usedByComposite
         {
             get => m_CompositeOperation != CompositeOperation.None;
             set => compositeOperation = value ? CompositeOperation.Merge : CompositeOperation.None;
@@ -490,9 +490,9 @@ namespace UnityEngine
             return Physics2DQueries.CopyColliders(Physics2DQueries.OverlapColliders(new[] { this }, pose, contactFilter, null), results);
         }
 
-        public int OverlapCollider(ContactFilter2D contactFilter, Collider2D[] results) => Overlap(contactFilter, results);
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("OverlapCollider has been renamed to Overlap (UnityUpgradable) -> Overlap(*)", false)] public int OverlapCollider(ContactFilter2D contactFilter, Collider2D[] results) => Overlap(contactFilter, results);
 
-        public int OverlapCollider(ContactFilter2D contactFilter, List<Collider2D> results) => Overlap(contactFilter, results);
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("OverlapCollider has been renamed to Overlap (UnityUpgradable) -> Overlap(*)", false)] public int OverlapCollider(ContactFilter2D contactFilter, List<Collider2D> results) => Overlap(contactFilter, results);
 
         public int Cast(Vector2 direction, RaycastHit2D[] results) => Cast(direction, Physics2D.DefaultCastFilter(m_GameObject), results, float.PositiveInfinity, true);
 
@@ -637,7 +637,7 @@ namespace UnityEngine
             }
         }
 
-        public Vector2 center
+        [global::System.@ObsoleteAttribute("CircleCollider2D.center has been deprecated. Use CircleCollider2D.offset instead (UnityUpgradable) -> offset", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] public Vector2 center
         {
             get => offset;
             set => offset = value;
@@ -716,7 +716,7 @@ namespace UnityEngine
             set => m_AutoTiling = value;
         }
 
-        public Vector2 center
+        [global::System.@ObsoleteAttribute("BoxCollider2D.center has been deprecated. Use BoxCollider2D.offset instead (UnityUpgradable) -> offset", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] public Vector2 center
         {
             get => offset;
             set => offset = value;

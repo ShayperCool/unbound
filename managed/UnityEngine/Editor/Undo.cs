@@ -107,7 +107,7 @@ namespace UnityEditor
             }
         }
 
-        public static void RegisterFullObjectHierarchyUndo(Object objectToUndo) => RegisterFullObjectHierarchyUndo(objectToUndo, "Full Object Hierarchy");
+        [global::System.@ObsoleteAttribute("Use Undo.RegisterFullObjectHierarchyUndo(Object, string) instead")] public static void RegisterFullObjectHierarchyUndo(Object objectToUndo) => RegisterFullObjectHierarchyUndo(objectToUndo, "Full Object Hierarchy");
 
         public static void RegisterCreatedObjectUndo(Object objectToUndo, string name)
         {

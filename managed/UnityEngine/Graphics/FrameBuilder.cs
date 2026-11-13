@@ -2298,7 +2298,7 @@ namespace UnityEngine
         public static Vector3 shadowCascade4Split { get; set; } = new Vector3(0.06666667f, 0.2f, 0.46666667f);
         public static int globalTextureMipmapLimit { get; set; }
 
-        [Obsolete("masterTextureLimit has been deprecated. Use globalTextureMipmapLimit instead (UnityUpgradable) -> globalTextureMipmapLimit")]
+        [global::System.@ObsoleteAttribute("masterTextureLimit has been deprecated. Use globalTextureMipmapLimit instead (UnityUpgradable) -> globalTextureMipmapLimit", false)]
         public static int masterTextureLimit { get => globalTextureMipmapLimit; set => globalTextureMipmapLimit = value; }
         public static AnisotropicFiltering anisotropicFiltering { get => Texture.anisotropicFiltering; set => Texture.anisotropicFiltering = value; }
         public static bool softParticles { get; set; }

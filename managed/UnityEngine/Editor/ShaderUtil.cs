@@ -151,7 +151,7 @@ namespace UnityEditor
             return false;
         }
 
-        [Unbound.EditorFaithful("no compiler errors are kept, so there are none to clear")]
+        [global::System.@ObsoleteAttribute("ClearShaderErrors has been deprecated. Use ClearShaderMessages instead (UnityUpgradable) -> ClearShaderMessages(*)")] [Unbound.EditorFaithful("no compiler errors are kept, so there are none to clear")]
         public static void ClearShaderErrors(Shader s) { }
     }
 

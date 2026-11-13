@@ -1305,32 +1305,27 @@ namespace UnityEngine.Animations
 
         public Vector3 GetPosition(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Transform(stream)?.position ?? Vector3.zero; }
 
-        [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
-        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
+        [global::System.@ObsoleteAttribute("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism", true)] [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetPosition(AnimationStream stream, Vector3 position) { }
 
         public Vector3 GetLocalPosition(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Transform(stream)?.localPosition ?? Vector3.zero; }
 
-        [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
-        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
+        [global::System.@ObsoleteAttribute("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism", true)] [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetLocalPosition(AnimationStream stream, Vector3 position) { }
 
         public Quaternion GetRotation(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Transform(stream)?.rotation ?? Quaternion.identity; }
 
-        [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
-        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
+        [global::System.@ObsoleteAttribute("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism", true)] [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetRotation(AnimationStream stream, Quaternion rotation) { }
 
         public Quaternion GetLocalRotation(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Transform(stream)?.localRotation ?? Quaternion.identity; }
 
-        [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
-        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
+        [global::System.@ObsoleteAttribute("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism", true)] [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetLocalRotation(AnimationStream stream, Quaternion rotation) { }
 
         public Vector3 GetLocalScale(AnimationStream stream) { using var engine = MainThreadCheck.Engine(); return Transform(stream)?.localScale ?? Vector3.one; }
 
-        [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
-        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
+        [global::System.@ObsoleteAttribute("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism", true)] [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetLocalScale(AnimationStream stream, Vector3 scale) { }
 
         public void GetLocalTRS(AnimationStream stream, out Vector3 position, out Quaternion rotation, out Vector3 scale)
@@ -1389,20 +1384,17 @@ namespace UnityEngine.Animations
 
         public float GetFloat(AnimationStream stream) => Value(stream);
 
-        [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
-        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
+        [global::System.@ObsoleteAttribute("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism", true)] [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetFloat(AnimationStream stream, float value) { }
 
         public int GetInt(AnimationStream stream) => (int)Math.Round(Value(stream));
 
-        [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
-        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
+        [global::System.@ObsoleteAttribute("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism", true)] [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetInt(AnimationStream stream, int value) { }
 
         public bool GetBool(AnimationStream stream) => Value(stream) >= 0.5f;
 
-        [Obsolete("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism")]
-        [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
+        [global::System.@ObsoleteAttribute("SceneHandle is now read-only; it was problematic with the engine multithreading and determinism", true)] [Unbound.EditorFaithful("obsolete: scene handles are read-only, Unity does nothing too")]
         public void SetBool(AnimationStream stream, bool value) { }
     }
 

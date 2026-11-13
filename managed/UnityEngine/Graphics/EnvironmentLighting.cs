@@ -59,7 +59,7 @@ namespace UnityEngine
         /// change does not replace it, even with UpdateGIMaterials.</summary>
         public static void SetEmissive(Renderer renderer, Color color) => RealtimeGI.SetEmissive(renderer, color);
 
-        [Obsolete("DynamicGI.UpdateMaterials(Renderer) is deprecated; instead, use extension method from RendererExtensions: 'renderer.UpdateGIMaterials()' (UnityUpgradable).")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("DynamicGI.UpdateMaterials(Renderer) is deprecated; instead, use extension method from RendererExtensions: 'renderer.UpdateGIMaterials()' (UnityUpgradable).", true)]
         public static void UpdateMaterials(Renderer renderer) => RealtimeGI.MaterialsChanged(renderer);
 
         /// <summary>A scene loaded alone (not additively) with <paramref name="settings"/>; additive

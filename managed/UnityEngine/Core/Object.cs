@@ -309,7 +309,7 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ Find
 
-        public static Object[] FindObjectsOfType(Type type) => FindObjectsOfType(type, false);
+        [global::System.@ObsoleteAttribute("Object.FindObjectsOfType has been deprecated. Use Object.FindObjectsByType instead which lets you decide whether you need the results sorted or not.  FindObjectsOfType sorts the results by InstanceID, but if you do not need this using FindObjectSortMode.None is considerably faster.", false)] public static Object[] FindObjectsOfType(Type type) => FindObjectsOfType(type, false);
 
         public static Object[] FindObjectsOfType(Type type, bool includeInactive)
         {
@@ -327,9 +327,9 @@ namespace UnityEngine
                 sorted: sortMode == FindObjectsSortMode.InstanceID));
         }
 
-        public static T[] FindObjectsOfType<T>() where T : Object => Cast<T>(FindObjectsOfType(typeof(T), false));
+        [global::System.@ObsoleteAttribute("Object.FindObjectsOfType has been deprecated. Use Object.FindObjectsByType instead which lets you decide whether you need the results sorted or not.  FindObjectsOfType sorts the results by InstanceID but if you do not need this using FindObjectSortMode.None is considerably faster.", false)] public static T[] FindObjectsOfType<T>() where T : Object => Cast<T>(FindObjectsOfType(typeof(T), false));
 
-        public static T[] FindObjectsOfType<T>(bool includeInactive) where T : Object =>
+        [global::System.@ObsoleteAttribute("Object.FindObjectsOfType has been deprecated. Use Object.FindObjectsByType instead which lets you decide whether you need the results sorted or not.  FindObjectsOfType sorts the results by InstanceID but if you do not need this using FindObjectSortMode.None is considerably faster.", false)] public static T[] FindObjectsOfType<T>(bool includeInactive) where T : Object =>
             Cast<T>(FindObjectsOfType(typeof(T), includeInactive));
 
         public static T[] FindObjectsByType<T>(FindObjectsSortMode sortMode) where T : Object =>
@@ -346,9 +346,9 @@ namespace UnityEngine
             return ObjectRegistry.FindFirstSceneObject(type, includeInactive);
         }
 
-        public static T FindObjectOfType<T>() where T : Object => (T)FindObjectOfType(typeof(T), false);
+        [global::System.@ObsoleteAttribute("Object.FindObjectOfType has been deprecated. Use Object.FindFirstObjectByType instead or if finding any instance is acceptable the faster Object.FindAnyObjectByType", false)] public static T FindObjectOfType<T>() where T : Object => (T)FindObjectOfType(typeof(T), false);
 
-        public static T FindObjectOfType<T>(bool includeInactive) where T : Object =>
+        [global::System.@ObsoleteAttribute("Object.FindObjectOfType has been deprecated. Use Object.FindFirstObjectByType instead or if finding any instance is acceptable the faster Object.FindAnyObjectByType", false)] public static T FindObjectOfType<T>(bool includeInactive) where T : Object =>
             (T)FindObjectOfType(typeof(T), includeInactive);
 
         public static T FindFirstObjectByType<T>() where T : Object => (T)FindObjectOfType(typeof(T), false);
@@ -374,7 +374,7 @@ namespace UnityEngine
         [Obsolete("Please use Resources.FindObjectsOfTypeAll instead")]
         public static Object[] FindObjectsOfTypeAll(Type type) => Resources.FindObjectsOfTypeAll(type);
 
-        [Obsolete("warning use Object.FindObjectsByType instead.")]
+        [global::System.@ObsoleteAttribute("use Resources.FindObjectsOfTypeAll instead.")]
         public static Object[] FindObjectsOfTypeIncludingAssets(Type type) => Resources.FindObjectsOfTypeAll(type);
 
         static T[] Cast<T>(Object[] objects) where T : Object

@@ -509,7 +509,7 @@ namespace UnityEngine
             }
         }
 
-        [Obsolete("Use bakedProbes instead.")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Use bakedProbes instead.", true)]
         public float[] coefficients
         {
             get
@@ -838,7 +838,7 @@ namespace UnityEngine
             }
         }
 
-        [Obsolete("Use GetInterpolatedProbe instead.")]
+        [global::System.@ObsoleteAttribute("Use GetInterpolatedProbe instead.", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public void GetInterpolatedLightProbe(Vector3 position, Renderer renderer, float[] coefficients)
         {
             if (coefficients == null || coefficients.Length < 27) throw new ArgumentException("Coefficients array must have 27 elements.", nameof(coefficients));

@@ -823,7 +823,7 @@ namespace UnityEngine
             editor.text = content.text ?? "";
             editor.position = position;
             editor.style = style;
-            editor.multiline = multiline;
+            editor.isMultiline = multiline;
             editor.controlID = id;
             editor.isPasswordField = maskChar != '\0';
             editor.DetectFocusChange();

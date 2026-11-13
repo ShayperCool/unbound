@@ -44,7 +44,7 @@ namespace UnityEngine
             set => m_LowpassResonanceQ = value;
         }
 
-        [Obsolete("AudioLowPassFilter.lowpassResonaceQ is obsolete. Use lowpassResonanceQ instead (UnityUpgradable) -> lowpassResonanceQ")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("AudioLowPassFilter.lowpassResonaceQ is obsolete. Use lowpassResonanceQ instead (UnityUpgradable) -> lowpassResonanceQ", true)]
         public float lowpassResonaceQ
         {
             get => lowpassResonanceQ;
@@ -109,7 +109,7 @@ namespace UnityEngine
             set => m_HighpassResonanceQ = value;
         }
 
-        [Obsolete("AudioHighPassFilter.highpassResonaceQ is obsolete. Use highpassResonanceQ instead (UnityUpgradable) -> highpassResonanceQ")]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("AudioHighPassFilter.highpassResonaceQ is obsolete. Use highpassResonanceQ instead (UnityUpgradable) -> highpassResonanceQ", true)]
         public float highpassResonaceQ
         {
             get => highpassResonanceQ;
@@ -379,7 +379,7 @@ namespace UnityEngine
         public float hfReference { get => Get(HFReference); set => Set(HFReference, value); }
         public float lfReference { get => Get(LFReference); set => Set(LFReference, value); }
 
-        [Obsolete("AudioReverbFilter.lFReference is obsolete. Use lfReference instead (UnityUpgradable) -> lfReference")]
+        [global::System.@ObsoleteAttribute("AudioReverbFilter.lFReference is obsolete. Use lfReference instead (UnityUpgradable) -> lfReference", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public float lFReference { get => lfReference; set => lfReference = value; }
 
         internal unsafe bool Describe(out AudioFilterDescriptor d)

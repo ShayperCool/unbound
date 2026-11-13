@@ -756,7 +756,7 @@ namespace UnityEngine.Rendering
         [Unbound.EditorFaithful("no XR device in the Editor: there is no stereo rendering to end or start (tests/projects/xr)")]
         public void StopMultiEye(Camera camera) { }
 
-        public void DrawSkybox(Camera camera) => FrameBuilder.DrawSkybox(camera);
+        [global::System.@ObsoleteAttribute("DrawSkybox is obsolete and replaced with the RendererList API: construct a RendererList using ScriptableRenderContext.CreateSkyboxRendererList and execture it using CommandBuffer.DrawRendererList.", false)] public void DrawSkybox(Camera camera) => FrameBuilder.DrawSkybox(camera);
         public void DrawUIOverlay(Camera camera) => RendererLists.DrawUIOverlay(camera);
         [Unbound.EditorFaithful("the Game view draws no gizmos unless its Gizmos toggle is on (off by default; batch mode has none)")]
         public void DrawGizmos(Camera camera, GizmoSubset gizmoSubset) { }
@@ -797,19 +797,19 @@ namespace UnityEngine.Rendering
 
         public RendererListStatus QueryRendererListStatus(RendererList rendererList) => RendererLists.Status(rendererList);
 
-        public void DrawRenderers(CullingResults cullingResults, ref DrawingSettings drawingSettings, ref FilteringSettings filteringSettings)
+        [global::System.@ObsoleteAttribute("DrawRenderers is obsolete and replaced with the RendererList API: construct a RendererList using ScriptableRenderContext.CreateRendererList and execture it using CommandBuffer.DrawRendererList.", false)] public void DrawRenderers(CullingResults cullingResults, ref DrawingSettings drawingSettings, ref FilteringSettings filteringSettings)
         {
             var list = RendererLists.Create(new RendererListParams(cullingResults, drawingSettings, filteringSettings));
             RendererLists.Draw(list);
         }
 
-        public void DrawRenderers(CullingResults cullingResults, ref DrawingSettings drawingSettings, ref FilteringSettings filteringSettings, ref RenderStateBlock stateBlock)
+        [global::System.@ObsoleteAttribute("DrawRenderers is obsolete and replaced with the RendererList API: construct a RendererList using ScriptableRenderContext.CreateRendererList and execture it using CommandBuffer.DrawRendererList.", false)] public void DrawRenderers(CullingResults cullingResults, ref DrawingSettings drawingSettings, ref FilteringSettings filteringSettings, ref RenderStateBlock stateBlock)
         {
             var p = new RendererListParams(cullingResults, drawingSettings, filteringSettings);
             RendererLists.Draw(RendererLists.Create(p, stateBlock));
         }
 
-        public void DrawShadows(ref ShadowDrawingSettings settings) => RendererLists.Draw(RendererLists.Shadows(settings));
+        [global::System.@ObsoleteAttribute("DrawShadows is obsolete and replaced with the RendererList API: construct a RendererList using ScriptableRenderContext.CreateShadowRendererList and execture it using CommandBuffer.DrawRendererList.", false)] public void DrawShadows(ref ShadowDrawingSettings settings) => RendererLists.Draw(RendererLists.Shadows(settings));
 
         public void BeginRenderPass(int width, int height, int volumeDepth, int samples, NativeArray<AttachmentDescriptor> attachments, [Internal.DefaultValue("-1")] int depthAttachmentIndex = -1) =>
             RenderPasses.Begin(attachments, depthAttachmentIndex, width, height, samples);

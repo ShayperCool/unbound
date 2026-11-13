@@ -79,7 +79,7 @@ namespace Unbound.Tests
             Assert.Equal(4, probes.count);
             Assert.Empty(probes.bakedProbes);
 #pragma warning disable 618
-            Assert.Empty(probes.coefficients);
+            Assert.Empty((float[])typeof(LightProbes).GetProperty("coefficients").GetValue(probes));
 #pragma warning restore 618
             Assert.Equal(4, probes.m_Set.Probes.Length);
             int cell = -1;

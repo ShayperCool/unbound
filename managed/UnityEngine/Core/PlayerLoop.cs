@@ -45,13 +45,13 @@ namespace UnityEngine.PlayerLoop
         public partial struct SynchronizeState { }
         public partial struct SynchronizeInputs { }
         public partial struct XREarlyUpdate { }
-        [Obsolete] public partial struct PlayerUpdateTime { }
+        [global::System.@ObsoleteAttribute("PlayerUpdateTime player loop component has been moved to its own category called TimeUpdate. (UnityUpgradable) -> UnityEngine.PlayerLoop.TimeUpdate/WaitForLastPresentationAndUpdateTime", true)] public partial struct PlayerUpdateTime { }
     }
 
     public partial struct EarlyUpdate
     {
         public partial struct PollPlayerConnection { }
-        public partial struct ProfilerStartFrame { }
+        [global::System.@ObsoleteAttribute("ProfilerStartFrame player loop component has been moved to the Initialization category. (UnityUpgradable) -> UnityEngine.PlayerLoop.Initialization/ProfilerStartFrame", true)] public partial struct ProfilerStartFrame { }
         public partial struct GpuTimestamp { }
         public partial struct AnalyticsCoreStatsUpdate { }
         public partial struct UnityWebRequestUpdate { }

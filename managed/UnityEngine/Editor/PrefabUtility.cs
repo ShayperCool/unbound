@@ -199,7 +199,7 @@ namespace UnityEditor
         }
 
         /// <summary>The obsolete prefab type of an object.</summary>
-        [Obsolete("PrefabUtility.GetPrefabType is no longer supported. Use PrefabUtility.GetPrefabAssetType and PrefabUtility.GetPrefabInstanceStatus to get the full picture about Prefab types.")]
+        [global::System.@ObsoleteAttribute("Use GetPrefabAssetType and GetPrefabInstanceStatus to get the full picture about Prefab types.")]
         public static PrefabType GetPrefabType(Object target)
         {
             if (target == null) return PrefabType.None;
@@ -210,7 +210,7 @@ namespace UnityEditor
             return type == PrefabAssetType.Model ? PrefabType.ModelPrefabInstance : PrefabType.PrefabInstance;
         }
 
-        [Obsolete("Use PrefabUtility.GetCorrespondingObjectFromSource.")]
+        [global::System.@ObsoleteAttribute("Use GetCorrespondingObjectFromSource.")]
         public static Object GetPrefabParent(Object obj) => GetCorrespondingObjectFromSource(obj);
 
         /// <summary>

@@ -157,7 +157,7 @@ namespace UnityEngine
         public static bool developerConsoleVisible { get; set; }
         [Unbound.EditorFaithful("always true in the Editor")]
         public static bool isDebugBuild { get { MainThreadCheck.Check("get_isDebugBuild"); return true; } }
-        public static ILogger logger => s_Logger;
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Debug.logger is obsolete. Please use Debug.unityLogger instead (UnityUpgradable) -> unityLogger")] public static ILogger logger => s_Logger;
 
         [Conditional("UNITY_ASSERTIONS")]
         public static void Assert(bool condition)

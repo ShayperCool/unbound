@@ -75,7 +75,7 @@ namespace UnityEngine
 
         public int bytesDownloaded => (int)m_Request.downloadedBytes;
 
-        [Obsolete("WWW.size is obsolete. Please use WWW.bytesDownloaded instead", false)]
+        [global::System.@ObsoleteAttribute("WWW.size is obsolete. Please use WWW.bytesDownloaded instead")]
         public int size => bytesDownloaded;
 
         /// <summary>The connection error, or the status line of an HTTP error.</summary>
@@ -127,7 +127,7 @@ namespace UnityEngine
             }
         }
 
-        [Obsolete("Please use WWW.text instead. (UnityUpgradable) -> text", false)]
+        [global::System.@ObsoleteAttribute("Please use WWW.text instead. (UnityUpgradable) -> text", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public string data => text;
 
         public Texture2D texture => m_Texture ??= MakeTexture(true);

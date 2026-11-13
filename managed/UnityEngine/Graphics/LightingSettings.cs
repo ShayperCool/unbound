@@ -154,8 +154,7 @@ namespace UnityEngine
         }
 
         /// <summary>Always false; setting it does nothing (measured).</summary>
-        [Obsolete("LightingSettings.autoGenerate is obsolete.")]
-        [Unbound.EditorFaithful("measured: tests/projects/lightingassets (reads false after setting true)")]
+        [global::System.@ObsoleteAttribute("LightingSettings.autoGenerate is obsolete.", false)] [Unbound.EditorFaithful("measured: tests/projects/lightingassets (reads false after setting true)")]
         public bool autoGenerate { get => false; set { } }
 
         /// <summary>A value that is not a mixed lighting mode stores Shadowmask.</summary>
@@ -215,11 +214,11 @@ namespace UnityEngine
 
         internal UnityEngine.FilterMode lightmapFilterMode { get => m_State.LightmapFilterMode; set => m_State.LightmapFilterMode = value; }
 
-        [Obsolete("Training data export for baked lighting is deprecated.")]
+        [global::System.@ObsoleteAttribute("Training data export for baked lighting is deprecated.", false)]
         public bool exportTrainingData { get => m_State.ExportTrainingData; set => m_State.ExportTrainingData = value; }
 
         /// <summary>Null leaves the destination as it is.</summary>
-        [Obsolete("Training data export for baked lighting is deprecated.")]
+        [global::System.@ObsoleteAttribute("Training data export for baked lighting is deprecated.", false)]
         public string trainingDataDestination { get => m_State.TrainingDataDestination; set { if (value != null) m_State.TrainingDataDestination = value; } }
 
         public float indirectResolution { get => m_State.IndirectResolution; set => m_State.IndirectResolution = Mathf.Max(k_MinResolution, value); }
@@ -241,7 +240,7 @@ namespace UnityEngine
         /// <summary>Sample counts are powers of two, at least one: the closest one.</summary>
         static int SampleCount(int value) => value <= 1 ? 1 : Mathf.ClosestPowerOfTwo(Math.Min(value, k_MaxSampleCount));
 
-        [Obsolete("Use LightingSettings.maxBounces instead. (UnityUpgradable) -> UnityEngine.LightingSettings.maxBounces")]
+        [global::System.@ObsoleteAttribute("Use LightingSettings.maxBounces instead. (UnityUpgradable) -> UnityEngine.LightingSettings.maxBounces", false)]
         public int bounces { get => maxBounces; set => maxBounces = value; }
 
         /// <summary>Within 0..100; a minimum above it comes down with it.</summary>
@@ -255,7 +254,7 @@ namespace UnityEngine
             }
         }
 
-        [Obsolete("Use LightingSettings.minBounces instead. (UnityUpgradable) -> UnityEngine.LightingSettings.minBounces")]
+        [global::System.@ObsoleteAttribute("Use LightingSettings.minBounces instead. (UnityUpgradable) -> UnityEngine.LightingSettings.minBounces", false)]
         public int russianRouletteStartBounce { get => minBounces; set => minBounces = value; }
 
         /// <summary>Within 0..maxBounces.</summary>
@@ -280,11 +279,11 @@ namespace UnityEngine
         public bool respectSceneVisibilityWhenBakingGI { get => m_State.RespectSceneVisibility; set => m_State.RespectSceneVisibility = value; }
 
         // The integer radii are the float ones truncated.
-        [Obsolete("LightingSettings.filteringGaussRadiusDirect is deprecated. Use filteringGaussianRadiusDirect instead.")]
+        [global::System.@ObsoleteAttribute("LightingSettings.filteringGaussRadiusDirect is deprecated. Use filteringGaussianRadiusDirect instead.", false)]
         public int filteringGaussRadiusDirect { get => (int)filteringGaussianRadiusDirect; set => filteringGaussianRadiusDirect = value; }
-        [Obsolete("LightingSettings.filteringGaussRadiusIndirect is deprecated. Use filteringGaussianRadiusIndirect instead.")]
+        [global::System.@ObsoleteAttribute("LightingSettings.filteringGaussRadiusIndirect is deprecated. Use filteringGaussianRadiusIndirect instead.", false)]
         public int filteringGaussRadiusIndirect { get => (int)filteringGaussianRadiusIndirect; set => filteringGaussianRadiusIndirect = value; }
-        [Obsolete("LightingSettings.filteringGaussRadiusAO is deprecated. Use filteringGaussianRadiusAO instead.")]
+        [global::System.@ObsoleteAttribute("LightingSettings.filteringGaussRadiusAO is deprecated. Use filteringGaussianRadiusAO instead.", false)]
         public int filteringGaussRadiusAO { get => (int)filteringGaussianRadiusAO; set => filteringGaussianRadiusAO = value; }
 
         /// <summary>The asset's values as written (the Editor clamped them when it wrote them).

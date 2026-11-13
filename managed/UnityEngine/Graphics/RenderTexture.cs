@@ -326,7 +326,7 @@ namespace UnityEngine
         [Unbound.EditorFaithful("no-op is equivalent: after a discard the contents are undefined, so keeping them is allowed")]
         public void DiscardContents(bool discardColor, bool discardDepth) { }
 
-        [Unbound.EditorFaithful("only silences a tile-GPU restore warning: nothing a game observes")]
+        [global::System.@ObsoleteAttribute("This function has no effect.", false)] [Unbound.EditorFaithful("only silences a tile-GPU restore warning: nothing a game observes")]
         public void MarkRestoreExpected() { }
 
         public void GenerateMips()

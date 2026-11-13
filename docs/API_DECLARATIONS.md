@@ -76,9 +76,9 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After UIElements metadata slice |
+| Category | Before Q410 | After member obsolete slice |
 | --- | ---: | ---: |
-| Attributes | 938 | 605 |
+| Attributes | 938 | 306 |
 | Modifiers | 87 | 72 |
 | Parameters | 74 | 73 |
 | Accessors | 70 | 60 |
@@ -87,7 +87,7 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 18 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 973 |
+| Total | 1,332 | 674 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -111,6 +111,18 @@ and an omitted field retains its previous value. [Event-interest annotations](ht
 retain their argument arrays and flags. These metadata changes do not add event dispatch filtering.
 The default-state inventory adds two public attribute types and three Editor rows;
 all 11,565 prior raw default-state rows are retained byte-identically.
+
+The member obsolete slice copies exact annotations for 299 type and member declarations.
+The probe identifies overloads by their full signature and records constructor arguments.
+TextEditor callers use the replacement state properties. Twenty-six controls
+separate legacy storage from active state and record focus selection/cursor
+behavior in both modes. GuiCompat selects the measured mechanism for 6000.0.71f1;
+other releases keep their previous, unmeasured field linkage and require their
+own reference before that fallback changes.
+Animator.animatePhysics remains queued as Q410-Animator-animatePhysics: its current setter
+changes updateMode, while the [Unity 6000.0 contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-animatePhysics.html)
+covers animated kinematic Rigidbody transforms influencing other bodies. That migration
+needs divergent-state and moving-platform controls with the runtime adaptation.
 
 ## Landing checks and default state
 

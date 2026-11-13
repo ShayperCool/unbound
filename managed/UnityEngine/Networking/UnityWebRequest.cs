@@ -634,10 +634,10 @@ namespace UnityEngine.Networking
         }
 
         /// <summary>Unity's original string Post: the string is sent url-escaped as a form.</summary>
-        [Obsolete("UnityWebRequest.Post with only a string data is obsolete. Use UnityWebRequest.Post with content type argument or UnityWebRequest.PostWwwForm instead (UnityUpgradable) -> [UnityEngine] UnityEngine.Networking.UnityWebRequest.PostWwwForm(*)", false)]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("UnityWebRequest.Post with only a string data is obsolete. Use UnityWebRequest.Post with content type argument or UnityWebRequest.PostWwwForm instead (UnityUpgradable) -> [UnityEngine] UnityWebRequest.PostWwwForm(*)", false)]
         public static UnityWebRequest Post(string uri, string postData) => PostWwwForm(uri, postData);
 
-        [Obsolete("UnityWebRequest.Post with only a string data is obsolete. Use UnityWebRequest.Post with content type argument or UnityWebRequest.PostWwwForm instead (UnityUpgradable) -> [UnityEngine] UnityEngine.Networking.UnityWebRequest.PostWwwForm(*)", false)]
+        [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("UnityWebRequest.Post with only a string data is obsolete. Use UnityWebRequest.Post with content type argument or UnityWebRequest.PostWwwForm instead (UnityUpgradable) -> [UnityEngine] UnityWebRequest.PostWwwForm(*)", false)]
         public static UnityWebRequest Post(Uri uri, string postData) => PostWwwForm(uri, postData);
 
         public static UnityWebRequest PostWwwForm(string uri, string form) =>
