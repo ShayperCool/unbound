@@ -154,7 +154,7 @@ namespace UnityEngine
         public override bool isReadable => m_IsReadable;
         internal override int MipmapCount() => m_SourceMips > 0 ? m_SourceMips : m_MipCount;
         public bool alphaIsTransparency { get; set; }
-        public bool isPreProcessed => false;
+        internal bool isPreProcessed => false;
         public bool streamingMipmaps { get { Stubs.Ignored("Texture2D.streamingMipmaps", "is not read from the import settings: texture streaming is not simulated"); return false; } }
         public int streamingMipmapsPriority { get { Stubs.Ignored("Texture2D.streamingMipmapsPriority", "is not read from the import settings: texture streaming is not simulated"); return 0; } }
         public int requestedMipmapLevel { get; set; }

@@ -76,18 +76,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After runtime modifier slice |
+| Category | Before Q410 | After visibility slice |
 | --- | ---: | ---: |
 | Attributes | 938 | 304 |
 | Modifiers | 87 | 13 |
 | Parameters | 74 | 0 |
-| Accessors | 70 | 41 |
+| Accessors | 70 | 31 |
 | Layout | 68 | 68 |
 | Interfaces | 65 | 65 |
-| Accessibility | 18 | 18 |
+| Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 521 |
+| Total | 1,332 | 493 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -167,6 +167,20 @@ empty objects. Removing the markers alone drops existing nested values. The runt
 needs shared built-in classification and JSON/YAML read/write/clone controls before
 these declarations can migrate. Raw Native and engine differences remain recorded;
 the accepted modifier controls cover the declarations migrated in this slice.
+
+The visibility slice resolves all 18 accessibility entries and ten coupled accessor
+entries. It narrows internal types, helpers and properties, exposes the selected
+protected GUI getter, and gives FontEngine its internal constructor. Bodies and
+field values remain unchanged. The generator's existing union of selected module
+assembly friendships remains in force. Compiler controls reject an internal system
+limit, accept the public texture limit and access the protected getter from a derived
+class. Each changed visibility has an Editor metadata control.
+
+The same visibility migration resolves seven default-state entries: five previous
+implementation-only public rows disappear and two nested FaceInfo values now match.
+Six remaining exact observations retain their unchanged Native expectations with
+updated implementation payloads. The default-state queue is 561 rows; no variable
+policy, comparator or Native reference row changes.
 
 ## Landing checks and default state
 

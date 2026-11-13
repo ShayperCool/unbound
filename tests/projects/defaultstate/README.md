@@ -393,3 +393,10 @@ UxmlObjectAttribute to the handwritten inventory. Two independent 6000.0.71f1 GP
 Editor captures confirm the three added rows. EventInterestAttribute has no public
 parameterless constructor; UxmlObjectAttribute constructs successfully and exposes
 its attribute type ID. All 11,565 prior raw reference rows remain byte-identical.
+
+Q410 visibility alignment removes seven exact migration entries. Five rows were
+implementation-only public members that are internal in the selected release;
+two nested FaceInfo records now match after the same narrowing. Six remaining
+raw observations retain updated exact implementation values and unchanged Native
+expectations. No variable policy was widened. The strict comparison retains
+561 queued rows and rejects every new or stale entry.

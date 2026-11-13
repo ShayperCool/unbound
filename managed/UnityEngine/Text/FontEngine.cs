@@ -84,6 +84,8 @@ namespace UnityEngine.TextCore.LowLevel
 
     public sealed partial class FontEngine
     {
+        internal FontEngine() { }
+
         /// <summary>GlyphRasterModes.RASTER_MODE_BITMAP and RASTER_MODE_COLOR.</summary>
         const int k_RasterModeBitmap = 16;
         const int k_RasterModeColor = 65536;

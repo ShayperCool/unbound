@@ -69,12 +69,12 @@ namespace UnityEngine.SceneManagement
         }
         public int buildIndex => PublicData?.BuildIndex ?? -1;
         public bool isDirty => Data?.IsDirty ?? false;
-        public int dirtyID => 0;
+        internal int dirtyID => 0;
         public int rootCount => PublicData?.Roots.Count ?? 0;
         bool m_Value_isSubScene;
         public bool isSubScene { get => m_Value_isSubScene; set => m_Value_isSubScene = value; }
 
-        public LoadingState loadingState => Data?.LoadingState ?? LoadingState.NotLoaded;
+        internal LoadingState loadingState => Data?.LoadingState ?? LoadingState.NotLoaded;
 
         public GameObject[] GetRootGameObjects()
         {
@@ -107,7 +107,7 @@ namespace UnityEngine.SceneManagement
         public override bool Equals(object other) => other is Scene s && s.m_Handle == m_Handle;
         bool IEquatable<Scene>.Equals(Scene other) => other.m_Handle == m_Handle;
 
-        public enum LoadingState
+        internal enum LoadingState
         {
             NotLoaded = 0,
             Loading = 1,

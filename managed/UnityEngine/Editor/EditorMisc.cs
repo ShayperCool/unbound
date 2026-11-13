@@ -327,7 +327,7 @@ namespace UnityEditor
         public TextureImporter() { }
     }
 
-    public partial class TextScriptImporter : AssetImporter
+    internal partial class TextScriptImporter : AssetImporter
     {
         public TextScriptImporter() { }
     }
@@ -365,7 +365,7 @@ namespace UnityEditor.Compilation
         /// <summary>The Code Optimization mode this session's scripts were compiled with.</summary>
         internal static CodeOptimization s_CodeOptimization = CodeOptimization.Release;
 
-        public static bool IsScriptDebugInfoEnabled() => s_CodeOptimization == CodeOptimization.Debug;
+        internal static bool IsScriptDebugInfoEnabled() => s_CodeOptimization == CodeOptimization.Debug;
 
         /// <summary>The Editor recompiles every script when this changes; Unbound compiles them
         /// when the game starts, so a change applies from the next start

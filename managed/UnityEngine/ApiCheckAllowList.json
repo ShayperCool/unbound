@@ -1,132 +1,6 @@
 [
   {
     "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEditor.Compilation.CompilationPipeline",
-    "Message": "static bool IsScriptDebugInfoEnabled() is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEditor.Compilation.CompilationPipeline."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEditor.TextScriptImporter",
-    "Message": "is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEditor.TextScriptImporter."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.GUI",
-    "Message": "static string mouseTooltip { get; } is internal, Unity's is protected",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.GUI."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.GUIStyle",
-    "Message": "void DrawPrefixLabel(UnityEngine.Rect, UnityEngine.GUIContent, int) is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.GUIStyle."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.Physics",
-    "Message": "static UnityEngine.Collider GetColliderByInstanceID(int) is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.Physics."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.Physics",
-    "Message": "static UnityEngine.Component GetBodyByInstanceID(int) is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.Physics."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.PlayerLoop.PreUpdate+PhysicsClothUpdate",
-    "Message": "is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.PlayerLoop.PreUpdate+PhysicsClothUpdate."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.RectTransform",
-    "Message": "UnityEngine.DrivenTransformProperties drivenProperties { get; internal set; } is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.RectTransform."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.RenderTexture",
-    "Message": "static UnityEngine.Experimental.Rendering.GraphicsFormat GetCompatibleFormat(UnityEngine.RenderTextureFormat, UnityEngine.RenderTextureReadWrite) is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.RenderTexture."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.SceneManagement.Scene",
-    "Message": "UnityEngine.SceneManagement.Scene.LoadingState loadingState { get; } is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.SceneManagement.Scene."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.SceneManagement.Scene",
-    "Message": "int dirtyID { get; } is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.SceneManagement.Scene."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.SceneManagement.Scene+LoadingState",
-    "Message": "is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.SceneManagement.Scene+LoadingState."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.SystemInfo",
-    "Message": "static int maxRenderTextureSize { get; } is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.SystemInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.TerrainCollider",
-    "Message": "bool Raycast(UnityEngine.Ray, out UnityEngine.RaycastHit, float, bool) is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.TerrainCollider."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.TextCore.FaceInfo",
-    "Message": "int faceIndex { get; set; } is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.TextCore.FaceInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.TextCore.FaceInfo",
-    "Message": "int unitsPerEM { get; set; } is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.TextCore.FaceInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.TextCore.LowLevel.FontEngine",
-    "Message": "FontEngine() is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.TextCore.LowLevel.FontEngine."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "access",
-    "Type": "UnityEngine.Texture2D",
-    "Message": "bool isPreProcessed { get; } is public, Unity's is internal",
-    "Reason": "Queued visibility migration; audit the module callers before narrowing or widening its declarations. Owner: UnityEngine.Texture2D."
-  },
-  {
-    "Release": "6000.0.71f1",
     "Category": "accessors",
     "Type": "Unity.Properties.PropertyCollection`1+Enumerator",
     "Message": "P:Current():Unity.Properties.IProperty`1<!0> setter is absent, Unity's is private",
@@ -303,13 +177,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "accessors",
-    "Type": "UnityEngine.GUI",
-    "Message": "P:static mouseTooltip():System.String getter is internal, Unity's is protected",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.GUI."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
     "Type": "UnityEngine.Pool.LinkedPool`1",
     "Message": "P:CountInactive():System.Int32 setter is absent, Unity's is private",
     "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Pool.LinkedPool`1."
@@ -320,13 +187,6 @@
     "Type": "UnityEngine.QualitySettings",
     "Message": "P:static names():System.String[] setter is internal, Unity's is absent",
     "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.QualitySettings."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.RectTransform",
-    "Message": "P:drivenProperties():UnityEngine.DrivenTransformProperties getter is public, Unity's is internal",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.RectTransform."
   },
   {
     "Release": "6000.0.71f1",
@@ -352,65 +212,9 @@
   {
     "Release": "6000.0.71f1",
     "Category": "accessors",
-    "Type": "UnityEngine.SceneManagement.Scene",
-    "Message": "P:dirtyID():System.Int32 getter is public, Unity's is internal",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.SceneManagement.Scene."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.SceneManagement.Scene",
-    "Message": "P:loadingState():UnityEngine.SceneManagement.Scene+LoadingState getter is public, Unity's is internal",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.SceneManagement.Scene."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.SystemInfo",
-    "Message": "P:static maxRenderTextureSize():System.Int32 getter is public, Unity's is internal",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.SystemInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.TextCore.FaceInfo",
-    "Message": "P:faceIndex():System.Int32 getter is public, Unity's is internal",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.TextCore.FaceInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.TextCore.FaceInfo",
-    "Message": "P:faceIndex():System.Int32 setter is public, Unity's is internal",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.TextCore.FaceInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.TextCore.FaceInfo",
-    "Message": "P:unitsPerEM():System.Int32 getter is public, Unity's is internal",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.TextCore.FaceInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.TextCore.FaceInfo",
-    "Message": "P:unitsPerEM():System.Int32 setter is public, Unity's is internal",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.TextCore.FaceInfo."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
     "Type": "UnityEngine.Texture",
     "Message": "P:updateCount():System.UInt32 setter is internal, Unity's is absent",
     "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Texture."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Texture2D",
-    "Message": "P:isPreProcessed():System.Boolean getter is public, Unity's is internal",
-    "Reason": "Queued accessor migration; update module state handling and its controls together with this declaration. Owner: UnityEngine.Texture2D."
   },
   {
     "Release": "6000.0.71f1",

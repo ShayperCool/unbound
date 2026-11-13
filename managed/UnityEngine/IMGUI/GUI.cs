@@ -132,7 +132,7 @@ namespace UnityEngine
             set => s_Tooltip = value ?? "";
         }
 
-        internal static string mouseTooltip => s_MouseTooltip;
+        protected static string mouseTooltip => s_MouseTooltip;
 
         internal static void ResetState()
         {

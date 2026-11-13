@@ -109,10 +109,10 @@ namespace UnityEngine
             internal set => m_DrivenBy = value;
         }
 
-        public DrivenTransformProperties drivenProperties
+        internal DrivenTransformProperties drivenProperties
         {
             get => m_DrivenProperties;
-            internal set => m_DrivenProperties = value;
+            set => m_DrivenProperties = value;
         }
 
         Vector2 ParentSize() => m_Parent is RectTransform parentRect ? parentRect.rect.size : Vector2.zero;

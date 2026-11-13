@@ -192,7 +192,7 @@ namespace UnityEngine
         public static int maxTextureSize => 16384;
         [Unbound.EditorFaithful("the Editor caps texture sizes at 16384")]
         public static int maxCubemapSize => 16384;
-        public static int maxRenderTextureSize => 16384;
+        internal static int maxRenderTextureSize => 16384;
         public static NPOTSupport npotSupport => NPOTSupport.Full;
         [Unbound.EditorFaithful("readbacks complete (see AsyncReadbacks), as on the Editor's OpenGLCore device")]
         public static bool supportsAsyncGPUReadback => true;

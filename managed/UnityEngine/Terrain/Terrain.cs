@@ -464,7 +464,7 @@ namespace UnityEngine
 
         /// <summary>A ray against this terrain; with <paramref name="hitHoles"/> the holes are solid
         /// too (not supported yet: they stay open).</summary>
-        public bool Raycast(Ray ray, out RaycastHit hitInfo, float maxDistance, bool hitHoles) => Raycast(ray, out hitInfo, maxDistance);
+        internal bool Raycast(Ray ray, out RaycastHit hitInfo, float maxDistance, bool hitHoles) => Raycast(ray, out hitInfo, maxDistance);
 
         internal override unsafe ulong CreateShape(ulong body, in B3.ShapeDef def, Matrix4x4 toBody, Rigidbody rigidbody)
         {

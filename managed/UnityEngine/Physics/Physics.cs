@@ -343,9 +343,9 @@ namespace UnityEngine
             W.SyncTransforms();
         }
 
-        public static Collider GetColliderByInstanceID(int instanceID) => ObjectRegistry.FindById(instanceID) as Collider;
+        internal static Collider GetColliderByInstanceID(int instanceID) => ObjectRegistry.FindById(instanceID) as Collider;
 
-        public static Component GetBodyByInstanceID(int instanceID) => ObjectRegistry.FindById(instanceID) as Rigidbody;
+        internal static Component GetBodyByInstanceID(int instanceID) => ObjectRegistry.FindById(instanceID) as Rigidbody;
 
         public static Vector3 ClosestPoint(Vector3 point, Collider collider, Vector3 position, Quaternion rotation)
         {

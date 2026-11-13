@@ -214,3 +214,15 @@ nested harmonic/layer-mask payloads. The strict reports preserve those differenc
 and the loss caused by removing markers without adapting the serializer. Existing
 markers stay in place until the built-in JSON/YAML and cloning migration lands.
 These cases do not claim serialization parity in the accepted modifier capture.
+
+## Visibility
+
+The visibility expansion adds 28 metadata rows, taking 1,004 rows to 1,032.
+Eighteen type/member visibility fixes also correct ten getter/setter visibility
+flags. These declarations come from the 6000.0.71f1 assemblies. The controls
+include the internal FontEngine constructor and the protected GUI getter.
+
+Compiler controls reject an internal SystemInfo helper, accept the public texture
+limit and allow derived code to read the protected getter. Existing selected
+module assembly friendships remain unchanged. No getter values, helper bodies,
+physics behavior or font loading rules change in this slice.

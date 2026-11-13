@@ -104,7 +104,7 @@ namespace UnityEngine.PlayerLoop
     {
         public partial struct PhysicsUpdate { }
         public partial struct Physics2DUpdate { }
-        public partial struct PhysicsClothUpdate { }
+        internal partial struct PhysicsClothUpdate { }
         public partial struct CheckTexFieldInput { }
         public partial struct IMGUISendQueuedEvents { }
         public partial struct NewInputUpdate { }

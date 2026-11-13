@@ -122,6 +122,11 @@
     "managed/UnityEngine/Physics2D/AxisJoints2D.cs",
     "managed/UnityEngine/Platform/Android/AndroidJava.cs",
     "managed/UnityEngine/Platform/PlayerPrefs.cs",
-    "managed/UnityEngine/Properties/PropertyBags.cs"
+    "managed/UnityEngine/Properties/PropertyBags.cs",
+    "managed/UnityEngine/Core/RectTransform.cs",
+    "managed/UnityEngine/Graphics/Texture2D.cs",
+    "managed/UnityEngine/IMGUI/GUIStyle.cs",
+    "managed/UnityEngine/Text/FontEngine.cs",
+    "managed/UnityEngine/Text/TextCore.cs"
   ]
 }

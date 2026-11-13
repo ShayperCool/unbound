@@ -374,7 +374,7 @@ namespace UnityEngine
             if (focus && firstSelectedCharacter == lastSelectedCharacter) DrawCursorAt(position, content, lastSelectedCharacter);
         }
 
-        public void DrawPrefixLabel(Rect position, GUIContent content, int controlID)
+        internal void DrawPrefixLabel(Rect position, GUIContent content, int controlID)
         {
             if (!IsRepaint()) return;
             bool focus = GUIUtility.keyboardControl == controlID;

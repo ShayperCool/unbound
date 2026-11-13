@@ -1001,4 +1001,32 @@
 {"key":"core.copy.limits.changed-min","value":"1"}
 {"key":"core.copy.motor.nan","value":"True"}
 {"key":"core.copy.motor.infinity","value":"True"}
+{"key":"access.UnityEngine.PlayerLoop.PreUpdate+PhysicsClothUpdate.type.declaration","value":"internal"}
+{"key":"access.UnityEngine.RectTransform.P:drivenProperties():UnityEngine.DrivenTransformProperties.declaration","value":"internal"}
+{"key":"access.UnityEngine.RectTransform.P:drivenProperties():UnityEngine.DrivenTransformProperties.getter","value":"internal"}
+{"key":"access.UnityEngine.SceneManagement.Scene.P:dirtyID():System.Int32.declaration","value":"internal"}
+{"key":"access.UnityEngine.SceneManagement.Scene.P:dirtyID():System.Int32.getter","value":"internal"}
+{"key":"access.UnityEngine.SceneManagement.Scene.P:loadingState():UnityEngine.SceneManagement.Scene+LoadingState.declaration","value":"internal"}
+{"key":"access.UnityEngine.SceneManagement.Scene.P:loadingState():UnityEngine.SceneManagement.Scene+LoadingState.getter","value":"internal"}
+{"key":"access.UnityEngine.SceneManagement.Scene+LoadingState.type.declaration","value":"internal"}
+{"key":"access.UnityEditor.TextScriptImporter.type.declaration","value":"internal"}
+{"key":"access.UnityEditor.Compilation.CompilationPipeline.M:static IsScriptDebugInfoEnabled`0():System.Boolean.declaration","value":"internal"}
+{"key":"access.UnityEngine.Texture2D.P:isPreProcessed():System.Boolean.declaration","value":"internal"}
+{"key":"access.UnityEngine.Texture2D.P:isPreProcessed():System.Boolean.getter","value":"internal"}
+{"key":"access.UnityEngine.RenderTexture.M:static GetCompatibleFormat`0(UnityEngine.RenderTextureFormat,UnityEngine.RenderTextureReadWrite):UnityEngine.Experimental.Rendering.GraphicsFormat.declaration","value":"internal"}
+{"key":"access.UnityEngine.GUI.P:static mouseTooltip():System.String.declaration","value":"protected"}
+{"key":"access.UnityEngine.GUI.P:static mouseTooltip():System.String.getter","value":"protected"}
+{"key":"access.UnityEngine.GUIStyle.M:DrawPrefixLabel`0(UnityEngine.Rect,UnityEngine.GUIContent,System.Int32):System.Void.declaration","value":"internal"}
+{"key":"access.UnityEngine.Physics.M:static GetColliderByInstanceID`0(System.Int32):UnityEngine.Collider.declaration","value":"internal"}
+{"key":"access.UnityEngine.Physics.M:static GetBodyByInstanceID`0(System.Int32):UnityEngine.Component.declaration","value":"internal"}
+{"key":"access.UnityEngine.SystemInfo.P:static maxRenderTextureSize():System.Int32.declaration","value":"internal"}
+{"key":"access.UnityEngine.SystemInfo.P:static maxRenderTextureSize():System.Int32.getter","value":"internal"}
+{"key":"access.UnityEngine.TerrainCollider.M:Raycast`0(UnityEngine.Ray,out UnityEngine.RaycastHit,System.Single,System.Boolean):System.Boolean.declaration","value":"internal"}
+{"key":"access.UnityEngine.TextCore.FaceInfo.P:faceIndex():System.Int32.declaration","value":"internal"}
+{"key":"access.UnityEngine.TextCore.FaceInfo.P:faceIndex():System.Int32.getter","value":"internal"}
+{"key":"access.UnityEngine.TextCore.FaceInfo.P:faceIndex():System.Int32.setter","value":"internal"}
+{"key":"access.UnityEngine.TextCore.FaceInfo.P:unitsPerEM():System.Int32.declaration","value":"internal"}
+{"key":"access.UnityEngine.TextCore.FaceInfo.P:unitsPerEM():System.Int32.getter","value":"internal"}
+{"key":"access.UnityEngine.TextCore.FaceInfo.P:unitsPerEM():System.Int32.setter","value":"internal"}
+{"key":"access.UnityEngine.TextCore.LowLevel.FontEngine.M:.ctor`0():System.Void.declaration","value":"internal"}
 {"key":"complete","value":"1"}

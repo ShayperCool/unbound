@@ -641,7 +641,7 @@ namespace UnityEngine
             return bits == 16 && GraphicsFormatUtility.IsStencilFormat(format) ? 24 : bits;
         }
 
-        public static GraphicsFormat GetCompatibleFormat(RenderTextureFormat renderTextureFormat, RenderTextureReadWrite readWrite) =>
+        internal static GraphicsFormat GetCompatibleFormat(RenderTextureFormat renderTextureFormat, RenderTextureReadWrite readWrite) =>
             GraphicsFormatUtility.GetGraphicsFormat(renderTextureFormat, readWrite);
 
         internal override void OnEngineDestroy() => ReleaseQuietly();
