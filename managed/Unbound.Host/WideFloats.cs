@@ -65,10 +65,14 @@ static partial class WideFloats
         using var input = new MemoryStream(image);
         using var assembly = AccessChecks.Read(input);
         bool changed = false;
-        foreach (var type in assembly.MainModule.GetTypes())
+        var math = new EngineMathCopies(assembly.MainModule);
+        foreach (var type in assembly.MainModule.GetTypes().ToList())
             foreach (var method in type.Methods)
                 if (method.HasBody && !CompiledByBurst(method))
+                {
+                    changed |= math.Redirect(method);
                     changed |= WidenBody(method, whole);
+                }
         if (!changed) return image;
         using var output = new MemoryStream();
         AccessChecks.Write(assembly, output);
@@ -277,6 +281,7 @@ static partial class WideFloats
                 {
                     if (CompiledByBurst(candidate)) continue;
                     if (WideExpressions(candidate) is not var (loads, unboxed) || loads.Count > 0 || unboxed.Count > 0) return true;
+                    if (CallsScriptMath(candidate)) return true;
                 }
             }
             return false;
@@ -349,7 +354,8 @@ static partial class WideFloats
                 {
                     var member = reader.GetMemberReference((MemberReferenceHandle)local);
                     return Member(member.Signature)
-                        || (member.Parent.Kind == HandleKind.TypeSpecification && Token(MetadataTokens.GetToken(member.Parent)));
+                        || (member.Parent.Kind == HandleKind.TypeSpecification && Token(MetadataTokens.GetToken(member.Parent)))
+                        || (member.Parent.Kind == HandleKind.TypeReference && ScriptMathType(MetadataTokens.GetToken(member.Parent)));
                 }
                 case HandleKind.MethodSpecification:
                 {
@@ -375,6 +381,13 @@ static partial class WideFloats
                 default:
                     return false;
             }
+        }
+
+        /// <summary>A UnityEngine math struct: calls to its methods may go to converted copies.</summary>
+        bool ScriptMathType(int token)
+        {
+            var type = m_Metadata.Reader(token, out var local).GetTypeReference((TypeReferenceHandle)local);
+            return m_Metadata.String(type.Namespace) == "UnityEngine" && s_ScriptMathTypes.Contains(m_Metadata.String(type.Name));
         }
 
         public bool GetPrimitiveType(PrimitiveTypeCode typeCode) => typeCode == PrimitiveTypeCode.Single;

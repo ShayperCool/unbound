@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Text;
@@ -121,6 +122,21 @@ static class AccessChecks
         using var output = new MemoryStream();
         Write(assembly, output);
         return output.ToArray();
+    }
+
+    /// <summary>Lets the module's code use <paramref name="target"/>'s non-public members, once.</summary>
+    internal static void IgnoreChecksTo(Mono.Cecil.ModuleDefinition module, string target)
+    {
+        var assembly = module.Assembly;
+        foreach (var existing in assembly.CustomAttributes)
+            if (existing.AttributeType.Name == AttributeName && existing.AttributeType.Namespace == AttributeNamespace
+                && existing.ConstructorArguments.Count == 1 && existing.ConstructorArguments[0].Value as string == target)
+                return;
+        var defined = module.Types.FirstOrDefault(t => t.Name == AttributeName && t.Namespace == AttributeNamespace);
+        MethodReference ctor = defined?.Methods.First(m => m.IsConstructor && !m.IsStatic) ?? DefineAttribute(module);
+        var custom = new CustomAttribute(ctor);
+        custom.ConstructorArguments.Add(new CustomAttributeArgument(module.TypeSystem.String, target));
+        assembly.CustomAttributes.Add(custom);
     }
 
     /// <summary>Whether the jobs IL post-processor added its registration class.</summary>

@@ -93,11 +93,14 @@ namespace Unity.Jobs { public interface IJob { void Execute(); } }
             .Split(Path.PathSeparator).Where(p => Path.GetFileName(p).StartsWith("System.", StringComparison.Ordinal) || Path.GetFileName(p) is "mscorlib.dll" or "netstandard.dll")
             .Select(p => (MetadataReference)MetadataReference.CreateFromFile(p)).ToArray();
 
-        static CSharpCompilation Compilation(string source, OptimizationLevel optimization, string name = "WideFloatsProbe") =>
-            CSharpCompilation.Create(name, new[] { CSharpSyntaxTree.ParseText(source, path: "Probe.cs", encoding: System.Text.Encoding.UTF8) },
-                s_References, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optimizationLevel: optimization, allowUnsafe: true));
+        static readonly MetadataReference[] s_EngineReferences = s_References.Append(MetadataReference.CreateFromFile(typeof(Vector3).Assembly.Location)).ToArray();
 
-        static (byte[] Image, byte[] Pdb) Emit(CSharpCompilation compilation)
+        /// <summary>The source compiled as game code; <paramref name="engine"/> references the engine.</summary>
+        internal static CSharpCompilation Compilation(string source, OptimizationLevel optimization, string name = "WideFloatsProbe", bool engine = false) =>
+            CSharpCompilation.Create(name, new[] { CSharpSyntaxTree.ParseText(source, path: "Probe.cs", encoding: System.Text.Encoding.UTF8) },
+                engine ? s_EngineReferences : s_References, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optimizationLevel: optimization, allowUnsafe: true));
+
+        internal static (byte[] Image, byte[] Pdb) Emit(CSharpCompilation compilation)
         {
             using var image = new MemoryStream();
             using var pdb = new MemoryStream();
@@ -106,7 +109,7 @@ namespace Unity.Jobs { public interface IJob { void Execute(); } }
             return (image.ToArray(), pdb.ToArray());
         }
 
-        static Assembly Load(byte[] image) => new AssemblyLoadContext("wide floats " + Guid.NewGuid(), isCollectible: true).LoadFromStream(new MemoryStream(image));
+        internal static Assembly Load(byte[] image) => new AssemblyLoadContext("wide floats " + Guid.NewGuid(), isCollectible: true).LoadFromStream(new MemoryStream(image));
 
         static object Run(Assembly assembly, string type, string method, float a = 16777216f, float b = 1f, float c = -16777216f) =>
             assembly.GetType(type)!.GetMethod(method)!.Invoke(null, new object[] { a, b, c })!;
@@ -306,16 +309,19 @@ public static class Game
 }";
 
         /// <summary>Whether hot-reload edits of <see cref="Edited"/> (one delta) need the conversions (a restart).</summary>
-        static bool EditNeedsWidening(params (string Before, string After)[] edits)
+        static bool EditNeedsWidening(params (string Before, string After)[] edits) => EditNeedsWidening(Edited, false, edits);
+
+        /// <summary>Whether hot-reload edits of <paramref name="edited"/> (one delta) need the conversions.</summary>
+        internal static bool EditNeedsWidening(string edited, bool engine, params (string Before, string After)[] edits)
         {
-            var original = Compilation(Edited, OptimizationLevel.Debug, "EditedGame");
+            var original = Compilation(edited, OptimizationLevel.Debug, "EditedGame", engine);
             var (image, pdb) = Emit(original);
             var loaded = WideFloats.Widen(image);
             var session = new Unbound.Compiler.EditAndContinue();
             session.Begin("EditedGame", original, loaded, pdb);
-            var source = Edited;
+            var source = edited;
             foreach (var (before, after) in edits) source = source.Replace(before, after);
-            var current = Compilation(source, OptimizationLevel.Debug, "EditedGame");
+            var current = Compilation(source, OptimizationLevel.Debug, "EditedGame", engine);
             var delta = session.Emit("EditedGame", current);
             Assert.NotNull(delta);
             return WideFloats.DeltaNeedsWidening(loaded, new[] { delta!.Metadata }, delta.IL, () => Emit(current).Image);
