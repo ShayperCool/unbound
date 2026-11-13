@@ -317,37 +317,43 @@ namespace UnityEngine
         }
 
         /// <summary>
-        /// Colour of a black body at <paramref name="kelvin"/> (1000..40000 K), as linear RGB
-        /// normalized so the largest component is 1. Uses Krystek's approximation of the Planckian
-        /// locus in CIE 1960 UCS, converted through CIE XYZ to linear sRGB primaries.
+        /// Colour of a black body at <paramref name="kelvin"/> as linear RGB with the largest
+        /// component 1 and alpha 1, as Unity 6000.0.71f1 gives it (tests/projects/lightcolor): with
+        /// t = kelvin / 1000 clamped to [1, 40] (below 1000 K, t = 1), a rational fit in t and t² per
+        /// channel, each clamped to [0, 1]. Up to 6570 K red is 1 and green and blue are fits;
+        /// from it red and green are fits and above it blue is 1 (at exactly 6570 K blue still takes
+        /// the lower fit). The arithmetic is single precision in this order; NaN gives NaN colour
+        /// channels.
         /// </summary>
         public static Color CorrelatedColorTemperatureToRGB(float kelvin)
         {
-            double t = Clamp(kelvin, 1000f, 40000f);
-            double u = (0.860117757 + 1.54118254e-4 * t + 1.28641212e-7 * t * t) /
-                       (1.0 + 8.42420235e-4 * t + 7.08145163e-7 * t * t);
-            double v = (0.317398726 + 4.22806245e-5 * t + 4.20481691e-8 * t * t) /
-                       (1.0 - 2.89741816e-5 * t + 1.61456053e-7 * t * t);
-            double d = 2.0 * u - 8.0 * v + 4.0;
-            double x = 3.0 * u / d;
-            double y = 2.0 * v / d;
-            double X = x / y;
-            double Z = (1.0 - x - y) / y;
-            double r = 3.2404542 * X - 1.5371385 - 0.4985314 * Z;
-            double g = -0.9692660 * X + 1.8760108 + 0.0415560 * Z;
-            double b = 0.0556434 * X - 0.2040259 + 1.0572252 * Z;
-            r = Math.Max(r, 0.0);
-            g = Math.Max(g, 0.0);
-            b = Math.Max(b, 0.0);
-            double m = Math.Max(r, Math.Max(g, b));
-            if (m > 0.0)
+            // A NaN fails every comparison below and stays NaN.
+            float t = 1000F > kelvin ? 1F : (40000F < kelvin ? 40000F : kelvin) / 1000F;
+            float t2 = t * t;
+            float r, g;
+            if (CctWarmLimit > t)
             {
-                r /= m;
-                g /= m;
-                b /= m;
+                r = 1F;
+                g = ClampUnit((414.270996F * t - 399.80899F + 111.542999F * t2)
+                    / (164.143005F * t + 2779.23999F + 84.7356033F * t2));
             }
-            return new Color((float)r, (float)g, (float)b, 1f);
+            else
+            {
+                r = ClampUnit((0.216422006F * t + 1.35651004F + 0.000633715012F * t2) / (-3.24222994F + 0.918711007F * t));
+                g = ClampUnit((734.616028F * t + 1370.38F + 0.689954996F * t2) / (-4625.68994F + 1699.87F * t));
+            }
+            float b = t > CctWarmLimit ? 1F
+                : ClampUnit((-523.530029F * t + 348.963013F + 183.619995F * t2)
+                    / (-214.520004F * t + 2848.82007F + 78.8613968F * t2));
+            return new Color(r, g, b, 1F);
         }
+
+        /// <summary>The colour temperature (in thousands of kelvin) where the red channel stops being
+        /// 1 and blue becomes 1.</summary>
+        const float CctWarmLimit = 6.57000017F;
+
+        /// <summary>0 below 0, 1 above 1; a NaN stays NaN (the comparisons are false).</summary>
+        static float ClampUnit(float x) => 0F > x ? 0F : (1F < x ? 1F : x);
 
         public static ushort FloatToHalf(float val) => BitConverter.HalfToUInt16Bits((Half)val);
 

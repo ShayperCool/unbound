@@ -169,17 +169,26 @@ namespace Unbound.Tests
             Assert.InRange(n1, 0f, 1f);
         }
 
-        [Fact]
-        public void ColorTemperature()
+        /// <summary>Values (as bits) of the Unity 6000.0.71f1 Editor, tests/projects/lightcolor:
+        /// the clamps at 1000 K and 40000 K, both sides of 6570 K, and NaN.</summary>
+        [Theory]
+        [InlineData(500f, 0x3f800000u, 0x3d2a70f9u, 0x3b5aac5fu)]
+        [InlineData(1000.1f, 0x3f800000u, 0x3d2a8693u, 0x3b5a4bc5u)]
+        [InlineData(1500f, 0x3f800000u, 0x3e1676f5u, 0x00000000u)]
+        [InlineData(4000f, 0x3f800000u, 0x3f2285e7u, 0x3ebbc2a2u)]
+        [InlineData(6570f, 0x3f800000u, 0x3f73a3f1u, 0x3f7f919du)]
+        [InlineData(6570.01f, 0x3f800000u, 0x3f73a3deu, 0x3f800000u)]
+        [InlineData(6600f, 0x3f7f3472u, 0x3f729f4fu, 0x3f800000u)]
+        [InlineData(12000f, 0x3f050e26u, 0x3f26eed8u, 0x3f800000u)]
+        [InlineData(50000f, 0x3ea88185u, 0x3f00b45cu, 0x3f800000u)]
+        [InlineData(float.NegativeInfinity, 0x3f800000u, 0x3d2a70f9u, 0x3b5aac5fu)]
+        [InlineData(float.NaN, 0xffc00000u, 0xffc00000u, 0xffc00000u)]
+        public void ColorTemperature(float kelvin, uint r, uint g, uint b)
         {
-            Color warm = Mathf.CorrelatedColorTemperatureToRGB(1500f);
-            Near.Equal(1f, warm.r);
-            Assert.True(warm.b < 0.2f);
-            Color daylight = Mathf.CorrelatedColorTemperatureToRGB(6500f);
-            Assert.True(daylight.r > 0.9f && daylight.g > 0.9f && daylight.b > 0.9f, daylight.ToString());
-            Color cold = Mathf.CorrelatedColorTemperatureToRGB(20000f);
-            Near.Equal(1f, cold.b);
-            Assert.True(cold.r < 0.8f);
+            Color c = Mathf.CorrelatedColorTemperatureToRGB(kelvin);
+            Assert.Equal((r, g, b, 0x3f800000u),
+                (BitConverter.SingleToUInt32Bits(c.r), BitConverter.SingleToUInt32Bits(c.g),
+                 BitConverter.SingleToUInt32Bits(c.b), BitConverter.SingleToUInt32Bits(c.a)));
         }
 
         [Fact]
