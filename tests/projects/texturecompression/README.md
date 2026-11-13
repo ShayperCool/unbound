@@ -166,7 +166,7 @@ sRGB flag, then store a linear channel. HeightRed and explicit HeightBC4 have id
 blocks, while HeightRedLinear differs below mip zero. Uncompressed HeightSingleSrgb and
 HeightSingleLinear are identical R8 data and filter linearly. These controls separate filtering
 from GPU sampling. The existing measured import profile selects the rule for 2D textures;
-other releases retain their prior behavior. The channel-fit and red-filter changes first used cache v30; the current format is v36.
+other releases retain their prior behavior. The channel-fit and red-filter changes first used cache v30; the current format is v41.
 
 
 The part's 4397-texture clean-cache import had zero failures throughout. Its first pass was
@@ -187,16 +187,16 @@ including partial blocks. A constant RGB field with changing alpha exercises the
 in both quality modes. These controls extend the existing noise, gradient and channel cases.
 Other releases retain the previous approximation, including its missing highQuality dithering.
 
-Alpha8 keeps one CPU byte per texel and samples (0,0,0,a), as the channel controls record.
+Alpha8's Unity-facing CPU storage keeps one byte per texel and samples (0,0,0,a), as the channel controls record.
 It still uses RGBA8 GPU storage. [wgpu-types 30.0.1's texture view descriptor](https://docs.rs/wgpu-types/30.0.1/wgpu_types/struct.TextureViewDescriptor.html)
 has no component mapping, and its format set has no alpha-only format.
-The Q404 check follows the vendored vendor/wgpu-sampler/wgpu/src/api/texture_view.rs alias to the
+The Q404 check follows vendor/wgpu-sampler/wgpu/src/api/texture_view.rs to the
 wgpu-types version locked in Cargo.lock, 30.0.1. The sampler fork adds no view mapping. An R8 view supplies
 red and an alpha of one. Consequently, a one-channel upload cannot preserve Alpha8 sampling
 through the current view API; a shader-side component mapping is a separate renderer change.
 
 The current GPU allocation stores four bytes per texel instead of one, an extra three bytes
-and four times the unpadded upload traffic. CPU/import storage and the upload packet retain
+and four times the unpadded upload traffic. Unity-facing CPU storage and the upload packet retain
 one byte per texel; the renderer expands it to RGBA8 before writing the GPU texture.
 
 | 1024x1024 Alpha8 texture | One-channel payload | Current RGBA8 GPU payload | Extra GPU payload |
@@ -222,17 +222,17 @@ Measured runtime blocks (Gamma and Linear are identical):
 
 | Format | Fast exact / total | High quality exact / total |
 |---|---:|---:|
-| BC4 | 362 / 363 | 362 / 363 |
-| BC5 | 362 / 364 | 362 / 364 |
-| DXT1 | 350 / 353 | 350 / 353 |
+| BC4 | 376 / 376 | 376 / 376 |
+| BC5 | 383 / 383 | 383 / 383 |
+| DXT1 | 351 / 353 | 351 / 353 |
 | DXT5 | 621 / 628 | 626 / 628 |
 
-Runtime edge blocks repeat their remaining rows and columns. The 3x2 RGB mip still has an
-unresolved colour/padding difference, reaching 35/255 in a decoded channel. Other residuals
-are small-mip colour fitting and the flat-RGB fast case (GPU difference at most 2/255).
-BC4 and BC5 now include the later partial-level controls: 2/726 and 4/728 blocks differ
-across both qualities, reaching 145/255 in a decoded channel. They remain exact-key residuals;
-no tolerance has changed. Current profile-level totals are listed above.
+Runtime three-column rows repeat the middle texel; one- and two-column rows tile, and rows
+repeat vertically. BC4 and BC5 match all measured partial mips in both qualities. Remaining
+runtime differences are colour fitting, including two DXT1 blocks per quality and the flat-RGB
+Fast case. The unresolved 3x2 RGB mip reaches 35/255 in a decoded channel; flat Fast GPU
+samples differ by at most 2/255. Every remaining discrepancy stays visible and declared.
+
 Android runtime ETC encoding is unchanged by these encoder changes; direct R8/RG16 runtime EAC uses the measured profile described below. The runtime encoder profile is part of the compression key.
 
 For this runtime change, the ordinary-project clean-cache import processed 4397 textures with
@@ -280,7 +280,7 @@ RGB24 imports stay RGB24. Explicit Single Channel RGBA32 preserves all four sour
 Explicit colour formats keep their authored sRGB flag. In a Gamma project, a Default 2D HDR
 source encodes colour to gamma independently of that flag, then stores a linear HDR format;
 HdrRGBAFloat and HdrBC6H distinguish source preparation from compressed decoding.
-The ASTC and source-processing changes first used cache v33; the current format is v36.
+The ASTC and source-processing changes first used cache v33; the current format is v41.
 
 Crunch controls cover DXT1 and DXT5 at qualities 0, 50 and 100, ETC_RGB4Crunched and
 ETC2_RGBA8Crunched Android counterparts, automatic selection, normal maps and non-power-of-two
@@ -356,11 +356,13 @@ The destination's CPU blocks stay yellow in both controls.
 ## Crunch archives, runtime EAC and ASTC uploads
 
 The additional 6000.0.71f1 controls have two identical GPU Editor recordings per profile.
-All 7467 earlier reference rows remain byte-identical. The current reference has 8229 rows.
+These archive controls extended the 7467-row reference to 8229 values without changing the
+earlier rows.
+The later Q404 controls bring the current reference to 8663 values per profile.
 The implementation uses the public [Crunch 1.04 fork at revision 8708900](https://github.com/Unity-Technologies/crunch/tree/8708900eca8ec609d279270e72936258f81ddfb7)
 under its zlib licence, with portable compilation and checked archive transcoding.
-Texture cache v36 records archive storage and format selection; NativeApi 64 carries the
-allocation-free compressed texel decoder and ASTC packet formats.
+Texture cache v36 introduced archive storage and format selection; NativeApi 64 introduced the
+compressed texel decoder and ASTC packets. The current cache/API versions are listed above.
 
 Default colour textures use perceptual Crunch fitting regardless of their authored sRGB flag;
 normal maps disable it. NoiseCrunchLinearNoMips and NoiseCrunchSrgbNoMips have identical archives,
@@ -428,19 +430,16 @@ checks cover all 18 packet variants, and an HDR partial-extent test preserves va
 The available NVIDIA device lacks ASTC, so the full GPU replay verifies fallbacks. Native ASTC
 hardware execution remains a follow-up for an ASTC-capable device.
 
-Whole-mip GPU copies round physical extents to the format\'s actual block footprint; regions
+Whole-mip GPU copies round physical extents to the format's actual block footprint; regions
 retain block-alignment checks even when a device uses decoded fallback storage. Tests cover
 all 18 ASTC packet variants, and the DXT1 control exercises a native compressed sub-block copy
 on the available GPU. Retained CPU blocks copy at command execution without a GPU upload;
 individual reads decode caller-owned storage and repeated copies allocate no managed memory.
 The 20 additive copy rows preserve all earlier 8209 reference rows byte for byte.
 
-Strict comparisons after these changes have 8107/8229 exact values in Gamma and Linear;
-AndroidGamma, AndroidLinear, AndroidETC2 and AndroidASTC have 7492, 7473, 7447 and 7842 exact.
-The remaining 122, 122, 737, 756, 782 and 387 values are listed individually or by existing
-residual declarations. Added ETC2 RGB automatic controls reproduce the corresponding older
-normal/quality controls in both implementations, including their existing fitting differences.
-No raw discrepancy or comparator tolerance is removed.
+Current strict comparison counts are listed at the top. Added ETC2 RGB automatic controls
+reproduce the corresponding older normal/quality controls in both implementations, including
+their existing fitting differences. Every raw discrepancy and comparator tolerance is retained.
 
 The part's clean-cache ordinary-project import processed 4397 textures with zero failures:
 19.25 s before and 14.16 s after, total process CPU including the cached second pass 94.90 s
@@ -471,17 +470,17 @@ when BC is available, or decoded RGBA8 otherwise. Native hardware execution rema
 
 The unresolved work includes BC6H fitting/CPU float reads, BC7 alpha-heavy fitting, runtime
 partial-mip colour fitting, the old ISPC Fast ASTC slice, exact distributable ETC/EAC fitting, and EAC's 45 one-step normalized-GPU differences.
-Split Alpha Channel, mipless automatic ETC1 at non-power-of-two sizes, native ASTC hardware
-execution, macOS compilation and other-release profiles remain outside the measured claim.
+Split Alpha Channel, mipless automatic ETC1 at non-power-of-two sizes, native ETC/ASTC hardware
+execution and other-release profiles remain outside the measured claim. Crunch includes the
+existing macOS 26 SDK build fix; encoder block parity on macOS arm64 remains unmeasured.
 DXT1's three-colour fourth entry also differs between the measured OpenGL Editor and wgpu.
 Alpha8 GPU storage cost is documented above; no renderer redesign is included.
 
-For close-out, another pair of GPU Editor captures for every profile matches all 8229 reference
-rows. The two ordinary Alpha8 controls again match every recorded value; the earlier ordinary
-BC, ASTC and Crunch results retain their per-format counts above. This documentation-only part
-changes no encoder, oracle, residual declaration or tolerance. Its 4397-texture clean-cache
-imports have zero failures, 18.85 s before and 17.63 s after, total process CPU 96.44 s before
-and 93.08 s after on the shared machine.
+The final Q404 close-out reuses the unchanged, duplicate 8663-value GPU Editor references.
+A fresh engine replay on the landed code checks all six profiles with the existing strict
+comparator and residual declarations. Ordinary BC, ASTC, LDR/HDR Crunch and Alpha8 results
+retain their per-format scopes above. This documentation-only part changes no encoder,
+reference, comparator, residual declaration or tolerance.
 
 
 ## Runtime partial rows, Q404
@@ -497,11 +496,11 @@ Android controls retain the measured intermediate-dimension rejection rule. The 
 mip chains compress to EAC on Android, with 28 new exact-key fitting residuals per profile;
 their raw, CPU and GPU discrepancies remain visible.
 
-No import encoder changes in this part. BC7 retains 6904/6964 exact blocks, BC6H 2712/2744
-in Gamma and 2729/2744 in Linear. These fitting residuals are unresolved, including BC7's
-large alpha-heavy errors; they are not classified as invisible ties. The existing Fast ASTC
-and non-Crunch ETC/EAC tables retain every differing block. Two ordinary images again match
-2734/2734 BC4 blocks, 2734/2734 BC5 blocks and 2732/2734 BC7 blocks, with identical source mips.
+This part changes runtime padding only. The import block counts above include the later HDR
+controls. BC7's large alpha-heavy errors and the existing BC6H fitting/CPU float-read limits
+remain unresolved; they are not classified as invisible ties. The Fast ASTC and non-Crunch
+ETC/EAC tables retain every differing block. Two ordinary images again match 2734/2734 BC4
+blocks, 2734/2734 BC5 blocks and 2732/2734 BC7 blocks, with identical source mips.
 
 Clean-cache imports process 4397 textures with zero failures. Initial first passes take
 33.67 s before and 20.03 s after; a subsequent pair takes 14.97 s before and 23.34 s after.
@@ -509,11 +508,8 @@ Total process CPU, including the cached second pass, is 89.53/97.69 s for the in
 and 94.93/99.81 s for the subsequent pair. Shared-machine wall time varies across these runs;
 this runtime-only change leaves the import encoders unchanged.
 
-Current runtime blocks per quality are BC4 376/376, BC5 383/383 and DXT1 351/353.
-DXT5 remains 621/628 at Fast and 626/628 at High. Across both qualities, unsigned EAC red
-is 0/46 and red/green 0/60. The strict results are 8321/8429 in Gamma and Linear, 7664/8429
-in AndroidGamma, 7645/8429 in AndroidLinear, 7619/8429 in AndroidETC2 and 8014/8429 in
-AndroidASTC. All 108/108/765/784/810/415 residual values remain declared and printed.
+Runtime totals are collected in the table above. Across both qualities, unsigned EAC red is
+0/46 and red/green 0/60. Current strict totals and residual counts are listed at the top.
 
 ## HDR RGBM and ETC uploads, Q404
 
@@ -538,9 +534,9 @@ do not depend on the Crunch flag. The 3x3 multiplier control also checks both by
 
 Two ordinary UI/effect sources converted to 128x128 HDR add three Crunch qualities per image
 in AndroidGamma and AndroidLinear. Each profile has two identical GPU Editor captures.
-Their float source controls match at every mip. The corrected source conversion is checked
-against all six archives and their 8202 logical ETC2 RGBA blocks per profile; private images,
-repeat recordings and run outputs remain outside Git.
+Their float source controls match at every mip. All six archives, their 8202 logical ETC2 RGBA
+blocks per profile and sampled GPU values match exactly. Private images, repeat recordings
+and run outputs remain outside Git.
 
 ETC1/ETC2 RGB and ETC2 RGBA packets retain native blocks until the render device is available.
 An enabled ETC2 feature and a base extent of whole 4x4 blocks permit native upload. Imported
@@ -559,3 +555,34 @@ First-pass time is 22.52 s before and 19.87 s after; total process CPU including
 second pass is 97.49/101.73 s. An earlier after-run took 15.64 s and 93.73 s CPU. These
 shared-machine runs show no noticeable wall-time regression and do not isolate encoder cost.
 The Standalone workload does not measure newly enabled Android HDR compression cost.
+
+## Q404 close-out scope
+
+The current profile totals, exact block tables and exact-key residuals describe different
+measurements. A visually small sample error does not establish block identity. Existing
+residuals remain visible with the same comparator and tolerances.
+
+| Outstanding work | Measured scope |
+|---|---|
+| BC6H import fitting and CPU float reads | 59/4376 raw blocks differ in Gamma and 27/4376 in Linear; CPU float-read limits are separate residuals. |
+| BC7 alpha-heavy fitting | 60/6964 import blocks differ; decoded channel error reaches 195/255 at level zero. |
+| DXT5 import filtering | WideNormal has one differing 2x1 mip block, 1/5592 import blocks. |
+| Runtime colour fitting | DXT1 differs in 2/353 blocks per quality; DXT5 differs in 7/628 Fast and 2/628 High. |
+| ISPC Fast ASTC | The format/quality tables retain each differing block, including visible Flat6 errors; ordinary-image Fast counts are also listed. |
+| ETC/EAC fitting and missing import formats | Independent approximate fitting remains counted; import EAC/ETC2_RGBA1 retain diagnosed fallbacks. Restricted encoder source stays outside scope. |
+| EAC GPU quantization | 45 of the 2048 channel values differ by one UNorm16 step; raw blocks and CPU bytes match. |
+| Native ETC/ASTC GPU execution | Feature/footprint and fallback controls pass; execution on supporting hardware remains unverified. |
+| Alpha8 GPU storage | Four bytes per texel remain necessary with the current view API; Unity-facing CPU data and wire packets retain one. |
+
+Other-release encoder profiles, Split Alpha Channel and mipless automatic NPOT ETC1 remain
+outside the measured implementation. The canonical controls cover Unity 6000.0.71f1 on the
+Linux GPU Editor; they do not establish other-release or other-device parity.
+
+The final six-profile engine gate passes with 8511/8513/7921/7902/7876/8271 exact values out of
+8663 and 152/150/742/761/787/392 listed residuals, in profile-table order. There are no missing,
+extra, unexplained or stale values. Every captured value is unchanged from the part-2 replay.
+Cache v41 and NativeApi 66 remain the landed texture mechanisms.
+
+The documentation close-out's 4397-texture clean-cache imports have zero failures, 16.76 s
+before and 15.47 s after. Total process CPU including the cached second pass is 98.47/98.70 s.
+Both runs use the same importer executable; this part changes documentation only.
