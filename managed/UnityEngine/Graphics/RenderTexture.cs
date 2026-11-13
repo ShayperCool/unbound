@@ -126,6 +126,9 @@ namespace UnityEngine
         {
             if (desc.width <= 0 || desc.height <= 0)
                 throw new ArgumentException("RenderTextureDesc width and height must be greater than zero.");
+            if (Compat.RenderingMeasured && desc.graphicsFormat != GraphicsFormat.None
+                && !SystemInfo.IsFormatSupported(desc.graphicsFormat, GraphicsFormatUsage.Render))
+                throw new ArgumentException($"RenderTextureDesc graphicsFormat {desc.graphicsFormat} is not supported on this platform.", "desc.graphicsFormat");
             m_Descriptor = desc;
             m_Descriptor.depthStencilFormat = RenderableDepthFormat(desc.depthStencilFormat);
             m_CreatedFromScript = true;

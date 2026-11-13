@@ -253,6 +253,10 @@ fn storage_format(name: &str) -> Option<naga::StorageFormat> {
         "R8Snorm" => F::R8Snorm,
         "Rg8Snorm" => F::Rg8Snorm,
         "Rgba8Snorm" => F::Rgba8Snorm,
+        "R16Snorm" => F::R16Snorm,
+        "Rg16Snorm" => F::Rg16Snorm,
+        "Rgba16Snorm" => F::Rgba16Snorm,
+        "Rgb10a2Uint" => F::Rgb10a2Uint,
         "Rgba16Unorm" => F::Rgba16Unorm,
         "Rgba16Float" => F::Rgba16Float,
         "Rgba32Float" => F::Rgba32Float,
@@ -795,6 +799,9 @@ RWStructuredBuffer<uint> _Out;
             ("R16Unorm", "r16unorm"),
             ("Rg16Unorm", "rg16unorm"),
             ("Rgba16Unorm", "rgba16unorm"),
+            ("R16Snorm", "r16snorm"),
+            ("Rg16Snorm", "rg16snorm"),
+            ("Rgba16Snorm", "rgba16snorm"),
         ] {
             let k = compiler
                 .compile_kernel(&program(), "Fill", &[], &[("_Result".into(), name.into())])

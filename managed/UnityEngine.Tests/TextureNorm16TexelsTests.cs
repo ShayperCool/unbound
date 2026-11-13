@@ -71,6 +71,20 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void DescriptorRequiresAFormatTheSelectedDeviceCanRender()
+        {
+            var previous = GraphicsDeviceProfile.Current;
+            try
+            {
+                GraphicsDeviceProfile.Select("Vulkan");
+                Assert.Throws<ArgumentException>(() => new RenderTexture(new RenderTextureDescriptor(2, 1, GraphicsFormat.R16G16B16_SNorm, 0)));
+                var valid = new RenderTexture(new RenderTextureDescriptor(2, 1, GraphicsFormat.R16G16_SNorm, 0));
+                Object.DestroyImmediate(valid);
+            }
+            finally { GraphicsDeviceProfile.Select(previous.Type.ToString()); }
+        }
+
+        [Fact]
         public void SignedReadbacksKeepNegativeEndpointsAndClampOnlyWhenRequested()
         {
             var texels = new byte[16];

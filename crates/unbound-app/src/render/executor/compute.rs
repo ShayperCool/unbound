@@ -338,6 +338,10 @@ fn storage_format_name(format: wgpu::TextureFormat) -> Option<&'static str> {
         F::R8Snorm => "R8Snorm",
         F::Rg8Snorm => "Rg8Snorm",
         F::Rgba8Snorm => "Rgba8Snorm",
+        F::R16Snorm => "R16Snorm",
+        F::Rg16Snorm => "Rg16Snorm",
+        F::Rgba16Snorm => "Rgba16Snorm",
+        F::Rgb10a2Uint => "Rgb10a2Uint",
         F::Rgba16Unorm => "Rgba16Unorm",
         F::Rgba16Float => "Rgba16Float",
         F::Rgba32Float => "Rgba32Float",
@@ -379,6 +383,10 @@ fn wgpu_storage_format(name: &str) -> wgpu::TextureFormat {
         "R8Snorm" => F::R8Snorm,
         "Rg8Snorm" => F::Rg8Snorm,
         "Rgba8Snorm" => F::Rgba8Snorm,
+        "R16Snorm" => F::R16Snorm,
+        "Rg16Snorm" => F::Rg16Snorm,
+        "Rgba16Snorm" => F::Rgba16Snorm,
+        "Rgb10a2Uint" => F::Rgb10a2Uint,
         "Rgba16Unorm" => F::Rgba16Unorm,
         "Rgba16Float" => F::Rgba16Float,
         "Rgba32Float" => F::Rgba32Float,
@@ -1542,6 +1550,10 @@ mod tests {
             (F::R16Unorm, "R16Unorm"),
             (F::Rg16Unorm, "Rg16Unorm"),
             (F::Rgba16Unorm, "Rgba16Unorm"),
+            (F::R16Snorm, "R16Snorm"),
+            (F::Rg16Snorm, "Rg16Snorm"),
+            (F::Rgba16Snorm, "Rgba16Snorm"),
+            (F::Rgb10a2Uint, "Rgb10a2Uint"),
         ] {
             assert_eq!(storage_format_name(format), Some(name));
             assert_eq!(wgpu_storage_format(name), format);

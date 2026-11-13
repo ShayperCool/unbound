@@ -496,7 +496,7 @@ namespace UnityEngine
         /// (tests/projects/textureformats .read, .read64): R16, RG32, ARGB64 and ARGB2101010 targets
         /// read into RGBAFloat at 8 bits, ARGB64 into RGBA64 at 16, float targets at full precision.</summary>
         bool ReadsAsBytes(GraphicsFormat source) =>
-            (!Compat.DeviceTextureReadback || GraphicsDeviceProfile.Current.FramebufferReadback || AsyncReadbacks.EightBit(source))
+            (!Compat.DeviceTextureReadback || GraphicsDeviceProfile.Current.FramebufferReadback || (AsyncReadbacks.EightBit(source) && !GraphicsFormatUtility.IsSNormFormat(source)))
             && !GraphicsFormatUtility.IsHDRFormat(source) && !GraphicsFormatUtility.IsIEEE754Format(source)
             && source != GraphicsFormatOf();
 
