@@ -465,6 +465,7 @@ public partial class HumanoidProbe : MonoBehaviour
             BodyBlends();
             BoneHandles();
             StanceInPlace();
+            ApiCurves();
         }
         catch (Exception e)
         {

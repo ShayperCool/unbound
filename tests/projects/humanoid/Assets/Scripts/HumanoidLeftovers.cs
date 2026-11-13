@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 
 /// <summary>The probe's controls of target matching on humanoid body parts, bone rotations set in
 /// the IK pass, translation DoF curves, feet without goal curves, and layers that do not place the
@@ -229,6 +232,80 @@ public partial class HumanoidProbe
         PlayableControls();
     }
 
+
+    /// <summary>A clip made at run time whose humanoid curves are set through the API: a muscle
+    /// of the spine (rising), of the left arm and of the left hand (constant), the body's height
+    /// and a turn of the body, through AnimationClip.SetCurve ("setCurve"), through
+    /// AnimationUtility.SetEditorCurve ("editorCurve"), and through SetCurve with the clip's
+    /// Mirror setting on ("mirror"). Each clip's humanMotion, length and curve bindings, then
+    /// three evaluations of a manual graph (0, 0.5 and 0.25 s) of the clip without foot IK on
+    /// HumanA without root motion, each with the transforms' rotations and the human pose.</summary>
+    static void ApiCurves()
+    {
+        foreach (var mode in new[] { "setCurve", "editorCurve", "mirror" })
+        {
+            string key = "apiCurves." + mode;
+            var clip = new AnimationClip { name = key };
+            void Set(string name, AnimationCurve curve)
+            {
+#if UNITY_EDITOR
+                if (mode == "editorCurve")
+                {
+                    UnityEditor.AnimationUtility.SetEditorCurve(clip, UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Animator), name), curve);
+                    return;
+                }
+#endif
+                clip.SetCurve("", typeof(Animator), name, curve);
+            }
+            Set("Spine Front-Back", AnimationCurve.Linear(0f, -0.5f, 1f, 0.5f));
+            Set("Left Arm Down-Up", AnimationCurve.Constant(0f, 1f, 0.8f));
+            Set("LeftHand.Thumb.1 Stretched", AnimationCurve.Constant(0f, 1f, -0.6f));
+            Set("RootT.x", AnimationCurve.Constant(0f, 1f, 0f));
+            Set("RootT.y", AnimationCurve.Constant(0f, 1f, 0.9f));
+            Set("RootT.z", AnimationCurve.Constant(0f, 1f, 0f));
+            var turn = Quaternion.Euler(0f, 20f, 0f);
+            Set("RootQ.x", AnimationCurve.Constant(0f, 1f, turn.x));
+            Set("RootQ.y", AnimationCurve.Constant(0f, 1f, turn.y));
+            Set("RootQ.z", AnimationCurve.Constant(0f, 1f, turn.z));
+            Set("RootQ.w", AnimationCurve.Constant(0f, 1f, turn.w));
+#if UNITY_EDITOR
+            if (mode == "mirror")
+            {
+                var settings = UnityEditor.AnimationUtility.GetAnimationClipSettings(clip);
+                settings.mirror = true;
+                UnityEditor.AnimationUtility.SetAnimationClipSettings(clip, settings);
+            }
+            var bindings = UnityEditor.AnimationUtility.GetCurveBindings(clip)
+                .Select(b => b.path + "|" + b.type.Name + "|" + b.propertyName).OrderBy(b => b, StringComparer.Ordinal).Select(S);
+            Put(key + ".clip", "{\"humanMotion\":" + B(clip.humanMotion) + ",\"length\":" + F(clip.length)
+                + ",\"bindings\":[" + string.Join(",", bindings) + "]}");
+#endif
+            var instance = Instantiate(Resources.Load<GameObject>("HumanA"));
+            var animator = instance.GetComponent<Animator>();
+            animator.runtimeAnimatorController = null;
+            animator.applyRootMotion = false;
+            var graph = PlayableGraph.Create(key);
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            // Without foot IK: the legs follow their (absent) muscle curves, not goals.
+            var playable = AnimationClipPlayable.Create(graph, clip);
+            playable.SetApplyFootIK(false);
+            AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
+            graph.Play();
+            var handler = new HumanPoseHandler(animator.avatar, instance.transform);
+            var hips = animator.GetBoneTransform(HumanBodyBones.Hips);
+            for (int step = 0; step < 3; step++)
+            {
+                graph.Evaluate(step == 0 ? 0f : step == 1 ? 0.5f : 0.25f);
+                Rotations(key + ".step" + step + ".rotations", instance.transform, hips);
+                var pose = new HumanPose();
+                handler.GetHumanPose(ref pose);
+                Pose(key + ".step" + step + ".pose", pose);
+            }
+            handler.Dispose();
+            graph.Destroy();
+            Destroy(instance);
+        }
+    }
 }
 
 /// <summary>Sets human bones' local rotations in OnAnimatorIK (<see cref="HumanoidProbe.s_BoneMode"/>)
