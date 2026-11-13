@@ -364,12 +364,10 @@ namespace UnityEngine
                 }
                 material.SetFloat("_NormalScale" + n, layer.normalScale);
                 material.SetTexture("_Mask" + n, layer.maskMapTexture);
-                // Already in the working color space: the material passes it on as it is, whatever
-                // the shader's [Gamma] flags (URP's terrain shaders flag _Metallic0-3; unmeasured
-                // under URP).
-                int metallic = Shader.PropertyToID("_Metallic" + n);
-                material.SetFloat(metallic, LayerMetallic(layer));
-                material.m_RawBindings.Add(metallic);
+                // Made linear here, and once more by the material where the shader flags it
+                // [Gamma] (URP's terrain shaders flag _Metallic0-3), as in the Unity 6000.0.71f1
+                // Editor (tests/projects/urpterrain).
+                material.SetFloat("_Metallic" + n, LayerMetallic(layer));
                 material.SetFloat("_Smoothness" + n, LayerSmoothness(layer));
                 material.SetVector("_DiffuseRemapScale" + n, layer.diffuseRemapMax - layer.diffuseRemapMin);
                 material.SetVector("_MaskMapRemapOffset" + n, layer.maskMapRemapMin);

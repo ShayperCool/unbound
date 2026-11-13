@@ -85,32 +85,39 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void AGammaFlaggedMetallicIsMadeLinearOnce()
+        public void AGammaFlaggedMetallicIsMadeLinearAgain()
         {
             var colorSpace = QualitySettings.s_ColorSpace;
             var shader = ShaderUtil.CreateShaderAsset(
                 "Shader \"Tests/TerrainGammaMetallic\" { Properties { [Gamma] _Metallic0 (\"Metallic\", Float) = 0 } SubShader { Pass {} } }");
+            var plain = ShaderUtil.CreateShaderAsset(
+                "Shader \"Tests/TerrainPlainMetallic\" { Properties { _Metallic0 (\"Metallic\", Float) = 0 } SubShader { Pass {} } }");
             var material = new Material(shader);
+            var other = new Material(plain);
             var data = new TerrainData();
             try
             {
                 QualitySettings.s_ColorSpace = ColorSpace.Linear;
                 int id = Shader.PropertyToID("_Metallic0");
-                // The shader asks for the conversion of a value a script sets (URP's terrain
-                // shaders flag their layers' metallic so; unmeasured under URP).
-                material.SetFloat(id, 0.5f);
+                var layers = new[] { new TerrainLayer { metallic = 0.5f } };
+                // The terrain gives the layer's value made linear; a shader that flags it [Gamma]
+                // (URP's terrain shaders) has the material make it linear once more, one that does
+                // not takes it as it is (tests/projects/urpterrain, defaultreflection).
+                TerrainRenderer.SetLayers(material, data, layers, 0, null);
+                Assert.Equal(Mathf.GammaToLinearSpace(0.5f), material.GetFloat(id), 6);
                 Assert.True(material.ConvertsProperty(id));
-                // The terrain gives the layer's value made linear already: it goes as it is.
-                TerrainRenderer.SetLayers(material, data, new[] { new TerrainLayer { metallic = 0.5f } }, 0, null);
-                Assert.Equal(Mathf.GammaToLinearSpace(0.5f), material.GetFloat(id));
-                Assert.False(material.ConvertsProperty(id));
+                TerrainRenderer.SetLayers(other, data, layers, 0, null);
+                Assert.Equal(Mathf.GammaToLinearSpace(0.5f), other.GetFloat(id), 6);
+                Assert.False(other.ConvertsProperty(id));
             }
             finally
             {
                 QualitySettings.s_ColorSpace = colorSpace;
                 Object.DestroyImmediate(material);
+                Object.DestroyImmediate(other);
                 Object.DestroyImmediate(data);
                 Object.DestroyImmediate(shader);
+                Object.DestroyImmediate(plain);
             }
         }
     }
