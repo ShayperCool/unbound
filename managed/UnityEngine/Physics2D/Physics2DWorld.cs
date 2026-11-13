@@ -155,22 +155,75 @@ namespace Unbound.Runtime
             return 2f * MathF.Atan2(rotation.z, rotation.w);
         }
 
-        /// <summary>Maps points of a collider's transform space into the frame of the body at the given pose.</summary>
-        internal static Matrix4x4 ToBodyMatrix(Transform collider, Vector2 bodyPosition, float bodyAngle)
+        /// <summary>Maps points of a collider's transform space into the frame of the body at the given
+        /// pose; <paramref name="body"/> is the body's transform, null for the static frame.</summary>
+        internal static Matrix4x4 ToBodyMatrix(Transform collider, Transform body, Vector2 bodyPosition, float bodyAngle)
         {
             // Native uses the conjugate of the pose quaternion. A general
             // matrix inverse adds determinant division and changes local vertices.
             var rotation = Quaternion.FromEulerRad(new Vector3(0f, 0f, bodyAngle));
             var inverse = Matrix4x4.Rotate(Quaternion.Inverse(rotation));
             var world = collider.localToWorldMatrix;
-            var m = inverse * world;
-            // Compose both translations in the rotated frame before subtracting.
-            // Tilted and nested frame controls retain this accumulation order.
-            m.m03 -= inverse.m00 * bodyPosition.x + inverse.m01 * bodyPosition.y;
-            m.m13 -= inverse.m10 * bodyPosition.x + inverse.m11 * bodyPosition.y;
+            Matrix4x4 m;
+            if (Compat.TransformArithmeticArm64)
+                m = ToBodyMatrixArm64(world, inverse, rotation, body == null ? null : (bool?)ReferenceEquals(body, collider),
+                    bodyPosition, body == null ? 0f : body.position.z);
+            else
+            {
+                m = inverse * world;
+                // Compose both translations in the rotated frame before subtracting.
+                // Tilted and nested frame controls retain this accumulation order.
+                m.m03 -= inverse.m00 * bodyPosition.x + inverse.m01 * bodyPosition.y;
+                m.m13 -= inverse.m10 * bodyPosition.x + inverse.m11 * bodyPosition.y;
+            }
             // The XY plane only: the depth of the collider does not matter.
             m.m23 = 0f;
             return m;
+        }
+
+        // The macOS arm64 Editor's body frame (tests/projects/solverpairorder --transform-inputs): the
+        // inverse pose times the collider's matrix, each column summed as one product and three fused
+        // multiply-adds. A body on another object puts its rotated, negated position into the inverse
+        // pose; a body on the collider's own object subtracts its rotated position afterwards, summed the
+        // same way; the static frame takes the collider's matrix as it is.
+        static Matrix4x4 ToBodyMatrixArm64(Matrix4x4 world, Matrix4x4 inverse, Quaternion rotation, bool? bodyOnCollider,
+            Vector2 bodyPosition, float bodyDepth)
+        {
+            if (bodyOnCollider == null)
+                return world;
+            if (bodyOnCollider == false)
+            {
+                // -(R^-1 b) from the half-angle sine and cosine, with the body's depth weighted by the
+                // zero XY coupling of a Z rotation.
+                float s = rotation.z, c = rotation.w;
+                float m = s * -2f, zeroS = m * -0f, zeroC = c * -0f, cs = c * m, k = s * m + 1f;
+                float x = bodyPosition.x, y = bodyPosition.y;
+                inverse.m03 = k * -x - y * (0f - cs) - bodyDepth * (zeroS + zeroC);
+                inverse.m13 = k * -y - x * (cs + 0f) - bodyDepth * (zeroS - zeroC);
+            }
+            var result = FusedProduct(inverse, world);
+            if (bodyOnCollider == true)
+            {
+                result.m03 -= MathF.FusedMultiplyAdd(inverse.m01, bodyPosition.y, inverse.m00 * bodyPosition.x);
+                result.m13 -= MathF.FusedMultiplyAdd(inverse.m11, bodyPosition.y, inverse.m10 * bodyPosition.x);
+            }
+            return result;
+        }
+
+        // a * b, each element a's row times b's column as one product and three fused multiply-adds in
+        // column order.
+        static Matrix4x4 FusedProduct(Matrix4x4 a, Matrix4x4 b)
+        {
+            Matrix4x4 r = default;
+            for (int j = 0; j < 4; j++)
+                for (int i = 0; i < 4; i++)
+                {
+                    float v = a[i, 0] * b[0, j];
+                    v = MathF.FusedMultiplyAdd(a[i, 1], b[1, j], v);
+                    v = MathF.FusedMultiplyAdd(a[i, 2], b[2, j], v);
+                    r[i, j] = MathF.FusedMultiplyAdd(a[i, 3], b[3, j], v);
+                }
+            return r;
         }
 
         static bool SameShapeMatrix(Matrix4x4 a, Matrix4x4 b)
@@ -441,7 +494,7 @@ namespace Unbound.Runtime
                 body = c.m_StaticBody = s_StaticBody;
             }
 
-            var matrix = ToBodyMatrix(transform, framePosition, frameAngle);
+            var matrix = ToBodyMatrix(transform, rb == null ? null : rb.m_GameObject.m_Transform, framePosition, frameAngle);
             if (!SameShapeMatrix(matrix, c.m_ShapeMatrix)) c.CaptureSkin();
             c.m_ShapeMatrix = matrix;
             s_ShapeBuffer.Clear();
@@ -571,7 +624,7 @@ namespace Unbound.Runtime
                 if (rb == null)
                 {
                     if (c.m_StaticBody == null) { Rebuild(c); continue; }
-                    var matrix = ToBodyMatrix(t, Vector2.zero, 0f);
+                    var matrix = ToBodyMatrix(t, null, Vector2.zero, 0f);
                     if (!SameShapeMatrix(matrix, c.m_ShapeMatrix) || matrix.m03 != c.m_ShapeMatrix.m03 || matrix.m13 != c.m_ShapeMatrix.m13)
                     {
                         c.CaptureSkin();
@@ -581,7 +634,7 @@ namespace Unbound.Runtime
                 else if (rb.m_Body != null)
                 {
                     PoseOf(rb.m_GameObject.m_Transform, out var position, out var angle);
-                    if (!SameShapeMatrix(ToBodyMatrix(t, position, angle), c.m_ShapeMatrix))
+                    if (!SameShapeMatrix(ToBodyMatrix(t, rb.m_GameObject.m_Transform, position, angle), c.m_ShapeMatrix))
                     {
                         c.CaptureSkin();
                         Rebuild(c);

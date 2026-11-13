@@ -243,7 +243,7 @@ namespace UnityEngine
             {
                 // The source in the composite's body frame, grown by the offset distance.
                 var polygons = new List<Vector2[]>();
-                source.BuildCompositeSource(W.ToBodyMatrix(source.transform, bodyPosition, bodyAngle), polygons);
+                source.BuildCompositeSource(W.ToBodyMatrix(source.transform, rb.transform, bodyPosition, bodyAngle), polygons);
                 var grown = ClipperOps.OffsetInt(ClipperOps.ToInt(polygons, measured), m_OffsetDistance * scale);
                 switch (source.m_CompositeOperation)
                 {
