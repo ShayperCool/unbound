@@ -13,6 +13,11 @@ namespace UnityEngine
         /// copies).</summary>
         internal Avatar m_HumanAvatar;
         const int AnimatorClassId = CurveBinding.AnimatorClassId;
+
+        /// <summary>The index of a curve among the humanoid curves (-1: none): a curve on the
+        /// Animator at the root path whose name is a humanoid curve's.</summary>
+        static int HumanCurveIndexOf(CurveBinding b) =>
+            b.ClassId == AnimatorClassId && b.Path.Length == 0 ? HumanClipImport.CurveIndex(b.Attribute) : -1;
         bool m_HumanConverted;
 
         /// <summary>Whether the clip animates a human (root, goal or muscle curves on the Animator);
@@ -23,7 +28,7 @@ namespace UnityEngine
             {
                 EnsureHumanCurves();
                 foreach (var c in m_Curves)
-                    if (c.Binding.ClassId == AnimatorClassId && HumanClipImport.CurveIndex(c.Binding.Attribute) >= HumanClipImport.RootFirst) return true;
+                    if (HumanCurveIndexOf(c.Binding) >= HumanClipImport.RootFirst) return true;
                 return false;
             }
         }
@@ -38,7 +43,7 @@ namespace UnityEngine
             {
                 EnsureHumanCurves();
                 foreach (var c in m_Curves)
-                    if (c.Binding.ClassId == AnimatorClassId && HumanClipImport.CurveIndex(c.Binding.Attribute) >= HumanClipImport.GoalFirst) return true;
+                    if (HumanCurveIndexOf(c.Binding) >= HumanClipImport.GoalFirst) return true;
                 return false;
             }
         }
@@ -59,8 +64,7 @@ namespace UnityEngine
                 m_HumanPresent = new bool[HumanClipImport.CurveCount];
                 foreach (var c in m_Curves)
                 {
-                    if (c.Binding.ClassId != AnimatorClassId) continue;
-                    int i = HumanClipImport.CurveIndex(c.Binding.Attribute);
+                    int i = HumanCurveIndexOf(c.Binding);
                     if (i < 0) continue;
                     m_HumanCurves[i] = c;
                     m_HumanPresent[i] = true;
@@ -180,6 +184,29 @@ namespace UnityEngine
             if (m_HumanMirrored == m_Mirror || (m_HumanAvatar != null && !m_HumanConverted)) return;
             m_HumanMirrored = m_Mirror;
             MirrorHumanCurves();
+            if (m_Mirror) NoteMirroredWithoutFootGoals();
+        }
+
+        /// <summary>Says once that a mirrored humanoid clip without a foot's goal curves places
+        /// its legs under Foot IK differently from the Editor (6000.0.71f1, an exploratory capture
+        /// of tests/projects/humanoid apiCurves.mirror with foot IK, kept as the known class
+        /// mirror-no-goals of apiCurves.mirrorFootIK: leg muscles and the body position differ,
+        /// the unmirrored clip matches; the cause is not found).</summary>
+        void NoteMirroredWithoutFootGoals()
+        {
+            bool any = false, left = false, right = false;
+            foreach (var c in m_Curves)
+            {
+                int i = c.Curve != null ? HumanCurveIndexOf(c.Binding) : -1;
+                if (i < 0) continue;
+                any = true;
+                left |= i == HumanClipImport.GoalFirst;
+                right |= i == HumanClipImport.GoalFirst + 7;
+            }
+            // Only the clip without either foot's goals is measured; one foot's goals alone is not.
+            if (any && !(left && right))
+                Unbound.Runtime.Stubs.Ignored("AnimationClip mirrored humanoid clip without foot goal curves",
+                    "places its legs under Foot IK differently from the Editor (measured without either foot's goals, not matched)");
         }
 
         AnimationClip m_StateMirrored;
@@ -232,7 +259,7 @@ namespace UnityEngine
             for (int k = 0; k < m_Curves.Count; k++)
             {
                 var c = m_Curves[k];
-                int i = c.Binding.ClassId == AnimatorClassId && c.Curve != null ? HumanClipImport.CurveIndex(c.Binding.Attribute) : -1;
+                int i = c.Curve != null ? HumanCurveIndexOf(c.Binding) : -1;
                 if (i < 0) continue;
                 if (i >= HumanClipImport.GoalFirst && i < HumanClipImport.MuscleFirst && (i - HumanClipImport.GoalFirst) % 7 >= 3)
                     goalRotations[(i - HumanClipImport.GoalFirst) / 7]++;
@@ -268,7 +295,7 @@ namespace UnityEngine
 
         /// <summary>The index of a stored curve among the humanoid curves, or -1.</summary>
         static int HumanCurveIndex(ClipCurve c) =>
-            c.Binding.ClassId == AnimatorClassId && c.Curve != null ? HumanClipImport.CurveIndex(c.Binding.Attribute) : -1;
+            c.Curve != null ? HumanCurveIndexOf(c.Binding) : -1;
 
         /// <summary>The clip's float curves as the Editor's curve queries show them: a clip with
         /// the Mirror setting shows its curves as imported, not mirrored, after it has played
@@ -323,8 +350,7 @@ namespace UnityEngine
         /// motion instead (<see cref="HumanClipMotion.LoopBlendX"/>), not the curve's values.</summary>
         static bool IsHumanBodyCurve(ClipCurve c)
         {
-            if (c.Binding.ClassId != AnimatorClassId) return false;
-            int i = HumanClipImport.CurveIndex(c.Binding.Attribute);
+            int i = HumanCurveIndexOf(c.Binding);
             return i >= HumanClipImport.RootFirst && i < HumanClipImport.GoalFirst;
         }
 

@@ -189,6 +189,8 @@ namespace UnityEngine.Tests
         {
             // The muscle curve itself is not played on this generic Animator.
             m_Expected.Add("Arm Down-Up is not supported yet (clip 'IdleClip')");
+            // The mirrored copy has a muscle curve and no foot goals.
+            m_Expected.Add("mirrored humanoid clip without foot goal curves");
             var animator = Character(NoParameters());
             var file = Load(AnimationFixtures.Locomotion);
             var idle = (AnimationClip)file.Objects[7400001];

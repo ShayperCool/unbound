@@ -85,6 +85,28 @@ namespace UnityEngine.Tests
             Assert.Equal(mirror ? 0.8f : 0f, right, 3);
         }
 
+        const string MirroredWithoutFootGoals = "AnimationClip mirrored humanoid clip without foot goal curves";
+
+        static int Hits(string member)
+        {
+            foreach (var hit in Unbound.Runtime.Stubs.HitReport())
+                if (hit.Key == member) return hit.Value;
+            return 0;
+        }
+
+        /// <summary>A mirrored humanoid clip without a foot's goal curves reports that its legs
+        /// under Foot IK differ from the Editor's (tests/projects/humanoid apiCurves.mirrorFootIK;
+        /// the warning itself is logged once per run). Control: the unmirrored clip does not.</summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void AMirroredClipWithoutFootGoalsReportsIt(bool mirror)
+        {
+            int before = Hits(MirroredWithoutFootGoals);
+            Muscles(Clip(false, mirror));
+            Assert.Equal(mirror ? before + 1 : before, Hits(MirroredWithoutFootGoals));
+        }
+
         /// <summary>Control: a Transform curve set through SetCurve stays a Transform curve, and a
         /// float curve on the Animator that is no humanoid curve does not make the clip a
         /// humanoid one.</summary>
