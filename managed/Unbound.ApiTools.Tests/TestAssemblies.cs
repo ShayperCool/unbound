@@ -11,14 +11,14 @@ namespace Unbound.ApiTools.Tests;
 /// implementation and game code.</summary>
 static class TestAssemblies
 {
-    public static Diagnostic[] EngineDiagnostics(string source) => Compilation("Consumer", source,
+    public static Diagnostic[] EngineDiagnostics(string source, string assemblyName = "Consumer") => Compilation(assemblyName, source,
         Path.Combine(AppContext.BaseDirectory, "declaration-reference", "UnityEngine.CoreModule.dll")).GetDiagnostics()
         .Where(d => d.Severity is DiagnosticSeverity.Error or DiagnosticSeverity.Warning).ToArray();
 
     static readonly MetadataReference[] Framework =
         ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
         .Split(Path.PathSeparator)
-        .Where(p => Path.GetFileName(p) is "System.Runtime.dll" or "System.Private.CoreLib.dll" or "netstandard.dll")
+        .Where(p => Path.GetFileName(p) is "System.Runtime.dll" or "System.Private.CoreLib.dll" or "netstandard.dll" or "System.Collections.dll")
         .Select(p => (MetadataReference)MetadataReference.CreateFromFile(p))
         .ToArray();
 

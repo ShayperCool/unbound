@@ -243,3 +243,19 @@ then exists after AddComponent; a second joint reuses it. The
 [6000.0 RequireComponent contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RequireComponent.html)
 checks missing dependencies when AddComponent runs, without retroactively repairing
 existing components. These controls exercise that call with a missing dependency.
+
+The serialization annotation controls bring the reference to 1,248 rows, preserving
+all earlier 1,193 rows. They cover 37 declarations and 18 runtime values, including
+negative random words, boxed overwrite, nested scene handles, converter key direction
+and ScriptableObject clone state. The
+[6000.0 SerializeField contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SerializeField.html)
+includes eligible private fields; the
+[FromJsonOverwrite contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/JsonUtility.FromJsonOverwrite.html)
+preserves omitted fields. The controls change a private word and the holder control
+while independent state remains unchanged.
+
+ObjectIdentifier retains its flag exception. Its JSON payload is empty, but cloning
+retains the target field initializer, 29, instead of the source value, 17. The clone
+control guards against enabling the flag while the generic cloner still copies 17.
+The full uncommitted trial captures remain outside Git; comparator rules and every
+landed reference row remain unchanged.

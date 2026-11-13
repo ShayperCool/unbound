@@ -91,13 +91,17 @@ public static class DeclarationAnnotationControls
         if (value.Value is Type) return ((Type)value.Value).FullName;
         return Convert.ToString(value.Value, CultureInfo.InvariantCulture);
     }
+    public static string Attributes(IEnumerable<CustomAttributeData> attributes, ISet<string> kinds)
+    {
+        var values = attributes.Where(a => kinds.Contains(a.AttributeType.FullName)).Select(a => a.AttributeType.FullName + "(" + string.Join(",", a.ConstructorArguments.Select(Value).ToArray()) + "){" + string.Join(",", a.NamedArguments.OrderBy(n => n.MemberName, StringComparer.Ordinal).Select(n => n.MemberName + "=" + Value(n.TypedValue)).ToArray()) + "}").OrderBy(v => v, StringComparer.Ordinal).ToArray();
+        return string.Join(";", values);
+    }
     public static void Record(Action<string, object> row)
     {
         foreach (var d in Declarations)
         {
             var member = DeclarationSignatures.Find(d[0], d[1], d[2]);
-            var values = member.GetCustomAttributesData().Where(a => Kinds.Contains(a.AttributeType.FullName)).Select(a => a.AttributeType.FullName + "(" + string.Join(",", a.ConstructorArguments.Select(Value).ToArray()) + "){" + string.Join(",", a.NamedArguments.OrderBy(n => n.MemberName, StringComparer.Ordinal).Select(n => n.MemberName + "=" + Value(n.TypedValue)).ToArray()) + "}").OrderBy(v => v, StringComparer.Ordinal).ToArray();
-            row("annotation." + d[0] + "." + d[2], string.Join(";", values));
+            row("annotation." + d[0] + "." + d[2], Attributes(member.GetCustomAttributesData(), Kinds));
         }
 
         foreach (string typeName in FlagTypes)

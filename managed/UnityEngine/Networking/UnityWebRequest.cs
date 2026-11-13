@@ -46,9 +46,9 @@ namespace UnityEngine.Networking
         string m_Method = kHttpVerbGET;
         readonly Dictionary<string, string> m_RequestHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         Dictionary<string, string> m_ResponseHeaders;
-        internal UploadHandler m_UploadHandler;
-        internal DownloadHandler m_DownloadHandler;
-        internal CertificateHandler m_CertificateHandler;
+        [global::System.NonSerialized] internal UploadHandler m_UploadHandler;
+        [global::System.NonSerialized] internal DownloadHandler m_DownloadHandler;
+        [global::System.NonSerialized] internal CertificateHandler m_CertificateHandler;
         int m_Timeout;
         int m_RedirectLimit = 32;
         bool m_UseHttpContinue = true;

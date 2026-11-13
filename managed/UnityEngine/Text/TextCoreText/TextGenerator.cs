@@ -70,7 +70,7 @@ namespace UnityEngine.TextCore.Text
         // Unity-visible state.
         internal TextProcessingElement[] m_TextProcessingArray = new TextProcessingElement[8];
         internal int m_InternalTextProcessingArraySize;
-        protected bool m_VertexBufferAutoSizeReduction;
+        [global::UnityEngine.@SerializeField] protected bool m_VertexBufferAutoSizeReduction;
         internal HighlightState m_HighlightState = new HighlightState(Color.white, Offset.zero);
         protected bool m_IsIgnoringAlignment;
         protected bool m_IsTextTruncated;

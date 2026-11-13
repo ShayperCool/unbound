@@ -1190,4 +1190,59 @@
 {"key":"annotation.require.shared-rigidbody-count","value":"1"}
 {"key":"annotation.require.light-transform-count","value":"1"}
 {"key":"annotation.require.camera-control-rigidbody","value":"True"}
+{"key":"payload.field.UnityEngine.SceneManagement.Scene.m_Handle","value":"UnityEngine.HideInInspector(){};UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.width","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.sortedAscending","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.headerContent","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.contextMenuText","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.headerTextAlignment","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.sortingArrowAlignment","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.minWidth","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.maxWidth","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.autoResize","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.allowToggleVisibility","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.canSort","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.userData","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEngine.Random+State.s0","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEngine.Random+State.s1","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEngine.Random+State.s2","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEngine.Random+State.s3","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEngine.TextCore.Text.TextGenerator.m_VertexBufferAutoSizeReduction","value":"UnityEngine.SerializeField(){};nonserialized=False"}
+{"key":"payload.field.UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column.userDataObj","value":";nonserialized=True"}
+{"key":"payload.field.UnityEngine.Networking.UnityWebRequest.m_CertificateHandler","value":";nonserialized=True"}
+{"key":"payload.field.UnityEngine.Networking.UnityWebRequest.m_DownloadHandler","value":";nonserialized=True"}
+{"key":"payload.field.UnityEngine.Networking.UnityWebRequest.m_UploadHandler","value":";nonserialized=True"}
+{"key":"payload.field.Unity.Properties.ConversionRegistry.m_Converters","value":";nonserialized=False"}
+{"key":"payload.return.Unity.Baselib.LowLevel.Binding.M:static Baselib_NetworkAddress_HostnameLookupCheckStatus`0(Unity.Baselib.LowLevel.Binding+Baselib_NetworkAddress_HostnameLookupHandle*,Unity.Baselib.LowLevel.Binding+Baselib_NetworkAddress*,Unity.Baselib.LowLevel.Binding+Baselib_ErrorState*):System.Boolean","value":"4"}
+{"key":"payload.return.Unity.Baselib.LowLevel.Binding.M:static Baselib_RegisteredNetwork_IsEmulated`0():System.Boolean","value":"4"}
+{"key":"payload.return.Unity.Baselib.LowLevel.Binding.M:static Baselib_SystemFutex_NativeSupport`0():System.Boolean","value":"4"}
+{"key":"payload.return.Unity.Baselib.LowLevel.Binding.M:static Baselib_SystemSemaphore_TryAcquire`0(Unity.Baselib.LowLevel.Binding+Baselib_SystemSemaphore_Handle):System.Boolean","value":"4"}
+{"key":"payload.return.Unity.Baselib.LowLevel.Binding.M:static Baselib_SystemSemaphore_TryTimedAcquire`0(Unity.Baselib.LowLevel.Binding+Baselib_SystemSemaphore_Handle,System.UInt32):System.Boolean","value":"4"}
+{"key":"payload.parameter.UnityEngine.Audio.AudioClipPlayable.M:Seek`0(System.Double,System.Double,System.Double):System.Void.2","value":"System.ComponentModel.DefaultValueAttribute(0){}"}
+{"key":"payload.parameter.Unity.Collections.CollectionExtensions.M:static AddSorted`1(System.Collections.Generic.List`1<!!0>,!!0,System.Collections.Generic.IComparer`1<!!0>):System.Void.0","value":"System.Diagnostics.CodeAnalysis.DisallowNullAttribute(){}"}
+{"key":"payload.parameter.Unity.Collections.CollectionExtensions.M:static Fill`1(System.Collections.Generic.List`1<!!0>,!!0,System.Int32):System.Void.0","value":"System.Diagnostics.CodeAnalysis.DisallowNullAttribute(){}"}
+{"key":"payload.parameter.Unity.Collections.CollectionExtensions.M:static SerializedView`1(System.Collections.Generic.IEnumerable`1<!!0>,System.Func`2<!!0,System.String>):System.String.0","value":"System.Diagnostics.CodeAnalysis.DisallowNullAttribute(){}"}
+{"key":"payload.parameter.Unity.Collections.CollectionExtensions.M:static SerializedView`1(System.Collections.Generic.IEnumerable`1<!!0>,System.Func`2<!!0,System.String>):System.String.1","value":"System.Diagnostics.CodeAnalysis.DisallowNullAttribute(){}"}
+{"key":"payload.parameter.Unity.Collections.CollectionExtensions.M:static ContainsByEquals`1(System.Collections.Generic.IEnumerable`1<!!0>,!!0):System.Boolean.0","value":"System.Diagnostics.CodeAnalysis.DisallowNullAttribute(){}"}
+{"key":"payload.parameter.UnityEngine.Object.M:static op_Implicit`0(UnityEngine.Object):System.Boolean.0","value":"System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute(False){};System.Diagnostics.CodeAnalysis.NotNullWhenAttribute(True){}"}
+{"key":"payload.parameter.UnityEngine.Analytics.IAnalytic.M:TryGatherData`0(out UnityEngine.Analytics.IAnalytic+IData,out System.Exception):System.Boolean.1","value":"System.Diagnostics.CodeAnalysis.NotNullWhenAttribute(False){}"}
+{"key":"payload.parameter.UnityEngine.Playables.PlayableGraph.M:Evaluate`0(System.Single):System.Void.0","value":"System.ComponentModel.DefaultValueAttribute(0){}"}
+{"key":"payload.random.root","value":"{\"s0\":1,\"s1\":-2,\"s2\":3,\"s3\":4}"}
+{"key":"payload.random.overwrite","value":"{\"s0\":1,\"s1\":7,\"s2\":3,\"s3\":4}"}
+{"key":"payload.random.copy","value":"{\"s0\":1,\"s1\":-2,\"s2\":3,\"s3\":4}"}
+{"key":"payload.scene.handle","value":"123"}
+{"key":"payload.scene.root","value":"{\"m_Handle\":123}"}
+{"key":"payload.nested","value":"{\"state\":{\"s0\":11,\"s1\":12,\"s2\":13,\"s3\":14},\"scene\":{\"m_Handle\":321},\"control\":19}"}
+{"key":"payload.nested.omitted","value":"{\"state\":{\"s0\":11,\"s1\":12,\"s2\":13,\"s3\":14},\"scene\":{\"m_Handle\":321},\"control\":23}"}
+{"key":"payload.column.width","value":"17"}
+{"key":"payload.column.control-min","value":"23"}
+{"key":"payload.converter.first","value":"8"}
+{"key":"payload.converter.replace","value":"9"}
+{"key":"payload.converter.reverse-control","value":"True"}
+{"key":"payload.clone.identifier.file-id","value":"29"}
+{"key":"payload.clone.identifier.path","value":"initializer.asset"}
+{"key":"payload.clone.state","value":"{\"s0\":1,\"s1\":-2,\"s2\":3,\"s3\":4}"}
+{"key":"payload.clone.control","value":"19"}
+{"key":"payload.clone.original-file-id","value":"17"}
+{"key":"payload.clone.independent","value":"29"}
 {"key":"complete","value":"1"}

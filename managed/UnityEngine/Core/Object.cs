@@ -143,7 +143,7 @@ namespace UnityEngine
         }
 
         /// <summary>True for a live object: neither a null reference nor destroyed.</summary>
-        public static implicit operator bool(Object exists) => !CompareBaseObjects(exists, null);
+        public static implicit operator bool([global::System.Diagnostics.CodeAnalysis.@NotNullWhenAttribute(true)] [global::System.Diagnostics.CodeAnalysis.@MaybeNullWhenAttribute(false)] Object exists) => !CompareBaseObjects(exists, null);
 
         public static bool operator ==(Object x, Object y) => CompareBaseObjects(x, y);
 

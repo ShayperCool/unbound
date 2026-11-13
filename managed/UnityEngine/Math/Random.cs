@@ -16,10 +16,10 @@ namespace UnityEngine
         [StructLayout(LayoutKind.Sequential)]
         public partial struct State
         {
-            private int s0;
-            private int s1;
-            private int s2;
-            private int s3;
+            [global::UnityEngine.@SerializeField] private int s0;
+            [global::UnityEngine.@SerializeField] private int s1;
+            [global::UnityEngine.@SerializeField] private int s2;
+            [global::UnityEngine.@SerializeField] private int s3;
 
             internal State(uint s0, uint s1, uint s2, uint s3)
             {

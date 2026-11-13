@@ -755,7 +755,7 @@ namespace Unity.Collections
     /// <summary>Extension helpers Unity's modules share.</summary>
     internal static partial class CollectionExtensions
     {
-        internal static void AddSorted<T>(this List<T> list, T item, IComparer<T> comparer = null)
+        internal static void AddSorted<T>([global::System.Diagnostics.CodeAnalysis.@DisallowNullAttribute] this List<T> list, T item, IComparer<T> comparer = null)
         {
             if (list == null) throw new ArgumentNullException("list must not be null.");
             comparer ??= Comparer<T>.Default;
@@ -773,7 +773,7 @@ namespace Unity.Collections
             list.Insert(index < 0 ? ~index : index, item);
         }
 
-        public static void Fill<T>(this List<T> dest, T value, int count)
+        public static void Fill<T>([global::System.Diagnostics.CodeAnalysis.@DisallowNullAttribute] this List<T> dest, T value, int count)
         {
             if (dest == null) throw new ArgumentNullException(nameof(dest));
             dest.Capacity = Math.Max(dest.Capacity, dest.Count + count);
@@ -798,7 +798,7 @@ namespace Unity.Collections
             return first;
         }
 
-        internal static string SerializedView<T>(this IEnumerable<T> collection, Func<T, string> serializeElement)
+        internal static string SerializedView<T>([global::System.Diagnostics.CodeAnalysis.@DisallowNullAttribute] this IEnumerable<T> collection, [global::System.Diagnostics.CodeAnalysis.@DisallowNullAttribute] Func<T, string> serializeElement)
         {
             if (collection == null) throw new ArgumentNullException("collection must not be null.");
             if (serializeElement == null) throw new ArgumentNullException("Argument serializeElement must not be null.");
@@ -807,7 +807,7 @@ namespace Unity.Collections
             return "[" + string.Join(",", parts) + "]";
         }
 
-        internal static bool ContainsByEquals<T>(this IEnumerable<T> collection, T element)
+        internal static bool ContainsByEquals<T>([global::System.Diagnostics.CodeAnalysis.@DisallowNullAttribute] this IEnumerable<T> collection, T element)
         {
             if (collection == null) throw new ArgumentNullException("collection must not be null.");
             foreach (var item in collection)

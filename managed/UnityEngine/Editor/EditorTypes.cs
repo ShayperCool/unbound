@@ -20,7 +20,7 @@ namespace UnityEngine.Analytics
 
     public partial interface IAnalytic
     {
-        bool TryGatherData(out IData data, out Exception error);
+        bool TryGatherData(out IData data, [global::System.Diagnostics.CodeAnalysis.@NotNullWhenAttribute(false)] out Exception error);
 
         public partial interface IData
         {

@@ -160,6 +160,10 @@
     "managed/UnityEngine/Playables/PlayableDirector.cs",
     "managed/UnityEngine/Text/TextCoreText/FontAsset.cs",
     "managed/UnityEngine/Text/TextCoreText/TextAssets.cs",
-    "managed/UnityEngine/Text/TextCoreText/TextSettings.cs"
+    "managed/UnityEngine/Text/TextCoreText/TextSettings.cs",
+    "managed/UnityEngine/Editor/ContentBuildInterface.cs",
+    "managed/UnityEngine/Math/Random.cs",
+    "managed/UnityEngine/Properties/Types.cs",
+    "managed/UnityEngine/Text/TextCoreText/TextGenerator.cs"
   ]
 }

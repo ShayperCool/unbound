@@ -615,19 +615,19 @@ namespace UnityEditor.IMGUI.Controls
         [Serializable]
         public partial class Column
         {
-            public float width = 50f;
-            public bool sortedAscending;
-            public GUIContent headerContent = new GUIContent();
-            public string contextMenuText;
-            public TextAlignment headerTextAlignment = TextAlignment.Left;
-            public TextAlignment sortingArrowAlignment = TextAlignment.Center;
-            public float minWidth = 20f;
-            public float maxWidth = 1000000f;
-            public bool autoResize = true;
-            public bool allowToggleVisibility = true;
-            public bool canSort = true;
-            public int userData;
-            internal object userDataObj;
+            [global::UnityEngine.@SerializeField] public float width = 50f;
+            [global::UnityEngine.@SerializeField] public bool sortedAscending;
+            [global::UnityEngine.@SerializeField] public GUIContent headerContent = new GUIContent();
+            [global::UnityEngine.@SerializeField] public string contextMenuText;
+            [global::UnityEngine.@SerializeField] public TextAlignment headerTextAlignment = TextAlignment.Left;
+            [global::UnityEngine.@SerializeField] public TextAlignment sortingArrowAlignment = TextAlignment.Center;
+            [global::UnityEngine.@SerializeField] public float minWidth = 20f;
+            [global::UnityEngine.@SerializeField] public float maxWidth = 1000000f;
+            [global::UnityEngine.@SerializeField] public bool autoResize = true;
+            [global::UnityEngine.@SerializeField] public bool allowToggleVisibility = true;
+            [global::UnityEngine.@SerializeField] public bool canSort = true;
+            [global::UnityEngine.@SerializeField] public int userData;
+            [global::System.NonSerialized] internal object userDataObj;
 
             public Column() { }
         }

@@ -31,7 +31,7 @@ namespace UnityEngine.Playables
 
         public void Evaluate() => Evaluate(0f);
 
-        public void Evaluate([DefaultValue("0")] float deltaTime) => Data.Evaluate(deltaTime);
+        public void Evaluate([DefaultValue("0")] [global::System.ComponentModel.@DefaultValueAttribute("0")] float deltaTime) => Data.Evaluate(deltaTime);
 
         public DirectorUpdateMode GetTimeUpdateMode() => Data.UpdateMode;
 

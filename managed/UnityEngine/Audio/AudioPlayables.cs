@@ -359,7 +359,7 @@ namespace UnityEngine.Audio
 
         public void Seek(double startTime, double startDelay) => Seek(startTime, startDelay, 0.0);
 
-        public void Seek(double startTime, double startDelay, [UnityEngine.Internal.DefaultValue("0")] double duration)
+        public void Seek(double startTime, double startDelay, [UnityEngine.Internal.DefaultValue("0")] [global::System.ComponentModel.@DefaultValueAttribute("0")] double duration)
         {
             var k = Kind;
             k.StartDelay = startDelay;

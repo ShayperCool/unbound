@@ -9,7 +9,7 @@ namespace UnityEngine.SceneManagement
     [Serializable]
     public partial struct Scene : IEquatable<Scene>
     {
-        internal int m_Handle;
+        [global::UnityEngine.@SerializeField] [global::UnityEngine.@HideInInspector] internal int m_Handle;
 
         internal Scene(SceneHandle handle) { m_Handle = handle.Value; }
 

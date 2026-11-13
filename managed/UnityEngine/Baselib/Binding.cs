@@ -474,6 +474,7 @@ namespace Unity.Baselib.LowLevel
         public static Baselib_NetworkAddress_HostnameLookupHandle* Baselib_NetworkAddress_HostnameLookup(byte* hostName, Baselib_NetworkAddress* dstAddress, Baselib_ErrorState* errorState) =>
             BaselibNet.HostnameLookup(Marshal.PtrToStringUTF8((IntPtr)hostName), dstAddress, errorState);
 
+        [return: global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.U1)]
         public static bool Baselib_NetworkAddress_HostnameLookupCheckStatus(Baselib_NetworkAddress_HostnameLookupHandle* task, Baselib_NetworkAddress* dstAddress, Baselib_ErrorState* errorState) =>
             BaselibNet.HostnameLookupCheckStatus(task, dstAddress, errorState);
 
@@ -527,6 +528,7 @@ namespace Unity.Baselib.LowLevel
         // ------------------------------------------------------------------ registered network (emulated)
 
         [Unbound.EditorFaithful("registered networking is emulated on desktop, in Unity's Baselib too")]
+        [return: global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.U1)]
         public static bool Baselib_RegisteredNetwork_IsEmulated() => true;
 
         public static Baselib_RegisteredNetwork_Buffer Baselib_RegisteredNetwork_Buffer_Register(Baselib_Memory_PageAllocation pageAllocation, Baselib_ErrorState* errorState) =>
@@ -620,6 +622,7 @@ namespace Unity.Baselib.LowLevel
         // ------------------------------------------------------------------ threads and synchronization
 
         [Unbound.EditorFaithful("futexes are emulated (Baselib_SystemFutex_Wait/Notify work): there is no native support to report")]
+        [return: global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.U1)]
         public static bool Baselib_SystemFutex_NativeSupport() => false;
 
         public static void Baselib_SystemFutex_Wait(IntPtr address, int expected, uint timeoutInMilliseconds) => BaselibThreads.FutexWait(address, expected, timeoutInMilliseconds);
@@ -633,8 +636,10 @@ namespace Unity.Baselib.LowLevel
 
         public static void Baselib_SystemSemaphore_Acquire(Baselib_SystemSemaphore_Handle semaphore) => BaselibThreads.Semaphore(semaphore).Wait();
 
+        [return: global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.U1)]
         public static bool Baselib_SystemSemaphore_TryAcquire(Baselib_SystemSemaphore_Handle semaphore) => BaselibThreads.Semaphore(semaphore).Wait(0);
 
+        [return: global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.U1)]
         public static bool Baselib_SystemSemaphore_TryTimedAcquire(Baselib_SystemSemaphore_Handle semaphore, uint timeoutInMilliseconds) =>
             BaselibThreads.Semaphore(semaphore).Wait((int)Math.Min(timeoutInMilliseconds, int.MaxValue));
 

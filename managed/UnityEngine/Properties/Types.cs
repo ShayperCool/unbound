@@ -66,7 +66,7 @@ namespace Unity.Properties
     /// <summary>Type converters keyed by source and destination types.</summary>
     internal readonly partial struct ConversionRegistry : IEqualityComparer<ConversionRegistry>
     {
-        readonly Dictionary<(Type Source, Type Destination), Delegate> m_Converters;
+        readonly Dictionary<(Type, Type), Delegate> m_Converters;
 
         ConversionRegistry(Dictionary<(Type, Type), Delegate> converters) => m_Converters = converters;
 

@@ -76,9 +76,9 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After annotation and UI state slices |
+| Category | Before Q410 | After serialization annotations and UI state slices |
 | --- | ---: | ---: |
-| Attributes | 938 | 246 |
+| Attributes | 938 | 209 |
 | Modifiers | 87 | 13 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 4 |
@@ -87,7 +87,7 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 407 |
+| Total | 1,332 | 370 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -139,8 +139,8 @@ Q410-Editor-computed-setters retains EditorApplication.isFocused and
 EditorAssemblies.loadedAssemblies. Their current getters derive live state; matching
 private setters requires adapting focus updates and assembly-cache invalidation,
 with diverged-state controls. The accessor slice resolves the AssetPostprocessor
-setter. Q410-Editor-coordination retains the ObjectIdentifier serialization flag
-until its source ownership and serialized payload controls are ready.
+setter. Q410-ObjectIdentifier-serialization retains the ObjectIdentifier serialization flag
+until the shared empty-payload eligibility rules cover JSON and cloning together.
 The five NamedBuildTarget readonly differences also require a generated header
 currently owned by Q411. Q410-Editor-serialized-payloads retains five Serializable
 flags on EditorBuildSettingsScene, PackageInfo, PackageCollection, ListRequest and
@@ -214,6 +214,30 @@ without a Rigidbody, adding it creates one, and adding a second joint retains on
 shared Rigidbody. A Light retains one Transform and a Camera remains an independent
 control without a Rigidbody. Existing internal class IDs and all non-target
 annotations are preserved, including across partial declarations.
+
+The serialization annotation slice resolves 37 attribute entries: 18 field markers,
+four NonSerialized fields, one private tuple label, nine parameter annotations and
+five bool return marshaling descriptors. Private random-state words and scene handles
+now participate in the existing serialization rules. Header and request fields retain
+the selected metadata, while converter keys retain their existing runtime lookup.
+The C# controls check nullability through an existing friend module and narrow a
+Unity Object reference after its truth conversion. Normal consumers keep their
+existing visibility restrictions.
+
+The 55 new rows contain 37 declaration observations and 18 runtime values. They cover
+negative random-state words, boxed overwrite with omitted fields, an independent
+struct copy, nested scene handles, converter replacement and reversed keys, and
+ScriptableObject cloning with independent source state. All earlier 1,193 raw rows
+remain unchanged.
+
+Q410-ObjectIdentifier-serialization remains a measured coupled change. The selected
+flag is true, and the measured JSON payload is empty. Cloning the measured
+ScriptableObject retains the identifier field initializer of 29 when the source contains 17.
+Enabling the flag in the current composite cloner copies 17, a regression. The flag
+therefore remains unchanged with its exact exception; the clone control remains in
+the canonical probe. The full trial reports retain all three clone regressions and
+the two preexisting metadata/nested-JSON gaps. A shared eligibility model for empty
+composites and built-in structs must precede that flag change.
 
 ## Landing checks and default state
 
