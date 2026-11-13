@@ -188,7 +188,30 @@ namespace Unbound.Tests
         [InlineData(4, 3, 2, 1f)]
         [InlineData(5, 2, 4, 0.5f)]
         [InlineData(6, 6, 1, 1f)]
-        public void GridsAreFilledByCellsOnEveryProbe(int nx, int ny, int nz, float spacing)
+        public void GridsAreFilledByCellsOnEveryProbe(int nx, int ny, int nz, float spacing) =>
+            AssertGridTiled(nx, ny, nz, spacing, Quaternion.identity, Vector3.zero);
+
+        [Theory]
+        [InlineData(3, 3, 3, 0.1f, 0f, 0f, 0f)]
+        [InlineData(4, 3, 3, 0.1f, 0f, 0f, 0f)]
+        [InlineData(4, 3, 3, 0f, 0.05f, 0f, 0f)]
+        [InlineData(2, 2, 3, 0.1f, 0f, 0f, 0f)]
+        [InlineData(3, 3, 3, 0.1f, 0.2f, 0f, 100f)]
+        [InlineData(5, 5, 1, 0.1f, 0.3f, 0f, 0f)]
+        [InlineData(5, 5, 1, 0.1f, 0.3f, 0f, 100f)]
+        [InlineData(4, 3, 3, 0.2f, 0.4f, 0f, 0f)]
+        [InlineData(6, 6, 3, 0f, 0.5235988f, 0f, 0f)]
+        [InlineData(5, 4, 3, 0.3f, 0.7f, 1.1f, 37f)]
+        public void RotatedAndMovedGridsAreFilledByCellsOnEveryProbe(int nx, int ny, int nz, float ax, float ay, float az, float offset)
+        {
+            // Rotated (radians about x, y, z) or moved far from the origin, a grid's positions are
+            // only within float rounding of its planes: that must make the same tiling, and a single
+            // layer still makes no cells.
+            var rotation = Quaternion.Euler(ax * Mathf.Rad2Deg, ay * Mathf.Rad2Deg, az * Mathf.Rad2Deg);
+            AssertGridTiled(nx, ny, nz, 1f, rotation, new Vector3(offset, 2f * offset / 100f, offset / 2f));
+        }
+
+        static void AssertGridTiled(int nx, int ny, int nz, float spacing, Quaternion rotation, Vector3 offset)
         {
             // A regular grid, as light probe groups usually are: every cube's corners are
             // cospherical and its faces coplanar, so the cells are one of many Delaunay choices,
@@ -197,7 +220,7 @@ namespace Unbound.Tests
             for (int k = 0; k < nz; k++)
             for (int j = 0; j < ny; j++)
             for (int i = 0; i < nx; i++)
-                positions.Add(new Vector3(i * spacing + 0.25f, j * spacing - 1f, k * spacing * 1.5f));
+                positions.Add(rotation * new Vector3(i * spacing + 0.25f, j * spacing - 1f, k * spacing * 1.5f) + offset);
             var set = new ProbeSet { Positions = positions.ToArray() };
             ProbeTetrahedralization.Build(set);
             var inner = set.Cells.Where(c => c.I3 >= 0).ToArray();
@@ -246,6 +269,31 @@ namespace Unbound.Tests
             Assert.NotEmpty(expected);
             Assert.Equal(expected, InnerCells(set));
             Assert.DoesNotContain(set.Cells, c => c.I0 == 1 || c.I1 == 1 || c.I2 == 1 || c.I3 == 1);
+        }
+
+        [Fact]
+        public void PredicatesAreExactAtTies()
+        {
+            // The unit corner tetrahedron: det(a − d, b − d, c − d) of (x, y, z, 0) is +1.
+            Assert.Equal(1, ProbeTetrahedralization.Predicates.Orient(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0));
+            Assert.Equal(-1, ProbeTetrahedralization.Predicates.Orient(0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0));
+            // Its circumsphere passes through (1, 1, 1): on it, inside at the center, outside beyond.
+            int InSphere(double x, double y, double z) =>
+                ProbeTetrahedralization.Predicates.InSphere(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, x, y, z);
+            Assert.Equal(0, InSphere(1, 1, 1));
+            Assert.Equal(1, InSphere(0.5, 0.5, 0.5));
+            Assert.Equal(-1, InSphere(1.5, 1.5, 1.5));
+            // Far from the origin the differences round in double; the decision stays exact. The
+            // corners of a cube 2^-20 wide at 1e9 are cospherical and its faces coplanar.
+            const double o = 1e9, h = 1.0 / (1 << 20);
+            Assert.Equal(0, ProbeTetrahedralization.Predicates.Orient(o, o, o, o + h, o, o, o, o + h, o, o + h, o + h, o));
+            Assert.Equal(0, ProbeTetrahedralization.Predicates.InSphere(o, o, o, o + h, o, o, o, o + h, o, o, o, o + h, o + h, o + h, o + h));
+            Assert.Equal(1, ProbeTetrahedralization.Predicates.InSphere(o + h, o, o, o, o + h, o, o, o, o + h, o, o, o, o + h / 2, o + h / 2, o + h / 2));
+            // In a triangle's plane: inside, on and outside its circumcircle.
+            bool InCircle(double x, double y) => ProbeTetrahedralization.Predicates.InCircle(0, 0, 0, 2, 0, 0, 0, 2, 0, x, y, 0);
+            Assert.True(InCircle(1, 1));
+            Assert.False(InCircle(2, 2));
+            Assert.False(InCircle(3, 3));
         }
 
         [Fact]

@@ -359,24 +359,40 @@ The runtime builder no longer encloses the probes in a finite tetrahedron. Its f
 probe 0 and the first probes after it that are off its position, line and plane, and the cells
 past that cell's faces are hull cells with a point at infinity. A later probe replaces a hull
 cell when it lies beyond the cell's triangle plane, or in that plane inside the triangle's
-circumcircle, and replaces a probe cell when it lies inside the cell's circumsphere, as before.
-The probes are still inserted in index order with the same tolerances. The inner cells are
-therefore the probes' Delaunay tetrahedralization however far a circumsphere reaches. Duplicate
-positions still take no cell, and four or more positions on a line or plane still make none.
+circumcircle, and replaces a probe cell when it lies inside the cell's circumsphere. The probes
+are still inserted in index order. The inner cells are therefore the probes' Delaunay
+tetrahedralization however far a circumsphere reaches.
 
-The main comparison is 383/625, previously 379/625, with no lost matches. The four
+Every one of those decisions is exact: orientation and in-sphere signs come from double
+precision when its error bound allows, otherwise from integers (Shewchuk's static filter bounds).
+A probe exactly on a circumsphere, or in a triangle's plane on its circumcircle, replaces
+nothing, so ties keep the cells made first. A probe grid that a rotation or a far offset leaves
+only within float rounding of its planes and spheres is therefore cut consistently: its cells tile
+its box without gaps or overlaps. The earlier tolerance-based tests could not guarantee that: the
+earlier builder overlapped cells of a 6 x 6 x 3 grid rotated 30 degrees. Duplicate positions take
+no cell.
+Positions all within about eight float32 rounding steps of one plane (1e-6 of the largest extent
+or coordinate) make no cells, as positions exactly in one plane do. The Editor's answer for such a
+nearly planar layer is unmeasured; the earlier builder made thin cells from it.
+
+The main comparison on macOS is 382/625, previously 378/625 there, with no lost matches; the Linux
+capture of the previous build was 379/625, the same values except one rendered pixel key. The four
 hull/shared-count keys of `additive tetrahedralized` and `unloaded` now match: the combined mesh
 has 87 inner and 34 hull cells, 121 as in the reference. `mesh_diagnostics.py` finds the
 combined capture's 87 inner cells equal to the empty-circumsphere set, with nothing missing or
-extra; Main keeps its 45. The 242 remaining strict differences are the unchanged 228 numeric-only
-keys and 14 functional keys: the twelve query-index keys and the two `occlusion at probes` rows.
-The diagnostic comparison is 48/298, previously 47/298. `combined mesh cells` matches, and
-`combined boundary seed 120` is now recorded. It still differs, like the other boundary seeds,
-because cell order differs. Managed controls compare the builder with a brute-force
-empty-circumsphere enumeration on two seeded layouts and on a flat cell whose circumsphere
-(radius about 2100) reaches far past the probes. A further control starts from a duplicate and a
-collinear probe. Light probe values do not depend on the OS: captures of the same build on macOS
-arm64 and Linux differ only in rendered pixel keys.
+extra; Main keeps its 45. The remaining strict differences are the unchanged 228 numeric-only
+keys, the twelve query-index keys and the two `occlusion at probes` rows (plus, on macOS only,
+rendered pixel keys). The diagnostic comparison is 48/298, previously 47/298, on both systems.
+`combined mesh cells` matches, and `combined boundary seed 120` is now recorded. It still
+differs, like the other boundary seeds, because cell order differs.
+
+Managed controls compare the builder with a brute-force empty-circumsphere enumeration on two
+seeded layouts and on a flat cell whose circumsphere (radius about 2100) reaches far past the
+probes, start from a duplicate and a collinear probe, and tile axis-aligned grids, grids rotated
+about one, two and three axes, grids offset to 37 and 100 units, and nearly planar layers. The
+predicates are checked at exact ties far from the origin. A 1152-probe grid builds in about 0.2 s
+axis-aligned and 0.1 s rotated (0.09 s and 0.07 s before; the scan over all cells per probe is
+unchanged).
 
 Cell, vertex and neighbour order remain Unbound's. The Editor's construction is an incremental
 Delaunay insertion with a deterministic shuffled insertion order. Its final cell order also
@@ -384,8 +400,8 @@ depends on how cells are replaced and traversed, which is not reproduced. The tw
 and the boundary-cell choice for combined probe 22 depend on that order.
 
 No index renumbering or layout-specific hull patch was admitted. Probe insertion order, cell
-vertex rotation, search-start choice and open-cell arithmetic all remain relevant to a general replacement for the combined mesh builder. The diagnostic layouts
-bound the current investigation; they do not establish general topology or degeneracy parity.
+vertex rotation, search-start choice and open-cell arithmetic all remain relevant to a general
+replacement for the combined mesh builder. The diagnostic layouts bound the current investigation; they do not establish general topology or degeneracy parity.
 
 Unity 6000.0 contracts checked for this work:
 
