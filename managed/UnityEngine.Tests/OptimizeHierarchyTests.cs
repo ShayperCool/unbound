@@ -553,12 +553,14 @@ namespace UnityEngine.Tests
         /// tests/projects/animoptimize jobUnanimated.Rig, jobRootDestroyed.Rig): the
         /// unanimated Leg moved after the avatar was built reads its default local position
         /// and a world position without the move of the unanimated Rig above it, while the
-        /// scene transforms keep their moves. Controls: a clip animating Leg gives its value;
-        /// the hand, animated, reads the clip under the moved Rig left out too.</summary>
+        /// scene transforms keep their moves. Controls: a clip animating Leg gives its value,
+        /// also when it animates its x alone (the other components keep the default pose:
+        /// Unbound's choice, unmeasured).</summary>
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void UnanimatedSkeletonNodesReadTheAvatarsDefaultPose(bool legAnimated)
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void UnanimatedSkeletonNodesReadTheAvatarsDefaultPose(bool legAnimated, bool onlyX)
         {
             var root = Rig(out var animator, out _);
             var rig = root.transform.Find("Rig");
@@ -567,7 +569,7 @@ namespace UnityEngine.Tests
             leg.localPosition = new Vector3(0f, 0f, 1f);
             var clip = Clip();
             if (legAnimated)
-                foreach (var (axis, value) in new[] { ("x", 0.5f), ("y", 0f), ("z", 0f) })
+                foreach (var (axis, value) in onlyX ? new[] { ("x", 0.5f) } : new[] { ("x", 0.5f), ("y", 0f), ("z", 0f) })
                     clip.SetCurve("Rig/Hips/Leg", typeof(Transform), "m_LocalPosition." + axis, AnimationCurve.Constant(0f, 1f, value));
             var graph = PlayJob(animator, clip, new HandJob { Hand = animator.BindStreamTransform(leg) });
             try
@@ -579,7 +581,7 @@ namespace UnityEngine.Tests
                 Assert.Equal(expected, HandJob.Read);
                 Near(hips.MultiplyPoint3x4(expected), HandJob.World);
                 Assert.Equal(new Vector3(0f, 3f, 0f), rig.localPosition);
-                Assert.Equal(legAnimated ? expected : new Vector3(0f, 0f, 1f), leg.localPosition);
+                if (!onlyX) Assert.Equal(legAnimated ? expected : new Vector3(0f, 0f, 1f), leg.localPosition);
             }
             finally
             {

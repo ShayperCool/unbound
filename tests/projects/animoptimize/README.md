@@ -42,7 +42,10 @@ evaluations of a job that read the handle (`jobReoptimize`) and the hand destroy
 `jobDestroyedRead`, the job reading it in every evaluation), then its parent `Spine` destroyed
 between the second and the third (`jobParentDestroyed`), or the hand destroyed with its animated
 grandparent `Hips` (`jobBranchDestroyed`) or with the whole skeleton under the unanimated top
-node `Rig`, raised by 3 before the handles are bound (`jobRootDestroyed`), between the first two. Graph controls on a rig without
+node `Rig`, raised by 3 before the handles are bound (`jobRootDestroyed`), between the first two;
+the same with `Animator.Rebind` after the raise (`jobRootRebound`) and with `Rig` raised before
+the Animator is first enabled (`jobRootInactive`); and the handles of the unanimated `Leg`, moved
+by 1 along z before they are bound (`jobUnanimated`). Graph controls on a rig without
 its controller, three evaluations of a manual graph each with the whole pose: the take as the
 output's source on `Rig`, `RigOpt`, `Human` and `HumanOpt` (`graphOnly.*`), and on the two
 humanoids under a job that does nothing (`graphJob.*`) or reads a stream handle of the left
@@ -114,8 +117,16 @@ What the Editor does (measured):
   world ones under the hand's parent (`jobDestroyedRead`). Its world values stay what the take
   gives the path when the parent, an animated ancestor or the top node is destroyed too
   (`jobParentDestroyed`, `jobBranchDestroyed`, `jobRootDestroyed`: the same records as
-  `jobDestroyedRead`). These three controls were recorded with the macOS Editor (two identical
-  captures); every other record of that capture matches the Linux reference within the
+  `jobDestroyedRead`).
+- A skeleton node that nothing animates holds the avatar's default pose in the stream, not its
+  scene values, and the stream leaves the scene transform alone: the moved `Leg` reads its
+  default local and world values while the transform keeps its move (`jobUnanimated`), and the
+  stream's world values below the raised `Rig` leave the raise out while the scene handle and
+  the transform include it, whether `Rig` was raised before the handles were bound, before
+  `Animator.Rebind` or before the Animator was first enabled (`jobRootDestroyed`,
+  `jobRootRebound`, `jobRootInactive`).
+- The controls `jobParentDestroyed` to `jobUnanimated` were recorded with the macOS Editor (two
+  identical captures); every other record of that capture matches the Linux reference within the
   comparator's tolerance, so the reference keeps its Linux records and adds these.
 - A manual graph plays the take on a rig without its controller, optimized or not, generic
   or humanoid, alone or under a job (`graphOnly.*`, `graphJob.*`). On the optimized humanoid

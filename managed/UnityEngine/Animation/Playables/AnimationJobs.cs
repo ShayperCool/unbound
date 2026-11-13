@@ -120,6 +120,7 @@ namespace Unbound.Runtime.Playables
         }
 
         readonly Dictionary<Transform, int> m_DefaultNodes = new Dictionary<Transform, int>(ReferenceEqualityComparer.Instance);
+        readonly List<Transform> m_DefaultNodesAlive = new List<Transform>();
         Unbound.Runtime.Humanoid.AvatarConstant m_DefaultNodesFor;
 
         /// <summary>The generic avatar skeleton whose default pose the stream gives the nodes
@@ -140,7 +141,9 @@ namespace Unbound.Runtime.Playables
 
         /// <summary>The node of the generic avatar's skeleton at a transform's path below the
         /// Animator (-1: none, or the Animator's own transform), found once per transform and
-        /// avatar while the transform is alive.</summary>
+        /// avatar while the transform is alive, and again after the hierarchy is optimized or
+        /// deoptimized. A transform moved to another parent at run time keeps the node of its
+        /// path when it was found (unmeasured).</summary>
         int DefaultNode(Transform transform)
         {
             var skeleton = DefaultSkeleton();
@@ -216,7 +219,12 @@ namespace Unbound.Runtime.Playables
         internal void HierarchyChanged()
         {
             StreamOwned.Clear();
-            m_DefaultNodes.Clear();
+            // Paths change with the hierarchy; destroyed transforms keep the nodes they were found at.
+            m_DefaultNodesAlive.Clear();
+            foreach (var transform in m_DefaultNodes.Keys)
+                if (transform != null) m_DefaultNodesAlive.Add(transform);
+            foreach (var transform in m_DefaultNodesAlive) m_DefaultNodes.Remove(transform);
+            m_DefaultNodesAlive.Clear();
             m_NodeChannelsFor = -1;
             m_OffSkeletonFor = null;
             for (int i = 0; i < Transforms.Count; i++)
@@ -485,22 +493,24 @@ namespace Unbound.Runtime.Playables
 
         // ------------------------------------------------------------------ transforms in the stream
 
-        /// <summary>A transform's local position in the stream: its channel's value once a clip
-        /// or a job set it, else the generic avatar's default pose for a node of its skeleton
-        /// (AnimatorHandles.DefaultLocal), else the channel's bound value or the scene's. A null
-        /// <paramref name="t"/> reads the channel alone.</summary>
+        /// <summary>A transform's local position in the stream: each component its channel's
+        /// value once a clip or a job set it, else the generic avatar's default pose for a node of
+        /// its skeleton (AnimatorHandles.DefaultLocal), else the channel's bound value or the
+        /// scene's. A null <paramref name="t"/> reads the channel alone.</summary>
         internal Vector3 LocalPosition(Transform t, int channel)
         {
             using var engine = MainThreadCheck.Engine();
-            if ((channel < 0 || !Stream.Animated[channel]) && Handles.DefaultLocal(t, out var x)) return new Vector3(x.t.x, x.t.y, x.t.z);
-            return channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localPosition;
+            var v = channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localPosition;
+            return Unset(channel, 3) && Handles.DefaultLocal(t, out var x) ? Defaulted(v, channel, x.t) : v;
         }
 
-        /// <summary>A transform's local rotation in the stream (see <see cref="LocalPosition"/>).</summary>
+        /// <summary>A transform's local rotation in the stream (see <see cref="LocalPosition"/>):
+        /// the default pose's only when none of its four channels is set.</summary>
         internal Quaternion LocalRotation(Transform t, int channel)
         {
             using var engine = MainThreadCheck.Engine();
-            if ((channel < 0 || !Stream.Animated[channel]) && Handles.DefaultLocal(t, out var x)) return Unbound.Runtime.Humanoid.AnimatorHuman.Rotation(x.q);
+            if (!AnySet(channel, 4) && Handles.DefaultLocal(t, out var x))
+                return Unbound.Runtime.Humanoid.AnimatorHuman.Rotation(x.q);
             return channel >= 0 ? QuaternionMath.Normalize(AnimationEvaluation.Q(Stream.Values, channel)) : t.localRotation;
         }
 
@@ -508,8 +518,36 @@ namespace Unbound.Runtime.Playables
         internal Vector3 LocalScale(Transform t, int channel)
         {
             using var engine = MainThreadCheck.Engine();
-            if ((channel < 0 || !Stream.Animated[channel]) && Handles.DefaultLocal(t, out var x)) return new Vector3(x.s.x, x.s.y, x.s.z);
-            return channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localScale;
+            var v = channel >= 0 ? new Vector3(Stream.Values[channel], Stream.Values[channel + 1], Stream.Values[channel + 2]) : t.localScale;
+            return Unset(channel, 3) && Handles.DefaultLocal(t, out var x) ? Defaulted(v, channel, x.s) : v;
+        }
+
+        /// <summary>Whether any of a value's <paramref name="width"/> channels is unset in the
+        /// stream (all of them without a channel).</summary>
+        bool Unset(int channel, int width)
+        {
+            if (channel < 0) return true;
+            for (int i = 0; i < width; i++)
+                if (!Stream.Animated[channel + i]) return true;
+            return false;
+        }
+
+        /// <summary>Whether a clip or a job set any of a value's <paramref name="width"/> channels in the stream.</summary>
+        bool AnySet(int channel, int width)
+        {
+            if (channel < 0) return false;
+            for (int i = 0; i < width; i++)
+                if (Stream.Animated[channel + i]) return true;
+            return false;
+        }
+
+        /// <summary>A vector with the default pose's components where the stream has not set them.</summary>
+        Vector3 Defaulted(Vector3 v, int channel, Unbound.Runtime.Humanoid.F4 pose)
+        {
+            if (channel < 0 || !Stream.Animated[channel]) v.x = pose.x;
+            if (channel < 0 || !Stream.Animated[channel + 1]) v.y = pose.y;
+            if (channel < 0 || !Stream.Animated[channel + 2]) v.z = pose.z;
+            return v;
         }
 
         /// <summary>A transform's local TRS as the stream has it (scene values where it does not).</summary>
