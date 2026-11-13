@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/lightcolor/run.py gate"
+  ],
+  "summary": "lightcolor: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Math/Mathf.cs",
+    "managed/UnityEngine/Graphics/Lighting.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpData.cs"
+  ]
+}
