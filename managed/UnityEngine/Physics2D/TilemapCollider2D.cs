@@ -87,6 +87,8 @@ namespace UnityEngine.Tilemaps
         {
             var map = Map;
             if (map == null) return;
+            // One trace per sprite in a pass: texels cannot change while it runs.
+            m_PassOutlines.Clear();
             if (!m_Processed || map.m_ShapeChanges.Count > m_MaximumTileChangeCount)
             {
                 m_Cells.Clear();
@@ -100,10 +102,14 @@ namespace UnityEngine.Tilemaps
                     if (map.m_Cells.TryGetValue(p, out var cell)) Outline(map, p, cell);
                 }
             }
+            m_PassOutlines.Clear();
             m_Processed = true;
             map.m_ShapeChanges.Clear();
             ShapeChanged();
         }
+
+        /// <summary>Each sprite's collider outline, during one pass over the cells.</summary>
+        readonly Dictionary<Sprite, Vector2[][]> m_PassOutlines = new Dictionary<Sprite, Vector2[][]>();
 
         /// <summary>The collider outlines of one cell, around its center before its transform:
         /// the cell's shape (Grid), or the sprite's collider outline, else its rectangle (Sprite).</summary>
@@ -120,7 +126,8 @@ namespace UnityEngine.Tilemaps
                 var sprite = cell.Sprite;
                 if (sprite == null) return;
                 // The physics shape, else the traced outline (measured: tests/projects/spriteoutlines).
-                foreach (var shape in sprite.ColliderOutline())
+                if (!m_PassOutlines.TryGetValue(sprite, out var traced)) m_PassOutlines[sprite] = traced = sprite.ColliderOutline();
+                foreach (var shape in traced)
                     if (shape.Length >= 3) outlines.Add(shape);
                 if (outlines.Count == 0)
                 {
