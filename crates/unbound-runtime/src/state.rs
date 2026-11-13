@@ -46,6 +46,10 @@ pub struct RuntimeState {
     audio_importer: RwLock<AudioImporter>,
     models: RwLock<HashMap<Guid, Arc<unbound_assets::ImportedModel>>>,
     pub audio: crate::audio::Engine,
+    /// The atlases the project's Sprite Packer mode packs for Play mode.
+    pub play_mode_atlases: Option<unbound_project::PlayModeAtlases>,
+    /// Those atlases packed (on first use, in Play mode).
+    atlases: OnceLock<crate::sprite_atlases::AtlasSet>,
 }
 
 /// What stays of an imported texture after its upload.
@@ -87,6 +91,11 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             resources.entry(key).or_default().push(asset.guid);
         }
     }
+    let play_mode_atlases = project.settings.play_mode_atlases(
+        db.iter()
+            .filter(|asset| !asset.is_folder)
+            .map(|asset| asset.path.as_str()),
+    );
     let state = RuntimeState {
         project_root: project.root.clone(),
         unity_data: project.install.data.clone(),
@@ -132,6 +141,8 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             true,
             unbound_compat::AudioOutputRules::for_version(project.version),
         ),
+        play_mode_atlases,
+        atlases: OnceLock::new(),
     };
     if STATE.set(state).is_err() {
         bail!("the runtime state is already initialized");
@@ -637,12 +648,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 layer: Option<usize>,
             }
             let r: Request = serde_json::from_str(request)?;
-            let guid = Guid::parse(&r.guid).context("bad guid")?;
-            let asset = s.db.by_guid(guid).context("no such asset")?;
-            let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
-            let texture = s
-                .imports
-                .get_or_import(&texture_importer(s), &asset.file, &meta)?;
+            let texture = imported_texture(s, &r.guid)?;
             let mip = match r.layer {
                 // Without a layer: the n-th stored level, as 2D textures always asked.
                 None => texture.mips.get(r.mip),
@@ -662,12 +668,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 guid: String,
             }
             let r: Request = serde_json::from_str(request)?;
-            let guid = Guid::parse(&r.guid).context("bad guid")?;
-            let asset = s.db.by_guid(guid).context("no such asset")?;
-            let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
-            let texture = s
-                .imports
-                .get_or_import(&texture_importer(s), &asset.file, &meta)?;
+            let texture = imported_texture(s, &r.guid)?;
             let blocks = texture
                 .blocks
                 .as_ref()
@@ -828,6 +829,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             })
             .to_string())
         }
+        "sprite-atlases" => Ok(crate::sprite_atlases::to_json(page_set(s)).to_string()),
         "texture-sprites" => {
             #[derive(Deserialize)]
             struct Request {
@@ -1454,8 +1456,14 @@ fn block_code(format: unbound_assets::texture::BlockFormat, srgb: bool) -> i32 {
 }
 
 /// Imports an asset texture (through the import cache) into a renderer handle.
+/// Imports an asset texture, or a sprite atlas page (`atlas:<guid>:<page>`), into a renderer
+/// handle.
 pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let s = state();
+    if let Some(page) = guid.strip_prefix(crate::sprite_atlases::PAGE_KEY_PREFIX) {
+        let texture = crate::sprite_atlases::page(page_set(s), page)?;
+        return upload_imported(s, handle, texture, None, 0);
+    }
     let guid = Guid::parse(guid).context("bad guid")?;
     let asset = s.db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
@@ -1471,6 +1479,47 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         },
     );
     let sprite_count = s.textures.read().unwrap()[&guid].sprites.len();
+    upload_imported(s, handle, texture, Some((&asset.file, &meta)), sprite_count)
+}
+
+/// An imported texture by its asset GUID, or a sprite atlas page by its key.
+fn imported_texture(
+    s: &RuntimeState,
+    key: &str,
+) -> Result<Arc<unbound_assets::texture::ImportedTexture>> {
+    if let Some(page) = key.strip_prefix(crate::sprite_atlases::PAGE_KEY_PREFIX) {
+        return Ok(Arc::new(crate::sprite_atlases::page(page_set(s), page)?));
+    }
+    let guid = Guid::parse(key).context("bad guid")?;
+    let asset = s.db.by_guid(guid).context("no such asset")?;
+    let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+    s.imports.get_or_import(&texture_importer(s), &asset.file, &meta)
+}
+
+/// The Play-mode sprite atlases, packed on first use.
+fn page_set(s: &RuntimeState) -> &crate::sprite_atlases::AtlasSet {
+    s.atlases.get_or_init(|| {
+        crate::sprite_atlases::pack_all(
+            s.play_mode_atlases
+                .as_ref()
+                .map(|a| a.paths.as_slice())
+                .unwrap_or_default(),
+            &s.db,
+            &texture_importer(s),
+            &s.imports,
+        )
+    })
+}
+
+/// Uploads an imported texture (`source`: its file and `.meta`, for an asset) to a handle.
+fn upload_imported(
+    s: &RuntimeState,
+    handle: u64,
+    mut texture: unbound_assets::texture::ImportedTexture,
+    source: Option<(&std::path::Path, &std::path::Path)>,
+    sprite_count: usize,
+) -> Result<ImportedTextureInfo> {
+    let importer = texture_importer(s);
     if let Some(why) = &texture.approximation {
         static WARNED: std::sync::Mutex<std::collections::BTreeSet<String>> =
             std::sync::Mutex::new(std::collections::BTreeSet::new());
@@ -1479,7 +1528,9 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             .unwrap_or_else(|e| e.into_inner())
             .insert(why.clone())
         {
-            tracing::warn!("Unbound: {why} (first: {})", asset.file.display());
+            let first =
+                source.map_or_else(|| texture.name.clone(), |(f, _)| f.display().to_string());
+            tracing::warn!("Unbound: {why} (first: {first})");
         }
     }
     let texture_format = texture.reported_format().unwrap_or(0);
@@ -1488,7 +1539,8 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         unbound_assets::texture::TextureFormat::Rgba32F => {
             // The importer retains float32 working pixels for both HDR storage formats.
             // Honour the target's explicit RGBAFloat override instead of narrowing it to Half.
-            let document = unbound_yaml::parse_value(&std::fs::read_to_string(&meta)?)?;
+            let meta = source.context("a floating-point atlas page")?.1;
+            let document = unbound_yaml::parse_value(&std::fs::read_to_string(meta)?)?;
             let settings = unbound_assets::meta::importer(&document, "TextureImporter");
             match unbound_assets::texture::platform_format(settings, &importer.build_target) {
                 Some(20) => 9, // TextureImporterFormat.RGBAFloat -> TexturePacket RGBAFloat.

@@ -1680,6 +1680,29 @@ pub fn import_pixels(
     }
 }
 
+/// RGBA8 texels (rows bottom-up) resized with the importer's Mitchell filter, as the Editor
+/// scales a variant sprite atlas's pages from its master's (matches the Unity 6000.0.71f1
+/// Editor, tests/projects/spriteatlas).
+pub fn resize_pixels(
+    width: u32,
+    height: u32,
+    texels: &[u8],
+    to_width: u32,
+    to_height: u32,
+) -> Vec<u8> {
+    let mut image = Image {
+        width,
+        height,
+        format: TextureFormat::Rgba8,
+        data: texels.to_vec(),
+    };
+    // The filter runs on the image as decoded (rows top-down).
+    image.flip_rows();
+    let mut resized = resize::mitchell(&image, to_width, to_height);
+    resized.flip_rows();
+    resized.data
+}
+
 /// The imported mip chain of a 2D texture (just its top level without mipmaps).
 fn mip_chain(image: Image, settings: &TextureSettings) -> Vec<MipLevel> {
     mip_chain_with_columns(image, settings, None)

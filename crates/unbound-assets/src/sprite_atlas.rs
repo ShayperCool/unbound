@@ -233,6 +233,13 @@ fn compare_texture_only(a: &PackSprite, b: &PackSprite) -> Ordering {
     })
 }
 
+/// The sprites by texture, as `SpriteAtlas.GetSprites` lists an atlas's packed sprites.
+pub fn texture_order(sprites: &[PackSprite]) -> Vec<usize> {
+    let mut order: Vec<usize> = (0..sprites.len()).collect();
+    order.sort_by(|&a, &b| compare_texture_only(&sprites[a], &sprites[b]));
+    order
+}
+
 /// FNV-1a, 32 bits.
 fn fnv1a(text: &str) -> u32 {
     text.bytes()
@@ -1323,6 +1330,44 @@ mod tests {
             assert_eq!(right[3], if dilation { 0 } else { texels[7] });
             // Beyond 7 texels nothing is filled.
             assert_eq!(&pixels[9 * 4..10 * 4], &[0, 0, 0, 0]);
+        }
+    }
+
+    #[test]
+    fn empty_and_degenerate_meshes_pack() {
+        // No triangles, a degenerate (zero-area) triangle and an index past the vertices: the
+        // masks are empty (a Tight atlas) or the covered box (none), and nothing panics.
+        let vertices: &[[f32; 2]] = &[[0.0, 0.0], [0.1, 0.0], [0.2, 0.0]];
+        let base = PackSprite {
+            name: "E",
+            texture_guid: 1,
+            texture: 0,
+            secondary_hash: 0,
+            texture_size: [16, 16],
+            rect: [2.0, 2.0, 8.0, 8.0],
+            uv_transform: [10.0, 4.0, 10.0, 4.0],
+            vertices,
+            indices: &[],
+        };
+        let sprites = [
+            base,
+            PackSprite {
+                name: "D",
+                indices: &[0, 1, 2],
+                ..base
+            },
+            PackSprite {
+                name: "X",
+                indices: &[0, 1, 9],
+                ..base
+            },
+        ];
+        for tight in [false, true] {
+            let layout = layout(&sprites, &settings(32, 2, true, tight)).unwrap();
+            assert_eq!(layout.pages, [[32, 32]]);
+            let texels = vec![255u8; 16 * 16 * 4];
+            let pixels = layout.page_pixels(0, &settings(32, 2, true, tight), |_| &texels);
+            assert_eq!(pixels.len(), 32 * 32 * 4);
         }
     }
 }
