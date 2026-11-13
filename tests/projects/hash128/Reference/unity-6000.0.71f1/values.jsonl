@@ -1,0 +1,90 @@
+{"k":"default","v":"00000000000000000000000000000000 False"}
+{"k":"ctor_u32","v":"01000000020000000300000004000000 True"}
+{"k":"ctor_u64","v":"efcdab89674523011032547698badcfe True"}
+{"k":"parse","v":"0123456789abcdef0011223344556677 True"}
+{"k":"parse_short","v":"ab000000000000000000000000000000 True"}
+{"k":"parse_upper","v":"0123456789abcdef0011223344556677 True"}
+{"k":"string_empty","v":"1909f56bfc062723c751e8b465ee728b True"}
+{"k":"string_null","v":"1909f56bfc062723c751e8b465ee728b True"}
+{"k":"string_abc","v":"67c93775f715ab8ab01178caf86713c6 True"}
+{"k":"string_non_ascii","v":"6c7b655479e40b6686d4c4f626d8adcc True"}
+{"k":"string_len_1","v":"bdc9bba09181101a922a4161f0584275 True"}
+{"k":"string_len_3","v":"c8209dfe945aa5e1719e3fcebceb11e3 True"}
+{"k":"string_len_4","v":"7ba0f73b79c0d5550d9b25005bc6f9ce True"}
+{"k":"string_len_7","v":"7fb9c9e706fc5dd9edc2f373778fdc11 True"}
+{"k":"string_len_8","v":"ddcc4cdcbcbd578de28caeaed3dec142 True"}
+{"k":"string_len_9","v":"0410e1c5bbc4d8f9a6762fb830238d68 True"}
+{"k":"string_len_12","v":"0d41ea0babeb8933a3fec794c905b088 True"}
+{"k":"string_len_15","v":"bd0722ec19d4404d7f0084781bdb0a06 True"}
+{"k":"string_len_16","v":"e20ffd5b3fef6443eece35e33fda5c1b True"}
+{"k":"string_len_17","v":"ee4f8605fde45d4e15ff108f034def5f True"}
+{"k":"string_len_31","v":"10affe15f982f6eb861b2ea448ee8c36 True"}
+{"k":"string_len_32","v":"aedfb699f6b23f83ae008191f917aad2 True"}
+{"k":"string_len_33","v":"ecacffad8f192e72594889287a94a65a True"}
+{"k":"string_len_48","v":"65ed42fb0af2e9bd20b1010c1e7e5475 True"}
+{"k":"string_len_63","v":"db2d90e2bb29fe96ca501c9019a6ab27 True"}
+{"k":"string_len_95","v":"bee47788010c2c6bdf7a94d216c6b18a True"}
+{"k":"string_len_96","v":"45d292db8a0e7f2fe855845790f7cc33 True"}
+{"k":"string_len_191","v":"12a2f5933428b6c2007ac27743e3d5b5 True"}
+{"k":"string_len_192","v":"1ad3b6e7f491c688e3bd79359767b36f True"}
+{"k":"string_len_193","v":"56b2737a8079e5aeadbc0a0e45efac1c True"}
+{"k":"string_len_287","v":"44a8ad4fa7c2e7378ef491db6b53e008 True"}
+{"k":"string_len_288","v":"262baf72bf7b58227a99df7bf78e7ece True"}
+{"k":"string_len_300","v":"3791176fa6d12b6dadb6b35b118878fe True"}
+{"k":"string_len_1000","v":"def124550fd82aea1af2f7fc9225703f True"}
+{"k":"int_0","v":"4456b8997d55fcac089bc6f50ef1e614 True"}
+{"k":"int_1","v":"23f040b61df81bda25adefc5f5d1db9b True"}
+{"k":"int_42","v":"f7e061de9ba090e9ea4e88f0dac81763 True"}
+{"k":"int_-1","v":"cd3b9c6912912a8869cc14048c65de21 True"}
+{"k":"int_-2147483648","v":"520821f6e123b1236a71d809b3019bde True"}
+{"k":"int_2147483647","v":"3e9a915570726d97c11fb1721d700374 True"}
+{"k":"float_00000000","v":"4456b8997d55fcac089bc6f50ef1e614 True"}
+{"k":"float_80000000","v":"520821f6e123b1236a71d809b3019bde True"}
+{"k":"float_3fc00000","v":"07c0e79dedca9deedb00074411361b9d True"}
+{"k":"float_c0500000","v":"831832680dff414fbcc14aaf66c78534 True"}
+{"k":"float_ffc00000","v":"100f3b37abcae7a4fdbd883ab11b7e25 True"}
+{"k":"float_7f800000","v":"1db9f5405f7b4c125479f37bac28426d True"}
+{"k":"float_0da24260","v":"c3925493d9f3de5b4e9d4e95699bc208 True"}
+{"k":"int_array","v":"56423e6313a52cde11787ff3869a0464 True"}
+{"k":"int_array_empty","v":"1909f56bfc062723c751e8b465ee728b True"}
+{"k":"int_array_range","v":"48b382045999326aa9439a043a9cd7fe True"}
+{"k":"int_array_range_empty","v":"1909f56bfc062723c751e8b465ee728b True"}
+{"k":"int_array_range_bad","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: Bad start/count arguments (start:90 count:20)"}
+{"k":"int_array_range_negative","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: Bad start/count arguments (start:-1 count:2)"}
+{"k":"byte_array","v":"bae5caf293ebff5dc1717c5abd7aeee0 True"}
+{"k":"byte_array_191","v":"a6e0a24a31ccf97a4b0d8c3984fd1655 True"}
+{"k":"byte_array_192","v":"dd379f33639b3f9e5af92a51bf9e4e2c True"}
+{"k":"vector_array","v":"5043c8a2058f9b568a9f514753623cfa True"}
+{"k":"struct_array","v":"147cae3613b85f1bcc19dc3e1422f27d True"}
+{"k":"non_blittable_array","v":"throws ArgumentException: Array passed to Compute must be blittable.\nWithReference.s is not blittable because it is not of value type (System.String)\n"}
+{"k":"int_list","v":"56423e6313a52cde11787ff3869a0464 True"}
+{"k":"int_list_range","v":"48b382045999326aa9439a043a9cd7fe True"}
+{"k":"int_list_range_bad","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: Bad start/count arguments (start:0 count:101)"}
+{"k":"native_array","v":"56423e6313a52cde11787ff3869a0464 True"}
+{"k":"native_array_range","v":"48b382045999326aa9439a043a9cd7fe True"}
+{"k":"native_array_range_bad","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: Bad start/count arguments (start:99 count:2)"}
+{"k":"ref_struct","v":"1ceac8c33e741efe01e0e181323fdb3f True"}
+{"k":"ref_matrix","v":"c80ff22c1c0b46874291c2c8c52ced73 True"}
+{"k":"pointer_0","v":"1909f56bfc062723c751e8b465ee728b True"}
+{"k":"pointer_5","v":"cbb6226e7cc3d0f9c0df7d3344ce05a6 True"}
+{"k":"pointer_250","v":"20de6e11fe22c76701eb687afa248951 True"}
+{"k":"append_chain","v":"cb144f3bb0554008ea164a9a919118be True"}
+{"k":"append_seeded_string","v":"203a9be8515a926695dadaf4165a019f True"}
+{"k":"append_seeded_int","v":"d71205fdd407137023c95a846e89b818 True"}
+{"k":"append_seeded_long","v":"5aabc23e6b317a9a595f55fdfa38b907 True"}
+{"k":"append_empty_string","v":"8a6c7ed7fc18f4b85589ee5079db92ab True"}
+{"k":"append_twice_vs_once","v":"4d57ba4a6af9b7e031121c7c01f44973 True"}
+{"k":"append_native","v":"855001476f8b157673e4c583fece1051 True"}
+{"k":"append_pointer","v":"5bc5f441b3615e9e3ca0ba8d49ac63fa True"}
+{"k":"append_non_blittable","v":"throws ArgumentException: Array passed to Append must be blittable.\nWithReference.s is not blittable because it is not of value type (System.String)\n"}
+{"k":"append_list_bad","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: Bad start/count arguments (start:50 count:51)"}
+{"k":"utilities_append_hash","v":"48b3861431166afcf4da8efcfbaa5c71 True"}
+{"k":"utilities_vector","v":"f27b03ef8185b44cafae838d96e86430 True"}
+{"k":"utilities_matrix","v":"825690a5f3c9e7daad6243223e933a31 True"}
+{"k":"utilities_struct","v":"4d06d32d5a09d23593a5a8df32224f78 True"}
+{"k":"utilities_bytes","v":"902343abdf2a4deab1444df626e4f9a4 True"}
+{"k":"utilities_bytes_empty","v":"throws IndexOutOfRangeException: Index was outside the bounds of the array."}
+{"k":"unsafe_hash128","v":"e0e7e1d1652ebba8f4db08a7ab80b915 True"}
+{"k":"unsafe_halves","v":"b0d74ffa5af9b55f4acc101bb185a95d True"}
+{"k":"compare","v":"-1 True False True -1364706738"}
+{"k":"complete","v":true}

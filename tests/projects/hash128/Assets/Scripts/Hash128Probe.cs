@@ -77,7 +77,7 @@ public class Hash128Probe : MonoBehaviour
         foreach (var v in new[] { 0, 1, 42, -1, int.MinValue, int.MaxValue })
             Try("int_" + v, () => Hash128.Compute(v));
         foreach (var v in new[] { 0f, -0f, 1.5f, -3.25f, float.NaN, float.PositiveInfinity, 1e-30f })
-            Try("float_" + v.ToString("R"), () => Hash128.Compute(v));
+            Try("float_" + BitConverter.SingleToInt32Bits(v).ToString("x8"), () => Hash128.Compute(v));
 
         var ints = new int[100];
         for (int i = 0; i < ints.Length; i++) ints[i] = i * 31 - 7;
