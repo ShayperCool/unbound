@@ -405,6 +405,10 @@ namespace Unbound.Runtime
         /// the renderer-style determinant correction until recorded.</summary>
         internal static bool ImmediateMeshKeepsWinding => RenderingMeasured;
 
+        /// <summary>Device-specific texture transfers measured by textureformats on NVIDIA.
+        /// Other releases retain the earlier framebuffer conversion.</summary>
+        internal static bool DeviceTextureReadback => RenderingMeasured;
+
         /// <summary>A render pass subpass with several color outputs of which exactly one clears
         /// (its load action, first use in the pass) clears every output it binds to that color on
         /// the Editor's OpenGL Core device; two or more clear each to its own color and loading

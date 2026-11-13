@@ -391,7 +391,7 @@ mod tests {
     /// The managed side pins the same version and refuses every other version.
     #[test]
     fn the_filter_descriptor_layout_is_native_api_61() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 68);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 69);
         assert_eq!(
             [
                 filter_kind::LOWPASS,

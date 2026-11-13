@@ -431,6 +431,16 @@ namespace UnityEngine
                 Debug.LogError($"Unbound: ReadPixels cannot read the integer render texture '{active.name}' ({active.graphicsFormat}); the texture is left unchanged.");
                 return;
             }
+            bool conversion = Compat.DeviceTextureReadback && !GraphicsDeviceProfile.Current.FramebufferReadback;
+            if (conversion && active != null && !SystemInfo.IsFormatSupported(active.graphicsFormat, GraphicsFormatUsage.ReadPixels))
+            {
+                Debug.LogError($"ReadPixels is unsupported for {active.graphicsFormat}; the texture is left unchanged.");
+                return;
+            }
+            int channels = active == null ? 4 : (int)GraphicsFormatUtility.GetComponentCount(active.graphicsFormat);
+            bool signedTransfer = Compat.DeviceTextureReadback && !conversion && active != null
+                && GraphicsFormatUtility.IsSNormFormat(active.graphicsFormat);
+            int componentBits = signedTransfer ? (int)GraphicsFormatUtility.GetBlockSize(active.graphicsFormat) * 8 / Math.Max(1, channels) : 0;
             var bytes = level ? Native.ReadTexture(activeHandle, mip, layer, x0, y0, w, h, true, currentAttachment: true)
                 : Native.ReadPixels(activeHandle, x0, y0, w, h, true);
             if (bytes == null)
@@ -455,8 +465,20 @@ namespace UnityEngine
                             int tx = destX + (x0 - (int)source.x) + col;
                             var c = new Color(f[0], f[1], f[2], f[3]);
                             f += 4;
+                            if (conversion)
+                                for (int k = channels; k < 4; k++) c[k] = 1f;
                             if (eightBit)
-                                for (int k = 0; k < 4; k++) c[k] = (int)(Mathf.Clamp01(c[k]) * 255f + 0.5f) * (1f / 255f);
+                                for (int k = 0; k < 4; k++)
+                                {
+                                    float value = c[k];
+                                    if (signedTransfer && k < channels)
+                                    {
+                                        float maximum = (1 << (componentBits - 1)) - 1;
+                                        float stored = MathF.Round(value * maximum);
+                                        value = (2f * stored + 1f) / ((1 << componentBits) - 1);
+                                    }
+                                    c[k] = (int)(Mathf.Clamp01(value) * 255f + 0.5f) * (1f / 255f);
+                                }
                             Write(ty * m_Width + tx, c);
                         }
                     }
@@ -474,7 +496,8 @@ namespace UnityEngine
         /// (tests/projects/textureformats .read, .read64): R16, RG32, ARGB64 and ARGB2101010 targets
         /// read into RGBAFloat at 8 bits, ARGB64 into RGBA64 at 16, float targets at full precision.</summary>
         bool ReadsAsBytes(GraphicsFormat source) =>
-            !GraphicsFormatUtility.IsHDRFormat(source) && !GraphicsFormatUtility.IsIEEE754Format(source)
+            (!Compat.DeviceTextureReadback || GraphicsDeviceProfile.Current.FramebufferReadback || AsyncReadbacks.EightBit(source))
+            && !GraphicsFormatUtility.IsHDRFormat(source) && !GraphicsFormatUtility.IsIEEE754Format(source)
             && source != GraphicsFormatOf();
 
         public Rect[] PackTextures(Texture2D[] textures, int padding, int maximumAtlasSize, bool makeNoLongerReadable) =>
@@ -1027,6 +1050,10 @@ namespace Unbound.Runtime
         /// between them need it).</summary>
         internal static int GpuNormFormat(UnityEngine.Experimental.Rendering.GraphicsFormat format) => format switch
         {
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R16_SNorm => 74,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_SNorm => 75,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_SNorm => 76,
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16_SNorm => 77,
             UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm => GpuR16UNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_UNorm => GpuRG16UNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_UNorm => GpuRGBA16UNorm,

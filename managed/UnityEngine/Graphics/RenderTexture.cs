@@ -426,6 +426,7 @@ namespace UnityEngine
         /// signed; -1 for any other format.</summary>
         internal static int IntegerPacketFormat(GraphicsFormat f)
         {
+            if (f == GraphicsFormat.A2B10G10R10_UIntPack32) return 73;
             if (!GraphicsFormatUtility.IsIntegerFormat(f) || GraphicsFormatUtility.IsPackedFormat(f)) return -1;
             uint n = GraphicsFormatUtility.GetComponentCount(f), size = GraphicsFormatUtility.GetBlockSize(f);
             if (n == 0 || n > 4 || size % n != 0) return -1;

@@ -71,6 +71,20 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void SignedReadbacksKeepNegativeEndpointsAndClampOnlyWhenRequested()
+        {
+            var texels = new byte[16];
+            float[] input = { -1f, -0.25f, 0f, 1f };
+            for (int i = 0; i < 4; i++) BitConverter.GetBytes(input[i]).CopyTo(texels, i * 4);
+            var format = ReadbackFormat.Of(GraphicsFormat.R16G16B16A16_SNorm);
+            Assert.Equal("018000e00000ff7f", Hex(format.Encode(texels, 1, true)));
+            Assert.Equal("000000000000ff7f", Hex(format.Encode(texels, 1, true, clampNegative: true)));
+            Assert.Equal("0180", Hex(ReadbackFormat.Of(GraphicsFormat.R16_SNorm).Encode(texels, 1, true)));
+            Assert.Equal("018000e00000", Hex(ReadbackFormat.Of(GraphicsFormat.R16G16B16_SNorm).Encode(texels, 1, true)));
+            Assert.Equal(73, RenderTexture.IntegerPacketFormat(GraphicsFormat.A2B10G10R10_UIntPack32));
+        }
+
+        [Fact]
         public void ReadbacksIntoSixteenBitFormatsKeepTheirSteps()
         {
             // Four floats per texel, as the renderer reads a texture: 8091 / 65535 and 1.

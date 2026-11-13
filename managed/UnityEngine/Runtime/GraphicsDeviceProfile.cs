@@ -23,6 +23,7 @@ namespace Unbound.Runtime
         /// <summary>UNITY_REVERSED_Z: depth 1 is near.</summary>
         internal readonly bool ReversedZ;
         internal readonly bool UsesLoadStoreActions;
+        internal readonly bool FramebufferReadback;
         internal readonly bool SupportsMultisampleResolveStencil;
         internal readonly bool SupportsMultisampleAutoResolve;
         internal readonly int ConstantBufferOffsetAlignment;
@@ -41,9 +42,10 @@ namespace Unbound.Runtime
         GraphicsDeviceProfile(GraphicsDeviceType type, bool uvStartsAtTop, bool reversedZ, bool loadStore,
             bool resolveStencil, bool autoResolve, int cbufferAlignment, RenderingThreadingMode threading,
             GraphicsFormat depthStencil, BatchBufferTarget batchTarget, GraphicsCapsTable.Device caps,
-            System.Func<MachineIdentity.Gpu> identity)
+            System.Func<MachineIdentity.Gpu> identity, bool framebufferReadback)
         {
             Type = type;
+            FramebufferReadback = framebufferReadback;
             UVStartsAtTop = uvStartsAtTop;
             ReversedZ = reversedZ;
             UsesLoadStoreActions = loadStore;
@@ -61,13 +63,13 @@ namespace Unbound.Runtime
             GraphicsDeviceType.OpenGLCore, uvStartsAtTop: false, reversedZ: false, loadStore: false,
             resolveStencil: false, autoResolve: false, cbufferAlignment: 256,
             RenderingThreadingMode.Direct, GraphicsFormat.D24_UNorm_S8_UInt,
-            BatchBufferTarget.ConstantBuffer, GraphicsCapsTable.OpenGLCore, MachineIdentity.ReadOpenGl);
+            BatchBufferTarget.ConstantBuffer, GraphicsCapsTable.OpenGLCore, MachineIdentity.ReadOpenGl, framebufferReadback: true);
 
         internal static readonly GraphicsDeviceProfile Vulkan = new GraphicsDeviceProfile(
             GraphicsDeviceType.Vulkan, uvStartsAtTop: true, reversedZ: true, loadStore: true,
             resolveStencil: true, autoResolve: true, cbufferAlignment: 64,
             RenderingThreadingMode.SingleThreaded, GraphicsFormat.D32_SFloat_S8_UInt,
-            BatchBufferTarget.RawBuffer, GraphicsCapsTable.Vulkan, VulkanIdentity.Read);
+            BatchBufferTarget.RawBuffer, GraphicsCapsTable.Vulkan, VulkanIdentity.Read, framebufferReadback: false);
 
         /// <summary>The run's device: OpenGL Core until the host says (tests, tools).</summary>
         internal static GraphicsDeviceProfile Current { get; private set; } = OpenGLCore;

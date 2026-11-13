@@ -218,6 +218,12 @@ pub mod texture_format {
     pub const ETC_BC7_FIRST: i32 = 69;
     pub const ETC_BC7_OFFSET: i32 = ETC_BC7_FIRST - ETC_RGB_COLOR;
     pub const ETC_LAST: i32 = 72;
+    pub const RGB10A2_UINT: i32 = 73;
+    pub const R16_SNORM: i32 = 74;
+    pub const RG16_SNORM: i32 = 75;
+    pub const RGBA16_SNORM: i32 = 76;
+    /// Three signed channels, stored with an opaque padding channel.
+    pub const RGB16_SNORM: i32 = 77;
 
     pub const fn etc_bc7_fallback(code: i32) -> bool {
         code >= ETC_BC7_FIRST && code <= ETC_LAST
@@ -277,7 +283,7 @@ pub mod texture_format {
     /// The packet's code, or why the renderer cannot take it: codes outside the table are
     /// rejected rather than drawn as some other format.
     pub fn validate(code: i32) -> Result<i32, String> {
-        if (SRGB_RGBA8..=ETC_LAST).contains(&code) {
+        if (SRGB_RGBA8..=RGB16_SNORM).contains(&code) {
             Ok(code)
         } else {
             Err(format!(
@@ -305,6 +311,7 @@ pub mod texture_format {
                 | RGBA32_FLOAT..=RG16_FLOAT
                 | RG16_UNORM..=R16_UNORM
                 | R8_SNORM..=RGBA8_SNORM
+                | R16_SNORM..=RGB16_SNORM
         )
     }
 }
@@ -855,7 +862,7 @@ mod tests {
         );
         assert_eq!((R8_SNORM, RG8_SNORM, RGBA8_SNORM), (35, 36, 37));
         assert_eq!((R8_UNORM, RG8_UNORM), (45, 46));
-        for code in 0..=ETC_LAST {
+        for code in 0..=RGB16_SNORM {
             assert_eq!(validate(code), Ok(code));
         }
         assert!(!float_data(R8_UNORM) && !float_data(RG8_UNORM) && !block_compressed(R8_UNORM));
@@ -864,7 +871,7 @@ mod tests {
         // The integer codes follow the normalized ones, without upload data.
         assert_eq!((integer(1, 8, false), integer(4, 32, true)), (17, 34));
         assert!((INTEGER_FIRST..=INTEGER_LAST).all(|c| !float_data(c)));
-        for code in [-1, 73, 74, i32::MAX, i32::MIN] {
+        for code in [-1, RGB16_SNORM + 1, i32::MAX, i32::MIN] {
             assert!(validate(code).is_err(), "{code} is accepted");
         }
         for code in [

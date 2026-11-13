@@ -138,6 +138,7 @@ struct Target {
     /// The depth buffer's format (with `depth`).
     depth_format: Option<wgpu::TextureFormat>,
     format: wgpu::TextureFormat,
+    alpha_one: bool,
     width: u32,
     height: u32,
     /// The screen of this frame (first use clears it).
@@ -160,6 +161,7 @@ struct ExtraColor {
     depth_slice: Option<u32>,
     resolve: Option<wgpu::TextureView>,
     format: wgpu::TextureFormat,
+    alpha_one: bool,
     texture: Option<(wgpu::Texture, u32, u32)>,
     auto_mips: bool,
     defer_mips: Option<wgpu::TextureFormat>,
@@ -2354,6 +2356,7 @@ impl UnityRenderer {
             depth: Some(s.depth.clone()),
             depth_format: Some(DEPTH_FORMAT),
             format,
+            alpha_one: false,
             width: s.width,
             height: s.height,
             screen: true,
@@ -2462,6 +2465,7 @@ impl UnityRenderer {
                 depth_format: depth_view.as_ref().and(t.depth_format()),
                 depth: depth_view,
                 format: t.target_format(space),
+                alpha_one: t.format == texture_format::RGB16_SNORM,
                 width: (t.width >> mip).max(1),
                 height: (t.height >> mip).max(1),
                 screen: false,
@@ -2757,6 +2761,7 @@ impl UnityRenderer {
                                 depth_slice: t.depth_slice,
                                 resolve: t.resolve,
                                 format: t.format,
+                                alpha_one: t.alpha_one,
                                 texture: t.texture,
                                 auto_mips: t.auto_mips,
                                 defer_mips: t.defer_mips,
@@ -2921,7 +2926,10 @@ impl UnityRenderer {
                     if clear_color {
                         self.mark_msaa_written(&target);
                     }
-                    let color = resources::unorm8_clear(target.format, color);
+                    let mut color = resources::unorm8_clear(target.format, color);
+                    if target.alpha_one {
+                        color[3] = 1.0;
+                    }
                     let clear_depth =
                         flags & (commands::clear::DEPTH | commands::clear::STENCIL) != 0;
                     let viewport = self.state.viewport;
@@ -2953,10 +2961,6 @@ impl UnityRenderer {
                         if clear_depth {
                             pass.depth_clear = Some((self.conventions.depth(depth), stencil));
                         }
-                    } else if integer && (clear_color || clear_depth) {
-                        self.warn_once(format!("int-clear{:?}", target.format), || {
-                            format!("a clear of part of an integer target ({:?}, viewport {viewport:?}) is not supported: its color and depth are left as they are", target.format)
-                        });
                     } else if clear_color || clear_depth {
                         let pipeline = self.pipelines.clear(
                             &device,
@@ -2969,10 +2973,27 @@ impl UnityRenderer {
                                 clear_depth,
                             },
                         );
-                        // The clear draws at the far depth of the device.
+                        let color = if integer {
+                            let c = resources::integer_clear(
+                                target.format,
+                                wgpu::Color {
+                                    r: color[0] as f64,
+                                    g: color[1] as f64,
+                                    b: color[2] as f64,
+                                    a: color[3] as f64,
+                                },
+                            );
+                            let signed = target.format.sample_type(None, None)
+                                == Some(wgpu::TextureSampleType::Sint);
+                            [c.r, c.g, c.b, c.a].map(|v| {
+                                f32::from_bits(if signed { v as i32 as u32 } else { v as u32 })
+                            })
+                        } else {
+                            color
+                        };
                         let offset = self.push_uniform(DrawUniform {
                             color,
-                            misc: [self.conventions.depth(1.0), 0.0, 0.0, 0.0],
+                            misc: [self.conventions.depth(depth), 0.0, 0.0, 0.0],
                             ..Zeroable::zeroed()
                         });
                         last_pass(&mut passes)
@@ -3729,6 +3750,23 @@ impl UnityRenderer {
                 stencil_ref,
                 (((!draw.raw_winding && mirrored) != draw.flip_winding) != top_down) != flip,
             );
+            if target.alpha_one || target.extra.iter().any(|e| e.alpha_one) {
+                let mut targets = state.targets.unwrap_or(
+                    [crate::materials::TargetState {
+                        blend: state.blend,
+                        color_mask: state.color_mask,
+                    }; crate::shaderlab::MAX_TARGETS],
+                );
+                if target.alpha_one {
+                    targets[0].color_mask &= !1;
+                }
+                for (i, e) in target.extra.iter().enumerate() {
+                    if e.alpha_one {
+                        targets[i + 1].color_mask &= !1;
+                    }
+                }
+                state.targets = Some(targets);
+            }
             let key = PipelineKey {
                 state,
                 topology: sub.topology,
@@ -3953,6 +3991,15 @@ impl UnityRenderer {
             wgpu::TextureFormat::Rgba16Unorm => texture_format::RGBA16_UNORM,
             wgpu::TextureFormat::Rgb10a2Unorm => texture_format::RGB10A2_UNORM,
             wgpu::TextureFormat::R16Unorm => texture_format::R16_UNORM,
+            wgpu::TextureFormat::R16Snorm => texture_format::R16_SNORM,
+            wgpu::TextureFormat::Rg16Snorm => texture_format::RG16_SNORM,
+            wgpu::TextureFormat::Rgba16Snorm => {
+                if target.alpha_one {
+                    texture_format::RGB16_SNORM
+                } else {
+                    texture_format::RGBA16_SNORM
+                }
+            }
             wgpu::TextureFormat::R8Snorm => texture_format::R8_SNORM,
             wgpu::TextureFormat::Rg8Snorm => texture_format::RG8_SNORM,
             wgpu::TextureFormat::Rgba8Snorm => texture_format::RGBA8_SNORM,
@@ -4083,6 +4130,17 @@ impl UnityRenderer {
             });
             return None;
         };
+        let opaque = |handle| {
+            self.textures
+                .get(&handle)
+                .is_some_and(|t| t.format == texture_format::RGB16_SNORM)
+        };
+        if opaque(source) != opaque(destination) {
+            self.warn_once(format!("copyrgb16-{source}-{destination}"), || {
+                "CopyTexture requires matching three-channel signed formats: skipped".into()
+            });
+            return None;
+        }
         let channel_kind = channel_copy_kind(src.format(), dst.format()).filter(|_| {
             src.dimension() == wgpu::TextureDimension::D2
                 && dst.dimension() == wgpu::TextureDimension::D2
@@ -4441,11 +4499,16 @@ impl UnityRenderer {
             }
             // The first color, then the further ones (cleared or loaded alike; integer ones
             // store the clear color's bits).
-            let load = |format| match pass.color_load {
-                wgpu::LoadOp::Clear(c) => wgpu::LoadOp::Clear(resources::integer_clear(
-                    format,
-                    resources::unorm8_clear_color(format, c),
-                )),
+            let load = |format, alpha_one| match pass.color_load {
+                wgpu::LoadOp::Clear(mut c) => {
+                    if alpha_one {
+                        c.a = 1.0;
+                    }
+                    wgpu::LoadOp::Clear(resources::integer_clear(
+                        format,
+                        resources::unorm8_clear_color(format, c),
+                    ))
+                }
                 load => load,
             };
             let colors: Vec<_> = std::iter::once(Some(wgpu::RenderPassColorAttachment {
@@ -4453,7 +4516,7 @@ impl UnityRenderer {
                 depth_slice: pass.target.depth_slice,
                 resolve_target: pass.target.resolve.as_ref(),
                 ops: wgpu::Operations {
-                    load: load(pass.target.format),
+                    load: load(pass.target.format, pass.target.alpha_one),
                     store: wgpu::StoreOp::Store,
                 },
             }))
@@ -4463,7 +4526,7 @@ impl UnityRenderer {
                     depth_slice: e.depth_slice,
                     resolve_target: e.resolve.as_ref(),
                     ops: wgpu::Operations {
-                        load: load(e.format),
+                        load: load(e.format, e.alpha_one),
                         store: wgpu::StoreOp::Store,
                     },
                 })
@@ -4780,6 +4843,9 @@ impl UnityRenderer {
                         | wgpu::TextureFormat::Rgb10a2Unorm
                         | wgpu::TextureFormat::R8Snorm
                         | wgpu::TextureFormat::Rg8Snorm
+                        | wgpu::TextureFormat::R16Snorm
+                        | wgpu::TextureFormat::Rg16Snorm
+                        | wgpu::TextureFormat::Rgba16Snorm
                         | wgpu::TextureFormat::Rgba8Snorm => {
                             for pixel in line.chunks_exact(texel as usize) {
                                 let rgba = resources::norm_texel_to_f32(format, pixel)?;

@@ -76,7 +76,8 @@ use std::ffi::c_void;
 /// 65: the `MeshInstance` render command carries its call's instance count.
 /// 67: listener components among scripts, immutable frame script plans and callback ranges.
 /// 68: the Draw render command flags distinguish raw winding and baked renderer reflections.
-pub const NATIVE_API_VERSION: u32 = 68;
+/// 69: packed unsigned and signed 16-bit normalized texture packet formats.
+pub const NATIVE_API_VERSION: u32 = 69;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

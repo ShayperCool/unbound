@@ -244,7 +244,11 @@ impl Pipelines {
             },
             fragment: Some(wgpu::FragmentState {
                 module: &self.clear_module,
-                entry_point: Some("fs_clear"),
+                entry_point: Some(match key.format.sample_type(None, None) {
+                    Some(wgpu::TextureSampleType::Sint) => "fs_clear_signed",
+                    Some(wgpu::TextureSampleType::Uint) => "fs_clear_unsigned",
+                    _ => "fs_clear",
+                }),
                 compilation_options: Default::default(),
                 targets: &std::iter::once(Some(wgpu::ColorTargetState {
                     format: key.format,
