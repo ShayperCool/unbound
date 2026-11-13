@@ -11,7 +11,14 @@
     <ProjectReference Include="../Unbound.ApiTools/Unbound.ApiTools.csproj" />
     <ProjectReference Include="../Unbound.Compiler/Unbound.Compiler.csproj" />
     <ProjectReference Include="../UnityEngine/UnityEngine.csproj" />
+    <!-- The math structs' sources built without IL optimization: read as data by WideFloats.EngineMath.cs. -->
+    <ProjectReference Include="../Unbound.ScriptMath/Unbound.ScriptMath.csproj" ReferenceOutputAssembly="false" OutputItemType="UnboundScriptMath" />
   </ItemGroup>
+  <Target Name="EmbedScriptMath" AfterTargets="ResolveProjectReferences" BeforeTargets="PrepareResources">
+    <ItemGroup>
+      <EmbeddedResource Include="@(UnboundScriptMath)" LogicalName="Unbound.ScriptMath.dll" />
+    </ItemGroup>
+  </Target>
   <ItemGroup>
     <!-- .NET's System.dll, System.Configuration.dll and System.Security.dll facades forward the
          .NET Framework types game code uses to these packages, which the shared framework lacks. -->

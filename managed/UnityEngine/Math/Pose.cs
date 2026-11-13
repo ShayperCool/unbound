@@ -26,11 +26,13 @@ namespace UnityEngine
             rotation = lhs.rotation * rotation,
         };
 
+#if !UNBOUND_SCRIPT_MATH // Transform uses the engine's math types
         public Pose GetTransformedBy(Transform lhs) => new Pose
         {
             position = lhs.TransformPoint(position),
             rotation = lhs.rotation * rotation,
         };
+#endif
 
         public Vector3 forward => rotation * Vector3.forward;
 

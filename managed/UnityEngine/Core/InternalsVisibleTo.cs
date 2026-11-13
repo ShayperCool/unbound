@@ -4,6 +4,8 @@ using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Unbound.Host")]
 [assembly: InternalsVisibleTo("Unbound.Runtime")]
+// The math structs' sources built a second time (managed/Unbound.ScriptMath), read as data only.
+[assembly: InternalsVisibleTo("Unbound.ScriptMath")]
 [assembly: InternalsVisibleTo("Assembly-CSharp-Editor-firstpass-testable")]
 [assembly: InternalsVisibleTo("Assembly-CSharp-Editor-testable")]
 [assembly: InternalsVisibleTo("Assembly-CSharp-firstpass-testable")]

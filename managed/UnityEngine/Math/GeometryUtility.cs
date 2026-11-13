@@ -12,13 +12,6 @@ namespace UnityEngine
     {
         public GeometryUtility() { }
 
-        public static Plane[] CalculateFrustumPlanes(Camera camera)
-        {
-            var planes = new Plane[6];
-            CalculateFrustumPlanes(camera, planes);
-            return planes;
-        }
-
         public static Plane[] CalculateFrustumPlanes(Matrix4x4 worldToProjectionMatrix)
         {
             var planes = new Plane[6];
@@ -26,11 +19,20 @@ namespace UnityEngine
             return planes;
         }
 
+#if !UNBOUND_SCRIPT_MATH // the Camera overloads use the engine's math types
         public static void CalculateFrustumPlanes(Camera camera, Plane[] planes)
         {
             if (camera == null) throw new ArgumentNullException(nameof(camera));
             CalculateFrustumPlanes(camera.projectionMatrix * camera.worldToCameraMatrix, planes);
         }
+
+        public static Plane[] CalculateFrustumPlanes(Camera camera)
+        {
+            var planes = new Plane[6];
+            CalculateFrustumPlanes(camera, planes);
+            return planes;
+        }
+#endif
 
         public static void CalculateFrustumPlanes(Matrix4x4 worldToProjectionMatrix, Plane[] planes)
         {
