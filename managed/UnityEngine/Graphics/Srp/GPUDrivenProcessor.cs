@@ -51,7 +51,7 @@ namespace UnityEngine.Rendering
 
     /// <summary>A material's state the GPU-driven code batches by, packed: transparent (its render
     /// queue past 2500, bit 0), a motion vector pass enabled (1), indirect drawing (2).</summary>
-    internal partial struct GPUDrivenPackedMaterialData : IEquatable<GPUDrivenPackedMaterialData>
+    internal partial struct GPUDrivenPackedMaterialData
     {
         uint data;
 
@@ -173,8 +173,8 @@ namespace UnityEngine.Rendering
         internal IntPtr m_Ptr;
         bool m_PartialRendering;
         bool m_MaterialFilters;
-        readonly List<Mesh> m_ScratchMeshes = new List<Mesh>();
-        readonly List<Material> m_ScratchMaterials = new List<Material>();
+        List<Mesh> m_ScratchMeshes = new List<Mesh>();
+        List<Material> m_ScratchMaterials = new List<Material>();
         readonly RendererScratch m_Scratch = new RendererScratch();
 
         /// <summary>The most materials (sub-meshes) a renderer GPU-driven rendering takes.</summary>
@@ -191,8 +191,8 @@ namespace UnityEngine.Rendering
             m_Scratch.Clear();
         }
 
-        internal List<Mesh> scratchMeshes => m_ScratchMeshes;
-        internal List<Material> scratchMaterials => m_ScratchMaterials;
+        internal List<Mesh> scratchMeshes { get => m_ScratchMeshes; private set => m_ScratchMeshes = value; }
+        internal List<Material> scratchMaterials { get => m_ScratchMaterials; private set => m_ScratchMaterials = value; }
 
         /// <summary>Kept: with partial rendering a renderer whose materials are not all supported is
         /// split between the two paths; without it (the drawer's use) such a renderer is refused.</summary>
@@ -214,8 +214,10 @@ namespace UnityEngine.Rendering
                 Stubs.Ignored("GPUDrivenProcessor.AddMaterialFilters", "is not supported yet: materials are not filtered");
         }
 
+        [Unbound.EditorFaithful("AddMaterialFilters keeps no filters (it is warned and ignored), so there are none to clear")]
         public void ClearMaterialFilters() { }
 
+        [Unbound.EditorFaithful("AddMaterialFilters keeps no filters (it is warned and ignored), so no material has filter flags")]
         public int GetMaterialFilterFlags(Material material) => 0;
 
         public void EnableGPUDrivenRenderingAndDispatchRendererData(ReadOnlySpan<int> renderersID, GPUDrivenRendererDataCallback callback, bool materialUpdateOnly = false)

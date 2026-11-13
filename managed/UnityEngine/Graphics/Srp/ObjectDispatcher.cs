@@ -52,7 +52,7 @@ namespace UnityEngine
 
         public void EnableTypeTracking(params Type[] types) => EnableTypeTracking(TypeTrackingFlags.Default, types);
 
-        [Obsolete("EnableTypeTrackingIncludingAssets is deprecated, please use EnableTypeTracking and provide the flag that specifies whether you need assets or not.")]
+        [Obsolete("EnableTypeTrackingIncludingAssets is deprecated, please use EnableTypeTracking and provide the flag that specifies whether you need assets or not.", false)]
         public void EnableTypeTrackingIncludingAssets(params Type[] types) => EnableTypeTracking(TypeTrackingFlags.SceneObjects | TypeTrackingFlags.Assets, types);
 
         public void DisableTypeTracking(params Type[] types)
