@@ -353,9 +353,38 @@ python3 tests/projects/lightprobes/compare.py \
   <cache-run>/unbound/geometry.jsonl --report <cache-run>/comparison.json
 ```
 
-No index renumbering or layout-specific hull patch was admitted. A finite enclosing tetrahedron,
-probe insertion order, cell vertex rotation, search-start choice and open-cell arithmetic all
-remain relevant to a general replacement for the combined mesh builder. The diagnostic layouts
+### Q408 unbounded hull
+
+The runtime builder no longer encloses the probes in a finite tetrahedron. Its first cell is
+probe 0 and the first probes after it that are off its position, line and plane, and the cells
+past that cell's faces are hull cells with a point at infinity. A later probe replaces a hull
+cell when it lies beyond the cell's triangle plane, or in that plane inside the triangle's
+circumcircle, and replaces a probe cell when it lies inside the cell's circumsphere, as before.
+The probes are still inserted in index order with the same tolerances. The inner cells are
+therefore the probes' Delaunay tetrahedralization however far a circumsphere reaches. Duplicate
+positions still take no cell, and four or more positions on a line or plane still make none.
+
+The main comparison is 383/625, previously 379/625, with no lost matches. The four
+hull/shared-count keys of `additive tetrahedralized` and `unloaded` now match: the combined mesh
+has 87 inner and 34 hull cells, 121 as in the reference. `mesh_diagnostics.py` finds the
+combined capture's 87 inner cells equal to the empty-circumsphere set, with nothing missing or
+extra; Main keeps its 45. The 242 remaining strict differences are the unchanged 228 numeric-only
+keys and 14 functional keys: the twelve query-index keys and the two `occlusion at probes` rows.
+The diagnostic comparison is 48/298, previously 47/298. `combined mesh cells` matches, and
+`combined boundary seed 120` is now recorded. It still differs, like the other boundary seeds,
+because cell order differs. Managed controls compare the builder with a brute-force
+empty-circumsphere enumeration on two seeded layouts and on a flat cell whose circumsphere
+(radius about 2100) reaches far past the probes. A further control starts from a duplicate and a
+collinear probe. Light probe values do not depend on the OS: captures of the same build on macOS
+arm64 and Linux differ only in rendered pixel keys.
+
+Cell, vertex and neighbour order remain Unbound's. The Editor's construction is an incremental
+Delaunay insertion with a deterministic shuffled insertion order. Its final cell order also
+depends on how cells are replaced and traversed, which is not reproduced. The twelve index keys
+and the boundary-cell choice for combined probe 22 depend on that order.
+
+No index renumbering or layout-specific hull patch was admitted. Probe insertion order, cell
+vertex rotation, search-start choice and open-cell arithmetic all remain relevant to a general replacement for the combined mesh builder. The diagnostic layouts
 bound the current investigation; they do not establish general topology or degeneracy parity.
 
 Unity 6000.0 contracts checked for this work:

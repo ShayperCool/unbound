@@ -98,6 +98,156 @@ namespace Unbound.Tests
             Assert.Empty(planar.Cells);
         }
 
+        /// <summary>Every tetrahedron of the positions whose circumsphere has no other position
+        /// strictly inside (a brute-force Delaunay tetrahedralization), with the closest call
+        /// among the rejected and accepted ones so a test can require a layout without ties.</summary>
+        static (HashSet<string> Cells, double ClosestTie) EmptySpheres(Vector3[] p)
+        {
+            var cells = new HashSet<string>();
+            double closest = double.MaxValue;
+            int n = p.Length;
+            var bounds = new Bounds(p[0], Vector3.zero);
+            foreach (var q in p) bounds.Encapsulate(q);
+            double extent = Math.Max(bounds.size.x, Math.Max(bounds.size.y, bounds.size.z));
+            for (int a = 0; a < n; a++)
+            for (int b = a + 1; b < n; b++)
+            for (int c = b + 1; c < n; c++)
+            for (int d = c + 1; d < n; d++)
+            {
+                double[] P(int i) => new double[] { p[i].x, p[i].y, p[i].z };
+                double[] pa = P(a), pb = P(b), pc = P(c), pd = P(d);
+                double[] u = { pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2] };
+                double[] v = { pc[0] - pa[0], pc[1] - pa[1], pc[2] - pa[2] };
+                double[] w = { pd[0] - pa[0], pd[1] - pa[1], pd[2] - pa[2] };
+                double det = u[0] * (v[1] * w[2] - v[2] * w[1]) - u[1] * (v[0] * w[2] - v[2] * w[0]) + u[2] * (v[0] * w[1] - v[1] * w[0]);
+                if (Math.Abs(det) < 1e-14) continue;
+                double u2 = u[0] * u[0] + u[1] * u[1] + u[2] * u[2], v2 = v[0] * v[0] + v[1] * v[1] + v[2] * v[2], w2 = w[0] * w[0] + w[1] * w[1] + w[2] * w[2];
+                double D(double a0, double a1, double a2, double b0, double b1, double b2, double c0, double c1, double c2) =>
+                    a0 * (b1 * c2 - b2 * c1) - a1 * (b0 * c2 - b2 * c0) + a2 * (b0 * c1 - b1 * c0);
+                double ox = D(u2, u[1], u[2], v2, v[1], v[2], w2, w[1], w[2]) / (2 * det);
+                double oy = D(u[0], u2, u[2], v[0], v2, v[2], w[0], w2, w[2]) / (2 * det);
+                double oz = D(u[0], u[1], u2, v[0], v[1], v2, w[0], w[1], w2) / (2 * det);
+                double r2 = ox * ox + oy * oy + oz * oz;
+                bool empty = true;
+                for (int e = 0; e < n; e++)
+                {
+                    if (e == a || e == b || e == c || e == d) continue;
+                    double ex = p[e].x - pa[0] - ox, ey = p[e].y - pa[1] - oy, ez = p[e].z - pa[2] - oz;
+                    // The distance from the sphere, relative to the layout's extent.
+                    double relative = (ex * ex + ey * ey + ez * ez - r2) / (2 * Math.Sqrt(r2) * extent);
+                    closest = Math.Min(closest, Math.Abs(relative));
+                    if (relative < 0) empty = false;
+                }
+                if (empty) cells.Add(Key(new[] { a, b, c, d }));
+            }
+            return (cells, closest);
+        }
+
+        static HashSet<string> InnerCells(ProbeSet set) =>
+            new HashSet<string>(set.Cells.Where(c => c.I3 >= 0).Select(c => Key(new[] { c.I0, c.I1, c.I2, c.I3 })));
+
+        [Fact]
+        public void CellsWithFarCircumspheresAreKept()
+        {
+            // A position just above the base triangle makes a flat cell whose circumsphere
+            // (radius about 2100) reaches far beyond the probes: it is still a Delaunay cell, under
+            // the three cells to the apex, and its face to the base is on the hull.
+            var positions = new[] { Vector3.zero, new Vector3(1, 0, 0), new Vector3(0, 1, 0),
+                new Vector3(0.3f, 0.3f, 1e-4f), new Vector3(0.3f, 0.3f, 1) };
+            var set = new ProbeSet { Positions = positions };
+            ProbeTetrahedralization.Build(set);
+            var expected = EmptySpheres(positions);
+            Assert.Contains(Key(new[] { 0, 1, 2, 3 }), expected.Cells);
+            Assert.Equal(4, expected.Cells.Count);
+            Assert.Equal(expected.Cells, InnerCells(set));
+            // Its base face is a hull triangle, an outer cell.
+            Assert.Contains(set.Cells, c => c.I3 < 0 && Key(new[] { c.I0, c.I1, c.I2 }) == Key(new[] { 0, 1, 2 }));
+        }
+
+        [Fact]
+        public void CellsAreTheDelaunayTetrahedralization()
+        {
+            // Pseudo-random layouts: a cube of probes, and a thin slab whose hull cells are flat.
+            for (int layout = 0; layout < 2; layout++)
+            {
+                uint s = 12345u + (uint)layout;
+                float Next() { s = s * 1664525u + 1013904223u; return (s >> 8) / 16777216f; }
+                var positions = new Vector3[18];
+                for (int i = 0; i < positions.Length; i++)
+                    positions[i] = new Vector3(Next() * 10, Next() * 10, layout == 0 ? Next() * 10 : Next() * 0.5f);
+                var expected = EmptySpheres(positions);
+                Assert.True(expected.ClosestTie > 1e-6, $"layout {layout} has a near tie {expected.ClosestTie}");
+                var set = new ProbeSet { Positions = positions };
+                ProbeTetrahedralization.Build(set);
+                Assert.Equal(expected.Cells, InnerCells(set));
+            }
+        }
+
+        [Theory]
+        [InlineData(3, 3, 3, 1f)]
+        [InlineData(4, 3, 2, 1f)]
+        [InlineData(5, 2, 4, 0.5f)]
+        [InlineData(6, 6, 1, 1f)]
+        public void GridsAreFilledByCellsOnEveryProbe(int nx, int ny, int nz, float spacing)
+        {
+            // A regular grid, as light probe groups usually are: every cube's corners are
+            // cospherical and its faces coplanar, so the cells are one of many Delaunay choices,
+            // but they must tile the grid's box without gaps or overlaps and use every probe.
+            var positions = new List<Vector3>();
+            for (int k = 0; k < nz; k++)
+            for (int j = 0; j < ny; j++)
+            for (int i = 0; i < nx; i++)
+                positions.Add(new Vector3(i * spacing + 0.25f, j * spacing - 1f, k * spacing * 1.5f));
+            var set = new ProbeSet { Positions = positions.ToArray() };
+            ProbeTetrahedralization.Build(set);
+            var inner = set.Cells.Where(c => c.I3 >= 0).ToArray();
+            if (nz == 1)
+            {
+                Assert.Empty(set.Cells);
+                return;
+            }
+            double volume = 0;
+            foreach (var c in inner)
+            {
+                var p3 = positions[c.I3];
+                volume += Math.Abs(Vector3.Dot(Vector3.Cross(positions[c.I0] - p3, positions[c.I1] - p3), positions[c.I2] - p3)) / 6.0;
+            }
+            double box = (nx - 1) * spacing * (ny - 1) * spacing * (nz - 1) * spacing * 1.5;
+            Assert.True(Math.Abs(volume - box) < 1e-4 * box, $"cells cover {volume}, the box {box}");
+            var used = new HashSet<int>(inner.SelectMany(c => new[] { c.I0, c.I1, c.I2, c.I3 }));
+            Assert.Equal(positions.Count, used.Count);
+            // Every face is shared by two inner cells or one inner and one outer cell.
+            var faces = new Dictionary<string, int>();
+            foreach (var c in set.Cells)
+            {
+                var v = c.I3 >= 0 ? new[] { c.I0, c.I1, c.I2, c.I3 } : new[] { c.I0, c.I1, c.I2 };
+                if (c.I3 < 0) { var key = Key(v); faces[key] = faces.GetValueOrDefault(key) + 1; continue; }
+                for (int k = 0; k < 4; k++)
+                {
+                    var key = Key(v.Where((_, j) => j != k));
+                    faces[key] = faces.GetValueOrDefault(key) + 1;
+                }
+            }
+            Assert.All(faces, f => Assert.Equal(2, f.Value));
+        }
+
+        [Fact]
+        public void TheFirstCellSkipsDuplicateCollinearAndCoplanarProbes()
+        {
+            // Probe 1 repeats probe 0, probe 2 is on their line... the first cell is 0, 2, 4, 5;
+            // the repeated probe takes no cell and the others are all the Delaunay cells.
+            var positions = new[] { Vector3.zero, Vector3.zero, new Vector3(1, 0, 0), new Vector3(2, 0, 0),
+                new Vector3(0, 1, 0), new Vector3(0, 0, 1), new Vector3(1.5f, 1.2f, 0.9f) };
+            var set = new ProbeSet { Positions = positions };
+            ProbeTetrahedralization.Build(set);
+            var unique = positions.Select((p, i) => (p, i)).Where(t => t.i != 1).ToArray();
+            var expected = EmptySpheres(unique.Select(t => t.p).ToArray()).Cells
+                .Select(k => Key(k.Split(',').Select(int.Parse).Select(j => unique[j].i))).ToHashSet();
+            Assert.NotEmpty(expected);
+            Assert.Equal(expected, InnerCells(set));
+            Assert.DoesNotContain(set.Cells, c => c.I0 == 1 || c.I1 == 1 || c.I2 == 1 || c.I3 == 1);
+        }
+
         [Fact]
         public void CellMatricesAreRoundedAsTheEditors()
         {

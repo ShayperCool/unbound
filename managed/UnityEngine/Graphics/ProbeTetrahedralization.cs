@@ -53,12 +53,33 @@ namespace UnityEngine
             return result;
         }
 
+        /// <summary>The vertex index of the point at infinity: the fourth vertex of a hull cell
+        /// while building (it sorts after every probe).</summary>
+        const int Infinite = int.MaxValue;
+
+        /// <summary>Relative tolerance, in units of the probes' extent, below which a probe counts
+        /// as on another's position, line or plane.</summary>
+        const double Coplanar = 1e-12;
+
+        /// <summary>A cell while building: a probe tetrahedron with its circumsphere, or a hull
+        /// triangle (D = <see cref="Infinite"/>) with its outward normal and its circumcircle.</summary>
         struct Tet
         {
             public int A, B, C, D;
             public double Cx, Cy, Cz, R2;
+            public double Nx, Ny, Nz, NLength;
             public bool Dead;
         }
+
+        static double Distance(double[] x, double[] y, double[] z, int a, int b)
+        {
+            double dx = x[b] - x[a], dy = y[b] - y[a], dz = z[b] - z[a];
+            return Math.Sqrt(dx * dx + dy * dy + dz * dz);
+        }
+
+        /// <summary>(b − a) × (c − a).</summary>
+        static Vector3d Cross(double[] x, double[] y, double[] z, int a, int b, int c) =>
+            Vector3d.Cross(new Vector3d(x[b] - x[a], y[b] - y[a], z[b] - z[a]), new Vector3d(x[c] - x[a], y[c] - y[a], z[c] - z[a]));
 
         static double Det3(double ax, double ay, double az, double bx, double by, double bz, double cx, double cy, double cz) =>
             ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx);
@@ -74,10 +95,10 @@ namespace UnityEngine
             set.HullRays = new Vector3[n];
             if (n < 4) return;
 
-            // Points in double, the four corners of an enclosing tetrahedron after them.
-            var x = new double[n + 4];
-            var y = new double[n + 4];
-            var z = new double[n + 4];
+            // Points in double.
+            var x = new double[n];
+            var y = new double[n];
+            var z = new double[n];
             double minX = double.MaxValue, minY = double.MaxValue, minZ = double.MaxValue;
             double maxX = double.MinValue, maxY = double.MinValue, maxZ = double.MinValue;
             for (int i = 0; i < n; i++)
@@ -86,12 +107,8 @@ namespace UnityEngine
                 minX = Math.Min(minX, x[i]); minY = Math.Min(minY, y[i]); minZ = Math.Min(minZ, z[i]);
                 maxX = Math.Max(maxX, x[i]); maxY = Math.Max(maxY, y[i]); maxZ = Math.Max(maxZ, z[i]);
             }
-            double size = Math.Max(Math.Max(maxX - minX, maxY - minY), Math.Max(maxZ - minZ, 1e-6)) * 64;
-            double mx = (minX + maxX) / 2, my = (minY + maxY) / 2, mz = (minZ + maxZ) / 2;
-            (x[n], y[n], z[n]) = (mx - size, my - size, mz - size);
-            (x[n + 1], y[n + 1], z[n + 1]) = (mx + 3 * size, my - size, mz - size);
-            (x[n + 2], y[n + 2], z[n + 2]) = (mx - size, my + 3 * size, mz - size);
-            (x[n + 3], y[n + 3], z[n + 3]) = (mx - size, my - size, mz + 3 * size);
+            double size = Math.Max(Math.Max(maxX - minX, maxY - minY), Math.Max(maxZ - minZ, 1e-6));
+            if (!double.IsFinite(size)) return;
 
             var tets = new List<Tet>();
             bool Sphere(ref Tet t)
@@ -109,22 +126,79 @@ namespace UnityEngine
                 t.R2 = ox * ox + oy * oy + oz * oz;
                 return true;
             }
-            var first = new Tet { A = n, B = n + 1, C = n + 2, D = n + 3 };
+
+            // The first tetrahedron: probe 0 and the first probes after it off its point, line and
+            // plane. Without four such probes there are no cells.
+            int i1 = -1, i2 = -1, i3 = -1;
+            double flat = Coplanar * size;
+            for (int i = 1; i < n && i1 < 0; i++)
+                if (Distance(x, y, z, 0, i) > flat) i1 = i;
+            for (int i = 1; i < n && i1 >= 0 && i2 < 0; i++)
+                if (i != i1 && Cross(x, y, z, 0, i1, i).Length() > flat * Distance(x, y, z, 0, i1)) i2 = i;
+            for (int i = 1; i < n && i2 >= 0 && i3 < 0; i++)
+            {
+                if (i == i1 || i == i2) continue;
+                var normal = Cross(x, y, z, 0, i1, i2);
+                if (Math.Abs(normal.Dot(x[i] - x[0], y[i] - y[0], z[i] - z[0])) > flat * normal.Length()) i3 = i;
+            }
+            if (i3 < 0) return;
+            // A point inside every hull the probes make from here on, which tells the hull
+            // triangles' outward side.
+            double ix = (x[0] + x[i1] + x[i2] + x[i3]) / 4, iy = (y[0] + y[i1] + y[i2] + y[i3]) / 4, iz = (z[0] + z[i1] + z[i2] + z[i3]) / 4;
+
+            // The unbounded hull: past each hull triangle a cell with the point at infinity, which a
+            // probe outside that triangle's plane (or in it, inside the triangle's circumcircle)
+            // replaces, so the cells are those of the probes' own Delaunay tetrahedralization
+            // however far a cell's circumsphere reaches.
+            bool Hull(ref Tet t)
+            {
+                var normal = Cross(x, y, z, t.A, t.B, t.C);
+                double length = normal.Length();
+                if (length < 1e-18) return false;
+                double side = normal.Dot(ix - x[t.A], iy - y[t.A], iz - z[t.A]);
+                if (side > 0) normal = normal.Negated();
+                (t.Nx, t.Ny, t.Nz, t.NLength) = (normal.X, normal.Y, normal.Z, length);
+                // The triangle's circumcircle: center and squared radius.
+                double bx = x[t.B] - x[t.A], by = y[t.B] - y[t.A], bz = z[t.B] - z[t.A];
+                double cx = x[t.C] - x[t.A], cy = y[t.C] - y[t.A], cz = z[t.C] - z[t.A];
+                double b2 = bx * bx + by * by + bz * bz, c2 = cx * cx + cy * cy + cz * cz;
+                var u = new Vector3d(b2 * cx - c2 * bx, b2 * cy - c2 * by, b2 * cz - c2 * bz);
+                var o = Vector3d.Cross(u, new Vector3d(normal.X, normal.Y, normal.Z)) * (1 / (2 * length * length));
+                if (side > 0) o = -o;
+                t.Cx = x[t.A] + o.X; t.Cy = y[t.A] + o.Y; t.Cz = z[t.A] + o.Z;
+                t.R2 = Vector3d.Dot(o, o);
+                return true;
+            }
+            bool Conflicts(in Tet t, int i)
+            {
+                double ex = x[i] - t.Cx, ey = y[i] - t.Cy, ez = z[i] - t.Cz;
+                bool inside = ex * ex + ey * ey + ez * ez < t.R2 * (1 - 1e-12);
+                if (t.D != Infinite) return inside;
+                double above = t.Nx * (x[i] - x[t.A]) + t.Ny * (y[i] - y[t.A]) + t.Nz * (z[i] - z[t.A]);
+                if (Math.Abs(above) <= flat * t.NLength) return inside;
+                return above > 0;
+            }
+            var first = new Tet { A = 0, B = i1, C = i2, D = i3 };
             Sphere(ref first);
             tets.Add(first);
+            foreach (var (a, b, c) in new[] { (i1, i2, i3), (0, i2, i3), (0, i1, i3), (0, i1, i2) })
+            {
+                var outer = new Tet { A = a, B = b, C = c, D = Infinite };
+                Hull(ref outer);
+                tets.Add(outer);
+            }
 
             var faces = new Dictionary<(int, int, int), int>();
             var faceOrder = new List<(int, int, int)>();
-            for (int i = 0; i < n; i++)
+            for (int i = 1; i < n; i++)
             {
+                if (i == i1 || i == i2 || i == i3) continue;
                 faces.Clear();
                 faceOrder.Clear();
                 for (int t = 0; t < tets.Count; t++)
                 {
                     var tet = tets[t];
-                    if (tet.Dead) continue;
-                    double ex = x[i] - tet.Cx, ey = y[i] - tet.Cy, ez = z[i] - tet.Cz;
-                    if (ex * ex + ey * ey + ez * ez >= tet.R2 * (1 - 1e-12)) continue;
+                    if (tet.Dead || !Conflicts(tet, i)) continue;
                     tet.Dead = true;
                     tets[t] = tet;
                     foreach (var f in new[] { (tet.B, tet.C, tet.D), (tet.A, tet.C, tet.D), (tet.A, tet.B, tet.D), (tet.A, tet.B, tet.C) })
@@ -137,8 +211,11 @@ namespace UnityEngine
                 foreach (var key in faceOrder)
                 {
                     if (faces[key] != 1) continue;
-                    var tet = new Tet { A = key.Item1, B = key.Item2, C = key.Item3, D = i };
-                    if (Sphere(ref tet)) tets.Add(tet);
+                    // Infinite sorts last: a face on the hull makes a new hull cell with probe i.
+                    var tet = key.Item3 == Infinite
+                        ? new Tet { A = key.Item1, B = key.Item2, C = i, D = Infinite }
+                        : new Tet { A = key.Item1, B = key.Item2, C = key.Item3, D = i };
+                    if (tet.D == Infinite ? Hull(ref tet) : Sphere(ref tet)) tets.Add(tet);
                 }
                 if (tets.Count > 4096) tets.RemoveAll(t => t.Dead);
             }
@@ -349,6 +426,9 @@ namespace UnityEngine
             public static Vector3d operator *(Vector3d a, double s) => new Vector3d(a.X * s, a.Y * s, a.Z * s);
             public static double Dot(Vector3d a, Vector3d b) => a.X * b.X + a.Y * b.Y + a.Z * b.Z;
             public static Vector3d Cross(Vector3d a, Vector3d b) => new Vector3d(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X);
+            public double Dot(double x, double y, double z) => X * x + Y * y + Z * z;
+            public double Length() => Math.Sqrt(Dot(this, this));
+            public Vector3d Negated() => -this;
             public Vector3d Normalized()
             {
                 double l = Math.Sqrt(Dot(this, this));
