@@ -4,9 +4,11 @@
     run.py record --label L     one macOS Editor capture (batch mode, no graphics device)
     run.py publish A B          two byte-identical captures -> Reference/unity-<release>/
     run.py gate [--label L]     the engine on a fresh copy, compared with Reference/
+    run.py check-reference      the committed reference is complete and holds every residual key
 
 The reference holds the faces and metrics of the macOS system fonts it was recorded with, so
-every mode runs on macOS only.
+record, publish and the engine comparison run on macOS only. On another host `gate` prints that
+it was not run and why; `check-reference` runs anywhere.
 """
 import argparse
 import os
@@ -58,14 +60,29 @@ def publish(labels):
     return 0
 
 
+def check_reference():
+    values = value_probe.read_values(reference_root(PROBE)/value_probe.VALUES)
+    missing = sorted(key for key in value_probe.residuals(PROBE) if key not in values)
+    if missing:
+        raise SystemExit('osfontfallback: residuals.json lists keys the reference does not hold: ' + ', '.join(missing))
+    print(f'osfontfallback: reference complete, {len(values)} values')
+    return 0
+
+
 def main():
-    if sys.platform != 'darwin':
-        sys.exit('osfontfallback: the reference was recorded with the macOS system fonts; run it on macOS')
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('record', 'publish', 'gate'))
+    parser.add_argument('mode', choices=('record', 'publish', 'gate', 'check-reference'))
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default=None)
     args = parser.parse_args()
+    if args.mode == 'check-reference':
+        return check_reference()
+    if sys.platform != 'darwin':
+        reason = 'the reference was recorded with the macOS system fonts'
+        if args.mode == 'gate':
+            print(f'osfontfallback: not run on {sys.platform}: {reason}')
+            return 0
+        sys.exit(f'osfontfallback: {reason}; run it on macOS')
     label = args.label or time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     if args.mode == 'record':
         return record(label)

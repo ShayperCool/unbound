@@ -3,8 +3,10 @@
 Measures which macOS faces fill in characters a font lacks, with the Unity 6000.0.71f1 macOS
 arm64 Editor in batch mode (no graphics device) on macOS 26 with its own system fonts. The
 reference was recorded on macOS: two independent captures were byte-identical. The values depend on
-the installed system fonts, so `run.py` runs on macOS only and the probe has no Linux land-gate
-command.
+the installed system fonts, so recording and the engine comparison run on macOS only: on another
+host `run.py gate` reports that it was not run and why, and `run.py check-reference` (a fast
+check on every host) only verifies that the committed reference is complete and holds every key
+`residuals.json` lists.
 
 Observations, for the built-in LegacyRuntime font and a project font (Liberation Sans, `Sans`):
 
@@ -44,6 +46,7 @@ python3 tests/projects/osfontfallback/run.py record --label mac-a
 python3 tests/projects/osfontfallback/run.py record --label mac-b
 python3 tests/projects/osfontfallback/run.py publish mac-a mac-b
 python3 tests/projects/osfontfallback/run.py gate
+python3 tests/projects/osfontfallback/run.py check-reference
 ```
 
 `FONT-LICENSE.txt` covers the supplied font.
