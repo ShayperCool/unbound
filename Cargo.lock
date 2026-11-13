@@ -6570,6 +6570,7 @@ dependencies = [
  "half",
  "rayon",
  "unbound-assets",
+ "unbound-compat",
  "unbound-yaml",
 ]
 

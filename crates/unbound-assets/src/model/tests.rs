@@ -184,17 +184,86 @@ fn an_obj_mesh_is_a_child_named_after_its_group() {
     assert_eq!(model.meshes[1].submeshes[0].len(), 3);
 }
 
+/// tests/projects/lightmapuvs Names/OrderFbx's and Names/Ties' children in file order, and the
+/// orders the Unity 6000.0.71f1 Editors give them: Linux (the probe's reference) and macOS
+/// (captured twice on macOS arm64, identical; not committed).
+#[rustfmt::skip]
+const SIBLING_ORDERS: [(&str, &[&str], &[&str], &[&str]); 2] = [
+    (
+        "OrderFbx",
+        &["10", "9", "A1", "Alpha", "B_0", "Beta", "Zed", "_under", "a01", "a10", "a1A", "a1b", "a2",
+          "alpha", "b-2", "b.1"],
+        &["9", "10", "_under", "a01", "A1", "a1A", "a1b", "a2", "a10", "Alpha", "alpha", "b-2", "b.1",
+          "B_0", "Beta", "Zed"],
+        &["9", "10", "_under", "a01", "A1", "a1A", "a1b", "a2", "a10", "alpha", "Alpha", "b-2", "b.1",
+          "B_0", "Beta", "Zed"],
+    ),
+    (
+        "Ties",
+        &["Delta", "E01", "GAMMA", "Gamma", "K", "M00", "P10", "Q", "R", "S", "U0", "V", "W", "delta",
+          "e001", "e1", "gamma", "k", "m0", "p10", "q", "r", "s", "u0", "v", "w", "x01y2", "x1y02"],
+        &["Delta", "delta", "e001", "E01", "e1", "gamma", "GAMMA", "Gamma", "K", "k", "M00", "m0",
+          "P10", "p10", "Q", "q", "R", "r", "S", "s", "U0", "u0", "V", "v", "W", "w", "x01y2", "x1y02"],
+        &["Delta", "delta", "e001", "E01", "e1", "Gamma", "gamma", "GAMMA", "k", "K", "M00", "m0",
+          "P10", "p10", "q", "Q", "R", "r", "S", "s", "U0", "u0", "V", "v", "W", "w", "x01y2", "x1y02"],
+    ),
+];
+
 #[test]
-fn siblings_sort_by_name_without_case_and_with_numbers_as_numbers() {
-    // The Editor's order of tests/projects/lightmapuvs Names/OrderFbx.
-    let expected = [
-        "9", "10", "_under", "a01", "A1", "a1A", "a1b", "a2", "a10", "Alpha", "alpha", "b-2",
-        "b.1", "B_0", "Beta", "Zed",
-    ];
-    let mut names = expected;
-    names.reverse();
-    names.sort_by(|a, b| hierarchy_name_order(a, b));
-    assert_eq!(names, expected);
+fn siblings_sort_as_each_editor_sorts_them() {
+    use unbound_compat::HostOs;
+    for (model, file, linux, macos) in SIBLING_ORDERS {
+        for (os, expected) in [(HostOs::Linux, linux), (HostOs::MacOs, macos)] {
+            let mut names = file.to_vec();
+            os.editor_sort(unbound_compat::Insertion::UpTo6)
+                .sort_by(&mut names, |a, b| hierarchy_name_order(a, b).is_lt());
+            assert_eq!(names, expected, "{model} on {os:?}");
+        }
+    }
+}
+
+#[test]
+fn imported_siblings_take_each_os_editors_order() {
+    use unbound_compat::HostOs;
+    let probe = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/lightmapuvs");
+    // By default the importer sorts as this OS's Editor.
+    assert_eq!(ModelImporter::default().editor_os, HostOs::current());
+    for (model, _, linux, macos) in SIBLING_ORDERS {
+        let path = probe.join(format!("Sources/Names/{model}.fbx"));
+        let bytes = std::fs::read(&path).unwrap();
+        for (os, expected) in [(HostOs::Linux, linux), (HostOs::MacOs, macos)] {
+            let importer = ModelImporter {
+                editor_os: os,
+                ..ModelImporter::default()
+            };
+            let imported = importer.import(&path, &bytes, &Value::Null).unwrap();
+            let names: Vec<&str> = imported.nodes[0]
+                .children
+                .iter()
+                .map(|&c| imported.nodes[c as usize].name.as_str())
+                .collect();
+            assert_eq!(names, expected, "{model} on {os:?}");
+        }
+    }
+}
+
+#[test]
+fn sibling_names_compare_without_case_and_with_numbers_as_numbers() {
+    use std::cmp::Ordering::*;
+    let order = |a, b| hierarchy_name_order(a, b);
+    // Letter case alone, or where leading zeros sit at the same length, do not order names.
+    assert_eq!(order("Alpha", "alpha"), Equal);
+    assert_eq!(order("x01y2", "x1y02"), Equal);
+    // Otherwise the longer is first (`a01` before `A1`, `00` before `0`).
+    assert_eq!(order("a01", "A1"), Less);
+    assert_eq!(order("00", "0"), Less);
+    // Punctuation up to `/`, then numbers, then `_`, then letters.
+    assert_eq!(order("a-", "a1"), Less);
+    assert_eq!(order("a9", "a_"), Less);
+    assert_eq!(order("a_", "aa"), Less);
+    // Unbound ranks bytes beyond ASCII by value, without case (not measured in the Editor).
+    assert_eq!(order("\u{c4}", "\u{e4}"), Less);
+    assert_eq!(order("z", "\u{e4}"), Less);
     // Outside the capture: numbers too long for an integer, and a name that is another's start.
     let mut names = [
         "x100000000000000000000000",
@@ -202,6 +271,7 @@ fn siblings_sort_by_name_without_case_and_with_numbers_as_numbers() {
         "x",
         "X1y",
         "x1",
+        "x100000000000000000000001",
     ];
     names.sort_by(|a, b| hierarchy_name_order(a, b));
     assert_eq!(
@@ -211,7 +281,8 @@ fn siblings_sort_by_name_without_case_and_with_numbers_as_numbers() {
             "x1",
             "X1y",
             "x99999999999999999999999",
-            "x100000000000000000000000"
+            "x100000000000000000000000",
+            "x100000000000000000000001",
         ]
     );
 }
@@ -303,6 +374,7 @@ fn bind_pose_conversion_mirrors_and_scales() {
         obj_defaults: Vec::new(),
         fbx_smoothing: Vec::new(),
         mtl: ModelImporter::default().mtl,
+        editor_os: ModelImporter::default().editor_os,
         rest_pose: None,
     };
     // A translation by (1, 2, 3) and a rotation of 90° about Z (x → y).

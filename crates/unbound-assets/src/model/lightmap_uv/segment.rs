@@ -5,6 +5,7 @@
 
 use super::math;
 use super::mesh::{Component, HalfEdgeMesh, NONE};
+use unbound_compat::EditorSort;
 
 const DISTANCE_EXPONENT: f64 = 0.7;
 const CHANGED_FRACTION: f64 = 0.01;
@@ -493,7 +494,9 @@ impl<'a> Segmentation<'a> {
         error / total
     }
 
-    fn borders(&self) -> Vec<Border> {
+    /// Neighbouring charts' borders, by centroid with `sort` (the Editor's unstable sort), then
+    /// stably by merge error.
+    fn borders(&self, sort: EditorSort) -> Vec<Border> {
         let mut borders: Vec<Border> = Vec::new();
         let mut index: std::collections::BTreeMap<(u32, u32), usize> = Default::default();
         for f in 0..self.map.facets.len() as u32 {
@@ -531,7 +534,7 @@ impl<'a> Segmentation<'a> {
         for i in 0..borders.len() {
             borders[i].error = self.merge_error(&borders[i]);
         }
-        crate::sort::introsort(&mut borders, |a, b| {
+        sort.sort_by(&mut borders, |a, b| {
             for k in 0..6 {
                 if a.centroids[k] - b.centroids[k] != 0.0 {
                     return b.centroids[k] < a.centroids[k];
@@ -646,6 +649,7 @@ pub fn segment(
     parent: &HalfEdgeMesh,
     component: &Component,
     labels: Option<(usize, &[i32])>,
+    sort: EditorSort,
 ) -> Result<Vec<Component>, String> {
     let mut s = Segmentation::new(parent, component, 0.02, 0.01)?;
     let (rounds, iterations) = match labels {
@@ -665,7 +669,7 @@ pub fn segment(
         }
     }
     s.cover_unassigned(GROW_ERROR, LLOYD_ERROR);
-    let mut borders = s.borders();
+    let mut borders = s.borders(sort);
     for i in 0..borders.len() {
         let b = borders[i];
         if b.charts[0] != b.charts[1] && b.error <= MERGE_ERROR {

@@ -387,6 +387,8 @@ fn assert_unwraps(
         triangles,
         polygons: &polygons,
         uvs: Some(uvs),
+        // The expected UV2 are the Linux Editor's.
+        sort: unbound_compat::EditorSort::LibStdCxx,
     };
     let out = generate(&input, &default_settings()).unwrap();
     for (t, (got, want)) in out.iter().zip(expected).enumerate() {
@@ -422,6 +424,7 @@ fn unwrap_default(
         triangles,
         polygons: &polygons,
         uvs: None,
+        sort: unbound_compat::EditorSort::LibStdCxx,
     };
     generate(&input, &default_settings())
 }
@@ -559,6 +562,7 @@ fn a_large_mesh_full_of_degenerate_triangles_is_cleaned_and_filled_from_its_neig
         triangles: &triangles,
         polygons: &polygons,
         uvs: None,
+        sort: unbound_compat::EditorSort::LibStdCxx,
     };
     let out: Vec<[[f32; 2]; 3]> = (0..triangles.len())
         .map(|t| [0, 1, 2].map(|k| [t as f32, k as f32]))
@@ -703,7 +707,7 @@ fn introsort_orders_like_a_stable_sort_on_distinct_keys() {
         .collect();
     let mut expected = keys.clone();
     expected.sort();
-    crate::sort::introsort(&mut keys, |a, b| a < b);
+    unbound_compat::EditorSort::LibStdCxx.sort_by(&mut keys, |a, b| a < b);
     assert_eq!(keys, expected);
 }
 

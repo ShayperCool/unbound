@@ -1076,6 +1076,8 @@ fn bake_key(inputs: &[BakeInput], probes: &[[f32; 3]]) -> String {
     let mut key = blake3::Hasher::new();
     key.update(&BAKE_CACHE_VERSION.to_le_bytes());
     key.update(&unbound_gi::precompute::FORMAT_VERSION.to_le_bytes());
+    // The system packing's order of equal shapes is this OS's Editor's sort's.
+    key.update(format!("{:?}", unbound_compat::HostOs::current()).as_bytes());
     key.update(&UV_CACHE_VERSION.to_le_bytes());
     key.update(&(inputs.len() as u64).to_le_bytes());
     for input in inputs {

@@ -4,6 +4,9 @@ use super::clusters::{GROUP, Instance, SAMPLES_PER_CLUSTER, cluster};
 use super::geometry::Bvh;
 use super::math::V3;
 
+/// The packing references are the Linux Editor's, made with its sort.
+const LINUX_SORT: unbound_compat::EditorSort = unbound_compat::EditorSort::LibStdCxx;
+
 /// A scene of the one system `c` (its dependency id 7s).
 fn scene(c: &super::clusters::Clustering) -> super::scene::Scene<'_> {
     super::scene::Scene::new(vec![c], vec![[7; 16]]).unwrap()
@@ -939,7 +942,7 @@ fn a_system_packs_its_instances_and_rounds_its_width() {
     // One instance of 6 x 4 texels: a system 8 texels wide (whole multiples of 4), its texels
     // beyond the instance no chart's.
     let one = uv_space(6, 4);
-    let layout = pack_system(&[&one]).unwrap();
+    let layout = pack_system(&[&one], LINUX_SORT).unwrap();
     assert_eq!(
         (layout.width, layout.height, &layout.origins[..]),
         (8, 4, &[[0, 0]][..])
@@ -950,7 +953,7 @@ fn a_system_packs_its_instances_and_rounds_its_width() {
     // The larger instance first, whatever the order; their charts numbered in the system's
     // order.
     let small = uv_space(2, 2);
-    let layout = pack_system(&[&small, &one]).unwrap();
+    let layout = pack_system(&[&small, &one], LINUX_SORT).unwrap();
     assert_eq!(layout.origins[1], [0, 0]);
     let mask = chart_mask(&layout, &[&small, &one]);
     let at = |o: [u32; 2]| mask[(o[1] * layout.width + o[0]) as usize];
@@ -965,13 +968,13 @@ fn a_system_packs_its_instances_and_rounds_its_width() {
             blocks: (0..9).map(|b| b != 4).collect(),
         }],
     };
-    let layout = pack_system(&[&ring, &small]).unwrap();
+    let layout = pack_system(&[&ring, &small], LINUX_SORT).unwrap();
     assert_eq!((layout.width, layout.height), (8, 6));
     assert_eq!(layout.origins, vec![[0, 0], [2, 2]]);
     // Instances that do not fit the largest output fail.
     let big = uv_space(400, 400);
-    assert!(pack_system(&[&big, &big]).is_err());
-    assert!(pack_system(&[]).is_err());
+    assert!(pack_system(&[&big, &big], LINUX_SORT).is_err());
+    assert!(pack_system(&[], LINUX_SORT).is_err());
 }
 
 #[test]

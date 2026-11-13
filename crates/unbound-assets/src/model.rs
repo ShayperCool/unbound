@@ -51,7 +51,7 @@ use std::{
     collections::{HashMap, HashSet},
     path::Path,
 };
-use unbound_compat::{MtlRules, UnityVersion};
+use unbound_compat::{HostOs, Insertion, MtlRules, UnityVersion};
 use unbound_yaml::{ObjectRef, Value};
 
 pub use materials::{MaterialDescription, TextureDescription};
@@ -820,12 +820,16 @@ const MESH_OPTIMIZATION_VERTEX_ORDER: i64 = 2;
 #[derive(Debug, Clone, Copy)]
 pub struct ModelImporter {
     pub mtl: &'static MtlRules,
+    /// The OS whose Editor's unstable sort leaves equal elements in its own order (siblings with
+    /// equal names, the lightmap UV unwrap's equal chart borders): this one.
+    pub editor_os: HostOs,
 }
 
 impl ModelImporter {
     pub fn for_release(version: &UnityVersion) -> Self {
         Self {
             mtl: MtlRules::of(version),
+            editor_os: HostOs::current(),
         }
     }
 }
@@ -840,7 +844,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 53;
+    const VERSION: u32 = 54;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -854,55 +858,88 @@ impl Importer for ModelImporter {
     }
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
-        import_model(source, bytes, meta, self.mtl)
+        import_with(self, source, bytes, meta)
     }
 
     fn options_key(&self) -> String {
-        self.mtl.name.into()
+        format!("{}/{:?}", self.mtl.name, self.editor_os)
     }
 }
 
 /// The order `sortHierarchyByName` gives sibling names (matches the Unity 6000.0.71f1 Editor,
-/// tests/projects/lightmapuvs Names/Order and Names/OrderFbx): letter case is ignored and runs of
-/// digits compare as numbers (`9`, `10`, `_under`, `a2`, `a10`, `alpha`, `B_0`, `Beta`); names
-/// equal that way compare as text without case (`a01` before `A1`), then exactly (`Alpha` before
-/// `alpha`).
+/// tests/projects/lightmapuvs Names/Order, Names/OrderFbx and Names/Ties). Names compare byte by
+/// byte: ASCII letters without case, other bytes above `9` by value, bytes up to `/` (space, most
+/// punctuation) before numbers, and runs of digits as numbers: leading zeros skipped, more digits
+/// first decide, then the value (in chunks of eight digits). After the end of either name, the
+/// one with more bytes is first (`a01` before `A1`). Names that differ only in ASCII letter case
+/// or in where leading zeros sit are equal; the sort leaves those where the Editor's `std::sort`
+/// does (`unbound_compat::EditorSort`). Bytes outside ASCII are not measured.
 fn hierarchy_name_order(a: &str, b: &str) -> std::cmp::Ordering {
-    use std::cmp::Ordering;
-    let (la, lb) = (a.to_lowercase(), b.to_lowercase());
-    let (mut x, mut y) = (la.chars().peekable(), lb.chars().peekable());
-    let natural = loop {
-        match (x.peek().copied(), y.peek().copied()) {
-            (None, None) => break Ordering::Equal,
-            (None, Some(_)) => break Ordering::Less,
-            (Some(_), None) => break Ordering::Greater,
-            (Some(c), Some(d)) if c.is_ascii_digit() && d.is_ascii_digit() => {
-                // Numbers of any length: without leading zeros, the longer is the larger.
-                let number = |it: &mut std::iter::Peekable<std::str::Chars>| {
-                    let mut digits = String::new();
-                    while let Some(c) = it.next_if(char::is_ascii_digit) {
-                        if !(digits.is_empty() && c == '0') {
-                            digits.push(c);
-                        }
-                    }
-                    digits
-                };
-                let (m, n) = (number(&mut x), number(&mut y));
-                let order = m.len().cmp(&n.len()).then_with(|| m.cmp(&n));
-                if order != Ordering::Equal {
-                    break order;
-                }
+    /// Added to the rank of every byte above `9`, so that it ranks after every number: a number
+    /// ranks as its value plus `0`, below 2^28 for any chunk of eight digits (also those after a
+    /// long number's first, which keep a leading 1).
+    const ABOVE_NUMBERS: i64 = 1 << 32;
+    let (a, b) = (a.as_bytes(), b.as_bytes());
+    let at = |s: &[u8], i: usize| s.get(i).copied().unwrap_or(0);
+    // The next element of `s` from `*i`: its rank and, for a number, its count of digits; `long`
+    // marks a number longer than eight digits whose next chunk follows.
+    let token = |s: &[u8], i: &mut usize, long: &mut bool| -> (i64, i64) {
+        let mut c = at(s, *i);
+        if c <= b'/' || c > b'9' {
+            *i += 1;
+            *long = false;
+            let rank = if c <= b'/' {
+                c as i64
+            } else {
+                c.to_ascii_lowercase() as i64 + ABOVE_NUMBERS
+            };
+            return (rank, 0);
+        }
+        // A chunk after a long number's first keeps its leading zeros.
+        let mut n: i64 = if *long { 1 } else { 0 };
+        if !*long && c == b'0' {
+            while at(s, *i) == b'0' {
+                *i += 1;
             }
-            (Some(c), Some(d)) => {
-                if c != d {
-                    break c.cmp(&d);
-                }
-                x.next();
-                y.next();
+            c = at(s, *i);
+            if !c.is_ascii_digit() {
+                return (b'0' as i64, 0);
+            }
+        }
+        let mut count = 0;
+        loop {
+            if count == 8 {
+                let more = (0..)
+                    .take_while(|&k| at(s, *i + 8 + k).is_ascii_digit())
+                    .count();
+                *i += 8;
+                *long = true;
+                return (n + b'0' as i64, 8 + more as i64);
+            }
+            n = n * 10 + (at(s, *i + count) - b'0') as i64;
+            count += 1;
+            if !at(s, *i + count).is_ascii_digit() {
+                *i += count;
+                *long = false;
+                return (n + b'0' as i64, count as i64);
             }
         }
     };
-    natural.then_with(|| la.cmp(&lb)).then_with(|| a.cmp(b))
+    let (mut i, mut j, mut long_a, mut long_b) = (0, 0, false, false);
+    let difference = loop {
+        let (rank_a, digits_a) = token(a, &mut i, &mut long_a);
+        let (rank_b, digits_b) = token(b, &mut j, &mut long_b);
+        if digits_a != digits_b && digits_a != 0 && digits_b != 0 {
+            break digits_a - digits_b;
+        }
+        if rank_a != rank_b {
+            break rank_a - rank_b;
+        }
+        if digits_a != digits_b || rank_a == 0 {
+            break j as i64 - i as i64;
+        }
+    };
+    difference.cmp(&0)
 }
 
 /// Select the same authored library for dependency hashing and ufbx loading.
@@ -927,12 +964,27 @@ fn obj_material_library(source: &Path, bytes: &[u8]) -> Option<std::path::PathBu
         .last()
 }
 
+/// Imports a model with `mtl`'s rules, its siblings ordered as this OS's Editor orders them.
 pub fn import_model(
     source: &Path,
     bytes: &[u8],
     meta: &Value,
     mtl: &'static MtlRules,
 ) -> Result<ImportedModel> {
+    let importer = ModelImporter {
+        mtl,
+        editor_os: HostOs::current(),
+    };
+    import_with(&importer, source, bytes, meta)
+}
+
+fn import_with(
+    rules: &ModelImporter,
+    source: &Path,
+    bytes: &[u8],
+    meta: &Value,
+) -> Result<ImportedModel> {
+    let mtl = rules.mtl;
     let settings = ModelSettings::read(meta);
     let imp = importer(meta, "ModelImporter");
     let is_obj = source
@@ -1088,6 +1140,7 @@ pub fn import_model(
         obj_meshes,
         fbx_smoothing,
         mtl,
+        editor_os: rules.editor_os,
         obj_defaults: Vec::new(),
     };
 
@@ -1268,6 +1321,8 @@ struct Builder<'a> {
     fbx_smoothing: Vec<Option<Vec<u32>>>,
     /// How the release reads MTL statements.
     mtl: &'static MtlRules,
+    /// The OS whose Editor's sort orders equal elements (see `ModelImporter::editor_os`).
+    editor_os: HostOs,
     /// The OBJ default materials made so far, by name.
     obj_defaults: Vec<(String, u32)>,
     /// With animation import, nodes rest in the first take's pose at its start, not in the file's
@@ -1391,8 +1446,11 @@ impl<'a> Builder<'a> {
         let mut children: Vec<&'a ufbx::Node> = node.children.iter().map(|c| c.as_ref()).collect();
         if self.settings.sort_hierarchy_by_name {
             let names = &self.unique_names;
-            children.sort_by(|a, b| {
+            // libc++'s insertion range of 6: the measured Names/Ties order needs it.
+            let sort = self.editor_os.editor_sort(Insertion::UpTo6);
+            sort.sort_by(&mut children, |a, b| {
                 hierarchy_name_order(&names[&a.element.element_id], &names[&b.element.element_id])
+                    .is_lt()
             });
         }
         for child in children {
@@ -2941,6 +2999,8 @@ impl<'a> Builder<'a> {
             triangles: &triangles,
             polygons: &polygons,
             uvs: uv0.map(|_| &uvs[..]),
+            // Assumed to copy trivially (libc++'s range of 30); not measured on macOS.
+            sort: self.editor_os.editor_sort(Insertion::UpTo30),
         };
         let uvs = lightmap_uv::generate(&input, settings)?;
         Ok(LightmapUvs { first, uvs })

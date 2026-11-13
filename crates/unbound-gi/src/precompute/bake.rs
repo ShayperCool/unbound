@@ -157,13 +157,21 @@ pub fn bake(all: &[BakeRenderer], probes: &[V3]) -> Result<Baked> {
         .map(|r| Member::new(r.bounds.0, r.bounds.1, r.uvs))
         .collect();
     let keys: Vec<u64> = renderers.iter().map(|r| r.group).collect();
+    // The order of equal shapes in a system is this OS's Editor's sort's (assumed to copy
+    // trivially, libc++'s range of 30; not measured on macOS).
+    let sort = unbound_compat::HostOs::current().editor_sort(unbound_compat::Insertion::UpTo30);
     let groups = scene_systems(&members, &keys, |group| {
         let outputs: Vec<&Output> = group.iter().map(|&k| renderers[k].uvs).collect();
-        pack_system(&outputs).is_ok()
+        pack_system(&outputs, sort).is_ok()
     });
     let layouts: Vec<SystemLayout> = groups
         .iter()
-        .map(|g| pack_system(&g.iter().map(|&k| renderers[k].uvs).collect::<Vec<_>>()))
+        .map(|g| {
+            pack_system(
+                &g.iter().map(|&k| renderers[k].uvs).collect::<Vec<_>>(),
+                sort,
+            )
+        })
         .collect::<Result<_>>()?;
     // Each renderer's positions in its system's texels.
     let texels: Vec<Vec<Vec<[f32; 2]>>> = groups

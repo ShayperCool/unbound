@@ -9,6 +9,9 @@ use crate::solver::{
 use std::path::Path;
 use std::sync::Arc;
 
+/// The packing references are the Linux Editor's, made with its sort.
+const LINUX_SORT: unbound_compat::EditorSort = unbound_compat::EditorSort::LibStdCxx;
+
 fn probe() -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/realtimegi")
 }
@@ -3679,7 +3682,7 @@ fn systems_and_atlases_are_laid_out_as_the_precomputes() {
         for (s, system) in data.systems.iter().enumerate() {
             let range = system.first_renderer..system.first_renderer + system.renderer_count;
             let mine: Vec<&crate::realtime_uv::Output> = outputs[range.clone()].iter().collect();
-            let layout = pack_system(&mine).unwrap();
+            let layout = pack_system(&mine, LINUX_SORT).unwrap();
             let (sw, sh) = (system.transport.width, system.transport.height);
             assert_eq!(
                 (layout.width, layout.height),
@@ -3913,7 +3916,7 @@ fn renderers_split_into_systems_as_the_precomputes() {
         let systems = scene_systems(&members, &keys, |group| {
             let mine: Vec<&crate::realtime_uv::Output> =
                 group.iter().map(|&i| &outputs[i]).collect();
-            pack_system(&mine).is_ok()
+            pack_system(&mine, LINUX_SORT).is_ok()
         });
         let mut ours: Vec<Vec<&str>> = systems
             .iter()
@@ -3989,12 +3992,12 @@ fn systems_in_unbounds_order() {
         let fits = |group: &[usize]| {
             let mine: Vec<&crate::realtime_uv::Output> =
                 group.iter().map(|&i| &outputs[order[i]]).collect();
-            pack_system(&mine).is_ok()
+            pack_system(&mine, LINUX_SORT).is_ok()
         };
         for system in scene_systems(&members, &keys, fits) {
             let mine: Vec<&crate::realtime_uv::Output> =
                 system.iter().map(|&i| &outputs[order[i]]).collect();
-            let layout = pack_system(&mine).unwrap();
+            let layout = pack_system(&mine, LINUX_SORT).unwrap();
             let mask = chart_mask(&layout, &mine);
             let blocks: usize = mine
                 .iter()

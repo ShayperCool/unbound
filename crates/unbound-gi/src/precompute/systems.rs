@@ -68,9 +68,10 @@ impl SystemLayout {
 /// Packs a system's instances: each one's charts move as one shape (its blocks; another
 /// instance's charts may take the blocks it leaves free), packed as an instance's charts are
 /// but ordered by an unstable sort on the blocks they use, most first (the order of equal
-/// shapes is the sort's, [`unbound_assets::sort::introsort`]), the output's width then rounded
+/// shapes is `sort`'s, the unstable sort of the Editor, [`unbound_compat::EditorSort`]; measured
+/// with the Linux Editor's only), the output's width then rounded
 /// up to whole multiples of [`SYSTEM_WIDTH_TEXELS`].
-pub fn pack_system(outputs: &[&Output]) -> Result<SystemLayout> {
+pub fn pack_system(outputs: &[&Output], sort: unbound_compat::EditorSort) -> Result<SystemLayout> {
     ensure!(!outputs.is_empty(), "a system without instances");
     let masks = outputs
         .iter()
@@ -79,7 +80,7 @@ pub fn pack_system(outputs: &[&Output]) -> Result<SystemLayout> {
     let refs: Vec<&Mask> = masks.iter().collect();
     let usage: Vec<usize> = masks.iter().map(Mask::usage).collect();
     let mut order: Vec<usize> = (0..masks.len()).collect();
-    unbound_assets::sort::introsort(&mut order, |&a, &b| usage[a] > usage[b]);
+    sort.sort_by(&mut order, |&a, &b| usage[a] > usage[b]);
     let (positions, width, height) = pack_in_order(&refs, &order)?;
     let mut width = width as u32 * BLOCK_TEXELS;
     width = width.div_ceil(SYSTEM_WIDTH_TEXELS) * SYSTEM_WIDTH_TEXELS;

@@ -14,6 +14,7 @@
 //! kept neighbour ([`removed_triangle_uvs`]).
 
 use super::SecondaryUvSettings;
+use unbound_compat::EditorSort;
 
 mod cleanup;
 mod math;
@@ -31,6 +32,8 @@ pub struct UnwrapInput<'a> {
     pub polygons: &'a [u32],
     /// UV0 per triangle corner, when the mesh has UVs.
     pub uvs: Option<&'a [[[f32; 2]; 3]]>,
+    /// The Editor's unstable sort, which orders the segmentation's equal chart borders.
+    pub sort: EditorSort,
 }
 
 /// The unwrap's parameters as the importer derives them from the settings.
@@ -44,6 +47,8 @@ pub struct UnwrapParams {
     pub hard_angle: f32,
     /// The gap between charts, as a fraction of the atlas.
     pub pack_margin: f32,
+    /// The input's sort.
+    pub sort: EditorSort,
 }
 
 impl UnwrapParams {
@@ -82,6 +87,7 @@ impl UnwrapParams {
             area_error: settings.area_distortion / 100.0,
             hard_angle: settings.hard_angle,
             pack_margin,
+            sort: input.sort,
         })
     }
 }
@@ -254,9 +260,9 @@ fn parametrize(
     charts: &mut Vec<param::Chart>,
 ) -> Result<(), String> {
     let segments = if component.facets.len() > 100 {
-        segment_large(map, &component)?
+        segment_large(map, &component, params.sort)?
     } else {
-        segment::segment(map, &component, None)?
+        segment::segment(map, &component, None, params.sort)?
     };
     // Pieces cut from a chart that overlapped itself are marked: one that overlaps itself again
     // is segmented further instead.
@@ -315,6 +321,7 @@ fn parametrize(
 fn segment_large(
     map: &mesh::HalfEdgeMesh,
     component: &mesh::Component,
+    sort: EditorSort,
 ) -> Result<Vec<mesh::Component>, String> {
     let n = component.facets.len();
     let sub = map.sub_triangles(component)?;
@@ -325,7 +332,7 @@ fn segment_large(
     } else {
         simplified.with_facets(target)
     };
-    let mut charts = segment::segment(map, &mesh::Component { facets: coarse }, None)?;
+    let mut charts = segment::segment(map, &mesh::Component { facets: coarse }, None, sort)?;
     let step = simplified.applied() / 3;
     let mut labels = vec![-1i32; n];
     let mut count;
@@ -347,11 +354,11 @@ fn segment_large(
         let finer = mesh::Component {
             facets: simplified.current(),
         };
-        charts.extend(segment::segment(map, &finer, Some((count, &labels)))?);
+        charts.extend(segment::segment(map, &finer, Some((count, &labels)), sort)?);
         round += 1;
     }
     simplified.refine(&mut labels, usize::MAX);
-    segment::segment(map, component, Some((count, &labels)))
+    segment::segment(map, component, Some((count, &labels)), sort)
 }
 
 #[cfg(test)]
@@ -388,6 +395,7 @@ mod margin_tests {
             triangles: &triangles,
             polygons: &[0, 1],
             uvs: None,
+            sort: EditorSort::LibStdCxx,
         };
         let manual = UnwrapParams::new(&settings(0), &input).unwrap();
         assert_eq!(manual.pack_margin, 4.0 / 1024.0);

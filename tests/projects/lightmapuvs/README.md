@@ -111,8 +111,10 @@ places (6 values 0.067 apart, passed to the gate as `--recorded`).
 
 `Sources/Names` holds hand-written OBJ files of one quad per part with `o` and `g` statements in
 different arrangements, Order.obj with group names that sort differently by letter case, digits
-and punctuation, and OrderFbx.fbx (`Tools/make_name_models.py`, Blender) with objects of the same
-names. The Names variant records each model's renderers in hierarchy order: the object's path
+and punctuation, OrderFbx.fbx (`Tools/make_name_models.py`, Blender) with objects of the same
+names, and Ties.fbx (same tool) with 28 objects, most of which have a sibling that differs only
+in letter case (`Gamma`, `gamma`, `GAMMA`) or in where a number's leading zeros are (`x01y2`,
+`x1y02`). The Names variant records each model's renderers in hierarchy order: the object's path
 and its mesh's name are part of the record's key.
 
 What the reference shows (Unity 6000.0.71f1): an OBJ file's meshes follow its `g` statements
@@ -121,14 +123,26 @@ the mesh `default`; a name of several words is joined by underscores; a group na
 later, also in another letter case, continues the same mesh (spelled as first seen); a group
 without faces gives no mesh; a vertex no face names is in no mesh. Each mesh is a child object of
 the root named like it, also when it is the only one. Siblings are ordered without regard to
-letter case and with runs of digits as numbers (`9`, `10`, `_under`, `a01`, `A1`, `a1A`, `a1b`,
-`a2`, `a10`, `Alpha`, `alpha`, `b-2`, `b.1`, `B_0`, `Beta`, `Zed`), the same for OBJ groups and FBX
-nodes. Not measured: `sortHierarchyByName` off; names with characters outside ASCII (Unbound
+ASCII letter case and with runs of digits as numbers (`9`, `10`, `_under`, `a01`, `A1`, `a1A`,
+`a1b`, `a2`, `a10`, `Alpha`, `alpha`, `b-2`, `b.1`, `B_0`, `Beta`, `Zed`), the same for OBJ groups
+and FBX nodes: bytes up to `/` before numbers, numbers before `_` and letters, more digits first,
+and of names otherwise equal the longer first (`a01` before `A1`). Names that differ only in
+letter case or in where leading zeros sit at the same length are equal to this order, and the
+order the Editor's unstable sort leaves them in depends on the OS: the Linux Editor's is GNU
+libstdc++'s introsort (OrderFbx: `Alpha`, `alpha`, its file order, as up to 16 siblings are only
+insertion sorted), the macOS Editor's the LLVM libc++ quicksort of releases before LLVM 15
+(`alpha`, `Alpha`). Ties.fbx's 28 siblings end in a third order on each OS, neither the file's nor
+a stable sort's; both OS orders are reproduced exactly by these two algorithms. The reference is
+the Linux Editor's; the macOS Editor's OrderFbx and Ties orders (two identical macOS arm64
+captures; every other Names record equals the reference) are in the importer's tests
+(`crates/unbound-assets/src/model/tests.rs`). Not measured: `sortHierarchyByName` off; names with characters outside ASCII (Unbound
 folds only ASCII letter case when it joins groups); group names with tabs, repeated spaces or a
 trailing comment (Unbound joins single spaces and keeps the rest of the line); and an OBJ face
 that gives no triangle with mesh optimization off (Unbound keeps its points, as for FBX).
 
-Unbound matches all 52 Names records in names, order, vertices and triangles; the calculated
+Unbound matches all 80 Names records in names, order, vertices and triangles, on Linux the
+reference and on macOS the macOS Editor's captures (Unbound sorts as the Editor of the OS it runs
+on); the calculated
 normals of some of these slightly bent quads differ in the last float digit (at most 1e-7).
 
 ## Imported normals
