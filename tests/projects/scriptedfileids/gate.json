@@ -1,6 +1,9 @@
 {
-  "commands": ["python3 tests/projects/scriptedfileids/run.py gate"],
-  "summary": "scriptedfileids: .*",
+  "commands": [
+    "python3 tests/projects/scriptedfileids/run.py gate",
+    "python3 tests/projects/scriptedfileids/hierarchy_control.py check --release \"$UNBOUND_PROBE_UNITY_VERSION\""
+  ],
+  "summary": "(scriptedfileids|hierarchyid): .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/ScriptedImporter.cs",
     "managed/UnityEngine/Runtime/Loading.cs"
