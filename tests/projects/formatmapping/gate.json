@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/formatmapping/run.py gate"
+  ],
+  "summary": "formatmapping: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/GraphicsFormats.cs",
+    "managed/UnityEngine/Graphics/TextureArrays.cs"
+  ]
+}
