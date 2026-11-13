@@ -202,35 +202,20 @@ static class NumberFormatShims
     /// </summary>
     internal static byte[] RedirectDelta(byte[] baseline, IReadOnlyList<byte[]> deltas, byte[] il)
     {
-        using var pe = new PEReader(ImmutableArray.Create(baseline));
-        var baseReader = pe.GetMetadataReader();
-        var providers = deltas.Select(d => MetadataReaderProvider.FromMetadataImage(ImmutableArray.Create(d))).ToList();
-        try
+        using var metadata = new DeltaMetadata(baseline, deltas);
+        var view = new AggregateView(metadata);
+        // The image's shim references, by key.
+        var targets = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var handle in metadata.Baseline.MemberReferences)
         {
-            var readers = new List<MetadataReader> { baseReader };
-            readers.AddRange(providers.Select(p => p.GetMetadataReader()));
-            var view = new AggregateView(new MetadataAggregator(baseReader, readers.Skip(1).ToList()), readers);
-            // The image's shim references, by key.
-            var targets = new Dictionary<string, int>(StringComparer.Ordinal);
-            foreach (var handle in baseReader.MemberReferences)
-            {
-                var (declaring, name, _, parameters) = view.Describe(MetadataTokens.GetToken(handle));
-                if (declaring == s_ShimType) targets[Key(name, parameters)] = MetadataTokens.GetToken(handle);
-            }
-            if (targets.Count == 0) return il;
-            var patched = (byte[])il.Clone();
-            var delta = readers[^1];
-            foreach (var handle in delta.MethodDefinitions)
-            {
-                var rva = delta.GetMethodDefinition(handle).RelativeVirtualAddress;
-                if (rva != 0) PatchBody(patched, rva, token => Redirection(view, targets, token));
-            }
-            return patched;
+            var (declaring, name, _, parameters) = view.Describe(MetadataTokens.GetToken(handle));
+            if (declaring == s_ShimType) targets[Key(name, parameters)] = MetadataTokens.GetToken(handle);
         }
-        finally
-        {
-            foreach (var provider in providers) provider.Dispose();
-        }
+        if (targets.Count == 0) return il;
+        var patched = (byte[])il.Clone();
+        foreach (var (_, offset) in metadata.Bodies())
+            PatchBody(patched, offset, token => Redirection(view, targets, token));
+        return patched;
     }
 
     /// <summary>The shim token for a call's member token (and its constrained type), or 0.</summary>
@@ -247,27 +232,13 @@ static class NumberFormatShims
     /// <summary>Rewrites the calls in the method body at <paramref name="offset"/>.</summary>
     static void PatchBody(byte[] il, int offset, Func<(int Token, int Constrained, bool Virtual), int> redirect)
     {
-        int codeSize, start;
-        if ((il[offset] & 0x3) == 0x2)
+        var (start, end, _) = DeltaMetadata.Body(il, offset);
+        int constrainedAt = -1, constrainedType = 0;
+        foreach (var (opcode, at, operand) in DeltaMetadata.Instructions(il, start, end))
         {
-            codeSize = il[offset] >> 2;
-            start = offset + 1;
-        }
-        else
-        {
-            int headerSize = (il[offset + 1] >> 4) * 4;
-            codeSize = BitConverter.ToInt32(il, offset + 4);
-            start = offset + headerSize;
-        }
-        int end = start + codeSize, constrainedAt = -1, constrainedType = 0;
-        for (int at = start; at < end;)
-        {
-            int opcode = il[at] == 0xFE ? 0xFE00 | il[at + 1] : il[at];
-            int size = opcode > 0xFF ? 2 : 1;
-            int operand = OperandSize(opcode, il, at + size);
             if (opcode is 0x28 or 0x6F) // call, callvirt
             {
-                int token = BitConverter.ToInt32(il, at + 1);
+                int token = BitConverter.ToInt32(il, operand);
                 bool prefixed = constrainedAt >= 0 && constrainedAt + 6 == at;
                 int target = redirect((token, prefixed ? constrainedType : 0, opcode == 0x6F));
                 if (target != 0)
@@ -280,53 +251,22 @@ static class NumberFormatShims
             if (opcode == 0xFE16) // constrained.
             {
                 constrainedAt = at;
-                constrainedType = BitConverter.ToInt32(il, at + 2);
+                constrainedType = BitConverter.ToInt32(il, operand);
             }
-            at += size + operand;
         }
     }
-
-    static readonly Dictionary<int, System.Reflection.Emit.OperandType> s_Operands = typeof(System.Reflection.Emit.OpCodes)
-        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-        .Select(f => (System.Reflection.Emit.OpCode)f.GetValue(null)!)
-        .ToDictionary(o => (int)(ushort)o.Value, o => o.OperandType);
-
-    static int OperandSize(int opcode, byte[] il, int at) => s_Operands[opcode] switch
-    {
-        System.Reflection.Emit.OperandType.InlineNone => 0,
-        System.Reflection.Emit.OperandType.ShortInlineBrTarget or System.Reflection.Emit.OperandType.ShortInlineI
-            or System.Reflection.Emit.OperandType.ShortInlineVar => 1,
-        System.Reflection.Emit.OperandType.InlineVar => 2,
-        System.Reflection.Emit.OperandType.InlineI8 or System.Reflection.Emit.OperandType.InlineR => 8,
-        System.Reflection.Emit.OperandType.InlineSwitch => 4 + 4 * BitConverter.ToInt32(il, at),
-        _ => 4,
-    };
 
     /// <summary>Names of references across a baseline and its deltas (whose rows and heap offsets
     /// continue the generations before them).</summary>
     sealed class AggregateView : ISignatureTypeProvider<string, object?>
     {
-        readonly MetadataAggregator m_Aggregator;
-        readonly List<MetadataReader> m_Readers;
+        readonly DeltaMetadata m_Metadata;
 
-        internal AggregateView(MetadataAggregator aggregator, List<MetadataReader> readers)
-        {
-            m_Aggregator = aggregator;
-            m_Readers = readers;
-        }
+        internal AggregateView(DeltaMetadata metadata) => m_Metadata = metadata;
 
-        MetadataReader Reader(Handle handle, out Handle local)
-        {
-            local = m_Aggregator.GetGenerationHandle(handle, out int generation);
-            return m_Readers[generation];
-        }
+        MetadataReader Reader(Handle handle, out Handle local) => m_Metadata.Reader(handle, out local);
 
-        string String(StringHandle handle)
-        {
-            if (handle.IsNil) return "";
-            var reader = Reader(handle, out var local);
-            return reader.GetString((StringHandle)local);
-        }
+        string String(StringHandle handle) => m_Metadata.String(handle);
 
         internal (string Declaring, string Name, bool HasThis, IReadOnlyList<string> Parameters) Describe(int token)
         {
