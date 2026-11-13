@@ -698,6 +698,18 @@ class JanitorTests(unittest.TestCase):
         self.assertTrue((outside/'link').exists())
         self.assertEqual(target.read_text(), 'keep')
 
+    def test_watch_retains_discovered_destinations_across_retry(self):
+        target = self.directory('q1/target')
+        link = self.cache/'reference'
+        link.symlink_to(target/'output')
+        watch = janitor.ReferenceWatch()
+        self.addCleanup(watch.close)
+        first = janitor.reference_paths([self.cache], watcher=watch, index_root=self.cache)
+        self.assertIn(target/'output', first)
+        link.unlink()
+        retried = janitor.reference_paths([self.cache], watcher=watch, index_root=self.cache)
+        self.assertIn(target/'output', retried)
+
     def test_new_symlink_moved_outside_roots_defers_removals(self):
         target = self.directory('q1/target')
         with self.guards():

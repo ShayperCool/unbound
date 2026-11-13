@@ -416,7 +416,10 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                                 continue
                             raise
                         target = target if target.is_absolute() else path.parent/target
-                        found.update((Path(os.path.abspath(target)), target.resolve()))
+                        values = (Path(os.path.abspath(target)), target.resolve())
+                        found.update(values)
+                        if watcher:
+                            watcher.references.update(values)
                         if target.is_dir() and not any(inside(target.resolve(), p) for p in excluded):
                             pending.append(target.resolve())
                     elif entry.is_dir() and path not in excluded:
