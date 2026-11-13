@@ -177,7 +177,11 @@ fn secondary_textures(v: Option<&Value>) -> Vec<SecondaryTextureDef> {
     seq.iter()
         .filter_map(|t| {
             let guid = t.get("texture")?.get("guid")?.as_str()?.to_string();
-            let name = t.get("name").and_then(Value::as_str).unwrap_or_default().to_string();
+            let name = t
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string();
             (!name.is_empty() && !guid.is_empty()).then_some(SecondaryTextureDef { name, guid })
         })
         .collect()
@@ -446,11 +450,7 @@ pub fn build_geometry(
     polygon: bool,
 ) {
     let r = sprite.texture_rect;
-    let texture = sprite_mesh::Texture {
-        width: width as i32,
-        height: height as i32,
-        rgba,
-    };
+    let texture = sprite_mesh::Texture::whole(width as i32, height as i32, rgba);
     let geometry = sprite_mesh::sprite_geometry(
         &texture,
         &sprite_mesh::SpriteSource {

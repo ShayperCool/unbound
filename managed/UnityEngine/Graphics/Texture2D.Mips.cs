@@ -233,6 +233,36 @@ namespace UnityEngine
             return result;
         }
 
+        /// <summary>Level 0's texels within a window, as GetPixels32 reads them (readable
+        /// textures only), for the engine's own tracing.</summary>
+        internal Color32[] GetPixels32Window(int x, int y, int blockWidth, int blockHeight)
+        {
+            RequireReadable(true);
+            CheckBlock(x, y, blockWidth, blockHeight, 0);
+            var result = new Color32[blockWidth * blockHeight];
+            int width = MipWidth(0);
+            for (int j = 0; j < blockHeight; j++)
+                for (int i = 0; i < blockWidth; i++)
+                {
+                    int at = (y + j) * width + x + i;
+                    result[j * blockWidth + i] = m_Hdr != null ? Texture2DTexels.Pixel32(m_Format, FloatCell(0, at)) : Texture2DTexels.Pixel32(m_Format, Cell(0, at));
+                }
+            return result;
+        }
+
+        /// <summary><see cref="GetPixels32Window"/>, also for a texture Apply made non-readable
+        /// (the texels it keeps for the engine).</summary>
+        internal Color32[] EngineTexels32Window(int x, int y, int blockWidth, int blockHeight)
+        {
+            if (m_IsReadable) return GetPixels32Window(x, y, blockWidth, blockHeight);
+            CheckBlock(x, y, blockWidth, blockHeight, 0);
+            var level = EnginePixels32();
+            var result = new Color32[blockWidth * blockHeight];
+            for (int j = 0; j < blockHeight; j++)
+                Array.Copy(level, (y + j) * m_Width + x, result, j * blockWidth, blockWidth);
+            return result;
+        }
+
         public Color32[] GetPixels32() => GetPixels32(0);
         public Color32[] GetPixels32(int miplevel)
         {

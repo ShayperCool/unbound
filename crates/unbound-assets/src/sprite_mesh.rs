@@ -1036,11 +1036,25 @@ pub struct SpriteGeometry {
 }
 
 /// The texture as `GetPixels32` gives it: RGBA8, rows bottom-up (`None`: not traceable, a
-/// floating-point texture).
+/// floating-point texture). `rgba` may hold only a window of the texture's texels (the rect a
+/// sprite is traced in): `window` is its `[x, y, width, height]` in texels.
 pub struct Texture<'a> {
     pub width: i32,
     pub height: i32,
     pub rgba: Option<&'a [u8]>,
+    pub window: [i32; 4],
+}
+
+impl<'a> Texture<'a> {
+    /// A texture whose texels are all given.
+    pub fn whole(width: i32, height: i32, rgba: Option<&'a [u8]>) -> Self {
+        Texture {
+            width,
+            height,
+            rgba,
+            window: [0, 0, width, height],
+        }
+    }
 }
 
 /// A sprite as the importer hands it to [`sprite_geometry`].
@@ -1099,15 +1113,25 @@ impl Region {
         })
     }
 
-    fn alpha(&self, rgba: &[u8], texture_width: i32) -> Vec<u8> {
+    /// The region's alpha; `None` when the texture has no 8-bit texels or its window does not
+    /// cover the region.
+    fn alpha(&self, texture: &Texture) -> Option<Vec<u8>> {
+        let rgba = texture.rgba?;
+        let [wx, wy, ww, wh] = texture.window;
+        if self.x0 < wx
+            || self.y0 < wy
+            || self.x0 + self.w > wx + ww
+            || self.y0 + self.h > wy + wh
+            || rgba.len() < (ww.max(0) as usize) * (wh.max(0) as usize) * 4
+        {
+            return None;
+        }
         let mut alpha = Vec::with_capacity((self.w * self.h) as usize);
         for y in 0..self.h {
-            for x in 0..self.w {
-                let i = ((y + self.y0) * texture_width + x + self.x0) as usize;
-                alpha.push(rgba[i * 4 + 3]);
-            }
+            let row = ((y + self.y0 - wy) * ww + self.x0 - wx) as usize;
+            alpha.extend((0..self.w as usize).map(|x| rgba[(row + x) * 4 + 3]));
         }
-        alpha
+        Some(alpha)
     }
 
     /// The traced outline of the texture: `quality` as [`make_shape`] takes it.
@@ -1130,7 +1154,7 @@ impl Region {
             detail
         };
         let extrude = if extrude == 0 { 1 } else { extrude.min(32) };
-        let alpha = self.alpha(texture.rgba?, texture.width);
+        let alpha = self.alpha(texture)?;
         let image = Alpha {
             width: self.w as usize,
             height: self.h as usize,
@@ -1702,11 +1726,7 @@ mod tests {
                 [10, 20, 30, a]
             })
             .collect();
-        let texture = Texture {
-            width: w as i32,
-            height: h as i32,
-            rgba: Some(&rgba),
-        };
+        let texture = Texture::whole(w as i32, h as i32, Some(&rgba));
         let rect = [0.0, 0.0, 64.0, 64.0];
         let holes = rect_outline(&texture, rect, 0.25, 0, true);
         assert_eq!(holes.len(), 2);
@@ -1719,11 +1739,21 @@ mod tests {
         assert!((31.0..=32.0).contains(&max), "{max}");
         // A rect outside the texture, or no 8-bit alpha: nothing.
         assert!(rect_outline(&texture, [60.0, 0.0, 20.0, 20.0], 0.25, 0, true).is_empty());
-        let none = Texture {
-            width: 64,
-            height: 64,
-            rgba: None,
-        };
+        let none = Texture::whole(64, 64, None);
         assert!(rect_outline(&none, rect, 0.25, 0, true).is_empty());
+        // Only the rect's texels: the same outlines; a window short of the rect: nothing.
+        let window: Vec<u8> = (16..48)
+            .flat_map(|y| rgba[(y * w + 8) * 4..(y * w + 40) * 4].to_vec())
+            .collect();
+        let part = Texture {
+            window: [8, 16, 32, 32],
+            ..Texture::whole(64, 64, Some(&window))
+        };
+        let inner = [8.0, 16.0, 32.0, 32.0];
+        assert_eq!(
+            rect_outline(&part, inner, 0.25, 0, true),
+            rect_outline(&texture, inner, 0.25, 0, true)
+        );
+        assert!(rect_outline(&part, [8.0, 16.0, 33.0, 32.0], 0.25, 0, true).is_empty());
     }
 }

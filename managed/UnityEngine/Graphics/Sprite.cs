@@ -83,15 +83,17 @@ namespace UnityEngine
                 m_Name = texture.name,
             };
             sprite.BuildGeometry();
-            if (meshType == SpriteMeshType.Tight || generateFallbackPhysicsShape)
-                sprite.Trace(meshType == SpriteMeshType.Tight, generateFallbackPhysicsShape);
+            // A Tight rect under 32 pixels on a side stays a quad: nothing to trace for its mesh.
+            bool tight = meshType == SpriteMeshType.Tight && rect.width >= 32 && rect.height >= 32;
+            if (tight || generateFallbackPhysicsShape) sprite.Trace(tight, generateFallbackPhysicsShape);
             return sprite;
         }
 
         /// <summary>The texture an imported sprite was made from (its page replaces m_Texture when an
         /// atlas packs it); null for sprites made otherwise.</summary>
         Texture2D m_SourceTexture;
-        /// <summary>The outline colliders take when the sprite has no physics shape, once traced.</summary>
+        /// <summary>The outline colliders take when the sprite has no physics shape, once traced
+        /// from an imported texture's import.</summary>
         Vector2[][] m_FallbackOutline;
 
         sealed class GeometryJson
@@ -110,28 +112,37 @@ namespace UnityEngine
 
         static readonly System.Text.Json.JsonSerializerOptions s_Json = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
 
-        /// <summary>The texels a trace reads: an imported texture by its GUID, else a readable
-        /// texture's own texels; null when there are none (the sprite stays a quad).</summary>
-        internal static Dictionary<string, object> TexelSource(Texture2D texture)
+        /// <summary>The texels a trace of <paramref name="rect"/> reads: an imported texture whose
+        /// texels are still the import's by its GUID, else the texture's CPU texels within the rect
+        /// (widened to whole texels): also those a script wrote but did not apply yet, and those of
+        /// a texture made non-readable by Apply (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteoutlines). Null without a texture (the sprite stays a quad).</summary>
+        internal static Dictionary<string, object> TexelSource(Texture2D texture, Rect rect)
         {
             if (texture == null || !Native.IsReady) return null;
-            if (texture.m_AssetGuid != null) return new Dictionary<string, object> { ["guid"] = texture.m_AssetGuid };
-            if (!texture.isReadable) return null;
-            var texels = texture.GetPixels32();
+            if (texture.TexelsAsImported) return new Dictionary<string, object> { ["guid"] = texture.m_AssetGuid };
+            int width = texture.width, height = texture.height;
+            int x0 = Math.Clamp((int)MathF.Floor(rect.x), 0, width), y0 = Math.Clamp((int)MathF.Floor(rect.y), 0, height);
+            int x1 = Math.Clamp((int)MathF.Ceiling(rect.x + rect.width), x0, width), y1 = Math.Clamp((int)MathF.Ceiling(rect.y + rect.height), y0, height);
+            var texels = texture.EngineTexels32Window(x0, y0, x1 - x0, y1 - y0);
             var bytes = new byte[texels.Length * 4];
             for (int i = 0; i < texels.Length; i++)
             {
                 bytes[i * 4] = texels[i].r; bytes[i * 4 + 1] = texels[i].g; bytes[i * 4 + 2] = texels[i].b; bytes[i * 4 + 3] = texels[i].a;
             }
-            return new Dictionary<string, object> { ["rgba"] = Convert.ToBase64String(bytes), ["width"] = texture.width, ["height"] = texture.height };
+            return new Dictionary<string, object>
+            {
+                ["rgba"] = Convert.ToBase64String(bytes), ["width"] = width, ["height"] = height,
+                ["window"] = new[] { x0, y0, x1 - x0, y1 - y0 },
+            };
         }
 
-        /// <summary>Traces the texture as the importer does: the Tight mesh (a rect under 32 pixels
-        /// on a side stays a quad) and the fallback physics shape (matches the Unity 6000.0.71f1
-        /// Editor's Sprite.Create, tests/projects/spriteoutlines).</summary>
+        /// <summary>Traces the texture as the importer does: the Tight mesh and the fallback
+        /// physics shape (matches the Unity 6000.0.71f1 Editor's Sprite.Create,
+        /// tests/projects/spriteoutlines).</summary>
         void Trace(bool tight, bool physics)
         {
-            var request = TexelSource(m_Texture);
+            var request = TexelSource(m_Texture, m_Rect);
             if (request == null) return;
             var geometry = TraceRequest(request, tight, physics);
             if (geometry == null) return;
@@ -175,10 +186,15 @@ namespace UnityEngine
         internal Vector2[][] ColliderOutline()
         {
             if (m_PhysicsShape is { Length: > 0 }) return m_PhysicsShape;
-            if (m_FallbackOutline != null) return m_FallbackOutline;
-            var request = TexelSource(m_SourceTexture ?? m_Texture);
+            var texture = m_SourceTexture ?? m_Texture;
+            // Kept only while nothing rewrote the texels it was traced from.
+            bool imported = texture != null && texture.TexelsAsImported;
+            if (m_FallbackOutline != null && imported) return m_FallbackOutline;
+            var request = TexelSource(texture, m_Rect);
             var geometry = request == null ? null : TraceRequest(request, false, true);
-            return m_FallbackOutline = Paths(geometry?.Physics) ?? Array.Empty<Vector2[]>();
+            var outline = Paths(geometry?.Physics) ?? Array.Empty<Vector2[]>();
+            m_FallbackOutline = imported ? outline : null;
+            return outline;
         }
 
         public static Sprite Create(Texture2D texture, Rect rect, Vector2 pivot, float pixelsPerUnit, uint extrude, SpriteMeshType meshType,

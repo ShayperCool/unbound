@@ -852,11 +852,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             }
             let r: Request = serde_json::from_str(request)?;
             let texels = texel_source(s, &r.texels)?;
-            let texture = unbound_assets::sprite_mesh::Texture {
-                width: texels.width as i32,
-                height: texels.height as i32,
-                rgba: texels.rgba.as_deref(),
-            };
+            let texture = texels.texture();
             let geometry = unbound_assets::sprite_mesh::sprite_geometry(
                 &texture,
                 &unbound_assets::sprite_mesh::SpriteSource {
@@ -893,11 +889,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             }
             let r: Request = serde_json::from_str(request)?;
             let texels = texel_source(s, &r.texels)?;
-            let texture = unbound_assets::sprite_mesh::Texture {
-                width: texels.width as i32,
-                height: texels.height as i32,
-                rgba: texels.rgba.as_deref(),
-            };
+            let texture = texels.texture();
             let paths = unbound_assets::sprite_mesh::rect_outline(
                 &texture,
                 r.rect,
@@ -1569,8 +1561,9 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     upload_imported(s, handle, texture, Some((&asset.file, &meta)), sprite_count)
 }
 
-/// Where a request's texels come from: an imported texture (its GUID) or the caller's RGBA8
-/// texels (base64, rows bottom-up).
+/// Where a request's texels come from: an imported texture (its GUID), or the caller's RGBA8
+/// texels (base64, rows bottom-up) of a `width` x `height` texture, all of them or only those of
+/// `window` (`[x, y, width, height]`).
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TexelSource {
@@ -1578,48 +1571,80 @@ struct TexelSource {
     rgba: Option<String>,
     width: Option<u32>,
     height: Option<u32>,
+    window: Option<[u32; 4]>,
 }
 
-struct Texels {
-    width: u32,
-    height: u32,
-    /// `None`: no 8-bit texels to trace (a floating-point texture).
-    rgba: Option<Vec<u8>>,
+enum Texels {
+    Imported(Arc<unbound_assets::texture::ImportedTexture>),
+    Given {
+        width: u32,
+        height: u32,
+        window: [u32; 4],
+        rgba: Vec<u8>,
+    },
+}
+
+impl Texels {
+    fn texture(&self) -> unbound_assets::sprite_mesh::Texture<'_> {
+        use unbound_assets::sprite_mesh::Texture;
+        match self {
+            Texels::Imported(texture) => match texture.mips.first() {
+                // A floating-point texture has no 8-bit alpha to trace.
+                Some(mip) => Texture::whole(
+                    mip.width as i32,
+                    mip.height as i32,
+                    (texture.format == unbound_assets::texture::TextureFormat::Rgba8)
+                        .then_some(&mip.data[..]),
+                ),
+                None => Texture::whole(0, 0, None),
+            },
+            Texels::Given {
+                width,
+                height,
+                window,
+                rgba,
+            } => Texture {
+                window: window.map(|v| v as i32),
+                ..Texture::whole(*width as i32, *height as i32, Some(rgba))
+            },
+        }
+    }
 }
 
 fn texel_source(s: &RuntimeState, source: &TexelSource) -> Result<Arc<Texels>> {
     if let Some(guid) = &source.guid {
+        let guid = guid.to_ascii_lowercase();
         let mut recent = s.traced_texels.lock().unwrap_or_else(|e| e.into_inner());
         if let Some((key, texels)) = recent.as_ref()
-            && key == guid
+            && *key == guid
         {
             return Ok(texels.clone());
         }
-        let texture = imported_texture(s, guid)?;
-        let mip = texture.mips.first().context("the texture has no texels")?;
-        let rgba = (texture.format == unbound_assets::texture::TextureFormat::Rgba8)
-            .then(|| mip.data.clone());
-        let texels = Arc::new(Texels {
-            width: mip.width,
-            height: mip.height,
-            rgba,
-        });
-        *recent = Some((guid.clone(), texels.clone()));
+        let texels = Arc::new(Texels::Imported(imported_texture(s, &guid)?));
+        *recent = Some((guid, texels.clone()));
         return Ok(texels);
     }
     let (Some(rgba), Some(width), Some(height)) = (&source.rgba, source.width, source.height)
     else {
         bail!("no texels: a texture GUID or RGBA texels with their size are needed");
     };
+    let window = source.window.unwrap_or([0, 0, width, height]);
+    let [x, y, w, h] = window;
+    anyhow::ensure!(
+        x.checked_add(w).is_some_and(|r| r <= width)
+            && y.checked_add(h).is_some_and(|t| t <= height),
+        "the texel window {window:?} is outside the {width}x{height} texture"
+    );
     let rgba = crate::fonts::decode_base64(rgba).context("texels are not base64")?;
     anyhow::ensure!(
-        rgba.len() == width as usize * height as usize * 4,
-        "the texels do not fill a {width}x{height} texture"
+        rgba.len() == w as usize * h as usize * 4,
+        "the texels do not fill a {w}x{h} window"
     );
-    Ok(Arc::new(Texels {
+    Ok(Arc::new(Texels::Given {
         width,
         height,
-        rgba: Some(rgba),
+        window,
+        rgba,
     }))
 }
 

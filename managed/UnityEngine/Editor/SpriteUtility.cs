@@ -15,7 +15,7 @@ namespace UnityEditor.Sprites
         internal static void GenerateOutline(Texture2D texture, Rect rect, float detail, byte alphaTolerance, bool holeDetection, out Vector2[][] paths)
         {
             paths = Array.Empty<Vector2[]>();
-            var request = Sprite.TexelSource(texture);
+            var request = Sprite.TexelSource(texture, rect);
             if (request == null) return;
             request["rect"] = new[] { rect.x, rect.y, rect.width, rect.height };
             request["detail"] = detail;

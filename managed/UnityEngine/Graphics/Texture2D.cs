@@ -31,6 +31,13 @@ namespace UnityEngine
         internal bool m_PixelsDirty;
         /// <summary>The asset GUID of an imported texture.</summary>
         internal string m_AssetGuid;
+        /// <summary>The update count when the texture was (re)imported.</summary>
+        uint m_ImportUpdateCount;
+
+        /// <summary>Whether the texels are still the import's: imported, no texels held on the CPU
+        /// (which scripts may have written) and not updated since the import.</summary>
+        internal bool TexelsAsImported => m_AssetGuid != null && updateCount == m_ImportUpdateCount
+            && m_Pixels == null && m_Hdr == null && m_Raw == null && m_Store == null && m_UnreadableRaw == null;
 
         Texture2D() { }
 
@@ -730,6 +737,7 @@ namespace UnityEngine
                 texture = new Texture2D { m_Name = name, hideFlags = HideFlags.NotEditable, IsPersistentAsset = true, m_AssetGuid = guid, m_ImportedFrom = guid };
             texture.m_NativeHandle = handle;
             texture.ApplyImport(info);
+            texture.m_ImportUpdateCount = texture.updateCount;
             return texture;
         }
 
@@ -809,6 +817,7 @@ namespace UnityEngine
             // The mip bias is the import's again (read back from the renderer, 0 without one).
             SetSamplerQuietly(filterMode, wrapModeU, wrapModeV, m_WrapModeW, anisoLevel, 0f);
             ApplyImport(info);
+            m_ImportUpdateCount = updateCount;
             return true;
         }
 
