@@ -5,6 +5,7 @@ Default is dry-run. Use --apply after inspecting it. JSON lines go to stdout and
 agents/janitor/<timestamp>.jsonl. No worktree or live checkout target is removed.
 """
 import argparse
+import ctypes
 import errno
 import fcntl
 import json
@@ -14,6 +15,7 @@ import re
 import shutil
 import sqlite3
 import stat
+import struct
 import subprocess
 import sys
 import time
@@ -28,7 +30,8 @@ GIB = 1024**3
 # Three days of captures, and a separate last-write grace for every deletion.
 DEFAULT_RUN_DAYS = 3
 DEFAULT_IDLE_HOURS = 24
-DEFAULT_MIN_FREE_GIB = 40
+DEFAULT_MIN_FREE_GIB = 20
+DEFAULT_SCAN_SECONDS = 1200
 
 
 def inside(path, root):
@@ -120,7 +123,85 @@ def process_paths(proc=Path('/proc'), *, uid=None, privileged=True):
     return found
 
 
-def reference_paths(roots, *, excluded=(), seconds=300):
+class ReferenceWatch:
+    """Keep link discovery current while workers create outputs concurrently.
+
+    Watch before reading each directory. A queue overflow or a moved watched
+    directory invalidates discovery and stops cleanup. Existing destinations stay
+    protected even if their original link disappears during this run.
+    """
+    CREATE, MOVED_TO = 0x100, 0x80
+    DELETE_SELF, MOVE_SELF, OVERFLOW, IGNORED = 0x400, 0x800, 0x4000, 0x8000
+    ONLYDIR, NOFOLLOW = 0x1000000, 0x2000000
+
+    def __init__(self, excluded=()):
+        self.libc = ctypes.CDLL(None, use_errno=True)
+        self.fd = self.libc.inotify_init1(os.O_NONBLOCK | os.O_CLOEXEC)
+        if self.fd < 0:
+            raise OSError(ctypes.get_errno(), 'cannot monitor reference directories')
+        self.directories, self.references, self.retired = {}, set(), set()
+        self.excluded = tuple(p.resolve() for p in excluded)
+
+    def close(self):
+        if self.fd >= 0:
+            os.close(self.fd)
+            self.fd = -1
+
+    def add(self, directory):
+        mask = self.CREATE | self.MOVED_TO | self.DELETE_SELF | self.MOVE_SELF | self.ONLYDIR | self.NOFOLLOW
+        descriptor = self.libc.inotify_add_watch(self.fd, os.fsencode(directory), mask)
+        if descriptor < 0:
+            number = ctypes.get_errno()
+            if number == errno.ENOENT:
+                return
+            raise OSError(number, f'cannot monitor reference directory {directory}; cleanup deferred')
+        self.directories[descriptor] = directory
+
+    def poll(self):
+        pending = set()
+        while True:
+            try:
+                data = os.read(self.fd, 1024*1024)
+            except BlockingIOError:
+                break
+            offset = 0
+            while offset < len(data):
+                descriptor, mask, _, length = struct.unpack_from('iIII', data, offset)
+                name = os.fsdecode(data[offset+16:offset+16+length].split(b'\0', 1)[0])
+                offset += 16+length
+                if mask & self.OVERFLOW:
+                    raise OSError('reference change queue overflowed; cleanup deferred')
+                directory = self.directories.get(descriptor)
+                if directory is None or any(inside(directory, p) for p in self.retired):
+                    continue
+                if mask & self.DELETE_SELF:
+                    # Its links are already protected. The watched parent catches
+                    # any replacement directory and its new links.
+                    self.directories.pop(descriptor, None)
+                    continue
+                if mask & self.MOVE_SELF:
+                    raise OSError(f'reference directory moved: {directory}; cleanup deferred')
+                if mask & self.IGNORED:
+                    self.directories.pop(descriptor, None)
+                    continue
+                path = directory/name
+                try:
+                    if path.is_symlink():
+                        raw = path.readlink()
+                        target = raw if raw.is_absolute() else path.parent/raw
+                        self.references.update((Path(os.path.abspath(target)), target.resolve()))
+                        if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
+                            pending.add(target.resolve())
+                    elif path.is_dir() and not any(inside(path, p) for p in self.excluded):
+                        self.add(path)
+                        pending.add(path)
+                except OSError as error:
+                    if not gone(error):
+                        raise
+        return pending
+
+
+def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root=None, prune=True):
     """Resolve links at any depth, including directory aliases and link chains.
 
     A link within a removal candidate conservatively keeps its target too. We
@@ -131,12 +212,15 @@ def reference_paths(roots, *, excluded=(), seconds=300):
     excluded = set(p.resolve() for p in excluded)
     roots = list(dict.fromkeys(Path(p).absolute() for p in roots))
     # One shared cache index for every scan root. No index files in checkouts.
-    index = DirectoryIndex(roots[0], seconds=seconds)
+    index = DirectoryIndex(index_root or roots[0], seconds=seconds)
     try:
         pending = [root for root in roots if root.exists()]
         while pending:
             batch = pending[-index.batch_size:]
             del pending[-index.batch_size:]
+            if watcher:
+                for directory in batch:
+                    watcher.add(directory)
             for directory, info in zip(batch, index.stat_many(batch)):
                 if isinstance(info, OSError):
                     if gone(info):
@@ -158,7 +242,12 @@ def reference_paths(roots, *, excluded=(), seconds=300):
                             pending.append(target.resolve())
                     elif entry.is_dir() and path not in excluded:
                         pending.append(path)
-        index.finish()
+            if watcher:
+                pending.extend(watcher.poll())
+        if watcher:
+            found.update(watcher.references)
+        if prune:
+            index.finish()
     finally:
         index.close()
     return found
@@ -193,7 +282,7 @@ def inventory(path):
 
 class Janitor:
     def __init__(self, repo, *, apply=False, idle_hours=DEFAULT_IDLE_HOURS,
-                 run_days=DEFAULT_RUN_DAYS, log=None, extra_protected=(), scan_seconds=300):
+                 run_days=DEFAULT_RUN_DAYS, log=None, extra_protected=(), scan_seconds=DEFAULT_SCAN_SECONDS):
         self.repo = Path(repo).resolve()
         self.cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound'
         self.builds = build.build_root()
@@ -203,6 +292,7 @@ class Janitor:
         self.log, self.scan_seconds = log, scan_seconds
         self.protected = [Path(p).resolve() for p in extra_protected]
         self.removed = self.reclaimable = 0
+        self.watch = None
 
     def emit(self, action, **fields):
         line = json.dumps({'time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -226,7 +316,10 @@ class Janitor:
                          self.cache/'tools', self.volume/'editors', self.volume/'tools',
                          Path.home()/'Unity/Hub/Editor']
         self.emit('scan', roots=[str(p) for p in self.scan_roots], seconds=self.scan_seconds)
-        self.links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_seconds)
+        self.watch = ReferenceWatch(self.excluded)
+        self.links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_seconds,
+                                     watcher=self.watch, index_root=self.cache)
+        self.emit('references_ready', watched_directories=len(self.watch.directories), references=len(self.links))
         self.processes = process_paths()
 
     def candidates(self):
@@ -279,11 +372,21 @@ class Janitor:
             return 'recently modified'
         return None
 
+    def refresh_links(self):
+        if self.watch is None:
+            return
+        pending = self.watch.poll()
+        if pending:
+            self.links.update(reference_paths(pending, excluded=self.excluded, seconds=self.scan_seconds,
+                                              watcher=self.watch, index_root=self.cache, prune=False))
+        self.links.update(self.watch.references)
+
     def remove(self, path, *, kind='runtime', hours=None):
         """Runtime collector callback; re-check each candidate immediately before removal."""
         path = Path(os.path.abspath(path))
         hours = max(self.idle_hours, hours or 0)
         try:
+            self.refresh_links()
             if reason := self.reason(path, hours):
                 self.emit('keep', path=str(path), reason=reason)
                 return False
@@ -299,9 +402,12 @@ class Janitor:
                     if self.states.get(task) != 'landed':
                         self.emit('keep', path=str(path), reason='task state changed')
                         return False
+                self.refresh_links()
                 if reason := self.reason(path, hours):
                     self.emit('keep', path=str(path), reason=reason)
                     return False
+                if self.watch:
+                    self.watch.retired.add(path)
                 self.emit('removing', path=str(path), kind=kind, allocated_bytes=allocated,
                           reclaimable_bytes=reclaimable)
                 if path.is_dir() and not path.is_symlink():
@@ -320,7 +426,14 @@ class Janitor:
             return False
 
     def collect(self):
-        self.discover()
+        try:
+            self.discover()
+            self.collect_candidates()
+        finally:
+            if self.watch:
+                self.watch.close()
+
+    def collect_candidates(self):
         for path, kind, hours in self.candidates():
             if kind == 'target':
                 marker = path/'.unbound-source-root'
@@ -395,7 +508,7 @@ def main(argv=None):
     parser.add_argument('--dry-run', action='store_true', help='default; mutually exclusive with --apply')
     parser.add_argument('--idle-hours', type=float, default=DEFAULT_IDLE_HOURS)
     parser.add_argument('--run-days', type=float, default=DEFAULT_RUN_DAYS)
-    parser.add_argument('--scan-seconds', type=float, default=300)
+    parser.add_argument('--scan-seconds', type=float, default=DEFAULT_SCAN_SECONDS)
     parser.add_argument('--protect', type=Path, action='append', default=[])
     args = parser.parse_args(argv)
     if args.process_paths_only is not None:

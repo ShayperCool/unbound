@@ -98,6 +98,7 @@ class JanitorTests(unittest.TestCase):
     def test_all_slots_main_and_train_are_protected(self):
         with self.guards():
             self.j.discover()
+        self.addCleanup(self.j.watch.close)
         for n in range(1, 11):
             target = janitor.build.default_target(self.volume/f'slots/slot-{n:02}', self.builds)
             target.mkdir()
@@ -189,6 +190,58 @@ class JanitorTests(unittest.TestCase):
         finally:
             process.communicate(input='', timeout=5)
 
+    def test_symlink_created_after_discovery_keeps_run(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            (self.cache/'late-reference').symlink_to(run/'output')
+            self.assertFalse(self.j.remove(run, kind='run', hours=72))
+            self.j.apply = True
+            self.assertFalse(self.j.remove(run, kind='run', hours=72))
+        self.assertTrue(run.is_dir())
+        self.assertTrue((self.cache/'late-reference').exists())
+
+    def test_new_nested_directory_and_moved_directory_links_are_seen(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        staging = self.root/'staging/nested'
+        staging.mkdir(parents=True)
+        (staging/'reference').symlink_to(run/'output')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            (self.root/'staging').rename(self.cache/'new-directory')
+            self.j.apply = True
+            self.assertFalse(self.j.remove(run, kind='run', hours=72))
+        self.assertTrue(run.is_dir())
+
+    def test_deleted_source_directory_can_be_replaced_with_new_link(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        source = self.cache/'source'
+        source.mkdir()
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            source.rmdir()
+            source.mkdir()
+            (source/'late-reference').symlink_to(run/'output')
+            self.j.apply = True
+            self.assertFalse(self.j.remove(run, kind='run', hours=72))
+        self.assertTrue(run.is_dir())
+
+    def test_reference_watch_overflow_fails_closed(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            overflow = janitor.struct.pack('iIII', -1, self.j.watch.OVERFLOW, 0, 0)
+            self.j.apply = True
+            with patch.object(janitor.os, 'read', return_value=overflow):
+                with self.assertRaisesRegex(OSError, 'overflowed'):
+                    self.j.remove(run, kind='run', hours=72)
+        self.assertTrue(run.is_dir())
+        self.assertEqual(self.j.removed, 0)
+
     def test_link_from_live_target_keeps_run_input(self):
         run = self.directory('unbound-validation/runs/probe-20261101-old')
         target = self.directory('builds/targets/live')
@@ -266,6 +319,7 @@ class JanitorTests(unittest.TestCase):
         self.assertIn('Persistent=true', units['unbound-janitor.timer'])
         self.assertIn(str(self.builds), units['unbound-janitor.service'])
         self.assertIn('--apply --repo', units['unbound-janitor.service'])
+        self.assertIn('WorkingDirectory='+str(self.repo)+'\n', units['unbound-janitor.service'])
 
 
 if __name__ == '__main__':

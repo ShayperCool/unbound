@@ -20,12 +20,14 @@ Description=Unbound disk janitor
 
 [Service]
 Type=oneshot
-WorkingDirectory={quote(repo)}
+WorkingDirectory={str(repo).replace('%', '%%')}
 {env}
 ExecStart={quote(sys.executable)} {quote(repo/'tools/agents/janitor.py')} --apply --repo {quote(repo)}
 Nice=15
 IOSchedulingClass=idle
-TimeoutStartSec=15min
+MemoryMax=4G
+OOMScoreAdjust=500
+TimeoutStartSec=45min
 '''
     timer = '''[Unit]
 Description=Hourly Unbound disk hygiene
