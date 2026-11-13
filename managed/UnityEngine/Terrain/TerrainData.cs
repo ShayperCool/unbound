@@ -111,6 +111,19 @@ namespace UnityEngine
         {
             get
             {
+                var (min, max) = HeightRange();
+                var s = size;
+                float low = min / (float)MaxHeight * s.y, high = max / (float)MaxHeight * s.y;
+                return new Bounds(new Vector3(s.x * 0.5f, (low + high) * 0.5f, s.z * 0.5f), new Vector3(s.x, Math.Max(high - low, MinimumBoundsHeight), s.z));
+            }
+        }
+
+        /// <summary>The heightmap's lowest and highest samples, kept until the heights change
+        /// (renderers read the bounds once per patch and frame).</summary>
+        (int, int) HeightRange()
+        {
+            if (!ReferenceEquals(m_RangeOf, m_Heights) || m_RangeVersion != m_HeightsVersion)
+            {
                 int min = ushort.MaxValue, max = 0;
                 foreach (var h in m_Heights)
                 {
@@ -118,11 +131,16 @@ namespace UnityEngine
                     if (h > max) max = h;
                 }
                 if (m_Heights.Length == 0) min = max = 0;
-                var s = size;
-                float low = min / (float)MaxHeight * s.y, high = max / (float)MaxHeight * s.y;
-                return new Bounds(new Vector3(s.x * 0.5f, (low + high) * 0.5f, s.z * 0.5f), new Vector3(s.x, Math.Max(high - low, MinimumBoundsHeight), s.z));
+                m_Range = (min, max);
+                m_RangeOf = m_Heights;
+                m_RangeVersion = m_HeightsVersion;
             }
+            return m_Range;
         }
+
+        (int, int) m_Range;
+        ushort[] m_RangeOf;
+        int m_RangeVersion;
 
         [Obsolete("Terrain thickness is no longer required by the physics engine. Set appropriate continuous collision detection modes to fast moving bodies.")]
         public float thickness { get; set; }

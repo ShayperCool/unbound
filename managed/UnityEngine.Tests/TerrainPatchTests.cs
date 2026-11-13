@@ -66,6 +66,23 @@ namespace UnityEngine.Tests
             return (terrain, data);
         }
 
+        /// <summary>The bounds follow every change of the heights, of the size and of the
+        /// resolution (the height range is kept between changes).</summary>
+        [Fact]
+        public void BoundsFollowTheHeights()
+        {
+            var (_, data) = Bumpy(33, 0f);
+            Assert.Equal(20f, data.bounds.center.y, 2);
+            Assert.Equal(0f, data.bounds.size.y, 2);
+            data.SetHeights(0, 0, new float[,] { { 1f } });
+            Assert.Equal(20f, data.bounds.size.y, 2);
+            Assert.Equal(30f, data.bounds.center.y, 2);
+            data.size = new Vector3(256f, 80f, 256f);
+            Assert.Equal(40f, data.bounds.size.y, 2);
+            data.heightmapResolution = 65;
+            Assert.Equal(0f, data.bounds.size.y, 2);
+        }
+
         static List<(int Level, int X, int Z)> DrawnNodes(TerrainRenderer.PatchTree tree)
         {
             var drawn = new List<(int, int, int)>();
