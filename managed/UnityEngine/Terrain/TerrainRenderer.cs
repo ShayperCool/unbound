@@ -185,10 +185,12 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>Whether a tree prefab's materials name a BillboardShader (the Soft Occlusion and
-        /// Tree Creator shaders do): the Editor draws such trees as billboards from a distance.</summary>
-        static bool NamesBillboardShader(GameObject prefab)
+        /// <summary>Whether a tree prefab without a LOD group has materials naming a BillboardShader
+        /// (the Soft Occlusion and Tree Creator shaders do): the Editor draws such trees as
+        /// billboards from a distance; a LOD group's trees take its levels instead.</summary>
+        internal static bool NamesBillboardShader(GameObject prefab)
         {
+            if (prefab.GetComponent<LODGroup>() != null) return false;
             foreach (var renderer in prefab.GetComponentsInChildren<Renderer>(true))
                 foreach (var material in renderer.sharedMaterials)
                     if (material != null && material.shader != null && material.shader.GetDependency("BillboardShader") != null)

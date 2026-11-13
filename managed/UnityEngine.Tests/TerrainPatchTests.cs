@@ -365,5 +365,39 @@ namespace UnityEngine.Tests
             Assert.Equal(float.PositiveInfinity, errors[17]);
             Assert.NotEqual(float.PositiveInfinity, errors[18]);
         }
+
+        /// <summary>A tree prefab is taken for a billboard tree when a material's shader names a
+        /// BillboardShader and it has no LOD group; a plain shader's tree is not.</summary>
+        [Fact]
+        public void BillboardTreesAreThoseWhoseShadersNameABillboardShader()
+        {
+            var bark = Shader.Create("Unbound Tests/Billboard Bark", 2000);
+            var rendertex = Shader.Create("Unbound Tests/Billboard Bark Rendertex", 2000);
+            var plain = Shader.Create("Unbound Tests/Plain Bark", 2000);
+            Shader.Register(bark);
+            Shader.Register(rendertex);
+            Shader.Register(plain);
+            ShaderPassInfo.s_CallForTests = name => System.Text.Json.JsonSerializer.Serialize(new
+            {
+                shader = name, found = true, tags = new Dictionary<string, string>(),
+                dependencies = name == bark.name ? new Dictionary<string, string> { ["BillboardShader"] = rendertex.name } : new Dictionary<string, string>(),
+                passes = new[] { new { name = "", tags = new Dictionary<string, string>() } },
+            });
+            try
+            {
+                GameObject Tree(Shader shader, bool lod)
+                {
+                    var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    m_Objects.Add(go);
+                    go.GetComponent<MeshRenderer>().sharedMaterial = new Material(shader);
+                    if (lod) go.AddComponent<LODGroup>();
+                    return go;
+                }
+                Assert.True(TerrainRenderer.NamesBillboardShader(Tree(bark, false)));
+                Assert.False(TerrainRenderer.NamesBillboardShader(Tree(plain, false)));
+                Assert.False(TerrainRenderer.NamesBillboardShader(Tree(bark, true)));
+            }
+            finally { ShaderPassInfo.ResetForTests(); }
+        }
     }
 }

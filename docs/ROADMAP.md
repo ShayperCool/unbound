@@ -236,7 +236,8 @@ In dependency order; each item ends with an Editor-reference probe.
       the base map past basemapDistance, the per-patch height errors and ranges
       (`tests/projects/terrainlod`) (Q421). Left in drawing: billboards for tree prototypes whose
       materials' shaders name a BillboardShader (Soft Occlusion, Tree Creator); the rest is in the
-      Terrain rows of COMPATIBILITY_GAPS.md (LOD overrides, heightmap textures, realtime GI).
+      Terrain rows of COMPATIBILITY_GAPS.md (LOD overrides, normalmapTexture) and its
+      terrainlightmaps row (realtime GI).
 - [x] AssetBundles the Editor builds (UnityFS: uncompressed, LZ4, LZMA): LoadFromFile, Memory,
       Stream and their async forms, LoadAsset (by path or name, sub-assets), LoadAllAssets, Unload,
       the manifest, scenes through SceneManager; player data read by its type trees (references
