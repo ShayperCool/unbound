@@ -510,8 +510,10 @@ namespace UnityEngine
 
         public void RotateAround(Vector3 point, Vector3 axis, float angle)
         {
+            // C# in Unity too: the position turns through the scripting Quaternion.AngleAxis; only the
+            // rotation goes through the native turn below.
             var worldPos = position;
-            var q = QuaternionMath.AngleAxis(angle, axis);
+            var q = Quaternion.AngleAxis(angle, axis);
             var dif = worldPos - point;
             dif = q * dif;
             worldPos = point + dif;
