@@ -450,6 +450,7 @@ namespace UnityEngine.Tests
             terrain.detailObjectDensity = 0.8f;
             terrain.heightmapPixelError = 9f;
             var previous = QualitySettings.terrainQualityOverrides;
+            float previousScale = QualitySettings.terrainDetailDensityScale;
             try
             {
                 QualitySettings.terrainQualityOverrides = TerrainQualityOverrides.DetailDensity;
@@ -462,6 +463,43 @@ namespace UnityEngine.Tests
             finally
             {
                 QualitySettings.terrainQualityOverrides = previous;
+                QualitySettings.terrainDetailDensityScale = previousScale;
+            }
+        }
+
+        /// <summary>Drawn details are rebuilt when the detail density changes, the terrain's or the
+        /// quality level's.</summary>
+        [Fact]
+        public void DrawnDetailsFollowTheDensity()
+        {
+            var texture = Own(new Texture2D(4, 4));
+            var data = Data(DetailScatterMode.InstanceCountMode, new DetailPrototype { prototypeTexture = texture, useDensityScaling = true });
+            Fill(data, 0, 2);
+            var go = Own(new GameObject("drawn density"));
+            go.SetActive(false);
+            var terrain = go.AddComponent<Terrain>();
+            terrain.terrainData = data;
+            go.SetActive(true);
+            var renderer = terrain.Renderer;
+            var origin = terrain.GetPosition();
+            Assert.True(renderer.DetailsStale(terrain, data, origin));
+            renderer.BuildDetailsForTest(terrain, data, origin);
+            Assert.False(renderer.DetailsStale(terrain, data, origin));
+            terrain.detailObjectDensity = 0.3f;
+            Assert.True(renderer.DetailsStale(terrain, data, origin));
+            renderer.BuildDetailsForTest(terrain, data, origin);
+            var previous = QualitySettings.terrainQualityOverrides;
+            float previousScale = QualitySettings.terrainDetailDensityScale;
+            try
+            {
+                QualitySettings.terrainQualityOverrides = TerrainQualityOverrides.DetailDensity;
+                QualitySettings.terrainDetailDensityScale = 0.7f;
+                Assert.True(renderer.DetailsStale(terrain, data, origin));
+            }
+            finally
+            {
+                QualitySettings.terrainQualityOverrides = previous;
+                QualitySettings.terrainDetailDensityScale = previousScale;
             }
         }
 

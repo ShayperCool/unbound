@@ -55,6 +55,14 @@ namespace UnityEngine
         int m_DetailsVersion = -1, m_DetailsHeights = -1;
         Vector3 m_DetailsOrigin;
         bool m_DetailsLegacy;
+        float m_DetailsDensity = float.NaN;
+
+        /// <summary>Whether the built details no longer match what they were built from: the data,
+        /// its heights, the terrain's place, the legacy distribution or the detail density (the
+        /// terrain's, or the quality level's).</summary>
+        internal bool DetailsStale(Terrain terrain, TerrainData data, Vector3 origin) =>
+            m_DetailsData != data || m_DetailsVersion != data.m_DetailsVersion || m_DetailsHeights != data.m_HeightsVersion || m_DetailsOrigin != origin
+            || m_DetailsLegacy != QualitySettings.useLegacyDetailDistribution || !(m_DetailsDensity == terrain.detailObjectDensity);
         Texture2D m_DetailAtlas;
         readonly Material[] m_DetailMaterials = new Material[3];
         static readonly string[] s_DetailShaders =
@@ -67,8 +75,7 @@ namespace UnityEngine
         void CollectDetails(Terrain terrain, TerrainData data, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             var origin = terrain.GetPosition();
-            if (m_DetailsData != data || m_DetailsVersion != data.m_DetailsVersion || m_DetailsHeights != data.m_HeightsVersion || m_DetailsOrigin != origin
-                || m_DetailsLegacy != QualitySettings.useLegacyDetailDistribution)
+            if (DetailsStale(terrain, data, origin))
                 BuildDetails(terrain, data, origin);
             float distance = terrain.detailObjectDistance;
             if (distance <= 0f) return;
@@ -212,6 +219,8 @@ namespace UnityEngine
             (byte)Mathf.Clamp(Mathf.RoundToInt(c.r * 255f), 0, 255), (byte)Mathf.Clamp(Mathf.RoundToInt(c.g * 255f), 0, 255),
             (byte)Mathf.Clamp(Mathf.RoundToInt(c.b * 255f), 0, 255), (byte)Mathf.Clamp(Mathf.RoundToInt(c.a * 255f), 0, 255));
 
+        internal void BuildDetailsForTest(Terrain terrain, TerrainData data, Vector3 origin) => BuildDetails(terrain, data, origin);
+
         void BuildDetails(Terrain terrain, TerrainData data, Vector3 origin)
         {
             DestroyDetails();
@@ -220,6 +229,7 @@ namespace UnityEngine
             m_DetailsHeights = data.m_HeightsVersion;
             m_DetailsOrigin = origin;
             m_DetailsLegacy = QualitySettings.useLegacyDetailDistribution;
+            m_DetailsDensity = terrain.detailObjectDensity;
             var prototypes = data.detailPrototypes;
             if (prototypes.Length == 0 || data.detailResolution == 0) return;
             var rects = BuildDetailAtlas(prototypes, out var white);
