@@ -42,6 +42,7 @@ namespace UnityEngine
         [LibraryImport(CoreFoundation)] private static partial IntPtr CFPreferencesCopyAppValue(IntPtr key, IntPtr app);
         [LibraryImport(CoreFoundation)] private static partial void CFPreferencesSetAppValue(IntPtr key, IntPtr value, IntPtr app);
         [LibraryImport(CoreFoundation)] private static partial byte CFPreferencesAppSynchronize(IntPtr app);
+        [LibraryImport(CoreFoundation)] private static partial IntPtr CFLocaleCopyPreferredLanguages();
 
         static IntPtr s_CurrentUser, s_AnyHost;
 
@@ -105,6 +106,22 @@ namespace UnityEngine
                 CFRelease(appRef);
             }
             return values;
+        }
+
+        /// <summary>The first of the user's preferred languages (System Settings, Language &amp;
+        /// Region) as a BCP 47 tag such as <c>zh-Hant-TW</c>, or null when the list is empty.</summary>
+        internal static string PreferredLanguage()
+        {
+            var languages = CFLocaleCopyPreferredLanguages();
+            if (languages == IntPtr.Zero) return null;
+            try
+            {
+                return CFArrayGetCount(languages) > 0 ? ReadString(CFArrayGetValueAtIndex(languages, 0)) : null;
+            }
+            finally
+            {
+                CFRelease(languages);
+            }
         }
 
         static object ToManaged(IntPtr value)

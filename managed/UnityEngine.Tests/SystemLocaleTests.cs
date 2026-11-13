@@ -1,3 +1,5 @@
+using System;
+using System.Globalization;
 using Unbound.Runtime;
 using Xunit;
 
@@ -30,6 +32,78 @@ namespace UnityEngine.Tests
             Assert.Equal("\u0130", "i".ToUpper(turkish));
             var german = SystemLocale.WithInvariantCollation(new System.Globalization.CultureInfo("de-DE"));
             Assert.Equal("1,5", 1.5.ToString(german));
+        }
+
+        // The macOS Editor's game culture is en-US whatever the system's settings; elsewhere the
+        // OS culture is kept.
+        [Fact]
+        public void TheGameCultureIsTheEditorsOfThisOs()
+        {
+            var culture = CultureInfo.CurrentCulture;
+            var ui = CultureInfo.CurrentUICulture;
+            var defaultCulture = CultureInfo.DefaultThreadCurrentCulture;
+            var defaultUi = CultureInfo.DefaultThreadCurrentUICulture;
+            try
+            {
+                CultureInfo.CurrentCulture = new CultureInfo("de-DE");
+                CultureInfo.CurrentUICulture = new CultureInfo("de-DE");
+                SystemLocale.InstallCulture();
+                bool mac = OperatingSystem.IsMacOS();
+                Assert.Equal(mac ? "en-US" : "de-DE", CultureInfo.CurrentCulture.Name);
+                Assert.Equal(mac ? "en-US" : "de-DE", CultureInfo.CurrentUICulture.Name);
+                Assert.Equal(mac ? "0.5" : "0,5", 0.5.ToString());
+                Assert.Equal(-1, CultureInfo.CurrentCulture.CompareInfo.LastIndexOf("Hit", "/"));
+            }
+            finally
+            {
+                CultureInfo.DefaultThreadCurrentCulture = defaultCulture;
+                CultureInfo.DefaultThreadCurrentUICulture = defaultUi;
+                CultureInfo.CurrentCulture = culture;
+                CultureInfo.CurrentUICulture = ui;
+            }
+        }
+
+        // The macOS Editor takes the first preferred language and ignores the POSIX variables;
+        // elsewhere they decide.
+        [Fact]
+        public void TheLocaleNameComesFromTheOsSetting()
+        {
+            string lang = Environment.GetEnvironmentVariable("LANG");
+            string all = Environment.GetEnvironmentVariable("LC_ALL");
+            string messages = Environment.GetEnvironmentVariable("LC_MESSAGES");
+            try
+            {
+                Environment.SetEnvironmentVariable("LC_ALL", null);
+                Environment.SetEnvironmentVariable("LC_MESSAGES", null);
+                Environment.SetEnvironmentVariable("LANG", "tlh_XX.UTF-8");
+                if (!OperatingSystem.IsMacOS())
+                {
+                    Assert.Equal("tlh_XX.UTF-8", SystemLocale.Name());
+                    return;
+                }
+                Assert.Equal(FirstPreferredLanguage(), SystemLocale.Name());
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("LANG", lang);
+                Environment.SetEnvironmentVariable("LC_ALL", all);
+                Environment.SetEnvironmentVariable("LC_MESSAGES", messages);
+            }
+        }
+
+        /// <summary>The user's first preferred language as the defaults tool prints the list.</summary>
+        static string FirstPreferredLanguage()
+        {
+            var start = new System.Diagnostics.ProcessStartInfo("/usr/bin/defaults", "read -g AppleLanguages")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            using var process = System.Diagnostics.Process.Start(start);
+            string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            Assert.Equal(0, process.ExitCode);
+            return output.Trim().TrimStart('(').Split(',')[0].Trim().Trim('"');
         }
     }
 }

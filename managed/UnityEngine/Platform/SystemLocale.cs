@@ -4,8 +4,9 @@ using UnityEngine;
 
 namespace Unbound.Runtime
 {
-    /// <summary>The OS's user interface language, as Application.systemLanguage reports it: the
-    /// POSIX locale variables (LC_ALL, LC_MESSAGES, LANG), else .NET's UI culture.</summary>
+    /// <summary>The OS's user interface language, as Application.systemLanguage reports it: on
+    /// macOS the first of the user's preferred languages, elsewhere the POSIX locale variables
+    /// (LC_ALL, LC_MESSAGES, LANG), else .NET's UI culture.</summary>
     internal static class SystemLocale
     {
         static SystemLanguage? s_Language;
@@ -17,17 +18,24 @@ namespace Unbound.Runtime
         /// Mono compares strings with its own collator, close to the root collation; .NET's ICU
         /// applies each language's tailoring, under which, for one, Thai ignores '/' (there
         /// <c>"Hit".LastIndexOf("/")</c> is 3, not -1). Formatting and casing stay the culture's,
-        /// as on a device.
+        /// as on a device. On macOS the game's culture and UI culture are en-US whatever the
+        /// system's language, region or POSIX variables: the Unity 6000.0.71f1 macOS Editor
+        /// reports en-US under LANG=de_DE.UTF-8, preferred language German, locale fr_FR or a
+        /// German region, where .NET would take the system region (en-RU, with decimal commas, for
+        /// English in Russia).
         /// </summary>
         internal static void InstallCulture()
         {
-            var culture = WithInvariantCollation(CultureInfo.CurrentCulture);
+            bool mac = OperatingSystem.IsMacOS();
+            var culture = WithInvariantCollation(mac ? CultureInfo.GetCultureInfo(MacEditorCulture) : CultureInfo.CurrentCulture);
             CultureInfo.DefaultThreadCurrentCulture = culture;
             CultureInfo.CurrentCulture = culture;
-            var ui = WithInvariantCollation(CultureInfo.CurrentUICulture);
+            var ui = mac ? culture : WithInvariantCollation(CultureInfo.CurrentUICulture);
             CultureInfo.DefaultThreadCurrentUICulture = ui;
             CultureInfo.CurrentUICulture = ui;
         }
+
+        const string MacEditorCulture = "en-US";
 
         internal static CultureInfo WithInvariantCollation(CultureInfo culture) =>
             culture.Name.Length == 0 || culture is MonoCollationCulture ? culture : new MonoCollationCulture(culture.Name);
@@ -39,8 +47,16 @@ namespace Unbound.Runtime
             public override CompareInfo CompareInfo => InvariantCulture.CompareInfo;
         }
 
-        static string Name()
+        /// <summary>The locale name the language comes from. The Unity 6000.0.71f1 macOS Editor
+        /// follows the preferred-language list (German, Traditional Chinese) and ignores LANG and
+        /// LC_ALL (de_DE.UTF-8 stays English) and the locale (fr_FR stays English).</summary>
+        internal static string Name()
         {
+            if (OperatingSystem.IsMacOS())
+            {
+                try { return MacPreferences.PreferredLanguage() ?? ""; }
+                catch (Exception) { return ""; }
+            }
             foreach (var variable in new[] { "LC_ALL", "LC_MESSAGES", "LANG" })
             {
                 var value = Environment.GetEnvironmentVariable(variable);
