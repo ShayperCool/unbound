@@ -157,6 +157,12 @@ head off with mask type None (`HumanMaskNone`); every other part but the root
   chest's muscles; Head the neck's, head's, eyes' and jaw's; a leg or an arm its muscles; the
   fingers a hand's finger muscles; an IK part its goal's seven curves. The other curves keep
   the values they have with every part on, and the twist bones keep their transform curves.
+- Translation DoF curves go with their bone's part too (`HumanMaskTDoF`, recorded last with the
+  macOS Editor, two identical captures: tests/projects/humanoid's HumanT, an avatar with
+  translation DoF whose clip moves seven bones, with Body, LeftLeg and RightArm off in its Scene
+  clip; its Mirror clip has every part on): the clip keeps NeckTDOF.x (Head) and
+  LeftShoulderTDOF.x (LeftArm) and has no SpineTDOF, LeftUpperLegTDOF or RightUpperArmTDOF
+  curves, which the Mirror clip has.
 
 Not measured: an empty mask made from the model, a human bone turned off in the transform list,
 an asset mask with a transform off, how a clip without some parts' curves plays, and a
@@ -211,7 +217,11 @@ of 0.5%; Spine turns up to 40 degrees from its first key and ends 10 degrees fro
 
 Not in the reference: Blob (tests/projects/blendshapes) under a Position Error of 100% keeps its
 float curve's key at frame 29 (0.326) and ends at 1.00000012; Unbound drops that key and ends
-at 1 (open).
+at 1 (open). Measured with the macOS Editor outside the reference: the key stays at Position
+Errors from 50% to 101% and goes from 102% on (two keys), where Unbound drops it from about 91%;
+with Compression Off the Editor's keys and slopes of that curve are the every-frame keys
+Unbound's walk reduces (their times sums of the frame length: 0.0333333351, 0.06666668,
+0.100000009, ..., 1.00000012).
 
 ## Whole-curve reduction
 
@@ -234,6 +244,6 @@ parameter or blend shape weight) that does so, and such Humanoid curves (the two
 `HumanReduced` have equal ends either way); the rule is applied to them as to the measured
 curves.
 
-Unbound matches 4534/4534 records. The generic reducing compression modes are compared by their
+Unbound matches 4544/4544 records. The generic reducing compression modes are compared by their
 bindings only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced`
 set).
