@@ -1728,6 +1728,7 @@ fn a_clip_range_of_no_frames_is_an_empty_clip() {
 fn old_importer_versions_without_a_generation_hash_hierarchy_names() {
     // Measured: tests/projects/modelfileids OldMeta (importer serializedVersion 20100 without
     // fileIdsGeneration), OldMetaGen2 (19301 with fileIdsGeneration 2) and Nested (22200, 2).
+    // Not measured: a meta of 20101 without the field and one of 22200 setting generation 1.
     let obj = "g Box\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
     let import = |version: u32, generation: Option<u32>| {
         let meshes = generation.map_or(String::new(), |g| {
