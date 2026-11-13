@@ -188,12 +188,29 @@ namespace UnityEngine.Tests
         {
             var manager = new RecordingMenuManager();
             var (panel, box, log) = MenuBox(manager);
+            // macOS shows the menu on the press, other platforms on the release; the triggering
+            // event is consumed and the menu prepared (statuses asked, trailing separator dropped).
+            bool osx = ContextualMenuManipulator.isOSXContextualMenuPlatform;
             Pointer(panel, EventType.MouseDown, new Vector2(20, 10), 1);
-            Assert.Empty(log);
+            if (osx)
+            {
+                Assert.Equal(new[] { "populate button 1 at (20.00, 10.00)" }, log);
+                Assert.Equal(new[] { "Hello:1 by PointerDownEvent" }, manager.Shown);
+                log.Clear();
+            }
+            else Assert.Empty(log);
             Pointer(panel, EventType.MouseUp, new Vector2(20, 10), 1);
-            // The release is consumed; the menu is prepared (statuses asked, trailing separator dropped).
-            Assert.Equal(new[] { "populate button 1 at (20.00, 10.00)" }, log);
-            Assert.Equal(new[] { "Hello:1 by PointerUpEvent" }, manager.Shown);
+            if (osx)
+            {
+                // The release after the press-shown menu shows no second one and propagates.
+                Assert.Equal(new[] { "root up 1" }, log);
+                Assert.Single(manager.Shown);
+            }
+            else
+            {
+                Assert.Equal(new[] { "populate button 1 at (20.00, 10.00)" }, log);
+                Assert.Equal(new[] { "Hello:1 by PointerUpEvent" }, manager.Shown);
+            }
             // The left button does not ask for a menu.
             log.Clear();
             Pointer(panel, EventType.MouseDown, new Vector2(20, 10));
@@ -360,7 +377,8 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "column value" }, f.Log);
             // A stretchable column in GrowAndFill mode already fits; a column without a title
             // shows its name; one that is not optional cannot be hidden.
-            Assert.Equal(new[] { "Resize To Fit:2 -- Name:4 value:4 Flag:2 Mine:1 by PointerUpEvent" }, manager.Shown);
+            string trigger = ContextualMenuManipulator.isOSXContextualMenuPlatform ? "PointerDownEvent" : "PointerUpEvent";
+            Assert.Equal(new[] { "Resize To Fit:2 -- Name:4 value:4 Flag:2 Mine:1 by " + trigger }, manager.Shown);
         }
 
         [Fact]
