@@ -694,9 +694,14 @@ namespace UnityEngine
             set
             {
                 m_Mesh = value;
-                // The renderer draws the filter's mesh: its change is the renderer's.
-                if (m_GameObject != null && m_GameObject.GetComponent<MeshRenderer>() is MeshRenderer renderer) renderer.Dirty();
+                RendererChanged();
             }
+        }
+
+        /// <summary>The renderer draws the filter's mesh: a change of the mesh is the renderer's.</summary>
+        void RendererChanged()
+        {
+            if (m_GameObject != null && m_GameObject.GetComponent<MeshRenderer>() is MeshRenderer renderer) renderer.Dirty();
         }
 
         /// <summary>The mesh, instantiated for this filter on first access.</summary>
@@ -705,6 +710,7 @@ namespace UnityEngine
             get
             {
                 if (m_Mesh != null && m_Mesh.m_InstanceOwnerId == GetInstanceID()) return m_Mesh;
+                var before = m_Mesh;
                 if (m_Mesh != null && m_Mesh.vertexCount > 0)
                 {
                     var source = m_Mesh;
@@ -717,6 +723,8 @@ namespace UnityEngine
                     m_Mesh.name = gameObject.name;
                 }
                 m_Mesh.m_InstanceOwnerId = GetInstanceID();
+                // A new mesh drawn: the renderer's change.
+                if (!ReferenceEquals(before, m_Mesh)) RendererChanged();
                 return m_Mesh;
             }
             set => sharedMesh = value;

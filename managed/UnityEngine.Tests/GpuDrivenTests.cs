@@ -19,6 +19,9 @@ namespace UnityEngine.Tests
         readonly ObjectDispatcher m_Dispatcher = new ObjectDispatcher();
         readonly Shader m_Dots, m_Plain;
         static int s_Made;
+        readonly List<string> m_Logs = new List<string>();
+        readonly ILogger m_Logger = Debug.unityLogger;
+        readonly ILogHandler m_PreviousHandler;
 
         public GpuDrivenTests()
         {
@@ -27,10 +30,35 @@ namespace UnityEngine.Tests
             ShaderDeclarations.s_CallForTests = Call;
             m_Dots = ShaderUtil.CreateShaderAsset("Shader \"Tests/GpuDriven/Dots" + (++s_Made) + "\" { SubShader { Pass { } } }");
             m_Plain = ShaderUtil.CreateShaderAsset("Shader \"Tests/GpuDriven/Plain" + (++s_Made) + "\" { SubShader { Pass { } } }");
+            // Unbound's own diagnostics bypass Application's log callbacks: they are observed at
+            // the logger's handler.
+            m_PreviousHandler = m_Logger.logHandler;
+            m_Logger.logHandler = new CaptureHandler(m_PreviousHandler, m_Logs);
+        }
+
+        sealed class CaptureHandler : ILogHandler
+        {
+            readonly ILogHandler m_Inner;
+            readonly List<string> m_Logs;
+
+            internal CaptureHandler(ILogHandler inner, List<string> logs)
+            {
+                m_Inner = inner;
+                m_Logs = logs;
+            }
+
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type != LogType.Log) m_Logs.Add(type + ": " + (args == null || args.Length == 0 ? format : string.Format(format, args)));
+                m_Inner.LogFormat(type, context, format, args);
+            }
+
+            public void LogException(Exception exception, Object context) => m_Inner.LogException(exception, context);
         }
 
         public void Dispose()
         {
+            m_Logger.logHandler = m_PreviousHandler;
             m_Dispatcher.Dispose();
             foreach (var o in m_Made) if (o) Object.DestroyImmediate(o);
             ShaderDeclarations.s_CallForTests = null;
@@ -144,18 +172,79 @@ namespace UnityEngine.Tests
             m_Dispatcher.maxDispatchHistoryFramesCount = 2;
             m_Dispatcher.EnableTypeTracking<Material>();
             var system = (ObjectDispatch.System)typeof(ObjectDispatcher).GetField("m_System", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(m_Dispatcher);
-            var logs = new List<string>();
-            Application.LogCallback log = (message, _, type) => { if (type == LogType.Error) logs.Add(message); };
-            Application.logMessageReceived += log;
-            try
-            {
-                system.CheckHistory(Time.frameCount + 2);
-                Assert.Empty(logs);
-                system.CheckHistory(Time.frameCount + 3);
-            }
-            finally { Application.logMessageReceived -= log; }
-            Assert.Contains(logs, m => m.StartsWith("ObjectDispatcher hasn't collected changes for type Material for more than 2 frames."));
+            system.CheckHistory(Time.frameCount + 2);
+            Assert.Empty(m_Logs);
+            system.CheckHistory(Time.frameCount + 3);
+            Assert.Contains(m_Logs, m => m.StartsWith("Error: ObjectDispatcher hasn't collected changes for type Material for more than 2 frames."));
             Assert.Equal(0, system.TypeCount);
+        }
+
+        [Fact]
+        public void ChangesOfARenderersDataOutsideItRecordTheRenderer()
+        {
+            m_Dispatcher.EnableTypeTracking<MeshRenderer>();
+            m_Dispatcher.EnableTypeTracking<Material>();
+            var renderer = Renderer("held", m_Dots);
+            var other = Renderer("other", m_Dots);
+            int id = renderer.GetInstanceID();
+            Changed<MeshRenderer>();
+            Changed<Material>();
+            // The filter's own instance of its mesh, made on first access: a new mesh drawn.
+            var filter = renderer.GetComponent<MeshFilter>();
+            Keep(filter.mesh);
+            Assert.Equal(new[] { id }, Changed<MeshRenderer>());
+            Assert.Same(filter.sharedMesh, filter.mesh);
+            Assert.Empty(Changed<MeshRenderer>());
+            // Its LOD group and levels, set after it was drawn, and the group destroyed.
+            var group = Keep(new GameObject("group")).AddComponent<LODGroup>();
+            group.SetLODs(new[] { new LOD(0.5f, new Renderer[] { renderer }) });
+            Assert.Equal(new[] { id }, Changed<MeshRenderer>());
+            group.SetLODs(new[] { new LOD(0.5f, new Renderer[] { other }), new LOD(0.1f, new Renderer[] { renderer }) });
+            Assert.Equal(new[] { id, other.GetInstanceID() }, Sorted(Changed<MeshRenderer>(), id, other.GetInstanceID()));
+            Object.DestroyImmediate(group);
+            Assert.Null(renderer.m_LODGroup);
+            Assert.Equal(new[] { id, other.GetInstanceID() }, Sorted(Changed<MeshRenderer>(), id, other.GetInstanceID()));
+            // Its layer; the same layer again changes nothing.
+            renderer.gameObject.layer = 30;
+            Assert.Equal(new[] { id }, Changed<MeshRenderer>());
+            renderer.gameObject.layer = 30;
+            Assert.Empty(Changed<MeshRenderer>());
+            // A material pass turned off (GPU-driven rendering keeps the motion vectors pass's).
+            var material = renderer.sharedMaterial;
+            material.SetShaderPassEnabled("MotionVectors", false);
+            Assert.Equal(new[] { material.GetInstanceID() }, Changed<Material>());
+            material.SetShaderPassEnabled("MotionVectors", false);
+            Assert.Empty(Changed<Material>());
+            material.SetShaderPassEnabled("MotionVectors", true);
+            Assert.Equal(new[] { material.GetInstanceID() }, Changed<Material>());
+        }
+
+        /// <summary>The ids among <paramref name="ids"/> that are <paramref name="a"/> or
+        /// <paramref name="b"/>, in that order.</summary>
+        static int[] Sorted(int[] ids, int a, int b)
+        {
+            var found = new List<int>();
+            if (Array.IndexOf(ids, a) >= 0) found.Add(a);
+            if (Array.IndexOf(ids, b) >= 0) found.Add(b);
+            Assert.Equal(found.Count, ids.Length);
+            return found.ToArray();
+        }
+
+        [Fact]
+        public void LightmappedRenderersStayOnTheOrdinaryPathWithAWarning()
+        {
+            var processor = new GPUDrivenProcessor();
+            var lightmapped = Renderer("lightmapped", m_Dots);
+            lightmapped.lightmapIndex = 0;
+            var influence = Renderer("influence", m_Dots);
+            influence.lightmapIndex = 0xFFFE;
+            var none = Renderer("none", m_Dots);
+            Assert.Equal(-1, none.lightmapIndex);
+            var taken = Taken(processor, lightmapped, influence, none);
+            Assert.Equal(new[] { influence.GetInstanceID(), none.GetInstanceID() }, taken);
+            Assert.False(lightmapped.m_GpuDriven);
+            Assert.Contains(m_Logs, m => m.StartsWith("Warning: Unbound: GPU-driven rendering does not take lightmapped renderers yet"));
+            processor.Dispose();
         }
 
         static List<int> Taken(GPUDrivenProcessor processor, params MeshRenderer[] renderers)
@@ -186,10 +275,26 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { plain.GetInstanceID() }, taken);
             Assert.True(plain.m_GpuDriven);
             Assert.False(block.m_GpuDriven);
+            // A camera's culling leaves it to GPU-driven rendering, visible all the same.
+            var camera = Keep(new GameObject("camera")).AddComponent<Camera>();
+            camera.transform.position = new Vector3(0, 0, -5);
+            var renderers = Cull(camera);
+            Assert.DoesNotContain(plain, renderers);
+            Assert.Contains(block, renderers);
+            Assert.True(plain.isVisible);
             // Turned off again: drawn as usual.
             processor.DisableGPUDrivenRendering(new[] { plain.GetInstanceID() });
             Assert.False(plain.m_GpuDriven);
+            Assert.Contains(plain, Cull(camera));
             processor.Dispose();
+        }
+
+        static List<Renderer> Cull(Camera camera)
+        {
+            Assert.True(camera.TryGetCullingParameters(out var parameters));
+            var renderers = new List<Renderer>(Culling.Get(Culling.Cull(ref parameters)).Renderers);
+            Culling.EndFrame();
+            return renderers;
         }
 
         static MaterialPropertyBlock Keep2(MaterialPropertyBlock block, Action<MaterialPropertyBlock> set)

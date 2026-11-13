@@ -131,7 +131,11 @@ namespace UnityEngine
                     Debug.LogError("A game object can only be in one layer. The layer needs to be in the range [0...31]");
                     return;
                 }
+                if (m_Layer == value) return;
                 m_Layer = value;
+                // A renderer's layer is its own data (GPU-driven rendering filters by it).
+                for (int i = 0; i < m_Components.Count; i++)
+                    if (m_Components[i] is Renderer renderer) renderer.Dirty();
             }
         }
 

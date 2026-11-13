@@ -646,12 +646,11 @@ namespace UnityEngine
         public void SetShaderPassEnabled(string passName, bool enabled)
         {
             if (passName == null) return;
-            if (enabled)
-            {
-                m_DisabledPasses?.Remove(passName);
-                return;
-            }
-            (m_DisabledPasses ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase)).Add(passName);
+            bool changed = enabled
+                ? m_DisabledPasses != null && m_DisabledPasses.Remove(passName)
+                : (m_DisabledPasses ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase)).Add(passName);
+            // GPU-driven rendering keeps whether the motion vectors pass is enabled.
+            if (changed) ObjectDispatch.Changed(this);
         }
 
         public bool GetShaderPassEnabled(string passName) => passName == null || m_DisabledPasses == null || !m_DisabledPasses.Contains(passName);

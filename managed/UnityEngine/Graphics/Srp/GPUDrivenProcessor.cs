@@ -281,10 +281,28 @@ namespace UnityEngine.Rendering
             if (renderer.HasPropertyBlock()) return false;
             if (ReceivesVisibilityMessages(go)) return false;
             if (renderer.forceRenderingOff || go.GetComponent<TextMesh>() != null) return false;
+            if (Lightmapped(renderer))
+            {
+                // BatchRendererGroup does not draw lightmaps yet: such a renderer keeps its
+                // lightmap on the ordinary path.
+                if (!s_WarnedLightmapped)
+                {
+                    s_WarnedLightmapped = true;
+                    Debug.LogWarning($"Unbound: GPU-driven rendering does not take lightmapped renderers yet (BatchRendererGroup draws no lightmaps); \"{renderer.name}\" and the others are drawn by the normal rendering path.");
+                }
+                return false;
+            }
             if (SortingLayer.GetLayerValueFromID(renderer.m_SortingLayerID) != 0 || renderer.m_SortingOrder != 0 || renderer.sortingGroupID != 0) return false;
             var group = renderer.m_LODGroup;
             return group is null || !group || !group.animateCrossFading;
         }
+
+        static bool s_WarnedLightmapped;
+
+        /// <summary>Whether a renderer is lightmapped: its lightmap index (16 bits) is below
+        /// 0xFFFE, which marks a renderer that only influences lightmaps, and 0xFFFF, none (the
+        /// render pipelines' GPU-driven batcher reads it so).</summary>
+        static bool Lightmapped(Renderer renderer) => (renderer.lightmapIndex & 0xFFFF) < 0xFFFE;
 
         /// <summary>Whether an Animator or Animation of the renderer's hierarchy culls by its
         /// renderers' visibility (an Animator not always animating, an Animation culling based on

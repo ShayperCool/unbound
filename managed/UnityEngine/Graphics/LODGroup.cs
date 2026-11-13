@@ -150,6 +150,9 @@ namespace UnityEngine
                 {
                     r.m_LODGroup = group;
                     r.m_FirstLOD = first;
+                    // A renderer's group and levels are its own data (GPU-driven rendering reads
+                    // them when the renderer is dispatched).
+                    r.Dirty();
                 }
         }
 
