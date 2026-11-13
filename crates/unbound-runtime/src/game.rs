@@ -35,7 +35,7 @@ pub fn restart_in_debug() -> bool {
     RESTART_IN_DEBUG.load(Ordering::SeqCst)
 }
 use unbound_host::ManagedRuntime;
-use unbound_project::{PlayModeAtlases, Project};
+use unbound_project::Project;
 
 /// Input sampled for one frame; the layout matches `FrameInput` in the managed engine.
 #[repr(C)]
@@ -175,15 +175,12 @@ impl Game {
         let project = Project::open(&project.root)?;
         let runtime = ManagedRuntime::start()?;
         let runtime_state = state::initialize(&project)?;
-        // Edit-mode sessions too: they can enter Play mode (EditorApplication.EnterPlaymode).
-        if let Some(atlases) = project.settings.play_mode_atlases(
-            runtime_state
-                .db
-                .iter()
-                .filter(|asset| !asset.is_folder)
-                .map(|asset| asset.path.as_str()),
-        ) {
-            tracing::warn!("{}", atlases.message(PlayModeAtlases::WARNING_SHOWN));
+        // Play-mode sessions pack the atlases (sprite_atlases); an Edit-mode session can enter
+        // Play mode (EditorApplication.EnterPlaymode) with the sprites it loaded unpacked.
+        if options.edit_mode
+            && let Some(atlases) = &runtime_state.play_mode_atlases
+        {
+            tracing::warn!("{}", atlases.edit_mode_message());
         }
         let normal_maps_xyz = project
             .settings

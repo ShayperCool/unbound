@@ -340,7 +340,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "unreadInRelease": coverage.unread_in_release,
             "renderingLimitations": RENDERING_LIMITATIONS,
             "audioLimitations": AUDIO_LIMITATIONS,
-            "unpackedSpriteAtlases": play_mode_atlases.as_ref().map(|a| json!({"mode": a.mode, "atlases": a.paths})),
+            "playModeSpriteAtlases": play_mode_atlases.as_ref().map(|a| json!({"mode": a.mode, "atlases": a.paths})),
             "unsupportedMessages": messages.messages,
             "messageAnalysisFailedAssemblies": messages.failed_assemblies,
         });
@@ -422,10 +422,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         println!("  {limitation}");
     }
     if let Some(atlases) = &play_mode_atlases {
-        println!(
-            "\nSprite atlases:\n  {}",
-            atlases.message(atlases.paths.len())
-        );
+        println!("\nSprite atlases:\n  {}", atlases.doctor_message());
     }
     let read =
         by_reading.get("Read").map_or(0, Vec::len) + by_reading.get("Loader").map_or(0, Vec::len);

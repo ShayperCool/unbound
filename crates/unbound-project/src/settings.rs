@@ -61,8 +61,8 @@ const SPRITE_ATLAS_V2: i64 = 5;
 
 /// The sprite atlases the Editor packs before it enters Play mode, by the project's Sprite
 /// Packer mode: documented for "Sprite Atlas V1 - Always Enabled" (`.spriteatlas` assets) and
-/// "Sprite Atlas V2 - Enabled" (`.spriteatlasv2`) in the Editor settings Manual. Unbound does
-/// not pack them yet; their sprites draw from their own textures.
+/// "Sprite Atlas V2 - Enabled" (`.spriteatlasv2`) in the Editor settings Manual. Unbound packs
+/// them for Play-mode sessions (unbound-runtime's sprite_atlases).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlayModeAtlases {
     /// The mode's name in the Editor settings.
@@ -75,8 +75,8 @@ impl PlayModeAtlases {
     /// The atlases the one-time warning names before it counts the rest (`a, b +3`).
     pub const WARNING_SHOWN: usize = 5;
 
-    /// One line naming the mode and the first `shown` atlases (`a, b +3`).
-    pub fn message(&self, shown: usize) -> String {
+    /// The first `shown` atlases (`a, b +3`).
+    fn names(&self, shown: usize) -> String {
         let mut names = self
             .paths
             .iter()
@@ -87,10 +87,32 @@ impl PlayModeAtlases {
         if self.paths.len() > shown {
             names.push_str(&format!(" +{}", self.paths.len() - shown));
         }
+        names
+    }
+
+    /// The warning of an Edit-mode session: sprites it loads stay unpacked when it enters Play
+    /// mode, where the Editor packs them.
+    pub fn edit_mode_message(&self) -> String {
         format!(
-            "Sprite Packer mode \"{}\" packs sprite atlases before entering Play mode; Unbound does not pack them, so their sprites draw and report from their own textures, not from the packed atlas (texture, UVs, packed rects, Sprite.packed). Atlases ({}): {names}",
+            "Sprite Packer mode \"{}\" packs sprite atlases before entering Play mode; Unbound packs \
+             them for Play-mode sessions only: sprites this Edit-mode session loads stay unpacked \
+             (their own textures, not the atlas pages) when it enters Play mode. Atlases ({}): {}",
             self.mode,
-            self.paths.len()
+            self.paths.len(),
+            self.names(Self::WARNING_SHOWN)
+        )
+    }
+
+    /// `unbound doctor`'s report: the atlases and what of their packing is not reproduced.
+    pub fn doctor_message(&self) -> String {
+        format!(
+            "Sprite Packer mode \"{}\" packs these atlases for Play mode, as the Editor packs them; \
+             not reproduced: their page textures' names end with Unbound's own hash, an Edit-mode \
+             session entering Play mode keeps its sprites unpacked, secondary textures get no \
+             secondary pages, alpha splitting is not made. Atlases ({}): {}",
+            self.mode,
+            self.paths.len(),
+            self.names(self.paths.len())
         )
     }
 }
@@ -526,7 +548,7 @@ mod tests {
         let message = with_mode(4)
             .play_mode_atlases(many.iter().map(String::as_str))
             .unwrap()
-            .message(PlayModeAtlases::WARNING_SHOWN);
+            .edit_mode_message();
         assert!(
             message.contains("Atlases (7): Assets/0.spriteatlas, "),
             "{message}"
