@@ -144,7 +144,7 @@ namespace UnityEngine
         // Rotation about Z, then X, then Y: q = qY * qX * qZ. Each half angle's sine and cosine come
         // from one sincos, which matches the macOS arm64 6000.0.71f1 Editor where it differs from
         // separate sin and cos in the last bit (tests/projects/solverpairorder --transform-inputs);
-        // glibc gives the same values either way.
+        // glibc's sincosf equals its sinf and cosf for every float, so Linux results do not change.
         internal static Quaternion FromEulerRad(Vector3 euler)
         {
             float hx = euler.x * 0.5f, hy = euler.y * 0.5f, hz = euler.z * 0.5f;

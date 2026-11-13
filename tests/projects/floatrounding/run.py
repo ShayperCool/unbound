@@ -153,7 +153,9 @@ def gate(profile, label):
     matched, failures = value_probe.compare(expected, actual, 0)
     known = {}
     for key, reason in value_probe.residuals(PROBE).items():
-        scope, _, rest = key.rpartition(':')
+        scope, _, rest = key.partition(':') if ':' in key.split('/', 1)[0] else ('', '', key)
+        if scope not in ('', 'linux', 'macos'):
+            raise SystemExit(f'floatrounding: residual {key} names an unknown host')
         if scope in ('', host()) and rest.startswith(profile+'/'):
             if rest[len(profile)+1:] in known:
                 raise SystemExit(f'floatrounding: residual {rest} is listed for all hosts and for {host()}')

@@ -743,7 +743,7 @@ namespace UnityEngine
             ((a.w * b.z - a.y * b.x) + a.z * b.w) + a.x * b.y,
             ((a.w * b.w - a.x * b.x) - a.z * b.z) - a.y * b.y);
 
-        // A set rotation divided by its length. The x86_64 Editor sums the squares as a horizontal add
+        // A set rotation divided by its length. The Linux x86_64 Editor sums the squares as a horizontal add
         // does, (x² + y²) + (z² + w²) for x and z and (y² + z²) + (w² + x²) for y and w; the macOS arm64
         // Editor (Compat.TransformArithmeticArm64) takes the first for every component.
         static Quaternion NormalizeParentingRotation(Quaternion q)
