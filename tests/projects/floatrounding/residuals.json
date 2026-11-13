@@ -119,9 +119,5 @@
   "debug/api/quaternionRotateTowards",
   "release/api/matrixVector",
   "release/api/quaternionRotateTowards"
- ],
- "Quaternion.Euler on Linux x86_64: Unbound's float32 implementation differs from the Linux Editor's native result in some samples (cause not studied; queued); on macOS arm64 it matches": [
-  "linux:debug/native/quaternionEuler",
-  "linux:release/native/quaternionEuler"
  ]
 }

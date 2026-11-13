@@ -2978,5 +2978,24 @@ only where the compiled IL keeps a local. Unbound converts game, package and plu
 load (`Compat.ScriptFloatsWide`, 6000.0.71f1) and matches every control in both modes; before it,
 Release matched 112/221 and Debug 121/221 of the first version's values. texturepixels'
 VolumeRGFloat rows match on macOS. Residuals: converted method bodies seen through reflection, and
-Unity's managed math types, which are engine code (queued).
+Unity's managed math types, which are engine code (done in Q435, below).
 
+### Q435 and Q434: Unity's C# math in game code; macOS arm64 transform arithmetic
+
+tests/projects/floatrounding gained 42 `api/` and `native/` rows of Unity's math structs (two
+Linux x86_64 and two macOS arm64 Editor captures per mode, all identical; the `native/` rows are
+kept per host, as other operands differed between them). Game code's calls to the methods Unity
+implements in C# run converted copies in a generated assembly, `Unbound.EngineMath`, built from
+an unoptimized second build of the engine's math sources (every declared local rounds, as in the
+Editor); the methods bound to native code keep the engine's float32 implementation. Release
+206/268 and Debug 215/268 values match on both hosts with Q434, 0 failures (before: 172/226 and
+181/226 of the first version's values); every C# math row that computes on its own matches. Cost: 1.3x on a
+math-heavy object loop in Release game code, 1.03x in Debug.
+
+On macOS arm64 a set rotation normalizes with one sum (x² + y²) + (z² + w²) for every component
+(`Compat.TransformArithmeticArm64`), and Euler rotations take each half angle's sine and cosine
+from one sincos: tests/projects/solverpairorder `--transform-inputs` equals the macOS Editor in
+135,746 of 135,896 fields (was 132,419), and floatrounding's Euler row matches on both hosts.
+Linux results do not change (x86_64 keeps its order; glibc's
+sincosf equals its sinf and cosf for every float). Queued: Unity's native math algorithms
+(11 `native/` rows), 147 Physics2D shape fields and 3 fields of a near-zero scale's inverse on macOS.
