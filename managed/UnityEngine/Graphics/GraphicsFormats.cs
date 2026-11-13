@@ -263,8 +263,8 @@ namespace UnityEngine.Experimental.Rendering
             (TextureFormat.ASTC_HDR_8x8, GraphicsFormat.RGBA_ASTC8X8_UFloat, GraphicsFormat.RGBA_ASTC8X8_UFloat),
             (TextureFormat.ASTC_HDR_10x10, GraphicsFormat.RGBA_ASTC10X10_UFloat, GraphicsFormat.RGBA_ASTC10X10_UFloat),
             (TextureFormat.ASTC_HDR_12x12, GraphicsFormat.RGBA_ASTC12X12_UFloat, GraphicsFormat.RGBA_ASTC12X12_UFloat),
-            (TextureFormat.R8, GraphicsFormat.R8_UNorm, GraphicsFormat.R8_UNorm),
-            (TextureFormat.RG16, GraphicsFormat.R8G8_UNorm, GraphicsFormat.R8G8_UNorm),
+            (TextureFormat.R8, GraphicsFormat.R8_UNorm, GraphicsFormat.R8_SRGB),
+            (TextureFormat.RG16, GraphicsFormat.R8G8_UNorm, GraphicsFormat.R8G8_SRGB),
             (TextureFormat.RG32, GraphicsFormat.R16G16_UNorm, GraphicsFormat.R16G16_UNorm),
             (TextureFormat.RGB48, GraphicsFormat.R16G16B16_UNorm, GraphicsFormat.R16G16B16_UNorm),
             (TextureFormat.RGBA64, GraphicsFormat.R16G16B16A16_UNorm, GraphicsFormat.R16G16B16A16_UNorm),
@@ -326,14 +326,37 @@ namespace UnityEngine.Experimental.Rendering
             _ => GetGraphicsFormat(format, isSRGB),
         };
 
+        /// <summary>The texture format of a graphics format, as Unity 6000.0.71f1 answers
+        /// (tests/projects/formatmapping): R8_UNorm is R8, not Alpha8 (whose graphics format is
+        /// another), and a few graphics formats name a texture format they do not come from.</summary>
         public static TextureFormat GetTextureFormat(GraphicsFormat format)
         {
             if (format == GraphicsFormat.B8G8R8A8_UNorm || format == GraphicsFormat.B8G8R8A8_SRGB)
                 return TextureFormat.BGRA32;
+            foreach (var (graphics, texture) in s_TextureFormatsOfGraphicsOnly)
+                if (graphics == format) return texture;
             foreach (var (t, linear, srgb) in s_TextureFormats)
-                if (linear == format || srgb == format) return t;
+                if (t != TextureFormat.Alpha8 && (linear == format || srgb == format)) return t;
             return 0;
         }
+
+        /// <summary>Graphics formats whose texture format the forward table does not give back.</summary>
+        static readonly (GraphicsFormat Graphics, TextureFormat Texture)[] s_TextureFormatsOfGraphicsOnly =
+        {
+            (GraphicsFormat.B8G8R8_UNorm, (TextureFormat)8),
+            (GraphicsFormat.B8G8R8_SRGB, (TextureFormat)8),
+            (GraphicsFormat.RGBA_DXT3_UNorm, (TextureFormat)11),
+            (GraphicsFormat.RGBA_DXT3_SRGB, (TextureFormat)11),
+            (GraphicsFormat.RGB_PVRTC_2Bpp_UNorm, TextureFormat.PVRTC_RGB2),
+            (GraphicsFormat.RGB_PVRTC_2Bpp_SRGB, TextureFormat.PVRTC_RGB2),
+            (GraphicsFormat.RGBA_PVRTC_2Bpp_UNorm, TextureFormat.PVRTC_RGBA2),
+            (GraphicsFormat.RGBA_PVRTC_2Bpp_SRGB, TextureFormat.PVRTC_RGBA2),
+            (GraphicsFormat.RGB_PVRTC_4Bpp_UNorm, TextureFormat.PVRTC_RGB4),
+            (GraphicsFormat.RGB_PVRTC_4Bpp_SRGB, TextureFormat.PVRTC_RGB4),
+            (GraphicsFormat.RGBA_PVRTC_4Bpp_UNorm, TextureFormat.PVRTC_RGBA4),
+            (GraphicsFormat.RGBA_PVRTC_4Bpp_SRGB, TextureFormat.PVRTC_RGBA4),
+            (GraphicsFormat.YUV2, TextureFormat.YUY2),
+        };
 
         // ------------------------------------------------------------ render texture formats
 
