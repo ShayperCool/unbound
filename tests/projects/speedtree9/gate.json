@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/speedtree9/run.py gate"
+  ],
+  "summary": "speedtree9: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/SpeedTree9/",
+    "managed/UnityEngine/Terrain/SpeedTreeWind.cs",
+    "managed/UnityEngine/Editor/ScriptedImporter.cs",
+    "managed/UnityEngine/Graphics/Mesh.cs",
+    "managed/UnityEngine/Graphics/LODGroup.cs",
+    "crates/unbound-assets/src/meta.rs"
+  ]
+}

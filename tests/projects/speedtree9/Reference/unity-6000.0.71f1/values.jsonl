@@ -1,0 +1,607 @@
+{"k":"pipeline","v":"builtin"}
+{"k":"Full/main","v":"GameObject Full"}
+{"k":"Full/object/CapsuleCollider/Full/Collider2:CapsuleCollider","v":"5084186749492169276"}
+{"k":"Full/object/GameObject/Full","v":"-7434008128576307933"}
+{"k":"Full/object/GameObject/Full/Collider1","v":"6430864488781879409"}
+{"k":"Full/object/GameObject/Full/Collider2","v":"-5976162455517244347"}
+{"k":"Full/object/GameObject/Full/LOD0","v":"9044615842348906356"}
+{"k":"Full/object/GameObject/Full/LOD1","v":"7500239982011423145"}
+{"k":"Full/object/GameObject/Full/LOD2","v":"-1573256644850547884"}
+{"k":"Full/object/GameObject/Full/LOD3","v":"-7309809893859521330"}
+{"k":"Full/object/LODGroup/Full:LODGroup","v":"-4650882288657729640"}
+{"k":"Full/object/Material/Bark","v":"-8761910824519130491"}
+{"k":"Full/object/Material/Billboard","v":"-1198624654948496732"}
+{"k":"Full/object/Material/Leaves","v":"-4006148316881293267"}
+{"k":"Full/object/Mesh/LOD0_Mesh","v":"4443394430103177256"}
+{"k":"Full/object/Mesh/LOD1_Mesh","v":"7286934686281182518"}
+{"k":"Full/object/Mesh/LOD2_Mesh","v":"-6527763313339446553"}
+{"k":"Full/object/Mesh/LOD3_Mesh","v":"5699096512235913117"}
+{"k":"Full/object/MeshFilter/Full/LOD0:MeshFilter","v":"1491452679648749081"}
+{"k":"Full/object/MeshFilter/Full/LOD1:MeshFilter","v":"4612558041721509824"}
+{"k":"Full/object/MeshFilter/Full/LOD2:MeshFilter","v":"-952262289116810653"}
+{"k":"Full/object/MeshFilter/Full/LOD3:MeshFilter","v":"-7083531494208559794"}
+{"k":"Full/object/MeshRenderer/Full/LOD0:MeshRenderer","v":"8864442659361393542"}
+{"k":"Full/object/MeshRenderer/Full/LOD1:MeshRenderer","v":"2975675883863627794"}
+{"k":"Full/object/MeshRenderer/Full/LOD2:MeshRenderer","v":"5663111918222471345"}
+{"k":"Full/object/MeshRenderer/Full/LOD3:MeshRenderer","v":"2519853017674462795"}
+{"k":"Full/object/Rigidbody/Full:Rigidbody","v":"-1132865758332202429"}
+{"k":"Full/object/SpeedTreeImporterOutputData/ImporterOutputData","v":"7965120797947565359"}
+{"k":"Full/object/SpeedTreeWindAsset/SpeedTreeWind","v":"-5819406165411355519"}
+{"k":"Full/object/SphereCollider/Full/Collider1:SphereCollider","v":"-1340661446408190016"}
+{"k":"Full/object/Transform/Full/Collider1:Transform","v":"-5180048063937878631"}
+{"k":"Full/object/Transform/Full/Collider2:Transform","v":"4251335387811871142"}
+{"k":"Full/object/Transform/Full/LOD0:Transform","v":"2364655863226792329"}
+{"k":"Full/object/Transform/Full/LOD1:Transform","v":"2041666890538590560"}
+{"k":"Full/object/Transform/Full/LOD2:Transform","v":"-8447226849082701856"}
+{"k":"Full/object/Transform/Full/LOD3:Transform","v":"-5679674305688112668"}
+{"k":"Full/object/Transform/Full:Transform","v":"-453750087388946865"}
+{"k":"Full/object/Tree/Full/LOD0:Tree","v":"957391066088196376"}
+{"k":"Full/object/Tree/Full/LOD1:Tree","v":"-227696351917468169"}
+{"k":"Full/object/Tree/Full/LOD2:Tree","v":"-1240146811894728736"}
+{"k":"Full/object/Tree/Full/LOD3:Tree","v":"3815124040502637876"}
+{"k":"Full/objects","v":"39"}
+{"k":"Full/go/Full","v":"active layer 0 tag Untagged static False"}
+{"k":"Full/go/Full/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/go/Full/components","v":"Transform Rigidbody LODGroup"}
+{"k":"Full/go/Full/Rigidbody","v":"gravity False kinematic True mass 3f800000 interpolation None detection Discrete constraints None"}
+{"k":"Full/go/Full/LODGroup","v":"CrossFade animate True billboard True size 3fa7c30e ref 00000000 3f27c30e 00000000 count 4 enabled True"}
+{"k":"Full/go/Full/LODGroup/lod0","v":"3f000000 fade 00000000 renderers LOD0"}
+{"k":"Full/go/Full/LODGroup/lod1","v":"3e800000 fade 00000000 renderers LOD1"}
+{"k":"Full/go/Full/LODGroup/lod2","v":"3e000000 fade 00000000 renderers LOD2"}
+{"k":"Full/go/Full/LODGroup/lod3","v":"3c23d70a fade 00000000 renderers LOD3"}
+{"k":"Full/go/Full/LOD0","v":"active layer 0 tag Untagged static False"}
+{"k":"Full/go/Full/LOD0/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/go/Full/LOD0/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"Full/go/Full/LOD0/MeshFilter","v":"LOD0_Mesh"}
+{"k":"Full/go/Full/LOD0/MeshRenderer","v":"Bark,Leaves cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 00000000 3f27c30e 00000000 3eaba9d2 3f27c30e 3e583d60"}
+{"k":"Full/go/Full/LOD0/Tree","v":"SpeedTreeWind data null"}
+{"k":"Full/go/Full/LOD1","v":"active layer 0 tag Untagged static False"}
+{"k":"Full/go/Full/LOD1/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/go/Full/LOD1/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"Full/go/Full/LOD1/MeshFilter","v":"LOD1_Mesh"}
+{"k":"Full/go/Full/LOD1/MeshRenderer","v":"Bark,Leaves cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3d79b130 3f105a71 00000000 3e8c73ac 3f105a71 3e583d60"}
+{"k":"Full/go/Full/LOD1/Tree","v":"SpeedTreeWind data null"}
+{"k":"Full/go/Full/LOD2","v":"active layer 0 tag Untagged static False"}
+{"k":"Full/go/Full/LOD2/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/go/Full/LOD2/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"Full/go/Full/LOD2/MeshFilter","v":"LOD2_Mesh"}
+{"k":"Full/go/Full/LOD2/MeshRenderer","v":"Bark cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3cbb44e6 3eea161e 00000000 3d8c73ac 3eea161e 3da22e08"}
+{"k":"Full/go/Full/LOD2/Tree","v":"SpeedTreeWind data null"}
+{"k":"Full/go/Full/LOD3","v":"active layer 0 tag Untagged static False"}
+{"k":"Full/go/Full/LOD3/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/go/Full/LOD3/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"Full/go/Full/LOD3/MeshFilter","v":"LOD3_Mesh"}
+{"k":"Full/go/Full/LOD3/MeshRenderer","v":"Billboard cast On receive True probes Off reflection Off motion Object layerMask 1 enabled True bounds 00000000 3f1c0ebf 00000000 3e9c0ebf 3f1c0ebf 00000000"}
+{"k":"Full/go/Full/LOD3/Tree","v":"SpeedTreeWind data null"}
+{"k":"Full/go/Full/Collider1","v":"active layer 0 tag Untagged static False"}
+{"k":"Full/go/Full/Collider1/transform","v":"00000000 3eea161e 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/go/Full/Collider1/components","v":"Transform SphereCollider"}
+{"k":"Full/go/Full/Collider1/SphereCollider","v":"3df9b132 center 00000000 00000000 00000000 trigger False"}
+{"k":"Full/go/Full/Collider2","v":"active layer 0 tag Untagged static False"}
+{"k":"Full/go/Full/Collider2/transform","v":"3cf9b132 3ec3126f 3c79b132 bf12f71c 3ec6a1e1 3eb5a8b9 3f20b26a 3f800000 3f800000 3f800000"}
+{"k":"Full/go/Full/Collider2/components","v":"Transform CapsuleCollider"}
+{"k":"Full/go/Full/Collider2/CapsuleCollider","v":"3dbb44e6 height 3f43d9ca direction 2 center 00000000 00000000 00000000 trigger False"}
+{"k":"Full/mesh/LOD0_Mesh","v":"vertices 42 submeshes 2 index UInt16 readable True bounds 00000000 3f27c30e 00000000 3eaba9d2 3f27c30e 3e583d60 streams 1"}
+{"k":"Full/mesh/LOD0_Mesh/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"Full/mesh/LOD0_Mesh/submesh0","v":"Triangles start 0 count 48 base 0 first 0 vcount 18 bounds 00000000 3eea161e 00000000 3dbb44e6 3eea161e 3dbb44e6"}
+{"k":"Full/mesh/LOD0_Mesh/submesh0/indices","v":"578a7629e6d6d705"}
+{"k":"Full/mesh/LOD0_Mesh/submesh1","v":"Triangles start 48 count 36 base 0 first 18 vcount 24 bounds 00000000 3f888ce8 00000000 3eaba9d2 3e79b134 3e583d60"}
+{"k":"Full/mesh/LOD0_Mesh/submesh1/indices","v":"9a97734eff9ece5d"}
+{"k":"Full/mesh/LOD0_Mesh/positions","v":"1d601a9de2763a86 first 3dbb44e6 00000000 00000000"}
+{"k":"Full/mesh/LOD0_Mesh/normals","v":"3bd9b35444ce311d"}
+{"k":"Full/mesh/LOD0_Mesh/tangents","v":"bb14fb7bdd882b99 first 80000000 00000000 3f800000 bf800000"}
+{"k":"Full/mesh/LOD0_Mesh/colors32","v":"ee1b58462ba266b5 first RGBA(115, 102, 89, 0)"}
+{"k":"Full/mesh/LOD0_Mesh/uv0","v":"5528bbaf81f77bc6 first 00000000 00000000 00000000 3e4ccccd"}
+{"k":"Full/mesh/LOD0_Mesh/uv1","v":"3327ab9a068750b4 first 00000000 00000000 00000000 00000000"}
+{"k":"Full/mesh/LOD0_Mesh/uv2","v":"7687b138e1ea074d first 00000000 00000000 00000000 00000000"}
+{"k":"Full/mesh/LOD0_Mesh/uv3","v":"36818748b5fd252e first 3dbb44e6 00000000 00000000 00000000"}
+{"k":"Full/mesh/LOD0_Mesh/uvDistribution","v":"3d08fdbc 3f08fdbc"}
+{"k":"Full/mesh/LOD1_Mesh","v":"vertices 24 submeshes 2 index UInt16 readable True bounds 3d79b130 3f105a71 00000000 3e8c73ac 3f105a71 3e583d60 streams 1"}
+{"k":"Full/mesh/LOD1_Mesh/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"Full/mesh/LOD1_Mesh/submesh0","v":"Triangles start 0 count 30 base 0 first 0 vcount 12 bounds 3c0f0f9c 3eea161e 00000000 3da962f2 3eea161e 3db21a80"}
+{"k":"Full/mesh/LOD1_Mesh/submesh0/indices","v":"b638a98283284cc6"}
+{"k":"Full/mesh/LOD1_Mesh/submesh1","v":"Triangles start 30 count 18 base 0 first 12 vcount 12 bounds 3d79b130 3f79b132 00000000 3e8c73ac 3e1c0ec0 3e583d60"}
+{"k":"Full/mesh/LOD1_Mesh/submesh1/indices","v":"be90e2bcf62d0a27"}
+{"k":"Full/mesh/LOD1_Mesh/positions","v":"6f65c03f5f800ec9 first 3dbb44e6 00000000 00000000"}
+{"k":"Full/mesh/LOD1_Mesh/normals","v":"07a50995fa75802d"}
+{"k":"Full/mesh/LOD1_Mesh/tangents","v":"f793f5f4b693f77d first 80000000 00000000 3f800000 bf800000"}
+{"k":"Full/mesh/LOD1_Mesh/colors32","v":"82dd09235dc7aec5 first RGBA(115, 108, 89, 0)"}
+{"k":"Full/mesh/LOD1_Mesh/uv0","v":"ee9d0e70390ff571 first 00000000 00000000 00000000 3e4ccccd"}
+{"k":"Full/mesh/LOD1_Mesh/uv1","v":"893c6e2eec0c5255 first 00000000 00000000 00000000 00000000"}
+{"k":"Full/mesh/LOD1_Mesh/uv2","v":"9e0796dc12bd5d2d first 00000000 00000000 00000000 00000000"}
+{"k":"Full/mesh/LOD1_Mesh/uv3","v":"a9b6265288577991 first 3dbb44e6 00000000 00000000 00000000"}
+{"k":"Full/mesh/LOD1_Mesh/uvDistribution","v":"3efba115 3ffba114"}
+{"k":"Full/mesh/LOD2_Mesh","v":"vertices 8 submeshes 1 index UInt16 readable True bounds 3cbb44e6 3eea161e 00000000 3d8c73ac 3eea161e 3da22e08 streams 1"}
+{"k":"Full/mesh/LOD2_Mesh/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"Full/mesh/LOD2_Mesh/submesh0","v":"Triangles start 0 count 18 base 0 first 0 vcount 8 bounds 3cbb44e6 3eea161e 00000000 3d8c73ac 3eea161e 3da22e08"}
+{"k":"Full/mesh/LOD2_Mesh/submesh0/indices","v":"f06cec9a9191fef2"}
+{"k":"Full/mesh/LOD2_Mesh/positions","v":"ff95d2f684637889 first 3dbb44e6 00000000 00000000"}
+{"k":"Full/mesh/LOD2_Mesh/normals","v":"f6b86adf9d118d55"}
+{"k":"Full/mesh/LOD2_Mesh/tangents","v":"c32a64b8064911a5 first 80000000 00000000 3f800000 bf800000"}
+{"k":"Full/mesh/LOD2_Mesh/colors32","v":"0b1382218d64cbed first RGBA(115, 115, 89, 0)"}
+{"k":"Full/mesh/LOD2_Mesh/uv0","v":"5f8a20821f11dcd1 first 00000000 00000000 00000000 3e4ccccd"}
+{"k":"Full/mesh/LOD2_Mesh/uv1","v":"5b04f841d1106781 first 00000000 00000000 00000000 00000000"}
+{"k":"Full/mesh/LOD2_Mesh/uv2","v":"8421ae126c7ced25 first 00000000 00000000 00000000 00000000"}
+{"k":"Full/mesh/LOD2_Mesh/uv3","v":"4f7b72d4e269d909 first 3dbb44e6 00000000 00000000 00000000"}
+{"k":"Full/mesh/LOD2_Mesh/uvDistribution","v":"3ede7223 3fde7223"}
+{"k":"Full/mesh/LOD3_Mesh","v":"vertices 4 submeshes 1 index UInt16 readable True bounds 00000000 3f1c0ebf 00000000 3e9c0ebf 3f1c0ebf 00000000 streams 1"}
+{"k":"Full/mesh/LOD3_Mesh/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0"}
+{"k":"Full/mesh/LOD3_Mesh/submesh0","v":"Triangles start 0 count 6 base 0 first 0 vcount 4 bounds 00000000 3f1c0ebf 00000000 3e9c0ebf 3f1c0ebf 00000000"}
+{"k":"Full/mesh/LOD3_Mesh/submesh0/indices","v":"182832dadf122b67"}
+{"k":"Full/mesh/LOD3_Mesh/positions","v":"2637169b054895ed first be9c0ebf 00000000 00000000"}
+{"k":"Full/mesh/LOD3_Mesh/normals","v":"be103943f91e8305"}
+{"k":"Full/mesh/LOD3_Mesh/tangents","v":"ba875b70b2302a65 first 3f800000 00000000 00000000 3f800000"}
+{"k":"Full/mesh/LOD3_Mesh/colors32","v":"f5828221c956b945 first RGBA(255, 255, 255, 0)"}
+{"k":"Full/mesh/LOD3_Mesh/uv0","v":"753553373d3766a5 first 00000000 00000000 00000000 00000000"}
+{"k":"Full/mesh/LOD3_Mesh/uv1","v":"753553373d3766a5 first 00000000 00000000 00000000 00000000"}
+{"k":"Full/mesh/LOD3_Mesh/uvDistribution","v":"3f3e43f3 3f3e43f3"}
+{"k":"Full/material/Bark","v":"Nature/SpeedTree9 queue 2450 instancing True doubleSidedGI False flags EmissiveIsBlack"}
+{"k":"Full/material/Bark/keywords","v":""}
+{"k":"Full/material/Bark/prop/_MainTex","v":"Bark_Color 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Bark/prop/_ColorTint","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/material/Bark/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"Full/material/Bark/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"Full/material/Bark/prop/_NormalMapKwToggle","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_NormalMap","v":"Bark_Normal 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Bark/prop/_ExtraTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Bark/prop/_Glossiness","v":"3f000000"}
+{"k":"Full/material/Bark/prop/_Metallic","v":"00000000"}
+{"k":"Full/material/Bark/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Full/material/Bark/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Bark/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/material/Bark/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Full/material/Bark/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Full/material/Bark/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"Full/material/Bark/prop/_TwoSided","v":"40000000"}
+{"k":"Full/material/Bark/prop/_LeafFacingKwToggle","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_WIND_BRANCH1","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_WIND_BRANCH2","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_WIND_RIPPLE","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_WIND_SHIMMER","v":"3f800000"}
+{"k":"Full/material/Billboard","v":"Nature/SpeedTree9 queue 2450 instancing True doubleSidedGI False flags EmissiveIsBlack"}
+{"k":"Full/material/Billboard/keywords","v":"_BILLBOARD"}
+{"k":"Full/material/Billboard/prop/_MainTex","v":"Billboard_Color 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Billboard/prop/_ColorTint","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/material/Billboard/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"Full/material/Billboard/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_NormalMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Billboard/prop/_ExtraTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Billboard/prop/_Glossiness","v":"3f000000"}
+{"k":"Full/material/Billboard/prop/_Metallic","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Billboard/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/material/Billboard/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Full/material/Billboard/prop/_BillboardKwToggle","v":"3f800000"}
+{"k":"Full/material/Billboard/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"Full/material/Billboard/prop/_TwoSided","v":"40000000"}
+{"k":"Full/material/Billboard/prop/_LeafFacingKwToggle","v":"3f800000"}
+{"k":"Full/material/Billboard/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Full/material/Billboard/prop/_WIND_BRANCH1","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_WIND_RIPPLE","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Full/material/Leaves","v":"Nature/SpeedTree9 queue 2450 instancing True doubleSidedGI True flags EmissiveIsBlack"}
+{"k":"Full/material/Leaves/keywords","v":""}
+{"k":"Full/material/Leaves/prop/_MainTex","v":"Leaf_Color 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Leaves/prop/_ColorTint","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/material/Leaves/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"Full/material/Leaves/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"Full/material/Leaves/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Full/material/Leaves/prop/_NormalMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Leaves/prop/_ExtraTex","v":"Leaf_Extra 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Leaves/prop/_Glossiness","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_Metallic","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Full/material/Leaves/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Leaves/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/material/Leaves/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Full/material/Leaves/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Full/material/Leaves/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"Full/material/Leaves/prop/_TwoSided","v":"00000000"}
+{"k":"Full/material/Leaves/prop/_LeafFacingKwToggle","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_WIND_BRANCH1","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_WIND_BRANCH2","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_WIND_RIPPLE","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_WIND_SHIMMER","v":"3f800000"}
+{"k":"Remapped/main","v":"GameObject Remapped"}
+{"k":"Remapped/object/GameObject/Remapped","v":"-7434008128576307933"}
+{"k":"Remapped/object/GameObject/Remapped/LOD0","v":"9044615842348906356"}
+{"k":"Remapped/object/LODGroup/Remapped:LODGroup","v":"-4650882288657729640"}
+{"k":"Remapped/object/Material/Leaves","v":"-4006148316881293267"}
+{"k":"Remapped/object/Mesh/LOD0_Mesh","v":"4443394430103177256"}
+{"k":"Remapped/object/MeshFilter/Remapped/LOD0:MeshFilter","v":"1491452679648749081"}
+{"k":"Remapped/object/MeshRenderer/Remapped/LOD0:MeshRenderer","v":"8864442659361393542"}
+{"k":"Remapped/object/Rigidbody/Remapped:Rigidbody","v":"-1132865758332202429"}
+{"k":"Remapped/object/SpeedTreeImporterOutputData/ImporterOutputData","v":"7965120797947565359"}
+{"k":"Remapped/object/Transform/Remapped/LOD0:Transform","v":"2364655863226792329"}
+{"k":"Remapped/object/Transform/Remapped:Transform","v":"-453750087388946865"}
+{"k":"Remapped/object/Tree/Remapped/LOD0:Tree","v":"957391066088196376"}
+{"k":"Remapped/objects","v":"12"}
+{"k":"Remapped/go/Remapped","v":"active layer 0 tag Untagged static False"}
+{"k":"Remapped/go/Remapped/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Remapped/go/Remapped/components","v":"Transform Rigidbody LODGroup"}
+{"k":"Remapped/go/Remapped/Rigidbody","v":"gravity False kinematic True mass 3f800000 interpolation None detection Discrete constraints None"}
+{"k":"Remapped/go/Remapped/LODGroup","v":"CrossFade animate True billboard False size 3f624895 ref 00000000 3ee24895 00000000 count 1 enabled True"}
+{"k":"Remapped/go/Remapped/LODGroup/lod0","v":"3c23d70a fade 00000000 renderers LOD0"}
+{"k":"Remapped/go/Remapped/LOD0","v":"active layer 0 tag Untagged static False"}
+{"k":"Remapped/go/Remapped/LOD0/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Remapped/go/Remapped/LOD0/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"Remapped/go/Remapped/LOD0/MeshFilter","v":"LOD0_Mesh"}
+{"k":"Remapped/go/Remapped/LOD0/MeshRenderer","v":"Remap,Leaves cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 00000000 3ee24895 00000000 3eaba9d2 3ee24895 3e79b132"}
+{"k":"Remapped/go/Remapped/LOD0/Tree","v":"null data null"}
+{"k":"Remapped/mesh/LOD0_Mesh","v":"vertices 30 submeshes 2 index UInt16 readable True bounds 00000000 3ee24895 00000000 3eaba9d2 3ee24895 3e79b132 streams 1"}
+{"k":"Remapped/mesh/LOD0_Mesh/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"Remapped/mesh/LOD0_Mesh/submesh0","v":"Triangles start 0 count 36 base 0 first 0 vcount 14 bounds 00000000 3e9c0ebf 00000000 3d9c0ebf 3e9c0ebf 3d87265c"}
+{"k":"Remapped/mesh/LOD0_Mesh/submesh0/indices","v":"61b3d0b425564215"}
+{"k":"Remapped/mesh/LOD0_Mesh/submesh1","v":"Triangles start 36 count 24 base 0 first 14 vcount 16 bounds 00000000 3f33775c 00000000 3eaba9d2 3e3b44e4 3e79b132"}
+{"k":"Remapped/mesh/LOD0_Mesh/submesh1/indices","v":"d20f4d92b42c4835"}
+{"k":"Remapped/mesh/LOD0_Mesh/positions","v":"340cf781a5f0e079 first 3d9c0ebf 00000000 00000000"}
+{"k":"Remapped/mesh/LOD0_Mesh/normals","v":"0ebacb5ca8f0a29d"}
+{"k":"Remapped/mesh/LOD0_Mesh/tangents","v":"987f432109c832c5 first 80000000 00000000 3f800000 bf800000"}
+{"k":"Remapped/mesh/LOD0_Mesh/colors32","v":"9d6819d09da05dbe first RGBA(115, 121, 89, 0)"}
+{"k":"Remapped/mesh/LOD0_Mesh/uv0","v":"530d26ada6ec9bfa first 00000000 00000000 00000000 3e4ccccd"}
+{"k":"Remapped/mesh/LOD0_Mesh/uv1","v":"6e2e9d6ecdd19268 first 00000000 00000000 00000000 00000000"}
+{"k":"Remapped/mesh/LOD0_Mesh/uv2","v":"fcfda4c07d71b8a5 first 00000000 00000000 00000000 00000000"}
+{"k":"Remapped/mesh/LOD0_Mesh/uv3","v":"fcfda4c07d71b8a5 first 00000000 00000000 00000000 00000000"}
+{"k":"Remapped/mesh/LOD0_Mesh/uvDistribution","v":"3e8eb2f6 3f8eb2f6"}
+{"k":"Remapped/material/Leaves","v":"Nature/SpeedTree9 queue 2450 instancing True doubleSidedGI True flags EmissiveIsBlack"}
+{"k":"Remapped/material/Leaves/keywords","v":""}
+{"k":"Remapped/material/Leaves/prop/_MainTex","v":"Leaf_Color 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Remapped/material/Leaves/prop/_ColorTint","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Remapped/material/Leaves/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"Remapped/material/Leaves/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"Remapped/material/Leaves/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Remapped/material/Leaves/prop/_NormalMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Remapped/material/Leaves/prop/_ExtraTex","v":"Leaf_Extra 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Remapped/material/Leaves/prop/_Glossiness","v":"3f800000"}
+{"k":"Remapped/material/Leaves/prop/_Metallic","v":"3f800000"}
+{"k":"Remapped/material/Leaves/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Remapped/material/Leaves/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Remapped/material/Leaves/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Remapped/material/Leaves/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Remapped/material/Leaves/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Remapped/material/Leaves/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"Remapped/material/Leaves/prop/_TwoSided","v":"00000000"}
+{"k":"Remapped/material/Leaves/prop/_LeafFacingKwToggle","v":"00000000"}
+{"k":"Remapped/material/Leaves/prop/_WIND_SHARED","v":"00000000"}
+{"k":"Remapped/material/Leaves/prop/_WIND_BRANCH1","v":"00000000"}
+{"k":"Remapped/material/Leaves/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Remapped/material/Leaves/prop/_WIND_RIPPLE","v":"00000000"}
+{"k":"Remapped/material/Leaves/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Settings/main","v":"GameObject Settings"}
+{"k":"Settings/object/GameObject/Settings","v":"-7434008128576307933"}
+{"k":"Settings/object/GameObject/Settings/LOD0","v":"9044615842348906356"}
+{"k":"Settings/object/GameObject/Settings/LOD1","v":"7500239982011423145"}
+{"k":"Settings/object/GameObject/Settings/LOD2","v":"-1573256644850547884"}
+{"k":"Settings/object/GameObject/Settings/LOD3","v":"-7309809893859521330"}
+{"k":"Settings/object/LODGroup/Settings:LODGroup","v":"-4650882288657729640"}
+{"k":"Settings/object/Material/Bark","v":"-8761910824519130491"}
+{"k":"Settings/object/Material/BarkLOD1","v":"-8273287388038204582"}
+{"k":"Settings/object/Material/Billboard","v":"-1198624654948496732"}
+{"k":"Settings/object/Material/Leaves","v":"-4006148316881293267"}
+{"k":"Settings/object/Material/LeavesLOD1","v":"-3929228418696219662"}
+{"k":"Settings/object/Mesh/LOD0_Mesh","v":"4443394430103177256"}
+{"k":"Settings/object/Mesh/LOD1_Mesh","v":"7286934686281182518"}
+{"k":"Settings/object/Mesh/LOD2_Mesh","v":"-6527763313339446553"}
+{"k":"Settings/object/Mesh/LOD3_Mesh","v":"5699096512235913117"}
+{"k":"Settings/object/MeshFilter/Settings/LOD0:MeshFilter","v":"1491452679648749081"}
+{"k":"Settings/object/MeshFilter/Settings/LOD1:MeshFilter","v":"4612558041721509824"}
+{"k":"Settings/object/MeshFilter/Settings/LOD2:MeshFilter","v":"-952262289116810653"}
+{"k":"Settings/object/MeshFilter/Settings/LOD3:MeshFilter","v":"-7083531494208559794"}
+{"k":"Settings/object/MeshRenderer/Settings/LOD0:MeshRenderer","v":"8864442659361393542"}
+{"k":"Settings/object/MeshRenderer/Settings/LOD1:MeshRenderer","v":"2975675883863627794"}
+{"k":"Settings/object/MeshRenderer/Settings/LOD2:MeshRenderer","v":"5663111918222471345"}
+{"k":"Settings/object/MeshRenderer/Settings/LOD3:MeshRenderer","v":"2519853017674462795"}
+{"k":"Settings/object/SpeedTreeImporterOutputData/ImporterOutputData","v":"7965120797947565359"}
+{"k":"Settings/object/SpeedTreeWindAsset/SpeedTreeWind","v":"-5819406165411355519"}
+{"k":"Settings/object/Transform/Settings/LOD0:Transform","v":"2364655863226792329"}
+{"k":"Settings/object/Transform/Settings/LOD1:Transform","v":"2041666890538590560"}
+{"k":"Settings/object/Transform/Settings/LOD2:Transform","v":"-8447226849082701856"}
+{"k":"Settings/object/Transform/Settings/LOD3:Transform","v":"-5679674305688112668"}
+{"k":"Settings/object/Transform/Settings:Transform","v":"-453750087388946865"}
+{"k":"Settings/object/Tree/Settings/LOD0:Tree","v":"957391066088196376"}
+{"k":"Settings/object/Tree/Settings/LOD1:Tree","v":"-227696351917468169"}
+{"k":"Settings/object/Tree/Settings/LOD2:Tree","v":"-1240146811894728736"}
+{"k":"Settings/object/Tree/Settings/LOD3:Tree","v":"3815124040502637876"}
+{"k":"Settings/objects","v":"34"}
+{"k":"Settings/go/Settings","v":"active layer 0 tag Untagged static False"}
+{"k":"Settings/go/Settings/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/go/Settings/components","v":"Transform LODGroup"}
+{"k":"Settings/go/Settings/LODGroup","v":"CrossFade animate False billboard True size 4089999a ref 00000000 4009999a 00000000 count 4 enabled True"}
+{"k":"Settings/go/Settings/LODGroup/lod0","v":"3f19999a fade 00000000 renderers LOD0"}
+{"k":"Settings/go/Settings/LODGroup/lod1","v":"3e99999a fade 00000000 renderers LOD1"}
+{"k":"Settings/go/Settings/LODGroup/lod2","v":"3e19999a fade 00000000 renderers LOD2"}
+{"k":"Settings/go/Settings/LODGroup/lod3","v":"3d4ccccd fade 00000000 renderers LOD3"}
+{"k":"Settings/go/Settings/LOD0","v":"active layer 0 tag Untagged static False"}
+{"k":"Settings/go/Settings/LOD0/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/go/Settings/LOD0/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"Settings/go/Settings/LOD0/MeshFilter","v":"LOD0_Mesh"}
+{"k":"Settings/go/Settings/LOD0/MeshRenderer","v":"Bark,Leaves cast Off receive True probes Off reflection Off motion Camera layerMask 1 enabled True bounds 00000000 4009999a 00000000 3f8ccccd 4009999a 3f315cac"}
+{"k":"Settings/go/Settings/LOD0/Tree","v":"SpeedTreeWind data null"}
+{"k":"Settings/go/Settings/LOD1","v":"active layer 0 tag Untagged static False"}
+{"k":"Settings/go/Settings/LOD1/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/go/Settings/LOD1/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"Settings/go/Settings/LOD1/MeshFilter","v":"LOD1_Mesh"}
+{"k":"Settings/go/Settings/LOD1/MeshRenderer","v":"BarkLOD1,LeavesLOD1 cast Off receive False probes BlendProbes reflection BlendProbesAndSkybox motion Camera layerMask 1 enabled True bounds 3e4ccccc 3feccccd 00000000 3f666667 3feccccd 3f315cac"}
+{"k":"Settings/go/Settings/LOD1/Tree","v":"SpeedTreeWind data null"}
+{"k":"Settings/go/Settings/LOD2","v":"active layer 0 tag Untagged static False"}
+{"k":"Settings/go/Settings/LOD2/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/go/Settings/LOD2/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"Settings/go/Settings/LOD2/MeshFilter","v":"LOD2_Mesh"}
+{"k":"Settings/go/Settings/LOD2/MeshRenderer","v":"Bark cast Off receive True probes Off reflection Off motion Camera layerMask 1 enabled True bounds 3d99999a 3fc00000 00000000 3e666667 3fc00000 3e850581"}
+{"k":"Settings/go/Settings/LOD2/Tree","v":"SpeedTreeWind data null"}
+{"k":"Settings/go/Settings/LOD3","v":"active layer 0 tag Untagged static False"}
+{"k":"Settings/go/Settings/LOD3/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/go/Settings/LOD3/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"Settings/go/Settings/LOD3/MeshFilter","v":"LOD3_Mesh"}
+{"k":"Settings/go/Settings/LOD3/MeshRenderer","v":"Billboard cast On receive True probes Off reflection Off motion Camera layerMask 1 enabled True bounds 00000000 40000000 00000000 3f800000 40000000 00000000"}
+{"k":"Settings/go/Settings/LOD3/Tree","v":"SpeedTreeWind data null"}
+{"k":"Settings/mesh/LOD0_Mesh","v":"vertices 42 submeshes 2 index UInt16 readable True bounds 00000000 4009999a 00000000 3f8ccccd 4009999a 3f315cac streams 1"}
+{"k":"Settings/mesh/LOD0_Mesh/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"Settings/mesh/LOD0_Mesh/submesh0","v":"Triangles start 0 count 48 base 0 first 0 vcount 18 bounds 00000000 3fc00000 00000000 3e99999a 3fc00000 3e99999a"}
+{"k":"Settings/mesh/LOD0_Mesh/submesh0/indices","v":"578a7629e6d6d705"}
+{"k":"Settings/mesh/LOD0_Mesh/submesh1","v":"Triangles start 48 count 36 base 0 first 18 vcount 24 bounds 00000000 40600000 00000000 3f8ccccd 3f4cccce 3f315cac"}
+{"k":"Settings/mesh/LOD0_Mesh/submesh1/indices","v":"9a97734eff9ece5d"}
+{"k":"Settings/mesh/LOD0_Mesh/positions","v":"6e56e4dfe69a3891 first 3e99999a 00000000 00000000"}
+{"k":"Settings/mesh/LOD0_Mesh/normals","v":"3bd9b35444ce311d"}
+{"k":"Settings/mesh/LOD0_Mesh/tangents","v":"bb14fb7bdd882b99 first 80000000 00000000 3f800000 bf800000"}
+{"k":"Settings/mesh/LOD0_Mesh/colors32","v":"ee1b58462ba266b5 first RGBA(115, 102, 89, 0)"}
+{"k":"Settings/mesh/LOD0_Mesh/uv0","v":"5528bbaf81f77bc6 first 00000000 00000000 00000000 3e4ccccd"}
+{"k":"Settings/mesh/LOD0_Mesh/uv1","v":"3327ab9a068750b4 first 00000000 00000000 00000000 00000000"}
+{"k":"Settings/mesh/LOD0_Mesh/uv2","v":"934d743a29ae7e75 first 3e99999a 00000000 00000000 00000000"}
+{"k":"Settings/mesh/LOD0_Mesh/uv3","v":"82342c0a6891e7a5 first 00000000 00000000 00000000 00000000"}
+{"k":"Settings/mesh/LOD0_Mesh/uvDistribution","v":"3eb851ec 40b851ec"}
+{"k":"Settings/mesh/LOD1_Mesh","v":"vertices 24 submeshes 2 index UInt16 readable True bounds 3e4ccccc 3feccccd 00000000 3f666667 3feccccd 3f315cac streams 1"}
+{"k":"Settings/mesh/LOD1_Mesh/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"Settings/mesh/LOD1_Mesh/submesh0","v":"Triangles start 0 count 30 base 0 first 0 vcount 12 bounds 3ceaae14 3fc00000 00000000 3e8aeeb9 3fc00000 3e921510"}
+{"k":"Settings/mesh/LOD1_Mesh/submesh0/indices","v":"b638a98283284cc6"}
+{"k":"Settings/mesh/LOD1_Mesh/submesh1","v":"Triangles start 30 count 18 base 0 first 12 vcount 12 bounds 3e4ccccc 404ccccd 00000000 3f666667 3f000000 3f315cac"}
+{"k":"Settings/mesh/LOD1_Mesh/submesh1/indices","v":"be90e2bcf62d0a27"}
+{"k":"Settings/mesh/LOD1_Mesh/positions","v":"c0621bfb0abc33f9 first 3e99999a 00000000 00000000"}
+{"k":"Settings/mesh/LOD1_Mesh/normals","v":"07a50995fa75802d"}
+{"k":"Settings/mesh/LOD1_Mesh/tangents","v":"f793f5f4b693f77d first 80000000 00000000 3f800000 bf800000"}
+{"k":"Settings/mesh/LOD1_Mesh/colors32","v":"82dd09235dc7aec5 first RGBA(115, 108, 89, 0)"}
+{"k":"Settings/mesh/LOD1_Mesh/uv0","v":"ee9d0e70390ff571 first 00000000 00000000 00000000 3e4ccccd"}
+{"k":"Settings/mesh/LOD1_Mesh/uv1","v":"893c6e2eec0c5255 first 00000000 00000000 00000000 00000000"}
+{"k":"Settings/mesh/LOD1_Mesh/uv2","v":"6b2e4ed207f11569 first 3e99999a 00000000 00000000 00000000"}
+{"k":"Settings/mesh/LOD1_Mesh/uv3","v":"c86ec345c0ee8125 first 00000000 00000000 00000000 00000000"}
+{"k":"Settings/mesh/LOD1_Mesh/uvDistribution","v":"40a9483b 41a9483b"}
+{"k":"Settings/mesh/LOD2_Mesh","v":"vertices 8 submeshes 1 index UInt16 readable True bounds 3d99999a 3fc00000 00000000 3e666667 3fc00000 3e850581 streams 1"}
+{"k":"Settings/mesh/LOD2_Mesh/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"Settings/mesh/LOD2_Mesh/submesh0","v":"Triangles start 0 count 18 base 0 first 0 vcount 8 bounds 3d99999a 3fc00000 00000000 3e666667 3fc00000 3e850581"}
+{"k":"Settings/mesh/LOD2_Mesh/submesh0/indices","v":"f06cec9a9191fef2"}
+{"k":"Settings/mesh/LOD2_Mesh/positions","v":"a54fa47ea7760779 first 3e99999a 00000000 00000000"}
+{"k":"Settings/mesh/LOD2_Mesh/normals","v":"f6b86adf9d118d55"}
+{"k":"Settings/mesh/LOD2_Mesh/tangents","v":"c32a64b8064911a5 first 80000000 00000000 3f800000 bf800000"}
+{"k":"Settings/mesh/LOD2_Mesh/colors32","v":"0b1382218d64cbed first RGBA(115, 115, 89, 0)"}
+{"k":"Settings/mesh/LOD2_Mesh/uv0","v":"5f8a20821f11dcd1 first 00000000 00000000 00000000 3e4ccccd"}
+{"k":"Settings/mesh/LOD2_Mesh/uv1","v":"5b04f841d1106781 first 00000000 00000000 00000000 00000000"}
+{"k":"Settings/mesh/LOD2_Mesh/uv2","v":"fbe7e72618d4ad39 first 3e99999a 00000000 00000000 00000000"}
+{"k":"Settings/mesh/LOD2_Mesh/uv3","v":"8421ae126c7ced25 first 00000000 00000000 00000000 00000000"}
+{"k":"Settings/mesh/LOD2_Mesh/uvDistribution","v":"4095a632 4195a632"}
+{"k":"Settings/mesh/LOD3_Mesh","v":"vertices 4 submeshes 1 index UInt16 readable True bounds 00000000 40000000 00000000 3f800000 40000000 00000000 streams 1"}
+{"k":"Settings/mesh/LOD3_Mesh/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0"}
+{"k":"Settings/mesh/LOD3_Mesh/submesh0","v":"Triangles start 0 count 6 base 0 first 0 vcount 4 bounds 00000000 40000000 00000000 3f800000 40000000 00000000"}
+{"k":"Settings/mesh/LOD3_Mesh/submesh0/indices","v":"182832dadf122b67"}
+{"k":"Settings/mesh/LOD3_Mesh/positions","v":"6d1ba0fa6a2fe385 first bf800000 00000000 00000000"}
+{"k":"Settings/mesh/LOD3_Mesh/normals","v":"be103943f91e8305"}
+{"k":"Settings/mesh/LOD3_Mesh/tangents","v":"ba875b70b2302a65 first 3f800000 00000000 00000000 3f800000"}
+{"k":"Settings/mesh/LOD3_Mesh/colors32","v":"f5828221c956b945 first RGBA(255, 255, 255, 0)"}
+{"k":"Settings/mesh/LOD3_Mesh/uv0","v":"753553373d3766a5 first 00000000 00000000 00000000 00000000"}
+{"k":"Settings/mesh/LOD3_Mesh/uv1","v":"753553373d3766a5 first 00000000 00000000 00000000 00000000"}
+{"k":"Settings/mesh/LOD3_Mesh/uvDistribution","v":"41000000 41000000"}
+{"k":"Settings/material/Bark","v":"Nature/SpeedTree9 queue 2450 instancing True doubleSidedGI False flags EmissiveIsBlack"}
+{"k":"Settings/material/Bark/keywords","v":""}
+{"k":"Settings/material/Bark/prop/_MainTex","v":"Bark_Color 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Bark/prop/_ColorTint","v":"3f666666 3f4ccccd 3f333333 3f800000"}
+{"k":"Settings/material/Bark/prop/_HueVariationKwToggle","v":"3f800000"}
+{"k":"Settings/material/Bark/prop/_HueVariationColor","v":"3e4cccca 3f19999a 3dccccc9 3e99999a"}
+{"k":"Settings/material/Bark/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_NormalMap","v":"Bark_Normal 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Bark/prop/_ExtraTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Bark/prop/_Glossiness","v":"3f000000"}
+{"k":"Settings/material/Bark/prop/_Metallic","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Bark/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/Bark/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Settings/material/Bark/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"Settings/material/Bark/prop/_TwoSided","v":"40000000"}
+{"k":"Settings/material/Bark/prop/_LeafFacingKwToggle","v":"3f800000"}
+{"k":"Settings/material/Bark/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Settings/material/Bark/prop/_WIND_BRANCH1","v":"3f800000"}
+{"k":"Settings/material/Bark/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_WIND_RIPPLE","v":"3f800000"}
+{"k":"Settings/material/Bark/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Settings/material/BarkLOD1","v":"Nature/SpeedTree9 queue 2450 instancing True doubleSidedGI False flags EmissiveIsBlack"}
+{"k":"Settings/material/BarkLOD1/keywords","v":""}
+{"k":"Settings/material/BarkLOD1/prop/_MainTex","v":"Bark_Color 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_ColorTint","v":"3f666666 3f4ccccd 3f333333 3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_HueVariationKwToggle","v":"3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_HueVariationColor","v":"3e4cccca 3f19999a 3dccccc9 3e99999a"}
+{"k":"Settings/material/BarkLOD1/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_NormalMap","v":"Bark_Normal 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_ExtraTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_Glossiness","v":"3f000000"}
+{"k":"Settings/material/BarkLOD1/prop/_Metallic","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Settings/material/BarkLOD1/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"Settings/material/BarkLOD1/prop/_TwoSided","v":"40000000"}
+{"k":"Settings/material/BarkLOD1/prop/_LeafFacingKwToggle","v":"3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_WIND_BRANCH1","v":"3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_WIND_RIPPLE","v":"3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Settings/material/Billboard","v":"Nature/SpeedTree9 queue 2450 instancing True doubleSidedGI False flags EmissiveIsBlack"}
+{"k":"Settings/material/Billboard/keywords","v":"_BILLBOARD"}
+{"k":"Settings/material/Billboard/prop/_MainTex","v":"Billboard_Color 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Billboard/prop/_ColorTint","v":"3f666666 3f4ccccd 3f333333 3f800000"}
+{"k":"Settings/material/Billboard/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_HueVariationColor","v":"3e4cccca 3f19999a 3dccccc9 3e99999a"}
+{"k":"Settings/material/Billboard/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_NormalMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Billboard/prop/_ExtraTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Billboard/prop/_Glossiness","v":"3f000000"}
+{"k":"Settings/material/Billboard/prop/_Metallic","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Billboard/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/Billboard/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Settings/material/Billboard/prop/_BillboardKwToggle","v":"3f800000"}
+{"k":"Settings/material/Billboard/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"Settings/material/Billboard/prop/_TwoSided","v":"40000000"}
+{"k":"Settings/material/Billboard/prop/_LeafFacingKwToggle","v":"3f800000"}
+{"k":"Settings/material/Billboard/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Settings/material/Billboard/prop/_WIND_BRANCH1","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_WIND_RIPPLE","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Settings/material/Leaves","v":"Nature/SpeedTree9 queue 2450 instancing True doubleSidedGI True flags EmissiveIsBlack"}
+{"k":"Settings/material/Leaves/keywords","v":""}
+{"k":"Settings/material/Leaves/prop/_MainTex","v":"Leaf_Color 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Leaves/prop/_ColorTint","v":"3f666666 3f4ccccd 3f333333 3f800000"}
+{"k":"Settings/material/Leaves/prop/_HueVariationKwToggle","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_HueVariationColor","v":"3e4cccca 3f19999a 3dccccc9 3e99999a"}
+{"k":"Settings/material/Leaves/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/_NormalMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Leaves/prop/_ExtraTex","v":"Leaf_Extra 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Leaves/prop/_Glossiness","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_Metallic","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Leaves/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/Leaves/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Settings/material/Leaves/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"Settings/material/Leaves/prop/_TwoSided","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/_LeafFacingKwToggle","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_WIND_BRANCH1","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/_WIND_RIPPLE","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1","v":"Nature/SpeedTree9 queue 2450 instancing True doubleSidedGI True flags EmissiveIsBlack"}
+{"k":"Settings/material/LeavesLOD1/keywords","v":""}
+{"k":"Settings/material/LeavesLOD1/prop/_MainTex","v":"Leaf_Color 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_ColorTint","v":"3f666666 3f4ccccd 3f333333 3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_HueVariationKwToggle","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_HueVariationColor","v":"3e4cccca 3f19999a 3dccccc9 3e99999a"}
+{"k":"Settings/material/LeavesLOD1/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_NormalMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_ExtraTex","v":"Leaf_Extra 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_Glossiness","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_Metallic","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_TwoSided","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_LeafFacingKwToggle","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_WIND_BRANCH1","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_WIND_RIPPLE","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Simple/main","v":"GameObject Simple"}
+{"k":"Simple/object/GameObject/Simple","v":"-7434008128576307933"}
+{"k":"Simple/object/GameObject/Simple/LOD0","v":"9044615842348906356"}
+{"k":"Simple/object/LODGroup/Simple:LODGroup","v":"-4650882288657729640"}
+{"k":"Simple/object/Material/Bark","v":"-8761910824519130491"}
+{"k":"Simple/object/Material/Leaves","v":"-4006148316881293267"}
+{"k":"Simple/object/Mesh/LOD0_Mesh","v":"4443394430103177256"}
+{"k":"Simple/object/MeshFilter/Simple/LOD0:MeshFilter","v":"1491452679648749081"}
+{"k":"Simple/object/MeshRenderer/Simple/LOD0:MeshRenderer","v":"8864442659361393542"}
+{"k":"Simple/object/Rigidbody/Simple:Rigidbody","v":"-1132865758332202429"}
+{"k":"Simple/object/SpeedTreeImporterOutputData/ImporterOutputData","v":"7965120797947565359"}
+{"k":"Simple/object/Transform/Simple/LOD0:Transform","v":"2364655863226792329"}
+{"k":"Simple/object/Transform/Simple:Transform","v":"-453750087388946865"}
+{"k":"Simple/object/Tree/Simple/LOD0:Tree","v":"957391066088196376"}
+{"k":"Simple/objects","v":"13"}
+{"k":"Simple/go/Simple","v":"active layer 0 tag Untagged static False"}
+{"k":"Simple/go/Simple/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Simple/go/Simple/components","v":"Transform Rigidbody LODGroup"}
+{"k":"Simple/go/Simple/Rigidbody","v":"gravity False kinematic True mass 3f800000 interpolation None detection Discrete constraints None"}
+{"k":"Simple/go/Simple/LODGroup","v":"CrossFade animate True billboard False size 3f624895 ref 00000000 3ee24895 00000000 count 1 enabled True"}
+{"k":"Simple/go/Simple/LODGroup/lod0","v":"3c23d70a fade 00000000 renderers LOD0"}
+{"k":"Simple/go/Simple/LOD0","v":"active layer 0 tag Untagged static False"}
+{"k":"Simple/go/Simple/LOD0/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Simple/go/Simple/LOD0/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"Simple/go/Simple/LOD0/MeshFilter","v":"LOD0_Mesh"}
+{"k":"Simple/go/Simple/LOD0/MeshRenderer","v":"Bark,Leaves cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 00000000 3ee24895 00000000 3eaba9d2 3ee24895 3e79b132"}
+{"k":"Simple/go/Simple/LOD0/Tree","v":"null data null"}
+{"k":"Simple/mesh/LOD0_Mesh","v":"vertices 30 submeshes 2 index UInt16 readable True bounds 00000000 3ee24895 00000000 3eaba9d2 3ee24895 3e79b132 streams 1"}
+{"k":"Simple/mesh/LOD0_Mesh/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"Simple/mesh/LOD0_Mesh/submesh0","v":"Triangles start 0 count 36 base 0 first 0 vcount 14 bounds 00000000 3e9c0ebf 00000000 3d9c0ebf 3e9c0ebf 3d87265c"}
+{"k":"Simple/mesh/LOD0_Mesh/submesh0/indices","v":"61b3d0b425564215"}
+{"k":"Simple/mesh/LOD0_Mesh/submesh1","v":"Triangles start 36 count 24 base 0 first 14 vcount 16 bounds 00000000 3f33775c 00000000 3eaba9d2 3e3b44e4 3e79b132"}
+{"k":"Simple/mesh/LOD0_Mesh/submesh1/indices","v":"d20f4d92b42c4835"}
+{"k":"Simple/mesh/LOD0_Mesh/positions","v":"340cf781a5f0e079 first 3d9c0ebf 00000000 00000000"}
+{"k":"Simple/mesh/LOD0_Mesh/normals","v":"0ebacb5ca8f0a29d"}
+{"k":"Simple/mesh/LOD0_Mesh/tangents","v":"987f432109c832c5 first 80000000 00000000 3f800000 bf800000"}
+{"k":"Simple/mesh/LOD0_Mesh/colors32","v":"9d6819d09da05dbe first RGBA(115, 121, 89, 0)"}
+{"k":"Simple/mesh/LOD0_Mesh/uv0","v":"530d26ada6ec9bfa first 00000000 00000000 00000000 3e4ccccd"}
+{"k":"Simple/mesh/LOD0_Mesh/uv1","v":"6e2e9d6ecdd19268 first 00000000 00000000 00000000 00000000"}
+{"k":"Simple/mesh/LOD0_Mesh/uv2","v":"fcfda4c07d71b8a5 first 00000000 00000000 00000000 00000000"}
+{"k":"Simple/mesh/LOD0_Mesh/uv3","v":"fcfda4c07d71b8a5 first 00000000 00000000 00000000 00000000"}
+{"k":"Simple/mesh/LOD0_Mesh/uvDistribution","v":"3e8eb2f6 3f8eb2f6"}
+{"k":"Simple/material/Bark","v":"Nature/SpeedTree9 queue 2450 instancing True doubleSidedGI False flags EmissiveIsBlack"}
+{"k":"Simple/material/Bark/keywords","v":""}
+{"k":"Simple/material/Bark/prop/_MainTex","v":"Bark_Color 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Simple/material/Bark/prop/_ColorTint","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Simple/material/Bark/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"Simple/material/Bark/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"Simple/material/Bark/prop/_NormalMapKwToggle","v":"3f800000"}
+{"k":"Simple/material/Bark/prop/_NormalMap","v":"Bark_Normal 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Simple/material/Bark/prop/_ExtraTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Simple/material/Bark/prop/_Glossiness","v":"3f000000"}
+{"k":"Simple/material/Bark/prop/_Metallic","v":"00000000"}
+{"k":"Simple/material/Bark/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Simple/material/Bark/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Simple/material/Bark/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Simple/material/Bark/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Simple/material/Bark/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Simple/material/Bark/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"Simple/material/Bark/prop/_TwoSided","v":"40000000"}
+{"k":"Simple/material/Bark/prop/_LeafFacingKwToggle","v":"00000000"}
+{"k":"Simple/material/Bark/prop/_WIND_SHARED","v":"00000000"}
+{"k":"Simple/material/Bark/prop/_WIND_BRANCH1","v":"00000000"}
+{"k":"Simple/material/Bark/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Simple/material/Bark/prop/_WIND_RIPPLE","v":"00000000"}
+{"k":"Simple/material/Bark/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Simple/material/Leaves","v":"Nature/SpeedTree9 queue 2450 instancing True doubleSidedGI True flags EmissiveIsBlack"}
+{"k":"Simple/material/Leaves/keywords","v":""}
+{"k":"Simple/material/Leaves/prop/_MainTex","v":"Leaf_Color 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Simple/material/Leaves/prop/_ColorTint","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Simple/material/Leaves/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"Simple/material/Leaves/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"Simple/material/Leaves/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Simple/material/Leaves/prop/_NormalMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Simple/material/Leaves/prop/_ExtraTex","v":"Leaf_Extra 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Simple/material/Leaves/prop/_Glossiness","v":"3f800000"}
+{"k":"Simple/material/Leaves/prop/_Metallic","v":"3f800000"}
+{"k":"Simple/material/Leaves/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Simple/material/Leaves/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"Simple/material/Leaves/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Simple/material/Leaves/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Simple/material/Leaves/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Simple/material/Leaves/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"Simple/material/Leaves/prop/_TwoSided","v":"00000000"}
+{"k":"Simple/material/Leaves/prop/_LeafFacingKwToggle","v":"00000000"}
+{"k":"Simple/material/Leaves/prop/_WIND_SHARED","v":"00000000"}
+{"k":"Simple/material/Leaves/prop/_WIND_BRANCH1","v":"00000000"}
+{"k":"Simple/material/Leaves/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Simple/material/Leaves/prop/_WIND_RIPPLE","v":"00000000"}
+{"k":"Simple/material/Leaves/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"complete","v":true}

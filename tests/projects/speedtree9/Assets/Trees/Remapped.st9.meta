@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3fc528c69ed2ef8bbb15c03540d8bbd1
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: 
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Bark
+    second: {fileID: 2100000, guid: 301e0f7e3a1217720fd6b70ec1c782eb, type: 2}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 12405, guid: 0000000000000000e000000000000000, type: 0}
