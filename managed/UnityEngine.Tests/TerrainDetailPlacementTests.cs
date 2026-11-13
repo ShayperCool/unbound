@@ -215,6 +215,75 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>ComputeDetailInstanceTransforms reads an untilted turn back from the transform,
+        /// on both halves of the turn and at its ends.</summary>
+        [Theory]
+        [InlineData(0f)]
+        [InlineData(0.3f)]
+        [InlineData(3.1f)]
+        [InlineData(3.4f)]
+        [InlineData(6.1f)]
+        public void TheTurnReadsBackFromAnUntiltedTransform(float turn)
+        {
+            var model = Matrix4x4.TRS(new Vector3(1f, 2f, 3f), Quaternion.AngleAxis(turn * Mathf.Rad2Deg, Vector3.up), new Vector3(2f, 3f, 2f));
+            var i = TerrainData.InstanceTransform(model);
+            Assert.Equal(turn, i.rotationY, 3);
+            Assert.Equal(2f, i.scaleXZ, 4);
+            Assert.Equal(3f, i.scaleY, 4);
+            Assert.Equal(new Vector3(1f, 2f, 3f), new Vector3(i.posX, i.posY, i.posZ));
+        }
+
+        /// <summary>alignToGround tilts an instance's up axis from up to the terrain's normal; the
+        /// bounds hold every instance's transformed mesh bounds.</summary>
+        [Theory]
+        [InlineData(0f)]
+        [InlineData(0.5f)]
+        [InlineData(1f)]
+        public void AlignToGroundTiltsInstancesTowardsTheNormal(float align)
+        {
+            var box = Box(new Vector3(0.2f, 0.5f, 0f), new Vector3(0.6f, 0.5f, 0.3f));
+            var data = Data(DetailScatterMode.InstanceCountMode,
+                new DetailPrototype { prototype = box, usePrototypeMesh = true, useInstancing = true, renderMode = DetailRenderMode.VertexLit, alignToGround = align, noiseSeed = 8 });
+            var heights = new float[33, 33];
+            for (int y = 0; y < 33; y++)
+                for (int x = 0; x < 33; x++)
+                    heights[y, x] = x / 32f;
+            data.SetHeights(0, 0, heights);
+            Fill(data, 0, 1);
+            var placements = new List<Matrix4x4>();
+            data.PlaceDetails(data.PrepareDetailLayer(0), 1, 2, 1f, placements, out var bounds);
+            Assert.Equal(64, placements.Count);
+            var mesh = box.GetComponent<MeshFilter>().sharedMesh;
+            foreach (var model in placements)
+            {
+                Vector3 position = model.GetColumn(3);
+                var normal = data.GetInterpolatedNormal(position.x / 16f, position.z / 16f);
+                var expected = Vector3.Slerp(Vector3.up, normal, align).normalized;
+                var up = ((Vector3)model.GetColumn(1)).normalized;
+                Assert.True(Vector3.Angle(expected, up) < 0.05f, $"{expected} vs {up}");
+                var corners = new Bounds(model.MultiplyPoint3x4(mesh.bounds.center), Vector3.zero);
+                for (int c = 0; c < 8; c++)
+                {
+                    var e = mesh.bounds.extents;
+                    var corner = mesh.bounds.center + new Vector3((c & 1) != 0 ? e.x : -e.x, (c & 2) != 0 ? e.y : -e.y, (c & 4) != 0 ? e.z : -e.z);
+                    var p = model.MultiplyPoint3x4(corner);
+                    Assert.True(bounds.Contains(p) || bounds.SqrDistance(p) < 1e-8f, $"{p} outside {bounds}");
+                }
+            }
+            if (align != 0f)
+            {
+                // Tilted instances' reported turns include the tilt: they no longer equal the
+                // untilted turn of the same draws.
+                var tilted = data.ComputeDetailInstanceTransforms(1, 2, 0, 1f, out _);
+                var flat = Data(DetailScatterMode.InstanceCountMode,
+                    new DetailPrototype { prototype = box, usePrototypeMesh = true, useInstancing = true, renderMode = DetailRenderMode.VertexLit, noiseSeed = 8 });
+                flat.SetHeights(0, 0, heights);
+                Fill(flat, 0, 1);
+                var straight = flat.ComputeDetailInstanceTransforms(1, 2, 0, 1f, out _);
+                Assert.Contains(tilted, t => Array.FindIndex(straight, s => Math.Abs(s.rotationY - t.rotationY) < 1e-3f) < 0);
+            }
+        }
+
         sealed class Errors : ILogHandler
         {
             readonly LogType m_Type;

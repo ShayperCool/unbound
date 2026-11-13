@@ -6,19 +6,11 @@ import json, os, sys
 
 TOLERANCE = 1e-4
 # Known differences: (case, name) -> why.
-EXPECTED = {
-    ("instances", "Coverage", 2): "ground-aligned meshes: the Editor's turn of a tilted instance is not reproduced",
-    ("instances", "Counts", 2): "ground-aligned meshes: the Editor's turn of a tilted instance is not reproduced (within 0.06 rad)",
-}
-# Not reproduced yet: prototypes scaled by detailObjectDensity, ground-aligned meshes, and the
-# bounds of meshes drawn without instancing.
-EXPECTED[("instances", "Refusals", 6)] = "the bounds of meshes drawn without instancing are not reproduced yet"
+EXPECTED = {}
+# Not reproduced yet: prototypes scaled by detailObjectDensity.
 for terrain in ("DensityCounts", "DensityCoverage"):
-    for layer in (0, 3):
+    for layer in (0, 1, 3):
         EXPECTED[("instances", terrain, layer)] = "useDensityScaling: the density does not scale the instances yet"
-    for case in ("instances", "legacy"):
-        EXPECTED[(case, terrain, 1)] = "ground-aligned meshes' turns and bounds, and useDensityScaling, are not reproduced yet"
-        EXPECTED[(case, terrain, 2)] = "ground-aligned meshes: the Editor's turns and bounds of tilted instances are not reproduced"
 CLIP_TOLERANCE = None
 
 
