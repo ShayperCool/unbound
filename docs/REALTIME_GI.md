@@ -1047,8 +1047,8 @@ measure):
   lightmaps; per unit of the albedo the baked-only pixels imply, a near grey of about 0.11 in
   linear) and is smaller with directional lightmaps (case 13, about 0.045), from no realtime
   lightmap and from a source not identified (measured on the NVIDIA OpenGL Core device only, one
-  albedo); Unbound draws the baked part and warns. A mesh renderer so is not measured: Unbound
-  draws its baked part without a warning.
+  albedo); Unbound draws the baked part and warns. A mesh renderer given a realtime lightmap index
+  this way is not measured in the Editor; Unbound draws its baked part without a warning.
 - Devices: drawn through Vulkan the material textures lack each chart's last corner texel, and
   the Editor's own Vulkan capture differs from its OpenGL Core one; no rule covers both yet
   ([Material inputs](#material-inputs)).
