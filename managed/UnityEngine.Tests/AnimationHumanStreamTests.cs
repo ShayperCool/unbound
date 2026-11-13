@@ -218,6 +218,43 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A solve after the job read the pose back works on the skeleton re-based under
+        /// the root without its scale: on a root scaled by 2 the body ends half as far from the
+        /// root as before the solve (the Editor displaces it the same way on the probe's root
+        /// scaled by 100, tests/projects/humanoid bone.solveTwice); on an unscaled root (the
+        /// control) it stays where it was.</summary>
+        [Theory]
+        [InlineData(1f)]
+        [InlineData(2f)]
+        public void ASolveAfterThePoseIsReadBackWorksOnTheRebasedSkeleton(float scale)
+        {
+            var root = Humanoid(out var animator, new Vector3(1f, 0f, 2f), scale);
+            Vector3 between = default, after = default;
+            var g = Graph(animator, (stream, frame) =>
+            {
+                var h = stream.AsHuman();
+                // No clip plays: the body starts on the root; the job lifts it first.
+                h.bodyPosition += new Vector3(0f, 1f, 0f);
+                h.SolveIK();
+                between = h.bodyPosition;
+                h.SolveIK();
+                after = h.bodyPosition;
+            });
+            try
+            {
+                Run(g, 1);
+                var origin = root.transform.position;
+                var expected = scale == 1f ? between : origin + (between - origin) / scale;
+                Assert.True((between - origin).magnitude > 0.5f, $"{between}");
+                Assert.True((after - expected).magnitude < 1e-3f, $"{after} vs {expected}");
+            }
+            finally
+            {
+                g.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
         [Fact]
         public void IKValuesStayInTheJobsStreamBetweenUpdates()
         {
