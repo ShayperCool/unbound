@@ -81,7 +81,10 @@ def command_paths(command, *, allow_root=True):
             continue
         seen.add(text)
         try:
-            tokens = shlex.split(text)
+            lexer = shlex.shlex(text, posix=True, punctuation_chars=';&|<>()')
+            lexer.whitespace_split = True
+            lexer.commenters = ''
+            tokens = list(lexer)
         except ValueError:
             tokens = text.split()
         for token in tokens:
@@ -92,7 +95,8 @@ def command_paths(command, *, allow_root=True):
                 yield Path(value)
                 if value.rstrip(',;') != value:
                     yield Path(value.rstrip(',;'))
-            if '/' in value and any(c.isspace() for c in value):
+            if '/' in value and (any(c.isspace() for c in value) or
+                                 not value.startswith('/') and any(c in value for c in ';&|<>()')):
                 pending.append(value)
 
 

@@ -552,6 +552,25 @@ class JanitorTests(unittest.TestCase):
                 self.assertFalse(self.j.remove(path, kind='task'))
         self.assertEqual(list(janitor.command_paths('tool '+str(direct))), [direct])
 
+    def test_shell_redirections_operators_and_quoted_punctuation_keep_references(self):
+        work = self.directory('q1/sheriff-S20-example')
+        redirected = self.directory('q1/redirected')
+        adjacent = self.directory('q1/adjacent')
+        quoted = self.directory('q1/quoted&&name')
+        shell = lambda body: janitor.shlex.join(['bash', '-c', body])
+        self.promote_fixture(work, command=shell('cat<'+str(redirected/'output')))
+        (work/'step.log').write_text('$ '+shell('tool --work='+str(adjacent)+'&&true')+'\n')
+        (work/'metadata.json').write_text(json.dumps({'command': shell(
+            'tool --work='+janitor.shlex.quote(str(quoted)))}))
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            candidates = {path for path, _, _ in self.j.candidates()}
+            for path in (redirected, adjacent, quoted):
+                self.assertNotIn(path, candidates)
+                self.j.apply = True
+                self.assertFalse(self.j.remove(path, kind='task'))
+
     def test_shortened_command_and_human_summary_do_not_protect_cache_ancestors(self):
         value = {'command': 'tool '+('x'*389)+' /home', 'summary': '3/10 values; /home'}
         self.assertEqual(len(value['command']), 400)
