@@ -194,10 +194,11 @@ namespace Unbound.Runtime
 
         /// <summary>Adds one draw per submesh/material pair of a mesh renderer.</summary>
         internal static void AddMeshDraws(Renderer renderer, Mesh mesh, Matrix4x4 model, Color color, CameraContext camera, List<DrawItem> into, Texture mainTexture = null,
-            Dictionary<int, object> properties = null)
+            Dictionary<int, object> properties = null, int firstMaterial = 0, int materialCount = -1)
         {
             var materials = renderer.m_Materials;
-            if (materials.Length == 0) return;
+            int end = materialCount < 0 ? materials.Length : Math.Min(materials.Length, firstMaterial + materialCount);
+            if (end <= firstMaterial) return;
             ulong meshHandle = mesh.Sync();
             ulong texture = mainTexture != null ? TextureHandles.Of(mainTexture) : 0;
             // A sprite sorts at its bounds' centre or, by its sort point, at its pivot (measured).
@@ -206,14 +207,14 @@ namespace Unbound.Runtime
             float distance = Distance(camera, center);
             var groups = GroupsOf(renderer, camera);
             int submeshes = Math.Max(1, mesh.subMeshCount);
-            for (int i = 0; i < materials.Length; i++)
+            for (int i = firstMaterial; i < end; i++)
             {
                 var material = renderer.DrawnMaterial(i, materials[i]);
                 if (material == null) continue;
                 into.Add(new DrawItem
                 {
                     Mesh = meshHandle,
-                    Submesh = Math.Min(i, submeshes - 1),
+                    Submesh = Math.Min(i - firstMaterial, submeshes - 1),
                     Material = material,
                     Model = model,
                     Color = color,

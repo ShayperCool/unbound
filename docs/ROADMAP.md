@@ -231,8 +231,8 @@ In dependency order; each item ends with an Editor-reference probe.
       counts exact; coverage exact for samples three quarters of a footprint across and more),
       drawn with Unity's detail shaders as the Editor builds the meshes (`tests/projects/grass`);
       layerless terrains' checker; coverage mode's rule, ground-aligned turns, detailObjectDensity,
-      drawn placement and the quality level's terrain overrides, heightmap LOD by pixel error
-      (`tests/projects/terrainlod`) (Q421). Left: the base map past basemapDistance, tree
+      drawn placement and the quality level's terrain overrides, heightmap LOD by pixel error and
+      the base map past basemapDistance (`tests/projects/terrainlod`) (Q421). Left: tree
       billboards.
 - [x] AssetBundles the Editor builds (UnityFS: uncompressed, LZ4, LZMA): LoadFromFile, Memory,
       Stream and their async forms, LoadAsset (by path or name, sub-assets), LoadAllAssets, Unload,

@@ -67,17 +67,51 @@ namespace UnityEngine
             var frustum = camera.Projection * camera.View;
             if (!LodCurrent(camera.Camera, camera.Position, frustum, height, Settings(terrain)))
                 UpdateGroupLod(terrain, camera, frustum, height);
-            CollectNode(tree, data, Matrix4x4.Translate(terrain.GetPosition()), tree.Levels, 0, 0, camera, into);
+            var origin = terrain.GetPosition();
+            var patches = new PatchDraw
+            {
+                Tree = tree, Data = data, Origin = origin, Model = Matrix4x4.Translate(origin),
+                BaseDistance = SqrBaseMapDistance(camera.Orthographic, m_BaseMaterial != null, terrain.basemapDistance),
+            };
+            CollectNode(ref patches, tree.Levels, 0, 0, camera, into);
+        }
+
+        /// <summary>The squared distance from which patches take the base map: none in orthographic
+        /// views or without a base map.</summary>
+        internal static float SqrBaseMapDistance(bool orthographic, bool baseMap, float basemapDistance) =>
+            orthographic || !baseMap ? float.PositiveInfinity : basemapDistance * basemapDistance;
+
+        /// <summary>Whether a patch draws the splat passes: its bounds' nearest point is closer to
+        /// the camera than the base map distance.</summary>
+        internal static bool DrawsSplats(Bounds worldBounds, Vector3 camera, float sqrBaseMapDistance) =>
+            worldBounds.SqrDistance(camera) < sqrBaseMapDistance;
+
+        struct PatchDraw
+        {
+            internal PatchTree Tree;
+            internal TerrainData Data;
+            internal Vector3 Origin;
+            internal Matrix4x4 Model;
+            internal float BaseDistance;
         }
 
         /// <summary>Adds the drawn nodes under a node, walking down only through split ones.</summary>
-        void CollectNode(PatchTree tree, TerrainData data, Matrix4x4 model, int level, int x, int z, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
+        void CollectNode(ref PatchDraw patches, int level, int x, int z, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
-            byte state = tree.State[level][z * tree.Side(level) + x];
+            var tree = patches.Tree;
+            int index = z * tree.Side(level) + x;
+            byte state = tree.State[level][index];
             if (state == Drawn)
-                FrameBuilder.AddMeshDraws(this, PatchMesh(tree, data, level, x, z, EdgeMask(tree, level, x, z)), model, Color.white, camera, into);
+            {
+                var bounds = tree.Bounds[level][index];
+                bounds.center += patches.Origin;
+                bool near = DrawsSplats(bounds, camera.Position, patches.BaseDistance);
+                var mesh = PatchMesh(tree, patches.Data, level, x, z, EdgeMask(tree, level, x, z));
+                FrameBuilder.AddMeshDraws(this, mesh, patches.Model, Color.white, camera, into,
+                    firstMaterial: near ? 0 : m_Passes.Length, materialCount: near ? m_Passes.Length : 1);
+            }
             else if (state == Split)
-                for (int c = 0; c < 4; c++) CollectNode(tree, data, model, level - 1, x * 2 + (c & 1), z * 2 + (c >> 1), camera, into);
+                for (int c = 0; c < 4; c++) CollectNode(ref patches, level - 1, x * 2 + (c & 1), z * 2 + (c >> 1), camera, into);
         }
 
         bool LodCurrent(Camera camera, Vector3 position, Matrix4x4 frustum, float height, Vector3 settings) =>

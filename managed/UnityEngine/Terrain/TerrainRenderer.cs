@@ -10,7 +10,8 @@ namespace UnityEngine
     /// casting) but no component of its GameObject (a terrain's GameObject has no Renderer). Its
     /// meshes are the heightmap's patches at the camera's level of detail (TerrainPatches.cs),
     /// drawn with a copy of the terrain's material template carrying the splat maps and four
-    /// layers, and one material of the template's AddPassShader per four more layers.
+    /// layers, and one material of the template's AddPassShader per four more layers; far patches
+    /// use the base map (TerrainBaseMap.cs).
     /// </summary>
     /// <summary>A placed tree's part as the lights and shadows see it: its bounds in the terrain's
     /// space, the prefab renderer's materials and shadow settings.</summary>
@@ -67,8 +68,10 @@ namespace UnityEngine
                 UpdateMaterials(terrain, data);
                 if (m_Passes.Length > 0)
                 {
-                    m_Materials = m_Passes;
-                    // Each material draws every patch (its single submesh).
+                    UpdateBaseMaps(data);
+                    // Each patch draws its single submesh with every splat pass, or with the base
+                    // map material (TerrainBaseMap.cs).
+                    m_Materials = m_DrawMaterials;
                     CollectPatches(terrain, data, camera, into);
                 }
             }
@@ -252,6 +255,7 @@ namespace UnityEngine
             }
             foreach (var old in m_Passes) if (old != null) DestroyImmediate(old);
             m_Passes = materials;
+            UpdateBaseMaterials(template, data);
         }
 
         /// <summary>A pass's four layers: the control (splat) map, each layer's textures, tiling
@@ -346,6 +350,8 @@ namespace UnityEngine
             m_Trees.Clear();
             foreach (var m in m_Passes) if (m != null) DestroyImmediate(m);
             m_Passes = Array.Empty<Material>();
+            DestroyBaseMaterials();
+            ReleaseBaseMaps();
             if (m_Holes != null) DestroyImmediate(m_Holes);
             DestroyDetails();
             DestroyPatches();

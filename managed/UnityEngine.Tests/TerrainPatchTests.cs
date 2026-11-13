@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
+using UnityEngine.Experimental.Rendering;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -253,5 +254,43 @@ namespace UnityEngine.Tests
             TerrainRenderer.UpdateLod(terrain, tree, camera, toward, false, 1000f);
             Assert.Contains(DrawnNodes(tree), n => n.Level == 0);
         }
+
+        /// <summary>A patch takes the base map from the base map distance on, measured to its bounds'
+        /// nearest point; orthographic views and templates without a base map never do.</summary>
+        [Fact]
+        public void PatchesPastTheBaseMapDistanceTakeTheBaseMap()
+        {
+            var bounds = new Bounds(new Vector3(100f, 0f, 0f), new Vector3(40f, 10f, 40f));
+            var camera = Vector3.zero;
+            float limit = TerrainRenderer.SqrBaseMapDistance(false, true, 90f);
+            // The centre lies past 90 but the near face (x = 80) does not.
+            Assert.True(TerrainRenderer.DrawsSplats(bounds, camera, limit));
+            Assert.False(TerrainRenderer.DrawsSplats(bounds, camera, TerrainRenderer.SqrBaseMapDistance(false, true, 80f)));
+            // At distance zero even a patch around the camera takes the base map.
+            Assert.False(TerrainRenderer.DrawsSplats(new Bounds(camera, Vector3.one), camera, TerrainRenderer.SqrBaseMapDistance(false, true, 0f)));
+            Assert.True(TerrainRenderer.DrawsSplats(bounds, camera, TerrainRenderer.SqrBaseMapDistance(true, true, 0f)));
+            Assert.True(TerrainRenderer.DrawsSplats(bounds, camera, TerrainRenderer.SqrBaseMapDistance(false, false, 0f)));
+        }
+
+        /// <summary>A base map generation pass's "Size" tag scales the base map resolution.</summary>
+        [Theory]
+        [InlineData("1", 1f)]
+        [InlineData("1/4", 0.25f)]
+        [InlineData("0.5", 0.5f)]
+        [InlineData("", 1f)]
+        [InlineData("1/0", 1f)]
+        [InlineData("half", 1f)]
+        public void TheSizeTagScalesTheBaseMap(string tag, float expected) => Assert.Equal(expected, TerrainRenderer.SizeOf(tag));
+
+        /// <summary>A base map's "Format" tag names a render texture format (URP's) or a texture
+        /// format (the built-in shaders'); the maps are linear.</summary>
+        [Theory]
+        [InlineData("RGBA32", GraphicsFormat.R8G8B8A8_UNorm)]
+        [InlineData("ARGB32", GraphicsFormat.R8G8B8A8_UNorm)]
+        [InlineData("R8", GraphicsFormat.R8_UNorm)]
+        [InlineData("A2R10G10B10", GraphicsFormat.None)]
+        [InlineData("7", GraphicsFormat.None)]
+        [InlineData("", GraphicsFormat.None)]
+        public void TheFormatTagNamesALinearFormat(string tag, GraphicsFormat expected) => Assert.Equal(expected, TerrainRenderer.BaseMapFormat(tag));
     }
 }
