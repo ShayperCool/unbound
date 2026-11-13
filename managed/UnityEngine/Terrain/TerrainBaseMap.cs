@@ -65,11 +65,7 @@ namespace UnityEngine
             }
             m_BaseMaterial = new Material(baseShader) { name = baseShader.name + " (Terrain)", hideFlags = HideFlags.HideAndDontSave };
             m_BaseMaterial.CopyPropertiesFromMaterial(template);
-            if (data.HasHoles)
-            {
-                m_BaseMaterial.EnableKeyword("_ALPHATEST_ON");
-                m_BaseMaterial.SetTexture("_TerrainHolesTexture", HolesTexture(data));
-            }
+            SetHoles(m_BaseMaterial, data);
             m_DrawMaterials = new Material[m_Passes.Length + 1];
             Array.Copy(m_Passes, m_DrawMaterials, m_Passes.Length);
             m_DrawMaterials[m_Passes.Length] = m_BaseMaterial;

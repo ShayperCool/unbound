@@ -246,16 +246,20 @@ namespace UnityEngine
                 material.name = p == 0 ? template.name + " (Terrain)" : addShader.name + " (Terrain)";
                 material.hideFlags = HideFlags.HideAndDontSave;
                 SetLayers(material, data, layers, p * 4, p < controls.Length ? controls[p] : null);
-                if (data.HasHoles)
-                {
-                    material.EnableKeyword("_ALPHATEST_ON");
-                    material.SetTexture("_TerrainHolesTexture", HolesTexture(data));
-                }
+                SetHoles(material, data);
                 materials[p] = material;
             }
             foreach (var old in m_Passes) if (old != null) DestroyImmediate(old);
             m_Passes = materials;
             UpdateBaseMaterials(template, data);
+        }
+
+        /// <summary>A terrain with holes cuts them out of every material it draws with.</summary>
+        void SetHoles(Material material, TerrainData data)
+        {
+            if (!data.HasHoles) return;
+            material.EnableKeyword("_ALPHATEST_ON");
+            material.SetTexture("_TerrainHolesTexture", HolesTexture(data));
         }
 
         /// <summary>A pass's four layers: the control (splat) map, each layer's textures, tiling

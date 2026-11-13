@@ -3,6 +3,7 @@
 prints the image measurements against Reference/unity-<release>/ (the suite tracks them; there is
 no tolerance). It fails when the engine fails, when a record differs, or when an image is missing."""
 import argparse
+from collections import Counter
 import json
 import os
 from pathlib import Path
@@ -49,7 +50,8 @@ def main():
         if row not in expected:
             print(f'terrainlod: extra record {json.dumps(row)}')
     if failed and all(row in actual for row in expected) and all(row in expected for row in actual):
-        print('terrainlod: records out of order')
+        same = Counter(map(json.dumps, expected)) == Counter(map(json.dumps, actual))
+        print('terrainlod: records out of order' if same else 'terrainlod: records repeated a different number of times')
     missing = [p.name for p in reference.glob('*.png') if not (out/p.name).is_file()]
     if missing:
         print('terrainlod: missing images: ' + ', '.join(missing))
