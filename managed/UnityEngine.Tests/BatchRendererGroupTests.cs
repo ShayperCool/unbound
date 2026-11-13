@@ -330,6 +330,36 @@ namespace UnityEngine.Tests
             Assert.Empty(Collect(data, all));
         }
 
+        /// <summary>A command of an unregistered mesh is not drawn and logs the Editor's error,
+        /// each distinct message once (tests/projects/brg errors, the Editor's log).</summary>
+        [Fact]
+        public void ACommandOfAnUnregisteredMeshLogsTheEditorsErrorOnce()
+        {
+            BatchCulling.s_InvalidIds.Clear();
+            BatchID batch = default;
+            BatchMaterialID material = default;
+            var filter = new BatchFilterSettings { renderingLayerMask = 1 };
+            var group = Group((g, c, o, u) => Emit(filter, 2,
+                new BatchDrawCommand { batchID = batch, meshID = new BatchMeshID { value = 1 }, materialID = material, visibleOffset = 0, visibleCount = 1 },
+                new BatchDrawCommand { batchID = batch, meshID = new BatchMeshID { value = 9 }, materialID = material, visibleOffset = 1, visibleCount = 1 })(g, c, o, u));
+            Assert.Equal(1u, group.RegisterMesh(m_Mesh).value);
+            material = group.RegisterMaterial(m_Material);
+            batch = AddBatch(group, ("_BaseColor", 0x80000040u));
+            var logged = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
+            try
+            {
+                var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
+                Assert.Single(Collect(Cull(), all));
+                Assert.Single(Collect(Cull(), all));
+            }
+            finally { Debug.unityLogger.logHandler = previous; }
+            var message = "A BatchDrawCommand was submitted with an invalid Batch, Mesh, or Material ID. This is not supported when rendering with a BatchRendererGroup or anything based on it like GPU Resident Drawer or Entities Graphics.\n"
+                + $"Shader pass: <unknown>, BatchDrawCommand index: 1, (index in range: 1), BatchDrawRange index: 0 MaterialID: {material.value} (\"{m_Material.name}\"), MeshID: 9 (\"<null>\"), BatchID: {batch.value}.";
+            Assert.Single(logged, l => l.Contains(message));
+        }
+
         /// <summary>An indirect command (the GPU Resident Drawer's under occlusion culling) is an
         /// item of its mesh and material whose properties add its visible instance buffer as
         /// unity_DOTSInstancing_IndirectInstanceVisibility; the batch's own stay as they are.</summary>

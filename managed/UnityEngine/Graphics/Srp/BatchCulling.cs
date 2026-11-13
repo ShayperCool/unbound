@@ -352,6 +352,19 @@ namespace Unbound.Runtime
             "BatchRendererGroup light cullings of point and spot lights take a directional light's context (one call with every split, view slice 0); the Editor's is not measured.",
         };
 
+        /// <summary>The invalid-ID errors logged so far: the Editor logs each distinct message once.</summary>
+        internal static readonly HashSet<(long, long, int, uint, uint, uint)> s_InvalidIds = new HashSet<(long, long, int, uint, uint, uint)>();
+
+        /// <summary>The Editor's error for a draw command whose batch, mesh or material is not
+        /// registered (measured: tests/projects/brg errors, in the Editor's log; the command is
+        /// not drawn). The pass is not known where the commands are read.</summary>
+        static void LogInvalidId(long command, long inRange, int range, BatchMaterialID materialId, Material material, BatchMeshID meshId, Mesh mesh, BatchID batchId)
+        {
+            if (!s_InvalidIds.Add((command, inRange, range, materialId.value, meshId.value, batchId.value))) return;
+            Debug.LogError("A BatchDrawCommand was submitted with an invalid Batch, Mesh, or Material ID. This is not supported when rendering with a BatchRendererGroup or anything based on it like GPU Resident Drawer or Entities Graphics.\n"
+                + $"Shader pass: <unknown>, BatchDrawCommand index: {command}, (index in range: {inRange}), BatchDrawRange index: {range} MaterialID: {materialId.value} (\"{(material != null ? material.name : "<null>")}\"), MeshID: {meshId.value} (\"{(mesh != null ? mesh.name : "<null>")}\"), BatchID: {batchId.value}.");
+        }
+
         static void WarnOnce(int what)
         {
             if ((s_Warned & (1u << what)) != 0) return;
@@ -425,7 +438,12 @@ namespace Unbound.Runtime
                         var batch = group.GetBatch(command.batchID);
                         var mesh = group.GetRegisteredMesh(command.meshID);
                         var material = group.GetRegisteredMaterial(command.materialID);
-                        if (batch == null || mesh == null || material == null || command.visibleCount == 0) continue;
+                        if (batch == null || mesh == null || material == null)
+                        {
+                            LogInvalidId(c, c - range.drawCommandsBegin, r, command.materialID, material, command.meshID, mesh, command.batchID);
+                            continue;
+                        }
+                        if (command.visibleCount == 0) continue;
                         if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
                         into.Add(Item(output, (int)c, false, mesh, command.submeshIndex, material, command.flags, batch.Properties, filter, main, ref sequence));
                     }
