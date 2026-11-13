@@ -120,7 +120,7 @@ Small resolves 107 existing queue entries and adds three exact initialized-conte
 giving 269 entries with the same 50 variable policies. Two variable observations happen
 to equal this implementation snapshot; their policies remain unresolved.
 
-The five Q411 part 2 slices remove 764 existing queue entries and add 1,107
+The five Q411 part 2 slices remove 764 existing queue entries and add 1,101
 independent controls. Concurrent declaration work removes seven more entries;
 three new exact contextual gaps remain queued. The total falls from 1,037 to 269.
 
