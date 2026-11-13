@@ -106,7 +106,7 @@ internal static class HotReload
                     // WideFloats); they do not fit a delta's bodies.
                     var (image, applied) = s_Applied[spec.Name];
                     if (Unbound.Runtime.Compat.ScriptFloatsWide
-                        && WideFloats.DeltaNeedsWidening(image, applied.Append(delta.Metadata).ToList(), delta.IL, () => File.ReadAllBytes(result.Dll)))
+                        && WideFloats.DeltaNeedsWidening(image, applied.Append(delta.Metadata).ToList(), delta.IL, () => File.Exists(result.Dll) ? File.ReadAllBytes(result.Dll) : null))
                         return Restart(response, $"{spec.Name}: the edit changes float arithmetic, which Unbound converts when the assembly loads", watch);
                     deltas.Add((assembly, delta));
                     response.Changes.AddRange(delta.Changed.Select(c => $"{spec.Name}: {c}"));
