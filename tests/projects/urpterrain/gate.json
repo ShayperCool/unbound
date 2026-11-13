@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/urpterrain/run.py check"],
+  "summary": "urpterrain: .*",
+  "engine_paths": ["managed/UnityEngine/Terrain/TerrainBaseMap.cs", "managed/UnityEngine/Terrain/TerrainRenderer.cs"]
+}
