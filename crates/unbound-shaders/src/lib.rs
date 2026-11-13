@@ -13,6 +13,7 @@ pub mod fixed;
 pub mod keywords;
 pub mod preprocess;
 
+mod buffer_members;
 mod fit;
 mod samplers;
 mod scopes;
@@ -29,7 +30,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 41;
+pub const FORMAT_VERSION: u32 = 42;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1157,11 +1158,11 @@ const FRAMEBUFFER_INPUT_MACROS: &[&str] = &[
 /// `half`/minimum precision types (one stays), empty member declarations (`;;` in a struct or
 /// cbuffer, left by macros), namespaces and member functions defined outside their struct
 /// ([`scopes`]), half literals (`1.0h`, which glslang types as 16-bit floats that mix with no
-/// integer; `half` is `float` on desktop).
+/// integer; `half` is `float` on desktop), buffers held in structs ([`buffer_members`]).
 fn fxc_compatible(source: &str) -> String {
-    writable_globals(&constructor_statements(&flat_bool_varyings(
-        &rename_type_semantics(&drop_empty_declarations(&drop_duplicate_overloads(
-            &half_literals(&scopes::flatten_scopes(source)),
+    buffer_members::buffer_members(&writable_globals(&constructor_statements(
+        &flat_bool_varyings(&rename_type_semantics(&drop_empty_declarations(
+            &drop_duplicate_overloads(&half_literals(&scopes::flatten_scopes(source))),
         ))),
     )))
 }
