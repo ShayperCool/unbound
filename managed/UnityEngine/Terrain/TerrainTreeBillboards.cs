@@ -22,7 +22,8 @@ namespace UnityEngine
     /// </list>
     /// Unmeasured: wind zones (warned; trees drawn unbent), several lights (the first four
     /// directional lights light the atlas), more than 500 trees (the Editor batches them by area,
-    /// drawing far areas in another order), treeMaximumFullLODCount.
+    /// drawing far areas in another order). treeMaximumFullLODCount changes nothing (measured,
+    /// tests/projects/treebillboards maxmesh3).
     /// </summary>
     internal sealed partial class TerrainRenderer
     {
@@ -475,9 +476,9 @@ namespace UnityEngine
                 indexArray[k + 3] = v + 2;
                 indexArray[k + 4] = v + 1;
                 indexArray[k + 5] = v + 3;
-                // However it turns, the quad stays within its largest offset of its place (plus
-                // the push towards the camera, at most its half width).
-                float reach = Mathf.Max(Mathf.Max(Mathf.Abs(halfWidth) * 2f, Mathf.Abs(bottom)), Mathf.Max(Mathf.Abs(top), Mathf.Abs(radius)));
+                // However it turns, the quad stays within its width (across and the push towards
+                // the camera) plus its largest height offset of its place.
+                float reach = 2f * Mathf.Abs(halfWidth) + Mathf.Max(Mathf.Max(Mathf.Abs(bottom), Mathf.Abs(top)), Mathf.Abs(radius));
                 min = Vector3.Min(min, part.Position - new Vector3(reach, reach, reach));
                 max = Vector3.Max(max, part.Position + new Vector3(reach, reach, reach));
                 v += 4;
