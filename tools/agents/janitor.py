@@ -96,7 +96,7 @@ def command_paths(command, *, allow_root=True):
                 if value.rstrip(',;') != value:
                     yield Path(value.rstrip(',;'))
             if '/' in value and (any(c.isspace() for c in value) or
-                                 not value.startswith('/') and any(c in value for c in ';&|<>()')):
+                                 any(c in value for c in ';&|<>()')):
                 pending.append(value)
 
 
