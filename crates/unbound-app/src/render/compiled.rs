@@ -987,6 +987,8 @@ impl Source {
             "unity_CameraInvProjection" => InvProjection,
             "unity_WorldToCamera" => WorldToCamera,
             "unity_CameraToWorld" => CameraToWorld,
+            // The legacy tree shaders' camera-to-world (UnityBuiltin2xTreeLibrary.cginc).
+            "_CameraToWorld" => CameraToWorld,
             "glstate_matrix_transpose_modelview0" => TransposeModelView,
             "glstate_matrix_invtrans_modelview0" => InvTransModelView,
             "glstate_matrix_modelview0" => ModelView,

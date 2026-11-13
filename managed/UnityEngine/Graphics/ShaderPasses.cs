@@ -43,6 +43,8 @@ namespace Unbound.Runtime
         /// <summary>`Dependency` lines: name → shader name.</summary>
         internal readonly Dictionary<string, string> Dependencies = new Dictionary<string, string>();
         internal readonly List<(string Name, Dictionary<string, string> Tags)> Passes = new List<(string, Dictionary<string, string>)>();
+        /// <summary>Per pass: whether it says Lighting On.</summary>
+        internal readonly List<bool> Lighting = new List<bool>();
 
         /// <summary>A pass's LightMode as the built-in pipeline reads it: its tag, else Always
         /// (empty for an untagged pass named like a shadow caster or meta pass, which no forward
@@ -134,6 +136,7 @@ namespace Unbound.Runtime
                     if (info.ShadowCasterPass < 0 && tags.TryGetValue("LightMode", out var lightMode) && lightMode == "ShadowCaster")
                         info.ShadowCasterPass = info.Passes.Count;
                     info.Passes.Add((pass.GetProperty("name").GetString() ?? "", tags));
+                    info.Lighting.Add(pass.TryGetProperty("lighting", out var lighting) && lighting.ValueKind == JsonValueKind.True);
                 }
             }
             catch (Exception)

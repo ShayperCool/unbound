@@ -964,7 +964,8 @@ namespace Unbound.Runtime
 
         /// <summary>Renderers drawn as meshes are: lit by the forward lights, with baked lighting and
         /// shadows (mesh, skinned mesh and terrain renderers).</summary>
-        internal static bool IsMeshLike(Renderer renderer) => renderer is MeshRenderer || renderer is SkinnedMeshRenderer || renderer is TerrainRenderer || renderer is BillboardRenderer;
+        internal static bool IsMeshLike(Renderer renderer) => renderer is MeshRenderer || renderer is SkinnedMeshRenderer || renderer is TerrainRenderer || renderer is TreeRenderer
+            || renderer is BillboardRenderer;
 
         static readonly List<string> s_DrawKeywords = new List<string>();
         static readonly int s_RenderingLayerId = Shader.PropertyToID("unity_RenderingLayer");
@@ -2102,7 +2103,9 @@ namespace Unbound.Runtime
                 {
                     var mode = info.LightMode(i);
                     forward |= mode == "ForwardBase" || mode == "ForwardAdd";
-                    vertex |= mode == "Vertex";
+                    // An untagged pass that turns lighting on gets the vertex lights too (the
+                    // Soft Occlusion tree shaders' mesh passes, tests/projects/treebillboards).
+                    vertex |= mode == "Vertex" || (mode == "SRPDefaultUnlit" && i < info.Lighting.Count && info.Lighting[i]);
                 }
                 vertexLit = vertex && !forward;
             }

@@ -187,7 +187,7 @@ impl Resolver {
     }
 
     /// The SubShader a shader draws with under the active pipeline (after its fallbacks; the
-    /// error shader's when none), as JSON: `{ shader, found, tags, passes: [{ name, tags }] }`.
+    /// error shader's when none), as JSON: `{ shader, found, tags, passes: [{ name, tags, lighting }] }`.
     pub fn describe(&mut self, name: &str) -> String {
         let (found, lab) = match self.shader(name) {
             Some(lab) => (true, lab),
@@ -196,7 +196,13 @@ impl Resolver {
         let passes: Vec<serde_json::Value> = lab
             .passes
             .iter()
-            .map(|p| serde_json::json!({ "name": p.name, "tags": p.states.tags }))
+            .map(|p| {
+                serde_json::json!({
+                    "name": p.name,
+                    "tags": p.states.tags,
+                    "lighting": p.states.fixed.lighting.unwrap_or(false),
+                })
+            })
             .collect();
         serde_json::json!({
             "shader": lab.name,
