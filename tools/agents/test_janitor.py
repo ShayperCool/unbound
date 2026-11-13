@@ -489,6 +489,54 @@ class JanitorTests(unittest.TestCase):
                 self.assertEqual(removed, [snapshot.name])
                 self.assertFalse(snapshot.exists())
 
+    def promote_fixture(self, work, **metadata):
+        baseline = self.cache/'agents/baseline'
+        baseline.mkdir(parents=True, exist_ok=True)
+        (baseline/'summary.json').write_text(json.dumps(dict(
+            label='sheriff-S20-example', work=str(work), **metadata)))
+
+    def test_promoted_suite_and_all_declared_references_are_not_candidates(self):
+        work = self.directory('q1/sheriff-S20-example')
+        linked = self.directory('q1/linked-output')
+        declared = self.directory('q1/json-output')
+        command = self.directory('q1/command output')
+        printed = self.directory('q1/printed output')
+        unpromoted = self.directory('q1/sheriff-S21-unpromoted')
+        (work/'link').symlink_to(linked)
+        (work/'metadata.json').write_text(json.dumps({'artifact': str(declared)}))
+        (work/'step.log').write_text('$ tool --work '+janitor.shlex.quote(str(command))+'\nunbound exit 0 '+janitor.shlex.quote(str(printed/'output'))+'\n')
+        self.promote_fixture(work)
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            candidates = {path for path, _, _ in self.j.candidates()}
+            for protected in (work, linked, declared, command, printed):
+                self.assertNotIn(protected, candidates)
+                self.j.apply = True
+                self.assertFalse(self.j.remove(protected, kind='task'))
+            self.assertIn(unpromoted, candidates)
+            self.assertTrue(self.j.remove(unpromoted, kind='task'))
+        self.assertTrue((linked/'output').exists())
+
+    def test_late_promotion_and_metadata_edit_protect_new_references(self):
+        work = self.directory('q1/sheriff-S20-example')
+        first = self.directory('q1/first')
+        second = self.directory('q1/second')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            self.promote_fixture(work, artifact=str(first))
+            self.j.apply = True
+            self.assertFalse(self.j.remove(first, kind='task'))
+            (work/'later.json').write_text(json.dumps({'artifact': str(second)}))
+            self.assertFalse(self.j.remove(second, kind='task'))
+        self.assertTrue(second.exists())
+
+    def test_shortened_command_and_human_summary_do_not_protect_cache_ancestors(self):
+        value = {'command': 'tool '+('x'*389)+' /home', 'summary': '3/10 values; /home'}
+        self.assertEqual(len(value['command']), 400)
+        self.assertEqual(list(janitor.suite_references(value)), [])
+
     def test_before_gate_threshold_and_protection(self):
         for free in (1, 19*janitor.GIB):
             with self.subTest(free=free), patch.dict(os.environ, {'UNBOUND_JANITOR_MIN_FREE_GIB': '20'}), \

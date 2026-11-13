@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import shlex
 import sqlite3
 import stat
 import struct
@@ -69,6 +70,79 @@ def active_tasks(queue):
         if len(cells) >= 4 and cells[3].lower() == 'active':
             found.update(value.lower() for value in re.findall(r'\bQ\d+\b', line, re.I))
     return found
+
+
+def suite_references(value):
+    """Read path-valued metadata and complete command arguments, not summaries."""
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key == 'command' and isinstance(child, str):
+                # Older summaries shortened commands. Step logs retain them whole.
+                if len(child) >= 400:
+                    child = child.rsplit(' ', 1)[0]
+                try:
+                    tokens = shlex.split(child)
+                except ValueError:
+                    tokens = []
+                for token in tokens:
+                    token = token.split('=', 1)[-1]
+                    if token.startswith('/'):
+                        yield Path(token)
+            elif key not in ('summary', 'continuation_summary'):
+                yield from suite_references(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from suite_references(child)
+    elif isinstance(value, str) and value.startswith('/'):
+        yield Path(value)
+
+
+def promoted_suite_paths(cache):
+    """Current promoted suite and its durable metadata, logs and link targets."""
+    summary = cache/'agents/baseline/summary.json'
+    if not summary.exists():
+        return set(), set()
+    value = json.loads(summary.read_text())
+    label = value.get('label', '')
+    if not isinstance(label, str) or Path(label).name != label or not label:
+        raise ValueError('promoted suite label is not a directory name')
+    roots = {summary.parent, cache/'agents/suite'/label, cache/'validation/suite'/label}
+    if value.get('work'):
+        work = Path(value['work'])
+        if not work.is_absolute():
+            raise ValueError('promoted suite work path must be absolute')
+        roots.add(work)
+    protected = set(roots)
+    protected.update(suite_references(value))
+    def walk_error(error):
+        raise error
+
+    for root in roots:
+        if not root.exists():
+            continue
+        for directory, directories, files in os.walk(root, followlinks=False, onerror=walk_error):
+            for name in [*directories, *files]:
+                path = Path(directory)/name
+                if path.is_symlink():
+                    protected.update((path, path.resolve()))
+                elif path.suffix == '.json':
+                    protected.update(suite_references(json.loads(path.read_text())))
+                elif path.suffix == '.log':
+                    # Stream full logs: drivers can print output paths that are
+                    # implicit in their command's label rather than arguments.
+                    with path.open(errors='replace') as stream:
+                        for line in stream:
+                            if '/' not in line:
+                                continue
+                            try:
+                                tokens = shlex.split(line)
+                            except ValueError:
+                                tokens = line.split()
+                            for token in tokens:
+                                token = token.split('=', 1)[-1].rstrip(',;')
+                                if token.startswith('/') and token != '/':
+                                    protected.add(Path(token))
+    return {p.resolve() for p in protected} | protected, {p.resolve() for p in roots}
 
 
 def gone(error):
@@ -141,7 +215,7 @@ class ReferenceWatch:
     DELETE_SELF, MOVE_SELF, OVERFLOW, IGNORED = 0x400, 0x800, 0x4000, 0x8000
     ONLYDIR, NOFOLLOW = 0x1000000, 0x2000000
 
-    def __init__(self, excluded=()):
+    def __init__(self, excluded=(), metadata_roots=()):
         self.libc = ctypes.CDLL(None, use_errno=True)
         self.fd = self.libc.inotify_init1(os.O_NONBLOCK | os.O_CLOEXEC)
         if self.fd < 0:
@@ -149,6 +223,8 @@ class ReferenceWatch:
         self.directories, self.references, self.retired = {}, set(), set()
         self.moves, self.handled_moves, self.invalidated = {}, set(), set()
         self.excluded = tuple(p.resolve() for p in excluded)
+        self.metadata_roots = set(metadata_roots)
+        self.metadata_dirty = False
 
     def close(self):
         if self.fd >= 0:
@@ -157,6 +233,8 @@ class ReferenceWatch:
 
     def add(self, directory):
         mask = self.CREATE | self.MOVED_FROM | self.MOVED_TO | self.DELETE_SELF | self.MOVE_SELF | self.ONLYDIR | self.NOFOLLOW
+        if any(inside(directory, root) for root in self.metadata_roots):
+            mask |= 0x2 | 0x4 | 0x8 | 0x200  # content, attributes, close-write, delete
         descriptor = self.libc.inotify_add_watch(self.fd, os.fsencode(directory), mask)
         if descriptor < 0:
             number = ctypes.get_errno()
@@ -192,6 +270,8 @@ class ReferenceWatch:
                 directory = self.directories.get(descriptor)
                 if directory is None or any(inside(directory, p) for p in self.retired):
                     continue
+                if any(inside(directory, root) for root in self.metadata_roots):
+                    self.metadata_dirty = True
                 if mask & self.DELETE_SELF:
                     # Its links are already protected. The watched parent catches
                     # any replacement directory and its new links.
@@ -358,6 +438,8 @@ class Janitor:
         self.protected = [Path(p).resolve() for p in extra_protected]
         self.removed = self.reclaimable = 0
         self.watch = None
+        self.suite_paths, self.suite_roots = set(), set()
+        self.baseline_signature = None
 
     def emit(self, action, **fields):
         line = json.dumps({'time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -368,6 +450,7 @@ class Janitor:
             self.log.flush()
 
     def discover(self):
+        self.refresh_baseline()
         self.states = task_states(self.cache/'agents/QUEUE.md')
         self.active = active_tasks(self.cache/'agents/QUEUE.md')
         checkouts = [entry[0] for entry in worktrees(self.repo)]
@@ -376,18 +459,27 @@ class Janitor:
         self.protected += [main, slots, slots.parent/'land-trains', self.repo,
                            *checkouts, *(build.default_target(p, self.builds) for p in [main, self.repo, *checkouts]),
                            *(build.default_target(slots/f'slot-{n:02}', self.builds) for n in range(1, 11))]
-        self.scan_roots = [self.cache, self.volume, *checkouts]
+        self.scan_roots = [self.cache, self.volume, *checkouts, *self.suite_roots]
         self.excluded = [self.builds/'kache', self.runtimes/'snapshots', self.cache/'editors',
                          self.cache/'tools', self.volume/'editors', self.volume/'tools',
                          Path.home()/'Unity/Hub/Editor']
         self.emit('scan', roots=[str(p) for p in self.scan_roots], seconds=self.scan_seconds)
-        self.watch = ReferenceWatch(self.excluded)
+        self.watch = ReferenceWatch(self.excluded, self.suite_roots)
         self.links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_seconds,
                                      watcher=self.watch, index_root=self.cache)
+        self.refresh_baseline(force=True)
         self.emit('references_ready', watched_directories=len(self.watch.directories), references=len(self.links))
         self.processes = process_paths()
 
     def candidates(self):
+        self.refresh_baseline()
+        for path, kind, hours in self.unprotected_candidates():
+            if any(overlaps(path, p) for p in self.suite_paths):
+                self.emit('keep', path=str(path), reason='promoted sheriff suite reference')
+                continue
+            yield path, kind, hours
+
+    def unprotected_candidates(self):
         # Probe-named runs/<probe>/ remain live regardless of their age.
         for root in [self.volume/'unbound-validation/runs']:
             if root.is_dir():
@@ -423,6 +515,8 @@ class Janitor:
             yield path, 'task', self.idle_hours
 
     def protection_reason(self, path):
+        if any(overlaps(path, p) for p in self.suite_paths):
+            return 'promoted sheriff suite reference'
         if any(value.lower() in self.active for part in path.parts
                for value in re.findall(r'(?<![a-zA-Z0-9])q\d+(?!\d)', part, re.I)):
             return 'active task directory'
@@ -443,6 +537,28 @@ class Janitor:
             return 'recently modified'
         return None
 
+    def refresh_baseline(self, force=False):
+        summary = self.cache/'agents/baseline/summary.json'
+        try:
+            info = summary.stat()
+            signature = (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_ctime_ns, info.st_size)
+        except FileNotFoundError:
+            signature = None
+        if force or signature != self.baseline_signature:
+            protected, roots = promoted_suite_paths(self.cache)
+            # A promotion never unprotects the prior baseline during this run.
+            self.suite_paths.update(protected)
+            new_roots = roots-self.suite_roots
+            self.suite_roots.update(roots)
+            self.baseline_signature = signature
+            if self.watch and new_roots:
+                self.watch.metadata_roots.update(new_roots)
+                self.links.update(reference_paths(new_roots, excluded=self.excluded, seconds=self.scan_seconds,
+                                                  watcher=self.watch, index_root=self.cache, prune=False))
+                for directory in list(self.watch.directories.values()):
+                    if any(inside(directory, root) for root in new_roots):
+                        self.watch.add(directory)
+
     def refresh_links(self):
         if self.watch is None:
             return
@@ -451,6 +567,8 @@ class Janitor:
             self.links.update(reference_paths(pending, excluded=self.excluded, seconds=self.scan_seconds,
                                               watcher=self.watch, index_root=self.cache, prune=False))
         self.links.update(self.watch.references)
+        self.refresh_baseline(force=self.watch.metadata_dirty)
+        self.watch.metadata_dirty = False
 
     def prepare_removal(self, path, kind, hours):
         path = Path(os.path.abspath(path))
@@ -492,6 +610,7 @@ class Janitor:
         self.guards_at = time.monotonic()
 
     def refresh_queue(self):
+        self.refresh_baseline()
         queue = self.cache/'agents/QUEUE.md'
         info = queue.stat()
         signature = (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_ctime_ns, info.st_size)
