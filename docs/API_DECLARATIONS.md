@@ -76,22 +76,41 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After enum slice |
+| Category | Before Q410 | After UIElements metadata slice |
 | --- | ---: | ---: |
-| Attributes | 938 | 732 |
-| Modifiers | 87 | 87 |
-| Parameters | 74 | 74 |
-| Accessors | 70 | 70 |
+| Attributes | 938 | 605 |
+| Modifiers | 87 | 72 |
+| Parameters | 74 | 73 |
+| Accessors | 70 | 60 |
 | Layout | 68 | 68 |
 | Interfaces | 65 | 65 |
 | Accessibility | 18 | 18 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 1,126 |
+| Total | 1,332 | 973 |
+
+One unrelated annotation exception entered main between these slices. Each Q410
+slice removes only the exact entries for declarations it fixes.
 
 Q410's enum slice copies obsolete constructor arguments, messages, error flags and
 accompanying annotations for 190 enum declarations. The attribute probe records
 the corresponding metadata without referencing removed enum names in game source.
+
+The UIElements metadata slice copies 128 annotations and fixes 26 accessors,
+modifiers and optional defaults. JSON controls start with different field values
+before overwrite; angle controls exercise unmarked private fields. Declaration
+controls record private setters, final overrides and abstract methods. Interface
+migrations remain separate because notification subscriptions change binding updates.
+The exact TextElement event-interest list also remains queued until command and IME
+event types have handwritten pooling and propagation controls, tracked as Q410-UI-command-events.
+
+The controls cover Unity 6000.0's [private-field serialization rules](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SerializeField.html)
+and [JSON overwrite semantics](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/JsonUtility.FromJsonOverwrite.html):
+marked fields change from nondefault values, unmarked private fields stay excluded,
+and an omitted field retains its previous value. [Event-interest annotations](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.EventInterestAttribute.html)
+retain their argument arrays and flags. These metadata changes do not add event dispatch filtering.
+The default-state inventory adds two public attribute types and three Editor rows;
+all 11,565 prior raw default-state rows are retained byte-identically.
 
 ## Landing checks and default state
 

@@ -143,7 +143,7 @@ namespace UnityEngine.UIElements
         [CreateProperty]
         public bool disablePlayModeTint { get; set; }
 
-        public LanguageDirection languageDirection { get => m_LanguageDirection; set => m_LanguageDirection = value; }
+        [global::Unity.Properties.@CreatePropertyAttribute] public LanguageDirection languageDirection { get => m_LanguageDirection; set => m_LanguageDirection = value; }
 
         [CreateProperty(ReadOnly = true)]
         public VisualTreeAsset visualTreeAssetSource { get => m_VisualTreeAssetSource; internal set => m_VisualTreeAssetSource = value; }
@@ -448,7 +448,7 @@ namespace UnityEngine.UIElements
 
         // ---- hierarchy ----
 
-        public Hierarchy hierarchy { get; private set; }
+        public Hierarchy hierarchy { get; }
 
         public VisualElement parent => m_PhysicalParent;
 

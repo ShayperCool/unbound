@@ -31,7 +31,7 @@ namespace UnityEngine.UIElements
         }
     }
 
-    public abstract partial class TransitionEventBase<T> : EventBase<T>, ITransitionEvent where T : TransitionEventBase<T>, new()
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)13)] public abstract partial class TransitionEventBase<T> : EventBase<T>, ITransitionEvent where T : TransitionEventBase<T>, new()
     {
         public StylePropertyNameCollection stylePropertyNames { get; } = new StylePropertyNameCollection(new List<StylePropertyName>());
         public double elapsedTime { get; protected set; }

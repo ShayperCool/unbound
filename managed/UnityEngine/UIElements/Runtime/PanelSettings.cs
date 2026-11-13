@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace UnityEngine.UIElements
 {
-    public partial class PanelSettings : ScriptableObject
+    [global::UnityEngine.@HelpURLAttribute("UIE-Runtime-Panel-Settings")] public partial class PanelSettings : ScriptableObject
     {
         [SerializeField] ThemeStyleSheet themeUss;
         [SerializeField] bool m_DisableNoThemeWarning;
@@ -21,7 +21,7 @@ namespace UnityEngine.UIElements
         [SerializeField] float m_FallbackDpi = 96f;
         [SerializeField] Vector2Int m_ReferenceResolution = new Vector2Int(1200, 800);
         [SerializeField] PanelScreenMatchMode m_ScreenMatchMode;
-        [SerializeField] float m_Match;
+        [global::UnityEngine.@SerializeField] [global::UnityEngine.@RangeAttribute(0f, 1f)] float m_Match;
         [SerializeField] float m_SortingOrder;
         [SerializeField] int m_TargetDisplay;
         [SerializeField] BindingLogLevel m_BindingLogLevel;
@@ -30,10 +30,10 @@ namespace UnityEngine.UIElements
         [SerializeField] Color m_ColorClearValue = Color.clear;
         [SerializeField] uint m_VertexBudget;
 
-        public bool forceGammaRendering;
+        [global::UnityEngine.@SerializeField] public bool forceGammaRendering;
 
         /// <summary>The panel's text settings (null: the default panel text settings).</summary>
-        public PanelTextSettings textSettings;
+        [global::UnityEngine.@SerializeField] public PanelTextSettings textSettings;
 
         BaseRuntimePanel m_Panel;
         ThemeStyleSheet m_OldThemeUss;
@@ -281,7 +281,7 @@ namespace UnityEngine.UIElements
         }
     }
 
-    public sealed partial class UIDocument : MonoBehaviour
+    [global::UnityEngine.@DefaultExecutionOrder(-100)] [global::UnityEngine.@DisallowMultipleComponent] [global::UnityEngine.@ExecuteAlways] [global::UnityEngine.@AddComponentMenu("UI Toolkit/UI Document")] [global::UnityEngine.@HelpURLAttribute("UIE-get-started-with-runtime-ui")] public sealed partial class UIDocument : MonoBehaviour
     {
         static int s_CurrentUIDocumentCounter;
         internal readonly int m_UIDocumentCreationIndex;
@@ -307,7 +307,7 @@ namespace UnityEngine.UIElements
             }
         }
 
-        public UIDocument parentUI => m_ParentUI;
+        public UIDocument parentUI { get => m_ParentUI; private set => m_ParentUI = value; }
 
         public VisualTreeAsset visualTreeAsset
         {

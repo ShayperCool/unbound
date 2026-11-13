@@ -1605,21 +1605,6 @@ namespace UnityEngine.UIElements
             public int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventCallbackRegistry.DynamicCallbackList.Count"); return default; } }
         }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
-    [global::Unbound.Stub]
-    internal unsafe partial class EventCategoryAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.EventCategory category;
-        [global::Unbound.Stub] public EventCategoryAttribute(global::UnityEngine.UIElements.EventCategory category) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventCategoryAttribute.ctor"); }
-    }
-    [global::System.Flags]
-    internal enum EventCategoryFlags
-    {
-        None = 0,
-        All = -1,
-        TriggeredByOS = 426094,
-        TargetOnly = 5536,
-    }
     [global::Unbound.Stub]
     internal unsafe static partial class EventDispatchUtilities
     {
@@ -1654,20 +1639,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcherGate.GetHashCode"); return default; }
         [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.EventDispatcherGate left, global::UnityEngine.UIElements.EventDispatcherGate right) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcherGate.op_Equality"); return default; }
         [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.EventDispatcherGate left, global::UnityEngine.UIElements.EventDispatcherGate right) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventDispatcherGate.op_Inequality"); return default; }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64, AllowMultiple = true)]
-    [global::Unbound.Stub]
-    public unsafe partial class EventInterestAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] internal global::System.Type[] eventTypes;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.EventCategoryFlags categoryFlags;
-        [global::Unbound.Stub] public EventInterestAttribute(params global::System.Type[] eventTypes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventInterestAttribute.ctor"); }
-        [global::Unbound.Stub] public EventInterestAttribute(global::UnityEngine.UIElements.EventInterestOptions interests) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventInterestAttribute.ctor"); }
-        [global::Unbound.Stub] internal EventInterestAttribute(global::UnityEngine.UIElements.EventInterestOptionsInternal interests) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventInterestAttribute.ctor"); }
-    }
-    internal enum EventInterestOptionsInternal
-    {
-        TriggeredByOS = 426094,
     }
     [global::Unbound.Stub]
     internal unsafe static partial class EventInterestReflectionUtils
@@ -5425,12 +5396,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public UxmlObjectAsset(string fullTypeNameOrFieldName, bool isField, global::UnityEngine.UIElements.UxmlNamespaceDefinition xmlNamespace = default) : base(default(string), default(global::UnityEngine.UIElements.UxmlNamespaceDefinition)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlObjectAsset.ctor"); }
         [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlObjectAsset.ToString"); return default; }
         public bool isField { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlObjectAsset.isField"); return default; } }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4, Inherited = false)]
-    [global::Unbound.Stub]
-    public unsafe partial class UxmlObjectAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public UxmlObjectAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlObjectAttribute.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class UxmlObjectAttributeDescription<T> where T : new()

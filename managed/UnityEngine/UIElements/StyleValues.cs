@@ -441,8 +441,8 @@ namespace UnityEngine.UIElements
     {
         enum Unit { Degree, Gradian, Radian, Turn, None }
 
-        [SerializeField] float m_Value;
-        [SerializeField] Unit m_Unit;
+         float m_Value;
+         Unit m_Unit;
 
         public float value { get => m_Value; set => m_Value = value; }
         public AngleUnit unit { get => (AngleUnit)m_Unit; set => m_Unit = (Unit)value; }

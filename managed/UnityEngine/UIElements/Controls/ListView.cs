@@ -115,19 +115,19 @@ namespace UnityEngine.UIElements
         SelectionType m_SelectionType;
         internal bool allowSingleClickChoice;
         bool m_HorizontalScrollingEnabled;
-        AlternatingRowBackground m_ShowAlternatingRowBackgrounds = AlternatingRowBackground.None;
+        [global::Unity.Properties.@DontCreatePropertyAttribute] [global::UnityEngine.@SerializeField] AlternatingRowBackground m_ShowAlternatingRowBackgrounds = AlternatingRowBackground.None;
         internal float m_FixedItemHeight = s_DefaultItemHeight;
         internal bool m_ItemHeightIsInline;
 
         /// <summary>The virtualization's scroll state (first visible index, content padding and height,
         /// anchor), kept by the view so a new controller continues from it.</summary>
-        internal SerializedVirtualizationData serializedVirtualizationData = new SerializedVirtualizationData();
+        [global::Unity.Properties.@DontCreatePropertyAttribute] [global::UnityEngine.@SerializeField] internal SerializedVirtualizationData serializedVirtualizationData = new SerializedVirtualizationData();
         CollectionVirtualizationMethod m_VirtualizationMethod;
         readonly ScrollView m_ScrollView;
         CollectionViewController m_ViewController;
         private protected CollectionVirtualizationController m_VirtualizationController;
         KeyboardNavigationManipulator m_NavigationManipulator;
-        readonly List<int> m_SelectedIds = new List<int>();
+        [global::UnityEngine.@SerializeField] [global::Unity.Properties.@DontCreatePropertyAttribute] readonly List<int> m_SelectedIds = new List<int>();
         readonly Selection m_Selection;
         float m_LastHeight;
         bool m_IsRangeSelectionDirectionUp;
@@ -222,7 +222,7 @@ namespace UnityEngine.UIElements
 
         public CollectionViewController viewController => m_ViewController;
 
-        [Obsolete("resolvedItemHeight is deprecated and will be removed from the API.")]
+        [global::System.@ObsoleteAttribute("resolvedItemHeight is deprecated and will be removed from the API.", false)]
         public float resolvedItemHeight => ResolveItemHeight();
 
         [CreateProperty]
@@ -335,7 +335,7 @@ namespace UnityEngine.UIElements
             }
         }
 
-        [Obsolete("itemHeight is deprecated, use fixedItemHeight instead.")]
+        [global::System.@ObsoleteAttribute("itemHeight is deprecated, use fixedItemHeight instead.", false)]
         public int itemHeight
         {
             get => (int)fixedItemHeight;
@@ -360,7 +360,7 @@ namespace UnityEngine.UIElements
 
         internal bool isRebuildScheduled => m_RebuildScheduled?.isActive ?? false;
 
-        [Obsolete("onItemsChosen is deprecated, use itemsChosen instead")]
+        [global::System.@ObsoleteAttribute("onItemsChosen is deprecated, use itemsChosen instead", false)]
         public event Action<IEnumerable<object>> onItemsChosen
         {
             add => itemsChosen += value;
@@ -369,7 +369,7 @@ namespace UnityEngine.UIElements
 
         public event Action<IEnumerable<object>> itemsChosen;
 
-        [Obsolete("onSelectionChange is deprecated, use selectionChanged instead")]
+        [global::System.@ObsoleteAttribute("onSelectionChange is deprecated, use selectionChanged instead", false)]
         public event Action<IEnumerable<object>> onSelectionChange
         {
             add => selectionChanged += value;
@@ -378,7 +378,7 @@ namespace UnityEngine.UIElements
 
         public event Action<IEnumerable<object>> selectionChanged;
 
-        [Obsolete("onSelectedIndicesChange is deprecated, use selectedIndicesChanged instead")]
+        [global::System.@ObsoleteAttribute("onSelectedIndicesChange is deprecated, use selectedIndicesChanged instead", false)]
         public event Action<IEnumerable<int>> onSelectedIndicesChange
         {
             add => selectedIndicesChanged += value;
@@ -528,7 +528,7 @@ namespace UnityEngine.UIElements
             PostRefresh();
         }
 
-        [Obsolete("Refresh() has been deprecated. Use Rebuild() instead. (UnityUpgradable) -> Rebuild()")]
+        [global::System.@ObsoleteAttribute("Refresh() has been deprecated. Use Rebuild() instead. (UnityUpgradable) -> Rebuild()", false)]
         public void Refresh() => Rebuild();
 
         public void Rebuild()
@@ -595,7 +595,7 @@ namespace UnityEngine.UIElements
             if (HasValidDataAndBindings()) virtualizationController.ScrollToItem(index);
         }
 
-        [Obsolete("ScrollToId() has been deprecated. Use ScrollToItemById() instead. (UnityUpgradable) -> ScrollToItemById(*)")]
+        [global::System.@ObsoleteAttribute("ScrollToId() has been deprecated. Use ScrollToItemById() instead. (UnityUpgradable) -> ScrollToItemById(*)", false)]
         public void ScrollToId(int id) => ScrollToItemById(id);
 
         public void ScrollToItemById(int id)
@@ -635,7 +635,7 @@ namespace UnityEngine.UIElements
             m_ScrollView.contentContainer.UnregisterCallback<PointerUpEvent>(OnPointerUp);
         }
 
-        [Obsolete("OnKeyDown is obsolete and will be removed from ListView. Use the event system instead, i.e. SendEvent(EventBase e).")]
+        [global::System.@ObsoleteAttribute("OnKeyDown is obsolete and will be removed from ListView. Use the event system instead, i.e. SendEvent(EventBase e).", true)]
         public void OnKeyDown(KeyDownEvent evt) => m_NavigationManipulator.OnKeyDown(evt);
 
         bool Apply(KeyboardNavigationOperation op, bool shiftKey, bool altKey)
@@ -924,7 +924,7 @@ namespace UnityEngine.UIElements
             m_Selection.Clear();
         }
 
-        protected override void HandleEventBubbleUp(EventBase evt)
+        [global::UnityEngine.UIElements.@EventInterestAttribute(new global::System.Type[] { typeof(global::UnityEngine.UIElements.PointerUpEvent), typeof(global::UnityEngine.UIElements.FocusInEvent), typeof(global::UnityEngine.UIElements.FocusOutEvent), typeof(global::UnityEngine.UIElements.NavigationSubmitEvent) })] protected override void HandleEventBubbleUp(EventBase evt)
         {
             base.HandleEventBubbleUp(evt);
             if (evt.eventTypeId == FocusInEvent.TypeId()) m_VirtualizationController?.OnFocusIn(evt.elementTarget);
@@ -932,8 +932,7 @@ namespace UnityEngine.UIElements
             else if (evt.eventTypeId == NavigationSubmitEvent.TypeId() && evt.target == this) m_ScrollView.contentContainer.Focus();
         }
 
-        [Obsolete("ExecuteDefaultAction override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.", false)]
-        [Unbound.EditorFaithful("Unity's obsolete override is empty too")]
+        [global::System.@ObsoleteAttribute("ExecuteDefaultAction override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.", false)] [global::UnityEngine.UIElements.@EventInterestAttribute((global::UnityEngine.UIElements.EventInterestOptions)0)] [Unbound.EditorFaithful("Unity's obsolete override is empty too")]
         protected override void ExecuteDefaultAction(EventBase evt) { }
 
         void OnSizeChanged(GeometryChangedEvent evt)

@@ -9,7 +9,7 @@ using UnityEngine.UIElements.StyleSheets;
 
 namespace UnityEngine.UIElements
 {
-    [Serializable]
+    [global::UnityEngine.@HelpURLAttribute("UIE-USS")] [Serializable]
     public partial class StyleSheet : ScriptableObject
     {
         [Serializable]
@@ -256,6 +256,7 @@ namespace UnityEngine.UIElements
         }
     }
 
+    [global::UnityEngine.@HelpURLAttribute("UIE-tss")] [global::System.Serializable]
     public partial class ThemeStyleSheet : StyleSheet
     {
         public ThemeStyleSheet() { }

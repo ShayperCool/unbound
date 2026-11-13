@@ -32,6 +32,7 @@
     "managed/UnityEngine/Terrain/TerrainTypes.cs",
     "managed/UnityEngine/UIElements/Enums.UIElements.cs",
     "managed/UnityEngine/Video/VideoPlayer.cs",
-    "managed/UnityEngine/XR/XRNoDevice.cs"
+    "managed/UnityEngine/XR/XRNoDevice.cs",
+    "managed/UnityEngine/UIElements/"
   ]
 }

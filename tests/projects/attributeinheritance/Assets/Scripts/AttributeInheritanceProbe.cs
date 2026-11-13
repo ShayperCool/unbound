@@ -184,6 +184,7 @@ public class AttributeInheritanceProbe : MonoBehaviour
                 DeclarationConditionalControls.Record(Row);
                 ConditionalEnabledControl.Record(Row);
                 DeclarationObsoleteControls.Record(Row);
+                DeclarationUiControls.Record(Row);
                 Row("complete", 1);
             }
             EditorApplication.Exit(0);

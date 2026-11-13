@@ -64,9 +64,9 @@ namespace UnityEngine.UIElements
 
     public enum BindingLogLevel
     {
-        None = 0,
-        Once = 1,
-        All = 2,
+        [global::UnityEngine.@InspectorNameAttribute("No logs")] None = 0,
+        [global::UnityEngine.@InspectorNameAttribute("One log per result")] Once = 1,
+        [global::UnityEngine.@InspectorNameAttribute("All logs")] All = 2,
     }
 
     public enum CollectionVirtualizationMethod

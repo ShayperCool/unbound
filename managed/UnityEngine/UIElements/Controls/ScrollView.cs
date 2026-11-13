@@ -158,7 +158,7 @@ namespace UnityEngine.UIElements
         float m_SingleLineHeight = k_DefaultSingleLineHeight;
         bool m_SingleLineHeightDirtyFlag;
         internal bool m_MouseWheelScrollSizeIsInline;
-        Vector2 m_ScrollOffset;
+        [global::Unity.Properties.@DontCreatePropertyAttribute] [global::UnityEngine.@SerializeField] Vector2 m_ScrollOffset;
         float m_HorizontalPageSize;
         float m_VerticalPageSize;
         float m_MouseWheelScrollSize = k_MouseWheelScrollSizeDefaultValue;

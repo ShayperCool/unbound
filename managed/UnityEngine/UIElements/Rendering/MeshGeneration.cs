@@ -104,7 +104,7 @@ namespace UnityEngine.UIElements
             }
         }
 
-        public VisualElement visualElement => uaElement;
+        public VisualElement visualElement { get => m_UaElement; private set => m_UaElement = value; }
 
         /// <summary>The vector painter object used to issue drawing commands: it draws into this
         /// context, as meshes of the element's content in its local space.</summary>

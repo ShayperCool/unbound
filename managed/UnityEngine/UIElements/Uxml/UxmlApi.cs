@@ -11,13 +11,19 @@ using Unbound.UIElements;
 
 namespace UnityEngine.UIElements
 {
+    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+    public partial class UxmlObjectAttribute : Attribute
+    {
+        public UxmlObjectAttribute() { }
+    }
+
     /// <summary>Gives the attribute values of one UXML element by name.</summary>
     public partial interface IUxmlAttributes
     {
         bool TryGetAttributeValue(string attributeName, out string value);
     }
 
-    [Obsolete("IUxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
+    [global::System.@ObsoleteAttribute("IUxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
     public partial interface IBaseUxmlFactory
     {
         bool AcceptsAttributeBag(IUxmlAttributes bag, CreationContext cc);
@@ -33,7 +39,7 @@ namespace UnityEngine.UIElements
         string substituteForTypeQualifiedName { get; }
     }
 
-    [Obsolete("IUxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
+    [global::System.@ObsoleteAttribute("IUxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
     public partial interface IUxmlFactory : IBaseUxmlFactory
     {
         VisualElement Create(IUxmlAttributes bag, CreationContext cc);
@@ -59,11 +65,11 @@ namespace UnityEngine.UIElements
             this.target = target;
         }
 
-        public VisualElement target { get; }
+        public VisualElement target { get; private set; }
 
-        public VisualTreeAsset visualTreeAsset { get; }
+        public VisualTreeAsset visualTreeAsset { get; private set; }
 
-        public Dictionary<string, VisualElement> slotInsertionPoints { get; }
+        public Dictionary<string, VisualElement> slotInsertionPoints { get; private set; }
 
         public override bool Equals(object obj) => obj is CreationContext other && Equals(other);
 
@@ -446,7 +452,7 @@ namespace UnityEngine.UIElements
 
     // ------------------------------------------------------------------ UxmlTraits / UxmlFactory
 
-    [Obsolete("BaseUxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
+    [global::System.@ObsoleteAttribute("BaseUxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
     public abstract partial class BaseUxmlTraits
     {
         // Unbound does not validate attributes against the declared ones: every traits class accepts
@@ -463,7 +469,7 @@ namespace UnityEngine.UIElements
         public virtual IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription => Array.Empty<UxmlChildElementDescription>();
     }
 
-    [Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
+    [global::System.@ObsoleteAttribute("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
     public abstract partial class UxmlTraits : BaseUxmlTraits
     {
         protected UxmlTraits() { }
@@ -472,7 +478,7 @@ namespace UnityEngine.UIElements
         public virtual void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc) { }
     }
 
-    [Obsolete("BaseUxmlFactory<TCreatedType, TTraits> is deprecated and will be removed. Use UxmlElementAttribute instead.")]
+    [global::System.@ObsoleteAttribute("BaseUxmlFactory<TCreatedType, TTraits> is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
     public abstract partial class BaseUxmlFactory<TCreatedType, TTraits> where TCreatedType : new() where TTraits : BaseUxmlTraits, new()
     {
         internal TTraits m_Traits;
@@ -505,7 +511,7 @@ namespace UnityEngine.UIElements
         public virtual string substituteForTypeQualifiedName => typeof(TCreatedType) != typeof(VisualElement) ? typeof(VisualElement).FullName : string.Empty;
     }
 
-    [Obsolete("UxmlFactory<TCreatedType, TTraits> is deprecated and will be removed. Use UxmlElementAttribute instead.")]
+    [global::System.@ObsoleteAttribute("UxmlFactory<TCreatedType, TTraits> is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
     public partial class UxmlFactory<TCreatedType, TTraits> : BaseUxmlFactory<TCreatedType, TTraits>, IUxmlFactory, IBaseUxmlFactory where TCreatedType : VisualElement, new() where TTraits : UxmlTraits, new()
     {
         public UxmlFactory() { }
@@ -519,7 +525,7 @@ namespace UnityEngine.UIElements
         }
     }
 
-    [Obsolete("UxmlFactory<TCreatedType> is deprecated and will be removed. Use UxmlElementAttribute instead.")]
+    [global::System.@ObsoleteAttribute("UxmlFactory<TCreatedType> is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
     public partial class UxmlFactory<TCreatedType> : UxmlFactory<TCreatedType, VisualElement.UxmlTraits> where TCreatedType : VisualElement, new()
     {
         public UxmlFactory() { }
@@ -527,7 +533,7 @@ namespace UnityEngine.UIElements
 
     public partial class VisualElement
     {
-        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
+        [global::System.@ObsoleteAttribute("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
         public partial class UxmlFactory : UxmlFactory<VisualElement, VisualElement.UxmlTraits>
         {
             public UxmlFactory() { }
@@ -535,7 +541,7 @@ namespace UnityEngine.UIElements
 
         /// <summary>The attributes every element reads. The values are applied as Unbound's builder
         /// applies them to built-in elements.</summary>
-        [Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
+        [global::System.@ObsoleteAttribute("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
         public partial class UxmlTraits : UnityEngine.UIElements.UxmlTraits
         {
             protected UxmlStringAttributeDescription m_Name = new UxmlStringAttributeDescription { name = "name" };
@@ -585,13 +591,13 @@ namespace UnityEngine.UIElements
 
     public partial class BindableElement
     {
-        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
+        [global::System.@ObsoleteAttribute("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
         public partial class UxmlFactory : UxmlFactory<BindableElement, BindableElement.UxmlTraits>
         {
             public UxmlFactory() { }
         }
 
-        [Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
+        [global::System.@ObsoleteAttribute("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
         public partial class UxmlTraits : VisualElement.UxmlTraits
         {
             readonly UxmlStringAttributeDescription bindingPathDescription = new UxmlStringAttributeDescription { name = "binding-path" };

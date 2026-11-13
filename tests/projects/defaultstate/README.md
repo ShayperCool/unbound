@@ -288,3 +288,9 @@ split index, -1 in the release and 0 in Unbound. Its implicit struct default is 
 separate case. Add a parameterized Editor control before changing it. Unmatched
 storage and constructors do not establish differences and must not be counted
 as equal.
+
+The Q410 UIElements declaration slice adds EventInterestAttribute and
+UxmlObjectAttribute to the handwritten inventory. Two independent 6000.0.71f1 GPU
+Editor captures confirm the three added rows. EventInterestAttribute has no public
+parameterless constructor; UxmlObjectAttribute constructs successfully and exposes
+its attribute type ID. All 11,565 prior raw reference rows remain byte-identical.

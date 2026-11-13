@@ -7329,6 +7329,12 @@
     {
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.UIElements.EventInterestAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
       "status": "static",
       "type": "UnityEngine.UIElements.Experimental.Easing"
     },
@@ -8261,6 +8267,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.UxmlLongAttributeDescription"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.UxmlObjectAttribute"
     },
     {
       "category": "class",

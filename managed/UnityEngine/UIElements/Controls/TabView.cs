@@ -29,7 +29,7 @@ using System.Collections.Generic;
 // or a lost capture cancels. Follows the same rules; not measured by a capture.
 namespace UnityEngine.UIElements
 {
-    public partial class TabView : VisualElement
+    [global::UnityEngine.UIElements.@UxmlElementAttribute(null, new global::System.Type[] { typeof(global::UnityEngine.UIElements.Tab) })] public partial class TabView : VisualElement
     {
         public static readonly string ussClassName = "unity-tab-view";
         public static readonly string headerContainerClassName = ussClassName + "__header-container";

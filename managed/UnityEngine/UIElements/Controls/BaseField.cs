@@ -18,7 +18,7 @@ namespace UnityEngine.UIElements
         protected internal static readonly string mixedValueString = "—";
 
         VisualElement m_VisualInput;
-        TValueType m_Value;
+        [global::Unity.Properties.@DontCreatePropertyAttribute] [global::UnityEngine.@SerializeField] TValueType m_Value;
         bool m_ShowMixedValue;
         Label m_MixedValueLabel;
         bool m_SkipValidation;
@@ -177,7 +177,7 @@ namespace UnityEngine.UIElements
 
         internal TValueType ValidatedValue(TValueType value) => onValidateValue != null ? onValidateValue(value) : value;
 
-        protected override void HandleEventBubbleUp(EventBase evt)
+        [global::UnityEngine.UIElements.@EventInterestAttribute(new global::System.Type[] { typeof(global::UnityEngine.UIElements.TooltipEvent) })] protected override void HandleEventBubbleUp(EventBase evt)
         {
             if (evt is TooltipEvent tooltip)
             {

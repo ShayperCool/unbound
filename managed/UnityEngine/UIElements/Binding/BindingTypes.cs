@@ -218,7 +218,7 @@ namespace UnityEngine.UIElements
     }
 
     /// <summary>A binding: how and when an element property is updated. Starts dirty.</summary>
-    public abstract partial class Binding
+    [global::UnityEngine.UIElements.@UxmlObjectAttribute] public abstract partial class Binding
     {
         bool m_Dirty;
 
@@ -259,7 +259,7 @@ namespace UnityEngine.UIElements
 
     /// <summary>A binding that copies a value between a data source path and the element property,
     /// in the directions of its binding mode, through its converter groups.</summary>
-    public partial class DataBinding : Binding, IDataSourceProvider
+    [global::UnityEngine.UIElements.@UxmlObjectAttribute] public partial class DataBinding : Binding, IDataSourceProvider
     {
         // The class of a text field's inner text element.
         const string k_InnerInputFieldComponentClass = "unity-text-element--inner-input-field-component";
@@ -352,7 +352,7 @@ namespace UnityEngine.UIElements
 
     /// <summary>A game's binding: Update is called with the binding context (every update by
     /// default).</summary>
-    public abstract partial class CustomBinding : Binding
+    [global::UnityEngine.UIElements.@UxmlObjectAttribute] public abstract partial class CustomBinding : Binding
     {
         protected CustomBinding() => updateTrigger = BindingUpdateTrigger.EveryUpdate;
 

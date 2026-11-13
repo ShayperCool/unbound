@@ -47,10 +47,10 @@ namespace UnityEngine.UIElements
 
             internal TextElement textElement { get; private set; }
 
-            [CreateProperty(ReadOnly = true)]
+
             public ITextSelection textSelection => textElement.selection;
 
-            [CreateProperty(ReadOnly = true)]
+
             public ITextEdition textEdition => textElement.edition;
 
             internal bool isDragging { get; set; }
@@ -66,60 +66,60 @@ namespace UnityEngine.UIElements
 
             internal string originalText => textElement.originalText;
 
-            [CreateProperty]
+            [global::System.@ObsoleteAttribute("isReadOnly is deprecated. Use textEdition.isReadOnly instead.")]
             public bool isReadOnly
             {
                 get => textEdition.isReadOnly;
                 set => textEdition.isReadOnly = value;
             }
 
-            [CreateProperty]
+            [global::System.@ObsoleteAttribute("maxLength is deprecated. Use textEdition.maxLength instead.")]
             public int maxLength
             {
                 get => textEdition.maxLength;
                 set => textEdition.maxLength = value;
             }
 
-            [CreateProperty]
+            [global::System.@ObsoleteAttribute("maskChar is deprecated. Use textEdition.maskChar instead.")]
             public char maskChar
             {
                 get => textEdition.maskChar;
                 set => textEdition.maskChar = value;
             }
 
-            [CreateProperty]
+            [global::System.@ObsoleteAttribute("isPasswordField is deprecated. Use textEdition.isPassword instead.")]
             public virtual bool isPasswordField
             {
                 get => textEdition.isPassword;
                 set => textEdition.isPassword = value;
             }
 
-            public Color selectionColor
+            [global::System.@ObsoleteAttribute("selectionColor is deprecated. Use textSelection.selectionColor instead.")] public Color selectionColor
             {
                 get => textElement.selectionColor;
                 set => textElement.selectionColor = value;
             }
 
-            public Color cursorColor
+            [global::System.@ObsoleteAttribute("cursorColor is deprecated. Use textSelection.cursorColor instead.")] public Color cursorColor
             {
                 get => textElement.cursorColor;
                 set => textElement.cursorColor = value;
             }
 
-            [CreateProperty]
+            [global::System.@ObsoleteAttribute("cursorIndex is deprecated. Use textSelection.cursorIndex instead.")]
             public int cursorIndex => textSelection.cursorIndex;
 
-            [CreateProperty]
+            [global::System.@ObsoleteAttribute("selectIndex is deprecated. Use textSelection.selectIndex instead.")]
             public int selectIndex => textSelection.selectIndex;
 
-            [CreateProperty]
+            [global::System.@ObsoleteAttribute("doubleClickSelectsWord is deprecated. Use textSelection.doubleClickSelectsWord instead.")]
             public bool doubleClickSelectsWord
             {
                 get => textSelection.doubleClickSelectsWord;
                 set => textSelection.doubleClickSelectsWord = value;
             }
 
-            [CreateProperty]
+            [global::System.@ObsoleteAttribute("tripleClickSelectsLine is deprecated. Use textSelection.tripleClickSelectsLine instead.")]
             public bool tripleClickSelectsLine
             {
                 get => textSelection.tripleClickSelectsLine;
@@ -359,7 +359,7 @@ namespace UnityEngine.UIElements
                 return true;
             }
 
-            public void SelectAll() => textSelection.SelectAll();
+            [global::System.@ObsoleteAttribute("SelectAll() is deprecated. Use textSelection.SelectAll() instead.")] public void SelectAll() => textSelection.SelectAll();
         }
 
         internal bool password
@@ -402,9 +402,9 @@ namespace UnityEngine.UIElements
 
         protected internal TextInputBase textInputBase => m_TextInputBase;
 
-        public ITextSelection textSelection => m_TextInputBase.textElement.selection;
+        [global::Unity.Properties.@CreatePropertyAttribute(ReadOnly = true)] public ITextSelection textSelection => m_TextInputBase.textElement.selection;
 
-        public ITextEdition textEdition => m_TextInputBase.textElement.edition;
+        [global::Unity.Properties.@CreatePropertyAttribute(ReadOnly = true)] public ITextEdition textEdition => m_TextInputBase.textElement.edition;
 
         protected Action<bool> onIsReadOnlyChanged
         {
@@ -412,13 +412,13 @@ namespace UnityEngine.UIElements
             set => m_TextInputBase.textElement.onIsReadOnlyChanged = value;
         }
 
-        public bool isReadOnly
+        [global::Unity.Properties.@CreatePropertyAttribute] public bool isReadOnly
         {
             get => textEdition.isReadOnly;
             set => textEdition.isReadOnly = value;
         }
 
-        public bool isPasswordField
+        [global::Unity.Properties.@CreatePropertyAttribute] public bool isPasswordField
         {
             get => textEdition.isPassword;
             set
@@ -452,7 +452,7 @@ namespace UnityEngine.UIElements
 
         public TouchScreenKeyboard touchScreenKeyboard => textEdition.touchScreenKeyboard;
 
-        public int maxLength
+        [global::Unity.Properties.@CreatePropertyAttribute] public int maxLength
         {
             get => textEdition.maxLength;
             set => textEdition.maxLength = value;
@@ -465,7 +465,7 @@ namespace UnityEngine.UIElements
             set => textEdition.isDelayed = value;
         }
 
-        public char maskChar
+        [global::Unity.Properties.@CreatePropertyAttribute] public char maskChar
         {
             get => textEdition.maskChar;
             set => textEdition.maskChar = value;
@@ -477,7 +477,7 @@ namespace UnityEngine.UIElements
         [Obsolete("cursorColor is deprecated. Please use the corresponding USS property (--unity-cursor-color) instead.")]
         public Color cursorColor => m_TextInputBase.textElement.cursorColor;
 
-        public int cursorIndex
+        [global::Unity.Properties.@CreatePropertyAttribute] public int cursorIndex
         {
             get => textSelection.cursorIndex;
             set => textSelection.cursorIndex = value;
@@ -486,7 +486,7 @@ namespace UnityEngine.UIElements
         [CreateProperty(ReadOnly = true)]
         public Vector2 cursorPosition => textSelection.cursorPosition;
 
-        public int selectIndex
+        [global::Unity.Properties.@CreatePropertyAttribute] public int selectIndex
         {
             get => textSelection.selectIndex;
             set => textSelection.selectIndex = value;
@@ -506,13 +506,13 @@ namespace UnityEngine.UIElements
             set => textSelection.selectAllOnMouseUp = value;
         }
 
-        public bool doubleClickSelectsWord
+        [global::Unity.Properties.@CreatePropertyAttribute] public bool doubleClickSelectsWord
         {
             get => textSelection.doubleClickSelectsWord;
             set => textSelection.doubleClickSelectsWord = value;
         }
 
-        public bool tripleClickSelectsLine
+        [global::Unity.Properties.@CreatePropertyAttribute] public bool tripleClickSelectsLine
         {
             get => textSelection.tripleClickSelectsLine;
             set => textSelection.tripleClickSelectsLine = value;
@@ -580,7 +580,7 @@ namespace UnityEngine.UIElements
         public Vector2 MeasureTextSize(string textToMeasure, float width, MeasureMode widthMode, float height, MeasureMode heightMode) =>
             m_TextInputBase.textElement.MeasureTextSize(textToMeasure, width, widthMode, height, heightMode);
 
-        protected override void HandleEventBubbleUp(EventBase evt)
+        [global::UnityEngine.UIElements.@EventInterestAttribute(new global::System.Type[] { typeof(global::UnityEngine.UIElements.NavigationSubmitEvent), typeof(global::UnityEngine.UIElements.FocusInEvent), typeof(global::UnityEngine.UIElements.FocusEvent), typeof(global::UnityEngine.UIElements.FocusOutEvent), typeof(global::UnityEngine.UIElements.BlurEvent) })] protected override void HandleEventBubbleUp(EventBase evt)
         {
             base.HandleEventBubbleUp(evt);
             if (textEdition.isReadOnly) return;
@@ -700,7 +700,7 @@ namespace UnityEngine.UIElements
 
         TextInput textInput => (TextInput)textInputBase;
 
-        public bool multiline
+        [global::Unity.Properties.@CreatePropertyAttribute] public bool multiline
         {
             get => textInput.multiline;
             set => textInput.multiline = value;
@@ -743,7 +743,7 @@ namespace UnityEngine.UIElements
 
         internal override void UpdateTextFromValue() => SetValueWithoutNotify(rawValue);
 
-        protected override void HandleEventBubbleUp(EventBase evt)
+        [global::UnityEngine.UIElements.@EventInterestAttribute(new global::System.Type[] { typeof(global::UnityEngine.UIElements.FocusOutEvent) })] protected override void HandleEventBubbleUp(EventBase evt)
         {
             base.HandleEventBubbleUp(evt);
             if (isDelayed && evt?.eventTypeId == FocusOutEvent.TypeId())

@@ -29,7 +29,7 @@ namespace UnityEngine.UIElements
         public new static readonly string ussClassName = "unity-tree-view";
         public new static readonly string itemUssClassName = ussClassName + "__item";
         public static readonly string itemToggleUssClassName = ussClassName + "__item-toggle";
-        [Obsolete("Individual item indents are no longer used, see itemIndentUssClassName instead")]
+        [global::System.@ObsoleteAttribute("Individual item indents are no longer used, see itemIndentUssClassName instead", false)]
         public static readonly string itemIndentsContainerUssClassName = ussClassName + "__item-indents";
         public static readonly string itemIndentUssClassName = ussClassName + "__item-indent";
         public static readonly string itemContentContainerUssClassName = ussClassName + "__item-content";
@@ -37,7 +37,7 @@ namespace UnityEngine.UIElements
         internal static readonly int invalidId = -1;
 
         // A theme or game sheet can set the indent per depth level.
-        internal static readonly CustomStyleProperty<float> s_TreeViewIndentProperty = new CustomStyleProperty<float>("--unity-tree-view-indent");
+        internal static CustomStyleProperty<float> s_TreeViewIndentProperty = new CustomStyleProperty<float>("--unity-tree-view-indent");
 
         bool m_AutoExpand;
 

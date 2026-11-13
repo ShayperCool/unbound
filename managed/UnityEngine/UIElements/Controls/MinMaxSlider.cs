@@ -60,10 +60,10 @@ namespace UnityEngine.UIElements
         Vector2 m_DragStartValue;
         DragPart m_NavigationPart;
 
-        internal VisualElement dragElement { get; }
-        internal VisualElement dragMinThumb { get; }
-        internal VisualElement dragMaxThumb { get; }
-        internal ClampedDragger<float> clampedDragger { get; }
+        internal VisualElement dragElement { get; private set; }
+        internal VisualElement dragMinThumb { get; private set; }
+        internal VisualElement dragMaxThumb { get; private set; }
+        internal ClampedDragger<float> clampedDragger { get; private set; }
 
         internal DragPart navigationPart => m_NavigationPart;
 
@@ -162,7 +162,7 @@ namespace UnityEngine.UIElements
             UpdateDragElements();
         }
 
-        protected override void HandleEventBubbleUp(EventBase evt)
+        [global::UnityEngine.UIElements.@EventInterestAttribute(new global::System.Type[] { typeof(global::UnityEngine.UIElements.GeometryChangedEvent) })] protected override void HandleEventBubbleUp(EventBase evt)
         {
             base.HandleEventBubbleUp(evt);
             if (evt != null && evt.eventTypeId == GeometryChangedEvent.TypeId()) UpdateDragElements();

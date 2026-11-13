@@ -8,7 +8,7 @@ namespace UnityEngine.UIElements
     /// topmost panel under the pointer (or the one holding the pointer), keyboard and navigation
     /// events to the focused panel, as Unity's default event system sends them.
     /// </summary>
-    internal sealed partial class DefaultEventSystem
+    internal partial class DefaultEventSystem
     {
         public enum UpdateMode
         {

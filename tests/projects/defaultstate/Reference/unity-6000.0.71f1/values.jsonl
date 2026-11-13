@@ -11587,4 +11587,7 @@
 {"key":"CoreControl/Audio/base/AudioListener","status":"value","value":"true"}
 {"key":"CoreControl/Audio/required/AudioListener","status":"value","value":"true"}
 {"key":"CoreControl/Audio/removedReverbSetting","status":"value","value":"[10,10,[string:Warning! roomRolloffFactor is no longer supported.,string:Warning! roomRolloffFactor is no longer supported.,string:Warning! roomRolloffFactor is no longer supported.,string:Warning! roomRolloffFactor is no longer supported.]]"}
+{"key":"UnityEngine.UIElements.EventInterestAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEngine.UIElements.UxmlObjectAttribute/@factory","status":"value","value":"class"}
+{"key":"UnityEngine.UIElements.UxmlObjectAttribute/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEngine.UIElements.UxmlObjectAttribute"}
 {"key":"complete","status":"value","value":"1"}

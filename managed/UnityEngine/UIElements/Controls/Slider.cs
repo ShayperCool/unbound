@@ -23,8 +23,8 @@ namespace UnityEngine.UIElements
         float m_AdjustedPageSizeFromClick;
         bool m_IsEditingTextField;
         bool m_Fill;
-        TValueType m_LowValue;
-        TValueType m_HighValue;
+        [global::Unity.Properties.@DontCreatePropertyAttribute] [global::UnityEngine.@SerializeField] TValueType m_LowValue;
+        [global::Unity.Properties.@DontCreatePropertyAttribute] [global::UnityEngine.@SerializeField] TValueType m_HighValue;
         float m_PageSize;
         bool m_ShowInputField;
         Rect m_DragElementStartPos;
@@ -478,14 +478,13 @@ namespace UnityEngine.UIElements
             }
         }
 
-        protected override void HandleEventBubbleUp(EventBase evt)
+        [global::UnityEngine.UIElements.@EventInterestAttribute(new global::System.Type[] { typeof(global::UnityEngine.UIElements.GeometryChangedEvent) })] protected override void HandleEventBubbleUp(EventBase evt)
         {
             base.HandleEventBubbleUp(evt);
             if (evt != null && evt.eventTypeId == GeometryChangedEvent.TypeId()) UpdateDragElementPosition((GeometryChangedEvent)evt);
         }
 
-        [Obsolete("ExecuteDefaultAction override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.", false)]
-        [Unbound.EditorFaithful("Unity's obsolete override is empty too")]
+        [global::System.@ObsoleteAttribute("ExecuteDefaultAction override has been removed because default event handling was migrated to HandleEventBubbleUp. Please use HandleEventBubbleUp.", false)] [global::UnityEngine.UIElements.@EventInterestAttribute((global::UnityEngine.UIElements.EventInterestOptions)0)] [Unbound.EditorFaithful("Unity's obsolete override is empty too")]
         protected override void ExecuteDefaultAction(EventBase evt) { }
 
         void UpdateTextFieldVisibility()

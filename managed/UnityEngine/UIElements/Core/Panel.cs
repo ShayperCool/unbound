@@ -243,7 +243,9 @@ namespace UnityEngine.UIElements
         /// <summary>An element's style without its inline values (null during a style pass).</summary>
         internal ComputedValues UaRuleValues(VisualElement element) => m_StyleResolver.RuleValues(element, scaledPixelsPerPoint);
 
-        public virtual void UpdateAnimations()
+        public abstract void UpdateAnimations();
+
+        internal void UaUpdateAnimations()
         {
             // Native controls show panel-wide value-type phases. All owners in a type are
             // sampled before its events, and callbacks can retarget a later type in this tick.
@@ -464,15 +466,15 @@ namespace UnityEngine.UIElements
         FocusController m_FocusController;
         internal readonly UaScheduler uaScheduler = new UaScheduler();
 
-        public override VisualElement visualTree => m_RootContainer;
-        public override EventDispatcher dispatcher { get => m_Dispatcher; set => m_Dispatcher = value; }
+        public sealed override VisualElement visualTree => m_RootContainer;
+        public sealed override EventDispatcher dispatcher { get => m_Dispatcher; set => m_Dispatcher = value; }
         public override ContextType contextType => m_ContextType;
         public override ScriptableObject ownerObject { get; protected set; }
         internal override void OnVersionChanged(VisualElement ele, VersionChangeType changeTypeFlag) => UaOnVersionChanged(ele, changeTypeFlag);
         public override void ApplyStyles() => UaApplyStyles();
-        public override void UpdateAnimations() => base.UpdateAnimations();
+        public override void UpdateAnimations() => UaUpdateAnimations();
         public override void ValidateLayout() => UaValidateLayout();
-        public override FocusController focusController { get => m_FocusController; set => m_FocusController = value; }
+        public sealed override FocusController focusController { get => m_FocusController; set => m_FocusController = value; }
 
         static TimeMsFunction s_TimeSinceStartup;
 
@@ -525,7 +527,7 @@ namespace UnityEngine.UIElements
         internal UaPanelClear uaClear;
         internal bool uaForceGamma;
 
-        protected BaseRuntimePanel(ScriptableObject ownerObject, EventDispatcher dispatcher)
+        protected BaseRuntimePanel(ScriptableObject ownerObject, EventDispatcher dispatcher = null)
             : base(ownerObject, ContextType.Player, dispatcher)
         {
             m_RuntimePanelCreationIndex = s_CurrentRuntimePanelCounter++;
@@ -647,7 +649,7 @@ namespace UnityEngine.UIElements
         public Color color;
     }
 
-    internal sealed partial class RuntimePanel : BaseRuntimePanel
+    internal partial class RuntimePanel : BaseRuntimePanel
     {
         internal static readonly EventDispatcher s_EventDispatcher = EventDispatcher.CreateDefault();
         readonly PanelSettings m_PanelSettings;

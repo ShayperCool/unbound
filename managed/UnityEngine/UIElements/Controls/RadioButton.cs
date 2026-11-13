@@ -85,7 +85,7 @@ namespace UnityEngine.UIElements
             if (!value) value = true;
         }
 
-        [Obsolete("[UI Toolkit] Please set the value property instead.")]
+        [global::System.@ObsoleteAttribute("[UI Toolkit] Please set the value property instead.", false)]
         public void SetSelected(bool selected) => value = selected;
 
         public override void SetValueWithoutNotify(bool newValue)

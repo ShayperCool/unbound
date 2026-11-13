@@ -79,3 +79,22 @@ compiler diagnostics before any updater processing.
 Two identical GPU Editor captures extend the canonical reference from 238 to 428
 rows. Every earlier row remains byte-identical. The exact comparator covers all
 190 added obsolete declarations as well as the earlier controls.
+
+## UIElements declaration controls
+
+The UIElements expansion adds 68 rows, bringing the canonical reference from 428 to
+496. Two independent GPU Editor captures match, and all 428 earlier rows remain
+byte-identical. Metadata controls cover field annotations, private setters, final
+overrides, abstract methods, serializable flags and the optional panel dispatcher.
+Event-interest constructor controls cover array identity, null, explicit flags and
+AttributeUsage. A declared geometry event reaches an override attached to a panel.
+
+Unity 6000.0's [SerializeField rules](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SerializeField.html)
+require marked private fields to participate in serialization. Sort-column JSON
+overwrite begins with a different name and changes the name, index and direction.
+An angle's unmarked private fields remain excluded. A plain-data control changes
+one field while retaining another omitted from the JSON, as documented by
+[FromJsonOverwrite](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/JsonUtility.FromJsonOverwrite.html).
+The [EventInterest contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.EventInterestAttribute.html)
+guarantees listed events reach the method but permits unlisted events too; the
+probe makes no assertion that an unlisted event is filtered.

@@ -1648,7 +1648,7 @@ namespace UnityEngine.UIElements
         float IResolvedStyle.width => resolvedStyle.width;
         float IResolvedStyle.wordSpacing => resolvedStyle.wordSpacing;
 #pragma warning disable CS0618
-        StyleEnum<ScaleMode> IResolvedStyle.unityBackgroundScaleMode => resolvedStyle.unityBackgroundScaleMode;
+        [global::System.@ObsoleteAttribute("unityBackgroundScaleMode is deprecated. Use background-* properties instead.")] StyleEnum<ScaleMode> IResolvedStyle.unityBackgroundScaleMode => resolvedStyle.unityBackgroundScaleMode;
 #pragma warning restore CS0618
     }
 }

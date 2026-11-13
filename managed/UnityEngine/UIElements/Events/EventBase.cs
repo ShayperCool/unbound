@@ -10,6 +10,37 @@ using System.Collections.Generic;
 
 namespace UnityEngine.UIElements
 {
+    [AttributeUsage(AttributeTargets.Class)]
+    internal partial class EventCategoryAttribute : Attribute
+    {
+        internal EventCategory category;
+        public EventCategoryAttribute(EventCategory category) { this.category = category; }
+    }
+
+    [Flags]
+    internal enum EventCategoryFlags
+    {
+        None = 0,
+        All = -1,
+        TriggeredByOS = 426094,
+        TargetOnly = 5536,
+    }
+
+    internal enum EventInterestOptionsInternal
+    {
+        TriggeredByOS = 426094,
+    }
+
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    public partial class EventInterestAttribute : Attribute
+    {
+        internal Type[] eventTypes;
+        internal EventCategoryFlags categoryFlags;
+        public EventInterestAttribute(params Type[] eventTypes) { this.eventTypes = eventTypes; }
+        public EventInterestAttribute(EventInterestOptions interests) { categoryFlags = (EventCategoryFlags)interests; }
+        internal EventInterestAttribute(EventInterestOptionsInternal interests) { categoryFlags = (EventCategoryFlags)interests; }
+    }
+
     public delegate void EventCallback<in TEventType>(TEventType evt);
     public delegate void EventCallback<in TEventType, in TCallbackArgs>(TEventType evt, TCallbackArgs userArgs);
 
@@ -204,7 +235,7 @@ namespace UnityEngine.UIElements
         public abstract void Dispose();
     }
 
-    public abstract partial class EventBase<T> : EventBase where T : EventBase<T>, new()
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)0)] public abstract partial class EventBase<T> : EventBase where T : EventBase<T>, new()
     {
         static readonly long s_TypeId = RegisterEventType();
         static readonly Stack<T> s_Pool = new Stack<T>();
@@ -332,20 +363,18 @@ namespace UnityEngine.UIElements
         public bool HasTrickleDownHandlers() => m_UaCallbacks != null && m_UaCallbacks.trickleDown.Count > 0;
         public bool HasBubbleUpHandlers() => m_UaCallbacks != null && m_UaCallbacks.bubbleUp.Count > 0;
 
-        [Obsolete("Use HandleEventBubbleUp. Before proceeding, make sure you understand the latest changes to UIToolkit event propagation rules by visiting Unity's manual page https://docs.unity3d.com/Manual/UIE-Events-Dispatching.html")]
-        [Unbound.EditorFaithful("Unity's base implementation")]
+        [global::UnityEngine.UIElements.@EventInterestAttribute((global::UnityEngine.UIElements.EventInterestOptions)0)] [global::System.@ObsoleteAttribute("Use HandleEventBubbleUp. Before proceeding, make sure you understand the latest changes to UIToolkit event propagation rules by visiting Unity's manual page https://docs.unity3d.com/Manual/UIE-Events-Dispatching.html")] [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void ExecuteDefaultActionAtTarget(EventBase evt) { }
-        [Unbound.EditorFaithful("Unity's base implementation")]
+        [global::UnityEngine.UIElements.@EventInterestAttribute((global::UnityEngine.UIElements.EventInterestOptions)0)] [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void HandleEventBubbleUp(EventBase evt) { }
-        internal virtual void HandleEventBubbleUpDisabled(EventBase evt) { }
-        [Unbound.EditorFaithful("Unity's base implementation")]
+        [global::UnityEngine.UIElements.@EventInterestAttribute((global::UnityEngine.UIElements.EventInterestOptions)0)] internal virtual void HandleEventBubbleUpDisabled(EventBase evt) { }
+        [global::UnityEngine.UIElements.@EventInterestAttribute((global::UnityEngine.UIElements.EventInterestOptions)0)] [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void HandleEventTrickleDown(EventBase evt) { }
-        internal virtual void HandleEventTrickleDownDisabled(EventBase evt) { }
-        [Obsolete("Use HandleEventBubbleUp. Before proceeding, make sure you understand the latest changes to UIToolkit event propagation rules by visiting Unity's manual page https://docs.unity3d.com/Manual/UIE-Events-Dispatching.html")]
-        [Unbound.EditorFaithful("Unity's base implementation")]
+        [global::UnityEngine.UIElements.@EventInterestAttribute((global::UnityEngine.UIElements.EventInterestOptions)0)] internal virtual void HandleEventTrickleDownDisabled(EventBase evt) { }
+        [global::System.@ObsoleteAttribute("Use HandleEventBubbleUp. Before proceeding, make sure you understand the latest changes to UIToolkit event propagation rules by visiting Unity's manual page https://docs.unity3d.com/Manual/UIE-Events-Dispatching.html")] [global::UnityEngine.UIElements.@EventInterestAttribute((global::UnityEngine.UIElements.EventInterestOptions)0)] [Unbound.EditorFaithful("Unity's base implementation")]
         protected virtual void ExecuteDefaultAction(EventBase evt) { }
-        internal virtual void ExecuteDefaultActionDisabledAtTarget(EventBase evt) { }
-        internal virtual void ExecuteDefaultActionDisabled(EventBase evt) { }
+        [global::System.@ObsoleteAttribute("Use HandleEventBubbleUpDisabled.")] [global::UnityEngine.UIElements.@EventInterestAttribute((global::UnityEngine.UIElements.EventInterestOptions)0)] internal virtual void ExecuteDefaultActionDisabledAtTarget(EventBase evt) { }
+        [global::UnityEngine.UIElements.@EventInterestAttribute((global::UnityEngine.UIElements.EventInterestOptions)0)] [global::System.@ObsoleteAttribute("Use HandleEventBubbleUpDisabled.")] internal virtual void ExecuteDefaultActionDisabled(EventBase evt) { }
 
 #pragma warning disable CS0618
         internal void HandleEventBubbleUpInternal(EventBase evt) => HandleEventBubbleUp(evt);

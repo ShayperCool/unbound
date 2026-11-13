@@ -139,7 +139,7 @@ namespace UnityEngine.UIElements
 
         readonly Toggle m_Toggle = new Toggle();
         readonly VisualElement m_Container;
-        bool m_Value;
+        [global::UnityEngine.@SerializeField] [global::Unity.Properties.@DontCreatePropertyAttribute] bool m_Value;
 
         internal Toggle toggle => m_Toggle;
 

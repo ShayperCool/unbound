@@ -176,7 +176,7 @@ namespace UnityEngine.UIElements
             Application.platform == RuntimePlatform.OSXEditor || Application.platform == RuntimePlatform.OSXPlayer ? Command(m) : Ctrl(m);
     }
 
-    public abstract partial class PointerEventBase<T> : EventBase<T>, IPointerEvent, IPointerEventInternal, IPointerOrMouseEvent where T : PointerEventBase<T>, new()
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)1)] public abstract partial class PointerEventBase<T> : EventBase<T>, IPointerEvent, IPointerEventInternal, IPointerOrMouseEvent where T : PointerEventBase<T>, new()
     {
         public int pointerId { get; protected set; }
         public string pointerType { get; protected set; }
@@ -481,7 +481,7 @@ namespace UnityEngine.UIElements
         protected PointerEventBase() { LocalInit(); }
     }
 
-    public sealed partial class PointerDownEvent : PointerEventBase<PointerDownEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)3)] public sealed partial class PointerDownEvent : PointerEventBase<PointerDownEvent>
     {
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit()
@@ -506,7 +506,7 @@ namespace UnityEngine.UIElements
         }
     }
 
-    public sealed partial class PointerMoveEvent : PointerEventBase<PointerMoveEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)2)] public sealed partial class PointerMoveEvent : PointerEventBase<PointerMoveEvent>
     {
         internal bool isHandledByDraggable { get; set; }
         internal bool isPointerUpDown => button >= 0;
@@ -602,7 +602,7 @@ namespace UnityEngine.UIElements
         }
     }
 
-    public sealed partial class PointerStationaryEvent : PointerEventBase<PointerStationaryEvent>
+    [global::System.@ObsoleteAttribute("Not sent by input backend.")] public sealed partial class PointerStationaryEvent : PointerEventBase<PointerStationaryEvent>
     {
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit()
@@ -627,7 +627,7 @@ namespace UnityEngine.UIElements
         }
     }
 
-    public sealed partial class PointerEnterEvent : PointerEventBase<PointerEnterEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)4)] public sealed partial class PointerEnterEvent : PointerEventBase<PointerEnterEvent>
     {
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit() => propagation = EventPropagation.TricklesDown;
@@ -643,7 +643,7 @@ namespace UnityEngine.UIElements
         }
     }
 
-    public sealed partial class PointerLeaveEvent : PointerEventBase<PointerLeaveEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)4)] public sealed partial class PointerLeaveEvent : PointerEventBase<PointerLeaveEvent>
     {
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit() => propagation = EventPropagation.TricklesDown;
@@ -658,7 +658,7 @@ namespace UnityEngine.UIElements
         }
     }
 
-    public sealed partial class PointerOverEvent : PointerEventBase<PointerOverEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)4)] public sealed partial class PointerOverEvent : PointerEventBase<PointerOverEvent>
     {
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit() => propagation = EventPropagation.BubblesOrTricklesDown;
@@ -666,7 +666,7 @@ namespace UnityEngine.UIElements
         internal override void Dispatch(BaseVisualElementPanel panel) => Unbound.UIElements.Dispatching.DispatchToAssignedTarget(this, panel);
     }
 
-    public sealed partial class PointerOutEvent : PointerEventBase<PointerOutEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)4)] public sealed partial class PointerOutEvent : PointerEventBase<PointerOutEvent>
     {
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit() => propagation = EventPropagation.BubblesOrTricklesDown;
@@ -676,7 +676,7 @@ namespace UnityEngine.UIElements
 
     // ---- mouse ----
 
-    public abstract partial class MouseEventBase<T> : EventBase<T>, IMouseEvent, IMouseEventInternal, IPointerOrMouseEvent where T : MouseEventBase<T>, new()
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)1)] public abstract partial class MouseEventBase<T> : EventBase<T>, IMouseEvent, IMouseEventInternal, IPointerOrMouseEvent where T : MouseEventBase<T>, new()
     {
         public EventModifiers modifiers { get; protected set; }
         public Vector2 mousePosition { get; protected set; }
@@ -834,7 +834,7 @@ namespace UnityEngine.UIElements
         protected MouseEventBase() { LocalInit(); }
     }
 
-    public partial class MouseDownEvent : MouseEventBase<MouseDownEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)3)] public partial class MouseDownEvent : MouseEventBase<MouseDownEvent>
     {
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit() => propagation = EventPropagation.BubblesOrTricklesDown | EventPropagation.SkipDisabledElements;
@@ -848,14 +848,14 @@ namespace UnityEngine.UIElements
         public MouseUpEvent() { LocalInit(); }
     }
 
-    public partial class MouseMoveEvent : MouseEventBase<MouseMoveEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)2)] public partial class MouseMoveEvent : MouseEventBase<MouseMoveEvent>
     {
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit() => propagation = EventPropagation.BubblesOrTricklesDown;
         public MouseMoveEvent() { LocalInit(); }
     }
 
-    public partial class MouseEnterEvent : MouseEventBase<MouseEnterEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)4)] public partial class MouseEnterEvent : MouseEventBase<MouseEnterEvent>
     {
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit() => propagation = EventPropagation.TricklesDown;
@@ -863,7 +863,7 @@ namespace UnityEngine.UIElements
         internal override void Dispatch(BaseVisualElementPanel panel) => Unbound.UIElements.Dispatching.DispatchToAssignedTarget(this, panel);
     }
 
-    public partial class MouseLeaveEvent : MouseEventBase<MouseLeaveEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)4)] public partial class MouseLeaveEvent : MouseEventBase<MouseLeaveEvent>
     {
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit() => propagation = EventPropagation.TricklesDown;
@@ -871,7 +871,7 @@ namespace UnityEngine.UIElements
         internal override void Dispatch(BaseVisualElementPanel panel) => Unbound.UIElements.Dispatching.DispatchToAssignedTarget(this, panel);
     }
 
-    public partial class MouseOverEvent : MouseEventBase<MouseOverEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)4)] public partial class MouseOverEvent : MouseEventBase<MouseOverEvent>
     {
         internal override void Dispatch(BaseVisualElementPanel panel) => Unbound.UIElements.Dispatching.DispatchToAssignedTarget(this, panel);
 
@@ -879,7 +879,7 @@ namespace UnityEngine.UIElements
         protected internal override void PreDispatch(IPanel panel) => base.PreDispatch(panel);
     }
 
-    public partial class MouseOutEvent : MouseEventBase<MouseOutEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)4)] public partial class MouseOutEvent : MouseEventBase<MouseOutEvent>
     {
         internal override void Dispatch(BaseVisualElementPanel panel) => Unbound.UIElements.Dispatching.DispatchToAssignedTarget(this, panel);
 
@@ -933,7 +933,7 @@ namespace UnityEngine.UIElements
         bool actionKey { get; }
     }
 
-    public abstract partial class KeyboardEventBase<T> : EventBase<T>, IKeyboardEvent where T : KeyboardEventBase<T>, new()
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)6)] public abstract partial class KeyboardEventBase<T> : EventBase<T>, IKeyboardEvent where T : KeyboardEventBase<T>, new()
     {
         public EventModifiers modifiers { get; protected set; }
         public char character { get; protected set; }
@@ -1058,7 +1058,7 @@ namespace UnityEngine.UIElements
         FocusChangeDirection direction { get; }
     }
 
-    public abstract partial class FocusEventBase<T> : EventBase<T>, IFocusEvent where T : FocusEventBase<T>, new()
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)11)] public abstract partial class FocusEventBase<T> : EventBase<T>, IFocusEvent where T : FocusEventBase<T>, new()
     {
         public Focusable relatedTarget { get; private set; }
         public FocusChangeDirection direction { get; private set; }
@@ -1123,7 +1123,7 @@ namespace UnityEngine.UIElements
 
     public partial interface IChangeEvent { }
 
-    public partial class ChangeEvent<T> : EventBase<ChangeEvent<T>>, IChangeEvent
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)9)] public partial class ChangeEvent<T> : EventBase<ChangeEvent<T>>, IChangeEvent
     {
         public T previousValue { get; protected set; }
         public T newValue { get; protected set; }
@@ -1184,7 +1184,7 @@ namespace UnityEngine.UIElements
         bool actionKey { get; }
     }
 
-    public abstract partial class NavigationEventBase<T> : EventBase<T>, INavigationEvent where T : NavigationEventBase<T>, new()
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)14)] public abstract partial class NavigationEventBase<T> : EventBase<T>, INavigationEvent where T : NavigationEventBase<T>, new()
     {
         public EventModifiers modifiers { get; protected set; }
         internal NavigationDeviceType deviceType { get; private set; }
@@ -1289,7 +1289,7 @@ namespace UnityEngine.UIElements
 
     // ---- layout, panel, style ----
 
-    public partial class GeometryChangedEvent : EventBase<GeometryChangedEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)7)] public partial class GeometryChangedEvent : EventBase<GeometryChangedEvent>
     {
         public Rect oldRect { get; private set; }
         public Rect newRect { get; private set; }
@@ -1315,7 +1315,7 @@ namespace UnityEngine.UIElements
 
     public partial interface IPanelChangedEvent { }
 
-    public abstract partial class PanelChangedEventBase<T> : EventBase<T>, IPanelChangedEvent where T : PanelChangedEventBase<T>, new()
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)12)] public abstract partial class PanelChangedEventBase<T> : EventBase<T>, IPanelChangedEvent where T : PanelChangedEventBase<T>, new()
     {
         public IPanel originPanel { get; private set; }
         public IPanel destinationPanel { get; private set; }
@@ -1341,12 +1341,12 @@ namespace UnityEngine.UIElements
     public partial class AttachToPanelEvent : PanelChangedEventBase<AttachToPanelEvent> { }
     public partial class DetachFromPanelEvent : PanelChangedEventBase<DetachFromPanelEvent> { }
 
-    public partial class CustomStyleResolvedEvent : EventBase<CustomStyleResolvedEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)8)] public partial class CustomStyleResolvedEvent : EventBase<CustomStyleResolvedEvent>
     {
         public ICustomStyle customStyle => elementTarget?.customStyle;
     }
 
-    public partial class TooltipEvent : EventBase<TooltipEvent>
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)16)] public partial class TooltipEvent : EventBase<TooltipEvent>
     {
         public string tooltip { get; set; }
         public Rect rect { get; set; }
@@ -1366,7 +1366,7 @@ namespace UnityEngine.UIElements
     public partial interface IPointerCaptureEvent { }
     public partial interface IMouseCaptureEvent { }
 
-    public abstract partial class PointerCaptureEventBase<T> : EventBase<T>, IPointerCaptureEvent where T : PointerCaptureEventBase<T>, new()
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)1)] public abstract partial class PointerCaptureEventBase<T> : EventBase<T>, IPointerCaptureEvent where T : PointerCaptureEventBase<T>, new()
     {
         public IEventHandler relatedTarget { get; private set; }
         public int pointerId { get; private set; }

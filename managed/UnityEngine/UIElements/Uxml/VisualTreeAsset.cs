@@ -12,15 +12,16 @@ using Unbound.UIElements;
 
 namespace UnityEngine.UIElements
 {
+    [global::UnityEngine.@HelpURLAttribute("UIE-VisualTree-landing")] [global::System.Serializable]
     public partial class VisualTreeAsset : ScriptableObject
     {
         internal UxmlNode m_UaRoot;
         internal Dictionary<string, VisualTreeAsset> m_UaTemplates = new Dictionary<string, VisualTreeAsset>();
         /// <summary>The document's asset path: asset urls in its attributes resolve against it.</summary>
         internal string m_UaAssetPath;
-        bool m_ImportedWithErrors;
-        bool m_ImportedWithWarnings;
-        int m_ContentHash;
+        [global::UnityEngine.@SerializeField] bool m_ImportedWithErrors;
+        [global::UnityEngine.@SerializeField] bool m_ImportedWithWarnings;
+        [global::UnityEngine.@SerializeField] int m_ContentHash;
 
         public VisualTreeAsset() { }
 
@@ -84,7 +85,7 @@ namespace UnityEngine.UIElements
         }
     }
 
-    public partial class TemplateContainer : BindableElement
+    [global::UnityEngine.@HideInInspector] [global::UnityEngine.UIElements.@UxmlElementAttribute("Instance")] public partial class TemplateContainer : BindableElement
     {
         VisualElement m_ContentContainer;
         VisualTreeAsset m_TemplateSource;

@@ -63,7 +63,7 @@ namespace UnityEngine.UIElements
 
     /// <summary>A column of a multi-column view: header (title, icon or template), cells
     /// (template or callbacks), width limits and flags.</summary>
-    public partial class Column
+    [global::UnityEngine.UIElements.@UxmlObjectAttribute] public partial class Column
     {
         internal const string k_HeaderTemplateAttributeName = "header-template";
         internal const string k_CellTemplateAttributeName = "cell-template";
@@ -200,7 +200,7 @@ namespace UnityEngine.UIElements
 
     /// <summary>The columns of a multi-column view, in source order, with a display order (header
     /// reordering) and the visible ones in display order.</summary>
-    public partial class Columns : ICollection<Column>
+    [global::UnityEngine.UIElements.@UxmlObjectAttribute] public partial class Columns : ICollection<Column>
     {
         public enum StretchMode
         {
@@ -364,11 +364,12 @@ namespace UnityEngine.UIElements
     }
 
     /// <summary>A column to sort by (by index or name) and its direction.</summary>
+    [global::UnityEngine.UIElements.@UxmlObjectAttribute] [global::System.Serializable]
     public partial class SortColumnDescription
     {
-        int m_ColumnIndex = -1;
-        string m_ColumnName;
-        SortDirection m_SortDirection;
+        [global::UnityEngine.@SerializeField] int m_ColumnIndex = -1;
+        [global::UnityEngine.@SerializeField] string m_ColumnName;
+        [global::UnityEngine.@SerializeField] SortDirection m_SortDirection;
 
         [CreateProperty]
         public string columnName { get => m_ColumnName; set { if (m_ColumnName == value) return; m_ColumnName = value; changed?.Invoke(this); } }
@@ -398,9 +399,9 @@ namespace UnityEngine.UIElements
         }
     }
 
-    public partial class SortColumnDescriptions : ICollection<SortColumnDescription>
+    [global::UnityEngine.UIElements.@UxmlObjectAttribute] public partial class SortColumnDescriptions : ICollection<SortColumnDescription>
     {
-        readonly List<SortColumnDescription> m_Descriptions = new List<SortColumnDescription>();
+        [global::UnityEngine.@SerializeField] readonly List<SortColumnDescription> m_Descriptions = new List<SortColumnDescription>();
 
         public int Count => m_Descriptions.Count;
 
@@ -1421,7 +1422,7 @@ namespace UnityEngine.UIElements
             private set => m_State.SetSortDescriptions(value);
         }
 
-        public bool sortingEnabled
+        [global::System.@ObsoleteAttribute("sortingEnabled has been deprecated. Use sortingMode instead.", false)] public bool sortingEnabled
         {
             get => sortingMode == ColumnSortingMode.Custom;
             set => sortingMode = value ? ColumnSortingMode.Custom : ColumnSortingMode.None;
@@ -1600,7 +1601,7 @@ namespace UnityEngine.UIElements
             private set => m_State.SetSortDescriptions(value);
         }
 
-        public bool sortingEnabled
+        [global::System.@ObsoleteAttribute("sortingEnabled has been deprecated. Use sortingMode instead.", false)] public bool sortingEnabled
         {
             get => sortingMode == ColumnSortingMode.Custom;
             set => sortingMode = value ? ColumnSortingMode.Custom : ColumnSortingMode.None;
