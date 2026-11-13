@@ -55,6 +55,7 @@ public static class ProbeRunner
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true) };
         AssetDatabase.SaveAssets();
         CreateDensity();
+        CreateRefusals();
     }
 
     /// <summary>
@@ -62,12 +63,14 @@ public static class ProbeRunner
     /// lopsided slab mesh (its bounds, its vertices' distance from the y axis and its diagonal
     /// give three different widths), the same without uvs, and two terrains with prototypes that scale with
     /// detailObjectDensity: `DensityCounts` (instance counts, the terrain's detailObjectDensity
-    /// 0.6) and `DensityCoverage` (coverage), with fully and partly ground-aligned slabs, placed
-    /// out of the other terrains' camera views.
+    /// 0.6) and `DensityCoverage` (coverage), with fully and partly ground-aligned slabs, in the
+    /// scene `Density`.
     /// </summary>
     public static void CreateDensity()
     {
-        var scene = EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
+        // Their own scene, which the probe loads after the first two terrains' images, so that
+        // nothing of them can reach those images.
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var blade = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Grass/Blade.png");
         var slab = MakeSlab("Slab", true);
         var bare = MakeSlab("SlabBare", false);
@@ -81,7 +84,78 @@ public static class ProbeRunner
         var b = Terrain.CreateTerrainGameObject(coverage);
         b.name = "DensityCoverage";
         b.transform.position = new Vector3(-300f, 0f, 0f);
-        EditorSceneManager.SaveScene(scene, "Assets/Scenes/Probe.unity");
+        EditorSceneManager.SaveScene(scene, "Assets/Scenes/Density.unity");
+        EditorBuildSettings.scenes = new[]
+        {
+            new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Density.unity", true),
+        };
+        AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>
+    /// `-executeMethod ProbeRunner.CreateRefusals` adds, without touching the other assets, a
+    /// terrain `Refusals` (coverage) to the scene `Density`, whose prototypes the Editor refuses, one per check, and a
+    /// mesh in the Grass render mode drawn without instancing, which it accepts.
+    /// </summary>
+    public static void CreateRefusals()
+    {
+        var scene = EditorSceneManager.OpenScene("Assets/Scenes/Density.unity");
+        var blade = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Grass/Blade.png");
+        var slab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Grass/Slab.prefab");
+        var material = slab.GetComponent<MeshRenderer>().sharedMaterial;
+        var mesh = slab.GetComponent<MeshFilter>().sharedMesh;
+        GameObject Prefab(string name, System.Action<GameObject> setup)
+        {
+            var go = new GameObject(name);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = material;
+            setup(go);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, $"Assets/Grass/{name}.prefab");
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+        var two = Prefab("SlabTwoMaterials", go => go.GetComponent<MeshRenderer>().sharedMaterials = new[] { material, material });
+        var lod = Prefab("SlabLOD", go => go.AddComponent<LODGroup>());
+        var empty = Prefab("SlabNoMesh", go => go.GetComponent<MeshFilter>().sharedMesh = null);
+
+        var data = new TerrainData();
+        AssetDatabase.CreateAsset(data, "Assets/Grass/Refusals.asset");
+        data.heightmapResolution = 33;
+        data.size = new Vector3(32f, 2f, 32f);
+        data.SetDetailScatterMode(DetailScatterMode.CoverageMode);
+        data.SetDetailResolution(16, 8);
+        DetailPrototype Mesh(GameObject prefab, DetailRenderMode mode, bool instancing) => new DetailPrototype
+        {
+            prototype = prefab, usePrototypeMesh = true, useInstancing = instancing, renderMode = mode,
+            minWidth = 0.5f, maxWidth = 0.6f, minHeight = 0.5f, maxHeight = 0.6f, noiseSeed = 21,
+        };
+        data.detailPrototypes = new[]
+        {
+            new DetailPrototype { prototypeTexture = blade, renderMode = DetailRenderMode.VertexLit, noiseSeed = 21 },
+            new DetailPrototype { prototypeTexture = blade, renderMode = DetailRenderMode.Grass, useInstancing = true, noiseSeed = 21 },
+            Mesh(slab, DetailRenderMode.GrassBillboard, false),
+            Mesh(two, DetailRenderMode.VertexLit, false),
+            Mesh(lod, DetailRenderMode.VertexLit, false),
+            Mesh(empty, DetailRenderMode.VertexLit, true),
+            Mesh(slab, DetailRenderMode.Grass, false),
+        };
+        for (int layer = 0; layer < data.detailPrototypes.Length; layer++)
+        {
+            var values = new int[16, 16];
+            for (int y = 0; y < 16; y++)
+                for (int x = 0; x < 16; x++)
+                    values[y, x] = (x + y + layer) % 3 == 0 ? 200 : 0;
+            data.SetDetailLayer(0, 0, layer, values);
+        }
+        data.wavingGrassAmount = 0f;
+        data.wavingGrassStrength = 0f;
+        data.wavingGrassSpeed = 0f;
+        EditorUtility.SetDirty(data);
+        var terrain = Terrain.CreateTerrainGameObject(data);
+        terrain.name = "Refusals";
+        terrain.transform.position = new Vector3(-400f, 0f, 0f);
+        EditorSceneManager.SaveScene(scene, "Assets/Scenes/Density.unity");
         AssetDatabase.SaveAssets();
     }
 

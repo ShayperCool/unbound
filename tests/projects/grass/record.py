@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Editor side of the grass probe, in copies of the project under the validation cache.
 
-    record.py create  --release 6000.0.71f1   # run ProbeRunner.CreateDensity, copy its assets back
+    record.py create  --release 6000.0.71f1   # run ProbeRunner.CreateDensity (--method), copy its assets back
     record.py record  --release 6000.0.71f1   # two independent GPU captures
     record.py publish --release 6000.0.71f1   # replace Reference/ when both captures agree
 
 `publish` refuses unless both captures ran on the NVIDIA GPU, are byte-identical, and the
-committed reference rows are an unchanged prefix of the new grass.jsonl; images already in
-Reference/ are kept as they are and only new images are added.
+committed reference rows are an unchanged prefix of the new grass.jsonl and the images already
+in Reference/ are byte-identical to the captures; only new images are added.
 """
 import argparse
 import os
@@ -20,10 +20,12 @@ sys.path.insert(0, str(PROBE.parents[1]))
 from probe_paths import cache_artifact_path, run_root  # noqa: E402
 from editor_runner import EditorJob, differences, result_problem, run  # noqa: E402
 
-# What ProbeRunner.CreateDensity adds or changes.
+# What ProbeRunner.CreateDensity and CreateRefusals add or change.
 CREATED = ['Assets/Grass/Slab.asset', 'Assets/Grass/Slab.prefab', 'Assets/Grass/SlabBare.asset',
            'Assets/Grass/SlabBare.prefab', 'Assets/Grass/DensityCounts.asset',
-           'Assets/Grass/DensityCoverage.asset', 'Assets/Scenes/Probe.unity']
+           'Assets/Grass/DensityCoverage.asset', 'Assets/Grass/SlabTwoMaterials.prefab', 'Assets/Grass/SlabLOD.prefab',
+           'Assets/Grass/SlabNoMesh.prefab', 'Assets/Grass/Refusals.asset', 'Assets/Scenes/Density.unity',
+           'ProjectSettings/EditorBuildSettings.asset']
 
 
 def copy_project(destination, release):
@@ -54,6 +56,9 @@ def main():
     parser.add_argument('command', choices=['create', 'record', 'publish'])
     parser.add_argument('--release', required=True)
     parser.add_argument('--label', default='record')
+    parser.add_argument('--method', default='CreateDensity', choices=['CreateDensity', 'CreateRefusals'],
+                        help='the ProbeRunner method `create` runs')
+    parser.add_argument('--base', type=Path, help='publish: the reference rows that must stay (default: Reference/grass.jsonl)')
     args = parser.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = cache_artifact_path(run_root(PROBE, args.label)).resolve()
@@ -63,7 +68,7 @@ def main():
         out = work/'create'
         project = copy_project(out/'project', args.release)
         result = run(EditorJob(project, out/'editor.log', out, batch=True,
-                               args=['-quit', '-executeMethod', 'ProbeRunner.CreateDensity'], timeout=900))
+                               args=['-quit', '-executeMethod', 'ProbeRunner.'+args.method], timeout=900))
         reason = result_problem(out, gpu=True)
         if reason or result.get('exit_code') != 0:
             print(f'Editor create failed: {reason or result}', file=sys.stderr)
@@ -92,13 +97,17 @@ def main():
     if problems:
         sys.exit('the captures differ ('+'; '.join(problems)+'); not publishing')
     reference = PROBE/'Reference'
-    old = (reference/'grass.jsonl').read_text().splitlines(keepends=True)
+    old = (args.base or reference/'grass.jsonl').read_text().splitlines(keepends=True)
     new = (captures[0]/'grass.jsonl').read_text().splitlines(keepends=True)
     if new[:len(old)] != old:
         sys.exit('the committed reference rows changed; not publishing')
+    images = [n for n in outputs(captures[0]) if n.endswith('.png')]
+    changed = [n for n in images if (reference/n).exists() and (reference/n).read_bytes() != (captures[0]/n).read_bytes()]
+    if changed:
+        sys.exit(f'committed images changed ({", ".join(changed)}); not publishing')
     shutil.copyfile(captures[0]/'grass.jsonl', reference/'grass.jsonl')
-    for name in outputs(captures[0]):
-        if name.endswith('.png') and not (reference/name).exists():
+    for name in images:
+        if not (reference/name).exists():
             shutil.copyfile(captures[0]/name, reference/name)
     print(f'published {len(new) - len(old)} added rows')
     return 0

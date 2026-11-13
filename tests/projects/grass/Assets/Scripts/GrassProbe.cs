@@ -6,12 +6,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Terrain details: for each terrain of the scene (detail instance counts, coverage) the detail
 /// data (resolution, patches, prototypes, layers read back), every patch's and layer's instances
 /// from ComputeDetailInstanceTransforms at two densities, the coverage; then images of the grass
-/// from a camera. Writes <c>grass.jsonl</c> and PNGs into <c>GRASS_PROBE_OUT</c>, then quits.
+/// from a camera. Then the same for the terrains of the scene `Density`, loaded additively, with
+/// their prototypes' validation, a third density, the legacy distribution and the logged messages. Writes <c>grass.jsonl</c> and PNGs into <c>GRASS_PROBE_OUT</c>, then quits.
 /// </summary>
 public class GrassProbe : MonoBehaviour
 {
@@ -38,49 +40,10 @@ public class GrassProbe : MonoBehaviour
         var messages = new List<string>();
         Application.LogCallback onLog = (message, stack, type) => messages.Add($"{type}: {message}");
         Application.logMessageReceived += onLog;
+        // The probe scene's terrains, their records and images; then the scene `Density`'s.
         var terrains = FindObjectsByType<Terrain>(FindObjectsSortMode.None).OrderBy(t => t.name).ToArray();
         foreach (var terrain in terrains)
-        {
-            var data = terrain.terrainData;
-            Record("data", $"\"terrain\":\"{terrain.name}\",\"mode\":\"{data.detailScatterMode}\",\"resolution\":{data.detailResolution},\"perPatch\":{data.detailResolutionPerPatch},\"patches\":{data.detailPatchCount},\"width\":{data.detailWidth},\"height\":{data.detailHeight},\"prototypes\":{data.detailPrototypes.Length},\"supported\":[{string.Join(",", data.GetSupportedLayers(0, 0, data.detailWidth, data.detailHeight))}],\"objectDistance\":{F(terrain.detailObjectDistance)},\"objectDensity\":{F(terrain.detailObjectDensity)}");
-            for (int layer = 0; layer < data.detailPrototypes.Length; layer++)
-            {
-                var values = data.GetDetailLayer(0, 0, data.detailWidth, data.detailHeight, layer);
-                long sum = 0;
-                var rows = new List<string>();
-                for (int y = 0; y < data.detailHeight; y += 9)
-                {
-                    var row = new List<string>();
-                    for (int x = 0; x < data.detailWidth; x += 5) row.Add(values[y, x].ToString());
-                    rows.Add("[" + string.Join(",", row) + "]");
-                }
-                foreach (var v in values) sum += v;
-                Record("layer", $"\"terrain\":\"{terrain.name}\",\"layer\":{layer},\"sum\":{sum},\"samples\":[{string.Join(",", rows)}],\"coverage\":{F(data.ComputeDetailCoverage(layer))}");
-            }
-            // The density terrains also at a third density, and what their prototypes validate to.
-            bool densityTerrain = terrain.name.StartsWith("Density");
-            if (densityTerrain)
-            {
-                var prototypes = data.detailPrototypes;
-                for (int i = 0; i < prototypes.Length; i++)
-                {
-                    bool valid = prototypes[i].Validate(out var error);
-                    Record("prototype", $"\"terrain\":\"{terrain.name}\",\"layer\":{i},\"valid\":{(valid ? "true" : "false")},\"error\":\"{error}\"");
-                }
-                Record("coverage_index", $"\"terrain\":\"{terrain.name}\",\"values\":[{F(data.ComputeDetailCoverage(-1))},{F(data.ComputeDetailCoverage(prototypes.Length))}]");
-            }
-            foreach (var density in densityTerrain ? new[] { 1f, 0.5f, 0.3f } : new[] { 1f, 0.5f })
-                RecordInstances("instances", terrain, density);
-        }
-        // QualitySettings.useLegacyDetailDistribution: the density terrains again, then back.
-        QualitySettings.useLegacyDetailDistribution = true;
-        foreach (var terrain in terrains)
-            if (terrain.name.StartsWith("Density"))
-                RecordInstances("legacy", terrain, 1f);
-        QualitySettings.useLegacyDetailDistribution = false;
-        Application.logMessageReceived -= onLog;
-        foreach (var group in messages.GroupBy(m => m))
-            Record("log", $"\"message\":\"{group.Key}\",\"count\":{group.Count()}");
+            RecordTerrain(terrain, false);
 
         // Images: each terrain from above at an angle (waving is off in the data).
         var target = new RenderTexture(320, 180, 24, RenderTextureFormat.ARGB32);
@@ -94,13 +57,24 @@ public class GrassProbe : MonoBehaviour
         light.transform.rotation = Quaternion.Euler(50f, 30f, 0f);
         yield return null;
         foreach (var terrain in terrains)
-        {
-            var origin = terrain.transform.position;
-            camera.transform.position = origin + new Vector3(16f, 8f, -6f);
-            camera.transform.LookAt(origin + new Vector3(16f, 1f, 14f));
-            camera.Render();
-            Save(target, Path.Combine(dir, $"{terrain.name}.png"));
-        }
+            Render(camera, target, terrain, dir);
+
+        yield return SceneManager.LoadSceneAsync("Density", LoadSceneMode.Additive);
+        var added = FindObjectsByType<Terrain>(FindObjectsSortMode.None).Where(t => !terrains.Contains(t)).OrderBy(t => t.name).ToArray();
+        foreach (var terrain in added)
+            RecordTerrain(terrain, true);
+        // QualitySettings.useLegacyDetailDistribution: the density terrains again, then back.
+        QualitySettings.useLegacyDetailDistribution = true;
+        foreach (var terrain in added)
+            if (terrain.name.StartsWith("Density"))
+                RecordInstances("legacy", terrain, 1f);
+        QualitySettings.useLegacyDetailDistribution = false;
+        Application.logMessageReceived -= onLog;
+        foreach (var group in messages.GroupBy(m => m))
+            Record("log", $"\"message\":\"{group.Key}\",\"count\":{group.Count()}");
+        yield return null;
+        foreach (var terrain in added)
+            Render(camera, target, terrain, dir);
 
         File.WriteAllText(Path.Combine(dir, "grass.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
@@ -108,6 +82,49 @@ public class GrassProbe : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    /// <summary>A terrain's detail data, layers and instances; for the added terrains also what
+    /// their prototypes validate to, and the density terrains at a third density.</summary>
+    void RecordTerrain(Terrain terrain, bool added)
+    {
+        var data = terrain.terrainData;
+        Record("data", $"\"terrain\":\"{terrain.name}\",\"mode\":\"{data.detailScatterMode}\",\"resolution\":{data.detailResolution},\"perPatch\":{data.detailResolutionPerPatch},\"patches\":{data.detailPatchCount},\"width\":{data.detailWidth},\"height\":{data.detailHeight},\"prototypes\":{data.detailPrototypes.Length},\"supported\":[{string.Join(",", data.GetSupportedLayers(0, 0, data.detailWidth, data.detailHeight))}],\"objectDistance\":{F(terrain.detailObjectDistance)},\"objectDensity\":{F(terrain.detailObjectDensity)}");
+        for (int layer = 0; layer < data.detailPrototypes.Length; layer++)
+        {
+            var values = data.GetDetailLayer(0, 0, data.detailWidth, data.detailHeight, layer);
+            long sum = 0;
+            var rows = new List<string>();
+            for (int y = 0; y < data.detailHeight; y += 9)
+            {
+                var row = new List<string>();
+                for (int x = 0; x < data.detailWidth; x += 5) row.Add(values[y, x].ToString());
+                rows.Add("[" + string.Join(",", row) + "]");
+            }
+            foreach (var v in values) sum += v;
+            Record("layer", $"\"terrain\":\"{terrain.name}\",\"layer\":{layer},\"sum\":{sum},\"samples\":[{string.Join(",", rows)}],\"coverage\":{F(data.ComputeDetailCoverage(layer))}");
+        }
+        if (added)
+        {
+            var prototypes = data.detailPrototypes;
+            for (int i = 0; i < prototypes.Length; i++)
+            {
+                bool valid = prototypes[i].Validate(out var error);
+                Record("prototype", $"\"terrain\":\"{terrain.name}\",\"layer\":{i},\"valid\":{(valid ? "true" : "false")},\"error\":\"{error}\"");
+            }
+            Record("coverage_index", $"\"terrain\":\"{terrain.name}\",\"values\":[{F(data.ComputeDetailCoverage(-1))},{F(data.ComputeDetailCoverage(prototypes.Length))}]");
+        }
+        foreach (var density in terrain.name.StartsWith("Density") ? new[] { 1f, 0.5f, 0.3f } : new[] { 1f, 0.5f })
+            RecordInstances("instances", terrain, density);
+    }
+
+    static void Render(Camera camera, RenderTexture target, Terrain terrain, string dir)
+    {
+        var origin = terrain.transform.position;
+        camera.transform.position = origin + new Vector3(16f, 8f, -6f);
+        camera.transform.LookAt(origin + new Vector3(16f, 1f, 14f));
+        camera.Render();
+        Save(target, Path.Combine(dir, $"{terrain.name}.png"));
     }
 
     void RecordInstances(string kind, Terrain terrain, float density)
