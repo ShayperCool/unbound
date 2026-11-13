@@ -15,7 +15,8 @@ namespace UnityEngine
     }
 
     // The details: per patch a mesh of the grass quads, one of the billboards and one of the meshes
-    // drawn without instancing, in world space, drawn with Unity's detail shaders
+    // drawn without instancing, relative to the terrain (the shaders compare its vertices with the
+    // camera less the terrain's position), drawn with Unity's detail shaders
     // (Hidden/TerrainEngine/Details/...) and a texture atlas of the prototypes; meshes drawn with
     // instancing are their prototype's meshes and materials at each instance. As the Editor builds
     // them (measured: a project overriding the detail shaders dumped the vertices it draws):
@@ -92,7 +93,7 @@ namespace UnityEngine
                     renderer.m_PropertyBlock = block;
                     // As the trees: the terrain renderer's rendering layers (unmeasured).
                     renderer.renderingLayerMask = renderingLayerMask;
-                    FrameBuilder.AddMeshDraws(renderer, patch.Meshes[kind], Matrix4x4.identity, Color.white, camera, into);
+                    FrameBuilder.AddMeshDraws(renderer, patch.Meshes[kind], Matrix4x4.Translate(origin), Color.white, camera, into);
                 }
             }
             foreach (var detail in m_InstancedDetails)
@@ -235,7 +236,7 @@ namespace UnityEngine
                         {
                             if (prototype.prototype == null) continue;
                             if (prototype.useInstancing) AddInstancedDetails(terrain, prototype, instances, origin);
-                            else BakeMeshDetails(builders[(int)DetailKind.Mesh] ??= new MeshBuilder(), prototype, instances, origin, white);
+                            else BakeMeshDetails(builders[(int)DetailKind.Mesh] ??= new MeshBuilder(), prototype, instances, white);
                             continue;
                         }
                         var kind = prototype.renderMode == DetailRenderMode.GrassBillboard ? DetailKind.Billboard : DetailKind.Grass;
@@ -248,7 +249,7 @@ namespace UnityEngine
                             var topColor = ToColor32(new Color(top.r, top.g, top.b, 1f));
                             var bottomColor = ToColor32(new Color(top.r * 0.625f, top.g * 0.625f, top.b * 0.625f, 0f));
                             var normal = data.GetInterpolatedNormal(i.posX / size.x, i.posZ / size.z);
-                            var position = origin + new Vector3(i.posX, i.posY, i.posZ);
+                            var position = new Vector3(i.posX, i.posY, i.posZ);
                             float half = i.scaleXZ * 0.5f;
                             int first = builder.Vertices.Count;
                             var u0 = new Vector2(rect.xMin, rect.yMin);
@@ -297,7 +298,8 @@ namespace UnityEngine
                         var bounds = mesh.bounds;
                         // Billboards reach their size around their position.
                         if (kind == (int)DetailKind.Billboard) bounds.Expand(4f);
-                        renderer.m_LocalBounds = new Bounds(bounds.center - origin, bounds.size);
+                        renderer.m_LocalBounds = bounds;
+                        bounds.center += origin;
                         patch.Renderers[kind] = renderer;
                         patch.Meshes[kind] = mesh;
                         if (!patch.HasBounds) { patch.Bounds = bounds; patch.HasBounds = true; }
@@ -323,7 +325,7 @@ namespace UnityEngine
         /// <summary>Meshes drawn without instancing: each instance's mesh turned, scaled and placed,
         /// coloured the instance's colour, sampling the atlas's white (or the material's texture
         /// would be packed: not yet).</summary>
-        static void BakeMeshDetails(MeshBuilder builder, DetailPrototype prototype, DetailInstanceTransform[] instances, Vector3 origin, Rect white)
+        static void BakeMeshDetails(MeshBuilder builder, DetailPrototype prototype, DetailInstanceTransform[] instances, Rect white)
         {
             var mesh = PrototypeMesh(prototype.prototype, out _);
             if (mesh == null) return;
@@ -335,7 +337,7 @@ namespace UnityEngine
                 float noise = Mathf.PerlinNoise(i.posX * prototype.noiseSpread, i.posZ * prototype.noiseSpread);
                 var c = Color.Lerp(prototype.dryColor, prototype.healthyColor, noise);
                 var color = ToColor32(new Color(c.r, c.g, c.b, 1f));
-                var model = DetailPlacement(origin, i);
+                var model = DetailPlacement(Vector3.zero, i);
                 var turn = Quaternion.Euler(0f, i.rotationY * Mathf.Rad2Deg, 0f);
                 int first = builder.Vertices.Count;
                 for (int v = 0; v < vertices.Length; v++)
