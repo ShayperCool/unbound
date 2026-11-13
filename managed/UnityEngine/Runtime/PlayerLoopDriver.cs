@@ -136,6 +136,7 @@ namespace Unbound.Runtime
             Register(typeof(PL.EarlyUpdate.RendererNotifyInvisible), Renderer.NotifyInvisible);
             Register(typeof(PL.EarlyUpdate.UpdateInputManager), UpdateInput);
             Register(typeof(PL.EarlyUpdate.ScriptRunDelayedStartupFrame), Lifecycle.RunPendingStarts);
+            Register(typeof(PL.EarlyUpdate.SpriteAtlasManagerUpdate), UnityEngine.U2D.SpriteAtlasPacking.DispatchRequests);
             // The Input System's updates: in each fixed step, after the frame's start, before rendering.
             Register(typeof(PL.FixedUpdate.NewInputFixedUpdate), NativeInput.FixedUpdate);
             Register(typeof(PL.PreUpdate.IMGUISendQueuedEvents), GuiDispatch.SendQueuedEvents);

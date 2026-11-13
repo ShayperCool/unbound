@@ -35,6 +35,14 @@ namespace UnityEngine
         SecondarySpriteTexture[] m_SecondaryTextures;
         (string Name, string Guid)[] m_SecondaryGuids;
         System.Collections.Generic.Dictionary<int, object> m_SecondaryProperties;
+        /// <summary>The imported sprite's place in the Play-mode atlas set (its texture's GUID and
+        /// file id), when a packed atlas holds it (see U2D/SpriteAtlasPacking.cs).</summary>
+        internal (string Texture, long FileId)? m_AtlasBinding;
+        /// <summary>Drawn from a packed atlas's page: its texture rect there.</summary>
+        Rect? m_AtlasRect;
+        SpritePackingMode m_PackingMode = SpritePackingMode.Rectangle;
+        SpritePackingRotation m_PackingRotation;
+        float m_AtlasScale = 1f;
 
         Sprite() { }
 
@@ -254,23 +262,69 @@ namespace UnityEngine
         }
 
         public Rect rect => m_Rect;
-        /// <summary>The rect, or a Tight mesh's traced bounds (measured: tests/projects/spriteimport).</summary>
-        public Rect textureRect => m_TextureRect ?? m_Rect;
-        [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect or its Tight mesh's bounds")]
+        /// <summary>The rect, or a Tight mesh's traced bounds (measured: tests/projects/spriteimport);
+        /// in a packed atlas its place on the page, also for tightly packed sprites (measured:
+        /// tests/projects/spriteatlas).</summary>
+        public Rect textureRect => m_AtlasRect ?? m_TextureRect ?? m_Rect;
         public Vector2 textureRectOffset => m_SerializedTextureRectOffset ?? (m_TextureRect is Rect t ? new Vector2(t.x - m_Rect.x, t.y - m_Rect.y) : Vector2.zero);
         public Texture2D texture => m_Texture;
         [Unbound.EditorFaithful("alpha-split textures are made for ETC1 Android builds only, never in the Editor")]
         public Texture2D associatedAlphaSplitTexture => null;
         public Vector2 pivot => m_Pivot;
         public float pixelsPerUnit => m_PixelsPerUnit;
-        [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect")]
-        public float spriteAtlasTextureScale => 1f;
+        /// <summary>A variant atlas's scale for the clones it gives (measured: tests/projects/spriteatlas).</summary>
+        public float spriteAtlasTextureScale => m_AtlasScale;
         public Vector4 border => m_Border;
-        [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect")]
-        public bool packed => false;
-        public SpritePackingMode packingMode => SpritePackingMode.Rectangle;
-        [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect")]
-        public SpritePackingRotation packingRotation => SpritePackingRotation.None;
+        public bool packed => m_AtlasRect != null;
+        public SpritePackingMode packingMode => m_PackingMode;
+        public SpritePackingRotation packingRotation => m_PackingRotation;
+
+        /// <summary>Draws the sprite from a packed atlas's page: its texture rect and UV transform
+        /// (pixels per unit, offset) there, in a page of `uvSize` (a variant's scaled page keeps its
+        /// master's rects and UVs, with its `scale`); the UVs follow, mirrored as the packer flipped
+        /// the sprite (Unity 6000.0.71f1, tests/projects/spriteatlas).</summary>
+        internal void BindAtlas(Texture2D page, Rect atlasRect, Vector4 uvTransform, SpritePackingMode mode, SpritePackingRotation rotation,
+            Vector2 uvSize, float scale)
+        {
+            m_Texture = page;
+            m_AtlasRect = atlasRect;
+            m_PackingMode = mode;
+            m_PackingRotation = rotation;
+            m_AtlasScale = scale;
+            float w = uvSize.x, h = uvSize.y;
+            var offset = textureRectOffset;
+            // The mirror lines: the atlas rect's far edges from the sprite's pivot.
+            float pivotX = m_Rect.width > 0 ? m_Pivot.x / m_Rect.width : 0f;
+            float pivotY = m_Rect.height > 0 ? m_Pivot.y / m_Rect.height : 0f;
+            float farX = uvTransform.y - m_Rect.width * pivotX + atlasRect.width + offset.x;
+            float farY = uvTransform.w - m_Rect.height * pivotY + atlasRect.height + offset.y;
+            float farU = farX / w, nearU = (farX - atlasRect.width) / w;
+            float farV = farY / h, nearV = (farY - atlasRect.height) / h;
+            bool flipX = rotation == SpritePackingRotation.FlipHorizontal || rotation == SpritePackingRotation.Rotate180;
+            bool flipY = rotation == SpritePackingRotation.FlipVertical || rotation == SpritePackingRotation.Rotate180;
+            m_UV = new Vector2[m_Vertices.Length];
+            for (int i = 0; i < m_Vertices.Length; i++)
+            {
+                float u = (m_Vertices[i].x * uvTransform.x + uvTransform.y) / w;
+                float v = (m_Vertices[i].y * uvTransform.z + uvTransform.w) / h;
+                if (flipX) u = farU - u + nearU;
+                if (flipY) v = farV - v + nearV;
+                m_UV[i] = new Vector2(u, v);
+            }
+            m_Mesh = null;
+            m_ShapeMesh = null;
+        }
+
+        /// <summary>A sprite of an atlas that binds late, before the atlas is registered: no texture
+        /// (measured: tests/projects/spriteatlas).</summary>
+        internal void UnbindTexture()
+        {
+            m_Texture = null;
+            // Without a texture the UVs are zero (as for Sprites saved without one).
+            m_UV = new Vector2[m_Vertices.Length];
+            m_Mesh = null;
+            m_ShapeMesh = null;
+        }
         public Vector2[] vertices => (Vector2[])m_Vertices.Clone();
         public ushort[] triangles => (ushort[])m_Triangles.Clone();
         public Vector2[] uv => (Vector2[])m_UV.Clone();
@@ -395,25 +449,59 @@ namespace UnityEngine
     {
         public sealed partial class DataUtility
         {
+            /// <summary>The texture size the sprite's rects are in: a variant atlas's scaled page keeps
+            /// its master's rects (measured: tests/projects/spriteatlas).</summary>
+            static (float, float) RectSpace(Sprite sprite, Texture2D t)
+            {
+                float scale = sprite.spriteAtlasTextureScale;
+                return (t.width / scale, t.height / scale);
+            }
+
+            /// <summary>The sprite's rect where it is drawn from: in a packed atlas, the rect placed as
+            /// its texture rect is.</summary>
+            static Rect DrawnRect(Sprite sprite)
+            {
+                var r = sprite.rect;
+                if (!sprite.packed) return r;
+                var t = sprite.textureRect;
+                var offset = sprite.textureRectOffset;
+                return new Rect(t.x - offset.x, t.y - offset.y, r.width, r.height);
+            }
+
+            /// <summary>Without a texture the inner and outer UVs are the unit square (measured for a
+            /// late-binding sprite before its atlas registers: tests/projects/spriteatlas).</summary>
+            static readonly Vector4 s_NoTexture = new Vector4(0f, 0f, 1f, 1f);
+
             public static Vector4 GetInnerUV(Sprite sprite)
             {
                 var t = sprite.texture;
-                float w = t != null ? t.width : 1f, h = t != null ? t.height : 1f;
-                var r = sprite.rect;
+                if (t == null) return s_NoTexture;
+                var (w, h) = RectSpace(sprite, t);
+                var r = DrawnRect(sprite);
                 var b = sprite.border;
                 return new Vector4((r.x + b.x) / w, (r.y + b.y) / h, (r.xMax - b.z) / w, (r.yMax - b.w) / h);
             }
 
+            /// <summary>The texture rect in its texture: a Tight sprite's trimmed rect, a packed
+            /// sprite's place on its page (Unity 6000.0.71f1, tests/projects/spriteatlas).</summary>
             public static Vector4 GetOuterUV(Sprite sprite)
             {
                 var t = sprite.texture;
-                float w = t != null ? t.width : 1f, h = t != null ? t.height : 1f;
-                var r = sprite.rect;
+                if (t == null) return s_NoTexture;
+                var (w, h) = RectSpace(sprite, t);
+                var r = sprite.textureRect;
                 return new Vector4(r.x / w, r.y / h, r.xMax / w, r.yMax / h);
             }
 
-            [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect")]
-            public static Vector4 GetPadding(Sprite sprite) => Vector4.zero;
+            /// <summary>The texture rect inset from the rect: left, bottom, right, top (Unity
+            /// 6000.0.71f1, tests/projects/spriteatlas: a trimmed Tight sprite, packed or not).</summary>
+            public static Vector4 GetPadding(Sprite sprite)
+            {
+                var r = sprite.rect;
+                var t = sprite.textureRect;
+                var offset = sprite.textureRectOffset;
+                return new Vector4(offset.x, offset.y, r.width - t.width - offset.x, r.height - t.height - offset.y);
+            }
 
             public static Vector2 GetMinSize(Sprite sprite) => new Vector2(sprite.border.x + sprite.border.z, sprite.border.y + sprite.border.w);
         }

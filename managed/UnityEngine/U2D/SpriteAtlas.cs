@@ -8,13 +8,15 @@ using Object = UnityEngine.Object;
 namespace UnityEngine.U2D
 {
     /// <summary>
-    /// A sprite atlas, as the Editor has it in Play mode: its sprites are those of its packables
-    /// (sprites, textures and folders; a variant's are its master's), and they keep their own
-    /// textures (Unbound does not pack them; they draw the same). Read from a `.spriteatlas`
-    /// (SpriteAtlas, its `m_EditorData`) or a `.spriteatlasv2` (SpriteAtlasAsset, its
-    /// `m_ImporterData`). Measured on the 6000.0 Editor: the name and tag are the file's name,
-    /// GetSprite returns a new clone named `name(Clone)` (the exact name, else null), GetSprites
-    /// gives clones in name order.
+    /// A sprite atlas: its sprites are those of its packables (sprites, textures and folders; a
+    /// variant's are its master's). Read from a `.spriteatlas` (SpriteAtlas, its `m_EditorData`)
+    /// or a `.spriteatlasv2` (SpriteAtlasAsset, its `m_ImporterData`). When the project's Sprite
+    /// Packer mode packs it for Play mode (see SpriteAtlasPacking), GetSprite and GetSprites give
+    /// clones on its pages, in its packed order (by texture GUID; on one texture by name hash);
+    /// otherwise clones of the unpacked sprites in name order (unmeasured outside Play mode).
+    /// Measured on the 6000.0 Editor: the name is the file's name, the tag V1's `m_Tag` (a
+    /// variant's is its master's name), GetSprite returns a new clone named `name(Clone)` (the
+    /// exact name, else null) (tests/projects/spriteatlas).
     /// </summary>
     [ClassId(687078895)]
     [ClassId(612988286)]
@@ -27,13 +29,14 @@ namespace UnityEngine.U2D
         readonly List<ObjectRef> m_Packables = new List<ObjectRef>();
         bool m_IsVariant;
         SpriteAtlas m_Master;
+        string m_Tag;
         List<Sprite> m_Sprites;
 
         public SpriteAtlas() { }
 
         public bool isVariant => m_IsVariant;
 
-        public string tag => name;
+        public string tag => string.IsNullOrEmpty(m_Tag) ? name : m_Tag;
 
         public int spriteCount => Sprites().Count;
 
@@ -42,7 +45,7 @@ namespace UnityEngine.U2D
         public Sprite GetSprite(string name)
         {
             foreach (var sprite in Sprites())
-                if (sprite.name == name) return (Sprite)Instantiate(sprite);
+                if (sprite.name == name) return SpriteAtlasPacking.Clone(this, sprite);
             return null;
         }
 
@@ -56,13 +59,15 @@ namespace UnityEngine.U2D
             {
                 if (count >= sprites.Length) break;
                 if (name != null && sprite.name != name) continue;
-                sprites[count++] = (Sprite)Instantiate(sprite);
+                sprites[count++] = SpriteAtlasPacking.Clone(this, sprite);
             }
             return count;
         }
 
         List<Sprite> Sprites()
         {
+            var packed = SpriteAtlasPacking.PackedSprites(this);
+            if (packed != null) return packed;
             if (m_Sprites != null) return m_Sprites;
             if (m_IsVariant && m_Master != null && !ReferenceEquals(m_Master, this)) return m_Sprites = m_Master.Sprites();
             var found = new List<Sprite>();
@@ -95,6 +100,7 @@ namespace UnityEngine.U2D
             foreach (var packable in data?.Get("packables")?.Seq() ?? Array.Empty<YNode>())
                 m_Packables.Add(packable.AsRef());
             m_IsVariant = body.Bool("m_IsVariant");
+            m_Tag = body.Str("m_Tag", null);
             var master = body.Ref("m_MasterAtlas");
             m_Master = master.FileId != 0 ? resolver.Resolve(master, typeof(SpriteAtlas)) as SpriteAtlas : null;
             m_Sprites = null;

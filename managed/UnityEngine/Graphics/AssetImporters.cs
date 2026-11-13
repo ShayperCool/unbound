@@ -238,6 +238,7 @@ namespace Unbound.Runtime
                     if (s.SecondaryTextures != null && s.SecondaryTextures.Count > 0)
                         sprite.SetImportedSecondaryTextures(s.SecondaryTextures.ConvertAll(t => (t.Name, t.Guid)).ToArray());
                     file.Objects[s.FileId] = sprite;
+                    UnityEngine.U2D.SpriteAtlasPacking.Apply(sprite, info.Guid, s.FileId);
                 }
             }
             return file;

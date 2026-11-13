@@ -5681,14 +5681,6 @@ namespace UnityEngine.U2D
         Global = 4,
     }
     [global::Unbound.Stub]
-    public unsafe partial class SpriteAtlasManager
-    {
-        [global::Unbound.Stub] internal static void Register(global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlasManager.Register"); }
-        [global::Unbound.Stub] public SpriteAtlasManager() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlasManager.ctor"); }
-        public static event global::System.Action<string, global::System.Action<global::UnityEngine.U2D.SpriteAtlas>> atlasRequested { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlasManager.atlasRequested"); } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<global::UnityEngine.U2D.SpriteAtlas> atlasRegistered { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteAtlasManager.atlasRegistered"); } [global::Unbound.Stub] remove { } }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial struct SpriteChannelInfo
     {
         public void* buffer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteChannelInfo.buffer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.SpriteChannelInfo.buffer"); } }
