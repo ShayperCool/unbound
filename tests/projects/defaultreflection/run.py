@@ -17,9 +17,10 @@ sys.path.insert(0, str(PROBE.parents[1]))
 from probe_paths import cache_artifact_path, reference_root, run_root  # noqa: E402
 from value_probe import image_difference  # noqa: E402
 
-# A black reflection where the Editor reflects the sky differs by tens of levels over every
-# smooth surface; these bounds leave the renderers' rasterization and filtering differences.
-MEAN_BOUND = 2.0
+# Measured on NVIDIA: the engine is at mean 0.02 (worst 6) on Data. A black reflection where the
+# Editor reflects the sky differs by tens of levels over every smooth surface; the terrain layers'
+# smoothness and metallic taken as the sliders alone give mean 0.58 (worst 9).
+MEAN_BOUND = 0.25
 OVER_BOUND = 0.01
 # The images' size (DefaultReflectionProbe.Width x Height).
 REFERENCE_PIXELS = 320 * 180

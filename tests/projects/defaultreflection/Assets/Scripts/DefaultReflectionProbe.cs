@@ -14,7 +14,9 @@ using UnityEngine.SceneManagement;
 /// surface shader), a nearer row of rough ones (the Standard shader, metallic at smoothness 0 and
 /// 0.25 and dielectric at 0; the surface shader, metallic at 0 and dielectric at 0.25), and behind
 /// them two flat terrains with one metallic, smooth layer, the left one drawn with its splat
-/// material, the right one with its base map. No light: what the surfaces show is the
+/// material, the right one with its base map, and behind the spheres two small ones: a layer half
+/// metallic on a diffuse texture without alpha, and one with a constant smoothness on a texture
+/// with alpha. No light: what the surfaces show is the
 /// environment's. Writes <c>defaultreflection.jsonl</c> (per scene the default reflection, its
 /// decode values and the ambient probe's first coefficients) and one PNG per scene into
 /// <c>DEFAULT_REFLECTION_PROBE_OUT</c>, then quits.
@@ -79,6 +81,10 @@ public class DefaultReflectionProbe : MonoBehaviour
         MakeTerrain(new Vector3(-40f, -0.01f, -15f), 1000f);
         // Base map distance 0: every patch draws the base map.
         MakeTerrain(new Vector3(0f, -0.01f, -15f), 0f);
+        // Behind the spheres: a layer half metallic on a diffuse texture without alpha, and one
+        // whose smoothness is its own (the constant source) on a texture with alpha.
+        MakeTerrain(new Vector3(-10f, 0.005f, 5f), 1000f, TextureFormat.RGB24, 0.5f, 0.6f, TerrainLayerSmoothnessSource.DiffuseAlphaChannel, 9f);
+        MakeTerrain(new Vector3(1f, 0.005f, 5f), 1000f, TextureFormat.RGBA32, 0.75f, 0.3f, TerrainLayerSmoothnessSource.Constant, 9f);
     }
 
     static void Sphere(int index, Shader shader, float metallic, float smoothness)
@@ -97,16 +103,17 @@ public class DefaultReflectionProbe : MonoBehaviour
         sphere.GetComponent<Renderer>().sharedMaterial = material;
     }
 
-    static void MakeTerrain(Vector3 position, float basemapDistance)
+    static void MakeTerrain(Vector3 position, float basemapDistance, TextureFormat format = TextureFormat.RGBA32, float metallic = 1f,
+        float smoothness = 0.9f, TerrainLayerSmoothnessSource source = TerrainLayerSmoothnessSource.DiffuseAlphaChannel, float size = 40f)
     {
-        var texture = new Texture2D(4, 4, TextureFormat.RGBA32, true);
+        var texture = new Texture2D(4, 4, format, true);
         var pixels = new Color[16];
-        for (int p = 0; p < pixels.Length; p++) pixels[p] = new Color(0.8f, 0.8f, 0.8f, 1f);
+        for (int p = 0; p < pixels.Length; p++) pixels[p] = new Color(0.8f, 0.6f, 0.4f, 1f);
         texture.SetPixels(pixels);
         texture.Apply();
-        var layer = new TerrainLayer { diffuseTexture = texture, tileSize = new Vector2(8f, 8f), metallic = 1f, smoothness = 0.9f };
+        var layer = new TerrainLayer { diffuseTexture = texture, tileSize = new Vector2(8f, 8f), metallic = metallic, smoothness = smoothness, smoothnessSource = source };
         var data = new TerrainData { heightmapResolution = 33, alphamapResolution = 32, baseMapResolution = 64 };
-        data.size = new Vector3(40f, 2f, 40f);
+        data.size = new Vector3(size, 2f, size * 0.75f);
         data.terrainLayers = new[] { layer };
         var terrain = Terrain.CreateTerrainGameObject(data).GetComponent<Terrain>();
         terrain.transform.position = position;
