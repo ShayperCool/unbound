@@ -581,12 +581,13 @@ namespace Unbound.Runtime.Playables
         /// <summary>The nearest of <paramref name="t"/> and its ancestors below the Animator that
         /// is a bone of a humanoid stream's human pose (the hips or a bone below them; null:
         /// none, also on a generic rig and an optimized hierarchy), and that bone's world values
-        /// in the pose. A transform the avatar's skeleton does not hold (a prop under a hand) is
+        /// in the pose. A transform the human skeleton does not hold (a prop under a hand) is
         /// placed under the bone as the stream's pose has it this update, its own and the
         /// transforms' values between through the stream: the prop's world values follow the
         /// hand's handle, its scale included (6000.0.71f1, tests/projects/humanoid bone.prop,
         /// recorded with the macOS Editor, a job that only reads; after the job changed the pose
-        /// or read it back the same placement is taken, unmeasured).</summary>
+        /// or read it back, without a read of the bone's own handle before, and for the avatar's
+        /// other bones the same placement is taken, unmeasured).</summary>
         void HumanBoneAbove(Transform t, out Transform bone, out Vector3 position, out Quaternion rotation, out Vector3 scale)
         {
             bone = null;
