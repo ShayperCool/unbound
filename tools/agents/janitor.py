@@ -457,19 +457,19 @@ class Janitor:
                 return None
             _, allocated, reclaimable = inventory(path)
             directory = path.is_dir() and not path.is_symlink()
+            # Finish age checks before chmod changes directory ctimes.
+            if reason := self.reason(path, hours):
+                self.emit('keep', path=str(path), reason=reason)
+                return None
             if self.apply and directory:
                 # Only directories need chmod; files can share live target inodes.
                 for _, _, _, descriptor in os.fwalk(path, follow_symlinks=False):
                     os.fchmod(descriptor, stat.S_IMODE(os.fstat(descriptor).st_mode) | stat.S_IRWXU)
-            # Preparation can walk a huge tree. Check age again before taking the
-            # batch's process snapshot, with no further tree walks afterwards.
-            if reason := self.reason(path, hours):
-                self.emit('keep', path=str(path), reason=reason)
-                return None
+            identity = path.lstat()
             task = next((p.name.lower() for p in path.parents
                          if p.parent in (self.volume, self.cache.resolve()) and
                          re.fullmatch(r'q\d+', p.name, re.I)), '')
-            return path, kind, directory, task, allocated, reclaimable
+            return path, kind, directory, task, allocated, reclaimable, hours, (identity.st_dev, identity.st_ino, stat.S_IFMT(identity.st_mode))
         except FileNotFoundError:
             return None
 
@@ -489,6 +489,24 @@ class Janitor:
             self.queue_signature = signature
 
     def remove_batch(self, candidates):
+        # Directory preparation may take minutes. Do not hold an earlier file's
+        # guards across another tree walk. Tiny files still share guard scans.
+        pending, removed = [], 0
+        for candidate in candidates:
+            path = candidate[0]
+            if Path(path).is_dir() and not Path(path).is_symlink():
+                if pending:
+                    removed += self.remove_prepared_batch(pending)
+                    pending.clear()
+                removed += self.remove_prepared_batch([candidate])
+            else:
+                pending.append(candidate)
+                if len(pending) >= REMOVAL_BATCH_SIZE:
+                    removed += self.remove_prepared_batch(pending)
+                    pending.clear()
+        return removed+self.remove_prepared_batch(pending)
+
+    def remove_prepared_batch(self, candidates):
         prepared = [value for path, kind, hours in candidates
                     if (value := self.prepare_removal(path, kind, hours)) is not None]
         if not prepared:
@@ -496,7 +514,7 @@ class Janitor:
         if self.apply:
             self.refresh_guards()
         removed = 0
-        for path, kind, directory, task, allocated, reclaimable in prepared:
+        for path, kind, directory, task, allocated, reclaimable, hours, identity in prepared:
             try:
                 if self.apply:
                     # A slow removal ends guard reuse. Queue edits and new links
@@ -510,6 +528,13 @@ class Janitor:
                         continue
                     if reason := self.protection_reason(path):
                         self.emit('keep', path=str(path), reason=reason)
+                        continue
+                    current = path.lstat()
+                    if (current.st_dev, current.st_ino, stat.S_IFMT(current.st_mode)) != identity:
+                        self.emit('keep', path=str(path), reason='candidate identity changed')
+                        continue
+                    if not directory and max(current.st_mtime, current.st_ctime) >= time.time()-hours*3600:
+                        self.emit('keep', path=str(path), reason='recently modified')
                         continue
                     self.emit('removing', path=str(path), kind=kind, allocated_bytes=allocated,
                               reclaimable_bytes=reclaimable)

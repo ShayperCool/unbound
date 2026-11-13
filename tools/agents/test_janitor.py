@@ -520,13 +520,45 @@ class JanitorTests(unittest.TestCase):
             self.assertLess(time.monotonic()-start, janitor.GATE_HANDOFF_SECONDS+1)
 
     def test_batch_refreshes_expensive_guards_once_after_all_preparation(self):
-        paths = [self.directory(f'q1/old-{n}') for n in range(32)]
-        late = paths[-1]/'output'
+        root = self.directory('q1')
+        paths = [root/str(n) for n in range(32)]
+        for path in paths:
+            path.write_text('old')
+        late = paths[-1]
         with self.guards(), patch.object(janitor, 'process_paths', return_value={late}) as processes:
             self.j.apply = True
             self.assertEqual(self.j.remove_batch([(p, 'task', 24) for p in paths]), 31)
         self.assertEqual(processes.call_count, 1)
         self.assertTrue(late.exists())
+
+    def test_real_clock_old_directory_survives_permission_preparation(self):
+        path = self.directory('q1/old')
+        path.chmod(0o555)
+        self.j.apply = True
+        self.j.idle_hours = 0.000001
+        time.sleep(0.03)
+        with patch.object(janitor, 'process_paths', return_value=set()):
+            self.assertTrue(self.j.remove(path, kind='task'))
+        self.assertFalse(path.exists())
+
+    def test_write_during_other_file_preparation_is_kept(self):
+        root = self.directory('q1')
+        paths = [root/'first', root/'second']
+        for path in paths:
+            path.write_text('old')
+        original = janitor.inventory
+        def concurrent_inventory(path):
+            result = original(path)
+            if path == paths[1]:
+                paths[0].write_text('new output')
+            return result
+        self.j.apply = True
+        self.j.idle_hours = 0.000001
+        time.sleep(0.03)
+        with patch.object(janitor, 'process_paths', return_value=set()), \
+             patch.object(janitor, 'inventory', side_effect=concurrent_inventory):
+            self.assertEqual(self.j.remove_batch([(p, 'task', None) for p in paths]), 1)
+        self.assertEqual(paths[0].read_text(), 'new output')
 
     def test_batch_rechecks_queue_and_links_between_removals(self):
         paths = [self.directory(f'q1/old-{n}') for n in range(3)]
