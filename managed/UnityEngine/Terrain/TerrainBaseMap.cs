@@ -36,6 +36,8 @@ namespace UnityEngine
         float[] m_BaseMapSizes = Array.Empty<float>();
         GraphicsFormat[] m_BaseMapFormats = Array.Empty<GraphicsFormat>();
         Shader m_BaseMapShader;
+        /// <summary>What the maps were made from: the template, the data and its layers' version.</summary>
+        (Material, TerrainData, int) m_BaseMapKey;
         bool m_BaseMapsDirty;
         /// <summary>The splat passes, then the base map material: patches draw a range of them.</summary>
         Material[] m_DrawMaterials = Array.Empty<Material>();
@@ -49,6 +51,7 @@ namespace UnityEngine
             var genShader = shader != null ? shader.GetDependency("BaseMapGenShader") : null;
             if (baseShader == null || genShader == null)
             {
+                ReleaseBaseMaps();
                 m_DrawMaterials = m_Passes;
                 return;
             }
@@ -71,7 +74,11 @@ namespace UnityEngine
             Array.Copy(m_Passes, m_DrawMaterials, m_Passes.Length);
             m_DrawMaterials[m_Passes.Length] = m_BaseMaterial;
             ReadBaseMapPasses(genShader);
-            m_BaseMapsDirty = true;
+            // Heights alone leave the maps as they are; new materials still take them.
+            var key = (template, data, data.m_SplatVersion);
+            if (m_BaseMapKey != key) m_BaseMapsDirty = true;
+            m_BaseMapKey = key;
+            BindBaseMaps();
         }
 
         /// <summary>Reads the generation passes' tags: which make a base map, bound to what, of
@@ -126,11 +133,23 @@ namespace UnityEngine
                 ulong target = map.EnsureCreated();
                 foreach (var gen in m_BaseGen) Immediate.BlitWith(target, gen, i, null);
                 map.GenerateMips();
+            }
+            GfxStream.Restore(saved);
+            BindBaseMaps();
+        }
+
+        /// <summary>Binds the base maps made so far to the base material, and the _MainTex one to
+        /// the splat passes too.</summary>
+        void BindBaseMaps()
+        {
+            for (int i = 0; i < m_BaseMaps.Length; i++)
+            {
+                var map = m_BaseMaps[i];
+                if (map == null) continue;
                 m_BaseMaterial.SetTexture(m_BaseMapNames[i], map);
                 if (m_BaseMapNames[i] == "_MainTex")
                     foreach (var pass in m_Passes) pass.SetTexture(s_MainTexId, map);
             }
-            GfxStream.Restore(saved);
         }
 
         int BaseMapSize(int pass, int resolution) => Math.Max(1, (int)(m_BaseMapSizes[pass] * resolution));
