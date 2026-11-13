@@ -4,23 +4,28 @@ namespace UnityEngine.Tests
 {
     public class TransformParentingParityTests
     {
-        static bool MacArm64 => OperatingSystem.IsMacOS() && System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64;
+        static System.Runtime.InteropServices.Architecture Architecture => System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture;
+        static bool MacArm64 => OperatingSystem.IsMacOS() && Architecture == System.Runtime.InteropServices.Architecture.Arm64;
+        static bool LinuxX64 => OperatingSystem.IsLinux() && Architecture == System.Runtime.InteropServices.Architecture.X64;
 
         [Fact]
         public void SetRotationsNormalizeAsTheHostsEditor()
         {
-            // tests/projects/solverpairorder --transform-inputs raw/6 and circle-scale/0/rotated: the
-            // Linux x86_64 and macOS arm64 Editors give different last bits; each host matches its own.
+            // tests/projects/solverpairorder --transform-inputs raw/6 and circle-scale/18/rotated: the
+            // Linux x86_64 and macOS arm64 Editors give different last bits; each host matches its own
+            // (the two measured hosts; others are unmeasured).
+            if (!MacArm64 && !LinuxX64) return;
             var o = new GameObject("rotation");
             try
             {
                 o.transform.localRotation = new Quaternion(.23f, -.17f, .31f, .9f);
                 Assert.Equal(MacArm64 ? new Quaternion(.231404275f, -.171037942f, .311892718f, .9054949f)
                     : new Quaternion(.231404275f, -.171037927f, .311892718f, .905494869f), o.transform.localRotation, Exact);
-                // Euler's half-angle sines and cosines: one sincos (macOS differs from sin and cos).
-                o.transform.localRotation = Quaternion.Euler(7f, -19f, 31f);
-                Assert.Equal(MacArm64 ? new Quaternion(.0139966542f, -.17483902f, .272791237f, .9459495f)
-                    : new Quaternion(.0139966542f, -.174839f, .272791237f, .945949435f), o.transform.localRotation, Exact);
+                // Euler's half-angle sines and cosines from one sincos: on macOS separate sin and cos
+                // give the Linux values here (y, z, w one bit off the macOS Editor's).
+                o.transform.localRotation = Quaternion.Euler(30f, 16f, 38f);
+                Assert.Equal(MacArm64 ? new Quaternion(.28610307f, .0436637141f, .277356058f, .916139841f)
+                    : new Quaternion(.28610307f, .0436637066f, .2773561f, .9161398f), o.transform.localRotation, Exact);
             }
             finally { Object.DestroyImmediate(o); }
         }

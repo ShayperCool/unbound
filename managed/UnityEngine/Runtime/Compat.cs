@@ -105,7 +105,8 @@ namespace Unbound.Runtime
         /// normalized with one sum (x² + y²) + (z² + w²) for every component, and a scale's reciprocal
         /// starts from the hardware estimate with two reciprocal steps. Measured by
         /// tests/projects/solverpairorder --transform-inputs against the macOS arm64 6000.0.71f1 Editor;
-        /// x86_64 hosts keep what the Linux Editor measures. Chosen by the host's architecture.</summary>
+        /// x86_64 hosts keep what the Linux Editor measures. Chosen by the host's architecture for every
+        /// release, though measured with 6000.0.71f1 only (as the x86_64 order).</summary>
         internal static bool TransformArithmeticArm64 => System.Runtime.Intrinsics.Arm.AdvSimd.IsSupported;
 
         /// <summary>Quaternion API accumulation and axis-conversion intermediates, measured by

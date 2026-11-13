@@ -155,6 +155,8 @@ def gate(profile, label):
     for key, reason in value_probe.residuals(PROBE).items():
         scope, _, rest = key.rpartition(':')
         if scope in ('', host()) and rest.startswith(profile+'/'):
+            if rest[len(profile)+1:] in known:
+                raise SystemExit(f'floatrounding: residual {rest} is listed for all hosts and for {host()}')
             known[rest[len(profile)+1:]] = reason
     residual = [f for f in failures if f['key'] in known]
     failures = [f for f in failures if f['key'] not in known]
