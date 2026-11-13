@@ -87,7 +87,7 @@ impl PlayModeAtlases {
             names.push_str(&format!(" +{}", self.paths.len() - SHOWN));
         }
         format!(
-            "Sprite Packer mode \"{}\" packs sprite atlases before entering Play mode; Unbound does not pack them, so their sprites draw and report from their own textures, not from the packed atlas (texture, UVs, packed rects, Sprite.packed). {} atlases: {names}",
+            "Sprite Packer mode \"{}\" packs sprite atlases before entering Play mode; Unbound does not pack them, so their sprites draw and report from their own textures, not from the packed atlas (texture, UVs, packed rects, Sprite.packed). Atlases ({}): {names}",
             self.mode,
             self.paths.len()
         )
@@ -527,7 +527,7 @@ mod tests {
             .unwrap()
             .message();
         assert!(
-            message.contains("7 atlases: Assets/0.spriteatlas, "),
+            message.contains("Atlases (7): Assets/0.spriteatlas, "),
             "{message}"
         );
         assert!(message.ends_with("Assets/4.spriteatlas +2"), "{message}");

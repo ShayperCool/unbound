@@ -175,10 +175,10 @@ impl Game {
         let project = Project::open(&project.root)?;
         let runtime = ManagedRuntime::start()?;
         let runtime_state = state::initialize(&project)?;
-        if !options.edit_mode
-            && let Some(atlases) = project
-                .settings
-                .play_mode_atlases(runtime_state.db.iter().map(|asset| asset.path.as_str()))
+        // Edit-mode sessions too: they can enter Play mode (EditorApplication.EnterPlaymode).
+        if let Some(atlases) = project
+            .settings
+            .play_mode_atlases(runtime_state.db.iter().map(|asset| asset.path.as_str()))
         {
             tracing::warn!("{}", atlases.message());
         }
