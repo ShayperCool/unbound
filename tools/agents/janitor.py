@@ -255,6 +255,7 @@ class ReferenceWatch:
         self.metadata_roots = set(metadata_roots)
         self.metadata_dirty = False
         self.unresolved, self.file_moves = {}, {}
+        self.broken = False
 
     def close(self):
         if self.fd >= 0:
@@ -283,14 +284,20 @@ class ReferenceWatch:
     def relocate(self, source, destination, *, handled=True):
         # A parent rename changes the location of every descendant watch. Rescan
         # the moved tree too: existing relative links may now name new targets.
-        for descriptor, previous in self.directories.items():
-            if inside(previous, source):
-                self.directories[descriptor] = destination/previous.relative_to(source)
-                if previous == source and handled:
-                    self.handled_moves.add(descriptor)
+        updates = [(descriptor, previous) for descriptor, previous in self.directories.items()
+                   if inside(previous, source)]
+        if len({previous for _, previous in updates}) != len(updates):
+            self.broken = True
+            raise ReferenceChanged('ambiguous replacement directory identity; remaining work retained')
+        for descriptor, previous in updates:
+            self.directories[descriptor] = destination/previous.relative_to(source)
+            if previous == source and handled:
+                self.handled_moves.add(descriptor)
         self.invalidated.update((source, destination))
 
     def poll(self):
+        if self.broken:
+            raise ReferenceChanged('reference monitoring is invalid; remaining work retained')
         pending = set()
         while True:
             try:
@@ -303,6 +310,7 @@ class ReferenceWatch:
                 name = os.fsdecode(data[offset+16:offset+16+length].split(b'\0', 1)[0])
                 offset += 16+length
                 if mask & self.OVERFLOW:
+                    self.broken = True
                     raise ReferenceChanged('reference change queue overflowed; batch deferred')
                 directory = self.directories.get(descriptor)
                 if directory is None or any(inside(directory, p) for p in self.retired):
@@ -630,6 +638,7 @@ class Janitor:
                                         watcher=self.watch, index_root=self.cache, prune=False)
             except ReferenceChanged:
                 if full:
+                    self.watch.broken = True
                     raise
                 links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_budget(),
                                         watcher=self.watch, index_root=self.cache, prune=False)

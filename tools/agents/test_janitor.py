@@ -723,6 +723,25 @@ class JanitorTests(unittest.TestCase):
                 self.j.remove(target, kind='task')
         self.assertTrue(target.exists())
 
+    def test_replacement_name_ambiguity_stops_reconciliation(self):
+        target = self.directory('q1/target')
+        source = self.directory('moving')
+        destination = self.volume/'moved'
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            source.rename(destination)
+            source.mkdir()
+            # A retry can register the replacement before draining the rename.
+            self.j.watch.add(source)
+            self.j.apply = True
+            with self.assertRaises(janitor.ReferenceChanged):
+                self.j.refresh_links()
+            (destination/'new-link').symlink_to(target/'output')
+            with self.assertRaises(janitor.ReferenceChanged):
+                self.j.remove(target, kind='task')
+        self.assertTrue(target.exists())
+
     def test_run_budget_returns_explicit_partial_summary(self):
         with self.guards():
             code = janitor.main(['--repo', str(self.repo), '--dry-run', '--run-seconds', '0.000001'])
