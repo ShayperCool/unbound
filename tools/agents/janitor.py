@@ -69,7 +69,7 @@ def gone(error):
     return error.errno in (errno.ENOENT, errno.ESRCH, errno.ENOTDIR)
 
 
-def process_paths(proc=Path('/proc'), *, uid=None, privileged=True):
+def process_paths(proc=Path('/proc'), *, uid=None, privileged=True, exclude_pid=None):
     """Open descriptors, mapped files, cwd, executables and pending commands.
 
     Other users cannot access private caches. Fail closed for unreadable processes
@@ -81,7 +81,7 @@ def process_paths(proc=Path('/proc'), *, uid=None, privileged=True):
     found = set()
     for process in proc.glob('[0-9]*'):
         try:
-            if process.stat().st_uid != uid or int(process.name) == os.getpid():
+            if process.stat().st_uid != uid or int(process.name) in (os.getpid(), exclude_pid):
                 continue
             cwd = Path(os.readlink(process/'cwd'))
             paths = [cwd, Path(os.readlink(process/'exe'))]
@@ -114,7 +114,7 @@ def process_paths(proc=Path('/proc'), *, uid=None, privileged=True):
                 # with a narrow read-only helper if passwordless sudo is available;
                 # otherwise fail closed instead of silently ignoring that process.
                 command = ['sudo', '-n', sys.executable, str(Path(__file__).resolve()),
-                           '--process-paths-only', str(uid)]
+                           '--process-paths-only', str(uid), '--exclude-process', str(os.getpid())]
                 result = subprocess.run(command, capture_output=True, text=True, timeout=30)
                 if result.returncode == 0:
                     return {Path(value) for value in json.loads(result.stdout)}
@@ -238,7 +238,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                     raise
                 visited.add(identity)
                 for entry in entries:
-                    path = Path(entry.path)
+                    path = directory/entry.name
                     if entry.is_symlink():
                         # Keep lexical and resolved destinations. Lexical paths
                         # protect intermediate links in a chain too.
@@ -534,6 +534,7 @@ def before_gate(repo):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--process-paths-only', type=int, help=argparse.SUPPRESS)
+    parser.add_argument('--exclude-process', type=int, help=argparse.SUPPRESS)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument('--apply', action='store_true')
     parser.add_argument('--dry-run', action='store_true', help='default; mutually exclusive with --apply')
@@ -543,7 +544,7 @@ def main(argv=None):
     parser.add_argument('--protect', type=Path, action='append', default=[])
     args = parser.parse_args(argv)
     if args.process_paths_only is not None:
-        print(json.dumps(sorted(str(p) for p in process_paths(uid=args.process_paths_only, privileged=False))))
+        print(json.dumps(sorted(str(p) for p in process_paths(uid=args.process_paths_only, privileged=False, exclude_pid=args.exclude_process))))
         return 0
     if args.apply and args.dry_run or min(args.idle_hours, args.run_days, args.scan_seconds) <= 0:
         parser.error('choose one mode and positive retention/scan limits')

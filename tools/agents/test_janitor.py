@@ -190,6 +190,20 @@ class JanitorTests(unittest.TestCase):
         finally:
             process.communicate(input='', timeout=5)
 
+    def test_collector_does_not_count_its_own_open_descriptor(self):
+        path = self.root/'collector-open-file'
+        with path.open('w'):
+            self.assertNotIn(path, janitor.process_paths())
+
+    def test_orphan_target_removed_with_real_process_inspection(self):
+        target = self.directory('builds/targets/orphan-real-proc')
+        (target/'.unbound-source-root').write_text(str(self.root/'gone'))
+        inspect = janitor.process_paths
+        with self.guards(), patch.object(janitor, 'process_paths', side_effect=inspect):
+            self.j.apply = True
+            self.j.collect()
+        self.assertFalse(target.exists())
+
     def test_symlink_created_after_discovery_keeps_run(self):
         run = self.directory('unbound-validation/runs/probe-20261101-old')
         with self.guards():
