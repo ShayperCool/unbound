@@ -43,6 +43,10 @@ Unbound's choices, unmeasured: a sprite without a texture in Sliced or Tiled mod
 extra texture coordinate channels of the old vertices; a pixels per unit of 0 or less given to the
 internal Create keeps 100.
 
+During an import, a copy instantiated with no parent or under an asset GameObject (also one of
+another asset, and also when a scene is named) becomes an asset GameObject; Unbound's model,
+unmeasured for those cases.
+
 Not covered: the physics shape the importer can generate (`generatePhysicsShape`, which traces a
 rendered texture through `SpriteUtility.GenerateOutline`), the UI SVGImage drawn on a canvas, and
 the 2D Sprite package's editor windows (Unbound has none; their registration hooks are kept).
