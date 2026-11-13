@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/assetloaded/run.py gate"],
+  "summary": "assetloaded: .*",
+  "engine_paths": ["managed/UnityEngine/Editor/AssetDatabase.cs"]
+}

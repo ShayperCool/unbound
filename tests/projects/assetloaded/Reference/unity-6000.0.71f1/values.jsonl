@@ -1,0 +1,10 @@
+{"k":"referenced.loaded","v":"True"}
+{"k":"unreferenced.loaded","v":"False"}
+{"k":"missing.loaded","v":"False"}
+{"k":"unreferenced.afterLoad","v":"True"}
+{"k":"unreferenced.afterUnload","v":"False"}
+{"k":"unreferenced.reference","v":"null"}
+{"k":"referenced.afterUnload","v":"False"}
+{"k":"referenced.sceneReference","v":"null"}
+{"k":"referenced.afterAccess","v":"False"}
+{"k":"complete","v":true}

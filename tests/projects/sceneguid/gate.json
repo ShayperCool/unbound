@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/sceneguid/run.py gate"],
+  "summary": "sceneguid: .*",
+  "engine_paths": ["managed/UnityEngine/Core/SceneManagement.cs"]
+}
