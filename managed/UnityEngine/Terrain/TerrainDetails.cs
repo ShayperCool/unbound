@@ -301,9 +301,10 @@ namespace UnityEngine
         /// the patch, then columns). A sample's generator is seeded by noiseSeed (or, when it is
         /// zero, the samples a patch holds × the layer's place in the patch's order) + the sample's
         /// index in the patch + 1013 × the patch's index (patches column by column). Instance count
-        /// mode: the sample's value is its count. Coverage mode: the count comes from
-        /// <see cref="CoverageCandidates"/>, and each candidate is kept when a draw is at most the
-        /// coverage squared. Each instance then draws three numbers: its place in the sample, and
+        /// mode: the sample's value is its count (with useDensityScaling, the value × the density
+        /// plus an ordered dither, rounded down). Coverage mode: the count comes from
+        /// <see cref="CoverageCandidates"/> (with useDensityScaling, of the instances per unit ×
+        /// the density), and each candidate is kept when a draw is at most the coverage squared. Each instance then draws three numbers: its place in the sample, and
         /// its turn. The place is a point of the R2 sequence (numbered from (seed mod 4095) + 2 +
         /// 255 × (rowOffset + the sample's row), one more per candidate) moved by positionJitter ×
         /// (draw - 0.5) / √count in x and z and wrapped into the sample, or with
@@ -330,6 +331,16 @@ namespace UnityEngine
         internal bool PlacePatchMeshDetails(in DetailLayerSetup layer, int patchX, int patchY, float density, int placedLayers, int verticesPerInstance, ref int usedVertices, List<Matrix4x4> into)
             => Place(layer, patchX, patchY, density, true, placedLayers, verticesPerInstance, ref usedVertices, into, out _);
 
+        /// <summary>The 8 × 8 ordered dither of instance counts scaled by the density (1 to 64; a
+        /// sample at column x and row y of its patch reads [(x mod 8) × 8 + y mod 8]).</summary>
+        static readonly float[] DensityDither =
+        {
+            1, 49, 13, 61, 4, 52, 16, 64, 33, 17, 45, 29, 36, 20, 48, 32,
+            9, 57, 5, 53, 12, 60, 8, 56, 41, 25, 37, 21, 44, 28, 40, 24,
+            3, 51, 15, 63, 2, 50, 14, 62, 35, 19, 47, 31, 34, 18, 46, 30,
+            11, 59, 7, 55, 10, 58, 6, 54, 43, 27, 39, 23, 42, 26, 38, 22,
+        };
+
         /// <summary>A patch mesh's largest vertex count.</summary>
         const int MaxPatchMeshVertices = 0x10000;
 
@@ -354,6 +365,10 @@ namespace UnityEngine
             float sampleUv = 1f / (patches * perPatch);
             int patchTerm = 1013 * (patchX * patches + patchY);
             int seedBase = prototype.m_NoiseSeed != 0 ? prototype.m_NoiseSeed : perPatch * perPatch * slot;
+            // useDensityScaling: the density scales the coverage, and the counts with an ordered
+            // dither over 8 × 8 samples of the patch.
+            bool scaled = prototype.m_UseDensityScaling != 0;
+            float scale = scaled ? density : 1f;
             Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
             for (int ly = 0; ly < perPatch; ly++)
                 for (int lx = 0; lx < perPatch; lx++)
@@ -370,8 +385,10 @@ namespace UnityEngine
                     if (coverage)
                     {
                         keep = value / 255f * (value / 255f);
-                        count = CoverageCandidates(layer.PerUnit, cellX, cellZ, ref random, lx, ly);
+                        count = CoverageCandidates(scale * layer.PerUnit, cellX, cellZ, ref random, lx, ly);
                     }
+                    else if (scaled)
+                        count = (int)((DensityDither[(lx & 7) * 8 + (ly & 7)] + -0.5f) * (1f / 64f) + scale * value);
                     else count = value;
                     if (patchMesh && verticesPerInstance > 0)
                         count = Math.Min(count, (MaxPatchMeshVertices - usedVertices) / verticesPerInstance);

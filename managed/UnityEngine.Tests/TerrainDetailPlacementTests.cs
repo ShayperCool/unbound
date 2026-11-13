@@ -414,6 +414,57 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>useDensityScaling: the density scales counts through an ordered dither (each
+        /// 8 × 8 block keeps the density's share) and coverage's instances per unit; prototypes
+        /// without it ignore the density.</summary>
+        [Theory]
+        [InlineData(0.25f)]
+        [InlineData(0.6f)]
+        public void TheDensityScalesOnlyPrototypesThatAskForIt(float density)
+        {
+            var texture = Own(new Texture2D(4, 4));
+            var data = Data(DetailScatterMode.InstanceCountMode,
+                new DetailPrototype { prototypeTexture = texture, noiseSeed = 3, useDensityScaling = true },
+                new DetailPrototype { prototypeTexture = texture, noiseSeed = 4 });
+            Fill(data, 0, 2);
+            Fill(data, 1, 2);
+            // An 8 × 8 patch of value 2: (2 × density + dither) rounded down over the 64 dither steps.
+            int expected = 0;
+            for (int step = 1; step <= 64; step++) expected += (int)((step - 0.5f) / 64f + 2f * density);
+            Assert.Equal(expected, data.ComputeDetailInstanceTransforms(1, 1, 0, density, out _).Length);
+            Assert.Equal(128, data.ComputeDetailInstanceTransforms(1, 1, 1, density, out _).Length);
+            var coverage = Data(DetailScatterMode.CoverageMode, new DetailPrototype { prototypeTexture = texture, noiseSeed = 3, useDensityScaling = true, density = 3f });
+            Fill(coverage, 0, 255);
+            int full = coverage.ComputeDetailInstanceTransforms(1, 1, 0, 1f, out _).Length;
+            int thinned = coverage.ComputeDetailInstanceTransforms(1, 1, 0, density, out _).Length;
+            Assert.InRange(thinned, (int)(full * density * density * 0.5f), (int)(full * density * density * 1.6f) + 4);
+        }
+
+        /// <summary>A terrain's quality-dependent settings read the level's overrides unless the
+        /// terrain ignores quality settings.</summary>
+        [Fact]
+        public void TerrainSettingsFollowTheQualityOverrides()
+        {
+            var go = Own(new GameObject("overrides"));
+            var terrain = go.AddComponent<Terrain>();
+            terrain.detailObjectDensity = 0.8f;
+            terrain.heightmapPixelError = 9f;
+            var previous = QualitySettings.terrainQualityOverrides;
+            try
+            {
+                QualitySettings.terrainQualityOverrides = TerrainQualityOverrides.DetailDensity;
+                QualitySettings.terrainDetailDensityScale = 0.3f;
+                Assert.Equal(0.3f, terrain.detailObjectDensity);
+                Assert.Equal(9f, terrain.heightmapPixelError);
+                terrain.ignoreQualitySettings = true;
+                Assert.Equal(0.8f, terrain.detailObjectDensity);
+            }
+            finally
+            {
+                QualitySettings.terrainQualityOverrides = previous;
+            }
+        }
+
         sealed class Errors : ILogHandler
         {
             readonly LogType m_Type;
