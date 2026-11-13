@@ -1041,11 +1041,14 @@ measure):
   UpdateEnvironment, the other skybox, environment-data and ambient-probe cases, nor the other
   scenes), directionality, and a render pipeline; and a device other than the NVIDIA OpenGL Core
   one both the Editor and Unbound ran on.
-- A renderer whose realtime lightmap index a script sets while the scene has no realtime GI:
-  the Editor draws a terrain so with `DYNAMICLIGHTMAP_ON` and light added that does not depend
-  on its baked lightmap (tests/projects/terrainlightmaps cases 12 to 14 and 19, measured on the
-  NVIDIA OpenGL Core device only), from no realtime lightmap; Unbound draws the baked part and
-  warns.
+- A terrain whose realtime lightmap index a script sets while the scene has no realtime GI: the
+  Editor draws it with `DYNAMICLIGHTMAP_ON` (tests/projects/terrainlightmaps case 19) and with
+  light added that does not depend on its baked lightmap (cases 12 and 14 the same, on two
+  lightmaps; per unit of the albedo the baked-only pixels imply, a near grey of about 0.11 in
+  linear) and is smaller with directional lightmaps (case 13, about 0.045), from no realtime
+  lightmap and from a source not identified (measured on the NVIDIA OpenGL Core device only, one
+  albedo); Unbound draws the baked part and warns. A mesh renderer so is not measured: Unbound
+  draws its baked part without a warning.
 - Devices: drawn through Vulkan the material textures lack each chart's last corner texel, and
   the Editor's own Vulkan capture differs from its OpenGL Core one; no rule covers both yet
   ([Material inputs](#material-inputs)).
