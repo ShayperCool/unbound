@@ -160,7 +160,7 @@ None, CompareDepths, the first None target again, and RawDepth. Its four channel
 the target's own sampler, another target's comparing sampler, an inline comparing sampler,
 and that other target's own sampler. The same bound texture therefore distinguishes stored
 depth from a comparison, and changing bindings checks reused sampler and bind-group state.
-All controls match: OpenGL Core 539/549 with ten declared residuals; Vulkan 549/549.
+All controls match: OpenGL Core 547/557 with ten declared residuals; Vulkan 557/557.
 
 Unity 6000.0 documents [shadowSamplingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTextureDescriptor-shadowSamplingMode.html),
 [RawDepth](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.ShadowSamplingMode.RawDepth.html)
@@ -170,3 +170,11 @@ through non-comparing state is observed behavior in these captures, not a portab
 guarantee. The native sampler opt-in is limited to NVIDIA OpenGL and Vulkan; other drivers
 are rejected. The release profile carries explicit texture state; unmeasured releases retain
 the legacy comparison path. OpenGL compute histories remain separate and unresolved.
+
+Eight `DepthState.pool.*` controls repeat the sampling-state changes through
+[GetTemporary](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture.GetTemporary.html)
+and ReleaseTemporary. Each depth lease is fully filled before sampling, so None and
+CompareDepths give different results. The binding controls request false, true, false and
+true for bindMS and record each returned descriptor. Temporary pool identity preserves both
+settings. These controls extend each reference from 549 to 557 rows without changing earlier
+rows; both devices have two identical NVIDIA captures.
