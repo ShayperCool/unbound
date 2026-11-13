@@ -79,6 +79,7 @@ public sealed class FloatRoundingProbe : MonoBehaviour
         // Conversions.
         Value("convert/toDouble", Bits(Controls.ToDouble(16777216f, 1f)));
         Value("convert/toInt", Controls.ToInt(16777216f, 1f).ToString(CultureInfo.InvariantCulture));
+        Value("convert/checkedInt", Controls.CheckedInt(16777216f, 1f).ToString(CultureInfo.InvariantCulture));
         Value("convert/toLong", Controls.ToLong(16777216f, 1f).ToString(CultureInfo.InvariantCulture));
         Value("convert/mixedDouble", Bits(Controls.MixedDouble(16777216f, 1f, -16777216f)));
         Value("convert/intToFloat", Bits(Controls.IntToFloat(16777217, -16777216f)));
@@ -146,6 +147,7 @@ public sealed class FloatRoundingProbe : MonoBehaviour
         Control("generic/method", Controls.GenericMethod, Wide);
         Control("generic/classField", Controls.GenericField, Wide);
         Control("generic/classMethod", Controls.GenericClassMethod, Wide);
+        Control("generic/nullable", Controls.Nullable, Wide);
 
         // Compiler-generated state.
         Control("state/closure", Controls.Closure, Wide);
@@ -177,11 +179,84 @@ public sealed class FloatRoundingProbe : MonoBehaviour
         foreach (var method in typeof(Controls).GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
         {
             var body = method.GetMethodBody();
-            if (body != null) Value("il/" + method.Name, Convert.ToBase64String(body.GetILAsByteArray()));
+            if (body != null) Value("il/" + method.Name, Disassemble(method, body.GetILAsByteArray()));
         }
-#if UNITY_EDITOR
         Value("codeOptimization", UnityEditor.Compilation.CompilationPipeline.codeOptimization.ToString());
-#endif
+    }
+
+    static Dictionary<short, System.Reflection.Emit.OpCode> s_OpCodes;
+
+    /// <summary>A method body as opcodes with their operands, metadata tokens replaced by the
+    /// names they resolve to (token values depend on the compilation, the instructions do not).</summary>
+    static string Disassemble(MethodBase method, byte[] il)
+    {
+        if (s_OpCodes == null)
+        {
+            s_OpCodes = new Dictionary<short, System.Reflection.Emit.OpCode>();
+            foreach (var field in typeof(System.Reflection.Emit.OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                var code = (System.Reflection.Emit.OpCode)field.GetValue(null);
+                s_OpCodes[code.Value] = code;
+            }
+        }
+        var text = new StringBuilder();
+        for (int at = 0; at < il.Length;)
+        {
+            short value = il[at] == 0xFE ? (short)(0xFE00 | il[at + 1]) : il[at];
+            at += il[at] == 0xFE ? 2 : 1;
+            var code = s_OpCodes[value];
+            if (text.Length > 0) text.Append(' ');
+            text.Append(code.Name);
+            switch (code.OperandType)
+            {
+                case System.Reflection.Emit.OperandType.InlineNone:
+                    break;
+                case System.Reflection.Emit.OperandType.ShortInlineBrTarget:
+                    text.Append(':').Append(at + 1 + (sbyte)il[at]); at += 1;
+                    break;
+                case System.Reflection.Emit.OperandType.ShortInlineI:
+                case System.Reflection.Emit.OperandType.ShortInlineVar:
+                    text.Append(':').Append(il[at]); at += 1;
+                    break;
+                case System.Reflection.Emit.OperandType.InlineVar:
+                    text.Append(':').Append(BitConverter.ToUInt16(il, at)); at += 2;
+                    break;
+                case System.Reflection.Emit.OperandType.InlineBrTarget:
+                    text.Append(':').Append(at + 4 + BitConverter.ToInt32(il, at)); at += 4;
+                    break;
+                case System.Reflection.Emit.OperandType.InlineI:
+                    text.Append(':').Append(BitConverter.ToInt32(il, at)); at += 4;
+                    break;
+                case System.Reflection.Emit.OperandType.ShortInlineR:
+                    text.Append(':').Append(Bits(BitConverter.ToSingle(il, at))); at += 4;
+                    break;
+                case System.Reflection.Emit.OperandType.InlineI8:
+                    text.Append(':').Append(BitConverter.ToInt64(il, at)); at += 8;
+                    break;
+                case System.Reflection.Emit.OperandType.InlineR:
+                    text.Append(':').Append(Bits(BitConverter.ToDouble(il, at))); at += 8;
+                    break;
+                case System.Reflection.Emit.OperandType.InlineSwitch:
+                {
+                    int count = BitConverter.ToInt32(il, at), end = at + 4 + 4 * count;
+                    for (int i = 0; i < count; i++) text.Append(':').Append(end + BitConverter.ToInt32(il, at + 4 + 4 * i));
+                    at = end;
+                    break;
+                }
+                case System.Reflection.Emit.OperandType.InlineString:
+                    text.Append(":string"); at += 4;
+                    break;
+                default:
+                {
+                    var member = method.Module.ResolveMember(BitConverter.ToInt32(il, at), method.DeclaringType.GetGenericArguments(),
+                        method.IsGenericMethod ? method.GetGenericArguments() : null);
+                    text.Append(':').Append(member is Type type ? type.Name : member.DeclaringType.Name + "::" + member.Name);
+                    at += 4;
+                    break;
+                }
+            }
+        }
+        return text.ToString();
     }
 
     // ------------------------------------------------------------------ randomized operands
@@ -315,6 +390,7 @@ public static class Controls
 
     public static double ToDouble(float a, float b) => (double)(a + b) - 16777216.0;
     public static int ToInt(float a, float b) => (int)(a + b) - 16777216;
+    public static int CheckedInt(float a, float b) => checked((int)(a + b) - 16777216);
     public static long ToLong(float a, float b) => (long)(a + b) - 16777216L;
     public static double MixedDouble(float a, float b, float c) => (a + b) + (double)c;
     public static float IntToFloat(int i, float c) => i + c;
@@ -377,6 +453,7 @@ public static class Controls
     public static float GenericNoInlining(float a, float b, float c) => PassNoInlining(a + b) + c;
     public static float GenericMethod(float a, float b, float c) => Pass(a + b) + c;
     public static float GenericField(float a, float b, float c) { FloatBox<float>.Value = a + b; return FloatBox<float>.Value + c; }
+    public static float Nullable(float a, float b, float c) { float? n = a + b; return n.Value + c; }
     public static float GenericClassMethod(float a, float b, float c) => FloatBox<float>.Echo(a + b) + c;
 
     public static float Closure(float a, float b, float c) { float t = a + b; Func<float> f = () => t; return t + c + f() * 0f; }

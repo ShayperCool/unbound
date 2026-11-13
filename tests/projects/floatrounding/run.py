@@ -106,8 +106,6 @@ def gate(profile, label):
                                str(project), '--no-watch', '--headless', '600'],
                               env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     expected = value_probe.read_values(reference(profile))
-    # The Editor-only key: the engine's mode is the one it was given.
-    expected.pop('codeOptimization', None)
     try:
         actual = value_probe.read_values(capture/value_probe.VALUES)
     except (OSError, ValueError) as error:
