@@ -92,8 +92,8 @@ internal static class HotReload
                         return Restart(response, $"the sources {spec.Name} was loaded from are not stored", watch);
                     // The baseline is the image the runtime loaded: Unbound may have adapted the
                     // compiler's output (see GameDomain.ImageFilter), and a delta's rows follow the
-                    // loaded image's. Its symbols are the compiler's: Edit and Continue finds locals
-                    // and lambdas in them by syntax offsets, which adapting does not change.
+                    // loaded image's. Its debug information is the compiler's PDB: Edit and Continue
+                    // finds locals and lambdas in it by syntax offsets, which adapting does not change.
                     var pdb = Path.ChangeExtension(loadedDll, ".pdb");
                     var image = File.ReadAllBytes(string.IsNullOrEmpty(assembly.Location) ? loadedDll : assembly.Location);
                     s_Enc.Begin(spec.Name, loadedCompilation, image, File.ReadAllBytes(pdb));
