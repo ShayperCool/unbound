@@ -224,7 +224,6 @@ namespace UnityEngine
             if (prototypes.Length == 0 || data.detailResolution == 0) return;
             var rects = BuildDetailAtlas(prototypes, out var white);
             int patches = data.detailPatchCount;
-            bool legacy = QualitySettings.useLegacyDetailDistribution;
             var layers = new TerrainData.DetailLayerSetup[prototypes.Length];
             for (int layer = 0; layer < prototypes.Length; layer++) layers[layer] = data.PrepareDetailLayer(layer);
             var placements = m_Placements;
@@ -237,7 +236,9 @@ namespace UnityEngine
                     {
                         float density = terrain.detailObjectDensity;
                         // Instanced meshes, layer after layer in the patch's order, the sequence's
-                        // row numbering running on from layer to layer.
+                        // row numbering running on from layer to layer: the second instanced layer
+                        // of a patch is drawn off the places ComputeDetailInstanceTransforms reports
+                        // (matches the Unity 6000.0.71f1 Editor, tests/projects/grass Instanced).
                         int rows = 0;
                         foreach (var index in order)
                         {
@@ -258,7 +259,7 @@ namespace UnityEngine
                                 if (!setup.IsValid || prototype.useInstancing || prototype.renderMode != mode) continue;
                                 var mesh = prototype.usePrototypeMesh ? PrototypeMesh(prototype.prototype, out _) : null;
                                 int perInstance = mesh != null ? mesh.vertexCount : 4;
-                                if (data.PlacePatchMeshDetails(setup, px, py, density, placed, perInstance, ref used, placements) && !legacy)
+                                if (data.PlacePatchMeshDetails(setup, px, py, density, placed, perInstance, ref used, placements))
                                     placed++;
                                 if (placements.Count == 0) continue;
                                 if (mesh != null) BakeMeshDetails(builders[(int)DetailKind.Mesh] ??= new MeshBuilder(), prototype, placements, white);
