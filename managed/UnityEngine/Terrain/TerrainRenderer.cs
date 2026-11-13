@@ -98,6 +98,10 @@ namespace UnityEngine
             internal LODGroup Group;
             internal Vector3 Reference;
             internal float Size;
+            /// <summary>A legacy tree's draw state (null for other trees), and its prefab
+            /// renderer's shadow casting.</summary>
+            internal LegacyTree Legacy;
+            internal Rendering.ShadowCastingMode Shadows;
         }
 
         readonly List<TreePart> m_Trees = new List<TreePart>();
@@ -113,8 +117,32 @@ namespace UnityEngine
             var origin = terrain.GetPosition();
             if (m_TreesData != data || m_TreesVersion != data.m_TreesVersion || m_TreesOrigin != origin) BuildTrees(terrain, data, origin);
             float distance = terrain.treeDistance;
-            foreach (var part in m_Trees)
+            // Legacy trees: meshes up to the billboard start and the fade, across the ground.
+            float start = Mathf.Min(distance, terrain.treeBillboardDistance);
+            float fade = Mathf.Min(terrain.treeCrossFadeLength, distance - start);
+            if (!(fade >= 0f)) fade = 0f;
+            float meshes = (start + fade) * (start + fade), trees = distance * distance;
+            float offsetFactor = 0.1f;
+            if (m_Atlas != null && !float.IsNaN(m_AtlasPitch)) BillboardFactors(m_AtlasPitch, out _, out offsetFactor);
+            m_Billboards.Clear();
+            for (int index = 0; index < m_Trees.Count; index++)
             {
+                var part = m_Trees[index];
+                if (part.Legacy != null)
+                {
+                    float dx = part.Position.x - camera.Position.x, dz = part.Position.z - camera.Position.z;
+                    float across = dx * dx + dz * dz;
+                    if (across >= trees) continue;
+                    if (across >= meshes && m_Atlas != null)
+                    {
+                        // One entry per tree: its first part stands for it.
+                        if (part.Mesh != null) m_Billboards.Add((across, index));
+                        continue;
+                    }
+                    part.Renderer.renderingLayerMask = renderingLayerMask;
+                    AddLegacyMesh(part, Mathf.Sqrt(across), start, fade, camera.Forward, offsetFactor, camera, into);
+                    continue;
+                }
                 if ((part.Position - camera.Position).sqrMagnitude > distance * distance) continue;
                 if (part.Group != null)
                 {
@@ -126,20 +154,26 @@ namespace UnityEngine
                 part.Renderer.renderingLayerMask = renderingLayerMask;
                 FrameBuilder.AddMeshDraws(part.Renderer, part.Mesh, part.Model, Color.white, camera, into);
             }
+            AddBillboards(terrain, camera, distance, into);
         }
 
         void BuildTrees(Terrain terrain, TerrainData data, Vector3 origin)
         {
             foreach (var part in m_Trees) part.Renderer.OnEngineDestroy();
             m_Trees.Clear();
+            DestroyBillboards();
             m_TreesData = data;
             m_TreesVersion = data.m_TreesVersion;
             m_TreesOrigin = origin;
             var prototypes = data.treePrototypes;
             var size = data.size;
-            foreach (var prototype in prototypes)
-                if (prototype?.prefab != null && NamesBillboardShader(prototype.prefab))
-                    Warn($"tree prototype '{prototype.prefab.name}' has materials made for billboards: Unbound draws it as its meshes at every distance, without billboards past treeBillboardDistance.");
+            m_Legacy = new LegacyPrototype[prototypes.Length];
+            bool anyLegacy = false;
+            for (int i = 0; i < prototypes.Length; i++)
+                anyLegacy |= (m_Legacy[i] = LegacyOf(prototypes[i])) != null;
+            if (anyLegacy) LayOutAtlas();
+            if (anyLegacy && Object.FindAnyObjectByType<WindZone>() != null)
+                Warn("terrain trees drawn with the Soft Occlusion or Tree Creator shaders are not bent by wind zones in Unbound.");
             foreach (var tree in data.treeInstances)
             {
                 if (tree.prototypeIndex < 0 || tree.prototypeIndex >= prototypes.Length) continue;
@@ -147,6 +181,11 @@ namespace UnityEngine
                 if (prefab == null) continue;
                 var root = prefab.transform;
                 var world = origin + Vector3.Scale(tree.position, size);
+                if (m_Legacy[tree.prototypeIndex] is LegacyPrototype legacy)
+                {
+                    m_Trees.Add(LegacyPart(terrain, legacy, prefab, tree, world, origin));
+                    continue;
+                }
                 var placement = Matrix4x4.TRS(world, Quaternion.AngleAxis(tree.rotation * Mathf.Rad2Deg, Vector3.up), new Vector3(tree.widthScale, tree.heightScale, tree.widthScale))
                     * Matrix4x4.TRS(Vector3.zero, root.rotation, root.localScale);
                 var group = prefab.GetComponent<LODGroup>();
@@ -393,6 +432,7 @@ namespace UnityEngine
             base.OnEngineDestroy();
             foreach (var part in m_Trees) part.Renderer.OnEngineDestroy();
             m_Trees.Clear();
+            DestroyBillboards();
             foreach (var m in m_Passes) if (m != null) DestroyImmediate(m);
             m_Passes = Array.Empty<Material>();
             DestroyBaseMaterials();
