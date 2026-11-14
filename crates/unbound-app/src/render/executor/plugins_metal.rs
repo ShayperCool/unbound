@@ -154,8 +154,8 @@ fn warn_outside(what: &str) {
 /// a render texture's pass, over the screen and outside callbacks) there is no descriptor until it
 /// asks for an encoder again, which is over the screen with its contents not loaded (nativegfx
 /// `plugin.state.*.camera2.2`, `*.mutate`, `*.screen`, `*.outside`: load 0); committing the
-/// command buffer keeps the target (`*.commitrt.2`). Unity's next draw into the target or a new
-/// target takes it back (unmeasured).
+/// command buffer keeps the target (`*.commitrt.2`). Unity's next draw into the target, a new
+/// target or a new frame takes it back (unmeasured).
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub(super) enum Redirect {
     /// The current target.
@@ -1063,7 +1063,8 @@ impl UnityRenderer {
         scope.current.close();
         scope.buffer.commit();
         // An encoder over the screen is a use of it: the frame's screen goes on from what the
-        // plugin drew (begun in an earlier event, the executor started the screen before this one).
+        // plugin drew (unmeasured; begun in an earlier event, the executor started the screen
+        // before this one).
         self.screen_touched |= scope.used_screen;
         // What it drew into a multisampled target's samples reaches the resolved image and its
         // retained copy as the OpenGL path's does (the executor resolves again).

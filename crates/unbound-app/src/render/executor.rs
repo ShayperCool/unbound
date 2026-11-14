@@ -3590,7 +3590,7 @@ impl UnityRenderer {
         #[cfg(target_os = "macos")]
         if end_frame && self.metal_plugins.is_some() {
             plugins_metal::commit_outside();
-            // Scripts' encoders until the next frame are over the screen as this one left it.
+            // Scripts' encoders are over the screen of the latest frame or callback.
             self.publish_metal_screen();
         }
         #[cfg(target_os = "linux")]
