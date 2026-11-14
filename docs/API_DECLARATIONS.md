@@ -112,18 +112,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After frame-rate serialization |
+| Category | Before Q410 | After scene value equality |
 | --- | ---: | ---: |
 | Attributes | 938 | 22 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 4 |
 | Layout | 68 | 61 |
-| Interfaces | 65 | 54 |
+| Interfaces | 65 | 53 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 161 |
+| Total | 1,332 | 160 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -378,7 +378,8 @@ slice reduced the queue from 370 to 341. The GUI payload slice removes another
 32 entries. Physics material and text adapters remove three more interface entries,
 and XR value payloads remove nine layout/interface entries. LocationInfo and the retired
 AnimationInfo value remove two more layout entries. FrameRate serialization removes one
-field annotation entry, leaving 161 exact entries, each with a
+field annotation entry. Scene value equality removes one extra interface, leaving
+160 exact entries, each with a
 specific follow-up reason. No allow-list is regenerated from a passing report.
 The generator format changes with the comparison policy and the committed stubs
 are regenerated from the selected release. Existing probe references and strict
@@ -401,7 +402,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-asset-interface-adapters` | 30 | PhysicsMaterial, PhysicsMaterial2D and TextAsset are migrated to external adapters with load/copy/coverage controls in `assetadapters`. Other asset types still need migration; retain mixer subasset restrictions. |
 | `Q410-built-in-inspector-registration` | 3 | Target-specific single/multiple-object inspector behavior before registry annotations. |
 | `Q410-enumerator-current-state` | 1 | Writable cached Current integrated with MoveNext, Reset and completion. |
-| `Q410-generic-equality-interfaces` | 1 | Scene comparer migration preserving collection equality and hashing. |
+| `Q410-generic-equality-interfaces` | 0 | Done by `scenevalues`: generic collections use Scene object equality/hash behavior after removal of the extra interface; internal registries already use their own handles and keys. |
 | `Q410-job-container-payloads` | 5 | Mesh/light-query ownership and safety metadata used by the job scheduler. |
 | `Q410-linked-pool-counter` | 1 | Counter state integrated with the existing shared pool implementation. |
 | `Q410-measured-lookup-policies` | 11 | Retain the eleven direct/inherited discovery policies and their controls. |
@@ -488,3 +489,16 @@ marker; overwrite preserves its seeded value while changing an ordinary sibling.
 marked and unmarked custom-struct controls distinguish field visibility from nested type
 eligibility. The existing shared serializer handles both contexts. One field annotation
 exception is removed without changing type eligibility or the serializer's policy.
+
+
+## Scene value equality
+
+`tests/projects/scenevalues` records 274 exact Unity 6000.0.71f1 values. Scene exposes
+no IEquatable interface. Its existing object equality, operators and hash code use its
+handle, including retained values after unload. Generic equality, hash sets and dictionaries
+preserve that identity through copies, duplicate values, integer limits and removals.
+Copied live scenes compare equal; distinct live scenes remain distinct, and a fresh value
+looked up by name retrieves the same dictionary entry. Internal engine registries already
+use SceneHandle, integer keys or SceneData references, so they require no new comparer.
+The extra interface and its duplicate explicit method are removed. Scene loading and
+lifetime behavior remain outside this declaration change.

@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/scenevalues/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Core/SceneManagement.cs",
+    "managed/UnityEngine/Runtime/SceneRegistry.cs"
+  ]
+}

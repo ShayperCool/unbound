@@ -415,13 +415,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEngine.SceneManagement.Scene",
-    "Message": "type interfaces is System.IEquatable`1<UnityEngine.SceneManagement.Scene>, Unity's is ",
-    "Reason": "Q410-generic-equality-interfaces: Scene generic equality is used by engine collections. Move internal callers to an explicit comparer while preserving handle equality and hashing before removing the extra IEquatable declaration."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.Shader",
     "Message": "type interfaces is Unbound.Runtime.Instantiation+ICloneable, Unity's is ",
     "Reason": "Q410-asset-interface-adapters: UnityEngine.Shader is loaded or cloned through engine helper interfaces. Move those calls to external type adapters before removing the extra interfaces; preserve existing serialized fields, ownership and independent clone state."

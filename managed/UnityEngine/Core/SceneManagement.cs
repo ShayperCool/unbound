@@ -7,7 +7,7 @@ using UnityEngine.Events;
 namespace UnityEngine.SceneManagement
 {
     [Serializable]
-    public partial struct Scene : IEquatable<Scene>
+    public partial struct Scene
     {
         [global::UnityEngine.@SerializeField] [global::UnityEngine.@HideInInspector] internal int m_Handle;
 
@@ -105,7 +105,6 @@ namespace UnityEngine.SceneManagement
         public static bool operator !=(Scene lhs, Scene rhs) => lhs.m_Handle != rhs.m_Handle;
         public override int GetHashCode() => m_Handle;
         public override bool Equals(object other) => other is Scene s && s.m_Handle == m_Handle;
-        bool IEquatable<Scene>.Equals(Scene other) => other.m_Handle == m_Handle;
 
         internal enum LoadingState
         {
