@@ -150,8 +150,15 @@
 {"k":"plugin.state.stencil.actions.mutate","v":"state.stencil.actions step=mutate load=0 store=4"}
 {"k":"plugin.peek.drawn","v":"peek step=drawn before=1"}
 {"k":"plugin.endpeek.drawn","v":"endpeek step=drawn encoder=render after=0"}
+{"k":"plugin.endpeek.ended","v":"endpeek step=ended encoder=render after=0"}
+{"k":"plugin.peek.ended","v":"peek step=ended before=0"}
+{"k":"plugin.state.plugindrew","v":"state step=plugindrew main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
+{"k":"plugin.state.color0.plugindrew","v":"state.color0 step=plugindrew texture=other resolve=none level=0 slice=0 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.plugindrew","v":"state.color0.actions step=plugindrew load=2 store=4"}
+{"k":"plugin.draw.plugindrew","v":"draw step=plugindrew drawn=1"}
+{"k":"plugin.peek.plugindrew","v":"peek step=plugindrew before=1"}
 {"k":"plugin.peek.cleared","v":"peek step=cleared before=0"}
-{"k":"plugin.again.again","v":"again step=again first=render second=render"}
+{"k":"plugin.again.again","v":"again step=again first=render pass=1 second=render"}
 {"k":"plugin.state.execute.plain","v":"state step=execute.plain main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
 {"k":"plugin.state.color0.execute.plain","v":"state.color0 step=execute.plain texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
 {"k":"plugin.state.color0.actions.execute.plain","v":"state.color0.actions step=execute.plain load=1 store=4"}

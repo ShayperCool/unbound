@@ -359,7 +359,7 @@ static void mutate_again(void)
     pass.colorAttachments[0].clearColor = MTLClearColorMake(1, 0, 0, 1);
     s_v1->EndCurrentCommandEncoder();
     id<MTLCommandEncoder> second = s_v1->CurrentCommandEncoder();
-    record("again step=%s first=%s second=%s", s_step, encoder_kind(first), encoder_kind(second));
+    record("again step=%s first=%s pass=%d second=%s", s_step, encoder_kind(first), pass ? 1 : 0, encoder_kind(second));
 }
 
 static void on_event(int id)

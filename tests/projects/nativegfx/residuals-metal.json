@@ -25,6 +25,7 @@
   "plugin.state.color0.actions.camera2",
   "plugin.state.color0.actions.execute",
   "plugin.state.color0.actions.execute.msaa",
+  "plugin.state.color0.actions.plugindrew",
   "plugin.state.depth.actions.camera",
   "plugin.state.depth.actions.camera2",
   "plugin.state.stencil.actions.camera",

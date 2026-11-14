@@ -309,6 +309,26 @@ public class NativeGfxMetalProbe : MonoBehaviour
                     NativeGfxMtl_Step("drawn");
                     Graphics.ExecuteCommandBuffer(cmd);
                 }
+                // Events after one that ended the encoder, and after one that drew through it.
+                using (var cmd = new CommandBuffer { name = "ended" })
+                {
+                    cmd.SetRenderTarget(drawn);
+                    cmd.ClearRenderTarget(true, true, Color.blue);
+                    cmd.DrawMesh(quad, Matrix4x4.identity, colored, 0, 0);
+                    cmd.IssuePluginEvent(callback, eventBase + EndPeek);
+                    cmd.IssuePluginEvent(callback, eventBase + Peek);
+                    NativeGfxMtl_Step("ended");
+                    Graphics.ExecuteCommandBuffer(cmd);
+                }
+                using (var cmd = new CommandBuffer { name = "plugin drew" })
+                {
+                    cmd.SetRenderTarget(drawn);
+                    cmd.ClearRenderTarget(true, true, Color.blue);
+                    cmd.IssuePluginEvent(callback, eventBase + Draw);
+                    cmd.IssuePluginEvent(callback, eventBase + Peek);
+                    NativeGfxMtl_Step("plugindrew");
+                    Graphics.ExecuteCommandBuffer(cmd);
+                }
                 // Only cleared: the same.
                 using (var cmd = new CommandBuffer { name = "cleared" })
                 {

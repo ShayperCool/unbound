@@ -362,10 +362,11 @@ extern "C" fn end_current_command_encoder() {
 }
 
 /// The descriptor the current encoder was begun from (as the header says): where something was
-/// drawn into the target since it was set the Editor's encoder exists, so the encoder is begun
-/// here; after only a clear, and after the plugin ended an encoder, there is none (nil). Measured
-/// on the macOS Editor: nativegfx `plugin.peek.drawn` (1), `plugin.peek.cleared` and
-/// `plugin.mutate` (0), `plugin.endpeek.drawn` (0 after the end).
+/// drawn into the target since it was set, or a plugin's encoder was left begun, the Editor's
+/// encoder exists, so the encoder is begun here; after only a clear, and once the plugin ended
+/// the encoder (in this event or an earlier one), there is none (nil). Measured on the macOS
+/// Editor: nativegfx `plugin.peek.drawn`, `plugin.peek.plugindrew` (1), `plugin.peek.cleared`,
+/// `plugin.mutate`, `plugin.endpeek.drawn` and `plugin.peek.ended` (0).
 extern "C" fn current_render_pass_descriptor() -> Object {
     let begin = with_scope(|s| s.encoder.is_none() && s.drawn && s.params.is_some());
     if begin == Some(true) {
@@ -395,6 +396,7 @@ extern "C" fn commit_current_command_buffer() -> Object {
             encoder.endEncoding();
             s.pass = None;
         }
+        s.drawn = false;
         let next = queue().and_then(|q| q.commandBuffer())?;
         let committed = std::mem::replace(&mut s.buffer, next);
         committed.commit();
@@ -784,6 +786,9 @@ impl UnityRenderer {
         let Some(scope) = SCOPE.with(|scope| scope.borrow_mut().take()) else {
             return;
         };
+        // The Editor's encoder lasts into the next event where the plugin left it begun or did
+        // not end the one a draw began (nativegfx `plugin.peek.plugindrew`, `plugin.peek.ended`).
+        self.plugin_target_drawn = scope.drawn || scope.encoder.is_some();
         if let Some(encoder) = scope.encoder {
             encoder.endEncoding();
         }
