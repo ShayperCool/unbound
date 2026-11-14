@@ -151,6 +151,15 @@ public class UitkProbe : MonoBehaviour
             }
             DestroyImmediate(material);
         }
+        var flags = new Material(Shader.Find("Probe/Fetch/Flags"));
+        Graphics.Blit(null, target, flags);
+        var active = RenderTexture.active;
+        RenderTexture.active = target;
+        readback.ReadPixels(new Rect(0, 0, 1, 1), 0, 0);
+        readback.Apply();
+        RenderTexture.active = active;
+        Row(rows, "fetch.Flags", readback.GetPixel(0, 0));
+        DestroyImmediate(flags);
     }
 
     static void SurfaceIndices(StringBuilder rows, RenderTexture target, Texture2D readback)
