@@ -336,7 +336,7 @@ movement and a retained destination, including one already reached. They record
 staleness before reading position, after that read and after the next AI update.
 The same-position Warp control requires synchronization even with no coordinate
 difference. Two GPU Editor repeats agree byte for byte, and all previous 30,843
-reference rows remain an unchanged byte prefix. All 64 added rows match. These
+reference rows remain an unchanged byte prefix, SHA-256 `368aa077937bd6083df76e867e046cc03c87396af27fea0bba01acfbe0585dc1`. All 64 added rows match. These
 mechanisms use Compat for 6000.0.71f1; other releases retain their previous,
 unmeasured reports and cancellation of the completed destination request.
 
