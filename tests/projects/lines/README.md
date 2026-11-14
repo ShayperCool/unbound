@@ -298,7 +298,7 @@ variable-width TransformZ controls distinguish the renderer's frame and sampled 
 The Unity 6000.0 [LineRenderer.shadowBias](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LineRenderer-shadowBias.html)
 and [TrailRenderer.shadowBias](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TrailRenderer-shadowBias.html)
 contracts express bias relative to each segment's width. Two independent GPU captures
-reproduce all 2,201 previous record bytes and all 15 previous images. Publish the disjoint
+reproduce all 2,201 previous record bytes and all 12 previous images. Publish the disjoint
 48-record, 28-image extension with:
 
     python3 tests/projects/lines/miter_reference.py --release 6000.0.71f1 --label L --shadow --receipt ~/.cache/unbound/lines-shadow-receipt.json
