@@ -172,32 +172,34 @@ namespace UnityEngine
     [Serializable]
     public sealed partial class GUIStyle
     {
-        [SerializeField] string m_Name = "";
-        [SerializeField] GUIStyleState m_Normal = new GUIStyleState();
-        [SerializeField] GUIStyleState m_Hover = new GUIStyleState();
-        [SerializeField] GUIStyleState m_Active = new GUIStyleState();
-        [SerializeField] GUIStyleState m_Focused = new GUIStyleState();
-        [SerializeField] GUIStyleState m_OnNormal = new GUIStyleState();
-        [SerializeField] GUIStyleState m_OnHover = new GUIStyleState();
-        [SerializeField] GUIStyleState m_OnActive = new GUIStyleState();
-        [SerializeField] GUIStyleState m_OnFocused = new GUIStyleState();
-        [SerializeField] RectOffset m_Border = new RectOffset();
-        [SerializeField] RectOffset m_Margin = new RectOffset();
-        [SerializeField] RectOffset m_Padding = new RectOffset();
-        [SerializeField] RectOffset m_Overflow = new RectOffset();
-        [SerializeField] Font m_Font;
-        [SerializeField] int m_FontSize;
-        [SerializeField] FontStyle m_FontStyle;
-        [SerializeField] TextAnchor m_Alignment;
-        [SerializeField] bool m_WordWrap;
-        [SerializeField] bool m_RichText = Compat.DefaultConstructorStateMeasured;
-        [SerializeField] TextClipping m_TextClipping;
-        [SerializeField] ImagePosition m_ImagePosition;
-        [SerializeField] Vector2 m_ContentOffset;
-        [SerializeField] float m_FixedWidth;
-        [SerializeField] float m_FixedHeight;
-        [SerializeField] bool m_StretchWidth = true;
-        [SerializeField] bool m_StretchHeight;
+        [NonSerialized] string m_Name = "";
+        [NonSerialized] GUIStyleState m_Normal = new GUIStyleState();
+        [NonSerialized] GUIStyleState m_Hover = new GUIStyleState();
+        [NonSerialized] GUIStyleState m_Active = new GUIStyleState();
+        [NonSerialized] GUIStyleState m_Focused = new GUIStyleState();
+        [NonSerialized] GUIStyleState m_OnNormal = new GUIStyleState();
+        [NonSerialized] GUIStyleState m_OnHover = new GUIStyleState();
+        [NonSerialized] GUIStyleState m_OnActive = new GUIStyleState();
+        [NonSerialized] GUIStyleState m_OnFocused = new GUIStyleState();
+        [NonSerialized] RectOffset m_Border = new RectOffset();
+        [NonSerialized] RectOffset m_Margin = new RectOffset();
+        [NonSerialized] RectOffset m_Padding = new RectOffset();
+        [NonSerialized] RectOffset m_Overflow = new RectOffset();
+        [NonSerialized] Font m_Font;
+        [NonSerialized] int m_FontSize;
+        [NonSerialized] FontStyle m_FontStyle;
+        [NonSerialized] TextAnchor m_Alignment;
+        [NonSerialized] bool m_WordWrap;
+        [NonSerialized] bool m_RichText = Compat.DefaultConstructorStateMeasured;
+        [NonSerialized] TextClipping m_TextClipping;
+        [NonSerialized] ImagePosition m_ImagePosition;
+        [NonSerialized] Vector2 m_ContentOffset;
+        [NonSerialized] float m_FixedWidth;
+        [NonSerialized] float m_FixedHeight;
+        [NonSerialized] bool m_StretchWidth = true;
+        [NonSerialized] bool m_StretchHeight;
+
+        [NonSerialized] bool m_IsSDF;
 
         static GUIStyle s_None;
 
@@ -238,6 +240,7 @@ namespace UnityEngine
             m_FixedHeight = other.m_FixedHeight;
             m_StretchWidth = other.m_StretchWidth;
             m_StretchHeight = other.m_StretchHeight;
+            m_IsSDF = other.m_IsSDF;
         }
 
         static RectOffset Copy(RectOffset o) => o == null ? new RectOffset() : new RectOffset(o.left, o.right, o.top, o.bottom);
@@ -627,11 +630,11 @@ namespace UnityEngine
         [SerializeField] GUIStyle m_window;
         [SerializeField] GUIStyle m_horizontalSlider;
         [SerializeField] GUIStyle m_horizontalSliderThumb;
-        [SerializeField] GUIStyle m_horizontalSliderThumbExtent;
+        [NonSerialized] GUIStyle m_horizontalSliderThumbExtent;
         [SerializeField] GUIStyle m_verticalSlider;
         [SerializeField] GUIStyle m_verticalSliderThumb;
-        [SerializeField] GUIStyle m_verticalSliderThumbExtent;
-        [SerializeField] GUIStyle m_SliderMixed;
+        [NonSerialized] GUIStyle m_verticalSliderThumbExtent;
+        [NonSerialized] GUIStyle m_SliderMixed;
         [SerializeField] GUIStyle m_horizontalScrollbar;
         [SerializeField] GUIStyle m_horizontalScrollbarThumb;
         [SerializeField] GUIStyle m_horizontalScrollbarLeftButton;

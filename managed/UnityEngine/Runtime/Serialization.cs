@@ -21,7 +21,7 @@ namespace Unbound.Runtime
         Bounds, BoundsInt, Matrix4x4, LayerMask, Hash128,
         /// <summary>A PropertyName: written as its string.</summary>
         PropertyName,
-        AnimationCurve, Gradient, RectOffset,
+        AnimationCurve, Gradient, RectOffset, GuiStyleState,
         /// <summary>A [Serializable] class or struct written field by field.</summary>
         Composite,
         Array,
@@ -80,8 +80,24 @@ namespace Unbound.Runtime
 
         internal static void ClearCache() => s_Members.Clear();
 
+        static readonly Lazy<SerializedMember[]> s_GuiStateMembers = new Lazy<SerializedMember[]>(() => Build(typeof(GUIStyleState), true));
+
         /// <summary>The serialized fields of a type, base class fields first, in declaration order.</summary>
-        internal static SerializedMember[] Members(Type type) => s_Members.GetOrAdd(type, Build);
+        internal static SerializedMember[] Members(Type type, bool guiStatePayload = false) =>
+            guiStatePayload ? s_GuiStateMembers.Value : s_Members.GetOrAdd(type, t => Build(t));
+
+        internal static bool IsComposite(Shape shape) => shape == Shape.Composite || shape == Shape.GuiStyleState;
+
+        // GUIStyle's managed fields cache views of its serialized payload. Keep that schema
+        // shared by scene loading, JSON and cloning instead of relying on field annotations.
+        static readonly string[] s_GuiStyleFields = {
+            "m_Name", "m_Normal", "m_Hover", "m_Active", "m_Focused", "m_OnNormal", "m_OnHover", "m_OnActive", "m_OnFocused",
+            "m_Border", "m_Margin", "m_Padding", "m_Overflow", "m_Font", "m_FontSize", "m_FontStyle", "m_Alignment",
+            "m_WordWrap", "m_RichText", "m_TextClipping", "m_ImagePosition", "m_ContentOffset", "m_FixedWidth", "m_FixedHeight",
+            "m_StretchWidth", "m_StretchHeight", "m_IsSDF",
+        };
+
+        internal static bool IsGuiWrapper(Type type) => type == typeof(GUIStyle) || type == typeof(GUIStyleState);
 
         /// <summary>A field's name in the settings an importer keeps in its asset's .meta file: a
         /// leading <c>m_</c> dropped and the next letter lower-cased (<c>m_SvgType</c> is written
@@ -92,8 +108,10 @@ namespace Unbound.Runtime
                 ? char.ToLowerInvariant(name[2]) + name.Substring(3)
                 : name;
 
-        static SerializedMember[] Build(Type type)
+        static SerializedMember[] Build(Type type, bool guiStatePayload = false)
         {
+            // A style state alone is an empty managed wrapper. Its payload belongs to GUIStyle.
+            if (type == typeof(GUIStyleState) && !guiStatePayload) return Array.Empty<SerializedMember>();
             var chain = new List<Type>();
             for (var t = type; t != null && t != typeof(object) && t != typeof(MonoBehaviour) && t != typeof(ScriptableObject)
                  && t != typeof(Behaviour) && t != typeof(Component) && t != typeof(Object); t = t.BaseType)
@@ -102,12 +120,17 @@ namespace Unbound.Runtime
             var members = new List<SerializedMember>();
             foreach (var t in chain)
             {
-                foreach (var field in t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+                bool guiStyle = t == typeof(GUIStyle);
+                var fields = guiStyle
+                    ? Array.ConvertAll(s_GuiStyleFields, name => t.GetField(name, flags) ?? throw new MissingFieldException(t.FullName, name))
+                    : t.GetFields(flags);
+                foreach (var field in fields)
                 {
-                    if (field.IsInitOnly || field.IsLiteral || field.IsDefined(typeof(NonSerializedAttribute), false))
+                    if (field.IsInitOnly || field.IsLiteral || (!guiStyle && field.IsDefined(typeof(NonSerializedAttribute), false)))
                         continue;
                     bool managedReference = field.IsDefined(typeof(SerializeReference), false);
-                    bool marked = field.IsPublic || field.IsDefined(typeof(SerializeField), false) || managedReference;
+                    bool marked = guiStyle || field.IsPublic || field.IsDefined(typeof(SerializeField), false) || managedReference;
                     if (!marked) continue;
                     var member = new SerializedMember { Field = field, Name = field.Name };
                     var former = field.GetCustomAttributes<FormerlySerializedAsAttribute>(false);
@@ -124,7 +147,7 @@ namespace Unbound.Runtime
                     }
                     else
                     {
-                        member.Shape = Classify(field.FieldType, 0);
+                        member.Shape = guiStyle && field.FieldType == typeof(GUIStyleState) ? Shape.GuiStyleState : Classify(field.FieldType, 0);
                         if (member.Shape == Shape.Unsupported) continue;
                         if (member.Shape == Shape.Array || member.Shape == Shape.List)
                         {
@@ -301,10 +324,10 @@ namespace Unbound.Runtime
         {
             m_ReferenceTable = body.Get("references");
             var visited = new HashSet<long>();
-            void Fields(Type owner, YNode map, int depth)
+            void Fields(Type owner, YNode map, int depth, bool guiStatePayload = false)
             {
                 if (map == null || map.Kind != YKind.Map) return;
-                foreach (var member in SerializationRules.Members(owner))
+                foreach (var member in SerializationRules.Members(owner, guiStatePayload))
                 {
                     var node = MemberNode(map, member);
                     if (node != null) Value(node, member.Field.FieldType, member.Shape, member.ElementType, member.ElementShape, depth);
@@ -312,7 +335,7 @@ namespace Unbound.Runtime
             }
             void Value(YNode node, Type valueType, Shape shape, Type element, Shape elementShape, int depth)
             {
-                if (shape == Shape.Composite) { if (depth < 10) Fields(valueType, node, depth + 1); }
+                if (SerializationRules.IsComposite(shape)) { if (depth < 10) Fields(valueType, node, depth + 1, shape == Shape.GuiStyleState); }
                 else if (shape == Shape.Array || shape == Shape.List)
                 {
                     foreach (var item in node.Seq()) Value(item, element, elementShape, null, Shape.Unsupported, depth + 1);
@@ -330,10 +353,10 @@ namespace Unbound.Runtime
             Fields(type, body, 0);
         }
 
-        internal void ReadFields(object target, Type type, YNode map, int depth)
+        internal void ReadFields(object target, Type type, YNode map, int depth, bool guiStatePayload = false)
         {
             if (map == null || map.Kind != YKind.Map) return;
-            foreach (var member in SerializationRules.Members(type))
+            foreach (var member in SerializationRules.Members(type, guiStatePayload))
             {
                 var node = MemberNode(map, member);
                 if (node == null)
@@ -390,10 +413,11 @@ namespace Unbound.Runtime
                 case Shape.Gradient:
                 case Shape.RectOffset:
                     return value ?? SerializationRules.EmptyBuiltin(shape);
+                case Shape.GuiStyleState:
                 case Shape.Composite:
                     if (depth >= 10) return value;
                     value ??= SerializationRules.Create(type);
-                    foreach (var nested in SerializationRules.Members(type))
+                    foreach (var nested in SerializationRules.Members(type, shape == Shape.GuiStyleState))
                         FillMissing(value, nested, depth + 1);
                     return value;
                 default:
@@ -469,10 +493,11 @@ namespace Unbound.Runtime
                 case Shape.AnimationCurve: return BuiltinReaders.AnimationCurve(node);
                 case Shape.Gradient: return BuiltinReaders.Gradient(node);
                 case Shape.RectOffset: return new RectOffset(node.Int("m_Left"), node.Int("m_Right"), node.Int("m_Top"), node.Int("m_Bottom"));
+                case Shape.GuiStyleState:
                 case Shape.Composite:
                 {
                     var instance = existing ?? SerializationRules.Create(type);
-                    ReadFields(instance, type, node, depth + 1);
+                    ReadFields(instance, type, node, depth + 1, shape == Shape.GuiStyleState);
                     if (instance is ISerializationCallbackReceiver receiver)
                     {
                         if (type.IsValueType)
@@ -598,9 +623,9 @@ namespace Unbound.Runtime
             }
         }
 
-        void CopyFields(object source, object target, Type type, int depth)
+        void CopyFields(object source, object target, Type type, int depth, bool guiStatePayload = false)
         {
-            foreach (var member in SerializationRules.Members(type))
+            foreach (var member in SerializationRules.Members(type, guiStatePayload))
             {
                 var value = member.Field.GetValue(source);
                 member.Field.SetValue(target, Copy(value, member.Field.FieldType, member.Shape, member.ElementType, member.ElementShape, depth));
@@ -612,7 +637,7 @@ namespace Unbound.Runtime
             if (value == null)
             {
                 // Unity never leaves a serialized class field or collection null.
-                if (shape == Shape.Composite && !type.IsValueType) return SerializationRules.Create(type);
+                if (SerializationRules.IsComposite(shape) && !type.IsValueType) return SerializationRules.Create(type);
                 if (shape == Shape.Array) return Array.CreateInstance(elementType, 0);
                 if (shape == Shape.List) return Activator.CreateInstance(type);
                 if (shape == Shape.String) return "";
@@ -644,6 +669,7 @@ namespace Unbound.Runtime
                     var r = (RectOffset)value;
                     return new RectOffset(r.left, r.right, r.top, r.bottom);
                 }
+                case Shape.GuiStyleState:
                 case Shape.Composite:
                 {
                     if (value is ISerializationCallbackReceiver before)
@@ -652,7 +678,7 @@ namespace Unbound.Runtime
                     }
                     var copy = type.IsValueType ? value : SerializationRules.Create(type);
                     if (type.IsValueType) copy = RuntimeHelpers.GetObjectValue(value);
-                    CopyFields(value, copy, type, depth + 1);
+                    CopyFields(value, copy, type, depth + 1, shape == Shape.GuiStyleState);
                     if (copy is ISerializationCallbackReceiver after)
                     {
                         try { after.OnAfterDeserialize(); } catch (Exception e) { Debug.LogException(e); }

@@ -179,8 +179,13 @@ namespace UnityEngine
                 m_Out.Append(m_Pretty ? ": " : ":");
             }
 
-            internal void WriteObject(object obj, Type type, int depth)
+            internal void WriteObject(object obj, Type type, int depth, bool guiStatePayload = false)
             {
+                if (depth == 0 && SerializationRules.IsGuiWrapper(type))
+                {
+                    m_Out.Append("{}");
+                    return;
+                }
                 if (obj is ISerializationCallbackReceiver receiver)
                 {
                     try { receiver.OnBeforeSerialize(); }
@@ -189,7 +194,7 @@ namespace UnityEngine
                 m_Out.Append('{');
                 m_Indent++;
                 bool first = true;
-                foreach (var member in SerializationRules.Members(type))
+                foreach (var member in SerializationRules.Members(type, guiStatePayload))
                 {
                     if (member.Shape == Shape.ManagedReference) continue;
                     Key(member.Name, ref first);
@@ -381,9 +386,10 @@ namespace UnityEngine
                         break;
                     }
                     case Shape.Hash128: { var v = (Hash128)value; Fields(("serializedVersion", "2"), ("Hash", v.ToString())); break; }
+                    case Shape.GuiStyleState:
                     case Shape.Composite:
                         if (depth > 10) { m_Out.Append("{}"); break; }
-                        WriteObject(value ?? SerializationRules.Create(type), value?.GetType() ?? type, depth);
+                        WriteObject(value ?? SerializationRules.Create(type), value?.GetType() ?? type, depth, shape == Shape.GuiStyleState);
                         break;
                     default:
                         // AnimationCurve, Gradient: not written by Unbound yet.
@@ -487,9 +493,10 @@ namespace UnityEngine
             }
 
             /// <summary>Fills the fields the JSON names; returns the (boxed, for structs) object.</summary>
-            internal object ReadFields(object target, Type type, JsonNode node, int depth)
+            internal object ReadFields(object target, Type type, JsonNode node, int depth, bool guiStatePayload = false)
             {
-                foreach (var member in SerializationRules.Members(type))
+                if (depth == 0 && SerializationRules.IsGuiWrapper(type)) return target;
+                foreach (var member in SerializationRules.Members(type, guiStatePayload))
                 {
                     if (member.Shape == Shape.ManagedReference) continue;
                     var value = node.Get(member.Name);
@@ -499,6 +506,8 @@ namespace UnityEngine
                         object result;
                         if (member.Shape == Shape.Array || member.Shape == Shape.List)
                             result = ReadList(value, member.Field.FieldType, member.ElementType, member.ElementShape, member.Field.GetValue(target), depth + 1);
+                        else if (type == typeof(GUIStyleState) && member.Name == "m_TextColor")
+                            result = new Color(F(value, "r"), F(value, "g"), F(value, "b"), value.Get("a") == null ? 1f : F(value, "a"));
                         else
                             result = ReadValue(value, member.Field.FieldType, member.Shape, member.Field.GetValue(target), depth + 1);
                         member.Field.SetValue(target, result);
@@ -638,11 +647,12 @@ namespace UnityEngine
                         return m;
                     }
                     case Shape.Hash128: return Hash128.Parse(node.Get("Hash")?.Text ?? "");
+                    case Shape.GuiStyleState:
                     case Shape.Composite:
                     {
                         if (node.Kind != JsonKind.Object || depth > 10) return existing;
-                        var target = existing ?? SerializationRules.Create(type);
-                        return ReadFields(target, target.GetType(), node, depth);
+                        var target = SerializationRules.IsGuiWrapper(type) ? SerializationRules.Create(type) : existing ?? SerializationRules.Create(type);
+                        return ReadFields(target, target.GetType(), node, depth, shape == Shape.GuiStyleState);
                     }
                     default:
                         return existing;

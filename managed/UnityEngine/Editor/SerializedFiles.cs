@@ -195,9 +195,9 @@ namespace Unbound.Runtime
                 m_Out.Append('\n');
             }
 
-            internal void Fields(object obj, Type type, int level)
+            internal void Fields(object obj, Type type, int level, bool guiStatePayload = false)
             {
-                foreach (var member in SerializationRules.Members(type))
+                foreach (var member in SerializationRules.Members(type, guiStatePayload))
                 {
                     if (member.Shape == Shape.ManagedReference)
                         throw new NotSupportedException($"Unbound does not write [SerializeReference] fields yet ({type.Name}.{member.Name}).");
@@ -227,17 +227,17 @@ namespace Unbound.Runtime
                     foreach (var item in list) Element(item, elementType, elementShape, level);
                     return;
                 }
-                if (shape == Shape.Composite)
+                if (SerializationRules.IsComposite(shape))
                 {
                     var composite = value ?? SerializationRules.Create(type);
-                    if (SerializationRules.Members(composite.GetType()).Length == 0)
+                    if (SerializationRules.Members(composite.GetType(), shape == Shape.GuiStyleState).Length == 0)
                     {
                         Line(level, name, "{}");
                         return;
                     }
                     Indent(level);
                     m_Out.Append(name).Append(":\n");
-                    Fields(composite, composite.GetType(), level + 1);
+                    Fields(composite, composite.GetType(), level + 1, shape == Shape.GuiStyleState);
                     return;
                 }
                 if (TryBlock(value, shape, out var block))
@@ -253,11 +253,11 @@ namespace Unbound.Runtime
             /// <summary>A sequence item, at the parent key's indentation ("- value").</summary>
             void Element(object item, Type type, Shape shape, int level)
             {
-                if (shape == Shape.Composite)
+                if (SerializationRules.IsComposite(shape))
                 {
                     var composite = item ?? SerializationRules.Create(type);
                     var start = m_Out.Length;
-                    Fields(composite, composite.GetType(), level + 1);
+                    Fields(composite, composite.GetType(), level + 1, shape == Shape.GuiStyleState);
                     if (m_Out.Length == start)
                     {
                         Indent(level);

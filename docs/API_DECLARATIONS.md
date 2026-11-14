@@ -112,9 +112,9 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After tooling policy |
+| Category | Before Q410 | After GUI payloads |
 | --- | ---: | ---: |
-| Attributes | 938 | 55 |
+| Attributes | 938 | 23 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 4 |
@@ -123,7 +123,7 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 208 |
+| Total | 1,332 | 176 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -374,7 +374,8 @@ Its four gradient aggregates and variable random seed remain queued.
 ## Remaining declaration queue
 
 The tooling slice removes 133 exact policy-only entries after the final-shapes
-slice reduced the queue from 370 to 341. It retains 208 exact entries, each with a
+slice reduced the queue from 370 to 341. The GUI payload slice removes another
+32 entries, leaving 176 exact entries, each with a
 specific follow-up reason. No allow-list is regenerated from a passing report.
 The generator format changes with the comparison policy and the committed stubs
 are regenerated from the selected release. Existing probe references and strict
@@ -388,7 +389,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-Editor-interfaces` | 11 | Window/menu/preview, request callbacks and connection/converter interface dispatch. |
 | `Q410-Editor-serialized-payloads` | 13 | Window/view/package/request fields and coupled Serializable classification. |
 | `Q410-FrameRate-serialization` | 1 | Nondefault scalar payload with root/nested overwrite controls. |
-| `Q410-GUI-serialized-payloads` | 32 | Shared GUIStyle/GUISkin wrapper serialization and clone schema. |
+| `Q410-GUI-serialized-payloads` | 0 | Done for the selected release by `guipayload`, with shared GUIStyle payloads across YAML, JSON and cloning; wrapper field annotations match the selected declarations. |
 | `Q410-ObjectIdentifier-serialization` | 1 | Empty composite eligibility that preserves initializer values during cloning. |
 | `Q410-UI-command-events` | 1 | Command/IME event pooling and propagation before the exact interest list. |
 | `Q410-UI-interfaces` | 12 | Binding notifications, panel/group ownership, animations and internal equality cleanup. |
@@ -416,3 +417,12 @@ Further runtime work remains separate from declaration debt: ObjectFactory eligi
 and window title/icon resource lookup, and NamedBuildTarget group conversion and
 constructor validation. Their presence in the public API is not a claim that the
 unmeasured runtime paths have been completed.
+
+The GUI payload slice takes the selected field annotations through StubGenerator and
+removes 32 exact exceptions. The shared serialization schema stores all eight style states,
+four offsets and scalar settings independently of the managed wrapper annotations. The
+`guipayload` reference has 43 exact controls from independent GPU captures, including
+root versus nested JSON, replacement of a supplied style payload during overwrite, YAML
+skin loading, references and independent copies. Standalone GUIStyleState remains an
+empty composite; style-owned states use the built-in payload. No persistent importer or
+cache output changes. Default-state and existing attribute references remain unchanged.

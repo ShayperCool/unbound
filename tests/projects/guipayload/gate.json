@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/guipayload/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/IMGUI/GUIStyle.cs",
+    "managed/UnityEngine/Runtime/Serialization.cs",
+    "managed/UnityEngine/Core/JsonUtility.cs"
+  ]
+}

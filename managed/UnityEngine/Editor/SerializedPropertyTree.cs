@@ -387,6 +387,7 @@ namespace Unbound.Runtime
             node.Path = ChildPath(parent, node);
             switch (shape)
             {
+                case Shape.GuiStyleState:
                 case Shape.Composite:
                 {
                     node.Kind = SerializedNodeKind.Composite;
@@ -403,7 +404,7 @@ namespace Unbound.Runtime
                     }
                     node.Value = type.IsValueType ? null : value;
                     if (nesting < MaxNesting)
-                        foreach (var member in SerializationRules.Members(type))
+                        foreach (var member in SerializationRules.Members(type, shape == Shape.GuiStyleState))
                             AddChild(node, MakeMember(node, member, member.Field.GetValue(source), ctx, nesting + 1));
                     break;
                 }
