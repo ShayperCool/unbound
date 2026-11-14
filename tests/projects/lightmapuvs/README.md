@@ -128,21 +128,17 @@ ASCII letter case and with runs of digits as numbers (`9`, `10`, `_under`, `a01`
 and FBX nodes: bytes up to `/` before numbers, numbers before `_` and letters, more digits first,
 and of names otherwise equal the longer first (`a01` before `A1`). Names that differ only in
 letter case or in where leading zeros sit at the same length are equal to this order, and the
-order the Editor's unstable sort leaves them in depends on the OS: the Linux Editor's is GNU
-libstdc++'s introsort (OrderFbx: `Alpha`, `alpha`, its file order, as up to 16 siblings are only
-insertion sorted), the macOS Editor's the LLVM libc++ quicksort of releases before LLVM 15
-(`alpha`, `Alpha`). Ties.fbx's 28 siblings end in a third order on each OS, neither the file's nor
-a stable sort's; both OS orders are reproduced exactly by these two algorithms. The reference is
-the Linux Editor's; the macOS Editor's OrderFbx and Ties orders (two identical macOS arm64
-captures; every other Names record equals the reference) are in the importer's tests
-(`crates/unbound-assets/src/model/tests.rs`). Not measured: `sortHierarchyByName` off; names with characters outside ASCII (Unbound
+order the Editor's unstable sort leaves them in is that of the Linux Editor's GNU libstdc++
+introsort (OrderFbx: `Alpha`, `alpha`, its file order, as up to 16 siblings are only insertion
+sorted; Ties.fbx's 28 siblings end in a third order, neither the file's nor a stable sort's),
+reproduced exactly on every OS. The macOS Editor's libc++ sort leaves some of them in other orders
+(`alpha`, `Alpha`), which Unbound does not reproduce (Q456). Not measured: `sortHierarchyByName` off; names with characters outside ASCII (Unbound
 folds only ASCII letter case when it joins groups); group names with tabs, repeated spaces or a
 trailing comment (Unbound joins single spaces and keeps the rest of the line); and an OBJ face
 that gives no triangle with mesh optimization off (Unbound keeps its points, as for FBX).
 
-Unbound matches all 80 Names records in names, order, vertices and triangles, on Linux the
-reference and on macOS the macOS Editor's captures (Unbound sorts as the Editor of the OS it runs
-on); the calculated
+Unbound matches all 80 Names records in names, order, vertices and triangles of the reference on
+every OS (on macOS too, where the sibling order is the Linux Editor's, Q456); the calculated
 normals of some of these slightly bent quads differ in the last float digit (at most 1e-7).
 
 ## Imported normals

@@ -3091,3 +3091,17 @@ memory modes, load and store actions, the unshared screen, the target after
 304 of 1078 format records and in default formats, sample counts, depth formats and caps, so they
 are no longer taken from the Linux measurements. Open: Intel Macs and other GPUs, the screen for
 plugin callbacks.
+
+### Q456: no per-OS emulation of the Editor's build toolchain
+
+User decision 2026-11-14: macOS runs compare against the Linux Editor's references, except for what
+the OS genuinely decides (paths, preferences, native plugins, graphics device, OS fonts), and the
+macOS build is not pulled to either Editor's values where the processor's arithmetic or the C++
+library differs. Removed: the libc++ sort of equal elements (sibling names, lightmap UV charts, GI
+systems take libstdc++'s on every OS), the one-sum rotation normalization and NEON scale
+reciprocal of transforms, the fused sums of 2D body frames, the NEON steps of imported normals'
+reciprocal (model cache VERSION 56) and the macOS overlay of the HDR texture import test. Linux
+results are unchanged. On macOS against the Linux references: solverpairorder `--transform-inputs`
+0 failures (120,484 exact), geometryframe2d 0 failures (as on Linux), textureimport one HDR level
+in Gamma and Android off in its last bits, lightmapuvs normals 211/420 cases exact with 67 cases of
+last-bit differences.
