@@ -118,7 +118,8 @@ preserving all 12,514 earlier raw rows, for 12,706 current rows. The comparison 
 12,439 exact rows, 267 differing reference rows, zero missing rows and zero extra implementation rows.
 Small resolves 107 existing queue entries and adds three exact initialized-context gaps,
 giving 269 entries with the same 50 variable policies. Q437 then matches the default
-polygon's two rows (12,441 exact, 265 differing, 267 entries). Two variable observations happen
+polygon's two rows (12,441 exact, 265 differing, 267 entries). Q443's native rotation of a
+matrix matches the zero matrix's `Matrix4x4.rotation` row, whose entry goes (266 entries). Two variable observations happen
 to equal this implementation snapshot; their policies remain unresolved.
 
 The five Q411 part 2 slices remove 764 existing queue entries and add 1,101

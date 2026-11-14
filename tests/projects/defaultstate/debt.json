@@ -1501,19 +1501,6 @@
       }
     },
     {
-      "key": "UnityEngine.Matrix4x4/Property/UnityEngine.Matrix4x4/rotation",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Quaternion{x=-0.159217164;y=-0.384384394;z=-0.384384364;w=0.824103832}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Quaternion{x=0;y=0;z=0;w=1}"
-      }
-    },
-    {
       "key": "UnityEngine.MeshCollider/Property/UnityEngine.Collider/GeometryHolder",
       "module": "UnityEngine.PhysicsModule",
       "reason": "Q411 typed collider geometry remains unimplemented. Correct factory and material state do not supply its dimensions and shape payload; returning only the fresh type enum would conceal the missing mechanism. Keep this exact discrepancy for typed geometry and assignment controls.",
