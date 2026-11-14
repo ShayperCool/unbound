@@ -146,3 +146,15 @@ rules. Unbound uses a callback that leaves plugin-owned storage alive.
 References: tests/projects/nativegfx `externalOwnedGL.*`, recorded twice with the Unity
 6000.0.71f1 GPU Editor on NVIDIA. Cube and volume sampling, copies and wrapper destruction
 are covered alongside renderer-owned aliases and existing 2D imports.
+
+## OpenGL mirror-once wrapping (`native-gl-mirror-clamp.patch`)
+
+The GLES adapter caches support for OpenGL 4.4 mirror-clamp or the ARB/EXT extension.
+Core's existing mirror-clamp query exposes that capability on GLES as well as Vulkan.
+The existing per-axis opt-in then sets GL_MIRROR_CLAMP_TO_EDGE on native sampler objects;
+ordinary address modes use the existing mapping. Core rejects unsupported opt-ins and the
+renderer retains its existing Mirror approximation there. No shader or coordinate rewrite is needed.
+
+Reference: Unity 6000.0.71f1 tests/projects/samplerstates `MirrorWrap.own.MirrorOnce.*`,
+recorded twice on NVIDIA. Each volume axis samples beyond both edges, with distinct Clamp
+and Mirror controls. The existing Vulkan mirror-clamp path is unchanged.

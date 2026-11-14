@@ -72,10 +72,9 @@ Unbound: `run.py check` compares an Unbound capture (`--force-glcore`, or `--for
 `--device vulkan`) with the device's reference. `residuals.json` and `residuals-vulkan.json`
 list the remaining cases and their causes. Texture-owned non-comparing depth state now reads
 stored depth on the measured NVIDIA devices. Vulkan has no remaining scalar residuals; OpenGL
-Core retains three compute comparisons, four unsupported comparison-plus-Load cases, and three
-MirrorOnce controls. D16 uses a normalized 16-bit
-color copy so its linear filtering keeps the measured depth precision. OpenGL Core retains the existing `MirrorOnce` approximation as `Mirror`; Vulkan uses
-native mirror-clamp-to-edge where the device enables it. A depth buffer of 16 bits is stored as 16 bits
+Core retains three compute comparisons and four unsupported comparison-plus-Load cases.
+D16 uses a normalized 16-bit color copy so its linear filtering keeps the measured depth
+precision. OpenGL Core and Vulkan use native mirror-clamp-to-edge where the device enables it. A depth buffer of 16 bits is stored as 16 bits
 without stencil, as in the Editor.
 
 `Stencil.<target>.*` (last): a target of two texels cleared, its left texel drawn with stencil 1,
@@ -131,14 +130,16 @@ inside and outside the mirrored interval. Texture-owned Clamp and Mirror control
 edge clamping from repeated reflection. The inline PointMirrorOnce sampler uses the same
 coordinates with a texture whose own mode is Clamp. On Vulkan the inline and texture-owned
 MirrorOnce states reflect around zero and clamp at either edge. OpenGL Core ignores the
-inline state and uses the texture's own state; its three texture-owned MirrorOnce rows retain
-the existing declared approximation. Both 489-row references preserve all 477 earlier rows,
+inline state and uses the texture's own state. Its three texture-owned MirrorOnce rows now
+match native mirror-clamp sampling on all axes. Both 489-row references preserve all 477 earlier rows,
 from two identical captures per device on Unity 6000.0.71f1, NVIDIA RTX 4060 only.
 
 Contract: [TextureWrapMode.MirrorOnce](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextureWrapMode.MirrorOnce.html)
 defines reflection around zero followed by edge clamping and requires checking device support.
-The native Vulkan opt-in requires the enabled mirror-clamp extension; other backend creation
-rejects that option. The zero-option path and ordinary samplers retain their validation.
+The Vulkan opt-in requires the enabled mirror-clamp extension. The OpenGL opt-in checks
+version 4.4 or the ARB/EXT mirror-clamp extension once when the device starts. Unsupported
+contexts reject the native option and retain the renderer's existing Mirror approximation. The zero-option
+path and ordinary samplers retain their validation.
 
 `D16Filter.*` compares D16 depth, R16 UNorm holding the same stored integers, and float
 textures holding either the quantized endpoints or the original endpoints. Nine coordinates

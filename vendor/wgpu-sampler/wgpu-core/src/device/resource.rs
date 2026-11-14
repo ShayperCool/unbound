@@ -2255,6 +2255,10 @@ impl Device {
         if let Some(device) = raw.downcast_ref::<hal::vulkan::Device>() {
             return Some(device.sampler_mirror_clamp());
         }
+        #[cfg(gles)]
+        if let Some(device) = raw.downcast_ref::<hal::gles::Device>() {
+            return Some(device.sampler_mirror_clamp());
+        }
         let _ = raw;
         None
     }

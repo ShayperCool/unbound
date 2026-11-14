@@ -1151,23 +1151,39 @@ fn a_stage_binds_the_contexts_texture_units() {
     assert_eq!(read(&device, &queue, &target)[5], [248, 128, 124, 255]);
 }
 
-/// The Vulkan-only native opt-in must fail validation on OpenGL, while ordinary sampler
-/// creation and the zero-option native path keep working on that same device.
+/// Native mirror-clamp follows the context's capability on each axis. Ordinary samplers
+/// and the zero-option path remain valid whether or not that capability is present.
 #[test]
-fn native_mirror_clamp_is_rejected_on_opengl() {
+fn native_mirror_clamp_follows_opengl_support() {
     let Some((device, _queue)) = gl_device() else {
         return;
     };
-    assert_eq!(device.native_sampler_mirror_clamp(), None);
-    let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
-    let rejected =
-        device.create_sampler_with_native_options(&Default::default(), 0.0, [true, false, false]);
-    assert!(rejected.is_some());
-    let error = bevy::tasks::block_on(scope.pop()).expect("unsupported native option must fail");
-    assert!(
-        error.to_string().contains("mirror-clamp-to-edge"),
-        "{error}"
-    );
+    let supported = device
+        .native_sampler_mirror_clamp()
+        .expect("OpenGL capability query");
+    for axes in [
+        [true, false, false],
+        [false, true, false],
+        [false, false, true],
+        [true; 3],
+    ] {
+        let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let sampler = device.create_sampler_with_native_options(&Default::default(), 0.0, axes);
+        assert!(sampler.is_some());
+        let error = bevy::tasks::block_on(scope.pop());
+        if supported {
+            assert!(
+                error.is_none(),
+                "supported mirror-clamp {axes:?}: {error:?}"
+            );
+        } else {
+            let error = error.expect("unsupported native option must fail");
+            assert!(
+                error.to_string().contains("mirror-clamp-to-edge"),
+                "{error}"
+            );
+        }
+    }
     let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
     let _ordinary = device.create_sampler(&Default::default());
     let _native = device.create_sampler_with_native_options(&Default::default(), 0.0, [false; 3]);

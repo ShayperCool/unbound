@@ -317,6 +317,8 @@ struct AdapterShared {
     snorm8_renderable: bool,
     /// Unbound: `GL_MAX_TEXTURE_LOD_BIAS` on desktop OpenGL (sampler LOD bias), else `None`.
     max_lod_bias: Option<f32>,
+    /// Native mirror-once wrapping, checked once for this context.
+    sampler_mirror_clamp: bool,
 }
 
 /// Unbound: `glTextureView(texture, target, origtexture, internalformat, minlevel, numlevels,
@@ -341,6 +343,7 @@ impl fmt::Debug for AdapterShared {
             desktop_image_formats: _,
             snorm8_renderable: _,
             max_lod_bias: _,
+            sampler_mirror_clamp: _,
             max_msaa_samples,
         } = self;
         f.debug_struct("AdapterShared")

@@ -123,6 +123,11 @@ impl CompilationContext<'_> {
 }
 
 impl super::Device {
+    /// Whether the context supports native mirror-once wrapping.
+    pub fn sampler_mirror_clamp(&self) -> bool {
+        self.shared.sampler_mirror_clamp
+    }
+
     /// Unbound: the sampler LOD bias range (`GL_MAX_TEXTURE_LOD_BIAS`), desktop OpenGL only.
     pub fn sampler_lod_bias_limit(&self) -> Option<f32> {
         self.shared.max_lod_bias
@@ -1273,31 +1278,20 @@ impl crate::Device for super::Device {
 
         let (min, mag) =
             conv::map_filter_modes(desc.min_filter, desc.mag_filter, desc.mipmap_filter);
+        let address_mode = |axis: usize| {
+            if desc.mirror_clamp[axis] {
+                glow::MIRROR_CLAMP_TO_EDGE
+            } else {
+                conv::map_address_mode(desc.address_modes[axis])
+            }
+        };
 
         unsafe { gl.sampler_parameter_i32(raw, glow::TEXTURE_MIN_FILTER, min as i32) };
         unsafe { gl.sampler_parameter_i32(raw, glow::TEXTURE_MAG_FILTER, mag as i32) };
 
-        unsafe {
-            gl.sampler_parameter_i32(
-                raw,
-                glow::TEXTURE_WRAP_S,
-                conv::map_address_mode(desc.address_modes[0]) as i32,
-            )
-        };
-        unsafe {
-            gl.sampler_parameter_i32(
-                raw,
-                glow::TEXTURE_WRAP_T,
-                conv::map_address_mode(desc.address_modes[1]) as i32,
-            )
-        };
-        unsafe {
-            gl.sampler_parameter_i32(
-                raw,
-                glow::TEXTURE_WRAP_R,
-                conv::map_address_mode(desc.address_modes[2]) as i32,
-            )
-        };
+        unsafe { gl.sampler_parameter_i32(raw, glow::TEXTURE_WRAP_S, address_mode(0) as i32) };
+        unsafe { gl.sampler_parameter_i32(raw, glow::TEXTURE_WRAP_T, address_mode(1) as i32) };
+        unsafe { gl.sampler_parameter_i32(raw, glow::TEXTURE_WRAP_R, address_mode(2) as i32) };
 
         if let Some(border_color) = desc.border_color {
             let border = match border_color {

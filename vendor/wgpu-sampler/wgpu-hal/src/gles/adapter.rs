@@ -748,6 +748,10 @@ impl super::Adapter {
         let copy_image =
             full_ver.is_some_and(|v| v >= (4, 3)) || extensions.contains("GL_ARB_copy_image");
         // Unbound: sampler LOD bias, desktop OpenGL only (`GL_TEXTURE_LOD_BIAS`).
+        let sampler_mirror_clamp = full_ver.is_some_and(|v| v >= (4, 4))
+            || extensions.contains("GL_ARB_texture_mirror_clamp_to_edge")
+            || extensions.contains("GL_EXT_texture_mirror_clamp")
+            || extensions.contains("EXT_texture_mirror_clamp");
         let max_lod_bias = full_ver
             .is_some()
             .then(|| unsafe { gl.get_parameter_f32(glow::MAX_TEXTURE_LOD_BIAS) });
@@ -1048,6 +1052,7 @@ impl super::Adapter {
                     desktop_image_formats,
                     snorm8_renderable,
                     max_lod_bias,
+                    sampler_mirror_clamp,
                 }),
             },
             info: Self::make_info(vendor, renderer, version),

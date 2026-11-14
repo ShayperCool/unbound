@@ -9,10 +9,5 @@
   "Compute.CompareLoad.splitLinear",
   "Compute.CompareLoad.map",
   "Compute.CompareLoad.mapLinear"
- ],
- "OpenGL Core MirrorOnce remains on the existing Mirror sampler path; the NVIDIA Editor mirrors once then clamps (Vulkan is implemented separately)": [
-  "MirrorWrap.own.MirrorOnce.0",
-  "MirrorWrap.own.MirrorOnce.1",
-  "MirrorWrap.own.MirrorOnce.2"
  ]
 }
