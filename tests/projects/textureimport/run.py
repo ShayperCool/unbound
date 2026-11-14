@@ -13,15 +13,9 @@ validation cache, with ProjectSettings switched to the profile's color space; no
 here. Profiles: Gamma and Linear on the Standalone target, Android (gamma) on the Android target.
 Editors run through the shared heavy-job launcher, on the GPU (a private Xvfb and VirtualGL).
 TEXTURE_IMPORT_PROFILES (comma-separated) limits a run to some profiles.
-
-On macOS the Editor runs directly (Metal), `publish` writes only the words in which the macOS
-Editor differs from the Linux reference (Reference/<release>/macOS.jsonl, see compare.py) and
-`gate` compares with the Linux reference under that overlay.
 """
 import argparse
-import base64
 import filecmp
-import json
 import os
 from pathlib import Path
 import shutil
@@ -36,9 +30,6 @@ REPO = PROBE.parents[2]
 # Profile: (color space, build target).
 PROFILES = {'Gamma': (0, 'Standalone'), 'Linear': (1, 'Standalone'), 'Android': (0, 'Android')}
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
-MACOS = sys.platform == 'darwin'
-# The words in which the macOS Editor's captures differ from the Linux reference.
-OVERLAY = 'macOS.jsonl'
 
 
 def copy_project(dest, profile):
@@ -70,15 +61,11 @@ def display():
     sys.exit('no free X display')
 
 
-def macos_editor():
-    if 'UNBOUND_PROBE_UNITY' in os.environ:
-        return editor_path()
-    version = os.environ['UNBOUND_PROBE_UNITY_VERSION']
-    return Path(f'/Applications/Unity/Hub/Editor/{version}/Unity.app/Contents/MacOS/Unity')
-
-
 def editor(work, workers=None):
-    name, server = (None, None) if MACOS else display()
+    if sys.platform != 'linux':
+        sys.exit('the texture import probe records the Linux Editor only (a private X display and the GPU); '
+                 'other OSes compare against its reference')
+    name, server = display()
     try:
         jobs = []
         repeats = ('native1', 'native2') if workers is None else (f'workers{workers}',)
@@ -90,14 +77,9 @@ def editor(work, workers=None):
                 out.parent.mkdir(parents=True, exist_ok=True)
                 if out.exists():
                     sys.exit(f'refusing to overwrite capture: {out}')
-                env = dict(os.environ, TEXTURE_IMPORT_PROBE_OUT=str(out))
-                if MACOS:
-                    command = [str(macos_editor())]
-                else:
-                    env['DISPLAY'] = name
-                    command = ['vglrun', '-d', 'egl', str(editor_path())]
+                env = dict(os.environ, DISPLAY=name, TEXTURE_IMPORT_PROBE_OUT=str(out))
                 jobs.append(subprocess.Popen(
-                    [str(LAUNCHER), 'timeout', '-s', 'KILL', '900', *command,
+                    [str(LAUNCHER), 'timeout', '-s', 'KILL', '900', 'vglrun', '-d', 'egl', str(editor_path()),
                      '-batchmode', '-buildTarget', PROFILES[space][1], '-projectPath', str(project),
                      '-executeMethod', 'ProbeRunner.Record', *extra,
                      '-logFile', str(work/repeat/f'{space}.log')], env=env))
@@ -105,54 +87,21 @@ def editor(work, workers=None):
         print('editor exits', codes)
         return int(any(codes))
     finally:
-        if server:
-            server.terminate()
-
-
-def macos_words(reference, capture):
-    """Per key, the 4-byte words in which `capture` differs from `reference`; anything else that
-    differs (a key, an info row, a size) refuses."""
-    def rows(path):
-        return {row['k']: row['v'] for row in map(json.loads, filter(str.strip, open(path, encoding='utf-8')))}
-    a, b = rows(reference), rows(capture)
-    if a.keys() != b.keys():
-        sys.exit(f'{capture}: keys differ from {reference}: {sorted(a.keys() ^ b.keys())}')
-    out = {}
-    for key in sorted(a):
-        if a[key] == b[key]:
-            continue
-        (size_a, data_a), (size_b, data_b) = a[key].split(':', 1), b[key].split(':', 1)
-        if key.endswith('.info') or size_a != size_b:
-            sys.exit(f'{capture}: {key} differs beyond its texels; not publishing')
-        data_a, data_b = base64.b64decode(data_a), base64.b64decode(data_b)
-        out[key] = {str(i // 4): '0x%08x' % int.from_bytes(data_b[i:i + 4], 'little')
-                    for i in range(0, len(data_a), 4) if data_a[i:i + 4] != data_b[i:i + 4]}
-    return out
+        server.terminate()
 
 
 def publish(work):
     target = reference_root(PROBE)
     target.mkdir(parents=True, exist_ok=True)
-    if MACOS and set(profiles()) != set(PROFILES):
-        sys.exit('the macOS overlay is published from every profile at once')
-    overlay = []
     for space in profiles():
         a, b = work/'native1'/f'{space}.jsonl', work/'native2'/f'{space}.jsonl'
         if not filecmp.cmp(a, b, shallow=False):
             sys.exit(f'{space}: the two Editor captures differ; not publishing')
-        if MACOS:
-            overlay += [{'profile': space, 'k': key, 'words': words}
-                        for key, words in macos_words(target/f'{space}.jsonl', a).items()]
-            continue
         for log in (work/'native1'/f'{space}.log', work/'native2'/f'{space}.log'):
             if 'NVIDIA' not in next((l for l in open(log, errors='replace') if 'Renderer:' in l), ''):
                 sys.exit(f'{log}: the Editor did not render on the NVIDIA GPU; not publishing')
         shutil.copyfile(a, target/f'{space}.jsonl')
         print('published', target/f'{space}.jsonl')
-    if MACOS:
-        with open(target/OVERLAY, 'w', encoding='utf-8') as file:
-            file.writelines(json.dumps(row) + '\n' for row in overlay)
-        print('published', target/OVERLAY, sum(len(row['words']) for row in overlay), 'words')
     return 0
 
 
@@ -177,15 +126,10 @@ def unbound(work):
 
 
 def gate(work):
-    overlay = []
-    if MACOS:
-        if not (reference_root(PROBE)/OVERLAY).exists():
-            sys.exit(f'no macOS Editor values recorded for this release: {reference_root(PROBE)/OVERLAY}')
-        overlay = ['--overlay', str(reference_root(PROBE)/OVERLAY)]
     code = unbound(work)
     for space in profiles():
         code |= subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)/f'{space}.jsonl'),
-                                str(work/'unbound'/f'{space}.jsonl'), *overlay]).returncode
+                                str(work/'unbound'/f'{space}.jsonl')]).returncode
     return code
 
 

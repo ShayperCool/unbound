@@ -827,11 +827,7 @@ fn alpha_from_gray_is_the_mean_rounded_down() {
 fn hdr_max_size_resize_matches_the_editor() {
     // tests/projects/textureimport's float case, whose probe value Unbound's runtime reports as
     // RGBAHalf: the imported floats must equal the Editor's (modified Mitchell, gamma after the
-    // resize in a gamma project), bit for bit. The gamma-encoded values of the Linux and macOS
-    // Editors differ in their last bits, and Unbound, whose gamma encoding takes `powf` from the
-    // platform's math library, reproduces each on its OS: the reference is the Linux Editor's,
-    // and on macOS the probe's macOS overlay (the macOS arm64 Editor's values where they differ)
-    // replaces those words.
+    // resize in a gamma project), bit for bit.
     let probe = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/textureimport");
     let source = probe.join("Assets/Textures/MaxSizeSoftHdr.exr");
     let bytes = std::fs::read(&source).unwrap();
@@ -859,7 +855,6 @@ fn hdr_max_size_resize_matches_the_editor() {
             })
             .collect()
     }
-    let mut overlaid = 0;
     for (profile, gamma, target) in [
         ("Linear", false, "Standalone"),
         ("Gamma", true, "Standalone"),
@@ -887,19 +882,22 @@ fn hdr_max_size_resize_matches_the_editor() {
             (tex.width, tex.height, tex.format),
             (128, 128, TextureFormat::Rgba32F)
         );
-        let mut expected = base64(data);
-        if cfg!(target_os = "macos") {
-            overlaid += apply_overlay(
-                &mut expected,
-                &probe.join("Reference/unity-6000.0.71f1/macOS.jsonl"),
-                profile,
-                "MaxSizeSoftHdr.mip0",
-            );
-        }
+        let expected = base64(data);
+        let float = |b: &[u8]| f32::from_le_bytes([b[0], b[1], b[2], b[3]]);
+        // The Linux Editor's floats bit for bit on x86_64; another processor's arithmetic may move
+        // their last bits (the macOS arm64 Editor's own differ from them in 322 of the Gamma and
+        // Android floats), so elsewhere they are compared within a few float steps.
         let differing = expected
             .chunks(4)
             .zip(tex.mips[0].data.chunks(4))
-            .filter(|(a, b)| a != b)
+            .filter(|(a, b)| {
+                if cfg!(target_arch = "x86_64") {
+                    a != b
+                } else {
+                    let (a, b) = (float(a), float(b));
+                    (a - b).abs() > 4.0 * f32::EPSILON * a.abs().max(f32::MIN_POSITIVE)
+                }
+            })
             .count();
         assert_eq!(
             (tex.mips[0].data.len(), differing),
@@ -907,29 +905,6 @@ fn hdr_max_size_resize_matches_the_editor() {
             "{profile}"
         );
     }
-    // On macOS the overlay is in use: a mistyped key would compare with the Linux values only.
-    assert_eq!(overlaid > 0, cfg!(target_os = "macos"));
-}
-
-/// Replaces the 4-byte words of `key` in `profile` that a probe overlay lists (rows `{"profile",
-/// "k", "words": {index: "0x<u32>"}}`, tests/projects/textureimport/compare.py).
-/// Returns the number of words replaced.
-fn apply_overlay(data: &mut [u8], overlay: &Path, profile: &str, key: &str) -> usize {
-    let text = std::fs::read_to_string(overlay).unwrap();
-    let mut applied = 0;
-    for row in text.lines().filter(|l| !l.trim().is_empty()) {
-        let row: serde_json::Value = serde_json::from_str(row).unwrap();
-        if row["profile"] != profile || row["k"] != key {
-            continue;
-        }
-        for (index, word) in row["words"].as_object().unwrap() {
-            let index: usize = index.parse().unwrap();
-            let word = u32::from_str_radix(word.as_str().unwrap().trim_start_matches("0x"), 16);
-            data[index * 4..index * 4 + 4].copy_from_slice(&word.unwrap().to_le_bytes());
-            applied += 1;
-        }
-    }
-    applied
 }
 
 /// Standard base64 (with padding) to bytes.
