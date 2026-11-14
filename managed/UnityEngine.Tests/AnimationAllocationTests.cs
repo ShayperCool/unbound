@@ -34,6 +34,7 @@ namespace UnityEngine.Tests
         {
             PlayableGraphData.UpdateAll();
             PlayableGraphData.ProcessOtherOutputs();
+            EmptyAllocationContext();
             long before = GC.GetAllocatedBytesForCurrentThread();
             AnimationTestLoop.Tick();
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
@@ -45,6 +46,7 @@ namespace UnityEngine.Tests
         /// evaluations of <paramref name="manual"/>; the bytes it allocated.</summary>
         static long GraphFrame(PlayableGraph manual)
         {
+            EmptyAllocationContext();
             long before = GC.GetAllocatedBytesForCurrentThread();
             PlayableGraphData.UpdateAll();
             if (manual.IsValid()) manual.Evaluate(0.02f);
@@ -62,47 +64,58 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheEmptiedAllocationContextCountsNoCollection()
         {
-            bool stop = false;
-            var noise = new System.Threading.Thread(() =>
+            using var noise = new CollectionNoise();
+            int sink = 0;
+            long counted = 0;
+            object primed = null;
+            for (int round = 0; round < 50; round++)
             {
-                var random = new System.Random(1);
-                object kept = null;
-                for (int i = 0; !System.Threading.Volatile.Read(ref stop); i++)
-                {
-                    kept = new byte[random.Next(16, 200_000)];
-                    if (i % 20 == 0) GC.Collect(2, GCCollectionMode.Forced, blocking: i % 40 != 0);
-                }
-                GC.KeepAlive(kept);
-            });
-            noise.Start();
+                primed = new byte[64]; // the context has room left
+                EmptyAllocationContext();
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int i = 0; i < 200_000; i++) sink = sink * 31 + i;
+                counted += GC.GetAllocatedBytesForCurrentThread() - before;
+            }
+            GC.KeepAlive(primed);
+            GC.KeepAlive(sink);
+            Assert.Equal(0, counted);
+            // An allocation after the emptying is still counted.
+            EmptyAllocationContext();
+            long start = GC.GetAllocatedBytesForCurrentThread();
+            primed = new byte[64];
+            Assert.True(GC.GetAllocatedBytesForCurrentThread() - start >= 64);
+            GC.KeepAlive(primed);
+        }
+
+        public sealed class AllocatingPreparation : PlayableBehaviour
+        {
+            internal int Calls;
+            internal byte[] Last;
+
+            public override void PrepareFrame(Playable playable, FrameData info)
+            {
+                Calls++;
+                Last = new byte[64];
+            }
+        }
+
+        /// <summary>Graph preparation is outside the Animator update's counter window. Its
+        /// allocations must not prime the context of the next sample while another thread collects.</summary>
+        [Fact]
+        public void AnimatorWindowsExcludeAllocatingGraphPreparation()
+        {
+            var graph = PlayableGraph.Create("allocation prepass");
             try
             {
-                int sink = 0;
-                long counted = 0;
-                object primed = null;
-                for (int round = 0; round < 50; round++)
-                {
-                    primed = new byte[64]; // the context has room left
-                    EmptyAllocationContext();
-                    long before = GC.GetAllocatedBytesForCurrentThread();
-                    for (int i = 0; i < 200_000; i++) sink = sink * 31 + i;
-                    counted += GC.GetAllocatedBytesForCurrentThread() - before;
-                }
-                GC.KeepAlive(primed);
-                GC.KeepAlive(sink);
-                Assert.Equal(0, counted);
-                // An allocation after the emptying is still counted.
-                EmptyAllocationContext();
-                long start = GC.GetAllocatedBytesForCurrentThread();
-                primed = new byte[64];
-                Assert.True(GC.GetAllocatedBytesForCurrentThread() - start >= 64);
-                GC.KeepAlive(primed);
+                var preparation = ScriptPlayable<AllocatingPreparation>.Create(graph);
+                ScriptPlayableOutput.Create(graph, "preparation").SetSourcePlayable(preparation);
+                graph.Play();
+                using var noise = new CollectionNoise();
+                AutomaticAnimationFramesDoNotAllocate("controller", AnimatorCullingMode.CullUpdateTransforms);
+                Assert.True(preparation.GetBehaviour().Calls > Frames);
+                Assert.Equal(64, preparation.GetBehaviour().Last.Length);
             }
-            finally
-            {
-                System.Threading.Volatile.Write(ref stop, true);
-                noise.Join();
-            }
+            finally { graph.Destroy(); }
         }
 
         sealed class CountingBehaviour : PlayableBehaviour
@@ -259,7 +272,6 @@ namespace UnityEngine.Tests
                 for (int i = 0, quiet = 0; i < MaxWarmup && quiet < QuietFrames; i++)
                     quiet = Frame() == 0 ? quiet + 1 : 0;
                 long allocated = 0;
-                EmptyAllocationContext();
                 for (int i = 0; i < Frames; i++) allocated += Frame();
                 Assert.True(allocated == 0, $"{shape}/{mode}: {allocated} bytes over {Frames} frames ({allocated / (double)Frames:F1} per frame)");
                 if (human) Assert.True(animator.deltaPosition.magnitude > 0f);
@@ -345,7 +357,6 @@ namespace UnityEngine.Tests
                 long allocated = 0;
                 int prepares = behaviour?.Prepares ?? 0;
                 double time = plain.GetTime();
-                EmptyAllocationContext();
                 for (int i = 0; i < Frames; i++) allocated += GraphFrame(manual);
                 Assert.True(allocated == 0, $"{shape}/{mode}: {allocated} bytes over {Frames} frames ({allocated / (double)Frames:F1} per frame)");
                 // The passes ran: the plain Playable above the clips advanced every frame, culled or not.
