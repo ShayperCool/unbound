@@ -967,9 +967,10 @@ it, as when a script sets one in a scene without realtime GI, draws as the Edito
 `unity_DynamicLightmap` decoded as above, and in a directional lightmaps mode the same texture as
 `unity_DynamicDirectionality` with `DIRLIGHTMAP_COMBINED`, beside its baked lightmap if it has one
 (tests/projects/terrainlightmaps cases 12 to 14, 19 and 29 to 35: terrains and mesh renderers,
-both color spaces, the NVIDIA OpenGL Core device only). An index the scene's lighting data gives
-keeps a realtime lightmap behind it; when Unbound has none for it (its realtime GI not read or a
-system not drawn, each with a warning) the renderer draws its baked part alone.
+both color spaces, the NVIDIA OpenGL Core device only). An index the scene's realtime GI gives (its
+lighting data, or Unbound's own bake), and one at which a loaded scene's realtime GI has a
+lightmap, keep a realtime lightmap behind them; when Unbound has none for the renderer (its
+realtime GI not read or a system not drawn, each with a warning) it draws without one.
 
 ## Residuals
 

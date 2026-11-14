@@ -1,4 +1,4 @@
 {
-  "engine_paths": ["managed/UnityEngine/Graphics/Lightmapping.cs"],
+  "engine_paths": ["managed/UnityEngine/Graphics/Lightmapping.cs", "managed/UnityEngine/Terrain/TerrainRenderer.cs"],
   "exclusive": true
 }

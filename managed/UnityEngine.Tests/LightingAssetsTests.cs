@@ -569,8 +569,8 @@ LightingSettings:
         /// draws with DYNAMICLIGHTMAP_ON and a grey texture of half alpha for the lightmap and,
         /// with directional lightmaps, for its directionality under DIRLIGHTMAP_COMBINED, with or
         /// without a baked lightmap (tests/projects/terrainlightmaps cases 29-35). An index the
-        /// scene's lighting data gave, whose realtime GI Unbound has not produced, and the
-        /// no-lightmap indices draw without it.</summary>
+        /// scene's lighting data gave, whose realtime GI Unbound has not produced (and a clone of
+        /// its renderer), and the no-lightmap indices draw without it.</summary>
         [Fact]
         public void RealtimeIndicesWithoutRealtimeLightmapsDrawGrey()
         {
@@ -578,6 +578,7 @@ LightingSettings:
             var mode = LightmapSettings.lightmapsMode;
             var space = QualitySettings.s_ColorSpace;
             var go = new GameObject("Absent");
+            GameObject clone = null;
             var bakedDirection = new Texture2D(4, 4, TextureFormat.RGBA32, false, true);
             int map = Shader.PropertyToID("unity_DynamicLightmap"), direction = Shader.PropertyToID("unity_DynamicDirectionality");
             try
@@ -619,10 +620,18 @@ LightingSettings:
                 Assert.Same(DefaultTextures.HalfGray, properties[map]);
                 Assert.Same(bakedDirection, properties[Shader.PropertyToID("unity_LightmapInd")]);
 
-                // The lighting data's index whose realtime lightmap Unbound has not produced.
+                // The lighting data's index whose realtime lightmap Unbound has not produced,
+                // and a clone of its renderer.
                 renderer.m_RealtimeLightmapFromData = true;
                 keywords.Clear();
                 properties = BakedLighting.Apply(renderer, null, keywords);
+                Assert.Equal(new[] { "LIGHTMAP_ON", "DIRLIGHTMAP_COMBINED" }, keywords);
+                Assert.False(properties.ContainsKey(map));
+                clone = Object.Instantiate(go);
+                var cloned = clone.GetComponent<MeshRenderer>();
+                Assert.Equal(0, cloned.realtimeLightmapIndex);
+                keywords.Clear();
+                properties = BakedLighting.Apply(cloned, null, keywords);
                 Assert.Equal(new[] { "LIGHTMAP_ON", "DIRLIGHTMAP_COMBINED" }, keywords);
                 Assert.False(properties.ContainsKey(map));
 
@@ -644,6 +653,7 @@ LightingSettings:
             finally
             {
                 UnityEngine.Object.DestroyImmediate(go);
+                if (clone != null) UnityEngine.Object.DestroyImmediate(clone);
                 UnityEngine.Object.DestroyImmediate(bakedDirection);
                 LightmapSettings.lightmaps = previous;
                 LightmapSettings.lightmapsMode = mode;

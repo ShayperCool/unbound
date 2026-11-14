@@ -226,6 +226,7 @@ namespace UnityEngine
                         var offset = s.GetProperty("offset");
                         float atlas = loaded.Atlases[system.Atlas].width;
                         renderer.realtimeLightmapIndex = system.Atlas;
+                        renderer.m_RealtimeLightmapFromData = true;
                         renderer.realtimeLightmapScaleOffset = new Vector4(
                             inSystem.x * system.Width / atlas, inSystem.y * system.Height / atlas,
                             (inSystem.z * system.Width + offset[0].GetInt32()) / atlas,
@@ -291,6 +292,15 @@ namespace UnityEngine
             // A scene loaded alone takes nothing of a cube a script gave before it: its
             // environment is made from its ambient source, whatever that was before the load.
             EnvironmentChanged();
+        }
+
+        /// <summary>Whether a loaded scene's precomputed realtime GI has a realtime lightmap at
+        /// <paramref name="index"/>, drawn or not (a failed system or scene keeps its atlases).</summary>
+        internal static bool HasRealtimeLightmap(int index)
+        {
+            for (int i = 0; i < s_Scenes.Count; i++)
+                if (index < s_Scenes[i].Atlases.Length) return true;
+            return false;
         }
 
         static void Release(int index)

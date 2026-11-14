@@ -284,12 +284,14 @@ namespace UnityEngine
             // With directional lightmaps its directionality too (unity_DynamicDirectionality,
             // DIRLIGHTMAP_COMBINED).
             // A realtime lightmap index with no realtime lightmap behind it (a script's, while
-            // no realtime GI gives the renderer one) draws the same way with a grey texture of
-            // half alpha for both maps, terrains and meshes alike (matches the Unity 6000.0.71f1
-            // Editor, tests/projects/terrainlightmaps cases 12-14 and 29-35). An index from
-            // lighting data whose realtime GI Unbound did not produce keeps the baked fallback.
+            // no realtime GI has a lightmap at that index) draws the same way with a grey texture
+            // of half alpha for both maps, terrains and meshes alike (matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/terrainlightmaps cases 12-14 and 29-35). An index
+            // the scene's realtime GI gave or has a lightmap at, which Unbound did not produce
+            // for this renderer, keeps the fallback without it.
             bool indexed = lightmaps && IsLightmapIndex(renderer.realtimeLightmapIndex);
-            bool absent = indexed && renderer.m_RealtimeLightmap == null && !renderer.m_RealtimeLightmapFromData;
+            bool absent = indexed && renderer.m_RealtimeLightmap == null && !renderer.m_RealtimeLightmapFromData
+                && !RealtimeGI.HasRealtimeLightmap(renderer.realtimeLightmapIndex);
             bool realtime = indexed && (renderer.m_RealtimeLightmap != null || absent);
             bool directional = LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional;
             bool realtimeDirectional = realtime && directional && (renderer.m_RealtimeDirectionality != null || absent);
