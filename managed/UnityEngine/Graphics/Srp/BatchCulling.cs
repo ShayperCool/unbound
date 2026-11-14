@@ -598,16 +598,12 @@ namespace Unbound.Runtime
             var batch = dots.Output.Group?.GetBatch(command.batchID);
             if (batch == null) return;
             int* visible = d.visibleInstances + command.visibleOffset;
-            if (dots.Instance >= 0)
+            // A sorted instance's draw draws that instance alone.
+            uint begin = dots.Instance >= 0 ? (uint)dots.Instance : 0u;
+            uint end = dots.Instance >= 0 ? Math.Min(begin + 1, command.visibleCount) : command.visibleCount;
+            for (uint first = begin; first < end; first += MaxInstancesPerDraw)
             {
-                if (dots.Instance >= command.visibleCount) return;
-                GfxStream.DotsDraw(dots.Header, batch.Offset, batch.Window, 0, visible + dots.Instance, 1);
-                GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);
-                return;
-            }
-            for (uint first = 0; first < command.visibleCount; first += MaxInstancesPerDraw)
-            {
-                int count = (int)Math.Min(MaxInstancesPerDraw, command.visibleCount - first);
+                int count = (int)Math.Min(MaxInstancesPerDraw, end - first);
                 GfxStream.DotsDraw(dots.Header, batch.Offset, batch.Window, 0, visible + first, count);
                 GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);
             }

@@ -548,7 +548,7 @@ public unsafe class BrgProbe : MonoBehaviour
     readonly List<(int First, int Count, bool Flagged, int Depth)> m_SortCommands = new List<(int, int, bool, int)>();
     Texture2D m_LastImage;
     /// <summary>The c5 rows' approximate depths, around minus the blue renderer's distance (about
-    /// 6.3) and minus its square (about 40).</summary>
+    /// 6.5) and minus its square (about 43).</summary>
     static readonly float[] s_ApproximateDepths = { -50f, -20f, -10f, -5f, -2f, 0f, 3f, 1000000f, -1000000f };
 
     static readonly Color SortGreen = new Color(0.1f, 0.9f, 0.2f, 0.5f), SortRed = new Color(0.95f, 0.1f, 0.1f, 0.5f),
