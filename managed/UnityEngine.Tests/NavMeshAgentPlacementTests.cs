@@ -127,6 +127,61 @@ namespace UnityEngine.Tests
             Assert.Equal(m_Height, agent.transform.position.y, 4);
         }
 
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void ReenablingAMovingAgentClearsItsReportedVelocity(bool deactivate, bool manual)
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-4f, 0f, -1f));
+                agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+                if (!manual) Assert.True(agent.SetDestination(Center + new Vector3(3f, 0f, -1f)));
+                for (int i = 0; i < 12; i++)
+                {
+                    if (manual) agent.velocity = new Vector3(1.25f, 0f, 0.25f);
+                    Frame();
+                }
+                Assert.True(agent.velocity.sqrMagnitude > 0.5f);
+                if (deactivate) agent.gameObject.SetActive(false);
+                else agent.enabled = false;
+                Assert.Equal(Vector3.zero, agent.velocity);
+                if (deactivate) agent.gameObject.SetActive(true);
+                else agent.enabled = true;
+                Assert.Equal(Vector3.zero, agent.velocity);
+                Assert.Equal(Vector3.zero, agent.desiredVelocity);
+                Assert.False(agent.hasPath);
+                var standing = agent.nextPosition;
+                Frame();
+                Assert.Equal(Vector3.zero, agent.velocity);
+                Assert.Equal(standing, agent.nextPosition);
+                // A new movement request still works after the reset.
+                agent.velocity = new Vector3(-1f, 0f, 0f);
+                Frame();
+                Assert.True(agent.velocity.x < -0.9f);
+            });
+        }
+
+        [Fact]
+        public void OtherReleasesRetainTheirUnmeasuredReenableVelocityReport()
+        {
+            NavigationTestRelease.At("6000.0.72f1", () =>
+            {
+                var agent = Agent(new Vector3(-4f, 0f, -1f));
+                agent.velocity = new Vector3(1f, 0f, 0f);
+                Frame();
+                var moving = agent.velocity;
+                Assert.True(moving.x > 0.9f);
+                agent.enabled = false;
+                agent.enabled = true;
+                Assert.Equal(moving, agent.velocity);
+                Frame();
+                Assert.Equal(Vector3.zero, agent.velocity);
+            });
+        }
+
         [Fact]
         public void WarpKeepsThePositionGivenUntilTheEarlyUpdate()
         {

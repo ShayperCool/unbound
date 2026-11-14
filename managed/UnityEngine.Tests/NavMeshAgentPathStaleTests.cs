@@ -10,7 +10,7 @@ namespace UnityEngine.Tests
     /// Documented (Scripting API 6000.0): the path is stale after a change of the agent's areaMask,
     /// an off-mesh link enabled or disabled, or changed NavMesh area costs; navMeshOwner is the
     /// owning object of the NavMesh (or link instance) the agent is placed on, null when none is set.
-    /// Nothing here is measured in Unity. Unbound's choices (unmeasured) are marked so: the flag is
+    /// Measured controls are identified below; other choices remain unmeasured. Initially the flag is
     /// set at once by the change, only a changed value counts, it applies to the path last applied
     /// and is cleared by a newly applied path or ResetPath, adding or removing a link counts as
     /// enabling or disabling it, and an agent on a link reports the link's owner.
@@ -169,6 +169,89 @@ namespace UnityEngine.Tests
                 Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
                 Assert.Equal(destination, agent.destination);
                 Assert.True(agent.isPathStale);
+            });
+        }
+
+        [Theory]
+        [InlineData("move", false)]
+        [InlineData("next", false)]
+        [InlineData("transform", false)]
+        [InlineData("move", true)]
+        [InlineData("next", true)]
+        [InlineData("transform", true)]
+        public void MovingWithoutADestinationRenewsTheStandingCorridor(string movement, bool destination)
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-6f, 0f, 0f));
+                agent.speed = 0f;
+                if (destination) Assert.True(agent.SetDestination(new Vector3(6f, 0f, 0f)));
+                AgentSystem.Step();
+                var target = agent.pathEndPosition;
+                NavMesh.SetLinkActive(m_Link, false);
+                Assert.True(agent.isPathStale);
+                var offset = new Vector3(0.1f, 0f, 0f);
+                if (movement == "move") agent.Move(offset);
+                else if (movement == "next") agent.nextPosition += offset;
+                else agent.transform.position += offset;
+                var moved = agent.nextPosition;
+                Assert.Equal(destination, agent.isPathStale);
+                Assert.Equal(destination ? target : moved, agent.pathEndPosition);
+            });
+        }
+
+        [Fact]
+        public void MovingAnArrivedAgentKeepsItsDestinationAndStalePath()
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-6f, 0f, 0f));
+                Assert.True(agent.SetDestination(agent.nextPosition));
+                AgentSystem.Step();
+                Assert.False(agent.hasPath);
+                var target = agent.pathEndPosition;
+                NavMesh.SetLinkActive(m_Link, false);
+                agent.Move(new Vector3(0.1f, 0f, 0f));
+                Assert.True(agent.isPathStale);
+                Assert.Equal(target, agent.pathEndPosition);
+                AgentSystem.Step();
+                Assert.True(agent.hasPath);
+                Assert.True(agent.desiredVelocity.x < 0f);
+                Assert.Equal(target, agent.pathEndPosition);
+            });
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void PlacementConsumesAnUnchangedTransformBeforeReportingPosition(bool warp)
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-6f, 0f, 0f));
+                AgentSystem.Step();
+                var position = agent.nextPosition;
+                if (warp) Assert.True(agent.Warp(position));
+                else { agent.enabled = false; agent.enabled = true; }
+                NavMesh.SetLinkActive(m_Link, false);
+                Assert.True(agent.isPathStale);
+                Assert.Equal(position, agent.nextPosition);
+                Assert.False(agent.isPathStale);
+            });
+        }
+
+        [Fact]
+        public void OtherReleasesRetainTheirUnmeasuredIdleMoveStaleness()
+        {
+            NavigationTestRelease.At("6000.0.72f1", () =>
+            {
+                var agent = Agent(new Vector3(-6f, 0f, 0f));
+                NavMesh.SetLinkActive(m_Link, false);
+                Assert.True(agent.isPathStale);
+                agent.Move(new Vector3(0.1f, 0f, 0f));
+                Assert.True(agent.isPathStale);
+                AgentSystem.Step();
+                Assert.False(agent.isPathStale);
             });
         }
 

@@ -741,6 +741,8 @@ public class NavLinksProbe : MonoBehaviour
         yield return RecordRotationWrites();
         yield return RecordActivationControls();
         yield return RecordPendingActivationControls();
+        yield return RecordReenableControls();
+        yield return RecordStaleReadControls();
         Finish(0);
     }
 
@@ -997,6 +999,64 @@ public class NavLinksProbe : MonoBehaviour
         }
         source.Link.activated = true;
         NavMesh.pathfindingIterationsPerFrame = budget;
+    }
+
+    IEnumerator RecordReenableControls()
+    {
+        var source = m_Lanes.Find(lane => lane.Name == "auto");
+        foreach (bool deactivate in new[] { false, true })
+        foreach (bool manual in new[] { false, true })
+        {
+            var lane = new Lane { Name = "reenable." + (deactivate ? "object" : "component")
+                + (manual ? ".velocity" : ".path"), O = source.O };
+            var agent = Agent(lane, "a", new Vector3(-8f, 0f, -1f), manual ? (Vector3?)null : new Vector3(-3f, 0f, -1f), a =>
+                a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance);
+            for (int i = 0; i < 12; i++)
+            {
+                if (manual) agent.velocity = new Vector3(1.25f, 0f, 0.25f);
+                yield return null;
+            }
+            Line(lane.Name, "a", 1, State(lane, agent));
+            if (deactivate) agent.gameObject.SetActive(false);
+            else agent.enabled = false;
+            Line(lane.Name, "a", 2, "\"v\":" + V(agent.velocity) + ",\"on\":" + B(agent.isOnNavMesh));
+            if (deactivate) agent.gameObject.SetActive(true);
+            else agent.enabled = true;
+            Line(lane.Name, "a", 3, State(lane, agent));
+            yield return null;
+            Line(lane.Name, "a", 4, State(lane, agent));
+            DestroyImmediate(agent.gameObject);
+        }
+    }
+
+    IEnumerator RecordStaleReadControls()
+    {
+        var source = m_Lanes.Find(lane => lane.Name == "crosstile");
+        foreach (string mode in new[] { "fresh", "warp", "reset", "reenable", "arrived", "path", "move", "next", "transform", "arrivedmove", "pathmove", "warpexact" })
+        {
+            source.Link.activated = true;
+            var lane = new Lane { Name = "staleread." + mode, O = source.O, Link = source.Link };
+            bool standing = mode == "fresh" || mode == "move" || mode == "next" || mode == "transform";
+            var agent = Agent(lane, "a", new Vector3(-8f, 0f, -0.3f), standing ? (Vector3?)null : new Vector3(-3f, 0f, -0.3f),
+                a => a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance);
+            for (int i = 0; i < (mode.StartsWith("arrived", StringComparison.Ordinal) ? 150 : 15); i++) yield return null;
+            if (mode == "warp") agent.Warp(lane.O + new Vector3(-6f, 0f, -0.3f));
+            if (mode == "warpexact") agent.Warp(agent.nextPosition);
+            if (mode == "reset") agent.ResetPath();
+            if (mode == "reenable") { agent.enabled = false; agent.enabled = true; }
+            Line(lane.Name, "a", 1, "\"stale\":" + B(agent.isPathStale) + ",\"hp\":" + B(agent.hasPath));
+            source.Link.activated = false;
+            Line(lane.Name, "a", 2, "\"stale\":" + B(agent.isPathStale));
+            if (mode == "move" || mode == "arrivedmove" || mode == "pathmove") agent.Move(new Vector3(0.1f, 0f, 0f));
+            if (mode == "next") agent.nextPosition += new Vector3(0.1f, 0f, 0f);
+            if (mode == "transform") agent.transform.position += new Vector3(0.1f, 0f, 0f);
+            var next = agent.nextPosition;
+            Line(lane.Name, "a", 3, "\"stale\":" + B(agent.isPathStale) + ",\"n\":" + V(next));
+            yield return null;
+            Line(lane.Name, "a", 4, State(lane, agent));
+            source.Link.activated = true;
+            DestroyImmediate(agent.gameObject);
+        }
     }
 
     string State(Lane lane, NavMeshAgent agent)
