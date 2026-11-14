@@ -94,9 +94,10 @@ def main(argv=None):
     p.add_argument('--rate', type=int, choices=(48000, 44100), action='append')
     p.add_argument('--work', type=Path)
     p.add_argument('--jobs', type=int, default=DEFAULT_CAPTURE_JOBS, help='Maximum concurrent capture drivers; each engine takes its own heavy-job lease')
-    p.add_argument('--device-channels', type=int, choices=(2, 4, 6, 8), default=8, help='Private encoding-reference device width')
+    p.add_argument('--device-channels', type=int, choices=(2, 4, 6, 8), default=8, help='Private encoding or source-input reference device width')
     a = p.parse_args(argv)
-    if a.device_channels != 8 and a.profile != 'encoding': p.error('--device-channels requires --profile encoding')
+    if a.device_channels != 8 and a.profile not in ('encoding', 'voice-input'):
+        p.error('--device-channels requires --profile encoding or voice-input')
     if a.jobs < 1:
         p.error('--jobs must be positive')
     if a.profile in ('settings', 'wide', 'wide-pcm') and a.rate and a.rate != [48000]:
@@ -139,7 +140,9 @@ def main(argv=None):
         run_captures(captures, a.jobs)
         merge_sessions(part, sessions, hardlink=a.profile in ('wide', 'wide-pcm'))
         reference = fixture/'Reference'/('unity-'+a.release)
-        reference = (reference/'encoding-devices'/('device-'+str(a.device_channels)) if a.profile == 'encoding' and a.device_channels != 8 else reference/a.profile)/('rate-'+str(rate))
+        reference = (reference/(a.profile+'-devices')/('device-'+str(a.device_channels))
+                     if a.profile in ('encoding', 'voice-input') and a.device_channels != 8
+                     else reference/a.profile)/('rate-'+str(rate))
         for name, extra in [('strict', []), ('gate', ['--pcm-steps', '1'])]:
             result = subprocess.run([sys.executable, str(fixture/'compare.py'), '--release', a.release,
                                      '--rate', str(rate), '--profile', a.profile, '--candidate', str(part/'capture'),

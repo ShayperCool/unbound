@@ -35,9 +35,10 @@ p.add_argument('--mono-live', action='store_true', help='Publish live Mono and c
 p.add_argument('--topology-diagnostics', action='store_true', help='Publish separate multiple-listener topology diagnostics')
 p.add_argument('--topology-pcm', action='store_true', help='Publish live Echo/Chorus and zone PCM controls')
 p.add_argument('--voice-input', action='store_true', help='Publish source callback width and processing diagnostics')
-p.add_argument('--device-channels', type=int, choices=(2, 4, 6, 8), default=8, help='Private device width for encoding diagnostics')
+p.add_argument('--device-channels', type=int, choices=(2, 4, 6, 8), default=8, help='Private device width for encoding or source-input controls')
 a = p.parse_args()
-if a.device_channels != 8 and not a.encoding: p.error('--device-channels requires --encoding')
+if a.device_channels != 8 and not (a.encoding or a.voice_input):
+    p.error('--device-channels requires --encoding or --voice-input')
 if a.settings and a.rate != 48000: p.error('settings controls use a 48000 Hz session with per-case configurations')
 selected = mono_cases() if a.mono else zone_cases() if a.zones else prologic_cases() if a.prologic else settings_cases() if a.settings else wet_edge_cases() if a.wet_edges else wet_cases() if a.wet else transition_cases() if a.transitions else surround_cases() if a.surround else [key for key, _ in devices()] if a.devices else None
 if a.listener_chain or a.listener_diagnostics:
@@ -101,7 +102,7 @@ if a.topology_diagnostics: target = target/'topology-diagnostics'
 if a.topology_pcm: target = target/'topology-pcm'
 if a.listener_chain: target = target/'listener-chain'
 if a.listener_diagnostics: target = target/'listener-diagnostics'
-if a.voice_input: target = target/'voice-input'
+if a.voice_input: target = target/'voice-input' if a.device_channels == 8 else target/'voice-input-devices'/('device-'+str(a.device_channels))
 if a.encoding: target = target/'encoding' if a.device_channels == 8 else target/'encoding-devices'/('device-'+str(a.device_channels))
 if a.wide: target = target/'wide'
 if a.wide_pcm: target = target/'wide-pcm'
@@ -117,6 +118,14 @@ else:
     target.mkdir(parents=True)
 shutil.copy2(a.capture/'capture.json', target/'capture.json')
 for f in sorted(a.capture.glob('*.f32')):
+    if a.voice_input and a.device_channels != 8:
+        # Reuse equal samples without requiring device contexts to share their PCM.
+        shared = target.parents[2]/'voice-input'/('rate-'+str(a.rate))/(f.name+'.gz')
+        packed = target/(f.name+'.gz')
+        if shared.exists() and gzip.decompress(shared.read_bytes()) == f.read_bytes():
+            if not packed.exists():
+                packed.symlink_to(Path('../../../voice-input')/('rate-'+str(a.rate))/(f.name+'.gz'))
+            continue
     if a.topology_pcm:
         packed = target/(f.name+'.gz')
         if not packed.exists(): packed.symlink_to(Path('../../mono-live')/('rate-'+str(a.rate))/(f.name+'.gz'))

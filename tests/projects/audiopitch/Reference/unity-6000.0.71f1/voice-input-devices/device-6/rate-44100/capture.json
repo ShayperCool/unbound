@@ -1,0 +1,1066 @@
+{
+  "release": "6000.0.71f1",
+  "rate": 44100,
+  "context_voiceinput_2_1_none.preflight_blocks": 4,
+  "context_voiceinput_2_1_none.buffer": 1024,
+  "context_voiceinput_2_1_none.mode": 2,
+  "context_voiceinput_2_1_none.rate": 44100,
+  "context_voiceinput_2_1_none.render_channels": 2,
+  "context_voiceinput_2_1_none.source_channels": 2,
+  "context_voiceinput_2_1_none.source_callbacks": 32,
+  "context_voiceinput_2_1_none.source_width_changed": false,
+  "context_voiceinput_2_1_none.source_overflow": false,
+  "context_voiceinput_2_1_none.source_float": {
+    "file": "context_voiceinput_2_1_none.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_1_none": {
+    "file": "context_voiceinput_2_1_none.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_1_none.master": {
+    "file": "context_voiceinput_2_1_none.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_1_before.preflight_blocks": 4,
+  "context_voiceinput_2_1_before.buffer": 1024,
+  "context_voiceinput_2_1_before.mode": 2,
+  "context_voiceinput_2_1_before.rate": 44100,
+  "context_voiceinput_2_1_before.render_channels": 2,
+  "context_voiceinput_2_1_before.source_channels": 2,
+  "context_voiceinput_2_1_before.source_callbacks": 32,
+  "context_voiceinput_2_1_before.source_width_changed": false,
+  "context_voiceinput_2_1_before.source_overflow": false,
+  "context_voiceinput_2_1_before.source_float": {
+    "file": "context_voiceinput_2_1_before.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_1_before": {
+    "file": "context_voiceinput_2_1_before.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_1_before.master": {
+    "file": "context_voiceinput_2_1_before.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_1_after.preflight_blocks": 4,
+  "context_voiceinput_2_1_after.buffer": 1024,
+  "context_voiceinput_2_1_after.mode": 2,
+  "context_voiceinput_2_1_after.rate": 44100,
+  "context_voiceinput_2_1_after.render_channels": 2,
+  "context_voiceinput_2_1_after.source_channels": 2,
+  "context_voiceinput_2_1_after.source_callbacks": 32,
+  "context_voiceinput_2_1_after.source_width_changed": false,
+  "context_voiceinput_2_1_after.source_overflow": false,
+  "context_voiceinput_2_1_after.source_float": {
+    "file": "context_voiceinput_2_1_after.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_1_after": {
+    "file": "context_voiceinput_2_1_after.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_1_after.master": {
+    "file": "context_voiceinput_2_1_after.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_2_none.preflight_blocks": 4,
+  "context_voiceinput_2_2_none.buffer": 1024,
+  "context_voiceinput_2_2_none.mode": 2,
+  "context_voiceinput_2_2_none.rate": 44100,
+  "context_voiceinput_2_2_none.render_channels": 2,
+  "context_voiceinput_2_2_none.source_channels": 2,
+  "context_voiceinput_2_2_none.source_callbacks": 32,
+  "context_voiceinput_2_2_none.source_width_changed": false,
+  "context_voiceinput_2_2_none.source_overflow": false,
+  "context_voiceinput_2_2_none.source_float": {
+    "file": "context_voiceinput_2_2_none.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_2_none": {
+    "file": "context_voiceinput_2_2_none.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_2_none.master": {
+    "file": "context_voiceinput_2_2_none.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_2_before.preflight_blocks": 4,
+  "context_voiceinput_2_2_before.buffer": 1024,
+  "context_voiceinput_2_2_before.mode": 2,
+  "context_voiceinput_2_2_before.rate": 44100,
+  "context_voiceinput_2_2_before.render_channels": 2,
+  "context_voiceinput_2_2_before.source_channels": 2,
+  "context_voiceinput_2_2_before.source_callbacks": 32,
+  "context_voiceinput_2_2_before.source_width_changed": false,
+  "context_voiceinput_2_2_before.source_overflow": false,
+  "context_voiceinput_2_2_before.source_float": {
+    "file": "context_voiceinput_2_2_before.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_2_before": {
+    "file": "context_voiceinput_2_2_before.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_2_before.master": {
+    "file": "context_voiceinput_2_2_before.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_2_after.preflight_blocks": 4,
+  "context_voiceinput_2_2_after.buffer": 1024,
+  "context_voiceinput_2_2_after.mode": 2,
+  "context_voiceinput_2_2_after.rate": 44100,
+  "context_voiceinput_2_2_after.render_channels": 2,
+  "context_voiceinput_2_2_after.source_channels": 2,
+  "context_voiceinput_2_2_after.source_callbacks": 32,
+  "context_voiceinput_2_2_after.source_width_changed": false,
+  "context_voiceinput_2_2_after.source_overflow": false,
+  "context_voiceinput_2_2_after.source_float": {
+    "file": "context_voiceinput_2_2_after.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_2_after": {
+    "file": "context_voiceinput_2_2_after.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_2_after.master": {
+    "file": "context_voiceinput_2_2_after.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_none.preflight_blocks": 4,
+  "context_voiceinput_2_6_none.buffer": 1024,
+  "context_voiceinput_2_6_none.mode": 2,
+  "context_voiceinput_2_6_none.rate": 44100,
+  "context_voiceinput_2_6_none.render_channels": 2,
+  "context_voiceinput_2_6_none.input_channels": 6,
+  "context_voiceinput_2_6_none.input_frames": 32768,
+  "context_voiceinput_2_6_none.input_roundtrip": true,
+  "context_voiceinput_2_6_none.driver_caps": 5,
+  "context_voiceinput_2_6_none.input": {
+    "file": "context_voiceinput_2_6_none.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_2_6_none.source_channels": 2,
+  "context_voiceinput_2_6_none.source_callbacks": 32,
+  "context_voiceinput_2_6_none.source_width_changed": false,
+  "context_voiceinput_2_6_none.source_overflow": false,
+  "context_voiceinput_2_6_none.source_float": {
+    "file": "context_voiceinput_2_6_none.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_none": {
+    "file": "context_voiceinput_2_6_none.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_none.master": {
+    "file": "context_voiceinput_2_6_none.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_before.preflight_blocks": 4,
+  "context_voiceinput_2_6_before.buffer": 1024,
+  "context_voiceinput_2_6_before.mode": 2,
+  "context_voiceinput_2_6_before.rate": 44100,
+  "context_voiceinput_2_6_before.render_channels": 2,
+  "context_voiceinput_2_6_before.input_channels": 6,
+  "context_voiceinput_2_6_before.input_frames": 32768,
+  "context_voiceinput_2_6_before.input_roundtrip": true,
+  "context_voiceinput_2_6_before.driver_caps": 5,
+  "context_voiceinput_2_6_before.input": {
+    "file": "context_voiceinput_2_6_before.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_2_6_before.source_channels": 2,
+  "context_voiceinput_2_6_before.source_callbacks": 32,
+  "context_voiceinput_2_6_before.source_width_changed": false,
+  "context_voiceinput_2_6_before.source_overflow": false,
+  "context_voiceinput_2_6_before.source_float": {
+    "file": "context_voiceinput_2_6_before.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_before": {
+    "file": "context_voiceinput_2_6_before.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_before.master": {
+    "file": "context_voiceinput_2_6_before.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_after.preflight_blocks": 4,
+  "context_voiceinput_2_6_after.buffer": 1024,
+  "context_voiceinput_2_6_after.mode": 2,
+  "context_voiceinput_2_6_after.rate": 44100,
+  "context_voiceinput_2_6_after.render_channels": 2,
+  "context_voiceinput_2_6_after.input_channels": 6,
+  "context_voiceinput_2_6_after.input_frames": 32768,
+  "context_voiceinput_2_6_after.input_roundtrip": true,
+  "context_voiceinput_2_6_after.driver_caps": 5,
+  "context_voiceinput_2_6_after.input": {
+    "file": "context_voiceinput_2_6_after.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_2_6_after.source_channels": 2,
+  "context_voiceinput_2_6_after.source_callbacks": 32,
+  "context_voiceinput_2_6_after.source_width_changed": false,
+  "context_voiceinput_2_6_after.source_overflow": false,
+  "context_voiceinput_2_6_after.source_float": {
+    "file": "context_voiceinput_2_6_after.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_after": {
+    "file": "context_voiceinput_2_6_after.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_after.master": {
+    "file": "context_voiceinput_2_6_after.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_group.preflight_blocks": 4,
+  "context_voiceinput_2_6_group.buffer": 1024,
+  "context_voiceinput_2_6_group.mode": 2,
+  "context_voiceinput_2_6_group.rate": 44100,
+  "context_voiceinput_2_6_group.render_channels": 2,
+  "context_voiceinput_2_6_group.input_channels": 6,
+  "context_voiceinput_2_6_group.input_frames": 32768,
+  "context_voiceinput_2_6_group.input_roundtrip": true,
+  "context_voiceinput_2_6_group.driver_caps": 5,
+  "context_voiceinput_2_6_group.input": {
+    "file": "context_voiceinput_2_6_group.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_2_6_group.source_channels": 2,
+  "context_voiceinput_2_6_group.source_callbacks": 32,
+  "context_voiceinput_2_6_group.source_width_changed": false,
+  "context_voiceinput_2_6_group.source_overflow": false,
+  "context_voiceinput_2_6_group.source_float": {
+    "file": "context_voiceinput_2_6_group.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_group": {
+    "file": "context_voiceinput_2_6_group.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_group.master": {
+    "file": "context_voiceinput_2_6_group.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_pan_left.preflight_blocks": 4,
+  "context_voiceinput_2_6_pan_left.buffer": 1024,
+  "context_voiceinput_2_6_pan_left.mode": 2,
+  "context_voiceinput_2_6_pan_left.rate": 44100,
+  "context_voiceinput_2_6_pan_left.render_channels": 2,
+  "context_voiceinput_2_6_pan_left.input_channels": 6,
+  "context_voiceinput_2_6_pan_left.input_frames": 32768,
+  "context_voiceinput_2_6_pan_left.input_roundtrip": true,
+  "context_voiceinput_2_6_pan_left.driver_caps": 5,
+  "context_voiceinput_2_6_pan_left.input": {
+    "file": "context_voiceinput_2_6_pan_left.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_2_6_pan_left.source_channels": 2,
+  "context_voiceinput_2_6_pan_left.source_callbacks": 32,
+  "context_voiceinput_2_6_pan_left.source_width_changed": false,
+  "context_voiceinput_2_6_pan_left.source_overflow": false,
+  "context_voiceinput_2_6_pan_left.source_float": {
+    "file": "context_voiceinput_2_6_pan_left.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_pan_left": {
+    "file": "context_voiceinput_2_6_pan_left.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_pan_left.master": {
+    "file": "context_voiceinput_2_6_pan_left.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_pan_right.preflight_blocks": 4,
+  "context_voiceinput_2_6_pan_right.buffer": 1024,
+  "context_voiceinput_2_6_pan_right.mode": 2,
+  "context_voiceinput_2_6_pan_right.rate": 44100,
+  "context_voiceinput_2_6_pan_right.render_channels": 2,
+  "context_voiceinput_2_6_pan_right.input_channels": 6,
+  "context_voiceinput_2_6_pan_right.input_frames": 32768,
+  "context_voiceinput_2_6_pan_right.input_roundtrip": true,
+  "context_voiceinput_2_6_pan_right.driver_caps": 5,
+  "context_voiceinput_2_6_pan_right.input": {
+    "file": "context_voiceinput_2_6_pan_right.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_2_6_pan_right.source_channels": 2,
+  "context_voiceinput_2_6_pan_right.source_callbacks": 32,
+  "context_voiceinput_2_6_pan_right.source_width_changed": false,
+  "context_voiceinput_2_6_pan_right.source_overflow": false,
+  "context_voiceinput_2_6_pan_right.source_float": {
+    "file": "context_voiceinput_2_6_pan_right.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_pan_right": {
+    "file": "context_voiceinput_2_6_pan_right.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_pan_right.master": {
+    "file": "context_voiceinput_2_6_pan_right.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_volume.preflight_blocks": 4,
+  "context_voiceinput_2_6_volume.buffer": 1024,
+  "context_voiceinput_2_6_volume.mode": 2,
+  "context_voiceinput_2_6_volume.rate": 44100,
+  "context_voiceinput_2_6_volume.render_channels": 2,
+  "context_voiceinput_2_6_volume.input_channels": 6,
+  "context_voiceinput_2_6_volume.input_frames": 32768,
+  "context_voiceinput_2_6_volume.input_roundtrip": true,
+  "context_voiceinput_2_6_volume.driver_caps": 5,
+  "context_voiceinput_2_6_volume.input": {
+    "file": "context_voiceinput_2_6_volume.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_2_6_volume.source_channels": 2,
+  "context_voiceinput_2_6_volume.source_callbacks": 32,
+  "context_voiceinput_2_6_volume.source_width_changed": false,
+  "context_voiceinput_2_6_volume.source_overflow": false,
+  "context_voiceinput_2_6_volume.source_float": {
+    "file": "context_voiceinput_2_6_volume.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_volume": {
+    "file": "context_voiceinput_2_6_volume.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_volume.master": {
+    "file": "context_voiceinput_2_6_volume.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_pitch.preflight_blocks": 4,
+  "context_voiceinput_2_6_pitch.buffer": 1024,
+  "context_voiceinput_2_6_pitch.mode": 2,
+  "context_voiceinput_2_6_pitch.rate": 44100,
+  "context_voiceinput_2_6_pitch.render_channels": 2,
+  "context_voiceinput_2_6_pitch.input_channels": 6,
+  "context_voiceinput_2_6_pitch.input_frames": 32768,
+  "context_voiceinput_2_6_pitch.input_roundtrip": true,
+  "context_voiceinput_2_6_pitch.driver_caps": 5,
+  "context_voiceinput_2_6_pitch.input": {
+    "file": "context_voiceinput_2_6_pitch.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_2_6_pitch.source_channels": 2,
+  "context_voiceinput_2_6_pitch.source_callbacks": 32,
+  "context_voiceinput_2_6_pitch.source_width_changed": false,
+  "context_voiceinput_2_6_pitch.source_overflow": false,
+  "context_voiceinput_2_6_pitch.source_float": {
+    "file": "context_voiceinput_2_6_pitch.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_pitch": {
+    "file": "context_voiceinput_2_6_pitch.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_pitch.master": {
+    "file": "context_voiceinput_2_6_pitch.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_oneshot.preflight_blocks": 4,
+  "context_voiceinput_2_6_oneshot.buffer": 1024,
+  "context_voiceinput_2_6_oneshot.mode": 2,
+  "context_voiceinput_2_6_oneshot.rate": 44100,
+  "context_voiceinput_2_6_oneshot.render_channels": 2,
+  "context_voiceinput_2_6_oneshot.input_channels": 6,
+  "context_voiceinput_2_6_oneshot.input_frames": 32768,
+  "context_voiceinput_2_6_oneshot.input_roundtrip": true,
+  "context_voiceinput_2_6_oneshot.driver_caps": 5,
+  "context_voiceinput_2_6_oneshot.input": {
+    "file": "context_voiceinput_2_6_oneshot.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_2_6_oneshot.source_channels": 2,
+  "context_voiceinput_2_6_oneshot.source_callbacks": 32,
+  "context_voiceinput_2_6_oneshot.source_width_changed": false,
+  "context_voiceinput_2_6_oneshot.source_overflow": false,
+  "context_voiceinput_2_6_oneshot.source_float": {
+    "file": "context_voiceinput_2_6_oneshot.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_oneshot": {
+    "file": "context_voiceinput_2_6_oneshot.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_oneshot.master": {
+    "file": "context_voiceinput_2_6_oneshot.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_live_pan.preflight_blocks": 4,
+  "context_voiceinput_2_6_live_pan.buffer": 1024,
+  "context_voiceinput_2_6_live_pan.mode": 2,
+  "context_voiceinput_2_6_live_pan.rate": 44100,
+  "context_voiceinput_2_6_live_pan.render_channels": 2,
+  "context_voiceinput_2_6_live_pan.input_channels": 6,
+  "context_voiceinput_2_6_live_pan.input_frames": 32768,
+  "context_voiceinput_2_6_live_pan.input_roundtrip": true,
+  "context_voiceinput_2_6_live_pan.driver_caps": 5,
+  "context_voiceinput_2_6_live_pan.input": {
+    "file": "context_voiceinput_2_6_live_pan.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_2_6_live_pan.source_channels": 2,
+  "context_voiceinput_2_6_live_pan.source_callbacks": 32,
+  "context_voiceinput_2_6_live_pan.source_width_changed": false,
+  "context_voiceinput_2_6_live_pan.source_overflow": false,
+  "context_voiceinput_2_6_live_pan.source_float": {
+    "file": "context_voiceinput_2_6_live_pan.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_live_pan": {
+    "file": "context_voiceinput_2_6_live_pan.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_live_pan.master": {
+    "file": "context_voiceinput_2_6_live_pan.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_live_volume.preflight_blocks": 4,
+  "context_voiceinput_2_6_live_volume.buffer": 1024,
+  "context_voiceinput_2_6_live_volume.mode": 2,
+  "context_voiceinput_2_6_live_volume.rate": 44100,
+  "context_voiceinput_2_6_live_volume.render_channels": 2,
+  "context_voiceinput_2_6_live_volume.input_channels": 6,
+  "context_voiceinput_2_6_live_volume.input_frames": 32768,
+  "context_voiceinput_2_6_live_volume.input_roundtrip": true,
+  "context_voiceinput_2_6_live_volume.driver_caps": 5,
+  "context_voiceinput_2_6_live_volume.input": {
+    "file": "context_voiceinput_2_6_live_volume.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_2_6_live_volume.source_channels": 2,
+  "context_voiceinput_2_6_live_volume.source_callbacks": 32,
+  "context_voiceinput_2_6_live_volume.source_width_changed": false,
+  "context_voiceinput_2_6_live_volume.source_overflow": false,
+  "context_voiceinput_2_6_live_volume.source_float": {
+    "file": "context_voiceinput_2_6_live_volume.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_live_volume": {
+    "file": "context_voiceinput_2_6_live_volume.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_live_volume.master": {
+    "file": "context_voiceinput_2_6_live_volume.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_dist_untapped.preflight_blocks": 4,
+  "context_voiceinput_2_6_dist_untapped.buffer": 1024,
+  "context_voiceinput_2_6_dist_untapped.mode": 2,
+  "context_voiceinput_2_6_dist_untapped.rate": 44100,
+  "context_voiceinput_2_6_dist_untapped.render_channels": 2,
+  "context_voiceinput_2_6_dist_untapped.input_channels": 6,
+  "context_voiceinput_2_6_dist_untapped.input_frames": 32768,
+  "context_voiceinput_2_6_dist_untapped.input_roundtrip": true,
+  "context_voiceinput_2_6_dist_untapped.driver_caps": 5,
+  "context_voiceinput_2_6_dist_untapped.input": {
+    "file": "context_voiceinput_2_6_dist_untapped.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_2_6_dist_untapped": {
+    "file": "context_voiceinput_2_6_dist_untapped.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_2_6_dist_untapped.master": {
+    "file": "context_voiceinput_2_6_dist_untapped.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_1_none.preflight_blocks": 4,
+  "context_voiceinput_7_1_none.buffer": 1024,
+  "context_voiceinput_7_1_none.mode": 7,
+  "context_voiceinput_7_1_none.rate": 44100,
+  "context_voiceinput_7_1_none.render_channels": 2,
+  "context_voiceinput_7_1_none.source_channels": 2,
+  "context_voiceinput_7_1_none.source_callbacks": 32,
+  "context_voiceinput_7_1_none.source_width_changed": false,
+  "context_voiceinput_7_1_none.source_overflow": false,
+  "context_voiceinput_7_1_none.source_float": {
+    "file": "context_voiceinput_7_1_none.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_1_none": {
+    "file": "context_voiceinput_7_1_none.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_1_none.master": {
+    "file": "context_voiceinput_7_1_none.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_1_before.preflight_blocks": 4,
+  "context_voiceinput_7_1_before.buffer": 1024,
+  "context_voiceinput_7_1_before.mode": 7,
+  "context_voiceinput_7_1_before.rate": 44100,
+  "context_voiceinput_7_1_before.render_channels": 2,
+  "context_voiceinput_7_1_before.source_channels": 2,
+  "context_voiceinput_7_1_before.source_callbacks": 32,
+  "context_voiceinput_7_1_before.source_width_changed": false,
+  "context_voiceinput_7_1_before.source_overflow": false,
+  "context_voiceinput_7_1_before.source_float": {
+    "file": "context_voiceinput_7_1_before.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_1_before": {
+    "file": "context_voiceinput_7_1_before.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_1_before.master": {
+    "file": "context_voiceinput_7_1_before.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_1_after.preflight_blocks": 4,
+  "context_voiceinput_7_1_after.buffer": 1024,
+  "context_voiceinput_7_1_after.mode": 7,
+  "context_voiceinput_7_1_after.rate": 44100,
+  "context_voiceinput_7_1_after.render_channels": 2,
+  "context_voiceinput_7_1_after.source_channels": 2,
+  "context_voiceinput_7_1_after.source_callbacks": 32,
+  "context_voiceinput_7_1_after.source_width_changed": false,
+  "context_voiceinput_7_1_after.source_overflow": false,
+  "context_voiceinput_7_1_after.source_float": {
+    "file": "context_voiceinput_7_1_after.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_1_after": {
+    "file": "context_voiceinput_7_1_after.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_1_after.master": {
+    "file": "context_voiceinput_7_1_after.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_2_none.preflight_blocks": 4,
+  "context_voiceinput_7_2_none.buffer": 1024,
+  "context_voiceinput_7_2_none.mode": 7,
+  "context_voiceinput_7_2_none.rate": 44100,
+  "context_voiceinput_7_2_none.render_channels": 2,
+  "context_voiceinput_7_2_none.source_channels": 2,
+  "context_voiceinput_7_2_none.source_callbacks": 32,
+  "context_voiceinput_7_2_none.source_width_changed": false,
+  "context_voiceinput_7_2_none.source_overflow": false,
+  "context_voiceinput_7_2_none.source_float": {
+    "file": "context_voiceinput_7_2_none.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_2_none": {
+    "file": "context_voiceinput_7_2_none.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_2_none.master": {
+    "file": "context_voiceinput_7_2_none.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_2_before.preflight_blocks": 4,
+  "context_voiceinput_7_2_before.buffer": 1024,
+  "context_voiceinput_7_2_before.mode": 7,
+  "context_voiceinput_7_2_before.rate": 44100,
+  "context_voiceinput_7_2_before.render_channels": 2,
+  "context_voiceinput_7_2_before.source_channels": 2,
+  "context_voiceinput_7_2_before.source_callbacks": 32,
+  "context_voiceinput_7_2_before.source_width_changed": false,
+  "context_voiceinput_7_2_before.source_overflow": false,
+  "context_voiceinput_7_2_before.source_float": {
+    "file": "context_voiceinput_7_2_before.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_2_before": {
+    "file": "context_voiceinput_7_2_before.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_2_before.master": {
+    "file": "context_voiceinput_7_2_before.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_2_after.preflight_blocks": 4,
+  "context_voiceinput_7_2_after.buffer": 1024,
+  "context_voiceinput_7_2_after.mode": 7,
+  "context_voiceinput_7_2_after.rate": 44100,
+  "context_voiceinput_7_2_after.render_channels": 2,
+  "context_voiceinput_7_2_after.source_channels": 2,
+  "context_voiceinput_7_2_after.source_callbacks": 32,
+  "context_voiceinput_7_2_after.source_width_changed": false,
+  "context_voiceinput_7_2_after.source_overflow": false,
+  "context_voiceinput_7_2_after.source_float": {
+    "file": "context_voiceinput_7_2_after.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_2_after": {
+    "file": "context_voiceinput_7_2_after.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_2_after.master": {
+    "file": "context_voiceinput_7_2_after.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_none.preflight_blocks": 4,
+  "context_voiceinput_7_6_none.buffer": 1024,
+  "context_voiceinput_7_6_none.mode": 7,
+  "context_voiceinput_7_6_none.rate": 44100,
+  "context_voiceinput_7_6_none.render_channels": 2,
+  "context_voiceinput_7_6_none.input_channels": 6,
+  "context_voiceinput_7_6_none.input_frames": 32768,
+  "context_voiceinput_7_6_none.input_roundtrip": true,
+  "context_voiceinput_7_6_none.driver_caps": 5,
+  "context_voiceinput_7_6_none.input": {
+    "file": "context_voiceinput_7_6_none.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_7_6_none.source_channels": 2,
+  "context_voiceinput_7_6_none.source_callbacks": 32,
+  "context_voiceinput_7_6_none.source_width_changed": false,
+  "context_voiceinput_7_6_none.source_overflow": false,
+  "context_voiceinput_7_6_none.source_float": {
+    "file": "context_voiceinput_7_6_none.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_none": {
+    "file": "context_voiceinput_7_6_none.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_none.master": {
+    "file": "context_voiceinput_7_6_none.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_before.preflight_blocks": 4,
+  "context_voiceinput_7_6_before.buffer": 1024,
+  "context_voiceinput_7_6_before.mode": 7,
+  "context_voiceinput_7_6_before.rate": 44100,
+  "context_voiceinput_7_6_before.render_channels": 2,
+  "context_voiceinput_7_6_before.input_channels": 6,
+  "context_voiceinput_7_6_before.input_frames": 32768,
+  "context_voiceinput_7_6_before.input_roundtrip": true,
+  "context_voiceinput_7_6_before.driver_caps": 5,
+  "context_voiceinput_7_6_before.input": {
+    "file": "context_voiceinput_7_6_before.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_7_6_before.source_channels": 2,
+  "context_voiceinput_7_6_before.source_callbacks": 32,
+  "context_voiceinput_7_6_before.source_width_changed": false,
+  "context_voiceinput_7_6_before.source_overflow": false,
+  "context_voiceinput_7_6_before.source_float": {
+    "file": "context_voiceinput_7_6_before.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_before": {
+    "file": "context_voiceinput_7_6_before.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_before.master": {
+    "file": "context_voiceinput_7_6_before.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_after.preflight_blocks": 4,
+  "context_voiceinput_7_6_after.buffer": 1024,
+  "context_voiceinput_7_6_after.mode": 7,
+  "context_voiceinput_7_6_after.rate": 44100,
+  "context_voiceinput_7_6_after.render_channels": 2,
+  "context_voiceinput_7_6_after.input_channels": 6,
+  "context_voiceinput_7_6_after.input_frames": 32768,
+  "context_voiceinput_7_6_after.input_roundtrip": true,
+  "context_voiceinput_7_6_after.driver_caps": 5,
+  "context_voiceinput_7_6_after.input": {
+    "file": "context_voiceinput_7_6_after.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_7_6_after.source_channels": 2,
+  "context_voiceinput_7_6_after.source_callbacks": 32,
+  "context_voiceinput_7_6_after.source_width_changed": false,
+  "context_voiceinput_7_6_after.source_overflow": false,
+  "context_voiceinput_7_6_after.source_float": {
+    "file": "context_voiceinput_7_6_after.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_after": {
+    "file": "context_voiceinput_7_6_after.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_after.master": {
+    "file": "context_voiceinput_7_6_after.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_group.preflight_blocks": 4,
+  "context_voiceinput_7_6_group.buffer": 1024,
+  "context_voiceinput_7_6_group.mode": 7,
+  "context_voiceinput_7_6_group.rate": 44100,
+  "context_voiceinput_7_6_group.render_channels": 2,
+  "context_voiceinput_7_6_group.input_channels": 6,
+  "context_voiceinput_7_6_group.input_frames": 32768,
+  "context_voiceinput_7_6_group.input_roundtrip": true,
+  "context_voiceinput_7_6_group.driver_caps": 5,
+  "context_voiceinput_7_6_group.input": {
+    "file": "context_voiceinput_7_6_group.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_7_6_group.source_channels": 2,
+  "context_voiceinput_7_6_group.source_callbacks": 32,
+  "context_voiceinput_7_6_group.source_width_changed": false,
+  "context_voiceinput_7_6_group.source_overflow": false,
+  "context_voiceinput_7_6_group.source_float": {
+    "file": "context_voiceinput_7_6_group.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_group": {
+    "file": "context_voiceinput_7_6_group.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_group.master": {
+    "file": "context_voiceinput_7_6_group.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_pan_left.preflight_blocks": 4,
+  "context_voiceinput_7_6_pan_left.buffer": 1024,
+  "context_voiceinput_7_6_pan_left.mode": 7,
+  "context_voiceinput_7_6_pan_left.rate": 44100,
+  "context_voiceinput_7_6_pan_left.render_channels": 2,
+  "context_voiceinput_7_6_pan_left.input_channels": 6,
+  "context_voiceinput_7_6_pan_left.input_frames": 32768,
+  "context_voiceinput_7_6_pan_left.input_roundtrip": true,
+  "context_voiceinput_7_6_pan_left.driver_caps": 5,
+  "context_voiceinput_7_6_pan_left.input": {
+    "file": "context_voiceinput_7_6_pan_left.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_7_6_pan_left.source_channels": 2,
+  "context_voiceinput_7_6_pan_left.source_callbacks": 32,
+  "context_voiceinput_7_6_pan_left.source_width_changed": false,
+  "context_voiceinput_7_6_pan_left.source_overflow": false,
+  "context_voiceinput_7_6_pan_left.source_float": {
+    "file": "context_voiceinput_7_6_pan_left.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_pan_left": {
+    "file": "context_voiceinput_7_6_pan_left.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_pan_left.master": {
+    "file": "context_voiceinput_7_6_pan_left.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_pan_right.preflight_blocks": 4,
+  "context_voiceinput_7_6_pan_right.buffer": 1024,
+  "context_voiceinput_7_6_pan_right.mode": 7,
+  "context_voiceinput_7_6_pan_right.rate": 44100,
+  "context_voiceinput_7_6_pan_right.render_channels": 2,
+  "context_voiceinput_7_6_pan_right.input_channels": 6,
+  "context_voiceinput_7_6_pan_right.input_frames": 32768,
+  "context_voiceinput_7_6_pan_right.input_roundtrip": true,
+  "context_voiceinput_7_6_pan_right.driver_caps": 5,
+  "context_voiceinput_7_6_pan_right.input": {
+    "file": "context_voiceinput_7_6_pan_right.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_7_6_pan_right.source_channels": 2,
+  "context_voiceinput_7_6_pan_right.source_callbacks": 32,
+  "context_voiceinput_7_6_pan_right.source_width_changed": false,
+  "context_voiceinput_7_6_pan_right.source_overflow": false,
+  "context_voiceinput_7_6_pan_right.source_float": {
+    "file": "context_voiceinput_7_6_pan_right.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_pan_right": {
+    "file": "context_voiceinput_7_6_pan_right.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_pan_right.master": {
+    "file": "context_voiceinput_7_6_pan_right.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_volume.preflight_blocks": 4,
+  "context_voiceinput_7_6_volume.buffer": 1024,
+  "context_voiceinput_7_6_volume.mode": 7,
+  "context_voiceinput_7_6_volume.rate": 44100,
+  "context_voiceinput_7_6_volume.render_channels": 2,
+  "context_voiceinput_7_6_volume.input_channels": 6,
+  "context_voiceinput_7_6_volume.input_frames": 32768,
+  "context_voiceinput_7_6_volume.input_roundtrip": true,
+  "context_voiceinput_7_6_volume.driver_caps": 5,
+  "context_voiceinput_7_6_volume.input": {
+    "file": "context_voiceinput_7_6_volume.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_7_6_volume.source_channels": 2,
+  "context_voiceinput_7_6_volume.source_callbacks": 32,
+  "context_voiceinput_7_6_volume.source_width_changed": false,
+  "context_voiceinput_7_6_volume.source_overflow": false,
+  "context_voiceinput_7_6_volume.source_float": {
+    "file": "context_voiceinput_7_6_volume.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_volume": {
+    "file": "context_voiceinput_7_6_volume.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_volume.master": {
+    "file": "context_voiceinput_7_6_volume.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_pitch.preflight_blocks": 4,
+  "context_voiceinput_7_6_pitch.buffer": 1024,
+  "context_voiceinput_7_6_pitch.mode": 7,
+  "context_voiceinput_7_6_pitch.rate": 44100,
+  "context_voiceinput_7_6_pitch.render_channels": 2,
+  "context_voiceinput_7_6_pitch.input_channels": 6,
+  "context_voiceinput_7_6_pitch.input_frames": 32768,
+  "context_voiceinput_7_6_pitch.input_roundtrip": true,
+  "context_voiceinput_7_6_pitch.driver_caps": 5,
+  "context_voiceinput_7_6_pitch.input": {
+    "file": "context_voiceinput_7_6_pitch.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_7_6_pitch.source_channels": 2,
+  "context_voiceinput_7_6_pitch.source_callbacks": 32,
+  "context_voiceinput_7_6_pitch.source_width_changed": false,
+  "context_voiceinput_7_6_pitch.source_overflow": false,
+  "context_voiceinput_7_6_pitch.source_float": {
+    "file": "context_voiceinput_7_6_pitch.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_pitch": {
+    "file": "context_voiceinput_7_6_pitch.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_pitch.master": {
+    "file": "context_voiceinput_7_6_pitch.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_oneshot.preflight_blocks": 4,
+  "context_voiceinput_7_6_oneshot.buffer": 1024,
+  "context_voiceinput_7_6_oneshot.mode": 7,
+  "context_voiceinput_7_6_oneshot.rate": 44100,
+  "context_voiceinput_7_6_oneshot.render_channels": 2,
+  "context_voiceinput_7_6_oneshot.input_channels": 6,
+  "context_voiceinput_7_6_oneshot.input_frames": 32768,
+  "context_voiceinput_7_6_oneshot.input_roundtrip": true,
+  "context_voiceinput_7_6_oneshot.driver_caps": 5,
+  "context_voiceinput_7_6_oneshot.input": {
+    "file": "context_voiceinput_7_6_oneshot.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_7_6_oneshot.source_channels": 2,
+  "context_voiceinput_7_6_oneshot.source_callbacks": 32,
+  "context_voiceinput_7_6_oneshot.source_width_changed": false,
+  "context_voiceinput_7_6_oneshot.source_overflow": false,
+  "context_voiceinput_7_6_oneshot.source_float": {
+    "file": "context_voiceinput_7_6_oneshot.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_oneshot": {
+    "file": "context_voiceinput_7_6_oneshot.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_oneshot.master": {
+    "file": "context_voiceinput_7_6_oneshot.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_live_pan.preflight_blocks": 4,
+  "context_voiceinput_7_6_live_pan.buffer": 1024,
+  "context_voiceinput_7_6_live_pan.mode": 7,
+  "context_voiceinput_7_6_live_pan.rate": 44100,
+  "context_voiceinput_7_6_live_pan.render_channels": 2,
+  "context_voiceinput_7_6_live_pan.input_channels": 6,
+  "context_voiceinput_7_6_live_pan.input_frames": 32768,
+  "context_voiceinput_7_6_live_pan.input_roundtrip": true,
+  "context_voiceinput_7_6_live_pan.driver_caps": 5,
+  "context_voiceinput_7_6_live_pan.input": {
+    "file": "context_voiceinput_7_6_live_pan.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_7_6_live_pan.source_channels": 2,
+  "context_voiceinput_7_6_live_pan.source_callbacks": 32,
+  "context_voiceinput_7_6_live_pan.source_width_changed": false,
+  "context_voiceinput_7_6_live_pan.source_overflow": false,
+  "context_voiceinput_7_6_live_pan.source_float": {
+    "file": "context_voiceinput_7_6_live_pan.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_live_pan": {
+    "file": "context_voiceinput_7_6_live_pan.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_live_pan.master": {
+    "file": "context_voiceinput_7_6_live_pan.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_live_volume.preflight_blocks": 4,
+  "context_voiceinput_7_6_live_volume.buffer": 1024,
+  "context_voiceinput_7_6_live_volume.mode": 7,
+  "context_voiceinput_7_6_live_volume.rate": 44100,
+  "context_voiceinput_7_6_live_volume.render_channels": 2,
+  "context_voiceinput_7_6_live_volume.input_channels": 6,
+  "context_voiceinput_7_6_live_volume.input_frames": 32768,
+  "context_voiceinput_7_6_live_volume.input_roundtrip": true,
+  "context_voiceinput_7_6_live_volume.driver_caps": 5,
+  "context_voiceinput_7_6_live_volume.input": {
+    "file": "context_voiceinput_7_6_live_volume.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_7_6_live_volume.source_channels": 2,
+  "context_voiceinput_7_6_live_volume.source_callbacks": 32,
+  "context_voiceinput_7_6_live_volume.source_width_changed": false,
+  "context_voiceinput_7_6_live_volume.source_overflow": false,
+  "context_voiceinput_7_6_live_volume.source_float": {
+    "file": "context_voiceinput_7_6_live_volume.source_float.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_live_volume": {
+    "file": "context_voiceinput_7_6_live_volume.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_live_volume.master": {
+    "file": "context_voiceinput_7_6_live_volume.master.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_dist_untapped.preflight_blocks": 4,
+  "context_voiceinput_7_6_dist_untapped.buffer": 1024,
+  "context_voiceinput_7_6_dist_untapped.mode": 7,
+  "context_voiceinput_7_6_dist_untapped.rate": 44100,
+  "context_voiceinput_7_6_dist_untapped.render_channels": 2,
+  "context_voiceinput_7_6_dist_untapped.input_channels": 6,
+  "context_voiceinput_7_6_dist_untapped.input_frames": 32768,
+  "context_voiceinput_7_6_dist_untapped.input_roundtrip": true,
+  "context_voiceinput_7_6_dist_untapped.driver_caps": 5,
+  "context_voiceinput_7_6_dist_untapped.input": {
+    "file": "context_voiceinput_7_6_dist_untapped.input.f32",
+    "frames": 32768,
+    "channels": 6
+  },
+  "context_voiceinput_7_6_dist_untapped": {
+    "file": "context_voiceinput_7_6_dist_untapped.f32",
+    "frames": 32768,
+    "channels": 2
+  },
+  "context_voiceinput_7_6_dist_untapped.master": {
+    "file": "context_voiceinput_7_6_dist_untapped.master.f32",
+    "frames": 32768,
+    "channels": 2
+  }
+}

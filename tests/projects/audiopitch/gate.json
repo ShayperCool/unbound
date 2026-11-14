@@ -17,7 +17,10 @@
   "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile encoding --device-channels 2",
   "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile encoding --device-channels 4",
   "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile encoding --device-channels 6",
-  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile encoding --device-channels 8"
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile encoding --device-channels 8",
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile voice-input --device-channels 2",
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile voice-input --device-channels 4",
+  "python3 tests/projects/audiopitch/context_run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --profile voice-input --device-channels 6"
  ],
  "summary": "\"tested\": \\d+, \"failed\": \\d+(?=.*\"pcm_steps\": 1\\b)",
  "fast_commands": [

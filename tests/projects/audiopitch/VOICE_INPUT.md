@@ -38,11 +38,45 @@ The six impulse coefficients remain the ordinary Stereo response in both modes o
 
 These are different layouts on the same backend, not measurements of multiple hardware drivers. Physical ALSA playback endpoints exist, but the current account cannot open them. The machine's default sink is unchanged; `PULSE_SERVER` selects a private server and cleanup unloads its sink by numeric module index.
 
+## Q449 source processing on additional devices
+
+The complete 36-control source profile is now also measured on private 2-, 4-
+and 6-channel PulseAudio devices at 48000 and 44100 Hz. This adds source callback
+width, nonlinear component and group processing, live pan and volume, pitch,
+one-shot playback and untapped controls to the earlier encoding-only coverage.
+Mono and stereo clips remain controls outside six-input playback.
+
+Each device/rate has two independent captures, with Stereo and Prologic in
+separate processes. All 24 new Editor sessions use the NVIDIA GPU and have no
+Editor assertions. Every pair agrees exactly on 11,665,952 values.
+
+| Device channels | Capability getter | New Editor repeat values per rate | Engine failures at the strict bounds |
+|---:|---|---:|---:|
+| 2 | Stereo | 11,665,952 exact | 0 |
+| 4 | Quad | 11,665,952 exact | 0 |
+| 6 | 5.1 | 11,665,952 exact | 0 |
+
+Across the new widths and rates, all 69,995,712 engine values pass strictly.
+Each capture retains its actual driver capability getter. The 24 capability
+fields per profile are the only metadata differences from the eight-channel
+reference. Every input, source callback, Master and device sample is byte-identical
+to that earlier reference. The new canonical metadata lives under
+`voice-input-devices/device-C/rate-RATE`; its PCM files link to the existing
+`voice-input/rate-RATE` samples after publication verifies byte equality.
+All earlier references remain unchanged.
+
+The gate replays all three new widths. No runtime rule, tolerance, PCM-step
+allowance or unsupported-context guard changes. These measurements qualify
+additional layouts on the same backend and NVIDIA driver. They do not establish
+physical-device playback or behavior on other backends.
+
 ## Remaining scope
 
 **Q416-R5a** covers six-input spatial sources, other output layouts, streamed six-channel clips, other input widths and arbitrary graph histories. On the measured release, starting a six-channel voice outside non-streamed 2D Stereo/Prologic throws a clear unsupported-context exception. Admission uses the active driver layout, so a requested wide layout that falls back to Stereo remains eligible. A live change outside the scope stops only the six-channel voices and reports one error on the control thread; ordinary mono/stereo voices continue. NativeApi 72 carries these status receipts without audio-thread logging or allocation. `unbound doctor` lists the limitation. Other input widths and graph histories remain unqualified. Other releases retain the prior first-two-input path, explicitly unmeasured. Physical-device PCM, other backends, setting pairs and releases remain unmeasured. No encoded-output reference is available for those contexts.
 
 ## Reproduction
+
+For additional source-profile devices, add `--device-channels C` to the Native command, publisher and `context_run.py --profile voice-input`, where C is 2, 4 or 6.
 
 Record each voice repeat with `native.py --release 6000.0.71f1 --rate RATE --set voice-input --work FRESH_CACHE_DIRECTORY`. Publish only after exact agreement with `publish.py --voice-input --release 6000.0.71f1 --rate RATE --capture A/capture --repeat B/capture`. Replay with `context_run.py --release 6000.0.71f1 --profile voice-input --unbound MATCHING_CLI`.
 
