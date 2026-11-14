@@ -15,6 +15,7 @@ pub mod preprocess;
 
 mod buffer_members;
 mod exponents;
+pub mod fetch;
 mod fit;
 mod matrix_swizzles;
 mod samplers;
@@ -32,7 +33,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 47;
+pub const FORMAT_VERSION: u32 = 48;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -161,6 +162,10 @@ pub struct Compiled {
     /// Whether the vertex program reads any vertex input: one that reads none (built from its
     /// vertex and instance ids) draws without vertex buffers, so any index it is given is safe.
     pub vertex_inputs: bool,
+    /// Whether the fragment program reads its color target ([`fetch::TEXTURE`]): the renderer
+    /// copies the target there before each draw.
+    #[serde(default)]
+    pub framebuffer_fetch: bool,
 }
 
 /// A buffer a program reads (or, in the fragment program, writes) by name.
@@ -662,13 +667,13 @@ pub struct ShaderCompiler {
     warned: HashSet<(PathBuf, String)>,
 }
 
-/// The device's built-in defines that programs do not compile with: framebuffer fetch (Metal's
-/// `inout` color targets), which Unbound's renderer does not do. Programs take their paths
-/// without it, as on Vulkan; `GraphicsSettings.HasShaderDefine` still answers it as the Editor
-/// does. A program whose own text tests it is warned of once per file. (Metal's fallback,
-/// `UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK`, is compiled: its framebuffer inputs read
+/// The device's framebuffer fetch define (Metal). With it every program also compiles with
+/// [`FRAMEBUFFER_FETCH_ENABLED`], as in the macOS Editor (tests/projects/shadertargets
+/// `fetch.Flags`); [`fetch`] takes the programs' fetch paths. (Metal's fallback,
+/// `UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK`, compiles as it is: its framebuffer inputs read
 /// `_UnityFBInput<i>`, the textures the render pipelines' inputs are bound to.)
-const NOT_COMPILED: [&str; 1] = ["UNITY_FRAMEBUFFER_FETCH_AVAILABLE"];
+const FRAMEBUFFER_FETCH_AVAILABLE: &str = "UNITY_FRAMEBUFFER_FETCH_AVAILABLE";
+const FRAMEBUFFER_FETCH_ENABLED: &str = "UNITY_FRAMEBUFFER_FETCH_ENABLED";
 
 /// The warning for a requirement name Unity does not know ([`targets::Requirements::unknown`]),
 /// naming the shader file it was read from.
@@ -774,23 +779,6 @@ impl ShaderCompiler {
         if let Some(c) = self.memory.get(&key) {
             return Ok(c.clone());
         }
-        if self
-            .settings
-            .platform_defines
-            .iter()
-            .any(|d| d == NOT_COMPILED[0])
-            && program.source.contains(NOT_COMPILED[0])
-            && self
-                .warned
-                .insert((program.file.clone(), NOT_COMPILED[0].into()))
-        {
-            tracing::warn!(
-                "{}: the program tests framebuffer fetch, which Unbound does not compile on the {} \
-                 device: it takes its path without it",
-                program.file.display(),
-                self.settings.device
-            );
-        }
         let variant = pragmas
             .requirements
             .variant(&selected, self.settings.device);
@@ -852,8 +840,29 @@ impl ShaderCompiler {
             w.strip_prefix("forcemaxcount:")
                 .and_then(|n| n.parse::<u32>().ok())
         });
-        let vertex_source = vertex.text;
-        let fragment_source = fragment.text;
+        let (vertex_source, _) = fetch::rewrite(&vertex.text, &vertex_entry, false)
+            .with_context(|| program.file.display().to_string())?;
+        // Only a device with framebuffer fetch takes an `inout` color target.
+        let fetches = self
+            .settings
+            .platform_defines
+            .iter()
+            .any(|k| k == FRAMEBUFFER_FETCH_AVAILABLE);
+        let (fragment_source, framebuffer_fetch) =
+            fetch::rewrite(&fragment.text, &fragment_entry, fetches)
+                .with_context(|| program.file.display().to_string())?;
+        if framebuffer_fetch
+            && self
+                .warned
+                .insert((program.file.clone(), FRAMEBUFFER_FETCH_AVAILABLE.into()))
+        {
+            tracing::warn!(
+                "{}: the program reads its color target (framebuffer fetch): Unbound copies the \
+                 target before each of its draws, so triangles of one draw that overlap read the \
+                 color from before the draw",
+                program.file.display()
+            );
+        }
 
         let hash = {
             let mut h = blake3::Hasher::new();
@@ -911,6 +920,7 @@ impl ShaderCompiler {
             self.settings.opengl_shading_language,
         )?;
         compiled.keywords = selected;
+        compiled.framebuffer_fetch = framebuffer_fetch;
         compiled.instanced_properties = instanced_properties;
         compiled.mesh_instance_stride = mesh_instance_stride;
         compiled.mesh_instance_uniform_scaling = mesh_instance_uniform_scaling;
@@ -951,9 +961,16 @@ impl ShaderCompiler {
             self.settings
                 .platform_defines
                 .iter()
-                .filter(|k| !NOT_COMPILED.contains(&k.as_str()))
                 .map(|k| (k.clone(), "1".to_string())),
         );
+        if self
+            .settings
+            .platform_defines
+            .iter()
+            .any(|k| k == FRAMEBUFFER_FETCH_AVAILABLE)
+        {
+            d.push((FRAMEBUFFER_FETCH_ENABLED.into(), "1".into()));
+        }
         d.extend(variant.defines());
         d.push((
             "UNITY_VERSION".into(),
@@ -3282,12 +3299,12 @@ float4 frag(v2f i) : SV_Target
         }
     }
 
-    /// Metal's framebuffer fetch define is answered (HasShaderDefine) but not compiled with: a
-    /// program's fetch path (an `inout` color target) is not taken.
+    /// Metal's framebuffer fetch path is compiled: an `inout` color target reads the copy of
+    /// the target the renderer makes before the draw (tests/projects/shadertargets `fetch.*`).
     #[test]
-    fn framebuffer_fetch_defines_are_not_compiled() {
+    fn framebuffer_fetch_paths_read_the_copy_of_the_target() {
         let mut defines: Vec<String> = DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect();
-        defines.extend(NOT_COMPILED.iter().map(|d| d.to_string()));
+        defines.push(FRAMEBUFFER_FETCH_AVAILABLE.into());
         let mut compiler = ShaderCompiler::new(Settings {
             unity_version: 6000071,
             platform_defines: defines,
@@ -3296,15 +3313,41 @@ float4 frag(v2f i) : SV_Target
         })
         .unwrap();
         let fetching = PROGRAM.replace(
-            "float4 frag(v2f i) : SV_Target",
-            "#if defined(UNITY_FRAMEBUFFER_FETCH_AVAILABLE)\n\
-             #error the fetch path is compiled\n\
+            "float4 frag(v2f i) : SV_Target\n{",
+            "#if !defined(UNITY_FRAMEBUFFER_FETCH_AVAILABLE) || !defined(UNITY_FRAMEBUFFER_FETCH_ENABLED)\n\
+             #error the fetch path is not compiled\n\
              #endif\n\
-             float4 frag(v2f i) : SV_Target",
+             void frag(v2f i, inout float4 target : SV_Target)\n{\n\
+             target = target * 0.5 + 0.25;\n\
+             }\n\
+             float4 unused(v2f i)\n{",
         );
-        compiler
+        assert_ne!(fetching, PROGRAM);
+        let compiled = compiler
             .compile(&program(&fetching, false), &[], false)
             .unwrap();
+        assert!(compiled.framebuffer_fetch);
+        assert!(compiled.textures.iter().any(|t| t == fetch::TEXTURE));
+        // Without framebuffer fetch (another device) an inout color target is not read.
+        let mut other = ShaderCompiler::new(Settings {
+            unity_version: 6000071,
+            platform_defines: DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect(),
+            ..Default::default()
+        })
+        .unwrap();
+        let unread = PROGRAM.replace(
+            "float4 frag(v2f i) : SV_Target\n{",
+            "void frag(v2f i, inout float4 target : SV_Target)\n{\ntarget = 1;\n}\nfloat4 unused(v2f i)\n{",
+        );
+        if let Ok(c) = other.compile(&program(&unread, false), &[], false) {
+            assert!(!c.framebuffer_fetch);
+        }
+        // A program without one reads nothing.
+        let plain = compiler
+            .compile(&program(PROGRAM, false), &[], false)
+            .unwrap();
+        assert!(!plain.framebuffer_fetch);
+        assert!(!plain.textures.iter().any(|t| t == fetch::TEXTURE));
     }
 
     #[test]
@@ -3833,6 +3876,68 @@ half4 frag(v2f i) : SV_Target { return UNITY_READ_FRAMEBUFFER_INPUT(0, i.pos) * 
             "{:?}",
             c.textures
         );
+    }
+
+    /// On Metal with Unity's includes every program names its color targets `CoLoR`
+    /// (HLSLSupport with fetch enabled): the documented fetch path reads the copy of the target,
+    /// a program without it draws as it is (on the installed Unity release's includes; skipped
+    /// without one).
+    #[test]
+    fn metal_fetch_paths_compile_with_unity_includes() {
+        let Some(cg) = unity_includes() else {
+            eprintln!("no Unity release installed: skipped");
+            return;
+        };
+        let fetching = r#"
+#pragma vertex vert
+#pragma fragment frag
+struct v2f { float4 pos : SV_POSITION; };
+v2f vert(float4 vertex : POSITION) { v2f o; o.pos = UnityObjectToClipPos(vertex); return o; }
+#ifdef UNITY_FRAMEBUFFER_FETCH_AVAILABLE
+void frag(v2f i, inout half4 ocol : SV_Target) { ocol = ocol * 0.5 + 0.125; }
+#else
+half4 frag(v2f i) : SV_Target { return half4(1, 0, 1, 1); }
+#endif
+"#;
+        let plain = r#"
+#pragma vertex vert
+#pragma fragment frag
+struct v2f { float4 pos : SV_POSITION; };
+struct targets { half4 a : SV_Target0; half4 b : SV_Target1; };
+v2f vert(float4 vertex : POSITION) { v2f o; o.pos = UnityObjectToClipPos(vertex); return o; }
+targets frag(v2f i) { targets t; t.a = 1; t.b = 0.5; return t; }
+"#;
+        let mut defines: Vec<String> = DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect();
+        defines.extend(
+            [
+                FRAMEBUFFER_FETCH_AVAILABLE,
+                "UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK",
+            ]
+            .map(String::from),
+        );
+        let mut compiler = ShaderCompiler::new(Settings {
+            includes: Includes {
+                cg_includes: Some(cg),
+                ..Default::default()
+            },
+            unity_version: 6000071,
+            platform_defines: defines,
+            device: unbound_compat::GraphicsDevice::Metal,
+            ..Default::default()
+        })
+        .unwrap();
+        let c = compiler
+            .compile(&program(fetching, true), &[], false)
+            .unwrap();
+        assert!(c.framebuffer_fetch);
+        assert!(
+            c.textures.iter().any(|t| t == fetch::TEXTURE),
+            "{:?}",
+            c.textures
+        );
+        let c = compiler.compile(&program(plain, true), &[], false).unwrap();
+        assert!(!c.framebuffer_fetch);
+        assert!(c.fragment.contains("location(1)"), "{}", c.fragment);
     }
 
     /// A UI program on the installed Unity release's includes (skipped without one).

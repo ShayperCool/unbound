@@ -4046,6 +4046,31 @@ impl UnityRenderer {
             } else {
                 None
             };
+            // A program reading its color target (framebuffer fetch, Metal) reads a copy of it
+            // made right before the draw (`unbound_shaders::fetch`).
+            if !errored && self.compiled.program(id).framebuffer_fetch {
+                if target.samples > 1 {
+                    let shader = resolved.shader.clone();
+                    self.warn_once(format!("fetchmsaa{shader}#{pass_index}"), || {
+                        format!(
+                            "shader `{shader}` pass {pass_index} reads a multisampled color target (framebuffer fetch): Unbound reads the resolved color, not the fragment's sample"
+                        )
+                    });
+                }
+                match self.grab(unbound_shaders::fetch::TEXTURE, target) {
+                    Some(copy) => planned.push(Planned::Grab(copy)),
+                    None => {
+                        let shader = resolved.shader.clone();
+                        self.warn_once(format!("fetch{shader}#{pass_index}"), || {
+                            format!(
+                                "shader `{shader}` pass {pass_index} reads its color target (framebuffer fetch), which has no texture to copy: it reads black"
+                            )
+                        });
+                    }
+                }
+                globals = self.globals.clone();
+                self.globals_index.refresh(&globals);
+            }
             let Some(material_bg) = self.program_bind_group(
                 draw.material,
                 pass_index,
@@ -4220,9 +4245,14 @@ impl UnityRenderer {
     /// A `GrabPass` into `name`: the texture (the target's size and format, made or remade as
     /// needed) and its `_TexelSize` set as globals, and the copy of the target into it; none
     /// when a named texture was grabbed in this camera's render already (measured: Unity grabs
-    /// those once per camera render, `_GrabTexture` for every object).
+    /// those once per camera render, `_GrabTexture` for every object). Framebuffer fetch's copy
+    /// is one too, made before each draw that reads it.
     fn grab(&mut self, name: &str, target: &Target) -> Option<Copy> {
-        if name != "_GrabTexture" && !self.grabbed.insert(name.to_string()) {
+        // `_GrabTexture` and the framebuffer fetch copy are made for every draw.
+        if name != "_GrabTexture"
+            && name != unbound_shaders::fetch::TEXTURE
+            && !self.grabbed.insert(name.to_string())
+        {
             return None;
         }
         let Some((source, layer, mip)) = target.texture.clone() else {

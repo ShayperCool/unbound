@@ -413,7 +413,7 @@ impl Settings {
     /// Editor (tests/projects/urp CapsProbe `HasShaderDefine.*`: `caps-metal.jsonl`; without the
     /// fallback with Android active, `caps-metal-android.jsonl`, and with a list of OpenGL Core
     /// and Vulkan, `caps-metal-list.jsonl`). Other targets (iOS, WebGL) are unmeasured and
-    /// taken as Android. Programs compile without framebuffer fetch (unbound_shaders' NOT_COMPILED).
+    /// taken as Android. Programs compile with framebuffer fetch (unbound_shaders' `fetch`).
     pub fn shader_defines(
         &self,
         group: &str,

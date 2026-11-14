@@ -78,6 +78,18 @@ targets Unity does not name (left out, as the platform ones are).
 `Reference/unity-6000.0.71f1/{opengl,vulkan}.jsonl` are two identical Editor captures each.
 Unbound matches all 139 records on both devices.
 
+## Framebuffer fetch (Metal)
+
+On Metal the probe also draws `Probe/Fetch/Plain` and `Probe/Fetch/Required` (the documented
+fragment signature with an `inout` color target where `UNITY_FRAMEBUFFER_FETCH_AVAILABLE` is
+defined; the second adds `#pragma require framebufferfetch`) once and twice over a texel cleared
+to (0.5, 0.25, 0.75, 1), and `Probe/Fetch/Flags`, a program without an `inout` target that records
+the fetch defines. `Reference/unity-6000.0.71f1/metal.jsonl` is two identical macOS Editor
+captures (Apple M2 Pro, macOS 26): every program compiles with `UNITY_FRAMEBUFFER_FETCH_AVAILABLE`,
+`UNITY_FRAMEBUFFER_FETCH_ENABLED` and `UNITY_COMPILER_HLSLCC`; both fetch shaders take the fetch
+path, which reads the color the draw before left (`fetch.*.2`). The other devices record none of
+these rows. Unbound matches all 144 Metal records (`run.py check --device metal`, macOS only).
+
 ## Generated pass indices
 
 The `surface.*` controls record each generated pass's name, first matching name index and
