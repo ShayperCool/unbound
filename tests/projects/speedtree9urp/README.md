@@ -6,7 +6,7 @@ pipeline asset and renderer of `tests/projects/urp`), in linear colour space. Th
 the materials URP's SpeedTree 9 shader graph and runs URP's `[MaterialSettingsCallback]`, which
 sets the culling from `_TwoSided` and the shader graph's keywords and passes.
 
-`Assets/Scripts/SpeedTreeUrpProbe.cs` records, before anything renders (the scene has no camera),
+`Assets/Scripts/SpeedTreeUrpProbe.cs` records, before anything renders (the Editor runs in batch mode and the scene has no camera),
 `Shader.globalRenderPipeline`, the shader's queue, sub-shader tags and pass count, a material made
 from it at run time, and the imported materials' queue, tags and enabled passes; then, after one
 `Camera.Render`, the same for the shader and each material in full (shader, keywords, queue, enabled
@@ -18,7 +18,7 @@ Measured in the Unity 6000.0.71f1 Editor (two identical captures, OpenGL Core, N
 after the render every material's shader, keywords, queue, tags and properties match in Unbound.
 `residuals.json` lists, by cause, what does not: before the first render the Editor has not set
 `Shader.globalRenderPipeline`, so the shader's fallback sub-shader is active (Unbound creates the
-pipeline earlier); the imported materials keep the MotionVectors pass off, as URP's material update
+pipeline earlier; a windowed Editor, whose views render before Play mode, is unmeasured); the imported materials keep the MotionVectors pass off, as URP's material update
 ran at import with the fallback active; on OpenGL Core the Editor drops the GBuffer pass whose
 program excludes glcore; and the Editor imports the tree's extra map without sRGB (its
 post-processing of a tree's textures).

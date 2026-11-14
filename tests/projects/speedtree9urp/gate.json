@@ -5,6 +5,9 @@
   "summary": "speedtree9urp: .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/SpeedTree9/",
-    "managed/UnityEngine/Editor/ScriptedImporter.cs"
+    "managed/UnityEngine/Editor/ScriptedImporter.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpCore.cs",
+    "managed/UnityEngine/Graphics/ShaderPasses.cs",
+    "managed/UnityEngine/Graphics/Material.cs"
   ]
 }

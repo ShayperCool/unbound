@@ -1,5 +1,5 @@
 {
- "Before anything renders through the pipeline (the scene has no camera) the Editor has not set Shader.globalRenderPipeline, so the shader's active sub-shader is its fallback (queue 2000, one pass, no tags) and the materials follow it; Unbound creates the pipeline, which sets it, before the first render (follow-up in docs/COMPATIBILITY_GAPS.md)": [
+ "Before anything renders through the pipeline (batch-mode Editor, a scene without a camera; only an explicit Camera.Render renders) the Editor has not set Shader.globalRenderPipeline, so the shader's active sub-shader is its fallback (queue 2000, one pass, no tags) and the materials follow it; Unbound creates the pipeline, which sets it, before the first render (a windowed Editor, whose views render before Play mode, is unmeasured; follow-up in docs/COMPATIBILITY_GAPS.md)": [
   "before/Full/material/Bark/passes",
   "before/Full/material/Bark/queue",
   "before/Full/material/Bark/tags",
