@@ -595,27 +595,11 @@ namespace UnityEditor.SpeedTree.Importer
                 return config;
             }
 
-            /// <summary>The samples of a wind curve.</summary>
-            const int CurveSamples = 20;
+            static unsafe void Copied(float[] source, float* target) =>
+                SpeedTreeWindCurves.Copy(source, new Span<float>(target, SpeedTreeWindCurves.Samples));
 
-            /// <summary>A curve keeps its first samples (a longer one is cut, as in the Editor).</summary>
-            static void CheckCurve(float[] source)
-            {
-                if (source.Length < CurveSamples)
-                    throw new FormatException($"a SpeedTree 9 wind curve has {source.Length} samples, fewer than {CurveSamples}");
-            }
-
-            static unsafe void Copied(float[] source, float* target)
-            {
-                CheckCurve(source);
-                for (int i = 0; i < CurveSamples; i++) target[i] = source[i];
-            }
-
-            static unsafe void Scaled(float[] source, float* target, float scale)
-            {
-                CheckCurve(source);
-                for (int i = 0; i < CurveSamples; i++) target[i] = source[i] * scale;
-            }
+            static unsafe void Scaled(float[] source, float* target, float scale) =>
+                SpeedTreeWindCurves.Scale(source, new Span<float>(target, SpeedTreeWindCurves.Samples), scale);
 
             static bool ValidBranch(SpeedTree9File.Branch b) =>
                 ValidCurve(b.Bend, true) && ValidCurve(b.Oscillation, true) && ValidCurve(b.Speed, true)
@@ -778,6 +762,36 @@ namespace UnityEditor.SpeedTree.Importer
             var data = CreateInstance<SpeedTreeImporterOutputData>();
             data.name = "ImporterOutputData";
             return data;
+        }
+    }
+}
+
+namespace Unbound.SpeedTree
+{
+    /// <summary>A SpeedTree 9 wind curve as the wind asset stores it: its first
+    /// <see cref="Samples"/> samples. A file's curve with fewer samples is refused; one with more is
+    /// cut to its first samples (unmeasured: the probe's trees have curves of exactly 20).</summary>
+    internal static class SpeedTreeWindCurves
+    {
+        /// <summary>The samples per curve (<c>SpeedTreeWindConfig9</c>'s fixed arrays).</summary>
+        internal const int Samples = 20;
+
+        static void Check(float[] source)
+        {
+            if (source.Length < Samples)
+                throw new FormatException($"a SpeedTree 9 wind curve has {source.Length} samples, fewer than {Samples}");
+        }
+
+        internal static void Copy(float[] source, Span<float> target)
+        {
+            Check(source);
+            source.AsSpan(0, Samples).CopyTo(target);
+        }
+
+        internal static void Scale(float[] source, Span<float> target, float scale)
+        {
+            Check(source);
+            for (int i = 0; i < Samples; i++) target[i] = source[i] * scale;
         }
     }
 }

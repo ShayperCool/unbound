@@ -41,7 +41,6 @@ namespace UnityEngine.Tests
             BitConverter.GetBytes(0x40000000u).CopyTo(huge, 0);
             Assert.Throws<FormatException>(() => SpeedTree9File.Read(WithSignature(huge)));
         }
-    
 
         /// <summary>Mesh bounds centre on (min + max) * 0.5, which differs in the last bit from
         /// Bounds.SetMinMax's min + extents for these corners (tests/projects/speedtree9).</summary>
@@ -56,6 +55,27 @@ namespace UnityEngine.Tests
             other.SetMinMax(min, max);
             Assert.NotEqual(BitConverter.SingleToInt32Bits(expected.x), BitConverter.SingleToInt32Bits(other.center.x));
             Assert.Equal(BitConverter.SingleToInt32Bits(expected.x), BitConverter.SingleToInt32Bits(mesh.bounds.center.x));
+        }
+
+        /// <summary>A wind curve keeps its first 20 samples: 21 are cut, 19 are refused.</summary>
+        [Fact]
+        public void WindCurvesKeepTheirFirstTwentySamples()
+        {
+            float[] Curve(int n)
+            {
+                var c = new float[n];
+                for (int i = 0; i < n; i++) c[i] = i + 1;
+                return c;
+            }
+            var target = new float[SpeedTreeWindCurves.Samples];
+            SpeedTreeWindCurves.Copy(Curve(21), target);
+            Assert.Equal(Curve(20), target);
+            SpeedTreeWindCurves.Scale(Curve(21), target, 0.5f);
+            Assert.Equal(20 * 0.5f, target[19]);
+            SpeedTreeWindCurves.Copy(Curve(20), target);
+            Assert.Equal(Curve(20), target);
+            Assert.Throws<FormatException>(() => SpeedTreeWindCurves.Copy(Curve(19), target));
+            Assert.Throws<FormatException>(() => SpeedTreeWindCurves.Scale(Curve(19), target, 2f));
         }
     }
 }
