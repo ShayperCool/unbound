@@ -154,11 +154,16 @@ const KEYWORD_REQUIREMENTS: [(&str, u64); 7] = [
 ];
 
 /// The features whose variants draw with the error shader on a device (measured: sparse
-/// textures on OpenGL Core and Vulkan, in a shader of one SubShader without a Fallback, though
-/// `SystemInfo.supportsSparseTextures` answers true there; the wave, 64-bit, 16-bit, barycentric
-/// and ray tracing features are unmeasured and taken as compiled).
-fn refused(_device: GraphicsDevice) -> u64 {
-    SPARSETEX
+/// textures on OpenGL Core, Vulkan and Metal, in a shader of one SubShader without a Fallback,
+/// though `SystemInfo.supportsSparseTextures` answers true there; the geometry stage on Metal,
+/// which has none, also a 4.0 or 4.6 target that brings it through a line with keywords; the
+/// wave, 64-bit, 16-bit, barycentric and ray tracing features are unmeasured and taken as
+/// compiled).
+fn refused(device: GraphicsDevice) -> u64 {
+    match device {
+        GraphicsDevice::Metal => SPARSETEX | GEOMETRY,
+        GraphicsDevice::OpenGLCore | GraphicsDevice::Vulkan => SPARSETEX,
+    }
 }
 
 impl Features {
@@ -227,12 +232,11 @@ pub fn shader_target(features: Features) -> u32 {
 }
 
 /// The features a device compiles every program with, beside the program's requirements
-/// (measured: OpenGL Core 3.5's, Vulkan 4.5's; Metal, which Unbound does not draw, unmeasured:
-/// taken as OpenGL Core's).
+/// (measured: OpenGL Core 3.5's, Vulkan and Metal 4.5's).
 fn device_floor(device: GraphicsDevice) -> Features {
     Features(match device {
-        GraphicsDevice::Vulkan => T45,
-        GraphicsDevice::OpenGLCore | GraphicsDevice::Metal => T35,
+        GraphicsDevice::Vulkan | GraphicsDevice::Metal => T45,
+        GraphicsDevice::OpenGLCore => T35,
     })
 }
 
@@ -491,6 +495,50 @@ mod tests {
         assert_eq!(
             plain.variant(&[], GraphicsDevice::OpenGLCore).missing,
             Some("sparsetex")
+        );
+    }
+
+    /// Metal has no geometry stage: variants requiring it draw with the error shader, a keyed
+    /// 4.0 target too; plain 4.0 lines leave the stages out (tests/projects/shadertargets metal).
+    #[test]
+    fn metal_refuses_the_geometry_stage() {
+        let keywords = |k: &[&str]| k.iter().map(|k| k.to_string()).collect::<Vec<_>>();
+        let staged = lines(&[
+            "target 2.0",
+            "require geometry : A",
+            "require tessellation : B",
+        ]);
+        assert_eq!(
+            staged
+                .variant(&keywords(&["A"]), GraphicsDevice::Metal)
+                .missing,
+            Some("geometry")
+        );
+        assert_eq!(
+            staged
+                .variant(&keywords(&["A"]), GraphicsDevice::Vulkan)
+                .missing,
+            None
+        );
+        let tess = staged.variant(&keywords(&["B"]), GraphicsDevice::Metal);
+        assert_eq!((tess.target, tess.missing), (46, None));
+        let keyed = lines(&["target 4.0 KW_A"]);
+        assert!(
+            keyed
+                .variant(&keywords(&["KW_A"]), GraphicsDevice::Metal)
+                .missing
+                .is_some()
+        );
+        let plain = lines(&["target 4.0"]).variant(&[], GraphicsDevice::Metal);
+        assert_eq!((plain.target, plain.missing), (35, None));
+        // Metal compiles with 4.5's features, as Vulkan does.
+        assert_eq!(
+            lines(&["target 2.0"])
+                .variant(&[], GraphicsDevice::Metal)
+                .available,
+            lines(&["target 2.0"])
+                .variant(&[], GraphicsDevice::Vulkan)
+                .available
         );
     }
 
