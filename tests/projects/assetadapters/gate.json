@@ -12,6 +12,8 @@
     "managed/UnityEngine/Physics/PhysicsTypes.cs",
     "managed/UnityEngine/Physics2D/Physics2DTypes.cs",
     "managed/UnityEngine/Graphics/TextAsset.cs",
-    "managed/UnityEngine/Graphics/TextAsset.Clone.cs"
+    "managed/UnityEngine/Graphics/TextAsset.Clone.cs",
+    "managed/UnityEngine/Runtime/PhysicsMaterialValues.cs",
+    "managed/UnityEngine/Runtime/Compat.cs"
   ]
 }
