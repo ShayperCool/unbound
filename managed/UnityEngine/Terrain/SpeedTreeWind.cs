@@ -2,19 +2,28 @@ using Unbound.Runtime;
 
 namespace UnityEngine
 {
-    /// <summary>The wind configuration of a SpeedTree 9 tree (its importer makes one); Unbound keeps
-    /// it for the trees' renderers. Wind animation is not drawn yet.</summary>
+    /// <summary>The wind configuration of a SpeedTree 9 tree (its importer makes one). Each wind
+    /// asset keeps one wind its trees draw with, from its creation until it is destroyed
+    /// (<see cref="SpeedTreeWindSystem"/>).</summary>
     [ClassId(228)]
     [ExcludeFromPreset]
     public partial class SpeedTreeWindAsset : Object
     {
         int m_Version;
         internal SpeedTreeWindConfig9 Config;
+        internal readonly SpeedTreeWindState Wind = new SpeedTreeWindState();
 
         internal SpeedTreeWindAsset(int version, SpeedTreeWindConfig9 config)
         {
             m_Version = version;
             Config = config;
+            SpeedTreeWindSystem.Register(this);
+        }
+
+        internal override void OnEngineDestroy()
+        {
+            base.OnEngineDestroy();
+            SpeedTreeWindSystem.Unregister(this);
         }
 
         public int Version
@@ -97,7 +106,7 @@ namespace UnityEngine
     }
 
     /// <summary>A tree's component: the SpeedTree 9 importer gives each level of detail one, with
-    /// the tree's wind asset.</summary>
+    /// the tree's wind asset; its renderer draws with the asset's wind.</summary>
     [ClassId(193)]
     [ExcludeFromPreset]
     public sealed partial class Tree : Component
@@ -111,6 +120,14 @@ namespace UnityEngine
             get => m_WindAsset;
             set => m_WindAsset = value;
         }
+
+        /// <summary>Whether the tree refers to a wind asset (Unity 6000.0.71f1,
+        /// tests/projects/speedtree9wind).</summary>
+        public bool hasSpeedTreeWind => m_WindAsset is not null;
+
+        internal override void OnEngineEnable() => SpeedTreeWindSystem.TreeEnabled(this);
+
+        internal override void OnEngineDisable() => SpeedTreeWindSystem.TreeDisabled(this);
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
         {

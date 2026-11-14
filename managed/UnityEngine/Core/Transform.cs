@@ -723,7 +723,7 @@ namespace UnityEngine
 
         // Position composition retains the original vector separately from the
         // rotation's diagonal correction. Its rounding differs from a matrix product.
-        static Vector3 RotateHierarchyPoint(Quaternion q, Vector3 point)
+        internal static Vector3 RotateHierarchyPoint(Quaternion q, Vector3 point)
         {
             var delta = Matrix4x4.Rotate(q);
             delta.m00 = -(q.y * (q.y * 2f) + q.z * (q.z * 2f));

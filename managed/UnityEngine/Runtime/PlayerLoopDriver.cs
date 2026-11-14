@@ -144,6 +144,7 @@ namespace Unbound.Runtime
             Register(typeof(PL.PreUpdate.InputForUIUpdate), UnityEngine.InputForUI.EventProvider.NotifyUpdate);
             // The Editor skips the cameras that render into textures.
             Register(typeof(PL.PreUpdate.SendMouseEvents), () => UnityEngine.SendMouseEvents.DoSendMouseEvents(1));
+            Register(typeof(PL.PreUpdate.WindUpdate), SpeedTreeWindSystem.Update);
             Register(typeof(PL.FixedUpdate.ScriptRunBehaviourFixedUpdate), Lifecycle.RunFixedUpdate);
             // Destroy requests present on entry finish at these three scripting points. Starts
             // precede delivery, while requests made by Starts, OnDestroy and coroutines wait for

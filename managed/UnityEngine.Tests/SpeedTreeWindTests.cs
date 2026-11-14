@@ -1,0 +1,145 @@
+using Xunit;
+
+namespace UnityEngine.Tests
+{
+    /// <summary>The SpeedTree 9 wind's rules (tests/projects/speedtree9wind measures them in the
+    /// Editor): the calm start, the eased direction and strength, the clamped strength, the parts a
+    /// configuration turns off, the previous frame's constants and the zone direction through a
+    /// mirrored parent.</summary>
+    public class SpeedTreeWindTests
+    {
+        const float Dt = 1f / 30f;
+
+        static unsafe SpeedTreeWindConfig9 Config(bool shared = true, bool branch1 = true, bool branch2 = true, bool ripple = true)
+        {
+            var config = new SpeedTreeWindConfig9
+            {
+                strengthResponse = 3f,
+                directionResponse = 1.5f,
+                treeExtentX = 2f,
+                treeExtentY = 4f,
+                treeExtentZ = 3f,
+                sharedHeightStart = 0.25f,
+                branch1StretchLimit = 0.4f,
+                branch2StretchLimit = 0.6f,
+                windIndependence = 0.7f,
+                importScale = 1f,
+                independenceShared = 0.1f,
+                doShared = shared ? 1 : 0,
+                doBranch1 = branch1 ? 1 : 0,
+                doBranch2 = branch2 ? 1 : 0,
+                doRipple = ripple ? 1 : 0,
+            };
+            for (int i = 0; i < 20; i++)
+            {
+                // Speeds rise along the curve; the bend is the sample index.
+                config.speedShared[i] = config.speedBranch1[i] = config.speedBranch2[i] = config.speedRipple[i] = 1f + i;
+                config.bendShared[i] = i;
+            }
+            return config;
+        }
+
+        static Vector4 Value(SpeedTreeWindState wind, int index) => (Vector4)wind.Values[index];
+
+        [Fact]
+        public void ACalmWindKeepsZeroWindAndTheTreesShape()
+        {
+            var wind = new SpeedTreeWindState();
+            var config = Config();
+            for (int frame = 1; frame <= 3; frame++) wind.Update(frame * Dt, Vector3.zero, 0f, ref config);
+            Assert.Equal(Vector4.zero, Value(wind, 0));
+            Assert.Equal(new Vector4(2f, 4f, 3f, 0.25f), Value(wind, 1));
+            Assert.Equal(new Vector4(0.4f, 0.6f, 0.7f, 1f), Value(wind, 2));
+            Assert.Equal(new Vector4(0f, 0f, 0f, 0.1f), Value(wind, 3));
+            Assert.False(wind.Blowing);
+        }
+
+        [Fact]
+        public void AWindAfterACalmTurnsAtOnceAndGrowsFromZero()
+        {
+            var wind = new SpeedTreeWindState();
+            var config = Config();
+            wind.Update(Dt, Vector3.zero, 0f, ref config);
+            var east = new Vector3(1f, 0f, 0f);
+            float time = 11f * Dt;
+            wind.Update(time, east, 0.6f, ref config);
+            // The calm left the clock at zero: the direction has eased since then; the strength
+            // starts now, from zero.
+            var vector = Value(wind, 0);
+            Assert.Equal(1f, vector.x, 6);
+            Assert.Equal(0f, vector.w);
+            // The noise moved against the wind for the whole time since zero, at the first speed.
+            Assert.Equal(-time * 1f, Value(wind, 3).x, 6);
+            Assert.True(wind.Blowing);
+            for (int frame = 12; frame < 200; frame++) wind.Update(frame * Dt, east, 0.6f, ref config);
+            Assert.Equal(0.6f, Value(wind, 0).w, 5);
+        }
+
+        [Fact]
+        public void AStrengthOverOneReadsTheLastCurveSample()
+        {
+            var wind = new SpeedTreeWindState();
+            var config = Config();
+            for (int frame = 1; frame < 400; frame++) wind.Update(frame * Dt, Vector3.forward, 2.5f, ref config);
+            Assert.Equal(1f, Value(wind, 0).w);
+            Assert.Equal(19f, Value(wind, 4).x);
+        }
+
+        [Fact]
+        public void APartTurnedOffKeepsZeroConstants()
+        {
+            var wind = new SpeedTreeWindState();
+            var config = Config(branch1: false, ripple: false);
+            for (int frame = 1; frame < 30; frame++) wind.Update(frame * Dt, Vector3.forward, 0.8f, ref config);
+            Assert.Equal(Vector4.zero, Value(wind, 5));
+            Assert.Equal(Vector4.zero, Value(wind, 6));
+            Assert.Equal(Vector4.zero, Value(wind, 9));
+            Assert.Equal(Vector4.zero, Value(wind, 10));
+            Assert.NotEqual(Vector4.zero, Value(wind, 7));
+        }
+
+        [Fact]
+        public void TheHistoryHoldsThePreviousFrame()
+        {
+            var wind = new SpeedTreeWindState();
+            var config = Config();
+            for (int frame = 1; frame < 20; frame++) wind.Update(frame * Dt, Vector3.forward, 0.8f, ref config);
+            var vector = Value(wind, 0);
+            var noise = Value(wind, 3);
+            wind.Update(20f * Dt, Vector3.forward, 0.8f, ref config);
+            Assert.Equal(vector, Value(wind, SpeedTreeWindState.HistoryOffset));
+            Assert.Equal(noise, Value(wind, SpeedTreeWindState.HistoryOffset + 3));
+            Assert.NotEqual(noise, Value(wind, 3));
+        }
+
+        [Fact]
+        public void ATurnedAroundWindStaysFiniteAndArrives()
+        {
+            var wind = new SpeedTreeWindState();
+            var config = Config();
+            int frame = 1;
+            for (; frame < 100; frame++) wind.Update(frame * Dt, Vector3.forward, 0.5f, ref config);
+            for (; frame < 300; frame++)
+            {
+                wind.Update(frame * Dt, Vector3.back, 0.5f, ref config);
+                var v = Value(wind, 0);
+                Assert.False(float.IsNaN(v.x) || float.IsNaN(v.y) || float.IsNaN(v.z));
+            }
+            Assert.Equal(-1f, Value(wind, 0).z, 6);
+        }
+
+        [Fact]
+        public void AZoneUnderAMirroredParentBlowsMirrored()
+        {
+            var parent = new GameObject("Mirror").transform;
+            parent.localScale = new Vector3(-1f, 1f, 1f);
+            var zone = new GameObject("Zone").AddComponent<WindZone>();
+            zone.transform.SetParent(parent, false);
+            zone.transform.localRotation = Quaternion.Euler(0f, 30f, 0f);
+            var direction = zone.SpeedTreeDirection();
+            Assert.Equal(-0.5f, direction.x, 6);
+            Assert.Equal(0f, direction.y, 6);
+            Assert.Equal(0.8660254f, direction.z, 6);
+        }
+    }
+}

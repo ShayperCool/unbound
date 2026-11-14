@@ -42,7 +42,6 @@ namespace UnityEngine
     unsafe partial class Tree
     {
         public global::UnityEngine.ScriptableObject data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.data"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.data"); } }
-        public bool hasSpeedTreeWind { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tree.hasSpeedTreeWind"); return default; } }
     }
 }
 namespace UnityEngine.Rendering

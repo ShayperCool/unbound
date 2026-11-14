@@ -134,7 +134,7 @@ namespace UnityEngine
             get { MainThreadCheck.Check("GetIsStaticShadowCaster"); return m_StaticShadowCaster; }
             set { MainThreadCheck.Check("SetIsStaticShadowCaster"); m_StaticShadowCaster = value; Dirty(); }
         }
-        MotionVectorGenerationMode m_MotionVectorGenerationMode = MotionVectorGenerationMode.Object;
+        internal MotionVectorGenerationMode m_MotionVectorGenerationMode = MotionVectorGenerationMode.Object;
         public MotionVectorGenerationMode motionVectorGenerationMode
         {
             get { MainThreadCheck.Check("get_motionVectorGenerationMode"); return m_MotionVectorGenerationMode; }

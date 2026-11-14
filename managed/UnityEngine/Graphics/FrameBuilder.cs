@@ -1007,6 +1007,7 @@ namespace Unbound.Runtime
             {
                 properties = BakedLighting.Apply(item.Renderer, properties, s_DrawKeywords, lightmaps, probes);
                 properties = ReflectionProbe.Apply(item.Renderer, properties, srp);
+                properties = SpeedTreeWindSystem.Apply(item.Renderer, properties);
             }
             else if (item.Lighting != null)
             {

@@ -50,6 +50,24 @@ namespace UnityEngine
             return d / Mathf.Sqrt(d2) * (strength * (1f - d2 / r2));
         }
 
+        /// <summary>The zone's forward as the SpeedTree wind takes it: rotated by the zone's
+        /// rotation, then by each parent's after the parent's scale signs, normalized.</summary>
+        internal Vector3 SpeedTreeDirection()
+        {
+            var t = transform;
+            var v = Transform.RotateHierarchyPoint(t.localRotation, Vector3.forward);
+            for (var p = t.parent; p != null; p = p.parent)
+            {
+                var s = p.localScale;
+                v = Transform.RotateHierarchyPoint(p.localRotation, new Vector3(Signed(v.x, s.x), Signed(v.y, s.y), Signed(v.z, s.z)));
+            }
+            float length = MathF.Sqrt((v.y * v.y + v.x * v.x) + v.z * v.z);
+            return new Vector3(v.x / length, v.y / length, v.z / length);
+        }
+
+        /// <summary><paramref name="v"/> with its sign flipped where <paramref name="scale"/> is negative.</summary>
+        static float Signed(float v, float scale) => scale < 0f ? -v : v;
+
         internal override void OnEngineEnable()
         {
             if (!s_All.Contains(this)) s_All.Add(this);
