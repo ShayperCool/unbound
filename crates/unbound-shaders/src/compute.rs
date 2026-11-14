@@ -61,7 +61,11 @@ pub enum ResourceKind {
     /// A structured or byte-address buffer.
     Buffer { read_only: bool },
     /// A sampled texture: `sample` is `float`, `sint`, `uint` or `depth`.
-    Texture { dim: TextureDim, sample: String },
+    Texture {
+        dim: TextureDim,
+        sample: String,
+        multisampled: bool,
+    },
     /// A RW texture: its format (naga's name, e.g. `Rgba8Unorm`) and whether it is only written.
     StorageTexture {
         dim: TextureDim,
@@ -417,11 +421,12 @@ fn fit_kernel(
                     let dim = texture_dim(&name, dim, arrayed)?;
                     match class {
                         ImageClass::Sampled { kind, multi } => {
-                            if multi {
-                                bail!("multisampled texture `{name}` is not supported");
+                            if multi && dim != TextureDim::D2 {
+                                bail!("multisampled texture `{name}` must be two-dimensional");
                             }
                             Some(ResourceKind::Texture {
                                 dim,
+                                multisampled: multi,
                                 sample: match kind {
                                     naga::ScalarKind::Sint => "sint",
                                     naga::ScalarKind::Uint => "uint",
@@ -430,10 +435,16 @@ fn fit_kernel(
                                 .into(),
                             })
                         }
-                        ImageClass::Depth { .. } => Some(ResourceKind::Texture {
-                            dim,
-                            sample: "depth".into(),
-                        }),
+                        ImageClass::Depth { multi } => {
+                            if multi && dim != TextureDim::D2 {
+                                bail!("multisampled texture `{name}` must be two-dimensional");
+                            }
+                            Some(ResourceKind::Texture {
+                                dim,
+                                sample: "depth".into(),
+                                multisampled: multi,
+                            })
+                        }
                         ImageClass::Storage { format, .. } => {
                             let format = storage_formats
                                 .iter()
@@ -906,6 +917,40 @@ RWStructuredBuffer<uint> _Out;
         assert_eq!(unfiltered("s_point_clamp_sampler"), Some(true));
         assert_eq!(unfiltered("s_linear_clamp_sampler"), Some(false));
     }
+    #[test]
+    fn multisampled_compute_loads_preserve_sample_queries() {
+        let program = ComputeProgram {
+            file: PathBuf::from("Multisampled.compute"),
+            source: r#"
+#pragma kernel Main
+Texture2DMS<float4> _Source;
+Texture2D<float4> _Single;
+RWStructuredBuffer<float4> _Out;
+[numthreads(1,1,1)] void Main(uint3 id : SV_DispatchThreadID) {
+    uint w,h,s; _Source.GetDimensions(w,h,s);
+    _Out[0] = _Source.Load(int2(id.xy), s - 1) + _Single.Load(int3(0,0,0));
+}"#
+            .into(),
+        };
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler.compile_kernel(&program, "Main", &[], &[]).unwrap();
+        let multisampled = |name| {
+            compiled.resources.iter().find_map(|r| {
+                if r.name != name {
+                    return None;
+                }
+                match r.kind {
+                    ResourceKind::Texture { multisampled, .. } => Some(multisampled),
+                    _ => None,
+                }
+            })
+        };
+        assert_eq!(multisampled("_Source"), Some(true));
+        assert_eq!(multisampled("_Single"), Some(false));
+        assert!(compiled.wgsl.contains("texture_multisampled_2d<f32>"));
+        assert!(compiled.wgsl.contains("textureNumSamples"));
+    }
+
     #[test]
     fn named_and_predefined_compute_samplers_keep_distinct_bindings() {
         let program = ComputeProgram {

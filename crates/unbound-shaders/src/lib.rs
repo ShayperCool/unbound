@@ -32,7 +32,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 44;
+pub const FORMAT_VERSION: u32 = 45;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -204,6 +204,8 @@ pub struct BlockRange {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TextureSlot {
     pub sample: SampleKind,
+    /// Texture2DMS loads individual samples rather than the resolved image.
+    pub multisampled: bool,
     pub comparison: bool,
     pub inline: Option<InlineSampler>,
 }
@@ -3314,6 +3316,33 @@ float4 frag(v2f i) : SV_Target
         // A variant is compiled once.
         let again = compiler.compile(&p, &["FANCY".into()], false).unwrap();
         assert!(Arc::ptr_eq(&c, &again));
+    }
+
+    #[test]
+    fn multisampled_loads_preserve_their_sample_count_and_main_texture_slot() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+Texture2DMS<float4> _MainTex;
+Texture2D<float4> _Ordinary;
+float4 vert(float4 v : POSITION) : SV_POSITION { return v; }
+float4 frag() : SV_Target {
+    uint w, h, samples; _MainTex.GetDimensions(w, h, samples);
+    return _MainTex.Load(int2(0, 0), samples - 1) + _Ordinary.Load(int3(0, 0, 0));
+}
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        assert!(!compiled.main_texture);
+        let slot = |name| {
+            compiled.texture_slots[compiled.textures.iter().position(|n| n == name).unwrap()]
+        };
+        assert!(slot("_MainTex").multisampled);
+        assert!(!slot("_Ordinary").multisampled);
+        assert!(compiled.fragment.contains("texture_multisampled_2d<f32>"));
+        assert!(compiled.fragment.contains("textureNumSamples"));
     }
 
     #[test]

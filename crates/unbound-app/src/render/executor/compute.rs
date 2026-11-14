@@ -930,15 +930,21 @@ fn main() {
                     has_dynamic_offset: false,
                     min_binding_size: None,
                 },
-                ResourceKind::Texture { dim, sample } => wgpu::BindingType::Texture {
+                ResourceKind::Texture {
+                    dim,
+                    sample,
+                    multisampled,
+                } => wgpu::BindingType::Texture {
                     sample_type: match sample.as_str() {
                         "sint" => wgpu::TextureSampleType::Sint,
                         "uint" => wgpu::TextureSampleType::Uint,
                         "depth" => wgpu::TextureSampleType::Depth,
-                        _ => wgpu::TextureSampleType::Float { filterable: true },
+                        _ => wgpu::TextureSampleType::Float {
+                            filterable: !multisampled,
+                        },
                     },
                     view_dimension: view_dimension(*dim),
-                    multisampled: false,
+                    multisampled: *multisampled,
                 },
                 ResourceKind::StorageTexture {
                     dim,
@@ -1179,12 +1185,33 @@ fn main() {
                         }
                         bound.push((r.binding, Bound::Buffer(b.buffer.clone(), 0, None)));
                     }
-                    ResourceKind::Texture { dim, sample } => {
+                    ResourceKind::Texture {
+                        dim,
+                        sample,
+                        multisampled,
+                    } => {
                         let handle = match value {
                             Some(PropertyValue::Texture { handle, .. }) => *handle,
                             Some(PropertyValue::Image { handle, .. }) => *handle,
                             _ => 0,
                         };
+                        if *multisampled {
+                            let kind = match sample.as_str() {
+                                "sint" => unbound_shaders::SampleKind::Sint,
+                                "uint" => unbound_shaders::SampleKind::Uint,
+                                "depth" => unbound_shaders::SampleKind::Depth,
+                                _ => unbound_shaders::SampleKind::Float,
+                            };
+                            let Some(view) = self.multisampled_view(handle, *dim, kind, space)
+                            else {
+                                self.warn_once(format!("kmultisampled{}{}", d.kernel, r.name), || format!(
+                                    "kernel `{}`: multisampled texture `{}` requires a compatible 2D bindTextureMS render texture: the dispatch is skipped", d.kernel, r.name));
+                                return None;
+                            };
+                            bound
+                                .push((r.binding, Bound::View(Some(view.texture().clone()), view)));
+                            continue;
+                        }
                         // A depth slot (compared, or read as depth): the texture's depth buffer when
                         // its shape is the slot's, else a far-plane default, as graphics programs
                         // read one (the float copy of a depth target is not a depth texture).

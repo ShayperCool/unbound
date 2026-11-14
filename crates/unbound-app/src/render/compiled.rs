@@ -402,9 +402,15 @@ impl CompiledPrograms {
             texture_entries.push(layout_entry(
                 2 * k,
                 wgpu::BindingType::Texture {
-                    sample_type: sample_type(slot.sample),
+                    sample_type: if slot.multisampled
+                        && slot.sample == unbound_shaders::SampleKind::Float
+                    {
+                        wgpu::TextureSampleType::Float { filterable: false }
+                    } else {
+                        sample_type(slot.sample)
+                    },
                     view_dimension: view_dimension(dim),
-                    multisampled: false,
+                    multisampled: slot.multisampled,
                 },
             ));
             // Integer textures are read unfiltered: their slot's sampler filters nothing.
@@ -412,7 +418,7 @@ impl CompiledPrograms {
                 2 * k + 1,
                 wgpu::BindingType::Sampler(if slot.comparison {
                     wgpu::SamplerBindingType::Comparison
-                } else if slot.integer() {
+                } else if slot.integer() || slot.multisampled {
                     wgpu::SamplerBindingType::NonFiltering
                 } else {
                     wgpu::SamplerBindingType::Filtering

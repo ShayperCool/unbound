@@ -11,9 +11,9 @@ namespace Unbound.Tests
     /// <summary>
     /// ComputeShader.SetTexture and CommandBuffer.SetComputeTextureParam with a
     /// RenderTextureSubElement (6000.0 Scripting API: the element indicates which data, Color, Depth
-    /// or Stencil, is set from the render texture). Unbound binds a kernel's render texture as with
-    /// Default whatever the element: Default and Color are that binding; a Depth or Stencil request
-    /// is reported through Stubs.Ignored instead of being dropped silently.
+    /// or Stencil, is set from the render texture). Multisampled Depth bindings select depth on
+    /// the measured rendering profile. Default and Color use the plain binding; unimplemented
+    /// Depth and Stencil contexts are reported through Stubs.Ignored.
     ///
     /// What is asserted: the binding a dispatch would send, and that each Depth/Stencil binding is
     /// counted (Stubs.HitReport) with at most one logged warning per member for the process. The
@@ -95,6 +95,31 @@ namespace Unbound.Tests
         /// <summary>What a dispatch of the kernel would bind (copied: the list is reused).</summary>
         static (string Name, byte Kind, ulong Handle, int Int)[] Bound(ComputeShader cs, int kernel) =>
             cs.Properties(kernel, null).Select(p => (p.Name, p.Kind, p.Handle, p.Int)).OrderBy(p => p.Name, StringComparer.Ordinal).ToArray();
+
+        [Theory]
+        [InlineData(2)]
+        [InlineData(4)]
+        [InlineData(8)]
+        public void MultisampledDepthBindingSelectsDepthAndCanBeReplacedByColor(int samples)
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            var rt = new RenderTexture(8, 4, 24) { antiAliasing = samples, bindTextureMS = true };
+            try
+            {
+                var cs = Shader("MultisampledElements");
+                int id = UnityEngine.Shader.PropertyToID("_Samples");
+                cs.SetTexture(0, id, rt, 0, RenderTextureSubElement.Depth);
+                var depth = Assert.Single(Bound(cs, 0));
+                Assert.Equal(rt.EnsureCreated() | TextureElements.DepthElement, depth.Handle);
+                cs.SetTexture(0, id, rt, 0, RenderTextureSubElement.Color);
+                Assert.Equal(rt.EnsureCreated(), Assert.Single(Bound(cs, 0)).Handle);
+                cs.SetTexture(1, id, rt, 0, RenderTextureSubElement.Depth);
+                Assert.Equal(depth.Handle, Assert.Single(Bound(cs, 1)).Handle);
+                Assert.Equal(rt.EnsureCreated(), Assert.Single(Bound(cs, 0)).Handle);
+            }
+            finally { Object.DestroyImmediate(rt); ProjectInfo.UnityVersion = version; }
+        }
 
         // ------------------------------------------------------------------ ComputeShader.SetTexture
 

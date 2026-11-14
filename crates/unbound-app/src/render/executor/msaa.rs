@@ -60,7 +60,7 @@ impl UnityRenderer {
         enabled: bool,
         dimension: i32,
     ) {
-        let automatic = dimension != TEX2D_ARRAY || gpu.layers == 1;
+        let automatic = !gpu.bind_ms && (dimension != TEX2D_ARRAY || gpu.layers == 1);
         if !enabled || gpu.samples == 1 || gpu.format == 5 {
             self.release_resolve_history(&gpu.texture);
             return;
@@ -223,6 +223,43 @@ impl UnityRenderer {
         }
         let source = self.textures.get(&base)?.texture.clone();
         self.resolve_msaa_source(&source, true)
+    }
+
+    /// Cached attachment views expose the samples without allocating a view during a draw.
+    pub(super) fn multisampled_view(
+        &self,
+        handle: u64,
+        dim: unbound_shaders::TextureDim,
+        sample: unbound_shaders::SampleKind,
+        space: i32,
+    ) -> Option<wgpu::TextureView> {
+        use unbound_shaders::{SampleKind, TextureDim};
+        let (base, depth_element) = handle::split(handle);
+        let t = self.textures.get(&base)?;
+        if !t.bind_ms || t.samples == 1 || dim != TextureDim::D2 || t.layers != 1 || t.volume {
+            return None;
+        }
+        if depth_element || t.format == 5 || sample == SampleKind::Depth {
+            return matches!(sample, SampleKind::Float | SampleKind::Depth)
+                .then(|| t.depth_msaa.clone())
+                .flatten();
+        }
+        let (raw, srgb) = t.msaa.as_ref()?;
+        let has = raw.texture().format().sample_type(None, None)?;
+        let compatible = match sample {
+            SampleKind::Float => matches!(has, wgpu::TextureSampleType::Float { .. }),
+            SampleKind::Sint => has == wgpu::TextureSampleType::Sint,
+            SampleKind::Uint => has == wgpu::TextureSampleType::Uint,
+            SampleKind::Depth => false,
+        };
+        compatible.then(|| {
+            if space == 1 {
+                srgb.as_ref().unwrap_or(raw)
+            } else {
+                raw
+            }
+            .clone()
+        })
     }
 
     pub(super) fn resolved_array_view(

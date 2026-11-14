@@ -1177,7 +1177,20 @@ pub(crate) fn fit(
                     arrayed,
                     class,
                 } => {
-                    dims.insert(key.clone(), texture_dim(name, dim, arrayed)?);
+                    let dimension = texture_dim(name, dim, arrayed)?;
+                    let multisampled = matches!(
+                        class,
+                        naga::ImageClass::Sampled { multi: true, .. }
+                            | naga::ImageClass::Depth { multi: true }
+                    );
+                    if multisampled && dimension != TextureDim::D2 {
+                        bail!("multisampled texture `{name}` must be two-dimensional");
+                    }
+                    if dims.contains_key(&key) && slot.multisampled != multisampled {
+                        bail!("texture `{name}` has different sample counts across stages");
+                    }
+                    slot.multisampled = multisampled;
+                    dims.insert(key.clone(), dimension);
                     let sample = match class {
                         naga::ImageClass::Depth { .. } => SampleKind::Depth,
                         naga::ImageClass::Sampled {
@@ -1218,7 +1231,7 @@ pub(crate) fn fit(
     let main_texture = dims.get(&main).copied().unwrap_or(TextureDim::D2) == TextureDim::D2
         && slots
             .get(&main)
-            .is_none_or(|slot| slot.sample == SampleKind::Float)
+            .is_none_or(|slot| slot.sample == SampleKind::Float && !slot.multisampled)
         && !names.contains(&(MAIN_TEXTURE.to_string(), true))
         && !further.values().any(|key| key.0 == MAIN_TEXTURE)
         && names.remove(&main);
@@ -1975,9 +1988,7 @@ fn rebind(
                 let sampler = match &module.types[g.ty].inner {
                     TypeInner::Sampler { .. } => true,
                     TypeInner::Image {
-                        class:
-                            naga::ImageClass::Sampled { multi: false, .. }
-                            | naga::ImageClass::Depth { multi: false },
+                        class: naga::ImageClass::Sampled { .. } | naga::ImageClass::Depth { .. },
                         ..
                     } => false,
                     other => {

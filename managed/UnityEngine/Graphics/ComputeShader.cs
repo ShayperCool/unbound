@@ -91,12 +91,18 @@ namespace UnityEngine
         public void SetTexture(int kernelIndex, string name, Texture texture) => SetTexture(kernelIndex, Shader.PropertyToID(name), texture, 0);
         public void SetTexture(int kernelIndex, string name, Texture texture, int mipLevel) => SetTexture(kernelIndex, Shader.PropertyToID(name), texture, mipLevel);
 
-        /// <summary>A render texture and the element of it the kernel reads. Default and Color bind
-        /// the texture as the plain overload does. Selecting its Depth or Stencil for a kernel is not
-        /// implemented: the texture is bound as with Default and each such binding is reported
-        /// (CommandBuffer.SetComputeTextureParam's when its command runs).</summary>
+        /// <summary>A render texture and the element of it the kernel reads. Multisampled Depth
+        /// bindings select the samples of a bindTextureMS target on the measured rendering profile.
+        /// Other Depth and Stencil bindings remain unsupported and report their default binding.</summary>
         public void SetTexture(int kernelIndex, int nameID, RenderTexture texture, int mipLevel, RenderTextureSubElement element)
         {
+            if (Compat.RenderingMeasured && texture != null && texture.bindTextureMS
+                && texture.antiAliasing > 1 && element == RenderTextureSubElement.Depth)
+            {
+                Kernel(kernelIndex);
+                m_Bound[(kernelIndex, nameID)] = ((Texture)texture, mipLevel, element);
+                return;
+            }
             SetTexture(kernelIndex, nameID, texture, mipLevel);
             if (texture == null) return;
             if (element == RenderTextureSubElement.Depth)
@@ -296,6 +302,11 @@ namespace UnityEngine
                         p.Components = 16;
                         p.Array = new float[ms.Length * 16];
                         for (int i = 0; i < ms.Length; i++) for (int k = 0; k < 16; k++) p.Array[i * 16 + k] = ms[i][k];
+                        break;
+                    case ValueTuple<Texture, int, RenderTextureSubElement> element:
+                        p.Kind = GfxStream.ImageKind;
+                        p.Handle = TextureElements.MaterialHandle(element.Item1, element.Item3);
+                        p.Int = element.Item2;
                         break;
                     case ValueTuple<Texture, int> t:
                         if (t.Item1 is RenderTexture rt) { p.Kind = GfxStream.ImageKind; p.Handle = rt.EnsureCreated(); p.Int = t.Item2; }

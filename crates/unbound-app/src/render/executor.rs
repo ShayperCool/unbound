@@ -1504,10 +1504,11 @@ impl UnityRenderer {
         let mut element_views: Vec<Option<wgpu::TextureView>> = Vec::with_capacity(slots.len());
         for (k, (h, _, dim, slot)) in slots.iter().enumerate() {
             let (base, depth) = handle::split(*h);
-            if self
-                .textures
-                .get(&base)
-                .is_some_and(|t| t.native_depth.is_some())
+            if !slot.multisampled
+                && self
+                    .textures
+                    .get(&base)
+                    .is_some_and(|t| t.native_depth.is_some())
             {
                 if !depth && self.textures[&base].format == 5 {
                     self.depth_element_view(base);
@@ -1515,7 +1516,7 @@ impl UnityRenderer {
                     self.depth_reads.entry(base).or_insert(false);
                 }
             }
-            element_views.push(if !depth {
+            element_views.push(if slot.multisampled || !depth {
                 None
             } else if slot.sample == SampleKind::Float && is_2d(*dim) {
                 self.depth_element_view(base)
@@ -1547,7 +1548,7 @@ impl UnityRenderer {
         // fmt.*.stencil.uint, fmt.*.globalStencil.uint). The bits are copied before every draw.
         let mut integer_views: Vec<Option<wgpu::TextureView>> = Vec::with_capacity(slots.len());
         for (k, (h, _, dim, slot)) in slots.iter().enumerate() {
-            if !slot.integer() {
+            if !slot.integer() || slot.multisampled {
                 integer_views.push(None);
                 continue;
             }
@@ -1707,7 +1708,24 @@ impl UnityRenderer {
                 key.lod_bias_bits = self.sampler_lod_bias(*h);
             }
 
-            if slot.integer() {
+            if slot.multisampled {
+                let Some(view) = self
+                    .multisampled_view(raw[k], *dim, slot.sample, space)
+                    .filter(|_| !self.drawn_into(*h))
+                else {
+                    let name = program.textures[k].clone();
+                    self.warn_once(format!("multisampled-slot{id}{name}{h}"), || format!(
+                        "multisampled texture `{name}` requires a compatible 2D bindTextureMS render texture distinct from the draw target: the draw is skipped"));
+                    return None;
+                };
+                samplers.push(self.sampler(resources::SamplerKey {
+                    filter: 0,
+                    aniso: 1,
+                    compare: 0,
+                    ..key
+                }));
+                views.push(view);
+            } else if slot.integer() {
                 // Integers are read unfiltered.
                 samplers.push(self.sampler(resources::SamplerKey {
                     filter: 0,
