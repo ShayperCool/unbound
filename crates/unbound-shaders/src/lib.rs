@@ -3348,8 +3348,9 @@ float4 frag(v2f i) : SV_Target
             "float4 frag(v2f i) : SV_Target\n{",
             "void frag(v2f i, inout float4 target : SV_Target)\n{\ntarget = 1;\n}\nfloat4 unused(v2f i)\n{",
         );
-        // An inout color target does not compile there (HLSLSupport.cginc: "a compiler error,
-        // unless SV_Target is defined to COLOR"): the parameter's input clashes.
+        // An inout color target is not read there: this program's fails to compile, its input
+        // clashing with the varying at its location (HLSLSupport.cginc describes such a
+        // parameter as a compiler error without fetch).
         let error = other
             .compile(&program(&unread, false), &[], false)
             .unwrap_err();
