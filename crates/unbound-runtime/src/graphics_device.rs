@@ -11,7 +11,11 @@ pub fn set(device: GraphicsDevice) {
     assert_eq!(current, device, "the graphics device was already chosen");
 }
 
-/// The run's device; OpenGL Core where nothing chose one (tools and tests that start no run).
+/// The run's device; where nothing chose one (tools and tests that start no run) the OS's
+/// Editor's default (OpenGL Core on Linux, Metal on macOS).
 pub fn get() -> GraphicsDevice {
-    DEVICE.get().copied().unwrap_or(GraphicsDevice::OpenGLCore)
+    DEVICE
+        .get()
+        .copied()
+        .unwrap_or_else(|| unbound_compat::HostOs::current().default_devices()[0])
 }

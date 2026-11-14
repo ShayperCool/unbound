@@ -733,7 +733,13 @@ mod tests {
         assert_eq!(by_reference, split);
         assert_eq!(by_reference as *const IUnityGraphics, &GRAPHICS as *const _);
         let graphics = unsafe { &*(by_reference as *const IUnityGraphics) };
-        assert_eq!((graphics.get_renderer)(), RENDERER_OPENGL_CORE);
+        // No run chose a device: the OS's Editor's default (OpenGL Core on Linux, Metal 16 on
+        // macOS).
+        let expected = match unbound_compat::HostOs::current() {
+            unbound_compat::HostOs::Linux => RENDERER_OPENGL_CORE,
+            unbound_compat::HostOs::MacOs => 16,
+        };
+        assert_eq!((graphics.get_renderer)(), expected);
         // A device's own interface the renderer has not offered, and unknown ones, are null.
         let vulkan = NOT_PROVIDED[0].0;
         assert!((table.get_interface_split)(vulkan.high, vulkan.low).is_null());
