@@ -3071,3 +3071,18 @@ vector curves, which only reproduced the refused removals. tests/projects/editor
 `ClipLength.*` calls recorded with the macOS Editor: Unbound matches 266/269 calls (3 expected: the
 reorderable list's height cache, and the stop time the Editor keeps after the Euler angles are
 removed by m_LocalEuler), where main's engine differed in 9 of the 14 it could answer.
+
+### Q423: the Metal device on macOS
+
+The macOS Editor (Unity 6000.0.71f1, arm64) runs Metal whatever is forced or listed; Unbound on
+macOS now does too, with Metal's own answers instead of the Linux Editor's OpenGL Core ones:
+SystemInfo and the format table as recorded by tests/projects/urp CapsProbe on the macOS Editor
+(two identical captures; Gamma and Linear), compared in managed tests on all three devices,
+`SHADER_API_METAL` with 4.5's features and the geometry stage refused (shadertargets `metal`:
+110/110), framebuffer fetch defines, Vulkan's conventions, and `IUnityGraphicsMetal`/`V1`/`V2`
+for native plugins (nativegfx `--device metal`: 75/175 records, 100 declared residuals: texture
+memory modes, load and store actions, the unshared screen, the target after
+`EndCurrentCommandEncoder`). The macOS Editor's graphics answers differ from the Linux Editor's in
+304 of 1078 format records and in default formats, sample counts, depth formats and caps, so they
+are no longer taken from the Linux measurements. Open: Intel Macs and other GPUs, the screen for
+plugin callbacks.
