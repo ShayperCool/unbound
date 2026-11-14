@@ -115,6 +115,123 @@ namespace UnityEngine.Tests
             Assert.Equal(0, Animator.StringToHash(""));
         }
 
+        /// <summary>A clip's length follows the curves it has, except that AnimationClip.SetCurve on a
+        /// legacy clip's Transform vector property (position, rotation, Euler angles, scale) keeps
+        /// that curve's key times until ClearCurves; AnimationUtility.SetEditorCurve keeps none.
+        /// Committed Unity 6000.0.71f1 Editor references: tests/projects/editorui (2 after adding a
+        /// 2 s curve, 1 after removing it, stop time 1) and tests/projects/defaultstate (1, 0.5, 0.5,
+        /// 3, 3). The other expected values come from 6000.0.71f1 Editor captures of the same calls
+        /// that are not yet committed references.</summary>
+        [Fact]
+        public void ClipLengthFollowsItsCurvesExceptSetCurveTransformVectors()
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            var created = new List<Object>();
+            AnimationClip Clip(bool legacy) { var c = new AnimationClip { legacy = legacy }; created.Add(c); return c; }
+            var light = new System.Func<string, UnityEditor.EditorCurveBinding>(p => UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Light), p));
+            try
+            {
+                // editorui: an Editor edit of a clip made with SetCurve.
+                var edited = Clip(false);
+                edited.SetCurve("Child", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+                UnityEditor.AnimationUtility.SetEditorCurve(edited, light("m_Intensity"), AnimationCurve.Linear(0f, 1f, 2f, 3f));
+                Assert.Equal(2f, edited.length);
+                UnityEditor.AnimationUtility.SetEditorCurve(edited, light("m_Intensity"), null);
+                Assert.Equal(1f, edited.length);
+                Assert.Equal(1f, UnityEditor.AnimationUtility.GetAnimationClipSettings(edited).stopTime);
+
+                // Runtime SetCurve shortens a non-legacy clip and a legacy clip's other curves.
+                foreach (bool legacy in new[] { false, true })
+                {
+                    var two = Clip(legacy);
+                    two.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                    two.SetCurve("", typeof(Light), "m_Range", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+                    Assert.Equal(2f, two.length);
+                    two.SetCurve("", typeof(Light), "m_Range", null);
+                    Assert.Equal(1f, two.length);
+                }
+                var replaced = Clip(false);
+                replaced.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+                replaced.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                Assert.Equal(1f, replaced.length);
+                var removed = Clip(true);
+                removed.SetCurve("", typeof(Light), "m_Range", AnimationCurve.Linear(0f, 0f, 3f, 1f));
+                removed.SetCurve("", typeof(Light), "m_Range", null);
+                Assert.Equal(1f, removed.length);
+                var negative = Clip(false);
+                negative.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(-2f, 0f, -1f, 1f));
+                Assert.Equal(-1f, negative.length);
+
+                // defaultstate: a legacy clip's position keys stay after removal and replacement.
+                var position = Clip(true);
+                position.ClearCurves();
+                Assert.Equal(1f, position.length);
+                position.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 0.5f, 1f));
+                Assert.Equal(0.5f, position.length);
+                position.SetCurve("", typeof(Transform), "localPosition.x", null);
+                Assert.Equal(0.5f, position.length);
+                position.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(2f, 0f, 3f, 1f));
+                Assert.Equal(3f, position.length);
+                position.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(-2f, 0f, -1f, 1f));
+                Assert.Equal(3f, position.length);
+                var components = Clip(true);
+                components.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                components.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+                components.SetCurve("", typeof(Transform), "localPosition.y", null);
+                Assert.Equal(2f, components.length);
+                components.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 0.25f, 1f));
+                Assert.Equal(2f, components.length);
+                components.ClearCurves();
+                Assert.Equal(1f, components.length);
+
+                // Every Transform vector property keeps them, also through later edits. A non-legacy
+                // clip's position stays through its companion curves (removing every component is
+                // unmeasured).
+                foreach (var property in new[] { "localScale.x", "localRotation.x", "localEulerAngles.x", "m_LocalPosition.x" })
+                {
+                    var vector = Clip(true);
+                    vector.SetCurve("", typeof(Transform), property, AnimationCurve.Linear(0f, 0f, 2f, 1f));
+                    vector.SetCurve("", typeof(Transform), property, null);
+                    Assert.Equal(2f, vector.length);
+                }
+                var scale = Clip(true);
+                scale.SetCurve("", typeof(Transform), "localScale.x", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+                scale.SetCurve("", typeof(Transform), "localScale.x", null);
+                scale.SetCurve("", typeof(Transform), "localScale.x", AnimationCurve.Linear(0f, 0f, 0.5f, 1f));
+                Assert.Equal(2f, scale.length);
+                scale.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                scale.SetCurve("", typeof(Transform), "localScale.x", null);
+                Assert.Equal(2f, scale.length);
+                var nonLegacy = Clip(false);
+                nonLegacy.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+                nonLegacy.SetCurve("", typeof(Transform), "localPosition.x", null);
+                Assert.Equal(2f, nonLegacy.length);
+                var later = Clip(true);
+                later.SetCurve("A", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+                later.SetCurve("B", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                later.SetCurve("A", typeof(Transform), "localPosition.x", null);
+                Assert.Equal(2f, later.length);
+                later.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                later.legacy = false;
+                later.AddEvent(new AnimationEvent { time = 0.5f, functionName = "F" });
+                Assert.Equal(2f, later.length);
+
+                // SetEditorCurve keeps no key times, also for a legacy clip's position.
+                var editorPosition = Clip(true);
+                var x = UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.x");
+                UnityEditor.AnimationUtility.SetEditorCurve(editorPosition, x, AnimationCurve.Linear(0f, 0f, 2f, 1f));
+                Assert.Equal(2f, editorPosition.length);
+                UnityEditor.AnimationUtility.SetEditorCurve(editorPosition, x, null);
+                Assert.Equal(1f, editorPosition.length);
+            }
+            finally
+            {
+                foreach (var o in created) Object.DestroyImmediate(o);
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
         [Fact]
         public void LegacyClipSamplesTransformCurves()
         {

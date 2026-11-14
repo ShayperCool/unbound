@@ -111,18 +111,18 @@ namespace UnityEditor
             return null;
         }
 
-        /// <summary>Sets a binding's curve (a null curve removes it).</summary>
+        /// <summary>Sets a binding's curve (a null curve removes it). Unlike AnimationClip.SetCurve on a
+        /// Transform vector property, the curve counts in the clip's length only while the clip has it
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/editorui).</summary>
         public static void SetEditorCurve(AnimationClip clip, EditorCurveBinding binding, AnimationCurve curve)
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             clip.RestoreImportedCurves();
-            clip.UpdateRuntimeCurveRange();
             clip.m_Curves.RemoveAll(c => c.Binding.Path == (binding.path ?? "") && c.Binding.Attribute == binding.propertyName && c.Binding.Matches(binding.type));
             if (curve != null)
             {
                 var copy = new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
                 clip.m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(binding.path ?? "", binding.propertyName, binding.type), Curve = copy });
-                clip.ExtendRuntimeCurveRange(copy);
             }
             clip.m_Version++;
         }

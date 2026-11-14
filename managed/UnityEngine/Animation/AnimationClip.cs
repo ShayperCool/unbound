@@ -120,34 +120,40 @@ namespace UnityEngine
         internal bool? m_GenericRoot;
 
         const float EmptyClipLength = 1f;
-        bool m_RuntimeCurveRange;
-        float m_RuntimeCurveEnd;
+        // AnimationClip.SetCurve on a legacy clip's Transform vector property (position, rotation,
+        // Euler angles, scale) keeps that curve's key times in the clip's length until ClearCurves,
+        // also once the curve is removed or replaced. Other curves, and every curve
+        // AnimationUtility.SetEditorCurve sets, count only while the clip has them (matches the
+        // Unity 6000.0.71f1 Editor, tests/projects/defaultstate and tests/projects/editorui).
+        // Unmeasured: a non-legacy clip whose vector components are all removed (its companion
+        // curves keep the length here), and a SetCurve vector curve removed by SetEditorCurve.
+        bool m_HasRetainedVectorEnd;
+        float m_RetainedVectorEnd;
 
         public AnimationClip() { }
 
-        internal void ExtendRuntimeCurveRange(AnimationCurve curve)
+        void RetainTransformVectorKeys(Type type, string attribute, AnimationCurve curve)
         {
-            if (!Compat.DefaultConstructorStateMeasured || m_HasRange || curve == null || curve.length == 0) return;
+            if (!m_Legacy || curve.length == 0 || !typeof(Transform).IsAssignableFrom(type)
+                || TransformVectorAxes(attribute, out _) == null) return;
             float end = curve[curve.length - 1].time;
-            m_RuntimeCurveEnd = m_RuntimeCurveRange ? Math.Max(m_RuntimeCurveEnd, end) : end;
-            m_RuntimeCurveRange = true;
+            m_RetainedVectorEnd = m_HasRetainedVectorEnd ? Math.Max(m_RetainedVectorEnd, end) : end;
+            m_HasRetainedVectorEnd = true;
         }
 
-        internal void UpdateRuntimeCurveRange()
+        static readonly string[] s_Axes3 = { "x", "y", "z" }, s_Axes4 = { "x", "y", "z", "w" };
+
+        /// <summary>The components of the Transform vector property a curve attribute names
+        /// (m_LocalPosition.x: x, y, z), else null.</summary>
+        static string[] TransformVectorAxes(string attribute, out string head)
         {
-            if (m_RuntimeCurveRange || m_HasRange || !Compat.DefaultConstructorStateMeasured) return;
-            bool found = false;
-            float end = float.NegativeInfinity;
-            foreach (var c in m_Curves)
-                if ((c.Curve != null && c.Curve.length > 0) || c.Sampled != null)
-                { end = Math.Max(end, c.LastKeyTime); found = true; }
-            foreach (var c in m_ObjectCurves)
-                if (c.Times.Length > 0)
-                { end = Math.Max(end, c.Times[c.Times.Length - 1]); found = true; }
-            if (found)
+            int dot = attribute.LastIndexOf('.');
+            head = dot < 0 ? null : attribute.Substring(0, dot);
+            switch (head)
             {
-                m_RuntimeCurveEnd = m_RuntimeCurveRange ? Math.Max(m_RuntimeCurveEnd, end) : end;
-                m_RuntimeCurveRange = true;
+                case "m_LocalPosition": case "m_LocalScale": case "localEulerAnglesRaw": return s_Axes3;
+                case "m_LocalRotation": return s_Axes4;
+                default: return null;
             }
         }
 
@@ -157,10 +163,16 @@ namespace UnityEngine
             {
                 if (m_HasRange) return Math.Max(0f, m_StopTime - m_StartTime);
                 if (!Compat.DefaultConstructorStateMeasured) return CurveEnd();
-                if (!m_RuntimeCurveRange) UpdateRuntimeCurveRange();
-                float end = m_RuntimeCurveRange ? m_RuntimeCurveEnd : float.NegativeInfinity;
-                foreach (var e in m_Events) end = Math.Max(end, e.m_Time);
-                return !m_RuntimeCurveRange && m_Events.Count == 0 ? EmptyClipLength : end;
+                bool found = m_HasRetainedVectorEnd;
+                float end = found ? m_RetainedVectorEnd : float.NegativeInfinity;
+                foreach (var c in m_Curves)
+                    if ((c.Curve != null && c.Curve.length > 0) || c.Sampled != null)
+                    { end = Math.Max(end, c.LastKeyTime); found = true; }
+                foreach (var c in m_ObjectCurves)
+                    if (c.Times.Length > 0)
+                    { end = Math.Max(end, c.Times[c.Times.Length - 1]); found = true; }
+                foreach (var e in m_Events) { end = Math.Max(end, e.m_Time); found = true; }
+                return found ? end : EmptyClipLength;
             }
         }
 
@@ -419,13 +431,12 @@ namespace UnityEngine
             relativePath ??= "";
             var attribute = CurveBinding.NormalizeScriptName(type, propertyName);
             RestoreImportedCurves();
-            UpdateRuntimeCurveRange();
             m_Curves.RemoveAll(c => c.Binding.Path == relativePath && c.Binding.Attribute == attribute && c.Binding.Matches(type));
             if (curve != null)
             {
                 var copy = new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
                 m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(relativePath, attribute, type), Curve = copy });
-                ExtendRuntimeCurveRange(copy);
+                RetainTransformVectorKeys(type, attribute, copy);
                 if (!m_Legacy && typeof(Transform).IsAssignableFrom(type)) AddVectorCompanions(relativePath, attribute, type, copy);
             }
             m_Version++;
@@ -433,16 +444,8 @@ namespace UnityEngine
 
         void AddVectorCompanions(string path, string attribute, Type type, AnimationCurve curve)
         {
-            int dot = attribute.LastIndexOf('.');
-            if (dot < 0) return;
-            var head = attribute.Substring(0, dot);
-            string[] axes;
-            switch (head)
-            {
-                case "m_LocalPosition": case "m_LocalScale": case "localEulerAnglesRaw": axes = new[] { "x", "y", "z" }; break;
-                case "m_LocalRotation": axes = new[] { "x", "y", "z", "w" }; break;
-                default: return;
-            }
+            var axes = TransformVectorAxes(attribute, out var head);
+            if (axes == null) return;
             foreach (var axis in axes)
             {
                 var name = head + "." + axis;
@@ -579,8 +582,8 @@ namespace UnityEngine
         {
             m_Curves.Clear();
             m_ObjectCurves.Clear();
-            m_RuntimeCurveRange = false;
-            m_RuntimeCurveEnd = 0f;
+            m_HasRetainedVectorEnd = false;
+            m_RetainedVectorEnd = 0f;
             m_Version++;
         }
 
@@ -609,8 +612,8 @@ namespace UnityEngine
             {
                 m_Curves = new List<ClipCurve>(m_Curves),
                 m_ObjectCurves = new List<ClipObjectCurve>(m_ObjectCurves),
-                m_RuntimeCurveRange = m_RuntimeCurveRange,
-                m_RuntimeCurveEnd = m_RuntimeCurveEnd,
+                m_HasRetainedVectorEnd = m_HasRetainedVectorEnd,
+                m_RetainedVectorEnd = m_RetainedVectorEnd,
                 m_SampleRate = m_SampleRate,
                 m_HumanKeyReduction = m_HumanKeyReduction,
                 m_HumanTransformPaths = m_HumanTransformPaths,
