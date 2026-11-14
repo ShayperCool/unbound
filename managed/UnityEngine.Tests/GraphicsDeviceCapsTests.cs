@@ -251,11 +251,52 @@ namespace Unbound.Tests
                     Assert.Equal(0, SystemInfo.maxComputeBufferInputsVertex);
                     Assert.Equal(0, SystemInfo.maxTiledPixelStorageSize);
                     Assert.False(SystemInfo.supportsMipStreaming);
+                    Assert.False(SystemInfo.supportsDynamicResolution);
                     Assert.Equal(0L, SystemInfo.maxGraphicsBufferSize);
                 }
             }
             finally
             {
+                GraphicsDeviceProfile.Select(previous.Type.ToString());
+            }
+        }
+
+        /// <summary>Dynamic resolution, which the Metal Editor does and Unbound's renderer not:
+        /// on Metal the answers are false and 1 and each use is reported as ignored (counted:
+        /// the warning is logged once a process); on the Linux devices they are the Editor's,
+        /// unreported (SystemInfo's own answer there is an unmeasured stub).</summary>
+        [Fact]
+        public void DynamicResolutionIsReportedWhereTheEditorScales()
+        {
+            int Hits(string member)
+            {
+                foreach (var (name, count) in Unbound.Runtime.Stubs.HitReport())
+                    if (name == member) return count;
+                return 0;
+            }
+            var previous = GraphicsDeviceProfile.Current;
+            var camera = new GameObject("dynamic resolution").AddComponent<Camera>();
+            try
+            {
+                foreach (var (device, reported) in new[] { ("Metal", 1), ("OpenGLCore", 0), ("Vulkan", 0) })
+                {
+                    GraphicsDeviceProfile.Select(device);
+                    int system = Hits("SystemInfo.supportsDynamicResolution");
+                    int manager = Hits("ScalableBufferManager");
+                    int cameraHits = Hits("Camera.allowDynamicResolution");
+                    Assert.False(SystemInfo.supportsDynamicResolution);
+                    ScalableBufferManager.ResizeBuffers(0.5f, 0.25f);
+                    Assert.Equal(1f, ScalableBufferManager.widthScaleFactor);
+                    camera.allowDynamicResolution = true;
+                    Assert.False(camera.allowDynamicResolution);
+                    Assert.Equal(reported, Hits("SystemInfo.supportsDynamicResolution") - system);
+                    Assert.Equal(2 * reported, Hits("ScalableBufferManager") - manager);
+                    Assert.Equal(reported, Hits("Camera.allowDynamicResolution") - cameraHits);
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(camera.gameObject);
                 GraphicsDeviceProfile.Select(previous.Type.ToString());
             }
         }

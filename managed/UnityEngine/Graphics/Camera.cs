@@ -206,10 +206,20 @@ namespace UnityEngine
         public int targetDisplay { get => m_TargetDisplay; set => m_TargetDisplay = value; }
         public bool allowHDR { get => m_AllowHDR; set => m_AllowHDR = value; }
         public bool allowMSAA { get => m_AllowMSAA; set => m_AllowMSAA = value; }
-        /// <summary>Stored, but the Editor's device has no dynamic resolution: false (measured:
-        /// tests/projects/builtinfx, a camera saved with it on reports false).</summary>
-        [Unbound.EditorFaithful("the Editor's device does not support dynamic resolution: the camera reports false")]
-        public bool allowDynamicResolution { get => false; set => m_AllowDynamicResolution = value; }
+        /// <summary>Stored, but Unbound's renderer has no dynamic resolution: false, as the Linux
+        /// Editor's devices answer (measured: tests/projects/builtinfx, a camera saved with it on
+        /// reports false). The macOS Editor's Metal device keeps the value: warned there.</summary>
+        [Unbound.EditorFaithful("the Linux Editor's devices do not support dynamic resolution: the camera reports false (warned on Metal)")]
+        public bool allowDynamicResolution
+        {
+            get
+            {
+                if (Unbound.Runtime.GraphicsDeviceProfile.Current.EditorDynamicResolution)
+                    Unbound.Runtime.Stubs.Ignored("Camera.allowDynamicResolution", "answers false: Unbound's renderer does not scale buffers (the Editor's Metal device keeps the value)");
+                return false;
+            }
+            set => m_AllowDynamicResolution = value;
+        }
         bool m_AllowDynamicResolution;
         public bool forceIntoRenderTexture { get; set; }
         public bool useOcclusionCulling { get; set; } = true;
