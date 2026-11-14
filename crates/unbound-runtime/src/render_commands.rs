@@ -184,7 +184,7 @@ pub enum Command {
         screen_width: i32,
         screen_height: i32,
         color_space: i32,
-        /// The image rectangle within the host window, in normalized top-left coordinates.
+        /// The image rectangle within the host window, in physical top-left pixels.
         presentation: [f32; 4],
     },
     /// The frame is complete: the screen is shown.

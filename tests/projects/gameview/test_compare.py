@@ -28,6 +28,14 @@ class CompareTests(unittest.TestCase):
     def test_raw_pointer_difference_is_not_tolerated(self):
         self.assertEqual(1, self.compare({'point': [1, 2]}, {'point': [1, 2.0000001]}))
 
+    def test_gate_accepts_only_the_exact_recorded_precision_pair(self):
+        row = ('1.pointer2', [480, -124.444443], [480, -124.444458])
+        self.assertTrue(runner.precision_only([row]))
+        self.assertFalse(runner.precision_only([('other', row[1], row[2])]))
+        self.assertFalse(runner.precision_only([('1.pointer2', row[1], [480, -124.44446])]))
+        self.assertFalse(runner.precision_only([row, ('missing', [1,2], None)]))
+        self.assertFalse(runner.precision_only([('1.pointer2',row[1],None)]))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -11,13 +11,20 @@ namespace UnityEngine.Tests
     {
         readonly int m_Width = Screen.width, m_Height = Screen.height;
 
-        public ScreenRenderingResolutionTests() => Screen.ResetRenderingResolutionForTests();
+        readonly string m_Release = ProjectInfo.UnityVersion;
+
+        public ScreenRenderingResolutionTests()
+        {
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            Screen.ResetRenderingResolutionForTests();
+        }
 
         public void Dispose()
         {
             Screen.ResetRenderingResolutionForTests();
             Screen.Update(m_Width, m_Height);
             Screen.ConsumeSizeChanged();
+            ProjectInfo.UnityVersion = m_Release;
         }
 
         [Fact]

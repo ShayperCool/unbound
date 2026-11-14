@@ -215,10 +215,10 @@ fn encode_present(
     let size = target.main_texture().size();
     let width = size.width as f32;
     let height = size.height as f32;
-    let x = (rect[0] * width).round_ties_even().clamp(0.0, width);
-    let y = (rect[1] * height).round_ties_even().clamp(0.0, height);
-    let w = (rect[2] * width).min(width - x);
-    let h = (rect[3] * height).min(height - y);
+    let x = rect[0].round_ties_even().clamp(0.0, width);
+    let y = rect[1].round_ties_even().clamp(0.0, height);
+    let w = rect[2].min(width - x);
+    let h = rect[3].min(height - y);
     if w <= 0.0 || h <= 0.0 {
         return;
     }

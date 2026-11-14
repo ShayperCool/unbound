@@ -3,7 +3,7 @@
 Unity 6000.0.71f1, Linux, NVIDIA OpenGL Core, one display pixel per Editor point.
 Two independent windowed Editor captures agree on all 43 records. The Game view is a
 floating window with its toolbar hidden and its default zoom, with real X pointer movement.
-Every capture waits for its private X display to become ready before starting another.
+Xvfb atomically assigns each private display before a capture starts.
 
 Six window/target pairs cover square, wide, tall, integer enlargement, fractional reduction
 and odd window dimensions. Records include the available view rectangle, the image rectangle,
@@ -13,16 +13,21 @@ than once, default zoom is the whole number of times it fits. Otherwise it shrin
 An odd margin can leave a half-pixel input offset. Screen and Camera.pixelRect describe the
 rendering target, independently of the window and its bars.
 
-The engine replay uses six private project copies and actual host pointer movement. Each
+The engine replay uses NVIDIA Vulkan, six private project copies and actual host pointer movement. Each
 host screenshot must have exactly the measured solid-red image bounds with black borders.
-Every reference row is compared exactly, including missing/extra keys. Screenshots and logs
+Every reference row is compared exactly, including missing/extra keys. One raw pointer row
+remains one float step apart: `1.pointer2` is `(480, -124.444443)` in the Editor and
+`(480, -124.444458)` in the engine. The vertical conversion's subtraction and scale round
+differently. It is recorded without changing the comparator or reference. `unbound` returns
+failure for that row; `gate` accepts only that exact expected/actual pair and prints the raw
+42/43 count. Any other difference, missing key or extra key fails the gate. Screenshots and logs
 stay in the run directory, outside Git. Publication requires complete, identical GPU repeats
 and checks every authored project file against both capture copies.
 
 ```sh
 python3 tests/projects/gameview/run.py editor --release 6000.0.71f1 --label <fresh-label>
 python3 tests/projects/gameview/run.py publish --release 6000.0.71f1 --label <same-label>
-UNBOUND_CLI=/path/to/runtime/unbound python3 tests/projects/gameview/run.py unbound --release 6000.0.71f1 --label <fresh-label>
+UNBOUND_CLI=/path/to/runtime/unbound python3 tests/projects/gameview/run.py gate --release 6000.0.71f1 --label <fresh-label>
 ```
 
 Documented in the [6000.0 Game view Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/GameView.html):

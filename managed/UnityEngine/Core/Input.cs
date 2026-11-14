@@ -112,17 +112,6 @@ namespace UnityEngine
             y = (y - rect.y) * s_RenderingHeight / rect.height;
         }
 
-        internal static Rect NormalizedPresentationRect
-        {
-            get
-            {
-                if (s_WindowWidth <= 0 || s_WindowHeight <= 0) return new Rect(0, 0, 1, 1);
-                var rect = PresentationRect;
-                return new Rect(rect.x / s_WindowWidth, rect.y / s_WindowHeight,
-                    rect.width / s_WindowWidth, rect.height / s_WindowHeight);
-            }
-        }
-
         internal static bool ConsumeSizeChanged()
         {
             bool changed = s_SizeChanged;
