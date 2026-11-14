@@ -1351,40 +1351,13 @@ fn image_entry(
 ) -> Option<ImageEntry> {
     let depth = texture.format().is_depth_stencil_format();
     // SAFETY: the raw handle is only read, while the texture lives (the candidates hold it).
-    let image = unsafe { texture.as_hal::<Vulkan>().map(|raw| raw.raw_handle()) }?;
+    let (image, flags) = unsafe {
+        texture
+            .as_hal::<Vulkan>()
+            .map(|raw| (raw.raw_handle(), raw.raw_usage()))
+    }?;
     let (uses, resting_layout) = resting(texture);
     candidates.push((texture.clone(), uses));
-    let usage = texture.usage();
-    let mut flags = vk::ImageUsageFlags::empty();
-    for (wgpu_usage, vk_usage) in [
-        (
-            wgpu::TextureUsages::COPY_SRC,
-            vk::ImageUsageFlags::TRANSFER_SRC,
-        ),
-        (
-            wgpu::TextureUsages::COPY_DST,
-            vk::ImageUsageFlags::TRANSFER_DST,
-        ),
-        (
-            wgpu::TextureUsages::TEXTURE_BINDING,
-            vk::ImageUsageFlags::SAMPLED,
-        ),
-        (
-            wgpu::TextureUsages::STORAGE_BINDING,
-            vk::ImageUsageFlags::STORAGE,
-        ),
-    ] {
-        if usage.contains(wgpu_usage) {
-            flags |= vk_usage;
-        }
-    }
-    if usage.contains(wgpu::TextureUsages::RENDER_ATTACHMENT) {
-        flags |= if depth {
-            vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT
-        } else {
-            vk::ImageUsageFlags::COLOR_ATTACHMENT
-        };
-    }
     let aspect = if !depth {
         vk::ImageAspectFlags::COLOR
     } else if texture.format().has_stencil_aspect() {
@@ -1610,7 +1583,9 @@ impl UnityRenderer {
                     sample_count: 1,
                     dimension: desc.dimension,
                     format: desc.format,
-                    usage: wgpu::TextureUses::RESOURCE | wgpu::TextureUses::COPY_SRC,
+                    usage: wgpu::TextureUses::RESOURCE
+                        | wgpu::TextureUses::COPY_SRC
+                        | wgpu::TextureUses::COPY_DST,
                     memory_flags: wgpu::hal::MemoryFlags::empty(),
                     view_formats: Vec::new(),
                 };
@@ -2388,5 +2363,145 @@ mod tests {
         };
         unsafe { configure_event(7, &config) };
         assert_eq!(with_state(|s| s.configs.get(&7).copied()), Some(config));
+    }
+    #[test]
+    fn owned_image_capabilities_preserve_import_and_initialization_contracts() {
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::VULKAN,
+            ..wgpu::InstanceDescriptor::new_without_display_handle_from_env()
+        });
+        let Some(adapter) =
+            bevy::tasks::block_on(instance.enumerate_adapters(wgpu::Backends::VULKAN))
+                .into_iter()
+                .next()
+        else {
+            eprintln!("skipped: no Vulkan adapter");
+            return;
+        };
+        let (device, _) = bevy::tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+            required_features: adapter.features()
+                & wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
+            required_limits: adapter.limits(),
+            ..Default::default()
+        }))
+        .unwrap();
+        let size = wgpu::Extent3d {
+            width: 7,
+            height: 3,
+            depth_or_array_layers: 1,
+        };
+        let usage = wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::RENDER_ATTACHMENT;
+        let expected = vk::ImageUsageFlags::SAMPLED
+            | vk::ImageUsageFlags::COLOR_ATTACHMENT
+            | vk::ImageUsageFlags::INPUT_ATTACHMENT
+            | vk::ImageUsageFlags::TRANSFER_SRC
+            | vk::ImageUsageFlags::TRANSFER_DST;
+        let hal = unsafe { device.as_hal::<Vulkan>() }.unwrap();
+        let supported = unsafe {
+            hal.shared_instance()
+                .raw_instance()
+                .get_physical_device_image_format_properties(
+                    hal.raw_physical_device(),
+                    vk::Format::R8G8B8A8_UNORM,
+                    vk::ImageType::TYPE_2D,
+                    vk::ImageTiling::OPTIMAL,
+                    expected,
+                    vk::ImageCreateFlags::empty(),
+                )
+        };
+        for samples in [1, 4] {
+            let texture = device.create_texture(&wgpu::TextureDescriptor {
+                label: None,
+                size,
+                mip_level_count: 1,
+                sample_count: samples,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                usage,
+                view_formats: &[],
+            });
+            let raw = unsafe { texture.as_hal::<Vulkan>() }.unwrap();
+            let extension_supported = supported.as_ref().is_ok_and(|p| {
+                p.sample_counts
+                    .contains(vk::SampleCountFlags::from_raw(samples))
+                    && p.max_extent.width >= size.width
+                    && p.max_extent.height >= size.height
+            });
+            assert_eq!(
+                raw.raw_usage(),
+                if extension_supported {
+                    expected
+                } else {
+                    vk::ImageUsageFlags::SAMPLED | vk::ImageUsageFlags::COLOR_ATTACHMENT
+                }
+            );
+            // A borrowed image reports the importer's declared minimum, even when the
+            // underlying owner has additional allocation capabilities.
+            let desc = wgpu::hal::TextureDescriptor {
+                label: None,
+                size,
+                mip_level_count: 1,
+                sample_count: samples,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                usage: wgpu::TextureUses::RESOURCE,
+                memory_flags: wgpu::hal::MemoryFlags::empty(),
+                view_formats: Vec::new(),
+            };
+            let borrowed = unsafe {
+                hal.texture_from_raw(
+                    raw.raw_handle(),
+                    &desc,
+                    Some(Box::new(|| {})),
+                    wgpu::hal::vulkan::TextureMemory::External,
+                )
+            };
+            assert_eq!(borrowed.raw_usage(), vk::ImageUsageFlags::SAMPLED);
+        }
+        // A sampled-only 2D image receives COLOR_TARGET internally for initialization.
+        // An explicit copy destination and a volume retain their original allocation usages.
+        let initialized_2d = if supported.as_ref().is_ok_and(|p| {
+            p.sample_counts.contains(vk::SampleCountFlags::TYPE_1)
+                && p.max_extent.width >= size.width
+                && p.max_extent.height >= size.height
+        }) {
+            expected
+        } else {
+            vk::ImageUsageFlags::SAMPLED | vk::ImageUsageFlags::COLOR_ATTACHMENT
+        };
+        for (dimension, usage, expected) in [
+            (
+                wgpu::TextureDimension::D2,
+                wgpu::TextureUsages::TEXTURE_BINDING,
+                initialized_2d,
+            ),
+            (
+                wgpu::TextureDimension::D2,
+                wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                vk::ImageUsageFlags::SAMPLED | vk::ImageUsageFlags::TRANSFER_DST,
+            ),
+            (
+                wgpu::TextureDimension::D3,
+                usage,
+                vk::ImageUsageFlags::SAMPLED
+                    | vk::ImageUsageFlags::COLOR_ATTACHMENT
+                    | vk::ImageUsageFlags::TRANSFER_DST,
+            ),
+        ] {
+            let texture = device.create_texture(&wgpu::TextureDescriptor {
+                label: None,
+                size,
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                usage,
+                view_formats: &[],
+            });
+            assert_eq!(
+                unsafe { texture.as_hal::<Vulkan>() }.unwrap().raw_usage(),
+                expected
+            );
+        }
     }
 }

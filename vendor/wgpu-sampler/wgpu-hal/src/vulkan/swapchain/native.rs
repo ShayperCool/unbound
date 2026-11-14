@@ -531,6 +531,7 @@ impl Swapchain for NativeSwapchain {
             index,
             texture: crate::vulkan::Texture {
                 raw: self.images[index as usize],
+                raw_usage: conv::map_texture_usage(self.config.usage),
                 drop_guard: None,
                 memory: crate::vulkan::TextureMemory::External,
                 format: self.config.format,

@@ -7,6 +7,11 @@ uses the low-level native plugin interface and records what it gets; the scripts
 
     python3 tests/projects/nativegfx/run.py check      # engine run compared with Reference/
 
+Current NVIDIA results against Unity 6000.0.71f1 are OpenGL Core 516/564 with
+48 declared residuals, Vulkan 516/518 with two, and the separate OpenGL stencil
+profile 544/605 with 61. The Vulkan attachment-capability change closes 62 of its
+64 prior differences. References and comparator tolerances are unchanged.
+
 Recorded:
 
 * **Load** (`plugin.load`, `interface.*`, `load.logs`, `event.base`): `UnityPluginLoad` runs on the
@@ -258,3 +263,38 @@ releases hardware resources without destroying the object; [DestroyImmediate](ht
 destroys the object immediately. Each control records the created state and the active
 state before and after the call, and all log messages in its own row. Other profiles retain
 the previous unmeasured destruction diagnostic.
+
+
+### Vulkan image allocation capabilities
+
+Owned optimal 2D attachments request input-attachment and both transfer usages
+when the device supports the complete format, creation flags, sample count, mip
+count, layer count and extent. Unsupported combinations retain their original
+usages. Transient, foreign, linear, DRM-modifier and volume allocations keep their
+contracts; swapchains keep their configured usage flags. The plugin receives the
+actual HAL allocation usages, including capabilities wgpu needs for initialization,
+rather than a reconstruction from the public descriptor. Imported images report
+the importer's declared minimum because Vulkan cannot query an existing image's
+creation descriptor.
+
+The SDK's IUnityGraphicsVulkan.h defines UnityVulkanImage.usage as VkImageUsageFlags.
+The [Vulkan image creation rules](https://docs.vulkan.org/refpages/latest/refpages/source/VkImageCreateInfo.html)
+require supported usage combinations, extents and sample counts. Existing
+plugin.device.*, render-buffer, resolve and sRGB controls verify the measured
+NVIDIA result without changing any reference rows. GPU unit controls also use a
+7x3 attachment, sample counts 1 and 4, a conservative borrowed view, a sampled
+copy destination and volume initialization.
+
+The remaining Vulkan rows retain their raw differences: plugin.dontcare.update
+has a command buffer in Unbound and none in this Editor history; the interface
+leaves DontCare unconstrained. plugin.msaa.buffer has sampled usage in Unbound,
+which this Editor buffer lacks. Broader multisampled allocation policy is queued.
+
+OpenGL's 42 original residuals remain: 39 callback error records, two attachment
+kind differences and Editor profiler activity. Six added multisample-compute
+rows retain earlier graphics resources in the Editor. This task does not
+synthesize those diagnostic histories or replace real GPU resources with
+metadata. Retained-color publication for bindTextureMS, multisampled arrays,
+other foreign Vulkan formats/layout handoffs and other drivers remain queued.
+The separate stencil profile's content controls match; its additional callback
+error rows remain visible.

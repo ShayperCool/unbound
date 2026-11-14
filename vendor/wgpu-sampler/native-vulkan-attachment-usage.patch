@@ -1,0 +1,87 @@
+diff --git a/wgpu-hal/src/vulkan/device.rs b/wgpu-hal/src/vulkan/device.rs
+index ca53ea688..30d9e7cde 100644
+--- a/wgpu-hal/src/vulkan/device.rs
++++ b/wgpu-hal/src/vulkan/device.rs
+@@ -311,0 +312 @@ impl super::Device {
++            raw_usage: conv::map_texture_usage(desc.usage),
+@@ -395,0 +397,47 @@ impl super::Device {
++        let base_usage = conv::map_texture_usage(desc.usage);
++        let mut raw_usage = base_usage;
++        // Plugin callbacks may use owned attachments as inputs or transfer endpoints.
++        // Keep external, transient, linear and volume image contracts unchanged.
++        if desc.dimension == wgt::TextureDimension::D2
++            && tiling == vk::ImageTiling::OPTIMAL
++            && external_memory_image_create_info.is_none()
++            && drm_modifier_info.is_none()
++            && !base_usage.contains(vk::ImageUsageFlags::TRANSIENT_ATTACHMENT)
++            && base_usage.intersects(
++                vk::ImageUsageFlags::COLOR_ATTACHMENT
++                    | vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT,
++            )
++        {
++            let extended = base_usage
++                | vk::ImageUsageFlags::INPUT_ATTACHMENT
++                | vk::ImageUsageFlags::TRANSFER_SRC
++                | vk::ImageUsageFlags::TRANSFER_DST;
++            // Query the full combination: adding usages can narrow sample/size support.
++            let properties = unsafe {
++                self.shared
++                    .instance
++                    .raw
++                    .get_physical_device_image_format_properties(
++                        self.shared.physical_device,
++                        original_format,
++                        conv::map_texture_dimension(desc.dimension),
++                        tiling,
++                        extended,
++                        raw_flags,
++                    )
++            };
++            if let Ok(properties) = properties {
++                if properties
++                    .sample_counts
++                    .contains(vk::SampleCountFlags::from_raw(desc.sample_count))
++                    && desc.mip_level_count <= properties.max_mip_levels
++                    && desc.array_layer_count() <= properties.max_array_layers
++                    && copy_size.width <= properties.max_extent.width
++                    && copy_size.height <= properties.max_extent.height
++                    && copy_size.depth <= properties.max_extent.depth
++                {
++                    raw_usage = extended;
++                }
++            }
++        }
++
+@@ -405 +453 @@ impl super::Device {
+-            .usage(conv::map_texture_usage(desc.usage))
++            .usage(raw_usage)
+@@ -442,0 +491 @@ impl super::Device {
++            usage: raw_usage,
+@@ -1241 +1290 @@ impl crate::Device for super::Device {
+-        Ok(unsafe {
++        let mut texture = unsafe {
+@@ -1248 +1297,3 @@ impl crate::Device for super::Device {
+-        })
++        };
++        texture.raw_usage = image.usage;
++        Ok(texture)
+@@ -3141,0 +3193 @@ struct ImageWithoutMemory {
++    usage: vk::ImageUsageFlags,
+diff --git a/wgpu-hal/src/vulkan/mod.rs b/wgpu-hal/src/vulkan/mod.rs
+index b3480a3ca..e50c3e766 100644
+--- a/wgpu-hal/src/vulkan/mod.rs
++++ b/wgpu-hal/src/vulkan/mod.rs
+@@ -819,0 +820 @@ pub struct Texture {
++    raw_usage: vk::ImageUsageFlags,
+@@ -839,0 +841,5 @@ impl Texture {
++    /// Allocation usage for owned images, or the declared minimum for imported images.
++    pub fn raw_usage(&self) -> vk::ImageUsageFlags {
++        self.raw_usage
++    }
++
+diff --git a/wgpu-hal/src/vulkan/swapchain/native.rs b/wgpu-hal/src/vulkan/swapchain/native.rs
+index 218b9ef16..bf202ef75 100644
+--- a/wgpu-hal/src/vulkan/swapchain/native.rs
++++ b/wgpu-hal/src/vulkan/swapchain/native.rs
+@@ -533,0 +534 @@ impl Swapchain for NativeSwapchain {
++                raw_usage: conv::map_texture_usage(self.config.usage),

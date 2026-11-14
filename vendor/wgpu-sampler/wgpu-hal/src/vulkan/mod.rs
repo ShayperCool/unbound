@@ -817,6 +817,7 @@ pub enum TextureMemory {
 #[derive(Debug)]
 pub struct Texture {
     raw: vk::Image,
+    raw_usage: vk::ImageUsageFlags,
     memory: TextureMemory,
     format: wgt::TextureFormat,
     copy_size: crate::CopyExtent,
@@ -835,6 +836,11 @@ impl Texture {
     /// - The image handle must not be manually destroyed
     pub unsafe fn raw_handle(&self) -> vk::Image {
         self.raw
+    }
+
+    /// Allocation usage for owned images, or the declared minimum for imported images.
+    pub fn raw_usage(&self) -> vk::ImageUsageFlags {
+        self.raw_usage
     }
 
     /// # Safety

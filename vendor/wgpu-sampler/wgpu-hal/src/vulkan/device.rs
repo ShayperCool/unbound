@@ -309,6 +309,7 @@ impl super::Device {
 
         super::Texture {
             raw: vk_image,
+            raw_usage: conv::map_texture_usage(desc.usage),
             drop_guard,
             memory,
             format: desc.format,
@@ -393,6 +394,53 @@ impl super::Device {
                 vk::ImageCreateFlags::MUTABLE_FORMAT | vk::ImageCreateFlags::EXTENDED_USAGE;
         }
 
+        let base_usage = conv::map_texture_usage(desc.usage);
+        let mut raw_usage = base_usage;
+        // Plugin callbacks may use owned attachments as inputs or transfer endpoints.
+        // Keep external, transient, linear and volume image contracts unchanged.
+        if desc.dimension == wgt::TextureDimension::D2
+            && tiling == vk::ImageTiling::OPTIMAL
+            && external_memory_image_create_info.is_none()
+            && drm_modifier_info.is_none()
+            && !base_usage.contains(vk::ImageUsageFlags::TRANSIENT_ATTACHMENT)
+            && base_usage.intersects(
+                vk::ImageUsageFlags::COLOR_ATTACHMENT
+                    | vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT,
+            )
+        {
+            let extended = base_usage
+                | vk::ImageUsageFlags::INPUT_ATTACHMENT
+                | vk::ImageUsageFlags::TRANSFER_SRC
+                | vk::ImageUsageFlags::TRANSFER_DST;
+            // Query the full combination: adding usages can narrow sample/size support.
+            let properties = unsafe {
+                self.shared
+                    .instance
+                    .raw
+                    .get_physical_device_image_format_properties(
+                        self.shared.physical_device,
+                        original_format,
+                        conv::map_texture_dimension(desc.dimension),
+                        tiling,
+                        extended,
+                        raw_flags,
+                    )
+            };
+            if let Ok(properties) = properties {
+                if properties
+                    .sample_counts
+                    .contains(vk::SampleCountFlags::from_raw(desc.sample_count))
+                    && desc.mip_level_count <= properties.max_mip_levels
+                    && desc.array_layer_count() <= properties.max_array_layers
+                    && copy_size.width <= properties.max_extent.width
+                    && copy_size.height <= properties.max_extent.height
+                    && copy_size.depth <= properties.max_extent.depth
+                {
+                    raw_usage = extended;
+                }
+            }
+        }
+
         let mut vk_info = vk::ImageCreateInfo::default()
             .flags(raw_flags)
             .image_type(conv::map_texture_dimension(desc.dimension))
@@ -402,7 +450,7 @@ impl super::Device {
             .array_layers(desc.array_layer_count())
             .samples(vk::SampleCountFlags::from_raw(desc.sample_count))
             .tiling(tiling)
-            .usage(conv::map_texture_usage(desc.usage))
+            .usage(raw_usage)
             .sharing_mode(vk::SharingMode::EXCLUSIVE)
             .initial_layout(vk::ImageLayout::UNDEFINED);
 
@@ -440,6 +488,7 @@ impl super::Device {
 
         Ok(ImageWithoutMemory {
             raw,
+            usage: raw_usage,
             requirements: req,
         })
     }
@@ -1238,14 +1287,16 @@ impl crate::Device for super::Device {
             unsafe { self.shared.raw.destroy_image(image.raw, None) };
         })?;
 
-        Ok(unsafe {
+        let mut texture = unsafe {
             self.texture_from_raw(
                 image.raw,
                 desc,
                 None,
                 super::TextureMemory::Allocation(allocation),
             )
-        })
+        };
+        texture.raw_usage = image.usage;
+        Ok(texture)
     }
 
     unsafe fn destroy_texture(&self, texture: super::Texture) {
@@ -3139,5 +3190,6 @@ impl super::DeviceShared {
 
 struct ImageWithoutMemory {
     raw: vk::Image,
+    usage: vk::ImageUsageFlags,
     requirements: vk::MemoryRequirements,
 }

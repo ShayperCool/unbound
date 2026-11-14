@@ -10,8 +10,12 @@ The SHA-256 values below identify the published `.crate` archives and are checke
 | wgpu-core | `14c018fce9b6270aa203c2fdd56f3cce996713534bd757e4ea58c8560b121f14` |
 | wgpu-hal | `b6b7fb58561a792bc237628ba0792e332de418fefe145f13b5ed8201e6d52f58` |
 
-`native-lod-bias.patch`, `gl-device.patch` and `native-mirror-clamp.patch`, in that order, contain every source change relative to those
-archives. `reproduce.py --output <fresh-cache-directory>` recreates the three patched source trees.
+`reproduce.py` applies `native-lod-bias.patch`, `gl-device.patch`,
+`native-mirror-clamp.patch`, `native-depth-state.patch`,
+`native-external-texture.patch`, `native-gl-mirror-clamp.patch` and
+`native-vulkan-attachment-usage.patch` in that order. Together they contain every
+source change relative to those archives. `reproduce.py --output <fresh-cache-directory>`
+recreates the three patched source trees.
 An optional `--archive-dir` supplies previously downloaded archives. The script does not
 read the Cargo registry or depend on machine-specific paths. No dependency version changes
 are required; Cargo's patch entries replace only these three packages.
@@ -158,3 +162,24 @@ renderer retains its existing Mirror approximation there. No shader or coordinat
 Reference: Unity 6000.0.71f1 tests/projects/samplerstates `MirrorWrap.own.MirrorOnce.*`,
 recorded twice on NVIDIA. Each volume axis samples beyond both edges, with distinct Clamp
 and Mirror controls. The existing Vulkan mirror-clamp path is unchanged.
+
+
+## Vulkan attachment capabilities (`native-vulkan-attachment-usage.patch`)
+
+Owned, optimal 2D color and depth attachments request input-attachment and both
+transfer usages when a Vulkan image-format query supports the full combination,
+sample count, mip count, layer count and extent. Unsupported combinations keep
+their original usages. Transient, foreign, linear, DRM-modifier and volume image
+contracts are unchanged; swapchains keep exactly their configured usages.
+
+`Texture::raw_usage()` reports the allocation's actual flags for owned images and
+the declared minimum for imported images. The native plugin interface reads those
+flags instead of reconstructing them from the narrower public texture usages.
+Importing an existing image adds no capabilities.
+
+Reference: Unity 6000.0.71f1 NVIDIA Vulkan, tests/projects/nativegfx
+`plugin.device.*`, render-buffer, resolve and sRGB metadata controls. The
+[Vulkan image creation rules](https://docs.vulkan.org/refpages/latest/refpages/source/VkImageCreateInfo.html)
+require the usage combination and image dimensions/sample count to be supported.
+These are backend allocation capabilities, not a promise of identical flags on
+other drivers or releases.
