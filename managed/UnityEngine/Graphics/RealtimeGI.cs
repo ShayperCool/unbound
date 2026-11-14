@@ -215,9 +215,8 @@ namespace UnityEngine
                 foreach (var r in s.GetProperty("renderers").EnumerateArray())
                 {
                     var renderer = BakedLighting.Find(file, r) as Renderer;
-                    var st = r.GetProperty("st");
                     renderers.Add(renderer);
-                    var inSystem = new Vector4(st[0].GetSingle(), st[1].GetSingle(), st[2].GetSingle(), st[3].GetSingle());
+                    var inSystem = LightingDataReply.Vector(r.GetProperty("st"));
                     offsets.Add(inSystem);
                     // Unbound's own bake has no lighting data to give the renderer its place in
                     // the atlas: it is its place in its system, moved to the system's.

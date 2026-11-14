@@ -115,7 +115,7 @@ pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) 
     }))
 }
 
-/// A float of the lighting data reply: a number, or for a non-finite value its name, which
+/// A float of the lighting data and realtime GI replies: a number, or for a non-finite value its name, which
 /// serde_json would write as null. Bakes hold such values: the lightmap scale and offset of a
 /// renderer whose lightmap UVs have no area (infinite scale, NaN offset; tests/projects/lightingdatanan),
 /// unused hull rays and matrix rows of light probe cells (NaN).
@@ -131,7 +131,7 @@ fn float(value: f32) -> Json {
     }
 }
 
-fn floats<'a>(values: impl IntoIterator<Item = &'a f32>) -> Json {
+pub(crate) fn floats<'a>(values: impl IntoIterator<Item = &'a f32>) -> Json {
     Json::Array(values.into_iter().map(|&v| float(v)).collect())
 }
 

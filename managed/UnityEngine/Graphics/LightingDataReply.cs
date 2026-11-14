@@ -4,7 +4,8 @@ using System.Text.Json;
 namespace UnityEngine
 {
     /// <summary>
-    /// Reads the floats of the native lighting data reply (`crates/unbound-runtime/src/lighting.rs`):
+    /// Reads the floats of the native lighting data and realtime GI replies
+    /// (`crates/unbound-runtime/src/lighting.rs`, `realtime_gi.rs`):
     /// numbers, and a non-finite value as the string "NaN", "Infinity" or "-Infinity", since JSON has
     /// no literal for them. The Editor's bakes hold such values: the lightmap scale and offset of a
     /// renderer whose lightmap UVs have no area (infinite scale, NaN offset; tests/projects/lightingdatanan),

@@ -220,7 +220,7 @@ fn register(
                 "width": s.transport.width,
                 "height": s.transport.height,
                 "renderers": data.renderers[range.clone()].iter().zip(&data.renderer_st[range])
-                    .map(|(&(object, prefab), st)| json!({ "object": object, "prefab": prefab, "st": st }))
+                    .map(|(&(object, prefab), st)| json!({ "object": object, "prefab": prefab, "st": crate::lighting::floats(st) }))
                     .collect::<Vec<_>>(),
             })
         })

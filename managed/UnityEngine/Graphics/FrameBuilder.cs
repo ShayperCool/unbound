@@ -632,10 +632,11 @@ namespace Unbound.Runtime
             // The environment's capture is drawn as the built-in pipeline draws a sky, whatever
             // the pipeline.
             bool builtin = GraphicsSettings.currentRenderPipeline == null || camera.m_EnvironmentCapture;
-            if (builtin && LightingGlobals.MainLightOf() == null)
+            // The sky's sun is the main light, else a fully baked one (SkySun), which lights no
+            // object and so is not in the globals.
+            var sun = builtin ? LightingGlobals.SkySun() : null;
+            if (builtin && (sun == null || sun.IsFullyBaked))
             {
-                // A fully baked sun lights no object, yet the sky is drawn with it (SkySun).
-                var sun = LightingGlobals.SkySun();
                 properties = sun == null
                     ? new Dictionary<int, object> { [s_WorldSpaceLightPos0Id] = (Vector4)LightingGlobals.SkyWithoutSun }
                     : new Dictionary<int, object>
