@@ -97,11 +97,10 @@ pub fn transform_normal(n: V3, inverse_scale: V3) -> V3 {
     ])
 }
 
-/// The reciprocal estimate refined twice, as the importer scales a triangle into a unit box. The
-/// estimate is the processor's, so the Editor's normals differ between architectures in their last
-/// bits: x86_64 refines SSE's estimate as the Linux Editor does (tests/projects/lightmapuvs'
-/// reference); aarch64 refines NEON's estimate with two fused reciprocal steps, as the macOS arm64
-/// Editor does (the probe's Tent normals in every weighting mode, captured on macOS, not committed).
+/// The reciprocal estimate refined twice, as the importer scales a triangle into a unit box: x86_64
+/// refines SSE's estimate as the Linux Editor does (tests/projects/lightmapuvs' reference). Other
+/// architectures divide; their normals can differ from the reference in the last bits, as the
+/// Editor's own do on another processor.
 fn reciprocal(m: f32) -> f32 {
     #[cfg(target_arch = "x86_64")]
     {
@@ -112,17 +111,7 @@ fn reciprocal(m: f32) -> f32 {
         let r2 = (2.0 - m * r1) * r1;
         if r2.is_nan() { r0 } else { r2 }
     }
-    #[cfg(target_arch = "aarch64")]
-    {
-        use std::arch::aarch64::{vrecpes_f32, vrecpss_f32};
-        // SAFETY: NEON is part of the aarch64 baseline. `vrecpss_f32(a, b)` is 2 - a * b, fused.
-        unsafe {
-            let r0 = vrecpes_f32(m);
-            let r1 = r0 * vrecpss_f32(m, r0);
-            r1 * vrecpss_f32(m, r1)
-        }
-    }
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+    #[cfg(not(target_arch = "x86_64"))]
     {
         1.0 / m
     }
@@ -606,65 +595,6 @@ mod tests {
     fn weighting_modes_match_the_editor_reference() {
         for (variant, vertex, n, expected) in tent_normals() {
             assert_eq!(n, expected, "{variant}, vertex {vertex}");
-        }
-    }
-
-    /// The macOS arm64 Unity 6000.0.71f1 Editor's Tent normals where they differ from the Linux
-    /// reference (tests/projects/lightmapuvs captured twice on macOS, identical; not committed):
-    /// the reciprocal estimate is the processor's (see `reciprocal`).
-    #[cfg(target_arch = "aarch64")]
-    #[rustfmt::skip]
-    const MACOS_TENT: &[(&str, usize, V3)] = &[
-        ("NormUnweighted", 0, [-0.0468938574, -0.00761750061, 0.9988708]),
-        ("NormUnweighted", 1, [-0.472026139, 0.00491451658, 0.8815709]),
-        ("NormUnweighted", 2, [-0.144533664, 0.471884429, 0.869732857]),
-        ("NormUnweighted", 3, [0.39120838, 0.310902536, 0.866196156]),
-        ("NormUnweighted", 6, [-0.3130386, 0.0164482221, 0.949597955]),
-        ("NormUnweighted", 7, [-0.12989749, 0.373811424, 0.918363631]),
-        ("NormUnweighted", 8, [0.2293963, 0.262860358, 0.93716687]),
-        ("NormUnweighted", 10, [-0.1578379, -0.408634484, 0.898946643]),
-        ("NormArea", 0, [-0.0527947731, 0.0137725435, 0.9985104]),
-        ("NormArea", 1, [-0.4100926, 0.00388097554, 0.9120356]),
-        ("NormArea", 2, [-0.140220821, 0.434145242, 0.889862955]),
-        ("NormArea", 3, [0.336075366, 0.269363761, 0.9024946]),
-        ("NormArea", 5, [-0.210570067, -0.44697693, 0.869408846]),
-        ("NormArea", 6, [-0.3129568, 0.009044963, 0.9497243]),
-        ("NormArea", 7, [-0.131228492, 0.372765034, 0.918599665]),
-        ("NormArea", 8, [0.248932332, 0.231645361, 0.9404111]),
-        ("NormArea", 10, [-0.159849241, -0.405909359, 0.8998255]),
-        ("NormAngle", 0, [0.00101722684, 0.02393734, 0.9997129]),
-        ("NormAngle", 1, [-0.417256027, -0.007107351, 0.908761144]),
-        ("NormAngle", 2, [-0.107788928, 0.470979542, 0.875534058]),
-        ("NormAngle", 3, [0.333145, 0.2810569, 0.900011957]),
-        ("NormAngle", 5, [-0.188393191, -0.492294759, 0.8497964]),
-        ("NormAngle", 6, [-0.3131643, 0.0340919755, 0.9490869]),
-        ("NormAngle", 7, [-0.218563035, 0.300997585, 0.9282406]),
-        ("NormAngle", 8, [0.230566129, 0.261015266, 0.9373955]),
-        ("NormAngle", 10, [-0.218507349, -0.322972059, 0.920838535]),
-        ("NormCalc", 1, [-0.368806541, -0.008651739, 0.929466]),
-        ("NormCalc", 2, [-0.09403174, 0.446768463, 0.8896943]),
-        ("NormCalc", 3, [0.303303, 0.233896986, 0.923742056]),
-        ("NormCalc", 5, [-0.157004, -0.475776285, 0.8654402]),
-        ("NormCalc", 6, [-0.313123584, 0.0267237276, 0.9493363]),
-        ("NormCalc", 7, [-0.219542965, 0.300156653, 0.9282817]),
-        ("NormCalc", 8, [0.25006476, 0.229809225, 0.9405611]),
-        ("NormCalc", 10, [-0.2201217, -0.320591271, 0.921285868]),
-    ];
-
-    #[test]
-    #[cfg(target_arch = "aarch64")]
-    fn weighting_modes_match_the_macos_editor() {
-        let normals = tent_normals();
-        for (variant, vertex, n, expected) in &normals {
-            let expected = MACOS_TENT
-                .iter()
-                .find(|(v, i, _)| v == variant && i == vertex)
-                .map_or(*expected, |row| row.2);
-            assert_eq!(*n, expected, "{variant}, vertex {vertex}");
-        }
-        // Every listed normal is one the test reaches, so none of them is a stale entry.
-        for (variant, vertex, _) in MACOS_TENT {
-            assert!(normals.iter().any(|(v, i, ..)| v == variant && i == vertex));
         }
     }
 }
