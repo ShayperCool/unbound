@@ -384,8 +384,8 @@ namespace UnityEngine
         internal static ProbeSet FromJson(JsonElement json)
         {
             var set = new ProbeSet();
-            var positions = Floats(json.GetProperty("positions"));
-            var coefficients = Floats(json.GetProperty("coefficients"));
+            var positions = LightingDataReply.Singles(json.GetProperty("positions"));
+            var coefficients = LightingDataReply.Singles(json.GetProperty("coefficients"));
             int count = positions.Length / 3;
             set.Positions = new Vector3[count];
             set.Probes = new SphericalHarmonicsL2[count];
@@ -406,13 +406,13 @@ namespace UnityEngine
                 {
                     if (i >= count) break;
                     var channels = Ints(o.GetProperty("channels"));
-                    set.Occlusion[i] = ProbeOcclusion(Ints(o.GetProperty("lights")), Floats(o.GetProperty("values")), channels);
+                    set.Occlusion[i] = ProbeOcclusion(Ints(o.GetProperty("lights")), LightingDataReply.Singles(o.GetProperty("values")), channels);
                     foreach (int channel in channels)
                         if (channel >= 0 && channel < 4) set.OcclusionChannels[i] |= (byte)(1 << channel);
                     i++;
                 }
             }
-            var rays = Floats(json.GetProperty("hullRays"));
+            var rays = LightingDataReply.Singles(json.GetProperty("hullRays"));
             set.HullRays = new Vector3[rays.Length / 3];
             for (int i = 0; i < set.HullRays.Length; i++)
                 set.HullRays[i] = new Vector3(rays[3 * i], rays[3 * i + 1], rays[3 * i + 2]);
@@ -421,7 +421,7 @@ namespace UnityEngine
             {
                 var idx = Ints(t.GetProperty("indices"));
                 var n = Ints(t.GetProperty("neighbors"));
-                var m = Floats(t.GetProperty("matrix"));
+                var m = LightingDataReply.Singles(t.GetProperty("matrix"));
                 cells.Add(new Cell
                 {
                     I0 = idx[0], I1 = idx[1], I2 = idx[2], I3 = idx[3],
@@ -451,17 +451,6 @@ namespace UnityEngine
             for (int channel = 0; channel < 4; channel++)
                 if ((present & (1 << channel)) == 0) v[channel] = 1f;
             return v;
-        }
-
-        /// <summary>A float array of the reply. JSON has no NaN: the native side writes a
-        /// non-finite value as null. The Editor's bakes hold NaN where a value is unused: the hull
-        /// ray of a probe off the hull and the first two matrix rows of an outer cell.</summary>
-        static float[] Floats(JsonElement array)
-        {
-            var values = new float[array.GetArrayLength()];
-            int i = 0;
-            foreach (var v in array.EnumerateArray()) values[i++] = v.ValueKind == JsonValueKind.Null ? float.NaN : v.GetSingle();
-            return values;
         }
 
         static int[] Ints(JsonElement array)

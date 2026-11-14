@@ -530,7 +530,7 @@ namespace UnityEngine
                     foreach (var v in root.GetProperty("ambientProbe").EnumerateArray())
                     {
                         if (k >= 27) break;
-                        sh[k / 9, k % 9] = v.GetSingle();
+                        sh[k / 9, k % 9] = LightingDataReply.Single(v);
                         k++;
                     }
                     ambient = sh;

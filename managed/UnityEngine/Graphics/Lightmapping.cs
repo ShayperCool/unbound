@@ -144,19 +144,21 @@ namespace UnityEngine
                     {
                         int terrainIndex = r.GetProperty("index").GetInt32();
                         terrain.lightmapIndex = terrainIndex >= 0xFFFE ? terrainIndex : terrainIndex + offset;
-                        terrain.lightmapScaleOffset = Vector(r.GetProperty("st"));
+                        terrain.lightmapScaleOffset = LightingDataReply.Vector(r.GetProperty("st"));
                         terrain.realtimeLightmapIndex = r.GetProperty("indexDynamic").GetInt32();
-                        terrain.realtimeLightmapScaleOffset = Vector(r.GetProperty("stDynamic"));
+                        terrain.realtimeLightmapScaleOffset = LightingDataReply.Vector(r.GetProperty("stDynamic"));
                         terrain.m_RealtimeLightmapFromData = IsLightmapIndex(terrain.realtimeLightmapIndex);
                         continue;
                     }
                     if (!(target is Renderer renderer)) continue;
+                    // A renderer lit by light probes keeps 0xFFFE (measured: tests/projects/lightingdatanan;
+                    // 0xFFFF, no lightmap, is -1 as for a renderer the bake left out, unmeasured).
                     int index = r.GetProperty("index").GetInt32();
-                    renderer.lightmapIndex = index >= 0xFFFE ? -1 : index + offset;
-                    renderer.lightmapScaleOffset = Vector(r.GetProperty("st"));
+                    renderer.lightmapIndex = index < 0xFFFE ? index + offset : index == ProbeLitLightmapIndex ? index : -1;
+                    renderer.lightmapScaleOffset = LightingDataReply.Vector(r.GetProperty("st"));
                     int dynamic = r.GetProperty("indexDynamic").GetInt32();
                     renderer.realtimeLightmapIndex = dynamic >= 0xFFFE ? -1 : dynamic;
-                    renderer.realtimeLightmapScaleOffset = Vector(r.GetProperty("stDynamic"));
+                    renderer.realtimeLightmapScaleOffset = LightingDataReply.Vector(r.GetProperty("stDynamic"));
                     renderer.m_RealtimeLightmapFromData = IsLightmapIndex(renderer.realtimeLightmapIndex);
                 }
             }
@@ -191,6 +193,10 @@ namespace UnityEngine
                 LightProbes.SceneLoaded(scene, lightingData, probes);
         }
 
+        /// <summary>The lightmap index of a renderer that contributes to global illumination and
+        /// receives it from light probes.</summary>
+        const int ProbeLitLightmapIndex = 0xFFFE;
+
         /// <summary>A lightmap index that names a lightmap (0xFFFE and 0xFFFF name none).</summary>
         internal static bool IsLightmapIndex(int index) => index >= 0 && index < 0xFFFE;
 
@@ -218,14 +224,6 @@ namespace UnityEngine
         {
             if (!map.TryGetProperty(key, out var r) || r.ValueKind != JsonValueKind.Object) return null;
             return AssetDatabaseRuntime.Load(r.GetProperty("guid").GetString(), r.GetProperty("fileId").GetInt64(), typeof(Texture2D)) as Texture2D;
-        }
-
-        static Vector4 Vector(JsonElement v)
-        {
-            var f = new float[4];
-            int i = 0;
-            foreach (var x in v.EnumerateArray()) if (i < 4) f[i++] = x.GetSingle();
-            return new Vector4(f[0], f[1], f[2], f[3]);
         }
 
         static readonly int s_Lightmap = Shader.PropertyToID("unity_Lightmap");

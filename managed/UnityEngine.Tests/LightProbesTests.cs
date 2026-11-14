@@ -207,16 +207,16 @@ namespace Unbound.Tests
         public void BakesWithUnusedNaNValuesLoad()
         {
             // The Editor's bakes hold NaN where a value is unused (the hull ray of a probe off the
-            // hull, an outer cell's first matrix rows); the lighting data reply writes it as null.
+            // hull, an outer cell's first matrix rows); the lighting data reply names it.
             const string json = @"{
                 ""positions"": [0,0,0, 1,0,0, 0,1,0, 0,0,1],
                 ""coefficients"": [" + "0.5,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0," + @"
                     0.5,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0," + @"
                     0.5,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0," + @"
                     0.5,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0],
-                ""hullRays"": [null,null,null, 1,0,0, 0,1,0, 0,0,1],
+                ""hullRays"": [""NaN"",""NaN"",""NaN"", 1,0,0, 0,1,0, 0,0,1],
                 ""tetrahedra"": [{ ""indices"": [1,2,3,-1], ""neighbors"": [-1,-1,-1,-1],
-                    ""matrix"": [null,null,null,null, null,null,null,null, 1,2,3,4] }]
+                    ""matrix"": [""NaN"",""NaN"",""NaN"",""NaN"", ""NaN"",""NaN"",""NaN"",""NaN"", 1,2,3,4] }]
             }";
             var probes = LightProbes.FromJson(JsonDocument.Parse(json).RootElement);
             Assert.Equal(4, probes.count);

@@ -46,6 +46,8 @@ fn meta_of(file: &Path) -> PathBuf {
 /// probeOcclusionLightIndex, occlusionMaskChannel, lightmapBakeType, mixedLightingMode, isBaked }],
 /// probes: { positions: [3n], coefficients: [27n], tetrahedra: [{ indices, neighbors, matrix }],
 /// hullRays: [3n], occlusion: [{ lights: [4], values: [4], channels: [4] }] } | null }`, references as `{guid, fileId}` or null.
+/// Floats are numbers, a non-finite one the string `"NaN"`, `"Infinity"` or `"-Infinity"` (JSON
+/// has no literal for them; bakes hold them, see [`float`]).
 pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) -> Result<Json> {
     let file = serialized_file(db, unity_data, guid)?;
     let cache = AssetCache::new(unbound_project::cache_root().join("builtin"));
@@ -62,17 +64,17 @@ pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) 
     };
     let probes = data.probes.as_ref().map(|p| {
         json!({
-            "positions": p.positions.iter().flatten().collect::<Vec<_>>(),
-            "coefficients": p.coefficients.iter().flatten().collect::<Vec<_>>(),
+            "positions": floats(p.positions.iter().flatten()),
+            "coefficients": floats(p.coefficients.iter().flatten()),
             "tetrahedra": p.tetrahedra.iter().map(|t| json!({
                 "indices": t.indices,
                 "neighbors": t.neighbors,
-                "matrix": t.matrix,
+                "matrix": floats(&t.matrix),
             })).collect::<Vec<_>>(),
-            "hullRays": p.hull_rays.iter().flatten().collect::<Vec<_>>(),
+            "hullRays": floats(p.hull_rays.iter().flatten()),
             "occlusion": p.occlusion.iter().map(|o| json!({
                 "lights": o.light_index,
-                "values": o.occlusion,
+                "values": floats(&o.occlusion),
                 "channels": o.mask_channel,
             })).collect::<Vec<_>>(),
         })
@@ -80,7 +82,7 @@ pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) 
     Ok(json!({
         "name": data.name,
         "lightmapsMode": data.lightmaps_mode,
-        "ambientProbe": data.ambient_probe,
+        "ambientProbe": floats(&data.ambient_probe),
         "defaultReflection": reference(&data.default_reflection),
         "reflectionProbes": data.reflection_probes.iter().map(|(id, cubemap)| json!({
             "object": id.object,
@@ -96,9 +98,9 @@ pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) 
             "object": r.id.object,
             "prefab": r.id.prefab,
             "index": r.lightmap_index,
-            "st": r.lightmap_st,
+            "st": floats(&r.lightmap_st),
             "indexDynamic": r.lightmap_index_dynamic,
-            "stDynamic": r.lightmap_st_dynamic,
+            "stDynamic": floats(&r.lightmap_st_dynamic),
         })).collect::<Vec<_>>(),
         "lights": data.lights.iter().map(|l| json!({
             "object": l.id.object,
@@ -111,6 +113,26 @@ pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) 
         })).collect::<Vec<_>>(),
         "probes": probes,
     }))
+}
+
+/// A float of the lighting data reply: a number, or for a non-finite value its name, which
+/// serde_json would write as null. Bakes hold such values: the lightmap scale and offset of a
+/// renderer whose lightmap UVs have no area (infinite scale, NaN offset; tests/projects/lightingdatanan),
+/// unused hull rays and matrix rows of light probe cells (NaN).
+fn float(value: f32) -> Json {
+    if value.is_finite() {
+        Json::from(value)
+    } else if value.is_nan() {
+        Json::from("NaN")
+    } else if value > 0.0 {
+        Json::from("Infinity")
+    } else {
+        Json::from("-Infinity")
+    }
+}
+
+fn floats<'a>(values: impl IntoIterator<Item = &'a f32>) -> Json {
+    Json::Array(values.into_iter().map(|&v| float(v)).collect())
 }
 
 /// Uploads a texture or cubemap of a serialized file under `handle`: `{ name, width, height,
@@ -300,3 +322,19 @@ fn stored_custom_render_queue(material: &Value) -> Result<i32> {
 #[cfg(test)]
 #[path = "lighting_material_queue_tests.rs"]
 mod material_queue_tests;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn non_finite_floats_are_named() {
+        assert_eq!(
+            floats(&[0.25, f32::INFINITY, f32::NEG_INFINITY, f32::NAN, -0.0]),
+            json!([0.25, "Infinity", "-Infinity", "NaN", -0.0])
+        );
+        // A finite value reads back as the same single.
+        let value = float(0.543_080_03);
+        assert_eq!(value.as_f64().unwrap() as f32, 0.543_080_03);
+    }
+}
