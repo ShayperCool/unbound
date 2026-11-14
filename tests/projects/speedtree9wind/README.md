@@ -19,7 +19,8 @@ and all zones go (130); once the winds have settled the spherical zone comes bac
 then a directional zone without wind (350), then a directional wind again (360); from frame 400
 the same wind is drawn through the built-in render pipeline. Trees also first appear late: a
 `Gusty` one once the winds have settled (300), another just before the spherical zone comes
-alone (335), a `Calm` one under the zone without wind (351); until such a tree draws its own
+alone (335), a `Calm` one under the zone without wind (351) (the second draws after the first,
+of the same asset, so the first decides the spherical zone's case); until such a tree draws its own
 wind it reads what an earlier draw left, so for it the probe records whether its extents are
 those of an earlier tree of its asset, and its constants only when they are. At 49 frames
 between 1 and 420 the probe records Time.time, the pipeline and each present

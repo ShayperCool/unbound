@@ -236,7 +236,8 @@ namespace UnityEngine
     /// wind zones (each its forward, through the hierarchy's rotations and scale signs,
     /// normalized, times windMain; pulse and turbulence take no part) at Time.time. A tree's
     /// renderer gets its constants when it first draws while the world has wind (a directional
-    /// wind, a spherical zone or a wind still moving; not a zone without wind) and from then on
+    /// wind, a spherical zone or a wind still moving; not a directional zone without wind; a
+    /// spherical zone without wind is unmeasured and counts) and from then on
     /// draws with its wind's constants of each frame, also once the wind has settled (its last
     /// direction, no strength, its noise where it stopped). Before that it draws with zeros (the
     /// Editor's draw reads whatever an earlier draw left). A spherical zone's own wind on the trees inside its
