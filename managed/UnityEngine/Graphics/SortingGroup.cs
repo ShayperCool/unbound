@@ -26,6 +26,18 @@ namespace UnityEngine.Rendering
         /// <summary>Sort with the renderers at the root, ignoring enclosing groups.</summary>
         public bool sortAtRoot { get => m_SortAtRoot; set => m_SortAtRoot = value; }
 
+        /// <summary>The nearest active and enabled sorting group on a renderer's GameObject or above
+        /// it (<paramref name="from"/> starts the walk higher up).</summary>
+        internal static SortingGroup Enclosing(Renderer renderer, Transform from = null)
+        {
+            for (var t = from ?? renderer.m_GameObject?.m_Transform; t != null; t = t.m_Parent)
+            {
+                var group = t.m_GameObject.GetComponent<SortingGroup>();
+                if (group != null && group.isActiveAndEnabled) return group;
+            }
+            return null;
+        }
+
         [Unbound.EditorFaithful("no-op is equivalent: Unbound reads sorting groups when it draws, so they are always up to date")]
         public static void UpdateAllSortingGroups() { }
 

@@ -162,9 +162,10 @@ namespace UnityEngine.Rendering
     /// off, is not lightmapped (Unbound's own refusal until BatchRendererGroup draws lightmaps), its
     /// LOD group (if any) does not animate cross-fading and every material's shader has a DOTS
     /// instancing variant (a pass declaring <c>DOTS_INSTANCING_ON</c>). Refused renderers are
-    /// drawn as usual. Matches the Unity 6000.0.71f1 Editor, tests/projects/residentdrawer, which
-    /// has a renderer for each rule but the sorting layer, sorting group, TextMesh (which Unity
-    /// does not add beside a MeshFilter), OnBecameInvisible and realtime GI ones: an
+    /// drawn as usual. Matches the Unity 6000.0.71f1 Editor, tests/projects/residentdrawer (the
+    /// sorting layer, sorting group and OnBecameInvisible rules in its controls profile), which
+    /// has a renderer for each rule but the TextMesh (which Unity does not add beside a MeshFilter)
+    /// and realtime GI ones: an
     /// OnRenderObject script, additional vertex streams, an Animation without clips and more than
     /// 128 materials (with the Editor's error) do not refuse a renderer.
     /// </summary>

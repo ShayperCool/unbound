@@ -259,7 +259,9 @@ namespace UnityEngine
             set { MainThreadCheck.Check("set_sortingOrder"); m_SortingOrder = (short)Mathf.Clamp(value, short.MinValue, short.MaxValue); Dirty(); }
         }
 
-        internal int sortingGroupID { get; set; }
+        /// <summary>The instance ID of the nearest active and enabled sorting group on the renderer
+        /// or above it, else 0.</summary>
+        internal int sortingGroupID => SortingGroup.Enclosing(this)?.GetInstanceID() ?? 0;
         internal int sortingGroupOrder { get; set; }
 
         // ------------------------------------------------------------------ materials

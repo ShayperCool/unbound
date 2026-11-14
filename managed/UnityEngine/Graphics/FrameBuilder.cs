@@ -121,10 +121,9 @@ namespace Unbound.Runtime
         internal static SortLevel[] GroupsOf(Renderer renderer, CameraContext camera)
         {
             s_GroupScratch.Clear();
-            for (var t = renderer.m_GameObject?.m_Transform; t != null; t = t.m_Parent)
+            for (var group = SortingGroup.Enclosing(renderer); group != null; group = SortingGroup.Enclosing(renderer, group.transform.m_Parent))
             {
-                var group = t.m_GameObject.GetComponent<SortingGroup>();
-                if (group == null || !group.isActiveAndEnabled) continue;
+                var t = group.transform;
                 s_GroupScratch.Add(new SortLevel
                 {
                     Id = group.GetInstanceID(),
