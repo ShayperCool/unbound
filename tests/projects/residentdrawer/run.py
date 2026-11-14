@@ -7,7 +7,8 @@
     run.py check                  an Unbound capture compared with the reference (the land gate)
     run.py compare REF ACTUAL     compares two capture directories
 
---profile selects the drawer's settings (controls: direct's, with more refusal controls; see the README): direct (the default: occlusion culling off, so the drawer
+--profile selects the drawer's settings (controls: direct's, with more refusal controls, see the
+README): direct (the default: occlusion culling off, so the drawer
 draws with direct draw commands) or occlusion (GPU occlusion culling in cameras on, so the main
 camera's commands are indirect ones the drawer's compute shaders fill). Both sides use the Vulkan
 device: the Editor windowed with -force-vulkan on the GPU-backed display :0 (the drawer dispatches
