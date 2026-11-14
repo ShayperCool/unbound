@@ -535,8 +535,9 @@ namespace UnityEngine
         }
 
         /// <summary>A curve's slope at a time between its keys (the Hermite segment's derivative, so
-        /// a key there leaves the curve as it was; flat outside its keys, and infinite on a stepped
-        /// segment, which keeps holding).</summary>
+        /// a key there leaves the curve as it was; flat outside its keys; on a stepped segment
+        /// infinite with the segment's sign, so both halves hold the value it held: +∞, which
+        /// holds the first key's value and wins over −∞, else −∞, which holds the second's).</summary>
         static float SlopeAt(AnimationCurve curve, float time)
         {
             var keys = curve.keys;
@@ -545,7 +546,8 @@ namespace UnityEngine
             while (keys[i].time < time) i++;
             Keyframe a = keys[i - 1], b = keys[i];
             float dt = b.time - a.time;
-            if (float.IsInfinity(a.outTangent) || float.IsInfinity(b.inTangent)) return float.PositiveInfinity;
+            if (float.IsPositiveInfinity(a.outTangent) || float.IsPositiveInfinity(b.inTangent)) return float.PositiveInfinity;
+            if (float.IsNegativeInfinity(a.outTangent) || float.IsNegativeInfinity(b.inTangent)) return float.NegativeInfinity;
             if (!(dt > 0f)) return 0f;
             float s = (time - a.time) / dt;
             float h00 = 6f * s * s - 6f * s, h10 = 3f * s * s - 4f * s + 1f, h01 = -h00, h11 = 3f * s * s - 2f * s;

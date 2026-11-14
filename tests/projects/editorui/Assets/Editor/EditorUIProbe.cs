@@ -470,7 +470,7 @@ public static class EditorUIProbe
         foreach (var legacy in new[] { true, false })
         {
             string tag = legacy ? "legacy" : "generic";
-            foreach (var (property, axes, whole) in new[] { ("localPosition", "xyz", "m_LocalPosition"), ("localRotation", "xyzw", "m_LocalRotation"), ("localEulerAngles", "xyz", "m_LocalEuler"), ("localScale", "xyz", "m_LocalScale") })
+            foreach (var (property, axes) in new[] { ("localPosition", "xyz"), ("localRotation", "xyzw"), ("localEulerAngles", "xyz"), ("localScale", "xyz") })
                 Call("ClipLength." + tag + ".SetCurve." + property, () =>
                 {
                     var c = new AnimationClip { legacy = legacy };
@@ -481,9 +481,17 @@ public static class EditorUIProbe
                     foreach (var axis in axes.Substring(1)) c.SetCurve("", typeof(Transform), property + "." + axis, null);
                     steps.Add(Span(c));
                     c.SetCurve("", typeof(Transform), property, null); steps.Add(Span(c));
-                    c.SetCurve("", typeof(Transform), property + ".x", full);
-                    c.SetCurve("", typeof(Transform), whole, null); steps.Add(Span(c));
                     c.ClearCurves(); steps.Add(Span(c));
+                    UnityEngine.Object.DestroyImmediate(c);
+                    return steps;
+                });
+            foreach (var (property, whole) in new[] { ("localPosition", "m_LocalPosition"), ("localRotation", "m_LocalRotation"), ("localEulerAngles", "m_LocalEuler"), ("localScale", "m_LocalScale") })
+                Call("ClipLength." + tag + ".SetCurve." + property + ".serializedRemoval", () =>
+                {
+                    var c = new AnimationClip { legacy = legacy };
+                    c.SetCurve("", typeof(Transform), property + ".x", full);
+                    var steps = new List<object> { Span(c) };
+                    c.SetCurve("", typeof(Transform), whole, null); steps.Add(Span(c));
                     UnityEngine.Object.DestroyImmediate(c);
                     return steps;
                 });

@@ -9,10 +9,10 @@ EXPECTED = {
     # expanded after the list was measured once does not count yet.
     "EditorGUI.GetPropertyHeight.pairs.expandedElements": "the reorderable list's height cache",
     # After SetCurve removes the Euler angles by m_LocalEuler, the Editor's clip settings keep the
-    # stop time of the removed curves (2) while the length is 1; Unbound reports 1 (unexplained,
-    # measured once per clip kind).
-    "ClipLength.legacy.SetCurve.localEulerAngles": "the stop time kept after the Euler angles' removal",
-    "ClipLength.generic.SetCurve.localEulerAngles": "the stop time kept after the Euler angles' removal",
+    # stop time of the removed curves (2) while the length is 1; Unbound reports 1 (unexplained;
+    # two identical macOS captures, legacy and non-legacy clips).
+    "ClipLength.legacy.SetCurve.localEulerAngles.serializedRemoval": "the stop time kept after the Euler angles' removal",
+    "ClipLength.generic.SetCurve.localEulerAngles.serializedRemoval": "the stop time kept after the Euler angles' removal",
 }
 
 

@@ -3067,7 +3067,7 @@ A clip's length follows the curves it has. SetCurve on one component of a Transf
 rotation, Euler angles or scale keys every component of the vector at the union of their key
 times, legacy clips too; removing one component that way logs the Editor's error and keeps it, and
 the property's whole name removes the vector. This replaces the retained key times of legacy
-vector curves, which only reproduced the refused removals. tests/projects/editorui gains 18
-`ClipLength.*` calls recorded with the macOS Editor: Unbound matches 258/261 calls (3 expected: the
+vector curves, which only reproduced the refused removals. tests/projects/editorui gains 26
+`ClipLength.*` calls recorded with the macOS Editor: Unbound matches 266/269 calls (3 expected: the
 reorderable list's height cache, and the stop time the Editor keeps after the Euler angles are
 removed by m_LocalEuler), where main's engine differed in 9 of the 14 it could answer.

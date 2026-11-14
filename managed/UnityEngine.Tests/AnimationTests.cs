@@ -171,8 +171,11 @@ namespace UnityEngine.Tests
                         Assert.StartsWith("Error: Can't remove individual", m_Logs[logs]);
                         // The whole vector goes by its serialized name, and by the script name but
                         // for the Euler angles, which log the error and stay.
+                        logs = m_Logs.Count;
                         vector.SetCurve("", typeof(Transform), property, null);
                         Assert.Equal(property == "localEulerAngles" ? count : 0, UnityEditor.AnimationUtility.GetCurveBindings(vector).Length);
+                        if (property == "localEulerAngles")
+                            Assert.Equal("Error: Can't remove individual rotation animation curve localEulerAngles you must remove the entire animation curve with m_LocalEuler.", Assert.Single(m_Logs.GetRange(logs, m_Logs.Count - logs)));
                         vector.SetCurve("", typeof(Transform), property + ".x", full);
                         string whole = property == "localEulerAngles" ? "m_LocalEuler" : "m_" + char.ToUpperInvariant(property[0]) + property.Substring(1);
                         vector.SetCurve("", typeof(Transform), whole, null);
@@ -241,7 +244,9 @@ namespace UnityEngine.Tests
         {
             var smooth = new AnimationCurve(new Keyframe(0f, 0f, 0f, 3f), new Keyframe(2f, 1f, -1f, 0f));
             var stepped = new AnimationCurve(new Keyframe(0f, 0f, 0f, float.PositiveInfinity), new Keyframe(2f, 1f));
-            foreach (var original in new[] { smooth, stepped })
+            var steppedLate = new AnimationCurve(new Keyframe(0f, 0f, 0f, float.NegativeInfinity), new Keyframe(2f, 1f));
+            var steppedIn = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(2f, 1f, float.NegativeInfinity, 0f));
+            foreach (var original in new[] { smooth, stepped, steppedLate, steppedIn })
             {
                 var clip = new AnimationClip { legacy = true };
                 clip.SetCurve("", typeof(Transform), "localPosition.x", original);
