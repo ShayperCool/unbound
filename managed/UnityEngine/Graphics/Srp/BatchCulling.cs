@@ -104,6 +104,9 @@ namespace Unbound.Runtime
             internal Header Header;
             /// <summary>An indirect draw command (of the output's indirect commands).</summary>
             internal bool Indirect;
+            /// <summary>The one visible instance (from the command's first) a draw of a command
+            /// with sorting positions draws, -1 for the command's whole visible range.</summary>
+            internal int Instance;
         }
 
         /// <summary>The bit of an indirect command's packed visible offset that marks it indirect
@@ -339,7 +342,7 @@ namespace Unbound.Runtime
 
         // Unsupported parts of draw commands (bits of s_Warned).
         const int UnsupportedIndirectTopology = 0, UnsupportedProcedural = 1, UnsupportedProceduralIndirect = 2, UnsupportedLightmap = 3,
-            UnsupportedCrossFadeKeyword = 4, UnsupportedMissingArrays = 5;
+            UnsupportedCrossFadeKeyword = 4, UnsupportedMissingArrays = 5, UnsupportedSortingPosition = 6;
 
         /// <summary>The view slice of a spot or point light's culling (a directional light's is 0):
         /// measured, tests/projects/brg local_shadows.</summary>
@@ -353,6 +356,7 @@ namespace Unbound.Runtime
             "BatchRendererGroup draw commands flagged IsLightMapped draw without their lightmaps (LIGHTMAP_ON and the lightmap of lightmapIndex are not bound yet).",
             "BatchRendererGroup draw commands flagged LODCrossFadeKeyword draw without LOD_FADE_CROSSFADE (not enabled yet).",
             "a BatchRendererGroup culling callback gave draw commands or visible instances without allocating their arrays; its output is not drawn.",
+            "a BatchRendererGroup draw command flagged HasSortingPosition points outside instanceSortingPositions; it sorts by its sortingPosition as an approximate depth.",
         };
 
         /// <summary>The invalid-ID errors logged so far: the Editor logs each distinct message once.</summary>
@@ -382,18 +386,18 @@ namespace Unbound.Runtime
         /// material at the default sorting layer. Commands of removed batches or unregistered
         /// meshes and materials are skipped.
         /// </summary>
-        internal static void Collect(CullingData data, FilteringSettings filtering, int mainLight, List<FrameBuilder.DrawItem> into, ref long sequence) =>
-            Collect(data, filtering, mainLight, -1, into, ref sequence);
+        internal static void Collect(FrameBuilder.CameraContext camera, CullingData data, FilteringSettings filtering, int mainLight, List<FrameBuilder.DrawItem> into, ref long sequence) =>
+            Collect(camera, data, filtering, mainLight, -1, into, ref sequence);
 
         /// <summary>The draw commands a light's shadow caster list draws: those of the light's
         /// culling outputs whose ranges cast shadows (On, TwoSided, ShadowsOnly), through the
         /// list's filters as a camera list's.</summary>
         internal static void CollectShadows(CullingData data, FilteringSettings filtering, int light, List<FrameBuilder.DrawItem> into, ref long sequence)
         {
-            if (light >= 0) Collect(data, filtering, -1, light, into, ref sequence);
+            if (light >= 0) Collect(null, data, filtering, -1, light, into, ref sequence);
         }
 
-        static void Collect(CullingData data, FilteringSettings filtering, int mainLight, int shadowLight, List<FrameBuilder.DrawItem> into, ref long sequence)
+        static void Collect(FrameBuilder.CameraContext camera, CullingData data, FilteringSettings filtering, int mainLight, int shadowLight, List<FrameBuilder.DrawItem> into, ref long sequence)
         {
             var main = mainLight >= 0 && mainLight < data.Lights.Length ? data.Lights[mainLight].light : null;
             bool shadows = shadowLight >= 0;
@@ -425,7 +429,7 @@ namespace Unbound.Runtime
                     if (filtering.excludeMotionVectorObjects && filter.motionMode == MotionVectorGenerationMode.Object) continue;
                     if (range.drawCommandsType == BatchDrawCommandType.Indirect)
                     {
-                        CollectIndirect(output, ref d, range, filter, main, into, ref sequence);
+                        CollectIndirect(camera, output, ref d, range, filter, main, into, ref sequence);
                         continue;
                     }
                     if (range.drawCommandsType != BatchDrawCommandType.Direct)
@@ -448,7 +452,22 @@ namespace Unbound.Runtime
                         }
                         if (command.visibleCount == 0) continue;
                         if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
-                        into.Add(Item(output, (int)c, false, mesh, command.submeshIndex, material, command.flags, batch.Properties, filter, main, ref sequence));
+                        var item = Item(output, (int)c, false, mesh, command.submeshIndex, material, command.flags, batch.Properties, filter, main, ref sequence);
+                        if ((command.flags & BatchDrawCommandFlags.HasSortingPosition) == 0 || camera == null)
+                        {
+                            item.Distance = ApproximateDistance(command.sortingPosition);
+                            into.Add(item);
+                            continue;
+                        }
+                        // Each instance is drawn and sorted on its own, at its sorting position.
+                        for (int k = 0; k < command.visibleCount; k++)
+                        {
+                            var instance = item;
+                            instance.Sequence = k == 0 ? item.Sequence : sequence++;
+                            instance.Dots = item.Dots.Value with { Instance = k };
+                            instance.Distance = SortingDistance(camera, ref d, command.sortingPosition + 3L * k, command.sortingPosition);
+                            into.Add(instance);
+                        }
                     }
                 }
             }
@@ -457,7 +476,7 @@ namespace Unbound.Runtime
         /// <summary>A range's indirect commands: each draws its mesh's indices with the counts its
         /// arguments buffer holds at its offset (IndirectDrawIndexedArgs), the instances' batch
         /// indices read from its visible instance buffer from its visible offset on.</summary>
-        static void CollectIndirect(Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, in BatchFilterSettings filter, Light main,
+        static void CollectIndirect(FrameBuilder.CameraContext camera, Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, in BatchFilterSettings filter, Light main,
             List<FrameBuilder.DrawItem> into, ref long sequence)
         {
             if (range.drawCommandsCount > 0 && d.indirectDrawCommands == null)
@@ -481,9 +500,39 @@ namespace Unbound.Runtime
                 }
                 // The arguments give the indices (the first one and the count): the mesh's whole
                 // index buffer is read.
-                into.Add(Item(output, (int)c, true, mesh, 0, material, command.flags,
-                    batch.WithVisibility(command.visibleInstancesBufferHandle), filter, main, ref sequence));
+                var item = Item(output, (int)c, true, mesh, 0, material, command.flags,
+                    batch.WithVisibility(command.visibleInstancesBufferHandle), filter, main, ref sequence);
+                // The instance count is on the GPU: a command with sorting positions sorts at its
+                // first instance's (unmeasured for indirect commands).
+                item.Distance = (command.flags & BatchDrawCommandFlags.HasSortingPosition) != 0 && camera != null
+                    ? SortingDistance(camera, ref d, command.sortingPosition, command.sortingPosition)
+                    : ApproximateDistance(command.sortingPosition);
+                into.Add(item);
             }
+        }
+
+        /// <summary>The sorting distance of a command without sorting positions: its
+        /// sortingPosition cast to a float is "an approximate depth" (the Scripting API's
+        /// BatchDrawCommand.sortingPosition), which sorts as minus a squared camera distance:
+        /// a larger value is drawn later among transparent draws, and against an ordinary
+        /// renderer at distance d it sorts nearer above -d*d (measured: tests/projects/brg sorting,
+        /// a perspective camera; equal values keep the commands' order).</summary>
+        static float ApproximateDistance(int sortingPosition) => -(float)sortingPosition;
+
+        /// <summary>The sorting distance of an instance at <paramref name="at"/> of the culling's
+        /// instanceSortingPositions (three floats, its world position): the camera's distance
+        /// metric, as an ordinary renderer's (measured: tests/projects/brg sorting). A position
+        /// outside the array is warned about and the command's sortingPosition is taken as an
+        /// approximate depth (unmeasured).</summary>
+        static float SortingDistance(FrameBuilder.CameraContext camera, ref BatchCullingOutputDrawCommands d, long at, int sortingPosition)
+        {
+            if (d.instanceSortingPositions == null || at < 0 || at + 3 > d.instanceSortingPositionFloatCount)
+            {
+                WarnOnce(UnsupportedSortingPosition);
+                return ApproximateDistance(sortingPosition);
+            }
+            var p = d.instanceSortingPositions + at;
+            return FrameBuilder.Distance(camera, new Vector3(p[0], p[1], p[2]));
         }
 
         /// <summary>A command's draw item: its mesh, submesh and material at the default sorting
@@ -526,7 +575,7 @@ namespace Unbound.Runtime
                 Bounds = group.m_GlobalBounds ?? default,
                 CullBounds = group.m_GlobalBounds ?? default,
                 Layer = filter.layer,
-                Dots = new DrawRef { Output = output, Command = command, Header = header, Indirect = indirect },
+                Dots = new DrawRef { Output = output, Command = command, Header = header, Indirect = indirect, Instance = -1 },
             };
         }
 
@@ -549,6 +598,13 @@ namespace Unbound.Runtime
             var batch = dots.Output.Group?.GetBatch(command.batchID);
             if (batch == null) return;
             int* visible = d.visibleInstances + command.visibleOffset;
+            if (dots.Instance >= 0)
+            {
+                if (dots.Instance >= command.visibleCount) return;
+                GfxStream.DotsDraw(dots.Header, batch.Offset, batch.Window, 0, visible + dots.Instance, 1);
+                GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);
+                return;
+            }
             for (uint first = 0; first < command.visibleCount; first += MaxInstancesPerDraw)
             {
                 int count = (int)Math.Min(MaxInstancesPerDraw, command.visibleCount - first);

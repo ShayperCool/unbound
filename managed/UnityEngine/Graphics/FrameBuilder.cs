@@ -805,7 +805,7 @@ namespace Unbound.Runtime
             // BatchRendererGroup draw commands (default sorting layer): a shadow caster list takes
             // its light culling's.
             if (shadows.HasValue) BatchCulling.CollectShadows(data, filtering, shadowLight, s_Items, ref s_Sequence);
-            else if (defaultSortingLayer) BatchCulling.Collect(data, filtering, drawing.mainLightIndex, s_Items, ref s_Sequence);
+            else if (defaultSortingLayer) BatchCulling.Collect(context, data, filtering, drawing.mainLightIndex, s_Items, ref s_Sequence);
             foreach (var source in Sources)
             {
                 try { source.CollectCameraDraws(context, s_Items); }
