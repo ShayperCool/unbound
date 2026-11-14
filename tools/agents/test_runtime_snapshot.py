@@ -22,6 +22,12 @@ class RuntimeSnapshotTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
+        # Fixture references belong to a task even in a detached integration
+        # checkout. Tests of main and live ownership override this explicitly.
+        owner = mock.patch.object(runtime, 'task_owner', return_value={
+            'worktree': str(self.root), 'branch': 'fixture-task'})
+        owner.start()
+        self.addCleanup(owner.stop)
         self.cli = self.root/'build/release/unbound'
         self.cli.parent.mkdir(parents=True)
         self.cli.write_bytes(b'#!/bin/sh\nexit 0\n')
