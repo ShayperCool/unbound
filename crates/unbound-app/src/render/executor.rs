@@ -1328,8 +1328,9 @@ impl UnityRenderer {
     /// A program's buffers: a random write target at a written buffer's register, else by name
     /// the draw's or material's (`material` has the draw's properties over the material's), else
     /// a global one; a hidden counter block its buffer's counter; zeros (with a warning) for one
-    /// nothing set. Err (warned once) when a hidden counter's buffer is not set or has no counter:
-    /// the pass is not drawn, as such a dispatch is not run.
+    /// nothing set (`unread`, a buffer the draw does not read, without one). Err (warned once)
+    /// when a hidden counter's buffer is not set or has no counter: the pass is not drawn, as
+    /// such a dispatch is not run.
     fn buffer_bind_group(
         &mut self,
         id: u32,
@@ -1337,6 +1338,7 @@ impl UnityRenderer {
         overrides: &[(String, owned::PropertyValue)],
         material: &owned::Material,
         globals: &[(String, owned::PropertyValue)],
+        unread: Option<&str>,
     ) -> Result<Option<wgpu::BindGroup>, ()> {
         if self.compiled.buffer_layout(id).is_none() {
             return Ok(None);
@@ -1426,6 +1428,9 @@ impl UnityRenderer {
             entries: &entries,
         });
         for name in missing {
+            if unread == Some(name.as_ref()) {
+                continue;
+            }
             self.warn_once(format!("drawbuf{shader}{name}"), || {
                 format!(
                     "shader `{shader}` reads buffer `{name}`, which nothing set: it reads zeros"
@@ -3984,9 +3989,18 @@ impl UnityRenderer {
             for copy in self.pre_draw.drain(..) {
                 planned.push(Planned::Convert(copy));
             }
-            let Ok(buffers_bg) =
-                self.buffer_bind_group(id, &resolved.shader, overrides, material_props, &globals)
-            else {
+            // A direct DOTS draw does not read the indirect visible instances.
+            let unread = dots
+                .filter(|d| d.indirect == 0)
+                .map(|_| super::dots::INDIRECT_VISIBILITY_BUFFER);
+            let Ok(buffers_bg) = self.buffer_bind_group(
+                id,
+                &resolved.shader,
+                overrides,
+                material_props,
+                &globals,
+                unread,
+            ) else {
                 continue;
             };
             let textures = &self.textures;

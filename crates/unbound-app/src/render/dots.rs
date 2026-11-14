@@ -21,6 +21,11 @@ use unbound_runtime::render_commands::{DOTS_HEADER_WORDS, DotsDraw};
 use unbound_runtime::render_protocol::owned::PropertyValue;
 use unbound_shaders::Compiled;
 
+/// The buffer an indirect command's visible instances are read from. A direct command leaves it
+/// unset: the shader library reads it only for an indirect command (the first visible instance
+/// element's `y`), so a direct draw binds zeros there without a warning, as the Editor logs none.
+pub const INDIRECT_VISIBILITY_BUFFER: &str = "unity_DOTSInstancing_IndirectInstanceVisibility";
+
 /// The prefix of a draw property carrying a metadata value (managed `BatchCulling.MetadataPrefix`).
 pub const METADATA_PREFIX: &str = "<DOTS>";
 const METADATA_UNIFORM: &str = "unity_DOTSInstancing";
