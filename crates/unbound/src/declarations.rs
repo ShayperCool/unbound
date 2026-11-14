@@ -668,7 +668,7 @@ impl State {
         let find = |lab: &ShaderLab| {
             lab.subshaders
                 .iter()
-                .flat_map(|s| s.passes.iter())
+                .flat_map(|s| s.passes.iter().chain(s.dropped.iter()))
                 .find(|p| p.name.eq_ignore_ascii_case(pass))
                 .cloned()
         };
@@ -835,12 +835,14 @@ impl State {
             .map_err(|e| Unknown::fixed(format!("{e:#}")))
     }
 
-    /// The keywords a project shader's own SubShaders declare (an error: the space is unknown).
+    /// The keywords a project shader's own SubShaders declare, every declared pass's (the ones
+    /// the device does not run included, as before passes were dropped; whether the space
+    /// depends on the device is unmeasured) (an error: the space is unknown).
     fn keywords(&mut self, inputs: &Inputs, lab: &ShaderLab) -> Result<Vec<Declared>, Unknown> {
         let mut space = Space::shader();
         for sub in &lab.subshaders {
             let mut surface_done = false;
-            for pass in &sub.passes {
+            for pass in sub.passes.iter().chain(sub.dropped.iter()) {
                 if pass.grab.is_some() {
                     continue;
                 }

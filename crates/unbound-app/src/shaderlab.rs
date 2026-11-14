@@ -1788,36 +1788,32 @@ impl ShaderIndex {
         if depth > 4 || lab.passes.iter().all(|p| p.use_pass.is_none()) {
             return;
         }
-        lab.passes.retain(|pass| {
-            let Some((shader, pass_name)) =
-                pass.use_pass.as_deref().and_then(|t| t.rsplit_once('/'))
-            else {
-                return true;
-            };
-            self.load(shader)
-                .is_none_or(|other| !other.drops_pass(pass_name))
-        });
-        for pass in &mut lab.passes {
-            let Some(target) = &pass.use_pass else {
-                continue;
-            };
-            let Some((shader, pass_name)) = target.rsplit_once('/') else {
-                continue;
-            };
-            let Some(mut other) = self.load(shader) else {
-                continue;
-            };
-            self.resolve_use_passes(&mut other, depth + 1);
-            if let Some(found) = other
-                .passes
-                .iter()
-                .find(|p| p.name.eq_ignore_ascii_case(pass_name))
+        let passes = std::mem::take(&mut lab.passes);
+        for mut pass in passes {
+            let target = pass
+                .use_pass
+                .as_deref()
+                .and_then(|t| t.rsplit_once('/'))
+                .map(|(shader, name)| (shader.to_string(), name.to_string()));
+            if let Some((shader, pass_name)) = target
+                && let Some(mut other) = self.load(&shader)
             {
-                // The pass itself, its name included (a UsePass pass keeps the target's name).
-                let use_pass = pass.use_pass.take();
-                *pass = found.clone();
-                pass.use_pass = use_pass;
+                if other.drops_pass(&pass_name) {
+                    continue;
+                }
+                self.resolve_use_passes(&mut other, depth + 1);
+                if let Some(found) = other
+                    .passes
+                    .iter()
+                    .find(|p| p.name.eq_ignore_ascii_case(&pass_name))
+                {
+                    // The pass itself, its name included (a UsePass pass keeps the target's name).
+                    let use_pass = pass.use_pass.take();
+                    pass = found.clone();
+                    pass.use_pass = use_pass;
+                }
             }
+            lab.passes.push(pass);
         }
     }
 }
