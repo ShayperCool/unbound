@@ -53,6 +53,10 @@ namespace Unbound.Runtime
         internal bool EditorGeometryShaders { get; init; } = true;
         internal bool EditorConservativeRaster { get; init; } = true;
         internal bool HiddenSurfaceRemovalOnGPU { get; init; }
+        /// <summary>The Editor's device scales buffers dynamically (Metal: SystemInfo answers true,
+        /// a camera keeps allowDynamicResolution and ScalableBufferManager.ResizeBuffers sets the
+        /// factors; two macOS Editor captures). Unbound's renderer does not, and answers false.</summary>
+        internal bool EditorDynamicResolution { get; init; }
         /// <summary>SystemInfo.supportsTextureWrapMirrorOnce: 1 where the Editor's device answers
         /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>
         internal int TextureWrapMirrorOnce { get; init; } = 1;
@@ -67,7 +71,7 @@ namespace Unbound.Runtime
             /// stages, and of the geometry stage.</summary>
             internal int ComputeBufferInputs, GeometryComputeBufferInputs;
             internal int TiledPixelStorageSize;
-            internal bool DynamicResolution, MipStreaming, ParallelPSOCreation;
+            internal bool MipStreaming, ParallelPSOCreation;
         }
 
         /// <summary>The render texture formats SystemInfo.SupportsRandomWriteOnRenderTextureFormat
@@ -143,14 +147,14 @@ namespace Unbound.Runtime
             EditorConservativeRaster = false,
             HiddenSurfaceRemovalOnGPU = true,
             TextureWrapMirrorOnce = 0,
-            // tests/projects/urp CapsProbe `device-metal.jsonl`. The renderer's Metal device takes
-            // 31 storage buffers a stage too.
+            EditorDynamicResolution = true,
+            // tests/projects/urp CapsProbe `device-metal.jsonl`. (The renderer's Metal device
+            // binds 29 storage buffers a stage: 2 of Metal's 31 buffer slots are its own.)
             Limits = new MeasuredLimits
             {
                 ComputeBufferInputs = 31,
                 GeometryComputeBufferInputs = 0,
                 TiledPixelStorageSize = 64,
-                DynamicResolution = true,
                 MipStreaming = true,
                 ParallelPSOCreation = true,
             },

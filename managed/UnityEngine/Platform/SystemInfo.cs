@@ -365,10 +365,19 @@ namespace UnityEngine
         public static int maxComputeBufferInputsCompute => Measured(static l => l.ComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsCompute");
         [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
         public static int maxTiledPixelStorageSize => Measured(static l => l.TiledPixelStorageSize, "UnityEngine.SystemInfo.maxTiledPixelStorageSize");
-        /// <summary>The Metal Editor's answer; it does not scale its buffers
-        /// (ScalableBufferManager keeps 1).</summary>
-        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
-        public static bool supportsDynamicResolution => Measured(static l => l.DynamicResolution, "UnityEngine.SystemInfo.supportsDynamicResolution");
+        /// <summary>False, what Unbound's renderer does: the Metal Editor answers true and scales
+        /// its buffers (ScalableBufferManager here keeps 1); unmeasured on the other devices.</summary>
+        public static bool supportsDynamicResolution
+        {
+            get
+            {
+                if (Device.EditorDynamicResolution)
+                    Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsDynamicResolution", "answers false, what Unbound's renderer does (the Editor's Metal device answers true and scales its buffers): games take their fallback path");
+                else
+                    Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfo.supportsDynamicResolution");
+                return false;
+            }
+        }
         /// <summary>The Metal Editor's answer; textures load whole (streaming is not simulated).</summary>
         [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
         public static bool supportsMipStreaming => Measured(static l => l.MipStreaming, "UnityEngine.SystemInfo.supportsMipStreaming");
