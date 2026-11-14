@@ -41,9 +41,19 @@ public sealed class SpeedTreeUrpProbe : MonoBehaviour
         {
             Rec("pipeline", GraphicsSettings.currentRenderPipeline == null ? "builtin" : GraphicsSettings.currentRenderPipeline.GetType().Name);
             Rec("colorSpace", QualitySettings.activeColorSpace.ToString());
-            foreach (var path in Directory.GetFiles("Assets/Trees", "*.st9").OrderBy(p => p, StringComparer.Ordinal))
-                DumpTree(path.Replace('\\', '/'));
-            DumpShader(Shader.Find("Universal Render Pipeline/Nature/SpeedTree9_URP"));
+            var shader = Shader.Find("Universal Render Pipeline/Nature/SpeedTree9_URP");
+            var trees = Directory.GetFiles("Assets/Trees", "*.st9").OrderBy(p => p, StringComparer.Ordinal).Select(p => p.Replace('\\', '/')).ToArray();
+            // The scene has no camera: nothing has rendered through the pipeline yet.
+            Rec("before/globalRenderPipeline", Shader.globalRenderPipeline);
+            DumpShader("before/shader", shader);
+            foreach (var path in trees) DumpStates("before/" + Path.GetFileNameWithoutExtension(path), path);
+            // One render through the pipeline.
+            var camera = new GameObject("ProbeCamera").AddComponent<Camera>();
+            camera.Render();
+            Destroy(camera.gameObject);
+            Rec("globalRenderPipeline", Shader.globalRenderPipeline);
+            foreach (var path in trees) DumpTree(path);
+            DumpShader("shader", shader);
             foreach (var path in Directory.GetFiles("Assets/Trees", "*.png").OrderBy(p => p, StringComparer.Ordinal))
             {
                 var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path.Replace('\\', '/'));
@@ -82,25 +92,38 @@ public sealed class SpeedTreeUrpProbe : MonoBehaviour
 
     /// <summary>The shader the materials use: its queue and each sub-shader's tags, and a material
     /// made from it at run time (controls for the imported materials' queue, tags and passes).</summary>
-    void DumpShader(Shader shader)
+    void DumpShader(string p, Shader shader)
     {
         if (shader == null)
         {
-            Rec("shader", "null");
+            Rec(p, "null");
             return;
         }
-        Rec("shader", shader.name + " queue " + shader.renderQueue + " subshaders " + shader.subshaderCount + " passes " + shader.passCount);
+        Rec(p, shader.name + " queue " + shader.renderQueue + " subshaders " + shader.subshaderCount + " passes " + shader.passCount);
         for (int i = 0; i < shader.subshaderCount; i++)
-            Rec("shader/subshader" + i, "RenderType=" + shader.FindSubshaderTagValue(i, new ShaderTagId("RenderType")).name
+            Rec(p + "/subshader" + i, "RenderType=" + shader.FindSubshaderTagValue(i, new ShaderTagId("RenderType")).name
                 + " Queue=" + shader.FindSubshaderTagValue(i, new ShaderTagId("Queue")).name
                 + " RenderPipeline=" + shader.FindSubshaderTagValue(i, new ShaderTagId("RenderPipeline")).name);
         var fresh = new Material(shader);
-        Rec("shader/fresh", "queue " + fresh.renderQueue + " raw " + fresh.rawRenderQueue);
-        Rec("shader/fresh/passes", string.Join(" ", k_Passes.Select(n => n + ":" + (fresh.GetShaderPassEnabled(n) ? 1 : 0))));
-        Rec("shader/fresh/tags", "RenderType=" + fresh.GetTag("RenderType", false, "") + " Queue=" + fresh.GetTag("Queue", false, ""));
+        Rec(p + "/fresh", "queue " + fresh.renderQueue + " raw " + fresh.rawRenderQueue);
+        Rec(p + "/fresh/passes", string.Join(" ", k_Passes.Select(n => n + ":" + (fresh.GetShaderPassEnabled(n) ? 1 : 0))));
+        Rec(p + "/fresh/tags", "RenderType=" + fresh.GetTag("RenderType", false, "") + " Queue=" + fresh.GetTag("Queue", false, ""));
         fresh.SetOverrideTag("RenderType", "");
-        Rec("shader/fresh/clearedOverride", "RenderType=" + fresh.GetTag("RenderType", false, "") + " fallbacks=" + fresh.GetTag("RenderType", true, ""));
+        Rec(p + "/fresh/clearedOverride", "RenderType=" + fresh.GetTag("RenderType", false, "") + " fallbacks=" + fresh.GetTag("RenderType", true, ""));
         Destroy(fresh);
+    }
+
+    /// <summary>The materials' queue, tags and passes (what depends on the shader's active
+    /// sub-shader).</summary>
+    void DumpStates(string t, string path)
+    {
+        foreach (var m in AssetDatabase.LoadAllAssetsAtPath(path).OfType<Material>().OrderBy(m => m.name, StringComparer.Ordinal))
+        {
+            string p = t + "/material/" + m.name;
+            Rec(p + "/queue", m.renderQueue.ToString(CultureInfo.InvariantCulture));
+            Rec(p + "/passes", string.Join(" ", k_Passes.Select(n => n + ":" + (m.GetShaderPassEnabled(n) ? 1 : 0))));
+            Rec(p + "/tags", "RenderType=" + m.GetTag("RenderType", false, "") + " Queue=" + m.GetTag("Queue", false, ""));
+        }
     }
 
     void DumpMaterial(string p, Material m)

@@ -6,18 +6,22 @@ pipeline asset and renderer of `tests/projects/urp`), in linear colour space. Th
 the materials URP's SpeedTree 9 shader graph and runs URP's `[MaterialSettingsCallback]`, which
 sets the culling from `_TwoSided` and the shader graph's keywords and passes.
 
-`Assets/Scripts/SpeedTreeUrpProbe.cs` records each material (shader, keywords, queue, enabled
+`Assets/Scripts/SpeedTreeUrpProbe.cs` records, before anything renders (the scene has no camera),
+`Shader.globalRenderPipeline`, the shader's queue, sub-shader tags and pass count, a material made
+from it at run time, and the imported materials' queue, tags and enabled passes; then, after one
+`Camera.Render`, the same for the shader and each material in full (shader, keywords, queue, enabled
 passes, tags, every shader property), the materials of each level's renderer, and each tree
-texture's sRGB state, format and mip count, and controls for the shader: its queue, each
-sub-shader's tags, and a material made from it at run time. Floats are the hex of their bits; values
-compare exactly.
+texture's sRGB state, format and mip count. Floats are the hex of their bits; values compare
+exactly.
 
 Measured in the Unity 6000.0.71f1 Editor (two identical captures, OpenGL Core, NVIDIA driver):
-every material's shader, keywords and properties match in Unbound. `residuals.json` lists what does
-not: in this Editor run the shader's active sub-shader is its second, the fallback (queue 2000, no
-tags, one pass), so the materials' queue, tags and MotionVectors pass follow it, while Unbound uses
-the URP sub-shader; and the Editor imports the tree's extra map without sRGB (its post-processing of
-a tree's textures), which Unbound does not reproduce.
+after the render every material's shader, keywords, queue, tags and properties match in Unbound.
+`residuals.json` lists, by cause, what does not: before the first render the Editor has not set
+`Shader.globalRenderPipeline`, so the shader's fallback sub-shader is active (Unbound creates the
+pipeline earlier); the imported materials keep the MotionVectors pass off, as URP's material update
+ran at import with the fallback active; on OpenGL Core the Editor drops the GBuffer pass whose
+program excludes glcore; and the Editor imports the tree's extra map without sRGB (its
+post-processing of a tree's textures).
 
     python3 tests/projects/speedtree9urp/run.py record --label A     # Editor capture (GPU)
     python3 tests/projects/speedtree9urp/run.py publish A B          # two identical captures
