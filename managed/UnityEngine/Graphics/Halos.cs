@@ -15,9 +15,9 @@ namespace Unbound.Runtime
     /// FlareLayer. A camera command buffer that clears the target's color at AfterForwardAlpha or
     /// BeforeHaloAndLensFlares hides the halos (not the flares); empty buffers and buffers setting a
     /// global float do not (see <see cref="HalosHidden"/>).</item>
-    /// <item>A halo is a square fan of four triangles facing the camera (its right and up axes),
+    /// <item>A halo is a square fan of eight triangles in view space,
     /// half as wide as the halo's size (a Halo component's size, a light's range times
-    /// <c>RenderSettings.haloStrength</c>), its center vertex a third of that size nearer the
+    /// <c>RenderSettings.haloStrength</c>), its center vertex 0.333 of that size nearer the
     /// camera, sampling <c>_HaloFalloff</c>: the scene's halo texture, else a 64x64 alpha texture
     /// of <c>1 - r²</c>.</item>
     /// <item>A flare's elements are quads in view space at the flare's depth, on the line from
@@ -151,7 +151,11 @@ namespace Unbound.Runtime
         /// project decodes the byte to linear and stores that again in 8 bits.</summary>
         static byte VertexByte(float gamma)
         {
-            int g = (int)(Mathf.Clamp01(gamma) * 255f + 0.5f);
+            return VertexByteFromGamma((int)(Mathf.Clamp01(gamma) * 255f + 0.5f));
+        }
+
+        static byte VertexByteFromGamma(int g)
+        {
             if (QualitySettings.activeColorSpace != ColorSpace.Linear)
             {
                 if (!s_WarnedGamma)
@@ -176,7 +180,7 @@ namespace Unbound.Runtime
         /// target with its matrices.</summary>
         internal static void Render(Camera camera, in Matrix4x4 view, in Matrix4x4 projection, Rect viewport)
         {
-            bool drawn = DrawHalos(camera, view);
+            bool drawn = DrawHalos(camera, view, projection);
             var layer = camera.GetComponent<FlareLayer>();
             if (layer != null && layer.enabled) drawn |= DrawFlares(camera, view, projection, viewport);
             else ForgetCamera(camera);
@@ -195,19 +199,16 @@ namespace Unbound.Runtime
                 Unmeasured(what + " on a layer the camera's cullingMask excludes", "it is drawn anyway");
         }
 
-        static bool DrawHalos(Camera camera, in Matrix4x4 view)
+        static bool DrawHalos(Camera camera, in Matrix4x4 view, in Matrix4x4 projection)
         {
             s_Vertices.Clear(); s_Uvs.Clear(); s_Colors.Clear(); s_Indices.Clear();
-            var cameraToWorld = view.inverseDoublePrecision;
-            Vector3 right = cameraToWorld.GetColumn(0), up = cameraToWorld.GetColumn(1), forward = -(Vector3)cameraToWorld.GetColumn(2);
-            right.Normalize(); up.Normalize(); forward.Normalize();
             foreach (var halo in s_Halos)
             {
                 if (halo == null || !halo.isActiveAndEnabled || halo.m_Size <= 0f) continue;
                 // A Halo component's color is its own (its transform's scale does not matter).
                 var c = halo.m_Color;
                 CheckLayer(camera, halo, "halo");
-                AddHalo(halo.transform.position, halo.m_Size, VertexColor(c.r, c.g, c.b), right, up, forward);
+                AddHalo(ViewPoint(view, halo.transform.position), halo.m_Size, c);
             }
             float strength = RenderSettings.haloStrength;
             float scale = Mathf.LinearToGammaSpace(Mathf.Max(0f, strength));
@@ -220,7 +221,7 @@ namespace Unbound.Runtime
                 var c = light.color;
                 CheckLayer(camera, light, "halo");
                 float k = light.intensity * scale;
-                AddHalo(light.transform.position, size, VertexColor(c.r * k, c.g * k, c.b * k), right, up, forward);
+                AddHalo(ViewPoint(view, light.transform.position), size, new Color(c.r * k, c.g * k, c.b * k));
             }
             if (s_Vertices.Count == 0 || HalosHidden(camera)) return false;
             s_HaloMesh ??= NewMesh("Unbound Halos");
@@ -235,7 +236,10 @@ namespace Unbound.Runtime
             s_HaloProperties[s_FalloffId] = Shader.GetGlobalTexture(s_FalloffId) ?? Falloff;
             // The shader declares no properties: its scale and offset come with the draw.
             s_HaloProperties[s_FalloffStId] = new Vector4(1f, 1f, 0f, 0f);
+            var saved = GfxStream.Current;
+            GfxStream.Camera(Matrix4x4.identity, projection, saved.Flags);
             GfxStream.Draw(s_HaloMesh.Sync(), 0, s_HaloMaterial.Sync(), 0, Matrix4x4.identity, Color.white, properties: s_HaloProperties);
+            GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
             return true;
         }
 
@@ -277,21 +281,43 @@ namespace Unbound.Runtime
             return hidden;
         }
 
-        static void AddHalo(Vector3 center, float size, Color32 color, Vector3 right, Vector3 up, Vector3 forward)
+        // Preserve the order of view-space products used by the flare geometry too.
+        static Vector3 ViewPoint(in Matrix4x4 view, Vector3 p) => new Vector3(
+            ((view.m02 * p.z + view.m01 * p.y) + view.m00 * p.x) + view.m03,
+            ((view.m12 * p.z + view.m11 * p.y) + view.m10 * p.x) + view.m13,
+            ((view.m22 * p.z + view.m21 * p.y) + view.m20 * p.x) + view.m23);
+
+        // The center's forward displacement measured by the halo depth controls.
+        const float HaloCenterOffset = 0.333f;
+        static void AddHalo(Vector3 center, float size, Color gamma)
         {
+            if (!(center.z <= -size)) return;
+            // Between one and two radii from the camera, fade the packed sRGB bytes
+            // before converting them to the project's vertex-color space.
+            int fade = center.z <= -2f * size ? 256 : (int)(center.z * -255f / size - 255f + 0.5f) + 1;
+            byte Channel(float value) => VertexByteFromGamma(((int)(Mathf.Clamp01(value) * 255f + 0.5f) * fade) >> 8);
+            var color = new Color32(Channel(gamma.r), Channel(gamma.g), Channel(gamma.b), (byte)((255 * fade) >> 8));
             int start = s_Vertices.Count;
-            s_Vertices.Add(center - forward * (size / 3f));
+            s_Vertices.Add(new Vector3(center.x, center.y, size * HaloCenterOffset + center.z));
             s_Uvs.Add(new Vector2(0.5f, 0.5f));
-            s_Vertices.Add(center - right * size - up * size); s_Uvs.Add(new Vector2(0f, 0f));
-            s_Vertices.Add(center + right * size - up * size); s_Uvs.Add(new Vector2(1f, 0f));
-            s_Vertices.Add(center + right * size + up * size); s_Uvs.Add(new Vector2(1f, 1f));
-            s_Vertices.Add(center - right * size + up * size); s_Uvs.Add(new Vector2(0f, 1f));
-            for (int i = 0; i < 5; i++) s_Colors.Add(color);
-            for (int i = 0; i < 4; i++)
+            // Midpoints split each side of the square. Their perspective interpolation
+            // differs from a fan that goes directly from corner to corner.
+            for (int i = 0; i < 8; i++)
             {
-                s_Indices.Add(start);
+                (float x, float y) = i switch
+                {
+                    0 => (-1f, 0f), 1 => (-1f, -1f), 2 => (0f, -1f), 3 => (1f, -1f),
+                    4 => (1f, 0f), 5 => (1f, 1f), 6 => (0f, 1f), _ => (-1f, 1f),
+                };
+                s_Vertices.Add(new Vector3(center.x + x * size, center.y + y * size, center.z));
+                s_Uvs.Add(new Vector2((x + 1f) * 0.5f, (y + 1f) * 0.5f));
+            }
+            for (int i = 0; i < 9; i++) s_Colors.Add(color);
+            for (int i = 0; i < 8; i++)
+            {
                 s_Indices.Add(start + 1 + i);
-                s_Indices.Add(start + 1 + (i + 1) % 4);
+                s_Indices.Add(start);
+                s_Indices.Add(start + 1 + (i + 1) % 8);
             }
         }
 
@@ -452,11 +478,7 @@ namespace Unbound.Runtime
         internal static Vector3 FlarePoint(in Matrix4x4 view, in Source source, float near)
         {
             var q = source.Point;
-            if (!source.Directional)
-                return new Vector3(
-                    q.z * view.m02 + q.y * view.m01 + view.m00 * q.x + view.m03,
-                    q.z * view.m12 + q.y * view.m11 + view.m10 * q.x + view.m13,
-                    q.z * view.m22 + q.y * view.m21 + q.x * view.m20 + view.m23);
+            if (!source.Directional) return ViewPoint(view, q);
             // Twice the near plane's distance: within 60 degrees of the view axis it is in view.
             float far = near + near;
             float x = q.x * far, y = q.y * far, z = far * q.z;

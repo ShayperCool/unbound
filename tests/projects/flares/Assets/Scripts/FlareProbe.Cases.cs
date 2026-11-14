@@ -109,6 +109,7 @@ public partial class FlareProbe
         yield return HaloTexture();
         yield return HaloBuffers();
         yield return FlareLimits();
+        yield return HaloLimits();
     }
 
     IEnumerator Halos()
@@ -633,4 +634,28 @@ public partial class FlareProbe
         ResetCamera();
         Flush();
     }
+    IEnumerator HaloLimits()
+    {
+        ResetCamera();
+        RenderSettings.haloStrength = 1f;
+        var pointObject = SceneObject("HaloPoint");
+        pointObject.SetActive(true);
+        var light = pointObject.GetComponent<Light>();
+        light.range = 2f;
+        light.intensity = 1f;
+        light.color = new Color(1f, 0.5f, 0.25f);
+        foreach (float depth in new[] { 1f, 2f, 2.5f, 3f, 4f, 5f })
+        {
+            pointObject.transform.position = cam.transform.position + new Vector3(0f, 0f, depth);
+            yield return Shot("hl.depth" + F(depth));
+        }
+        cam.orthographic = true;
+        cam.orthographicSize = 3f;
+        pointObject.transform.position = cam.transform.position + new Vector3(0.3f, 0.2f, 3f);
+        yield return Shot("hl.orthoFade");
+        ResetCamera();
+        pointObject.SetActive(false);
+        Flush();
+    }
+
 }

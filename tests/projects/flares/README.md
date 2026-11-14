@@ -67,8 +67,8 @@ value and image (`run.py extend`).
 * `_HaloFalloff` is a global texture from the start: `UnityHalo`, 64x64 alpha, bilinear, clamped,
   alpha `round(255 * max(0, 1 - r²))` with r the texel center's distance from the middle over 32.
   A scene's halo texture replaces it when the scene loads (sampled with its own filter).
-* A halo is a square fan of four triangles in the camera's right/up plane, its corners `size` away
-  along each axis, its center vertex `size / 3` nearer the camera; it draws with the Halo shader
+* A halo is a square fan of eight triangles in the camera's right/up plane, its corners `size` away
+  along each axis, its center vertex `0.333 * size` nearer the camera; it draws with the Halo shader
   (depth tested, fogged towards black, `OneMinusDstColor One`) with or without a FlareLayer. A
   Halo component's size is its own (not scaled by its transform, not by haloStrength); a light's
   is its range times haloStrength, for every light type, while the light is enabled.
@@ -117,3 +117,8 @@ value and image (`run.py extend`).
   do not, nor the LensFlare's ignored layers), and out at half that speed; disabling restarts it
   at zero. Directional flares are infinitely far opposite their forward axis. Fog and `useFog`
   change nothing measured here.
+
+The `hl.*` controls append seven images of a point-light halo near the camera, including an
+orthographic view. The halo is culled closer than its radius and fades between one and two
+radii, by scaling its packed sRGB bytes before the linear vertex-color conversion. The
+existing image and value rows remain byte-identical in both new NVIDIA OpenGL Core captures.
