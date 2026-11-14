@@ -663,13 +663,12 @@ pub struct ShaderCompiler {
 }
 
 /// The device's built-in defines that programs do not compile with: framebuffer fetch (Metal's
-/// `inout` color targets) and its fallback, which Unbound's renderer does not do. Programs take
-/// their paths without it, as on Vulkan; `GraphicsSettings.HasShaderDefine` still answers them as
-/// the Editor does. A program that tests the define is warned of once per file.
-const NOT_COMPILED: [&str; 2] = [
-    "UNITY_FRAMEBUFFER_FETCH_AVAILABLE",
-    "UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK",
-];
+/// `inout` color targets), which Unbound's renderer does not do. Programs take their paths
+/// without it, as on Vulkan; `GraphicsSettings.HasShaderDefine` still answers it as the Editor
+/// does. A program whose own text tests it is warned of once per file. (Metal's fallback,
+/// `UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK`, is compiled: its framebuffer inputs read
+/// `_UnityFBInput<i>`, the textures the render pipelines' inputs are bound to.)
+const NOT_COMPILED: [&str; 1] = ["UNITY_FRAMEBUFFER_FETCH_AVAILABLE"];
 
 /// The warning for a requirement name Unity does not know ([`targets::Requirements::unknown`]),
 /// naming the shader file it was read from.
@@ -786,8 +785,8 @@ impl ShaderCompiler {
                 .insert((program.file.clone(), NOT_COMPILED[0].into()))
         {
             tracing::warn!(
-                "{}: the program has a framebuffer fetch path, which Unbound does not compile on \
-                 the {} device: it takes its path without it",
+                "{}: the program tests framebuffer fetch, which Unbound does not compile on the {} \
+                 device: it takes its path without it",
                 program.file.display(),
                 self.settings.device
             );
@@ -3283,8 +3282,8 @@ float4 frag(v2f i) : SV_Target
         }
     }
 
-    /// Metal's framebuffer fetch defines are answered (HasShaderDefine) but not compiled with:
-    /// a program's fetch path (an `inout` color target) is not taken.
+    /// Metal's framebuffer fetch define is answered (HasShaderDefine) but not compiled with: a
+    /// program's fetch path (an `inout` color target) is not taken.
     #[test]
     fn framebuffer_fetch_defines_are_not_compiled() {
         let mut defines: Vec<String> = DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect();
@@ -3298,12 +3297,14 @@ float4 frag(v2f i) : SV_Target
         .unwrap();
         let fetching = PROGRAM.replace(
             "float4 frag(v2f i) : SV_Target",
-            "#if defined(UNITY_FRAMEBUFFER_FETCH_AVAILABLE) || defined(UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK)\n\
+            "#if defined(UNITY_FRAMEBUFFER_FETCH_AVAILABLE)\n\
              #error the fetch path is compiled\n\
              #endif\n\
              float4 frag(v2f i) : SV_Target",
         );
-        compiler.compile(&program(&fetching, false), &[], false).unwrap();
+        compiler
+            .compile(&program(&fetching, false), &[], false)
+            .unwrap();
     }
 
     #[test]
@@ -3786,6 +3787,52 @@ float4 frag(float4 p : SV_POSITION) : SV_Target
             .collect();
         found.sort();
         found.into_iter().next()
+    }
+
+    /// Metal's framebuffer fetch fallback is compiled: HLSLSupport's framebuffer inputs read
+    /// `_UnityFBInput<i>` (on the installed Unity release's includes; skipped without one).
+    #[test]
+    fn metal_framebuffer_inputs_read_their_fallback_textures() {
+        let Some(cg) = unity_includes() else {
+            eprintln!("no Unity release installed: skipped");
+            return;
+        };
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+#include "UnityCG.cginc"
+UNITY_DECLARE_FRAMEBUFFER_INPUT_HALF(0);
+struct v2f { float4 pos : SV_POSITION; };
+v2f vert(float4 vertex : POSITION) { v2f o; o.pos = UnityObjectToClipPos(vertex); return o; }
+half4 frag(v2f i) : SV_Target { return UNITY_READ_FRAMEBUFFER_INPUT(0, i.pos) * 0.5; }
+"#;
+        let mut defines: Vec<String> = DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect();
+        defines.extend(
+            [
+                "UNITY_FRAMEBUFFER_FETCH_AVAILABLE",
+                "UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK",
+            ]
+            .map(String::from),
+        );
+        let mut compiler = ShaderCompiler::new(Settings {
+            includes: Includes {
+                cg_includes: Some(cg),
+                ..Default::default()
+            },
+            unity_version: 6000071,
+            platform_defines: defines,
+            device: unbound_compat::GraphicsDevice::Metal,
+            ..Default::default()
+        })
+        .unwrap();
+        let c = compiler
+            .compile(&program(source, true), &[], false)
+            .unwrap();
+        assert!(
+            c.textures.iter().any(|t| t == "_UnityFBInput0"),
+            "{:?}",
+            c.textures
+        );
     }
 
     /// A UI program on the installed Unity release's includes (skipped without one).
