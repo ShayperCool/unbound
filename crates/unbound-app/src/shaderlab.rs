@@ -503,7 +503,9 @@ impl PassInfo {
     /// (Unity 6000.0.71f1 on OpenGL Core, tests/projects/speedtree9urp: the shader graph's GBuffer
     /// pass, `exclude_renderers gles3 glcore`, is not among the shader's passes). A pass without a
     /// program of its own (fixed-function, `UsePass`, `GrabPass`) and the pragmas of an
-    /// `#include_with_pragmas` file (not read) leave it running.
+    /// `#include_with_pragmas` file (not read) leave it running. Unmeasured, Unbound's reading:
+    /// a pragma inside a `/* */` comment counts, and every `only_renderers` line must name the
+    /// device.
     pub fn runs_on(&self, renderer: &str) -> bool {
         let Some(program) = &self.program else {
             return true;
@@ -695,6 +697,14 @@ impl ShaderLab {
                 self.passes = Vec::new();
             }
         }
+    }
+
+    /// Whether a pass by this name (compared case-insensitively) is one the device does not run
+    /// and no SubShader runs one by the name.
+    pub fn drops_pass(&self, name: &str) -> bool {
+        let named = |p: &PassInfo| p.name.eq_ignore_ascii_case(name);
+        self.subshaders.iter().any(|s| s.dropped.iter().any(named))
+            && !self.subshaders.iter().any(|s| s.passes.iter().any(named))
     }
 
     /// The pass a renderer list draws for a `LightMode` tag: the first whose tag it is (an
@@ -939,6 +949,8 @@ pub struct SubShader {
     pub passes: Vec<PassInfo>,
     /// `LOD n` (0 when it has none).
     pub lod: u32,
+    /// The passes it declares that the device does not run, in order.
+    pub dropped: Vec<PassInfo>,
     /// Every pass it has is one the device does not run, so it is not chosen (Unbound's
     /// reading: unmeasured, where only a dropped pass among others is).
     pub unsupported: bool,
@@ -1212,6 +1224,7 @@ impl Parser<'_> {
             tags: HashMap::new(),
             passes: Vec::new(),
             lod: 0,
+            dropped: Vec::new(),
             unsupported: false,
         };
         if self.next() != Some(Token::Open) {
@@ -1317,9 +1330,8 @@ impl Parser<'_> {
         // States set after a pass apply to it too: ShaderLab states are SubShader-wide.
         sub.tags = states.tags.clone();
         let declared = passes.len();
-        sub.passes = passes
+        let (kept, dropped): (Vec<_>, Vec<_>) = passes
             .into_iter()
-            .filter(|pass| pass.runs_on(self.renderer))
             .map(|mut pass| {
                 if pass.use_pass.is_none() {
                     pass.own_tags = pass.states.tags.clone();
@@ -1327,7 +1339,9 @@ impl Parser<'_> {
                 }
                 pass
             })
-            .collect();
+            .partition(|pass| pass.runs_on(self.renderer));
+        sub.passes = kept;
+        sub.dropped = dropped;
         sub.unsupported = declared > 0 && sub.passes.is_empty();
         sub
     }
@@ -1768,11 +1782,21 @@ impl ShaderIndex {
     }
 
     /// Replaces `UsePass` passes by the named passes (`"Shader/PASS"`, pass names compared
-    /// case-insensitively as Unity does).
+    /// case-insensitively as Unity does); one naming a pass the device does not run goes with
+    /// it.
     fn resolve_use_passes(&self, lab: &mut ShaderLab, depth: u32) {
         if depth > 4 || lab.passes.iter().all(|p| p.use_pass.is_none()) {
             return;
         }
+        lab.passes.retain(|pass| {
+            let Some((shader, pass_name)) =
+                pass.use_pass.as_deref().and_then(|t| t.rsplit_once('/'))
+            else {
+                return true;
+            };
+            self.load(shader)
+                .is_none_or(|other| !other.drops_pass(pass_name))
+        });
         for pass in &mut lab.passes {
             let Some(target) = &pass.use_pass else {
                 continue;
@@ -2241,6 +2265,34 @@ Pass { Name "TAIL" }
         )
         .unwrap();
         assert_eq!(vertex_lit.forward_passes(), vec![0]);
+    }
+
+    #[test]
+    fn a_use_pass_of_a_pass_the_device_does_not_run_goes_with_it() {
+        let dir = std::env::temp_dir().join(format!("unbound-usepass-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("Source.shader"),
+            "Shader \"Tests/Source\" { SubShader { Pass { Name \"KEPT\" } \
+             Pass { Name \"GONE\" HLSLPROGRAM\n#pragma exclude_renderers glcore\nENDHLSL } } }",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("User.shader"),
+            "Shader \"Tests/User\" { SubShader { UsePass \"Tests/Source/KEPT\" UsePass \"Tests/Source/GONE\" } }",
+        )
+        .unwrap();
+        let mut index = ShaderIndex::scan(std::slice::from_ref(&dir));
+        let names: Vec<String> = index
+            .get("Tests/User")
+            .unwrap()
+            .passes
+            .iter()
+            .map(|p| p.name.clone())
+            .collect();
+        std::fs::remove_dir_all(&dir).ok();
+        // The tests run for the default device, OpenGL Core.
+        assert_eq!(names, ["KEPT"]);
     }
 
     /// Every shader of a real project parses: `UNBOUND_TEST_PROJECT=<unity project> cargo test`.

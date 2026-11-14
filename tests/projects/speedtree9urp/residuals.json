@@ -1,5 +1,5 @@
 {
-  "The Editor's post-processing of a tree's textures (an extra map imported without sRGB) is not reproduced (follow-up in docs/COMPATIBILITY_GAPS.md)": [
+  "The Editor's post-processing of a tree's textures (an extra map imported without sRGB) is not reproduced, by decision (row in docs/COMPATIBILITY_GAPS.md: the Editor keeps it in the textures' .meta files, which Unbound does not write)": [
     "texture/Leaf_Extra.png"
   ]
 }

@@ -628,7 +628,7 @@ impl State {
             let found = lab
                 .subshaders
                 .iter()
-                .flat_map(|s| s.passes.iter())
+                .flat_map(|s| s.passes.iter().chain(s.dropped.iter()))
                 .find(|p| p.name.eq_ignore_ascii_case(pass))
                 .cloned()
                 .ok_or_else(unresolved)?;
@@ -711,7 +711,7 @@ impl State {
         let found = self.project(inputs).get(shader).and_then(|lab| {
             lab.subshaders
                 .iter()
-                .flat_map(|s| s.passes.iter())
+                .flat_map(|s| s.passes.iter().chain(s.dropped.iter()))
                 .find(|p| p.name.eq_ignore_ascii_case(name))
                 .cloned()
         });
@@ -722,16 +722,42 @@ impl State {
         }
     }
 
+    /// Whether a `UsePass` names a project shader's pass the device does not run.
+    fn use_pass_dropped(&mut self, inputs: &Inputs, target: &str) -> bool {
+        let Some((shader, name)) = target.rsplit_once('/') else {
+            return false;
+        };
+        self.project(inputs)
+            .get(shader)
+            .is_some_and(|lab| lab.drops_pass(name))
+    }
+
     /// A project shader's own SubShaders: tags and passes (names and own tags as Unity stores
     /// them; a surface program stands for the passes Unity generates for it), their `LOD` and
-    /// whether a pass limits the devices it runs on.
+    /// whether a pass limits the devices it runs on. The passes are the ones the device runs (a
+    /// pass whose program excludes it, or a `UsePass` of such a pass, is not among them, as on
+    /// the Editor's OpenGL Core device), and a SubShader that lost one is `restricted` (its
+    /// selection then is the renderer's); a SubShader the device runs no pass of keeps its
+    /// declared passes, `restricted` (the renderer passes it over).
     fn subshaders(&mut self, inputs: &Inputs, lab: &ShaderLab) -> Result<Vec<Value>, Unknown> {
         let mut out = Vec::new();
         for sub in &lab.subshaders {
             let mut passes = Vec::new();
             let mut surface_done = false;
-            let mut restricted = false;
+            let mut restricted = !sub.dropped.is_empty();
+            let mut kept = Vec::new();
             for pass in &sub.passes {
+                match &pass.use_pass {
+                    Some(target) if self.use_pass_dropped(inputs, target) => restricted = true,
+                    _ => kept.push(pass),
+                }
+            }
+            let listed: Vec<&PassInfo> = if kept.is_empty() {
+                sub.passes.iter().chain(sub.dropped.iter()).collect()
+            } else {
+                kept
+            };
+            for pass in listed {
                 restricted |= self.pass_limits_renderers(inputs, pass, 0);
                 if let Some(program) = pass.program.as_ref().filter(|p| p.surface) {
                     if let Some(option) = surface_options(&program.code).first() {

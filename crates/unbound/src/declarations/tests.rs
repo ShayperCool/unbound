@@ -1088,6 +1088,46 @@ fn renderer_limits_are_read_from_pragmas() {
 /// then the Fallback chain's, a built-in Fallback's LOD from its serialized form and never
 /// restricted. Shader.passCount picks by them (managed ShaderPassCountTests).
 #[test]
+fn a_pass_the_device_does_not_run_is_not_among_the_passes() {
+    let scratch = Scratch::new("decl-dropped");
+    let data = scratch.0.join("install");
+    scratch.write("install/Resources/unity_builtin_extra", "stand-in");
+    scratch.write("install/Resources/unity default resources", "stand-in");
+    scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
+    // The default device in tests is OpenGL Core.
+    scratch.write(
+        "Assets/Dropped.shader",
+        "Shader \"Tests/Dropped\" {\n\
+         SubShader { Pass { Name \"FORWARD\" } Pass { Name \"GBUFFER\" HLSLPROGRAM\n#pragma exclude_renderers gles3 glcore\n#pragma vertex vert\nENDHLSL } Pass { Name \"META\" } }\n\
+         SubShader { Pass { Name \"OTHER\" } UsePass \"Tests/Dropped/GBUFFER\" }\n}",
+    );
+    let provider = Provider::new(inputs(
+        &scratch,
+        scratch.0.join("CGIncludes"),
+        data,
+        MEASURED,
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicBool::new(false)),
+    ));
+    let answer = ask(&provider, "Tests/Dropped");
+    assert_eq!(answer["subshaders_known"], true, "{answer}");
+    let subs = answer["subshaders"].as_array().unwrap();
+    let names = |s: &Value| {
+        s["passes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|p| p["name"].as_str().unwrap().to_string())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(names(&subs[0]), ["FORWARD", "META"]);
+    assert_eq!(names(&subs[1]), ["OTHER"]);
+    // A SubShader that lost a pass is one whose selection the renderer answers.
+    assert_eq!(subs[0]["restricted"], true);
+    assert_eq!(subs[1]["restricted"], true);
+}
+
+#[test]
 fn subshaders_carry_their_lod_and_device_limits() {
     use unbound_assets::builtin_shaders::{DeclaredPass, DeclaredSubShader};
     let scratch = Scratch::new("decl-lod");
