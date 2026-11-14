@@ -813,6 +813,17 @@ namespace Unbound.Runtime
                         if (file.MainObject is UnityEngine.U2D.SpriteAtlas)
                             file.Objects[UnityEngine.U2D.SpriteAtlas.ImportedFileId] = file.MainObject;
                         break;
+                    case "vfx":
+                        // A graph's models look their asset up while they load and compile.
+                        try
+                        {
+                            file = VisualEffectImports.Import(info, Publish);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogWarning($"Unbound: importing {info.Path}: {e.Message}");
+                        }
+                        break;
                     default:
                         if (Importers.TryGetValue(info.Kind ?? "", out var importer))
                         {
@@ -1186,6 +1197,17 @@ namespace Unbound.Runtime
         {
             foreach (var pair in file.Objects) s_Objects[(file.Guid, pair.Key)] = pair.Value;
             s_Files[file.Guid] = file;
+        }
+
+        /// <summary>Registers the objects of a loaded file again after an import changed them:
+        /// objects it no longer has are forgotten, new ones found by their file ids.</summary>
+        internal static void RefreshObjects(LoadedFile file)
+        {
+            var stale = new List<(string, long)>();
+            foreach (var key in s_Objects.Keys)
+                if (string.Equals(key.Item1, file.Guid, StringComparison.OrdinalIgnoreCase) && !file.Objects.ContainsKey(key.Item2)) stale.Add(key);
+            foreach (var key in stale) s_Objects.Remove(key);
+            foreach (var pair in file.Objects) s_Objects[(file.Guid, pair.Key)] = pair.Value;
         }
 
         /// <summary>Forgets one file so that the next load reads it again (hot reload of content).</summary>

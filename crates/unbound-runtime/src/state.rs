@@ -214,6 +214,7 @@ fn asset_kind(path: &str) -> &'static str {
         "cs" => "script",
         "shader" | "cginc" | "hlsl" | "shadergraph" => "shader",
         "compute" => "compute",
+        "vfx" | "vfxoperator" | "vfxblock" => "vfx",
         "raytrace" => "raytrace",
         "uxml" => "uxml",
         "uss" => "uss",
@@ -1217,6 +1218,7 @@ fn default_importer(path: &str) -> &'static str {
         "asmref" => "AssemblyDefinitionReferenceImporter",
         "shader" => "ShaderImporter",
         "compute" => "ComputeShaderImporter",
+        "vfx" | "vfxoperator" | "vfxblock" => "VisualEffectImporter",
         "raytrace" => "RayTracingShaderImporter",
         "png" | "jpg" | "jpeg" | "tga" | "psd" | "tif" | "tiff" | "gif" | "bmp" | "exr" | "hdr" => {
             "TextureImporter"

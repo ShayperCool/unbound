@@ -4682,15 +4682,6 @@ namespace UnityEngine.Rendering
         [global::System.Obsolete("This AddInstance method is deprecated and will be removed and it will be removed in Unity 2024.1. Please use the alternative AddInstance method for adding Renderers to the acceleration structure.")] [global::Unbound.Stub] public void AddInstance(global::UnityEngine.Renderer targetRenderer, bool[] subMeshMask = null, bool[] subMeshTransparencyFlags = null, bool enableTriangleCulling = true, bool frontTriangleCounterClockwise = false, uint mask = 255U, uint id = 4294967295U) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingAccelerationStructure.AddInstance"); }
         [global::System.Obsolete("This AddInstance method is deprecated and it will be removed in Unity 2024.1. Please use the alternative AddInstance method for adding procedural geometry (AABBs) to the acceleration structure.")] [global::Unbound.Stub] public void AddInstance(global::UnityEngine.GraphicsBuffer aabbBuffer, uint numElements, global::UnityEngine.Material material, bool isCutOff, bool enableTriangleCulling = true, bool frontTriangleCounterClockwise = false, uint mask = 255U, bool reuseBounds = false, uint id = 4294967295U) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingAccelerationStructure.AddInstance"); }
         [global::System.Obsolete("This AddInstance method is deprecated and it will be removed in Unity 2024.1. Please use the alternative AddInstance method for adding procedural geometry (AABBs) to the acceleration structure.")] [global::Unbound.Stub] public int AddInstance(global::UnityEngine.GraphicsBuffer aabbBuffer, uint aabbCount, bool dynamicData, global::UnityEngine.Matrix4x4 matrix, global::UnityEngine.Material material, bool opaqueMaterial, global::UnityEngine.MaterialPropertyBlock properties, uint mask = 255U, uint id = 4294967295U) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingAccelerationStructure.AddInstance"); return default; }
-        [global::System.Flags]
-        public enum RayTracingModeMask
-        {
-            Nothing = 0,
-            Static = 2,
-            DynamicTransform = 4,
-            DynamicGeometry = 8,
-            Everything = 14,
-        }
         public enum ManagementMode
         {
             Manual = 0,

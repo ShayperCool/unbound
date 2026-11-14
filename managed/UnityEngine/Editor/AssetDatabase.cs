@@ -333,8 +333,14 @@ namespace UnityEditor
 
         public static void ImportAsset(string path) => ImportAsset(path, ImportAssetOptions.Default);
 
-        public static void ImportAsset(string path, ImportAssetOptions options) =>
+        /// <summary>Assets are read from the project as they load, so there is nothing to bring
+        /// up to date; a forced import of a loaded Visual Effect Graph compiles it again
+        /// (<see cref="VisualEffectImports.Reimport"/>).</summary>
+        public static void ImportAsset(string path, ImportAssetOptions options)
+        {
+            if ((options & ImportAssetOptions.ForceUpdate) != 0 && VisualEffectImports.Reimport(path)) return;
             Stubs.Ignored("AssetDatabase.ImportAsset", "does not re-import (assets are read from the project as they are)");
+        }
 
         [Unbound.EditorFaithful("Unbound keeps no asset files open")]
         public static void ReleaseCachedFileHandles() { }

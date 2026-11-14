@@ -7,85 +7,16 @@
 
 namespace UnityEditor.VFX
 {
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class VFXCPUBufferData : global::System.IDisposable
+    unsafe partial class VFXCPUBufferData
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] public VFXCPUBufferData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXCPUBufferData.ctor"); }
         [global::Unbound.Stub] internal static global::System.IntPtr Internal_Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXCPUBufferData.Internal_Create"); return default; }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXCPUBufferData.Dispose"); }
         [global::Unbound.Stub] internal static void Internal_Destroy(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXCPUBufferData.Internal_Destroy"); }
-        [global::Unbound.Stub] public void PushUInt(uint v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXCPUBufferData.PushUInt"); }
-        [global::Unbound.Stub] public void PushInt(int v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXCPUBufferData.PushInt"); }
-        [global::Unbound.Stub] public void PushFloat(float v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXCPUBufferData.PushFloat"); }
-        [global::Unbound.Stub] public void PushBool(bool v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXCPUBufferData.PushBool"); }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEditor.VFX.VFXCPUBufferData data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXCPUBufferData.BindingsMarshaller.ConvertToNative"); return default; }
         }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXCPUBufferDesc
-    {
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXLayoutElementDesc[] layout;
-        [global::Unbound.Stub] public uint capacity;
-        [global::Unbound.Stub] public uint stride;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXCPUBufferData initialData;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXEditorSystemDesc
-    {
-        [global::Unbound.Stub] public global::UnityEngine.VFX.VFXSystemType type;
-        [global::Unbound.Stub] public global::UnityEngine.VFX.VFXSystemFlag flags;
-        [global::Unbound.Stub] public uint capacity;
-        [global::Unbound.Stub] public uint layer;
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXMapping[] buffers;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXMapping[] values;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXEditorTaskDesc[] tasks;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXInstanceSplitDesc[] instanceSplitDescs;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXEditorTaskDesc
-    {
-        [global::Unbound.Stub] public global::UnityEngine.VFX.VFXTaskType type;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXMapping[] buffers;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXMappingTemporary[] temporaryBuffers;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXMapping[] values;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXMapping[] parameters;
-        [global::Unbound.Stub] public uint instanceSplitIndex;
-        [global::Unbound.Stub] public global::UnityEngine.Object model;
-        [global::Unbound.Stub] public bool usesMaterialVariant;
-        public global::UnityEngine.Object externalProcessor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXEditorTaskDesc.externalProcessor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXEditorTaskDesc.externalProcessor"); } }
-        public int shaderSourceIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXEditorTaskDesc.shaderSourceIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXEditorTaskDesc.shaderSourceIndex"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXEventDesc
-    {
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] public uint[] startSystems;
-        [global::Unbound.Stub] public uint[] stopSystems;
-        [global::Unbound.Stub] public uint[] initSystems;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXExposedMapping
-    {
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXMapping mapping;
-        [global::Unbound.Stub] public global::UnityEngine.VFX.VFXSpace space;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXExpressionDesc
-    {
-        [global::Unbound.Stub] public global::UnityEngine.VFX.VFXExpressionOperation op;
-        [global::Unbound.Stub] public int[] data;
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class VFXExpressionHelper
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.VFX.VFXValueType GetTypeOfOperation(global::UnityEngine.VFX.VFXExpressionOperation op, int data0, int data1, int data2, int data3) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXExpressionHelper.GetTypeOfOperation"); return default; }
-        [global::Unbound.Stub] public static int GetSizeOfType(global::UnityEngine.VFX.VFXValueType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXExpressionHelper.GetSizeOfType"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Rendering.TextureDimension GetTextureDimension(global::UnityEngine.VFX.VFXValueType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXExpressionHelper.GetTextureDimension"); return default; }
     }
     [global::Unbound.Stub]
     internal unsafe partial class VFXExpressionMesh
@@ -126,20 +57,6 @@ namespace UnityEditor.VFX
         [global::Unbound.Stub] public VFXExpressionNoise() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXExpressionNoise.ctor"); }
     }
     [global::Unbound.Stub]
-    internal unsafe partial class VFXExpressionObjectValueContainerDesc<T> : global::UnityEditor.VFX.VFXExpressionValueContainerDesc
-    {
-        [global::Unbound.Stub] public int instanceID;
-        [global::Unbound.Stub] public VFXExpressionObjectValueContainerDesc() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXExpressionObjectValueContainerDesc<T>.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXExpressionSheet
-    {
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXExpressionDesc[] expressions;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXExpressionDesc[] expressionsPerSpawnEventAttribute;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXExpressionValueContainerDesc[] values;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXExposedMapping[] exposed;
-    }
-    [global::Unbound.Stub]
     internal unsafe partial struct VFXExpressionSheetInternal
     {
         [global::Unbound.Stub] public global::UnityEditor.VFX.VFXExpressionDesc[] expressions;
@@ -152,18 +69,6 @@ namespace UnityEditor.VFX
     {
         [global::Unbound.Stub] internal static uint GetTextureFormat(global::UnityEngine.Texture texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXExpressionTexture.GetTextureFormat"); return default; }
         [global::Unbound.Stub] public VFXExpressionTexture() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXExpressionTexture.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class VFXExpressionValueContainerDesc
-    {
-        [global::Unbound.Stub] public uint expressionIndex;
-        [global::Unbound.Stub] protected VFXExpressionValueContainerDesc() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXExpressionValueContainerDesc.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class VFXExpressionValueContainerDesc<T> : global::UnityEditor.VFX.VFXExpressionValueContainerDesc
-    {
-        [global::Unbound.Stub] public T value;
-        [global::Unbound.Stub] public VFXExpressionValueContainerDesc() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXExpressionValueContainerDesc<T>.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct VFXExpressionValuesSheetInternal
@@ -196,170 +101,20 @@ namespace UnityEditor.VFX
         [global::Unbound.Stub] public uint[] boolValuesExpressions;
     }
     [global::Unbound.Stub]
-    internal unsafe partial struct VFXGPUBufferDesc
-    {
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXLayoutElementDesc[] layout;
-        [global::Unbound.Stub] public uint capacity;
-        [global::Unbound.Stub] public global::UnityEngine.GraphicsBuffer.Target target;
-        [global::Unbound.Stub] public uint size;
-        [global::Unbound.Stub] public uint stride;
-        [global::Unbound.Stub] public global::UnityEngine.ComputeBufferMode mode;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXInstanceSplitDesc
-    {
-        [global::Unbound.Stub] public uint[] values;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXLayoutElementDesc
-    {
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] public global::UnityEngine.VFX.VFXValueType type;
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXLayoutOffset offset;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXLayoutOffset
-    {
-        [global::Unbound.Stub] public uint bucket;
-        [global::Unbound.Stub] public uint structure;
-        [global::Unbound.Stub] public uint element;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXMapping
-    {
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] public int index;
-        [global::Unbound.Stub] public VFXMapping(string name, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXMapping.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXMappingTemporary
-    {
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXMapping mapping;
-        [global::Unbound.Stub] public uint pastFrameIndex;
-        [global::Unbound.Stub] public bool perCameraBuffer;
-        [global::Unbound.Stub] public VFXMappingTemporary(global::UnityEditor.VFX.VFXMapping mapping, uint pastFrameIndex, bool perCameraBuffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXMappingTemporary.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class VFXMemorySerializer
-    {
-        [global::Unbound.Stub] public static string StoreObjects(global::UnityEngine.ScriptableObject[] objects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXMemorySerializer.StoreObjects"); return default; }
-        [global::Unbound.Stub] public static byte[] StoreObjectsToByteArray(global::UnityEngine.ScriptableObject[] objects, global::UnityEngine.CompressionLevel compressionLevel = (global::UnityEngine.CompressionLevel)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXMemorySerializer.StoreObjectsToByteArray"); return global::System.Array.Empty<byte>(); }
-        [global::Unbound.Stub] public static global::UnityEngine.ScriptableObject[] DuplicateObjects(global::UnityEngine.ScriptableObject[] objects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXMemorySerializer.DuplicateObjects"); return global::System.Array.Empty<global::UnityEngine.ScriptableObject>(); }
-        [global::Unbound.Stub] public static global::UnityEngine.ScriptableObject[] ExtractObjects(string data, bool asACopy) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXMemorySerializer.ExtractObjects"); return global::System.Array.Empty<global::UnityEngine.ScriptableObject>(); }
-        [global::Unbound.Stub] public static global::UnityEngine.ScriptableObject[] ExtractObjects(byte[] data, bool asACopy) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VFXMemorySerializer.ExtractObjects"); return global::System.Array.Empty<global::UnityEngine.ScriptableObject>(); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXRendererSettings
-    {
-        [global::Unbound.Stub] public global::UnityEngine.MotionVectorGenerationMode motionVectorGenerationMode;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.ShadowCastingMode shadowCastingMode;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.RayTracingAccelerationStructure.RayTracingModeMask rayTracingMode;
-        [global::Unbound.Stub] public bool receiveShadows;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.ReflectionProbeUsage reflectionProbeUsage;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.LightProbeUsage lightProbeUsage;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXShaderSourceDesc
-    {
-        [global::Unbound.Stub] public bool compute;
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] public string source;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXTemplate
-    {
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] public string category;
-        [global::Unbound.Stub] public string description;
-        [global::Unbound.Stub] public global::UnityEngine.Texture2D icon;
-        [global::Unbound.Stub] public global::UnityEngine.Texture2D thumbnail;
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct VFXTemporaryGPUBufferDesc
-    {
-        [global::Unbound.Stub] public global::UnityEditor.VFX.VFXGPUBufferDesc desc;
-        [global::Unbound.Stub] public uint frameCount;
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class VisualEffectEditorDefault : global::UnityEditor.Editor, global::UnityEditor.ICoupledEditor
     {
         [global::Unbound.Stub] public override void OnInspectorGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectEditorDefault.OnInspectorGUI"); }
         global::UnityEditor.SerializedObject global::UnityEditor.ICoupledEditor.coupledComponent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectEditorDefault.coupledComponent"); return default; } }
         [global::Unbound.Stub] public VisualEffectEditorDefault() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectEditorDefault.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class VisualEffectImporter : global::UnityEditor.AssetImporter
+    unsafe partial class VisualEffectResource
     {
-        [global::Unbound.Stub] public VisualEffectImporter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectImporter.ctor"); }
-        public global::UnityEditor.VFX.VFXTemplate templateProperty { [global::Unbound.Stub] get { this.CheckImporterState("get_templateProperty"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectImporter.templateProperty"); return default; } [global::Unbound.Stub] set { this.CheckImporterState("set_templateProperty"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectImporter.templateProperty"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class VisualEffectResource : global::UnityEngine.Object
-    {
-        public const string Extension = ".vfx";
-        public const int CurrentVersion = 1;
-        public const uint uncompiledVersion = 0U;
-        public const uint defaultVersion = 1U;
-        [global::Unbound.Stub] internal static global::System.Func<string, string[]> onAddResourceDependencies;
-        [global::Unbound.Stub] internal static global::System.Action<global::UnityEditor.VFX.VisualEffectResource> onCompileResource;
-        [global::Unbound.Stub] internal static global::System.Action<global::UnityEditor.VFX.VisualEffectResource, global::UnityEngine.Material, global::UnityEngine.Object> onSetupMaterial;
-        [global::Unbound.Stub] public VisualEffectResource() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.ctor"); }
-        [global::Unbound.Stub] public void ClearRuntimeData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.ClearRuntimeData"); }
         [global::Unbound.Stub] public void SetValueSheet(global::UnityEditor.VFX.VFXExpressionValueContainerDesc[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.SetValueSheet"); }
-        [global::Unbound.Stub] public int GetShaderSourceCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.GetShaderSourceCount"); return default; }
-        [global::Unbound.Stub] public string GetShaderSourceName(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.GetShaderSourceName"); return default; }
-        [global::Unbound.Stub] public string GetShaderSource(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.GetShaderSource"); return default; }
-        [global::Unbound.Stub] public void SetRuntimeData(global::UnityEditor.VFX.VFXExpressionSheet sheet, global::UnityEditor.VFX.VFXEditorSystemDesc[] systemDesc, global::UnityEditor.VFX.VFXEventDesc[] eventDesc, global::UnityEditor.VFX.VFXGPUBufferDesc[] gpuBufferDesc, global::UnityEditor.VFX.VFXCPUBufferDesc[] cpuBufferDesc, global::UnityEditor.VFX.VFXTemporaryGPUBufferDesc[] temporaryBufferDesc, global::UnityEditor.VFX.VFXShaderSourceDesc[] shaderSourceDesc, global::UnityEngine.Rendering.ShadowCastingMode shadowCastingMode, global::UnityEngine.MotionVectorGenerationMode motionVectorGenerationMode, global::UnityEngine.VFX.VFXInstancingDisabledReason instancingDisabledReason, uint version = 1U) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.SetRuntimeData"); }
-        [global::Unbound.Stub] public void MarkRuntimeVersion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.MarkRuntimeVersion"); }
         [global::Unbound.Stub] public void ValidateAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.ValidateAsset"); }
         [global::Unbound.Stub] public void WriteAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.WriteAsset"); }
-        [global::Unbound.Stub] public static global::UnityEditor.VFX.VisualEffectResource GetResourceAtPath(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.GetResourceAtPath"); return default; }
         [global::Unbound.Stub] public static void DeleteAtPath(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.DeleteAtPath"); }
         [global::Unbound.Stub] public void SetAssetPath(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.SetAssetPath"); }
-        [global::Unbound.Stub] public global::UnityEngine.Object[] GetContents() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.GetContents"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
-        [global::Unbound.Stub] public void SetContents(global::UnityEngine.Object[] dependencies) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.SetContents"); }
-        [global::Unbound.Stub] public int GetShaderIndex(global::UnityEngine.Object shader) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.GetShaderIndex"); return default; }
         [global::Unbound.Stub] public void ShowGeneratedShaderFile(int index, int line = 0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.ShowGeneratedShaderFile"); }
-        [global::Unbound.Stub] public global::UnityEngine.Material FindMaterial(global::UnityEngine.ScriptableObject model) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.FindMaterial"); return default; }
-        [global::Unbound.Stub] public void ClearSourceDependencies() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.ClearSourceDependencies"); }
-        [global::Unbound.Stub] public void AddSourceDependency(string dep) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.AddSourceDependency"); }
-        [global::Unbound.Stub] public void ClearImportDependencies() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.ClearImportDependencies"); }
-        [global::Unbound.Stub] public void AddImportDependency(string dep) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.AddImportDependency"); }
-        [global::Unbound.Stub] internal static string[] AddResourceDependencies(string assetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.AddResourceDependencies"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] internal void CompileResource() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.CompileResource"); }
-        [global::Unbound.Stub] internal void SetupMaterial(global::UnityEngine.Material material, global::UnityEngine.Object model) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.SetupMaterial"); }
-        public global::UnityEditor.VFX.VFXShaderSourceDesc[] shaderSources { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.shaderSources"); return global::System.Array.Empty<global::UnityEditor.VFX.VFXShaderSourceDesc>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.shaderSources"); } }
-        public bool compileInitialVariants { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.compileInitialVariants"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.compileInitialVariants"); } }
-        public global::UnityEditor.VFX.VFXRendererSettings rendererSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.rendererSettings"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.rendererSettings"); } }
-        public global::UnityEngine.VFX.VFXUpdateMode updateMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.updateMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.updateMode"); } }
-        public float preWarmDeltaTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.preWarmDeltaTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.preWarmDeltaTime"); } }
-        public uint preWarmStepCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.preWarmStepCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.preWarmStepCount"); } }
-        public string initialEventName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.initialEventName"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.initialEventName"); } }
-        public global::UnityEngine.VFX.VFXCullingFlags cullingFlags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.cullingFlags"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.cullingFlags"); } }
-        public global::UnityEngine.VFX.VFXInstancingMode instancingMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.instancingMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.instancingMode"); } }
-        public uint instancingCapacity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.instancingCapacity"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.instancingCapacity"); } }
-        public bool isSubgraph { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.isSubgraph"); return default; } }
-        public global::UnityEngine.VFX.VisualEffectAsset asset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.asset"); return default; } }
-        public global::UnityEditor.VFX.VisualEffectSubgraph subgraph { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.subgraph"); return default; } }
-        public global::UnityEngine.VFX.VisualEffectObject visualEffectObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.visualEffectObject"); return default; } }
-        public global::UnityEngine.ScriptableObject graph { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.graph"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.graph"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class VisualEffectSubgraph : global::UnityEngine.VFX.VisualEffectObject
-    {
-        [global::Unbound.Stub] protected VisualEffectSubgraph() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectSubgraph.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class VisualEffectSubgraphBlock : global::UnityEditor.VFX.VisualEffectSubgraph
-    {
-        public const string Extension = ".vfxblock";
-        [global::Unbound.Stub] public VisualEffectSubgraphBlock() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectSubgraphBlock.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class VisualEffectSubgraphOperator : global::UnityEditor.VFX.VisualEffectSubgraph
-    {
-        public const string Extension = ".vfxoperator";
-        [global::Unbound.Stub] public VisualEffectSubgraphOperator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectSubgraphOperator.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class VisualEffectTest

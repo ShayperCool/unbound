@@ -96,5 +96,15 @@ namespace UnityEngine.Rendering
         {
             public BuildSettings() { }
         }
+
+        [Flags]
+        public enum RayTracingModeMask
+        {
+            Nothing = 0,
+            Static = 2,
+            DynamicTransform = 4,
+            DynamicGeometry = 8,
+            Everything = 14,
+        }
     }
 }
