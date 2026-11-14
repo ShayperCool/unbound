@@ -141,3 +141,26 @@ objects for A, B and a fresh `.jsonl.gz` REPORT. No frame limit, PCM-step
 allowance or residual is supplied. Keep the two histories and their reports
 separate. Verify every session's GPU renderer and absence of assertions before
 using its results.
+
+## Q449 endpoint investigation
+
+Two new independent GPU Editor captures repeat all fourteen controls in the
+32000 Hz / 340-frame Surround cell, preserving the original per-cell history.
+They agree exactly on all 4,617,323 values. Both use the NVIDIA driver and a
+private eight-channel PulseAudio device. This matching pair does not erase the
+earlier Flange counterexample or qualify either excluded rate/buffer pair.
+
+The Flange coordinate calculation reaches the end of its 1360-frame history
+at processed frame 20422: single-precision addition rounds the wrapped read to
+1360 instead of an interior coordinate. The fixture's zero-wet interval spans
+24 periods. Accounting for those periods places the boundary at capture frame
+28582, interleaved sample 142914 in the last Surround channel, exactly where the
+Q416 Flange pair disagreed. The endpoint can expose storage beyond the cleared
+history. A zero extension describes the current matching pair, but cannot derive
+the earlier nonzero value from the authored input.
+
+This identifies a boundary consistent with that isolated Flange spike, not a
+repeatable amplitude correction. No arbitrary padding value or effect-specific
+sample exception is introduced. The device-only Pitch Shifter and source Chorus
+spikes and the separate Reset histories remain unexplained. Both entire pairs,
+all earlier raw failures and the existing admission guards remain unchanged.
