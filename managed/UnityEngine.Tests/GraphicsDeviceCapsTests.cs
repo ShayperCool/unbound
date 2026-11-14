@@ -300,11 +300,16 @@ namespace Unbound.Tests
                     Assert.Equal(reported, Hits("SystemInfo.supportsDynamicResolution") - system);
                     Assert.Equal(2 * reported, Hits("ScalableBufferManager") - manager);
                     Assert.Equal(reported, Hits("Camera.allowDynamicResolution") - cameraHits);
+                    // Back to 1: the factors are the Editor's again, unreported.
                     ScalableBufferManager.ResizeBuffers(1f, 1f);
+                    manager = Hits("ScalableBufferManager");
+                    Assert.Equal(1f, ScalableBufferManager.widthScaleFactor);
+                    Assert.Equal(0, Hits("ScalableBufferManager") - manager);
                 }
             }
             finally
             {
+                ScalableBufferManager.ResizeBuffers(1f, 1f);
                 UnityEngine.Object.DestroyImmediate(camera.gameObject);
                 GraphicsDeviceProfile.Select(previous.Type.ToString());
             }
