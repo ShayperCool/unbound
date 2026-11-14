@@ -8,5 +8,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Probe.unity
     guid: 356cb80c6be992462ae0af77e1685359
+  - enabled: 1
+    path: Assets/Scenes/NoData.unity
+    guid: 6387258a71a442e5bfaf5f3f598a364c
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

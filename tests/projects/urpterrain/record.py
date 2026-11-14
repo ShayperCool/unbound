@@ -35,7 +35,7 @@ def outputs(directory):
 def complete(directory):
     path = directory/'urpterrain.jsonl'
     lines = path.read_text().splitlines() if path.is_file() else []
-    if sum('"image"' in line for line in lines) != 5 or not any('"basemap"' in line for line in lines):
+    if sum('"image"' in line for line in lines) != 6 or not any('"basemap"' in line for line in lines):
         return 'missing or incomplete urpterrain.jsonl'
     return None
 

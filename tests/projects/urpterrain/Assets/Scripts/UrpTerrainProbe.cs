@@ -4,12 +4,13 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// A terrain drawn with the Universal Render Pipeline's terrain shaders: five layers in stripes, seen
 /// from above on its splat passes (base map distance 1000), on its base map (0), and half on each
 /// (120, split into its four patches: the far two), with a smooth metallic sphere (the pipeline's Lit shader) beside it reflecting the scene's
-/// default reflection. Writes <c>urpterrain.jsonl</c> (the settings each image used, then the base
+/// default reflection, then the same scene without lighting data (<c>nodata</c>, the grazing view). Writes <c>urpterrain.jsonl</c> (the settings each image used, then the base
 /// maps the terrain made) and PNGs into <c>URP_TERRAIN_PROBE_OUT</c>, then quits.
 /// </summary>
 public class UrpTerrainProbe : MonoBehaviour
@@ -18,7 +19,12 @@ public class UrpTerrainProbe : MonoBehaviour
     readonly StringBuilder m_Out = new StringBuilder();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Run() => new GameObject("UrpTerrainProbe").AddComponent<UrpTerrainProbe>();
+    static void Run()
+    {
+        var go = new GameObject("UrpTerrainProbe");
+        DontDestroyOnLoad(go);
+        go.AddComponent<UrpTerrainProbe>();
+    }
 
     static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);
 
@@ -41,6 +47,12 @@ public class UrpTerrainProbe : MonoBehaviour
         Capture(dir, "grazing", terrain, new Vector3(0f, 6f, -15f), new Vector3(0f, 0f, 60f), 1000f);
         Capture(dir, "grazingbase", terrain, new Vector3(0f, 6f, -15f), new Vector3(0f, 0f, 60f), 0f);
         AppendBaseMaps();
+        // The same scene without lighting data: what the sphere and the metallic layers reflect.
+        SceneManager.LoadScene("NoData");
+        yield return null;
+        yield return null;
+        terrain = FindAnyObjectByType<Terrain>();
+        Capture(dir, "nodata", terrain, new Vector3(0f, 6f, -15f), new Vector3(0f, 0f, 60f), 1000f);
         File.WriteAllText(Path.Combine(dir, "urpterrain.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
