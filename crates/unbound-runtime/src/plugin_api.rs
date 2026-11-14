@@ -180,6 +180,18 @@ pub mod guid {
         high: 0x329334C09DCA4787,
         low: 0xB347DD92A0097FFC,
     };
+    pub const GRAPHICS_METAL: Guid = Guid {
+        high: 0x992C8EAEA95811E5,
+        low: 0x9A62C4B5B9876117,
+    };
+    pub const GRAPHICS_METAL_V1: Guid = Guid {
+        high: 0x29F8F3D03833465E,
+        low: 0x92138551C15D823D,
+    };
+    pub const GRAPHICS_METAL_V2: Guid = Guid {
+        high: 0xF58857784FEF46EC,
+        low: 0x9DB7A8803B87DA3D,
+    };
 }
 
 /// Interfaces the renderer offers on the devices that have them ([`provide`]): where it has

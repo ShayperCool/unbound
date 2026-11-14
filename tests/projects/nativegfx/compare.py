@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare a native rendering plugin probe capture with the Editor's reference.
 
-    compare.py REFERENCE.jsonl ACTUAL.jsonl [--device opengl|vulkan]
+    compare.py REFERENCE.jsonl ACTUAL.jsonl [--device opengl|vulkan|metal]
 
 Every value compares exactly over the union of keys (pixels as runs, plugin records, pointer
 relations, log messages); Mono's argument exception messages are compared in
@@ -40,7 +40,7 @@ def rows(path):
 
 def residuals(device):
     """{key: reason} of the known residuals."""
-    path = RESIDUALS if device == "opengl" else RESIDUALS.with_name("residuals-vulkan.json")
+    path = RESIDUALS if device == "opengl" else RESIDUALS.with_name(f"residuals-{device}.json")
     if not path.exists():
         return {}
     return {key: reason for reason, keys in json.loads(path.read_text()).items() for key in keys}
@@ -50,7 +50,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("reference")
     parser.add_argument("actual")
-    parser.add_argument("--device", choices=("opengl", "vulkan"), default="opengl")
+    parser.add_argument("--device", choices=("opengl", "vulkan", "metal"), default="opengl")
     args = parser.parse_args()
     ref, act = rows(args.reference), rows(args.actual)
     known = residuals(args.device)

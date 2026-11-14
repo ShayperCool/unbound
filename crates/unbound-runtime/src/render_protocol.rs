@@ -860,6 +860,12 @@ pub trait RenderBackend: Send + Sync {
     fn native_texture(&self, _texture: u64, _depth: bool) -> u64 {
         0
     }
+    /// The native texture of a render texture's render buffer image (0 its color, 1 its depth,
+    /// 2 a multisampled color's resolved texture) on devices whose plugin interface names them
+    /// (Metal); 0 elsewhere or when it has none.
+    fn render_buffer_texture(&self, _texture: u64, _image: u8) -> u64 {
+        0
+    }
     /// Makes `texture` borrow the native 2D, cube or volume storage described by `info`.
     fn external_texture(
         &self,

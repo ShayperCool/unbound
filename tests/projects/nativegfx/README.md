@@ -181,24 +181,44 @@ intermediates, the Game view of a windowed Editor as the target, the rendering e
 queries under a render pipeline, with other cameras or with XR, events sent to the queue from
 other threads, a custom player loop.
 
-## macOS
+## macOS: the Metal device
 
-`run.py engine --label L` also runs on macOS arm64: the libraries are built as `.dylib` files in
-`Assets/Plugins/macOS` with the importer settings OS OSX and CPU ARM64. There is no
-macOS reference: the macOS Editor's device is Metal, which this OpenGL plugin does not draw with,
-and `check` stays Linux-only. Compared with the Linux reference (`run.py verify`), an Unbound run
-on macOS 26 matches 46/195 records: the interfaces found by GUID, `load.logs`, `event.base`, the
-device answers (OpenGL Core, 17: Unbound draws macOS with Metal but does not report a Metal device
-yet, so `IUnityGraphicsMetal`/`V1`/`V2` are absent as on Linux), the profiler's categories and
-script markers, the event queue's load records, the native pointers' identities and the CPU copy.
-Unbound gives plugins no graphics context there (one error at startup in the engine log; the
-probe's own OpenGL loader opens the Linux libraries only, so its `gl=` fields are 0 on macOS
-whatever is current), rendering callbacks are skipped with a warning, textures are not shared (their pointers are no texture
-names), and `Texture2D.CreateExternalTexture` with the null texture the plugin could not make
-throws `ArgumentException`, so the scripts stop in their second frame (`complete` false; the
-records after it are missing). `IUnityGraphicsVulkan`/`V2` are null on macOS (Linux answers them
-on OpenGL Core). Nothing re-checks this run: the count is a measurement, not a gate. Open: the Metal device and `IUnityGraphicsMetal` (device, command buffer and
-encoder, textures as Metal textures), and the macOS Editor's answers to the other interfaces.
+The macOS Editor's only device is Metal (tests/projects/urp CapsProbe), so is Unbound's there.
+`run.py ... --device metal` (macOS arm64 only) builds the probe's Metal plugin
+(`Plugins/nativegfx_metal.m`, `libNativeGfxMetal.dylib`, Objective-C against the system's Metal
+framework) and `NativeGfxMetalProbe.cs` records the Metal plugin interface:
+
+    python3 tests/projects/nativegfx/run.py native --label L --device metal   # two macOS Editor captures
+    python3 tests/projects/nativegfx/run.py publish L-1 L-2 --device metal
+    python3 tests/projects/nativegfx/run.py check --device metal              # macOS only, not in the Linux gate
+
+`Reference/unity-6000.0.71f1/metal.jsonl` is two identical captures of the macOS Editor in batchmode
+(arm64, Apple M2 Pro, macOS 26). Recorded: at load `GetRenderer` 16, `IUnityGraphicsMetal`, `V1` and
+`V2` (three tables), no `IUnityGraphicsVulkan`, the device (the system default device), Metal's
+bundle, the command queue (of the device); in callbacks from `GL.IssuePluginEvent`, a camera's
+command buffer and an executed command buffer: the main thread, the current command buffer (of
+the queue, not committed), the current encoder and render pass descriptor (attachments named by the
+native pointers handed over, their format and shape; load and store actions and texture memory as
+records of their own); a draw with the current render encoder (a camera with HDR and MSAA draws
+into a 2-sample half-float intermediate with a resolve; without them into its target), ending it
+and blitting with the current command buffer, `CommitCurrentCommandBuffer` (it returns the
+committed buffer and goes on in a new one), a blit with a command buffer of the plugin's own after
+that commit, the pointers of 2D, sRGB, mip-mapped, three-channel, cube, array and 3D textures and
+of render textures (color, depth, multisampled samples, depth-only), what the render buffer
+pointers give (`RenderBufferFromHandle` returns the pointer; their texture, resolved texture,
+stencil texture), an external texture of the plugin's, and the pixels.
+
+Unbound matches 54/145 records with 91 declared residuals (`residuals-metal.json`, each with its
+reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
+textures have pixel format views), the descriptor's load and store actions (the Editor's are the
+pass it began, clearing, its store left unknown; Unbound begins a pass of its own that loads and
+stores), everything outside a render texture target (the Editor's encoder there is a render
+encoder over its batchmode screen; Unbound does not share the screen with plugins: nil, logged
+once), and what follows `EndCurrentCommandEncoder` inside a camera's pass (the Editor begins its
+next encoder over the screen; Unbound over the same target, so the plugin's next draw lands in it;
+the interface leaves this to the device). Measured on macOS 26 only; Intel Macs and other GPUs
+are unmeasured. The OpenGL probe (`run.py engine` without `--device`) still builds on macOS, but
+its plugin draws with OpenGL, which plugins do not get on Metal: it is not a macOS measurement.
 
 ### External cube, volume and Vulkan storage
 

@@ -9,6 +9,10 @@ mod mesh_buffers;
 mod mipmaps;
 mod msaa;
 mod plugins;
+#[cfg(target_os = "macos")]
+mod plugins_metal;
+#[cfg(target_os = "macos")]
+pub use plugins_metal::provide_metal_plugin_interfaces;
 #[cfg(target_os = "linux")]
 mod plugins_vulkan;
 #[cfg(target_os = "linux")]
@@ -494,6 +498,9 @@ pub struct UnityRenderer {
     /// The Vulkan device's plugin interface (None: plugins see OpenGL Core's, `plugins`).
     #[cfg(target_os = "linux")]
     vulkan_plugins: Option<plugins_vulkan::VulkanPlugins>,
+    /// The Metal device's plugin interface (`plugins_metal`).
+    #[cfg(target_os = "macos")]
+    metal_plugins: Option<plugins_metal::MetalPlugins>,
     /// The last frame (counted from 1) whose GPU work is done: plugins' `safeFrameNumber`.
     frames_completed: Arc<std::sync::atomic::AtomicU64>,
     /// The current target's pass was drawing at a plugin event, or a plugin event ran inside it
@@ -629,6 +636,11 @@ impl UnityRenderer {
             vulkan_plugins: (unbound_runtime::graphics_device::get()
                 == unbound_compat::GraphicsDevice::Vulkan)
                 .then(|| plugins_vulkan::VulkanPlugins::new(&device, &queue))
+                .flatten(),
+            #[cfg(target_os = "macos")]
+            metal_plugins: (unbound_runtime::graphics_device::get()
+                == unbound_compat::GraphicsDevice::Metal)
+                .then(|| plugins_metal::MetalPlugins::new(&device, &queue))
                 .flatten(),
             frames_completed: Default::default(),
             plugin_pass_open: false,
@@ -3524,6 +3536,11 @@ impl UnityRenderer {
         // A depth-only target still being drawn: read back before the next submission.
         self.copy_depth(&mut passes, depth_mark);
         self.encode(passes);
+        // What plugins encoded from scripts this frame runs after its work.
+        #[cfg(target_os = "macos")]
+        if end_frame && self.metal_plugins.is_some() {
+            plugins_metal::commit_outside();
+        }
         #[cfg(target_os = "linux")]
         if end_frame && let Some(plugins) = self.vulkan_plugins.as_mut() {
             // What plugins used in frames the GPU finished is freed; when it finishes this one,

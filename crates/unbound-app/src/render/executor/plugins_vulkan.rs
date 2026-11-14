@@ -930,7 +930,7 @@ unsafe extern "C" fn access_texture_by_id(
 /// A render buffer's image: its depth buffer, else its color (multisampled where the texture
 /// is), or that color's resolve texture (`resolve`; multisampled textures only).
 fn render_buffer_image(scope: &Scope, pointer: *mut c_void, resolve: bool) -> Option<ImageEntry> {
-    let (handle, depth) = render_buffer(pointer as u64);
+    let (handle, depth) = super::plugins::render_buffer(pointer as u64);
     let images = scope.by_handle.get(&handle)?;
     match (depth, resolve) {
         (true, false) => images.depth,
@@ -1067,14 +1067,6 @@ unsafe extern "C" fn access_queue(_: QueueCallback, _: i32, _: *mut c_void, _: b
 unsafe extern "C" fn configure_swapchain(_: *const c_void) -> bool {
     unsupported("ConfigureSwapchain");
     false
-}
-
-/// A render buffer pointer (`RenderBuffer.GetNativeRenderBufferPtr`, managed `NativePlugins`):
-/// its render texture's handle and whether it is the depth buffer.
-fn render_buffer(pointer: u64) -> (u64, bool) {
-    const BASE: u64 = 0x5500_0000_0000_0000;
-    let rest = pointer.wrapping_sub(BASE);
-    (rest >> 1, rest & 1 == 1)
 }
 
 /// The renderer's side: what plugins get from the device, made once.
@@ -2320,20 +2312,6 @@ mod tests {
         assert_eq!(
             offset_of!(IUnityGraphicsVulkanV2, add_intercept_initialization),
             14 * size_of::<usize>()
-        );
-    }
-
-    /// Render buffer pointers carry the render texture's handle and the buffer kind (managed
-    /// `NativePlugins.RenderBufferPointer`).
-    #[test]
-    fn render_buffer_pointers_name_their_texture() {
-        assert_eq!(
-            render_buffer(0x5500_0000_0000_0000 | (42 << 1)),
-            (42, false)
-        );
-        assert_eq!(
-            render_buffer(0x5500_0000_0000_0000 | (42 << 1) | 1),
-            (42, true)
         );
     }
 

@@ -228,6 +228,15 @@ fn external_format(format: gl_interop::InternalFormat) -> Option<i32> {
     })
 }
 
+/// A render buffer pointer (`RenderBuffer.GetNativeRenderBufferPtr`, managed `NativePlugins`):
+/// its render texture's handle and whether it is the depth buffer.
+#[cfg_attr(not(unix), allow(dead_code))]
+pub(super) fn render_buffer(pointer: u64) -> (u64, bool) {
+    const BASE: u64 = 0x5500_0000_0000_0000;
+    let rest = pointer.wrapping_sub(BASE);
+    (rest >> 1, rest & 1 == 1)
+}
+
 /// Calls a rendering event or custom blit's callback (`TextureUpdate`s run their own sequence).
 pub(super) fn invoke(call: &PluginCall) {
     match *call {
@@ -271,6 +280,10 @@ impl UnityRenderer {
         #[cfg(target_os = "linux")]
         if self.vulkan_plugins.is_some() {
             return self.vulkan_native_texture(handle, depth);
+        }
+        #[cfg(target_os = "macos")]
+        if self.metal_plugins.is_some() {
+            return self.metal_native_texture(handle, depth);
         }
         let shared = self.share(handle).and_then(|names| {
             if depth || (self.textures[&handle].format == 5 && !self.textures[&handle].cube) {
@@ -469,6 +482,10 @@ impl UnityRenderer {
         if let Some(plugins) = self.vulkan_plugins.as_mut() {
             plugins.release(handle);
         }
+        #[cfg(target_os = "macos")]
+        if let Some(plugins) = self.metal_plugins.as_mut() {
+            plugins.release(handle);
+        }
         self.plugins.refused.remove(&handle);
         self.plugins.aliases.remove(&handle);
         self.plugins.external_copy_layouts.remove(&handle);
@@ -488,6 +505,10 @@ impl UnityRenderer {
         #[cfg(target_os = "linux")]
         if self.vulkan_plugins.is_some() {
             return self.external_texture_vulkan(handle, native, info);
+        }
+        #[cfg(target_os = "macos")]
+        if self.metal_plugins.is_some() {
+            return self.external_texture_metal(handle, native, info);
         }
         let basic_copy_layout = info.flags
             & unbound_runtime::render_protocol::ExternalTextureInfo::MEASURED_LAYOUT
@@ -662,6 +683,23 @@ impl UnityRenderer {
                 _ => {
                     self.run_plugin_vulkan(call, || invoke(call));
                 }
+            }
+            return;
+        }
+        #[cfg(target_os = "macos")]
+        if self.metal_plugins.is_some() {
+            // The Metal device: the plugin encodes into a command buffer of the renderer's queue
+            // (`plugins_metal`); texture updates upload as on every device.
+            match *call {
+                PluginCall::TextureUpdate {
+                    callback,
+                    texture,
+                    user_data,
+                    v2,
+                    format,
+                    bytes_per_pixel,
+                } => self.texture_update(callback, texture, user_data, v2, format, bytes_per_pixel),
+                _ => self.run_plugin_metal(|| invoke(call)),
             }
             return;
         }
@@ -1075,6 +1113,20 @@ pub(super) fn descriptor(gpu: &GpuTexture) -> owned::Texture {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Render buffer pointers carry the render texture's handle and the buffer kind (managed
+    /// `NativePlugins.RenderBufferPointer`).
+    #[test]
+    fn render_buffer_pointers_name_their_texture() {
+        assert_eq!(
+            render_buffer(0x5500_0000_0000_0000 | (42 << 1)),
+            (42, false)
+        );
+        assert_eq!(
+            render_buffer(0x5500_0000_0000_0000 | (42 << 1) | 1),
+            (42, true)
+        );
+    }
     use wgpu::TextureFormat as F;
 
     #[test]

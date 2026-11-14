@@ -163,10 +163,15 @@ pub fn start_device(device: unbound_compat::GraphicsDevice) -> bool {
     render::device::start(device)
 }
 
-/// Offers the graphics device's own plugin interfaces (`IUnityGraphicsVulkan` on Vulkan), before
-/// any plugin loads; their device handles are filled once the renderer is up. On OpenGL Core
-/// the Vulkan interfaces are answered too, as the Editor answers them, and refuse every call.
+/// Offers the graphics device's own plugin interfaces (`IUnityGraphicsVulkan` on Vulkan,
+/// `IUnityGraphicsMetal` on Metal), before any plugin loads; their device handles are filled
+/// once the renderer is up. On OpenGL Core the Vulkan interfaces are answered too, as the Editor
+/// answers them, and refuse every call.
 pub fn provide_plugin_interfaces(device: unbound_compat::GraphicsDevice) {
+    #[cfg(target_os = "macos")]
+    if device == unbound_compat::GraphicsDevice::Metal {
+        render::executor::provide_metal_plugin_interfaces();
+    }
     #[cfg(target_os = "linux")]
     match device {
         unbound_compat::GraphicsDevice::Vulkan => {

@@ -10,79 +10,130 @@
 {"k":"plugin.load.device","v":"load.device device=1 system_default=1 bundle=com.apple.Metal"}
 {"k":"plugin.load.queue","v":"load.queue queue=1 device_match=1"}
 {"k":"plugin.load.state","v":"load.state buffer=1 encoder=render pass=1"}
-{"k":"plugin.native.t0.target","v":"native.t0.target texture=1 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.t1.camera","v":"native.t1.camera texture=1 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.t2.camera.depth","v":"native.t2.camera.depth texture=1 format=260 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.native.t3.second","v":"native.t3.second texture=1 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.t4.second.depth","v":"native.t4.second.depth texture=1 format=260 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.native.t5.executed","v":"native.t5.executed texture=1 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.t6.multisampled","v":"native.t6.multisampled texture=1 format=70 type=4 size=8x8x1 mips=1 layers=1 samples=4 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.native.t7.multisampled.depth","v":"native.t7.multisampled.depth texture=1 format=260 type=4 size=8x8x1 mips=1 layers=1 samples=4 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.native.t8.srgbtarget","v":"native.t8.srgbtarget texture=1 format=71 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.t9.half","v":"native.t9.half texture=1 format=115 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.t10.single","v":"native.t10.single texture=1 format=55 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.t11.depthonly","v":"native.t11.depthonly texture=1 format=260 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.native.t12.depthonly.depth","v":"native.t12.depthonly.depth texture=1 format=260 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.native.t13.texture","v":"native.t13.texture texture=1 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=1 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.t14.srgb","v":"native.t14.srgb texture=1 format=71 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=1 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.t15.mipped","v":"native.t15.mipped texture=1 format=70 type=2 size=8x8x1 mips=4 layers=1 samples=1 usage=1 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.rgb","v":"native.rgb texture=1 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=1 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.cube","v":"native.cube texture=1 format=70 type=5 size=8x8x1 mips=4 layers=1 samples=1 usage=1 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.array","v":"native.array texture=1 format=70 type=3 size=8x4x1 mips=1 layers=3 samples=1 usage=1 storage=0 framebufferOnly=0"}
-{"k":"plugin.native.volume","v":"native.volume texture=1 format=70 type=7 size=4x4x2 mips=1 layers=1 samples=1 usage=1 storage=0 framebufferOnly=0"}
-{"k":"plugin.renderbuffer.b0.camera.color","v":"renderbuffer.b0.camera.color handle_is_buffer=1 texture=t1 resolved=none stencil=none format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.renderbuffer.b1.camera.depth","v":"renderbuffer.b1.camera.depth handle_is_buffer=1 texture=t2 resolved=none stencil=none format=260 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.renderbuffer.b2.multisampled.color","v":"renderbuffer.b2.multisampled.color handle_is_buffer=1 texture=t6 resolved=b2.resolved stencil=none format=70 type=4 size=8x8x1 mips=1 layers=1 samples=4 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.renderbuffer.b3.multisampled.depth","v":"renderbuffer.b3.multisampled.depth handle_is_buffer=1 texture=t7 resolved=none stencil=none format=260 type=4 size=8x8x1 mips=1 layers=1 samples=4 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.renderbuffer.b4.target.color","v":"renderbuffer.b4.target.color handle_is_buffer=1 texture=t0 resolved=none stencil=none format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.t0.target","v":"native.t0.target texture=1 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t0.target.memory.load","v":"native.t0.target.memory step=load usage=5 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.t1.camera","v":"native.t1.camera texture=1 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t1.camera.memory.load","v":"native.t1.camera.memory step=load usage=5 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.t2.camera.depth","v":"native.t2.camera.depth texture=1 format=260 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t2.camera.depth.memory.load","v":"native.t2.camera.depth.memory step=load usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.t3.second","v":"native.t3.second texture=1 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t3.second.memory.load","v":"native.t3.second.memory step=load usage=5 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.t4.second.depth","v":"native.t4.second.depth texture=1 format=260 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t4.second.depth.memory.load","v":"native.t4.second.depth.memory step=load usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.t5.executed","v":"native.t5.executed texture=1 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t5.executed.memory.load","v":"native.t5.executed.memory step=load usage=5 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.t6.multisampled","v":"native.t6.multisampled texture=1 format=70 type=4 size=8x8x1 mips=1 layers=1 samples=4"}
+{"k":"plugin.native.t6.multisampled.memory.load","v":"native.t6.multisampled.memory step=load usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.t7.multisampled.depth","v":"native.t7.multisampled.depth texture=1 format=260 type=4 size=8x8x1 mips=1 layers=1 samples=4"}
+{"k":"plugin.native.t7.multisampled.depth.memory.load","v":"native.t7.multisampled.depth.memory step=load usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.t8.srgbtarget","v":"native.t8.srgbtarget texture=1 format=71 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t8.srgbtarget.memory.load","v":"native.t8.srgbtarget.memory step=load usage=5 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.t9.half","v":"native.t9.half texture=1 format=115 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t9.half.memory.load","v":"native.t9.half.memory step=load usage=5 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.t10.single","v":"native.t10.single texture=1 format=55 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t10.single.memory.load","v":"native.t10.single.memory step=load usage=5 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.t11.depthonly","v":"native.t11.depthonly texture=1 format=260 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t11.depthonly.memory.load","v":"native.t11.depthonly.memory step=load usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.t12.depthonly.depth","v":"native.t12.depthonly.depth texture=1 format=260 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t12.depthonly.depth.memory.load","v":"native.t12.depthonly.depth.memory step=load usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.t13.texture","v":"native.t13.texture texture=1 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t13.texture.memory.load","v":"native.t13.texture.memory step=load usage=1 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.t14.srgb","v":"native.t14.srgb texture=1 format=71 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.t14.srgb.memory.load","v":"native.t14.srgb.memory step=load usage=1 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.t15.mipped","v":"native.t15.mipped texture=1 format=70 type=2 size=8x8x1 mips=4 layers=1 samples=1"}
+{"k":"plugin.native.t15.mipped.memory.load","v":"native.t15.mipped.memory step=load usage=1 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.rgb","v":"native.rgb texture=1 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.rgb.memory.load","v":"native.rgb.memory step=load usage=1 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.cube","v":"native.cube texture=1 format=70 type=5 size=8x8x1 mips=4 layers=1 samples=1"}
+{"k":"plugin.native.cube.memory.load","v":"native.cube.memory step=load usage=1 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.array","v":"native.array texture=1 format=70 type=3 size=8x4x1 mips=1 layers=3 samples=1"}
+{"k":"plugin.native.array.memory.load","v":"native.array.memory step=load usage=1 storage=0 framebufferOnly=0"}
+{"k":"plugin.native.volume","v":"native.volume texture=1 format=70 type=7 size=4x4x2 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.volume.memory.load","v":"native.volume.memory step=load usage=1 storage=0 framebufferOnly=0"}
+{"k":"plugin.renderbuffer.b0.camera.color","v":"renderbuffer.b0.camera.color handle_is_buffer=1 texture=t1 resolved=none stencil=none format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.renderbuffer.b1.camera.depth","v":"renderbuffer.b1.camera.depth handle_is_buffer=1 texture=t2 resolved=none stencil=none format=260 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.renderbuffer.b2.multisampled.color","v":"renderbuffer.b2.multisampled.color handle_is_buffer=1 texture=t6 resolved=b2.resolved stencil=none format=70 type=4 size=8x8x1 mips=1 layers=1 samples=4"}
+{"k":"plugin.renderbuffer.b3.multisampled.depth","v":"renderbuffer.b3.multisampled.depth handle_is_buffer=1 texture=t7 resolved=none stencil=none format=260 type=4 size=8x8x1 mips=1 layers=1 samples=4"}
+{"k":"plugin.renderbuffer.b4.target.color","v":"renderbuffer.b4.target.color handle_is_buffer=1 texture=t0 resolved=none stencil=none format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
 {"k":"plugin.state.update","v":"state step=update main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
-{"k":"plugin.state.color0.update","v":"state.color0 step=update texture=other resolve=none load=1 store=4 level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.state.depth.update","v":"state.depth step=update texture=other load=1 store=4 format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.state.stencil.update","v":"state.stencil step=update texture=other same_as_depth=1 load=1 store=4"}
+{"k":"plugin.state.color0.update","v":"state.color0 step=update texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.update","v":"state.color0.actions step=update load=1 store=4"}
+{"k":"plugin.state.depth.update","v":"state.depth step=update texture=other format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.update","v":"state.depth.actions step=update load=1 store=4"}
+{"k":"plugin.state.stencil.update","v":"state.stencil step=update texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.update","v":"state.stencil.actions step=update load=1 store=4"}
 {"k":"plugin.state.update.2","v":"state step=update main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
-{"k":"plugin.state.color0.update.2","v":"state.color0 step=update texture=other resolve=none load=1 store=4 level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.state.depth.update.2","v":"state.depth step=update texture=other load=1 store=4 format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.state.stencil.update.2","v":"state.stencil step=update texture=other same_as_depth=1 load=1 store=4"}
+{"k":"plugin.state.color0.update.2","v":"state.color0 step=update texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.update.2","v":"state.color0.actions step=update load=1 store=4"}
+{"k":"plugin.state.depth.update.2","v":"state.depth step=update texture=other format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.update.2","v":"state.depth.actions step=update load=1 store=4"}
+{"k":"plugin.state.stencil.update.2","v":"state.stencil step=update texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.update.2","v":"state.stencil.actions step=update load=1 store=4"}
 {"k":"plugin.draw.update","v":"draw step=update drawn=1"}
 {"k":"plugin.state.commit","v":"state step=commit main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
-{"k":"plugin.state.color0.commit","v":"state.color0 step=commit texture=other resolve=none load=1 store=4 level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.state.depth.commit","v":"state.depth step=commit texture=other load=1 store=4 format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.state.stencil.commit","v":"state.stencil step=commit texture=other same_as_depth=1 load=1 store=4"}
+{"k":"plugin.state.color0.commit","v":"state.color0 step=commit texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.commit","v":"state.color0.actions step=commit load=1 store=4"}
+{"k":"plugin.state.depth.commit","v":"state.depth step=commit texture=other format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.commit","v":"state.depth.actions step=commit load=1 store=4"}
+{"k":"plugin.state.stencil.commit","v":"state.stencil step=commit texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.commit","v":"state.stencil.actions step=commit load=1 store=4"}
 {"k":"plugin.commit.commit","v":"commit step=commit returned_current=1 status=2 new_buffer=1 after_status=0 encoder=render"}
 {"k":"plugin.state.commit.2","v":"state step=commit main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
-{"k":"plugin.state.color0.commit.2","v":"state.color0 step=commit texture=other resolve=none load=1 store=4 level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.state.depth.commit.2","v":"state.depth step=commit texture=other load=1 store=4 format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.state.stencil.commit.2","v":"state.stencil step=commit texture=other same_as_depth=1 load=1 store=4"}
+{"k":"plugin.state.color0.commit.2","v":"state.color0 step=commit texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.commit.2","v":"state.color0.actions step=commit load=1 store=4"}
+{"k":"plugin.state.depth.commit.2","v":"state.depth step=commit texture=other format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.commit.2","v":"state.depth.actions step=commit load=1 store=4"}
+{"k":"plugin.state.stencil.commit.2","v":"state.stencil step=commit texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.commit.2","v":"state.stencil.actions step=commit load=1 store=4"}
 {"k":"plugin.blit.commit","v":"blit step=commit done=1 encoder_after=render"}
 {"k":"plugin.queueblit.commit","v":"queueblit step=commit status=4"}
 {"k":"plugin.state.commit.3","v":"state step=commit main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
-{"k":"plugin.state.color0.commit.3","v":"state.color0 step=commit texture=other resolve=none load=1 store=4 level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.state.depth.commit.3","v":"state.depth step=commit texture=other load=1 store=4 format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.state.stencil.commit.3","v":"state.stencil step=commit texture=other same_as_depth=1 load=1 store=4"}
+{"k":"plugin.state.color0.commit.3","v":"state.color0 step=commit texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.commit.3","v":"state.color0.actions step=commit load=1 store=4"}
+{"k":"plugin.state.depth.commit.3","v":"state.depth step=commit texture=other format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.commit.3","v":"state.depth.actions step=commit load=1 store=4"}
+{"k":"plugin.state.stencil.commit.3","v":"state.stencil step=commit texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.commit.3","v":"state.stencil.actions step=commit load=1 store=4"}
 {"k":"plugin.state.camera","v":"state step=camera main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
-{"k":"plugin.state.color0.camera","v":"state.color0 step=camera texture=other resolve=other load=2 store=4 level=0 slice=0 format=115 type=4 size=8x8x1 mips=1 layers=1 samples=2 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.state.depth.camera","v":"state.depth step=camera texture=other load=2 store=4 format=260 type=4 size=8x8x1 mips=1 layers=1 samples=2 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.state.stencil.camera","v":"state.stencil step=camera texture=other same_as_depth=1 load=2 store=4"}
+{"k":"plugin.state.color0.camera","v":"state.color0 step=camera texture=other resolve=other level=0 slice=0 format=115 type=4 size=8x8x1 mips=1 layers=1 samples=2"}
+{"k":"plugin.state.color0.actions.camera","v":"state.color0.actions step=camera load=2 store=4"}
+{"k":"plugin.state.depth.camera","v":"state.depth step=camera texture=other format=260 type=4 size=8x8x1 mips=1 layers=1 samples=2"}
+{"k":"plugin.state.depth.actions.camera","v":"state.depth.actions step=camera load=2 store=4"}
+{"k":"plugin.state.stencil.camera","v":"state.stencil step=camera texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.camera","v":"state.stencil.actions step=camera load=2 store=4"}
 {"k":"plugin.draw.camera","v":"draw step=camera drawn=1"}
 {"k":"plugin.state.camera2","v":"state step=camera2 main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
-{"k":"plugin.state.color0.camera2","v":"state.color0 step=camera2 texture=t3 resolve=none load=2 store=4 level=0 slice=0 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.state.depth.camera2","v":"state.depth step=camera2 texture=t4 load=2 store=4 format=260 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.state.stencil.camera2","v":"state.stencil step=camera2 texture=t4 same_as_depth=1 load=2 store=4"}
+{"k":"plugin.state.color0.camera2","v":"state.color0 step=camera2 texture=t3 resolve=none level=0 slice=0 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.camera2","v":"state.color0.actions step=camera2 load=2 store=4"}
+{"k":"plugin.state.depth.camera2","v":"state.depth step=camera2 texture=t4 format=260 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.camera2","v":"state.depth.actions step=camera2 load=2 store=4"}
+{"k":"plugin.state.stencil.camera2","v":"state.stencil step=camera2 texture=t4 same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.camera2","v":"state.stencil.actions step=camera2 load=2 store=4"}
 {"k":"plugin.blit.camera2","v":"blit step=camera2 done=1 encoder_after=render"}
 {"k":"plugin.state.camera2.2","v":"state step=camera2 main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
-{"k":"plugin.state.color0.camera2.2","v":"state.color0 step=camera2 texture=other resolve=none load=0 store=4 level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.state.depth.camera2.2","v":"state.depth step=camera2 texture=other load=0 store=4 format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.state.stencil.camera2.2","v":"state.stencil step=camera2 texture=other same_as_depth=1 load=0 store=4"}
+{"k":"plugin.state.color0.camera2.2","v":"state.color0 step=camera2 texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.camera2.2","v":"state.color0.actions step=camera2 load=0 store=4"}
+{"k":"plugin.state.depth.camera2.2","v":"state.depth step=camera2 texture=other format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.camera2.2","v":"state.depth.actions step=camera2 load=0 store=4"}
+{"k":"plugin.state.stencil.camera2.2","v":"state.stencil step=camera2 texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.camera2.2","v":"state.stencil.actions step=camera2 load=0 store=4"}
 {"k":"plugin.state.camera2.3","v":"state step=camera2 main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
-{"k":"plugin.state.color0.camera2.3","v":"state.color0 step=camera2 texture=other resolve=none load=0 store=4 level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.state.depth.camera2.3","v":"state.depth step=camera2 texture=other load=0 store=4 format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.state.stencil.camera2.3","v":"state.stencil step=camera2 texture=other same_as_depth=1 load=0 store=4"}
+{"k":"plugin.state.color0.camera2.3","v":"state.color0 step=camera2 texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.camera2.3","v":"state.color0.actions step=camera2 load=0 store=4"}
+{"k":"plugin.state.depth.camera2.3","v":"state.depth step=camera2 texture=other format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.camera2.3","v":"state.depth.actions step=camera2 load=0 store=4"}
+{"k":"plugin.state.stencil.camera2.3","v":"state.stencil step=camera2 texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.camera2.3","v":"state.stencil.actions step=camera2 load=0 store=4"}
 {"k":"plugin.draw.camera2","v":"draw step=camera2 drawn=1"}
 {"k":"plugin.state.execute","v":"state step=execute main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
-{"k":"plugin.state.color0.execute","v":"state.color0 step=execute texture=t5 resolve=none load=2 store=4 level=0 slice=0 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
+{"k":"plugin.state.color0.execute","v":"state.color0 step=execute texture=t5 resolve=none level=0 slice=0 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.execute","v":"state.color0.actions step=execute load=2 store=4"}
 {"k":"plugin.draw.execute","v":"draw step=execute drawn=1"}
 {"k":"plugin.state.execute.plain","v":"state step=execute.plain main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
-{"k":"plugin.state.color0.execute.plain","v":"state.color0 step=execute.plain texture=other resolve=none load=1 store=4 level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=0 framebufferOnly=0"}
-{"k":"plugin.state.depth.execute.plain","v":"state.depth step=execute.plain texture=other load=1 store=4 format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1 usage=5 storage=2 framebufferOnly=0"}
-{"k":"plugin.state.stencil.execute.plain","v":"state.stencil step=execute.plain texture=other same_as_depth=1 load=1 store=4"}
+{"k":"plugin.state.color0.execute.plain","v":"state.color0 step=execute.plain texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.execute.plain","v":"state.color0.actions step=execute.plain load=1 store=4"}
+{"k":"plugin.state.depth.execute.plain","v":"state.depth step=execute.plain texture=other format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.execute.plain","v":"state.depth.actions step=execute.plain load=1 store=4"}
+{"k":"plugin.state.stencil.execute.plain","v":"state.stencil step=execute.plain texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.execute.plain","v":"state.stencil.actions step=execute.plain load=1 store=4"}
 {"k":"complete","v":true}

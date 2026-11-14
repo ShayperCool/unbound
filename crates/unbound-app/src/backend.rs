@@ -246,6 +246,14 @@ impl RenderBackend for GpuBackend {
         }
     }
 
+    #[cfg(target_os = "macos")]
+    fn render_buffer_texture(&self, texture: u64, image: u8) -> u64 {
+        match self.inner.lock().unwrap().renderer.as_mut() {
+            Some(r) => r.metal_render_buffer_texture(texture, image),
+            None => 0,
+        }
+    }
+
     fn external_texture(
         &self,
         texture: u64,

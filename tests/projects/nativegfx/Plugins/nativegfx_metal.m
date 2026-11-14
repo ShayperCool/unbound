@@ -129,19 +129,27 @@ static void texture_slot(id<MTLTexture> texture, char* out, size_t size)
     snprintf(out, size, "other");
 }
 
+/// A texture's shape and format.
 static void describe(id<MTLTexture> t, char* out, size_t size)
 {
     if (!t) { snprintf(out, size, "null"); return; }
-    snprintf(out, size, "format=%lu type=%lu size=%lux%lux%lu mips=%lu layers=%lu samples=%lu usage=%lu storage=%lu framebufferOnly=%d",
-             (unsigned long)t.pixelFormat, (unsigned long)t.textureType, (unsigned long)t.width, (unsigned long)t.height,
-             (unsigned long)t.depth, (unsigned long)t.mipmapLevelCount, (unsigned long)t.arrayLength,
-             (unsigned long)t.sampleCount, (unsigned long)t.usage, (unsigned long)t.storageMode, t.framebufferOnly ? 1 : 0);
+    snprintf(out, size, "format=%lu type=%lu size=%lux%lux%lu mips=%lu layers=%lu samples=%lu", (unsigned long)t.pixelFormat,
+             (unsigned long)t.textureType, (unsigned long)t.width, (unsigned long)t.height, (unsigned long)t.depth,
+             (unsigned long)t.mipmapLevelCount, (unsigned long)t.arrayLength, (unsigned long)t.sampleCount);
+}
+
+/// How a texture's memory is set up (a record of its own: `<what>.memory`).
+static void record_memory(const char* what, id<MTLTexture> t)
+{
+    if (!t) return;
+    record("%s.memory step=%s usage=%lu storage=%lu framebufferOnly=%d", what, s_step, (unsigned long)t.usage,
+           (unsigned long)t.storageMode, t.framebufferOnly ? 1 : 0);
 }
 
 static void record_pass(const char* what)
 {
     MTLRenderPassDescriptor* pass = s_v1->CurrentRenderPassDescriptor();
-    if (!pass) { record("%s step=%s pass=none", what, s_step); return; }
+    if (!pass) { record("%s.pass step=%s none", what, s_step); return; }
     for (int i = 0; i < 8; i++) {
         MTLRenderPassColorAttachmentDescriptor* color = pass.colorAttachments[i];
         if (!color.texture) continue;
@@ -149,21 +157,25 @@ static void record_pass(const char* what)
         texture_slot(color.texture, slot, sizeof slot);
         texture_slot(color.resolveTexture, resolve, sizeof resolve);
         describe(color.texture, desc, sizeof desc);
-        record("%s.color%d step=%s texture=%s resolve=%s load=%lu store=%lu level=%lu slice=%lu %s", what, i, s_step, slot, resolve,
-               (unsigned long)color.loadAction, (unsigned long)color.storeAction, (unsigned long)color.level, (unsigned long)color.slice, desc);
+        record("%s.color%d step=%s texture=%s resolve=%s level=%lu slice=%lu %s", what, i, s_step, slot, resolve,
+               (unsigned long)color.level, (unsigned long)color.slice, desc);
+        record("%s.color%d.actions step=%s load=%lu store=%lu", what, i, s_step, (unsigned long)color.loadAction,
+               (unsigned long)color.storeAction);
     }
     if (pass.depthAttachment.texture) {
         char slot[32], desc[256];
         texture_slot(pass.depthAttachment.texture, slot, sizeof slot);
         describe(pass.depthAttachment.texture, desc, sizeof desc);
-        record("%s.depth step=%s texture=%s load=%lu store=%lu %s", what, s_step, slot, (unsigned long)pass.depthAttachment.loadAction,
-               (unsigned long)pass.depthAttachment.storeAction, desc);
+        record("%s.depth step=%s texture=%s %s", what, s_step, slot, desc);
+        record("%s.depth.actions step=%s load=%lu store=%lu", what, s_step, (unsigned long)pass.depthAttachment.loadAction,
+               (unsigned long)pass.depthAttachment.storeAction);
     }
     if (pass.stencilAttachment.texture) {
         char slot[32];
         texture_slot(pass.stencilAttachment.texture, slot, sizeof slot);
-        record("%s.stencil step=%s texture=%s same_as_depth=%d load=%lu store=%lu", what, s_step, slot,
-               pass.stencilAttachment.texture == pass.depthAttachment.texture ? 1 : 0, (unsigned long)pass.stencilAttachment.loadAction,
+        record("%s.stencil step=%s texture=%s same_as_depth=%d", what, s_step, slot,
+               pass.stencilAttachment.texture == pass.depthAttachment.texture ? 1 : 0);
+        record("%s.stencil.actions step=%s load=%lu store=%lu", what, s_step, (unsigned long)pass.stencilAttachment.loadAction,
                (unsigned long)pass.stencilAttachment.storeAction);
     }
 }
@@ -364,6 +376,9 @@ EXPORT void NativeGfxMtl_Describe(const char* what, void* pointer)
     describe((__bridge id<MTLTexture>)pointer, desc, sizeof desc);
     id object = (__bridge id)pointer;
     record("native.%s texture=%d %s", what, pointer && [object conformsToProtocol:@protocol(MTLTexture)] ? 1 : 0, pointer ? desc : "null");
+    char memory[96];
+    snprintf(memory, sizeof memory, "native.%s", what);
+    record_memory(memory, (__bridge id<MTLTexture>)pointer);
 }
 
 /// What a render buffer pointer gives through the interface: its texture, resolved texture and

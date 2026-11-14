@@ -28,8 +28,7 @@ then on (device events and UnityPluginUnload at shutdown) becomes `plugin.exit`,
 others record `plugin.preloaded` and `plugin.prefixed`. The plugin draws with OpenGL: the Editor
 captures and `check` run on Linux x86_64 only. `engine` also runs on macOS arm64, where the
 libraries are .dylib files in Assets/Plugins/macOS with the importer settings OS OSX, CPU
-ARM64; Unbound gives plugins no graphics context there, so that capture shows what works
-without one (README.md, "macOS").
+ARM64; the device there is Metal, which gives plugins no OpenGL context (README.md, "macOS").
 
 The release is $UNBOUND_PROBE_UNITY_VERSION (else tests/probe_paths.py's default). Run output
 stays under $XDG_CACHE_HOME/unbound/validation/runs/nativegfx/.
