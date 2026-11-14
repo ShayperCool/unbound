@@ -1,8 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.Arm;
 using Unbound.Runtime;
 
 namespace UnityEngine
@@ -686,26 +684,10 @@ namespace UnityEngine
         static float ReciprocalScale(float scale)
         {
             if (MathF.Abs(scale) < 1e-9f) return 0f;
-            if (Unbound.Runtime.Compat.TransformArithmeticArm64) return NeonReciprocal(scale);
             float estimate = float.ReciprocalEstimate(scale);
             float first = estimate * (2.0000005f - scale * estimate);
             float refined = first * (2f - scale * first);
             return float.IsNaN(refined) ? estimate : refined;
-        }
-
-        // On arm64 the reciprocal starts from the 8-bit hardware estimate and takes two
-        // reciprocal steps, each estimate * (2 - scale * estimate) with the bracket rounded
-        // once (an infinite scale's zero estimate stays zero). Unity 6000.0.71f1 macOS arm64
-        // Editor, tests/projects/solverpairorder --transform-inputs: with the NEON rotation
-        // normalization and Euler's sincos, 135,746 of 135,896 fields equal; the refinement above
-        // on the arm64 estimate gave 121,013 and a division 122,809 (before those two).
-        static float NeonReciprocal(float scale)
-        {
-            var value = Vector64.CreateScalarUnsafe(scale);
-            var estimate = AdvSimd.ReciprocalEstimate(value);
-            estimate = AdvSimd.Multiply(estimate, AdvSimd.ReciprocalStep(value, estimate));
-            estimate = AdvSimd.Multiply(estimate, AdvSimd.ReciprocalStep(value, estimate));
-            return estimate.ToScalar();
         }
 
         Matrix4x4 InverseLocalMatrix()
@@ -758,16 +740,11 @@ namespace UnityEngine
             ((a.w * b.w - a.x * b.x) - a.z * b.z) - a.y * b.y);
 
         // A set rotation divided by its length. The Linux x86_64 Editor sums the squares as a horizontal add
-        // does, (x² + y²) + (z² + w²) for x and z and (y² + z²) + (w² + x²) for y and w; the macOS arm64
-        // Editor (Compat.TransformArithmeticArm64) takes the first for every component.
+        // does, (x² + y²) + (z² + w²) for x and z and (y² + z²) + (w² + x²) for y and w; every host takes
+        // that order (the macOS arm64 Editor's own one is not reproduced).
         static Quaternion NormalizeParentingRotation(Quaternion q)
         {
             float x = q.x * q.x, y = q.y * q.y, z = q.z * q.z, w = q.w * q.w;
-            if (Unbound.Runtime.Compat.TransformArithmeticArm64)
-            {
-                float d = (x + y) + (z + w), s = MathF.Sqrt(d);
-                return d > 1e-30f ? new Quaternion(q.x / s, q.y / s, q.z / s, q.w / s) : Quaternion.identity;
-            }
             float xz = (x + y) + (z + w), yw = (y + z) + (w + x);
             float sxz = MathF.Sqrt(xz), syw = MathF.Sqrt(yw);
             return new Quaternion(xz > 1e-30f ? q.x / sxz : 0f, yw > 1e-30f ? q.y / syw : 0f,

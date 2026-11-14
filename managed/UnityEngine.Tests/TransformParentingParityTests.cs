@@ -9,18 +9,17 @@ namespace UnityEngine.Tests
         static bool LinuxX64 => OperatingSystem.IsLinux() && Architecture == System.Runtime.InteropServices.Architecture.X64;
 
         [Fact]
-        public void SetRotationsNormalizeAsTheHostsEditor()
+        public void SetRotationsNormalizeAsTheLinuxEditor()
         {
             // tests/projects/solverpairorder --transform-inputs raw/6 and circle-scale/18/rotated: the
-            // Linux x86_64 and macOS arm64 Editors give different last bits; each host matches its own
-            // (the two measured hosts; others are unmeasured).
+            // Linux x86_64 Editor's normalization, on every host (the macOS arm64 Editor's last bits
+            // differ and are not reproduced). Euler angles take the platform library's sincos.
             if (!MacArm64 && !LinuxX64) return;
             var o = new GameObject("rotation");
             try
             {
                 o.transform.localRotation = new Quaternion(.23f, -.17f, .31f, .9f);
-                Assert.Equal(MacArm64 ? new Quaternion(.231404275f, -.171037942f, .311892718f, .9054949f)
-                    : new Quaternion(.231404275f, -.171037927f, .311892718f, .905494869f), o.transform.localRotation, Exact);
+                Assert.Equal(new Quaternion(.231404275f, -.171037927f, .311892718f, .905494869f), o.transform.localRotation, Exact);
                 // Euler's half-angle sines and cosines from one sincos: on macOS separate sin and cos
                 // give the Linux values here (y, z, w one bit off the macOS Editor's).
                 o.transform.localRotation = Quaternion.Euler(30f, 16f, 38f);
@@ -119,12 +118,16 @@ namespace UnityEngine.Tests
                 child.transform.rotation = Quaternion.Euler(0f,0f,12f);
                 child.transform.localScale = new Vector3(.5f,-.8f,1.3f);
                 child.transform.SetParent(parent.transform,true);
-                Assert.Equal(new Vector3(.392445117f,-1.102024913f,1.181818128f),child.transform.localScale);
+                var expected = new Vector3(.392445117f,-1.102024913f,1.181818128f);
+                // Exact on x86_64 (the Linux Editor's); the processor's reciprocal estimate elsewhere.
+                if (Architecture == System.Runtime.InteropServices.Architecture.X64) Assert.Equal(expected,child.transform.localScale);
+                else Assert.True((expected - child.transform.localScale).magnitude < 1e-6f);
             }
             finally { Object.DestroyImmediate(child); Object.DestroyImmediate(parent); }
         }
         // tests/projects/solverpairorder --transform-inputs circle-planar/10/initial: the Linux
-        // x86-64 and macOS arm64 Editors round three inverse scales differently.
+        // x86-64 Editor's inverse scales, exact on x86_64 hosts; the reciprocal starts from the
+        // processor's estimate, so other hosts are within a step of them.
         [Fact]
         public void TheInverseScaleFollowsTheCpusReciprocal()
         {
@@ -136,13 +139,18 @@ namespace UnityEngine.Tests
                 parent.transform.position = child.transform.position;
                 child.transform.SetParent(parent.transform,true);
                 var inverse = child.transform.worldToLocalMatrix;
-                bool arm64 = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64;
-                Assert.Equal(-1.11111116f,inverse.m00);
-                Assert.Equal(arm64 ? .5882353f : .588235259f,inverse.m11);
-                Assert.Equal(arm64 ? -.909090936f : -.9090909f,inverse.m22);
-                Assert.Equal(.333333373f,inverse.m03);
-                Assert.Equal(arm64 ? .117647067f : .117647052f,inverse.m13);
-                Assert.Equal(arm64 ? 1.81818187f : 1.81818175f,inverse.m23);
+                bool x64 = Architecture == System.Runtime.InteropServices.Architecture.X64;
+                void Same(float expected, float actual)
+                {
+                    if (x64) Assert.Equal(expected, actual);
+                    else Assert.Equal(expected, actual, 1e-6f * Math.Abs(expected));
+                }
+                Same(-1.11111116f,inverse.m00);
+                Same(.588235259f,inverse.m11);
+                Same(-.9090909f,inverse.m22);
+                Same(.333333373f,inverse.m03);
+                Same(.117647052f,inverse.m13);
+                Same(1.81818175f,inverse.m23);
             }
             finally { Object.DestroyImmediate(child); Object.DestroyImmediate(parent); }
         }

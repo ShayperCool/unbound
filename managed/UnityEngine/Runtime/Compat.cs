@@ -130,15 +130,6 @@ namespace Unbound.Runtime
             return false;
         }
 
-        /// <summary>On arm64 hosts transform arithmetic follows the macOS arm64 Editor: a set rotation is
-        /// normalized with one sum (x² + y²) + (z² + w²) for every component, a scale's reciprocal
-        /// starts from the hardware estimate with two reciprocal steps, and a 2D collider's body frame
-        /// sums each column of its 4x4 product as one product and three fused multiply-adds. Measured by
-        /// tests/projects/solverpairorder --transform-inputs against the macOS arm64 6000.0.71f1 Editor;
-        /// x86_64 hosts keep what the Linux Editor measures. Chosen by the host's architecture for every
-        /// release, though measured with 6000.0.71f1 only (as the x86_64 order).</summary>
-        internal static bool TransformArithmeticArm64 => System.Runtime.Intrinsics.Arm.AdvSimd.IsSupported;
-
         /// <summary>The larger of two floats in Unity's native math: NaN when either is NaN on arm64
         /// hosts (as the macOS arm64 Editor computes it), the second operand when either is NaN on
         /// x86_64 hosts (as the Linux x86_64 Editor does). Measured by tests/projects/floatrounding
