@@ -171,19 +171,21 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   request at the next frame's `UpdateAsyncReadbackManager`, as the Editor does at the earliest
   (tests/projects/gpubuffers).
 * **Graphics devices**: like Unity, Unbound has several graphics devices, and the device a game
-  sees is the one it gets: OpenGL Core and Vulkan (Metal later, on macOS). The run's device is
+  sees is the one it gets: OpenGL Core and Vulkan on Linux, Metal on macOS. The run's device is
   chosen once at startup (`unbound_compat::graphics`), as the Editor of the OS chooses it (Unity
-  6000.0.71f1, measured on Linux): `--force-vulkan` / `--force-glcore` (the Editor's
+  6000.0.71f1, measured on both): on Linux `--force-vulkan` / `--force-glcore` (the Editor's
   `-force-vulkan`, `-force-glcore[XY]`), else the project's graphics API list for the OS's
   standalone platform (Player Settings `m_BuildTargetGraphicsAPIs`, unless automatic) followed by
-  the platform's first default, else the defaults (Linux: OpenGL Core, then Vulkan; macOS:
-  Metal); the first device that starts wins, OpenGL Core last. Without settings the Linux Editor
-  runs OpenGL Core, so does Unbound. Everything device-dependent reads that one choice, resolved
+  the platform's first default, else the defaults (OpenGL Core, then Vulkan); the first device
+  that starts wins, OpenGL Core last. Without settings the Linux Editor runs OpenGL Core, so does
+  Unbound. The macOS Editor runs Metal whatever is forced or listed, so does Unbound (a
+  `--force-*` option is ignored with a warning). Everything device-dependent reads that one choice, resolved
   before the game starts, never per frame: SystemInfo's answers and format tables measured on
   each device (`Unbound.Runtime.GraphicsDeviceProfile`; tests/projects/urp CapsProbe), the
-  shader compilation target (`SHADER_API_GLCORE`/`SHADER_API_VULKAN`, compiled programs keyed by
-  it), `GL.GetGPUProjectionMatrix`, `IUnityGraphics::GetRenderer`, and the renderer's conventions
-  (`render::device`). OpenGL Core: clip depth from -w to w, every target stored bottom-up.
+  shader compilation target (`SHADER_API_GLCORE`/`SHADER_API_VULKAN`/`SHADER_API_METAL`, compiled
+  programs keyed by it), `GL.GetGPUProjectionMatrix`, `IUnityGraphics::GetRenderer` and the
+  device's plugin interface, and the renderer's conventions (`render::device`; Metal's are
+  Vulkan's). OpenGL Core: clip depth from -w to w, every target stored bottom-up.
   Vulkan (`UNITY_UV_STARTS_AT_TOP`, `UNITY_REVERSED_Z`): the GPU projection maps depth to 1 (near)
   .. 0 (far), depth tests, clears, biases and comparison samplers are mirrored, render textures
   are drawn with the projection's y flipped (`_ProjectionParams.x` -1; their rows stay bottom-up,
@@ -192,7 +194,8 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   read as their input attachments' textures (`_UnityFBInput<i>`). On Linux each device is drawn by
   its own wgpu backend: OpenGL Core by the OpenGL backend (EGL, a 4.5 core context; the vendored
   changes it needs, from texture views in another format to sampler LOD bias, are in
-  `vendor/wgpu-sampler/PATCHES.md`), Vulkan by the Vulkan backend; macOS draws with Metal. The
+  `vendor/wgpu-sampler/PATCHES.md`), Vulkan by the Vulkan backend; macOS's Metal by the Metal
+  backend, whose device, queue and textures plugins get (`IUnityGraphicsMetal`). The
   GPU device is made when the device is chosen, before the game boots (`render::device::start`):
   the first device whose backend starts wins, and the window's renderer takes it. The OpenGL
   device's EGL display is X11's: it draws into an X11 window (the Linux Editor is an X11
