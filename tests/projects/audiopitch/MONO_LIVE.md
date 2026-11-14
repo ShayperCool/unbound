@@ -84,6 +84,9 @@ full-profile parent must match byte for byte before publication.
 `mono-live` and `topology-diagnostics` commands remain independent diagnostics
 and return every actual failure.
 
+Q416-R4c duplicate diagnostics are closed for the measured rejection route;
+see [the Q449 correction](#q449-duplicate-diagnostics) below.
+
 ## Remaining queue work
 
 - **Q416-R4a, Mono Echo startup.** Isolated Mono Echo and Reverb/Echo composition
@@ -95,20 +98,17 @@ and return every actual failure.
   Reverb/Echo controls retain sparse Master and device differences. They are
   outside this new PCM qualification; their complete samples and original float
   bounds remain in `mono-live`.
-- **Q416-R4c, diagnostic callback publication.** The full duplicate-filter
-  diagnostic still differs on twelve log callback counts. The Editor reports
-  zero callbacks during each immediate duplicate attempt; the engine reports
-  one. Rejection, retained component identity and replacement agree. Console
-  output and application log callback timing need a separate runtime change.
 - **Q416-R4d, live changes with simultaneous listeners.** The six-case diagnostic
   remains open. Editing either owner's chain has different retained-history
   interactions. Static multiple-listener controls remain the earlier measured
   scope; Unity documents one active listener and gives no global ordering
   guarantee for these invalid simultaneous-listener setups.
 
-The complete 135-control comparison retains 29650/31060 gate failures at
+The earlier Q416 135-control comparison retained 29650/31060 gate failures at
 48000/44100 Hz, including 10604/11040 Master floats, 19034/20008 device samples
-and twelve callback metadata values. The separate six-control comparison retains
+and twelve Error callback metadata differences. The Q449 logging correction
+resolves those twelve metadata differences, leaving 29638/31048 gate failures
+and the same Master and device samples. The separate six-control comparison retains
 123337/123586 gate failures out of 917566 values per rate. No tolerance, sample
 range, oracle value or residual allowance was changed to exclude these failures.
 
@@ -116,9 +116,9 @@ range, oracle value or residual allowance was changed to exclude these failures.
 
 Fresh independent GPU Editor repeats on an NVIDIA RTX 4060 reproduce all
 19,399,899 values per rate in `mono-live` byte for byte, including the committed
-references. The current engine still reports 29,650/31,060 gate failures at
-48000/44100 Hz. This recheck changes no reference, float bound, device-step gate
-or engine behavior.
+references. Before the Q449 diagnostic correction, the engine reported
+29,650/31,060 gate failures at 48000/44100 Hz. This recheck changes no reference,
+float bound, device-step gate or engine behavior.
 
 The Stereo/Quad source LowPass/Chorus and Reverb/Echo compositions account for
 93/116 failing Master samples. Their observed absolute errors range from about
@@ -153,8 +153,8 @@ instances, custom/default handlers and muted/enabled public logging. Both
 Editor repeats and the engine agree exactly on 1345 values.
 
 Rejection publishes one immediate `LogType.Log` to Application callbacks and
-bypasses the public logger. The earlier Error-only observer therefore correctly
-records zero in the Editor. The shared component-factory route now matches that
+bypasses the public logger. The earlier Error-only observer recorded zero in
+the Editor versus one in the engine on twelve duplicate attempts per rate. The shared component-factory route now matches that
 severity and publication behavior through its existing Compat selector.
 
 All 270 PCM files per rate remain byte-identical to the earlier engine run.
