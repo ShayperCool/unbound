@@ -156,3 +156,38 @@ The current navigation regression run retains every reference and tolerance. To
 record the diagnostic without replacing a reference, run the existing editor and
 unbound modes with `UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1` and
 `NAVMESH_PROBE_STEER=250`; keep the added steering records in the run cache.
+
+
+Q462 adds an optional corridor diagnostic with its own reference. It records frames
+190 to 196 of the blocked agent, including its live path, a fresh agent path query,
+and a global query whose start is held at the frame-191 reference position.
+The default probe and reference are unchanged.
+
+    UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navmesh/run.py editor --profile corridor --label L
+    UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navmesh/run.py publish --profile corridor --label L
+    UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 UNBOUND=.../unbound python3 tests/projects/navmesh/run.py unbound --profile corridor --label L
+
+The reference is `Reference/unity-6000.0.71f1/corridor.json`. Two GPU Editor repeats
+agree byte for byte on the NVIDIA RTX 4060 renderer, and all original main-reference
+values agree exactly. Other devices were not measured. All 422
+values are compared with the existing tolerance, including missing and extra values.
+The current diagnostic fails strictly in 103 values across six of seven scenarios;
+frame 190 is the matching control. It has no listed-key exceptions and is separate
+from the default carving gate.
+
+At frame 191 both engines have the same position, velocity and desired velocity.
+Both fresh queries keep the corner at (-2, 4.5), including with the same fixed
+start. Unity's live corridor has already dropped that corner and steers towards
+(3.5, 3.5), while Unbound's retains it. This distinguishes corridor history from
+a disagreement in the static query at that position. It does not establish a new
+shortcut order or threshold. Desired velocities diverge on 192 and positions on 193.
+A fresh-query correction alone would not account for this first live-path change.
+
+The default rerun remains at 212 differing frame scenarios. The deferred walker
+vertex tie, three climber rounding records, left's frame-222 hasPath and right's
+frame-241 arrival remain visible. Avoidance retains two near configurations and
+one speed configuration. All three differ only in the second-frame steeringTarget,
+whose x coordinate is 42.6666679 in the reference and 50 in Unbound; position,
+velocity, desired velocity and next position match. This leaves corner or corridor
+reporting open and does not justify changing avoidance weights. Their twelve raw
+capture files are byte-identical before and after both Q462 corrections.

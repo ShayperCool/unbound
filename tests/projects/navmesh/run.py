@@ -6,6 +6,8 @@
     run.py unbound [--label L]   an Unbound capture ($UNBOUND or UNBOUND_CLI: the binary), then
                                  compare.py over everything (a report) and the carving check
                                  (the exit status)
+    --profile corridor         optional strict query/corridor diagnostic, with its own reference;
+                                 a nonzero result currently records the unresolved scope
 
 Captures go to $XDG_CACHE_HOME/unbound/validation/runs/navmesh/<label>; each Editor runs on a
 fresh copy of the probe through tests/editor_runner.py (one launcher lease each, GPU through
@@ -37,6 +39,23 @@ OUTPUT = 'navmesh.json'
 TOLERANCE = 1e-3
 
 
+def profile_root(args):
+    root = run_root(PROBE, args.label)
+    return root/'corridor' if args.profile == 'corridor' else root
+
+
+def profile_reference(args):
+    path = reference_file(PROBE)
+    return path.with_suffix('')/'corridor.json' if args.profile == 'corridor' else path
+
+
+def corridor_values(data):
+    picked = {k: v for k, v in data.items() if k.startswith('agents.corridor.')}
+    if not picked:
+        sys.exit('corridor capture has no diagnostic records')
+    return picked
+
+
 def copy_project(dest):
     if dest.exists():
         sys.exit(f'refusing to overwrite project: {dest}')
@@ -46,7 +65,7 @@ def copy_project(dest):
 
 
 def editor(args):
-    root = run_root(PROBE, args.label)
+    root = profile_root(args)
     jobs = []
     for name in REPEATS:
         out = root/name
@@ -54,7 +73,8 @@ def editor(args):
             sys.exit(f'refusing to overwrite capture: {out}')
         project = copy_project(out/'project')
         jobs.append(EditorJob(project, out/'editor.log', out, ['-executeMethod', 'ProbeRunner.Record'], batch=True,
-                              env={'NAVMESH_PROBE_OUT': str(out/OUTPUT)}, timeout=1200, label='navmesh-'+name))
+                              env={'NAVMESH_PROBE_OUT': str(out/OUTPUT),
+                                   'NAVMESH_PROBE_CORRIDOR': '1' if args.profile == 'corridor' else ''}, timeout=1200, label='navmesh-'+name))
     failed = False
     for result, name in zip(run_parallel(jobs), REPEATS):
         print(summary(result))
@@ -66,7 +86,7 @@ def editor(args):
 
 
 def publish(args):
-    root = run_root(PROBE, args.label)
+    root = profile_root(args)
     for name in REPEATS:
         problem = result_problem(root/name)
         if problem:
@@ -74,7 +94,10 @@ def publish(args):
     first, second = ((root/name/OUTPUT).read_bytes() for name in REPEATS)
     if first != second:
         sys.exit('the two captures differ; nothing published')
-    target = reference_file(PROBE)
+    if args.profile == 'corridor':
+        first = (json.dumps(corridor_values(json.loads(first)), indent=2) + '\n').encode()
+    target = profile_reference(args)
+    target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(first)
     print(f'published {target}')
     return 0
@@ -135,20 +158,49 @@ def unbound(args):
     binary = os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI')
     if not binary:
         sys.exit('set UNBOUND to the unbound binary')
-    out = run_root(PROBE, args.label)/'unbound'
+    out = profile_root(args)/'unbound'
     out.mkdir(parents=True, exist_ok=True)
     result = out/OUTPUT
+    if args.profile == 'corridor' and result.exists():
+        sys.exit(f'refusing to overwrite capture: {result}')
     result.unlink(missing_ok=True)
     launcher = Path.home()/'.cache/compat/with-heavy-job'
-    command = [binary, 'run', '-p', str(PROBE), '--no-watch', '--frames', '300']
+    project = copy_project(out/'project') if args.profile == 'corridor' else PROBE
+    command = [binary, 'run', '-p', str(project), '--no-watch', '--frames', '300']
     if launcher.exists():
         command = [str(launcher), *command]
     with open(out/'run.log', 'w') as log:
-        code = subprocess.run(command, env=dict(os.environ, NAVMESH_PROBE_OUT=str(result)), stdout=log,
+        code = subprocess.run(command, env=dict(os.environ, NAVMESH_PROBE_OUT=str(result),
+                            NAVMESH_PROBE_CORRIDOR='1' if args.profile == 'corridor' else ''), stdout=log,
                               stderr=subprocess.STDOUT, timeout=900).returncode
     if code != 0 or not result.exists():
         sys.exit(f'Unbound failed (exit {code}); see {out/"run.log"}')
-    reference = reference_file(PROBE)
+    reference = profile_reference(args)
+    if args.profile == 'corridor':
+        data = corridor_values(json.loads(result.read_text()))
+        candidate = out/'corridor.json'
+        candidate.write_text(json.dumps(data, indent=2) + '\n')
+        command = [sys.executable, str(PROBE/'compare.py'), str(reference), str(candidate), '--details', str(sys.maxsize)]
+        checked = subprocess.run(command, capture_output=True, text=True)
+        expected = json.loads(reference.read_text())
+        extra = set(data) - set(expected)
+        missing = set(expected) - set(data)
+        lines = [f'{scenario}.{key}: unity <missing>  unbound {value!r}'
+                 for scenario in sorted(extra) for key, value in data[scenario].items()]
+        lines += [f'{scenario}.{key}: unity {value!r}  unbound <missing>'
+                  for scenario in sorted(missing) for key, value in expected[scenario].items()]
+        for scenario in sorted(set(expected) & set(data)):
+            before, after = expected[scenario], data[scenario]
+            if 'error' in after and 'error' not in before:
+                # The shared comparator reports the exception before checking its fields.
+                for key in sorted(set(before) | set(after)):
+                    a, b = before.get(key, '<missing>'), after.get(key, '<missing>')
+                    if not same(a, b):
+                        lines.append(f'{scenario}.{key}: unity {a!r}  unbound {b!r}')
+        report = checked.stdout + checked.stderr + ''.join(line + '\n' for line in lines)
+        (out/'compare.txt').write_text(report)
+        print(report, end='')
+        return 1 if checked.returncode or lines else 0
     report = subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference), str(result), '--details', '0'],
                             capture_output=True, text=True).stdout
     (out/'compare.txt').write_text(report)
@@ -160,6 +212,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('command', choices=('editor', 'publish', 'unbound'))
     parser.add_argument('--label', default='current')
+    parser.add_argument('--profile', choices=('main', 'corridor'), default='main')
     args = parser.parse_args()
     print(f'Unity {unity_version()}', file=sys.stderr)
     return {'editor': editor, 'publish': publish, 'unbound': unbound}[args.command](args)

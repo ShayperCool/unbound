@@ -162,3 +162,17 @@ own walkable height surface, reduction and per-tile query data, including the
 documented terrain-orientation and preserveTilesOutsideBounds controls. These
 items remain queue work, rather than being approximated by raw source triangles
 or an arbitrary layer limit. References, listed keys and tolerances are unchanged.
+
+
+Q462 reruns the main profile after the placement-state and braking corrections: routes
+remain 23/163, wide-link approaches 2/167 and post avoidance 17/578. The full
+comparison report is unchanged. The optional navmesh corridor diagnostic isolates
+one live-agent history difference; it does not establish a shared rule for these
+placed-route and approach cases. No new funnel reset, sample weight or arrival
+threshold is selected from them.
+
+The separate stacked-link profile still fails in 523/5826 values across 18/30
+scenarios. Its ownership and lifetime controls still rule out reconnecting every
+point link on every refresh. A fixed layer capacity does not explain the point
+bindings or the eight-layer wide-link corner heights. Persistent ownership and
+selective reconnection remain a separate implementation task.

@@ -391,11 +391,39 @@ public class NavProbe : MonoBehaviour
                 ProbeLog.Value(name + ".steer", "p" + P(agent.transform.position) + " v" + P(agent.velocity) + " dv" + P(agent.desiredVelocity)
                     + " st" + P(agent.steeringTarget) + " n" + P(agent.nextPosition) + " r" + agent.remainingDistance.ToString("R", CultureInfo.InvariantCulture));
         }
+        if (Environment.GetEnvironmentVariable("NAVMESH_PROBE_CORRIDOR") == "1"
+            && m_Frame >= 190 && m_Frame <= 196)
+            RecordCorridorDiagnostic();
         if (m_Frame >= Frames)
         {
             m_Done = true;
             StartCoroutine(PredictionControls());
         }
+    }
+
+    void RecordCorridorDiagnostic()
+    {
+        var blocked = m_Agents[5].Agent;
+        ProbeLog.Begin("agents.corridor.f" + m_Frame);
+        ProbeLog.Value("position", blocked.nextPosition);
+        ProbeLog.Value("velocity", blocked.velocity);
+        ProbeLog.Value("desiredVelocity", blocked.desiredVelocity);
+        ProbeLog.Value("steeringTarget", blocked.steeringTarget);
+        ProbeLog.Value("destination", blocked.destination);
+        var route = new NavMeshPath();
+        ProbeLog.Value("fresh.found", blocked.CalculatePath(blocked.destination, route));
+        RecordDiagnosticCorners("fresh", route.corners);
+        // The reference position at frame 191 holds the query input fixed after trajectories diverge.
+        var fixedPosition = new Vector3(-1.98877454f, 0.0535862446f, 4.59227753f);
+        ProbeLog.Value("fixed.found", NavMesh.CalculatePath(fixedPosition, blocked.destination, NavMesh.AllAreas, route));
+        RecordDiagnosticCorners("fixed", route.corners);
+        RecordDiagnosticCorners("live", blocked.path.corners);
+    }
+
+    static void RecordDiagnosticCorners(string name, Vector3[] corners)
+    {
+        ProbeLog.Value(name + ".count", corners.Length);
+        for (int i = 0; i < corners.Length; i++) ProbeLog.Value(name + ".c" + i, corners[i]);
     }
 
     IEnumerator PredictionControls()
