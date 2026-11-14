@@ -208,13 +208,14 @@ namespace UnityEngine
         public bool allowMSAA { get => m_AllowMSAA; set => m_AllowMSAA = value; }
         /// <summary>Stored, but Unbound's renderer has no dynamic resolution: false, as the Linux
         /// Editor's devices answer (measured: tests/projects/builtinfx, a camera saved with it on
-        /// reports false). The macOS Editor's Metal device keeps the value: warned there.</summary>
+        /// reports false). The macOS Editor's Metal device keeps the value: warned there when it
+        /// is true.</summary>
         [Unbound.EditorFaithful("the Linux Editor's devices do not support dynamic resolution: the camera reports false (warned on Metal)")]
         public bool allowDynamicResolution
         {
             get
             {
-                if (Unbound.Runtime.GraphicsDeviceProfile.Current.EditorDynamicResolution)
+                if (m_AllowDynamicResolution && Unbound.Runtime.GraphicsDeviceProfile.Current.EditorDynamicResolution)
                     Unbound.Runtime.Stubs.Ignored("Camera.allowDynamicResolution", "answers false: Unbound's renderer does not scale buffers (the Editor's Metal device keeps the value)");
                 return false;
             }

@@ -284,6 +284,14 @@ namespace Unbound.Tests
                     int system = Hits("SystemInfo.supportsDynamicResolution");
                     int manager = Hits("ScalableBufferManager");
                     int cameraHits = Hits("Camera.allowDynamicResolution");
+                    // What the Editor answers too (a camera left off, no scale asked for, a scale
+                    // of 1) is not reported.
+                    camera.allowDynamicResolution = false;
+                    Assert.False(camera.allowDynamicResolution);
+                    ScalableBufferManager.ResizeBuffers(1f, 1f);
+                    Assert.Equal(1f, ScalableBufferManager.heightScaleFactor);
+                    Assert.Equal(0, Hits("ScalableBufferManager") - manager);
+                    Assert.Equal(0, Hits("Camera.allowDynamicResolution") - cameraHits);
                     Assert.False(SystemInfo.supportsDynamicResolution);
                     ScalableBufferManager.ResizeBuffers(0.5f, 0.25f);
                     Assert.Equal(1f, ScalableBufferManager.widthScaleFactor);
@@ -292,6 +300,7 @@ namespace Unbound.Tests
                     Assert.Equal(reported, Hits("SystemInfo.supportsDynamicResolution") - system);
                     Assert.Equal(2 * reported, Hits("ScalableBufferManager") - manager);
                     Assert.Equal(reported, Hits("Camera.allowDynamicResolution") - cameraHits);
+                    ScalableBufferManager.ResizeBuffers(1f, 1f);
                 }
             }
             finally

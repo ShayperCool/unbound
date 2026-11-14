@@ -400,7 +400,7 @@ namespace UnityEngine
             return true;
         }
 
-        [Unbound.EditorFaithful("the Editor has no dynamic resolution: the scale stays 1 (as ScalableBufferManager)")]
+        [Unbound.EditorFaithful("the Linux Editor's devices have no dynamic resolution: the scale stays 1 (as ScalableBufferManager, which warns on Metal)")]
         public void ApplyDynamicScale() { }
 
         public void SetGlobalShaderProperty(string propertyName) => Shader.SetGlobalTexture(propertyName, this);
