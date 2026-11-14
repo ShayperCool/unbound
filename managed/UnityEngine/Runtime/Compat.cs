@@ -101,6 +101,21 @@ namespace Unbound.Runtime
         /// unmeasured immediate stop.</summary>
         internal static bool NavMeshStoppingDistanceMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>An arrived agent retains its destination request and resumes it when moved
+        /// away, measured by tests/projects/navlinks on 6000.0.71f1. Other releases retain the
+        /// previous, unmeasured cancellation of the completed request.</summary>
+        internal static bool NavMeshDestinationRetentionMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>A surface move without a destination renews the standing corridor's endpoint
+        /// and stale version, measured by tests/projects/navlinks on 6000.0.71f1. Other releases
+        /// retain the previous, unmeasured corridor and staleness until the next update.</summary>
+        internal static bool NavMeshIdleMoveMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Enabling an agent starts its reported velocity at zero, measured by
+        /// tests/projects/navlinks on 6000.0.71f1. Other releases retain the previous,
+        /// unmeasured velocity report until the next update.</summary>
+        internal static bool NavMeshEnableVelocityMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Link activation updates query access immediately and invalidates an agent's
         /// corridor at its next update (Unity 6000.0.71f1, tests/projects/navlinks). Other releases
         /// retain the previous immediate mesh rebuild.</summary>

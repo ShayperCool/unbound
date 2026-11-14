@@ -65,6 +65,8 @@ namespace UnityEngine.AI
         internal bool m_LandAfterReset;
         /// <summary>The agent was walking when the crowd update began (a link it reaches is new).</summary>
         internal bool m_StepWalking;
+        /// <summary>A newly placed agent must take in its transform once, even when equal.</summary>
+        internal bool m_PlacementMovePending;
 
         public NavMeshAgent() { }
 
@@ -263,6 +265,13 @@ namespace UnityEngine.AI
             if (!m_Crowd.corridor.MovePosition(NavMesh.V(target), m_Surface.Query, Filter)) return false;
             m_Crowd.npos = m_Crowd.corridor.GetPos();
             m_NextPosition = AgentSystem.Reported(this);
+            if (Compat.NavMeshIdleMoveMeasured && !m_HasDestination)
+            {
+                // Moving without a destination renews the standing corridor, including its
+                // endpoint and staleness (Unity 6000.0.71f1, tests/projects/navlinks staleread.*).
+                m_Crowd.corridor.Reset(m_Crowd.corridor.GetFirstPoly(), m_Crowd.npos);
+                CatchUpStaleness();
+            }
             return true;
         }
 
@@ -557,6 +566,7 @@ namespace UnityEngine.AI
             // Keep the requested transform move pending. With updatePosition enabled, the next
             // synchronization follows it along the connected surface (navbaked warp.sync).
             m_WrittenPosition = m_NextPosition + Vector3.up * m_BaseOffset;
+            m_PlacementMovePending = Compat.NavMeshIdleMoveMeasured;
             return true;
         }
 
@@ -786,9 +796,13 @@ namespace UnityEngine.AI
         // enabled 17 frames later; a link change after it leaves the path not stale).
         internal override void OnEngineEnable()
         {
+            // A new simulation starts at rest, including its same-frame velocity report
+            // (Unity 6000.0.71f1, tests/projects/navlinks reenable.*).
+            if (Compat.NavMeshEnableVelocityMeasured) m_Velocity = Vector3.zero;
             ResetAreaCosts();
             ForgetPath();
             AgentSystem.Add(this);
+            m_PlacementMovePending = Compat.NavMeshIdleMoveMeasured && m_Crowd != null;
         }
 
         internal override void OnEngineDisable()
@@ -902,7 +916,8 @@ namespace Unbound.Runtime
         internal static void FollowTransform(NavMeshAgent agent)
         {
             if (agent.m_Crowd == null || !agent.updatePosition || agent.m_LinkCompleting
-                || (agent.transform.position - agent.WrittenPosition).sqrMagnitude <= 1e-8f) return;
+                || (!agent.m_PlacementMovePending && (agent.transform.position - agent.WrittenPosition).sqrMagnitude <= 1e-8f)) return;
+            agent.m_PlacementMovePending = false;
             var moved = agent.transform.position;
             // Recorded first: the nextPosition setter syncs the agent again.
             agent.WrittenPosition = moved;
@@ -912,7 +927,11 @@ namespace Unbound.Runtime
 
         /// <summary>The agent stands where its transform does not: the transform is written at the
         /// next early update, and is not a script's move until then.</summary>
-        internal static void DeferTransform(NavMeshAgent agent) => agent.WrittenPosition = agent.transform.position;
+        internal static void DeferTransform(NavMeshAgent agent)
+        {
+            agent.WrittenPosition = agent.transform.position;
+            agent.m_PlacementMovePending = false;
+        }
 
         /// <summary>The frame's agent update, before Update (PreUpdate's AIUpdate): transforms, path
         /// requests, then the crowds steer, plan, move and cross links, and transforms follow.</summary>
@@ -1021,6 +1040,7 @@ namespace Unbound.Runtime
                 crowd.RemoveAgent(agent.m_Crowd);
             agent.m_Crowd = null;
             agent.m_Surface = null;
+            agent.m_PlacementMovePending = false;
             agent.m_LinkId = 0;
             agent.m_LinkCompleting = false;
             agent.m_LandAfterReset = false;
@@ -1881,7 +1901,9 @@ namespace Unbound.Runtime
                 ag.nvel = RcVec3f.Zero;
                 ag.pvel = RcVec3f.Zero;
                 agent.m_Velocity = Vector3.zero;
-                CrowdOf(agent.m_Surface)?.ResetMoveTarget(ag);
+                // Keep the destination request after arrival so a later surface move can
+                // resume it (Unity 6000.0.71f1, tests/projects/navlinks staleread.arrivedmove).
+                if (!Compat.NavMeshDestinationRetentionMeasured) CrowdOf(agent.m_Surface)?.ResetMoveTarget(ag);
                 ag.corridor.Reset(ag.corridor.GetFirstPoly(), ag.npos);
                 agent.m_NextPosition = Reported(agent);
                 ag.ncorners = 0;
@@ -1933,6 +1955,7 @@ namespace Unbound.Runtime
             var position = agent.m_NextPosition + Vector3.up * agent.baseOffset;
             agent.transform.position = position;
             agent.WrittenPosition = position;
+            agent.m_PlacementMovePending = false;
         }
 
         /// <summary>Gain of the turn towards the agent's heading: per second, (this + speed) times the
