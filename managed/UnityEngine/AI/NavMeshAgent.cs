@@ -424,8 +424,8 @@ namespace UnityEngine.AI
         // areaMask, enabling or disabling an off-mesh link, or changing the NavMesh area costs
         // makes the path stale; the agent goes on following it. Measured (Unity 6000.0.71f1,
         // tests/projects/navlinks, every lane): a link activated or deactivated anywhere makes
-        // every agent's path stale at once; an agent with a destination stays stale (also while
-        // the NavMesh change replans it) until a new path is applied for a new destination; one
+        // every agent's path stale at once; a newly applied path clears staleness, including
+        // a route repaired after a link on it is deactivated at the next update; one
         // without a destination (never given, ResetPath, Warp) is not stale from its next agent
         // update; the agent's own areaMask and area costs make its path stale until its next
         // destination; a stale partial path is searched again near its end (RepathStalePartial).
@@ -516,8 +516,10 @@ namespace UnityEngine.AI
             m_Surface.Query.FindStraightPath(PathStart(), m_Crowd.corridor.GetTarget(), corridor, count, straight, out int n, straight.Length, 0);
             var corners = new Vector3[n];
             for (int i = 0; i < n; i++) corners[i] = NavMesh.V(straight[i].pos);
-            // On a link the path goes on from the link's own end (measured: tests/projects/navlinks).
-            if (n > 0 && isOnOffMeshLink) corners[0] = CurrentLinkEnd();
+            // The path starts at the link's own end until the next walking update, including
+            // the frame CompleteOffMeshLink leaves it (Unity 6000.0.71f1, tests/projects/navlinks).
+            if (n > 0 && (isOnOffMeshLink || (Compat.NavMeshCorridorReportingMeasured && m_LinkCompleting)))
+                corners[0] = CurrentLinkEnd();
             result.m_Corners = corners;
             result.m_Polygons = corridor.Slice(0, count).ToArray();
             result.m_Status = m_PathStatus;
@@ -693,6 +695,7 @@ namespace UnityEngine.AI
                 data.m_EndPos = forward ? link.End : link.Start;
                 data.m_InstanceID = link.Owner;
                 data.m_LinkType = link.Type;
+                data.m_Activated = link.Active ? 1 : 0;
                 // A wide link: the points the agent would cross between from where its path
                 // reaches the link (measured: tests/projects/navpath link.wide gb1.2, whose path
                 // reaches it where the NavMesh under its start ends).
@@ -916,9 +919,37 @@ namespace Unbound.Runtime
         internal static void Step()
         {
             SyncTransforms();
+            RevalidateActivatedLinks();
             RepathStalePartial();
             ProcessRequests();
             UpdateCrowds();
+        }
+
+        static int s_LinkActivationVersion;
+
+        /// <summary>Repair routes through a deactivated link at the next AI update. Queries have
+        /// already excluded the link, while agent reports retained the old corridor in the setter's
+        /// frame (Unity 6000.0.71f1, tests/projects/navlinks activation and waitrebuild).</summary>
+        static void RevalidateActivatedLinks()
+        {
+            if (!Compat.NavMeshLinkActivationMeasured || s_LinkActivationVersion == NavWorld.LinkActivationVersion) return;
+            s_LinkActivationVersion = NavWorld.LinkActivationVersion;
+            foreach (var agent in s_Agents)
+            {
+                var ag = agent.m_Crowd;
+                if (ag == null || !agent.FollowingPath || agent.pathPending || agent.isOnOffMeshLink) continue;
+                var path = ag.corridor.GetPath();
+                int count = ag.corridor.GetPathCount();
+                for (int i = 0; i < count; i++)
+                {
+                    if (agent.m_Surface.Mesh.GetTileAndPolyByRef(path[i], out _, out var poly).Failed()
+                        || poly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION || poly.flags != 0) continue;
+                    PlanAgain(agent);
+                    agent.CatchUpStaleness();
+                    ag.waitingForConnection = false;
+                    break;
+                }
+            }
         }
 
         /// <summary>A partial path made stale (isPathStale) is searched again, before this update's

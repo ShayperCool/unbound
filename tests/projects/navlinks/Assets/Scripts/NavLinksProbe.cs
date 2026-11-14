@@ -739,6 +739,7 @@ public class NavLinksProbe : MonoBehaviour
         yield return RecordStoppingControls();
         yield return RecordUpAxisEdges();
         yield return RecordRotationWrites();
+        yield return RecordActivationControls();
         Finish(0);
     }
 
@@ -931,6 +932,37 @@ public class NavLinksProbe : MonoBehaviour
                 yield return null;
                 Line(lane.Name, "a", frame, "\"changed\":" + B(agent.transform.hasChanged) + ",\"up\":" + V(agent.transform.up));
             }
+            DestroyImmediate(agent.gameObject);
+        }
+    }
+
+    IEnumerator RecordActivationControls()
+    {
+        var source = m_Lanes.Find(lane => lane.Name == "crosstile");
+        foreach (string kind in new[] { "far", "near", "toggle" })
+        foreach (bool repath in new[] { true, false })
+        {
+            var lane = new Lane { Name = "activation." + kind + (repath ? ".repath" : ".noRepath"), O = source.O, Link = source.Link };
+            source.Link.activated = true;
+            var agent = Agent(lane, "a", new Vector3(kind == "near" ? -3.2f : -8f, 0f, -0.3f), new Vector3(8f, 0f, 0f), a =>
+            {
+                a.speed = 0f;
+                a.autoRepath = repath;
+                a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            });
+            yield return null;
+            Line(lane.Name, "a", 1, State(lane, agent));
+            source.Link.activated = false;
+            if (kind == "toggle") source.Link.activated = true;
+            var query = new NavMeshPath();
+            NavMesh.CalculatePath(lane.O + new Vector3(-8f, 0f, 0f), lane.O + new Vector3(8f, 0f, 0f), NavMesh.AllAreas, query);
+            Line(lane.Name, "a", 2, State(lane, agent) + ",\"queryStatus\":" + Text(query.status.ToString()));
+            yield return null;
+            Line(lane.Name, "a", 3, State(lane, agent));
+            source.Link.activated = true;
+            Line(lane.Name, "a", 4, State(lane, agent));
+            yield return null;
+            Line(lane.Name, "a", 5, State(lane, agent));
             DestroyImmediate(agent.gameObject);
         }
     }

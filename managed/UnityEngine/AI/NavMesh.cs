@@ -553,9 +553,7 @@ namespace UnityEngine.AI
         {
             var link = NavWorld.FindLink(linkHandle);
             if (link == null || link.Active == activated) return;
-            link.Active = activated;
-            NavWorld.MarkPathsStale();
-            NavWorld.MarkDirty();
+            NavWorld.SetLinkActive(link, activated);
         }
 
         [Obsolete("AddOffMeshLinks has no effect and is deprecated.")]

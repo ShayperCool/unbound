@@ -76,6 +76,71 @@ namespace UnityEngine.Tests
             return NavMesh.AddNavMeshData(data);
         }
 
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void LinkActivationChangesQueriesBeforeTheAgentsNextUpdate(bool autoRepath)
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-7f, 0f, -0.3f));
+                agent.speed = 0f;
+                agent.autoRepath = autoRepath;
+                agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+                Assert.True(agent.SetDestination(new Vector3(7f, 0f, 0f)));
+                AgentSystem.Step();
+                Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+                Assert.False(agent.isPathStale);
+                var destination = agent.destination;
+                var oldCorners = agent.path.corners;
+
+                NavMesh.SetLinkActive(m_Link, false);
+                var query = new NavMeshPath();
+                Assert.True(NavMesh.CalculatePath(agent.nextPosition, destination, NavMesh.AllAreas, query));
+                Assert.Equal(NavMeshPathStatus.PathPartial, query.status);
+                Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+                Assert.Equal(destination, agent.destination);
+                Assert.Equal(oldCorners, agent.path.corners);
+                Assert.True(agent.nextOffMeshLinkData.valid);
+                Assert.False(agent.nextOffMeshLinkData.activated);
+                Assert.True(agent.isPathStale);
+
+                AgentSystem.Step();
+                Assert.Equal(NavMeshPathStatus.PathPartial, agent.pathStatus);
+                Assert.False(agent.isPathStale);
+                Assert.False(agent.nextOffMeshLinkData.valid);
+                Assert.True(agent.destination.x < 0f);
+
+                NavMesh.SetLinkActive(m_Link, true);
+                Assert.True(NavMesh.CalculatePath(agent.nextPosition, destination, NavMesh.AllAreas, query));
+                Assert.Equal(NavMeshPathStatus.PathComplete, query.status);
+                Assert.Equal(NavMeshPathStatus.PathPartial, agent.pathStatus);
+                Assert.True(agent.isPathStale);
+                AgentSystem.Step();
+                Assert.Equal(NavMeshPathStatus.PathPartial, agent.pathStatus);
+                Assert.True(agent.isPathStale);
+            });
+        }
+
+        [Fact]
+        public void ActivationRestoredBeforeUpdateKeepsTheRouteAndItsStaleFlag()
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                var agent = Agent(new Vector3(-7f, 0f, 0f));
+                agent.speed = 0f;
+                Assert.True(agent.SetDestination(new Vector3(7f, 0f, 0f)));
+                AgentSystem.Step();
+                var destination = agent.destination;
+                NavMesh.SetLinkActive(m_Link, false);
+                NavMesh.SetLinkActive(m_Link, true);
+                AgentSystem.Step();
+                Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+                Assert.Equal(destination, agent.destination);
+                Assert.True(agent.isPathStale);
+            });
+        }
+
         GameObject Owner(string name)
         {
             var go = new GameObject(name);

@@ -277,3 +277,36 @@ Remaining causes after Q401, by case:
 An arrival rule tested on the remaining arrival cases (a braking agent arriving when the
 straight distance to the end is below its previous step) adds failures (325 -> 501,
 and two configurations each in avoidance arrival, arrival-start and runs), so it was not kept.
+
+Q426 updates link activation in place for 6000.0.71f1. A path query excludes a
+newly deactivated link immediately. An agent retains its old corridor and next-link
+data for the rest of that frame, with `isPathStale` set and the next link's
+`activated` false. At the next AI update an affected walking route is repaired,
+clearing its stale flag. This repair also occurs with `autoRepath` false. An
+unaffected route keeps its stale flag, and re-enabling a link does not immediately
+replace a distant partial route. Disabling and re-enabling before the update keeps
+the complete route. Existing occupied traversals continue through activation changes.
+
+The six `activation.*` controls have no occupying agent and cover near and far
+approaches, both `autoRepath` settings and a same-frame toggle. All 2,034 added
+values match, compared with 48 differences on the previous runtime. Two independent
+GPU Editor captures agree byte for byte and retain all previous 30,807 records as
+an unchanged byte prefix. The engine no longer rebuilds unrelated corridors on an
+activation change. Paths completed by script retain the link's own end as their
+first corner until the following walking update, as the existing manual controls
+require.
+
+Strict original failures fall from 325 to 258, with no newly failing value.
+Both disabled occupied-link controls now match all values, previously 59 failures.
+`redirectmid`, `resetmid` and `completeauto` also match. Remaining counts are
+`crosstile` 118, `endatlink` 81, `areamask` 54, `disableagent` 2, and one each in
+`targets`, `warpwait` and `warpauto`. Endpoint projection alone was tested and left
+the strict count at 325; it was not changed. Other releases retain the previous
+immediate rebuild and remain unmeasured for this activation timing.
+
+[isPathStale, Unity 6000.0](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-isPathStale.html)
+documents staleness after link changes.
+[autoRepath](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-autoRepath.html)
+describes acquiring a path after invalidation and at the end of a stale partial
+route. The immediate-query and next-update reporting sequence above is measured
+behavior, not a timing guarantee from those pages.

@@ -592,6 +592,23 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void CompletedLinkPathKeepsTheLinkEndUntilTheWalkingUpdate()
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                var agent = Agent(autoTraverse: false);
+                StepOntoLink(agent);
+                var end = agent.currentOffMeshLinkData.endPos;
+                agent.CompleteOffMeshLink();
+                Assert.False(agent.isOnOffMeshLink);
+                Assert.Equal(end, agent.path.corners[0]);
+                Step();
+                Assert.True(MathF.Abs(agent.nextPosition.y - end.y) > 0.02f);
+                Assert.Equal(agent.nextPosition.y, agent.path.corners[0].y, 5);
+            });
+        }
+
+        [Fact]
         public void CompleteOffMeshLinkPutsTheAgentAtTheEndAndItWalksOn()
         {
             var agent = Agent(autoTraverse: false);

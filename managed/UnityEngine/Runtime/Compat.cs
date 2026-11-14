@@ -101,6 +101,11 @@ namespace Unbound.Runtime
         /// unmeasured immediate stop.</summary>
         internal static bool NavMeshStoppingDistanceMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Link activation updates query access immediately and invalidates an agent's
+        /// corridor at its next update (Unity 6000.0.71f1, tests/projects/navlinks). Other releases
+        /// retain the previous immediate mesh rebuild.</summary>
+        internal static bool NavMeshLinkActivationMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Script code evaluates float32 expressions with double intermediates and rounds them
         /// where its IL stores a float32 (locals, arguments, fields, array elements, boxes, call
         /// arguments and returns), as the Editor's Mono does: measured by tests/projects/floatrounding

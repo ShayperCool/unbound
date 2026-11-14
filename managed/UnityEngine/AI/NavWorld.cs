@@ -11,7 +11,8 @@ namespace Unbound.Runtime
     /// <summary>
     /// The NavMesh world: the NavMeshData instances and links added to it, and per agent type a
     /// Detour mesh holding their tiles (in world space) with a query object. The meshes are rebuilt
-    /// whenever data or links come and go; polygon references are only valid until then. A carving
+    /// whenever data or links come and go; polygon references are only valid until then. Link
+    /// activation can change query access in place. A carving
     /// change replaces only the tiles it reaches (their polygon references change, the others' stay).
     /// </summary>
     internal static class NavWorld
@@ -185,6 +186,29 @@ namespace Unbound.Runtime
         internal static LinkInstance FindLink(int id) => s_Links.Find(l => l.Id == id);
 
         internal static void MarkDirty() => s_Dirty = true;
+
+        /// <summary>Activation changes since the agents last validated their corridors.</summary>
+        internal static int LinkActivationVersion;
+
+        /// <summary>Change query access without replacing the link's geometry or its occupied
+        /// traversal. Existing corridors retain their polygons until the next AI update.</summary>
+        internal static void SetLinkActive(LinkInstance link, bool active)
+        {
+            link.Active = active;
+            MarkPathsStale();
+            if (!Compat.NavMeshLinkActivationMeasured)
+            {
+                MarkDirty();
+                return;
+            }
+            LinkActivationVersion++;
+            if (s_Dirty) return;
+            foreach (var surface in s_Surfaces.Values)
+                foreach (var pair in surface.LinkOfPoly)
+                    if (pair.Value == link.Id && surface.Mesh.GetTileAndPolyByRef(pair.Key, out _, out var poly).Succeeded())
+                        poly.flags = active ? 1 : 0;
+        }
+
 
         /// <summary>Rebuilds the NavMesh now if it changed (instead of at the next query).</summary>
         internal static void RefreshNow() => Refresh();
@@ -501,7 +525,7 @@ namespace Unbound.Runtime
             int ends = 0;
             foreach (var link in s_Links)
             {
-                if (!link.Active || link.Link.agentTypeID != surface.AgentTypeID) continue;
+                if ((!link.Active && !Compat.NavMeshLinkActivationMeasured) || link.Link.agentTypeID != surface.AgentTypeID) continue;
                 var end = link.End;
                 // Over the tile or within the snap radius of it: an end lands on a polygon of the
                 // tile it lies over up to the snap radius away (DtNavMesh.ConnectOffMeshEnd).
@@ -538,7 +562,7 @@ namespace Unbound.Runtime
                 poly.verts[0] = v;
                 poly.verts[1] = v + 1;
                 poly.vertCount = 2;
-                poly.flags = 1;
+                poly.flags = link.Active ? 1 : 0;
                 poly.SetArea(link.Link.area);
                 poly.SetPolyType(DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION);
                 polys[basePoly + i] = poly;
@@ -637,7 +661,9 @@ namespace Unbound.Runtime
             return new AreaFilter { Mask = mask, Costs = costs ?? NavMeshAreas.Costs };
         }
 
-        public bool PassFilter(long refs, DtMeshTile tile, DtPoly poly) => (Mask & (1 << poly.GetArea())) != 0;
+        public bool PassFilter(long refs, DtMeshTile tile, DtPoly poly) =>
+            (Mask & (1 << poly.GetArea())) != 0
+            && (poly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION || poly.flags != 0);
 
         public float GetCost(RcVec3f pa, RcVec3f pb, long prevRef, DtMeshTile prevTile, DtPoly prevPoly, long curRef, DtMeshTile curTile,
             DtPoly curPoly, long nextRef, DtMeshTile nextTile, DtPoly nextPoly)
