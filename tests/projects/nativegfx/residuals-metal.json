@@ -24,13 +24,15 @@
   "plugin.state.color0.actions.camera",
   "plugin.state.color0.actions.camera2",
   "plugin.state.color0.actions.execute",
+  "plugin.state.color0.actions.execute.msaa",
   "plugin.state.depth.actions.camera",
   "plugin.state.depth.actions.camera2",
   "plugin.state.stencil.actions.camera",
   "plugin.state.stencil.actions.camera2"
  ],
- "Outside a render texture target (from Update, an executed command buffer without one, after CommitCurrentCommandBuffer, a plugin's load) the Editor's current encoder is a render encoder over its batchmode screen (64x64 BGRA8, D32S8); Unbound does not share the screen with plugins: the encoder and the render pass descriptor are nil there (logged once)": [
+ "Outside a render texture target (from Update, an executed command buffer without one, after CommitCurrentCommandBuffer, a plugin's load, a script) the Editor's current encoder is a render encoder over its batchmode screen (64x64 BGRA8, D32S8); Unbound does not share the screen with plugins: the encoder and the render pass descriptor are nil there (logged once)": [
   "plugin.blit.commit",
+  "plugin.blit.script",
   "plugin.commit.commit",
   "plugin.draw.update",
   "plugin.load.state",

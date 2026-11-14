@@ -1,9 +1,11 @@
 {"k":"device","v":"Metal"}
 {"k":"device.name","v":true}
-{"k":"target.pixels","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4"]}
+{"k":"target.pixels","v":["ffff00ff*4 ffffffff*4","ffff00ff*4 ffffffff*4","ffff00ff*4 ffffffff*4","ffff00ff*4 ffffffff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4"]}
 {"k":"camera.pixels","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
 {"k":"second.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
 {"k":"executed.pixels","v":["00ffffff*8","00ffffff*8","00ffffff*8","00ffffff*8","00ffffff*8","00ffffff*8","00ffffff*8","00ffffff*8"]}
+{"k":"executedmsaa.pixels","v":["ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8"]}
+{"k":"executedcopy.pixels","v":["ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8"]}
 {"k":"external.pixels","v":["0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
 {"k":"external.pointer","v":true}
 {"k":"plugin.load","v":"load renderer=16 metal=1 v1=1 v2=1 vulkan=0 v1_is_plain=0"}
@@ -125,10 +127,16 @@
 {"k":"plugin.state.stencil.camera2.3","v":"state.stencil step=camera2 texture=other same_as_depth=1"}
 {"k":"plugin.state.stencil.actions.camera2.3","v":"state.stencil.actions step=camera2 load=0 store=4"}
 {"k":"plugin.draw.camera2","v":"draw step=camera2 drawn=1"}
+{"k":"plugin.blit.script","v":"blit step=script done=1 encoder_after=render"}
+{"k":"plugin.script.commit.script","v":"script.commit step=script main=1 returned_current=1 status=4 new_buffer=1"}
 {"k":"plugin.state.execute","v":"state step=execute main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
 {"k":"plugin.state.color0.execute","v":"state.color0 step=execute texture=t5 resolve=none level=0 slice=0 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
 {"k":"plugin.state.color0.actions.execute","v":"state.color0.actions step=execute load=2 store=4"}
 {"k":"plugin.draw.execute","v":"draw step=execute drawn=1"}
+{"k":"plugin.state.execute.msaa","v":"state step=execute.msaa main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
+{"k":"plugin.state.color0.execute.msaa","v":"state.color0 step=execute.msaa texture=other resolve=other level=0 slice=0 format=70 type=4 size=8x8x1 mips=1 layers=1 samples=4"}
+{"k":"plugin.state.color0.actions.execute.msaa","v":"state.color0.actions step=execute.msaa load=2 store=4"}
+{"k":"plugin.draw.execute.msaa","v":"draw step=execute.msaa drawn=1"}
 {"k":"plugin.state.execute.plain","v":"state step=execute.plain main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
 {"k":"plugin.state.color0.execute.plain","v":"state.color0 step=execute.plain texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
 {"k":"plugin.state.color0.actions.execute.plain","v":"state.color0.actions step=execute.plain load=1 store=4"}

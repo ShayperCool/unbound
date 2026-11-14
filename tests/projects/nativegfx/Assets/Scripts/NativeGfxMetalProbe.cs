@@ -14,7 +14,8 @@ using UnityEngine.Rendering;
 /// buffer, command encoder and render pass descriptor of rendering callbacks (from Update, a
 /// camera's command buffer and an executed command buffer), drawing with the current render
 /// encoder, ending it and blitting with the current command buffer inside a camera's pass, blitting
-/// with a command buffer of the plugin's own from the queue (V2), committing the current one, the
+/// with a command buffer of the plugin's own from the queue (V2), committing the current one (in
+/// a callback and from a script), the
 /// textures behind native pointers and render buffers, and an external texture of the plugin's.
 /// Pixels are read back.
 /// </summary>
@@ -31,6 +32,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
     [DllImport(Plugin)] static extern void NativeGfxMtl_Describe(string what, IntPtr pointer);
     [DllImport(Plugin)] static extern void NativeGfxMtl_DescribeRenderBuffer(string what, IntPtr handle);
     [DllImport(Plugin)] static extern IntPtr NativeGfxMtl_MakeTexture();
+    [DllImport(Plugin)] static extern void NativeGfxMtl_ScriptCommit();
     [DllImport(Plugin)] static extern int NativeGfxMtl_Record(byte[] buffer, int capacity);
 
     // The plugin's events after its reserved base.
@@ -42,7 +44,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
     string output;
     IntPtr callback;
     int eventBase;
-    RenderTexture target, cameraTarget, secondTarget, executed;
+    RenderTexture target, cameraTarget, secondTarget, executed, executedMsaa, executedCopy;
     Camera firstCamera, secondCamera;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -143,6 +145,8 @@ public class NativeGfxMetalProbe : MonoBehaviour
         cameraTarget = Target("camera", 24);
         secondTarget = Target("second", 24);
         executed = Target("executed", 0);
+        executedMsaa = Target("executedmsaa", 0, samples: 4);
+        executedCopy = Target("executedcopy", 0);
         var multisampled = Target("multisampled", 24, samples: 4);
         var srgbTarget = Target("srgbtarget", 0, readWrite: RenderTextureReadWrite.sRGB);
         var half = Target("half", 0, RenderTextureFormat.ARGBHalf);
@@ -240,6 +244,10 @@ public class NativeGfxMetalProbe : MonoBehaviour
                 secondCamera.Render();
                 break;
             case 4:
+                // From the script itself: the current command buffer, committed and waited on.
+                NativeGfxMtl_Step("script");
+                NativeGfxMtl_SetColor(1f, 1f, 0f, 1f);
+                NativeGfxMtl_ScriptCommit();
                 NativeGfxMtl_SetColor(0f, 1f, 1f, 1f);
                 using (var cmd = new CommandBuffer { name = "executed" })
                 {
@@ -247,6 +255,19 @@ public class NativeGfxMetalProbe : MonoBehaviour
                     cmd.ClearRenderTarget(true, true, Color.yellow);
                     cmd.IssuePluginEvent(callback, eventBase + Draw);
                     NativeGfxMtl_Step("execute");
+                    Graphics.ExecuteCommandBuffer(cmd);
+                }
+                // A multisampled target: what the plugin draws into its samples is what is
+                // sampled after (resolved).
+                NativeGfxMtl_SetColor(1f, 0f, 1f, 1f);
+                using (var cmd = new CommandBuffer { name = "executed msaa" })
+                {
+                    cmd.SetRenderTarget(executedMsaa);
+                    cmd.ClearRenderTarget(true, true, Color.yellow);
+                    cmd.IssuePluginEvent(callback, eventBase + Draw);
+                    // Sampled in the same buffer, right after the plugin drew.
+                    cmd.Blit(executedMsaa, executedCopy);
+                    NativeGfxMtl_Step("execute.msaa");
                     Graphics.ExecuteCommandBuffer(cmd);
                 }
                 using (var cmd = new CommandBuffer { name = "plain" })
@@ -265,6 +286,8 @@ public class NativeGfxMetalProbe : MonoBehaviour
         Value("camera.pixels", Pixels(cameraTarget, 8, 8));
         Value("second.pixels", Pixels(secondTarget, 8, 8));
         Value("executed.pixels", Pixels(executed, 8, 8));
+        Value("executedmsaa.pixels", Pixels(executedMsaa, 8, 8));
+        Value("executedcopy.pixels", Pixels(executedCopy, 8, 8));
         NativeGfxMtl_SetColor(0f, 0f, 1f, 1f);
         var pointer = NativeGfxMtl_MakeTexture();
         var external = Texture2D.CreateExternalTexture(4, 4, TextureFormat.RGBA32, false, true, pointer);

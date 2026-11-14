@@ -256,8 +256,8 @@ static void draw(void)
 }
 
 /// Copies a 4x4 block of the current color (8-bit RGBA or BGRA texels) into texture slot 0 at
-/// column `x` of its last four rows with a blit encoder of `buffer`.
-static void blit_block(id<MTLCommandBuffer> buffer, NSUInteger x)
+/// column `x` of its last four rows (`top`: of its first four) with a blit encoder of `buffer`.
+static void blit_block(id<MTLCommandBuffer> buffer, NSUInteger x, int top)
 {
     id<MTLTexture> target = (__bridge id<MTLTexture>)s_textures[0];
     if (!target || !buffer) { record("blit step=%s done=0", s_step); return; }
@@ -268,7 +268,7 @@ static void blit_block(id<MTLCommandBuffer> buffer, NSUInteger x)
     id<MTLBuffer> source = [s_v1->MetalDevice() newBufferWithBytes:texels length:sizeof texels options:MTLResourceStorageModeShared];
     id<MTLBlitCommandEncoder> blit = [buffer blitCommandEncoder];
     [blit copyFromBuffer:source sourceOffset:0 sourceBytesPerRow:16 sourceBytesPerImage:64 sourceSize:MTLSizeMake(4, 4, 1)
-               toTexture:target destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(x, target.height - 4, 0)];
+               toTexture:target destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(x, top ? 0 : target.height - 4, 0)];
     [blit endEncoding];
     record("blit step=%s done=1 encoder_after=%s", s_step, encoder_kind(s_v1->CurrentCommandEncoder()));
 }
@@ -279,7 +279,7 @@ static void end_and_blit(void)
     // Nothing is asked of the interface between ending Unity's encoder and making one: asking
     // for the current encoder begins Unity's again.
     s_v1->EndCurrentCommandEncoder();
-    blit_block(s_v1->CurrentCommandBuffer(), 0);
+    blit_block(s_v1->CurrentCommandBuffer(), 0, 0);
 }
 
 /// Blits with a command buffer of the plugin's own from the device's queue (V2), committed.
@@ -287,7 +287,7 @@ static void queue_blit(void)
 {
     if (!s_v2) { record("queueblit step=%s v2=0", s_step); return; }
     id<MTLCommandBuffer> buffer = [s_v2->CommandQueue() commandBuffer];
-    blit_block(buffer, 4);
+    blit_block(buffer, 4, 0);
     [buffer commit];
     [buffer waitUntilCompleted];
     record("queueblit step=%s status=%ld", s_step, (long)buffer.status);
@@ -406,6 +406,22 @@ EXPORT void* NativeGfxMtl_MakeTexture(void)
         for (int c = 0; c < 4; c++) texels[i][c] = (uint8_t)(s_color[c] * 255.0f + 0.5f);
     [s_external replaceRegion:MTLRegionMake2D(0, 0, 4, 4) mipmapLevel:0 withBytes:texels bytesPerRow:16];
     return (__bridge void*)s_external;
+}
+
+/// From a script, outside rendering callbacks: ends Unity's encoder, blits with the current command
+/// buffer into the first four rows of texture slot 0, commits it with CommitCurrentCommandBuffer
+/// and waits for it.
+EXPORT void NativeGfxMtl_ScriptCommit(void)
+{
+    if (!s_v2) { record("script.commit step=%s v2=0", s_step); return; }
+    id<MTLCommandBuffer> buffer = s_v1->CurrentCommandBuffer();
+    s_v1->EndCurrentCommandEncoder();
+    blit_block(buffer, 0, 1);
+    id<MTLCommandBuffer> committed = s_v2->CommitCurrentCommandBuffer();
+    [committed waitUntilCompleted];
+    id<MTLCommandBuffer> after = s_v1->CurrentCommandBuffer();
+    record("script.commit step=%s main=%d returned_current=%d status=%ld new_buffer=%d", s_step, main_thread(),
+           committed == buffer ? 1 : 0, committed ? (long)committed.status : -1L, after && after != buffer ? 1 : 0);
 }
 
 EXPORT int NativeGfxMtl_Record(char* out, int capacity)

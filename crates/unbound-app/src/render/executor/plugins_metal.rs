@@ -11,8 +11,10 @@
 //! attachments at the image being drawn (their contents loaded and stored, a multisampled color
 //! resolved into its texture again); `EndCurrentCommandEncoder` ends it, and the next request
 //! begins another over the same target. Outside callbacks (a plugin's own calls from scripts)
-//! the current command buffer is one of the queue's, committed before the next callback or at
-//! the end of the frame, without an encoder. A texture's native pointer is its `MTLTexture`
+//! the current command buffer is one of the queue's, committed by `CommitCurrentCommandBuffer`,
+//! else before the next callback or at the end of the frame; it runs before the rendering the
+//! frame has not submitted yet (not measured). There is no encoder there (logged once). A
+//! texture's native pointer is its `MTLTexture`
 //! (in the format Unity's device stores it: sRGB where a Linear project samples it as sRGB);
 //! a multisampled render texture's color and depth pointers are its samples. Not followed (the
 //! interface leaves them to the device; measured in batchmode only): outside a render texture
@@ -34,7 +36,7 @@ use rustc_hash::FxHashMap as HashMap;
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use unbound_runtime::plugin_api;
 use wgpu::hal::api::Metal;
 
@@ -103,6 +105,20 @@ static QUEUE: AtomicUsize = AtomicUsize::new(0);
 static BUNDLE: AtomicUsize = AtomicUsize::new(0);
 /// The command buffer plugins get outside callbacks, retained (0: none yet).
 static OUTSIDE: Mutex<usize> = Mutex::new(0);
+/// The buffer `CommitCurrentCommandBuffer` last committed outside callbacks, retained so the
+/// plugin can wait on it (0: none).
+static COMMITTED_OUTSIDE: Mutex<usize> = Mutex::new(0);
+/// Whether a plugin was told that there is no encoder outside callbacks.
+static WARNED_OUTSIDE: AtomicBool = AtomicBool::new(false);
+
+/// Logs once that a plugin asked for the encoder or its descriptor outside a callback.
+fn warn_outside(what: &str) {
+    if !WARNED_OUTSIDE.swap(true, Ordering::Relaxed) {
+        tracing::warn!(
+            "a native plugin asked for the {what} outside a rendering callback: Unbound has none there (nil; the Editor's draws to its screen, which is not shared with plugins)"
+        );
+    }
+}
 
 /// What a callback sees: its command buffer, the encoder begun in it, the descriptor encoders
 /// begin from, and the render textures' images by handle (render buffer pointers).
@@ -114,6 +130,9 @@ struct Scope {
     /// Buffers committed by `CommitCurrentCommandBuffer` in this callback, kept until it ends
     /// (the plugin may wait on the one returned).
     committed: Vec<Retained<CommandBuffer>>,
+    /// Whether an encoder was begun over a multisampled color.
+    drew_samples: bool,
+    multisampled: bool,
 }
 
 /// A render texture's images, as render buffer pointers name them (0: none).
@@ -200,10 +219,14 @@ extern "C" fn current_command_encoder() -> Object {
             && let Some(pass) = &s.pass
         {
             s.encoder = s.buffer.renderCommandEncoderWithDescriptor(pass);
+            s.drew_samples |= s.multisampled && s.encoder.is_some();
         }
         s.encoder.as_ref().map_or(std::ptr::null_mut(), object)
     })
-    .unwrap_or(std::ptr::null_mut())
+    .unwrap_or_else(|| {
+        warn_outside("current command encoder");
+        std::ptr::null_mut()
+    })
 }
 
 extern "C" fn end_current_command_encoder() {
@@ -215,14 +238,17 @@ extern "C" fn end_current_command_encoder() {
 }
 
 extern "C" fn current_render_pass_descriptor() -> Object {
-    with_scope(|s| s.pass.as_ref().map_or(std::ptr::null_mut(), object))
-        .unwrap_or(std::ptr::null_mut())
+    with_scope(|s| s.pass.as_ref().map_or(std::ptr::null_mut(), object)).unwrap_or_else(|| {
+        warn_outside("current render pass descriptor");
+        std::ptr::null_mut()
+    })
 }
 
-/// Commits the callback's command buffer and goes on in a new one; the committed one is
-/// returned (nativegfx `plugin.commit.*`: status Committed, a new current buffer).
+/// Commits the current command buffer and goes on in a new one; the committed one is returned
+/// (nativegfx `plugin.commit.*`: status Committed, a new current buffer; `plugin.script.commit`
+/// outside callbacks).
 extern "C" fn commit_current_command_buffer() -> Object {
-    with_scope(|s| {
+    let inside = with_scope(|s| {
         if let Some(encoder) = s.encoder.take() {
             encoder.endEncoding();
         }
@@ -232,9 +258,34 @@ extern "C" fn commit_current_command_buffer() -> Object {
         let pointer = object(&committed);
         s.committed.push(committed);
         Some(pointer)
-    })
-    .flatten()
-    .unwrap_or(std::ptr::null_mut())
+    });
+    match inside {
+        Some(committed) => committed.unwrap_or(std::ptr::null_mut()),
+        None => commit_outside_now(),
+    }
+}
+
+/// `CommitCurrentCommandBuffer` outside callbacks: the buffer plugins were given (a new one if
+/// none was), committed and kept until the next such commit.
+fn commit_outside_now() -> Object {
+    let raw = std::mem::take(&mut *OUTSIDE.lock().unwrap_or_else(|e| e.into_inner()));
+    // SAFETY: made by `into_raw` in `current_command_buffer`, taken once.
+    let buffer = match unsafe { Retained::from_raw(raw as *mut CommandBuffer) } {
+        Some(buffer) => buffer,
+        None => match queue().and_then(|q| q.commandBuffer()) {
+            Some(buffer) => buffer,
+            None => return std::ptr::null_mut(),
+        },
+    };
+    buffer.commit();
+    let pointer = object(&buffer);
+    let previous = std::mem::replace(
+        &mut *COMMITTED_OUTSIDE.lock().unwrap_or_else(|e| e.into_inner()),
+        Retained::into_raw(buffer) as usize,
+    );
+    // SAFETY: the previous kept buffer, made by `into_raw` above.
+    drop(unsafe { Retained::from_raw(previous as *mut CommandBuffer) });
+    pointer
 }
 
 /// The Editor's render buffer pointers are its native render buffers (nativegfx
@@ -309,6 +360,8 @@ pub(super) struct MetalPlugins {
     natives: HashMap<(u64, Which), (wgpu::Texture, Shared<Texture>)>,
     /// The render textures' handles at a callback (reused).
     targets: Vec<u64>,
+    /// The render textures' images a callback's scope holds (reused, lent to the scope).
+    images: HashMap<u64, Images>,
 }
 
 impl MetalPlugins {
@@ -324,6 +377,7 @@ impl MetalPlugins {
             _queue: Shared(raw_queue),
             natives: HashMap::default(),
             targets: Vec::new(),
+            images: HashMap::default(),
         })
     }
 
@@ -462,7 +516,13 @@ impl UnityRenderer {
             });
             return None;
         }
-        self.state.target.as_ref()?;
+        let several = !self.state.target.as_ref()?.extra.is_empty();
+        if several {
+            self.warn_once("plugin-metal-colors".into(), || {
+                "a native plugin callback while several colors are the target gets a render pass over the first color only"
+                    .into()
+            });
+        }
         let (mip, slice) = self.plugins.target;
         let (level, slice) = (mip.max(0) as usize, slice.max(0) as usize);
         let gpu = self.textures.get(&color)?;
@@ -542,12 +602,19 @@ impl UnityRenderer {
             return;
         };
         let pass = self.metal_pass();
-        // Render buffer pointers name render textures: their images, by handle.
-        let Some(mut targets) = self
-            .metal_plugins
-            .as_mut()
-            .map(|p| std::mem::take(&mut p.targets))
-        else {
+        let multisampled = pass.is_some()
+            && self
+                .textures
+                .get(&self.target_handles.0)
+                .is_some_and(|t| t.msaa.is_some());
+        // Render buffer pointers name render textures: their images, by handle (the cached
+        // pointers; the map and the handle list are reused from callback to callback).
+        let Some((mut targets, mut images)) = self.metal_plugins.as_mut().map(|p| {
+            (
+                std::mem::take(&mut p.targets),
+                std::mem::take(&mut p.images),
+            )
+        }) else {
             return;
         };
         targets.clear();
@@ -557,7 +624,7 @@ impl UnityRenderer {
                 .filter(|(_, t)| t.render_target)
                 .map(|(&h, _)| h),
         );
-        let mut images = HashMap::default();
+        images.clear();
         for &handle in &targets {
             let image = Images {
                 color: self.metal_texture(handle, Which::Color).unwrap_or(0),
@@ -566,9 +633,6 @@ impl UnityRenderer {
             };
             images.insert(handle, image);
         }
-        if let Some(plugins) = self.metal_plugins.as_mut() {
-            plugins.targets = targets;
-        }
         SCOPE.with(|scope| {
             *scope.borrow_mut() = Some(Scope {
                 buffer,
@@ -576,15 +640,24 @@ impl UnityRenderer {
                 pass,
                 images,
                 committed: Vec::new(),
+                drew_samples: false,
+                multisampled,
             })
         });
         invoke();
-        if let Some(scope) = SCOPE.with(|scope| scope.borrow_mut().take()) {
-            if let Some(encoder) = scope.encoder {
-                encoder.endEncoding();
-            }
-            scope.buffer.commit();
-            drop(scope.committed);
+        let Some(scope) = SCOPE.with(|scope| scope.borrow_mut().take()) else {
+            return;
+        };
+        if let Some(encoder) = scope.encoder {
+            encoder.endEncoding();
+        }
+        scope.buffer.commit();
+        // What it drew into a multisampled target's samples reaches the resolved image and its
+        // retained copy as the OpenGL path's does (the executor resolves again).
+        self.plugins.drew_into_samples |= scope.drew_samples;
+        if let Some(plugins) = self.metal_plugins.as_mut() {
+            plugins.targets = targets;
+            plugins.images = scope.images;
         }
     }
 

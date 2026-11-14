@@ -203,18 +203,21 @@ records of their own); a draw with the current render encoder (a camera with HDR
 into a 2-sample half-float intermediate with a resolve; without them into its target), ending it
 and blitting with the current command buffer, `CommitCurrentCommandBuffer` (it returns the
 committed buffer and goes on in a new one), a blit with a command buffer of the plugin's own after
-that commit, the pointers of 2D, sRGB, mip-mapped, three-channel, cube, array and 3D textures and
+that commit, the same commit from a script outside callbacks (a blit with the current command
+buffer, committed and waited on), a draw into a multisampled render texture sampled right after
+in the same command buffer, the pointers of 2D, sRGB, mip-mapped, three-channel, cube, array and 3D textures and
 of render textures (color, depth, multisampled samples, depth-only), what the render buffer
 pointers give (`RenderBufferFromHandle` returns the pointer; their texture, resolved texture,
 stencil texture), an external texture of the plugin's, and the pixels.
 
-Unbound matches 54/145 records with 91 declared residuals (`residuals-metal.json`, each with its
+Unbound matches 60/153 records with 93 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load and store actions (the Editor's are the
 pass it began, clearing, its store left unknown; Unbound begins a pass of its own that loads and
 stores), everything outside a render texture target (the Editor's encoder there is a render
 encoder over its batchmode screen; Unbound does not share the screen with plugins: nil, logged
-once), and what follows `EndCurrentCommandEncoder` inside a camera's pass (the Editor begins its
+once; outside callbacks the plugin's current command buffer runs before the rendering the frame
+has not submitted yet, unmeasured), and what follows `EndCurrentCommandEncoder` inside a camera's pass (the Editor begins its
 next encoder over the screen; Unbound over the same target, so the plugin's next draw lands in it;
 the interface leaves this to the device). Measured on macOS 26 only; Intel Macs and other GPUs
 are unmeasured. The OpenGL probe (`run.py engine` without `--device`) still builds on macOS, but
