@@ -365,12 +365,7 @@ fn fingerprints(root: &Path) -> Fingerprints {
             let input = input_fingerprint(root, source, &bytes, meta_bytes.as_deref());
             let mut hasher = blake3::Hasher::new();
             let root = root.to_string_lossy();
-            // One OS's sorts on every host, so the fingerprints do not depend on the OS that
-            // records them (the sorts differ only in where equal elements end).
-            let importer = ModelImporter {
-                editor_os: unbound_compat::HostOs::Linux,
-                ..ModelImporter::default()
-            };
+            let importer = ModelImporter::default();
             match importer.import(source, &bytes, &meta) {
                 // A failure is output too: the cache keeps no entry for it.
                 Err(_) => {

@@ -51,7 +51,7 @@ use std::{
     collections::{HashMap, HashSet},
     path::Path,
 };
-use unbound_compat::{HostOs, Insertion, MtlRules, UnityVersion};
+use unbound_compat::{EditorSort, MtlRules, UnityVersion};
 use unbound_yaml::{ObjectRef, Value};
 
 pub use materials::{MaterialDescription, TextureDescription};
@@ -832,16 +832,12 @@ const MESH_OPTIMIZATION_VERTEX_ORDER: i64 = 2;
 #[derive(Debug, Clone, Copy)]
 pub struct ModelImporter {
     pub mtl: &'static MtlRules,
-    /// The OS whose Editor's unstable sort leaves equal elements in its own order (siblings with
-    /// equal names, the lightmap UV unwrap's equal chart borders): this one.
-    pub editor_os: HostOs,
 }
 
 impl ModelImporter {
     pub fn for_release(version: &UnityVersion) -> Self {
         Self {
             mtl: MtlRules::of(version),
-            editor_os: HostOs::current(),
         }
     }
 }
@@ -856,7 +852,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 55;
+    const VERSION: u32 = 56;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -874,7 +870,7 @@ impl Importer for ModelImporter {
     }
 
     fn options_key(&self) -> String {
-        format!("{}/{:?}", self.mtl.name, self.editor_os)
+        self.mtl.name.to_string()
     }
 }
 
@@ -983,10 +979,7 @@ pub fn import_model(
     meta: &Value,
     mtl: &'static MtlRules,
 ) -> Result<ImportedModel> {
-    let importer = ModelImporter {
-        mtl,
-        editor_os: HostOs::current(),
-    };
+    let importer = ModelImporter { mtl };
     import_with(&importer, source, bytes, meta)
 }
 
@@ -1152,7 +1145,6 @@ fn import_with(
         obj_meshes,
         fbx_smoothing,
         mtl,
-        editor_os: rules.editor_os,
         obj_defaults: Vec::new(),
     };
 
@@ -1333,8 +1325,6 @@ struct Builder<'a> {
     fbx_smoothing: Vec<Option<Vec<u32>>>,
     /// How the release reads MTL statements.
     mtl: &'static MtlRules,
-    /// The OS whose Editor's sort orders equal elements (see `ModelImporter::editor_os`).
-    editor_os: HostOs,
     /// The OBJ default materials made so far, by name.
     obj_defaults: Vec<(String, u32)>,
     /// With animation import, nodes rest in the first take's pose at its start, not in the file's
@@ -1458,9 +1448,7 @@ impl<'a> Builder<'a> {
         let mut children: Vec<&'a ufbx::Node> = node.children.iter().map(|c| c.as_ref()).collect();
         if self.settings.sort_hierarchy_by_name {
             let names = &self.unique_names;
-            // libc++'s insertion range of 6: the measured Names/Ties order needs it.
-            let sort = self.editor_os.editor_sort(Insertion::UpTo6);
-            sort.sort_by(&mut children, |a, b| {
+            EditorSort::LibStdCxx.sort_by(&mut children, |a, b| {
                 hierarchy_name_order(&names[&a.element.element_id], &names[&b.element.element_id])
                     .is_lt()
             });
@@ -3025,8 +3013,7 @@ impl<'a> Builder<'a> {
             triangles: &triangles,
             polygons: &polygons,
             uvs: uv0.map(|_| &uvs[..]),
-            // Assumed to copy trivially (libc++'s range of 30); not measured on macOS.
-            sort: self.editor_os.editor_sort(Insertion::UpTo30),
+            sort: EditorSort::LibStdCxx,
         };
         let uvs = lightmap_uv::generate(&input, settings)?;
         Ok(LightmapUvs { first, uvs })

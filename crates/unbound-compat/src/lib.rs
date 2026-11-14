@@ -16,6 +16,6 @@ pub use graphics::{
 pub use mtl::{MtlColor, MtlRules, MtlTransparency};
 pub use profile::{CompileMode, Feature, InputHandling, Profile, ProfileData};
 pub use shader_keywords::ShaderKeywordRules;
-pub use sort::{EditorSort, Insertion};
+pub use sort::EditorSort;
 pub use texture::TextureCompressionRules;
 pub use version::{Stage, UnityVersion};

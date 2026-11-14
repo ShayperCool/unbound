@@ -869,7 +869,8 @@ fn write_cached(path: &Path, output: &unbound_gi::realtime_uv::Output) -> Result
 /// Format version of the bake's cache entries (`bake`), beyond what the precompute's own
 /// version (`unbound_gi::precompute::FORMAT_VERSION`) covers.
 /// 1: a checksum, then `unbound_gi::precompute::bake::Baked::encode`'s encoding.
-const BAKE_CACHE_VERSION: u32 = 1;
+/// 2: the system packing's sort is the Linux Editor's on every OS (the key no longer names the OS).
+const BAKE_CACHE_VERSION: u32 = 2;
 
 /// One renderer of a scene as Unbound's own precompute takes it.
 pub struct BakeInput {
@@ -1076,8 +1077,6 @@ fn bake_key(inputs: &[BakeInput], probes: &[[f32; 3]]) -> String {
     let mut key = blake3::Hasher::new();
     key.update(&BAKE_CACHE_VERSION.to_le_bytes());
     key.update(&unbound_gi::precompute::FORMAT_VERSION.to_le_bytes());
-    // The system packing's order of equal shapes is this OS's Editor's sort's.
-    key.update(format!("{:?}", unbound_compat::HostOs::current()).as_bytes());
     key.update(&UV_CACHE_VERSION.to_le_bytes());
     key.update(&(inputs.len() as u64).to_le_bytes());
     for input in inputs {

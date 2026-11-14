@@ -185,17 +185,15 @@ fn an_obj_mesh_is_a_child_named_after_its_group() {
 }
 
 /// tests/projects/lightmapuvs Names/OrderFbx's and Names/Ties' children in file order, and the
-/// orders the Unity 6000.0.71f1 Editors give them: Linux (the probe's reference) and macOS
-/// (captured twice on macOS arm64, identical; not committed).
+/// order the Unity 6000.0.71f1 Linux Editor gives them (the probe's reference), which every host
+/// takes.
 #[rustfmt::skip]
-const SIBLING_ORDERS: [(&str, &[&str], &[&str], &[&str]); 2] = [
+const SIBLING_ORDERS: [(&str, &[&str], &[&str]); 2] = [
     (
         "OrderFbx",
         &["10", "9", "A1", "Alpha", "B_0", "Beta", "Zed", "_under", "a01", "a10", "a1A", "a1b", "a2",
           "alpha", "b-2", "b.1"],
         &["9", "10", "_under", "a01", "A1", "a1A", "a1b", "a2", "a10", "Alpha", "alpha", "b-2", "b.1",
-          "B_0", "Beta", "Zed"],
-        &["9", "10", "_under", "a01", "A1", "a1A", "a1b", "a2", "a10", "alpha", "Alpha", "b-2", "b.1",
           "B_0", "Beta", "Zed"],
     ),
     (
@@ -204,46 +202,34 @@ const SIBLING_ORDERS: [(&str, &[&str], &[&str], &[&str]); 2] = [
           "e001", "e1", "gamma", "k", "m0", "p10", "q", "r", "s", "u0", "v", "w", "x01y2", "x1y02"],
         &["Delta", "delta", "e001", "E01", "e1", "gamma", "GAMMA", "Gamma", "K", "k", "M00", "m0",
           "P10", "p10", "Q", "q", "R", "r", "S", "s", "U0", "u0", "V", "v", "W", "w", "x01y2", "x1y02"],
-        &["Delta", "delta", "e001", "E01", "e1", "Gamma", "gamma", "GAMMA", "k", "K", "M00", "m0",
-          "P10", "p10", "q", "Q", "R", "r", "S", "s", "U0", "u0", "V", "v", "W", "w", "x01y2", "x1y02"],
     ),
 ];
 
 #[test]
-fn siblings_sort_as_each_editor_sorts_them() {
-    use unbound_compat::HostOs;
-    for (model, file, linux, macos) in SIBLING_ORDERS {
-        for (os, expected) in [(HostOs::Linux, linux), (HostOs::MacOs, macos)] {
-            let mut names = file.to_vec();
-            os.editor_sort(unbound_compat::Insertion::UpTo6)
-                .sort_by(&mut names, |a, b| hierarchy_name_order(a, b).is_lt());
-            assert_eq!(names, expected, "{model} on {os:?}");
-        }
+fn siblings_sort_as_the_editor_sorts_them() {
+    for (model, file, expected) in SIBLING_ORDERS {
+        let mut names = file.to_vec();
+        unbound_compat::EditorSort::LibStdCxx
+            .sort_by(&mut names, |a, b| hierarchy_name_order(a, b).is_lt());
+        assert_eq!(names, expected, "{model}");
     }
 }
 
 #[test]
-fn imported_siblings_take_each_os_editors_order() {
-    use unbound_compat::HostOs;
+fn imported_siblings_take_the_editors_order() {
     let probe = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/lightmapuvs");
-    // By default the importer sorts as this OS's Editor.
-    assert_eq!(ModelImporter::default().editor_os, HostOs::current());
-    for (model, _, linux, macos) in SIBLING_ORDERS {
+    for (model, _, expected) in SIBLING_ORDERS {
         let path = probe.join(format!("Sources/Names/{model}.fbx"));
         let bytes = std::fs::read(&path).unwrap();
-        for (os, expected) in [(HostOs::Linux, linux), (HostOs::MacOs, macos)] {
-            let importer = ModelImporter {
-                editor_os: os,
-                ..ModelImporter::default()
-            };
-            let imported = importer.import(&path, &bytes, &Value::Null).unwrap();
-            let names: Vec<&str> = imported.nodes[0]
-                .children
-                .iter()
-                .map(|&c| imported.nodes[c as usize].name.as_str())
-                .collect();
-            assert_eq!(names, expected, "{model} on {os:?}");
-        }
+        let imported = ModelImporter::default()
+            .import(&path, &bytes, &Value::Null)
+            .unwrap();
+        let names: Vec<&str> = imported.nodes[0]
+            .children
+            .iter()
+            .map(|&c| imported.nodes[c as usize].name.as_str())
+            .collect();
+        assert_eq!(names, expected, "{model}");
     }
 }
 
@@ -374,7 +360,6 @@ fn bind_pose_conversion_mirrors_and_scales() {
         obj_defaults: Vec::new(),
         fbx_smoothing: Vec::new(),
         mtl: ModelImporter::default().mtl,
-        editor_os: ModelImporter::default().editor_os,
         rest_pose: None,
     };
     // A translation by (1, 2, 3) and a rotation of 90° about Z (x → y).

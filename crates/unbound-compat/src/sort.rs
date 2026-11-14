@@ -1,49 +1,18 @@
-//! The unstable sorts of the C++ standard libraries the Editors of each OS are built with. Where
-//! the Editor sorts with an order that leaves some elements equal, the order those elements end in
-//! is the algorithm's: the Linux Editor's is GNU libstdc++'s introsort, the macOS Editor's the
-//! LLVM libc++ quicksort of the releases before LLVM 15. Both are reproduced step by step, so
-//! elements that compare equal end where the Editor of that OS leaves them. Measured with the
-//! Unity 6000.0.71f1 Editors: sibling order by name on both OSes (tests/projects/lightmapuvs
-//! Names/OrderFbx and Names/Ties); on Linux also the lightmap UV unwrap
-//! (tests/projects/lightmapuvs) and the realtime GI system packing, which on macOS take the macOS
-//! sort as well (their equal elements, and so libc++'s insertion range for them, are not measured
-//! there). Only 6000.0.71f1 is
-//! measured; other releases are assumed to sort as it does (a release built with LLVM 15 or
-//! later would sort differently on macOS).
+//! The unstable sort of the C++ standard library the Linux Editor is built with, GNU libstdc++'s
+//! introsort. Where the Editor sorts with an order that leaves some elements equal, the order those
+//! elements end in is the algorithm's; it is reproduced step by step, so elements that compare equal
+//! end where the Linux Editor leaves them, on every OS (the macOS Editor's libc++ sort is not
+//! reproduced). Measured with the Unity 6000.0.71f1 Editor: sibling order by name
+//! (tests/projects/lightmapuvs Names/OrderFbx and Names/Ties), the lightmap UV unwrap
+//! (tests/projects/lightmapuvs) and the realtime GI system packing. Only 6000.0.71f1 is measured;
+//! other releases are assumed to sort as it does.
 
-use crate::HostOs;
-
-/// One C++ standard library's `std::sort`.
+/// The Editor's `std::sort`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EditorSort {
     /// GNU libstdc++: introsort (median of three moved to the front, recursion depth
     /// `2 * floor(log2(n))`, then heap sort), ranges of 16 or fewer left to a final insertion sort.
     LibStdCxx,
-    /// LLVM libc++ before LLVM 15: quicksort with a median of three (five from 1000 elements),
-    /// sorting networks for up to five elements, insertion sort of ranges up to `insertion`
-    /// elements, and an early insertion sort of partitions that needed no swap.
-    LibCxxLegacy { insertion: Insertion },
-}
-
-/// The range libc++ insertion sorts, which depends on the sorted elements' type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Insertion {
-    /// Up to 6 elements, for elements that are not trivially copyable. The macOS Editor's sibling
-    /// order needs it (with 30, tests/projects/lightmapuvs Names/Ties' 28 siblings would be
-    /// insertion sorted and keep `K` before `k` as in the file; the Editor gives `k`, `K`).
-    UpTo6,
-    /// Up to 30 elements, for trivially copyable ones (plain numbers and records). Not measured.
-    UpTo30,
-}
-
-impl HostOs {
-    /// The `std::sort` of this OS's Editor for elements copied as `insertion` says.
-    pub fn editor_sort(self, insertion: Insertion) -> EditorSort {
-        match self {
-            HostOs::Linux => EditorSort::LibStdCxx,
-            HostOs::MacOs => EditorSort::LibCxxLegacy { insertion },
-        }
-    }
 }
 
 impl EditorSort {
@@ -51,13 +20,6 @@ impl EditorSort {
     pub fn sort_by<T: Copy>(self, v: &mut [T], mut less: impl FnMut(&T, &T) -> bool) {
         match self {
             EditorSort::LibStdCxx => libstdcxx::sort(v, &mut less),
-            EditorSort::LibCxxLegacy { insertion } => {
-                let limit = match insertion {
-                    Insertion::UpTo6 => 6,
-                    Insertion::UpTo30 => 30,
-                };
-                libcxx::sort(v, limit, &mut less)
-            }
         }
     }
 }
@@ -235,262 +197,6 @@ mod libstdcxx {
     }
 }
 
-mod libcxx {
-    /// From this many elements the pivot is the median of five.
-    const NINTHER: usize = 1000;
-    /// An early insertion sort gives up after this many moved elements.
-    const INCOMPLETE_LIMIT: u32 = 8;
-
-    /// Ranges of up to `limit` elements are insertion sorted.
-    pub fn sort<T: Copy>(v: &mut [T], limit: usize, less: &mut impl FnMut(&T, &T) -> bool) {
-        sort_range(v, 0, v.len(), limit, less);
-    }
-
-    fn sort3<T: Copy>(
-        v: &mut [T],
-        x: usize,
-        y: usize,
-        z: usize,
-        less: &mut impl FnMut(&T, &T) -> bool,
-    ) -> u32 {
-        if !less(&v[y], &v[x]) {
-            if !less(&v[z], &v[y]) {
-                return 0;
-            }
-            v.swap(y, z);
-            if less(&v[y], &v[x]) {
-                v.swap(x, y);
-                return 2;
-            }
-            return 1;
-        }
-        if less(&v[z], &v[y]) {
-            v.swap(x, z);
-            return 1;
-        }
-        v.swap(x, y);
-        if less(&v[z], &v[y]) {
-            v.swap(y, z);
-            return 2;
-        }
-        1
-    }
-
-    /// The network of `sort3` followed by sinking each further element into place.
-    fn sort_network<T: Copy>(
-        v: &mut [T],
-        at: &[usize],
-        less: &mut impl FnMut(&T, &T) -> bool,
-    ) -> u32 {
-        let mut swaps = sort3(v, at[0], at[1], at[2], less);
-        for k in 3..at.len() {
-            for m in (1..=k).rev() {
-                if !less(&v[at[m]], &v[at[m - 1]]) {
-                    break;
-                }
-                v.swap(at[m - 1], at[m]);
-                swaps += 1;
-            }
-        }
-        swaps
-    }
-
-    /// Sorts ranges of up to five elements; false for longer ones.
-    fn small<T: Copy>(
-        v: &mut [T],
-        first: usize,
-        last: usize,
-        less: &mut impl FnMut(&T, &T) -> bool,
-    ) -> bool {
-        match last - first {
-            0 | 1 => {}
-            2 => {
-                if less(&v[last - 1], &v[first]) {
-                    v.swap(first, last - 1);
-                }
-            }
-            n @ 3..=5 => {
-                let at = [first, first + 1, first + 2, first + 3, first + 4];
-                sort_network(v, &at[..n], less);
-            }
-            _ => return false,
-        }
-        true
-    }
-
-    /// Insertion sort after sorting the first three; with `limit`, stops after that many moved
-    /// elements and says whether the range is sorted.
-    fn insertion_sort_3<T: Copy>(
-        v: &mut [T],
-        first: usize,
-        last: usize,
-        limit: Option<u32>,
-        less: &mut impl FnMut(&T, &T) -> bool,
-    ) -> bool {
-        let mut j = first + 2;
-        sort3(v, first, first + 1, j, less);
-        let mut moved = 0;
-        for i in j + 1..last {
-            if less(&v[i], &v[j]) {
-                let t = v[i];
-                let mut k = j;
-                j = i;
-                loop {
-                    v[j] = v[k];
-                    j = k;
-                    if j == first {
-                        break;
-                    }
-                    k -= 1;
-                    if !less(&t, &v[k]) {
-                        break;
-                    }
-                }
-                v[j] = t;
-                moved += 1;
-                if Some(moved) == limit {
-                    return i + 1 == last;
-                }
-            }
-            j = i;
-        }
-        true
-    }
-
-    fn insertion_sort_incomplete<T: Copy>(
-        v: &mut [T],
-        first: usize,
-        last: usize,
-        less: &mut impl FnMut(&T, &T) -> bool,
-    ) -> bool {
-        small(v, first, last, less)
-            || insertion_sort_3(v, first, last, Some(INCOMPLETE_LIMIT), less)
-    }
-
-    fn sort_range<T: Copy>(
-        v: &mut [T],
-        mut first: usize,
-        mut last: usize,
-        limit: usize,
-        less: &mut impl FnMut(&T, &T) -> bool,
-    ) {
-        'restart: loop {
-            let len = last - first;
-            if small(v, first, last, less) {
-                return;
-            }
-            if len <= limit {
-                insertion_sort_3(v, first, last, None, less);
-                return;
-            }
-            let lm1 = last - 1;
-            let mut m = first + len / 2;
-            let mut swaps = if len >= NINTHER {
-                let delta = len / 4;
-                sort_network(v, &[first, first + delta, m, m + delta, lm1], less)
-            } else {
-                sort3(v, first, m, lm1, less)
-            };
-            let mut i = first;
-            let mut j = lm1;
-            if !less(&v[i], &v[m]) {
-                // The first element equals the pivot: find a smaller one from the back as a guard.
-                loop {
-                    j -= 1;
-                    if i == j {
-                        // No element is smaller than the pivot: put those equal to the first in front
-                        // and sort the rest.
-                        i += 1;
-                        j = last - 1;
-                        if !less(&v[first], &v[j]) {
-                            loop {
-                                if i == j {
-                                    return;
-                                }
-                                if less(&v[first], &v[i]) {
-                                    v.swap(i, j);
-                                    i += 1;
-                                    break;
-                                }
-                                i += 1;
-                            }
-                        }
-                        if i == j {
-                            return;
-                        }
-                        loop {
-                            while !less(&v[first], &v[i]) {
-                                i += 1;
-                            }
-                            j -= 1;
-                            while less(&v[first], &v[j]) {
-                                j -= 1;
-                            }
-                            if i >= j {
-                                break;
-                            }
-                            v.swap(i, j);
-                            i += 1;
-                        }
-                        first = i;
-                        continue 'restart;
-                    }
-                    if less(&v[j], &v[m]) {
-                        v.swap(i, j);
-                        swaps += 1;
-                        break;
-                    }
-                }
-            }
-            i += 1;
-            if i < j {
-                loop {
-                    while less(&v[i], &v[m]) {
-                        i += 1;
-                    }
-                    j -= 1;
-                    while !less(&v[j], &v[m]) {
-                        j -= 1;
-                    }
-                    if i > j {
-                        break;
-                    }
-                    v.swap(i, j);
-                    swaps += 1;
-                    if m == i {
-                        m = j;
-                    }
-                    i += 1;
-                }
-            }
-            if i != m && less(&v[m], &v[i]) {
-                v.swap(i, m);
-                swaps += 1;
-            }
-            if swaps == 0 {
-                let front = insertion_sort_incomplete(v, first, i, less);
-                if insertion_sort_incomplete(v, i + 1, last, less) {
-                    if front {
-                        return;
-                    }
-                    last = i;
-                    continue;
-                } else if front {
-                    first = i + 1;
-                    continue;
-                }
-            }
-            if i - first < last - i {
-                sort_range(v, first, i, limit, less);
-                first = i + 1;
-            } else {
-                sort_range(v, i + 1, last, limit, less);
-                last = i;
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -516,12 +222,9 @@ mod tests {
     }
 
     #[test]
-    fn both_sorts_order_every_range() {
-        for sort in [
-            EditorSort::LibStdCxx,
-            HostOs::MacOs.editor_sort(Insertion::UpTo6),
-            HostOs::MacOs.editor_sort(Insertion::UpTo30),
-        ] {
+    fn the_sort_orders_every_range() {
+        {
+            let sort = EditorSort::LibStdCxx;
             for n in [
                 0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 31, 100, 999, 1000, 1500, 5000,
             ] {
@@ -552,12 +255,11 @@ mod tests {
     }
 
     #[test]
-    fn equal_elements_end_as_each_library_leaves_them() {
+    fn equal_elements_end_as_the_library_leaves_them() {
         // Forty elements whose keys repeat (i * 7 mod 3): the order the equal ones end in is
-        // each algorithm's own. The expected orders are these implementations' outputs, also
-        // given by a separate transcription of both algorithms and checked against the real
-        // libc++ 13 `std::sort` for elements that are not trivially copyable; the Editor
-        // captures that confirm the algorithms are in unbound-assets' model tests.
+        // the algorithm's own. The expected order is this implementation's output, also given by
+        // a separate transcription of the algorithm; the Editor captures that confirm it are in
+        // unbound-assets' model tests.
         let file: Vec<(u64, usize)> = (0..40).map(|i| ((i * 7 % 3) as u64, i)).collect();
         let order = |sort: EditorSort| {
             let mut v = file.clone();
@@ -569,19 +271,5 @@ mod tests {
             0, 21, 18, 24, 15, 27, 12, 30, 9, 33, 6, 36, 3, 39, 31, 34, 28, 37, 25, 22, 1, 19, 16, 4,
             13, 7, 10, 2, 20, 38, 5, 35, 8, 32, 11, 29, 14, 26, 17, 23,
         ]);
-        #[rustfmt::skip]
-        assert_eq!(order(HostOs::MacOs.editor_sort(Insertion::UpTo6)), [
-            0, 36, 33, 3, 30, 27, 6, 24, 21, 9, 39, 18, 12, 15, 37, 13, 16, 1, 34, 19, 10, 31, 22, 4,
-            7, 25, 28, 5, 26, 29, 23, 8, 32, 2, 11, 35, 17, 14, 38, 20,
-        ]);
-        // Up to 30 elements of trivially copyable kind are insertion sorted: equal ones keep their
-        // order.
-        let mut v: Vec<(u64, usize)> = file[..28].to_vec();
-        HostOs::MacOs
-            .editor_sort(Insertion::UpTo30)
-            .sort_by(&mut v, |a, b| a.0 < b.0);
-        let mut stable = file[..28].to_vec();
-        stable.sort_by_key(|e| e.0);
-        assert_eq!(v, stable);
     }
 }
