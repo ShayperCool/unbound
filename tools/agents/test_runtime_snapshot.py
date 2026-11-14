@@ -319,6 +319,56 @@ class RuntimeSnapshotTests(unittest.TestCase):
         self.assertFalse(first.is_symlink())
         self.assertTrue(promoted.exists() and other.exists())
 
+    def test_task_finish_preserves_a_sheriff_candidate_for_later_promotion(self):
+        import suite
+        owner = {'worktree': str(self.root), 'branch': 'slot/sheriff-fixture'}
+        with mock.patch.object(runtime, 'task_owner', return_value=owner):
+            candidate = self.snapshot('validation/suite/sheriff-candidate')
+            snapshot = candidate.resolve()
+            self.cli.write_bytes(b'ordinary task runtime')
+            ordinary = self.snapshot('validation/suite/ordinary-control')
+        for reference in (candidate, ordinary):
+            os.utime(reference.resolve(), (0, 0))
+        with mock.patch.dict(os.environ, UNBOUND_RUNTIME_CACHE=str(self.cache)):
+            runtime.finish_task(self.root, owner['branch'])
+        self.assertTrue(candidate.exists())
+        self.assertFalse(ordinary.is_symlink())
+        agents = self.root/'agents'
+        summary = agents/'suite/sheriff-candidate/summary.json'
+        summary.parent.mkdir(parents=True)
+        summary.write_text(json.dumps({'work': str(candidate.parent), 'runtime_snapshot': str(snapshot)}))
+        with mock.patch.object(suite, 'AGENTS', agents), mock.patch.dict(os.environ, UNBOUND_RUNTIME_CACHE=str(self.cache)):
+            suite.promote(summary)
+        runtime.release_reference(candidate, cache=self.cache)
+        runtime.cleanup(cache=self.cache, days=0)
+        self.assertTrue((summary.parent/'runtime').exists())
+        self.assertEqual((agents/'baseline/runtime').resolve(), snapshot)
+
+    def test_main_suite_automatic_release_keeps_sheriff_until_explicit_dismissal(self):
+        import suite
+        owner = {'worktree': str(self.root), 'branch': 'main', 'pid': 1073741824, 'start': 'exited'}
+        agents, outputs = self.root/'agents', self.root/'validation-cache'
+        with mock.patch.object(suite, 'AGENTS', agents), mock.patch.object(suite, 'CACHE', outputs), \
+             mock.patch.object(suite, 'managed_for', return_value=self.managed), \
+             mock.patch.object(suite, 'discover', return_value=['fixture']), \
+             mock.patch.object(suite, 'recipe_for', return_value=[suite.Step('compare', ['true'])]), \
+             mock.patch.object(suite, 'task_owner', return_value=owner), \
+             mock.patch.object(runtime, 'task_owner', return_value=owner), \
+             mock.patch.dict(os.environ, UNBOUND_RUNTIME_CACHE=str(self.cache)):
+            for label in ('sheriff-candidate', 'ordinary-control'):
+                self.cli.write_bytes(label.encode())
+                with mock.patch('sys.argv', ['suite.py', '--cli', str(self.cli), '--label', label, '--against', 'none']):
+                    self.assertEqual(suite.main(), 0)
+        candidate = outputs/'validation/suite/sheriff-candidate/runtime'
+        ordinary = outputs/'validation/suite/ordinary-control/runtime'
+        self.assertTrue(candidate.exists())
+        self.assertFalse(ordinary.is_symlink())
+        snapshot = candidate.resolve()
+        runtime.release_reference(candidate, cache=self.cache)
+        runtime.cleanup(cache=self.cache, days=0)
+        self.assertFalse(candidate.is_symlink())
+        self.assertFalse(snapshot.exists())
+
     def test_pending_release_waits_for_live_owner_and_active_engine(self):
         with mock.patch.object(runtime, 'task_owner', return_value={
                 'worktree': str(self.root), 'branch': 'task', 'pid': 123, 'start': '456'}):

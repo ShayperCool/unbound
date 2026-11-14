@@ -257,7 +257,7 @@ A worker with this task, in its own slot on a branch from current `main`:
 
 1. Run `python3 tools/agents/land.py --check --full` (build, all managed and Rust tests), then the
    full probe suite on that build, in the background:
-   `python3 tools/agents/suite.py > ~/.cache/unbound/agents/logs/suite-$(date +%Y%m%d-%H%M).log 2>&1`.
+   `python3 tools/agents/suite.py --label sheriff-$(date +%Y%m%d-%H%M%S) > ~/.cache/unbound/agents/logs/suite-$(date +%Y%m%d-%H%M).log 2>&1`.
    It runs every `tests/projects/<probe>` with a `Reference/` (this checkout's release build, or
    `--cli`/`$UNBOUND`) without starting the Unity Editor (a probe whose step starts one fails with
    `launched the Unity Editor`), prints one line per probe (`pass`, `fail`, `report` for comparators
@@ -276,7 +276,12 @@ A worker with this task, in its own slot on a branch from current `main`:
 3. Find the landing that caused it: bisect within `landed.jsonl`. Then either land a `git revert`
    with the reason, or, if a small fix is obvious, land the fix. Add a queue item for the owner
    subsystem either way.
-4. Update the baseline (`python3 tools/agents/suite.py --promote <label>`) and report in at most
+4. Use a `sheriff-` prefix for the suite label. Its runtime link stays available across task
+   landing, slot preparation and automatic suite cleanup so fixes can land before promotion.
+   Promote it with `python3 tools/agents/suite.py --promote <label>`. To discard an unpromoted
+   candidate, explicitly run `python3 tools/agents/runtime_snapshot.py release <work>/runtime`;
+   task completion alone does not discard it. Promoted runtime references keep their existing
+   retention. Report in at most
    10 lines: suite counts, regressions, what was reverted or fixed.
 
 ## Conflicts

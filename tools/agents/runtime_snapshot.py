@@ -188,7 +188,8 @@ def release_task(worktree, branch=None, *, cache=None):
                 atomic_json(path, record)
 
 
-def release_reference(destination, *, cache=None):
+def release_reference(destination, *, cache=None, automatic=False):
+    """Request retirement; automatic callers preserve pending sheriff candidates."""
     cache = Path(cache or cache_root()).resolve()
     key = hashlib.sha256(os.fsencode(Path(os.path.abspath(destination)))).hexdigest()
     with cache_lock(cache):
@@ -196,6 +197,8 @@ def release_reference(destination, *, cache=None):
         if path.is_file():
             record = json.loads(path.read_text())
             record['release_requested'] = True
+            if not automatic:
+                record['explicit_release'] = True
             atomic_json(path, record)
 
 
@@ -398,7 +401,12 @@ def cleanup(*, days=14, cache=None, now=None, repo=None, remove=None, dry_run=Fa
             # explicit retirement request; a completed summary alone proves nothing.
             if owner.get('start') and owner.get('branch') in ('', 'main') and not live:
                 record['release_requested'] = True
-            if record.get('release_requested') and not record.get('retained') and not live and record['snapshot'] not in protected:
+            # A sheriff can land fixes before promoting its suite. Completing the
+            # task must keep that runtime available; explicit release dismisses it.
+            pending_sheriff = (reference.name == 'runtime' and reference.parent.parent.name == 'suite'
+                               and reference.parent.name.startswith('sheriff-') and not record.get('explicit_release'))
+            if (record.get('release_requested') and not pending_sheriff and not record.get('retained')
+                    and not live and record['snapshot'] not in protected):
                 if reference.is_symlink() and reference.resolve() == (cache/'snapshots'/record['snapshot']).resolve():
                     if not discard(reference):
                         protected.add(record['snapshot'])

@@ -1489,7 +1489,7 @@ def main():
     if args.update_baseline:
         promote(summary_dir/'summary.json')
     if task_owner()['branch'] in ('', 'main'):
-        release_reference(runtime)
+        release_reference(runtime, automatic=True)
     try:
         cleanup(days=1/24, repo=REPO)
     except (OSError, ValueError, subprocess.SubprocessError) as error:
