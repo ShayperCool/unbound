@@ -122,8 +122,11 @@ The full workflow is in [tools/agents/WORKFLOW.md](tools/agents/WORKFLOW.md). In
   `/Applications/Unity/Hub/Editor/<version>/Unity.app` on macOS), else from its downloads, unpacked
   once into `<cache>/editors/` (`UNBOUND_UNITY`/`--unity` overrides, `UNBOUND_OFFLINE` forbids
   downloading, `UNBOUND_EDITOR_MODULES` picks the platform modules, default `android,ios`).
-- Platforms: Linux x86_64 and macOS arm64. Behaviour measured against the Linux Editor (graphics
-  caps, input devices) stays as measured on macOS; what the OS decides (platform, paths, prefs,
-  native plugins) follows the macOS Editor there. `--remote` streaming needs NVENC (an NVIDIA GPU on
-  Linux).
+- Platforms: Linux x86_64 and macOS arm64. What the OS decides follows the macOS Editor there:
+  platform, paths, prefs, native plugins, OS fonts, and the graphics device's answers (Metal:
+  device type, SystemInfo caps, format support and defaults, sample counts, depth formats, shader
+  targets and variants). Input devices stay as measured on Linux unless measured on macOS.
+  Everything else compares against the Linux references; Editor build-toolchain artefacts (C++
+  library sort ties, compiler arithmetic) get no per-OS emulation, and such macOS differences are
+  recorded, not chased. `--remote` streaming needs NVENC (an NVIDIA GPU on Linux).
 - Test project: `~/unity-projects/game` (Unity 6000.0.71f1, built-in RP, mobile).
