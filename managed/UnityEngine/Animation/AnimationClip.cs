@@ -120,26 +120,8 @@ namespace UnityEngine
         internal bool? m_GenericRoot;
 
         const float EmptyClipLength = 1f;
-        // AnimationClip.SetCurve on a legacy clip's Transform vector property (position, rotation,
-        // Euler angles, scale) keeps that curve's key times in the clip's length until ClearCurves,
-        // also once the curve is removed or replaced. Other curves, and every curve
-        // AnimationUtility.SetEditorCurve sets, count only while the clip has them (matches the
-        // Unity 6000.0.71f1 Editor, tests/projects/defaultstate and tests/projects/editorui).
-        // Unmeasured: a non-legacy clip whose vector components are all removed (its companion
-        // curves keep the length here), and a SetCurve vector curve removed by SetEditorCurve.
-        bool m_HasRetainedVectorEnd;
-        float m_RetainedVectorEnd;
 
         public AnimationClip() { }
-
-        void RetainTransformVectorKeys(Type type, string attribute, AnimationCurve curve)
-        {
-            if (!m_Legacy || curve.length == 0 || !typeof(Transform).IsAssignableFrom(type)
-                || TransformVectorAxes(attribute, out _) == null) return;
-            float end = curve[curve.length - 1].time;
-            m_RetainedVectorEnd = m_HasRetainedVectorEnd ? Math.Max(m_RetainedVectorEnd, end) : end;
-            m_HasRetainedVectorEnd = true;
-        }
 
         static readonly string[] s_Axes3 = { "x", "y", "z" }, s_Axes4 = { "x", "y", "z", "w" };
 
@@ -163,8 +145,8 @@ namespace UnityEngine
             {
                 if (m_HasRange) return Math.Max(0f, m_StopTime - m_StartTime);
                 if (!Compat.DefaultConstructorStateMeasured) return CurveEnd();
-                bool found = m_HasRetainedVectorEnd;
-                float end = found ? m_RetainedVectorEnd : float.NegativeInfinity;
+                bool found = false;
+                float end = float.NegativeInfinity;
                 foreach (var c in m_Curves)
                     if ((c.Curve != null && c.Curve.length > 0) || c.Sampled != null)
                     { end = Math.Max(end, c.LastKeyTime); found = true; }
@@ -430,30 +412,117 @@ namespace UnityEngine
             if (propertyName == null) throw new ArgumentNullException(nameof(propertyName));
             relativePath ??= "";
             var attribute = CurveBinding.NormalizeScriptName(type, propertyName);
+            bool transform = typeof(Transform).IsAssignableFrom(type);
+            string head = null;
+            var axes = transform ? TransformVectorAxes(attribute, out head) : null;
+            if (curve == null && axes != null)
+            {
+                // A Transform vector's component cannot be removed on its own; its whole curve can.
+                Debug.LogError($"Can't remove individual {VectorCurveKind(head)} curve {propertyName} you must remove the entire animation curve with {VectorCurveName(head)}.");
+                return;
+            }
             RestoreImportedCurves();
+            if (curve == null && transform && TransformVectorAxes(attribute + ".x", out _) != null)
+                m_Curves.RemoveAll(c => c.Binding.Path == relativePath && c.Binding.Attribute.StartsWith(attribute + ".", StringComparison.Ordinal) && c.Binding.Matches(type));
             m_Curves.RemoveAll(c => c.Binding.Path == relativePath && c.Binding.Attribute == attribute && c.Binding.Matches(type));
             if (curve != null)
             {
                 var copy = new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
                 m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(relativePath, attribute, type), Curve = copy });
-                RetainTransformVectorKeys(type, attribute, copy);
-                if (!m_Legacy && typeof(Transform).IsAssignableFrom(type)) AddVectorCompanions(relativePath, attribute, type, copy);
+                if (axes != null) KeyVectorTogether(relativePath, head, axes, type);
             }
             m_Version++;
         }
 
-        void AddVectorCompanions(string path, string attribute, Type type, AnimationCurve curve)
+        /// <summary>The Editor's words for a Transform vector's curve in its SetCurve removal error.</summary>
+        static string VectorCurveKind(string head) => head switch
         {
-            var axes = TransformVectorAxes(attribute, out var head);
-            if (axes == null) return;
-            foreach (var axis in axes)
+            "m_LocalPosition" => "position animation",
+            "m_LocalRotation" => "animation rotation",
+            "localEulerAnglesRaw" => "rotation animation",
+            _ => "scale animation",
+        };
+
+        /// <summary>The name the Editor's SetCurve removal error gives a Transform vector's whole curve.</summary>
+        static string VectorCurveName(string head) => head == "localEulerAnglesRaw" ? "m_LocalEuler" : head;
+
+        /// <summary>
+        /// AnimationClip.SetCurve on a component of a Transform vector property (position,
+        /// rotation, Euler angles, scale) keys every component of that vector at the union of their
+        /// key times, legacy and non-legacy clips alike: a missing component starts at its default
+        /// value (1 for scale and rotation w, else 0), and each component gets a key at every time
+        /// it lacks, on its own curve there (value and slope). Matches the Unity 6000.0.71f1 Editor
+        /// for the key times and the clip's length, tests/projects/editorui `ClipLength.*`
+        /// (keys at 0 and 2 then 0.5 and 1 give 0, 0.5, 1, 2 on x and y; recorded with the macOS
+        /// Editor); the inserted keys' values and slopes are unmeasured.
+        /// </summary>
+        void KeyVectorTogether(string path, string head, string[] axes, Type type)
+        {
+            var components = new ClipCurve[axes.Length];
+            var times = new SortedSet<float>();
+            for (int a = 0; a < axes.Length; a++)
             {
-                var name = head + "." + axis;
-                if (m_Curves.Exists(c => c.Binding.Path == path && c.Binding.Attribute == name && c.Binding.Matches(type))) continue;
-                float value = head == "m_LocalScale" || (head == "m_LocalRotation" && axis == "w") ? 1f : 0f;
-                var keys = curve.keys.Select(k => new Keyframe(k.time, value)).ToArray();
-                m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForType(path, name, type), Curve = new AnimationCurve(keys) });
+                var name = head + "." + axes[a];
+                components[a] = m_Curves.Find(c => c.Binding.Path == path && c.Binding.Attribute == name && c.Binding.Matches(type));
+                if (components[a]?.Curve != null)
+                    foreach (var k in components[a].Curve.keys) times.Add(k.time);
             }
+            for (int a = 0; a < axes.Length; a++)
+            {
+                var c = components[a];
+                if (c == null)
+                {
+                    float value = head == "m_LocalScale" || (head == "m_LocalRotation" && axes[a] == "w") ? 1f : 0f;
+                    var keys = new Keyframe[times.Count];
+                    int i = 0;
+                    foreach (var t in times) keys[i++] = new Keyframe(t, value);
+                    m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForType(path, head + "." + axes[a], type), Curve = new AnimationCurve(keys) });
+                    continue;
+                }
+                var curve = c.Curve;
+                var have = new HashSet<float>(curve.keys.Select(k => k.time));
+                if (have.Count == times.Count) continue;
+                var merged = new List<Keyframe>(curve.keys);
+                foreach (var t in times)
+                    if (!have.Contains(t))
+                    {
+                        float slope = SlopeAt(curve, t);
+                        merged.Add(new Keyframe(t, curve.Evaluate(t), slope, slope));
+                    }
+                merged.Sort((x, y) => x.time.CompareTo(y.time));
+                c.Curve = new AnimationCurve(merged.ToArray()) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
+            }
+            // One vector curve: its components together, in axis order, where its first one was.
+            int at = int.MaxValue;
+            var ordered = new ClipCurve[axes.Length];
+            for (int i = m_Curves.Count - 1; i >= 0; i--)
+            {
+                var b = m_Curves[i].Binding;
+                if (b.Path != path || !b.Matches(type) || !b.Attribute.StartsWith(head, StringComparison.Ordinal)
+                    || b.Attribute.Length != head.Length + 2 || b.Attribute[head.Length] != '.') continue;
+                int a = Array.IndexOf(axes, b.Attribute.Substring(head.Length + 1));
+                if (a < 0) continue;
+                ordered[a] = m_Curves[i];
+                m_Curves.RemoveAt(i);
+                at = i;
+            }
+            m_Curves.InsertRange(Math.Min(at, m_Curves.Count), ordered.Where(c => c != null));
+        }
+
+        /// <summary>A curve's slope at a time between its keys (the Hermite segment's derivative,
+        /// unweighted; flat outside its keys or on a stepped segment).</summary>
+        static float SlopeAt(AnimationCurve curve, float time)
+        {
+            var keys = curve.keys;
+            if (keys.Length < 2 || time <= keys[0].time || time >= keys[keys.Length - 1].time) return 0f;
+            int i = 1;
+            while (keys[i].time < time) i++;
+            Keyframe a = keys[i - 1], b = keys[i];
+            float dt = b.time - a.time;
+            if (!(dt > 0f) || float.IsInfinity(a.outTangent) || float.IsInfinity(b.inTangent)) return 0f;
+            float s = (time - a.time) / dt;
+            float h00 = 6f * s * s - 6f * s, h10 = 3f * s * s - 4f * s + 1f, h01 = -h00, h11 = 3f * s * s - 2f * s;
+            return (h00 * a.value + h01 * b.value) / dt + h10 * a.outTangent + h11 * b.inTangent;
         }
 
         /// <summary>
@@ -582,8 +651,6 @@ namespace UnityEngine
         {
             m_Curves.Clear();
             m_ObjectCurves.Clear();
-            m_HasRetainedVectorEnd = false;
-            m_RetainedVectorEnd = 0f;
             m_Version++;
         }
 
@@ -612,8 +679,6 @@ namespace UnityEngine
             {
                 m_Curves = new List<ClipCurve>(m_Curves),
                 m_ObjectCurves = new List<ClipObjectCurve>(m_ObjectCurves),
-                m_HasRetainedVectorEnd = m_HasRetainedVectorEnd,
-                m_RetainedVectorEnd = m_RetainedVectorEnd,
                 m_SampleRate = m_SampleRate,
                 m_TakeStart = m_TakeStart,
                 m_HumanKeyReduction = m_HumanKeyReduction,

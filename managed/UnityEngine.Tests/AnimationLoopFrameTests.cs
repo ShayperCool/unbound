@@ -633,9 +633,10 @@ namespace UnityEngine.Tests
             const float rate = 24f;
             var source = Source(SmoothCurve(), rate);
             // A weighted segment across frame 12, and a looping post-wrap mode before it.
-            source.SetCurve("", typeof(Transform), "localPosition.y",
+            // Single components (SetCurve would key the whole position at the union of its times).
+            UnityEditor.AnimationUtility.SetEditorCurve(source, UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.y"),
                 new AnimationCurve(new Keyframe(0f, 0f, 1f, 1f, 0.5f, 0.5f), new Keyframe(1f, 1f, 1f, 1f, 0.5f, 0.5f)));
-            source.SetCurve("", typeof(Transform), "localPosition.z",
+            UnityEditor.AnimationUtility.SetEditorCurve(source, UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.z"),
                 new AnimationCurve(new Keyframe(0f, 0f, 0f, 0f), new Keyframe(0.3f, 1f, 0f, 0f)) { postWrapMode = WrapMode.Loop });
             var animation = NewAnimation(out _);
             m_Expected.Add(NotInserted);

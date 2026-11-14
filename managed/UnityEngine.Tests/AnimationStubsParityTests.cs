@@ -232,7 +232,8 @@ namespace UnityEngine.Tests
             for (int a = 0; a < 3; a++)
                 clip.SetCurve("", typeof(Transform), "localRotation." + s_Axes[a],
                     new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, Component(q1, a))));
-            clip.SetCurve("", typeof(Transform), "localRotation.w",
+            // SetCurve would key all four at the union of their times; SetEditorCurve keeps w's own.
+            UnityEditor.AnimationUtility.SetEditorCurve(clip, UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalRotation.w"),
                 new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.5f, 0f), new Keyframe(1f, q1.w)));
             int version = clip.m_Version;
             m_Expected.Add(KeptKeys);

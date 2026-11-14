@@ -313,7 +313,8 @@ namespace UnityEngine.Tests
             clip.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Constant(0f, 1f, 0f));
             clip.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 1f, 1f));
             clip.SetCurve("", typeof(Transform), "localPosition.z", AnimationCurve.Constant(0f, 1f, 0f));
-            clip.SetCurve("ContinueText", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+            // One component alone (SetCurve would key the whole position).
+            UnityEditor.AnimationUtility.SetEditorCurve(clip, UnityEditor.EditorCurveBinding.FloatCurve("ContinueText", typeof(Transform), "m_LocalPosition.x"), AnimationCurve.Linear(0f, 0f, 1f, 2f));
             clip.legacy = false;
             var graph = PlayableGraph.Create("culled-output");
             var output = AnimationPlayableOutput.Create(graph, "Animation", animator);

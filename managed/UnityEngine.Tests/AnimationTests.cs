@@ -115,21 +115,25 @@ namespace UnityEngine.Tests
             Assert.Equal(0, Animator.StringToHash(""));
         }
 
-        /// <summary>A clip's length follows the curves it has, except that AnimationClip.SetCurve on a
-        /// legacy clip's Transform vector property (position, rotation, Euler angles, scale) keeps
-        /// that curve's key times until ClearCurves; AnimationUtility.SetEditorCurve keeps none.
-        /// Committed Unity 6000.0.71f1 Editor references: tests/projects/editorui (2 after adding a
-        /// 2 s curve, 1 after removing it, stop time 1) and tests/projects/defaultstate (1, 0.5, 0.5,
-        /// 3, 3). The other expected values come from 6000.0.71f1 Editor captures of the same calls
-        /// that are not yet committed references.</summary>
+        /// <summary>A clip's length follows the curves it has. AnimationClip.SetCurve on a component of
+        /// a Transform vector property (position, rotation, Euler angles, scale) keys every component
+        /// of the vector at the union of their key times, legacy and non-legacy clips alike (a new
+        /// component is 0, or 1 for scale and rotation w); removing one component that way logs the
+        /// Editor's error and keeps it; the whole property's name removes the vector; SetEditorCurve
+        /// sets and removes single components. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/editorui `ClipLength.*` (recorded with the macOS Editor) and
+        /// tests/projects/defaultstate `Small/animation/*` (1, 0.5, 0.5, 3, 3).</summary>
         [Fact]
-        public void ClipLengthFollowsItsCurvesExceptSetCurveTransformVectors()
+        public void ClipLengthFollowsTheCurvesTheClipHas()
         {
             string version = ProjectInfo.UnityVersion;
             ProjectInfo.UnityVersion = "6000.0.71f1";
+            Expect("Can't remove individual");
             var created = new List<Object>();
             AnimationClip Clip(bool legacy) { var c = new AnimationClip { legacy = legacy }; created.Add(c); return c; }
             var light = new System.Func<string, UnityEditor.EditorCurveBinding>(p => UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Light), p));
+            UnityEditor.EditorCurveBinding Position(string axis) => UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition." + axis);
+            var full = AnimationCurve.Linear(0f, 0f, 2f, 1f);
             try
             {
                 // editorui: an Editor edit of a clip made with SetCurve.
@@ -141,29 +145,67 @@ namespace UnityEngine.Tests
                 Assert.Equal(1f, edited.length);
                 Assert.Equal(1f, UnityEditor.AnimationUtility.GetAnimationClipSettings(edited).stopTime);
 
-                // Runtime SetCurve shortens a non-legacy clip and a legacy clip's other curves.
                 foreach (bool legacy in new[] { false, true })
                 {
+                    // Other curves count while the clip has them.
                     var two = Clip(legacy);
                     two.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(0f, 0f, 1f, 1f));
-                    two.SetCurve("", typeof(Light), "m_Range", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+                    two.SetCurve("", typeof(Light), "m_Range", full);
                     Assert.Equal(2f, two.length);
                     two.SetCurve("", typeof(Light), "m_Range", null);
                     Assert.Equal(1f, two.length);
+
+                    // A vector's components: all of them, at the union of the key times.
+                    foreach (var (property, count) in new[] { ("localPosition", 3), ("localRotation", 4), ("localEulerAngles", 3), ("localScale", 3) })
+                    {
+                        var vector = Clip(legacy);
+                        vector.SetCurve("", typeof(Transform), property + ".x", full);
+                        Assert.Equal(count, UnityEditor.AnimationUtility.GetCurveBindings(vector).Length);
+                        vector.SetCurve("", typeof(Transform), property + ".x", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                        Assert.Equal(2f, vector.length);
+                        int logs = m_Logs.Count;
+                        vector.SetCurve("", typeof(Transform), property + ".x", null);
+                        Assert.Equal(count, UnityEditor.AnimationUtility.GetCurveBindings(vector).Length);
+                        Assert.Equal(2f, vector.length);
+                        Assert.Single(m_Logs.GetRange(logs, m_Logs.Count - logs));
+                        Assert.StartsWith("Error: Can't remove individual", m_Logs[logs]);
+                        vector.ClearCurves();
+                        Assert.Equal(1f, vector.length);
+                    }
+                    var keys = Clip(legacy);
+                    keys.SetCurve("", typeof(Transform), "localPosition.x", full);
+                    keys.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0.5f, 0f, 1f, 1f));
+                    float[] Times(string axis) => UnityEditor.AnimationUtility.GetEditorCurve(keys, Position(axis)).keys.Select(k => k.time).ToArray();
+                    Assert.Equal(new[] { 0f, 0.5f, 1f, 2f }, Times("x"));
+                    Assert.Equal(new[] { 0f, 0.5f, 1f, 2f }, Times("y"));
+                    keys.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(-2f, 0f, -1f, 1f));
+                    Assert.Equal(new[] { -2f, -1f, 0f, 0.5f, 1f, 2f }, Times("z"));
+                    Assert.Equal(2f, keys.length);
+                    keys.SetCurve("", typeof(Transform), "localPosition", null);
+                    Assert.Empty(UnityEditor.AnimationUtility.GetCurveBindings(keys));
+                    Assert.Equal(1f, keys.length);
+                    keys.SetCurve("", typeof(Transform), "localPosition.x", full);
+                    keys.SetCurve("", typeof(Transform), "m_LocalPosition", null);
+                    Assert.Equal(1f, keys.length);
+
+                    // SetEditorCurve sets and removes single components.
+                    var editor = Clip(legacy);
+                    UnityEditor.AnimationUtility.SetEditorCurve(editor, Position("x"), full);
+                    Assert.Equal(new[] { 2f, 1f }, new[] { editor.length, UnityEditor.AnimationUtility.GetCurveBindings(editor).Length });
+                    UnityEditor.AnimationUtility.SetEditorCurve(editor, Position("x"), null);
+                    Assert.Equal(1f, editor.length);
+                    var mixed = Clip(legacy);
+                    mixed.SetCurve("", typeof(Transform), "localPosition.x", full);
+                    UnityEditor.AnimationUtility.SetEditorCurve(mixed, Position("x"), AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                    Assert.Equal(2f, mixed.length);
+                    foreach (var axis in new[] { "x", "y", "z" }) UnityEditor.AnimationUtility.SetEditorCurve(mixed, Position(axis), null);
+                    Assert.Equal(1f, mixed.length);
                 }
-                var replaced = Clip(false);
-                replaced.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(0f, 0f, 2f, 1f));
-                replaced.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(0f, 0f, 1f, 1f));
-                Assert.Equal(1f, replaced.length);
-                var removed = Clip(true);
-                removed.SetCurve("", typeof(Light), "m_Range", AnimationCurve.Linear(0f, 0f, 3f, 1f));
-                removed.SetCurve("", typeof(Light), "m_Range", null);
-                Assert.Equal(1f, removed.length);
                 var negative = Clip(false);
                 negative.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(-2f, 0f, -1f, 1f));
                 Assert.Equal(-1f, negative.length);
 
-                // defaultstate: a legacy clip's position keys stay after removal and replacement.
+                // defaultstate: a legacy clip's position.
                 var position = Clip(true);
                 position.ClearCurves();
                 Assert.Equal(1f, position.length);
@@ -175,55 +217,6 @@ namespace UnityEngine.Tests
                 Assert.Equal(3f, position.length);
                 position.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(-2f, 0f, -1f, 1f));
                 Assert.Equal(3f, position.length);
-                var components = Clip(true);
-                components.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 1f));
-                components.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 2f, 1f));
-                components.SetCurve("", typeof(Transform), "localPosition.y", null);
-                Assert.Equal(2f, components.length);
-                components.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 0.25f, 1f));
-                Assert.Equal(2f, components.length);
-                components.ClearCurves();
-                Assert.Equal(1f, components.length);
-
-                // Every Transform vector property keeps them, also through later edits. A non-legacy
-                // clip's position stays through its companion curves (removing every component is
-                // unmeasured).
-                foreach (var property in new[] { "localScale.x", "localRotation.x", "localEulerAngles.x", "m_LocalPosition.x" })
-                {
-                    var vector = Clip(true);
-                    vector.SetCurve("", typeof(Transform), property, AnimationCurve.Linear(0f, 0f, 2f, 1f));
-                    vector.SetCurve("", typeof(Transform), property, null);
-                    Assert.Equal(2f, vector.length);
-                }
-                var scale = Clip(true);
-                scale.SetCurve("", typeof(Transform), "localScale.x", AnimationCurve.Linear(0f, 0f, 2f, 1f));
-                scale.SetCurve("", typeof(Transform), "localScale.x", null);
-                scale.SetCurve("", typeof(Transform), "localScale.x", AnimationCurve.Linear(0f, 0f, 0.5f, 1f));
-                Assert.Equal(2f, scale.length);
-                scale.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 1f));
-                scale.SetCurve("", typeof(Transform), "localScale.x", null);
-                Assert.Equal(2f, scale.length);
-                var nonLegacy = Clip(false);
-                nonLegacy.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 2f, 1f));
-                nonLegacy.SetCurve("", typeof(Transform), "localPosition.x", null);
-                Assert.Equal(2f, nonLegacy.length);
-                var later = Clip(true);
-                later.SetCurve("A", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 2f, 1f));
-                later.SetCurve("B", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 1f));
-                later.SetCurve("A", typeof(Transform), "localPosition.x", null);
-                Assert.Equal(2f, later.length);
-                later.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(0f, 0f, 1f, 1f));
-                later.legacy = false;
-                later.AddEvent(new AnimationEvent { time = 0.5f, functionName = "F" });
-                Assert.Equal(2f, later.length);
-
-                // SetEditorCurve keeps no key times, also for a legacy clip's position.
-                var editorPosition = Clip(true);
-                var x = UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.x");
-                UnityEditor.AnimationUtility.SetEditorCurve(editorPosition, x, AnimationCurve.Linear(0f, 0f, 2f, 1f));
-                Assert.Equal(2f, editorPosition.length);
-                UnityEditor.AnimationUtility.SetEditorCurve(editorPosition, x, null);
-                Assert.Equal(1f, editorPosition.length);
             }
             finally
             {
@@ -245,7 +238,9 @@ namespace UnityEngine.Tests
             child.localPosition = new Vector3(0f, 4f, 0f);
 
             clip.SampleAnimation(root, 0.5f);
-            Near.Equal(new Vector3(5f, 4f, 0f), child.localPosition);
+            // The position's other components are curves of 0 (editorui
+            // ClipLength.legacy.SetCurve.companions: (5, 0, 0) in the Editor).
+            Near.Equal(new Vector3(5f, 0f, 0f), child.localPosition);
             Near.Equal(new Vector3(1f, 1.5f, 1f), root.transform.localScale);
 
             clip.SampleAnimation(root, 5f); // clamped to the end

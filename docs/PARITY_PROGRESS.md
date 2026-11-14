@@ -3060,3 +3060,13 @@ ends at 1.00000012 s. tests/projects/modelclips gains the `Shapes*` models (Comp
 102%; 36 records recorded with the macOS Editor) and matches 4580/4580 records (was 4573/4580
 with them), every key time exactly; modelaxis (all six sets), blendshapes and rootcurves are
 unchanged (macOS runs). Model cache VERSION 55.
+
+### Q458: AnimationClip.SetCurve on Transform vectors and clip length
+
+A clip's length follows the curves it has. SetCurve on one component of a Transform position,
+rotation, Euler angles or scale keys every component of the vector at the union of their key
+times, legacy clips too; removing one component that way logs the Editor's error and keeps it, and
+the property's whole name removes the vector. This replaces the retained key times of legacy
+vector curves, which only reproduced the refused removals. tests/projects/editorui gains 18
+`ClipLength.*` calls recorded with the macOS Editor: Unbound matches 260/261 calls (1 expected),
+where main's engine differed in 9 of the 14 it could answer.
