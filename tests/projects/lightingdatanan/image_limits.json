@@ -1,0 +1,10 @@
+{
+  "frame.png": {
+    "mean": 0.16, "worst": 8, "over8": 0,
+    "reason": "Two pixels on the mirror spheres' silhouettes differ by up to 8; every other pixel within 2."
+  },
+  "sun.png": {
+    "mean": 1.54, "worst": 133, "over8": 374,
+    "reason": "The procedural sky's sun disk: the Editor draws a dot of about 2x2 pixels, Unbound a glow of about 20 pixels' radius (the same with a realtime sun, measured with this scene's lighting data removed); the sky elsewhere within 2."
+  }
+}

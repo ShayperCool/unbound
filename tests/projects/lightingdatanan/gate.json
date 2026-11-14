@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/lightingdatanan/run.py gate"
+  ],
+  "summary": "lightingdatanan: .*",
+  "engine_paths": [
+    "crates/unbound-runtime/src/lighting.rs",
+    "crates/unbound-assets/src/lighting.rs",
+    "managed/UnityEngine/Graphics/LightingDataReply.cs",
+    "managed/UnityEngine/Graphics/Lightmapping.cs",
+    "managed/UnityEngine/Graphics/LightProbes.cs",
+    "managed/UnityEngine/Graphics/Lighting.cs"
+  ]
+}

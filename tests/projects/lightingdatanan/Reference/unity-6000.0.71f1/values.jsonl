@@ -1,0 +1,16 @@
+{"k":"lightmaps","v":"1"}
+{"k":"renderer Ground","v":"0 0.543080032 0.543080032 -0.00220260583 -0.00220260583"}
+{"k":"renderer Ground realtime","v":"-1 1 1 0 0"}
+{"k":"renderer Mirror In Probe","v":"-1 1 1 0 0"}
+{"k":"renderer Mirror In Probe realtime","v":"-1 1 1 0 0"}
+{"k":"renderer Mirror In Sky","v":"-1 1 1 0 0"}
+{"k":"renderer Mirror In Sky realtime","v":"-1 1 1 0 0"}
+{"k":"renderer Quad Flat Lightmap UVs","v":"65534 Infinity Infinity NaN NaN"}
+{"k":"renderer Quad Flat Lightmap UVs realtime","v":"-1 1 1 0 0"}
+{"k":"renderer Quad Probes","v":"65534 0.25 0.25 0 0"}
+{"k":"renderer Quad Probes realtime","v":"-1 1 1 0 0"}
+{"k":"ambientProbe","v":"0.18028377 -0.00568232732 -0.01256071 0.007252024 0.00569996331 -0.009872438 0.0103301462 -0.0104363048 0.0250355676 0.225714117 0.04134383 -0.0197532251 0.0114032412 0.009111968 -0.0157832541 0.01437996 -0.0152235646 0.0344360545 0.306922853 0.127484977 -0.0340533853 0.0196566544 0.0163652115 -0.0283491481 0.01771555 -0.0220852531 0.0404654965"}
+{"k":"probe Reflection Probe baked","v":"ReflectionProbe-0 32 mips 6 Cube"}
+{"k":"probe Reflection Probe texture","v":"ReflectionProbe-0 32 mips 6 Cube"}
+{"k":"defaultReflection","v":"ReflectionProbe-1 128 mips 8 Cube"}
+{"k":"complete","v":true}
