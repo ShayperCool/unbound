@@ -57,6 +57,19 @@ namespace Unbound.Runtime
         /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>
         internal int TextureWrapMirrorOnce { get; init; } = 1;
 
+        /// <summary>SystemInfo answers measured on the device's Editor alone; null where they are
+        /// not measured (the members stay stubs there).</summary>
+        internal MeasuredLimits Limits { get; init; }
+
+        internal sealed class MeasuredLimits
+        {
+            /// <summary>maxComputeBufferInputs of the vertex, fragment, hull, domain and compute
+            /// stages, and of the geometry stage.</summary>
+            internal int ComputeBufferInputs, GeometryComputeBufferInputs;
+            internal int TiledPixelStorageSize;
+            internal bool DynamicResolution, MipStreaming, ParallelPSOCreation;
+        }
+
         /// <summary>The render texture formats SystemInfo.SupportsRandomWriteOnRenderTextureFormat
         /// answers true for: OpenGL Core's (tests/projects/urp CapsProbe; the Vulkan Editor also
         /// answers BGRA32, whose storage Unbound's renderer does not request of the device),
@@ -130,6 +143,17 @@ namespace Unbound.Runtime
             EditorConservativeRaster = false,
             HiddenSurfaceRemovalOnGPU = true,
             TextureWrapMirrorOnce = 0,
+            // tests/projects/urp CapsProbe `device-metal.jsonl`. The renderer's Metal device takes
+            // 31 storage buffers a stage too.
+            Limits = new MeasuredLimits
+            {
+                ComputeBufferInputs = 31,
+                GeometryComputeBufferInputs = 0,
+                TiledPixelStorageSize = 64,
+                DynamicResolution = true,
+                MipStreaming = true,
+                ParallelPSOCreation = true,
+            },
             RandomWriteFormats = new[]
             {
                 RenderTextureFormat.ARGB32, RenderTextureFormat.ARGBHalf, RenderTextureFormat.DefaultHDR, RenderTextureFormat.ARGBFloat,

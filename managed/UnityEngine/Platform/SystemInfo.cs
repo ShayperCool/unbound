@@ -348,5 +348,54 @@ namespace UnityEngine
         public static bool supportsGraphicsFence => true;
         public static bool supportsRenderTargetArrayIndexFromVertexShader { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsRenderTargetArrayIndexFromVertexShader", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
         public static bool supportsMultisampled2DArrayTextures { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsMultisampled2DArrayTextures", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
+
+        // Measured on the Metal device alone (GraphicsDeviceProfile.Limits: tests/projects/urp
+        // CapsProbe `device-metal.jsonl`); still stubs on the other devices.
+        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        public static int maxComputeBufferInputsVertex => Measured(static l => l.ComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsVertex");
+        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        public static int maxComputeBufferInputsFragment => Measured(static l => l.ComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsFragment");
+        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        public static int maxComputeBufferInputsGeometry => Measured(static l => l.GeometryComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsGeometry");
+        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        public static int maxComputeBufferInputsDomain => Measured(static l => l.ComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsDomain");
+        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        public static int maxComputeBufferInputsHull => Measured(static l => l.ComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsHull");
+        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        public static int maxComputeBufferInputsCompute => Measured(static l => l.ComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsCompute");
+        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        public static int maxTiledPixelStorageSize => Measured(static l => l.TiledPixelStorageSize, "UnityEngine.SystemInfo.maxTiledPixelStorageSize");
+        /// <summary>The Metal Editor's answer; it does not scale its buffers
+        /// (ScalableBufferManager keeps 1).</summary>
+        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        public static bool supportsDynamicResolution => Measured(static l => l.DynamicResolution, "UnityEngine.SystemInfo.supportsDynamicResolution");
+        /// <summary>The Metal Editor's answer; textures load whole (streaming is not simulated).</summary>
+        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        public static bool supportsMipStreaming => Measured(static l => l.MipStreaming, "UnityEngine.SystemInfo.supportsMipStreaming");
+        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        public static bool supportsParallelPSOCreation => Measured(static l => l.ParallelPSOCreation, "UnityEngine.SystemInfo.supportsParallelPSOCreation");
+
+        /// <summary>The Metal device's maxBufferLength, as the macOS Editor answers (two captures
+        /// on an Apple M2 Pro with 16 GB: 9534832640, its maxBufferLength); a stub on the other
+        /// devices.</summary>
+        public static long maxGraphicsBufferSize
+        {
+            get
+            {
+                long size = Device.Type == GraphicsDeviceType.Metal ? Gpu?.MaxBufferBytes ?? 0 : 0;
+                if (size > 0) return size;
+                Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfo.maxGraphicsBufferSize");
+                return 0;
+            }
+        }
+
+        /// <summary>A member's answer where the device's Editor was measured, else the stub's.</summary>
+        static T Measured<T>(Func<GraphicsDeviceProfile.MeasuredLimits, T> answer, string member)
+        {
+            var limits = Device.Limits;
+            if (limits != null) return answer(limits);
+            Unbound.Runtime.Stubs.NotImplemented(member);
+            return default;
+        }
     }
 }

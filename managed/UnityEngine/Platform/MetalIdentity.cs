@@ -6,7 +6,9 @@ namespace Unbound.Runtime
     /// <summary>The GPU as the macOS Editor's Metal device names it (tests/projects/urp CapsProbe
     /// `device-metal.jsonl` on an Apple M2 Pro): the system default MTLDevice's name, the
     /// vendor as the name's first word ("Apple"), the version "Metal", vendor and device ids 0,
-    /// and recommendedMaxWorkingSetSize in MiB as the memory. Only Apple silicon is measured.</summary>
+    /// recommendedMaxWorkingSetSize in MiB as the memory and maxBufferLength as the largest
+    /// graphics buffer (SystemInfo.maxGraphicsBufferSize: 9534832640 on an Apple M2 Pro with
+    /// 16 GB, two macOS Editor captures). Only Apple silicon is measured.</summary>
     internal static class MetalIdentity
     {
         const string ObjC = "/usr/lib/libobjc.A.dylib";
@@ -35,6 +37,7 @@ namespace Unbound.Runtime
                     var nameObject = SendPointer(device, Selector("name\0"u8));
                     var name = Marshal.PtrToStringUTF8(SendPointer(nameObject, Selector("UTF8String\0"u8))) ?? "";
                     ulong memory = SendUInt64(device, Selector("recommendedMaxWorkingSetSize\0"u8));
+                    ulong maxBuffer = SendUInt64(device, Selector("maxBufferLength\0"u8));
                     int space = name.IndexOf(' ');
                     return new MachineIdentity.Gpu
                     {
@@ -42,6 +45,7 @@ namespace Unbound.Runtime
                         Vendor = space > 0 ? name.Substring(0, space) : name,
                         Version = "Metal",
                         MemoryMb = (int)(memory / (1024 * 1024)),
+                        MaxBufferBytes = (long)maxBuffer,
                     };
                 }
                 finally

@@ -217,20 +217,45 @@ namespace Unbound.Tests
                 "foveatedRenderingCaps: NonUniformRaster -> None",
                 "hdrDisplaySupportFlags: Supported, RuntimeSwitchable, AutomaticTonemapping -> None",
                 "supportsSparseTextures: True -> False",
-                // Stubs on every device (not implemented yet).
-                "maxComputeBufferInputsCompute: 31 -> 0",
-                "maxComputeBufferInputsDomain: 31 -> 0",
-                "maxComputeBufferInputsFragment: 31 -> 0",
-                "maxComputeBufferInputsHull: 31 -> 0",
-                "maxComputeBufferInputsVertex: 31 -> 0",
-                "maxTiledPixelStorageSize: 64 -> 0",
+                // Compressed volume textures are not decoded where a device lacks their blocks in 3D:
+                // not answered (a stub).
                 "supportsCompressed3DTextures: True -> False",
-                "supportsDynamicResolution: True -> False",
-                "supportsMipStreaming: True -> False",
-                "supportsParallelPSOCreation: True -> False",
             };
             expected.AddRange(s_NotDrawn);
             Assert.Equal(Sorted(expected), Sorted(differences));
+        }
+
+        /// <summary>maxGraphicsBufferSize on Metal is the device's maxBufferLength (the macOS
+        /// Editor on an Apple M2 Pro with 16 GB answers 9534832640, that device's maxBufferLength;
+        /// the value is the machine's, so it is not in the reference); the members measured on
+        /// Metal alone stay stubs (0, false) on the other devices.</summary>
+        [Fact]
+        public void MetalBufferLimitAndUnmeasuredDevices()
+        {
+            var previous = GraphicsDeviceProfile.Current;
+            try
+            {
+                if (OperatingSystem.IsMacOS())
+                {
+                    GraphicsDeviceProfile.Select("Metal");
+                    var gpu = GraphicsDeviceProfile.Metal.Identity;
+                    Assert.NotNull(gpu);
+                    Assert.True(gpu.MaxBufferBytes > 0);
+                    Assert.Equal(gpu.MaxBufferBytes, SystemInfo.maxGraphicsBufferSize);
+                }
+                foreach (var device in new[] { "OpenGLCore", "Vulkan" })
+                {
+                    GraphicsDeviceProfile.Select(device);
+                    Assert.Equal(0, SystemInfo.maxComputeBufferInputsVertex);
+                    Assert.Equal(0, SystemInfo.maxTiledPixelStorageSize);
+                    Assert.False(SystemInfo.supportsMipStreaming);
+                    Assert.Equal(0L, SystemInfo.maxGraphicsBufferSize);
+                }
+            }
+            finally
+            {
+                GraphicsDeviceProfile.Select(previous.Type.ToString());
+            }
         }
 
         /// <summary>GL.GetGPUProjectionMatrix on Metal, to the bit (`device-metal.jsonl`: the

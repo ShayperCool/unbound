@@ -20,6 +20,8 @@ namespace Unbound.Runtime
         {
             internal string Name, Vendor, Version;
             internal int VendorId, DeviceId, MemoryMb;
+            /// <summary>The largest buffer the device makes, in bytes (0: not read).</summary>
+            internal long MaxBufferBytes;
         }
 
         static readonly Lazy<Dictionary<string, string>> s_Cpu = new Lazy<Dictionary<string, string>>(ReadCpu);
