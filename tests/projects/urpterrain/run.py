@@ -14,23 +14,26 @@ import sys
 PROBE = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROBE.parents[1]))
 from probe_paths import cache_artifact_path, reference_root, run_root  # noqa: E402
+from space import SPACES, apply_color_space, reference_dir  # noqa: E402
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=['check'])
     parser.add_argument('--label', default='check')
+    parser.add_argument('--color-space', choices=SPACES, default='linear')
     args = parser.parse_args()
     cli = os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI')
     if not cli:
         parser.error('set UNBOUND or UNBOUND_CLI')
-    reference = reference_root(PROBE)
+    reference = reference_dir(reference_root(PROBE), args.color_space)
     work = cache_artifact_path(run_root(PROBE, args.label)).resolve()
     if work.exists():
         shutil.rmtree(work)
     project = work/'project'
     for part in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(PROBE/part, project/part)
+    apply_color_space(project, args.color_space)
     out = work/'out'
     env = dict(os.environ, URP_TERRAIN_PROBE_OUT=str(out))
     command = [str(Path.home()/'.cache/compat/with-heavy-job'), cli, 'run', '-p', str(project),
@@ -60,7 +63,8 @@ def main():
                             capture_output=True, text=True)
     print(images.stdout, end='')
     matching = sum(row in actual for row in expected)
-    print(f'urpterrain: {matching}/{len(expected)} records, {len(missing)} images missing')
+    space = '' if args.color_space == 'linear' else args.color_space + ' '
+    print(f'urpterrain: {space}{matching}/{len(expected)} records, {len(missing)} images missing')
     return int(failed)
 
 

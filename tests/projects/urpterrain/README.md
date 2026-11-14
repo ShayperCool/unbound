@@ -23,6 +23,10 @@ Make the assets once and record Unity's reference (two GPU captures, published w
     python3 tests/projects/urpterrain/record.py record --release 6000.0.71f1
     python3 tests/projects/urpterrain/record.py publish --release 6000.0.71f1
 
+The same in a gamma-space copy of the project (`--color-space gamma` for `record`, `publish` and
+`check`; its reference in `Reference/unity-<release>/gamma/`): the same records, and images that
+Unbound matches as closely as the linear project's.
+
 Run Unbound and compare (records exact; image means printed for the suite to track):
 
     UNBOUND=/path/to/unbound python3 tests/projects/urpterrain/run.py check

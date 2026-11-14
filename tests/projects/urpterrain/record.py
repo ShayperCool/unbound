@@ -5,6 +5,7 @@
     record.py record  --release 6000.0.71f1   # two independent GPU captures
     record.py publish --release 6000.0.71f1   # write Reference/unity-<release>/ when both agree; an existing
                                               # reference only gains rows after its own and new images
+    --color-space gamma: the same in a gamma-space copy, its reference in Reference/unity-<release>/gamma/
 """
 import argparse
 import os
@@ -15,15 +16,17 @@ import sys
 PROBE = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROBE.parents[1]))
 from probe_paths import cache_artifact_path, reference_root, run_root  # noqa: E402
+from space import SPACES, apply_color_space, reference_dir  # noqa: E402
 from editor_runner import EditorJob, differences, result_problem, run  # noqa: E402
 
 
-def copy_project(destination, release):
+def copy_project(destination, release, space='linear'):
     if destination.exists():
         raise SystemExit(f'refusing to overwrite project: {destination}')
     for part in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(PROBE/part, destination/part)
     (destination/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+release+'\n')
+    apply_color_space(destination, space)
     return destination
 
 
@@ -45,6 +48,7 @@ def main():
     parser.add_argument('command', choices=['create', 'record', 'publish'])
     parser.add_argument('--release', required=True)
     parser.add_argument('--label', default='record')
+    parser.add_argument('--color-space', choices=SPACES, default='linear')
     args = parser.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = cache_artifact_path(run_root(PROBE, args.label)).resolve()
@@ -65,7 +69,7 @@ def main():
         return 0
     if args.command == 'record':
         for out in captures:
-            project = copy_project(out/'project', args.release)
+            project = copy_project(out/'project', args.release, args.color_space)
             result = run(EditorJob(project, out/'editor.log', out, batch=True,
                                    args=['-executeMethod', 'ProbeRunner.Record'],
                                    env={'URP_TERRAIN_PROBE_OUT': str(out)}, timeout=900))
@@ -81,7 +85,7 @@ def main():
     problems = differences(captures, outputs)
     if problems:
         sys.exit('the captures differ ('+'; '.join(problems)+'); not publishing')
-    target = reference_root(PROBE)
+    target = reference_dir(reference_root(PROBE), args.color_space)
     names = outputs(captures[0])
     if target.exists():
         # Rows and images already published stay as they are; only additions are taken.
