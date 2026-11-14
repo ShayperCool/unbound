@@ -51,7 +51,7 @@ struct Presenter {
     /// Per output kind (non-sRGB, sRGB): the present mode parameters.
     params: [Option<wgpu::Buffer>; 2],
     /// What this frame presents.
-    current: Option<(wgpu::RenderPipeline, wgpu::BindGroup, [f32; 4])>,
+    current: Option<(wgpu::RenderPipeline, wgpu::BindGroup, (u32, u32), bool)>,
 }
 
 impl Plugin for UnityRenderPlugin {
@@ -183,7 +183,7 @@ fn prepare_present(presenter: Option<ResMut<Presenter>>, views: Query<&ViewTarge
             },
         ],
     });
-    presenter.current = Some((pipeline, bind_group, frame.presentation));
+    presenter.current = Some((pipeline, bind_group, frame.size, frame.fixed_game_view));
 }
 
 fn encode_present(
@@ -195,7 +195,7 @@ fn encode_present(
         return;
     };
     let target = view.into_inner();
-    let Some((pipeline, bind_group, rect)) = &presenter.current else {
+    let Some((pipeline, bind_group, screen, fixed_game_view)) = &presenter.current else {
         return;
     };
     // Taken as Bevy's output attachment, which marks the window's texture as drawn: Bevy only
@@ -213,6 +213,7 @@ fn encode_present(
         multiview_mask: None,
     });
     let size = target.main_texture().size();
+    let rect = presentation_rect((size.width, size.height), *screen, *fixed_game_view);
     let width = size.width as f32;
     let height = size.height as f32;
     let x = rect[0].round_ties_even().clamp(0.0, width);
@@ -226,4 +227,18 @@ fn encode_present(
     pass.set_pipeline(pipeline);
     pass.set_bind_group(0, bind_group, &[]);
     pass.draw(0..3, 0..1);
+}
+
+/// Presentation follows host resizes even when rendering retains an older screen frame.
+/// The fixed-view rule matches Screen.PresentationRect, in physical pixels on both sides.
+fn presentation_rect(output: (u32, u32), screen: (u32, u32), fixed: bool) -> [f32; 4] {
+    let (width, height) = (output.0 as f32, output.1 as f32);
+    if !fixed {
+        return [0.0, 0.0, width, height];
+    }
+    let (sw, sh) = (screen.0.max(1) as f32, screen.1.max(1) as f32);
+    let scale = (width / sw).min(height / sh);
+    let scale = if scale > 1.0 { scale.floor() } else { scale };
+    let (w, h) = (sw * scale, sh * scale);
+    [(width - w) * 0.5, (height - h) * 0.5, w, h]
 }

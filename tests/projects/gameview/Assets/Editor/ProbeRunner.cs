@@ -6,7 +6,7 @@ using UnityEngine;
 
 /// <summary>
 /// Records the probe in a windowed Editor (an X server of its own, the GPU through VirtualGL):
-/// with <c>SCREENREAD_PROBE_OUT</c> set, the Editor opens the probe scene at a 64x32 game view,
+/// with <c>SCREENREAD_PROBE_OUT</c> set, the Editor opens the probe scene at a 320x320 game view,
 /// enters Play mode and quits when <see cref="GameViewProbe"/> has written its record (nonzero on
 /// failure). A watchdog quits with code 4 when Play mode does not finish in time.
 /// </summary>

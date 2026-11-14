@@ -80,11 +80,13 @@ namespace UnityEngine
         /// <summary>The centered default Game view scale, measured at one display pixel per
         /// point in Unity 6000.0.71f1, tests/projects/gameview. Larger targets shrink uniformly;
         /// smaller targets use an integer zoom. Other releases retain their previous stretch.</summary>
+        internal static bool FixedGameView => Compat.RenderingMeasured && s_RenderingWidth > 0;
+
         internal static Rect PresentationRect
         {
             get
             {
-                if (!Compat.RenderingMeasured || s_RenderingWidth <= 0 || s_WindowWidth <= 0 || s_WindowHeight <= 0)
+                if (!FixedGameView || s_WindowWidth <= 0 || s_WindowHeight <= 0)
                     return new Rect(0, 0, s_WindowWidth, s_WindowHeight);
                 float scale = Mathf.Min((float)s_WindowWidth / s_RenderingWidth, (float)s_WindowHeight / s_RenderingHeight);
                 if (scale > 1f) scale = Mathf.Floor(scale);

@@ -184,8 +184,8 @@ pub enum Command {
         screen_width: i32,
         screen_height: i32,
         color_space: i32,
-        /// The image rectangle within the host window, in physical top-left pixels.
-        presentation: [f32; 4],
+        /// Present a fixed Game view with its default uniform zoom; otherwise fill the window.
+        fixed_game_view: bool,
     },
     /// The frame is complete: the screen is shown.
     EndFrame,
@@ -611,7 +611,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 screen_width: r.i32()?,
                 screen_height: r.i32()?,
                 color_space: r.i32()?,
-                presentation: [r.f32()?, r.f32()?, r.f32()?, r.f32()?],
+                fixed_game_view: r.i32()? != 0,
             },
             op::END_FRAME => Command::EndFrame,
             op::SET_TARGET => Command::SetTarget {
@@ -1038,15 +1038,13 @@ impl Writer {
                 screen_width,
                 screen_height,
                 color_space,
-                presentation,
+                fixed_game_view,
             } => {
                 self.bytes.push(op::BEGIN_FRAME);
                 self.u32(*screen_width as u32);
                 self.u32(*screen_height as u32);
                 self.u32(*color_space as u32);
-                for value in presentation {
-                    self.u32(value.to_bits());
-                }
+                self.u32(u32::from(*fixed_game_view));
             }
             Command::EndFrame => self.bytes.push(op::END_FRAME),
             Command::SetTarget {
@@ -1468,7 +1466,7 @@ mod tests {
                 screen_width: 960,
                 screen_height: 540,
                 color_space: 1,
-                presentation: [0.1, 0.0, 0.8, 1.0],
+                fixed_game_view: true,
             },
             Command::SetTarget {
                 color: 0,

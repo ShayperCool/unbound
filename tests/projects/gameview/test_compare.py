@@ -36,6 +36,17 @@ class CompareTests(unittest.TestCase):
         self.assertFalse(runner.precision_only([row, ('missing', [1,2], None)]))
         self.assertFalse(runner.precision_only([('1.pointer2',row[1],None)]))
 
+    def test_reference_extension_keeps_every_existing_row_byte(self):
+        old=b'{"k":"a","v":1}\n{"k":"complete","v":true}\n'
+        new=b'{"k":"a","v":1}\n{"k":"new","v":2}\n{"k":"complete","v":true}\n'
+        runner.validate_extension(old,new)
+        with self.assertRaises(RuntimeError):
+            runner.validate_extension(old,new.replace(b'"v":1}',b'"v":1.0}'))
+        with self.assertRaises(RuntimeError):
+            runner.validate_extension(old,new.replace(b'{"k":"a","v":1}\n',b''))
+        with self.assertRaises(RuntimeError):
+            runner.validate_extension(old,b'{"k":"complete","v":true}\n{"k":"a","v":1}\n')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -51,7 +51,7 @@ def unbound(work, gate=False):
     name, server = display()
     combined = []
     try:
-        for c, (ww,wh) in enumerate(((640,360),(360,640),(640,360),(640,360),(641,361),(360,640))):
+        for c, (ww,wh) in enumerate(((640,360),(360,640),(640,360),(640,360),(641,361),(360,640),(640,360),(640,360))):
             project = base.copy_project(work/'projects'/str(c))
             out = base.fresh_output(work/str(c))
             env = dict(os.environ, DISPLAY=name, SCREENREAD_PROBE_OUT=str(out), GAMEVIEW_CASE=str(c))
@@ -82,12 +82,21 @@ def unbound(work, gate=False):
                         raise RuntimeError('host window has the wrong size')
                     image = ImageGrab.grab(xdisplay=name).crop((left,top,left+ww,top+wh)).convert('RGB')
                     image.save(out/'window.png')
-                    for point in range(3):
-                        x=left+ww*(point+1)//4; y=top+wh*(point+1)//4
-                        subprocess.run(['xdotool','mousemove','--sync',str(x),str(y)],env=env,check=True)
-                        time.sleep(.15)
-                        (out/f'move{point}').touch()
-                        wait_file(out/f'read{point}',job)
+                    if c>=6:
+                        subprocess.run(['xdotool','windowsize',identifier,'800','600'],env=env,check=True)
+                        (out/'resize').touch()
+                        wait_file(out/'resized',job)
+                        time.sleep(.2)
+                        image=ImageGrab.grab(xdisplay=name).crop((left,top,left+800,top+600)).convert('RGB')
+                        image.save(out/'resized.png')
+                        (out/'finish').touch()
+                    else:
+                        for point in range(3):
+                            x=left+ww*(point+1)//4; y=top+wh*(point+1)//4
+                            subprocess.run(['xdotool','mousemove','--sync',str(x),str(y)],env=env,check=True)
+                            time.sleep(.15)
+                            (out/f'move{point}').touch()
+                            wait_file(out/f'read{point}',job)
                     job.wait(timeout=30)
                     if job.returncode: raise RuntimeError(f'engine exit {job.returncode}')
                 finally:
@@ -100,10 +109,17 @@ def unbound(work, gate=False):
                             job.wait()
             adapter = next((line for line in (out/'unbound.log').read_text().splitlines() if 'AdapterInfo' in line), '')
             if 'NVIDIA' not in adapter: raise RuntimeError('NVIDIA engine renderer was not verified')
-            combined.extend((out/'values.jsonl').read_text().splitlines())
+            case_lines=(out/'values.jsonl').read_text().splitlines()
+            if c!=7: combined.extend(case_lines)
             # The host image must contain the native rectangle as a solid red region with black borders.
             rows = {r['k']:r['v'] for r in map(json.loads,combined)}
-            x,y,w,h = rows[f'{c}.target']
+            if c>=6:
+                control={r['k']:r['v'] for r in map(json.loads,case_lines)}
+                if control['retained.after.draws'] != [0]: raise RuntimeError('retained control rendered a new camera frame')
+                x,y,w,h=control['retained.after.target']
+                if c==7 and (x,y,w,h)!=(0,0,800,600): raise RuntimeError('unfixed retained view did not follow the window')
+            else:
+                x,y,w,h = rows[f'{c}.target']
             expected = (round(x),round(y),round(x)+round(w),round(y)+round(h))
             mask = image.getchannel('R').point(lambda v:255 if v>250 else 0)
             if mask.getbbox()!=expected:
@@ -172,11 +188,30 @@ def check(work):
     return compare(base.reference(),work/'native1/values.jsonl') if base.reference().exists() else 0
 
 
-original_publish = base.publish
+def validate_extension(old, new):
+    import json
+    old_lines=old.splitlines(keepends=True)
+    new_lines=new.splitlines(keepends=True)
+    old_keys={json.loads(line)['k'] for line in old_lines}
+    retained=[line for line in new_lines if json.loads(line)['k'] in old_keys]
+    if retained != old_lines:
+        raise RuntimeError('existing reference rows changed or moved relative to each other')
 
-def publish(work):
+
+def publish(work, extend=False):
     validate_repeats(work)
-    return original_publish(work)
+    target=base.reference()
+    data=(work/'native1/values.jsonl').read_bytes()
+    if target.exists():
+        if target.read_bytes()==data:
+            print('reference already matches')
+            return 0
+        if not extend: raise RuntimeError('reference exists; append controls with --extend')
+        validate_extension(target.read_bytes(),data)
+    target.parent.mkdir(parents=True,exist_ok=True)
+    target.write_bytes(data)
+    print('published',target)
+    return 0
 
 
 base.publish = publish
@@ -186,12 +221,13 @@ def main():
     parser.add_argument('mode',choices=('editor','publish','check','unbound','gate'))
     parser.add_argument('--release',required=True)
     parser.add_argument('--label',required=True)
+    parser.add_argument('--extend',action='store_true')
     args=parser.parse_args()
     if not args.label or Path(args.label).name!=args.label or args.label in ('.','..'):
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION']=args.release
     work=base.run_root(PROBE,args.label)
-    return {'editor':base.editor,'publish':publish,'check':check,'unbound':unbound,
+    return {'editor':base.editor,'publish':lambda work: publish(work,extend=args.extend),'check':check,'unbound':unbound,
             'gate':lambda work: unbound(work,gate=True)}[args.mode](work)
 
 

@@ -56,7 +56,7 @@ fn frame_commands(
     draws: &[DrawPacket],
 ) -> Vec<Command> {
     let mut out = vec![Command::BeginFrame {
-        presentation: [0.0, 0.0, width as f32, height as f32],
+        fixed_game_view: false,
         screen_width: width,
         screen_height: height,
         color_space,

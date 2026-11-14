@@ -40,4 +40,11 @@
 {"k":"5.pointer0","v":[0,480]}
 {"k":"5.pointer1","v":[90,320]}
 {"k":"5.pointer2","v":[180,160]}
+{"k":"retained.before.target","v":[160,20,320,320]}
+{"k":"retained.before.screen","v":[320,320]}
+{"k":"retained.after.view","v":[0,0,800,600]}
+{"k":"retained.after.target","v":[240,140,320,320]}
+{"k":"retained.after.screen","v":[320,320]}
+{"k":"retained.after.camera","v":[0,0,320,320]}
+{"k":"retained.after.draws","v":[0]}
 {"k":"complete","v":true}
