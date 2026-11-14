@@ -43,7 +43,7 @@ public sealed class SpeedTreeUrpProbe : MonoBehaviour
             Rec("colorSpace", QualitySettings.activeColorSpace.ToString());
             var shader = Shader.Find("Universal Render Pipeline/Nature/SpeedTree9_URP");
             var trees = Directory.GetFiles("Assets/Trees", "*.st9").OrderBy(p => p, StringComparer.Ordinal).Select(p => p.Replace('\\', '/')).ToArray();
-            // The scene has no camera: nothing has rendered through the pipeline yet.
+            // Before the probe's first Camera.Render (the scene has no camera).
             Rec("before/globalRenderPipeline", Shader.globalRenderPipeline);
             DumpShader("before/shader", shader);
             foreach (var path in trees) DumpStates("before/" + Path.GetFileNameWithoutExtension(path), path);

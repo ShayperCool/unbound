@@ -15,9 +15,9 @@ texture's sRGB state, format and mip count. Floats are the hex of their bits; va
 exactly.
 
 Measured in a windowed Unity 6000.0.71f1 Editor importing the project afresh (two identical
-captures, OpenGL Core, NVIDIA driver): the pipeline exists before Play mode
+captures, OpenGL Core, NVIDIA driver): at the first Play-mode frame the pipeline exists
 (`Shader.globalRenderPipeline` is set, the URP sub-shader is active, the imported materials keep
-URP's MotionVectors pass on), and every material's shader, keywords, queue, tags and properties
+URP's MotionVectors pass on, so their import ran with it active, inferred), and every material's shader, keywords, queue, tags and properties
 match in Unbound before and after the render. A batch-mode Editor differs (until something
 renders it has not created the pipeline, so its imports ran with the shader's fallback sub-shader
 active and turned the MotionVectors pass off); the probe records the windowed Editor, as a game's
