@@ -112,6 +112,9 @@ namespace UnityEngine
     public sealed partial class Tree : Component
     {
         SpeedTreeWindAsset m_WindAsset;
+        /// <summary>Whether the tree's renderer has been drawn while the world had wind (until
+        /// then it draws with zero wind constants).</summary>
+        internal bool m_DrawnWithWind;
 
         public Tree() { }
 

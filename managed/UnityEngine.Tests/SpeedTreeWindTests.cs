@@ -51,7 +51,6 @@ namespace UnityEngine.Tests
             Assert.Equal(new Vector4(2f, 4f, 3f, 0.25f), Value(wind, 1));
             Assert.Equal(new Vector4(0.4f, 0.6f, 0.7f, 1f), Value(wind, 2));
             Assert.Equal(new Vector4(0f, 0f, 0f, 0.1f), Value(wind, 3));
-            Assert.False(wind.Blowing);
         }
 
         [Fact]
@@ -70,9 +69,30 @@ namespace UnityEngine.Tests
             Assert.Equal(0f, vector.w);
             // The noise moved against the wind for the whole time since zero, at the first speed.
             Assert.Equal(-time * 1f, Value(wind, 3).x, 6);
-            Assert.True(wind.Blowing);
             for (int frame = 12; frame < 200; frame++) wind.Update(frame * Dt, east, 0.6f, ref config);
             Assert.Equal(0.6f, Value(wind, 0).w, 5);
+        }
+
+        [Fact]
+        public void ASettledWindKeepsItsDirectionAndNoiseAndAReturningWindJumpsTheNoise()
+        {
+            var wind = new SpeedTreeWindState();
+            var config = Config();
+            int frame = 1;
+            for (; frame < 60; frame++) wind.Update(frame * Dt, Vector3.right, 0.5f, ref config);
+            // The wind goes and settles over the strength response.
+            for (; frame < 400; frame++) wind.Update(frame * Dt, Vector3.zero, 0f, ref config);
+            var settled = Value(wind, 0);
+            var noise = Value(wind, 3);
+            Assert.Equal(new Vector4(1f, 0f, 0f, 0f), settled);
+            Assert.Equal(0f, Value(wind, 4).x);
+            wind.Update(frame++ * Dt, Vector3.zero, 0f, ref config);
+            Assert.Equal(noise, Value(wind, 3));
+            // A wind again: the settled wind's clock stood at zero, so the noise moves by the
+            // whole time since then at once.
+            float time = frame * Dt;
+            wind.Update(time, Vector3.right, 0.5f, ref config);
+            Assert.Equal(noise.x - time * 1f, Value(wind, 3).x, 4);
         }
 
         [Fact]
@@ -145,13 +165,16 @@ namespace UnityEngine.Tests
             var plain = new GameObject("PlainRenderer");
             var zone = new GameObject("Sphere").AddComponent<WindZone>();
             var directional = new GameObject("Directional").AddComponent<WindZone>();
+            SpeedTreeWindAsset asset = null;
             try
             {
                 Debug.unityLogger.logHandler = warnings;
+                SpeedTreeWindSystem.ResetSphericalWarning();
                 tree.AddComponent<MeshFilter>().sharedMesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
                 var renderer = tree.AddComponent<MeshRenderer>();
                 renderer.motionVectorGenerationMode = MotionVectorGenerationMode.Camera;
-                tree.AddComponent<Tree>().windAsset = new SpeedTreeWindAsset(1, Config());
+                asset = new SpeedTreeWindAsset(1, Config());
+                tree.AddComponent<Tree>().windAsset = asset;
                 var plainRenderer = plain.AddComponent<MeshRenderer>();
                 zone.mode = WindZoneMode.Spherical;
                 zone.radius = 5f;
@@ -177,6 +200,7 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(plain);
                 Object.DestroyImmediate(zone.gameObject);
                 Object.DestroyImmediate(directional.gameObject);
+                if (asset != null) Object.DestroyImmediate(asset);
             }
         }
 

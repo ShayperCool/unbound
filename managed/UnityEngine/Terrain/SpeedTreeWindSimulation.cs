@@ -46,12 +46,12 @@ namespace UnityEngine
             return values;
         }
 
+        /// <summary>Whether the wind still moves: on its way to its target, or with strength.</summary>
+        internal bool Blowing => InTransition || Clamp01(m_Strength) > 0f;
+
         internal bool InTransition =>
             Math.Abs(m_Direction.x - m_DirectionTarget.x) > Arrived || Math.Abs(m_Direction.y - m_DirectionTarget.y) > Arrived ||
             Math.Abs(m_Direction.z - m_DirectionTarget.z) > Arrived || Math.Abs(m_Strength - m_StrengthTarget) > Arrived;
-
-        /// <summary>Whether the wind still moves its trees.</summary>
-        internal bool Blowing => InTransition || Clamp01(m_Strength) > 0f;
 
         /// <summary>Advances the wind to <paramref name="time"/> under the scene's wind (a unit
         /// direction, or zero, and its strength) and updates <see cref="Values"/>.</summary>
@@ -234,10 +234,12 @@ namespace UnityEngine
     /// constants to the draws of trees' renderers. Each wind asset that exists keeps its wind,
     /// which moves once a frame in PreUpdate.WindUpdate toward the sum of the active directional
     /// wind zones (each its forward, through the hierarchy's rotations and scale signs,
-    /// normalized, times windMain; pulse and turbulence take no part) at Time.time. While the
-    /// world has no wind (no directional wind, no spherical zone and no wind still moving) the
-    /// trees draw with zero constants. A spherical zone's own wind on the trees inside its radius
-    /// is not simulated: such a tree is warned about and keeps the directional wind.
+    /// normalized, times windMain; pulse and turbulence take no part) at Time.time. A tree's
+    /// renderer draws with zero constants until it is first drawn while the world has wind (a
+    /// directional wind, a spherical zone or a wind still moving); from then on it draws with its
+    /// wind's constants of each frame, also once the wind has settled (its last direction, no
+    /// strength, its noise where it stopped). A spherical zone's own wind on the trees inside its
+    /// radius is not simulated: such a tree is warned about and keeps the directional wind.
     /// </summary>
     internal static class SpeedTreeWindSystem
     {
@@ -245,7 +247,9 @@ namespace UnityEngine
         /// <summary>The active trees, by game object (a tree's wind asset may be set after it is
         /// enabled; the draws read it).</summary>
         static readonly Dictionary<GameObject, Tree> s_Trees = new Dictionary<GameObject, Tree>();
-        static readonly object[] s_Calm = SpeedTreeWindState.NewValues();
+        /// <summary>The constants of a tree not yet drawn with wind, and the history constants of a
+        /// renderer without per-object motion vectors.</summary>
+        static readonly object[] s_Zero = SpeedTreeWindState.NewValues();
         static readonly int[] s_Ids = Ids();
         /// <summary>This frame's spherical zones.</summary>
         static readonly List<WindZone> s_Spherical = new List<WindZone>();
@@ -315,6 +319,9 @@ namespace UnityEngine
             s_AnyWind = wind.x != 0f || wind.y != 0f || wind.z != 0f || s_Spherical.Count > 0 || blowing;
         }
 
+        /// <summary>Lets the spherical zone warning be given again (tests).</summary>
+        internal static void ResetSphericalWarning() => s_WarnedSpherical = false;
+
         /// <summary>Warns once when a tree drawn with wind is inside a spherical zone's radius.</summary>
         static void WarnIfInSphericalZone(Renderer renderer)
         {
@@ -338,10 +345,12 @@ namespace UnityEngine
         {
             if (s_Trees.Count == 0 || !s_Trees.TryGetValue(renderer.m_GameObject, out var tree)) return properties;
             var asset = tree.windAsset;
-            if (asset is null) return properties;
+            // A destroyed asset's wind is no longer advanced: the tree draws without wind.
+            if (asset == null) return properties;
             if (s_Spherical.Count > 0 && !s_WarnedSpherical) WarnIfInSphericalZone(renderer);
-            var values = s_AnyWind ? asset.Wind.Values : s_Calm;
-            var history = renderer.m_MotionVectorGenerationMode == MotionVectorGenerationMode.Object ? values : s_Calm;
+            if (s_AnyWind) tree.m_DrawnWithWind = true;
+            var values = tree.m_DrawnWithWind ? asset.Wind.Values : s_Zero;
+            var history = renderer.m_MotionVectorGenerationMode == MotionVectorGenerationMode.Object ? values : s_Zero;
             var merged = DrawPropertyPool.Copy(properties);
             for (int i = 0; i < SpeedTreeWindState.HistoryOffset; i++) merged[s_Ids[i]] = values[i];
             for (int i = SpeedTreeWindState.HistoryOffset; i < s_Ids.Length; i++) merged[s_Ids[i]] = history[i];
