@@ -143,3 +143,23 @@ reference. The engine retains 123,337/123,586 gate failures. This reproduces the
 live-history discrepancy without extending the documented one-active-listener
 contract or imposing a global ordering rule. Both the single-owner and invalid
 simultaneous-owner histories remain visible for a later publication correction.
+
+## Q449 duplicate diagnostics
+
+The earlier Q449 recheck above precedes the diagnostic correction. The new
+[componentlogs probe](../componentlogs/README.md) records all severities for six
+audio filters and a custom DisallowMultipleComponent, with enabled/disabled
+instances, custom/default handlers and muted/enabled public logging. Both
+Editor repeats and the engine agree exactly on 1345 values.
+
+Rejection publishes one immediate `LogType.Log` to Application callbacks and
+bypasses the public logger. The earlier Error-only observer therefore correctly
+records zero in the Editor. The shared component-factory route now matches that
+severity and publication behavior through its existing Compat selector.
+
+All 270 PCM files per rate remain byte-identical to the earlier engine run.
+Only twelve duplicate-add Error counts per rate change from one to zero. The
+complete 135-case gate now retains 29,638/31,048 failures, with strict counts
+36,607/37,211. The unchanged Master failures, sparse compositions and six-case
+simultaneous-listener diagnostic remain open. Existing references and comparison
+bounds are unchanged.

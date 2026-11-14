@@ -3013,3 +3013,26 @@ Q429 (the latter within its bounded residual), twod's spriteshape.render matches
 2D probes move by rounding without failures. The hot-reload
 restart for float edits and the Burst exemption are off by default with it; converting hot-reload
 deltas and measuring Burst in the Editor (Q436) are dropped.
+
+### Q449: audio diagnostic publication and device coverage
+
+Duplicate component rejection now publishes the measured immediate `LogType.Log`
+to Application callbacks independently of the public logger. Two GPU Editor
+repeats and the engine agree exactly on all 1345 componentlogs values, including
+six audio filters, a custom DisallowMultipleComponent, disabled instances,
+custom handlers and muted logging. Twelve old mono-live metadata differences
+per rate resolve; all 270 PCM files per rate remain byte-identical.
+
+The complete 36-control source profile also passes on private 2-, 4- and
+6-channel PulseAudio devices at 48000/44100 Hz, adding 69,995,712 strict values.
+All 24 additional Editor sessions use the NVIDIA GPU and have no assertions.
+Native PCM matches the eight-channel reference byte for byte; new canonical
+metadata retains each device's actual capability getter. All 21 audiopitch gate
+commands pass, with existing references and tolerances unchanged.
+
+Reset publication, both excluded setting pairs, Mono Echo construction history,
+source composition precision and live simultaneous-listener histories remain
+open with their raw discrepancies. A fresh 44100 Hz reset repeat still differs
+on 665,500 values. Six-input spatial/streaming contexts, other input widths,
+physical-device PCM and other backends/releases remain queued. See
+[the audio closure](../tests/projects/audiopitch/CLOSURE.md) for measured scope.
