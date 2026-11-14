@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/speedtree9wind/run.py gate"
+  ],
+  "summary": "speedtree9wind: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Terrain/SpeedTreeWind.cs",
+    "managed/UnityEngine/Terrain/SpeedTreeWindSimulation.cs",
+    "managed/UnityEngine/Wind/WindZone.cs",
+    "managed/UnityEngine/Editor/SpeedTree9/"
+  ]
+}
