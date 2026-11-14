@@ -1,4 +1,5 @@
 using System;
+using static UnityEngine.Tests.AllocationMeasurement;
 using System.Threading;
 using Unbound.Runtime;
 using Xunit;
@@ -74,6 +75,7 @@ namespace UnityEngine.Tests
                             AudioFilters.Dispatch(AudioCallbackKind.RenderBufferScope, token, null, 0, 0, 1);
                             fixed (float* data = samples)
                             {
+                                EmptyAllocationContext();
                                 long before = GC.GetAllocatedBytesForCurrentThread();
                                 for (int i = 0; i < 10; i++)
                                 {

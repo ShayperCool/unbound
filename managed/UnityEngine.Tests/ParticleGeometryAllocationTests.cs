@@ -1,4 +1,5 @@
 using System;
+using static UnityEngine.Tests.AllocationMeasurement;
 using System.Collections.Generic;
 using Xunit;
 
@@ -34,6 +35,7 @@ namespace UnityEngine.Tests
         {
             build();
             build();
+            EmptyAllocationContext();
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 4; i++) build();
             return GC.GetAllocatedBytesForCurrentThread() - before;
@@ -130,6 +132,7 @@ namespace UnityEngine.Tests
                 Draw(systems[0]);
                 Assert.Equal(160, mesh.m_StreamVertexCount);
                 Assert.Equal(240, mesh.m_StreamIndexCount);
+                EmptyAllocationContext();
                 long before = GC.GetAllocatedBytesForCurrentThread();
                 for (int round = 0; round < 3; round++)
                     foreach (var ps in systems) Draw(ps);

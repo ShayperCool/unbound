@@ -1,4 +1,5 @@
 using System;
+using static UnityEngine.Tests.AllocationMeasurement;
 using Unbound.Runtime;
 using Unbound.Runtime.Humanoid;
 using Unbound.Runtime.Playables;
@@ -27,14 +28,6 @@ namespace UnityEngine.Tests
         const int QuietFrames = 300, MaxWarmup = 5000, Frames = 4000;
         // A unit sum: the supported humanoid mixer context.
         static readonly float[] InputWeights = { 0.2f, 0.3f, 0.5f };
-
-        /// <summary>Empties this thread's allocation context with a collection of its own. While
-        /// other threads allocate and collect, the runtime's counter for this thread was seen to
-        /// rise by up to 8 KiB (about one allocation quantum) without an allocation in the test
-        /// host; with the context emptied first it does not rise until the code allocates, so the
-        /// window counts only what the code allocates
-        /// (<see cref="TheEmptiedAllocationContextCountsNoCollection"/>).</summary>
-        static void EmptyAllocationContext() => GC.Collect();
 
         /// <summary>One frame; the bytes the Animators' own update allocated.</summary>
         static long Frame()

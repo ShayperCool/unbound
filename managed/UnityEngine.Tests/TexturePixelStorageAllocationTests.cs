@@ -1,4 +1,5 @@
 using System;
+using static UnityEngine.Tests.AllocationMeasurement;
 using UnityEngine;
 using Xunit;
 using Object = UnityEngine.Object;
@@ -20,6 +21,7 @@ namespace UnityEngine.Tests
                 else ((Texture2D)texture).GetPixelData<byte>(0);
                 Color[] Read() => cube ? ((Cubemap)texture).GetPixels(CubemapFace.PositiveX) : ((Texture2D)texture).GetPixels();
                 Read();
+                EmptyAllocationContext();
                 long before = GC.GetAllocatedBytesForCurrentThread();
                 var pixels = Read();
                 long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
@@ -41,6 +43,7 @@ namespace UnityEngine.Tests
             var cube = new Cubemap(width, format, false);
             try
             {
+                EmptyAllocationContext();
                 long before = GC.GetAllocatedBytesForCurrentThread();
                 var data = cube.GetPixelData<byte>(0, CubemapFace.PositiveX);
                 long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
