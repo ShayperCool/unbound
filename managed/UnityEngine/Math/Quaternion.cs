@@ -309,8 +309,6 @@ namespace UnityEngine
             return rotation;
         }
 
-        internal static Quaternion LookRotationSilent(Vector3 forward) => LookRotationSilent(forward, Vector3.up);
-
         private static bool TryLookRotation(Vector3 forward, Vector3 upwards, out Quaternion rotation)
         {
             Span<float> m = stackalloc float[9];
