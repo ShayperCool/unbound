@@ -407,8 +407,15 @@ impl Settings {
     /// normal maps unpacked from RGB), then come those of the highest graphics
     /// tier the Editor runs, which `UNITY_HARDWARE_TIER3` names only when the tiers differ.
     /// `UNITY_LIGHT_PROBE_PROXY_VOLUME` is left out: proxy volumes are not supported, and
-    /// without one its branch is off.
-    pub fn shader_defines(&self, group: &str) -> Vec<&'static str> {
+    /// without one its branch is off. The Metal device adds framebuffer fetch, and its fallback
+    /// for GPUs without it while the macOS standalone platform's graphics API list has Metal
+    /// (an automatic list has): measured with the macOS Editor's standalone target active
+    /// (tests/projects/urp CapsProbe `HasShaderDefine.*`, `caps-metal.jsonl`).
+    pub fn shader_defines(
+        &self,
+        group: &str,
+        device: unbound_compat::GraphicsDevice,
+    ) -> Vec<&'static str> {
         // BuildTargetGroup: Standalone 1, iOS 4, Android 7, WebGL 13.
         let (id, mobile) = match group {
             "Android" => (7, true),
@@ -450,6 +457,17 @@ impl Settings {
         ] {
             if on {
                 defines.push(define);
+            }
+        }
+        if device == unbound_compat::GraphicsDevice::Metal {
+            defines.push("UNITY_FRAMEBUFFER_FETCH_AVAILABLE");
+            let metal = unbound_compat::GraphicsDevice::Metal.device_type();
+            if self
+                .graphics_apis
+                .get(unbound_compat::HostOs::MacOs.standalone_platform())
+                .is_none_or(|list| list.contains(&metal))
+            {
+                defines.push("UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK");
             }
         }
         defines
@@ -508,6 +526,7 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::{PlayModeAtlases, Settings, TierSettings};
+    use unbound_compat::GraphicsDevice::{Metal, OpenGLCore};
 
     #[test]
     fn play_mode_atlases_follow_the_sprite_packer_mode() {
@@ -634,8 +653,35 @@ mod tests {
     }
 
     #[test]
+    fn metal_compiles_with_framebuffer_fetch_and_its_fallback_while_its_list_has_metal() {
+        let desktop = Settings::default().shader_defines("Standalone", OpenGLCore);
+        let mut metal = desktop.clone();
+        metal.extend([
+            "UNITY_FRAMEBUFFER_FETCH_AVAILABLE",
+            "UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK",
+        ]);
+        assert_eq!(
+            Settings::default().shader_defines("Standalone", Metal),
+            metal
+        );
+        // A macOS list without Metal (OpenGL Core, Vulkan) drops the fallback.
+        let mut settings = Settings::default();
+        settings
+            .graphics_apis
+            .insert("MacStandaloneSupport".into(), vec![17, 21]);
+        assert_eq!(
+            settings.shader_defines("Standalone", Metal).last(),
+            Some(&"UNITY_FRAMEBUFFER_FETCH_AVAILABLE")
+        );
+        settings
+            .graphics_apis
+            .insert("MacStandaloneSupport".into(), vec![17, 16]);
+        assert_eq!(settings.shader_defines("Standalone", Metal), metal);
+    }
+
+    #[test]
     fn shader_defines_follow_the_targets_tier_settings() {
-        let desktop = Settings::default().shader_defines("Standalone");
+        let desktop = Settings::default().shader_defines("Standalone", OpenGLCore);
         assert_eq!(
             desktop,
             [
@@ -650,7 +696,7 @@ mod tests {
         );
         // Measured: Android's automatic tiers.
         assert_eq!(
-            Settings::default().shader_defines("Android"),
+            Settings::default().shader_defines("Android", OpenGLCore),
             [
                 "SHADER_API_MOBILE",
                 "UNITY_NO_DXT5nm",
@@ -673,7 +719,7 @@ mod tests {
             settings.tier_settings.insert((7, tier), low);
         }
         assert_eq!(
-            settings.shader_defines("Android"),
+            settings.shader_defines("Android", OpenGLCore),
             [
                 "SHADER_API_MOBILE",
                 "UNITY_NO_DXT5nm",
@@ -689,7 +735,7 @@ mod tests {
             },
         );
         assert_eq!(
-            settings.shader_defines("Android"),
+            settings.shader_defines("Android", OpenGLCore),
             [
                 "SHADER_API_MOBILE",
                 "UNITY_NO_DXT5nm",

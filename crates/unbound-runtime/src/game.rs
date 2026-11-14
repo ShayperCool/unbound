@@ -184,7 +184,7 @@ impl Game {
         }
         let normal_maps_xyz = project
             .settings
-            .shader_defines(&options.target)
+            .shader_defines(&options.target, crate::graphics_device::get())
             .contains(&"UNITY_NO_DXT5nm");
         state::set_build_target(&options.target, normal_maps_xyz);
         if let Some(backend) = backend {

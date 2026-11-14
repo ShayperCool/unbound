@@ -95,7 +95,7 @@ fn shader_settings(
         cache_dir,
         platform_defines: project
             .settings
-            .shader_defines(target)
+            .shader_defines(target, unbound_runtime::graphics_device::get())
             .into_iter()
             .map(String::from)
             .collect(),
