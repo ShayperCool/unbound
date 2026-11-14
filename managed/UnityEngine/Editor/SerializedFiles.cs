@@ -184,6 +184,8 @@ namespace Unbound.Runtime
             internal void String(string key, string value, int level = 1) => Line(level, key, Scalar(value));
             internal void Vector3(string key, Vector3 value, int level = 1) => Line(level, key, Flow(value, typeof(Vector3), Shape.Vector3));
             internal void Quaternion(string key, Quaternion value, int level = 1) => Line(level, key, Flow(value, typeof(Quaternion), Shape.Quaternion));
+            internal void Vector2(string key, Vector2 value, int level = 1) => Line(level, key, Flow(value, typeof(Vector2), Shape.Vector2));
+            internal void Color(string key, Color value, int level = 1) => Line(level, key, Flow(value, typeof(Color), Shape.Color));
             internal void Ref(string key, Object value, int level = 1) => Line(level, key, Reference(value));
             internal void Mask(string key, int bits, int level = 1)
             {

@@ -186,6 +186,39 @@ namespace UnityEngine.Tests
             Assert.Equal(IdOf(b.File, b.Child.transform), marker.Body.Ref("lid").FileId);
         }
 
+        /// <summary>A 2D importer's hierarchy (PSD, Aseprite, SVG importers): sprite renderers.</summary>
+        [Fact]
+        public void SpriteRenderersReadBackFromTheirDocuments()
+        {
+            using var engine = MainThreadCheck.Engine();
+            var texture = new Texture2D(4, 4) { name = "Atlas" };
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f));
+            sprite.name = "Arm";
+            var root = new GameObject("Character");
+            var r = root.AddComponent<SpriteRenderer>();
+            r.sprite = sprite;
+            r.color = new Color(1f, 0.5f, 0.25f, 0.75f);
+            r.flipX = true;
+            r.drawMode = SpriteDrawMode.Sliced;
+            r.size = new Vector2(2f, 3f);
+            r.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+            r.spriteSortPoint = SpriteSortPoint.Pivot;
+            r.sortingOrder = -2;
+            var file = new LoadedFile { Guid = Guid, Path = "Assets/Art/Character.psb", MainObject = root };
+            file.Objects[1] = root;
+            file.Objects[2] = root.transform;
+            file.Objects[3] = r;
+            file.Objects[4] = sprite;
+            var docs = Parse(ImportedPrefabDocuments.Write(file, root));
+            Assert.Equal(212, docs[3].ClassId);
+            Assert.Equal((4L, Guid), (docs[3].Body.Ref("m_Sprite").FileId, docs[3].Body.Ref("m_Sprite").Guid));
+            var copy = new GameObject("copy").AddComponent<SpriteRenderer>();
+            ObjectGraphBuilder.ReadComponent(copy, docs[3].Body, file);
+            Assert.Same(sprite, copy.sprite);
+            Assert.Equal((r.color, r.flipX, r.flipY, r.drawMode, r.size, r.maskInteraction, r.spriteSortPoint, r.sortingOrder),
+                (copy.color, copy.flipX, copy.flipY, copy.drawMode, copy.size, copy.maskInteraction, copy.spriteSortPoint, copy.sortingOrder));
+        }
+
         [Fact]
         public void AComponentWithoutItsOwnWriterFailsLoudly()
         {

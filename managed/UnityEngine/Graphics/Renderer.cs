@@ -1262,6 +1262,21 @@ namespace UnityEngine
             m_SpriteSortPoint = (SpriteSortPoint)body.Int("m_SpriteSortPoint");
         }
 
+        internal override void WriteSerialized(UnityYamlWriter.Writer w)
+        {
+            WriteRendererData(w);
+            w.Ref("m_Sprite", m_Sprite);
+            w.Color("m_Color", m_Color);
+            w.Bool("m_FlipX", m_FlipX);
+            w.Bool("m_FlipY", m_FlipY);
+            w.Int("m_DrawMode", (int)m_DrawMode);
+            w.Vector2("m_Size", m_Size);
+            w.Float("m_AdaptiveModeThreshold", m_AdaptiveModeThreshold);
+            w.Int("m_SpriteTileMode", (int)m_TileMode);
+            w.Int("m_MaskInteraction", (int)m_MaskInteraction);
+            w.Int("m_SpriteSortPoint", (int)m_SpriteSortPoint);
+        }
+
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var s = (SpriteRenderer)source;
