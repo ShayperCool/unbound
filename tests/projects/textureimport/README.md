@@ -117,7 +117,9 @@ exactly, including the HDR case's format and float32 payload. Each complete reco
 is byte-identical to its canonical reference and two independent Editor recordings.
 Explicit RGBAFloat overrides retain float32 precision through the runtime descriptor;
 default and explicit RGBAHalf imports retain their existing format. The importer test
-`hdr_max_size_resize_matches_the_editor` also checks the HDR values bit for bit.
+`hdr_max_size_resize_matches_the_editor` also checks the HDR values, bit for bit on x86_64 and
+within a few float steps on other processors (on macOS the Gamma and Android cases differ in their
+last bits, Q456).
 
 Runners select the Editor release explicitly and write it into disposable project copies.
 Use a fresh label for each run; existing projects and captures are preserved. Only the

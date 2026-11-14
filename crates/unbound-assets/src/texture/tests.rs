@@ -895,7 +895,9 @@ fn hdr_max_size_resize_matches_the_editor() {
                     a != b
                 } else {
                     let (a, b) = (float(a), float(b));
-                    (a - b).abs() > 4.0 * f32::EPSILON * a.abs().max(f32::MIN_POSITIVE)
+                    a.is_nan()
+                        || b.is_nan()
+                        || (a - b).abs() > 4.0 * f32::EPSILON * a.abs().max(f32::MIN_POSITIVE)
                 }
             })
             .count();

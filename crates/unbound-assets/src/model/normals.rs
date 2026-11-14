@@ -590,11 +590,21 @@ mod tests {
         out
     }
 
+    /// Bit for bit on x86_64 (the Linux Editor's arithmetic); other processors divide for the
+    /// face reciprocal and land within a few float steps.
     #[test]
-    #[cfg(target_arch = "x86_64")]
     fn weighting_modes_match_the_editor_reference() {
         for (variant, vertex, n, expected) in tent_normals() {
-            assert_eq!(n, expected, "{variant}, vertex {vertex}");
+            if cfg!(target_arch = "x86_64") {
+                assert_eq!(n, expected, "{variant}, vertex {vertex}");
+            } else {
+                for c in 0..3 {
+                    assert!(
+                        (n[c] - expected[c]).abs() <= 1e-6,
+                        "{variant}, vertex {vertex}: {n:?} {expected:?}"
+                    );
+                }
+            }
         }
     }
 }
