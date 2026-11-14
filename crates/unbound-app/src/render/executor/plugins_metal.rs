@@ -20,8 +20,8 @@
 //! buffer is one of the queue's, committed by `CommitCurrentCommandBuffer`, else before the next
 //! callback or at the end of the frame, so it runs after the rendering submitted by then (a
 //! script's commit: before what the frame has not submitted yet; neither is measured), and the
-//! current encoder is over the screen as the last frame left it (which frame's image a script's
-//! draw reaches is unmeasured). A texture's native pointer is its `MTLTexture`
+//! current encoder is over the screen of the latest frame or callback (which frame's image a
+//! script's draw reaches is unmeasured). A texture's native pointer is its `MTLTexture`
 //! (in the format Unity's device stores it: sRGB where a Linear project samples it as sRGB);
 //! a multisampled render texture's color and depth pointers are its samples. The screen's color
 //! texture is the renderer's 8-bit RGBA one; the macOS Editor's is BGRA (`format=80`).
@@ -113,7 +113,7 @@ static OUTSIDE: Mutex<Outside> = Mutex::new(Outside {
     buffer: None,
     current: Current::SCREEN,
 });
-/// The screen's images as the last frame left them, for encoders outside callbacks.
+/// The screen's images of the latest frame or callback, for encoders outside callbacks.
 static SCREEN: Mutex<Option<ScreenImages>> = Mutex::new(None);
 /// The buffer `CommitCurrentCommandBuffer` last committed outside callbacks, retained so the
 /// plugin can wait on it (0: none).
@@ -225,6 +225,17 @@ impl Open {
     }
 }
 
+/// Where an encoder was begun when the plugin asked.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Begun {
+    /// None was (there is one, or nothing to begin it over).
+    No,
+    /// Over the current target.
+    Target,
+    /// Over the screen, after the plugin ended the encoder.
+    Screen,
+}
+
 /// The current encoder of a callback or of the calls outside callbacks.
 struct Current {
     open: Option<Open>,
@@ -243,15 +254,15 @@ impl Current {
         redirect: Redirect::Target,
     };
 
-    /// The current encoder, begun where the plugin's next one goes if there is none; whether it
-    /// was begun now over the target.
+    /// The current encoder, begun where the plugin's next one goes if there is none; where it
+    /// was begun now.
     fn encoder(
         &mut self,
         buffer: &CommandBuffer,
         target: Option<&PassParams>,
         screen: Option<&PassParams>,
-    ) -> (Object, bool) {
-        let mut over_target = false;
+    ) -> (Object, Begun) {
+        let mut begun = Begun::No;
         if self.open.is_none() {
             use MTLLoadAction as L;
             let (params, load, shown) = match self.redirect {
@@ -261,7 +272,11 @@ impl Current {
             };
             self.open = params.and_then(|params| Open::begin(buffer, params, load, shown));
             if self.open.is_some() {
-                over_target = self.redirect == Redirect::Target;
+                begun = if self.redirect == Redirect::Target {
+                    Begun::Target
+                } else {
+                    Begun::Screen
+                };
                 if self.redirect == Redirect::Ended {
                     self.redirect = Redirect::Screen;
                 }
@@ -271,7 +286,7 @@ impl Current {
             .open
             .as_ref()
             .map_or(std::ptr::null_mut(), |o| object(&o.encoder));
-        (encoder, over_target)
+        (encoder, begun)
     }
 
     /// The descriptor the current encoder was begun from: where the Editor's encoder exists it is
@@ -285,16 +300,16 @@ impl Current {
         buffer: &CommandBuffer,
         target: Option<&PassParams>,
         screen: Option<&PassParams>,
-    ) -> (Object, bool) {
-        let mut over_target = false;
+    ) -> (Object, Begun) {
+        let mut begun = Begun::No;
         if self.open.is_none() && self.drawn {
-            over_target = self.encoder(buffer, target, screen).1;
+            begun = self.encoder(buffer, target, screen).1;
         }
         let pass = self
             .open
             .as_ref()
             .map_or(std::ptr::null_mut(), |o| object(&o.pass));
-        (pass, over_target)
+        (pass, begun)
     }
 
     /// `EndCurrentCommandEncoder`: the next encoder goes over the screen.
@@ -363,6 +378,16 @@ struct Scope {
     /// Whether an encoder was begun over a multisampled color.
     drew_samples: bool,
     multisampled: bool,
+    /// Whether an encoder was begun over the screen after the plugin ended one.
+    used_screen: bool,
+}
+
+impl Scope {
+    /// What an encoder begun for the plugin drew over.
+    fn note(&mut self, begun: Begun) {
+        self.drew_samples |= begun == Begun::Target && self.multisampled;
+        self.used_screen |= begun == Begun::Screen;
+    }
 }
 
 /// What a render pass over the current target is made of: its images (pointers the native
@@ -545,10 +570,10 @@ fn with_outside<R>(
 
 extern "C" fn current_command_encoder() -> Object {
     with_scope(|s| {
-        let (encoder, over_target) =
-            s.current
-                .encoder(&s.buffer, s.params.as_ref(), s.screen.as_ref());
-        s.drew_samples |= over_target && s.multisampled;
+        let (encoder, begun) = s
+            .current
+            .encoder(&s.buffer, s.params.as_ref(), s.screen.as_ref());
+        s.note(begun);
         encoder
     })
     .or_else(|| with_outside(|current, buffer, screen| current.encoder(buffer, screen, screen).0))
@@ -574,10 +599,10 @@ extern "C" fn end_current_command_encoder() {
 /// The descriptor the current encoder was begun from (as the header says; [`Current::descriptor`]).
 extern "C" fn current_render_pass_descriptor() -> Object {
     with_scope(|s| {
-        let (pass, over_target) =
-            s.current
-                .descriptor(&s.buffer, s.params.as_ref(), s.screen.as_ref());
-        s.drew_samples |= over_target && s.multisampled;
+        let (pass, begun) = s
+            .current
+            .descriptor(&s.buffer, s.params.as_ref(), s.screen.as_ref());
+        s.note(begun);
         pass
     })
     .or_else(|| {
@@ -859,8 +884,8 @@ impl UnityRenderer {
     }
 
     /// The render pass over the screen of this frame (its color texture and depth buffer, cached
-    /// while they are the same), which is also what encoders outside callbacks begin from until
-    /// the next callback or frame (None: the renderer has no Metal plugins).
+    /// while they are the same), which encoders outside callbacks then begin from too (None:
+    /// the renderer has no Metal plugins).
     fn metal_screen(&mut self) -> Option<PassParams> {
         let slot = self.screen_slot;
         let screen = self.ensure_screen(slot);
@@ -888,7 +913,7 @@ impl UnityRenderer {
             .map(|(_, _, images)| images.params())
     }
 
-    /// Hands plugins' calls outside callbacks the screen as this frame left it.
+    /// Hands plugins' calls outside callbacks the screen of this frame.
     pub(super) fn publish_metal_screen(&mut self) {
         self.metal_screen();
     }
@@ -1023,6 +1048,7 @@ impl UnityRenderer {
                 committed: Vec::new(),
                 drew_samples: false,
                 multisampled,
+                used_screen: false,
             })
         });
         invoke();
@@ -1036,6 +1062,9 @@ impl UnityRenderer {
         self.plugin_redirect = scope.current.redirect;
         scope.current.close();
         scope.buffer.commit();
+        // An encoder over the screen is a use of it: the frame's screen goes on from what the
+        // plugin drew (begun in an earlier event, the executor started the screen before this one).
+        self.screen_touched |= scope.used_screen;
         // What it drew into a multisampled target's samples reaches the resolved image and its
         // retained copy as the OpenGL path's does (the executor resolves again).
         self.plugins.drew_into_samples |= scope.drew_samples;
@@ -1313,8 +1342,8 @@ mod tests {
         };
         // The Editor's encoder over the target exists: the descriptor begins it, its store left
         // unknown.
-        let (pass, over_target) = current.descriptor(&buffer, Some(&target), Some(&screen));
-        assert!(over_target);
+        let (pass, begun) = current.descriptor(&buffer, Some(&target), Some(&screen));
+        assert_eq!(begun, Begun::Target);
         assert_eq!(
             attachment(pass),
             Some((target.color, MTLLoadAction::Load, MTLStoreAction::Unknown))
@@ -1327,8 +1356,9 @@ mod tests {
                 .is_null()
         );
         // Asked for again: over the screen, not loaded.
-        let (encoder, over_target) = current.encoder(&buffer, Some(&target), Some(&screen));
-        assert!(!encoder.is_null() && !over_target);
+        let (encoder, begun) = current.encoder(&buffer, Some(&target), Some(&screen));
+        assert!(!encoder.is_null());
+        assert_eq!(begun, Begun::Screen);
         let pass = current.descriptor(&buffer, Some(&target), Some(&screen)).0;
         assert_eq!(
             attachment(pass),
@@ -1398,8 +1428,8 @@ mod tests {
                 .0
                 .is_null()
         );
-        let (_, over_target) = current.encoder(&buffer, Some(&target), Some(&screen));
-        assert!(over_target);
+        let (_, begun) = current.encoder(&buffer, Some(&target), Some(&screen));
+        assert_eq!(begun, Begun::Target);
         current.close();
         // Outside callbacks the target is the screen and its descriptor is there at once.
         let mut outside = Current::SCREEN;

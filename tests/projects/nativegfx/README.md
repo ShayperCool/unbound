@@ -228,8 +228,8 @@ encoder ends. After `EndCurrentCommandEncoder`, inside a render texture's pass, 
 and from a script alike, there is no descriptor until the plugin asks for an encoder again, which
 is over the screen with its contents not loaded (`*.camera2.2`, `*.mutate`, `*.screen`,
 `*.outside`); `CommitCurrentCommandBuffer` keeps the target (`*.commitrt`). `run.py` runs Unbound
-at 64x64 for this device, the size of the Editor's batchmode screen. Measured on macOS 26 only; Intel Macs and other GPUs
-are unmeasured. The OpenGL probe (`run.py engine` without `--device`) still builds on macOS, but
+at 64x64 for this device, the size of the Editor's batchmode screen. Measured on macOS 26 only;
+Intel Macs, other GPUs, an HDR (EDR) screen and foveation are unmeasured. The OpenGL probe (`run.py engine` without `--device`) still builds on macOS, but
 its plugin draws with OpenGL, which plugins do not get on Metal: it is not a macOS measurement.
 
 ### External cube, volume and Vulkan storage

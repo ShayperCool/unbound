@@ -2786,6 +2786,12 @@ impl UnityRenderer {
                     self.compute_bindings.frame(self.frame_number);
                     self.state.target = None;
                     self.target_handles = (0, 0);
+                    #[cfg(target_os = "macos")]
+                    {
+                        // A frame begins its own encoder over the screen (unmeasured).
+                        self.plugin_target_drawn = false;
+                        self.plugin_redirect = Default::default();
+                    }
                     self.depth_target = None;
                     self.state.depth_bias = [0.0; 2];
                     self.state.state_override = None;
