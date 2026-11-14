@@ -112,18 +112,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After XR value payloads |
+| Category | Before Q410 | After sampled value payloads |
 | --- | ---: | ---: |
 | Attributes | 938 | 23 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 4 |
-| Layout | 68 | 63 |
+| Layout | 68 | 61 |
 | Interfaces | 65 | 54 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 164 |
+| Total | 1,332 | 162 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -376,7 +376,8 @@ Its four gradient aggregates and variable random seed remain queued.
 The tooling slice removes 133 exact policy-only entries after the final-shapes
 slice reduced the queue from 370 to 341. The GUI payload slice removes another
 32 entries. Physics material and text adapters remove three more interface entries,
-and XR value payloads remove nine layout/interface entries, leaving 164 exact entries, each with a
+and XR value payloads remove nine layout/interface entries. LocationInfo and the retired
+AnimationInfo value remove two more layout entries, leaving 162 exact entries, each with a
 specific follow-up reason. No allow-list is regenerated from a passing report.
 The generator format changes with the comparison policy and the committed stubs
 are regenerated from the selected release. Existing probe references and strict
@@ -405,7 +406,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-measured-lookup-policies` | 11 | Retain the eleven direct/inherited discovery policies and their controls. |
 | `Q410-slide-result-serialization` | 2 | Nondefault collision-hit backing payloads and overwrite controls. |
 | `Q410-unconstrained-pixel-data` | 1 | Shared allocation-free unconstrained array transfer and invalid/reference-containing input controls. |
-| `Q410-value-layout-payloads` | 3 | Five XR payloads now have selected field order, sizes and nondefault unmanaged round trips in `xrvalues`. AnimationInfo, LocationInfo and ray-tracing BuildSettings still need their payload migrations. |
+| `Q410-value-layout-payloads` | 1 | Five XR payloads are covered by `xrvalues`; LocationInfo and the empty retired AnimationInfo value are covered by `valuepayloads`. Ray-tracing BuildSettings still needs its payload migration with the rendering owner. |
 | `Q410-wrapper-layouts` | 60 | YieldInstruction and WaitForSeconds now marshal their complete payloads in `yieldlayouts`; their two exact default-packing metadata discrepancies remain. The other 58 wrappers still need payload/base-layout and ownership migration. |
 
 The earlier strict navlinks run retained 325 value differences and the texture-pixel
@@ -457,3 +458,20 @@ available without setting the others. Structure copies retain independent values
 The no-provider controls overwrite seeded handle/capability outputs with defaults. Physical
 provider queries on the handle types remain unsupported; this change does not claim XR hardware
 support. Runtime default packing remains the separate discrepancy documented by `yieldlayouts`.
+
+
+## Location and retired animation values
+
+`tests/projects/valuepayloads` records 113 exact Unity 6000.0.71f1 values. LocationInfo
+stores a double timestamp followed by five floats, with a 32-byte unmanaged size. Getters,
+independent copies and unmanaged round trips retain nondefault values, negative zero, NaN,
+infinities and out-of-range coordinates without normalization. The desktop location service
+continues to supply an empty sample; no physical provider is added. Root JSON is empty, the
+nested value is omitted, and overwrite leaves its existing sample unchanged while updating
+an ordinary sibling field.
+
+The public animation module's obsolete AnimationInfo is an empty one-byte value. Its getters
+return null and zero, including after an unmanaged round trip. The probe resolves that public
+module type explicitly because the legacy facade also has a different internal type with the
+same name. The unsupported stored clip/weight pair is removed rather than retained beside the
+selected payload. Both exact layout entries are removed; all other entries stay unchanged.

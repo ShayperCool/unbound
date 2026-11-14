@@ -26,15 +26,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static void SimulateTouch(global::UnityEngine.Touch touch) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.SimulateTouch"); }
         internal static bool simulateTouchEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.simulateTouchEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Input.simulateTouchEnabled"); } }
     }
-    unsafe partial struct LocationInfo
-    {
-        [global::Unbound.Stub] internal double m_Timestamp;
-        [global::Unbound.Stub] internal float m_Latitude;
-        [global::Unbound.Stub] internal float m_Longitude;
-        [global::Unbound.Stub] internal float m_Altitude;
-        [global::Unbound.Stub] internal float m_HorizontalAccuracy;
-        [global::Unbound.Stub] internal float m_VerticalAccuracy;
-    }
     unsafe partial class LocationService
     {
         [global::Unbound.Stub] internal static bool IsServiceEnabledByUser() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LocationService.IsServiceEnabledByUser"); return default; }

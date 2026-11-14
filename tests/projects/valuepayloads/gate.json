@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/valuepayloads/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Core/Input.cs",
+    "managed/UnityEngine/Animation/AnimatorTypes.cs"
+  ]
+}

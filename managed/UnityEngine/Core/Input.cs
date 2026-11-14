@@ -1094,15 +1094,22 @@ namespace UnityEngine
         public void Stop() { }
     }
 
-    [Unbound.EditorFaithful("only ever the empty LocationService.lastData of the desktop Editor")]
+    /// <summary>A copied location sample. The desktop service still returns an empty sample.</summary>
     public partial struct LocationInfo
     {
-        public float latitude => 0f;
-        public float longitude => 0f;
-        public float altitude => 0f;
-        public float horizontalAccuracy => 0f;
-        public float verticalAccuracy => 0f;
-        public double timestamp => 0;
+        internal double m_Timestamp;
+        internal float m_Latitude;
+        internal float m_Longitude;
+        internal float m_Altitude;
+        internal float m_HorizontalAccuracy;
+        internal float m_VerticalAccuracy;
+
+        public float latitude => m_Latitude;
+        public float longitude => m_Longitude;
+        public float altitude => m_Altitude;
+        public float horizontalAccuracy => m_HorizontalAccuracy;
+        public float verticalAccuracy => m_VerticalAccuracy;
+        public double timestamp => m_Timestamp;
     }
 
     public enum LocationServiceStatus

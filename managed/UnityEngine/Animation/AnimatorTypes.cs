@@ -172,15 +172,13 @@ namespace UnityEngine
         public AnimationClipPair() { }
     }
 
-    /// <summary>Obsolete clip-and-weight pair of the old Animator API.</summary>
+    /// <summary>Obsolete compatibility value with no stored clip or weight.</summary>
+    [Unbound.EditorFaithful("Unity 6000.0.71f1, tests/projects/valuepayloads: empty obsolete value with null/zero getters.")]
     [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)] [global::System.@ObsoleteAttribute("Use AnimatorClipInfo instead (UnityUpgradable) -> AnimatorClipInfo", true)] public partial struct AnimationInfo
     {
-        internal AnimationClip m_Clip;
-        internal float m_Weight;
+        public AnimationClip clip => null;
 
-        public AnimationClip clip => m_Clip;
-
-        public float weight => m_Weight;
+        public float weight => 0f;
     }
 }
 
