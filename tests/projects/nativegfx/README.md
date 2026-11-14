@@ -57,7 +57,9 @@ Recorded:
   `device.resolveDestination.*`, `device.resolveSourceSingle.*`): 2, 4 and 8 samples,
   color and depth loads, sample-count queries, automatic averaged color, explicit self and
   active-source destination resolves. `bindTextureMS` shaders read individual samples.
-  Resolving into a multisampled destination leaves its previous content; a single-sample
+  Suppression of retained single-sample color publication for `bindTextureMS` has no
+  divergent supported-access control here and remains queued; the direct sample interface
+  is covered. Resolving into a multisampled destination leaves its previous content; a single-sample
   source can resolve into a single-sample destination too. Vulkan compute color and depth
   loads match. On OpenGL Core, the six multisample compute rows retain preceding graphics
   bindings instead of the requested resources; these remain strict declared residuals.
