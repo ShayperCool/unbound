@@ -72,7 +72,8 @@ def fresh_output(directory):
 
 def job(work, repeat):
     project, out = work/'projects'/repeat, work/repeat
-    return EditorJob(project, out/'editor.log', out, env={'LINE_PROBE_OUT': str(out)},
+    return EditorJob(project, out/'editor.log', out, env={'LINE_PROBE_OUT': str(out),
+                         **({'LINE_SHADOW_PROBE': '1'} if os.environ.get('LINE_SHADOW_PROBE') == '1' else {})},
                      timeout=HARD_TIMEOUT, progress_files=[out/'values.jsonl'],
                      progress_timeout=PROGRESS_TIMEOUT, label='lines-'+repeat,
                      launch_inputs={'release': os.environ['UNBOUND_PROBE_UNITY_VERSION'],
@@ -240,6 +241,7 @@ def main():
                         help='editor: print the Editor jobs without copying projects or launching')
     parser.add_argument('--append', metavar='PREFIX',
                         help='publish: append the captures\' PREFIX keys to the existing reference')
+    parser.add_argument('--shadow', action='store_true', help='record the separate shadow-caster diagnostics')
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
@@ -248,6 +250,7 @@ def main():
     if args.append is not None and (args.mode != 'publish' or not args.append.endswith('.')):
         parser.error('--append applies to publish only and takes a key prefix ending with a dot')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
+    os.environ['LINE_SHADOW_PROBE'] = '1' if args.shadow else ''
     work = run_root(PROBE, args.label)
     if args.mode == 'editor':
         return editor(work, args.dry_run)

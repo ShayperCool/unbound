@@ -119,5 +119,25 @@ class PublicationTests(unittest.TestCase):
         self.assertEqual({k: ref.layout.tree(self.target)[k] for k in before}, before)
         self.assertEqual(len(ref.load(self.target)), len(self.rows))
 
+    def test_shadow_extension_keeps_every_previous_record_and_image(self):
+        for name in ref.ORDER:
+            file, keys, images = ref.SETS[name]
+            if name != 'reversal':
+                self.rows = self.rows[:-1] + [record(k, 7) for k in keys] + self.rows[-1:]
+            self.capture()
+            for repeat in ref.layout.run.REPEATS:
+                for image in [image for previous in ref.ORDER[:ref.ORDER.index(name)+1]
+                              for image in ref.SETS[previous][2]]:
+                    (self.work/repeat/image).write_bytes(image.encode())
+            before = ref.layout.tree(self.target)
+            ref.publish('test', 'test', self.receipt, extension=name)
+            self.assertEqual({k: ref.layout.tree(self.target)[k] for k in before}, before)
+            self.receipt.unlink()
+        self.assertEqual(len(ref.load(self.target, shadows=True)), len(self.rows))
+        self.assertEqual(len(ref.load(self.target)), len(self.rows) - len(ref.SHADOW_KEYS))
+        self.assertTrue((self.target/ref.SHADOW_FILE).exists())
+        for image in ref.SHADOW_IMAGES:
+            self.assertEqual(gzip.decompress((self.target/(image+'.gz')).read_bytes()), image.encode())
+
 if __name__ == '__main__':
     unittest.main()

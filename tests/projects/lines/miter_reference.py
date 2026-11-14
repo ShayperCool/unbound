@@ -51,18 +51,40 @@ EDGE_KEYS = [f'edge.{name}.{part}' for name in ('line.zParallel.c0', 'line.zPara
 EDGE_KEYS += ['edge.gradient.closeKeys.Blend', 'edge.gradient.closeKeys.PerceptualBlend',
               'line.objectMatrix.local', 'img.objectMatrix.local.pixels', 'img.objectMatrix.trail.pixels']
 
+SHADOW_FILE = 'shadow.values.jsonl'
+SHADOW_KEYS, SHADOW_IMAGES = [], []
+for renderer in ('line', 'trail'):
+    for bias in ('0', '0.5', '1'):
+        prefix = f'shadow.{renderer}.bias{bias}'
+        SHADOW_KEYS += [prefix + suffix for suffix in ('.bake', '.normal.pixels', '.map.covered', '.map.pixels')]
+        SHADOW_IMAGES += [prefix + suffix for suffix in ('.normal.rgba', '.map.rgba')]
+    for bias in ('0', '0.5'):
+        prefix = f'shadow.{renderer}.transformZ.bias{bias}'
+        SHADOW_KEYS += [prefix + suffix for suffix in ('.normal.pixels', '.map.covered', '.map.pixels')]
+        SHADOW_IMAGES += [prefix + suffix for suffix in ('.normal.rgba', '.map.rgba')]
+
+    for bias in ('0', '0.5'):
+        prefix = f'shadow.{renderer}.angledView.bias{bias}'
+        SHADOW_KEYS += [prefix + suffix for suffix in ('.normal.pixels', '.map.covered', '.map.pixels')]
+        SHADOW_IMAGES += [prefix + suffix for suffix in ('.normal.rgba', '.map.rgba')]
+
 # The control files beside the canonical reference, in publication order, with their images:
 # each extends the capture after the previous ones and is published only once those exist.
 SETS = {'reversal': (FILE, KEYS, (IMAGE,)), 'chain': (CHAIN_FILE, CHAIN_KEYS, ()),
-        'space': (SPACE_FILE, SPACE_KEYS, ()), 'edge': (EDGE_FILE, EDGE_KEYS, EDGE_IMAGES)}
+        'space': (SPACE_FILE, SPACE_KEYS, ()), 'edge': (EDGE_FILE, EDGE_KEYS, EDGE_IMAGES),
+        'shadow': (SHADOW_FILE, SHADOW_KEYS, SHADOW_IMAGES)}
 ORDER = list(SETS)
 
 
-def load(directory):
-    """The complete original, cap-count and control union, without filtering captures."""
+def load(directory, shadows=False):
+    """The original and control union, optionally including shadow diagnostics; captures stay whole."""
     target = Path(directory)
     rows = layout.load_reference(target, 'capcount')
     for name in ORDER:
+        if name == "shadow" and not shadows:
+            break
+        if name == "shadow" and not (target/SETS[name][0]).exists():
+            raise SystemExit("the shadow diagnostic reference is not published")
         file, keys, _ = SETS[name]
         if name != 'reversal' and not (target/file).exists():
             break
@@ -138,6 +160,7 @@ if __name__ == '__main__':
     parser.add_argument('--chains', action='store_true', help='publish the later reach-history controls')
     parser.add_argument('--space', action='store_true', help='publish the build-space and Simplify controls')
     parser.add_argument('--edge', action='store_true', help='publish the edge and object-matrix controls')
+    parser.add_argument('--shadow', action='store_true', help='publish line/trail shadow-bias controls')
     args = parser.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
-    publish(args.release, args.label, args.receipt, args.chains, 'space' if args.space else 'edge' if args.edge else None)
+    publish(args.release, args.label, args.receipt, args.chains, 'shadow' if args.shadow else 'space' if args.space else 'edge' if args.edge else None)

@@ -12,7 +12,7 @@ includes those controls and the cap-count controls along with the entire old set
   and cap vertex counts; loops; every texture mode and texture scale; width
   curves and multipliers; color gradients; View alignment for orthographic and
   perspective cameras; TransformZ on rotated transforms; local-space lines with
-  and without the transform applied; lighting data; shadow bias; component
+  and without the transform applied; lighting data; shadow-bias property and bake controls; component
   defaults and the start/end shortcuts.
 - Trails, stepped at a 50 fps capture frame rate: moving objects with several
   settings, recorded after each move and at the end of each frame (positions,
@@ -277,3 +277,40 @@ python3 -m unittest tests/projects/lines/test_capcount_layout.py tests/projects/
 ```
 
 Receipt: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-corner-alpha-20261101-t3-dae2fa72/REPORT.md`.
+
+## Opt-in shadow caster diagnostics
+
+Pass `--shadow` to `run.py editor` or `run.py unbound` to add `shadow.*` controls.
+Ordinary captures keep their existing records. The shadow controls compare line and trail
+maps at biases 0, 0.5 and 1, a tilted TransformZ strip with a variable width curve, and a
+View strip with an angled camera and a differently rotated directional light. Normal
+images and BakeMesh controls distinguish caster changes from ordinary geometry changes.
+Trail points are added while emission is enabled, then emission stops, so they have width.
+
+A custom caster program writes world z into depth while projecting world xy directly.
+A light command buffer binds the active depth sub-element explicitly. On the Unity
+6000.0.71f1 Editor's NVIDIA OpenGL Core device, bias 0.5 at width 0.3 shifts the line's view-aligned
+caster by 0.15 along the directional light's forward axis. The angled control rules out
+using the normal camera's forward axis. The unbiased caster also uses a different build
+frame from the normal View strip; its complete frame rule remains unresolved. The tilted,
+variable-width TransformZ controls distinguish the renderer's frame and sampled widths.
+
+The Unity 6000.0 [LineRenderer.shadowBias](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LineRenderer-shadowBias.html)
+and [TrailRenderer.shadowBias](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TrailRenderer-shadowBias.html)
+contracts express bias relative to each segment's width. Two independent GPU captures
+reproduce all 2,201 previous record bytes and all 15 previous images. Publish the disjoint
+48-record, 28-image extension with:
+
+    python3 tests/projects/lines/miter_reference.py --release 6000.0.71f1 --label L --shadow --receipt ~/.cache/unbound/lines-shadow-receipt.json
+
+`shadow.values.jsonl` and its images extend the reference without rewriting prior files.
+Compare a shadow capture using `compare.py --mode shadow`; it preserves the entire key
+union, every mismatch and the existing numeric and image tolerances. The normal gate uses
+`--mode miter` and keeps its original capture scope. It now requires all 15 trail frame-count
+records strictly, since Q374 resolved them; the perceptual-gradient byte remains open.
+
+Shadow rendering is still open: built-in caster collection currently excludes line and
+trail renderers. A complete fix needs the shadow build frame and separate cached geometry
+for each light/cascade or cube face, while normal rendering and BakeMesh stay unbiased.
+Shifting the normal strip is ruled out by the angled control. Spot lights, point lights,
+multiple cascades and SRP shadow lists are unmeasured by this diagnostic.

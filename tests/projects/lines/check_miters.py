@@ -60,10 +60,10 @@ def components(reference, capture):
     return out
 
 
-# Open residuals (docs/COMPATIBILITY_GAPS.md, LineRenderer/TrailRenderer geometry): the probe's
-# frame count during trails (player-loop scope) and one byte of a perceptual gradient (the
-# gradient's sRGB conversion). Every other key, missing or extra key fails the gate.
-OPEN = re.compile(r'trail\.f\d+\.time|line\.color\.PerceptualBlend')
+# Open residual (docs/COMPATIBILITY_GAPS.md, LineRenderer/TrailRenderer geometry): one byte
+# of a perceptual gradient. Q374 resolved the trail frame counts; they are strict requirements.
+# Every other key, missing or extra key fails the gate.
+OPEN = re.compile(r'line\.color\.PerceptualBlend')
 
 
 def open_residual(key):

@@ -14,6 +14,7 @@ using UnityEngine;
 public static class ProbeRunner
 {
     const double WatchdogSeconds = 600;
+    static bool s_BeginPending;
 
     static ProbeRunner()
     {
@@ -49,13 +50,14 @@ public static class ProbeRunner
             };
             return;
         }
-        if (!EditorApplication.isPlayingOrWillChangePlaymode && !SessionState.GetBool("LineProbe.started", false))
+        if (!EditorApplication.isPlayingOrWillChangePlaymode)
             EditorApplication.delayCall += Begin;
     }
 
     static void Begin()
     {
-        SessionState.SetBool("LineProbe.started", true);
+        if (s_BeginPending || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        s_BeginPending = true;
         int ticks = 0;
         EditorApplication.CallbackFunction wait = null;
         wait = () =>
