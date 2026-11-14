@@ -2,13 +2,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "accessors",
-    "Type": "Unity.Properties.PropertyCollection`1+Enumerator",
-    "Message": "P:Current():Unity.Properties.IProperty`1<!0> setter is absent, Unity's is private",
-    "Reason": "Q410-enumerator-current-state: Current derives the active underlying enumerator. The selected cached private setter needs MoveNext/Reset/end-state integration and diverged-state controls for enumerable, list and indexed property bags."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "accessors",
     "Type": "UnityEditor.EditorApplication",
     "Message": "P:static isFocused():System.Boolean setter is absent, Unity's is private",
     "Reason": "Q410-Editor-computed-setters: isFocused currently derives live Application focus. Matching the selected private setter requires focus-update integration and a diverged-state Editor control."

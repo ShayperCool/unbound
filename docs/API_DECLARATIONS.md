@@ -112,18 +112,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After scene value equality |
+| Category | Before Q410 | After enumerator state |
 | --- | ---: | ---: |
 | Attributes | 938 | 22 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
-| Accessors | 70 | 4 |
+| Accessors | 70 | 3 |
 | Layout | 68 | 61 |
 | Interfaces | 65 | 53 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 160 |
+| Total | 1,332 | 159 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -227,8 +227,7 @@ change NavMesh costs and resource paths through reflection, with independent str
 copy, agent and attribute-field controls. Startup focus keeps its existing callback
 phase and texture increments retain their public counter.
 
-Q410-Accessor-state retains four exact entries. PropertyCollection<T>.Enumerator.Current
-needs a writable cached value integrated with MoveNext, Reset and end states;
+Q410-Accessor-state retains three exact entries after the enumerator slice.
 LinkedPool<T>.CountInactive needs a counter integrated with its shared ObjectPool.
 EditorApplication.isFocused and EditorAssemblies.loadedAssemblies retain the live
 focus and game-domain state migration already tracked above. No no-op setters are added. The strict texture-pixel run retains three VolumeRGFloat
@@ -378,8 +377,8 @@ slice reduced the queue from 370 to 341. The GUI payload slice removes another
 32 entries. Physics material and text adapters remove three more interface entries,
 and XR value payloads remove nine layout/interface entries. LocationInfo and the retired
 AnimationInfo value remove two more layout entries. FrameRate serialization removes one
-field annotation entry. Scene value equality removes one extra interface, leaving
-160 exact entries, each with a
+field annotation entry. Scene value equality removes one extra interface and cached
+enumerator state removes one accessor entry, leaving 159 exact entries, each with a
 specific follow-up reason. No allow-list is regenerated from a passing report.
 The generator format changes with the comparison policy and the committed stubs
 are regenerated from the selected release. Existing probe references and strict
@@ -401,7 +400,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-animation-job-producer` | 1 | Animation producer payload and scheduling/lifetime controls. |
 | `Q410-asset-interface-adapters` | 30 | PhysicsMaterial, PhysicsMaterial2D and TextAsset are migrated to external adapters with load/copy/coverage controls in `assetadapters`. Other asset types still need migration; retain mixer subasset restrictions. |
 | `Q410-built-in-inspector-registration` | 3 | Target-specific single/multiple-object inspector behavior before registry annotations. |
-| `Q410-enumerator-current-state` | 1 | Writable cached Current integrated with MoveNext, Reset and completion. |
+| `Q410-enumerator-current-state` | 0 | Done by `propertyenumerator`: Current caches each advance, including false, and preserves its state across Reset/Dispose for enumerable, list, indexed and default forms. |
 | `Q410-generic-equality-interfaces` | 0 | Done by `scenevalues`: generic collections use Scene object equality/hash behavior after removal of the extra interface; internal registries already use their own handles and keys. |
 | `Q410-job-container-payloads` | 5 | Mesh/light-query ownership and safety metadata used by the job scheduler. |
 | `Q410-linked-pool-counter` | 1 | Counter state integrated with the existing shared pool implementation. |
@@ -502,3 +501,16 @@ looked up by name retrieves the same dictionary entry. Internal engine registrie
 use SceneHandle, integer keys or SceneData references, so they require no new comparer.
 The extra interface and its duplicate explicit method are removed. Scene loading and
 lifetime behavior remain outside this declaration change.
+
+
+## Property enumerator state
+
+`tests/projects/propertyenumerator` records 194 exact Unity 6000.0.71f1 values.
+MoveNext caches the underlying Current after each advance, including a false result.
+Repeated reads and changes to the underlying source leave that cached value untouched.
+A throwing underlying getter leaves the previous cache intact. Reset and Dispose retain
+the cache, while later advances replace it. Controls cover enumerable, list and indexed
+sources, empty/default forms, copied enumerators, private cache writes and actual
+underlying reset/disposal calls. The selected list form resets a boxed copy, so its next
+advance continues the original list position; that measured limitation stays explicit.
+One exact setter exception is removed.

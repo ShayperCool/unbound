@@ -216,6 +216,7 @@ namespace Unity.Properties
                 m_Enumerator = enumerator;
                 m_List = default;
                 m_Indexed = default;
+                Current = default;
             }
 
             internal Enumerator(List<IProperty<TContainer>>.Enumerator properties)
@@ -224,6 +225,7 @@ namespace Unity.Properties
                 m_Enumerator = null;
                 m_List = properties;
                 m_Indexed = default;
+                Current = default;
             }
 
             internal Enumerator(IndexedCollectionPropertyBagEnumerator<TContainer> enumerator)
@@ -232,25 +234,34 @@ namespace Unity.Properties
                 m_Enumerator = null;
                 m_List = default;
                 m_Indexed = enumerator;
+                Current = default;
             }
 
-            public readonly IProperty<TContainer> Current => m_Source switch
-            {
-                Source.Enumerable => m_Enumerator.Current,
-                Source.List => m_List.Current,
-                Source.Indexed => m_Indexed.Current,
-                _ => null,
-            };
+            public IProperty<TContainer> Current { get; private set; }
 
             object IEnumerator.Current => Current;
 
-            public bool MoveNext() => m_Source switch
+            public bool MoveNext()
             {
-                Source.Enumerable => m_Enumerator.MoveNext(),
-                Source.List => m_List.MoveNext(),
-                Source.Indexed => m_Indexed.MoveNext(),
-                _ => false,
-            };
+                bool moved;
+                switch (m_Source)
+                {
+                    case Source.Enumerable:
+                        moved = m_Enumerator.MoveNext();
+                        Current = m_Enumerator.Current;
+                        break;
+                    case Source.List:
+                        moved = m_List.MoveNext();
+                        Current = m_List.Current;
+                        break;
+                    case Source.Indexed:
+                        moved = m_Indexed.MoveNext();
+                        Current = m_Indexed.Current;
+                        break;
+                    default: return false;
+                }
+                return moved;
+            }
 
             public void Reset()
             {

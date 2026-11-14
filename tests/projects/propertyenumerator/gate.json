@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/propertyenumerator/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Properties/PropertyBags.cs"
+  ]
+}
