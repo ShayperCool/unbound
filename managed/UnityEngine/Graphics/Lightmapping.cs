@@ -291,7 +291,9 @@ namespace UnityEngine
             // the scene's realtime GI gave or has a lightmap at, which Unbound did not produce
             // for this renderer, keeps the fallback without it.
             bool indexed = lightmaps && IsLightmapIndex(renderer.realtimeLightmapIndex);
-            bool unmade = indexed && renderer.m_RealtimeLightmap == null;
+            var made = renderer.realtimeLightmapIndex == renderer.m_RealtimeLightmapMadeFor ? renderer.m_RealtimeLightmap : null;
+            var madeDirectionality = made != null ? renderer.m_RealtimeDirectionality : null;
+            bool unmade = indexed && made == null;
             bool absent = unmade && !renderer.m_RealtimeLightmapFromData && !RealtimeGI.HasRealtimeLightmap(renderer.realtimeLightmapIndex);
             if (unmade && !absent && !s_WarnedUnmadeRealtimeLightmap)
             {
@@ -299,19 +301,19 @@ namespace UnityEngine
                 Unbound.Runtime.Stubs.Ignored("Renderer.realtimeLightmapIndex",
                     "points at a realtime lightmap Unbound has not made (realtime GI off in the scene's Lighting Settings or not read, a system not drawn, a terrain's realtime charts, or a script's index at another renderer's atlas): drawn without it");
             }
-            bool realtime = indexed && (renderer.m_RealtimeLightmap != null || absent);
+            bool realtime = indexed && (made != null || absent);
             bool directional = LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional;
-            bool realtimeDirectional = realtime && directional && (renderer.m_RealtimeDirectionality != null || absent);
+            bool realtimeDirectional = realtime && directional && (madeDirectionality != null || absent);
             if (realtime)
             {
                 properties = DrawPropertyPool.Copy(properties);
-                properties[s_DynamicLightmap] = renderer.m_RealtimeLightmap ?? DefaultTextures.HalfGray;
+                properties[s_DynamicLightmap] = made ?? DefaultTextures.HalfGray;
                 properties[s_DynamicLightmapST] = renderer.realtimeLightmapScaleOffset;
                 properties[s_DynamicLightmapHDR] = QualitySettings.activeColorSpace == ColorSpace.Gamma ? s_GammaRealtimeDecode : s_LinearRealtimeDecode;
                 keywords.Add("DYNAMICLIGHTMAP_ON");
                 // The keyword is the baked lightmap's too: whichever of the two has no direction
                 // of its own under it gets one that changes nothing (unmeasured in the Editor).
-                if (directional) properties[s_DynamicDirectionality] = renderer.m_RealtimeDirectionality ?? (absent ? DefaultTextures.HalfGray : FlatDirection);
+                if (directional) properties[s_DynamicDirectionality] = madeDirectionality ?? (absent ? DefaultTextures.HalfGray : FlatDirection);
                 if (realtimeDirectional) keywords.Add("DIRLIGHTMAP_COMBINED");
             }
             var map = lightmaps ? LightmapSettings.Of(renderer.lightmapIndex) : null;

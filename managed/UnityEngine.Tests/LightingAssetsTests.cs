@@ -435,6 +435,7 @@ LightingSettings:
             {
                 var renderer = go.AddComponent<MeshRenderer>();
                 renderer.m_RealtimeLightmap = atlas;
+                renderer.m_RealtimeLightmapMadeFor = 0;
                 renderer.realtimeLightmapIndex = 0;
                 renderer.realtimeLightmapScaleOffset = new Vector4(0.25f, 0.5f, 0.125f, 0f);
                 var keywords = new List<string>();
@@ -498,6 +499,7 @@ LightingSettings:
             {
                 var renderer = go.AddComponent<MeshRenderer>();
                 renderer.m_RealtimeLightmap = atlas;
+                renderer.m_RealtimeLightmapMadeFor = 0;
                 renderer.realtimeLightmapIndex = 0;
                 var keywords = new List<string>();
 
@@ -664,8 +666,8 @@ LightingSettings:
         /// <summary>Realtime lightmap indices with a realtime lightmap behind them that Unbound
         /// has not made draw without one and say so once: an index the scene's lighting data gives
         /// (until a script changes it), and one at which a loaded scene's realtime GI has an atlas
-        /// (Unbound's own bake gives its renderers such indices). Past the loaded atlases a
-        /// script's index draws grey.</summary>
+        /// (Unbound's own bake gives its renderers such indices), or a renderer's made atlas under
+        /// a script's other index. Past the loaded atlases a script's index draws grey.</summary>
         [Fact]
         public void RealtimeIndicesOfRealtimeGIDrawWithoutTheGreyLightmap()
         {
@@ -675,10 +677,13 @@ LightingSettings:
             var scenes = (System.Collections.IList)typeof(RealtimeGI).GetField("s_Scenes", Hidden).GetValue(null);
             var type = typeof(RealtimeGI).GetNestedType("GIScene", Hidden);
             var loaded = Activator.CreateInstance(type, true);
-            type.GetField("Atlases", Hidden).SetValue(loaded, new Texture2D[1]);
+            type.GetField("Atlases", Hidden).SetValue(loaded, new Texture2D[2]);
             var go = new GameObject("Indexed");
+            var atlas = new Texture2D(8, 8, TextureFormat.RGBAHalf, false, true);
             int map = Shader.PropertyToID("unity_DynamicLightmap");
-            int Hits() => Unbound.Runtime.Stubs.HitReport().Where(h => h.Key == "Renderer.realtimeLightmapIndex").Select(h => h.Value).FirstOrDefault();
+            // The warning is logged on its first use in the process: forget earlier ones.
+            var hits = (System.Collections.Concurrent.ConcurrentDictionary<string, int>)typeof(Unbound.Runtime.Stubs).GetField("Hits", Hidden).GetValue(null);
+            hits.TryRemove("Renderer.realtimeLightmapIndex", out _);
             try
             {
                 LightmapSettings.lightmaps = Array.Empty<LightmapData>();
@@ -690,14 +695,16 @@ LightingSettings:
                 Assert.Equal(3, renderer.realtimeLightmapIndex);
                 Assert.True(renderer.m_RealtimeLightmapFromData);
                 BakedLighting.s_WarnedUnmadeRealtimeLightmap = false;
-                int before = Hits();
                 var keywords = new List<string>();
-                var properties = BakedLighting.Apply(renderer, null, keywords, probes: false);
+                Dictionary<int, object> properties;
+                using (var capture = new WarningCapture())
+                {
+                    properties = BakedLighting.Apply(renderer, null, keywords, probes: false);
+                    BakedLighting.Apply(renderer, null, new List<string>(), probes: false);
+                    Assert.Single(capture.Warnings, w => w.Contains("Renderer.realtimeLightmapIndex points at a realtime lightmap Unbound has not made"));
+                }
                 Assert.Empty(keywords);
                 Assert.True(properties == null || !properties.ContainsKey(map));
-                Assert.Equal(before + 1, Hits());
-                BakedLighting.Apply(renderer, null, new List<string>(), probes: false);
-                Assert.Equal(before + 1, Hits());
 
                 // A script's other index: none of the lighting data's; past every atlas, grey.
                 renderer.realtimeLightmapIndex = 3;
@@ -709,16 +716,35 @@ LightingSettings:
                 Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON" }, keywords);
                 Assert.Same(DefaultTextures.HalfGray, properties[map]);
 
-                // At a loaded scene's atlas (as Unbound's own bake gives them): without it.
+                // At a loaded scene's atlas (as Unbound's own bake gives them): without it;
+                // past them, grey.
                 scenes.Add(loaded);
-                renderer.realtimeLightmapIndex = 0;
+                renderer.realtimeLightmapIndex = 1;
                 keywords.Clear();
                 properties = BakedLighting.Apply(renderer, null, keywords, probes: false);
                 Assert.Empty(keywords);
+                renderer.realtimeLightmapIndex = 2;
+                keywords.Clear();
+                properties = BakedLighting.Apply(renderer, null, keywords, probes: false);
+                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON" }, keywords);
+                Assert.Same(DefaultTextures.HalfGray, properties[map]);
+
+                // A renderer whose atlas was made at index 0: drawn with it there only.
+                renderer.realtimeLightmapIndex = 0;
+                renderer.m_RealtimeLightmap = atlas;
+                renderer.m_RealtimeLightmapMadeFor = 0;
+                keywords.Clear();
+                properties = BakedLighting.Apply(renderer, null, keywords, probes: false);
+                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON" }, keywords);
+                Assert.Same(atlas, properties[map]);
                 renderer.realtimeLightmapIndex = 1;
                 keywords.Clear();
                 BakedLighting.Apply(renderer, null, keywords, probes: false);
-                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON" }, keywords);
+                Assert.Empty(keywords);
+                renderer.realtimeLightmapIndex = 9;
+                keywords.Clear();
+                properties = BakedLighting.Apply(renderer, null, keywords, probes: false);
+                Assert.Same(DefaultTextures.HalfGray, properties[map]);
 
                 // A terrain's index from lighting data, then a script's.
                 var terrain = new GameObject("Terrain").AddComponent<Terrain>();
@@ -739,6 +765,7 @@ LightingSettings:
             {
                 scenes.Remove(loaded);
                 UnityEngine.Object.DestroyImmediate(go);
+                UnityEngine.Object.DestroyImmediate(atlas);
                 LightmapSettings.lightmaps = previous;
                 LightmapSettings.lightmapsMode = mode;
             }

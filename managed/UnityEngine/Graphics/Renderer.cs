@@ -220,6 +220,9 @@ namespace UnityEngine
         internal Texture2D m_RealtimeLightmap;
         /// <summary>That atlas's directionality, once a directional scene's update made it.</summary>
         internal Texture2D m_RealtimeDirectionality;
+        /// <summary>The realtime lightmap index the atlas is this renderer's at: under another
+        /// index (a script's) the renderer draws without it.</summary>
+        internal int m_RealtimeLightmapMadeFor = -1;
         /// <summary>Its realtime lightmap index came from its scene's lighting data, so a realtime
         /// lightmap stands behind it even while Unbound has none for it; cleared when the index
         /// changes.</summary>

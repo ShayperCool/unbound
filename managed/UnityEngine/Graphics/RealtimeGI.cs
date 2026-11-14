@@ -256,7 +256,11 @@ namespace UnityEngine
                 else
                 {
                     foreach (var renderer in system.Renderers)
-                        if (renderer != null) renderer.m_RealtimeLightmap = loaded.Atlases[system.Atlas];
+                        if (renderer != null)
+                        {
+                            renderer.m_RealtimeLightmap = loaded.Atlases[system.Atlas];
+                            renderer.m_RealtimeLightmapMadeFor = renderer.realtimeLightmapIndex;
+                        }
                 }
             }
             loaded.Systems = systems.ToArray();
