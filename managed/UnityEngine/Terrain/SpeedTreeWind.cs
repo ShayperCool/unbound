@@ -27,6 +27,23 @@ namespace UnityEngine
     /// <summary>The wind parameters of a SpeedTree 9 tree (Unity 6000.0.71f1's layout).</summary>
     internal unsafe partial struct SpeedTreeWindConfig9
     {
+        /// <summary>The release's defaults (the gust and response settings; curves and switches
+        /// zero).</summary>
+        public SpeedTreeWindConfig9()
+        {
+            strengthResponse = 5f;
+            directionResponse = 2.5f;
+            gustStrengthMin = 0.5f;
+            gustStrengthMax = 1f;
+            gustDurationMin = 1f;
+            gustDurationMax = 4f;
+            gustRiseScalar = 1f;
+            gustFallScalar = 1f;
+            branch1StretchLimit = 1f;
+            branch2StretchLimit = 1f;
+            importScale = 1f;
+        }
+
         public float strengthResponse;
         public float directionResponse;
         public float gustFrequency;
@@ -74,8 +91,6 @@ namespace UnityEngine
         public int doShimmer;
         public int lodFade;
         public float importScale;
-
-        public SpeedTreeWindConfig9() { }
 
         /// <summary>Whether any wind part is on (shimmer goes with ripple).</summary>
         public readonly bool IsWindEnabled => doShared != 0 || doBranch1 != 0 || doBranch2 != 0 || doRipple != 0;
