@@ -36,7 +36,8 @@ public class NativeGfxMetalProbe : MonoBehaviour
     [DllImport(Plugin)] static extern int NativeGfxMtl_Record(byte[] buffer, int capacity);
 
     // The plugin's events after its reserved base.
-    const int State = 0, Draw = 1, EndBlit = 2, Commit = 3, QueueBlit = 4, Copy = 5, Mutate = 6;
+    const int State = 0, Draw = 1, EndBlit = 2, Commit = 3, QueueBlit = 4, Copy = 5, Mutate = 6, Peek = 7, EndPeek = 8,
+        MutateAgain = 9;
 
     readonly StringBuilder records = new StringBuilder();
     readonly List<string> logs = new List<string>();
@@ -44,7 +45,9 @@ public class NativeGfxMetalProbe : MonoBehaviour
     string output;
     IntPtr callback;
     int eventBase;
-    RenderTexture target, cameraTarget, secondTarget, executed, executedMsaa, executedCopy, mutated;
+    RenderTexture target, cameraTarget, secondTarget, executed, executedMsaa, executedCopy, mutated, drawn, again;
+    Mesh quad;
+    Material colored;
     Texture2D texture;
     Camera firstCamera, secondCamera;
 
@@ -149,6 +152,12 @@ public class NativeGfxMetalProbe : MonoBehaviour
         executedMsaa = Target("executedmsaa", 0, samples: 4);
         executedCopy = Target("executedcopy", 0);
         mutated = Target("mutated", 0);
+        drawn = Target("drawn", 0);
+        again = Target("again", 0);
+        quad = Keep(new Mesh { name = "quad" });
+        quad.vertices = new[] { new Vector3(-1, -1, 0), new Vector3(-1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, -1, 0) };
+        quad.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        colored = Keep(new Material(Shader.Find("Hidden/Internal-Colored")) { color = Color.white });
         var multisampled = Target("multisampled", 24, samples: 4);
         var srgbTarget = Target("srgbtarget", 0, readWrite: RenderTextureReadWrite.sRGB);
         var half = Target("half", 0, RenderTextureFormat.ARGBHalf);
@@ -288,6 +297,36 @@ public class NativeGfxMetalProbe : MonoBehaviour
                     NativeGfxMtl_Step("mutate");
                     Graphics.ExecuteCommandBuffer(cmd);
                 }
+                // Something drawn into the target before the event: the descriptor before the
+                // encoder, and after the plugin ends it.
+                using (var cmd = new CommandBuffer { name = "drawn" })
+                {
+                    cmd.SetRenderTarget(drawn);
+                    cmd.ClearRenderTarget(true, true, Color.blue);
+                    cmd.DrawMesh(quad, Matrix4x4.identity, colored, 0, 0);
+                    cmd.IssuePluginEvent(callback, eventBase + Peek);
+                    cmd.IssuePluginEvent(callback, eventBase + EndPeek);
+                    NativeGfxMtl_Step("drawn");
+                    Graphics.ExecuteCommandBuffer(cmd);
+                }
+                // Only cleared: the same.
+                using (var cmd = new CommandBuffer { name = "cleared" })
+                {
+                    cmd.SetRenderTarget(drawn);
+                    cmd.ClearRenderTarget(true, true, Color.blue);
+                    cmd.IssuePluginEvent(callback, eventBase + Peek);
+                    NativeGfxMtl_Step("cleared");
+                    Graphics.ExecuteCommandBuffer(cmd);
+                }
+                // A change to the descriptor, the encoder ended and asked for again in one event.
+                using (var cmd = new CommandBuffer { name = "again" })
+                {
+                    cmd.SetRenderTarget(again);
+                    cmd.ClearRenderTarget(true, true, Color.green);
+                    cmd.IssuePluginEvent(callback, eventBase + MutateAgain);
+                    NativeGfxMtl_Step("again");
+                    Graphics.ExecuteCommandBuffer(cmd);
+                }
                 using (var cmd = new CommandBuffer { name = "plain" })
                 {
                     cmd.IssuePluginEvent(callback, eventBase + State);
@@ -307,6 +346,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
         Value("executedmsaa.pixels", Pixels(executedMsaa, 8, 8));
         Value("executedcopy.pixels", Pixels(executedCopy, 8, 8));
         Value("mutated.pixels", Pixels(mutated, 8, 8));
+        Value("again.pixels", Pixels(again, 8, 8));
         NativeGfxMtl_SetColor(0f, 0f, 1f, 1f);
         var pointer = NativeGfxMtl_MakeTexture();
         var external = Texture2D.CreateExternalTexture(4, 4, TextureFormat.RGBA32, false, true, pointer);

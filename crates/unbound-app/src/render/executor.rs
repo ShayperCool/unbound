@@ -501,6 +501,10 @@ pub struct UnityRenderer {
     /// The Metal device's plugin interface (`plugins_metal`).
     #[cfg(target_os = "macos")]
     metal_plugins: Option<plugins_metal::MetalPlugins>,
+    /// Something was drawn into the current target since it was set: the Editor's Metal encoder
+    /// over it exists then (`plugins_metal`).
+    #[cfg(target_os = "macos")]
+    plugin_target_drawn: bool,
     /// The last frame (counted from 1) whose GPU work is done: plugins' `safeFrameNumber`.
     frames_completed: Arc<std::sync::atomic::AtomicU64>,
     /// The current target's pass was drawing at a plugin event, or a plugin event ran inside it
@@ -637,6 +641,8 @@ impl UnityRenderer {
                 == unbound_compat::GraphicsDevice::Vulkan)
                 .then(|| plugins_vulkan::VulkanPlugins::new(&device, &queue))
                 .flatten(),
+            #[cfg(target_os = "macos")]
+            plugin_target_drawn: false,
             #[cfg(target_os = "macos")]
             metal_plugins: (unbound_runtime::graphics_device::get()
                 == unbound_compat::GraphicsDevice::Metal)
@@ -2865,6 +2871,10 @@ impl UnityRenderer {
                     slice,
                     extra,
                 } => {
+                    #[cfg(target_os = "macos")]
+                    {
+                        self.plugin_target_drawn = false;
+                    }
                     self.copy_depth(&mut passes, depth_mark);
                     // The texture whose depth buffer is attached (the color's own, or another's:
                     // a G-buffer's) is copied where shaders sample it when it has a depth copy.
@@ -3161,6 +3171,10 @@ impl UnityRenderer {
                     }
                 }
                 Command::Draw(mut draw) => {
+                    #[cfg(target_os = "macos")]
+                    {
+                        self.plugin_target_drawn = true;
+                    }
                     if self.sync_mesh_buffers(draw.mesh, &mut passes) {
                         open = false;
                     }

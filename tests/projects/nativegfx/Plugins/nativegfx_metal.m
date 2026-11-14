@@ -58,7 +58,7 @@ static const Guid kVulkan = {0x95355348d4ef4e11ULL, 0x9789313dfcffcc87ULL};
 
 // The probe's events, after the reserved base.
 enum { EventState = 0, EventDraw = 1, EventEndBlit = 2, EventCommit = 3, EventQueueBlit = 4, EventCopy = 5, EventMutate = 6,
-       EventCount = 7 };
+       EventPeek = 7, EventEndPeek = 8, EventMutateAgain = 9, EventCount = 10 };
 
 // ------------------------------------------------------------------ record
 
@@ -335,6 +335,33 @@ static void mutate_pass(void)
     record("mutate step=%s before=%d encoder=%s pass=%d", s_step, before ? 1 : 0, encoder_kind(current), pass ? 1 : 0);
 }
 
+/// The descriptor, asked before the encoder.
+static void peek(void)
+{
+    record("peek step=%s before=%d", s_step, s_v1->CurrentRenderPassDescriptor() ? 1 : 0);
+}
+
+/// The descriptor after the plugin ends the current encoder.
+static void end_peek(void)
+{
+    id<MTLCommandEncoder> current = s_v1->CurrentCommandEncoder();
+    s_v1->EndCurrentCommandEncoder();
+    record("endpeek step=%s encoder=%s after=%d", s_step, encoder_kind(current), s_v1->CurrentRenderPassDescriptor() ? 1 : 0);
+}
+
+/// Changes the current encoder's descriptor (a clear to red), ends the encoder and asks for one
+/// again in the same callback.
+static void mutate_again(void)
+{
+    id<MTLCommandEncoder> first = s_v1->CurrentCommandEncoder();
+    MTLRenderPassDescriptor* pass = s_v1->CurrentRenderPassDescriptor();
+    pass.colorAttachments[0].loadAction = MTLLoadActionClear;
+    pass.colorAttachments[0].clearColor = MTLClearColorMake(1, 0, 0, 1);
+    s_v1->EndCurrentCommandEncoder();
+    id<MTLCommandEncoder> second = s_v1->CurrentCommandEncoder();
+    record("again step=%s first=%s second=%s", s_step, encoder_kind(first), encoder_kind(second));
+}
+
 static void on_event(int id)
 {
     int event = id - s_eventBase;
@@ -347,6 +374,9 @@ static void on_event(int id)
     case EventQueueBlit: record_state("state"); queue_blit(); break;
     case EventCopy: end_and_copy(); break;
     case EventMutate: mutate_pass(); break;
+    case EventPeek: peek(); break;
+    case EventEndPeek: end_peek(); break;
+    case EventMutateAgain: mutate_again(); break;
     default: record("event step=%s unknown=%d", s_step, event); break;
     }
 }

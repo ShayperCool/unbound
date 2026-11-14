@@ -165,6 +165,9 @@ struct Scope {
     pass: Option<Retained<MTLRenderPassDescriptor>>,
     /// The screen is the target (it has no pass: not shared with plugins).
     screen: bool,
+    /// Something was drawn into the target since it was set (the Editor's encoder exists), and
+    /// the plugin has not ended an encoder in this callback.
+    drawn: bool,
     images: HashMap<u64, Images>,
     /// Buffers committed by `CommitCurrentCommandBuffer` in this callback, kept until it ends
     /// (the plugin may wait on the one returned).
@@ -352,26 +355,30 @@ extern "C" fn end_current_command_encoder() {
     with_scope(|s| {
         if let Some(encoder) = s.encoder.take() {
             encoder.endEncoding();
-            s.pass = None;
         }
+        s.pass = None;
+        s.drawn = false;
     });
 }
 
-/// The descriptor of the current encoder, else of the pass the next one begins (a fresh object).
-/// Not followed: the macOS Editor answers nil before its encoder is begun in a command buffer
-/// that only set and cleared its target (nativegfx `plugin.mutate`), but has its encoder, so
-/// its descriptor, where it already drew (most likely; unmeasured): plugins get one here.
+/// The descriptor the current encoder was begun from (as the header says): where something was
+/// drawn into the target since it was set the Editor's encoder exists, so the encoder is begun
+/// here; after only a clear, and after the plugin ended an encoder, there is none (nil). Measured
+/// on the macOS Editor: nativegfx `plugin.peek.drawn` (1), `plugin.peek.cleared` and
+/// `plugin.mutate` (0), `plugin.endpeek.drawn` (0 after the end).
 extern "C" fn current_render_pass_descriptor() -> Object {
+    let begin = with_scope(|s| s.encoder.is_none() && s.drawn && s.params.is_some());
+    if begin == Some(true) {
+        current_command_encoder();
+    }
     with_scope(|s| {
-        if s.pass.is_none()
-            && let Some(params) = &s.params
-        {
-            s.pass = Some(params.descriptor());
-        }
         if s.params.is_none() && s.screen {
             warn_screen();
         }
-        s.pass.as_ref().map_or(std::ptr::null_mut(), object)
+        match (&s.encoder, &s.pass) {
+            (Some(_), Some(pass)) => object(pass),
+            _ => std::ptr::null_mut(),
+        }
     })
     .unwrap_or_else(|| {
         warn_outside("current render pass descriptor");
@@ -766,6 +773,7 @@ impl UnityRenderer {
                 params,
                 pass: None,
                 screen,
+                drawn: self.plugin_target_drawn,
                 images,
                 committed: Vec::new(),
                 drew_samples: false,
