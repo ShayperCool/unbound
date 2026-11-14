@@ -1,5 +1,7 @@
 """Cached listings retain deep links and detect edits without rescanning file histories."""
 import os
+import sqlite3
+import threading
 from pathlib import Path
 import tempfile
 import unittest
@@ -56,6 +58,51 @@ class IndexTests(unittest.TestCase):
         finally:
             index.close()
         self.assertEqual(slot.symlink_targets(self.base), set())
+
+    def test_reap_validates_past_the_old_limit_but_bounded_warming_stays_closed(self):
+        (self.deep/'Assets').symlink_to(self.target)
+        # Simulate validation taking over five minutes, including with warm listings.
+        slot.symlink_targets(self.base)
+        for seconds in (None, 300):
+            ticks = iter(range(0, 10000, 301))
+            with mock.patch('run_cache_index.time.monotonic', side_effect=lambda: next(ticks)):
+                if seconds is None:
+                    self.assertIn(self.target, slot.symlink_targets(self.base))
+                else:
+                    with self.assertRaisesRegex(SystemExit, 'refusing to reap'):
+                        slot.symlink_targets(self.base, seconds=seconds)
+
+    def test_next_batch_publishes_progress_and_releases_the_writer(self):
+        first = DirectoryIndex(self.base)
+        second = DirectoryIndex(self.base)
+        try:
+            first.entries(self.base, self.base.stat())
+            first.stat_many([self.deep])
+            self.assertIsNotNone(second.execute('SELECT path FROM directories WHERE path=?',
+                                               (str(self.base),)).fetchone())
+            second.db.execute('PRAGMA busy_timeout=20')
+            second.entries(self.deep, self.deep.stat())
+        finally:
+            first.close()
+            second.close()
+
+    def test_busy_writer_is_waited_out(self):
+        index = DirectoryIndex(self.base)
+        writer = sqlite3.connect(index.db.execute('PRAGMA database_list').fetchone()[2],
+                                 check_same_thread=False)
+        try:
+            writer.execute('BEGIN IMMEDIATE')
+            index.db.execute('PRAGMA busy_timeout=20')
+            release = threading.Timer(0.1, writer.commit)
+            release.start()
+            try:
+                index.entries(self.base, self.base.stat())
+            finally:
+                release.join()
+            self.assertEqual(index.scanned, 1)
+        finally:
+            writer.close()
+            index.close()
 
     def test_checkout_membership_preserves_nested_roots_and_path_boundaries(self):
         parent, nested, unrelated = [self.root/name for name in ('a', 'a/child', 'a-extra')]

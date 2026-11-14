@@ -260,7 +260,7 @@ def _symlink_targets(base, checkouts, index):
     return found
 
 
-def symlink_targets(base, checkouts=(), *, seconds=300):
+def symlink_targets(base, checkouts=(), *, seconds=None):
     from run_cache_index import DirectoryIndex
     import sqlite3
     index = None
@@ -298,7 +298,7 @@ def referenced_checkouts(links, checkouts):
 
 def cmd_index(args, repo):
     started = time.monotonic()
-    print(f'index run-cache references: budget {args.seconds}s', flush=True)
+    print(f'warm run-cache listings: budget {args.seconds}s; reap validates the complete tree', flush=True)
     found = symlink_targets(run_cache(), [entry[0] for entry in worktrees(repo)], seconds=args.seconds)
     print(f'{len(found)} reference paths indexed in {time.monotonic()-started:.1f}s; no worktrees removed')
     return 0
@@ -327,6 +327,7 @@ def cmd_reap(args, repo):
             reason = 'has tracked paths hidden by index flags'
         else:
             if linked is None:
+                print('inspect run-cache references: full validation, no time limit', flush=True)
                 roots = [entry[0] for entry in entries]
                 linked = referenced_checkouts(symlink_targets(run_cache(), checkouts=roots), roots)
             if path in linked:

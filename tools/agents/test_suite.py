@@ -441,11 +441,11 @@ class SharedGuardTests(unittest.TestCase):
                     suite.run_step(suite.Step('driver', ['touch', 'unsafe']), {}, Path(temp)/'log', {})
             self.assertFalse((Path(temp)/'unsafe').exists())
 
-    def test_gate_stops_an_editor_launch_and_does_not_run_later_commands(self):
+    def test_gate_stops_an_editor_driver_before_later_shell_commands(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             editor = root/'6000.0.71f1/Editor/Unity'
-            probes = ['bash -c '+shlex.quote(f'(exec -a {editor} sleep 60); touch after'), 'touch later']
+            probes = ['bash -c '+shlex.quote(f'(exec -a {editor} sleep 60); touch after; touch later')]
             gate = land.Gate(root, 'HEAD', probes, False, root/'gate.log')
             start = time.monotonic()
             with unittest.mock.patch.object(probe_runtime, 'EDITOR_POLL', 0.05):
@@ -778,7 +778,8 @@ class ReleaseTests(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()):
                 gate.run_probes()  # a probe that exits nonzero ends the gate with exit 5
             os.environ[land.RELEASE_VARIABLE] = '2022.3.10f1'
-            gate.probes = ['test "$UNBOUND_PROBE_UNITY_VERSION" = 2022.3.10f1']
+            gate = land.Gate(gate.worktree, 'HEAD',
+                             ['test "$UNBOUND_PROBE_UNITY_VERSION" = 2022.3.10f1'], False, gate.log)
             with contextlib.redirect_stdout(io.StringIO()):
                 gate.run_probes()
             gate.probes = ['test -n "$NOT_THE_RELEASE_${UNBOUND_PROBE_UNITY_VERSION:?}" && exit 1']
@@ -813,6 +814,10 @@ class StubGateTests(unittest.TestCase):
         cli.write_text(f'#!/bin/sh\n# {source}-host\n# {source}\n{script}\n')
         cli.chmod(0o755)
         gate = land.Gate(self.tree, 'HEAD', [], False, Path(self.temp.name)/'gate.log')
+        step = gate.step
+        # The stand-in checkout has no .NET project. Exercise the real shell CLI
+        # and generated-file checks, with the separate tooling-test step stubbed.
+        gate.step = lambda name, *args, **kwargs: (0 if name == 'API tooling tests' else step(name, *args, **kwargs))
         return gate, cli
 
     def run_stubs(self, script, compiled_from=None):
