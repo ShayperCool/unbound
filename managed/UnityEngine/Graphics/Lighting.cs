@@ -889,10 +889,12 @@ namespace Unbound.Runtime
 
         internal static Light MainLightOf() => MainLight();
 
-        /// <summary>The sun a sky is drawn with: chosen as the main light, a fully baked light
-        /// included (measured: tests/projects/lightingdatanan, whose baked sun lights the procedural
-        /// sky and draws its disk while it lights no object at run time).</summary>
-        internal static Light SkySun() => MainLight(allowBaked: true);
+        /// <summary>The sun a sky is drawn with: the main light, else (a scene whose directional
+        /// lights are all fully baked) the one chosen as the main light with baked lights included
+        /// (measured: tests/projects/lightingdatanan, whose baked sun lights the procedural sky and
+        /// draws its disk while it lights no object at run time; a baked named sun beside a
+        /// realtime directional light is unmeasured).</summary>
+        internal static Light SkySun() => MainLight() ?? MainLight(allowBaked: true);
 
         /// <summary>The direction to the light a sky is drawn with when the scene has no main
         /// light (built-in pipeline).</summary>

@@ -634,7 +634,7 @@ namespace Unbound.Runtime
             bool builtin = GraphicsSettings.currentRenderPipeline == null || camera.m_EnvironmentCapture;
             if (builtin && LightingGlobals.MainLightOf() == null)
             {
-                // A fully baked sun lights no object, yet the sky is drawn with it.
+                // A fully baked sun lights no object, yet the sky is drawn with it (SkySun).
                 var sun = LightingGlobals.SkySun();
                 properties = sun == null
                     ? new Dictionary<int, object> { [s_WorldSpaceLightPos0Id] = (Vector4)LightingGlobals.SkyWithoutSun }
