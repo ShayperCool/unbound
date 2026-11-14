@@ -294,10 +294,9 @@ fn channel_copy_kind(
     destination: wgpu::TextureFormat,
 ) -> Option<CopyKind> {
     use wgpu::TextureFormat as F;
-    match (
-        source.remove_srgb_suffix(),
-        destination.remove_srgb_suffix(),
-    ) {
+    // Repacking reads and writes raw channel values. Physical sRGB storage need not permit
+    // a linear view, and unlike equal-format copies a shader pass would convert its bytes.
+    match (source, destination) {
         (F::Rgba8Unorm, F::R8Unorm) => Some(CopyKind::ToR8),
         (F::R8Unorm, F::Rgba8Unorm) => Some(CopyKind::ToRgba8),
         _ => None,
@@ -5379,13 +5378,15 @@ mod tests {
     fn channel_copies_join_r8_and_rgba8_storages() {
         use wgpu::TextureFormat as F;
         assert_eq!(
-            channel_copy_kind(F::Rgba8UnormSrgb, F::R8Unorm),
+            channel_copy_kind(F::Rgba8Unorm, F::R8Unorm),
             Some(CopyKind::ToR8)
         );
         assert_eq!(
             channel_copy_kind(F::R8Unorm, F::Rgba8Unorm),
             Some(CopyKind::ToRgba8)
         );
+        assert_eq!(channel_copy_kind(F::Rgba8UnormSrgb, F::R8Unorm), None);
+        assert_eq!(channel_copy_kind(F::R8Unorm, F::Rgba8UnormSrgb), None);
         assert_eq!(channel_copy_kind(F::Rg8Unorm, F::Rgba8Unorm), None);
         assert_eq!(channel_copy_kind(F::Rgba8Unorm, F::Rg8Unorm), None);
         assert_eq!(channel_copy_kind(F::R8Unorm, F::Rg8Unorm), None);

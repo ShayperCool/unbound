@@ -227,6 +227,11 @@ neither a layout nor a synchronization handoff; a raw VkImage does not expose ei
 their distinct values and rewraps after destruction. Float controls retain values above 1.0. All new foreign-format images omit mutable-format
 permission, including sRGB: their views must match their physical storage
 ([Vulkan image-view requirements](https://docs.vulkan.org/refpages/latest/refpages/source/VkImageViewCreateInfo.html)).
+The sRGB control also copies raw bytes into compatible RGBA8 storage. Incompatible copies
+between that image and R8 leave both divergent destinations unchanged, with diagnostics.
+The [CopyTexture contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.CopyTexture.html)
+requires compatible formats; physical sRGB storage is never repacked through an invalid
+linear view.
 
 OpenGL's whole-image copies from external 2D and cube wrappers write one texel; untouched
 pixels in these controls retain a defined sentinel color. Volume copies cover the slices.

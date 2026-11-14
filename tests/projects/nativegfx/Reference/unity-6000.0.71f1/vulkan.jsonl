@@ -338,6 +338,9 @@
 {"k":"externalVkFormats.RGBA32.srgb.dimensions","v":"4,4,1,3"}
 {"k":"externalVkFormats.RGBA32.srgb.sample0","v":"0.25,0.50390625,0.75390625,1"}
 {"k":"externalVkFormats.RGBA32.srgb.sample1","v":"0.376953125,0.50390625,0.75390625,1"}
+{"k":"externalVkFormats.RGBA32.srgb.copy","v":"89bce1ff,89bce1ff,89bce1ff,89bce1ff,89bce1ff,89bce1ff,89bce1ff,89bce1ff,89bce1ff,89bce1ff,89bce1ff,89bce1ff,89bce1ff,89bce1ff,89bce1ff,89bce1ff"}
+{"k":"externalVkFormats.RGBA32.srgb.incompatible.toR8","v":"1,0,0,1"}
+{"k":"externalVkFormats.RGBA32.srgb.incompatible.fromR8","v":"0.25,0.50390625,0.75390625,1"}
 {"k":"externalVkFormats.RGBA32.srgb.after","v":"0.50390625,0.50390625,0.75390625,1"}
 {"k":"externalVkFormats.R8.linear.created","v":true}
 {"k":"externalVkFormats.R8.linear.dimensions","v":"4,4,1,3"}

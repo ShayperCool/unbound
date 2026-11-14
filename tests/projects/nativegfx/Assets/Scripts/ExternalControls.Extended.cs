@@ -72,6 +72,20 @@ static partial class ExternalControls
             row(key + ".dimensions", View(wrapper, 0, false, 0, true));
             row(key + ".sample0", View(wrapper, 0, false));
             row(key + ".sample1", View(wrapper, 0, false, 1));
+            if (index == 1)
+            {
+                row(key + ".copy", Pixels(wrapper, 0, 4, 4));
+                var oneChannel = new Texture2D(4, 4, TextureFormat.R8, false, true);
+                var red = new Color[16];
+                for (int pixel = 0; pixel < red.Length; pixel++) red[pixel] = Color.red;
+                oneChannel.SetPixels(red); oneChannel.Apply(false);
+                // Different bit widths are incompatible; both destinations have divergent data.
+                Graphics.CopyTexture(wrapper, 0, 0, oneChannel, 0, 0);
+                row(key + ".incompatible.toR8", View(oneChannel, 0, false));
+                Graphics.CopyTexture(oneChannel, 0, 0, wrapper, 0, 0);
+                row(key + ".incompatible.fromR8", View(wrapper, 0, false));
+                UnityEngine.Object.DestroyImmediate(oneChannel);
+            }
             UnityEngine.Object.DestroyImmediate(wrapper);
             var again = Texture2D.CreateExternalTexture(4, 4, formats[index], true, index != 1, pointer);
             row(key + ".after", View(again, 0, false, 2));
