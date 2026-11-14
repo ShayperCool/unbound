@@ -216,9 +216,15 @@ The owner remains responsible for storage lifetime through the wrapper's last GP
 The measured wrappers report isReadable as true while GetPixels throws ArgumentException
 because native textures have no CPU pixel storage. Renderer-owned Vulkan aliases retain
 the source's stable image address. A wrapper around a plugin's VkImage has its own stable
-address containing the same image handle. Plugin-owned Vulkan imports currently require
-linear RGBA32 storage initialized in GENERAL layout with sampled and transfer usage.
-Other foreign formats, layouts and drivers remain unmeasured.
+address containing the same image handle. Plugin-owned Vulkan imports support
+RGBA32 linear and sRGB, R8, RG16, R16, and R/RG/RGBA half and float storage, initialized
+in GENERAL layout with sampled and transfer usage. Borrowing preserves the physical format;
+it cannot convert channel order, expand channels, decode blocks or replace an unsupported
+format. BGRA, packed and compressed foreign Vulkan storage remain unsupported. Other import
+layouts and drivers remain outside the measured contract. The public creation API carries
+neither a layout nor a synchronization handoff; a raw VkImage does not expose either.
+`externalVkFormats.*` clears each of three mip levels independently on the GPU, samples
+their distinct values and rewraps after destruction. Float controls retain values above 1.0.
 
 OpenGL's whole-image copies from external 2D and cube wrappers write one texel; untouched
 pixels in these controls retain a defined sentinel color. Volume copies cover the slices.
@@ -227,7 +233,15 @@ to dimension queries and explicit copies. Compat.RenderingMeasured selects these
 sampling rules. `externalBounds.*` repeats them at 7x3 and 8x8, checks explicit regions, and
 copies normal textures into external destinations. `externalMips.*` initializes distinct
 colors in each mip and checks sampling, copies and dimension queries. Logical dimensions
-and full mip visibility are preserved.
+and full mip visibility are preserved. `externalGpuMips.*` repeats the 2D and cube rules
+with source mips written by render-target clears. Source mip 1 differs from mip 0; the cube
+wrapper samples mip 0 at LOD 1 on OpenGL, while its explicit mip-1 copies read mip 1.
+Whole copies still write one texel and region copies fill the target. Vulkan samples and
+copies the requested mip. Known-owner aliases retain the owner's actual GPU dimensions and
+levels when the wrapper declares a smaller size or no mip chain. These mismatch observations
+are bounded diagnostics: the [creation contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.CreateExternalTexture.html)
+requires metadata matching the underlying storage. Incompatible formats, shapes and foreign
+image metadata mismatches are not established by these controls.
 
 `activeRelease.*` distinguishes uncreated and inactive targets from a target still bound as
 RenderTexture.active. Both explicit Release and DestroyImmediate emit the measured warning

@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-static class ExternalControls
+static partial class ExternalControls
 {
     [DllImport("NativeGfxVulkan")] static extern int NativeGfxVk_SameImage(IntPtr first, IntPtr second);
     [DllImport("NativeGfxVulkan")] static extern void NativeGfxVk_SetTexture(int index, IntPtr pointer);
@@ -310,6 +310,8 @@ static class ExternalControls
         MipInfo(row);
         CopyBounds(row);
         ExternalMips(row);
+        if (isolateLogs == null) ExtendedControls(row);
+        else isolateLogs(() => ExtendedControls(row));
         UnityEngine.Object.DestroyImmediate(cube); UnityEngine.Object.DestroyImmediate(volume);
     }
 }

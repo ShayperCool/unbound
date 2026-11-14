@@ -537,16 +537,17 @@ EXPORT void* NativeGfxVk_DeviceEvent(void) { return (void*)on_msaa_device_event;
 EXPORT void NativeGfxVk_SetDevice(int index, void* pointer) { if (index >= 0 && index < 2) s_device[index] = pointer; }
 
 // Plugin-owned images, kept alive independently of Unity's texture wrappers.
-static VkImage s_external_images[3];
-static VkDeviceMemory s_external_memory[3];
-static int s_external_result[3];
+enum { EXTERNAL_IMAGE_COUNT = 14 };
+static VkImage s_external_images[EXTERNAL_IMAGE_COUNT];
+static VkDeviceMemory s_external_memory[EXTERNAL_IMAGE_COUNT];
+static int s_external_result[EXTERNAL_IMAGE_COUNT];
 static int s_external_pending;
 #define DEVICE_PROC(type, name) type name = (type)vk.GetDeviceProcAddr(s_instance.device, #name)
 static void on_external_image_event(int event_id)
 {
     (void)event_id;
     int kind = s_external_pending;
-    if (kind < 0 || kind >= 3 || s_external_images[kind]) return;
+    if (kind < 0 || kind >= EXTERNAL_IMAGE_COUNT || s_external_images[kind]) return;
     DEVICE_PROC(PFN_vkCreateImage, vkCreateImage);
     DEVICE_PROC(PFN_vkGetImageMemoryRequirements, vkGetImageMemoryRequirements);
     DEVICE_PROC(PFN_vkAllocateMemory, vkAllocateMemory);
@@ -562,11 +563,15 @@ static void on_external_image_event(int event_id)
     UnityVulkanRecordingState state;
     memset(&state, 0, sizeof state);
     if (!s_vulkan->CommandRecordingState(&state, 0) || !state.commandBuffer) return;
+    static const VkFormat formats[] = { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_SRGB,
+        VK_FORMAT_R8_UNORM, VK_FORMAT_R8G8_UNORM, VK_FORMAT_R16_UNORM,
+        VK_FORMAT_R16_SFLOAT, VK_FORMAT_R16G16_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_FORMAT_R32_SFLOAT, VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT };
     VkImageCreateInfo desc = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | (kind == 1 ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0),
         .imageType = kind == 2 ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D,
-        .format = VK_FORMAT_R8G8B8A8_UNORM, .extent = {4, kind == 1 ? 4 : 2, kind == 2 ? 2 : 1},
-        .mipLevels = 1, .arrayLayers = kind == 1 ? 6 : 1, .samples = VK_SAMPLE_COUNT_1_BIT,
+        .format = kind < 3 ? VK_FORMAT_R8G8B8A8_UNORM : formats[kind - 3], .extent = {4, kind == 1 || kind >= 3 ? 4 : 2, kind == 2 ? 2 : 1},
+        .mipLevels = kind < 3 ? 1 : 3, .arrayLayers = kind == 1 ? 6 : 1, .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = VK_IMAGE_TILING_OPTIMAL, .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE, .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED };
     if (vkCreateImage(s_instance.device, &desc, NULL, &s_external_images[kind]) != VK_SUCCESS) return;
@@ -581,7 +586,7 @@ static void on_external_image_event(int event_id)
     VkMemoryAllocateInfo alloc = { .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, .allocationSize = requirements.size, .memoryTypeIndex = type };
     if (vkAllocateMemory(s_instance.device, &alloc, NULL, &s_external_memory[kind]) != VK_SUCCESS ||
         vkBindImageMemory(s_instance.device, s_external_images[kind], s_external_memory[kind], 0) != VK_SUCCESS) return;
-    VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, desc.arrayLayers};
+    VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, desc.mipLevels, 0, desc.arrayLayers};
     VkImageMemoryBarrier barrier = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_GENERAL,
@@ -589,7 +594,12 @@ static void on_external_image_event(int event_id)
         .image = s_external_images[kind], .subresourceRange = range };
     vkCmdPipelineBarrier(state.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
     VkClearColorValue color = {{0.25f, 0.5f, 0.75f, 1.0f}};
-    vk.CmdClearColorImage(state.commandBuffer, s_external_images[kind], VK_IMAGE_LAYOUT_GENERAL, &color, 1, &range);
+    for (uint32_t mip = 0; mip < desc.mipLevels; ++mip) {
+        VkImageSubresourceRange level = {VK_IMAGE_ASPECT_COLOR_BIT, mip, 1, 0, desc.arrayLayers};
+        color.float32[0] = 0.25f + 0.125f * mip;
+        if (kind >= 8) color.float32[1] = 1.5f;
+        vk.CmdClearColorImage(state.commandBuffer, s_external_images[kind], VK_IMAGE_LAYOUT_GENERAL, &color, 1, &level);
+    }
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
     barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
     vkCmdPipelineBarrier(state.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
@@ -597,14 +607,14 @@ static void on_external_image_event(int event_id)
 }
 EXPORT void NativeGfxVk_ExternalPrepare(int kind) { s_external_pending = kind; }
 EXPORT void* NativeGfxVk_ExternalEvent(void) { return (void*)on_external_image_event; }
-EXPORT void* NativeGfxVk_ExternalPtr(int kind) { return kind >= 0 && kind < 3 && s_external_result[kind] ? &s_external_images[kind] : NULL; }
+EXPORT void* NativeGfxVk_ExternalPtr(int kind) { return kind >= 0 && kind < EXTERNAL_IMAGE_COUNT && s_external_result[kind] ? &s_external_images[kind] : NULL; }
 EXPORT void NativeGfxVk_ExternalDestroy(void)
 {
     DEVICE_PROC(PFN_vkDestroyImage, vkDestroyImage);
     DEVICE_PROC(PFN_vkFreeMemory, vkFreeMemory);
     if (!vkDestroyImage || !vkFreeMemory) return;
     // The preceding synchronous readback completed every use before wrapper destruction.
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < EXTERNAL_IMAGE_COUNT; i++) {
         if (s_external_images[i]) vkDestroyImage(s_instance.device, s_external_images[i], NULL);
         if (s_external_memory[i]) vkFreeMemory(s_instance.device, s_external_memory[i], NULL);
         s_external_images[i] = VK_NULL_HANDLE; s_external_memory[i] = VK_NULL_HANDLE; s_external_result[i] = 0;

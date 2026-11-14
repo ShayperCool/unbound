@@ -1425,6 +1425,32 @@ fn image_entry(
     })
 }
 
+/// Exact physical formats for foreign Vulkan storage. Unlike pixel uploads, borrowing
+/// cannot expand channels, decode blocks or substitute a fallback format. The input values
+/// are UnityEngine.TextureFormat; the result is the render protocol's storage code.
+fn foreign_texture_format(format: i32, linear: bool) -> Option<i32> {
+    use unbound_runtime::render_protocol::texture_format as F;
+    Some(match format {
+        4 => {
+            if linear {
+                F::LINEAR_RGBA8
+            } else {
+                F::SRGB_RGBA8
+            }
+        } // RGBA32.
+        9 => F::R16_UNORM,     // R16.
+        15 => F::R16_FLOAT,    // RHalf.
+        16 => F::RG16_FLOAT,   // RGHalf.
+        17 => F::RGBA_HALF,    // RGBAHalf.
+        18 => F::R32_FLOAT,    // RFloat.
+        19 => F::RG32_FLOAT,   // RGFloat.
+        20 => F::RGBA32_FLOAT, // RGBAFloat.
+        62 => F::RG8_UNORM,    // RG16.
+        63 => F::R8_UNORM,     // R8.
+        _ => return None,
+    })
+}
+
 impl UnityRenderer {
     /// A texture's native pointer on the Vulkan device: the address of its `VkImage`, stable for
     /// the texture (`depth`: its depth buffer's). 0 for an unknown texture.
@@ -1469,7 +1495,7 @@ impl UnityRenderer {
         info: &unbound_runtime::render_protocol::ExternalTextureInfo,
     ) -> Result<(), String> {
         use super::plugins::descriptor;
-        use unbound_runtime::render_protocol::{owned, texture_format};
+        use unbound_runtime::render_protocol::owned;
         if native == 0 {
             return Err("the external Vulkan image pointer is null".into());
         }
@@ -1524,18 +1550,25 @@ impl UnityRenderer {
             }
             return Ok(());
         }
-        // The API supplies the image address, not a queryable image descriptor. The measured
-        // foreign-image contract is RGBA32 linear, initialized in GENERAL by its owner.
-        const RGBA32: i32 = 4; // UnityEngine.TextureFormat.RGBA32.
-        if info.format != RGBA32 || info.linear == 0 {
-            return Err("plugin-owned Vulkan external images currently require linear RGBA32 storage in GENERAL layout".into());
+        // The API supplies the image address, not a queryable image descriptor. The caller
+        // must describe its physical storage and initialize every mip in GENERAL layout.
+        let format = foreign_texture_format(info.format, info.linear != 0).ok_or_else(|| {
+            format!("plugin-owned Vulkan external TextureFormat {} has no exact borrowed storage mapping; supported formats are RGBA32, R8, RG16, R16, and R/RG/RGBA half or float in GENERAL layout", info.format)
+        })?;
+        if format == unbound_runtime::render_protocol::texture_format::R16_UNORM
+            && !self
+                .device
+                .features()
+                .contains(wgpu::Features::TEXTURE_FORMAT_16BIT_NORM)
+        {
+            return Err("the Vulkan device cannot borrow R16 normalized storage".into());
         }
         let packet = owned::Texture {
             width: info.width,
             height: info.height,
             layers: if info.dimension == 4 { 6 } else { info.depth },
             dimension: info.dimension,
-            format: texture_format::LINEAR_RGBA8,
+            format,
             mip_count: info.mip_count,
             filter_mode: 1,
             wrap_u: 1,
@@ -2189,6 +2222,34 @@ pub fn vk_format(adapter: &wgpu::Adapter, format: wgpu::TextureFormat) -> Option
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn foreign_formats_preserve_channels_precision_and_color_space() {
+        use unbound_runtime::render_protocol::texture_format as F;
+        let cases = [
+            (4, F::LINEAR_RGBA8),
+            (9, F::R16_UNORM),
+            (15, F::R16_FLOAT),
+            (16, F::RG16_FLOAT),
+            (17, F::RGBA_HALF),
+            (18, F::R32_FLOAT),
+            (19, F::RG32_FLOAT),
+            (20, F::RGBA32_FLOAT),
+            (62, F::RG8_UNORM),
+            (63, F::R8_UNORM),
+        ];
+        for (input, expected) in cases {
+            assert_eq!(foreign_texture_format(input, true), Some(expected));
+            assert_eq!(
+                foreign_texture_format(input, false),
+                Some(if input == 4 { F::SRGB_RGBA8 } else { expected })
+            );
+        }
+        // These need channel conversion, a distinct channel order, packed storage or blocks.
+        for unsupported in [-1, 0, 1, 3, 5, 7, 10, 12, 14, 22, 72, 74, i32::MAX] {
+            assert_eq!(foreign_texture_format(unsupported, true), None);
+        }
+    }
 
     /// On a device that is not Vulkan the interfaces answer no to what needs no device, and
     /// give nothing where the Editor would end.
