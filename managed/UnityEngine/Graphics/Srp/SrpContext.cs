@@ -278,10 +278,10 @@ namespace UnityEngine.Rendering
 
         /// <summary>
         /// A directional light's cascade: as the Editor computes it (measured in
-        /// tests/projects/urp, ShadowMatrixProbe). The shadow distance's slice ends at the depth
-        /// the share <see cref="ShadowSliceShare"/> of the view frustum; cascades split it by the ratios. A cascade's culling sphere
-        /// is the bounding sphere of its slice from the camera's near plane, centered on the view
-        /// axis. The light's camera looks along the light from 1.2 radii before the sphere's center,
+        /// tests/projects/urp, ShadowMatrixProbe). The shadow distance's slice covers the share
+        /// <see cref="ShadowSliceShare"/> of the view frustum; cascades split it by the ratios. A
+        /// cascade's culling sphere is the bounding sphere of its part of the slice (from the
+        /// previous split), centered on the view axis. The light's camera looks along the light from 1.2 radii before the sphere's center,
         /// snapped to whole texels across, with an orthographic size of the radius (plus 5 texels
         /// each side with several cascades), far at 2.3 radii and near at 0.1 radii minus ten times
         /// the near plane offset (measured: tests/projects/urp with an offset of 3, tests/projects/brg
@@ -372,7 +372,7 @@ namespace UnityEngine.Rendering
         /// cascades are the same, measured): its view and projection, culling sphere and near plane.</summary>
         internal static bool DirectionalShadowSlice(Camera camera, Matrix4x4 lightLocalToWorld, int splitIndex, int splitCount, Vector3 splitRatio,
             int shadowResolution, float distance, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out Vector4 cullingSphere, out float cullingNear,
-            bool sliceFromPreviousSplit = false, bool conservative = false, int iterations = 0, float nearPlaneOffset = BuiltInNearPlaneOffset,
+            bool conservative = false, int iterations = 0, float nearPlaneOffset = BuiltInNearPlaneOffset,
             float sliceNearOffset = 0f)
         {
             viewMatrix = projMatrix = Matrix4x4.identity;
@@ -387,14 +387,14 @@ namespace UnityEngine.Rendering
             float share = ShadowSliceShare(camera, distance, sliceNearOffset, conservative, out float from);
             float far = near + share * (camera.farClipPlane - near);
             float Ratio(int i) => i >= splitCount - 1 ? 1f : i switch { 0 => splitRatio.x, 1 => splitRatio.y, _ => splitRatio.z };
-            // A scriptable pipeline's cascades slice the view from the near plane; the built-in
-            // pipeline's from the previous split (measured, tests/projects/lighting's globals).
-            // Conservative spheres bound each cascade's own slice, which the culling starts at (measured).
+            // Every cascade bounds its own part of the slice, from the previous split (measured:
+            // tests/projects/lighting's globals for the built-in pipeline, tests/projects/urp
+            // slice-shares' orthographic and narrow cameras, whose spheres do not reach the far
+            // rectangle's, for a scriptable one).
             float previous = splitIndex > 0 ? near + Ratio(splitIndex - 1) * (far - near) : near;
-            float sliceNear = (sliceFromPreviousSplit || conservative) && splitIndex > 0 ? previous : near;
             var sphere = conservative
                 ? ConservativeSliceSphere(camera, splitIndex > 0 ? Ratio(splitIndex - 1) : 0f, Ratio(splitIndex), share, iterations)
-                : SliceSphere(camera, sliceNear, near + Ratio(splitIndex) * (far - near));
+                : SliceSphere(camera, previous, near + Ratio(splitIndex) * (far - near));
             float radius = sphere.w;
             float half = splitCount > 1 ? radius * (1f + 10f / shadowResolution) : radius;
             float texel = 2f * half / shadowResolution;
@@ -413,8 +413,8 @@ namespace UnityEngine.Rendering
             float zNear = 0.1f * radius - 10f * Math.Max(nearPlaneOffset, 0f), zFar = 2.3f * radius;
             projMatrix = Matrix4x4.Ortho(-half, half, -half, half, zNear, zFar);
             cullingSphere = sphere;
-            // The culling starts where the cascade's share of the slice does, from e (measured with
-            // shadowNearPlaneOffset 0, 5 and -2 on the first cascade, 0 on the others).
+            // The culling starts where the cascade's part of the slice does, counted from `from`, the
+            // near plane less the culling parameters' offset (tests/projects/urp slice-shares).
             cullingNear = from + (camera.farClipPlane - from) * ((splitIndex > 0 ? Ratio(splitIndex - 1) : 0f) * share);
             return true;
         }
@@ -474,7 +474,8 @@ namespace UnityEngine.Rendering
             return share < 0f ? 0f : Math.Min(share, 1f) * MaximumOffset;
         }
 
-        /// <summary>(tan² of the corner ray's angle from the view axis): lateral² per depth².</summary>
+        /// <summary>(tan² of the corner ray's angle from the view axis): lateral² per depth², 0 for an
+        /// orthographic camera, whose cross-section does not grow.</summary>
         static float SliceCornerFactor(Camera camera)
         {
             if (camera.orthographic) return 0f;
@@ -552,12 +553,16 @@ namespace UnityEngine.Rendering
         }
 
         /// <summary>The bounding sphere of the view slice [near, far]: on the view axis, through
-        /// the near and far corners, or around the far rectangle when that is smaller.</summary>
+        /// the near and far corners, or around the far rectangle when that is smaller. An
+        /// orthographic slice keeps its cross-section at every depth (tests/projects/urp
+        /// slice-shares).</summary>
         internal static Vector4 SliceSphere(Camera camera, float near, float far)
         {
             float k = SliceCornerFactor(camera);
             float c = SliceSphereDepth(camera, near, far);
-            float r = Mathf.Sqrt((far - c) * (far - c) + far * far * k);
+            float size = camera.orthographicSize;
+            float lateral = camera.orthographic ? size * size * (1f + camera.aspect * camera.aspect) : far * far * k;
+            float r = Mathf.Sqrt((far - c) * (far - c) + lateral);
             var t = camera.transform;
             var center = t.position + t.forward * c;
             return new Vector4(center.x, center.y, center.z, r);

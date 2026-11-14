@@ -141,7 +141,7 @@ namespace Unbound.Runtime
             RunLightEvent(camera, light, LightEvent.BeforeShadowMap, shadowMap);
             for (int c = 0; c < cascades; c++)
             {
-                if (!CullingResults.DirectionalShadowSlice(camera, lightToWorld, c, cascades, ratios, tile, distance, out var view, out var projection, out var sphere, out _, true))
+                if (!CullingResults.DirectionalShadowSlice(camera, lightToWorld, c, cascades, ratios, tile, distance, out var view, out var projection, out var sphere, out _))
                     continue;
                 var rect = cascades == 1 ? new Rect(0, 0, atlas, atlas) : new Rect((c % 2) * tile, (c / 2) * tile, tile, tile);
                 var cascadePass = (ShadowMapPass)((int)ShadowMapPass.DirectionalCascade0 << c);

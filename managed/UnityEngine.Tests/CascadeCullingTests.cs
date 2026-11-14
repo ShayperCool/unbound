@@ -57,74 +57,88 @@ namespace UnityEngine.Tests
             Assert.Equal(new Vector4(0.0334f, -7.2547f, 43.2304f, 58.951f), Round(second));
         }
 
-        /// <summary>Every single-cascade slice without conservative spheres the Editor recorded in
-        /// tests/projects/urp (fields of view 30-90, aspects 0.5-1.8, near planes 0.3 and 2, pitches
-        /// 0, 10 and 45, a shadow distance of 100): the culling sphere.</summary>
+        /// <summary>Every slice without conservative spheres the Editor recorded in tests/projects/urp:
+        /// the single-cascade grid (fields of view 30-90, aspects 0.5-1.8, near planes 0.3 and 2,
+        /// pitches 0, 10 and 45, a shadow distance of 100: the culling sphere) and every cascade of
+        /// one, two and four over lights, distances and resolutions (the sphere's radius and the
+        /// culling near plane, which do not depend on the camera's rotation).</summary>
         [Fact]
         public void EveryRecordedSliceIsTheEditors()
         {
-            int checkedRecords = 0;
-            float worst = 0f;
+            int grids = 0, cascades = 0;
+            float worst = 0f, worstNear = 0f;
             foreach (var line in File.ReadLines(UrpReference("shadow-matrices.jsonl")))
             {
-                // Other records hold an infinite sphere, which JSON cannot read.
-                if (!line.StartsWith("{\"grid\"", StringComparison.Ordinal)) continue;
+                // Some records hold an infinite sphere, which JSON cannot read.
+                bool grid = line.StartsWith("{\"grid\"", StringComparison.Ordinal);
+                if (!grid && !line.Contains("\"split\":", StringComparison.Ordinal)) continue;
                 using var json = JsonDocument.Parse(line);
                 var root = json.RootElement;
-                if (!root.TryGetProperty("grid", out var grid)) continue;
-                var sphere = Slice(grid[0].GetSingle(), grid[1].GetSingle(), grid[2].GetSingle(), grid[3].GetSingle(), 0f, out _);
                 var expected = root.GetProperty("sphere");
-                for (int i = 0; i < 4; i++)
+                if (grid)
                 {
-                    float e = expected[i].GetSingle(), error = Math.Abs(sphere[i] - e) / Math.Max(1f, Math.Abs(e));
-                    worst = Math.Max(worst, error);
+                    var g = root.GetProperty("grid");
+                    var sphere = Slice(g[0].GetSingle(), g[1].GetSingle(), g[2].GetSingle(), g[3].GetSingle(), 0f, out _);
+                    for (int i = 0; i < 4; i++) worst = Math.Max(worst, Relative(sphere[i], expected[i].GetSingle()));
+                    grids++;
+                    continue;
                 }
-                checkedRecords++;
+                if (!root.GetProperty("ok").GetBoolean()) continue;
+                m_Camera.fieldOfView = 60f;
+                m_Camera.aspect = 320f / 180f;
+                m_Camera.nearClipPlane = 0.3f;
+                var ratio = root.GetProperty("ratio");
+                Assert.True(CullingResults.DirectionalShadowSlice(m_Camera, Matrix4x4.identity, root.GetProperty("split").GetInt32(), root.GetProperty("count").GetInt32(),
+                    new Vector3(ratio[0].GetSingle(), ratio[1].GetSingle(), ratio[2].GetSingle()), root.GetProperty("resolution").GetInt32(),
+                    root.GetProperty("distance").GetSingle(), out _, out _, out var cascade, out float cullingNear));
+                worst = Math.Max(worst, Relative(cascade.w, expected[3].GetSingle()));
+                worstNear = Math.Max(worstNear, Math.Abs(cullingNear - root.GetProperty("nearPlane").GetSingle()));
+                cascades++;
             }
-            Assert.Equal(54, checkedRecords);
+            Assert.Equal(54, grids);
+            Assert.True(cascades >= 168, $"{cascades} cascades");
             Assert.True(worst < 1e-4f, $"worst relative difference {worst}");
+            Assert.True(worstNear < 2e-3f, $"worst near plane difference {worstNear}");
         }
 
-        /// <summary>The culling parameters' shadowNearPlaneOffset moves the slice's start back (and
-        /// with it the first cascade's culling near plane) and so lengthens the slice: measured once
-        /// in the Unity 6000.0.71f1 Editor (fov 60, aspect 16:9, far 1000, distance 100; not a
-        /// recorded reference).</summary>
-        [Theory]
-        [InlineData(0f, 0.3f, 67.01706f, 0.3f)]
-        [InlineData(5f, 0.3f, 70.01187f, -4.7f)]
-        [InlineData(5f, 2f, 70.88376f, -3f)]
-        [InlineData(-2f, 0.3f, 65.81072f, 2.3f)]
-        public void TheCullingNearPlaneOffsetMovesTheSliceStart(float offset, float near, float radius, float cullingNear)
-        {
-            var sphere = Slice(60f, 320f / 180f, near, 10f, offset, out float actualNear);
-            Assert.Equal(radius, sphere.w, 1e-4f * radius);
-            Assert.Equal(cullingNear, actualNear, 1e-5f);
-        }
-
-        /// <summary>Later cascades' culling near planes start where their share of the slice does
-        /// (tests/projects/urp's two- and four-cascade records), also for a narrow camera, where the
-        /// slice's start lies before its sphere's center.</summary>
+        /// <summary>Every slice of tests/projects/urp's slice-shares records: orthographic cameras
+        /// (sizes 5 and 20, far planes 1000 and 50), fields of view 20, 60 and 170, a far plane of
+        /// 200, culling parameters' shadowNearPlaneOffset of 5 and -2, with and without conservative
+        /// spheres, one and four cascades: the culling sphere and near plane.</summary>
         [Fact]
-        public void LaterCascadesCullFromTheirShareOfTheSlice()
+        public void EveryRecordedSliceShareIsTheEditors()
         {
-            m_Camera.fieldOfView = 60f;
-            m_Camera.aspect = 320f / 180f;
-            m_Camera.nearClipPlane = 0.3f;
-            var ratios = new Vector3(0.067f, 0.2f, 0.467f);
-            float[] expected = { 0.3f, 2.19052577f, 5.94336033f, 13.4772463f };
-            for (int split = 0; split < 4; split++)
+            int records = 0;
+            float worst = 0f, worstNear = 0f;
+            foreach (var line in File.ReadLines(UrpReference("slice-shares.jsonl")))
             {
-                Assert.True(CullingResults.DirectionalShadowSlice(m_Camera, Matrix4x4.identity, split, 4, ratios, 2048, 50f,
-                    out _, out _, out _, out float cullingNear));
-                Assert.Equal(expected[split], cullingNear, 2e-3f);
+                using var json = JsonDocument.Parse(line);
+                var root = json.RootElement;
+                if (!root.GetProperty("ok").GetBoolean()) continue;
+                float size = root.GetProperty("size").GetSingle();
+                m_Camera.orthographic = size > 0f;
+                if (size > 0f) m_Camera.orthographicSize = size;
+                m_Camera.fieldOfView = root.GetProperty("fov").GetSingle();
+                m_Camera.nearClipPlane = root.GetProperty("near").GetSingle();
+                m_Camera.farClipPlane = root.GetProperty("far").GetSingle();
+                m_Camera.aspect = 1.7777778f;
+                var camera = root.GetProperty("camera");
+                m_Object.transform.SetPositionAndRotation(new Vector3(camera[0].GetSingle(), camera[1].GetSingle(), camera[2].GetSingle()), Quaternion.Euler(10f, 0f, 0f));
+                bool conservative = root.GetProperty("conservative").GetBoolean();
+                Assert.True(CullingResults.DirectionalShadowSlice(m_Camera, Matrix4x4.identity, root.GetProperty("split").GetInt32(), root.GetProperty("count").GetInt32(),
+                    new Vector3(0.067f, 0.2f, 0.467f), 2048, 100f, out _, out _, out var sphere, out float cullingNear,
+                    conservative: conservative, iterations: 64, sliceNearOffset: root.GetProperty("offset").GetSingle()));
+                var expected = root.GetProperty("sphere");
+                for (int i = 0; i < 4; i++) worst = Math.Max(worst, Relative(sphere[i], expected[i].GetSingle()));
+                worstNear = Math.Max(worstNear, Math.Abs(cullingNear - root.GetProperty("nearPlane").GetSingle()));
+                records++;
             }
-            m_Camera.fieldOfView = 20f;
-            m_Camera.aspect = 0.5f;
-            float share = CullingResults.ShadowSliceShare(m_Camera, 50f, 0f, false, out float from);
-            Assert.True(CullingResults.DirectionalShadowSlice(m_Camera, Matrix4x4.identity, 1, 2, new Vector3(0.25f, 0f, 0f), 2048, 50f,
-                out _, out _, out _, out float second));
-            Assert.Equal(from + (m_Camera.farClipPlane - from) * (0.25f * share), second, 1e-4f);
+            Assert.True(records >= 120, $"{records} records");
+            Assert.True(worst < 2e-4f, $"worst relative difference {worst}");
+            Assert.True(worstNear < 2e-3f, $"worst near plane difference {worstNear}");
         }
+
+        static float Relative(float actual, float expected) => Math.Abs(actual - expected) / Math.Max(1f, Math.Abs(expected));
 
         Vector4 Slice(float fov, float aspect, float near, float pitch, float offset, out float cullingNear)
         {
