@@ -568,7 +568,7 @@ static void on_external_image_event(int event_id)
         VK_FORMAT_R16_SFLOAT, VK_FORMAT_R16G16_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_FORMAT_R32_SFLOAT, VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT };
     VkImageCreateInfo desc = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | (kind == 1 ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0),
+        .flags = (kind < 3 ? VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT : 0) | (kind == 1 ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0),
         .imageType = kind == 2 ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D,
         .format = kind < 3 ? VK_FORMAT_R8G8B8A8_UNORM : formats[kind - 3], .extent = {4, kind == 1 || kind >= 3 ? 4 : 2, kind == 2 ? 2 : 1},
         .mipLevels = kind < 3 ? 1 : 3, .arrayLayers = kind == 1 ? 6 : 1, .samples = VK_SAMPLE_COUNT_1_BIT,

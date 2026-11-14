@@ -1451,6 +1451,21 @@ fn foreign_texture_format(format: i32, linear: bool) -> Option<i32> {
     })
 }
 
+/// Borrowed images need views of their physical format even without mutable-format permission.
+/// The upload path normally keeps sRGB pixels in a linear base allocation with an sRGB view;
+/// a foreign sRGB allocation instead has an sRGB base and no alternate view formats.
+fn foreign_texture_descriptor<'a>(
+    descriptor: &wgpu::TextureDescriptor<'a>,
+    format: i32,
+) -> wgpu::TextureDescriptor<'a> {
+    let mut imported = descriptor.clone();
+    imported.view_formats = &[];
+    if format == unbound_runtime::render_protocol::texture_format::SRGB_RGBA8 {
+        imported.format = wgpu::TextureFormat::Rgba8UnormSrgb;
+    }
+    imported
+}
+
 impl UnityRenderer {
     /// A texture's native pointer on the Vulkan device: the address of its `VkImage`, stable for
     /// the texture (`depth`: its depth buffer's). 0 for an unknown texture.
@@ -1586,6 +1601,8 @@ impl UnityRenderer {
             &packet,
             self.generation,
             &mut |desc| {
+                let imported = foreign_texture_descriptor(desc, format);
+                let desc = &imported;
                 let hal_desc = wgpu::hal::TextureDescriptor {
                     label: None,
                     size: desc.size,
@@ -2222,6 +2239,38 @@ pub fn vk_format(adapter: &wgpu::Adapter, format: wgpu::TextureFormat) -> Option
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn foreign_srgb_views_need_no_mutable_format_permission() {
+        use unbound_runtime::render_protocol::texture_format as F;
+        let original = wgpu::TextureDescriptor {
+            label: None,
+            size: wgpu::Extent3d {
+                width: 8,
+                height: 4,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 4,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[wgpu::TextureFormat::Rgba8UnormSrgb],
+        };
+        let srgb = foreign_texture_descriptor(&original, F::SRGB_RGBA8);
+        assert_eq!(srgb.format, wgpu::TextureFormat::Rgba8UnormSrgb);
+        assert!(srgb.view_formats.is_empty());
+        assert_eq!(srgb.mip_level_count, 4);
+        assert_eq!(srgb.size, original.size);
+        let linear = foreign_texture_descriptor(&original, F::LINEAR_RGBA8);
+        assert_eq!(linear.format, wgpu::TextureFormat::Rgba8Unorm);
+        assert!(linear.view_formats.is_empty());
+        assert_eq!(original.format, wgpu::TextureFormat::Rgba8Unorm);
+        assert_eq!(
+            original.view_formats,
+            &[wgpu::TextureFormat::Rgba8UnormSrgb]
+        );
+    }
 
     #[test]
     fn foreign_formats_preserve_channels_precision_and_color_space() {

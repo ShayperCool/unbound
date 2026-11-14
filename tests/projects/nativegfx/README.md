@@ -224,7 +224,9 @@ format. BGRA, packed and compressed foreign Vulkan storage remain unsupported. O
 layouts and drivers remain outside the measured contract. The public creation API carries
 neither a layout nor a synchronization handoff; a raw VkImage does not expose either.
 `externalVkFormats.*` clears each of three mip levels independently on the GPU, samples
-their distinct values and rewraps after destruction. Float controls retain values above 1.0.
+their distinct values and rewraps after destruction. Float controls retain values above 1.0. All new foreign-format images omit mutable-format
+permission, including sRGB: their views must match their physical storage
+([Vulkan image-view requirements](https://docs.vulkan.org/refpages/latest/refpages/source/VkImageViewCreateInfo.html)).
 
 OpenGL's whole-image copies from external 2D and cube wrappers write one texel; untouched
 pixels in these controls retain a defined sentinel color. Volume copies cover the slices.
