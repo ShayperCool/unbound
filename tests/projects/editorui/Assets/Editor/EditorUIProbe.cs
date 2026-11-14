@@ -450,6 +450,107 @@ public static class EditorUIProbe
 
         // Prefab utility events.
         Call("PrefabUtility.prefabInstanceUpdated", () => { PrefabUtility.prefabInstanceUpdated += _ => { }; return true; });
+
+        // Last (recorded with the macOS Editor): clip lengths while curves come and go.
+        ClipLengths();
+    }
+
+    /// <summary>A clip's length, its settings' stop time and its number of curve bindings.</summary>
+    static object[] Span(AnimationClip c) => new object[] { c.length, AnimationUtility.GetAnimationClipSettings(c).stopTime, AnimationUtility.GetCurveBindings(c).Length };
+
+    /// <summary>Clip lengths while curves are set, shortened and removed, on a legacy and a
+    /// non-legacy clip: AnimationClip.SetCurve on each Transform vector property and on a Light's
+    /// intensity, AnimationUtility.SetEditorCurve on a position component, and a SetCurve position
+    /// curve shortened and removed through SetEditorCurve. Each step records Span. Recorded last
+    /// (the macOS Editor).</summary>
+    static void ClipLengths()
+    {
+        var full = AnimationCurve.Linear(0, 0, 2, 1);
+        var half = AnimationCurve.Linear(0, 0, 1, 1);
+        foreach (var legacy in new[] { true, false })
+        {
+            string tag = legacy ? "legacy" : "generic";
+            foreach (var (property, axes) in new[] { ("localPosition", "xyz"), ("localRotation", "xyzw"), ("localEulerAngles", "xyz"), ("localScale", "xyz") })
+                Call("ClipLength." + tag + ".SetCurve." + property, () =>
+                {
+                    var c = new AnimationClip { legacy = legacy };
+                    var steps = new List<object> { Span(c) };
+                    c.SetCurve("", typeof(Transform), property + ".x", full); steps.Add(Span(c));
+                    c.SetCurve("", typeof(Transform), property + ".x", half); steps.Add(Span(c));
+                    c.SetCurve("", typeof(Transform), property + ".x", null); steps.Add(Span(c));
+                    foreach (var axis in axes.Substring(1)) c.SetCurve("", typeof(Transform), property + "." + axis, null);
+                    steps.Add(Span(c));
+                    c.ClearCurves(); steps.Add(Span(c));
+                    UnityEngine.Object.DestroyImmediate(c);
+                    return steps;
+                });
+            Call("ClipLength." + tag + ".SetCurve.light", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                var steps = new List<object>();
+                c.SetCurve("", typeof(Light), "m_Intensity", full); steps.Add(Span(c));
+                c.SetCurve("", typeof(Light), "m_Intensity", half); steps.Add(Span(c));
+                c.SetCurve("", typeof(Light), "m_Intensity", null); steps.Add(Span(c));
+                UnityEngine.Object.DestroyImmediate(c);
+                return steps;
+            });
+            Call("ClipLength." + tag + ".SetEditorCurve.position", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                var x = EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.x");
+                var steps = new List<object>();
+                AnimationUtility.SetEditorCurve(c, x, full); steps.Add(Span(c));
+                AnimationUtility.SetEditorCurve(c, x, half); steps.Add(Span(c));
+                AnimationUtility.SetEditorCurve(c, x, null); steps.Add(Span(c));
+                UnityEngine.Object.DestroyImmediate(c);
+                return steps;
+            });
+            Call("ClipLength." + tag + ".SetCurve.keyTimes", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                var x = EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.x");
+                var y = EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.y");
+                object Times(EditorCurveBinding b) { var e = AnimationUtility.GetEditorCurve(c, b); return e == null ? null : e.keys.Select(k => k.time).ToArray(); }
+                var steps = new List<object>();
+                c.SetCurve("", typeof(Transform), "localPosition.x", full);
+                c.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0.5f, 0, 1, 1));
+                steps.Add(new object[] { Span(c), Times(x), Times(y) });
+                c.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(-2, 0, -1, 1));
+                steps.Add(new object[] { Span(c), Times(x), Times(y) });
+                c.SetCurve("", typeof(Transform), "localPosition", null); steps.Add(Span(c));
+                c.SetCurve("", typeof(Transform), "localPosition.x", full);
+                c.SetCurve("", typeof(Transform), "m_LocalPosition", null); steps.Add(Span(c));
+                UnityEngine.Object.DestroyImmediate(c);
+                return steps;
+            });
+            Call("ClipLength." + tag + ".SetCurve.companions", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                c.SetCurve("Child", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0, 0, 1, 10));
+                var root = new GameObject("CompanionRoot");
+                var child = new GameObject("Child");
+                child.transform.SetParent(root.transform, false);
+                child.transform.localPosition = new Vector3(0, 4, 6);
+                c.SampleAnimation(root, 0.5f);
+                var y = AnimationUtility.GetEditorCurve(c, EditorCurveBinding.FloatCurve("Child", typeof(Transform), "m_LocalPosition.y"));
+                var result = new object[] { child.transform.localPosition, y == null ? null : y.keys.Select(k => new object[] { k.time, k.value, k.inTangent, k.outTangent }).ToArray() };
+                UnityEngine.Object.DestroyImmediate(root);
+                UnityEngine.Object.DestroyImmediate(c);
+                return result;
+            });
+            Call("ClipLength." + tag + ".SetCurveThenSetEditorCurve.position", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                var steps = new List<object>();
+                c.SetCurve("", typeof(Transform), "localPosition.x", full); steps.Add(Span(c));
+                AnimationUtility.SetEditorCurve(c, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.x"), half); steps.Add(Span(c));
+                foreach (var axis in "xyz")
+                    AnimationUtility.SetEditorCurve(c, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition." + axis), null);
+                steps.Add(Span(c));
+                UnityEngine.Object.DestroyImmediate(c);
+                return steps;
+            });
+        }
     }
 
     class EmptyTree : TreeView

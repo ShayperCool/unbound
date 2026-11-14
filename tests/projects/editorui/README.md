@@ -33,6 +33,12 @@ Run Unbound and compare:
     EDITORUI_PROBE_OUT=/tmp/editorui unbound run -p tests/projects/editorui --headless 300000 --fixed-fps 60
     python3 tests/projects/editorui/compare.py tests/projects/editorui/Reference /tmp/editorui
 
+`ClipLength.*` (the last calls, recorded with the macOS Editor, two identical captures; the other
+rows are the Linux reference's, unchanged) records a clip's length, stop time and bindings while
+AnimationClip.SetCurve and AnimationUtility.SetEditorCurve set, shorten and remove Transform vector
+and other curves on legacy and non-legacy clips, the key times SetCurve leaves on a vector's
+components, and how a clip of one position component plays.
+
 Every call matches but one expected difference: Unity's reorderable list keeps its elements'
 heights from its first layout, so an element expanded after the list was measured once does not
 count yet.
