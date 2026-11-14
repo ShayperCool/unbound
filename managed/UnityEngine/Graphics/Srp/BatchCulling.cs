@@ -580,7 +580,8 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A draw command's draws: its visible instances in draws of at most
-        /// <see cref="MaxInstancesPerDraw"/>, each with its batch's window.</summary>
+        /// <see cref="MaxInstancesPerDraw"/>, each with its batch's window (a sorted instance's
+        /// item draws that instance alone).</summary>
         internal static void Draw(in FrameBuilder.DrawItem item, DrawRef dots, ulong material, int pass, Dictionary<int, object> properties)
         {
             ref var d = ref dots.Output.Drawn;
