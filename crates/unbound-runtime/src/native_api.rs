@@ -84,7 +84,8 @@ use std::ffi::c_void;
 /// 73: DOTS draw commands carry their indirect visible-instance offset.
 /// 74: texture packet bits 64/128 carry the texture-owned depth comparison state.
 /// 75: external texture binding carries the native image metadata.
-pub const NATIVE_API_VERSION: u32 = 75;
+/// 76: sampled compute texture properties admit the depth-element selector.
+pub const NATIVE_API_VERSION: u32 = 76;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

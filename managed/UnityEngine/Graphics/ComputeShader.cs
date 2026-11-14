@@ -304,7 +304,7 @@ namespace UnityEngine
                         for (int i = 0; i < ms.Length; i++) for (int k = 0; k < 16; k++) p.Array[i * 16 + k] = ms[i][k];
                         break;
                     case ValueTuple<Texture, int, RenderTextureSubElement> element:
-                        p.Kind = GfxStream.ImageKind;
+                        p.Kind = GfxStream.TextureKind;
                         p.Handle = TextureElements.MaterialHandle(element.Item1, element.Item3);
                         p.Int = element.Item2;
                         break;

@@ -45,8 +45,29 @@
   "device.sampleResolve.4.before.logs",
   "device.sampleResolve.8.after.logs",
   "device.sampleResolve.8.before.logs",
+  "device.stencilResolve.1.initialize.logs",
+  "device.stencilResolve.2.again.logs",
+  "device.stencilResolve.2.clear.logs",
+  "device.stencilResolve.2.initialize.logs",
+  "device.stencilResolve.2.self.logs",
+  "device.stencilResolve.4.again.logs",
+  "device.stencilResolve.4.clear.logs",
+  "device.stencilResolve.4.initialize.logs",
+  "device.stencilResolve.4.self.logs",
+  "device.stencilResolve.8.again.logs",
+  "device.stencilResolve.8.clear.logs",
+  "device.stencilResolve.8.initialize.logs",
+  "device.stencilResolve.8.self.logs",
   "shape.msaa.after.logs",
   "shape.msaa.plain.logs",
   "shape.msaa.srgb.after.logs"
+ ],
+ "OpenGL Core multisample compute reads retain preceding graphics texture bindings in these NVIDIA histories; the renderer binds the requested color and depth samples. Alternating graphics color/depth and isolated kernels confirm the history dependence; other drivers are unmeasured": [
+  "device.colorResolve.2.True.compute.color",
+  "device.colorResolve.2.True.compute.depth",
+  "device.colorResolve.4.True.compute.color",
+  "device.colorResolve.4.True.compute.depth",
+  "device.colorResolve.8.True.compute.color",
+  "device.colorResolve.8.True.compute.depth"
  ]
 }

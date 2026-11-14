@@ -218,6 +218,8 @@ public partial class NativeGfxProbe : MonoBehaviour
         NotesRecord();
         ExternalControls.Run(Value);
         DeviceControls();
+        MsaaControls.Run(Value);
+        if (Environment.GetEnvironmentVariable("NATIVEGFX_STENCIL") == "1") StencilControls();
         NativeGfx_Mark("exit");
         Value("complete", B(code == 0));
         File.WriteAllText(output, records.ToString());

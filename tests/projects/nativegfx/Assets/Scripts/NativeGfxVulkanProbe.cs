@@ -281,6 +281,7 @@ public partial class NativeGfxVulkanProbe : MonoBehaviour
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
         }
         DeviceControls();
+        MsaaControls.Run(Value);
         ExternalControls.Run(Value, action =>
         {
             Application.logMessageReceived -= OnLog;

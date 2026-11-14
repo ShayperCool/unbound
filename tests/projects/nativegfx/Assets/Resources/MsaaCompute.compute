@@ -1,0 +1,21 @@
+#pragma kernel Main
+#pragma kernel SelectA
+#pragma kernel SelectB
+Texture2DMS<float4> _Samples;
+Texture2DMS<float> _Depth;
+RWStructuredBuffer<float4> _Out;
+[numthreads(1,1,1)] void Main(uint3 id:SV_DispatchThreadID) {
+ uint w,h,s;_Samples.GetDimensions(w,h,s);
+ _Out[0]=float4(_Samples.Load(int2(0,0),0).r,_Samples.Load(int2(0,0),s-1).r,w/16.0,s/16.0);
+ _Out[1]=float4(_Depth.Load(int2(0,0),0),_Depth.Load(int2(0,0),s-1),w/16.0,s/16.0);
+}
+
+Texture2DMS<float4> _Selected;
+[numthreads(1,1,1)] void SelectA(uint3 id:SV_DispatchThreadID) {
+ uint w,h,s;_Selected.GetDimensions(w,h,s);
+ _Out[0]=float4(_Selected.Load(int2(0,0),0).r,_Selected.Load(int2(0,0),s-1).r,w/16.0,s/16.0);
+}
+[numthreads(1,1,1)] void SelectB(uint3 id:SV_DispatchThreadID) {
+ uint w,h,s;_Selected.GetDimensions(w,h,s);
+ _Out[1]=float4(_Selected.Load(int2(0,0),0).r,_Selected.Load(int2(0,0),s-1).r,w/16.0,s/16.0);
+}

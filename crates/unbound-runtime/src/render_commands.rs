@@ -537,7 +537,7 @@ impl<'a> Reader<'a> {
         Ok((components, data))
     }
 
-    /// A property; `sampled`: a draw's or a global property, whose textures may name an element.
+    /// A property; `sampled`: draw, global and compute texture bindings may name an element.
     fn property(&mut self, sampled: bool) -> Result<(String, PropertyValue), String> {
         let name = self.string()?;
         let value = match self.u8()? {
@@ -887,7 +887,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 let count = r.u32()? as usize;
                 let mut properties = Vec::with_capacity(count.min(64));
                 for _ in 0..count {
-                    properties.push(r.property(false)?);
+                    properties.push(r.property(true)?);
                 }
                 Command::Dispatch(Box::new(Dispatch {
                     file,
@@ -1710,9 +1710,19 @@ mod tests {
             }))
         };
         assert!(encode(dispatch(7)).is_ok());
+        assert!(encode(dispatch(depth)).is_ok());
+        assert!(encode(dispatch(handle::DEPTH_ELEMENT)).is_err());
+        assert!(encode(dispatch(7 | 1 << 63)).is_err());
+        let mut image = dispatch(7);
+        if let Command::Dispatch(d) = &mut image {
+            d.properties[0].1 = PropertyValue::Image {
+                handle: depth,
+                mip: 0,
+            };
+        }
         assert!(
-            encode(dispatch(depth)).is_err(),
-            "kernels bind plain textures"
+            encode(image).is_err(),
+            "writable images require a plain handle"
         );
         assert_eq!(handle::split(depth), (7, true));
         assert_eq!(handle::split(7), (7, false));
@@ -1873,7 +1883,7 @@ mod tests {
     /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts, 73 BatchRendererGroup indirect draws.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 75);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 76);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

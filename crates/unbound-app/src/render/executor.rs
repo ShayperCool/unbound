@@ -2764,15 +2764,20 @@ impl UnityRenderer {
                         if let Some(copies) = self.resolve_msaa(texture) {
                             passes.extend(copies.map(Op::Copy));
                         }
-                    } else if let Some(copy) = self.plan_copy(
-                        texture,
-                        [0, 0],
-                        [0, 0, -1, -1],
-                        destination,
-                        [0, 0],
-                        [0, 0],
-                        false,
-                    ) {
+                    } else if self
+                        .textures
+                        .get(&destination)
+                        .is_none_or(|t| t.samples == 1)
+                        && let Some(copy) = self.plan_copy(
+                            texture,
+                            [0, 0],
+                            [0, 0, -1, -1],
+                            destination,
+                            [0, 0],
+                            [0, 0],
+                            false,
+                        )
+                    {
                         passes.push(Op::Copy(copy));
                     }
                     open = false;
@@ -4529,7 +4534,7 @@ impl UnityRenderer {
                             }),
                             stencil_ops: b.format.has_stencil_aspect().then_some(
                                 wgpu::Operations {
-                                    load: wgpu::LoadOp::Clear(0),
+                                    load: wgpu::LoadOp::Load,
                                     store: wgpu::StoreOp::Store,
                                 },
                             ),

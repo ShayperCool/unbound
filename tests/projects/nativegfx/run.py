@@ -57,6 +57,7 @@ LIBRARY = 'libNativeGfxProbe.so'
 LIBRARIES = ((LIBRARY, None), ('libNativeGfxPreload.so', 'preload'), ('libGfxPluginNativeGfxPrefix.so', 'prefix'))
 VULKAN_LIBRARY = 'libNativeGfxVulkan.so'
 DEVICE = 'opengl'
+STENCIL = False
 
 
 LINUX = sys.platform == 'linux' and platform.machine() in ('x86_64', 'AMD64')
@@ -147,7 +148,8 @@ def assemble(out):
 def environment(out):
     if DEVICE == 'vulkan':
         return {'NATIVEGFX_VULKAN_OUT': str(out/OUT)}
-    return {'NATIVEGFX_PROBE_OUT': str(out/SCRIPTS_OUT), 'NATIVEGFX_PLUGIN_LOG': str(out/PLUGIN_LOG)}
+    return {'NATIVEGFX_PROBE_OUT': str(out/SCRIPTS_OUT), 'NATIVEGFX_PLUGIN_LOG': str(out/PLUGIN_LOG),
+            'NATIVEGFX_STENCIL': '1' if STENCIL else '0'}
 
 
 def finish(out):
@@ -157,6 +159,8 @@ def finish(out):
 
 
 def reference():
+    if STENCIL:
+        return ROOT/'Reference'/f'unity-{unity_version()}'/'stencil.jsonl'
     return reference_file(ROOT, 'jsonl') if DEVICE == 'opengl' else ROOT/'Reference'/f'unity-{unity_version()}'/'vulkan.jsonl'
 
 
@@ -228,9 +232,13 @@ def main():
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
     parser.add_argument('--device', choices=('opengl', 'vulkan'), default='opengl')
+    parser.add_argument('--stencil', action='store_true', help='OpenGL retained-stencil controls')
     args = parser.parse_args()
-    global DEVICE
+    global DEVICE, STENCIL
     DEVICE = args.device
+    STENCIL = args.stencil
+    if STENCIL and (DEVICE != 'opengl' or not LINUX):
+        parser.error('--stencil is measured on Linux OpenGL only')
     if args.mode in ('native', 'engine') and (not args.label or Path(args.label).name != args.label):
         parser.error('--label must be a single directory name')
     if args.mode == 'native':

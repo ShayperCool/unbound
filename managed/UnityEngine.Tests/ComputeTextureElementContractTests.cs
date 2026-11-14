@@ -111,6 +111,7 @@ namespace Unbound.Tests
                 int id = UnityEngine.Shader.PropertyToID("_Samples");
                 cs.SetTexture(0, id, rt, 0, RenderTextureSubElement.Depth);
                 var depth = Assert.Single(Bound(cs, 0));
+                Assert.Equal(GfxStream.TextureKind, depth.Kind);
                 Assert.Equal(rt.EnsureCreated() | TextureElements.DepthElement, depth.Handle);
                 cs.SetTexture(0, id, rt, 0, RenderTextureSubElement.Color);
                 Assert.Equal(rt.EnsureCreated(), Assert.Single(Bound(cs, 0)).Handle);

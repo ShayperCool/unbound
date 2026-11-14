@@ -1279,14 +1279,14 @@ static void describe_bound(int grey)
 /// textures, 2 writes into three shapes, 3 describes the bound target and draws into it, 4 the
 /// same with half grey for an sRGB target; any other does nothing (what Unity itself reports
 /// around a callback).
-static void read_device_depth(void)
+static void read_device_component(int stencil)
 {
     typedef void (*GetTextureSubImageFn)(GLuint, GLint, GLint, GLint, GLint, GLsizei, GLsizei, GLsizei, GLenum, GLenum, GLsizei, void*);
     void* lib = dlopen("libOpenGL.so.0", RTLD_NOW | RTLD_GLOBAL);
     if (!lib) lib = dlopen("libGL.so.1", RTLD_NOW | RTLD_GLOBAL);
     GetTextureSubImageFn get = lib ? (GetTextureSubImageFn)dlsym(lib, "glGetTextureSubImage") : NULL;
     GLuint name = (GLuint)shape_named("depth");
-    if (!get || !name) { texture_note("depth unavailable"); return; }
+    if (!get || !name) { texture_note("depth unavailable"); if (lib) dlclose(lib); return; }
     GLint buffer = 0;
     gl.GetIntegerv(0x88ed, &buffer);
     gl.BindBuffer(0x88eb, 0);
@@ -1294,16 +1294,41 @@ static void read_device_depth(void)
     GLint saved[6];
     for (int i = 0; i < 6; i++) { gl.GetIntegerv(states[i], &saved[i]); gl.PixelStorei(states[i], i == 0 ? 4 : 0); }
     while (gl.GetError()) {}
-    float depth = -99.0f;
-    get(name, 0, 0, 0, 0, 1, 1, 1, 0x1902, 0x1406, sizeof depth, &depth);
+    union { float depth; unsigned char stencil[4]; } value;
+    value.depth = -99.0f;
+    get(name, 0, 0, 0, 0, 1, 1, 1, stencil ? 0x1901 : 0x1902, stencil ? 0x1401 : 0x1406, sizeof value, &value);
     GLenum error = gl.GetError();
-    texture_note("depth value=%.9g error=0x%x", depth, error);
-    get(name, 0, 6, 0, 0, 1, 1, 1, 0x1902, 0x1406, sizeof depth, &depth);
+    if (stencil) texture_note("stencil value=%u error=0x%x", value.stencil[0], error);
+    else texture_note("depth value=%.9g error=0x%x", value.depth, error);
+    get(name, 0, 6, 0, 0, 1, 1, 1, stencil ? 0x1901 : 0x1902, stencil ? 0x1401 : 0x1406, sizeof value, &value);
     error = gl.GetError();
-    texture_note("depth right=%.9g error=0x%x", depth, error);
+    if (stencil) texture_note("stencil right=%u error=0x%x", value.stencil[0], error);
+    else texture_note("depth right=%.9g error=0x%x", value.depth, error);
     for (int i = 0; i < 6; i++) gl.PixelStorei(states[i], saved[i]);
     gl.BindBuffer(0x88eb, (GLuint)buffer);
     if (lib) dlclose(lib);
+}
+
+#define GL_DEPTH_STENCIL 0x84F9
+#define GL_UNSIGNED_INT_24_8 0x84FA
+
+static void initialize_resolved_stencil(void)
+{
+    typedef void (*ClearTextureFn)(GLuint, GLint, GLenum, GLenum, const void*);
+    void* lib = dlopen("libOpenGL.so.0", RTLD_NOW | RTLD_GLOBAL);
+    if (!lib) lib = dlopen("libGL.so.1", RTLD_NOW | RTLD_GLOBAL);
+    ClearTextureFn clear = lib ? (ClearTextureFn)dlsym(lib, "glClearTexImage") : NULL;
+    GLuint name = (GLuint)shape_named("depth");
+    if (!clear || !name) { texture_note("stencil initialization unavailable"); if(lib)dlclose(lib); return; }
+    GLint buffer = 0;gl.GetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &buffer);gl.BindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    while(gl.GetError()) {}
+    // A defined retained value distinguishes stencil preservation from uninitialized storage.
+    const GLuint max_depth24 = (1u << 24) - 1u;
+    const GLuint stencil_sentinel = 113u;
+    const GLuint initialized_depth_stencil = ((GLuint)(0.75 * max_depth24) << 8) | stencil_sentinel;
+    clear(name, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, &initialized_depth_stencil);
+    texture_note("stencil initialized=113 error=0x%x",gl.GetError());
+    gl.BindBuffer(GL_PIXEL_UNPACK_BUFFER, (GLuint)buffer);dlclose(lib);
 }
 
 static void on_texture_event(int id)
@@ -1325,7 +1350,9 @@ static void on_texture_event(int id)
     case 2: write_shapes(); break;
     case 3: describe_bound(0); break;
     case 4: describe_bound(1); break;
-    case 5: read_device_depth(); break;
+    case 5: read_device_component(0); break;
+    case 6: read_device_component(1); break;
+    case 7: initialize_resolved_stencil(); break;
     default: break;
     }
 }

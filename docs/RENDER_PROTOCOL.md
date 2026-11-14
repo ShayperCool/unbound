@@ -433,3 +433,8 @@ NativeApi 75 changes the external-texture FFI to take an eight-int image descrip
 TextureFormat, mip count, TextureDimension, linear-data flag and compatibility flags. Its native pointer names
 borrowed storage. Vulkan foreign imports require initialized linear RGBA32 images in GENERAL
 layout with sampled and transfer usage; renderer-owned aliases reuse their tracked storage.
+
+NativeApi 76 admits the depth-element bit in sampled compute texture properties, using the
+existing texture-property encoding. Writable image properties still require a plain texture
+handle. Multisampled graphics and compute slots preserve their declared sample count and read
+the cached color or depth attachment view of a compatible 2D `bindTextureMS` target.

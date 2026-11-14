@@ -52,9 +52,31 @@ Recorded:
   describes disabled automatic resolves, and
   [ResolveAntiAliasedSurface](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture.ResolveAntiAliasedSurface.html)
   describes explicit self and destination resolves. Separate retained depth publication
-  is observed behavior in these controls. Managed multisampled shader resources and the
-  disabled automatic color-resolve behavior remain unimplemented; these controls establish
-  native-plugin image selection.
+  is observed behavior in these controls.
+* **Managed multisample loads and color resolves** (`device.colorResolve.*`,
+  `device.resolveDestination.*`, `device.resolveSourceSingle.*`): 2, 4 and 8 samples,
+  color and depth loads, sample-count queries, automatic averaged color, explicit self and
+  active-source destination resolves. `bindTextureMS` shaders read individual samples.
+  Resolving into a multisampled destination leaves its previous content; a single-sample
+  source can resolve into a single-sample destination too. Vulkan compute color and depth
+  loads match. On OpenGL Core, the six multisample compute rows retain preceding graphics
+  bindings instead of the requested resources; these remain strict declared residuals.
+  Isolated kernels after alternating color/depth graphics reads distinguish that history
+  from color quantization and the requested subelement. Array multisampling and other
+  drivers remain outside this capture. All original reference rows are unchanged.
+  [ComputeShader.SetTexture](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ComputeShader.SetTexture.html)
+  selects an element per kernel and ignores the mip parameter for sampled textures.
+  Multisampled depth selection is implemented on the measured profile; ordinary compute
+  depth and stencil element selection remain reported as unsupported.
+  The Vulkan `device.kernelElements.*` controls give one property opposing element bindings
+  in two kernels and replace each binding independently before dispatch.
+* **Retained stencil** (`--stencil`, OpenGL only): the plugin initializes the native depth
+  image's stencil to 113 before a clear, stencil writes of 37 and 91, and self-resolves.
+  A single-sample image follows the writes; a multisample target's retained stencil keeps
+  113 while its depth is published. Depth-only publication preserves the destination's
+  stencil. The separate canonical profile includes every primary row and the raw callback
+  error logs. Run it with `python3 tests/projects/nativegfx/run.py check --stencil`.
+  Vulkan stencil publication and other drivers remain unmeasured.
 * **External textures** (`external.*`): `Texture2D.CreateExternalTexture` and
   `UpdateExternalTexture` with textures the plugin made, and with another texture's pointer
   (the same texture), also a render texture with depth and mips, which works on after the
