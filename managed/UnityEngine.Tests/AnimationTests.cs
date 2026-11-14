@@ -169,7 +169,14 @@ namespace UnityEngine.Tests
                         Assert.Equal(2f, vector.length);
                         Assert.Single(m_Logs.GetRange(logs, m_Logs.Count - logs));
                         Assert.StartsWith("Error: Can't remove individual", m_Logs[logs]);
-                        vector.ClearCurves();
+                        // The whole vector goes by its serialized name, and by the script name but
+                        // for the Euler angles, which log the error and stay.
+                        vector.SetCurve("", typeof(Transform), property, null);
+                        Assert.Equal(property == "localEulerAngles" ? count : 0, UnityEditor.AnimationUtility.GetCurveBindings(vector).Length);
+                        vector.SetCurve("", typeof(Transform), property + ".x", full);
+                        string whole = property == "localEulerAngles" ? "m_LocalEuler" : "m_" + char.ToUpperInvariant(property[0]) + property.Substring(1);
+                        vector.SetCurve("", typeof(Transform), whole, null);
+                        Assert.Empty(UnityEditor.AnimationUtility.GetCurveBindings(vector));
                         Assert.Equal(1f, vector.length);
                     }
                     var keys = Clip(legacy);
@@ -223,6 +230,39 @@ namespace UnityEngine.Tests
                 foreach (var o in created) Object.DestroyImmediate(o);
                 ProjectInfo.UnityVersion = version;
             }
+        }
+
+        /// <summary>The keys SetCurve adds to a vector's other components leave each curve as it
+        /// was: on its Hermite segment (value and slope) and on a stepped segment (still held).
+        /// A player clip's compiled component and a weighted curve keep their keys (Unbound's
+        /// console warns).</summary>
+        [Fact]
+        public void VectorKeysAddedBySetCurveKeepEachCurve()
+        {
+            var smooth = new AnimationCurve(new Keyframe(0f, 0f, 0f, 3f), new Keyframe(2f, 1f, -1f, 0f));
+            var stepped = new AnimationCurve(new Keyframe(0f, 0f, 0f, float.PositiveInfinity), new Keyframe(2f, 1f));
+            foreach (var original in new[] { smooth, stepped })
+            {
+                var clip = new AnimationClip { legacy = true };
+                clip.SetCurve("", typeof(Transform), "localPosition.x", original);
+                clip.SetCurve("", typeof(Transform), "localPosition.y", new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.5f, 1f), new Keyframe(1.25f, 2f)));
+                var x = UnityEditor.AnimationUtility.GetEditorCurve(clip, UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.x"));
+                Assert.Equal(new[] { 0f, 0.5f, 1.25f, 2f }, x.keys.Select(k => k.time).ToArray());
+                for (float t = 0f; t <= 2f; t += 0.125f) Assert.Equal(original.Evaluate(t), x.Evaluate(t), 5);
+                Object.DestroyImmediate(clip);
+            }
+            var player = new AnimationClip { legacy = true, name = "player" };
+            player.m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForType("", "m_LocalPosition.x", typeof(Transform)) });
+            player.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+            Assert.Equal(2, player.m_Curves.Count);
+            Assert.Null(player.m_Curves[0].Curve);
+            var weighted = new AnimationClip { legacy = true, name = "weighted" };
+            UnityEditor.AnimationUtility.SetEditorCurve(weighted, UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.x"),
+                new AnimationCurve(new Keyframe(0f, 0f, 1f, 1f, 0.5f, 0.5f) { weightedMode = WeightedMode.Both }, new Keyframe(1f, 1f, 1f, 1f, 0.5f, 0.5f) { weightedMode = WeightedMode.Both }));
+            weighted.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+            Assert.Equal(2, UnityEditor.AnimationUtility.GetEditorCurve(weighted, UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.x")).length);
+            Object.DestroyImmediate(player);
+            Object.DestroyImmediate(weighted);
         }
 
         [Fact]

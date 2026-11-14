@@ -403,9 +403,12 @@ namespace UnityEngine
         }
 
         /// <summary>Sets (or with a null curve removes) the curve of one property. In the Editor this
-        /// works on any clip (a player refuses non-legacy ones); a non-legacy clip keeps a Transform's
-        /// vector whole, so one component's curve brings the others' (measured: zero at the same
-        /// times, the clip's bindings x, y, z).</summary>
+        /// works on any clip (a player refuses non-legacy ones). A Transform vector property is one
+        /// curve: a component's curve keys every component at the union of their times
+        /// (<see cref="KeyVectorTogether"/>); a single component, or the Euler angles by their script
+        /// name, cannot be removed (the Editor's error); the serialized name (m_LocalPosition,
+        /// m_LocalRotation, m_LocalScale, m_LocalEuler) or the script name of position, rotation and
+        /// scale removes the whole vector (tests/projects/editorui ClipLength.*).</summary>
         public void SetCurve(string relativePath, Type type, string propertyName, AnimationCurve curve)
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
@@ -415,15 +418,21 @@ namespace UnityEngine
             bool transform = typeof(Transform).IsAssignableFrom(type);
             string head = null;
             var axes = transform ? TransformVectorAxes(attribute, out head) : null;
-            if (curve == null && axes != null)
+            if (curve == null && transform && (axes != null || attribute == EulerScriptName))
             {
-                // A Transform vector's component cannot be removed on its own; its whole curve can.
+                // A Transform vector's component cannot be removed on its own, nor the Euler angles
+                // by their script name; the whole curve can, by its serialized name.
+                head ??= attribute;
                 Debug.LogError($"Can't remove individual {VectorCurveKind(head)} curve {propertyName} you must remove the entire animation curve with {VectorCurveName(head)}.");
                 return;
             }
             RestoreImportedCurves();
-            if (curve == null && transform && TransformVectorAxes(attribute + ".x", out _) != null)
-                m_Curves.RemoveAll(c => c.Binding.Path == relativePath && c.Binding.Attribute.StartsWith(attribute + ".", StringComparison.Ordinal) && c.Binding.Matches(type));
+            if (curve == null && transform)
+            {
+                string whole = attribute == VectorCurveName(EulerScriptName) ? EulerScriptName : attribute;
+                if (TransformVectorAxes(whole + ".x", out _) != null)
+                    m_Curves.RemoveAll(c => c.Binding.Path == relativePath && c.Binding.Attribute.StartsWith(whole + ".", StringComparison.Ordinal) && c.Binding.Matches(type));
+            }
             m_Curves.RemoveAll(c => c.Binding.Path == relativePath && c.Binding.Attribute == attribute && c.Binding.Matches(type));
             if (curve != null)
             {
@@ -433,6 +442,9 @@ namespace UnityEngine
             }
             m_Version++;
         }
+
+        /// <summary>The Euler angles' curve name (localEulerAngles in scripts).</summary>
+        const string EulerScriptName = "localEulerAnglesRaw";
 
         /// <summary>The Editor's words for a Transform vector's curve in its SetCurve removal error.</summary>
         static string VectorCurveKind(string head) => head switch
@@ -464,8 +476,14 @@ namespace UnityEngine
             {
                 var name = head + "." + axes[a];
                 components[a] = m_Curves.Find(c => c.Binding.Path == path && c.Binding.Attribute == name && c.Binding.Matches(type));
-                if (components[a]?.Curve != null)
-                    foreach (var k in components[a].Curve.keys) times.Add(k.time);
+                if (components[a] == null) continue;
+                if (components[a].Curve == null)
+                {
+                    // A player clip's compiled curve has no keys to merge with.
+                    Debug.LogWarning($"Unbound: AnimationClip.SetCurve on '{this.name}': the other components of {path}/{head} are compiled player curves and keep their keys.", this);
+                    return;
+                }
+                foreach (var k in components[a].Curve.keys) times.Add(k.time);
             }
             for (int a = 0; a < axes.Length; a++)
             {
@@ -482,6 +500,13 @@ namespace UnityEngine
                 var curve = c.Curve;
                 var have = new HashSet<float>(curve.keys.Select(k => k.time));
                 if (have.Count == times.Count) continue;
+                // A weighted segment would change shape when split (unmeasured): such a curve keeps
+                // its keys.
+                if (curve.keys.Any(k => k.weightedMode != WeightedMode.None))
+                {
+                    Debug.LogWarning($"Unbound: AnimationClip.SetCurve on '{this.name}': {path}/{c.Binding.Attribute} has weighted keys and keeps its key times; the Editor keys it at the other components' times too.", this);
+                    continue;
+                }
                 var merged = new List<Keyframe>(curve.keys);
                 foreach (var t in times)
                     if (!have.Contains(t))
@@ -509,8 +534,9 @@ namespace UnityEngine
             m_Curves.InsertRange(Math.Min(at, m_Curves.Count), ordered.Where(c => c != null));
         }
 
-        /// <summary>A curve's slope at a time between its keys (the Hermite segment's derivative,
-        /// unweighted; flat outside its keys or on a stepped segment).</summary>
+        /// <summary>A curve's slope at a time between its keys (the Hermite segment's derivative, so
+        /// a key there leaves the curve as it was; flat outside its keys, and infinite on a stepped
+        /// segment, which keeps holding).</summary>
         static float SlopeAt(AnimationCurve curve, float time)
         {
             var keys = curve.keys;
@@ -519,7 +545,8 @@ namespace UnityEngine
             while (keys[i].time < time) i++;
             Keyframe a = keys[i - 1], b = keys[i];
             float dt = b.time - a.time;
-            if (!(dt > 0f) || float.IsInfinity(a.outTangent) || float.IsInfinity(b.inTangent)) return 0f;
+            if (float.IsInfinity(a.outTangent) || float.IsInfinity(b.inTangent)) return float.PositiveInfinity;
+            if (!(dt > 0f)) return 0f;
             float s = (time - a.time) / dt;
             float h00 = 6f * s * s - 6f * s, h10 = 3f * s * s - 4f * s + 1f, h01 = -h00, h11 = 3f * s * s - 2f * s;
             return (h00 * a.value + h01 * b.value) / dt + h10 * a.outTangent + h11 * b.inTangent;

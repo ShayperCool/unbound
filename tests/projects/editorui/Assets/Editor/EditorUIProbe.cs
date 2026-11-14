@@ -470,7 +470,7 @@ public static class EditorUIProbe
         foreach (var legacy in new[] { true, false })
         {
             string tag = legacy ? "legacy" : "generic";
-            foreach (var (property, axes) in new[] { ("localPosition", "xyz"), ("localRotation", "xyzw"), ("localEulerAngles", "xyz"), ("localScale", "xyz") })
+            foreach (var (property, axes, whole) in new[] { ("localPosition", "xyz", "m_LocalPosition"), ("localRotation", "xyzw", "m_LocalRotation"), ("localEulerAngles", "xyz", "m_LocalEuler"), ("localScale", "xyz", "m_LocalScale") })
                 Call("ClipLength." + tag + ".SetCurve." + property, () =>
                 {
                     var c = new AnimationClip { legacy = legacy };
@@ -480,6 +480,9 @@ public static class EditorUIProbe
                     c.SetCurve("", typeof(Transform), property + ".x", null); steps.Add(Span(c));
                     foreach (var axis in axes.Substring(1)) c.SetCurve("", typeof(Transform), property + "." + axis, null);
                     steps.Add(Span(c));
+                    c.SetCurve("", typeof(Transform), property, null); steps.Add(Span(c));
+                    c.SetCurve("", typeof(Transform), property + ".x", full);
+                    c.SetCurve("", typeof(Transform), whole, null); steps.Add(Span(c));
                     c.ClearCurves(); steps.Add(Span(c));
                     UnityEngine.Object.DestroyImmediate(c);
                     return steps;

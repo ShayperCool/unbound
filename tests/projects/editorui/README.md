@@ -39,6 +39,8 @@ AnimationClip.SetCurve and AnimationUtility.SetEditorCurve set, shorten and remo
 and other curves on legacy and non-legacy clips, the key times SetCurve leaves on a vector's
 components, and how a clip of one position component plays.
 
-Every call matches but one expected difference: Unity's reorderable list keeps its elements'
+Every call matches but three expected differences: Unity's reorderable list keeps its elements'
 heights from its first layout, so an element expanded after the list was measured once does not
-count yet.
+count yet; and after SetCurve removes a clip's Euler angles by m_LocalEuler, the Editor's clip
+settings keep the removed curves' stop time (2, with a length of 1) where Unbound reports 1
+(`ClipLength.*.SetCurve.localEulerAngles`, open).
