@@ -246,7 +246,8 @@ namespace UnityEngine.Tests
             var stepped = new AnimationCurve(new Keyframe(0f, 0f, 0f, float.PositiveInfinity), new Keyframe(2f, 1f));
             var steppedLate = new AnimationCurve(new Keyframe(0f, 0f, 0f, float.NegativeInfinity), new Keyframe(2f, 1f));
             var steppedIn = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(2f, 1f, float.NegativeInfinity, 0f));
-            foreach (var original in new[] { smooth, stepped, steppedLate, steppedIn })
+            var steppedBoth = new AnimationCurve(new Keyframe(0f, 0f, 0f, float.NegativeInfinity), new Keyframe(2f, 1f, float.PositiveInfinity, 0f));
+            foreach (var original in new[] { smooth, stepped, steppedLate, steppedIn, steppedBoth })
             {
                 var clip = new AnimationClip { legacy = true };
                 clip.SetCurve("", typeof(Transform), "localPosition.x", original);
