@@ -514,3 +514,7 @@ sources, empty/default forms, copied enumerators, private cache writes and actua
 underlying reset/disposal calls. The selected list form resets a boxed copy, so its next
 advance continues the original list position; that measured limitation stays explicit.
 One exact setter exception is removed.
+
+The [remaining behavior audit](API_DECLARATION_FOLLOWUPS.md) records concrete payload,
+ownership, integration and control requirements for every remaining row and the three
+separate runtime follow-ups. Their exact exceptions and raw comparisons stay visible.

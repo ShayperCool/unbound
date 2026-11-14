@@ -1,0 +1,41 @@
+# Remaining API declaration behavior
+
+This audit covers the remaining Q410 behavior rows after Q453's payload, adapter,
+value, equality and enumerator slices. The exact selected-release exceptions remain in
+`managed/UnityEngine/ApiCheckAllowList.json`; the table below does not replace them.
+The retained count is 159 for Unity 6000.0.71f1. Selected declaration payloads and
+current callers were audited before assigning these follow-ups. An audit establishes
+scope, not runtime parity. Each follow-up still needs its own divergent-state Editor
+controls, implementation and independent review.
+
+The completed slices and strict probe counts are recorded in
+[API_DECLARATIONS.md](API_DECLARATIONS.md).
+
+| Row | Retained entries | Audit result and next behavior control |
+| --- | ---: | --- |
+| Asset adapters | 30 | Typed external dispatch already serves PhysicsMaterial, PhysicsMaterial2D and TextAsset. Other asset types still use the legacy reader/copy interfaces. Migrate registration with each type's ownership rules, including mixer subasset restrictions, imported versus runtime resources, independent copies and reloads. Remaining types overlap active rendering, importer, audio and animation work. |
+| Wrapper layouts | 60 | YieldInstruction/WaitForSeconds interop works, with two raw default-packing discrepancies retained. Object owns additional managed identity/reload/destruction state, and derived wrappers need a coordinated state/base-layout migration. GUIContent also lacks a serialized cache and event state. Coroutine owns execution state beyond its selected pointer payload. Require complete field transfers, native-resource lifetimes and derived-type controls for the other 58 wrappers. |
+| Value layouts | 1 | Ray-tracing BuildSettings still needs the selected flags/origin payload and copy/interop controls with the rendering owner. Five XR values, LocationInfo and retired AnimationInfo are now covered separately. |
+| Editor serialized payloads | 13 | Window/view fields include tree, owner, overlay, persistence, geometry and rendering state. PackageInfo has a much larger identity/dependency/compliance payload than its constructor properties. Requests need error/status/identity and fetched-result state beyond completed-result storage. Coordinate field/type markers with shared serialization and live state restoration; use nondefault root/nested overwrite, omitted fields and independent copies. |
+| Editor interfaces | 11 | Window/model backend lifetime, menus, previews, package completion/error callbacks, connection dispatch and converters require actual state. Existing empty views/completed requests are insufficient controls. Test changed owner/focus state, distinct preview targets and error/status restoration through the selected interfaces. |
+| UI interfaces | 12 | Existing panel attachment/group state, property binding notifications and style animation helpers need selected interface dispatch. Test distinct panel/group owners, changed column/sort values and actual animation state through those interfaces. Remove internal equality declarations only with collection controls. |
+| Job containers | 5 | Mesh data uses handle-backed stores and safety state; light queries retain a probe snapshot and safety handle. Container and pointer-safety attributes alter JobLayout/UnsafeUtility scheduling checks. Require read/write ranges, restricted parallel access, dependency completion, disposal and copied-handle lifetime controls before changing the metadata. Graphics/importer ownership overlaps active work. |
+| Animator animatePhysics | 1 | The current property aliases updateMode. The required behavior is animated kinematic-body synchronization. Distinguish the moving transform/body poses across updates rather than observing a stationary body or just the mode enum. Coordinate animation/physics work. |
+| Core built-in serialization | 3 | Harmonics and rendering-layer masks require their actual built-in schemas and root/nested classification. Selected type eligibility differs from ordinary CLR Serializable state. Test nondefault coefficients, version/bits, overwrite and independent clone state with the rendering owner. |
+| Editor computed setters | 2 | Editor focus currently forwards game application focus; assembly enumeration is computed from the engine and game domain. A stored private setter needs app/game/window focus divergence and durable assembly overrides with dependent cache invalidation. Test actual changed states through callbacks/reloads. |
+| ObjectIdentifier serialization | 1 | Existing canonical cloning distinguishes source 17 from initializer 29. Simply enabling its empty composite type copies 17 incorrectly. Settle common empty-composite eligibility across nested fields, arrays/lists and initializer identity before changing the marker. Existing raw trial failures stay visible. |
+| UI command events | 1 | Command/IME event pooling and text propagation must route correctly before changing TextElement's interest declaration. Use nondefault text/selection, disabled-state and event reuse/propagation controls. |
+| Animation job producer | 1 | Producer reflection data must contain the selected animation job payload and integrate with scheduling, stream ownership and lifetime. An annotation without a working producer is insufficient. Coordinate animation work. |
+| Built-in inspectors | 3 | Current GameObject/Transform inspectors have empty setup; material preview preparation is omitted. Registry annotations would select incomplete target-specific behavior. Test single/multiple distinct targets, serialized editing and preview/resource lifetime before registration. Material preview also needs rendering ownership. |
+| Linked pool counter | 1 | LinkedPool delegates storage/counting to ObjectPool, whose count is derived from the list. A writable cache would diverge from storage. Capture forced private-count divergence across Get, Release, capacity rejection, Clear and callbacks, then integrate the counter into the shared pool mechanism. |
+| Slide result serialization | 2 | Existing slide code explicitly records unverified hit payload serialization. Seed real nondefault slide/surface hits and object references; compare root/nested JSON and overwrite before marking the backing fields. Default hits cannot distinguish the missing behavior. |
+| Unconstrained pixel data | 1 | The current struct-constrained transfer shares MemoryMarshal-based code with layered textures. Settle allocation-free arbitrary-array transfer for null, empty, bool, reference-containing and ordinary pixel values; preserve all shared callers with the rendering owner. |
+| Measured lookup policies | 11 | Retain the exact selected-release lookup policies and all canonical discovery controls unless a new capture contradicts them. No global ordering or stronger inheritance guarantee is inferred. |
+
+Runtime follow-ups have no remaining declaration entry:
+
+- ObjectFactory remains generated/unsupported. Its scope includes eligibility, instance/component/scene creation, placement, reset/finalization and actual lifecycle callbacks. Test marked/unmarked and direct/inherited restrictions with changed object state.
+- Window title attributes currently store data; construction uses type names and does not resolve the title/icon resource policy. Test actual window creation, inherited/direct attributes, title override, icon lookup, cache independence and resource lifetime.
+- NamedBuildTarget still uses enum-name parsing and an unrestricted internal constructor. Selected declarations require validated canonical names and fixed group conversions. Enum parsing cannot represent names such as Windows Store Apps or Nintendo Switch. Settle the complete valid-name list and reverse lookup, including Server, obsolete names and aliases, with paired controls for zero/default targets, unknown numeric groups, invalid constructor strings, case/space variants and exceptions. Keep any release differences in Compat.
+
+Excluded owner work stays excluded: navlinks baseline, texture-pixel baseline and Q411 default-state residuals. Default-state discrepancies remain governed by their own exact queue. No Q456 per-OS emulation instance has been added by these slices.
