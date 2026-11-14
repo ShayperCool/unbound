@@ -222,8 +222,10 @@ namespace UnityEngine
                 {
                     name = "Tree Imposter Texture",
                     hideFlags = HideFlags.HideAndDontSave,
+                    // Mips made automatically after each draw (the Editor's atlas reports
+                    // autoGenerateMips: tests/projects/treebillboards `atlasSampler`).
                     useMipMap = true,
-                    autoGenerateMips = false,
+                    autoGenerateMips = true,
                     mipMapBias = -1f,
                 };
             }
@@ -280,7 +282,6 @@ namespace UnityEngine
                 }
             }
             GfxStream.Restore(saved);
-            m_Atlas.GenerateMips();
         }
 
         /// <summary>The tree lights (_TerrainTreeLightDirections, _TerrainTreeLightColors): the

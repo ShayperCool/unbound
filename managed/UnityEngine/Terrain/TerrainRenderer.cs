@@ -168,7 +168,7 @@ namespace UnityEngine
             m_Legacy = new LegacyPrototype[prototypes.Length];
             bool anyLegacy = false;
             for (int i = 0; i < prototypes.Length; i++)
-                anyLegacy |= (m_Legacy[i] = LegacyOf(prototypes[i])) != null;
+                anyLegacy |= (m_Legacy[i] = TerrainData.IsPersistentPrefab(prototypes[i]?.prefab) ? LegacyOf(prototypes[i]) : null) != null;
             if (anyLegacy) LayOutAtlas();
             if (anyLegacy && Object.FindAnyObjectByType<WindZone>() != null)
                 Warn("terrain trees drawn with the Soft Occlusion or Tree Creator shaders are not bent by wind zones in Unbound.");
@@ -176,7 +176,7 @@ namespace UnityEngine
             {
                 if (tree.prototypeIndex < 0 || tree.prototypeIndex >= prototypes.Length) continue;
                 var prefab = prototypes[tree.prototypeIndex]?.prefab;
-                if (prefab == null) continue;
+                if (!TerrainData.IsPersistentPrefab(prefab)) continue;
                 var root = prefab.transform;
                 var world = origin + Vector3.Scale(tree.position, size);
                 if (m_Legacy[tree.prototypeIndex] is LegacyPrototype legacy)

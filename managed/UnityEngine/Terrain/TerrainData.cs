@@ -614,8 +614,21 @@ namespace UnityEngine
             set
             {
                 m_TreePrototypes = value != null ? (TreePrototype[])value.Clone() : new TreePrototype[0];
-                TreesChanged();
+                RefreshTreePrototypes();
             }
+        }
+
+        /// <summary>A tree prototype's prefab is drawn only when it is an asset: one that is a scene
+        /// or run-time object is an error and its trees are not drawn (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/treebillboards `wide`).</summary>
+        internal static bool IsPersistentPrefab(GameObject prefab) => prefab != null && (prefab.IsPersistentAsset || prefab.m_IsPrefabAsset);
+
+        void RefreshTreePrototypes()
+        {
+            foreach (var prototype in m_TreePrototypes)
+                if (prototype?.m_Prefab is GameObject prefab && !IsPersistentPrefab(prefab))
+                    Debug.LogError($"Tree '{prefab.name}' couldn't be selected because it is not persistent.", this);
+            TreesChanged();
         }
 
         internal void RemoveTreePrototype(int index)
@@ -626,7 +639,7 @@ namespace UnityEngine
             TreesChanged();
         }
 
-        public void RefreshPrototypes() => TreesChanged();
+        public void RefreshPrototypes() => RefreshTreePrototypes();
 
         public DetailPrototype[] detailPrototypes
         {
