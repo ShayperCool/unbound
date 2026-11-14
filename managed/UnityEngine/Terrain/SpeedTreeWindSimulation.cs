@@ -247,6 +247,8 @@ namespace UnityEngine
         static readonly Dictionary<GameObject, Tree> s_Trees = new Dictionary<GameObject, Tree>();
         static readonly object[] s_Calm = SpeedTreeWindState.NewValues();
         static readonly int[] s_Ids = Ids();
+        /// <summary>This frame's spherical zones.</summary>
+        static readonly List<WindZone> s_Spherical = new List<WindZone>();
         static bool s_AnyWind, s_WarnedSpherical;
 
         static int[] Ids()
@@ -289,12 +291,12 @@ namespace UnityEngine
         internal static void Update()
         {
             var wind = Vector3.zero;
-            bool spherical = false;
+            s_Spherical.Clear();
             foreach (var zone in WindZone.All)
             {
                 if (zone.mode == WindZoneMode.Spherical)
                 {
-                    spherical = true;
+                    s_Spherical.Add(zone);
                     continue;
                 }
                 var d = zone.SpeedTreeDirection();
@@ -310,28 +312,22 @@ namespace UnityEngine
                 asset.Wind.Update(time, direction, strength, ref asset.Config);
                 blowing |= asset.Wind.Blowing;
             }
-            s_AnyWind = wind.x != 0f || wind.y != 0f || wind.z != 0f || spherical || blowing;
-            if (spherical && !s_WarnedSpherical) WarnSpherical();
+            s_AnyWind = wind.x != 0f || wind.y != 0f || wind.z != 0f || s_Spherical.Count > 0 || blowing;
         }
 
-        /// <summary>Warns once when a spherical zone reaches a tree with wind.</summary>
-        static void WarnSpherical()
+        /// <summary>Warns once when a tree drawn with wind is inside a spherical zone's radius.</summary>
+        static void WarnIfInSphericalZone(Renderer renderer)
         {
-            foreach (var zone in WindZone.All)
+            var bounds = renderer.bounds;
+            foreach (var zone in s_Spherical)
             {
-                if (zone.mode != WindZoneMode.Spherical) continue;
-                var center = zone.transform.position;
+                if (zone == null) continue;
                 float radius = zone.radius;
-                foreach (var tree in s_Trees.Values)
-                {
-                    if (tree.windAsset is null) continue;
-                    var renderer = tree.GetComponent<Renderer>();
-                    if (renderer == null || renderer.bounds.SqrDistance(center) >= radius * radius) continue;
-                    s_WarnedSpherical = true;
-                    Debug.LogWarning("Unbound: SpeedTree 9 trees inside a spherical WindZone's radius ('" + tree.name +
-                        "') are bent only by the directional wind zones; the spherical zone's own wind is not simulated.");
-                    return;
-                }
+                if (bounds.SqrDistance(zone.transform.position) >= radius * radius) continue;
+                s_WarnedSpherical = true;
+                Debug.LogWarning("Unbound: SpeedTree 9 trees inside a spherical WindZone's radius ('" + renderer.name +
+                    "') are bent only by the directional wind zones; the spherical zone's own wind is not simulated.");
+                return;
             }
         }
 
@@ -343,6 +339,7 @@ namespace UnityEngine
             if (s_Trees.Count == 0 || !s_Trees.TryGetValue(renderer.m_GameObject, out var tree)) return properties;
             var asset = tree.windAsset;
             if (asset is null) return properties;
+            if (s_Spherical.Count > 0 && !s_WarnedSpherical) WarnIfInSphericalZone(renderer);
             var values = s_AnyWind ? asset.Wind.Values : s_Calm;
             var history = renderer.m_MotionVectorGenerationMode == MotionVectorGenerationMode.Object ? values : s_Calm;
             var merged = DrawPropertyPool.Copy(properties);

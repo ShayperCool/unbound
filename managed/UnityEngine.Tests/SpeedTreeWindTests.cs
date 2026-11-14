@@ -128,6 +128,58 @@ namespace UnityEngine.Tests
             Assert.Equal(-1f, Value(wind, 0).z, 6);
         }
 
+        sealed class Warnings : ILogHandler
+        {
+            internal readonly System.Collections.Generic.List<string> Messages = new System.Collections.Generic.List<string>();
+            public void LogException(System.Exception exception, Object context) => Messages.Add(exception.Message);
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                Messages.Add(logType + ": " + string.Format(format, args));
+        }
+
+        [Fact]
+        public void ATreeRendererDrawsWithItsWindAndASphericalZoneOverItWarnsOnce()
+        {
+            var previous = Debug.unityLogger.logHandler;
+            var warnings = new Warnings();
+            var tree = new GameObject("WindTree");
+            var plain = new GameObject("PlainRenderer");
+            var zone = new GameObject("Sphere").AddComponent<WindZone>();
+            var directional = new GameObject("Directional").AddComponent<WindZone>();
+            try
+            {
+                Debug.unityLogger.logHandler = warnings;
+                tree.AddComponent<MeshFilter>().sharedMesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
+                var renderer = tree.AddComponent<MeshRenderer>();
+                renderer.motionVectorGenerationMode = MotionVectorGenerationMode.Camera;
+                tree.AddComponent<Tree>().windAsset = new SpeedTreeWindAsset(1, Config());
+                var plainRenderer = plain.AddComponent<MeshRenderer>();
+                zone.mode = WindZoneMode.Spherical;
+                zone.radius = 5f;
+                SpeedTreeWindSystem.Update();
+                SpeedTreeWindSystem.Update();
+                using (Unbound.Runtime.DrawPropertyPool.Begin())
+                {
+                    var drawn = SpeedTreeWindSystem.Apply(renderer, null);
+                    Assert.Equal(SpeedTreeWindState.ConstantCount, drawn.Count);
+                    Assert.Equal(new Vector4(2f, 4f, 3f, 0.25f), (Vector4)drawn[Shader.PropertyToID("_ST_TreeExtents_SharedHeightStart")]);
+                    // Camera motion vectors: no history.
+                    Assert.Equal(Vector4.zero, (Vector4)drawn[Shader.PropertyToID("_ST_HistoryTreeExtents_SharedHeightStart")]);
+                    SpeedTreeWindSystem.Apply(renderer, null);
+                    Assert.Null(SpeedTreeWindSystem.Apply(plainRenderer, null));
+                }
+                Assert.Single(warnings.Messages);
+                Assert.Contains("spherical WindZone", warnings.Messages[0]);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                Object.DestroyImmediate(tree);
+                Object.DestroyImmediate(plain);
+                Object.DestroyImmediate(zone.gameObject);
+                Object.DestroyImmediate(directional.gameObject);
+            }
+        }
+
         [Fact]
         public void AZoneUnderAMirroredParentBlowsMirrored()
         {
