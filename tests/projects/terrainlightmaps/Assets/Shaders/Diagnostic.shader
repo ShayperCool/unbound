@@ -13,6 +13,22 @@ float _Mode;
 struct v2f { float4 pos:SV_POSITION; float2 uv0:TEXCOORD0; float2 uv1:TEXCOORD1; float2 uv2:TEXCOORD2; float2 uv3:TEXCOORD3; };
 v2f vert(appdata_full v) { v2f o; o.pos=UnityObjectToClipPos(v.vertex); o.uv0=v.texcoord.xy; o.uv1=v.texcoord1.xy; o.uv2=v.texcoord2.xy; o.uv3=v.texcoord3.xy; return o; }
 float4 frag(v2f i):SV_Target {
+ if (_Mode > 7.5) {
+ #ifdef DYNAMICLIGHTMAP_ON
+  float2 rt=i.uv2*unity_DynamicLightmapST.xy+unity_DynamicLightmapST.zw;
+  if (_Mode < 8.5) return UNITY_SAMPLE_TEX2D(unity_DynamicLightmap,rt);
+  if (_Mode < 9.5) {
+  #ifdef DIRLIGHTMAP_COMBINED
+   return UNITY_SAMPLE_TEX2D_SAMPLER(unity_DynamicDirectionality,unity_DynamicLightmap,rt);
+  #else
+   return float4(0,0,1,1);
+  #endif
+  }
+  return float4(unity_DynamicLightmap_HDR.x/8,unity_DynamicLightmap_HDR.y,unity_DynamicLightmap_HDR.z,1);
+ #else
+  return float4(1,0,1,1);
+ #endif
+ }
  if (_Mode > 6.5) {
  #ifdef DYNAMICLIGHTMAP_ON
   return float4(0,1,0,1);

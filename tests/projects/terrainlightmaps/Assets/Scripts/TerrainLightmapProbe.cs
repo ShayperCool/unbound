@@ -92,6 +92,22 @@ public class TerrainLightmapProbe : MonoBehaviour
         a.materialTemplate=b.materialTemplate=new Material(Shader.Find("Nature/Terrain/Diffuse"));
         LightmapSettings.lightmapsMode=LightmapsMode.NonDirectional; Capture("27-diffuse-gradient");
         LightmapSettings.lightmapsMode=LightmapsMode.CombinedDirectional; Capture("28-diffuse-directional-gradient");
+        // A realtime lightmap index with no realtime lightmap: what is bound, for terrains and meshes.
+        a.lightmapIndex=-1; a.realtimeLightmapIndex=5; b.lightmapIndex=0; b.realtimeLightmapIndex=0;
+        a.realtimeLightmapScaleOffset=b.realtimeLightmapScaleOffset=new Vector4(1,1,0,0);
+        LightmapSettings.lightmapsMode=LightmapsMode.NonDirectional;
+        diagnostic=new Material(diagnostic); diagnostic.SetFloat("_Mode",8); a.materialTemplate=b.materialTemplate=diagnostic; Capture("29-realtime-sample");
+        LightmapSettings.lightmapsMode=LightmapsMode.CombinedDirectional;
+        diagnostic=new Material(diagnostic); diagnostic.SetFloat("_Mode",9); a.materialTemplate=b.materialTemplate=diagnostic; Capture("30-realtime-direction");
+        diagnostic=new Material(diagnostic); diagnostic.SetFloat("_Mode",10); a.materialTemplate=b.materialTemplate=diagnostic; Capture("31-realtime-decode");
+        a.materialTemplate=b.materialTemplate=new Material(Shader.Find("Nature/Terrain/Diffuse"));
+        LightmapSettings.lightmapsMode=LightmapsMode.NonDirectional; Capture("32-diffuse-realtime");
+        LightmapSettings.lightmapsMode=LightmapsMode.CombinedDirectional; Capture("33-diffuse-realtime-directional");
+        a.enabled=b.enabled=false;
+        meshes[0].lightmapIndex=-1; meshes[0].realtimeLightmapIndex=5; meshes[1].lightmapIndex=0; meshes[1].realtimeLightmapIndex=0;
+        foreach(var r in meshes) { r.realtimeLightmapScaleOffset=new Vector4(1,1,0,0); r.enabled=true; }
+        LightmapSettings.lightmapsMode=LightmapsMode.NonDirectional; Capture("34-surface-mesh-realtime");
+        LightmapSettings.lightmapsMode=LightmapsMode.CombinedDirectional; Capture("35-surface-mesh-realtime-directional");
         File.WriteAllText(Path.Combine(output,"records.jsonl"),records.ToString()); Debug.Log("Terrain lightmaps probe complete: "+output);
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
