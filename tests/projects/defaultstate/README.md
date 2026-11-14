@@ -538,3 +538,12 @@ handwritten ExcludeFromObjectFactoryAttribute and EditorWindowTitleAttribute. Bo
 new types and all seven values agree in independent GPU Editor captures. The
 12,706 earlier raw rows and existing inventory entries remain byte-identical,
 bringing the canonical reference to 12,713 rows.
+
+The SpeedTree 9 import slice adds seven types to the handwritten inventory:
+`AssetImporter.SourceAssetIdentifier`, `ScriptedImporterAttribute`,
+`MaterialSettingsCallbackAttribute`, `SpeedTree9Importer`, `SpeedTreeImporterOutputData`,
+`SpeedTreeWindAsset` and `Tree`. Two independent 6000.0.71f1 GPU Editor captures agree on all
+48 of their rows, appended before the completion row; every earlier row and inventory entry is
+byte-identical (12,761 rows). `SpeedTreeWindConfig9`'s parameterless constructor stores the
+release's gust and response defaults. The two queued TextCore instance ids keep their reference
+values; their exact implementation values move by the 36 objects the new rows create first.

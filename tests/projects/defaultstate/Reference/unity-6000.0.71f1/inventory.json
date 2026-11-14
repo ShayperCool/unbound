@@ -907,6 +907,12 @@
       "type": "UnityEditor.AssetImporter"
     },
     {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.AssetImporter+SourceAssetIdentifier"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
@@ -929,6 +935,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "abstract",
       "type": "UnityEditor.AssetImporters.ScriptedImporter"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.AssetImporters.ScriptedImporterAttribute"
     },
     {
       "category": "struct",
@@ -1643,6 +1655,24 @@
       "module": "UnityEditor.CoreModule",
       "status": "static",
       "type": "UnityEditor.ShortcutManagement.ShortcutManager"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.SpeedTree.Importer.MaterialSettingsCallbackAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SpeedTree.Importer.SpeedTree9Importer"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SpeedTree.Importer.SpeedTreeImporterOutputData"
     },
     {
       "category": "class",
@@ -6445,6 +6475,12 @@
       "type": "UnityEngine.SpaceAttribute"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.TerrainModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.SpeedTreeWindAsset"
+    },
+    {
       "category": "component",
       "module": "UnityEngine.PhysicsModule",
       "status": "candidate",
@@ -6869,6 +6905,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.Transform"
+    },
+    {
+      "category": "component",
+      "module": "UnityEngine.TerrainModule",
+      "status": "candidate",
+      "type": "UnityEngine.Tree"
     },
     {
       "category": "struct",
