@@ -234,10 +234,12 @@ In dependency order; each item ends with an Editor-reference probe.
       layerless terrains' checker; coverage mode's rule, ground-aligned turns, detailObjectDensity,
       drawn placement and the quality level's terrain overrides, heightmap LOD by pixel error and
       the base map past basemapDistance, the per-patch height errors and ranges
-      (`tests/projects/terrainlod`) (Q421). Left in drawing: billboards for tree prototypes whose
-      materials' shaders name a BillboardShader (Soft Occlusion, Tree Creator); the rest is in the
-      Terrain rows of COMPATIBILITY_GAPS.md (LOD overrides, normalmapTexture) and its
-      terrainlightmaps row (realtime GI).
+      (`tests/projects/terrainlod`) (Q421); tree billboards for prototypes whose materials'
+      shaders name a BillboardShader (`tests/projects/treebillboards`), the default reflection
+      and layer metallic and smoothness (`tests/projects/defaultreflection`), URP terrains
+      (`tests/projects/urpterrain`) and a realtime lightmap index without a realtime lightmap
+      (`tests/projects/terrainlightmaps`) (Q442, Q455). The rest is in the Terrain rows of
+      COMPATIBILITY_GAPS.md (wind zones, Tree Creator trees, the URP base map at a grazing angle).
 - [x] AssetBundles the Editor builds (UnityFS: uncompressed, LZ4, LZMA): LoadFromFile, Memory,
       Stream and their async forms, LoadAsset (by path or name, sub-assets), LoadAllAssets, Unload,
       the manifest, scenes through SceneManager; player data read by its type trees (references

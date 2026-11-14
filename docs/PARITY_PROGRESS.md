@@ -688,6 +688,11 @@ Q455: the four realtime cases now match. A realtime lightmap index with no realt
 behind it binds a grey texture of half alpha for both realtime maps, terrains and meshes alike;
 the reference adds cases 29 to 35 (1559 records and 48 PNGs per color space, all matching).
 
+Q455, URP terrain and billboards: tests/projects/urpterrain adds a scene without lighting data
+(`nodata`, 0.00: the black default reflection); tests/projects/treebillboards adds a second
+directional light, a point light, 2400 trees and a prototype that is not an asset (an error, its
+trees not drawn), 17/17 records.
+
 ## Integrated Canvas creation and driven lifecycle
 
 Reviewed and cherry-picked seven delegate commits as 84e38a1e, 0e2d3ffa, 5ff7419a,

@@ -16,7 +16,8 @@ to 380 units ahead of the cameras, of several width and height scales and colors
   tinted and at intensity 1.6), `maxmesh3` (treeMaximumFullLODCount 3) and `sunonly` (the sun's
   intensity alone changed, the view unchanged), `twolights` (a second, bluish directional light),
   `pointlight` (a point light among the near trees), `wide` (every fifth tree a third prototype
-  made at run time, the round tree flattened to three times its width and 0.4 of its height) and
+  made at run time, the round tree flattened to three times its width and 0.4 of its height: not
+  an asset, so the Editor logs an error and draws none of those trees) and
   `many` (2400 trees in a dense grid): the ground view with other settings.
 
 What it shows (Unity 6000.0.71f1, NVIDIA): such trees are drawn as their meshes up to the billboard
