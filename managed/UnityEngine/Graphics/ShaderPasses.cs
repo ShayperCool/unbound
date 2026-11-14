@@ -44,6 +44,9 @@ namespace Unbound.Runtime
         internal readonly Dictionary<string, string> Dependencies = new Dictionary<string, string>();
         internal readonly List<(string Name, Dictionary<string, string> Tags)> Passes = new List<(string, Dictionary<string, string>)>();
         /// <summary>Per pass: whether it says Lighting On.</summary>
+        internal readonly List<bool> Supported = new List<bool>();
+        internal bool CanDraw(int pass) => pass >= Supported.Count || Supported[pass];
+        internal readonly List<Dictionary<string, string>> QueryTags = new List<Dictionary<string, string>>();
         internal readonly List<bool> Lighting = new List<bool>();
 
         /// <summary>A pass's LightMode as the built-in pipeline reads it: its tag, else Always
@@ -92,7 +95,7 @@ namespace Unbound.Runtime
         internal bool HasPassFor(List<string> lightModes)
         {
             for (int i = 0; i < Passes.Count; i++)
-                if (lightModes.Contains(LightMode(i))) return true;
+                if (CanDraw(i) && lightModes.Contains(LightMode(i))) return true;
             return false;
         }
 
@@ -133,8 +136,19 @@ namespace Unbound.Runtime
                 {
                     var tags = new Dictionary<string, string>();
                     foreach (var tag in pass.GetProperty("tags").EnumerateObject()) tags[tag.Name] = tag.Value.GetString() ?? "";
-                    if (info.ShadowCasterPass < 0 && tags.TryGetValue("LightMode", out var lightMode) && lightMode == "ShadowCaster")
+                    // Unsupported generated passes keep their indices, while shadow drawing
+                    // retains its existing fallback until their programs are implemented.
+                    bool supported = !pass.TryGetProperty("supported", out var available) || available.ValueKind != JsonValueKind.False;
+                    info.Supported.Add(supported);
+                    if (supported && info.ShadowCasterPass < 0 && tags.TryGetValue("LightMode", out var lightMode) && lightMode == "ShadowCaster")
                         info.ShadowCasterPass = info.Passes.Count;
+                    var queryTags = tags;
+                    if (pass.TryGetProperty("query_tags", out var ownTags))
+                    {
+                        queryTags = new Dictionary<string, string>();
+                        foreach (var tag in ownTags.EnumerateObject()) queryTags[tag.Name] = tag.Value.GetString() ?? "";
+                    }
+                    info.QueryTags.Add(queryTags);
                     info.Passes.Add((pass.GetProperty("name").GetString() ?? "", tags));
                     info.Lighting.Add(pass.TryGetProperty("lighting", out var lighting) && lighting.ValueKind == JsonValueKind.True);
                 }
@@ -251,7 +265,9 @@ namespace UnityEngine
         {
             var info = Unbound.Runtime.ShaderPassInfo.Of(this);
             if (info == null || passIndex < 0 || passIndex >= info.Passes.Count) return ShaderTagId.none;
-            return info.Passes[passIndex].Tags.TryGetValue(tagName.name, out var value) ? new ShaderTagId(value) : ShaderTagId.none;
+            var tags = passIndex < info.QueryTags.Count ? info.QueryTags[passIndex] : info.Passes[passIndex].Tags;
+            var value = Unbound.Runtime.ShaderDeclarations.Tag(tags, tagName.name);
+            return value != null ? new ShaderTagId(value) : ShaderTagId.none;
         }
 
         /// <summary>A pass's own tag (without its SubShader's) as Unity stores it: built-in light

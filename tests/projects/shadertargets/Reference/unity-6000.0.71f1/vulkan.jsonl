@@ -107,4 +107,14 @@
 {"k":"ReqComputeTess.KW_A","v":[45,4095,1,45]}
 {"k":"ReqComputeTess.KW_B","v":[46,4095,2,45]}
 {"k":"ReqComputeTess.KW_A+KW_B","v":[50,4095,3,45]}
+{"k":"surface.Plain.passes","v":"0/FORWARD/0/FORWARDBASE;1/FORWARD/0/FORWARDADD;2/DEFERRED/2/DEFERRED;3/Meta/3/META;4/TAIL/4/ALWAYS;"}
+{"k":"surface.Plain.tail","v":[0.25,0.5,0.75,1]}
+{"k":"surface.AddShadow.passes","v":"0/FORWARD/0/FORWARDBASE;1/FORWARD/0/FORWARDADD;2/DEFERRED/2/DEFERRED;3/ShadowCaster/3/SHADOWCASTER;4/Meta/4/META;5/TAIL/5/ALWAYS;"}
+{"k":"surface.AddShadow.tail","v":[0.25,0.5,0.75,1]}
+{"k":"surface.NoAdd.passes","v":"0/FORWARD/0/FORWARDBASE;1/DEFERRED/1/DEFERRED;2/Meta/2/META;3/TAIL/3/ALWAYS;"}
+{"k":"surface.NoAdd.tail","v":[0.25,0.5,0.75,1]}
+{"k":"surface.ForwardOnly.passes","v":"0/FORWARD/0/FORWARDBASE;1/FORWARD/0/FORWARDADD;2/TAIL/2/ALWAYS;"}
+{"k":"surface.ForwardOnly.tail","v":[0.25,0.5,0.75,1]}
+{"k":"surface.DeferredOnly.passes","v":"0/DEFERRED/0/DEFERRED;1/Meta/1/META;2/TAIL/2/ALWAYS;"}
+{"k":"surface.DeferredOnly.tail","v":[0.25,0.5,0.75,1]}
 {"k":"complete","v":true}

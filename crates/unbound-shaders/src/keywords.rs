@@ -376,7 +376,7 @@ pub struct SurfacePass {
 /// The passes Unity generates for a surface shader with these `#pragma surface` options (the
 /// words after the surface function and lighting model): forward base, forward add (not with
 /// `noforwardadd`), deferred (not for blended or decal surfaces, nor with
-/// `exclude_path:deferred`), meta (not with `nometa`), and a shadow caster with `addshadow`.
+/// `exclude_path:deferred`), a shadow caster with `addshadow`, then meta (not with `nometa`).
 pub fn surface_passes(options: &[String]) -> Vec<SurfacePass> {
     let has = |w: &str| options.iter().any(|o| o == w);
     let blended = options.iter().any(|o| {
@@ -401,16 +401,16 @@ pub fn surface_passes(options: &[String]) -> Vec<SurfacePass> {
             light_mode: "Deferred",
         });
     }
-    if !has("nometa") {
-        passes.push(SurfacePass {
-            name: "META",
-            light_mode: "Meta",
-        });
-    }
     if has("addshadow") {
         passes.push(SurfacePass {
             name: "ShadowCaster",
             light_mode: "ShadowCaster",
+        });
+    }
+    if !has("nometa") {
+        passes.push(SurfacePass {
+            name: "Meta",
+            light_mode: "Meta",
         });
     }
     passes

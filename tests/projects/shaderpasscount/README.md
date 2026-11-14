@@ -209,3 +209,12 @@ engine count decreases from 21/923 to 20/923 failing keys. Those 20 are the reta
 183/183, including a truncation control that now cuts within a line rather than
 at a midpoint that could coincide with a newline. Comparator rules are unchanged;
 the Python runner creates no X server.
+
+## Generated pass identity
+
+Two fresh windowed NVIDIA OpenGL Core captures for Unity 6000.0.71f1 reproduce all 923
+canonical rows byte for byte. The renderer now keeps the generated pass slots in the same
+index space as its declarations. The companion `shadertargets` `surface.*` controls record
+names and indices for five option sets and draw a named pass after the generated ones.
+Deferred, meta and generated shadow programs themselves remain unsupported and diagnose an
+explicit attempt to draw them; the built-in forward path and shadow fallback are retained.

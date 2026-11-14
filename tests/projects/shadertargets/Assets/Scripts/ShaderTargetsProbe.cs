@@ -78,6 +78,7 @@ public class UitkProbe : MonoBehaviour
                     DestroyImmediate(material);
                 }
             }
+            SurfaceIndices(rows, target, readback);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -90,6 +91,37 @@ public class UitkProbe : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    static void SurfaceIndices(StringBuilder rows, RenderTexture target, Texture2D readback)
+    {
+        foreach (var name in new[] { "Plain", "AddShadow", "NoAdd", "ForwardOnly", "DeferredOnly" })
+        {
+            var shader = Shader.Find("Probe/SurfaceIndices/" + name);
+            var material = new Material(shader);
+            var metadata = new StringBuilder();
+            for (int i = 0; i < material.passCount; i++)
+            {
+                var passName = material.GetPassName(i);
+                metadata.Append(i).Append('/').Append(passName).Append('/')
+                    .Append(material.FindPass(passName)).Append('/')
+                    .Append(shader.FindPassTagValue(i, new UnityEngine.Rendering.ShaderTagId("LightMode")).name)
+                    .Append(';');
+            }
+            rows.Append("{\"k\":\"surface.").Append(name).Append(".passes\",\"v\":\"")
+                .Append(metadata).Append("\"}\n");
+            var previous = RenderTexture.active;
+            RenderTexture.active = target;
+            GL.Clear(true, true, new Color(-1, -1, -1, -1));
+            RenderTexture.active = previous;
+            Graphics.Blit(null, target, material, material.FindPass("TAIL"));
+            RenderTexture.active = target;
+            readback.ReadPixels(new Rect(0, 0, 1, 1), 0, 0);
+            readback.Apply();
+            RenderTexture.active = previous;
+            Row(rows, "surface." + name + ".tail", readback.GetPixel(0, 0));
+            DestroyImmediate(material);
+        }
     }
 
     static void Row(StringBuilder rows, string key, Color v)

@@ -250,19 +250,38 @@ namespace UnityEngine.Tests
         Shader Surface() => Make(Sub("S0", 300, new[] { "FORWARD", "FORWARD", "DEFERRED", "META", "Outline" }), Sub("S1", 200, Named("S1", 3)));
 
         /// <summary>While the renderer draws a SubShader, a found index is one a draw takes: the
-        /// renderer's, also for a pass that follows a surface program's generated ones (the
-        /// Editor's index counts those: open, see the gap table).</summary>
+        /// renderer's, including generated slots before a following named pass.</summary>
         [Fact]
         public void AFoundPassIsOneTheRendererDraws()
         {
             var surface = Surface();
-            SeedRenderer(surface, "S0", "FORWARD", "FORWARD", "Outline");
+            SeedRenderer(surface, "S0", "FORWARD", "FORWARD", "DEFERRED", "Meta", "Outline");
             var material = new Material(surface);
             Assert.Equal(5, material.passCount);
-            Assert.Equal(new[] { 0, -1, -1, 2, -1 }, new[] { "FORWARD", "DEFERRED", "META", "OUTLINE", "S1P0" }.Select(material.FindPass));
-            Assert.Equal(new[] { "FORWARD", "FORWARD", "Outline", "", "" }, new[] { 0, 1, 2, 3, -1 }.Select(material.GetPassName));
+            Assert.Equal(new[] { 0, 2, 3, 4, -1 }, new[] { "FORWARD", "DEFERRED", "META", "OUTLINE", "S1P0" }.Select(material.FindPass));
+            Assert.Equal(new[] { "FORWARD", "FORWARD", "DEFERRED", "Meta", "Outline", "", "" }, new[] { 0, 1, 2, 3, 4, 5, -1 }.Select(material.GetPassName));
             Assert.Equal(-1, material.FindPass(""));
             Assert.Equal(-1, material.FindPass(null));
+        }
+
+        [Fact]
+        public void UnsupportedGeneratedSlotsKeepTheForwardFallbackAndLaterExecutablePasses()
+        {
+            var shader = Surface();
+            var info = new ShaderPassInfo { Found = true, DrawnShader = shader.name };
+            info.Passes.Add(("DEFERRED", new Dictionary<string, string> { ["LightMode"] = "Deferred" }));
+            info.Supported.Add(false);
+            var key = (shader.DrawnName, Shader.globalRenderPipeline);
+            PassInfoCache()[key] = info;
+            m_Seeded.Add(key);
+            var material = new Material(shader);
+            Assert.Equal(0, material.FindPass("DEFERRED"));
+            Assert.Equal(-1, FrameBuilder.DeferredPass(material));
+            Assert.False(info.HasPassFor(new List<string> { "Deferred" }));
+            info.Passes.Add(("CUSTOM", new Dictionary<string, string> { ["LightMode"] = "Deferred" }));
+            info.Supported.Add(true);
+            Assert.Equal(1, FrameBuilder.DeferredPass(material));
+            Assert.True(info.HasPassFor(new List<string> { "Deferred" }));
         }
 
         /// <summary>When the limit leaves no SubShader in reach, the names are those of the

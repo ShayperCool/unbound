@@ -488,6 +488,15 @@ pub enum LightMode {
 }
 
 impl PassInfo {
+    /// A generated pass with a stable public index whose program is not implemented yet.
+    pub fn unsupported_surface_pass(&self) -> bool {
+        self.program.as_ref().is_some_and(|p| p.surface)
+            && !matches!(
+                self.light_mode(),
+                LightMode::ForwardBase | LightMode::ForwardAdd
+            )
+    }
+
     pub fn light_mode(&self) -> LightMode {
         match self.states.tags.get("LightMode") {
             None => {
@@ -659,6 +668,9 @@ impl ShaderLab {
     /// untagged pass is `SRPDefaultUnlit`).
     pub fn tagged_pass(&self, light_mode: &str) -> Option<usize> {
         self.passes.iter().position(|p| {
+            if p.unsupported_surface_pass() {
+                return false;
+            }
             if p.grab.is_some() {
                 return false;
             }
@@ -1169,22 +1181,33 @@ impl Parser<'_> {
                     if self.blocks[b].include {
                         self.includes.push(b);
                     } else if let Some(mut program) = self.program(b) {
-                        // A SubShader-level program: a surface shader's, which generates
-                        // a forward base pass and (unless `noforwardadd`) a forward add pass.
+                        // Preserve generated passes in their public index space, including
+                        // passes that this renderer cannot execute yet.
                         program.surface = true;
-                        let surface = surface_states(&program.code);
-                        let add = surface_add_states(&program.code);
-                        passes.push(PassInfo {
-                            name: "FORWARD".into(),
-                            states: surface,
-                            program: Some(program.clone()),
-                            ..Default::default()
-                        });
-                        if let Some(add) = add {
+                        let options: Vec<String> = program
+                            .code
+                            .lines()
+                            .find_map(|line| {
+                                let mut words =
+                                    line.trim().strip_prefix("#pragma")?.split_whitespace();
+                                (words.next()? == "surface")
+                                    .then(|| words.skip(2).map(String::from).collect())
+                            })
+                            .unwrap_or_default();
+                        for generated in unbound_shaders::keywords::surface_passes(&options) {
+                            let mut states = match generated.light_mode {
+                                "ForwardBase" => surface_states(&program.code),
+                                "ForwardAdd" => surface_add_states(&program.code)
+                                    .expect("generated forward add pass has states"),
+                                _ => States::default(),
+                            };
+                            states
+                                .tags
+                                .insert("LightMode".into(), generated.light_mode.into());
                             passes.push(PassInfo {
-                                name: "FORWARD".into(),
-                                states: add,
-                                program: Some(program),
+                                name: generated.name.into(),
+                                states,
+                                program: Some(program.clone()),
                                 ..Default::default()
                             });
                         }
@@ -2015,6 +2038,71 @@ Fallback "Other"
             ff.stages[0].constant,
             Some(ColorValue::Literal([1.0, 0.5, 0.0, 1.0]))
         );
+    }
+
+    #[test]
+    fn surface_generated_slots_preserve_the_later_pass_indices() {
+        let shader = ShaderLab::parse(
+            r#"Shader "S" { SubShader {
+CGPROGRAM
+#pragma surface surf Lambert addshadow
+ENDCG
+Pass { Name "TAIL" Tags { "LightMode"="Always" } }
+} }"#,
+        )
+        .unwrap();
+        assert_eq!(
+            shader
+                .passes
+                .iter()
+                .map(|p| p.name.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "FORWARD",
+                "FORWARD",
+                "DEFERRED",
+                "ShadowCaster",
+                "Meta",
+                "TAIL"
+            ]
+        );
+        assert_eq!(shader.forward_passes(), [0, 5]);
+        assert!(!shader.passes[0].unsupported_surface_pass());
+        assert!(!shader.passes[1].unsupported_surface_pass());
+        assert!(
+            shader.passes[2..5]
+                .iter()
+                .all(PassInfo::unsupported_surface_pass)
+        );
+        assert!(!shader.passes[5].unsupported_surface_pass());
+        let later = ShaderLab::parse(
+            r#"Shader "S" { SubShader {
+CGPROGRAM
+#pragma surface surf Lambert
+ENDCG
+Pass { Name "CUSTOM" Tags { "LightMode"="Deferred" } }
+} }"#,
+        )
+        .unwrap();
+        assert_eq!(later.tagged_pass("Deferred"), Some(4));
+        let shader = ShaderLab::parse(
+            r#"Shader "S" { SubShader {
+CGPROGRAM
+#pragma surface surf Lambert exclude_path:forward nometa
+ENDCG
+Pass { Name "TAIL" }
+} }"#,
+        )
+        .unwrap();
+        assert_eq!(
+            shader
+                .passes
+                .iter()
+                .map(|p| p.name.as_str())
+                .collect::<Vec<_>>(),
+            ["DEFERRED", "TAIL"]
+        );
+        assert_eq!(shader.forward_passes(), [1]);
     }
 
     #[test]

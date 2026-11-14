@@ -201,6 +201,9 @@ impl Resolver {
                     "name": p.name,
                     "tags": p.states.tags,
                     "lighting": p.states.fixed.lighting.unwrap_or(false),
+                    "supported": !p.unsupported_surface_pass(),
+                    "query_tags": unbound_assets::shader_tags::canonical_tags(p.own_tags.iter())
+                        .into_iter().collect::<std::collections::HashMap<_, _>>(),
                 })
             })
             .collect();
@@ -363,6 +366,12 @@ impl Resolver {
             ));
         }
         let light_mode = pass.states.tags.get("LightMode").cloned();
+        if pass.unsupported_surface_pass() {
+            return Err(format!(
+                "generated surface {} pass is not supported",
+                light_mode.as_deref().unwrap_or("unknown")
+            ));
+        }
         Ok(match &pass.program {
             Some(p) => unbound_shaders::Program {
                 file: p.file.clone(),

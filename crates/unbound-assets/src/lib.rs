@@ -107,3 +107,5 @@ pub(crate) fn asset_name(path: &Path) -> String {
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_default()
 }
+
+pub mod shader_tags;

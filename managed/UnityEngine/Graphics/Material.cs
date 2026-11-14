@@ -661,9 +661,8 @@ namespace UnityEngine
         /// error shader's): those of the SubShader <see cref="passCount"/> counts
         /// (<see cref="Shader.ActivePassNames"/>; canonical tests/projects/shaderpasscount
         /// case.global25.*.mat.findPass: the first SubShader's passes are found). Null while the
-        /// renderer draws a SubShader: pass indices are then the renderer's, the ones draws
-        /// take, which lack the passes Unity generates for a surface program beyond the forward
-        /// ones (the Editor finds those too; see the gap table).
+        /// renderer draws a SubShader: pass indices are then the renderer's, including slots
+        /// for generated surface passes whose programs are not supported yet.
         /// </summary>
         List<string> HiddenPassNames(string api) =>
             m_Shader != null && m_Shader.IsLodHidden ? m_Shader.ActivePassNames(api) : null;

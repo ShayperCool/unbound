@@ -74,3 +74,16 @@ targets Unity does not name (left out, as the platform ones are).
 
 `Reference/unity-6000.0.71f1/{opengl,vulkan}.jsonl` are two identical Editor captures each.
 Unbound matches every record on both devices.
+
+## Generated pass indices
+
+The `surface.*` controls record each generated pass's name, first matching name index and
+LightMode tag, then draw the named `TAIL` pass after the surface program. Plain, `addshadow`,
+`noforwardadd`, `exclude_path:deferred nometa` and `exclude_path:forward` controls distinguish
+which generated slots exist. Both devices give the same names and indices. `Meta` retains its
+case, and `addshadow` places `ShadowCaster` between deferred and meta. The tail color verifies
+that a found index reaches its own program after the generated slots.
+
+These controls test index identity. Unbound retains slots for deferred, meta and generated
+shadow programs, reports that their execution is unsupported, and keeps the existing shadow
+fallback. They do not establish parity for those programs.

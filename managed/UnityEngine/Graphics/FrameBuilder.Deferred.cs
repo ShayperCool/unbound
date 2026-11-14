@@ -27,13 +27,13 @@ namespace Unbound.Runtime
         static readonly string[] s_DeferredLightKeywords = { "DIRECTIONAL", "DIRECTIONAL_COOKIE", "POINT", "POINT_COOKIE", "SPOT" };
 
         /// <summary>The pass a material fills the G-buffer with (-1: it draws forward).</summary>
-        static int DeferredPass(Material material)
+        internal static int DeferredPass(Material material)
         {
             if (material == null || material.PassDisabled("Deferred")) return -1;
             var info = ShaderPassInfo.Of(material.shader);
             if (info == null) return -1;
             for (int p = 0; p < info.Passes.Count; p++)
-                if (string.Equals(info.LightMode(p), "Deferred", StringComparison.OrdinalIgnoreCase)) return p;
+                if (info.CanDraw(p) && string.Equals(info.LightMode(p), "Deferred", StringComparison.OrdinalIgnoreCase)) return p;
             return -1;
         }
 
