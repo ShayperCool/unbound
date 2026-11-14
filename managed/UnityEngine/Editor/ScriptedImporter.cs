@@ -51,18 +51,35 @@ namespace UnityEditor
         }
 
         /// <summary>The .meta's <c>externalObjects</c>: imported objects by class and name, remapped
-        /// to project assets.</summary>
+        /// to project assets. Entries read from the .meta keep their reference in
+        /// <see cref="m_UnloadedRemaps"/> until the map is first asked for, so that finding an
+        /// importer does not load every asset its remaps name.</summary>
         readonly Dictionary<SourceAssetIdentifier, Object> m_ExternalObjects = new Dictionary<SourceAssetIdentifier, Object>();
+        readonly Dictionary<SourceAssetIdentifier, (string Guid, long FileId)> m_UnloadedRemaps = new Dictionary<SourceAssetIdentifier, (string, long)>();
 
-        public Dictionary<SourceAssetIdentifier, Object> GetExternalObjectMap() => new Dictionary<SourceAssetIdentifier, Object>(m_ExternalObjects);
+        public Dictionary<SourceAssetIdentifier, Object> GetExternalObjectMap()
+        {
+            if (m_UnloadedRemaps.Count > 0)
+            {
+                foreach (var pair in m_UnloadedRemaps)
+                    m_ExternalObjects[pair.Key] = AssetDatabaseRuntime.Load(pair.Value.Guid, pair.Value.FileId, pair.Key.type);
+                m_UnloadedRemaps.Clear();
+            }
+            return new Dictionary<SourceAssetIdentifier, Object>(m_ExternalObjects);
+        }
 
-        public void AddRemap(SourceAssetIdentifier identifier, Object externalObject) => m_ExternalObjects[identifier] = externalObject;
+        public void AddRemap(SourceAssetIdentifier identifier, Object externalObject)
+        {
+            m_UnloadedRemaps.Remove(identifier);
+            m_ExternalObjects[identifier] = externalObject;
+        }
 
-        public bool RemoveRemap(SourceAssetIdentifier identifier) => m_ExternalObjects.Remove(identifier);
+        public bool RemoveRemap(SourceAssetIdentifier identifier) =>
+            m_UnloadedRemaps.Remove(identifier) | m_ExternalObjects.Remove(identifier);
 
         /// <summary>Reads the .meta's <c>externalObjects</c> entries (<c>first: {type: "Namespace:Class",
         /// assembly, name}</c>, <c>second: {fileID, guid}</c>); an entry naming a class Unbound does not
-        /// know is skipped.</summary>
+        /// know is skipped. Every importer's .meta lists its remaps this way.</summary>
         internal void ReadExternalObjects(YNode settings)
         {
             var entries = settings?.Get("externalObjects");
@@ -73,8 +90,18 @@ namespace UnityEditor
                 var type = ExternalType(first?.Get("type")?.AsString());
                 var name = first?.Get("name")?.AsString();
                 if (type == null || string.IsNullOrEmpty(name)) continue;
+                var id = new SourceAssetIdentifier(type, name);
                 var target = entry.Ref("second");
-                m_ExternalObjects[new SourceAssetIdentifier(type, name)] = target.IsNull ? null : AssetDatabaseRuntime.Load(target.Guid, target.FileId, type);
+                if (target.IsNull)
+                {
+                    m_UnloadedRemaps.Remove(id);
+                    m_ExternalObjects[id] = null;
+                }
+                else
+                {
+                    m_ExternalObjects.Remove(id);
+                    m_UnloadedRemaps[id] = (target.Guid, target.FileId);
+                }
             }
         }
 

@@ -34,32 +34,37 @@ namespace UnityEditor
         {
             var settings = Native.LoadDocuments("meta:" + guid);
             if (settings.Count == 0) return null;
-            var doc = settings[0];
+            return FromMeta(path, guid, settings[0].TypeName, settings[0].Body);
+        }
+
+        /// <summary>The importer a .meta's importer section (<paramref name="typeName"/>:
+        /// <paramref name="body"/>) describes.</summary>
+        internal static AssetImporter FromMeta(string path, string guid, string typeName, YNode body)
+        {
             AssetImporter importer;
             using (ObjectRegistry.AsAssets())
             {
-                if (doc.TypeName == "ScriptedImporter")
+                if (typeName == "ScriptedImporter")
                 {
-                    var script = doc.Body.Ref("script");
-                    importer = ScriptedImports.CreateImporter(script.Guid, script.FileId, path, guid, doc.Body);
+                    var script = body.Ref("script");
+                    importer = ScriptedImports.CreateImporter(script.Guid, script.FileId, path, guid, body);
                 }
                 else
                 {
-                    var type = typeof(AssetImporter).Assembly.GetType("UnityEditor." + doc.TypeName)
-                        ?? typeof(AssetImporter).Assembly.GetType("UnityEditor.AssetImporters." + doc.TypeName);
+                    var type = typeof(AssetImporter).Assembly.GetType("UnityEditor." + typeName)
+                        ?? typeof(AssetImporter).Assembly.GetType("UnityEditor.AssetImporters." + typeName);
                     importer = type != null && typeof(AssetImporter).IsAssignableFrom(type) && !type.IsAbstract
                         ? (AssetImporter)ObjectConstruction.CreateWithBacking(type)
                         : (AssetImporter)ObjectConstruction.CreateWithBacking(typeof(AssetImporter));
-                    // Every importer's .meta lists its remaps the same way.
-                    importer.ReadExternalObjects(doc.Body);
+                    importer.ReadExternalObjects(body);
                 }
             }
             if (importer == null) return null;
             importer.m_AssetPath = path;
-            importer.userData = doc.Body.Str("userData");
-            importer.assetBundleName = doc.Body.Str("assetBundleName");
-            importer.assetBundleVariant = doc.Body.Str("assetBundleVariant");
-            importer.ReadSettings(doc.Body);
+            importer.userData = body.Str("userData");
+            importer.assetBundleName = body.Str("assetBundleName");
+            importer.assetBundleVariant = body.Str("assetBundleVariant");
+            importer.ReadSettings(body);
             return importer;
         }
 
