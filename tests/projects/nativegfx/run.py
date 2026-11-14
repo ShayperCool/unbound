@@ -50,6 +50,7 @@ REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
 from probe_paths import reference_file, run_root, unity_version  # noqa: E402
 import editor_runner  # noqa: E402
+import macos_editor  # noqa: E402
 
 WORK = run_root(ROOT, 'runs')
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
@@ -182,46 +183,16 @@ def reference():
     return ROOT/'Reference'/f'unity-{unity_version()}'/f'{DEVICE}.jsonl'
 
 
-def macos_editor():
-    return Path(f'/Applications/Unity/Hub/Editor/{unity_version()}/Unity.app/Contents/MacOS/Unity')
-
-
 def native_macos(label):
     """The Metal captures: the macOS Editor in batchmode on its Metal device, one after the other."""
-    if os.environ.get('UNBOUND_SUITE_NO_EDITOR'):
-        raise SystemExit('nativegfx: refusing to start the Unity Editor in a suite run')
     ok = True
     for repeat in (f'{label}-1', f'{label}-2'):
         out = WORK/repeat
         copy_project(out/'project')
-        command = ['timeout', '-s', 'KILL', '900', str(macos_editor()), '-batchmode', '-projectPath', str(out/'project'),
-                   '-executeMethod', 'ProbeRunner.Record', '-logFile', str(out/'editor.log')]
-        with (out/'editor.out').open('w') as log:
-            code = subprocess.run(command, env=dict(os.environ, **environment(out)), stdout=log, stderr=subprocess.STDOUT).returncode
-        (out/'editor-exit').write_text(f'{code}\n')
+        code = macos_editor.capture(out/'project', out, ['-executeMethod', 'ProbeRunner.Record'], environment(out))
         print(repeat, 'exit', code)
         ok = ok and code == 0 and finish(out)
     return 0 if ok else 1
-
-
-def publish_macos(labels, target):
-    """Two byte-identical macOS Editor captures that exited 0 and completed become `target`."""
-    if len(labels) < 2:
-        raise SystemExit('publishing needs two independent repeats')
-    captures = []
-    for label in labels:
-        out = WORK/label
-        problem = editor_runner.jsonl_complete(OUT)(out)
-        if (out/'editor-exit').read_text().strip() != '0' or problem:
-            raise SystemExit(f'{label}: the Editor did not exit 0 with a complete record ({problem}); not publishing')
-        captures.append((out/OUT).read_bytes())
-    if any(capture != captures[0] for capture in captures):
-        raise SystemExit('the repeats differ; not publishing')
-    if target.exists():
-        raise SystemExit(f'refusing to overwrite reference: {target}')
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(captures[0])
-    return 0
 
 
 def native(label):
@@ -265,7 +236,7 @@ def publish(labels):
     its order (a probe with added records, recorded again)."""
     target = reference()
     if DEVICE == 'metal':
-        return publish_macos(labels, target)
+        return macos_editor.publish([WORK/label for label in labels], target, OUT)
     fresh = target.with_name(target.name + '.new')
 
     def write(path, first):

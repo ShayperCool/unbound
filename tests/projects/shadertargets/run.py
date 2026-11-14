@@ -8,8 +8,9 @@
 
 --device selects the graphics device of both sides: opengl (the default: the Linux Editor's own
 device, on a private display through VirtualGL; Unbound with --force-glcore) or vulkan (the Editor
-with -force-vulkan on the GPU-backed display :0, Unbound with --force-vulkan). The references are
-Reference/unity-R/<device>.jsonl.
+with -force-vulkan on the GPU-backed display :0, Unbound with --force-vulkan) or metal (macOS arm64:
+the macOS Editor's one device, run directly in batchmode; Unbound's only device there). The
+references are Reference/unity-R/<device>.jsonl.
 
 The probe's script and shaders are staged over a fresh copy of the UI Toolkit fixture
 (tests/projects/uitk: its scene runs the script) under
@@ -33,6 +34,7 @@ sys.path.insert(0, str(ROOT.parent/'nativegfx'))
 from probe_paths import reference_root, run_root, unity_version  # noqa: E402
 import compare  # noqa: E402
 import editor_runner  # noqa: E402
+import macos_editor  # noqa: E402
 
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 OUT = 'capture/values.jsonl'
@@ -57,6 +59,14 @@ def stage(label):
 
 
 def native(label):
+    if DEVICE == 'metal':
+        codes = []
+        for repeat in (f'{label}-1', f'{label}-2'):
+            work, project = stage(repeat)
+            codes.append(macos_editor.capture(project, work, ['-executeMethod', 'ProbeRunner.Record'],
+                                              {'SHADER_TARGETS_OUT': str(work/'capture')}, timeout=1500))
+            print(repeat, 'exit', codes[-1])
+        return 0 if not any(codes) else 1
     jobs = []
     for repeat in (f'{label}-1', f'{label}-2'):
         work, project = stage(repeat)
@@ -76,7 +86,7 @@ def engine(label):
     env = dict(os.environ, SHADER_TARGETS_OUT=str(work/'capture'))
     command = [str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '-s', 'KILL', '900', cli, 'run', '-p', str(project),
                '--no-watch', '--frames', '20', '--size', '320x180',
-               '--force-'+('vulkan' if DEVICE == 'vulkan' else 'glcore')]
+               *([] if DEVICE == 'metal' else ['--force-'+('vulkan' if DEVICE == 'vulkan' else 'glcore')])]
     with (work/'process.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     values = work/OUT
@@ -100,8 +110,11 @@ def publish(labels):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(first/OUT, path)
     fresh.unlink(missing_ok=True)
-    editor_runner.publish([run_root(ROOT, label) for label in labels], fresh, lambda d: [OUT], write,
-                          complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
+    if DEVICE == 'metal':
+        macos_editor.publish([run_root(ROOT, label) for label in labels], fresh, OUT)
+    else:
+        editor_runner.publish([run_root(ROOT, label) for label in labels], fresh, lambda d: [OUT], write,
+                              complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
     if target.exists() and not kept(target, fresh):
         fresh.unlink()
         sys.exit(f'the captures change rows of the reference; not replacing {target}')
@@ -122,7 +135,7 @@ def main():
     parser.add_argument('mode', choices=['native', 'engine', 'publish', 'check'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
-    parser.add_argument('--device', choices=('opengl', 'vulkan'), default='opengl')
+    parser.add_argument('--device', choices=('opengl', 'vulkan', 'metal'), default='opengl')
     args = parser.parse_args()
     global DEVICE
     DEVICE = args.device
