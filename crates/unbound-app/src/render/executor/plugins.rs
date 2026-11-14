@@ -698,7 +698,9 @@ impl UnityRenderer {
                     v2,
                     format,
                     bytes_per_pixel,
-                } => self.texture_update(callback, texture, user_data, v2, format, bytes_per_pixel),
+                } => super::plugins_metal::while_renderer_busy(|| {
+                    self.texture_update(callback, texture, user_data, v2, format, bytes_per_pixel)
+                }),
                 _ => self.run_plugin_metal(|| invoke(call)),
             }
             return;

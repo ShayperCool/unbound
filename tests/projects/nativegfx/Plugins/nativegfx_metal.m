@@ -57,7 +57,7 @@ static const Guid kMetalV2 = {0xF58857784FEF46ECULL, 0x9DB7A8803B87DA3DULL};
 static const Guid kVulkan = {0x95355348d4ef4e11ULL, 0x9789313dfcffcc87ULL};
 
 // The probe's events, after the reserved base.
-enum { EventState = 0, EventDraw = 1, EventEndBlit = 2, EventCommit = 3, EventQueueBlit = 4, EventCount = 5 };
+enum { EventState = 0, EventDraw = 1, EventEndBlit = 2, EventCommit = 3, EventQueueBlit = 4, EventCopy = 5, EventCount = 6 };
 
 // ------------------------------------------------------------------ record
 
@@ -273,6 +273,23 @@ static void blit_block(id<MTLCommandBuffer> buffer, NSUInteger x, int top)
     record("blit step=%s done=1 encoder_after=%s", s_step, encoder_kind(s_v1->CurrentCommandEncoder()));
 }
 
+/// Ends the current encoder and copies the first 4x4 texels of texture slot 13 into texture slot
+/// 0 at column 4 of its first four rows with the current buffer (what the plugin reads of a
+/// texture updated just before the event).
+static void end_and_copy(void)
+{
+    s_v1->EndCurrentCommandEncoder();
+    id<MTLTexture> source = (__bridge id<MTLTexture>)s_textures[13];
+    id<MTLTexture> target = (__bridge id<MTLTexture>)s_textures[0];
+    id<MTLCommandBuffer> buffer = s_v1->CurrentCommandBuffer();
+    if (!source || !target || !buffer) { record("copy step=%s done=0", s_step); return; }
+    id<MTLBlitCommandEncoder> blit = [buffer blitCommandEncoder];
+    [blit copyFromTexture:source sourceSlice:0 sourceLevel:0 sourceOrigin:MTLOriginMake(0, 0, 0) sourceSize:MTLSizeMake(4, 4, 1)
+                toTexture:target destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(4, 0, 0)];
+    [blit endEncoding];
+    record("copy step=%s done=1", s_step);
+}
+
 /// Ends the current encoder (inside a pass: the render encoder) and blits with the current buffer.
 static void end_and_blit(void)
 {
@@ -314,6 +331,7 @@ static void on_event(int id)
     case EventEndBlit: record_state("state"); end_and_blit(); break;
     case EventCommit: record_state("state"); commit(); break;
     case EventQueueBlit: record_state("state"); queue_blit(); break;
+    case EventCopy: end_and_copy(); break;
     default: record("event step=%s unknown=%d", s_step, event); break;
     }
 }

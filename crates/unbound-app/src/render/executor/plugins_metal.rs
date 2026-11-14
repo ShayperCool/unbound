@@ -4,24 +4,27 @@
 //! its render pass descriptor, as the Unity 6000.0.71f1 macOS Editor gives them
 //! (tests/projects/nativegfx `Reference/unity-6000.0.71f1/metal.jsonl`).
 //!
-//! A callback runs where it is in the stream: the work before it has been submitted to the
+//! A callback runs where it is in the stream: the passes before it have been submitted to the
 //! queue; the plugin's command buffer is committed after the callback, so it runs between the
-//! work before and the work after (Metal runs one queue's command buffers in order). Inside it
+//! work before and the work after (Metal runs one queue's command buffers in order). A texture
+//! upload made just before the event (`Texture2D.Apply` in the same frame, with no pass between)
+//! runs after the plugin's buffer, as the Editor's does (nativegfx `target.pixels`: the plugin
+//! copies the texture's earlier texels). Inside it
 //! the current encoder is begun when first asked, over the current render texture target's
 //! attachments at the image being drawn (their contents loaded and stored, a multisampled color
 //! resolved into its texture again); `EndCurrentCommandEncoder` ends it, and the next request
 //! begins another over the same target. Outside callbacks (a plugin's own calls from scripts)
 //! the current command buffer is one of the queue's, committed by `CommitCurrentCommandBuffer`,
-//! else before the next callback or at the end of the frame; it runs before the rendering the
-//! frame has not submitted yet (not measured). There is no encoder there (logged once). A
+//! else before the next callback or at the end of the frame, so it runs after the rendering
+//! submitted by then (a script's commit: before what the frame has not submitted yet; neither is
+//! measured). There is no encoder there (logged once). A
 //! texture's native pointer is its `MTLTexture`
 //! (in the format Unity's device stores it: sRGB where a Linear project samples it as sRGB);
 //! a multisampled render texture's color and depth pointers are its samples. Not followed (the
 //! interface leaves them to the device; measured in batchmode only): outside a render texture
 //! target the Editor's current encoder is a render encoder over the screen, and after
-//! `EndCurrentCommandEncoder` its next one is too; the screen is not shared here (logged once,
-//! the encoder and descriptor are nil). A camera rendering with HDR or MSAA draws into an
-//! intermediate texture in the Editor; here it is the camera's target.
+//! `EndCurrentCommandEncoder` its next one is too; the screen is not shared here (the encoder
+//! and descriptor are nil, logged once when asked for).
 use super::UnityRenderer;
 use crate::render::resources::GpuTexture;
 use objc2::Message;
@@ -108,8 +111,38 @@ static OUTSIDE: Mutex<usize> = Mutex::new(0);
 /// The buffer `CommitCurrentCommandBuffer` last committed outside callbacks, retained so the
 /// plugin can wait on it (0: none).
 static COMMITTED_OUTSIDE: Mutex<usize> = Mutex::new(0);
-/// Whether a plugin was told that there is no encoder outside callbacks.
+/// What plugins were told once: no encoder outside callbacks, none over the screen, the first
+/// of several colors only, a depth buffer left out, no command buffer, renderer busy.
 static WARNED_OUTSIDE: AtomicBool = AtomicBool::new(false);
+static WARNED_SCREEN: AtomicBool = AtomicBool::new(false);
+static WARNED_COLORS: AtomicBool = AtomicBool::new(false);
+static WARNED_DEPTH: AtomicBool = AtomicBool::new(false);
+static WARNED_BUFFER: AtomicBool = AtomicBool::new(false);
+static WARNED_BUSY: AtomicBool = AtomicBool::new(false);
+
+thread_local! {
+    /// The renderer runs a plugin's call on this thread without a scope (a texture update's
+    /// events): render buffer lookups cannot ask it.
+    static BUSY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Runs `f` (a texture update's plugin events) marked as running inside the renderer.
+pub(super) fn while_renderer_busy<R>(f: impl FnOnce() -> R) -> R {
+    BUSY.with(|b| b.set(true));
+    let result = f();
+    BUSY.with(|b| b.set(false));
+    result
+}
+
+/// Logs once, inside a callback over the screen, that there is no pass.
+fn warn_screen() {
+    if !WARNED_SCREEN.swap(true, Ordering::Relaxed) {
+        tracing::warn!(
+            "a native plugin callback while the screen is the target asked for its encoder or \
+             render pass: the screen is not shared with plugins (nil)"
+        );
+    }
+}
 
 /// Logs once that a plugin asked for the encoder or its descriptor outside a callback.
 fn warn_outside(what: &str) {
@@ -126,6 +159,8 @@ struct Scope {
     buffer: Retained<CommandBuffer>,
     encoder: Option<Retained<ProtocolObject<dyn MTLRenderCommandEncoder>>>,
     pass: Option<Retained<MTLRenderPassDescriptor>>,
+    /// The screen is the target (it has no pass: not shared with plugins).
+    screen: bool,
     images: HashMap<u64, Images>,
     /// Buffers committed by `CommitCurrentCommandBuffer` in this callback, kept until it ends
     /// (the plugin may wait on the one returned).
@@ -221,6 +256,9 @@ extern "C" fn current_command_encoder() -> Object {
             s.encoder = s.buffer.renderCommandEncoderWithDescriptor(pass);
             s.drew_samples |= s.multisampled && s.encoder.is_some();
         }
+        if s.pass.is_none() && s.screen {
+            warn_screen();
+        }
         s.encoder.as_ref().map_or(std::ptr::null_mut(), object)
     })
     .unwrap_or_else(|| {
@@ -238,7 +276,13 @@ extern "C" fn end_current_command_encoder() {
 }
 
 extern "C" fn current_render_pass_descriptor() -> Object {
-    with_scope(|s| s.pass.as_ref().map_or(std::ptr::null_mut(), object)).unwrap_or_else(|| {
+    with_scope(|s| {
+        if s.pass.is_none() && s.screen {
+            warn_screen();
+        }
+        s.pass.as_ref().map_or(std::ptr::null_mut(), object)
+    })
+    .unwrap_or_else(|| {
         warn_outside("current render pass descriptor");
         std::ptr::null_mut()
     })
@@ -307,6 +351,15 @@ fn render_buffer_image(buffer: Object, resolved: bool) -> Object {
     if let Some(image) = with_scope(|s| s.images.get(&handle).map_or(0, |i| i.pick(which))) {
         return image as Object;
     }
+    if BUSY.with(|b| b.get()) {
+        if !WARNED_BUSY.swap(true, Ordering::Relaxed) {
+            tracing::warn!(
+                "a native plugin asked for a render buffer's texture in a texture update's \
+                 event: Unbound answers nil there"
+            );
+        }
+        return std::ptr::null_mut();
+    }
     unbound_runtime::state::backend().render_buffer_texture(handle, which as u8) as Object
 }
 
@@ -362,6 +415,8 @@ pub(super) struct MetalPlugins {
     targets: Vec<u64>,
     /// The render textures' images a callback's scope holds (reused, lent to the scope).
     images: HashMap<u64, Images>,
+    /// The last render pass made, by its images, level and slice.
+    pass: Option<([usize; 5], Shared<MTLRenderPassDescriptor>)>,
 }
 
 impl MetalPlugins {
@@ -378,6 +433,7 @@ impl MetalPlugins {
             natives: HashMap::default(),
             targets: Vec::new(),
             images: HashMap::default(),
+            pass: None,
         })
     }
 
@@ -504,37 +560,72 @@ impl UnityRenderer {
     }
 
     /// The render pass over the current target that encoders begin from, or None (the screen,
-    /// a target not drawn into).
+    /// a target not drawn into); the last one is kept and given again while the target's
+    /// images are the same.
     fn metal_pass(&mut self) -> Option<Retained<MTLRenderPassDescriptor>> {
         let (color, depth) = self.target_handles;
         if color == 0 {
-            self.warn_once("plugin-metal-screen".into(), || {
-                "a native plugin callback while the screen is the target finds no render pass \
-                 (the screen is not shared with plugins): its current encoder and render pass \
-                 descriptor are nil"
-                    .into()
-            });
             return None;
         }
-        let several = !self.state.target.as_ref()?.extra.is_empty();
-        if several {
-            self.warn_once("plugin-metal-colors".into(), || {
-                "a native plugin callback while several colors are the target gets a render pass over the first color only"
-                    .into()
-            });
+        if !self.state.target.as_ref()?.extra.is_empty()
+            && !WARNED_COLORS.swap(true, Ordering::Relaxed)
+        {
+            tracing::warn!(
+                "a native plugin callback while several colors are the target gets a render pass \
+                 over the first color only"
+            );
         }
         let (mip, slice) = self.plugins.target;
         let (level, slice) = (mip.max(0) as usize, slice.max(0) as usize);
         let gpu = self.textures.get(&color)?;
         let (volume, layered) = (gpu.volume, gpu.cube || gpu.cube_array || gpu.array);
         let (multisampled, depth_only) = (gpu.msaa.is_some(), gpu.format == 5);
+        let (width, samples) = (gpu.width >> level, gpu.samples.max(1));
+        let color_image = if depth_only {
+            0
+        } else {
+            self.metal_texture(color, Which::Color)?
+        };
+        let resolved = if multisampled && !depth_only {
+            self.metal_texture(color, Which::Resolved)?
+        } else {
+            0
+        };
+        // The depth buffer where it can be attached with the color: its samples and size at the
+        // level are the color's (another render texture's may not be).
+        let owner = super::depth_owner(color, depth);
+        let depth_image = owner
+            .and_then(|owner| {
+                let buffer = self.textures.get(&owner)?.depth_texture.as_ref()?;
+                let fits = depth_only
+                    || (buffer.sample_count().max(1) == samples
+                        && (buffer.width() >> level).max(1) == width.max(1));
+                if !fits && !WARNED_DEPTH.swap(true, Ordering::Relaxed) {
+                    tracing::warn!(
+                        "a native plugin callback's render pass leaves out a depth buffer whose \
+                         samples or size are not its color's"
+                    );
+                }
+                fits.then_some(owner)
+            })
+            .and_then(|owner| self.metal_texture(owner, Which::Depth))
+            .unwrap_or(0);
+        if depth_only && depth_image == 0 {
+            return None;
+        }
+        let key = [color_image, resolved, depth_image, level, slice];
+        let plugins = self.metal_plugins.as_mut()?;
+        if let Some((kept, pass)) = &plugins.pass
+            && *kept == key
+        {
+            return Some(pass.0.clone());
+        }
         let pass = MTLRenderPassDescriptor::new();
-        if !depth_only {
-            let samples = self.metal_texture(color, Which::Color)?;
+        if color_image != 0 {
             // SAFETY: index 0 is within the attachments' range.
             let attachment = unsafe { pass.colorAttachments().objectAtIndexedSubscript(0) };
             // SAFETY: the cache holds the textures.
-            attachment.setTexture(Some(unsafe { held(samples) }));
+            attachment.setTexture(Some(unsafe { held(color_image) }));
             attachment.setLevel(level);
             if volume {
                 attachment.setDepthPlane(slice);
@@ -542,8 +633,7 @@ impl UnityRenderer {
                 attachment.setSlice(slice);
             }
             attachment.setLoadAction(MTLLoadAction::Load);
-            if multisampled {
-                let resolved = self.metal_texture(color, Which::Resolved)?;
+            if resolved != 0 {
                 attachment.setResolveTexture(Some(unsafe { held(resolved) }));
                 attachment.setResolveLevel(level);
                 if volume {
@@ -556,39 +646,35 @@ impl UnityRenderer {
                 attachment.setStoreAction(MTLStoreAction::Store);
             }
         }
-        let owner = super::depth_owner(color, depth);
-        match owner.and_then(|owner| self.metal_texture(owner, Which::Depth)) {
-            Some(pointer) => {
-                // SAFETY: the cache holds it.
-                let texture = unsafe { held(pointer) };
-                // A 3D target's depth buffer is one image; an array's or a cube's has a layer
-                // for each of the color's.
-                let depth_slice = if layered { Some(slice) } else { None };
-                let attachment = pass.depthAttachment();
-                attachment.setTexture(Some(texture));
-                attachment.setLevel(level);
-                if let Some(slice) = depth_slice {
-                    attachment.setSlice(slice);
-                }
-                attachment.setLoadAction(MTLLoadAction::Load);
-                attachment.setStoreAction(MTLStoreAction::Store);
-                if matches!(
-                    texture.pixelFormat(),
-                    MTLPixelFormat::Depth32Float_Stencil8 | MTLPixelFormat::Depth24Unorm_Stencil8
-                ) {
-                    let stencil = pass.stencilAttachment();
-                    stencil.setTexture(Some(texture));
-                    stencil.setLevel(level);
-                    if let Some(slice) = depth_slice {
-                        stencil.setSlice(slice);
-                    }
-                    stencil.setLoadAction(MTLLoadAction::Load);
-                    stencil.setStoreAction(MTLStoreAction::Store);
-                }
+        if depth_image != 0 {
+            // SAFETY: the cache holds it.
+            let texture = unsafe { held(depth_image) };
+            // A 3D target's depth buffer is one image; an array's or a cube's has a layer for
+            // each of the color's.
+            let depth_slice = layered.then_some(slice);
+            let attachment = pass.depthAttachment();
+            attachment.setTexture(Some(texture));
+            attachment.setLevel(level);
+            if let Some(slice) = depth_slice {
+                attachment.setSlice(slice);
             }
-            None if depth_only => return None,
-            None => {}
+            attachment.setLoadAction(MTLLoadAction::Load);
+            attachment.setStoreAction(MTLStoreAction::Store);
+            if matches!(
+                texture.pixelFormat(),
+                MTLPixelFormat::Depth32Float_Stencil8 | MTLPixelFormat::Depth24Unorm_Stencil8
+            ) {
+                let stencil = pass.stencilAttachment();
+                stencil.setTexture(Some(texture));
+                stencil.setLevel(level);
+                if let Some(slice) = depth_slice {
+                    stencil.setSlice(slice);
+                }
+                stencil.setLoadAction(MTLLoadAction::Load);
+                stencil.setStoreAction(MTLStoreAction::Store);
+            }
         }
+        plugins.pass = Some((key, Shared(pass.clone())));
         Some(pass)
     }
 
@@ -596,12 +682,15 @@ impl UnityRenderer {
     pub(super) fn run_plugin_metal(&mut self, invoke: impl FnOnce()) {
         commit_outside();
         let Some(buffer) = queue().and_then(|q| q.commandBuffer()) else {
-            self.warn_once("plugin-metal-buffer".into(), || {
-                "native plugin callbacks are skipped: the Metal queue made no command buffer".into()
-            });
+            if !WARNED_BUFFER.swap(true, Ordering::Relaxed) {
+                tracing::warn!(
+                    "native plugin callbacks are skipped: the Metal queue made no command buffer"
+                );
+            }
             return;
         };
         let pass = self.metal_pass();
+        let screen = self.target_handles.0 == 0;
         let multisampled = pass.is_some()
             && self
                 .textures
@@ -638,6 +727,7 @@ impl UnityRenderer {
                 buffer,
                 encoder: None,
                 pass,
+                screen,
                 images,
                 committed: Vec::new(),
                 drew_samples: false,

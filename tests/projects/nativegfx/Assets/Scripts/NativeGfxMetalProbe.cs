@@ -36,7 +36,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
     [DllImport(Plugin)] static extern int NativeGfxMtl_Record(byte[] buffer, int capacity);
 
     // The plugin's events after its reserved base.
-    const int State = 0, Draw = 1, EndBlit = 2, Commit = 3, QueueBlit = 4;
+    const int State = 0, Draw = 1, EndBlit = 2, Commit = 3, QueueBlit = 4, Copy = 5;
 
     readonly StringBuilder records = new StringBuilder();
     readonly List<string> logs = new List<string>();
@@ -45,6 +45,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
     IntPtr callback;
     int eventBase;
     RenderTexture target, cameraTarget, secondTarget, executed, executedMsaa, executedCopy;
+    Texture2D texture;
     Camera firstCamera, secondCamera;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -152,7 +153,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
         var half = Target("half", 0, RenderTextureFormat.ARGBHalf);
         var single = Target("single", 0, RenderTextureFormat.RFloat);
         var depthOnly = Target("depthonly", 24, RenderTextureFormat.Depth);
-        var texture = Keep(new Texture2D(8, 8, TextureFormat.RGBA32, false, true) { name = "texture" });
+        texture = Keep(new Texture2D(8, 8, TextureFormat.RGBA32, false, true) { name = "texture" });
         texture.Apply();
         var srgb = Keep(new Texture2D(8, 8, TextureFormat.RGBA32, false, false) { name = "srgb" });
         srgb.Apply();
@@ -248,6 +249,11 @@ public class NativeGfxMetalProbe : MonoBehaviour
                 NativeGfxMtl_Step("script");
                 NativeGfxMtl_SetColor(1f, 1f, 0f, 1f);
                 NativeGfxMtl_ScriptCommit();
+                // A texture updated just before an event: the plugin copies what was uploaded.
+                texture.SetPixels32(Enumerable.Repeat(new Color32(255, 0, 128, 255), 64).ToArray());
+                texture.Apply();
+                NativeGfxMtl_Step("copy");
+                Issue(Copy);
                 NativeGfxMtl_SetColor(0f, 1f, 1f, 1f);
                 using (var cmd = new CommandBuffer { name = "executed" })
                 {

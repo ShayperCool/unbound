@@ -204,13 +204,14 @@ into a 2-sample half-float intermediate with a resolve; without them into its ta
 and blitting with the current command buffer, `CommitCurrentCommandBuffer` (it returns the
 committed buffer and goes on in a new one), a blit with a command buffer of the plugin's own after
 that commit, the same commit from a script outside callbacks (a blit with the current command
-buffer, committed and waited on), a draw into a multisampled render texture sampled right after
-in the same command buffer, the pointers of 2D, sRGB, mip-mapped, three-channel, cube, array and 3D textures and
+buffer, committed and waited on), a copy from a texture updated with `Apply` just before the
+event in the same frame (the plugin copies its earlier texels: the update runs after), a draw
+into a multisampled render texture sampled right after in the same command buffer, the pointers of 2D, sRGB, mip-mapped, three-channel, cube, array and 3D textures and
 of render textures (color, depth, multisampled samples, depth-only), what the render buffer
 pointers give (`RenderBufferFromHandle` returns the pointer; their texture, resolved texture,
 stencil texture), an external texture of the plugin's, and the pixels.
 
-Unbound matches 60/153 records with 93 declared residuals (`residuals-metal.json`, each with its
+Unbound matches 61/154 records with 93 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load and store actions (the Editor's are the
 pass it began, clearing, its store left unknown; Unbound begins a pass of its own that loads and
