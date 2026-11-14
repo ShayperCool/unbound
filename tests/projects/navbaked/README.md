@@ -63,3 +63,11 @@ needs a walkable height surface and per-tile lookup data, rather than using unfi
 source triangles. The documented terrain-orientation and preserveTilesOutsideBounds
 limits remain required controls for that follow-up. No arrival threshold, nearest-layer
 preference or comparator tolerance was changed to reduce the remaining count.
+
+Q426 retains 14 of 816 height-agent differences and all 103 matching imported
+height queries. Link activation changes neither result. Endpoint projection alone
+does not resolve the bump/ramp residuals. No new height reference was published.
+Runtime height-mesh generation remains unsupported with its existing warning; it
+needs a separate implementation of a walkable height surface and query data.
+The terrain-orientation and preserveTilesOutsideBounds limitations documented for
+6000.0 remain required controls for that implementation.

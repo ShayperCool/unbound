@@ -4,6 +4,14 @@
 > history and in the rows of [COMPATIBILITY_GAPS.md](COMPATIBILITY_GAPS.md). See
 > [tools/agents/WORKFLOW.md](../tools/agents/WORKFLOW.md).
 
+Navigation follow-up, 2026-11-14 (Q426): link activation and stale pending results
+reduce strict navlinks differences from 325 to 258; all 2306 added control values
+match. The navigation gate retains 212 navmesh frame scenarios, 3 avoidance
+configurations, 23 bent-route, 2 wide-link, 17 post-avoidance, 14 height-agent and
+523 stacked-link differences. Runtime height generation remains unsupported.
+Current scope and validation are recorded in [COMPATIBILITY_GAPS.md](COMPATIBILITY_GAPS.md)
+and the navigation probe READMEs; the historical log below remains unchanged.
+
 The interrupted Claude work lives on `compat/close-gaps`, originally checked out in
 `.claude/worktrees/compat-gaps`. Its last commit was `982c93b2`. The root checkout was still on
 `main` at `4724b839`, so continuing from that checkout alone would have missed 58 commits.

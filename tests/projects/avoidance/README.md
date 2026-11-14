@@ -65,3 +65,11 @@ Moving, overlap and 16 of 17 speed configurations now match, and near falls from
 the steering target of its second frame: Unity reports an intermediate corner at
 x = 42.67, Unbound the destination at x = 50. No newly failing record is
 introduced (Mac engine run against the unchanged references).
+
+Q426 retains the three configurations in the near and speeds groups. Their
+second-frame steering target is the intermediate corner near x = 42.67 in Unity
+and the destination in Unbound. Removing straight-path endpoint projection does
+not resolve them. No corner is inserted, snapping distance changed or velocity
+sample preferred to fit these records. The separate navpath post-avoidance
+control remains at 17 differing values. The measurements use the existing Linux
+6000.0.71f1 references; new diagnostic Editor runs used the NVIDIA RTX 4060 only.

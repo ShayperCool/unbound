@@ -134,3 +134,25 @@ how Unity treats a hit exactly at one of an edge's vertices is inferred from tha
 No constant or tolerance is changed for this, and the sampling weights are unchanged.
 The other agents' residuals (blocked corners from 191, left hasPath at 222, right
 arrival at 241, climber rounding) remain as described above.
+
+Q426 rechecks the remaining agents against two identical GPU Editor diagnostics
+with `NAVMESH_PROBE_STEER=250`. At frame 191, blocked has exactly the same horizontal
+position, velocity and desired velocity in both engines, but Unity has advanced its
+steering target to (3.5, 3.5) while Unbound retains (-2, 4.5). The desired velocities
+first diverge on 192 and positions on 193. This excludes accumulated movement drift
+as the cause of that first corner disagreement. It does not establish a universal
+corner-advance timing rule or justify selecting a particular topology-search order.
+
+Left's frame-222 horizontal position and remaining distance agree at full precision
+(0.003315133 m remains), while hasPath differs. Right's last moving frame leaves
+about 0.0000786 m in Unbound, while Unity has arrived; both agree on the following
+frame. These remain distinct path-state and arrival questions, with their raw
+discrepancies retained. The walker tie remains deferred, as do the three climber
+rounding records.
+
+Removing straight-path endpoint projection alone leaves all 212 failing frame
+scenarios and the avoidance residuals unchanged. That candidate was discarded.
+The current navigation regression run retains every reference and tolerance. To
+record the diagnostic without replacing a reference, run the existing editor and
+unbound modes with `UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1` and
+`NAVMESH_PROBE_STEER=250`; keep the added steering records in the run cache.

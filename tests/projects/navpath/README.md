@@ -146,3 +146,19 @@ agent scope also stays at 14/816 in navbaked. Imported height sampling still mat
 retained. Source triangles alone would not supply a reduced walkable height surface
 and its per-tile query structure. No funnel, arrival or height correction is fitted to
 these fixtures.
+
+Q426 rechecks the query and height scope after the link-activation correction.
+Bent routes remain at 23 differing values, wide-link approaches at two, and post
+avoidance at 17. Straight-path endpoint projection alone does not reduce any of
+these counts. No shared funnel or approach rule was established; the bent landing
+routes and agent approaches remain separate cases.
+
+The separate stacked-link replay still fails strictly in 523 of 5826 values,
+across 18 of 30 scenarios. Point-end ownership and connection lifetime remain
+open; the removal, restoration, recreation and added-closer-floor controls still
+exclude a global reconnect as a general correction. Wide eight-layer corner
+heights remain distinct from reachability. Runtime height generation needs its
+own walkable height surface, reduction and per-tile query data, including the
+documented terrain-orientation and preserveTilesOutsideBounds controls. These
+items remain queue work, rather than being approximated by raw source triangles
+or an arbitrary layer limit. References, listed keys and tolerances are unchanged.
