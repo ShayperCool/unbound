@@ -10,17 +10,21 @@ using UnityEngine.Rendering;
 /// spheres and planes, caster bounds) for several lights, cascade splits, resolutions and shadow
 /// distances, from inside a render (where a cull is possible). With <c>conservativePath</c>, the
 /// culling spheres of conservative enclosing spheres (as URP's asset asks for) over cameras,
-/// distances, cascades and iteration counts go there.</summary>
+/// distances, cascades and iteration counts go there. With <c>slicePath</c>, the culling spheres and
+/// near planes of single and four-cascade slices over orthographic cameras, a wide field of view
+/// and culling parameters' shadowNearPlaneOffset values, with and without conservative spheres,
+/// go there.</summary>
 public static class ShadowMatrixProbe
 {
     static string F(float f) => f.ToString("R", CultureInfo.InvariantCulture);
     static string M(Matrix4x4 m) => "[" + string.Join(",", Enumerable.Range(0, 16).Select(i => F(m[i]))) + "]";
     static string V(Vector4 v) => $"[{F(v.x)},{F(v.y)},{F(v.z)},{F(v.w)}]";
 
-    public static void Record(string path, string conservativePath = null)
+    public static void Record(string path, string conservativePath = null, string slicePath = null)
     {
         var sb = new StringBuilder();
         var cons = new StringBuilder();
+        var slices = new StringBuilder();
         var light = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsSortMode.None).First(l => l.type == LightType.Directional);
         var rotation = light.transform.rotation;
         light.shadows = LightShadows.Hard;
@@ -123,6 +127,51 @@ public static class ShadowMatrixProbe
                 }
             }
             light.transform.rotation = rotation;
+            if (slicePath != null)
+            {
+                var (fov0, near0, far0, rot0, ortho0, size0) = (camera.fieldOfView, camera.nearClipPlane, camera.farClipPlane, camera.transform.rotation,
+                    camera.orthographic, camera.orthographicSize);
+                // (orthographic size or 0 for a perspective camera, field of view, far plane, culling offset, conservative)
+                var cases = new[]
+                {
+                    (5f, 60f, 1000f, 0f, false), (20f, 60f, 1000f, 0f, false), (20f, 60f, 50f, 0f, false), (20f, 60f, 1000f, 5f, false), (20f, 60f, 1000f, 0f, true),
+                    (0f, 60f, 1000f, 5f, false), (0f, 60f, 1000f, -2f, false), (0f, 60f, 1000f, 5f, true), (0f, 60f, 1000f, -2f, true),
+                    (0f, 170f, 1000f, 0f, false), (0f, 20f, 1000f, 0f, false), (0f, 60f, 200f, 0f, false),
+                };
+                foreach (var (size, fov, far, offset, conservative) in cases)
+                    foreach (var near in new[] { 0.3f, 2f })
+                    {
+                        camera.orthographic = size > 0f;
+                        if (size > 0f) camera.orthographicSize = size;
+                        camera.fieldOfView = fov;
+                        camera.nearClipPlane = near;
+                        camera.farClipPlane = far;
+                        camera.aspect = 1.7777778f;
+                        camera.transform.rotation = Quaternion.Euler(10f, 0f, 0f);
+                        camera.TryGetCullingParameters(out var sp);
+                        sp.shadowDistance = 100f;
+                        sp.shadowNearPlaneOffset = offset;
+                        sp.conservativeEnclosingSphere = conservative;
+                        sp.numIterationsEnclosingSphere = 64;
+                        var sc = context.Cull(ref sp);
+                        int si = 0;
+                        for (int i = 0; i < sc.visibleLights.Length; i++) if (sc.visibleLights[i].light == light) si = i;
+                        foreach (var (count, ratio) in new[] { (1, new Vector3(1f, 0f, 0f)), (4, new Vector3(0.067f, 0.2f, 0.467f)) })
+                            for (int split = 0; split < count; split++)
+                            {
+                                bool ok = sc.ComputeDirectionalShadowMatricesAndCullingPrimitives(si, split, count, ratio, 2048, 3f, out _, out _, out var ssd);
+                                var pos = camera.transform.position;
+                                slices.Append($"{{\"size\":{F(size)},\"fov\":{F(fov)},\"near\":{F(near)},\"far\":{F(far)},\"offset\":{F(offset)},\"conservative\":{(conservative ? "true" : "false")},\"count\":{count},\"split\":{split},\"ok\":{(ok ? "true" : "false")},\"sphere\":{V(ssd.cullingSphere)},\"nearPlane\":{F(ssd.cullingNearPlane)},\"camera\":[{F(pos.x)},{F(pos.y)},{F(pos.z)}]}}\n");
+                            }
+                    }
+                camera.orthographic = ortho0;
+                camera.orthographicSize = size0;
+                camera.fieldOfView = fov0;
+                camera.nearClipPlane = near0;
+                camera.farClipPlane = far0;
+                camera.transform.rotation = rot0;
+                camera.ResetAspect();
+            }
         }
         RenderPipelineManager.beginCameraRendering += Handler;
         var cam = Camera.main;
@@ -135,5 +184,6 @@ public static class ShadowMatrixProbe
         light.shadows = LightShadows.None;
         File.WriteAllText(path, sb.ToString());
         if (conservativePath != null) File.WriteAllText(conservativePath, cons.ToString());
+        if (slicePath != null) File.WriteAllText(slicePath, slices.ToString());
     }
 }

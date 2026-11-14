@@ -44,7 +44,8 @@ public partial class UrpProbe : MonoBehaviour
         {
             Directory.CreateDirectory(dir);
             var light = FindObjectsByType<Light>(FindObjectsSortMode.None).First(l => l.type == LightType.Directional);
-            ShadowMatrixProbe.Record(Path.Combine(dir, "shadow-matrices.jsonl"), Path.Combine(dir, "conservative-shadow-matrices.jsonl"));
+            ShadowMatrixProbe.Record(Path.Combine(dir, "shadow-matrices.jsonl"), Path.Combine(dir, "conservative-shadow-matrices.jsonl"),
+                Path.Combine(dir, "slice-shares.jsonl"));
             LocalShadowMatrixProbe.Record(Path.Combine(dir, "local-shadow-matrices.jsonl"));
             SkyMeshProbe.Record(Path.Combine(dir, "sky-mesh.jsonl"));
             Scenario(dir, "base", () => { }, () => { });
