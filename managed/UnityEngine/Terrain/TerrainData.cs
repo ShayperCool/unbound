@@ -618,9 +618,11 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>A tree prototype's prefab is drawn only when it is an asset: one that is a scene
-        /// or run-time object is an error and its trees are not drawn (matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/treebillboards `wide`).</summary>
+        /// <summary>A tree prototype's prefab is drawn only when it is an asset: setting prototypes
+        /// with one that is a scene or run-time object is an error and its trees are not drawn
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/treebillboards `wide`). The same
+        /// check on RefreshPrototypes, the prototype kept in the list and nothing said for a
+        /// missing prefab are Unbound's choices (unmeasured).</summary>
         internal static bool IsPersistentPrefab(GameObject prefab) => prefab != null && (prefab.IsPersistentAsset || prefab.m_IsPrefabAsset);
 
         void RefreshTreePrototypes()

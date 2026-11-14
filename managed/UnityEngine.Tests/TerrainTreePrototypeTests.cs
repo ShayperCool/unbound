@@ -5,8 +5,9 @@ using Xunit;
 namespace UnityEngine.Tests
 {
     /// <summary>A tree prototype whose prefab is not an asset (a scene or run-time object) is an
-    /// error when the prototypes are set or refreshed, and its trees are not drawn; the prototype
-    /// stays in the list (tests/projects/treebillboards `wide`).</summary>
+    /// error when the prototypes are set, and its trees are not drawn (tests/projects/treebillboards
+    /// `wide`). Unbound's choices, unmeasured: the same error on RefreshPrototypes, the prototype
+    /// kept in the list, nothing said for a missing prefab.</summary>
     public class TerrainTreePrototypeTests
     {
         sealed class ErrorCapture : ILogHandler, IDisposable
