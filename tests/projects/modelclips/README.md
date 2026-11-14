@@ -18,8 +18,8 @@ clip masks; `HumanTwistGeneric` is the same file imported as Generic. `HumanSing
 `GenericSingle` and `LegacySingle` are `HumanLong` with one clip of no frames (first and last
 frame 5) imported as Humanoid, Generic and Legacy; their records come after the others and were
 recorded with the macOS Editor (two identical captures, whose other records match the Linux
-reference); the `HumanMask*` models (see Body masks) come next and the `Shapes*` models (see
-Float curves of a take that starts into its file) last. Other Humanoid clip
+reference); the `HumanMask*` models (see Body masks) come next and the `Shapes*` models and
+`HumanLate` (see Float curves of a take that starts into its file) last. Other Humanoid clip
 settings are not covered.
 
 `ClipProbe` records each imported clip (length, frame rate, flags, events,
@@ -238,6 +238,15 @@ reference's, unchanged; on macOS 616 of the `play.*` records differ from them in
   of it. The same curve at half the scale (50 to 0) loses the key under both. A curve that starts
   at 0 becomes two keys of 0 at either error (its first value holds it within 100% or more).
 
+`HumanLate` (tests/projects/humanoid/make_models.py) is HumanLong's rig, settings and clip on
+frames 1..31 of a take that starts at frame 1 (`ProbeRunner.CreateHumanLate`); `keys.HumanLate.*`
+were recorded after the `Shapes*` records, the same way. Its 130 muscle curves have 31 keys each
+at the take's frame times less the start (0, 0.0333333351, 0.06666668, ...), the last at the
+range's end, 0.99999994, which is also the clip's length. Unbound matches every record within the
+tolerance (on the clip's own frame times before, 63 records were outside it); its muscle keys lie
+at the frame count times the frame length (0.06666667 for the third, 1 for the last), and the clip
+is 1.00000012 long (open).
+
 ## Whole-curve reduction
 
 `RigLoose` is `Rig.fbx` under Keyframe Reduction with a Rotation Error of 15 degrees and Position
@@ -259,7 +268,7 @@ parameter or blend shape weight) that does so, and such Humanoid curves (the two
 `HumanReduced` have equal ends either way); the rule is applied to them as to the measured
 curves.
 
-Unbound matches 4580/4580 records (the `curvekeys.Shapes*` key times exactly; 110 of their 209
+Unbound matches 4711/4711 records (the `curvekeys.Shapes*` key times exactly; 110 of their 209
 values exactly, the others in their last digits, which their slopes follow). The generic reducing compression modes are compared by their
 bindings only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced`
 set).

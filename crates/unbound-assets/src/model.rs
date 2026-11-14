@@ -631,8 +631,8 @@ pub struct ModelClip {
     /// The Editor's `__preview__<take>` clip of a whole take (HideInHierarchy).
     #[serde(default)]
     pub preview: bool,
-    /// Keys on every frame, rotations and scales with smooth tangents (the slope between the
-    /// neighbouring keys) and positions linear, as animation compression Off makes them (measured,
+    /// Keys on every frame, rotations and scales with smooth tangents (the mean of the slopes to
+    /// the neighbouring keys) and positions linear, as animation compression Off makes them (measured,
     /// tests/projects/modelclips); else linear between the keys.
     #[serde(default)]
     pub smooth: bool,
@@ -1823,12 +1823,13 @@ impl<'a> Builder<'a> {
                 self.asset_id(ids, class::ANIMATION_CLIP, "AnimationClip", &range.name)
             });
             // In single precision, as the Editor's clip length (a range from frame 40 to 48 at
-            // 24 fps is 0.33333337 s). A Generic or Humanoid clip ends at its last key: 31
-            // frames at 30 a second are 1.0333334 s, one step past the range's 1.0333333
-            // (tests/projects/modelclips HumanLong), and frames 1 to 31 of a take are
-            // 1.00000012 s (`ShapesOff`); a Legacy clip at its range's end (tests/projects/modelaxis
-            // Reduced: Drift, 3 s). A clip without keys has the range (0, 1) of an empty
-            // AnimationClip.
+            // 24 fps is 0.33333337 s). A Generic or Humanoid clip ends at the clip time of its last
+            // frame: 31 frames at 30 a second are 1.0333334 s, one step past the range's 1.0333333
+            // (tests/projects/modelclips HumanLong), and frames 1 to 31 of a take are 1.00000012 s
+            // (`ShapesOff`); a Legacy clip at its range's end (tests/projects/modelaxis Reduced:
+            // Drift, 3 s). Open: the Humanoid clip of frames 1 to 31 (`HumanLate`) is 0.99999994 s
+            // long in the Editor, the range's end, where this gives 1.00000012. A clip without
+            // keys has the range (0, 1) of an empty AnimationClip.
             let length = if empty {
                 1.0
             } else if self.settings.animation_type == 1 {

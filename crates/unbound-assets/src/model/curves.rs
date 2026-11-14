@@ -7,7 +7,7 @@ use super::Key;
 pub type Slopes<const N: usize> = Vec<([f32; N], [f32; N])>;
 
 /// Per key, its incoming and outgoing slope: the slope to each neighbouring key (a curve end
-/// takes the other side's; a segment shorter than [`MIN_SLOPE_SPAN`] is flat). `smooth`: inner
+/// takes the other side's). `smooth`: inner
 /// keys take the mean of those two slopes on both sides (see [`super::ModelClip::smooth`]), as
 /// the Unity 6000.0.71f1 Editor's every-frame curves have them (tests/projects/modelclips
 /// `curvekeys.ShapesOff`).
@@ -15,7 +15,7 @@ pub fn key_slopes<const N: usize>(keys: &[Key<N>], smooth: bool) -> Slopes<N> {
     let slope = |a: &Key<N>, b: &Key<N>| {
         let dt = b.time - a.time;
         let mut out = [0f32; N];
-        if dt.abs() > MIN_SLOPE_SPAN {
+        if dt > 0.0 {
             for i in 0..N {
                 out[i] = (b.value[i] - a.value[i]) / dt;
             }
@@ -39,9 +39,6 @@ pub fn key_slopes<const N: usize>(keys: &[Key<N>], smooth: bool) -> Slopes<N> {
         })
         .collect()
 }
-
-/// Keys closer together than this (seconds) have a flat slope between them.
-const MIN_SLOPE_SPAN: f32 = 1e-5;
 
 /// The keys moved `start` seconds earlier, in single precision: the importer samples and
 /// reduces a clip on its take's times and then makes them the clip's own.
@@ -268,9 +265,6 @@ mod tests {
         // the neighbours (1.5 / 1.5 = 1).
         let uneven = [key(0.0, 0.0), key(0.5, 1.0), key(1.5, 1.5)];
         assert_eq!(key_slopes(&uneven, true)[1], ([1.25], [1.25]));
-        // Keys closer than the minimum span are flat between them.
-        let close = [key(0.0, 0.0), key(0.000001, 1.0)];
-        assert_eq!(key_slopes(&close, false), vec![([0.0], [0.0]); 2]);
     }
 
     #[test]

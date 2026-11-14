@@ -227,9 +227,10 @@ A first attempt with 0.05 degrees and 0.05% put the rotation threshold within a 
 precision steps of a unit dot product, where keeping or dropping a key is a rounding tie
 (our captures differed by up to 0.0009 in basis vectors there); `Tight` uses errors above that.
 
-Key times: a key a whole number of frames after the range's start lies at that number times
-the frame length, both in single precision (3 s at 30 fps: 3.0000002 for rotations; the
-position curve of `Drift` ends at 3 exactly, scales unmeasured). With these times a segment of
+Key times: a key on a whole frame of the take lies at that frame's number times the frame
+length, both in single precision, less the range's start (3 s at 30 fps: 3.0000002 for
+rotations; the position curve of `Drift` ends at 3 exactly, scales unmeasured; ranges that start
+into their take: tests/projects/modelclips `Shapes*` and `Beyond`). With these times a segment of
 exactly 50 frames is not "fewer than 50": `Drift` keeps frame 49. Legacy clips, like Generic
 ones, have curves only for the channels the take animates (`Packed`: the unanimated rotation of
 Hips is not packed), pivoted nodes aside.
@@ -257,9 +258,9 @@ or end between frames, curves with different incoming and outgoing slopes (the i
 none for rotations), kept keys that fall into the same hundredth (above 100 fps; `PackedRate120`
 keeps none) and the hidden preview clips, which are packed like the others. The key times above
 change a result only in the 3 s Legacy clips here; Generic and compression Off clips longer
-than a second take the same times unmeasured. Humanoid clips (the transform keys their muscle
-curves are converted from, and the curves of nodes outside the human skeleton), float curves
-(blend shape weights) and root motion curves still take the plain difference of times.
+than a second take the same times unmeasured. Float curves (blend shape weights) and the
+transform keys of Humanoid clips take them too (tests/projects/modelclips `Shapes*`,
+`HumanLate`); root motion curves still take the plain difference of times.
 
 `PackedRate120` uses a scale error of 1%: at 0.5% dropping its scale corner at 1/3 s is a tie
 (the segment over it misses the corner by 0.5% of its value to within 4e-6), and the Editor,
