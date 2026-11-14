@@ -369,7 +369,8 @@ namespace UnityEngine.Rendering
 
         /// <summary>A directional light's shadow cascade (see
         /// <see cref="ComputeDirectionalShadowMatricesAndCullingPrimitives"/>; the built-in pipeline's
-        /// cascades are the same, measured): its view and projection, culling sphere and near plane.</summary>
+        /// cascades are the same, measured for perspective cameras; its orthographic ones are not): its
+        /// view and projection, culling sphere and near plane.</summary>
         internal static bool DirectionalShadowSlice(Camera camera, Matrix4x4 lightLocalToWorld, int splitIndex, int splitCount, Vector3 splitRatio,
             int shadowResolution, float distance, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out Vector4 cullingSphere, out float cullingNear,
             bool conservative = false, int iterations = 0, float nearPlaneOffset = BuiltInNearPlaneOffset,
@@ -434,7 +435,8 @@ namespace UnityEngine.Rendering
         /// (<see cref="ShadowSphereOffset"/>), s = (o + √(o² + L²(1 − o)² − L²o²)) / L², and 1 for a
         /// projection whose far corner lies at infinity. Matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/urp ShadowMatrixProbe (fields of view 30–90, aspects 0.5–1.8, near planes
-        /// 0.3 and 2; offsets other than 0 checked once in the Editor, not recorded).
+        /// 0.3 and 2) and slice-shares (orthographic cameras, fields of view 20 and 170, far planes
+        /// 50 and 200, offsets 5 and -2 with and without conservative spheres).
         /// </summary>
         internal static float ShadowSliceShare(Camera camera, float distance, float nearOffset, bool conservative, out float from)
         {

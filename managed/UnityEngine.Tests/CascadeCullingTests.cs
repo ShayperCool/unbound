@@ -78,7 +78,7 @@ namespace UnityEngine.Tests
                 if (grid)
                 {
                     var g = root.GetProperty("grid");
-                    var sphere = Slice(g[0].GetSingle(), g[1].GetSingle(), g[2].GetSingle(), g[3].GetSingle(), 0f, out _);
+                    var sphere = Slice(g[0].GetSingle(), g[1].GetSingle(), g[2].GetSingle(), g[3].GetSingle());
                     for (int i = 0; i < 4; i++) worst = Math.Max(worst, Relative(sphere[i], expected[i].GetSingle()));
                     grids++;
                     continue;
@@ -96,7 +96,7 @@ namespace UnityEngine.Tests
                 cascades++;
             }
             Assert.Equal(54, grids);
-            Assert.True(cascades >= 168, $"{cascades} cascades");
+            Assert.Equal(168, cascades);
             Assert.True(worst < 1e-4f, $"worst relative difference {worst}");
             Assert.True(worstNear < 2e-3f, $"worst near plane difference {worstNear}");
         }
@@ -133,21 +133,21 @@ namespace UnityEngine.Tests
                 worstNear = Math.Max(worstNear, Math.Abs(cullingNear - root.GetProperty("nearPlane").GetSingle()));
                 records++;
             }
-            Assert.True(records >= 120, $"{records} records");
+            Assert.Equal(120, records);
             Assert.True(worst < 2e-4f, $"worst relative difference {worst}");
             Assert.True(worstNear < 2e-3f, $"worst near plane difference {worstNear}");
         }
 
         static float Relative(float actual, float expected) => Math.Abs(actual - expected) / Math.Max(1f, Math.Abs(expected));
 
-        Vector4 Slice(float fov, float aspect, float near, float pitch, float offset, out float cullingNear)
+        Vector4 Slice(float fov, float aspect, float near, float pitch)
         {
             m_Camera.fieldOfView = fov;
             m_Camera.aspect = aspect;
             m_Camera.nearClipPlane = near;
             m_Object.transform.rotation = Quaternion.Euler(pitch, 0f, 0f);
             Assert.True(CullingResults.DirectionalShadowSlice(m_Camera, Matrix4x4.identity, 0, 1, new Vector3(1f, 0f, 0f), 2048, 100f,
-                out _, out _, out var sphere, out cullingNear, sliceNearOffset: offset));
+                out _, out _, out var sphere, out _));
             return sphere;
         }
 
