@@ -41,6 +41,8 @@ namespace Unbound.Runtime
             { typeof(PhysicsMaterial), new Adapter<PhysicsMaterial>((asset, body, resolver) => asset.ReadSerialized(body, resolver), asset => asset.CloneObject()) },
             { typeof(PhysicsMaterial2D), new Adapter<PhysicsMaterial2D>((asset, body, resolver) => asset.ReadSerialized(body, resolver), asset => asset.CloneObject()) },
             { typeof(TextAsset), new Adapter<TextAsset>((asset, body, resolver) => asset.ReadSerialized(body, resolver), asset => asset.CloneObject()) },
+            { typeof(AudioClip), new Adapter<AudioClip>((asset, body, resolver) => asset.ReadSerialized(body, resolver), asset => asset.CloneObject()) },
+            { typeof(Font), new Adapter<Font>((asset, body, resolver) => asset.ReadSerialized(body, resolver), asset => asset.CloneObject()) },
         };
 
         static Adapter Find(Type type)

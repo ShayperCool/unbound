@@ -2,11 +2,11 @@ using Unbound.Runtime;
 
 namespace UnityEngine
 {
-    public sealed partial class Font : Instantiation.ICloneable
+    public sealed partial class Font
     {
         /// <summary>Serialized font data is copied, material and texture references are shared.
         /// Dynamic fonts report the Editor's unsupported-clone diagnostic (assetinstantiate).</summary>
-        Object Instantiation.ICloneable.CloneObject()
+        internal Object CloneObject()
         {
             if (!Compat.AssetCloneResourcesMeasured)
                 throw new System.NotSupportedException("Font instantiation is measured only for Unity 6000.0.71f1.");

@@ -20,7 +20,7 @@ namespace UnityEngine
     /// handle.
     /// </summary>
     [ClassId(83)]
-    public sealed partial class AudioClip : AudioResource, ISerializedAsset
+    public sealed partial class AudioClip : AudioResource
     {
         public delegate void PCMReaderCallback(float[] data);
 
@@ -448,7 +448,7 @@ namespace UnityEngine
 
         /// <summary>A player clip (an AssetBundle's): its properties, and its FSB5 bank, in the
         /// bundle's stream file, decoded natively.</summary>
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_IsAsset = true;
             m_LoadType = (AudioClipLoadType)body.Int("m_LoadType");

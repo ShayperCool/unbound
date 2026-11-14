@@ -3,7 +3,7 @@ using Unbound.Runtime;
 
 namespace UnityEngine
 {
-    public sealed partial class AudioClip : Instantiation.ICloneable
+    public sealed partial class AudioClip
     {
         // Imported clips share the decoded resource. A clone of loaded non-streamed data observes
         // its owner's load state; an unloaded/loading source gives the clone its own load status.
@@ -23,7 +23,7 @@ namespace UnityEngine
 
         SharedClipData m_SharedData;
 
-        Object Instantiation.ICloneable.CloneObject()
+        internal Object CloneObject()
         {
             if (!Compat.AssetCloneResourcesMeasured)
                 throw new NotSupportedException("AudioClip instantiation is measured only for Unity 6000.0.71f1.");

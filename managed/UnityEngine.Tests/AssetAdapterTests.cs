@@ -89,6 +89,72 @@ TextAsset:
         }
 
         [Fact]
+        public void AudioClipDispatchRetainsBundleMetadataAndEmptyResourceCloneRules()
+        {
+            var source = (AudioClip)Activator.CreateInstance(typeof(AudioClip), nonPublic: true);
+            var previous = Debug.unityLogger.logHandler; var capture = new Capture(); Debug.unityLogger.logHandler = capture;
+            try
+            {
+                Assert.Equal(typeof(AudioClip), AssetAdapters.Reader(typeof(AudioClip)).DeclaringType);
+                Assert.True(AssetAdapters.TryRead(source, TestYaml.DocumentBody(@"
+AudioClip:
+  m_LoadType: 1
+  m_Channels: 2
+  m_Frequency: 22050
+  m_Length: 0.25
+  m_PreloadAudioData: 0
+  m_LoadInBackground: 1
+  m_Ambisonic: 1
+  m_CompressionFormat: 0
+"), null));
+                Assert.Equal(2, source.channels); Assert.Equal(22050, source.frequency); Assert.Equal(5512, source.samples);
+                Assert.True(source.ambisonic); Assert.True(source.loadInBackground); Assert.False(source.preloadAudioData);
+                Assert.Contains("has no audio data Unbound can read", Assert.Single(capture.Errors));
+                Assert.False(typeof(ISerializedAsset).IsAssignableFrom(typeof(AudioClip)));
+                Assert.False(typeof(Instantiation.ICloneable).IsAssignableFrom(typeof(AudioClip)));
+                Assert.True(AssetAdapters.TryClone(source, out var cloned));
+                var copy = Assert.IsType<AudioClip>(cloned);
+                Assert.NotSame(source, copy); Assert.Equal(2, copy.channels); Assert.Equal(22050, copy.frequency);
+                Assert.Equal(0, copy.samples);
+                Object.DestroyImmediate(source); Assert.Equal(22050, copy.frequency); Object.DestroyImmediate(copy);
+            }
+            finally { Debug.unityLogger.logHandler = previous; if (source) Object.DestroyImmediate(source); }
+        }
+
+        [Fact]
+        public void FontDispatchCopiesItsLoadedCharacterDataIndependently()
+        {
+            var source = new Font();
+            Assert.Equal(typeof(Font), AssetAdapters.Reader(typeof(Font)).DeclaringType);
+            Assert.True(AssetAdapters.TryRead(source, TestYaml.DocumentBody(@"
+Font:
+  m_FontSize: 27
+  m_Ascent: 19
+  m_Descent: -4
+  m_LineSpacing: 34
+  m_FontNames:
+  - CaseA
+  - CaseB
+  m_CharacterRects:
+  - index: 65
+    advance: 7
+    uv: {x: 0.1, y: 0.2, width: 0.3, height: 0.4}
+    vert: {x: 1, y: 2, width: 5, height: -8}
+"), new LoadedFile()));
+            Assert.Equal(27, source.fontSize); Assert.Equal(19, source.ascent); Assert.Equal(34, source.lineHeight);
+            Assert.Equal(new[] { "CaseA", "CaseB" }, source.m_FontNames); Assert.Single(source.characterInfo);
+            Assert.False(typeof(ISerializedAsset).IsAssignableFrom(typeof(Font)));
+            Assert.False(typeof(Instantiation.ICloneable).IsAssignableFrom(typeof(Font)));
+            var copy = Object.Instantiate(source);
+            Assert.NotSame(source.m_FontNames, copy.m_FontNames);
+            Assert.Equal(new[] { "CaseA", "CaseB" }, copy.m_FontNames);
+            var characters = copy.characterInfo; characters[0].advance = 33; copy.characterInfo = characters;
+            Assert.Equal(7, source.characterInfo[0].advance);
+            Assert.Equal(33, copy.characterInfo[0].advance);
+            Object.DestroyImmediate(source); Assert.Equal(33, copy.characterInfo[0].advance); Object.DestroyImmediate(copy);
+        }
+
+        [Fact]
         public void UnmigratedReadersAndClonersKeepTheirDispatch()
         {
             var source = new Texture2D(1, 1);

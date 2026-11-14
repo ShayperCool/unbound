@@ -289,13 +289,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEngine.AudioClip",
-    "Message": "type interfaces is Unbound.Runtime.ISerializedAsset,Unbound.Runtime.Instantiation+ICloneable, Unity's is ",
-    "Reason": "Q410-asset-interface-adapters: UnityEngine.AudioClip is loaded or cloned through engine helper interfaces. Move those calls to external type adapters before removing the extra interfaces; preserve existing serialized fields, ownership and independent clone state."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.Avatar",
     "Message": "type interfaces is Unbound.Runtime.ISerializedAsset, Unity's is ",
     "Reason": "Q410-asset-interface-adapters: UnityEngine.Avatar is loaded or cloned through engine helper interfaces. Move those calls to external type adapters before removing the extra interfaces; preserve existing serialized fields, ownership and independent clone state."
@@ -355,13 +348,6 @@
     "Type": "UnityEngine.Flare",
     "Message": "type interfaces is Unbound.Runtime.ISerializedAsset, Unity's is ",
     "Reason": "Q410-asset-interface-adapters: UnityEngine.Flare is loaded or cloned through engine helper interfaces. Move those calls to external type adapters before removing the extra interfaces; preserve existing serialized fields, ownership and independent clone state."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
-    "Type": "UnityEngine.Font",
-    "Message": "type interfaces is Unbound.Runtime.ISerializedAsset,Unbound.Runtime.Instantiation+ICloneable, Unity's is ",
-    "Reason": "Q410-asset-interface-adapters: UnityEngine.Font is loaded or cloned through engine helper interfaces. Move those calls to external type adapters before removing the extra interfaces; preserve existing serialized fields, ownership and independent clone state."
   },
   {
     "Release": "6000.0.71f1",

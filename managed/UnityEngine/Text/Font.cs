@@ -11,7 +11,7 @@ namespace UnityEngine
     /// fonts do; a custom (.fontsettings) font maps characters to rectangles of its own texture.
     /// </summary>
     [ClassId(128)]
-    public sealed partial class Font : Object, ISerializedAsset
+    public sealed partial class Font : Object
     {
         public delegate void FontTextureRebuildCallback();
 
@@ -319,7 +319,7 @@ namespace UnityEngine
         }
 
         /// <summary>A custom font (.fontsettings) or a font serialized in an asset file.</summary>
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_LineSpacing = body.Float("m_LineSpacing");
             m_FontSize = body.Float("m_FontSize", 16f);

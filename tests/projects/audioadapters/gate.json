@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/audioadapters/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Runtime/AssetAdapters.cs",
+    "managed/UnityEngine/Runtime/Instantiation.cs",
+    "managed/UnityEngine/Audio/AudioClip.cs",
+    "managed/UnityEngine/Audio/AudioClip.Clone.cs",
+    "managed/UnityEngine/Text/Font.cs",
+    "managed/UnityEngine/Text/Font.Clone.cs"
+  ]
+}
