@@ -205,6 +205,29 @@ public static class ProbeRunner
         }
     }
 
+    /// <summary>HumanLate (tests/projects/humanoid/make_models.py): HumanLong's import settings and
+    /// clip, the clip on frames 1..31 of a take that starts at frame 1. Changes only its importer
+    /// (run once in a copy of the project; the .meta is committed).</summary>
+    public static void CreateHumanLate()
+    {
+        try
+        {
+            var source = (ModelImporter)AssetImporter.GetAtPath(Dir + "HumanLong.fbx");
+            var importer = (ModelImporter)AssetImporter.GetAtPath(Dir + "HumanLate.fbx");
+            EditorUtility.CopySerialized(source, importer);
+            var clips = importer.clipAnimations;
+            foreach (var clip in clips) clip.firstFrame = 1f;
+            importer.clipAnimations = clips;
+            importer.SaveAndReimport();
+            EditorApplication.Exit(0);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
     static AnimationClip Load(string name) =>
         AssetDatabase.LoadAllAssetsAtPath(Model).OfType<AnimationClip>().First(c => c.name == name);
 

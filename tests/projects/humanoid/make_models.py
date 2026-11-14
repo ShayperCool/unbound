@@ -12,12 +12,14 @@ avatar with translation DoF).
 HumanLong: HumanB's rig with the same clip over 31 frames, a length whose last frame time in
 single precision lies past the clip's end; it goes to tests/projects/modelclips and is made
 only when named.
+HumanLate: HumanLong's clip one frame later, on frames 1..31 of a take that starts at frame 1;
+it goes to tests/projects/modelclips and is made only when named.
 HumanTwist: HumanB's rig and clip with its two twist bones, which are not human bones, animated
 too (the left one turns, the right one moves); it goes to tests/projects/modelclips as
 HumanTwistNone.fbx (copied there under its other clip masks) and is made only when named.
 The character faces Blender's -Y, which is Unity's +Z.
 
-Names after `--` generate only those rigs (HumanA, HumanB, HumanT, HumanLong, HumanTwist).
+Names after `--` generate only those rigs (HumanA, HumanB, HumanT, HumanLong, HumanLate, HumanTwist).
 """
 import math
 import os
@@ -162,7 +164,7 @@ def a_keys():
     return keys
 
 
-def human_b(end=20, file='HumanB.fbx', probe=PROBE, twist=False):
+def human_b(end=20, file='HumanB.fbx', probe=PROBE, twist=False, start=0):
     body = [
         ('Root', None, (0, 0, 0), (0, 0, 0.2), 0),
         ('Hips', 'Root', (0, 0.02, 1.12), (0, 0.02, 1.22), 90),
@@ -181,7 +183,7 @@ def human_b(end=20, file='HumanB.fbx', probe=PROBE, twist=False):
     ])
     rig = armature('HumanB', body + limbs)
     keys = []
-    for f, s in ((0, 1), (end // 2, -1), (end, 1)):
+    for f, s in ((start, 1), (start + (end - start) // 2, -1), (end, 1)):
         keys += [
             ('Hips', f, (0, 10 * s, 0), (0, 0, 0.05 * s)),
             ('Spine', f, (8 * s, 0, 0), None),
@@ -194,12 +196,18 @@ def human_b(end=20, file='HumanB.fbx', probe=PROBE, twist=False):
                 ('LeftUpperArmTwist', f, (25 * s, 0, 0), None),
                 ('RightUpperArmTwist', f, None, (0, 0.03 * s, 0)),
             ]
+    bpy.context.scene.frame_start = start
     animate(rig, 'Wave', end, keys)
     export(rig, file, probe)
 
 
 def human_long():
     human_b(31, 'HumanLong.fbx', os.path.join(os.path.dirname(PROBE), 'modelclips'))
+
+
+def human_late():
+    """HumanLong's clip on frames 1..31 of a take that starts at frame 1 (Blender's default start)."""
+    human_b(31, 'HumanLate.fbx', os.path.join(os.path.dirname(PROBE), 'modelclips'), start=1)
 
 
 def human_twist():
@@ -240,6 +248,7 @@ def export(rig, file, probe=PROBE):
 
 only = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else ['HumanA', 'HumanB', 'HumanT']
 for name, make in (('HumanA', human_a), ('HumanB', human_b), ('HumanT', human_t), ('HumanLong', human_long),
+                   ('HumanLate', human_late),
                    ('HumanTwist', human_twist)):
     if name in only:
         reset()

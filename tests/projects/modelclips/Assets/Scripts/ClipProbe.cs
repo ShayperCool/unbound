@@ -324,6 +324,8 @@ public class ClipProbe : MonoBehaviour
                 Imported(model, false);
                 CurveKeys(model);
             }
+            // Then HumanLong's clip on frames 1..31 of a take that starts at frame 1 (HumanLate).
+            Keys("HumanLate");
         }
         catch (Exception e)
         {
