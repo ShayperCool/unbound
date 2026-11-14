@@ -929,7 +929,7 @@ namespace Unbound.Runtime
 
     internal static class DefaultTextures
     {
-        static UnityEngine.Texture2D s_White, s_Black, s_Red, s_Gray, s_Normal;
+        static UnityEngine.Texture2D s_White, s_Black, s_Red, s_Gray, s_HalfGray, s_Normal;
 
         static UnityEngine.Texture2D Make(string name, UnityEngine.Color32 color)
         {
@@ -945,6 +945,10 @@ namespace Unbound.Runtime
         internal static UnityEngine.Texture2D Black => s_Black ??= Make("UnityBlack", new UnityEngine.Color32(0, 0, 0, 255));
         internal static UnityEngine.Texture2D Red => s_Red ??= Make("UnityRed", new UnityEngine.Color32(255, 0, 0, 255));
         internal static UnityEngine.Texture2D Gray => s_Gray ??= Make("UnityGrey", new UnityEngine.Color32(128, 128, 128, 255));
+        /// <summary>Grey in every channel, alpha too: what a realtime lightmap index with no
+        /// realtime lightmap samples (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/terrainlightmaps cases 29 and 30).</summary>
+        internal static UnityEngine.Texture2D HalfGray => s_HalfGray ??= Make("UnityHalfGrey", new UnityEngine.Color32(128, 128, 128, 128));
         internal static UnityEngine.Texture2D Normal => s_Normal ??= Make("UnityNormalMap", new UnityEngine.Color32(128, 128, 255, 255));
     }
 

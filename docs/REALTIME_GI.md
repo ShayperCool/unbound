@@ -961,6 +961,16 @@ coefficients are read back after each update (`gi_read_probes`) into the scene's
 `DynamicGI.isConverged`, `synchronousMode`, `SetEmissive`, `SetEnvironmentData`,
 `UpdateEnvironment`, `indirectScale` and `updateThreshold` act on it.
 
+A renderer or terrain whose realtime lightmap index (0 to 65533) has no realtime lightmap behind
+it, as when a script sets one in a scene without realtime GI, draws as the Editor's does: with
+`DYNAMICLIGHTMAP_ON`, a grey texture of half alpha (128 in every channel, sRGB) as
+`unity_DynamicLightmap` decoded as above, and in a directional lightmaps mode the same texture as
+`unity_DynamicDirectionality` with `DIRLIGHTMAP_COMBINED`, beside its baked lightmap if it has one
+(tests/projects/terrainlightmaps cases 12 to 14, 19 and 29 to 35: terrains and mesh renderers,
+both color spaces, the NVIDIA OpenGL Core device only). An index the scene's lighting data gives
+keeps a realtime lightmap behind it; when Unbound has none for it (its realtime GI not read or a
+system not drawn, each with a warning) the renderer draws its baked part alone.
+
 ## Residuals
 
 Measured with tests/projects/realtimegi (the comparator allows 0.02 + 5%):
@@ -1041,14 +1051,9 @@ measure):
   UpdateEnvironment, the other skybox, environment-data and ambient-probe cases, nor the other
   scenes), directionality, and a render pipeline; and a device other than the NVIDIA OpenGL Core
   one both the Editor and Unbound ran on.
-- A terrain whose realtime lightmap index a script sets while the scene has no realtime GI: the
-  Editor draws it with `DYNAMICLIGHTMAP_ON` (tests/projects/terrainlightmaps case 19) and with
-  light added that does not depend on its baked lightmap (cases 12 and 14 the same, on two
-  lightmaps; per unit of the albedo the baked-only pixels imply, a near grey of about 0.11 in
-  linear) and is smaller with directional lightmaps (case 13, about 0.045), from no realtime
-  lightmap and from a source not identified (measured on the NVIDIA OpenGL Core device only, one
-  albedo); Unbound draws the baked part and warns. A mesh renderer given a realtime lightmap index
-  this way is not measured in the Editor; Unbound draws its baked part without a warning.
+- Realtime lightmap indices of lighting data whose scene's Lighting Settings turn realtime GI
+  off, and a script's index on a renderer of a scene with realtime GI that points at another
+  system's atlas: unmeasured (Unbound draws the baked part, and the renderer's own atlas).
 - Devices: drawn through Vulkan the material textures lack each chart's last corner texel, and
   the Editor's own Vulkan capture differs from its OpenGL Core one; no rule covers both yet
   ([Material inputs](#material-inputs)).

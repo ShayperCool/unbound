@@ -147,6 +147,7 @@ namespace UnityEngine
                         terrain.lightmapScaleOffset = Vector(r.GetProperty("st"));
                         terrain.realtimeLightmapIndex = r.GetProperty("indexDynamic").GetInt32();
                         terrain.realtimeLightmapScaleOffset = Vector(r.GetProperty("stDynamic"));
+                        terrain.m_RealtimeLightmapFromData = IsLightmapIndex(terrain.realtimeLightmapIndex);
                         continue;
                     }
                     if (!(target is Renderer renderer)) continue;
@@ -156,6 +157,7 @@ namespace UnityEngine
                     int dynamic = r.GetProperty("indexDynamic").GetInt32();
                     renderer.realtimeLightmapIndex = dynamic >= 0xFFFE ? -1 : dynamic;
                     renderer.realtimeLightmapScaleOffset = Vector(r.GetProperty("stDynamic"));
+                    renderer.m_RealtimeLightmapFromData = IsLightmapIndex(renderer.realtimeLightmapIndex);
                 }
             }
             if (file != null && root.TryGetProperty("lights", out var lights))
@@ -190,7 +192,7 @@ namespace UnityEngine
         }
 
         /// <summary>A lightmap index that names a lightmap (0xFFFE and 0xFFFF name none).</summary>
-        static bool IsLightmapIndex(int index) => index >= 0 && index < 0xFFFE;
+        internal static bool IsLightmapIndex(int index) => index >= 0 && index < 0xFFFE;
 
         internal static int RealtimeContributors(JsonElement root)
         {
@@ -281,19 +283,26 @@ namespace UnityEngine
             // scale and offset, DYNAMICLIGHTMAP_ON); a renderer with one takes no light probes.
             // With directional lightmaps its directionality too (unity_DynamicDirectionality,
             // DIRLIGHTMAP_COMBINED).
-            bool realtime = lightmaps && renderer.m_RealtimeLightmap != null && IsLightmapIndex(renderer.realtimeLightmapIndex);
+            // A realtime lightmap index with no realtime lightmap behind it (a script's, while
+            // no realtime GI gives the renderer one) draws the same way with a grey texture of
+            // half alpha for both maps, terrains and meshes alike (matches the Unity 6000.0.71f1
+            // Editor, tests/projects/terrainlightmaps cases 12-14 and 29-35). An index from
+            // lighting data whose realtime GI Unbound did not produce keeps the baked fallback.
+            bool indexed = lightmaps && IsLightmapIndex(renderer.realtimeLightmapIndex);
+            bool absent = indexed && renderer.m_RealtimeLightmap == null && !renderer.m_RealtimeLightmapFromData;
+            bool realtime = indexed && (renderer.m_RealtimeLightmap != null || absent);
             bool directional = LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional;
-            bool realtimeDirectional = realtime && directional && renderer.m_RealtimeDirectionality != null;
+            bool realtimeDirectional = realtime && directional && (renderer.m_RealtimeDirectionality != null || absent);
             if (realtime)
             {
                 properties = DrawPropertyPool.Copy(properties);
-                properties[s_DynamicLightmap] = renderer.m_RealtimeLightmap;
+                properties[s_DynamicLightmap] = renderer.m_RealtimeLightmap ?? DefaultTextures.HalfGray;
                 properties[s_DynamicLightmapST] = renderer.realtimeLightmapScaleOffset;
                 properties[s_DynamicLightmapHDR] = QualitySettings.activeColorSpace == ColorSpace.Gamma ? s_GammaRealtimeDecode : s_LinearRealtimeDecode;
                 keywords.Add("DYNAMICLIGHTMAP_ON");
                 // The keyword is the baked lightmap's too: whichever of the two has no direction
                 // of its own under it gets one that changes nothing (unmeasured in the Editor).
-                if (directional) properties[s_DynamicDirectionality] = renderer.m_RealtimeDirectionality ?? FlatDirection;
+                if (directional) properties[s_DynamicDirectionality] = renderer.m_RealtimeDirectionality ?? (absent ? DefaultTextures.HalfGray : FlatDirection);
                 if (realtimeDirectional) keywords.Add("DIRLIGHTMAP_COMBINED");
             }
             var map = lightmaps ? LightmapSettings.Of(renderer.lightmapIndex) : null;

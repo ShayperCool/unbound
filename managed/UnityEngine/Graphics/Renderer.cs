@@ -213,6 +213,9 @@ namespace UnityEngine
         internal Texture2D m_RealtimeLightmap;
         /// <summary>That atlas's directionality, once a directional scene's update made it.</summary>
         internal Texture2D m_RealtimeDirectionality;
+        /// <summary>Its realtime lightmap index came from its scene's lighting data, so a realtime
+        /// lightmap stands behind it even while Unbound has none for it.</summary>
+        internal bool m_RealtimeLightmapFromData;
         public Vector4 realtimeLightmapScaleOffset
         {
             get { MainThreadCheck.Check("GetLightmapST"); return m_RealtimeLightmapScaleOffset; }

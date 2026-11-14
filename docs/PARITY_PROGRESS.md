@@ -684,6 +684,10 @@ Native evidence and limitations are in tests/projects/terrainlightmaps/README.md
 project has been restored to Linear. Full realtime GI is still open; this closes the baked
 Terrain binding/UV gap, not the complete lighting subsystem.
 
+Q455: the four realtime cases now match. A realtime lightmap index with no realtime lightmap
+behind it binds a grey texture of half alpha for both realtime maps, terrains and meshes alike;
+the reference adds cases 29 to 35 (1559 records and 48 PNGs per color space, all matching).
+
 ## Integrated Canvas creation and driven lifecycle
 
 Reviewed and cherry-picked seven delegate commits as 84e38a1e, 0e2d3ffa, 5ff7419a,

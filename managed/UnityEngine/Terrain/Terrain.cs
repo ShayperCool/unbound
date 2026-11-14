@@ -124,6 +124,8 @@ namespace UnityEngine
 
         public int lightmapIndex { get => m_LightmapIndex; set => m_LightmapIndex = NormalizeLightmapIndex(value); }
         public int realtimeLightmapIndex { get => m_RealtimeLightmapIndex; set => m_RealtimeLightmapIndex = NormalizeLightmapIndex(value); }
+        /// <summary>Its realtime lightmap index came from its scene's lighting data (<see cref="Renderer.m_RealtimeLightmapFromData"/>).</summary>
+        internal bool m_RealtimeLightmapFromData;
         // The native terrain stores 16-bit indices. 0xFFFE is the no-lightmap sentinel
         // exposed as 65534; negative and out-of-range assignments read back as -1.
         // Measured in tests/projects/terrainlightmaps on Unity 6000.0.71f1.

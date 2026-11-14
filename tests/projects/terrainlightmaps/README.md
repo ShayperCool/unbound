@@ -6,20 +6,25 @@ floating-point lightmaps to two terrains with distinct bindings. Diagnostic
 shaders report UVs, lightmap scale/offset, color sampling and directional-map
 behavior. Lighting cases use the built-in Diffuse and Standard terrain shaders.
 Ordinary surface meshes have constant UV0 and nontrivial UV2 plus scale/offset.
+Cases 29 to 35 give terrains and meshes a realtime lightmap index (5, and 0 beside a
+baked lightmap) with no realtime lightmap behind it: the diagnostic shader reads the
+bound `unity_DynamicLightmap`, `unity_DynamicDirectionality` and `unity_DynamicLightmap_HDR`,
+and the Diffuse terrain shader and a surface shader draw with them in both lightmaps modes.
 
 `Reference/unity-6000.0.71f1/{Linear,Gamma}` holds one canonical Native recording
-per color space. Each contains 1,335 records and 41 PNGs. Two independent Editor
+per color space. Each contains 1,559 records and 48 PNGs (the first 1,335 records
+and 41 PNGs as first recorded, cases 29 to 35 added). Two independent Editor
 processes produced byte-identical recordings per space. `compare.py` checks every
 field, sampled pixel and PNG. Field tolerance is 1e-5; readback samples allow one
 byte; whole-image limits remain max 2 bytes and mean .25 bytes, including alpha.
 Missing records or images fail. No values or images are excluded.
 
-The retained engine result is 1,271/1,335 records and 37/41 PNGs per space.
-All 23 non-pixel fields match. The 64 sampled-pixel failures and four image
-failures concern explicit realtime index 5 in cases 12, 13, 14 and 19. Native
-changes those images despite the absence of an authored realtime bake. Unbound
-reports unsupported realtime GI and draws the baked contribution. Baked import,
-UV2/ST, gradients, invalid bindings, clones and property blocks pass.
+The engine matches 1,559/1,559 records and 48/48 PNGs per space. A realtime index
+with no realtime lightmap behind it binds a grey texture of half alpha (128 in every
+channel, sRGB) for both realtime maps, decoded (1, 1) in linear and (1, 1/2.2) in
+gamma, with `DYNAMICLIGHTMAP_ON` and, in the directional mode, `DIRLIGHTMAP_COMBINED`
+(cases 12, 13, 14, 19, 29 to 35). Baked import, UV2/ST, gradients, invalid bindings,
+clones and property blocks pass.
 The ordinary terrain regression retains its two inherited steepness differences,
 214/216 records, with unchanged parent/candidate captures.
 
@@ -51,7 +56,6 @@ python3 "$f/verify.py" --repeat-linear "$cache/native2/Linear" --repeat-gamma "$
 bash "$f/regression.sh"
 ```
 
-The two engine comparisons intentionally exit 1 while realtime GI is unsupported.
 For a new release, `verify.py --record-reference` requires `--native-linear`,
 `--repeat-linear`, `--native-gamma` and `--repeat-gamma`. It verifies exact Native
 repetition and refuses to overwrite the versioned oracle. Otherwise `verify.py`
