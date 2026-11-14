@@ -456,7 +456,7 @@ namespace UnityEngine.Rendering
             float s = 1f;
             if (!conservative)
             {
-                var inverse = Matrix4x4.InverseSingle(camera.projectionMatrix);
+                var inverse = Matrix4x4.Inverse(camera.projectionMatrix);
                 float w = inverse.m30 + inverse.m31 + inverse.m32 + inverse.m33;
                 if (Math.Abs(w) > FarCornerEpsilon)
                 {
@@ -515,7 +515,7 @@ namespace UnityEngine.Rendering
         /// </summary>
         internal static Vector4 ConservativeSliceSphere(Camera camera, float from, float to, float share, int iterations)
         {
-            var inverse = Matrix4x4.InverseSingle(camera.projectionMatrix);
+            var inverse = Matrix4x4.Inverse(camera.projectionMatrix);
             Span<Vector3> frustum = stackalloc Vector3[8];
             for (int i = 0; i < 8; i++)
             {

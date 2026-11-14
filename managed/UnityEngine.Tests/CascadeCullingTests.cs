@@ -251,13 +251,13 @@ namespace UnityEngine.Tests
         public void TheSinglePrecisionInverseInvertsAndRefusesSingularMatrices()
         {
             var m = Matrix4x4.TRS(new Vector3(1f, 2f, 3f), Quaternion.Euler(20f, 30f, 40f), new Vector3(2f, 3f, 4f));
-            var product = Matrix4x4.InverseSingle(m) * m;
+            var product = Matrix4x4.Inverse(m) * m;
             for (int r = 0; r < 4; r++)
                 for (int c = 0; c < 4; c++)
                     Assert.Equal(r == c ? 1f : 0f, product[r, c], 5);
-            Assert.Equal(Matrix4x4.zero, Matrix4x4.InverseSingle(Matrix4x4.Scale(new Vector3(1f, 0f, 1f))));
+            Assert.Equal(Matrix4x4.zero, Matrix4x4.Inverse(Matrix4x4.Scale(new Vector3(1f, 0f, 1f))));
             // A perspective projection's far corner comes out past the far plane, as in the Editor.
-            var corner = Matrix4x4.InverseSingle(m_Camera.projectionMatrix) * new Vector4(1f, 1f, 1f, 1f);
+            var corner = Matrix4x4.Inverse(m_Camera.projectionMatrix) * new Vector4(1f, 1f, 1f, 1f);
             Assert.Equal(-1000.07f, corner.z / corner.w, 1);
         }
     }

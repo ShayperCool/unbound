@@ -365,7 +365,10 @@ namespace UnityEngine
         /// <summary>
         /// The inverse matrix by Gauss-Jordan elimination with partial pivoting on [m | I], in
         /// single precision in the order of the Unity 6000.0.71f1 Editor (tests/projects/floatrounding,
-        /// native/matrixInverse). A zero pivot (a singular matrix) gives Matrix4x4.zero.
+        /// native/matrixInverse). A zero pivot (a singular matrix) gives Matrix4x4.zero. The Editor
+        /// inverts a camera's projection the same way to find its frustum's corners (a perspective
+        /// projection's far corners come out a little off, as in the Editor: tests/projects/brg
+        /// shadows, the cascades' culling spheres).
         /// </summary>
         public static Matrix4x4 Inverse(Matrix4x4 m)
         {
@@ -428,75 +431,6 @@ namespace UnityEngine
         }
 
         public Matrix4x4 inverse => Inverse(this);
-
-        /// <summary>The inverse in single precision by Gauss-Jordan elimination with partial
-        /// pivoting, column by column: the Editor inverts a camera's projection so to find its
-        /// frustum's corners (a perspective projection's far corners come out a little off, as in
-        /// the Editor: measured, tests/projects/brg shadows, the cascades' culling spheres). A
-        /// singular matrix gives Matrix4x4.zero.</summary>
-        internal static unsafe Matrix4x4 InverseSingle(in Matrix4x4 m)
-        {
-            // Four rows of the matrix beside the identity, swapped by reference as they pivot.
-            float* w = stackalloc float[32];
-            for (int r = 0; r < 4; r++)
-                for (int c = 0; c < 4; c++)
-                {
-                    w[r * 8 + c] = m[r, c];
-                    w[r * 8 + 4 + c] = r == c ? 1f : 0f;
-                }
-            float* r0 = w, r1 = w + 8, r2 = w + 16, r3 = w + 24;
-            static void Swap(ref float* a, ref float* b) { var t = a; a = b; b = t; }
-            if (Math.Abs(r3[0]) > Math.Abs(r2[0])) Swap(ref r3, ref r2);
-            if (Math.Abs(r2[0]) > Math.Abs(r1[0])) Swap(ref r2, ref r1);
-            if (Math.Abs(r1[0]) > Math.Abs(r0[0])) Swap(ref r1, ref r0);
-            if (r0[0] == 0f) return zeroMatrix;
-            Eliminate(r1, r0, 0);
-            Eliminate(r2, r0, 0);
-            Eliminate(r3, r0, 0);
-            if (Math.Abs(r3[1]) > Math.Abs(r2[1])) Swap(ref r3, ref r2);
-            if (Math.Abs(r2[1]) > Math.Abs(r1[1])) Swap(ref r2, ref r1);
-            if (r1[1] == 0f) return zeroMatrix;
-            Eliminate(r2, r1, 1);
-            Eliminate(r3, r1, 1);
-            if (Math.Abs(r3[2]) > Math.Abs(r2[2])) Swap(ref r3, ref r2);
-            if (r2[2] == 0f) return zeroMatrix;
-            Eliminate(r3, r2, 2);
-            if (r3[3] == 0f) return zeroMatrix;
-            // Back substitution.
-            float s = 1f / r3[3];
-            for (int k = 4; k < 8; k++) r3[k] *= s;
-            float m2 = r2[3];
-            s = 1f / r2[2];
-            for (int k = 4; k < 8; k++) r2[k] = s * (r2[k] - r3[k] * m2);
-            float m1 = r1[3];
-            for (int k = 4; k < 8; k++) r1[k] -= r3[k] * m1;
-            float m0 = r0[3];
-            for (int k = 4; k < 8; k++) r0[k] -= r3[k] * m0;
-            m1 = r1[2];
-            s = 1f / r1[1];
-            for (int k = 4; k < 8; k++) r1[k] = s * (r1[k] - r2[k] * m1);
-            m0 = r0[2];
-            for (int k = 4; k < 8; k++) r0[k] -= r2[k] * m0;
-            m0 = r0[1];
-            s = 1f / r0[0];
-            for (int k = 4; k < 8; k++) r0[k] = s * (r0[k] - r1[k] * m0);
-            Matrix4x4 result = default;
-            for (int c = 0; c < 4; c++)
-            {
-                result[0, c] = r0[4 + c];
-                result[1, c] = r1[4 + c];
-                result[2, c] = r2[4 + c];
-                result[3, c] = r3[4 + c];
-            }
-            return result;
-
-            // Subtracts the pivot row from a row below it, from the pivot's column on.
-            static void Eliminate(float* row, float* pivot, int column)
-            {
-                float factor = row[column] / pivot[column];
-                for (int k = column + 1; k < 8; k++) row[k] -= factor * pivot[k];
-            }
-        }
 
         /// <summary>
         /// The engine's own inverse, from double-precision cofactors (zero for a singular matrix): the
