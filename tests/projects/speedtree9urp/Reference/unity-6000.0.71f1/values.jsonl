@@ -1,37 +1,37 @@
 {"k":"pipeline","v":"UniversalRenderPipelineAsset"}
 {"k":"colorSpace","v":"Linear"}
-{"k":"before/globalRenderPipeline","v":""}
-{"k":"before/shader","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2000 subshaders 2 passes 1"}
+{"k":"before/globalRenderPipeline","v":"UniversalPipeline"}
+{"k":"before/shader","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2450 subshaders 2 passes 9"}
 {"k":"before/shader/subshader0","v":"RenderType=Opaque Queue=AlphaTest RenderPipeline=UniversalPipeline"}
 {"k":"before/shader/subshader1","v":"RenderType= Queue= RenderPipeline="}
-{"k":"before/shader/fresh","v":"queue 2000 raw -1"}
+{"k":"before/shader/fresh","v":"queue 2450 raw -1"}
 {"k":"before/shader/fresh/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
-{"k":"before/shader/fresh/tags","v":"RenderType= Queue="}
-{"k":"before/shader/fresh/clearedOverride","v":"RenderType= fallbacks=Opaque"}
-{"k":"before/Full/material/Bark/queue","v":"2000"}
-{"k":"before/Full/material/Bark/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
-{"k":"before/Full/material/Bark/tags","v":"RenderType= Queue="}
-{"k":"before/Full/material/Billboard/queue","v":"2000"}
-{"k":"before/Full/material/Billboard/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
-{"k":"before/Full/material/Billboard/tags","v":"RenderType= Queue="}
-{"k":"before/Full/material/Leaves/queue","v":"2000"}
-{"k":"before/Full/material/Leaves/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
-{"k":"before/Full/material/Leaves/tags","v":"RenderType= Queue="}
-{"k":"before/Settings/material/Bark/queue","v":"2000"}
-{"k":"before/Settings/material/Bark/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
-{"k":"before/Settings/material/Bark/tags","v":"RenderType= Queue="}
-{"k":"before/Settings/material/BarkLOD1/queue","v":"2000"}
-{"k":"before/Settings/material/BarkLOD1/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
-{"k":"before/Settings/material/BarkLOD1/tags","v":"RenderType= Queue="}
-{"k":"before/Settings/material/Billboard/queue","v":"2000"}
-{"k":"before/Settings/material/Billboard/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
-{"k":"before/Settings/material/Billboard/tags","v":"RenderType= Queue="}
-{"k":"before/Settings/material/Leaves/queue","v":"2000"}
-{"k":"before/Settings/material/Leaves/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
-{"k":"before/Settings/material/Leaves/tags","v":"RenderType= Queue="}
-{"k":"before/Settings/material/LeavesLOD1/queue","v":"2000"}
-{"k":"before/Settings/material/LeavesLOD1/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
-{"k":"before/Settings/material/LeavesLOD1/tags","v":"RenderType= Queue="}
+{"k":"before/shader/fresh/tags","v":"RenderType=Opaque Queue=AlphaTest"}
+{"k":"before/shader/fresh/clearedOverride","v":"RenderType=Opaque fallbacks=Opaque"}
+{"k":"before/Full/material/Bark/queue","v":"2450"}
+{"k":"before/Full/material/Bark/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"before/Full/material/Bark/tags","v":"RenderType=Opaque Queue=AlphaTest"}
+{"k":"before/Full/material/Billboard/queue","v":"2450"}
+{"k":"before/Full/material/Billboard/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"before/Full/material/Billboard/tags","v":"RenderType=Opaque Queue=AlphaTest"}
+{"k":"before/Full/material/Leaves/queue","v":"2450"}
+{"k":"before/Full/material/Leaves/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"before/Full/material/Leaves/tags","v":"RenderType=Opaque Queue=AlphaTest"}
+{"k":"before/Settings/material/Bark/queue","v":"2450"}
+{"k":"before/Settings/material/Bark/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"before/Settings/material/Bark/tags","v":"RenderType=Opaque Queue=AlphaTest"}
+{"k":"before/Settings/material/BarkLOD1/queue","v":"2450"}
+{"k":"before/Settings/material/BarkLOD1/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"before/Settings/material/BarkLOD1/tags","v":"RenderType=Opaque Queue=AlphaTest"}
+{"k":"before/Settings/material/Billboard/queue","v":"2450"}
+{"k":"before/Settings/material/Billboard/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"before/Settings/material/Billboard/tags","v":"RenderType=Opaque Queue=AlphaTest"}
+{"k":"before/Settings/material/Leaves/queue","v":"2450"}
+{"k":"before/Settings/material/Leaves/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"before/Settings/material/Leaves/tags","v":"RenderType=Opaque Queue=AlphaTest"}
+{"k":"before/Settings/material/LeavesLOD1/queue","v":"2450"}
+{"k":"before/Settings/material/LeavesLOD1/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"before/Settings/material/LeavesLOD1/tags","v":"RenderType=Opaque Queue=AlphaTest"}
 {"k":"globalRenderPipeline","v":"UniversalPipeline"}
 {"k":"Full/renderer/LOD0","v":"Bark,Leaves"}
 {"k":"Full/renderer/LOD1","v":"Bark,Leaves"}
@@ -39,7 +39,7 @@
 {"k":"Full/renderer/LOD3","v":"Billboard"}
 {"k":"Full/material/Bark","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2450 instancing True doubleSidedGI False flags BakedEmissive"}
 {"k":"Full/material/Bark/keywords","v":""}
-{"k":"Full/material/Bark/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Full/material/Bark/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
 {"k":"Full/material/Bark/tags","v":"RenderType=Opaque Queue=AlphaTest"}
 {"k":"Full/material/Bark/rawQueue","v":"-1"}
 {"k":"Full/material/Bark/prop/_MainTex","v":"Bark_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
@@ -71,7 +71,7 @@
 {"k":"Full/material/Bark/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
 {"k":"Full/material/Billboard","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2450 instancing True doubleSidedGI False flags BakedEmissive"}
 {"k":"Full/material/Billboard/keywords","v":"_BILLBOARD"}
-{"k":"Full/material/Billboard/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Full/material/Billboard/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
 {"k":"Full/material/Billboard/tags","v":"RenderType=Opaque Queue=AlphaTest"}
 {"k":"Full/material/Billboard/rawQueue","v":"-1"}
 {"k":"Full/material/Billboard/prop/_MainTex","v":"Billboard_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
@@ -103,7 +103,7 @@
 {"k":"Full/material/Billboard/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
 {"k":"Full/material/Leaves","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2450 instancing True doubleSidedGI True flags BakedEmissive"}
 {"k":"Full/material/Leaves/keywords","v":""}
-{"k":"Full/material/Leaves/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Full/material/Leaves/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
 {"k":"Full/material/Leaves/tags","v":"RenderType=Opaque Queue=AlphaTest"}
 {"k":"Full/material/Leaves/rawQueue","v":"-1"}
 {"k":"Full/material/Leaves/prop/_MainTex","v":"Leaf_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
@@ -139,7 +139,7 @@
 {"k":"Settings/renderer/LOD3","v":"Billboard"}
 {"k":"Settings/material/Bark","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2450 instancing True doubleSidedGI False flags BakedEmissive"}
 {"k":"Settings/material/Bark/keywords","v":""}
-{"k":"Settings/material/Bark/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Settings/material/Bark/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
 {"k":"Settings/material/Bark/tags","v":"RenderType=Opaque Queue=AlphaTest"}
 {"k":"Settings/material/Bark/rawQueue","v":"-1"}
 {"k":"Settings/material/Bark/prop/_MainTex","v":"Bark_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
@@ -171,7 +171,7 @@
 {"k":"Settings/material/Bark/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
 {"k":"Settings/material/BarkLOD1","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2450 instancing True doubleSidedGI False flags BakedEmissive"}
 {"k":"Settings/material/BarkLOD1/keywords","v":""}
-{"k":"Settings/material/BarkLOD1/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Settings/material/BarkLOD1/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
 {"k":"Settings/material/BarkLOD1/tags","v":"RenderType=Opaque Queue=AlphaTest"}
 {"k":"Settings/material/BarkLOD1/rawQueue","v":"-1"}
 {"k":"Settings/material/BarkLOD1/prop/_MainTex","v":"Bark_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
@@ -203,7 +203,7 @@
 {"k":"Settings/material/BarkLOD1/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
 {"k":"Settings/material/Billboard","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2450 instancing True doubleSidedGI False flags BakedEmissive"}
 {"k":"Settings/material/Billboard/keywords","v":"_BILLBOARD"}
-{"k":"Settings/material/Billboard/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Settings/material/Billboard/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
 {"k":"Settings/material/Billboard/tags","v":"RenderType=Opaque Queue=AlphaTest"}
 {"k":"Settings/material/Billboard/rawQueue","v":"-1"}
 {"k":"Settings/material/Billboard/prop/_MainTex","v":"Billboard_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
@@ -235,7 +235,7 @@
 {"k":"Settings/material/Billboard/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
 {"k":"Settings/material/Leaves","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2450 instancing True doubleSidedGI True flags BakedEmissive"}
 {"k":"Settings/material/Leaves/keywords","v":""}
-{"k":"Settings/material/Leaves/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Settings/material/Leaves/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
 {"k":"Settings/material/Leaves/tags","v":"RenderType=Opaque Queue=AlphaTest"}
 {"k":"Settings/material/Leaves/rawQueue","v":"-1"}
 {"k":"Settings/material/Leaves/prop/_MainTex","v":"Leaf_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
@@ -267,7 +267,7 @@
 {"k":"Settings/material/Leaves/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
 {"k":"Settings/material/LeavesLOD1","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2450 instancing True doubleSidedGI True flags BakedEmissive"}
 {"k":"Settings/material/LeavesLOD1/keywords","v":""}
-{"k":"Settings/material/LeavesLOD1/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Settings/material/LeavesLOD1/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
 {"k":"Settings/material/LeavesLOD1/tags","v":"RenderType=Opaque Queue=AlphaTest"}
 {"k":"Settings/material/LeavesLOD1/rawQueue","v":"-1"}
 {"k":"Settings/material/LeavesLOD1/prop/_MainTex","v":"Leaf_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
