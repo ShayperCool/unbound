@@ -9,22 +9,22 @@
 //! work before and the work after (Metal runs one queue's command buffers in order). A texture
 //! upload made just before the event (`Texture2D.Apply` in the same frame, with no pass between)
 //! runs after the plugin's buffer, as the Editor's does (nativegfx `target.pixels`: the plugin
-//! copies the texture's earlier texels). Inside it
-//! the current encoder is begun when first asked, over the current render texture target's
-//! attachments at the image being drawn (their contents loaded and stored, a multisampled color
-//! resolved into its texture again); `EndCurrentCommandEncoder` ends it, and the next request
-//! begins another over the same target. Outside callbacks (a plugin's own calls from scripts)
-//! the current command buffer is one of the queue's, committed by `CommitCurrentCommandBuffer`,
-//! else before the next callback or at the end of the frame, so it runs after the rendering
-//! submitted by then (a script's commit: before what the frame has not submitted yet; neither is
-//! measured). There is no encoder there (logged once). A
-//! texture's native pointer is its `MTLTexture`
+//! copies the texture's earlier texels). Inside it the current encoder is begun when first asked,
+//! over the current target's attachments at the image being drawn: a render texture's (their
+//! contents loaded, a multisampled color resolved into its texture again) or the screen's (its
+//! color texture and depth buffer, loaded). Its store actions are left unknown in the descriptor
+//! and set when it ends, as the Editor's are (nativegfx `*.actions`: store 4). After
+//! `EndCurrentCommandEncoder` there is no descriptor until the plugin asks for an encoder again,
+//! which is begun over the screen without loading its contents, whatever the target was
+//! ([`Redirect`]). Outside callbacks (a plugin's own calls from scripts) the current command
+//! buffer is one of the queue's, committed by `CommitCurrentCommandBuffer`, else before the next
+//! callback or at the end of the frame, so it runs after the rendering submitted by then (a
+//! script's commit: before what the frame has not submitted yet; neither is measured), and the
+//! current encoder is over the screen as the last frame left it (which frame's image a script's
+//! draw reaches is unmeasured). A texture's native pointer is its `MTLTexture`
 //! (in the format Unity's device stores it: sRGB where a Linear project samples it as sRGB);
-//! a multisampled render texture's color and depth pointers are its samples. Not followed (the
-//! interface leaves them to the device; measured in batchmode only): outside a render texture
-//! target the Editor's current encoder is a render encoder over the screen, and after
-//! `EndCurrentCommandEncoder` its next one is too; the screen is not shared here (the encoder
-//! and descriptor are nil, logged once when asked for).
+//! a multisampled render texture's color and depth pointers are its samples. The screen's color
+//! texture is the renderer's 8-bit RGBA one; the macOS Editor's is BGRA (`format=80`).
 use super::UnityRenderer;
 use crate::render::resources::GpuTexture;
 use objc2::Message;
@@ -46,6 +46,7 @@ use wgpu::hal::api::Metal;
 type Object = *mut c_void;
 type Texture = ProtocolObject<dyn MTLTexture>;
 type CommandBuffer = ProtocolObject<dyn MTLCommandBuffer>;
+type RenderEncoder = ProtocolObject<dyn MTLRenderCommandEncoder>;
 
 /// `IUnityGraphicsMetalV1`; `IUnityGraphicsMetal` has the same members.
 #[repr(C)]
@@ -106,15 +107,20 @@ static DEVICE: AtomicUsize = AtomicUsize::new(0);
 static QUEUE: AtomicUsize = AtomicUsize::new(0);
 /// Metal.framework's bundle, which the Editor answers for `MetalBundle` (retained once).
 static BUNDLE: AtomicUsize = AtomicUsize::new(0);
-/// The command buffer plugins get outside callbacks, retained (0: none yet).
-static OUTSIDE: Mutex<usize> = Mutex::new(0);
+/// What plugins get outside callbacks: a command buffer of the queue (made when asked for) and
+/// the encoder over the screen.
+static OUTSIDE: Mutex<Outside> = Mutex::new(Outside {
+    buffer: None,
+    current: Current::SCREEN,
+});
+/// The screen's images as the last frame left them, for encoders outside callbacks.
+static SCREEN: Mutex<Option<ScreenImages>> = Mutex::new(None);
 /// The buffer `CommitCurrentCommandBuffer` last committed outside callbacks, retained so the
 /// plugin can wait on it (0: none).
 static COMMITTED_OUTSIDE: Mutex<usize> = Mutex::new(0);
-/// What plugins were told once: no encoder outside callbacks, none over the screen, the first
-/// of several colors only, a depth buffer left out, no command buffer, renderer busy.
+/// What plugins were told once: no screen yet outside callbacks, the first of several colors
+/// only, a depth buffer left out, no command buffer, renderer busy.
 static WARNED_OUTSIDE: AtomicBool = AtomicBool::new(false);
-static WARNED_SCREEN: AtomicBool = AtomicBool::new(false);
 static WARNED_COLORS: AtomicBool = AtomicBool::new(false);
 static WARNED_DEPTH: AtomicBool = AtomicBool::new(false);
 static WARNED_BUFFER: AtomicBool = AtomicBool::new(false);
@@ -134,40 +140,222 @@ pub(super) fn while_renderer_busy<R>(f: impl FnOnce() -> R) -> R {
     result
 }
 
-/// Logs once, inside a callback over the screen, that there is no pass.
-fn warn_screen() {
-    if !WARNED_SCREEN.swap(true, Ordering::Relaxed) {
-        tracing::warn!(
-            "a native plugin callback while the screen is the target asked for its encoder or \
-             render pass: the screen is not shared with plugins (nil)"
-        );
-    }
-}
-
-/// Logs once that a plugin asked for the encoder or its descriptor outside a callback.
+/// Logs once that a plugin asked for the encoder or its descriptor outside callbacks before the
+/// renderer had a screen.
 fn warn_outside(what: &str) {
     if !WARNED_OUTSIDE.swap(true, Ordering::Relaxed) {
         tracing::warn!(
-            "a native plugin asked for the {what} outside a rendering callback: Unbound has none there (nil; the Editor's draws to its screen, which is not shared with plugins)"
+            "a native plugin asked for the {what} outside a rendering callback before the first frame: there is no screen yet (nil)"
         );
     }
 }
 
-/// What a callback sees: its command buffer, the encoder begun in it, the descriptor encoders
-/// begin from, and the render textures' images by handle (render buffer pointers).
+/// Where a plugin's next encoder goes. In the macOS Editor, once the plugin ends the encoder (in
+/// a render texture's pass, over the screen and outside callbacks) there is no descriptor until it
+/// asks for an encoder again, which is over the screen with its contents not loaded (nativegfx
+/// `plugin.state.*.camera2.2`, `*.mutate`, `*.screen`, `*.outside`: load 0); committing the
+/// command buffer keeps the target (`*.commitrt.2`). Unity's next draw into the target or a new
+/// target takes it back (unmeasured).
+#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
+pub(super) enum Redirect {
+    /// The current target.
+    #[default]
+    Target,
+    /// The plugin ended the encoder: the next one is over the screen, not loaded.
+    Ended,
+    /// An encoder was begun over the screen after that. The Editor's lasts into the next events
+    /// (nativegfx `plugin.state.*.camera2.3`: its descriptor's load action is still 0); here
+    /// each callback begins one of its own, which loads what the earlier one drew.
+    Screen,
+}
+
+/// The store actions an encoder ends with: its descriptor leaves them unknown until then.
+#[derive(Clone, Copy)]
+struct Finish {
+    color: Option<MTLStoreAction>,
+    depth: bool,
+    stencil: bool,
+}
+
+/// An encoder begun for a plugin and the descriptor it was begun from (a fresh object for each
+/// encoder, so a plugin's change to it never reaches another).
+struct Open {
+    encoder: Retained<RenderEncoder>,
+    pass: Retained<MTLRenderPassDescriptor>,
+    finish: Finish,
+}
+
+impl Open {
+    /// An encoder over `params` with `load`; its descriptor shows `shown` (the load action of the
+    /// encoder it continues).
+    fn begin(
+        buffer: &CommandBuffer,
+        params: &PassParams,
+        load: MTLLoadAction,
+        shown: MTLLoadAction,
+    ) -> Option<Self> {
+        let (pass, finish) = params.descriptor(load);
+        let encoder = buffer.renderCommandEncoderWithDescriptor(&pass)?;
+        if shown != load {
+            // SAFETY: index 0 is within the attachments' range.
+            unsafe { pass.colorAttachments().objectAtIndexedSubscript(0) }.setLoadAction(shown);
+            pass.depthAttachment().setLoadAction(shown);
+            pass.stencilAttachment().setLoadAction(shown);
+        }
+        Some(Self {
+            encoder,
+            pass,
+            finish,
+        })
+    }
+
+    /// Sets the store actions the descriptor left unknown, then ends the encoder.
+    fn end(self) {
+        if let Some(action) = self.finish.color {
+            // SAFETY: attachment 0 is the descriptor's color.
+            unsafe { self.encoder.setColorStoreAction_atIndex(action, 0) };
+        }
+        if self.finish.depth {
+            self.encoder.setDepthStoreAction(MTLStoreAction::Store);
+        }
+        if self.finish.stencil {
+            self.encoder.setStencilStoreAction(MTLStoreAction::Store);
+        }
+        self.encoder.endEncoding();
+    }
+}
+
+/// The current encoder of a callback or of the calls outside callbacks.
+struct Current {
+    open: Option<Open>,
+    /// The Editor's encoder exists (asking for the descriptor begins it), until the plugin ends
+    /// it or commits the buffer.
+    drawn: bool,
+    redirect: Redirect,
+}
+
+impl Current {
+    /// Outside callbacks: the Editor's encoder over the screen exists (nativegfx
+    /// `plugin.peek.outside`, `plugin.load.state`).
+    const SCREEN: Self = Self {
+        open: None,
+        drawn: true,
+        redirect: Redirect::Target,
+    };
+
+    /// The current encoder, begun where the plugin's next one goes if there is none; whether it
+    /// was begun now over the target.
+    fn encoder(
+        &mut self,
+        buffer: &CommandBuffer,
+        target: Option<&PassParams>,
+        screen: Option<&PassParams>,
+    ) -> (Object, bool) {
+        let mut over_target = false;
+        if self.open.is_none() {
+            use MTLLoadAction as L;
+            let (params, load, shown) = match self.redirect {
+                Redirect::Target => (target, L::Load, L::Load),
+                Redirect::Ended => (screen, L::DontCare, L::DontCare),
+                Redirect::Screen => (screen, L::Load, L::DontCare),
+            };
+            self.open = params.and_then(|params| Open::begin(buffer, params, load, shown));
+            if self.open.is_some() {
+                over_target = self.redirect == Redirect::Target;
+                if self.redirect == Redirect::Ended {
+                    self.redirect = Redirect::Screen;
+                }
+            }
+        }
+        let encoder = self
+            .open
+            .as_ref()
+            .map_or(std::ptr::null_mut(), |o| object(&o.encoder));
+        (encoder, over_target)
+    }
+
+    /// The descriptor the current encoder was begun from: where the Editor's encoder exists it is
+    /// begun here; after only a clear, and once the plugin ended the encoder (in this event or an
+    /// earlier one), there is none (nil). Measured on the macOS Editor: nativegfx
+    /// `plugin.peek.drawn`, `plugin.peek.plugindrew`, `plugin.peek.screen`, `plugin.peek.outside`
+    /// (1), `plugin.peek.cleared`, `plugin.mutate`, `plugin.endpeek.*` and `plugin.peek.ended`,
+    /// `plugin.peek.screen.2`, `plugin.peek.outside.2` (0).
+    fn descriptor(
+        &mut self,
+        buffer: &CommandBuffer,
+        target: Option<&PassParams>,
+        screen: Option<&PassParams>,
+    ) -> (Object, bool) {
+        let mut over_target = false;
+        if self.open.is_none() && self.drawn {
+            over_target = self.encoder(buffer, target, screen).1;
+        }
+        let pass = self
+            .open
+            .as_ref()
+            .map_or(std::ptr::null_mut(), |o| object(&o.pass));
+        (pass, over_target)
+    }
+
+    /// `EndCurrentCommandEncoder`: the next encoder goes over the screen.
+    fn end(&mut self) {
+        self.close();
+        self.drawn = false;
+        self.redirect = Redirect::Ended;
+    }
+
+    /// The encoder ends with its command buffer (committed, or the callback is over).
+    fn close(&mut self) {
+        if let Some(open) = self.open.take() {
+            open.end();
+        }
+    }
+}
+
+/// What plugins use outside callbacks.
+struct Outside {
+    buffer: Option<Retained<CommandBuffer>>,
+    current: Current,
+}
+
+// SAFETY: Metal's command buffers and encoders may be used from any thread; the mutex orders
+// their use.
+unsafe impl Send for Outside {}
+
+/// The screen's color texture and depth buffer.
+struct ScreenImages {
+    color: Retained<Texture>,
+    depth: Retained<Texture>,
+}
+
+// SAFETY: Metal textures may be used from any thread; nothing here mutates them.
+unsafe impl Send for ScreenImages {}
+
+impl ScreenImages {
+    /// A render pass over them (valid while they are held).
+    fn params(&self) -> PassParams {
+        PassParams {
+            color: Retained::as_ptr(&self.color) as usize,
+            resolved: 0,
+            depth: Retained::as_ptr(&self.depth) as usize,
+            level: 0,
+            slice: 0,
+            layered: false,
+            volume: false,
+        }
+    }
+}
+
+/// What a callback sees: its command buffer, its current encoder, the render passes over the
+/// current target and over the screen, and the render textures' images by handle (render buffer
+/// pointers).
 struct Scope {
     buffer: Retained<CommandBuffer>,
-    encoder: Option<Retained<ProtocolObject<dyn MTLRenderCommandEncoder>>>,
-    /// The render pass over the current target (None: the screen, no target drawn into).
+    current: Current,
+    /// The render pass over the current target (None: a target the callback cannot draw into).
     params: Option<PassParams>,
-    /// The descriptor handed out: the current encoder's, or one made for a plugin asking before
-    /// any encoder (each a fresh object, so a plugin's change to it never reaches another).
-    pass: Option<Retained<MTLRenderPassDescriptor>>,
-    /// The screen is the target (it has no pass: not shared with plugins).
-    screen: bool,
-    /// The Editor's encoder exists (the executor's flag at the callback's start), until the
-    /// plugin ends or commits it in this callback.
-    drawn: bool,
+    /// The render pass over the screen.
+    screen: Option<PassParams>,
     images: HashMap<u64, Images>,
     /// Buffers committed by `CommitCurrentCommandBuffer` in this callback, kept until it ends
     /// (the plugin may wait on the one returned).
@@ -192,10 +380,16 @@ struct PassParams {
 
 impl PassParams {
     /// A new descriptor of the pass: its color (resolved again where multisampled) and depth
-    /// buffer at the level and slice, their contents loaded and stored.
-    fn descriptor(&self) -> Retained<MTLRenderPassDescriptor> {
+    /// buffer at the level and slice, with `load`, their store actions unknown; the actions the
+    /// encoder ends with.
+    fn descriptor(&self, load: MTLLoadAction) -> (Retained<MTLRenderPassDescriptor>, Finish) {
         let pass = MTLRenderPassDescriptor::new();
         let (level, slice) = (self.level, self.slice);
+        let mut finish = Finish {
+            color: None,
+            depth: false,
+            stencil: false,
+        };
         if self.color != 0 {
             // SAFETY: index 0 is within the attachments' range; the cache holds the textures.
             let attachment = unsafe { pass.colorAttachments().objectAtIndexedSubscript(0) };
@@ -206,8 +400,9 @@ impl PassParams {
             } else if self.layered {
                 attachment.setSlice(slice);
             }
-            attachment.setLoadAction(MTLLoadAction::Load);
-            if self.resolved != 0 {
+            attachment.setLoadAction(load);
+            attachment.setStoreAction(MTLStoreAction::Unknown);
+            finish.color = Some(if self.resolved != 0 {
                 attachment.setResolveTexture(Some(unsafe { held(self.resolved) }));
                 attachment.setResolveLevel(level);
                 if self.volume {
@@ -215,10 +410,10 @@ impl PassParams {
                 } else if self.layered {
                     attachment.setResolveSlice(slice);
                 }
-                attachment.setStoreAction(MTLStoreAction::StoreAndMultisampleResolve);
+                MTLStoreAction::StoreAndMultisampleResolve
             } else {
-                attachment.setStoreAction(MTLStoreAction::Store);
-            }
+                MTLStoreAction::Store
+            });
         }
         if self.depth != 0 {
             // SAFETY: the cache holds it.
@@ -231,8 +426,9 @@ impl PassParams {
             if self.layered {
                 attachment.setSlice(slice);
             }
-            attachment.setLoadAction(MTLLoadAction::Load);
-            attachment.setStoreAction(MTLStoreAction::Store);
+            attachment.setLoadAction(load);
+            attachment.setStoreAction(MTLStoreAction::Unknown);
+            finish.depth = true;
             if matches!(
                 texture.pixelFormat(),
                 MTLPixelFormat::Depth32Float_Stencil8 | MTLPixelFormat::Depth24Unorm_Stencil8
@@ -243,11 +439,12 @@ impl PassParams {
                 if self.layered {
                     stencil.setSlice(slice);
                 }
-                stencil.setLoadAction(MTLLoadAction::Load);
-                stencil.setStoreAction(MTLStoreAction::Store);
+                stencil.setLoadAction(load);
+                stencil.setStoreAction(MTLStoreAction::Unknown);
+                finish.stencil = true;
             }
         }
-        pass
+        (pass, finish)
     }
 }
 
@@ -312,92 +509,91 @@ extern "C" fn current_command_buffer() -> Object {
         return buffer;
     }
     let mut outside = OUTSIDE.lock().unwrap_or_else(|e| e.into_inner());
-    if *outside == 0
-        && let Some(buffer) = queue().and_then(|q| q.commandBuffer())
-    {
-        *outside = Retained::into_raw(buffer) as usize;
-    }
-    *outside as Object
+    outside_buffer(&mut outside).map_or(std::ptr::null_mut(), object)
 }
 
-/// Commits the command buffer plugins were given outside callbacks, if they asked for one.
+/// The command buffer plugins get outside callbacks, made when first asked for.
+fn outside_buffer(outside: &mut Outside) -> Option<&Retained<CommandBuffer>> {
+    if outside.buffer.is_none() {
+        outside.buffer = queue().and_then(|q| q.commandBuffer());
+    }
+    outside.buffer.as_ref()
+}
+
+/// Commits what plugins encoded outside callbacks, if they asked for a command buffer; the
+/// Editor's encoder over the screen is there again after it.
 pub(super) fn commit_outside() {
-    let raw = std::mem::take(&mut *OUTSIDE.lock().unwrap_or_else(|e| e.into_inner()));
-    // SAFETY: made by `into_raw` in `current_command_buffer`, taken once.
-    if let Some(buffer) = unsafe { Retained::from_raw(raw as *mut CommandBuffer) } {
+    let mut outside = OUTSIDE.lock().unwrap_or_else(|e| e.into_inner());
+    outside.current.close();
+    outside.current = Current::SCREEN;
+    if let Some(buffer) = outside.buffer.take() {
         buffer.commit();
     }
 }
 
+/// Runs `f` with the current encoder outside callbacks, its command buffer and the pass over the
+/// screen (None before the renderer's first frame).
+fn with_outside<R>(
+    f: impl FnOnce(&mut Current, &CommandBuffer, Option<&PassParams>) -> R,
+) -> Option<R> {
+    let screen = SCREEN.lock().unwrap_or_else(|e| e.into_inner());
+    let params = screen.as_ref().map(ScreenImages::params);
+    let mut outside = OUTSIDE.lock().unwrap_or_else(|e| e.into_inner());
+    let buffer = outside_buffer(&mut outside)?.clone();
+    Some(f(&mut outside.current, &buffer, params.as_ref()))
+}
+
 extern "C" fn current_command_encoder() -> Object {
     with_scope(|s| {
-        if s.encoder.is_none()
-            && let Some(params) = &s.params
-        {
-            // Begun from a descriptor of its own, whatever the plugin did to one it was given.
-            let pass = params.descriptor();
-            s.encoder = s.buffer.renderCommandEncoderWithDescriptor(&pass);
-            s.drew_samples |= s.multisampled && s.encoder.is_some();
-            s.pass = Some(pass);
-        }
-        if s.params.is_none() && s.screen {
-            warn_screen();
-        }
-        s.encoder.as_ref().map_or(std::ptr::null_mut(), object)
+        let (encoder, over_target) =
+            s.current
+                .encoder(&s.buffer, s.params.as_ref(), s.screen.as_ref());
+        s.drew_samples |= over_target && s.multisampled;
+        encoder
     })
+    .or_else(|| with_outside(|current, buffer, screen| current.encoder(buffer, screen, screen).0))
+    .filter(|encoder| !encoder.is_null())
     .unwrap_or_else(|| {
-        warn_outside("current command encoder");
+        if SCREEN.lock().unwrap_or_else(|e| e.into_inner()).is_none() {
+            warn_outside("current command encoder");
+        }
         std::ptr::null_mut()
     })
 }
 
 extern "C" fn end_current_command_encoder() {
-    with_scope(|s| {
-        if let Some(encoder) = s.encoder.take() {
-            encoder.endEncoding();
-        }
-        s.pass = None;
-        s.drawn = false;
-    });
+    if with_scope(|s| s.current.end()).is_none() {
+        OUTSIDE
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .current
+            .end();
+    }
 }
 
-/// The descriptor the current encoder was begun from (as the header says): where something was
-/// drawn into the target since it was set, or a plugin's encoder was left begun, the Editor's
-/// encoder exists, so the encoder is begun here; after only a clear, and once the plugin ended
-/// the encoder (in this event or an earlier one), there is none (nil). Measured on the macOS
-/// Editor: nativegfx `plugin.peek.drawn`, `plugin.peek.plugindrew` (1), `plugin.peek.cleared`,
-/// `plugin.mutate`, `plugin.endpeek.drawn` and `plugin.peek.ended` (0).
+/// The descriptor the current encoder was begun from (as the header says; [`Current::descriptor`]).
 extern "C" fn current_render_pass_descriptor() -> Object {
-    let begin = with_scope(|s| s.encoder.is_none() && s.drawn && s.params.is_some());
-    if begin == Some(true) {
-        current_command_encoder();
-    }
     with_scope(|s| {
-        if s.params.is_none() && s.screen {
-            warn_screen();
-        }
-        match (&s.encoder, &s.pass) {
-            (Some(_), Some(pass)) => object(pass),
-            _ => std::ptr::null_mut(),
-        }
+        let (pass, over_target) =
+            s.current
+                .descriptor(&s.buffer, s.params.as_ref(), s.screen.as_ref());
+        s.drew_samples |= over_target && s.multisampled;
+        pass
     })
-    .unwrap_or_else(|| {
-        warn_outside("current render pass descriptor");
-        std::ptr::null_mut()
+    .or_else(|| {
+        with_outside(|current, buffer, screen| current.descriptor(buffer, screen, screen).0)
     })
+    .unwrap_or(std::ptr::null_mut())
 }
 
 /// Commits the current command buffer and goes on in a new one; the committed one is returned
 /// (nativegfx `plugin.commit.*`: status Committed, a new current buffer; `plugin.script.commit`
 /// outside callbacks). The encoder ends with it, so the descriptor is nil until the plugin
-/// asks for an encoder again (unmeasured).
+/// asks for an encoder again (unmeasured), which is over the same target (`plugin.commit.commitrt`).
 extern "C" fn commit_current_command_buffer() -> Object {
     let inside = with_scope(|s| {
-        if let Some(encoder) = s.encoder.take() {
-            encoder.endEncoding();
-            s.pass = None;
-        }
-        s.drawn = false;
+        s.current.close();
+        s.current.drawn = false;
         let next = queue().and_then(|q| q.commandBuffer())?;
         let committed = std::mem::replace(&mut s.buffer, next);
         committed.commit();
@@ -414,14 +610,15 @@ extern "C" fn commit_current_command_buffer() -> Object {
 /// `CommitCurrentCommandBuffer` outside callbacks: the buffer plugins were given (a new one if
 /// none was), committed and kept until the next such commit.
 fn commit_outside_now() -> Object {
-    let raw = std::mem::take(&mut *OUTSIDE.lock().unwrap_or_else(|e| e.into_inner()));
-    // SAFETY: made by `into_raw` in `current_command_buffer`, taken once.
-    let buffer = match unsafe { Retained::from_raw(raw as *mut CommandBuffer) } {
-        Some(buffer) => buffer,
-        None => match queue().and_then(|q| q.commandBuffer()) {
-            Some(buffer) => buffer,
-            None => return std::ptr::null_mut(),
-        },
+    let buffer = {
+        let mut outside = OUTSIDE.lock().unwrap_or_else(|e| e.into_inner());
+        outside.current.close();
+        outside.current.drawn = false;
+        outside_buffer(&mut outside);
+        outside.buffer.take()
+    };
+    let Some(buffer) = buffer else {
+        return std::ptr::null_mut();
     };
     buffer.commit();
     let pointer = object(&buffer);
@@ -517,6 +714,8 @@ pub(super) struct MetalPlugins {
     targets: Vec<u64>,
     /// The render textures' images a callback's scope holds (reused, lent to the scope).
     images: HashMap<u64, Images>,
+    /// The screen's color texture and depth buffer and their `MTLTexture`s.
+    screen: Option<(wgpu::Texture, wgpu::Texture, ScreenImages)>,
 }
 
 impl MetalPlugins {
@@ -533,6 +732,7 @@ impl MetalPlugins {
             natives: HashMap::default(),
             targets: Vec::new(),
             images: HashMap::default(),
+            screen: None,
         })
     }
 
@@ -658,8 +858,43 @@ impl UnityRenderer {
         self.metal_texture(handle, which).unwrap_or(0) as u64
     }
 
-    /// The render pass over the current target that encoders begin from, or None (the screen,
-    /// a target not drawn into).
+    /// The render pass over the screen of this frame (its color texture and depth buffer, cached
+    /// while they are the same), which is also what encoders outside callbacks begin from until
+    /// the next callback or frame (None: the renderer has no Metal plugins).
+    fn metal_screen(&mut self) -> Option<PassParams> {
+        let slot = self.screen_slot;
+        let screen = self.ensure_screen(slot);
+        let (color, depth) = (screen.texture.clone(), screen.depth_texture.clone());
+        let plugins = self.metal_plugins.as_mut()?;
+        let kept = plugins
+            .screen
+            .as_ref()
+            .is_some_and(|(c, d, _)| *c == color && *d == depth);
+        if !kept {
+            let images = ScreenImages {
+                color: raw_texture(&color)?,
+                depth: raw_texture(&depth)?,
+            };
+            let shared = ScreenImages {
+                color: images.color.clone(),
+                depth: images.depth.clone(),
+            };
+            plugins.screen = Some((color, depth, images));
+            *SCREEN.lock().unwrap_or_else(|e| e.into_inner()) = Some(shared);
+        }
+        plugins
+            .screen
+            .as_ref()
+            .map(|(_, _, images)| images.params())
+    }
+
+    /// Hands plugins' calls outside callbacks the screen as this frame left it.
+    pub(super) fn publish_metal_screen(&mut self) {
+        self.metal_screen();
+    }
+
+    /// The render pass over the current render texture target that encoders begin from, or None
+    /// (a target the callback cannot draw into).
     fn metal_pass(&mut self) -> Option<PassParams> {
         let (color, depth) = self.target_handles;
         if color == 0 {
@@ -736,9 +971,11 @@ impl UnityRenderer {
             }
             return;
         };
-        let params = self.metal_pass();
-        let screen = self.target_handles.0 == 0;
-        let multisampled = params.is_some()
+        let screen = self.metal_screen();
+        let on_screen = self.target_handles.0 == 0;
+        let params = if on_screen { screen } else { self.metal_pass() };
+        let multisampled = !on_screen
+            && params.is_some()
             && self
                 .textures
                 .get(&self.target_handles.0)
@@ -772,11 +1009,16 @@ impl UnityRenderer {
         SCOPE.with(|scope| {
             *scope.borrow_mut() = Some(Scope {
                 buffer,
-                encoder: None,
+                current: Current {
+                    open: None,
+                    // The Editor's encoder over the screen is there until the plugin ends it
+                    // (nativegfx `plugin.peek.screen`).
+                    drawn: self.plugin_target_drawn
+                        || (on_screen && self.plugin_redirect != Redirect::Ended),
+                    redirect: self.plugin_redirect,
+                },
                 params,
-                pass: None,
                 screen,
-                drawn: self.plugin_target_drawn,
                 images,
                 committed: Vec::new(),
                 drew_samples: false,
@@ -784,15 +1026,15 @@ impl UnityRenderer {
             })
         });
         invoke();
-        let Some(scope) = SCOPE.with(|scope| scope.borrow_mut().take()) else {
+        let Some(mut scope) = SCOPE.with(|scope| scope.borrow_mut().take()) else {
             return;
         };
         // The Editor's encoder lasts into the next event where the plugin left it begun or did
-        // not end the one a draw began (nativegfx `plugin.peek.plugindrew`, `plugin.peek.ended`).
-        self.plugin_target_drawn = scope.drawn || scope.encoder.is_some();
-        if let Some(encoder) = scope.encoder {
-            encoder.endEncoding();
-        }
+        // not end the one a draw began (nativegfx `plugin.peek.plugindrew`, `plugin.peek.ended`);
+        // so does where the next one goes.
+        self.plugin_target_drawn = scope.current.drawn || scope.current.open.is_some();
+        self.plugin_redirect = scope.current.redirect;
+        scope.current.close();
         scope.buffer.commit();
         // What it drew into a multisampled target's samples reaches the resolved image and its
         // retained copy as the OpenGL path's does (the executor resolves again).
@@ -959,5 +1201,217 @@ fn plugin_texture(
             None,
         );
         device.create_texture_from_hal::<Metal>(hal, &desc, wgpu::TextureUses::RESOURCE)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use objc2_metal::{
+        MTLCreateSystemDefaultDevice, MTLOrigin, MTLRegion, MTLSize, MTLStorageMode,
+        MTLTextureDescriptor, MTLTextureUsage,
+    };
+
+    /// A 4x4 RGBA8 render target the CPU can read and write, filled with `texel`.
+    fn texture(device: &ProtocolObject<dyn MTLDevice>, texel: [u8; 4]) -> Retained<Texture> {
+        // SAFETY: valid sizes and format.
+        let desc = unsafe {
+            MTLTextureDescriptor::texture2DDescriptorWithPixelFormat_width_height_mipmapped(
+                MTLPixelFormat::RGBA8Unorm,
+                4,
+                4,
+                false,
+            )
+        };
+        desc.setStorageMode(MTLStorageMode::Shared);
+        desc.setUsage(MTLTextureUsage::RenderTarget | MTLTextureUsage::ShaderRead);
+        let texture = device.newTextureWithDescriptor(&desc).unwrap();
+        let bytes = [texel; 16];
+        // SAFETY: 16 texels of 4 bytes, rows of 16 bytes.
+        unsafe {
+            texture.replaceRegion_mipmapLevel_withBytes_bytesPerRow(
+                region(),
+                0,
+                std::ptr::NonNull::new(bytes.as_ptr() as *mut c_void).unwrap(),
+                16,
+            )
+        };
+        texture
+    }
+
+    fn region() -> MTLRegion {
+        MTLRegion {
+            origin: MTLOrigin { x: 0, y: 0, z: 0 },
+            size: MTLSize {
+                width: 4,
+                height: 4,
+                depth: 1,
+            },
+        }
+    }
+
+    fn texels(texture: &Texture) -> [[u8; 4]; 16] {
+        let mut out = [[0u8; 4]; 16];
+        // SAFETY: the buffer holds the 4x4 region.
+        unsafe {
+            texture.getBytes_bytesPerRow_fromRegion_mipmapLevel(
+                std::ptr::NonNull::new(out.as_mut_ptr() as *mut c_void).unwrap(),
+                16,
+                region(),
+                0,
+            )
+        };
+        out
+    }
+
+    fn params(texture: &Retained<Texture>) -> PassParams {
+        PassParams {
+            color: Retained::as_ptr(texture) as usize,
+            resolved: 0,
+            depth: 0,
+            level: 0,
+            slice: 0,
+            layered: false,
+            volume: false,
+        }
+    }
+
+    /// The descriptor handed out: its color texture and load and store actions.
+    fn attachment(pass: Object) -> Option<(usize, MTLLoadAction, MTLStoreAction)> {
+        // SAFETY: a descriptor handed out by `Current`, alive while its encoder is.
+        let pass = unsafe { (pass as *const MTLRenderPassDescriptor).as_ref() }?;
+        let color = unsafe { pass.colorAttachments().objectAtIndexedSubscript(0) };
+        let texture = color.texture().map_or(0, |t| Retained::as_ptr(&t) as usize);
+        Some((texture, color.loadAction(), color.storeAction()))
+    }
+
+    struct Setup {
+        queue: Retained<ProtocolObject<dyn MTLCommandQueue>>,
+        target: Retained<Texture>,
+        screen: Retained<Texture>,
+    }
+
+    /// None where the machine has no Metal device.
+    fn setup() -> Option<Setup> {
+        let device = MTLCreateSystemDefaultDevice()?;
+        Some(Setup {
+            queue: device.newCommandQueue()?,
+            target: texture(&device, [255, 0, 0, 255]),
+            screen: texture(&device, [0, 255, 0, 255]),
+        })
+    }
+
+    #[test]
+    fn ending_the_encoder_moves_the_next_one_to_the_screen_unloaded() {
+        let Some(s) = setup() else { return };
+        let (target, screen) = (params(&s.target), params(&s.screen));
+        let buffer = s.queue.commandBuffer().unwrap();
+        let mut current = Current {
+            open: None,
+            drawn: true,
+            redirect: Redirect::Target,
+        };
+        // The Editor's encoder over the target exists: the descriptor begins it, its store left
+        // unknown.
+        let (pass, over_target) = current.descriptor(&buffer, Some(&target), Some(&screen));
+        assert!(over_target);
+        assert_eq!(
+            attachment(pass),
+            Some((target.color, MTLLoadAction::Load, MTLStoreAction::Unknown))
+        );
+        current.end();
+        assert!(
+            current
+                .descriptor(&buffer, Some(&target), Some(&screen))
+                .0
+                .is_null()
+        );
+        // Asked for again: over the screen, not loaded.
+        let (encoder, over_target) = current.encoder(&buffer, Some(&target), Some(&screen));
+        assert!(!encoder.is_null() && !over_target);
+        let pass = current.descriptor(&buffer, Some(&target), Some(&screen)).0;
+        assert_eq!(
+            attachment(pass),
+            Some((
+                screen.color,
+                MTLLoadAction::DontCare,
+                MTLStoreAction::Unknown
+            ))
+        );
+        assert_eq!(current.redirect, Redirect::Screen);
+        current.close();
+        buffer.commit();
+        buffer.waitUntilCompleted();
+        assert_eq!(
+            buffer.status(),
+            objc2_metal::MTLCommandBufferStatus::Completed
+        );
+        // The target keeps what it had.
+        assert_eq!(texels(&s.target), [[255, 0, 0, 255]; 16]);
+    }
+
+    #[test]
+    fn a_continued_screen_encoder_keeps_its_contents_and_shows_how_it_began() {
+        let Some(s) = setup() else { return };
+        let (target, screen) = (params(&s.target), params(&s.screen));
+        let buffer = s.queue.commandBuffer().unwrap();
+        // A later event after the plugin began one over the screen.
+        let mut current = Current {
+            open: None,
+            drawn: true,
+            redirect: Redirect::Screen,
+        };
+        let pass = current.descriptor(&buffer, Some(&target), Some(&screen)).0;
+        assert_eq!(
+            attachment(pass),
+            Some((
+                screen.color,
+                MTLLoadAction::DontCare,
+                MTLStoreAction::Unknown
+            ))
+        );
+        current.close();
+        buffer.commit();
+        buffer.waitUntilCompleted();
+        // Loaded and stored: the store action set when it ended.
+        assert_eq!(texels(&s.screen), [[0, 255, 0, 255]; 16]);
+    }
+
+    #[test]
+    fn a_commit_keeps_the_target_and_the_screen_is_there_outside_callbacks() {
+        let Some(s) = setup() else { return };
+        let (target, screen) = (params(&s.target), params(&s.screen));
+        let buffer = s.queue.commandBuffer().unwrap();
+        let mut current = Current {
+            open: None,
+            drawn: true,
+            redirect: Redirect::Target,
+        };
+        current.encoder(&buffer, Some(&target), Some(&screen));
+        // `CommitCurrentCommandBuffer`: the encoder ends with the buffer, no descriptor until
+        // one is asked for, over the same target.
+        current.close();
+        current.drawn = false;
+        assert!(
+            current
+                .descriptor(&buffer, Some(&target), Some(&screen))
+                .0
+                .is_null()
+        );
+        let (_, over_target) = current.encoder(&buffer, Some(&target), Some(&screen));
+        assert!(over_target);
+        current.close();
+        // Outside callbacks the target is the screen and its descriptor is there at once.
+        let mut outside = Current::SCREEN;
+        let pass = outside.descriptor(&buffer, Some(&screen), Some(&screen)).0;
+        assert_eq!(
+            attachment(pass),
+            Some((screen.color, MTLLoadAction::Load, MTLStoreAction::Unknown))
+        );
+        outside.close();
+        buffer.commit();
+        buffer.waitUntilCompleted();
+        assert_eq!(texels(&s.target), [[255, 0, 0, 255]; 16]);
+        assert_eq!(texels(&s.screen), [[0, 255, 0, 255]; 16]);
     }
 }

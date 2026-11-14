@@ -222,8 +222,11 @@ def engine(label):
     env = dict(os.environ, **environment(out))
     # macOS has one device, Metal (the default); Linux selects the probe's.
     device = [] if MACOS else ['--force-' + ('vulkan' if DEVICE == 'vulkan' else 'glcore')]
+    # The Metal plugin records the screen's size: the macOS Editor's batchmode screen is 64x64
+    # (Reference/unity-<version>/metal.jsonl, plugin.state.color0.update).
+    size = '64x64' if DEVICE == 'metal' else '64x32'
     command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(out/'project'),
-               '--no-watch', '--frames', '400', '--size', '64x32', *device]
+               '--no-watch', '--frames', '400', '--size', size, *device]
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print(label, 'exit', code)

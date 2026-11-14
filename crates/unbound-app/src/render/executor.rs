@@ -98,6 +98,8 @@ struct ScreenTarget {
     /// The screen's depth: one buffer for every slot of the ring, so it lasts from frame to frame
     /// as the color does.
     depth: wgpu::TextureView,
+    /// That buffer's texture.
+    depth_texture: wgpu::Texture,
     /// Its depth, as `CopyDepth` samples it.
     depth_sample: wgpu::TextureView,
 }
@@ -506,6 +508,10 @@ pub struct UnityRenderer {
     /// (`plugins_metal`).
     #[cfg(target_os = "macos")]
     plugin_target_drawn: bool,
+    /// Where a Metal plugin's next encoder goes: the current target until a plugin ends the
+    /// encoder, then the screen until another target is set or drawn into (`plugins_metal`).
+    #[cfg(target_os = "macos")]
+    plugin_redirect: plugins_metal::Redirect,
     /// The last frame (counted from 1) whose GPU work is done: plugins' `safeFrameNumber`.
     frames_completed: Arc<std::sync::atomic::AtomicU64>,
     /// The current target's pass was drawing at a plugin event, or a plugin event ran inside it
@@ -644,6 +650,8 @@ impl UnityRenderer {
                 .flatten(),
             #[cfg(target_os = "macos")]
             plugin_target_drawn: false,
+            #[cfg(target_os = "macos")]
+            plugin_redirect: Default::default(),
             #[cfg(target_os = "macos")]
             metal_plugins: (unbound_runtime::graphics_device::get()
                 == unbound_compat::GraphicsDevice::Metal)
@@ -2451,8 +2459,14 @@ impl UnityRenderer {
                 .iter()
                 .flatten()
                 .find(|s| s.width == width && s.height == height)
-                .map(|s| (s.depth.clone(), s.depth_sample.clone()));
-            let (depth, depth_sample) = shared.unwrap_or_else(|| {
+                .map(|s| {
+                    (
+                        s.depth.clone(),
+                        s.depth_sample.clone(),
+                        s.depth_texture.clone(),
+                    )
+                });
+            let (depth, depth_sample, depth_texture) = shared.unwrap_or_else(|| {
                 let texture = self.device.create_texture(&wgpu::TextureDescriptor {
                     label: Some("unbound screen depth"),
                     size,
@@ -2468,7 +2482,7 @@ impl UnityRenderer {
                     aspect: wgpu::TextureAspect::DepthOnly,
                     ..Default::default()
                 });
-                (texture.create_view(&Default::default()), sample)
+                (texture.create_view(&Default::default()), sample, texture)
             });
             self.screens[slot] = Some(ScreenTarget {
                 width,
@@ -2478,6 +2492,7 @@ impl UnityRenderer {
                 srgb,
                 depth,
                 depth_sample,
+                depth_texture,
             });
         }
         self.screens[slot].as_ref().unwrap()
@@ -2828,6 +2843,18 @@ impl UnityRenderer {
                 Command::Plugin(call) => {
                     // The plugin sees everything before it drawn, and draws before what follows.
                     self.copy_depth(&mut passes, depth_mark);
+                    // A Metal plugin's encoder over the screen is a use of it: the frame's screen
+                    // starts there, as at a pass's first use.
+                    #[cfg(target_os = "macos")]
+                    if self.metal_plugins.is_some()
+                        && !self.screen_touched
+                        && (self.target_handles.0 == 0
+                            || self.plugin_redirect != plugins_metal::Redirect::Target)
+                    {
+                        let target = self.screen_target(self.color_space);
+                        let pass = self.new_pass(target);
+                        passes.push(Op::Pass(pass));
+                    }
                     self.encode(std::mem::take(&mut passes));
                     depth_mark = 0;
                     // Whether the current target's pass was drawing: a plugin event that does not
@@ -2875,6 +2902,7 @@ impl UnityRenderer {
                     #[cfg(target_os = "macos")]
                     {
                         self.plugin_target_drawn = false;
+                        self.plugin_redirect = Default::default();
                     }
                     self.copy_depth(&mut passes, depth_mark);
                     // The texture whose depth buffer is attached (the color's own, or another's:
@@ -3175,6 +3203,7 @@ impl UnityRenderer {
                     #[cfg(target_os = "macos")]
                     {
                         self.plugin_target_drawn = true;
+                        self.plugin_redirect = Default::default();
                     }
                     if self.sync_mesh_buffers(draw.mesh, &mut passes) {
                         open = false;
@@ -3555,6 +3584,8 @@ impl UnityRenderer {
         #[cfg(target_os = "macos")]
         if end_frame && self.metal_plugins.is_some() {
             plugins_metal::commit_outside();
+            // Scripts' encoders until the next frame are over the screen as this one left it.
+            self.publish_metal_screen();
         }
         #[cfg(target_os = "linux")]
         if end_frame && let Some(plugins) = self.vulkan_plugins.as_mut() {

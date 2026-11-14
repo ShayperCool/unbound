@@ -239,13 +239,14 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   renderer's work before it is done (`Plugin` commands, render protocol 15); OpenGL finishes the
   plugin's before the renderer goes on. The current target is bound for the callback (its color
   level, its depth texture, the viewport; a multisampled target's samples, resolved again after
-  the callback); the screen is not shared. A texture made with
+  the callback); the screen is not shared (on Metal it is: `plugins_metal.rs`). A texture made with
   `CreateExternalTexture` from another texture's pointer is that texture; from a plugin's own
   2D texture it samples that texture, as OpenGL samples it in its own format, through as many of
   its mip levels as the external texture has. A headless run has
-  no renderer: the plugins' context shares nothing there. macOS has no plugin context: plugin
-  callbacks are skipped with an error there, texture updates still run, and native pointers are
-  not OpenGL names.
+  no renderer: the plugins' context shares nothing there. macOS has no plugin OpenGL context: its
+  device is Metal, whose plugins get `IUnityGraphicsMetal` (`render/executor/plugins_metal.rs`:
+  the renderer's device and queue, a command buffer and an encoder over the current target or the
+  screen), and native pointers are `MTLTexture`s.
 * **Shaders**: every shader draws with its own code; there are no hand-written ports. A material's
   shader is the project's `.shader` (Assets, packages), else Unity's built-in one, compiled from
   the release's `builtin_shaders` sources (MIT; downloaded once into the global cache,

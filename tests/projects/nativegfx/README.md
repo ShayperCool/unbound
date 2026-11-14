@@ -216,16 +216,19 @@ of render textures (color, depth, multisampled samples, depth-only), what the re
 pointers give (`RenderBufferFromHandle` returns the pointer; their texture, resolved texture,
 stencil texture), an external texture of the plugin's, and the pixels.
 
-Unbound matches 75/175 records with 100 declared residuals (`residuals-metal.json`, each with its
+Unbound matches 155/196 records with 41 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
-textures have pixel format views), the descriptor's load and store actions (the Editor's are the
-pass it began, clearing, its store left unknown; Unbound begins a pass of its own that loads and
-stores), everything outside a render texture target (the Editor's encoder there is a render
-encoder over its batchmode screen; Unbound does not share the screen with plugins: nil, logged
-once; outside callbacks the plugin's current command buffer runs before the rendering the frame
-has not submitted yet, unmeasured), and what follows `EndCurrentCommandEncoder` inside a render texture target's pass (the Editor begins its
-next encoder over the screen; Unbound over the same target, so the plugin's next draw lands in it;
-the interface leaves this to the device). Measured on macOS 26 only; Intel Macs and other GPUs
+textures have pixel format views), the descriptor's load action over a render texture (the
+Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), and the
+screen's color format (the Editor's BGRA8Unorm, the renderer's RGBA8Unorm). The screen is shared:
+outside render texture targets the current encoder is over the screen's color texture and depth
+buffer (loaded), in callbacks and from scripts, and its descriptor is there before the plugin asks
+for the encoder (`plugin.peek.screen`, `plugin.peek.outside`); store actions are unknown until the
+encoder ends. After `EndCurrentCommandEncoder`, inside a render texture's pass, over the screen
+and from a script alike, there is no descriptor until the plugin asks for an encoder again, which
+is over the screen with its contents not loaded (`*.camera2.2`, `*.mutate`, `*.screen`,
+`*.outside`); `CommitCurrentCommandBuffer` keeps the target (`*.commitrt`). `run.py` runs Unbound
+at 64x64 for this device, the size of the Editor's batchmode screen. Measured on macOS 26 only; Intel Macs and other GPUs
 are unmeasured. The OpenGL probe (`run.py engine` without `--device`) still builds on macOS, but
 its plugin draws with OpenGL, which plugins do not get on Metal: it is not a macOS measurement.
 
