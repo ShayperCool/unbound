@@ -190,9 +190,11 @@ namespace Unbound.Runtime
         /// planes, blend factor, near plane and matrix), then, for a light that culls by the view
         /// frustum (Light.useViewFrustumForShadowCasterCull), the camera's six frustum planes as
         /// receiver planes, the far one at the shadow distance; the light's matrix, the camera's
-        /// LOD parameters, the camera's layers that the light lights, and the light as the view.
-        /// Matches the Unity 6000.0.71f1 Editor, tests/projects/brg <c>shadows</c> (a directional
-        /// light of two cascades).
+        /// LOD parameters, the camera's layers that the light lights, and the light as the view
+        /// (slice 0 for a directional light, -1 for a spot or point light). Every light type takes
+        /// the same context. Matches the Unity 6000.0.71f1 Editor, tests/projects/brg
+        /// <c>shadows</c> (a directional light of two cascades) and <c>local_shadows</c> (a spot
+        /// light and a point light's six faces).
         /// </summary>
         internal static void CullShadows(CullingData data, ShadowCastersCullingInfos infos)
         {
@@ -209,8 +211,6 @@ namespace Unbound.Runtime
                 if ((info.splitExclusionMask & 0xffu) == all) continue;
                 var light = data.Lights[index].light;
                 if (light == null) continue;
-                // Measured for directional lights; point and spot lights take the same path.
-                if (light.type != LightType.Directional) WarnOnce(UnsupportedLocalLightCulling);
                 int planes = 0;
                 for (int s = 0; s < splits; s++) planes += infos.splitBuffer[info.splitRange.start + s].cullingPlaneCount;
                 Reserve(planes + ReceiverPlanes, splits);
@@ -250,7 +250,7 @@ namespace Unbound.Runtime
                 var context = new BatchCullingContext(s_Planes.GetSubArray(0, planes), s_Splits.GetSubArray(0, splits), parameters.lodParameters,
                     light.transform.localToWorldMatrix, BatchCullingViewType.Light, info.projectionType,
                     ExcludesLightmappedCasters(light) ? BatchCullingFlags.CullLightmappedShadowCasters : BatchCullingFlags.None,
-                    new BatchPackedCullingViewID(light.GetInstanceID(), 0).handle, parameters.cullingMask & (uint)light.cullingMask,
+                    new BatchPackedCullingViewID(light.GetInstanceID(), light.type == LightType.Directional ? 0 : LocalLightViewSlice).handle, parameters.cullingMask & (uint)light.cullingMask,
                     GameViewSceneCullingMask, (byte)info.splitExclusionMask, receiverOffset, receivers, IntPtr.Zero);
                 Invoke(data, context, index);
             }
@@ -339,7 +339,11 @@ namespace Unbound.Runtime
 
         // Unsupported parts of draw commands (bits of s_Warned).
         const int UnsupportedIndirectTopology = 0, UnsupportedProcedural = 1, UnsupportedProceduralIndirect = 2, UnsupportedLightmap = 3,
-            UnsupportedCrossFadeKeyword = 4, UnsupportedMissingArrays = 5, UnsupportedLocalLightCulling = 6;
+            UnsupportedCrossFadeKeyword = 4, UnsupportedMissingArrays = 5;
+
+        /// <summary>The view slice of a spot or point light's culling (a directional light's is 0):
+        /// measured, tests/projects/brg local_shadows.</summary>
+        const int LocalLightViewSlice = -1;
 
         static readonly string[] s_Unsupported =
         {
@@ -349,7 +353,6 @@ namespace Unbound.Runtime
             "BatchRendererGroup draw commands flagged IsLightMapped draw without their lightmaps (LIGHTMAP_ON and the lightmap of lightmapIndex are not bound yet).",
             "BatchRendererGroup draw commands flagged LODCrossFadeKeyword draw without LOD_FADE_CROSSFADE (not enabled yet).",
             "a BatchRendererGroup culling callback gave draw commands or visible instances without allocating their arrays; its output is not drawn.",
-            "BatchRendererGroup light cullings of point and spot lights take a directional light's context (one call with every split, view slice 0); the Editor's is not measured.",
         };
 
         /// <summary>The invalid-ID errors logged so far: the Editor logs each distinct message once.</summary>

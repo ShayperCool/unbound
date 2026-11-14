@@ -256,8 +256,15 @@ namespace UnityEngine.Rendering
                 new Vector4(-Vector3.Dot(axes.x, position), -Vector3.Dot(axes.y, position), -Vector3.Dot(axes.z, position), 1f));
             projMatrix = Matrix4x4.Perspective(90f + fovBias, 1f, near, light.range * 1.01f);
             SetFrustumCulling(ref shadowSplitData, projMatrix * viewMatrix, near);
+            // The culling matrix keeps the face's vertical axis upright (the view above turns it
+            // for the cube map), and on a device with reversed depth also turns its depth axis:
+            // measured, tests/projects/brg local_shadows on OpenGL Core and Vulkan (a spot
+            // light's is the same on both).
+            shadowSplitData.cullingMatrix = (SystemInfo.usesReversedZBuffer ? s_FlipYZ : s_FlipY) * shadowSplitData.cullingMatrix;
             return true;
         }
+
+        static readonly Matrix4x4 s_FlipY = Matrix4x4.Scale(new Vector3(1f, -1f, 1f)), s_FlipYZ = Matrix4x4.Scale(new Vector3(1f, -1f, -1f));
 
         /// <summary>A visible point or spot light of the given type and its shadow near plane.</summary>
         bool LocalLight(int activeLightIndex, LightType type, out VisibleLight light, out float near)
@@ -274,6 +281,9 @@ namespace UnityEngine.Rendering
             for (int i = 0; i < planes.Length; i++) split.SetCullingPlane(i, planes[i]);
             split.cullingSphere = new Vector4(0f, 0f, 0f, float.NegativeInfinity);
             split.cullingNearPlane = near;
+            // The light's own projection by view (measured: tests/projects/brg local_shadows, a
+            // spot light and a point light's six faces through their light cullings).
+            split.cullingMatrix = worldToProjection;
         }
 
         /// <summary>
