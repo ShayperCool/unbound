@@ -285,12 +285,65 @@ namespace UnityEngine.Tests
             return default;
         };
 
-        List<FrameBuilder.DrawItem> Collect(CullingData data, FilteringSettings filtering, int mainLight = -1)
+        List<FrameBuilder.DrawItem> Collect(CullingData data, FilteringSettings filtering, int mainLight = -1, FrameBuilder.CameraContext camera = null)
         {
             var items = new List<FrameBuilder.DrawItem>();
             long sequence = 0;
-            BatchCulling.Collect(data, filtering, mainLight, items, ref sequence);
+            BatchCulling.Collect(camera ?? new FrameBuilder.CameraContext(), data, filtering, mainLight, items, ref sequence);
             return items;
+        }
+
+        /// <summary>A command flagged HasSortingPosition is drawn instance by instance, each sorted
+        /// at its position in instanceSortingPositions by the camera's distance metric; another
+        /// sorts at minus its sortingPosition (tests/projects/brg sorting); a flagged command
+        /// pointing outside the positions sorts as an unflagged one, with a warning.</summary>
+        [Fact]
+        public void CommandsSortAtTheirSortingPositionsOrApproximateDepths()
+        {
+            BatchID batch = default;
+            BatchMeshID mesh = default;
+            BatchMaterialID material = default;
+            var filter = new BatchFilterSettings { renderingLayerMask = uint.MaxValue };
+            var positions = new[] { 0f, 0f, 5f, 0f, 0f, 2f };
+            var group = Group((g, c, o, u) =>
+            {
+                Emit(filter, 3,
+                    new BatchDrawCommand { batchID = batch, meshID = mesh, materialID = material, visibleOffset = 0, visibleCount = 2, flags = BatchDrawCommandFlags.HasSortingPosition, sortingPosition = 0 },
+                    new BatchDrawCommand { batchID = batch, meshID = mesh, materialID = material, visibleOffset = 2, visibleCount = 1, sortingPosition = 40 },
+                    new BatchDrawCommand { batchID = batch, meshID = mesh, materialID = material, visibleOffset = 2, visibleCount = 1, flags = BatchDrawCommandFlags.HasSortingPosition, sortingPosition = 6 })(g, c, o, u);
+                var d = (BatchCullingOutputDrawCommands*)o.drawCommands.GetUnsafePtr();
+                d->instanceSortingPositions = (float*)UnsafeUtility.Malloc(positions.Length * sizeof(float), UnsafeUtility.AlignOf<float>(), Allocator.TempJob);
+                for (int i = 0; i < positions.Length; i++) d->instanceSortingPositions[i] = positions[i];
+                d->instanceSortingPositionFloatCount = positions.Length;
+                return default;
+            });
+            mesh = group.RegisterMesh(m_Mesh);
+            material = group.RegisterMaterial(m_Material);
+            batch = AddBatch(group, ("_BaseColor", 0x80000040u));
+            var camera = new FrameBuilder.CameraContext { Position = new Vector3(0f, 0f, -1f), Forward = Vector3.forward, Metric = DistanceMetric.Perspective };
+            var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
+            var logged = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
+            BatchCulling.s_Warned = 0;
+            List<FrameBuilder.DrawItem> items;
+            try { items = Collect(Cull(), all, -1, camera); }
+            finally { Debug.unityLogger.logHandler = previous; }
+            // The flagged command's two instances, then the unflagged one, then the flagged one
+            // whose position is outside the array.
+            Assert.Equal(4, items.Count);
+            Assert.Equal((0, 0, 36f), (items[0].Dots.Value.Command, items[0].Dots.Value.Instance, items[0].Distance));
+            Assert.Equal((0, 1, 9f), (items[1].Dots.Value.Command, items[1].Dots.Value.Instance, items[1].Distance));
+            Assert.Equal((1, -1, -40f), (items[2].Dots.Value.Command, items[2].Dots.Value.Instance, items[2].Distance));
+            Assert.Equal((2, 0, -6f), (items[3].Dots.Value.Command, items[3].Dots.Value.Instance, items[3].Distance));
+            Assert.True(items[0].Sequence < items[1].Sequence && items[1].Sequence < items[2].Sequence);
+            Assert.Contains(logged, m => m.Contains("points outside instanceSortingPositions"));
+            // Back to front: the far instance (36) first, the near one (9), then the approximate
+            // depths, whose larger values draw later.
+            var order = new int[items.Count];
+            for (int i = 0; i < order.Length; i++) order[i] = i;
+            FrameBuilder.SortRendererList(items, order, SortingCriteria.CommonTransparent);
+            Assert.Equal(new[] { 0, 1, 3, 2 }, order);
         }
 
         [Fact]
