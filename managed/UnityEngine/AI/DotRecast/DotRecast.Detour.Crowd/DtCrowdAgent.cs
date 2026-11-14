@@ -67,6 +67,8 @@ namespace DotRecast.Detour.Crowd
 
         /// Unbound: whether the plan in pvel brakes at the end of the path.
         public bool braking;
+        // The braking plan already uses the duration of the frame that prepared it.
+        public bool brakingVelocityPrepared;
         internal bool brakingNow;
 
         /// The agent's configuration parameters.
@@ -127,23 +129,28 @@ namespace DotRecast.Detour.Crowd
         public void Accelerate(float dt) => vel = NextVelocity(dt);
 
         /// Unbound: the velocity the next Accelerate gives (towards the plan in pvel), unapplied.
-        public RcVec3f NextVelocity(float dt)
+        public RcVec3f NextVelocity(float dt) => braking && brakingVelocityPrepared ? pvel : VelocityToward(pvel, dt, braking);
+
+        private RcVec3f VelocityToward(RcVec3f target, float dt, bool brake)
         {
-            // Fake dynamic constraint.
             float maxDelta = option.maxAcceleration * dt;
-            // Braking takes the whole planned velocity when it reduces speed, including a
-            // change of heading after landing (Unity 6000.0.71f1, navlinks costlow/areajump).
-            if (braking && pvel.LengthSquared() <= vel.LengthSquared()) return pvel;
-            RcVec3f dv = RcVec3f.Subtract(pvel, vel);
+            // A braking speed reduction takes the whole plan, including a changed heading
+            // (Unity 6000.0.71f1, tests/projects/navlinks).
+            if (brake && target.LengthSquared() <= vel.LengthSquared()) return target;
+            RcVec3f dv = RcVec3f.Subtract(target, vel);
             float ds = dv.Length();
             if (ds > maxDelta)
                 dv = dv * (maxDelta / ds);
             return RcVec3f.Add(vel, dv);
         }
 
-        public void Integrate(float dt)
+        public void Integrate(float dt, bool measuredBrakingPlan = false)
         {
-            // Unbound: this update's plan waits for the next (see Accelerate).
+            // Braking uses the steering velocity for its next plan, with acceleration
+            // limiting when that increases speed (Unity 6000.0.71f1, tests/projects/navbaked).
+            brakingVelocityPrepared = measuredBrakingPlan && brakingNow;
+            if (brakingVelocityPrepared) nvel = VelocityToward(dvel, dt, true);
+            // This update's plan waits for the next; its current movement is unchanged.
             pvel = nvel;
             braking = brakingNow;
 

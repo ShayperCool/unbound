@@ -1066,6 +1066,7 @@ namespace Unbound.Runtime
                     maxTopologyOptimizationIterations = 8,
                     predictNeighbourBounds = Compat.NavMeshPredictionBoundsMeasured,
                     measuredStoppingDistance = Compat.NavMeshStoppingDistanceMeasured,
+                    measuredBrakingPlan = Compat.NavMeshBrakingPlanMeasured,
                 };
                 crowd = new DtCrowd(config, surface.Mesh, i => AreaFilter.Of(-1));
                 crowd.tryEnterConnection = polyRef => TryEnterLink(surface, polyRef);
@@ -1323,6 +1324,7 @@ namespace Unbound.Runtime
             ag.vel = moving.vel;
             ag.pvel = moving.pvel;
             ag.braking = moving.braking;
+            ag.brakingVelocityPrepared = moving.brakingVelocityPrepared;
             // The reported corners stay until the next update finds them again.
             ag.reportedCorners = moving.reportedCorners;
             ag.reportedSteer = moving.reportedSteer;

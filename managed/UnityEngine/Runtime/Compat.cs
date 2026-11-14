@@ -101,6 +101,11 @@ namespace Unbound.Runtime
         /// unmeasured immediate stop.</summary>
         internal static bool NavMeshStoppingDistanceMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Braking prepares and reports the next velocity from the steering plan,
+        /// measured by tests/projects/navbaked on 6000.0.71f1. Other releases retain
+        /// their previous, unmeasured use of the avoidance sample while braking.</summary>
+        internal static bool NavMeshBrakingPlanMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>An arrived agent retains its destination request and resumes it when moved
         /// away, measured by tests/projects/navlinks on 6000.0.71f1. Other releases retain the
         /// previous, unmeasured cancellation of the completed request.</summary>

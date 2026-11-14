@@ -1461,7 +1461,7 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                ag.Integrate(dt);
+                ag.Integrate(dt, _config.measuredBrakingPlan);
             }
         }
 

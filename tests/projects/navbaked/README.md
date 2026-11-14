@@ -71,3 +71,27 @@ Runtime height-mesh generation remains unsupported with its existing warning; it
 needs a separate implementation of a walkable height surface and query data.
 The terrain-orientation and preserveTilesOutsideBounds limitations documented for
 6000.0 remain required controls for that implementation.
+
+
+Q462 prepares the braking velocity from the three-dimensional steering plan, using
+its planning frame's acceleration limit when increasing speed. The next update
+uses that prepared velocity; movement during the planning frame still uses the
+previous plan. This fixes all 13 bump-walker X positions: `height.agents` improves
+from 14 to 1/816 differences, with no newly failing value. Imported height queries
+remain 103/103 and Warp controls 41/41. Two fresh GPU Editor repeats agree exactly
+on every original reference value; the renderer was NVIDIA RTX 4060. Other devices
+were not measured. The existing reference and comparator are unchanged.
+
+The remaining `ramp.f205.vy` is 0.0210583284 in the reference and zero in Unbound.
+The reference is still moving near the endpoint while Unbound has already stopped.
+This leaves final arrival separate from the corrected braking plan; no arrival
+threshold is changed. Runtime height generation remains unsupported. It needs a
+walkable height surface and per-tile query data, including the documented
+terrain-orientation and preserveTilesOutsideBounds controls.
+
+| Contract or observation | Scope and control |
+| --- | --- |
+| [autoBraking, Unity 6000.0](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-autoBraking.html) describes slowing near the destination to avoid overshoot | It does not specify velocity preparation order or three-dimensional sampling. The existing ramp, stairs and bump agents exercise arrival on different surfaces. |
+| [desiredVelocity, Unity 6000.0](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-desiredVelocity.html) includes potential avoidance contributions | Selecting the steering plan while braking is measured for 6000.0.71f1, not a universal API guarantee. |
+| Braking reduces speed immediately, including changes in heading and height; an increase is acceleration limited | `NavMeshBrakingPlanTests` uses distinct steering and avoidance vectors, zero acceleration, a speed increase, a shorter following frame, ending braking and a nonbraking sample. |
+| `Compat.NavMeshBrakingPlanMeasured` selects this preparation mechanism | The measured release and another-release control check the published and next-update velocities. Other releases retain the previous, unmeasured avoidance plan. |
