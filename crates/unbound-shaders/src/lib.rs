@@ -662,6 +662,15 @@ pub struct ShaderCompiler {
     warned: HashSet<(PathBuf, String)>,
 }
 
+/// The device's built-in defines that programs do not compile with: framebuffer fetch (Metal's
+/// `inout` color targets) and its fallback, which Unbound's renderer does not do. Programs take
+/// their paths without it, as on Vulkan; `GraphicsSettings.HasShaderDefine` still answers them as
+/// the Editor does. A program that tests the define is warned of once per file.
+const NOT_COMPILED: [&str; 2] = [
+    "UNITY_FRAMEBUFFER_FETCH_AVAILABLE",
+    "UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK",
+];
+
 /// The warning for a requirement name Unity does not know ([`targets::Requirements::unknown`]),
 /// naming the shader file it was read from.
 fn left_out_warning(file: &Path, what: &str) -> String {
@@ -765,6 +774,23 @@ impl ShaderCompiler {
         let key = (program.clone(), selected.clone(), linear);
         if let Some(c) = self.memory.get(&key) {
             return Ok(c.clone());
+        }
+        if self
+            .settings
+            .platform_defines
+            .iter()
+            .any(|d| d == NOT_COMPILED[0])
+            && program.source.contains(NOT_COMPILED[0])
+            && self
+                .warned
+                .insert((program.file.clone(), NOT_COMPILED[0].into()))
+        {
+            tracing::warn!(
+                "{}: the program has a framebuffer fetch path, which Unbound does not compile on \
+                 the {} device: it takes its path without it",
+                program.file.display(),
+                self.settings.device
+            );
         }
         let variant = pragmas
             .requirements
@@ -926,6 +952,7 @@ impl ShaderCompiler {
             self.settings
                 .platform_defines
                 .iter()
+                .filter(|k| !NOT_COMPILED.contains(&k.as_str()))
                 .map(|k| (k.clone(), "1".to_string())),
         );
         d.extend(variant.defines());
@@ -3254,6 +3281,29 @@ float4 frag(v2f i) : SV_Target
             cg,
             light_mode: None,
         }
+    }
+
+    /// Metal's framebuffer fetch defines are answered (HasShaderDefine) but not compiled with:
+    /// a program's fetch path (an `inout` color target) is not taken.
+    #[test]
+    fn framebuffer_fetch_defines_are_not_compiled() {
+        let mut defines: Vec<String> = DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect();
+        defines.extend(NOT_COMPILED.iter().map(|d| d.to_string()));
+        let mut compiler = ShaderCompiler::new(Settings {
+            unity_version: 6000071,
+            platform_defines: defines,
+            device: unbound_compat::GraphicsDevice::Metal,
+            ..Default::default()
+        })
+        .unwrap();
+        let fetching = PROGRAM.replace(
+            "float4 frag(v2f i) : SV_Target",
+            "#if defined(UNITY_FRAMEBUFFER_FETCH_AVAILABLE) || defined(UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK)\n\
+             #error the fetch path is compiled\n\
+             #endif\n\
+             float4 frag(v2f i) : SV_Target",
+        );
+        compiler.compile(&program(&fetching, false), &[], false).unwrap();
     }
 
     #[test]
