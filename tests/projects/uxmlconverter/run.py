@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record independent GPU Editor captures or replay the linked-pool state controls."""
+"""Record independent GPU Editor captures or replay the UXML converter controls."""
 import argparse
 import json
 import os
