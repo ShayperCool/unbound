@@ -3044,3 +3044,15 @@ open with their raw discrepancies. A fresh 44100 Hz reset repeat still differs
 on 665,500 values. Six-input spatial/streaming contexts, other input widths,
 physical-device PCM and other backends/releases remain queued. See
 [the audio closure](../tests/projects/audiopitch/CLOSURE.md) for measured scope.
+
+### Q447: float curve keyframe reduction and take frame times
+
+A clip's keys are sampled at its take's frames (frame number times the single-precision frame
+length), keyframe reduction walks them on those times, and the keys then move by the clip's start
+in single precision; smooth slopes are the mean of the slopes to both neighbours. A blend shape
+weight easing from 100 to 0 over frames 1..31 now keeps its frame-29 key up to a Position Error of
+101% and drops it from 102%, as the Editor does (before: dropped from about 91%), and the clip
+ends at 1.00000012 s. tests/projects/modelclips gains the `Shapes*` models (Compression Off, 101%,
+102%; 36 records recorded with the macOS Editor) and matches 4580/4580 records (was 4573/4580
+with them), every key time exactly; modelaxis (all six sets), blendshapes and rootcurves are
+unchanged (macOS runs). Model cache VERSION 55.
