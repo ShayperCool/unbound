@@ -522,11 +522,14 @@ class JanitorTests(unittest.TestCase):
 
     def test_promoted_suite_empty_json_and_json_named_directories(self):
         work = self.directory('q1/sheriff-S20-example')
+        logged = self.directory('q1/logged-output')
         declared = self.directory('q1/nested-output')
         unpromoted = self.directory('q1/sheriff-S21-unpromoted')
         logs = work/'project/Library/Unbound/ProjectView/Logs'
         logs.mkdir(parents=True)
         (logs/'Output.log.json').write_text('')
+        (logs/'Blank.log.json').write_text(' \n\n')
+        (logs/'Lines.log.json').write_text(json.dumps({'Message': 'a'})+'\n'+json.dumps({'artifact': str(logged)})+'\n')
         nested = work/'probe/report.json'
         nested.mkdir(parents=True)
         (nested/'metadata.json').write_text(json.dumps({'artifact': str(declared)}))
@@ -537,24 +540,45 @@ class JanitorTests(unittest.TestCase):
             candidates = {path for path, _, _ in self.j.candidates()}
             self.assertNotIn(work, candidates)
             self.assertNotIn(declared, candidates)
+            self.assertNotIn(logged, candidates)
             self.j.apply = True
             self.assertFalse(self.j.remove(declared, kind='task'))
+            self.assertFalse(self.j.remove(logged, kind='task'))
             self.assertIn(unpromoted, candidates)
 
-    def test_promoted_suite_truncated_json_stops_discovery(self):
+    def unreadable_suite_fails_closed(self, write, expected):
         work = self.directory('q1/sheriff-S20-example')
         declared = self.directory('q1/json-output')
-        (work/'report.json').write_text('{"artifact": "'+str(declared)+'"')
+        write(work, declared)
         self.promote_fixture(work)
         with patch.object(janitor.time, 'time', return_value=self.future), self.guards():
             code = janitor.main(['--repo', str(self.repo), '--apply'])
         self.assertEqual(code, 1)
         logs = list((self.cache/'agents/janitor').glob('*.jsonl'))
         rows = [json.loads(line) for line in logs[0].read_text().splitlines()]
-        self.assertIn('Expecting', next(row for row in rows if row['action'] == 'error')['error'])
+        self.assertIn(expected, next(row for row in rows if row['action'] == 'error')['error'])
         self.assertTrue(rows[-1]['failed'])
         self.assertEqual(rows[-1]['removals'], 0)
         self.assertTrue(declared.exists())
+
+    def test_promoted_suite_truncated_json_stops_discovery(self):
+        def write(work, declared):
+            (work/'report.json').write_text('{"artifact": "'+str(declared)+'"')
+        self.unreadable_suite_fails_closed(write, 'Expecting')
+
+    def test_promoted_suite_truncated_json_lines_stop_discovery(self):
+        def write(work, declared):
+            (work/'Output.log.json').write_text(json.dumps({'Message': 'a'})+'\n{"artifact": "'+str(declared)+'"\n')
+        self.unreadable_suite_fails_closed(write, 'Extra data')
+
+    def test_promoted_suite_unreadable_json_stops_discovery(self):
+        def write(work, declared):
+            sealed = work/'sealed'
+            sealed.mkdir()
+            (sealed/'metadata.json').write_text(json.dumps({'artifact': str(declared)}))
+            sealed.chmod(0o444)
+            self.addCleanup(sealed.chmod, 0o755)
+        self.unreadable_suite_fails_closed(write, 'Permission denied')
 
     def test_late_promotion_and_metadata_edit_protect_new_references(self):
         work = self.directory('q1/sheriff-S20-example')

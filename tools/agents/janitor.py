@@ -120,6 +120,27 @@ def suite_references(value):
         yield Path(value)
 
 
+def json_references(text):
+    """References in a JSON document, or in JSON Lines such as com.unity.logging's
+    Output.log.json, where every line is one document. An empty file names nothing.
+    Anything else that does not parse raises: its references are unknown."""
+    if not text.strip():
+        return []
+    try:
+        return list(suite_references(json.loads(text)))
+    except json.JSONDecodeError as error:
+        lines = [line for line in text.splitlines() if line.strip()]
+        if len(lines) < 2:
+            raise
+        found = []
+        for line in lines:
+            try:
+                found.extend(suite_references(json.loads(line)))
+            except json.JSONDecodeError:
+                raise error from None
+        return found
+
+
 def promoted_suite_paths(cache):
     """Current promoted suite and its durable metadata, logs and link targets."""
     summary = cache/'agents/baseline/summary.json'
@@ -146,18 +167,16 @@ def promoted_suite_paths(cache):
         for directory, directories, files in os.walk(root, followlinks=False, onerror=walk_error):
             for name in [*directories, *files]:
                 path = Path(directory)/name
-                if path.is_symlink():
+                # lstat raises on unreadable or vanished entries, unlike is_file().
+                mode = os.lstat(path).st_mode
+                if stat.S_ISLNK(mode):
                     protected.update((path, path.resolve()))
-                elif not path.is_file():
+                elif not stat.S_ISREG(mode):
                     # Directories named *.json (report.json/) are walked themselves;
-                    # FIFOs, sockets and files removed meanwhile hold no references.
+                    # FIFOs and sockets hold no references.
                     continue
                 elif path.suffix == '.json':
-                    text = path.read_text()
-                    # An empty file (e.g. an empty engine log named *.json) names nothing.
-                    # Any other unparsable file stops discovery: its references are unknown.
-                    if text.strip():
-                        protected.update(suite_references(json.loads(text)))
+                    protected.update(json_references(path.read_text()))
                 elif path.suffix == '.log':
                     # Stream full logs: drivers can print output paths that are
                     # implicit in their command's label rather than arguments.
