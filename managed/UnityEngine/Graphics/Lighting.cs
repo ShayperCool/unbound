@@ -889,6 +889,11 @@ namespace Unbound.Runtime
 
         internal static Light MainLightOf() => MainLight();
 
+        /// <summary>The sun a sky is drawn with: chosen as the main light, a fully baked light
+        /// included (measured: tests/projects/lightingdatanan, whose baked sun lights the procedural
+        /// sky and draws its disk while it lights no object at run time).</summary>
+        internal static Light SkySun() => MainLight(allowBaked: true);
+
         /// <summary>The direction to the light a sky is drawn with when the scene has no main
         /// light (built-in pipeline).</summary>
         internal static readonly Vector3 SkyWithoutSun = new Vector3(0f, 0f, -1f);
@@ -897,16 +902,16 @@ namespace Unbound.Runtime
         /// enabled directional light. A light with a cookie is never it: the base pass has no
         /// cookie variant, such a light draws in the ForwardAdd pass (measured:
         /// tests/projects/builtinrp main_light_cookie).</summary>
-        static Light MainLight()
+        static Light MainLight(bool allowBaked = false)
         {
             bool builtin = GraphicsSettings.currentRenderPipeline == null;
             var sun = UnityEngine.RenderSettings.sun;
-            if (sun != null && sun.isActiveAndEnabled && sun.type == LightType.Directional && !sun.IsFullyBaked && !(builtin && sun.cookie != null)) return sun;
+            if (sun != null && sun.isActiveAndEnabled && sun.type == LightType.Directional && (allowBaked || !sun.IsFullyBaked) && !(builtin && sun.cookie != null)) return sun;
             Light best = null;
             float bestValue = -1f;
             foreach (var l in Light.s_Enabled)
             {
-                if (l == null || !l.isActiveAndEnabled || l.type != LightType.Directional || l.IsFullyBaked) continue;
+                if (l == null || !l.isActiveAndEnabled || l.type != LightType.Directional || (!allowBaked && l.IsFullyBaked)) continue;
                 if (builtin && l.cookie != null) continue;
                 KeepBrighter(l, ref best, ref bestValue);
             }

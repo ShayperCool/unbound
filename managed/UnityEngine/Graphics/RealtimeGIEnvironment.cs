@@ -85,7 +85,7 @@ namespace UnityEngine
                     key.Sky = sky;
                     key.SkyVersion = sky.m_Version;
                     key.Intensity = RenderSettings.ambientIntensity;
-                    var sun = LightingGlobals.MainLightOf();
+                    var sun = LightingGlobals.SkySun();
                     var toSun = sun != null ? -sun.transform.forward : LightingGlobals.SkyWithoutSun;
                     key.Sun = new Vector3Int(Thousandths(toSun.x), Thousandths(toSun.y), Thousandths(toSun.z));
                     if (sun != null && !Compat.SkyAmbientWithoutLightColor) key.SunColor = sun.color * sun.intensity;

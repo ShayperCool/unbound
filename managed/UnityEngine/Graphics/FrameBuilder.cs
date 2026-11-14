@@ -633,13 +633,23 @@ namespace Unbound.Runtime
             // the pipeline.
             bool builtin = GraphicsSettings.currentRenderPipeline == null || camera.m_EnvironmentCapture;
             if (builtin && LightingGlobals.MainLightOf() == null)
-                properties = new Dictionary<int, object> { [Shader.PropertyToID("_WorldSpaceLightPos0")] = (Vector4)LightingGlobals.SkyWithoutSun };
+            {
+                // A fully baked sun lights no object, yet the sky is drawn with it.
+                var sun = LightingGlobals.SkySun();
+                properties = sun == null
+                    ? new Dictionary<int, object> { [s_WorldSpaceLightPos0Id] = (Vector4)LightingGlobals.SkyWithoutSun }
+                    : new Dictionary<int, object>
+                    {
+                        [s_WorldSpaceLightPos0Id] = (Vector4)(-sun.transform.forward),
+                        [s_LightColor0Id] = (Vector4)sun.FinalColor(QualitySettings.activeColorSpace == ColorSpace.Linear),
+                    };
+            }
             // The ambient projection leaves out the main light's colour, whatever the sky's
             // shader (Compat.SkyAmbientWithoutLightColor).
             if (camera.m_EnvironmentCapture && Compat.SkyAmbientWithoutLightColor)
             {
                 properties ??= new Dictionary<int, object>();
-                properties[Shader.PropertyToID("_LightColor0")] = Vector4.zero;
+                properties[s_LightColor0Id] = Vector4.zero;
             }
             return properties;
         }
