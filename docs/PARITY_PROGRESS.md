@@ -3092,6 +3092,25 @@ memory modes, load and store actions, the unshared screen, the target after
 are no longer taken from the Linux measurements. Open: Intel Macs and other GPUs, the screen for
 plugin callbacks.
 
+### Q443: Unity's natively bound math
+
+The engine's implementations of the methods Unity binds to native code (Quaternion Slerp, Lerp,
+LookRotation, FromToRotation, AngleAxis, eulerAngles; Vector3 Slerp, RotateTowards; Matrix4x4 inverse,
+rotation, lossyScale, Perspective; Bounds Contains, SqrDistance, ClosestPoint) now compute in single
+precision with the Editor's algorithms and order, and log the Editor's messages for degenerate operands:
+tests/projects/floatrounding matches all 23 `native/` rows on Linux x86_64 and macOS arm64 in both
+modes (Release 226/275, Debug 235/275 values with the Mono float opt-in its gate sets, 0 failures; the 11
+`native/` residuals and the two C# rows that take a native result are gone), and defaultstate's queued
+zero-matrix rotation matches. The hosts differ only through the platform's trigonometric functions and
+one per-architecture larger-of-two (`Compat.NativeMax`). Engine-internal paths that stand for Unity's
+internals keep the precision their probes were measured with (`QuaternionMath` slerp, lerp, axis-angle
+and look rotation, `InverseDoublePrecision`, `PerspectiveDoublePrecision`); the shadow cascades' projection
+inverse is the scripting one, as measured. The macOS 2D body-frame sums measured with this item were removed
+again with Q456 (below), with the other per-OS toolchain emulation. Queued: three solverpairorder
+`--transform-inputs` fields that are exact decimal ties at nine digits (measured against the macOS
+Editor: Mono's "R" rounds them half away from zero, `MonoNumberFormat` half to even), NaN payloads,
+and the open cases of the Q443 gap row.
+
 ### Q456: no per-OS emulation of the Editor's build toolchain
 
 User decision 2026-11-14: macOS runs compare against the Linux Editor's references, except for what
@@ -3101,7 +3120,9 @@ library differs. Removed: the libc++ sort of equal elements (sibling names, ligh
 systems take libstdc++'s on every OS), the one-sum rotation normalization and NEON scale
 reciprocal of transforms, the fused sums of 2D body frames, the NEON steps of imported normals'
 reciprocal (model cache VERSION 56) and the macOS overlay of the HDR texture import test. Linux
-results are unchanged. On macOS against the Linux references: solverpairorder `--transform-inputs`
+results are unchanged. Not yet removed (outside this slice, queued): `Compat.NativeMax`, which takes
+the arm64 Editor's NaN rule on arm64 hosts, and floatrounding's per-host `native/` references, against
+which macOS runs still compare. On macOS against the Linux references: solverpairorder `--transform-inputs`
 0 failures (120,484 exact), geometryframe2d 0 failures (as on Linux), textureimport one HDR level
 in Gamma and Android off in its last bits, lightmapuvs normals 211/420 cases exact with 67 cases of
 last-bit differences.

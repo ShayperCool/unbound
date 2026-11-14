@@ -319,8 +319,9 @@ fix resolves one additional row. The ParticleSystem slice resolves another 337 r
 UIElements resolves 59 values and shared JSON string transfer resolves two record strings.
 The remaining Core mechanisms resolve another 127 rows across their shared operation,
 component and renderer state. Small mechanisms resolve 107 existing entries and retain three new exact contextual
-gaps. The default-state probe now has 12,448 exact rows and 267 queued rows, including
-the unchanged 50 variable rows. Its 12,713 canonical rows
+gaps. The default-state probe now has 12,497 exact rows and 266 queued rows (the land gate of
+Q443, on the reference of later controls), including
+the unchanged 50 variable rows. Its 12,761 canonical rows
 preserve every original line. Added controls
 cover exact removed-getter messages, valid and rejected factories, requirements,
 explicit constructor arguments, aliases, refresh-rate arithmetic, drive input ranges,
