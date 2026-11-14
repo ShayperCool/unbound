@@ -55,6 +55,8 @@ def main():
     work.mkdir(parents=True, exist_ok=True)
     captures = [work/'editor1', work/'editor2']
     if args.command == 'create':
+        if args.color_space != 'linear':
+            parser.error('create makes the authored assets: the linear project only')
         out = work/'create'
         project = copy_project(out/'project', args.release)
         result = run(EditorJob(project, out/'editor.log', out, batch=True,

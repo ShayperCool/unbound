@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Engine side of the URP terrain probe: `run.py check` runs Unbound on a copy of the project and
 prints the image measurements against Reference/unity-<release>/ (the suite tracks them; there is
-no tolerance). It fails when the engine fails, when a record differs, or when an image is missing."""
+no tolerance). It fails when the engine fails, when a record differs, or when an image is missing.
+`--color-space gamma` runs a gamma-space copy against Reference/unity-<release>/gamma/."""
 import argparse
 from collections import Counter
 import json
