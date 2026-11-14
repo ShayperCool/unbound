@@ -515,7 +515,14 @@ namespace UnityEngine
                         merged.Add(new Keyframe(t, curve.Evaluate(t), slope, slope));
                     }
                 merged.Sort((x, y) => x.time.CompareTo(y.time));
-                c.Curve = new AnimationCurve(merged.ToArray()) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
+                // Replaced, not edited: copies of the clip (Animation.AddClip under another name)
+                // share the curves they were made with.
+                components[a] = new ClipCurve
+                {
+                    Binding = c.Binding, QuaternionStart = c.QuaternionStart, EulerStart = c.EulerStart,
+                    Curve = new AnimationCurve(merged.ToArray()) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode },
+                };
+                m_Curves[m_Curves.IndexOf(c)] = components[a];
             }
             // One vector curve: its components together, in axis order, where its first one was.
             int at = int.MaxValue;

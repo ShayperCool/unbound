@@ -257,6 +257,16 @@ namespace UnityEngine.Tests
                 for (float t = 0f; t <= 2f; t += 0.125f) Assert.Equal(original.Evaluate(t), x.Evaluate(t), 5);
                 Object.DestroyImmediate(clip);
             }
+            // A copy made before keeps its own keys (defaultstate Small/animation/clipCopies: an
+            // Animation's clip added under another name keeps 2 after the original's x reaches 3).
+            var source = new AnimationClip { legacy = true };
+            source.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+            var copy = Object.Instantiate(source);
+            source.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 3f, 1f));
+            Assert.Equal(3f, source.length);
+            Assert.Equal(2f, copy.length);
+            Object.DestroyImmediate(source);
+            Object.DestroyImmediate(copy);
             var player = new AnimationClip { legacy = true, name = "player" };
             player.m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForType("", "m_LocalPosition.x", typeof(Transform)) });
             player.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 1f, 1f));
