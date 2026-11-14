@@ -181,12 +181,14 @@ namespace Unbound.Tests
 
         /// <summary>Every SystemInfo property the macOS Editor recorded (`device-metal.jsonl`: the
         /// ones the machine decides are not recorded) against Unbound's on the Metal device. The
-        /// GPU's own strings and ids are read from Metal, so they are compared on macOS only.</summary>
+        /// GPU's own strings and ids are read from Metal and the OS family is the host's, so they
+        /// are compared on macOS only.</summary>
         [Fact]
         public void MetalSystemInfoAsTheMacEditor()
         {
             var editor = Read(Reference("unity-6000.0.71f1/device-metal.jsonl"));
-            var identity = new[] { "graphicsDeviceVendor", "graphicsDeviceVersion", "graphicsDeviceVendorID", "graphicsDeviceID" };
+            // Read from Metal or decided by the OS: compared on macOS only.
+            var identity = new[] { "graphicsDeviceVendor", "graphicsDeviceVersion", "graphicsDeviceVendorID", "graphicsDeviceID", "operatingSystemFamily" };
             var previous = GraphicsDeviceProfile.Current;
             var differences = new List<string>();
             try
