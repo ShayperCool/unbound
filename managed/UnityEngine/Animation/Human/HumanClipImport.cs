@@ -266,9 +266,12 @@ namespace Unbound.Runtime.Humanoid
 
         /// <summary>The times the importer samples a clip whose transform curves span
         /// [<paramref name="start"/>, <paramref name="stop"/>]: steps of 1 / (sample rate ×
-        /// oversampling) from the start, ceil(duration / step) + 1 of them (the last one may lie past
-        /// the stop).</summary>
-        public static float[] SampleTimes(float start, float stop, float sampleRate, int oversampling)
+        /// oversampling), ceil(duration / step) + 1 of them (the last one may lie past the stop),
+        /// taken on the take's times from the clip's start there (<paramref name="takeStart"/>) and
+        /// moved back by it, in single precision: matches the Unity 6000.0.71f1 Editor's muscle
+        /// key times, tests/projects/modelclips HumanLate (frames 1 to 31 of its take:
+        /// 0.06666668, ..., 0.966666639, 0.99999994) and HumanLong (a take from 0).</summary>
+        public static float[] SampleTimes(float start, float stop, float sampleRate, int oversampling, float takeStart = 0f)
         {
             if (!(start < stop))
                 throw new NotSupportedException("a humanoid clip whose curves do not span any time (a single frame) gets no muscle curves; this is not supported");
@@ -277,7 +280,8 @@ namespace Unbound.Runtime.Humanoid
             float duration = stop - start;
             int count = (int)(MathF.Ceiling(duration / dt) + 1f);
             var times = new float[count];
-            for (int i = 0; i < count; i++) times[i] = (float)i * dt + start;
+            float origin = start + takeStart;
+            for (int i = 0; i < count; i++) times[i] = ((float)i * dt + origin) - takeStart;
             return times;
         }
 

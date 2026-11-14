@@ -605,6 +605,10 @@ pub struct ModelClip {
     /// Made for the legacy Animation component (`animationType` Legacy).
     pub legacy: bool,
     pub sample_rate: f32,
+    /// Where the clip starts on its take, seconds in single precision: its keys' times are the
+    /// take's less this (see `take_key_time`); a Humanoid clip's muscle conversion samples from it.
+    #[serde(default)]
+    pub take_start: f32,
     /// Seconds.
     pub length: f32,
     pub wrap_mode: i32,
@@ -1827,9 +1831,9 @@ impl<'a> Builder<'a> {
             // frame: 31 frames at 30 a second are 1.0333334 s, one step past the range's 1.0333333
             // (tests/projects/modelclips HumanLong), and frames 1 to 31 of a take are 1.00000012 s
             // (`ShapesOff`); a Legacy clip at its range's end (tests/projects/modelaxis Reduced:
-            // Drift, 3 s). Open: the Humanoid clip of frames 1 to 31 (`HumanLate`) is 0.99999994 s
-            // long in the Editor, the range's end, where this gives 1.00000012. A clip without
-            // keys has the range (0, 1) of an empty AnimationClip.
+            // Drift, 3 s). A Humanoid clip's end is set again from its last muscle key when its
+            // curves are converted (`HumanLate`, frames 1 to 31 of its take: 0.99999994). A clip
+            // without keys has the range (0, 1) of an empty AnimationClip.
             let length = if empty {
                 1.0
             } else if self.settings.animation_type == 1 {
@@ -1872,6 +1876,7 @@ impl<'a> Builder<'a> {
                 name: range.name,
                 legacy: self.settings.animation_type == 1,
                 sample_rate: fps as f32,
+                take_start: start as f32,
                 length,
                 wrap_mode: range.wrap_mode,
                 loop_time: range.loop_time,
@@ -3590,7 +3595,9 @@ fn whole_frame(time: f64, fps: f64) -> i64 {
 /// and `curvekeys.Shapes*` (frames 1 to 31 at 30 fps: 0.0333333351, 0.06666668, ...,
 /// 1.00000012, and the keys Keyframe Reduction keeps at Position Errors of 101% and 102%).
 /// A Humanoid clip's transform keys are measured only through its converted curves
-/// (tests/projects/humanoid, humanfirstpose).
+/// (tests/projects/humanoid, humanfirstpose, modelclips `HumanLate`). Unmeasured: frame rates whose
+/// single-precision frame length is below the true one (25 and 50 a second), where a clip that
+/// starts on some frames gets a first key a step below 0.
 fn take_key_time(time: f64, fps: f64) -> f32 {
     let frames = time * fps;
     if (frames - frames.round()).abs() < FRAME_EPSILON {

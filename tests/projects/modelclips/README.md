@@ -240,12 +240,11 @@ reference's, unchanged; on macOS 616 of the `play.*` records differ from them in
 
 `HumanLate` (tests/projects/humanoid/make_models.py) is HumanLong's rig, settings and clip on
 frames 1..31 of a take that starts at frame 1 (`ProbeRunner.CreateHumanLate`); `keys.HumanLate.*`
-were recorded after the `Shapes*` records, the same way. Its 130 muscle curves have 31 keys each
-at the take's frame times less the start (0, 0.0333333351, 0.06666668, ...), the last at the
-range's end, 0.99999994, which is also the clip's length. Unbound matches every record within the
-tolerance (on the clip's own frame times before, 63 records were outside it); its muscle keys lie
-at the frame count times the frame length (0.06666667 for the third, 1 for the last), and the clip
-is 1.00000012 long (open).
+were recorded after the `Shapes*` records, the same way. Its 64 muscle curves that are not float
+noise have 31 keys each: the conversion steps one frame length at a time on the take's times from
+the clip's start and moves the samples back (0, 0.0333333351, 0.06666668, ..., 0.966666639,
+0.99999994), and the clip ends at its last key, 0.99999994. Unbound matches every key time and
+the length exactly (on the clip's own frame times before, 63 records were outside the tolerance).
 
 ## Whole-curve reduction
 

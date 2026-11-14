@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
+using Unbound.Runtime.Humanoid;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -125,6 +126,24 @@ namespace UnityEngine.Tests
 
             Assert.Equal(foreignCurve ? 1 : 0, clip.m_Curves.Count);
             foreach (var c in clip.m_Curves) Assert.Equal(EngineTypes.TransformId, c.Binding.ClassId);
+        }
+
+        /// <summary>A clip on frames 1 to 31 of a take at 30 fps (tests/projects/modelclips
+        /// HumanLate): the Editor steps from the clip's start on the take's times and moves the
+        /// samples back, so the third is 0.06666668 (not 2 / 30 = 0.06666667) and the 31st,
+        /// 0.99999994, is the last one inside the span; the 32nd lies past it. A take from 0
+        /// keeps the plain steps.</summary>
+        [Fact]
+        public void SamplesStepOnTheTakesTimesFromTheClipsStart()
+        {
+            float frame = 1f / 30f;
+            float stop = 31f * frame - frame;
+            var times = HumanClipImport.SampleTimes(0f, stop, 30f, 1, frame);
+            Assert.Equal(32, times.Length);
+            Assert.Equal(0.06666668f, times[2]);
+            Assert.Equal(0.99999994f, times[30]);
+            Assert.True(times[31] > stop);
+            Assert.Equal(2f * frame, HumanClipImport.SampleTimes(0f, stop, 30f, 1)[2]);
         }
     }
 }

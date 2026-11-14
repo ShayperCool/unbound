@@ -12,6 +12,9 @@ namespace UnityEngine
         /// <summary>The avatar a Humanoid model's clip is converted with (its model's, or the one it
         /// copies).</summary>
         internal Avatar m_HumanAvatar;
+        /// <summary>A model clip's start on its take (seconds; 0 for other clips): its curves' key
+        /// times are the take's less this.</summary>
+        internal float m_TakeStart;
         const int AnimatorClassId = CurveBinding.AnimatorClassId;
 
         /// <summary>The index of a curve among the humanoid curves (-1: none): a curve on the
@@ -419,12 +422,12 @@ namespace UnityEngine
                 if (constant.HumanSkeletonReverseIndexArray[node] < 0 && KeepsTransformCurves(b.Path)) kept.Add(c);
             }
             if (!(start < stop)) return;
-            // The samples span the curves' keys, whose last one is the clip's end (the frame
-            // count times the frame length). For some counts that end, divided by the frame
-            // length, rounds past the count, and there is one sample more: 31 frames at 30 a
-            // second are sampled 33 times (tests/projects/modelclips HumanLong; other lengths in
+            // The samples span the curves' keys, stepping on the take's times from the clip's
+            // start (see HumanClipImport.SampleTimes). For some counts the span, divided by the
+            // frame length, rounds past the count, and there is one sample more: 31 frames at 30
+            // a second are sampled 33 times (tests/projects/modelclips HumanLong; other lengths in
             // HumanClipSampleRangeTests).
-            var times = HumanClipImport.SampleTimes(start, stop, m_SampleRate, 1);
+            var times = HumanClipImport.SampleTimes(start, stop, m_SampleRate, 1, m_TakeStart);
             var settings = HumanSettings();
             var curvesOut = HumanClipImport.Convert(constant, times, (frame, time, pose) =>
             {
@@ -442,6 +445,9 @@ namespace UnityEngine
             int inRange = times.Length;
             while (inRange > 0 && times[inRange - 1] > stop) inRange--;
             curvesOut.Keep(inRange);
+            // The clip ends at its last muscle key (HumanLong: 1.03333342, the frame count times
+            // the frame length; HumanLate, frames 1 to 31 of its take: 0.99999994).
+            if (m_HasRange && inRange > 0) m_StopTime = m_StartTime + times[inRange - 1];
             m_Curves = kept;
             var keptKeys = m_HumanKeyReduction > 0f ? new List<int>() : null;
             for (int i = 0; i < HumanClipImport.CurveCount; i++)

@@ -161,6 +161,8 @@ namespace UnityEngine
         {
             get
             {
+                // A Humanoid model clip ends at its last muscle key (see ConvertHumanCurvesOnce).
+                ConvertHumanCurves();
                 if (m_HasRange) return Math.Max(0f, m_StopTime - m_StartTime);
                 if (!Compat.DefaultConstructorStateMeasured) return CurveEnd();
                 bool found = m_HasRetainedVectorEnd;
@@ -615,6 +617,7 @@ namespace UnityEngine
                 m_HasRetainedVectorEnd = m_HasRetainedVectorEnd,
                 m_RetainedVectorEnd = m_RetainedVectorEnd,
                 m_SampleRate = m_SampleRate,
+                m_TakeStart = m_TakeStart,
                 m_HumanKeyReduction = m_HumanKeyReduction,
                 m_HumanTransformPaths = m_HumanTransformPaths,
                 m_HumanPartsOff = m_HumanPartsOff,
@@ -1019,6 +1022,7 @@ namespace Unbound.Runtime
             clip.m_SampleRate = body.Float("m_SampleRate", 60f);
             clip.m_HumanKeyReduction = body.Float("m_UnboundHumanKeyReduction", 0f);
             clip.m_HumanPartsOff = body.Int("m_UnboundHumanPartsOff");
+            clip.m_TakeStart = body.Float("m_UnboundTakeStart", 0f);
             var humanTransforms = body.Get("m_UnboundHumanTransformPaths");
             if (humanTransforms != null && !humanTransforms.IsNull)
             {

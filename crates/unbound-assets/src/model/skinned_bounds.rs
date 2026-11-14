@@ -615,6 +615,7 @@ mod tests {
             },
             legacy: true,
             sample_rate: rate,
+            take_start: 0.0,
             length: 1.0,
             wrap_mode: 0,
             loop_time: false,

@@ -922,6 +922,7 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
                 human_transforms.map_or(Value::Null, Value::Seq),
             ),
             ("m_UnboundHumanPartsOff", scalar(clip.human_parts_off)),
+            ("m_UnboundTakeStart", scalar(clip.take_start)),
             (
                 "m_AnimationClipSettings",
                 map(vec![
