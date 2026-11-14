@@ -281,3 +281,54 @@ fn encodes_documents() {
         docs.len() as u32
     );
 }
+
+/// An imported prefab (a ScriptedImporter's) names its import's meshes by the asset's own guid:
+/// those stay references to the asset, while its own objects follow the instance.
+#[test]
+fn references_to_an_imports_assets_stay_external() {
+    let guid = Guid::parse("0000000000000000000000000000beef").unwrap();
+    let prefab = "%YAML 1.1
+--- !u!1 &100
+GameObject:
+  m_Component:
+  - component: {fileID: 101}
+  - component: {fileID: 102}
+  m_Name: Tree
+--- !u!4 &101
+Transform:
+  m_GameObject: {fileID: 100}
+  m_Children: []
+  m_Father: {fileID: 0}
+--- !u!33 &102
+MeshFilter:
+  m_GameObject: {fileID: 100, guid: 0000000000000000000000000000beef, type: 3}
+  m_Mesh: {fileID: 4443394430103177256, guid: 0000000000000000000000000000beef, type: 3}
+";
+    let scene = "%YAML 1.1
+--- !u!1001 &60
+PrefabInstance:
+  m_Modification:
+    m_TransformParent: {fileID: 0}
+    m_Modifications: []
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0000000000000000000000000000beef, type: 3}
+";
+    let fixture = Fixture([(guid, parse_documents(prefab).unwrap())].into());
+    let docs = flatten(&parse_documents(scene).unwrap(), &fixture, &mut Vec::new()).unwrap();
+    let filter = docs.iter().find(|d| d.file_id == 60 ^ 102).unwrap();
+    // The GameObject is one of the prefab's documents: it follows the instance.
+    assert_eq!(
+        filter.body.path("m_GameObject.fileID").unwrap().as_i64(),
+        Some(60 ^ 100)
+    );
+    assert!(filter.body.path("m_GameObject.guid").is_none());
+    // The mesh is not: it stays the asset's.
+    assert_eq!(
+        filter.body.path("m_Mesh.fileID").unwrap().as_i64(),
+        Some(4443394430103177256)
+    );
+    assert_eq!(
+        filter.body.path("m_Mesh.guid").unwrap().as_guid(),
+        Some(guid)
+    );
+}

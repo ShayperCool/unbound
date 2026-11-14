@@ -74,14 +74,17 @@ fn object_ref(file_id: i64) -> Value {
 }
 
 /// Rewrites references local to the source prefab (no guid, or the source's own guid) to the
-/// ids its objects get in the instance.
-fn remap_refs(value: &mut Value, source: Guid, map: &dyn Fn(i64) -> i64) {
+/// ids its objects get in the instance. A reference with the source's guid to an object that is
+/// not one of its documents (`objects`) stays as it is: an asset of the source's import (a
+/// ScriptedImporter's meshes and materials), loaded from the asset itself.
+fn remap_refs(value: &mut Value, source: Guid, objects: &HashSet<i64>, map: &dyn Fn(i64) -> i64) {
     match value {
         Value::Map(m) => {
             let file = m.get("fileID").and_then(Value::as_i64);
             if let Some(file) = file {
                 let guid = m.get("guid").and_then(Value::as_guid).unwrap_or_default();
-                if file != 0 && (guid.is_zero() || guid == source) && m.len() <= 3 {
+                let local = guid.is_zero() || (guid == source && objects.contains(&file));
+                if file != 0 && local && m.len() <= 3 {
                     m.insert("fileID", Value::Scalar(map(file).to_string()));
                     m.remove("guid");
                     m.remove("type");
@@ -89,10 +92,12 @@ fn remap_refs(value: &mut Value, source: Guid, map: &dyn Fn(i64) -> i64) {
                 }
             }
             for (_, v) in m.0.iter_mut() {
-                remap_refs(v, source, map);
+                remap_refs(v, source, objects, map);
             }
         }
-        Value::Seq(items) => items.iter_mut().for_each(|v| remap_refs(v, source, map)),
+        Value::Seq(items) => items
+            .iter_mut()
+            .for_each(|v| remap_refs(v, source, objects, map)),
         _ => {}
     }
 }
@@ -137,6 +142,7 @@ pub fn flatten(
             }
         };
         let map_id = |s: i64| stripped.get(&(p, s)).copied().unwrap_or((p ^ s) & ID_MASK);
+        let source_ids: HashSet<i64> = source.iter().map(|d| d.file_id).collect();
         let mut objects: Vec<Document> = source
             .iter()
             .filter(|d| d.class_id != PREFAB_INSTANCE)
@@ -144,7 +150,7 @@ pub fn flatten(
                 let mut d = d.clone();
                 let source_id = d.file_id;
                 d.file_id = map_id(source_id);
-                remap_refs(&mut d.body, source_guid, &map_id);
+                remap_refs(&mut d.body, source_guid, &source_ids, &map_id);
                 link_to_source(&mut d.body, source_id, source_guid, p);
                 d
             })
