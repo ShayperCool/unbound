@@ -972,7 +972,7 @@ script changes it), and one at which a loaded scene's realtime GI has a lightmap
 bake included), keep a realtime lightmap behind them; when Unbound has none for the renderer
 (realtime GI off in the Lighting Settings or not read, a system not drawn, a terrain's realtime
 charts, a script's index at another renderer's atlas) it draws without one and says so once. A
-renderer whose index a script changes draws its atlas no more.
+renderer draws its atlas only under the index realtime GI gave it.
 
 ## Residuals
 
