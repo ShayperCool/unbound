@@ -27,6 +27,7 @@ public class UitkProbe : MonoBehaviour
         "ReqCube", "ReqKeyed", "ReqCompute", "ReqInts", "Target46Cube", "ReqMsaaKeyed",
         "BuiltinKeywords", "BuiltinCompute", "Aliases",
         "BuiltinShadows", "ReqMrt4Array", "ReqInstSparse", "ReqStages", "ReqComputeTess",
+        "PlainGeometry", "PlainTessellation", "SparseFallback", "SparseLater", "SparseFallbackControl",
     };
 
     /// <summary>The keywords the cases declare (a keyword space also holds built-in ones).</summary>
@@ -79,6 +80,7 @@ public class UitkProbe : MonoBehaviour
                 }
             }
             SurfaceIndices(rows, target, readback);
+            InstancedTarget(rows, target, readback);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -91,6 +93,36 @@ public class UitkProbe : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    static void InstancedTarget(StringBuilder rows, RenderTexture target, Texture2D readback)
+    {
+        var material = new Material(Shader.Find("Probe/Targets/InstancingTarget"));
+        material.enableInstancing = true;
+        var mesh = new Mesh();
+        mesh.vertices = new[] { new Vector3(0,0,0), new Vector3(1,0,0), new Vector3(1,1,0), new Vector3(0,1,0) };
+        mesh.triangles = new[] { 0,1,2,0,2,3 };
+        foreach (bool instanced in new[] { false, true })
+        {
+            var command = new UnityEngine.Rendering.CommandBuffer();
+            command.SetRenderTarget(target);
+            command.SetViewport(new Rect(0,0,1,1));
+            command.ClearRenderTarget(false, true, new Color(-1,-1,-1,-1));
+            if (instanced)
+                command.DrawMeshInstanced(mesh, 0, material, 0, new[] { Matrix4x4.identity, Matrix4x4.Translate(new Vector3(0.1f,0,0)) }, 2);
+            else
+                command.DrawMesh(mesh, Matrix4x4.identity, material, 0, 0);
+            Graphics.ExecuteCommandBuffer(command);
+            command.Release();
+            var previous = RenderTexture.active;
+            RenderTexture.active = target;
+            readback.ReadPixels(new Rect(0,0,1,1),0,0);
+            readback.Apply();
+            RenderTexture.active = previous;
+            Row(rows, instanced ? "draw.instanced" : "draw.plain", readback.GetPixel(0,0));
+        }
+        DestroyImmediate(mesh);
+        DestroyImmediate(material);
     }
 
     static void SurfaceIndices(StringBuilder rows, RenderTexture target, Texture2D readback)

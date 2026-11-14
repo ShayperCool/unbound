@@ -31,6 +31,9 @@ enabled keywords joined by `+`).
 | Aliases | `target es3.0`, `target gl4.1 KW_A`, `target es3.1 KW_B` |
 | BuiltinShadows | `multi_compile _ SHADOWS_SOFT`, `multi_compile _ DIRLIGHTMAP_COMBINED`, `target 2.0` |
 | ReqMrt4Array, ReqInstSparse | `target 2.0` + `require mrt4 : KW_A`, `require 2darray : KW_B`; `require instancing : KW_A`, `require sparsetex : KW_B` |
+| PlainGeometry, PlainTessellation | `target 2.0` + plain `require geometry` or `require tessellation` |
+| SparseFallback, SparseLater | `target 2.0`, `require sparsetex : KW_A`; valid Fallback or later SubShader |
+| SparseFallbackControl | draw the fallback program directly |
 | ReqStages, ReqComputeTess | `target 2.0` + `require geometry : KW_A`, `require tessellation : KW_B`; `require compute : KW_A`, `require tessellation : KW_B` |
 
 The Unity 6000.0 Manual (Targeting shader models and GPU features in HLSL) documents that a line
@@ -43,12 +46,14 @@ with keywords applies to the variants with any of them. What the captures show o
   while a line with keywords keeps its target (`target 4.0 KW_A` is 4.0 for `KW_A`);
 - required features raise the target on their own: `mrt4` to 3.0, `2darray` and `instancing` to
   3.5, `geometry` to 4.0, `compute` and `msaatex` to 4.5, `tessellation` to 4.6, `compute` with
-  `tessellation` to 5.0 (the stage features measured through keyed lines only); `integers` and `cubearray` raise nothing; `SHADOWS_SCREEN`,
+  `tessellation` to 5.0 (stage features raise keyed variants; plain requirements are removed when their stages are absent); `integers` and `cubearray` raise nothing; `SHADOWS_SCREEN`,
   `SHADOWS_SOFT`, `DIRLIGHTMAP_COMBINED` and `DYNAMICLIGHTMAP_ON` make it 3.0 and
   `PROCEDURAL_INSTANCING_ON` 4.5; a material's `INSTANCING_ON` selects no variant (the draw
-  decides instancing);
+  decides instancing). An actual `CommandBuffer.DrawMeshInstanced` draw has target 3.5, compared with
+  2.0 for `DrawMesh` of the same program; the blue keyword bit verifies the instanced variant;
 - a variant requiring `sparsetex` draws with the error shader (magenta) on both devices, though
-  `SystemInfo.supportsSparseTextures` answers true on them;
+  `SystemInfo.supportsSparseTextures` answers true on them. A valid Fallback and a later SubShader
+  leave the keyed sparse variant magenta; the direct fallback-program control renders its distinct color;
 - the `SHADER_AVAILABLE_*` defines hold the variant's features and the device's own, 3.5's on
   OpenGL Core and 4.5's on Vulkan, never the stages' (`TESSHW`, `GEOMETRY`, `TESSELLATION`) and
   cube arrays only through `#pragma require cubearray` (4.6 and 5.0 do not bring them);
@@ -60,11 +65,9 @@ Where the captures differ from the Manual's pragma target reference: it gives 4.
 and describes `gl4.1` as 4.0 with cube arrays, tessellation and MSAA texture reads; on these
 devices 4.6 brings no cube arrays and `gl4.1` applies nothing.
 
-Unmeasured: the instancing variant's target (an instanced draw of the case recorded nothing in the
-Editor; taken as the instancing feature's, 3.5), a material's `INSTANCING_ON` through a renderer's
-draw (only `Graphics.Blit` is recorded), compute kernels (5.0 without the stages' features), a
-sparse texture variant in a shader with a Fallback or a further SubShader (Unity may draw those
-instead of the error shader), the other features whose variants may be refused (wave, 64-bit,
+Unmeasured: a material's `INSTANCING_ON` through a renderer's draw (the material-keyword control
+uses `Graphics.Blit`), compute kernels (5.0 without the stages' features), an unconditional sparse
+requirement that makes the whole SubShader unsupported, the other features whose variants may be refused (wave, 64-bit,
 16-bit, barycentrics, ray tracing: taken as compiled), the stereo and device capability keywords (Unbound enables none),
 targets Unity does not name (left out, as the platform ones are).
 
@@ -73,7 +76,7 @@ targets Unity does not name (left out, as the platform ones are).
     python3 tests/projects/shadertargets/run.py check [--device vulkan]              # the land gate
 
 `Reference/unity-6000.0.71f1/{opengl,vulkan}.jsonl` are two identical Editor captures each.
-Unbound matches every record on both devices.
+Unbound matches all 139 records on both devices.
 
 ## Generated pass indices
 
