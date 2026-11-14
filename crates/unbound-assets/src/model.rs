@@ -515,6 +515,13 @@ pub struct NodeCurves {
 }
 
 impl NodeCurves {
+    /// The keys moved `start` seconds earlier (see `take_key_time`).
+    fn shift(&mut self, start: f32) {
+        curves::shift_keys(&mut self.positions, start);
+        curves::shift_keys(&mut self.rotations, start);
+        curves::shift_keys(&mut self.scales, start);
+    }
+
     /// A node's curves with slopes derived from their keys.
     pub fn new(
         path: String,
@@ -576,7 +583,8 @@ pub struct FloatCurve {
     pub attribute: String,
     pub class_id: i32,
     pub keys: Vec<Key<1>>,
-    /// Per key, its slopes where the import sets them (keyframe reduction); empty: linear.
+    /// Per key, its slopes where the import sets them (blend shape weights: smooth on every
+    /// frame, or those keyframe reduction keeps); empty: linear.
     #[serde(default)]
     pub slopes: curves::Slopes<1>,
 }
@@ -844,7 +852,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 54;
+    const VERSION: u32 = 55;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1705,14 +1713,15 @@ impl<'a> Builder<'a> {
                     (Vec::new(), Vec::new(), Vec::new());
                 for time in frame_times(start, end, fps) {
                     let t = ufbx::evaluate_transform(&stack.anim, source, time);
-                    // One rule for every rig type. A Humanoid clip's transform keys feed the
+                    // On the take's times until the curves are made (see `take_key_time`). One
+                    // rule for every rig type. A Humanoid clip's transform keys feed the
                     // muscle conversion, whose own sample times follow the same single-precision
                     // frame arithmetic (tests/projects/humanfirstpose, modelclips HumanReduced).
-                    let rotation_time = frame_key_time(time, start, fps);
+                    let rotation_time = take_key_time(time, fps);
                     // Positions and scales end exactly at the range's end (measured for
                     // positions, tests/projects/modelaxis Reduced: Drift; scales unmeasured).
                     let time = if time == end {
-                        (end - start) as f32
+                        end as f32
                     } else {
                         rotation_time
                     };
@@ -1746,10 +1755,12 @@ impl<'a> Builder<'a> {
                 let positions = only(channels[0], positions);
                 let rotations = only(channels[1], rotations);
                 let scales = only(channels[2], scales);
-                curves.push(match &reduction {
+                let mut node = match &reduction {
                     None => NodeCurves::new(path, positions, rotations, scales),
                     Some(reduction) => reduction.node(path, &positions, &rotations, &scales),
-                });
+                };
+                node.shift(start as f32);
+                curves.push(node);
             }
             curves.sort_by(|a, b| a.path.cmp(&b.path));
             // Blend shape weights: the channels' DeformPercent, on their meshes' renderers.
@@ -1766,7 +1777,7 @@ impl<'a> Builder<'a> {
                     let keys: Vec<Key<1>> = frame_times(start, end, fps)
                         .into_iter()
                         .map(|time| Key {
-                            time: (time - start) as f32,
+                            time: take_key_time(time, fps),
                             value: [ufbx::evaluate_prop_flags(
                                 &stack.anim,
                                 source,
@@ -1778,10 +1789,17 @@ impl<'a> Builder<'a> {
                             .x as f32],
                         })
                         .collect();
-                    let (keys, slopes) = match &reduction {
-                        None => (keys, Vec::new()),
+                    // Smooth slopes on every frame, as with Compression Off, before the keys
+                    // are reduced and moved to the clip's times (tests/projects/modelclips
+                    // `curvekeys.Shapes*`).
+                    let (mut keys, slopes) = match &reduction {
+                        None => {
+                            let slopes = curves::key_slopes(&keys, true);
+                            (keys, slopes)
+                        }
                         Some(reduction) => reduction.float(&keys),
                     };
+                    curves::shift_keys(&mut keys, start as f32);
                     for (path, name) in targets {
                         floats.push(FloatCurve {
                             path: path.clone(),
@@ -1805,16 +1823,18 @@ impl<'a> Builder<'a> {
                 self.asset_id(ids, class::ANIMATION_CLIP, "AnimationClip", &range.name)
             });
             // In single precision, as the Editor's clip length (a range from frame 40 to 48 at
-            // 24 fps is 0.33333337 s). A Humanoid clip ends at its last key, whose time is the
-            // frame count times the frame length: 31 frames at 30 a second are 1.0333334 s, one
-            // step past the range's 1.0333333 (tests/projects/modelclips HumanLong).
-            // A clip without keys has the range (0, 1) of an empty AnimationClip.
+            // 24 fps is 0.33333337 s). A Generic or Humanoid clip ends at its last key: 31
+            // frames at 30 a second are 1.0333334 s, one step past the range's 1.0333333
+            // (tests/projects/modelclips HumanLong), and frames 1 to 31 of a take are
+            // 1.00000012 s (`ShapesOff`); a Legacy clip at its range's end (tests/projects/modelaxis
+            // Reduced: Drift, 3 s). A clip without keys has the range (0, 1) of an empty
+            // AnimationClip.
             let length = if empty {
                 1.0
-            } else if human {
-                frame_key_time(end, start, fps)
-            } else {
+            } else if self.settings.animation_type == 1 {
                 end as f32 - start as f32
+            } else {
+                take_key_time(end, fps) - start as f32
             };
             let additive_reference = match range.additive_frame {
                 Some(frame) if range.has_additive_reference => {
@@ -3559,19 +3579,23 @@ fn whole_frame(time: f64, fps: f64) -> i64 {
     (time * fps + FRAME_EPSILON).floor() as i64
 }
 
-/// The key time of a clip's resampled transform curve at `time` of a range starting at `start`,
-/// for every rig type: a whole number of frames after the start is that number times one
-/// frame's length, both in single precision (matches the Unity 6000.0.71f1 Editor's key times,
-/// tests/projects/modelaxis Reduced, at 30, 60 and 120 frames a second; three seconds at 30
-/// give 3.0000002). Other times (a range that ends between frames) are the difference itself.
+/// A resampled key's time on its take, in single precision: a whole frame of the take is that
+/// frame's number times one frame's length, other times (a range that starts or ends between
+/// frames) the time itself. The importer reduces a clip's curves on these times and then moves
+/// every key by the clip's start, `key - start` in single precision ([`NodeCurves::shift`],
+/// [`curves::shift_keys`]): matches the Unity 6000.0.71f1 Editor's key times, tests/projects/modelaxis
+/// Reduced at 30, 60 and 120 frames a second (three seconds at 30 give 3.0000002),
+/// tests/projects/modelclips `Beyond` (frames 40 to 48 at 24 fps: its first key is 1.1920929E-07)
+/// and `curvekeys.Shapes*` (frames 1 to 31 at 30 fps: 0.0333333351, 0.06666668, ...,
+/// 1.00000012, and the keys Keyframe Reduction keeps at Position Errors of 101% and 102%).
 /// A Humanoid clip's transform keys are measured only through its converted curves
 /// (tests/projects/humanoid, humanfirstpose).
-fn frame_key_time(time: f64, start: f64, fps: f64) -> f32 {
-    let frames = (time - start) * fps;
+fn take_key_time(time: f64, fps: f64) -> f32 {
+    let frames = time * fps;
     if (frames - frames.round()).abs() < FRAME_EPSILON {
         frames.round() as f32 * (1.0 / fps as f32)
     } else {
-        (time - start) as f32
+        time as f32
     }
 }
 

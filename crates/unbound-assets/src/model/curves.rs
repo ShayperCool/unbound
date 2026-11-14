@@ -7,13 +7,15 @@ use super::Key;
 pub type Slopes<const N: usize> = Vec<([f32; N], [f32; N])>;
 
 /// Per key, its incoming and outgoing slope: the slope to each neighbouring key (a curve end
-/// takes the other side's). `smooth`: inner keys take the slope between their neighbours on
-/// both sides (see [`super::ModelClip::smooth`]).
-pub fn key_slopes<const N: usize>(keys: &[Key<N>], smooth: bool) -> Vec<([f32; N], [f32; N])> {
+/// takes the other side's; a segment shorter than [`MIN_SLOPE_SPAN`] is flat). `smooth`: inner
+/// keys take the mean of those two slopes on both sides (see [`super::ModelClip::smooth`]), as
+/// the Unity 6000.0.71f1 Editor's every-frame curves have them (tests/projects/modelclips
+/// `curvekeys.ShapesOff`).
+pub fn key_slopes<const N: usize>(keys: &[Key<N>], smooth: bool) -> Slopes<N> {
     let slope = |a: &Key<N>, b: &Key<N>| {
         let dt = b.time - a.time;
         let mut out = [0f32; N];
-        if dt > 0.0 {
+        if dt.abs() > MIN_SLOPE_SPAN {
             for i in 0..N {
                 out[i] = (b.value[i] - a.value[i]) / dt;
             }
@@ -25,9 +27,9 @@ pub fn key_slopes<const N: usize>(keys: &[Key<N>], smooth: bool) -> Vec<([f32; N
             let incoming = (i > 0).then(|| slope(&keys[i - 1], &keys[i]));
             let outgoing = (i + 1 < keys.len()).then(|| slope(&keys[i], &keys[i + 1]));
             match (incoming, outgoing) {
-                (Some(_), Some(_)) if smooth => {
-                    let both = slope(&keys[i - 1], &keys[i + 1]);
-                    (both, both)
+                (Some(a), Some(b)) if smooth => {
+                    let mean = std::array::from_fn(|c| (a[c] + b[c]) * 0.5);
+                    (mean, mean)
                 }
                 (Some(a), Some(b)) => (a, b),
                 (Some(a), None) => (a, a),
@@ -36,6 +38,17 @@ pub fn key_slopes<const N: usize>(keys: &[Key<N>], smooth: bool) -> Vec<([f32; N
             }
         })
         .collect()
+}
+
+/// Keys closer together than this (seconds) have a flat slope between them.
+const MIN_SLOPE_SPAN: f32 = 1e-5;
+
+/// The keys moved `start` seconds earlier, in single precision: the importer samples and
+/// reduces a clip on its take's times and then makes them the clip's own.
+pub fn shift_keys<const N: usize>(keys: &mut [Key<N>], start: f32) {
+    for key in keys {
+        key.time -= start;
+    }
 }
 
 /// Rotation keys with each key in the hemisphere of the previous one, so slopes do not jump.
@@ -251,6 +264,13 @@ mod tests {
         assert_eq!(linear, vec![([2.0], [2.0]), ([2.0], [0.0]), ([0.0], [0.0])]);
         let smooth = key_slopes(&keys, true);
         assert_eq!(smooth[1], ([1.0], [1.0]));
+        // Unevenly spaced keys: the mean of the two slopes (2 and 0.5), not the slope between
+        // the neighbours (1.5 / 1.5 = 1).
+        let uneven = [key(0.0, 0.0), key(0.5, 1.0), key(1.5, 1.5)];
+        assert_eq!(key_slopes(&uneven, true)[1], ([1.25], [1.25]));
+        // Keys closer than the minimum span are flat between them.
+        let close = [key(0.0, 0.0), key(0.000001, 1.0)];
+        assert_eq!(key_slopes(&close, false), vec![([0.0], [0.0]); 2]);
     }
 
     #[test]
@@ -382,6 +402,119 @@ mod tests {
         assert!(!within(&turn(10.0), &turn(10.6)));
         // A segment quaternion far from unit length does not hold.
         assert!(!within(&turn(10.0), &turn(10.0).map(|c| c * 1.01)));
+    }
+
+    /// The Editor's every-frame keys of a blend shape weight easing from 100 to 0 over frames 1
+    /// to 31 of a take at 30 fps (tests/projects/modelclips `curvekeys.ShapesOff`, DownZero), on
+    /// the take's times (frame times 1/30 in single precision).
+    fn editor_down_zero() -> Vec<Key<1>> {
+        let values: [f32; 31] = [
+            100.0,
+            99.67407,
+            98.72593,
+            97.2,
+            95.14074,
+            92.59259,
+            89.6,
+            86.20741,
+            82.45926,
+            78.4,
+            74.07407,
+            69.52592,
+            64.7999954,
+            59.9407349,
+            54.99259,
+            49.9999962,
+            45.0073929,
+            40.0592537,
+            35.1999931,
+            30.4740772,
+            25.92591,
+            21.6000061,
+            17.5407352,
+            13.7925911,
+            10.3999949,
+            7.407398,
+            4.85924244,
+            2.799997,
+            1.27408421,
+            0.325930119,
+            0.0,
+        ];
+        let frame = 1.0f32 / 30.0;
+        (0..31)
+            .map(|i| key((i + 1) as f32 * frame, values[i]))
+            .collect()
+    }
+
+    #[test]
+    fn the_editors_smooth_slopes_are_the_mean_of_the_two_slopes_on_the_takes_times() {
+        let editor: [f32; 31] = [
+            -9.777831,
+            -19.11106,
+            -37.11113,
+            -53.77785,
+            -69.111084,
+            -83.1111,
+            -95.77767,
+            -107.1111,
+            -117.111176,
+            -125.777786,
+            -133.111221,
+            -139.11113,
+            -143.77774,
+            -147.11113,
+            -149.111084,
+            -149.777863,
+            -149.111145,
+            -147.111008,
+            -143.777649,
+            -139.111237,
+            -133.111069,
+            -125.777649,
+            -117.11113,
+            -107.111107,
+            -95.77791,
+            -83.11128,
+            -69.11103,
+            -53.77737,
+            -37.111042,
+            -19.1112633,
+            -9.777878,
+        ];
+        let slopes = key_slopes(&editor_down_zero(), true);
+        for (k, (slope, editor)) in slopes.iter().zip(editor).enumerate() {
+            assert_eq!(*slope, ([editor], [editor]), "key {k}");
+        }
+    }
+
+    #[test]
+    fn a_float_curve_ending_at_zero_keeps_its_last_frame_up_to_the_editors_error() {
+        // Matches the Unity 6000.0.71f1 Editor (modelclips `curvekeys.ShapesTight` and
+        // `ShapesLoose`): one frame length before the end the segment from the first key is float
+        // noise of about 1.0e-5, which fails the 101% error and is zero under 102% of 1e-5.
+        let keys = editor_down_zero();
+        let slopes = key_slopes(&keys, true);
+        let frame = 1.0f32 / 30.0;
+        let kept = |error: f32| {
+            let (mut kept, _) = reduce(&keys, &slopes, frame, float_within(error));
+            shift_keys(&mut kept, frame);
+            kept.iter().map(|k| k.time).collect::<Vec<_>>()
+        };
+        assert_eq!(kept(1.01), [0.0, 0.966_666_64, 1.000_000_1]);
+        assert_eq!(kept(1.02), [0.0, 1.000_000_1]);
+        // The same curve on the clip's times (keyed from zero) loses the key sooner.
+        let from_zero: Vec<Key<1>> = keys
+            .iter()
+            .map(|k| key(k.time - frame, k.value[0]))
+            .collect();
+        let (kept, _) = reduce(
+            &from_zero,
+            &key_slopes(&from_zero, true),
+            frame,
+            float_within(1.01),
+        );
+        assert_eq!(kept.len(), 2);
     }
 
     #[test]

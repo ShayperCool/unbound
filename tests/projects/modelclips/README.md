@@ -18,7 +18,8 @@ clip masks; `HumanTwistGeneric` is the same file imported as Generic. `HumanSing
 `GenericSingle` and `LegacySingle` are `HumanLong` with one clip of no frames (first and last
 frame 5) imported as Humanoid, Generic and Legacy; their records come after the others and were
 recorded with the macOS Editor (two identical captures, whose other records match the Linux
-reference); the `HumanMask*` models (see Body masks) come last. Other Humanoid clip
+reference); the `HumanMask*` models (see Body masks) come next and the `Shapes*` models (see
+Float curves of a take that starts into its file) last. Other Humanoid clip
 settings are not covered.
 
 `ClipProbe` records each imported clip (length, frame rate, flags, events,
@@ -215,13 +216,27 @@ of 0.5%; Spine turns up to 40 degrees from its first key and ends 10 degrees fro
 - Spine's rotation becomes two keys with its first value, as positions and scales within their
   error of the first value do.
 
-Not in the reference: Blob (tests/projects/blendshapes) under a Position Error of 100% keeps its
-float curve's key at frame 29 (0.326) and ends at 1.00000012; Unbound drops that key and ends
-at 1 (open). Measured with the macOS Editor outside the reference: the key stays at Position
-Errors from 50% to 101% and goes from 102% on (two keys), where Unbound drops it from about 91%;
-with Compression Off the Editor's keys and slopes of that curve are the every-frame keys
-Unbound's walk reduces (their times sums of the frame length: 0.0333333351, 0.06666668,
-0.100000009, ..., 1.00000012).
+## Float curves of a take that starts into its file
+
+`ShapesOff`, `ShapesTight` and `ShapesLoose` (`make_shapes.py`, Blender: one take of frames 1..31
+at 30 fps, six blend shape weights easing between their ends: 100 to 0, 0 to 100, 50 to 0, 100 to
+0.1, 100 to 10 and 100 to -20) are imported as Generic under Compression Off and under Keyframe
+Reduction at Position Errors of 101% and 102% (`ProbeRunner.CreateShapes` wrote their `.meta`).
+`clip.<model>.Scene` and `curvekeys.<model>.Scene.|blendShape.<name>` (every key) were recorded last
+with the macOS Editor (two identical captures; the 4544 records before them are the Linux
+reference's, unchanged; on macOS 616 of the `play.*` records differ from them in their last digits).
+
+- The keys are sampled on the take's frames, frame number times one frame's length in single
+  precision (1 x 0.0333333351, 2 x 0.0333333351, ...), reduced on those times, and then moved by
+  the clip's start (1/30 s): 0, 0.0333333351, 0.06666668, 0.100000009, ..., 1.00000012. The clip
+  is 1.00000012 s long, its last key's time.
+- Compression Off keeps every frame with smooth slopes: the mean of the slopes to both
+  neighbours, on the take's times.
+- Under 101% the 100-to-0 curve keeps its key at frame 29 (0.325930119); under 102% it does not.
+  One frame length before the end the segment from the first key to the last one is float noise
+  of about 1.0e-5 in that curve, which exceeds 101% of the reduction's zero (1e-5) and not 102%
+  of it. The same curve at half the scale (50 to 0) loses the key under both. A curve that starts
+  at 0 becomes two keys of 0 at either error (its first value holds it within 100% or more).
 
 ## Whole-curve reduction
 
@@ -244,6 +259,7 @@ parameter or blend shape weight) that does so, and such Humanoid curves (the two
 `HumanReduced` have equal ends either way); the rule is applied to them as to the measured
 curves.
 
-Unbound matches 4544/4544 records. The generic reducing compression modes are compared by their
+Unbound matches 4580/4580 records (the `curvekeys.Shapes*` key times exactly; 110 of their 209
+values exactly, the others in their last digits, which their slopes follow). The generic reducing compression modes are compared by their
 bindings only here; their keyframe reduction is measured in tests/projects/modelaxis (`Reduced`
 set).

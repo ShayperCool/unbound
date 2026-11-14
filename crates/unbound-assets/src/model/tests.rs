@@ -1269,6 +1269,26 @@ fn reduced_probe_model(name: &str) -> ImportedModel {
         .unwrap()
 }
 
+/// The clip `clip` of tests/projects/<probe>/Assets/Resources/<model>.fbx, imported with its meta.
+fn probe_clip_named(probe: &str, model: &str, clip: &str) -> ModelClip {
+    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
+        "../../tests/projects/{probe}/Assets/Resources/{model}.fbx"
+    ));
+    let settings = meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap());
+    ModelImporter::default()
+        .import(&source, &std::fs::read(&source).unwrap(), &settings)
+        .unwrap()
+        .clips
+        .into_iter()
+        .find(|c| !c.preview && c.name == clip)
+        .unwrap()
+}
+
+/// The take clip ("Scene") of a probe model without clips in its meta.
+fn probe_clip(probe: &str, model: &str) -> ModelClip {
+    probe_clip_named(probe, model, "Scene")
+}
+
 fn clip_node<'a>(model: &'a ImportedModel, path: &str) -> &'a NodeCurves {
     let clip = model.clips.iter().find(|c| !c.preview).unwrap();
     clip.curves.iter().find(|c| c.path == path).unwrap()
@@ -1353,12 +1373,87 @@ fn key_times_are_frames_times_the_frame_length_in_single_precision() {
         .map(|k| k.time)
         .collect();
     assert_eq!(times, [0.0, 1.63, 3.0]);
-    // A time between frames is the difference itself.
-    assert_eq!(frame_key_time(1.25, 1.0, 30.0), 0.25);
+    // A time between frames is the time itself; a whole frame is its number times the frame
+    // length, wherever the clip starts.
+    assert_eq!(take_key_time(1.25, 30.0), 1.25);
+    assert_eq!(take_key_time(31.0 / 30.0, 30.0), 31.0 * (1.0f32 / 30.0));
+    assert_ne!(31.0 * (1.0f32 / 30.0), (31.0f64 / 30.0) as f32);
+}
+
+/// A clip whose take starts one frame into its file (tests/projects/modelclips `ShapesOff`,
+/// `ShapesTight`, `ShapesLoose`: frames 1 to 31 at 30 fps, six blend shape weights easing between
+/// their ends): the Editor samples and reduces the curves on the take's frame times and then
+/// moves them to the clip's start. The key times, the smooth slopes (the mean of the slopes to
+/// both neighbours) and the keys Keyframe Reduction keeps are the Editor's to the bit.
+#[test]
+fn a_clip_is_reduced_on_its_takes_frames_and_then_moved_to_its_start() {
+    let curve = |model: &str, shape: &str| {
+        let clip = probe_clip("modelclips", model);
+        assert_eq!(clip.length, 1.000_000_1, "{model}");
+        let attribute = format!("blendShape.{shape}");
+        let curve = clip
+            .floats
+            .into_iter()
+            .find(|f| f.attribute == attribute)
+            .unwrap();
+        let slopes = curve.key_slopes();
+        (curve.keys, slopes)
+    };
+    // Compression Off: every frame, each time `frame * (1/30) - 1/30` in single precision.
+    let (keys, slopes) = curve("ShapesOff", "DownZero");
+    let frame = 1.0f32 / 30.0;
+    let times: Vec<f32> = (1..=31).map(|f| f as f32 * frame - frame).collect();
+    assert_eq!(keys.iter().map(|k| k.time).collect::<Vec<_>>(), times);
+    assert_eq!(keys[2].time, 0.066_666_68);
+    assert_eq!(keys[30].time, 1.000_000_1);
+    // Smooth slopes, the mean of the slopes to both neighbours on the take's times (the
+    // Editor's own keys are pinned in curves::tests; the values sampled here differ from the
+    // Editor's in their last digits at some frames, which their slopes follow).
+    let editor = [
+        (0, -9.777831),
+        (1, -19.11106),
+        (2, -37.11113),
+        (30, -9.777878),
+    ];
+    for (k, slope) in editor {
+        assert_eq!(slopes[k], ([slope], [slope]), "key {k}");
+    }
+    // At a Position Error of 101% the key at frame 29 stays: the segment from the first key to
+    // the last one does not hold the curve one frame length before its end, where it is float
+    // noise past the error's zero (101% of 1e-5); from 102% on it holds.
+    let (tight, _) = curve("ShapesTight", "DownZero");
+    let at = |keys: &[Key<1>]| {
+        keys.iter()
+            .map(|k| (k.time, k.value[0]))
+            .collect::<Vec<_>>()
+    };
     assert_eq!(
-        frame_key_time(1.0 + 7.0 / 30.0, 1.0, 30.0),
-        7.0 * (1.0f32 / 30.0)
+        at(&tight),
+        [
+            (0.0, 100.0),
+            (0.966_666_64, 0.325_930_12),
+            (1.000_000_1, 0.0)
+        ]
     );
+    let (loose, loose_slopes) = curve("ShapesLoose", "DownZero");
+    assert_eq!(at(&loose), [(0.0, 100.0), (1.000_000_1, 0.0)]);
+    assert_eq!(
+        loose_slopes,
+        [([-9.777831], [-9.777831]), ([-9.777878], [-9.777878])]
+    );
+    // The control at half the scale holds at both errors, as in the Editor.
+    let (half, _) = curve("ShapesTight", "HalfZero");
+    assert_eq!(at(&half), [(0.0, 50.0), (1.000_000_1, 0.0)]);
+    // A clip that starts at frame 40 of its take at 24 fps starts 1.1920929E-07 after its
+    // start: frame 40 times 1/24 is one step above 40/24 (modelclips `clip.Rig.Beyond`).
+    let beyond = probe_clip_named("modelclips", "Rig", "Beyond");
+    let spin = beyond
+        .curves
+        .iter()
+        .find(|c| c.path.ends_with("Spin"))
+        .unwrap();
+    assert_eq!(spin.rotations[0].time, 1.192_092_9e-7);
+    assert_eq!(beyond.length, 0.333_333_37);
 }
 
 /// A Humanoid clip's transform keys take the frame times of every other rig type: the frame
@@ -1409,7 +1504,7 @@ fn a_humanoid_clips_transform_keys_take_the_shared_frame_times() {
     let legacy = import("modelaxis/Assets/Resources/Reduced/Drift.fbx");
     assert_eq!(legacy.length, 3.0);
     // Another frame rate, where other frames differ (24 a second: frame 5).
-    assert_eq!(frame_key_time(5.0 / 24.0, 0.0, 24.0), 5.0 * (1.0f32 / 24.0));
+    assert_eq!(take_key_time(5.0 / 24.0, 24.0), 5.0 * (1.0f32 / 24.0));
     assert_ne!(5.0 * (1.0f32 / 24.0), (5.0f64 / 24.0) as f32);
 }
 
