@@ -112,18 +112,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After audio/font adapters |
+| Category | Before Q410 | After converter dispatch |
 | --- | ---: | ---: |
 | Attributes | 938 | 22 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
 | Layout | 68 | 61 |
-| Interfaces | 65 | 51 |
+| Interfaces | 65 | 50 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 156 |
+| Total | 1,332 | 155 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -379,7 +379,7 @@ and XR value payloads remove nine layout/interface entries. LocationInfo and the
 AnimationInfo value remove two more layout entries. FrameRate serialization removes one
 field annotation entry. Scene value equality removes one extra interface; cached
 enumerator and linked-pool state each remove one accessor entry. Audio/font adapters
-remove two more interface entries, leaving 156 exact entries, each with a
+remove two more interface entries; converter dispatch removes one, leaving 155 exact entries, each with a
 specific follow-up reason. No allow-list is regenerated from a passing report.
 The generator format changes with the comparison policy and the committed stubs
 are regenerated from the selected release. Existing probe references and strict
@@ -390,7 +390,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-Animator-animatePhysics` | 1 | Animated kinematic body synchronization with moving-body controls. |
 | `Q410-Core-built-in-serialization` | 3 | Harmonic/mask built-in payloads across root/nested JSON, YAML and cloning. |
 | `Q410-Editor-computed-setters` | 2 | Live focus state and assembly-cache invalidation before private setter alignment. |
-| `Q410-Editor-interfaces` | 11 | Window/menu/preview, request callbacks and connection/converter interface dispatch. |
+| `Q410-Editor-interfaces` | 10 | Window/menu/preview, request callbacks and connection dispatch; converter bridging is covered by `uxmlconverter`. |
 | `Q410-Editor-serialized-payloads` | 13 | Window/view/package/request fields and coupled Serializable classification. |
 | `Q410-FrameRate-serialization` | 0 | Done by `framepayloads`: signed scalar root JSON, reconstruction and overwrite preserve the selected payload; the unmarked nested type stays omitted. |
 | `Q410-GUI-serialized-payloads` | 0 | Done for the selected release by `guipayload`, with shared GUIStyle payloads across YAML, JSON and cloning; wrapper field annotations match the selected declarations. |
@@ -553,3 +553,21 @@ font diagnostics, rendered bitmap copies, imported audio playback and other load
 
 Reader dispatch tests use nondefault bundle metadata and custom-font character data,
 including the existing missing-audio-data diagnostic. No importer or cache output changes.
+
+
+## UXML converter dispatch
+
+`UxmlAttributeConverter<T>` implements its selected internal object-valued interface.
+The bridge calls the typed virtual methods on the same instance, including inherited
+implementations when a derived class hides the method. Attribute loading now uses
+that bridge with the existing instance cache. Constructor failures retain their
+underlying exception, while exceptions thrown by a converter retain their own kind.
+The existing typed default formatting stays invariant.
+
+`tests/projects/uxmlconverter` records 57 exact Unity 6000.0.71f1 values from paired GPU
+captures: changed instance state, distinct document contexts, hidden versus virtual
+dispatch, invalid casts, null and nullable values, malformed text and English/French
+formatting. Managed tests also load a custom value through the attribute reader,
+change the cached converter state, and distinguish constructor exceptions from an
+explicit invocation exception thrown by converter code. Existing `uxmlattributes`
+controls still cover custom values and lists. One exact interface entry is removed.

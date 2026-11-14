@@ -326,17 +326,18 @@ namespace Unbound.UIElements
         {
             result = null;
             error = null;
+            bool constructing = true;
             try
             {
                 if (!s_ConverterInstances.TryGetValue(converterType, out var instance))
                     s_ConverterInstances[converterType] = instance = Activator.CreateInstance(converterType, true);
-                var method = converterType.GetMethod("FromString", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(string) }, null);
-                result = method.Invoke(instance, new object[] { text });
+                constructing = false;
+                result = ((IUxmlAttributeConverter)instance).FromString(text, default);
                 return true;
             }
             catch (Exception e)
             {
-                var inner = e is TargetInvocationException { InnerException: { } x } ? x : e;
+                var inner = constructing && e is TargetInvocationException { InnerException: { } x } ? x : e;
                 error = $"{converterType.Name}.FromString threw {inner.GetType().Name}: {inner.Message}";
                 return false;
             }

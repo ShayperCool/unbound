@@ -232,11 +232,6 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] public override global::UnityEngine.Hash128 FromString(string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Hash128AttributeConverter.FromString"); return default; }
         [global::Unbound.Stub] public Hash128AttributeConverter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Hash128AttributeConverter.ctor"); }
     }
-    internal unsafe partial interface IUxmlAttributeConverter
-    {
-        object FromString(string value, global::UnityEngine.UIElements.CreationContext cc);
-        string ToString(object value, global::UnityEngine.UIElements.VisualTreeAsset visualTreeAsset);
-    }
     internal enum ImportErrorCode
     {
         InvalidRootElement = 0,
@@ -587,11 +582,6 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] public static bool TryGetConverterType(global::System.Type type, out global::System.Type converterType) { converterType = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlAttributeConverter.TryGetConverterType"); return default; }
         [global::Unbound.Stub] public static bool HasConverter(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlAttributeConverter.HasConverter"); return default; }
         [global::Unbound.Stub] public static bool TryGetConverter(global::System.Type type, out global::UnityEditor.UIElements.IUxmlAttributeConverter converter) { converter = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlAttributeConverter.TryGetConverter"); return default; }
-    }
-    unsafe partial class UxmlAttributeConverter<T> : global::UnityEditor.UIElements.IUxmlAttributeConverter
-    {
-        [global::Unbound.Stub] string global::UnityEditor.UIElements.IUxmlAttributeConverter.ToString(object value, global::UnityEngine.UIElements.VisualTreeAsset visualTreeAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlAttributeConverter<T>.ToString"); return default; }
-        [global::Unbound.Stub] object global::UnityEditor.UIElements.IUxmlAttributeConverter.FromString(string value, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlAttributeConverter<T>.FromString"); return default; }
     }
     [global::Unbound.Stub]
     internal unsafe partial class UxmlCodeDependencies

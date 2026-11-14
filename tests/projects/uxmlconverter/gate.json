@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/uxmlconverter/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Uxml/UxmlApi.cs",
+    "managed/UnityEngine/UIElements/Uxml/UxmlAttributeValues.cs"
+  ]
+}

@@ -1,4 +1,10 @@
 {
-  "commands": ["python3 tests/projects/uxmlattributes/run.py gate"],
-  "summary": "uxmlattributes: .*"
+  "commands": [
+    "python3 tests/projects/uxmlattributes/run.py gate"
+  ],
+  "summary": "uxmlattributes: .*",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Uxml/UxmlApi.cs",
+    "managed/UnityEngine/UIElements/Uxml/UxmlAttributeValues.cs"
+  ]
 }

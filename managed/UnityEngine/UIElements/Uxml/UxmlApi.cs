@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
 using Unbound.UIElements;
+using UnityEngine.UIElements;
 
 // The public API that custom controls use to take their values from UXML: the [UxmlElement] and
 // [UxmlAttribute] declarations with their converters, and the older UxmlFactory/UxmlTraits classes
@@ -620,14 +621,24 @@ namespace UnityEngine.UIElements
 
 namespace UnityEditor.UIElements
 {
+    internal partial interface IUxmlAttributeConverter
+    {
+        object FromString(string value, CreationContext cc);
+        string ToString(object value, VisualTreeAsset visualTreeAsset);
+    }
+
     /// <summary>Reads a [UxmlAttribute] of type <typeparamref name="T"/> from its UXML text. Unbound
     /// finds the non-abstract converters of the game's assemblies when it first needs one.</summary>
-    public abstract partial class UxmlAttributeConverter<T>
+    public abstract partial class UxmlAttributeConverter<T> : IUxmlAttributeConverter
     {
         protected UxmlAttributeConverter() { }
 
         public abstract T FromString(string value);
 
         public virtual string ToString(T value) => Convert.ToString(value, CultureInfo.InvariantCulture);
+
+        object IUxmlAttributeConverter.FromString(string value, CreationContext cc) => FromString(value);
+
+        string IUxmlAttributeConverter.ToString(object value, VisualTreeAsset visualTreeAsset) => ToString((T)value);
     }
 }

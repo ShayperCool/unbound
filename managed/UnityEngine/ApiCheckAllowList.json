@@ -240,13 +240,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEditor.UIElements.UxmlAttributeConverter`1",
-    "Message": "type interfaces is , Unity's is UnityEditor.UIElements.IUxmlAttributeConverter",
-    "Reason": "Q410-Editor-interfaces: UnityEditor.UIElements.UxmlAttributeConverter`1 needs untyped converter dispatch with null, malformed text and typed value controls. Selected interface members must use that state and receive divergent-state controls rather than empty implementations."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.AI.NavMeshData",
     "Message": "type interfaces is Unbound.Runtime.ISerializedAsset, Unity's is ",
     "Reason": "Q410-asset-interface-adapters: UnityEngine.AI.NavMeshData is loaded or cloned through engine helper interfaces. Move those calls to external type adapters before removing the extra interfaces; preserve existing serialized fields, ownership and independent clone state."
