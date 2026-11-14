@@ -338,12 +338,19 @@ fn integer_samplers(module: &Module) -> HashSet<naga::Handle<naga::GlobalVariabl
 /// Binds a kernel's resources in group 0 by order, reads its uniform blocks, sets its RW
 /// textures' formats and access, and writes WGSL.
 /// `opengl_shading_language`: the kernel runs as OpenGL shading language
-/// (`Settings::opengl_shading_language`), which cannot read a compared texture with `Load`.
+/// (`Settings::opengl_shading_language`): fetches need a raw binding beside comparisons.
 fn fit_kernel(
     spv: &[u32],
     storage_formats: &[(String, String)],
     opengl_shading_language: bool,
 ) -> Result<CompiledKernel> {
+    // GLSL fetches use an ordinary image binding alongside a comparison binding.
+    let separated = if opengl_shading_language {
+        Some(crate::samplers::separate_depth_fetches(spv)?)
+    } else {
+        None
+    };
+    let spv = separated.as_deref().unwrap_or(spv);
     // A texture sampled through several samplers: a variable for each (the renderer binds a
     // resource by its name, the texture's).
     let primary = crate::samplers::primary_samplers(&crate::samplers::sampled_pairs(spv)?);
@@ -688,10 +695,10 @@ void Scale(uint3 id : SV_DispatchThreadID)
         )));
     }
 
-    /// A kernel that compares a texture and reads it with `Load` is refused for OpenGL's shading
-    /// language and compiles otherwise; one that only compares compiles for OpenGL too.
+    /// A kernel can fetch stored depth while comparing through a separate binding in GLSL.
+    /// Other backends and comparison-only kernels retain their original resource count.
     #[test]
-    fn a_kernel_loading_a_compared_texture_is_refused_in_opengl_shading_language() {
+    fn a_kernel_can_load_a_compared_texture_in_opengl_shading_language() {
         let program = |body: &str| ComputeProgram {
             file: PathBuf::from("Depth.compute"),
             source: format!(
@@ -704,22 +711,82 @@ void Scale(uint3 id : SV_DispatchThreadID)
                 ..Settings::default()
             })
             .unwrap();
-            compiler
-                .compile_kernel(&program(body), "K", &[], &[])
-                .map(|_| ())
+            compiler.compile_kernel(&program(body), "K", &[], &[])
         };
         let both = "_Depth.SampleCmpLevelZero(sampler_Depth, float2(0.5, 0.5), 0.5) + _Depth.Load(int3(0, 0, 0))";
-        let refused = compile(both, true).unwrap_err();
-        assert!(
-            format!("{refused:#}").contains("compared and read with Load"),
-            "{refused:#}"
-        );
-        compile(both, false).unwrap();
+        let gl = compile(both, true).unwrap();
+        let textures = |kernel: &CompiledKernel| {
+            kernel
+                .resources
+                .iter()
+                .filter(|r| matches!(r.kind, ResourceKind::Texture { .. }))
+                .count()
+        };
+        assert_eq!(textures(&gl), 2);
+        for sample in ["float", "depth"] {
+            assert!(gl.resources.iter().any(|r| r.name == "_Depth" && matches!(&r.kind, ResourceKind::Texture { sample: kind, .. } if kind == sample)));
+        }
+        assert_eq!(textures(&compile(both, false).unwrap()), 1);
         compile(
             "_Depth.SampleCmpLevelZero(sampler_Depth, float2(0.5, 0.5), 0.5)",
             true,
         )
         .unwrap();
+    }
+
+    #[test]
+    fn compared_array_fetches_keep_the_layer_and_mip_operands() {
+        let program = ComputeProgram {
+            file: PathBuf::from("ArrayDepth.compute"),
+            source: "#pragma kernel K\nTexture2DArray<float> _Depth; SamplerComparisonState sampler_Depth; RWStructuredBuffer<float2> _Out; [numthreads(1,1,1)] void K(uint3 id : SV_DispatchThreadID) { _Out[0] = float2(_Depth.SampleCmpLevelZero(sampler_Depth, float3(.25,.5,1), .5), _Depth.Load(int4(0,0,1,2))); }".into(),
+        };
+        let mut compiler = ShaderCompiler::new(Settings {
+            opengl_shading_language: true,
+            ..Settings::default()
+        })
+        .unwrap();
+        let kernel = compiler.compile_kernel(&program, "K", &[], &[]).unwrap();
+        let textures: Vec<_> = kernel
+            .resources
+            .iter()
+            .filter(|r| matches!(r.kind, ResourceKind::Texture { .. }))
+            .collect();
+        assert_eq!(textures.len(), 2);
+        assert!(textures.iter().all(|r| r.name == "_Depth"
+            && matches!(
+                r.kind,
+                ResourceKind::Texture {
+                    dim: TextureDim::D2Array,
+                    ..
+                }
+            )));
+        let module = naga::front::wgsl::parse_str(&kernel.wgsl).unwrap();
+        let functions = module
+            .functions
+            .iter()
+            .map(|(_, f)| f)
+            .chain(module.entry_points.iter().map(|e| &e.function));
+        assert!(
+            functions
+                .into_iter()
+                .any(|f| f.expressions.iter().any(|(_, expression)| {
+                    let naga::Expression::ImageLoad {
+                        array_index: Some(layer),
+                        level: Some(level),
+                        ..
+                    } = expression
+                    else {
+                        return false;
+                    };
+                    matches!(
+                        f.expressions[*layer],
+                        naga::Expression::Literal(naga::Literal::I32(1) | naga::Literal::U32(1))
+                    ) && matches!(
+                        f.expressions[*level],
+                        naga::Expression::Literal(naga::Literal::I32(2) | naga::Literal::U32(2))
+                    )
+                }))
+        );
     }
 
     #[test]

@@ -231,6 +231,7 @@ public class UitkProbe : MonoBehaviour
             D16Controls(rows);
             DepthStateControls(rows);
             PoolDepthControls(rows);
+            RawDepthSourceControls(rows);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -504,6 +505,40 @@ public class UitkProbe : MonoBehaviour
         UnityEngine.Object.DestroyImmediate(faces); UnityEngine.Object.DestroyImmediate(culled); UnityEngine.Object.DestroyImmediate(equal);
     }
 
+    static void RawDepthSourceControls(StringBuilder rows)
+    {
+#if UNITY_EDITOR
+        var shader = UnityEditor.AssetDatabase.LoadAssetAtPath<ComputeShader>("Assets/Shaders/DepthCompute.compute");
+        var previous = RenderTexture.active;
+        var first = new RenderTexture(2, 1, 24, RenderTextureFormat.Depth, RenderTextureReadWrite.Linear);
+        var second = new RenderTexture(2, 1, 24, RenderTextureFormat.Depth, RenderTextureReadWrite.Linear);
+        first.filterMode = second.filterMode = FilterMode.Point;
+        first.Create(); second.Create();
+        RenderTexture.active = first; GL.Clear(true, false, Color.black, .125f);
+        RenderTexture.active = second; GL.Clear(true, false, Color.black, .875f);
+        RenderTexture.active = previous;
+        var output = new ComputeBuffer(3, 16);
+        var unset = new[] { -Vector4.one, -Vector4.one, -Vector4.one };
+        var data = new Vector4[3];
+        int kernel = shader.FindKernel("CompareLoad");
+        shader.SetBuffer(kernel, "_Out", output);
+        void Fetch(string key, RenderTexture source)
+        {
+            output.SetData(unset);
+            shader.SetTexture(kernel, "_Depth", source);
+            shader.Dispatch(kernel, 1, 1, 1); output.GetData(data);
+            // Compare history is recorded elsewhere. These lanes must read the requested image.
+            Row(rows, "Compute.RawSource." + key, new Color(data[1].y, data[1].z, 0, 1));
+        }
+        Fetch("first", first);
+        Fetch("second", second);
+        Fetch("firstAgain", first);
+        output.Release();
+        RenderTexture.active = previous;
+        UnityEngine.Object.DestroyImmediate(first); UnityEngine.Object.DestroyImmediate(second);
+#endif
+    }
+
     /// <summary>Recorded after the stencil rows: compute kernels reading each depth target (a
     /// comparison against 0.5 through the texture's own comparison sampler at both texels, a
     /// comparison and Loads of the same texture, Loads alone), one float4 each; a kernel that
@@ -535,6 +570,8 @@ public class UitkProbe : MonoBehaviour
                 output.GetData(data);
                 var v = data[index];
                 Row(rows, "Compute." + kernels[index] + "." + suffix, new Color(v.x, v.y, v.z, v.w));
+                if (kernels[index] == "CompareLoad")
+                    Row(rows, "Compute.RawLoad." + suffix, new Color(v.y, v.z, 0, 1));
             }
         output.Release();
     }

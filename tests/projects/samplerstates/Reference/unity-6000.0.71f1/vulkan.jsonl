@@ -74,15 +74,19 @@
 {"k":"Stencil.d16s8.format","v":"D24_UNorm_S8_UInt"}
 {"k":"Compute.Compare.split","v":[0.2500038,0.7499962,0,1]}
 {"k":"Compute.CompareLoad.split","v":[0.2500038,0.2500038,0.7499962,1]}
+{"k":"Compute.RawLoad.split","v":[0.2500038,0.7499962,0,1]}
 {"k":"Compute.LoadOnly.split","v":[0.2500038,0.7499962,0,1]}
 {"k":"Compute.Compare.splitLinear","v":[0.2500038,0.7499962,0,1]}
 {"k":"Compute.CompareLoad.splitLinear","v":[0.2500038,0.2500038,0.7499962,1]}
+{"k":"Compute.RawLoad.splitLinear","v":[0.2500038,0.7499962,0,1]}
 {"k":"Compute.LoadOnly.splitLinear","v":[0.2500038,0.7499962,0,1]}
 {"k":"Compute.Compare.map","v":[1,0,0,1]}
 {"k":"Compute.CompareLoad.map","v":[1,0.2500038,0.7499962,1]}
+{"k":"Compute.RawLoad.map","v":[0.2500038,0.7499962,0,1]}
 {"k":"Compute.LoadOnly.map","v":[0.2500038,0.7499962,0,1]}
 {"k":"Compute.Compare.mapLinear","v":[1,0,0,1]}
 {"k":"Compute.CompareLoad.mapLinear","v":[1,0.2500038,0.7499962,1]}
+{"k":"Compute.RawLoad.mapLinear","v":[0.2500038,0.7499962,0,1]}
 {"k":"Compute.LoadOnly.mapLinear","v":[0.2500038,0.7499962,0,1]}
 {"k":"StencilFaces.plain.normal","v":[1,0,0,1]}
 {"k":"StencilFaces.plain.mirrored","v":[0,1,0,1]}
@@ -554,4 +558,7 @@
 {"k":"DepthState.pool.bind.1","v":[1,4,0,1]}
 {"k":"DepthState.pool.bind.2","v":[0,4,0,1]}
 {"k":"DepthState.pool.bind.3","v":[1,4,0,1]}
+{"k":"Compute.RawSource.first","v":[0.875,0.875,0,1]}
+{"k":"Compute.RawSource.second","v":[0.125,0.125,0,1]}
+{"k":"Compute.RawSource.firstAgain","v":[0.875,0.875,0,1]}
 {"k":"complete","v":true}

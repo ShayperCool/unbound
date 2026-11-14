@@ -541,6 +541,118 @@ pub(crate) fn one_sampler_per_texture(
     Ok(out)
 }
 
+/// Integer-coordinate fetches use a non-comparing alias of a compared texture's property.
+pub(crate) fn separate_depth_fetches(words: &[u32]) -> Result<Vec<u32>> {
+    const OP_IMAGE_FETCH: u32 = 95;
+    let scan = Sampling::scan(words)?;
+    let mut fetches = BTreeMap::new();
+    let mut variables = BTreeSet::new();
+    for k in 0..scan.list.len() {
+        let w = scan.inst(k);
+        if scan.op(k) == OP_IMAGE_FETCH
+            && w.len() >= 4
+            && let Some(variable) = scan.origin(w[3])
+            && scan.depth.contains(&variable)
+        {
+            fetches.insert(k, variable);
+            variables.insert(variable);
+        }
+    }
+    if fetches.is_empty() {
+        return Ok(words.to_vec());
+    }
+    let mut bound = words[3];
+    let mut id = || {
+        let next = bound;
+        bound += 1;
+        next
+    };
+    let mut raw_types = BTreeMap::new();
+    let mut aliases = BTreeMap::new();
+    let mut types_after: BTreeMap<usize, Vec<u32>> = BTreeMap::new();
+    for &variable in &variables {
+        let (pointer, name, _) = &scan.textures[&variable];
+        if name.is_empty() {
+            bail!("a compared texture Load needs a named resource");
+        }
+        let (raw_image, raw_pointer) = match raw_types.get(pointer) {
+            Some(types) => *types,
+            None => {
+                let p = (0..scan.list.len())
+                    .find(|&k| scan.op(k) == OP_TYPE_POINTER && scan.inst(k)[1] == *pointer)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("a compared texture Load has no pointer type")
+                    })?;
+                let image_type = scan.inst(p)[3];
+                let t = (0..scan.list.len())
+                    .find(|&k| scan.op(k) == OP_TYPE_IMAGE && scan.inst(k)[1] == image_type)
+                    .ok_or_else(|| anyhow::anyhow!("a compared texture Load has no image type"))?;
+                let (raw_image, raw_pointer) = (id(), id());
+                let mut image = scan.inst(t).to_vec();
+                image[1] = raw_image;
+                image[4] = 0;
+                types_after.entry(t).or_default().extend(image);
+                types_after.entry(p).or_default().extend([
+                    (4 << 16) | OP_TYPE_POINTER,
+                    raw_pointer,
+                    UNIFORM_CONSTANT,
+                    raw_image,
+                ]);
+                raw_types.insert(*pointer, (raw_image, raw_pointer));
+                (raw_image, raw_pointer)
+            }
+        };
+        aliases.insert(variable, (raw_image, raw_pointer, id()));
+    }
+    drop(id);
+    let mut next_binding = scan.next_binding();
+    let mut out = Vec::with_capacity(words.len() + aliases.len() * 32 + fetches.len() * 4);
+    out.extend_from_slice(&words[..5]);
+    let (mut named, mut decorated) = (false, false);
+    for k in 0..scan.list.len() {
+        let w = scan.inst(k);
+        if scan.op(k) == OP_NAME && !named {
+            named = true;
+            for (&original, &(_, _, raw)) in &aliases {
+                out.extend(name_words(
+                    raw,
+                    &format!("{}{FURTHER}__unbound_load", scan.textures[&original].1),
+                ));
+            }
+        }
+        if !decorated
+            && (scan.op(k) == OP_DECORATE || (FIRST_TYPE..=LAST_TYPE).contains(&scan.op(k)))
+        {
+            decorated = true;
+            for &(_, _, raw) in aliases.values() {
+                out.extend_from_slice(&[(4 << 16) | OP_DECORATE, raw, DESCRIPTOR_SET, 0]);
+                out.extend_from_slice(&[(4 << 16) | OP_DECORATE, raw, BINDING, next_binding]);
+                next_binding += 1;
+            }
+        }
+        if let Some(variable) = fetches.get(&k) {
+            let &(image_type, _, raw) = &aliases[variable];
+            let loaded = bound;
+            bound += 1;
+            out.extend_from_slice(&[(4 << 16) | OP_LOAD, image_type, loaded, raw]);
+            out.extend_from_slice(&[w[0], w[1], w[2], loaded]);
+            out.extend_from_slice(&w[4..]);
+        } else {
+            out.extend_from_slice(w);
+        }
+        if let Some(types) = types_after.get(&k) {
+            out.extend_from_slice(types);
+        }
+        for (&original, &(_, pointer, raw)) in &aliases {
+            if k == scan.textures[&original].2 {
+                out.extend_from_slice(&[(4 << 16) | OP_VARIABLE, pointer, raw, UNIFORM_CONSTANT]);
+            }
+        }
+    }
+    out[3] = bound;
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

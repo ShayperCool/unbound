@@ -72,7 +72,10 @@ Unbound: `run.py check` compares an Unbound capture (`--force-glcore`, or `--for
 `--device vulkan`) with the device's reference. `residuals.json` and `residuals-vulkan.json`
 list the remaining cases and their causes. Texture-owned non-comparing depth state now reads
 stored depth on the measured NVIDIA devices. Vulkan has no remaining scalar residuals; OpenGL
-Core retains three compute comparisons and four unsupported comparison-plus-Load cases.
+Core retains six comparison-lane residuals across comparison-only and comparison-plus-Load kernels.
+The mixed compute kernels now compile and their raw Load lanes match in all four cases;
+the mapLinear mixed case matches completely. Current scalar results are OpenGL Core
+558/564 with six declared residuals and Vulkan 564/564.
 D16 uses a normalized 16-bit color copy so its linear filtering keeps the measured depth
 precision. OpenGL Core and Vulkan use native mirror-clamp-to-edge where the device enables it. A depth buffer of 16 bits is stored as 16 bits
 without stencil, as in the Editor.
@@ -179,3 +182,23 @@ CompareDepths give different results. The binding controls request false, true, 
 true for bindMS and record each returned descriptor. Temporary pool identity preserves both
 settings. These controls extend each reference from 549 to 557 rows without changing earlier
 rows; both devices have two identical NVIDIA captures.
+
+
+OpenGL compute kernels that combine comparison sampling with integer-coordinate Load use
+two bindings of the same texture property: its comparison view and a raw-value view.
+This avoids a GLSL shadow-sampler fetch. Graphics programs with this combination remain
+explicitly unsupported, and unresolved access patterns retain their existing diagnostics.
+Shader cache format 46 invalidates older compiled kernels.
+
+Compute.RawLoad.* records only the raw lanes from each mixed kernel, so an accepted
+comparison mismatch cannot hide a broken fetch. Compute.RawSource.* clears two independent
+sources to different depths, then selects first, second and first again with SetTexture.
+Both devices retain all 557 previous reference rows byte-for-byte; seven new rows per
+device come from two identical GPU Editor captures on NVIDIA. Source depth clear values
+follow each device's conventions.
+
+Contracts: the [Unity 6000.0 SetTexture documentation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ComputeShader.SetTexture.html)
+binds the specified texture per kernel. The [HLSL Load documentation](https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-to-load)
+defines integer texel coordinates and explicit mip selection without filtering.
+The source-switch controls test differing stored data, and the compiler's array control
+preserves layer 1 and mip 2. Runtime GPU evidence here covers 2D inputs.
