@@ -316,6 +316,14 @@ public class ClipProbe : MonoBehaviour
                 Nodes("AxisSigned/" + model);
             Imported("RigRotLoose", false);
             CurveKeys("RigRotLoose");
+            // Then blend shape weight curves of a take that starts one frame into its file
+            // (make_shapes.py), every key under Compression Off and under Keyframe Reduction at
+            // Position Errors of 101% and 102%.
+            foreach (var model in new[] { "ShapesOff", "ShapesTight", "ShapesLoose" })
+            {
+                Imported(model, false);
+                CurveKeys(model);
+            }
         }
         catch (Exception e)
         {

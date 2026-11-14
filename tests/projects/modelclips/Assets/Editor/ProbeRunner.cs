@@ -178,6 +178,33 @@ public static class ProbeRunner
         }
     }
 
+    /// <summary>The blend shape models of make_shapes.py, Generic: Compression Off, and Keyframe
+    /// Reduction at Position Errors of 101% and 102%. Changes only these three importers (run once
+    /// in a copy of the project; the .meta files are committed).</summary>
+    public static void CreateShapes()
+    {
+        try
+        {
+            foreach (var (file, error) in new[] { ("ShapesOff", 0f), ("ShapesTight", 101f), ("ShapesLoose", 102f) })
+            {
+                var importer = (ModelImporter)AssetImporter.GetAtPath(Dir + file + ".fbx");
+                Generic(importer);
+                if (error > 0f)
+                {
+                    importer.animationCompression = ModelImporterAnimationCompression.KeyframeReduction;
+                    importer.animationPositionError = error;
+                }
+                importer.SaveAndReimport();
+            }
+            EditorApplication.Exit(0);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
     static AnimationClip Load(string name) =>
         AssetDatabase.LoadAllAssetsAtPath(Model).OfType<AnimationClip>().First(c => c.name == name);
 
