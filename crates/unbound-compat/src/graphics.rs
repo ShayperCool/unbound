@@ -102,6 +102,15 @@ impl GraphicsDevice {
         self.device_type()
     }
 
+    /// The device's name in a program's `#pragma only_renderers` and `exclude_renderers`.
+    pub fn pragma_renderer(self) -> &'static str {
+        match self {
+            Self::Metal => "metal",
+            Self::OpenGLCore => "glcore",
+            Self::Vulkan => "vulkan",
+        }
+    }
+
     /// The `SHADER_API_*` define programs compile with.
     pub fn shader_api(self) -> &'static str {
         match self {

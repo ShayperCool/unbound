@@ -497,6 +497,38 @@ impl PassInfo {
             )
     }
 
+    /// Whether the pass runs on the device its programs call `renderer` (`glcore`, `vulkan`,
+    /// `metal`): not when a `#pragma exclude_renderers` of its program (include blocks in scope
+    /// too) names it, or an `only_renderers` does not. Unity drops such a pass from its SubShader
+    /// (Unity 6000.0.71f1 on OpenGL Core, tests/projects/speedtree9urp: the shader graph's GBuffer
+    /// pass, `exclude_renderers gles3 glcore`, is not among the shader's passes). A pass without a
+    /// program of its own (fixed-function, `UsePass`, `GrabPass`) and the pragmas of an
+    /// `#include_with_pragmas` file (not read) leave it running.
+    pub fn runs_on(&self, renderer: &str) -> bool {
+        let Some(program) = &self.program else {
+            return true;
+        };
+        program.code.lines().all(|line| {
+            let Some(rest) = line.trim_start().strip_prefix('#') else {
+                return true;
+            };
+            let Some(rest) = rest.trim_start().strip_prefix("pragma") else {
+                return true;
+            };
+            if !rest.starts_with(char::is_whitespace) {
+                return true;
+            }
+            let mut words = rest.split_whitespace();
+            let kind = words.next();
+            let mut names = words.take_while(|w| !w.starts_with("//"));
+            match kind {
+                Some("exclude_renderers") => !names.any(|w| w == renderer),
+                Some("only_renderers") => names.any(|w| w == renderer),
+                _ => true,
+            }
+        })
+    }
+
     pub fn light_mode(&self) -> LightMode {
         match self.states.tags.get("LightMode") {
             None => {
@@ -644,6 +676,7 @@ impl ShaderLab {
                     .iter()
                     .any(|p| matches!(p.light_mode(), LightMode::Vertex | LightMode::Always));
             runs && vertex_lit
+                && !sub.unsupported
                 && selection.max_lod.is_none_or(|max| sub.lod <= max)
                 && selection
                     .tag
@@ -685,8 +718,18 @@ impl ShaderLab {
         Self::parse_file(source, Path::new(""))
     }
 
-    /// Parses the shader in `path` (whose programs' includes resolve from its directory).
+    /// Parses the shader in `path` (whose programs' includes resolve from its directory) for the
+    /// run's graphics device.
     pub fn parse_file(source: &str, path: &Path) -> Option<ShaderLab> {
+        Self::parse_file_for(
+            source,
+            path,
+            unbound_runtime::graphics_device::get().pragma_renderer(),
+        )
+    }
+
+    /// [`ShaderLab::parse_file`] for the device whose renderer pragma name is `renderer`.
+    pub fn parse_file_for(source: &str, path: &Path, renderer: &str) -> Option<ShaderLab> {
         let (text, blocks) = strip_blocks(source);
         let tokens = tokenize_text(&text);
         let mut p = Parser {
@@ -695,6 +738,7 @@ impl ShaderLab {
             blocks: &blocks,
             includes: Vec::new(),
             path,
+            renderer,
         };
         // `Shader "Name" {`
         loop {
@@ -882,6 +926,8 @@ struct Parser<'a> {
     /// Include blocks in scope (the shader's, then the SubShader's).
     includes: Vec<usize>,
     path: &'a Path,
+    /// The device's name in the programs' renderer pragmas.
+    renderer: &'a str,
 }
 
 /// A parsed SubShader, before one is chosen.
@@ -889,9 +935,13 @@ struct Parser<'a> {
 #[derive(Debug, Clone, Default)]
 pub struct SubShader {
     pub tags: HashMap<String, String>,
+    /// The passes that run on the device ([`PassInfo::runs_on`]).
     pub passes: Vec<PassInfo>,
     /// `LOD n` (0 when it has none).
     pub lod: u32,
+    /// Every pass it has is one the device does not run, so it is not chosen (Unbound's
+    /// reading: unmeasured, where only a dropped pass among others is).
+    pub unsupported: bool,
 }
 
 impl Parser<'_> {
@@ -1162,6 +1212,7 @@ impl Parser<'_> {
             tags: HashMap::new(),
             passes: Vec::new(),
             lod: 0,
+            unsupported: false,
         };
         if self.next() != Some(Token::Open) {
             return sub;
@@ -1265,8 +1316,10 @@ impl Parser<'_> {
         self.includes.truncate(scope);
         // States set after a pass apply to it too: ShaderLab states are SubShader-wide.
         sub.tags = states.tags.clone();
+        let declared = passes.len();
         sub.passes = passes
             .into_iter()
+            .filter(|pass| pass.runs_on(self.renderer))
             .map(|mut pass| {
                 if pass.use_pass.is_none() {
                     pass.own_tags = pass.states.tags.clone();
@@ -1275,6 +1328,7 @@ impl Parser<'_> {
                 pass
             })
             .collect();
+        sub.unsupported = declared > 0 && sub.passes.is_empty();
         sub
     }
 
@@ -1788,6 +1842,36 @@ fn shader_name(text: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_pass_whose_program_excludes_the_device_is_dropped() {
+        let source = "Shader \"R\" { SubShader { \
+            Pass { Name \"Forward\" HLSLPROGRAM\n#pragma vertex v\nENDHLSL } \
+            Pass { Name \"GBuffer\" HLSLPROGRAM\n#pragma exclude_renderers gles3 glcore\n#pragma vertex v\nENDHLSL } \
+            Pass { Name \"D3DOnly\" HLSLPROGRAM\n  #  pragma only_renderers d3d11 // tessellation\nENDHLSL } \
+            Pass { Name \"Comment\" HLSLPROGRAM\n// #pragma exclude_renderers glcore\nENDHLSL } } \
+            SubShader { Pass { Name \"Fallback\" } } }";
+        let names = |lab: &ShaderLab| {
+            lab.passes
+                .iter()
+                .map(|p| p.name.clone())
+                .collect::<Vec<_>>()
+        };
+        let glcore = ShaderLab::parse_file_for(source, Path::new(""), "glcore").unwrap();
+        assert_eq!(names(&glcore), ["Forward", "Comment"]);
+        let vulkan = ShaderLab::parse_file_for(source, Path::new(""), "vulkan").unwrap();
+        assert_eq!(names(&vulkan), ["Forward", "GBuffer", "Comment"]);
+        let d3d = ShaderLab::parse_file_for(source, Path::new(""), "d3d11").unwrap();
+        assert_eq!(names(&d3d), ["Forward", "GBuffer", "D3DOnly", "Comment"]);
+        // A SubShader whose every pass the device drops is passed over.
+        let only = "Shader \"O\" { SubShader { Pass { Name \"A\" HLSLPROGRAM\n#pragma only_renderers d3d11\nENDHLSL } } \
+            SubShader { Pass { Name \"B\" } } }";
+        let lab = ShaderLab::parse_file_for(only, Path::new(""), "glcore").unwrap();
+        assert!(lab.subshaders[0].unsupported);
+        assert_eq!(names(&lab), ["B"]);
+        let lab = ShaderLab::parse_file_for(only, Path::new(""), "d3d11").unwrap();
+        assert_eq!(names(&lab), ["A"]);
+    }
 
     #[test]
     fn program_keywords_share_lines() {

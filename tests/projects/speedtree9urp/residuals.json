@@ -1,8 +1,4 @@
 {
-  "On OpenGL Core the Editor drops the shader's GBuffer pass, whose program excludes glcore (9 passes); Unbound keeps every pass (10) (follow-up in docs/COMPATIBILITY_GAPS.md)": [
-    "before/shader",
-    "shader"
-  ],
   "The Editor's post-processing of a tree's textures (an extra map imported without sRGB) is not reproduced (follow-up in docs/COMPATIBILITY_GAPS.md)": [
     "texture/Leaf_Extra.png"
   ]
