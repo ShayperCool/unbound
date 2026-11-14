@@ -112,9 +112,9 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After sampled value payloads |
+| Category | Before Q410 | After frame-rate serialization |
 | --- | ---: | ---: |
-| Attributes | 938 | 23 |
+| Attributes | 938 | 22 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 4 |
@@ -123,7 +123,7 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 162 |
+| Total | 1,332 | 161 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -377,7 +377,8 @@ The tooling slice removes 133 exact policy-only entries after the final-shapes
 slice reduced the queue from 370 to 341. The GUI payload slice removes another
 32 entries. Physics material and text adapters remove three more interface entries,
 and XR value payloads remove nine layout/interface entries. LocationInfo and the retired
-AnimationInfo value remove two more layout entries, leaving 162 exact entries, each with a
+AnimationInfo value remove two more layout entries. FrameRate serialization removes one
+field annotation entry, leaving 161 exact entries, each with a
 specific follow-up reason. No allow-list is regenerated from a passing report.
 The generator format changes with the comparison policy and the committed stubs
 are regenerated from the selected release. Existing probe references and strict
@@ -390,7 +391,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-Editor-computed-setters` | 2 | Live focus state and assembly-cache invalidation before private setter alignment. |
 | `Q410-Editor-interfaces` | 11 | Window/menu/preview, request callbacks and connection/converter interface dispatch. |
 | `Q410-Editor-serialized-payloads` | 13 | Window/view/package/request fields and coupled Serializable classification. |
-| `Q410-FrameRate-serialization` | 1 | Nondefault scalar payload with root/nested overwrite controls. |
+| `Q410-FrameRate-serialization` | 0 | Done by `framepayloads`: signed scalar root JSON, reconstruction and overwrite preserve the selected payload; the unmarked nested type stays omitted. |
 | `Q410-GUI-serialized-payloads` | 0 | Done for the selected release by `guipayload`, with shared GUIStyle payloads across YAML, JSON and cloning; wrapper field annotations match the selected declarations. |
 | `Q410-ObjectIdentifier-serialization` | 1 | Empty composite eligibility that preserves initializer values during cloning. |
 | `Q410-UI-command-events` | 1 | Command/IME event pooling and propagation before the exact interest list. |
@@ -475,3 +476,15 @@ return null and zero, including after an unmanaged round trip. The probe resolve
 module type explicitly because the legacy facade also has a different internal type with the
 same name. The unsupported stored clip/weight pair is removed rather than retained beside the
 selected payload. Both exact layout entries are removed; all other entries stay unchanged.
+
+
+## Frame-rate scalar serialization
+
+`tests/projects/framepayloads` records 156 exact Unity 6000.0.71f1 values. FrameRate's
+private integer field is serialized at the root, preserving zero, positive/negative values
+and both integer limits through JSON reconstruction and boxed overwrite. Omitted fields
+retain existing values. Nested FrameRate remains omitted because the type has no Serializable
+marker; overwrite preserves its seeded value while changing an ordinary sibling. Parallel
+marked and unmarked custom-struct controls distinguish field visibility from nested type
+eligibility. The existing shared serializer handles both contexts. One field annotation
+exception is removed without changing type eligibility or the serializer's policy.

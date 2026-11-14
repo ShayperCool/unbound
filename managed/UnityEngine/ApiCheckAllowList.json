@@ -156,13 +156,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.Playables.FrameRate",
-    "Message": "field m_Rate attributes is [], Unity's is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",
-    "Reason": "Q410-FrameRate-serialization: FrameRate.m_Rate needs root-versus-nested built-in serialization classification and nondefault round-trip/overwrite controls. Marking the private scalar without coordinating that model could change the managed wrapper payload."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.RenderingLayerMask",
     "Message": "field m_Bits attributes is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}], Unity's is []",
     "Reason": "Q410-Core-built-in-serialization: nested JSON uses a built-in payload although the selected CLR serialization marker is absent. Current runtime composite handling still needs the harmonic coefficient schema or rendering-layer version/bits schema. Migrate serialization classification, JSON/YAML read/write and cloning with root-versus-nested and round-trip controls before removing this marker; removal alone drops existing nested values."

@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/framepayloads/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Playables/PlayableHandles.cs",
+    "managed/UnityEngine/Core/JsonUtility.cs",
+    "managed/UnityEngine/Runtime/Serialization.cs"
+  ]
+}

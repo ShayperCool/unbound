@@ -692,7 +692,7 @@ namespace UnityEngine.Playables
         public static readonly FrameRate k_60Fps = new FrameRate(60u);
         public static readonly FrameRate k_59_94Fps = new FrameRate(60u, drop: true);
 
-        int m_Rate;
+        [SerializeField] int m_Rate;
 
         public bool dropFrame => m_Rate < 0;
 
