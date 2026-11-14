@@ -9,6 +9,9 @@
     "managed/UnityEngine/Editor/ScriptedImporter.cs",
     "managed/UnityEngine/Graphics/Mesh.cs",
     "managed/UnityEngine/Graphics/LODGroup.cs",
-    "crates/unbound-assets/src/meta.rs"
+    "crates/unbound-assets/src/meta.rs",
+    "managed/UnityEngine/Editor/ImportedPrefabDocuments.cs",
+    "crates/unbound-runtime/src/imported_prefabs.rs",
+    "crates/unbound-scene/src/flatten.rs"
   ]
 }

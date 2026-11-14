@@ -57,12 +57,22 @@ namespace Unbound.Runtime
         /// <paramref name="file"/> holds with their file ids.</summary>
         internal static string Write(LoadedFile file, GameObject root)
         {
+            // Objects of the written hierarchy are referenced locally; the import's other objects
+            // (assets, another root's GameObjects) by the asset's GUID.
+            var written = new HashSet<Object>(ReferenceEqualityComparer.Instance);
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+            {
+                written.Add(t.gameObject);
+                foreach (var c in t.gameObject.GetComponents<Component>())
+                    if (c != null) written.Add(c);
+            }
             var ids = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance);
             var assets = new Dictionary<Object, (string, long)>(ReferenceEqualityComparer.Instance);
             foreach (var pair in file.Objects)
             {
-                if (pair.Value is GameObject || pair.Value is Component) ids[pair.Value] = pair.Key;
-                else if (pair.Value != null) assets[pair.Value] = (file.Guid, pair.Key);
+                if (pair.Value == null) continue;
+                if (written.Contains(pair.Value)) ids[pair.Value] = pair.Key;
+                else assets[pair.Value] = (file.Guid, pair.Key);
             }
             var sb = new StringBuilder("%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n");
             var writer = new UnityYamlWriter.Writer(sb, ids, assets);

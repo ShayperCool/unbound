@@ -235,6 +235,33 @@ namespace UnityEngine.Tests
                 (copy.color, copy.flipX, copy.flipY, copy.drawMode, copy.size, copy.maskInteraction, copy.spriteSortPoint, copy.sortingOrder));
         }
 
+        /// <summary>An object of the import outside the written hierarchy (another root) is
+        /// referenced by the asset's GUID, as an asset of the import.</summary>
+        [Fact]
+        public void ObjectsOutsideTheHierarchyAreReferencedAsTheAssets()
+        {
+            using var engine = MainThreadCheck.Engine();
+            var b = Build();
+            var other = Made(new GameObject("OtherRoot"));
+            b.File.Objects[500] = other;
+            b.File.Objects[501] = other.transform;
+            b.Root.GetComponent<Marker>().lid = other.transform;
+            var docs = Parse(ImportedPrefabDocuments.Write(b.File, b.Root));
+            Assert.DoesNotContain(500L, docs.Keys);
+            var lid = docs[IdOf(b.File, b.Root.GetComponent<Marker>())].Body.Ref("lid");
+            Assert.Equal((501L, Guid), (lid.FileId, lid.Guid));
+        }
+
+        /// <summary>Instantiate copies a Tree's wind asset.</summary>
+        [Fact]
+        public void InstantiateCopiesATreesWindAsset()
+        {
+            using var engine = MainThreadCheck.Engine();
+            var b = Build();
+            var clone = Made((GameObject)Object.Instantiate(b.Child));
+            Assert.Same(b.Wind, clone.GetComponent<Tree>().windAsset);
+        }
+
         [Fact]
         public void AComponentWithoutItsOwnWriterFailsLoudly()
         {
@@ -253,7 +280,7 @@ namespace UnityEngine.Tests
         {
             using var engine = MainThreadCheck.Engine();
             var b = Build();
-            new GameObject("Unlisted").transform.SetParent(b.Root.transform, false);
+            Made(new GameObject("Unlisted")).transform.SetParent(b.Root.transform, false);
             var e = Assert.Throws<InvalidOperationException>(() => ImportedPrefabDocuments.Write(b.File, b.Root));
             Assert.Contains("Unlisted", e.Message);
         }
