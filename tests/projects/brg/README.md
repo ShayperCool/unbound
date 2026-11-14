@@ -46,6 +46,18 @@ view type how many callbacks ran. Scenarios:
   view: a point light face's with its vertical axis upright, and on Vulkan, whose depth is
   reversed, its depth axis turned too.
 
+- `sorting`: transparent commands (URP Unlit, alpha blended, half-transparent quads facing the
+  camera) whose drawing order shows in the colour where they overlap (`sorting.command<i>.pixel`):
+  two commands flagged `HasSortingPosition` whose positions contradict their order; unflagged
+  pairs with `sortingPosition` 1 and 1000, 1000 and 1, 0 and 0; flagged commands of two instances
+  (near first, far first) and an unflagged one; unflagged commands over an ordinary transparent
+  renderer at the same place (distance about 6.5) with approximate depths from -1000000 to
+  1000000; flagged commands one unit nearer or farther than such a renderer, and a flagged
+  command of two instances on both sides of one. The Editor sorts a flagged command's instances
+  one by one at their world positions among the other draws; an unflagged command sorts as if
+  minus its `sortingPosition` were its squared camera distance (nearer than the renderer from
+  -20 up, farther at -50 and below), equal values in command order, its instances in their order.
+
 Light contexts record their receiver planes again as `receiver<i>`, compared exactly.
 
     python3 tests/projects/brg/run.py native --label L [--device vulkan]   # two Editor captures
@@ -55,6 +67,6 @@ Light contexts record their receiver planes again as `receiver<i>`, compared exa
 The references (`Reference/unity-6000.0.71f1/opengl`, `.../vulkan`) are two identical captures each
 of the Editor on its OpenGL Core and Vulkan devices, measured on the NVIDIA driver only. The
 Editor draws the batch on both devices (the Manual's platform list names only Vulkan for Linux);
-the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: every value on both devices (851 on OpenGL Core, 848 on Vulkan), the cascades'
+the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: every value on both devices (1655 records on OpenGL Core, 1652 on Vulkan), the cascades'
 caster culling planes, culling matrices and conservative culling spheres of the light contexts
 included; every image matches exactly.
