@@ -37,7 +37,14 @@ view type how many callbacks ran. Scenarios:
   group's DOTS instancing data and the scene's ordinary Lit sphere; `forward_plus_plain`: the same
   with the group drawing nothing and eight ordinary Lit cubes in its cubes' places. URP's shader
   library (`Input.hlsl`) sizes those buffers for 256 lights on Vulkan (the tile buffer alone 64 KB)
-  and for 32 on OpenGL Core.
+  and for 32 on OpenGL Core;
+- `local_shadows`: a spot light and a point light cast hard shadows (URP's additional light shadows
+  turned on at run time, the sun casting none) onto the ground plane, with the light-only group as
+  in `shadows`; each light culling's context also names its light. Each light is culled once with
+  all its splits (the spot light one, the point light its six faces), the light as the view at
+  slice -1 (a directional light's is 0), every split's culling matrix the light's projection by
+  view: a point light face's with its vertical axis upright, and on Vulkan, whose depth is
+  reversed, its depth axis turned too.
 
 Light contexts record their receiver planes again as `receiver<i>`, compared exactly.
 

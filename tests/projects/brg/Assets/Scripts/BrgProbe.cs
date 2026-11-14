@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -87,6 +88,7 @@ public unsafe class BrgProbe : MonoBehaviour
             Lifetime();
             Errors();
             ForwardPlus();
+            LocalShadows();
         }
         catch (Exception e)
         {
@@ -477,6 +479,51 @@ public unsafe class BrgProbe : MonoBehaviour
         if (!string.IsNullOrEmpty(s_Out)) File.WriteAllBytes(Path.Combine(s_Out, name + ".png"), texture.EncodeToPNG());
     }
 
+    /// <summary>A spot and a point light cast hard shadows (URP's additional light shadows turned
+    /// on at run time; the sun casts none) onto a ground plane; the range casts and receives
+    /// shadows, and a second group takes light views alone. Each light view's context names the
+    /// light it is for.</summary>
+    void LocalShadows()
+    {
+        var urp = (UniversalRenderPipelineAsset)GraphicsSettings.currentRenderPipeline;
+        var supported = typeof(UniversalRenderPipelineAsset).GetField("m_AdditionalLightShadowsSupported", BindingFlags.NonPublic | BindingFlags.Instance);
+        bool wasSupported = (bool)supported.GetValue(urp);
+        supported.SetValue(urp, true);
+        var spot = new GameObject("Local Shadow Spot").AddComponent<Light>();
+        spot.type = LightType.Spot;
+        spot.transform.SetPositionAndRotation(new Vector3(-0.5f, 2.5f, 0.2f), Quaternion.Euler(70f, 10f, 0f));
+        spot.range = 6f;
+        spot.spotAngle = 70f;
+        spot.intensity = 3f;
+        spot.shadows = LightShadows.Hard;
+        var point = new GameObject("Local Shadow Point").AddComponent<Light>();
+        point.type = LightType.Point;
+        point.transform.position = new Vector3(1.2f, 1.2f, 0.4f);
+        point.range = 4f;
+        point.intensity = 2f;
+        point.shadows = LightShadows.Hard;
+        m_LocalLights = new[] { spot, point };
+        var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        ground.transform.position = new Vector3(0f, -0.45f, 1.5f);
+        ground.transform.localScale = new Vector3(0.8f, 1f, 0.5f);
+        m_LightOnly = new BatchRendererGroup(OnPerformCulling, (IntPtr)2);
+        m_LightOnly.SetEnabledViewTypes(new[] { BatchCullingViewType.Light });
+        m_Shadows = true;
+        Scenario("local_shadows");
+        RecordViews();
+        m_Shadows = false;
+        m_LightOnly.Dispose();
+        m_LightOnly = null;
+        m_LocalLights = null;
+        DestroyImmediate(ground);
+        DestroyImmediate(spot.gameObject);
+        DestroyImmediate(point.gameObject);
+        supported.SetValue(urp, wasSupported);
+    }
+
+    /// <summary>The local_shadows scenario's lights, which its contexts name.</summary>
+    Light[] m_LocalLights;
+
     JobHandle OnPerformCulling(BatchRendererGroup group, BatchCullingContext context, BatchCullingOutput output, IntPtr user)
     {
         int call = m_Calls++;
@@ -585,6 +632,13 @@ public unsafe class BrgProbe : MonoBehaviour
         Row(key + ".receiverPlaneCount", c.receiverPlaneCount);
         Row(key + ".viewIsCamera", c.viewID.GetInstanceID() == m_ViewCamera.GetInstanceID());
         if (m_Scenario != "basic") Row(key + ".viewIsLight", m_Light != null && c.viewID.GetInstanceID() == m_Light.GetInstanceID());
+        if (m_LocalLights != null)
+        {
+            string light = "none";
+            foreach (var l in m_LocalLights)
+                if (c.viewID.GetInstanceID() == l.GetInstanceID()) light = l.type.ToString();
+            Row(key + ".viewLight", light);
+        }
         Row(key + ".viewSlice", c.viewID.GetSliceIndex());
         Row(key + ".localToWorld", Floats(c.localToWorldMatrix));
         var lod = c.lodParameters;
