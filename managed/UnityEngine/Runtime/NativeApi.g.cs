@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 76;
+        internal const uint CurrentVersion = 77;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -209,5 +209,12 @@ namespace Unbound.Runtime
         /// another format, an invalid index or null buffers. Accepts BC, ETC, unsigned EAC and ASTC.
         /// </summary>
         internal delegate* unmanaged<int, byte*, uint, float*, int> DecodeBlockTexel;
+        /// <summary>
+        /// (source: asset GUID text, length, sink): the managed writer of a ScriptedImporter prefab's
+        /// documents; it writes Unity YAML into the sink and returns 0, or an error message and 1.
+        /// </summary>
+        internal delegate* unmanaged<delegate* unmanaged<byte*, int, void*, int>, void> SetDocumentSource;
+        /// <summary>(sink, bytes, length): appends to the sink a document source was called with.</summary>
+        internal delegate* unmanaged<void*, byte*, int, void> DocumentSourceWrite;
     }
 }

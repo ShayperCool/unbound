@@ -117,14 +117,10 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
                 .extension()
                 .is_some_and(|e| e.eq_ignore_ascii_case("asset"));
             if !is_asset {
-                // A scene's prefab instance of a ScriptedImporter's asset (a SpeedTree 9 tree):
-                // the importer runs in managed code, which the scene's expansion cannot use yet.
-                return unbound_assets::meta::scripted_importer_of(file).map(|_| {
-                    Err(anyhow::anyhow!(
-                        "{} is imported by a ScriptedImporter: prefab instances of its objects in scenes and prefabs are not supported yet",
-                        file.display()
-                    ))
-                });
+                // A ScriptedImporter's prefab (a SpeedTree 9 tree): the managed engine runs the
+                // importer and writes the documents of its hierarchy.
+                return unbound_assets::meta::scripted_importer_of(file)
+                    .map(|_| crate::imported_prefabs::documents(guid));
             }
             let data = std::fs::read(file).ok()?;
             unbound_assets::serialized::is_binary(&data)

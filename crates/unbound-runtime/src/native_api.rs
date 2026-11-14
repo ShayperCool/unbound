@@ -85,7 +85,8 @@ use std::ffi::c_void;
 /// 74: texture packet bits 64/128 carry the texture-owned depth comparison state.
 /// 75: external texture binding carries the native image metadata.
 /// 76: sampled compute texture properties admit the depth-element selector.
-pub const NATIVE_API_VERSION: u32 = 76;
+/// 77: the managed engine writes the documents of ScriptedImporter prefabs.
+pub const NATIVE_API_VERSION: u32 = 77;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -344,6 +345,13 @@ pub struct NativeApi {
     /// (TextureFormat, one block, texel index, out four RGBA floats): 1 on success; 0 for
     /// another format, an invalid index or null buffers. Accepts BC, ETC, unsigned EAC and ASTC.
     pub decode_block_texel: extern "C" fn(i32, *const u8, u32, *mut f32) -> i32,
+    // Version 76: prefabs that ScriptedImporters make (`imported_prefabs`).
+    /// (source: asset GUID text, length, sink): the managed writer of a ScriptedImporter prefab's
+    /// documents; it writes Unity YAML into the sink and returns 0, or an error message and 1.
+    pub set_document_source:
+        extern "C" fn(Option<extern "C" fn(*const u8, i32, *mut c_void) -> i32>),
+    /// (sink, bytes, length): appends to the sink a document source was called with.
+    pub document_source_write: extern "C" fn(*mut c_void, *const u8, i32),
 }
 
 pub fn api() -> NativeApi {
@@ -405,6 +413,8 @@ pub fn api() -> NativeApi {
         plugin_script_marker,
         plugin_marker_event,
         decode_block_texel,
+        set_document_source,
+        document_source_write,
     }
 }
 
@@ -1276,6 +1286,16 @@ extern "C" fn plugin_load(load: *const c_void) {
     plugin_api::while_rendering(|| {
         state::backend().with_plugin_context(&mut || load(plugin_api::interfaces()))
     });
+}
+
+extern "C" fn set_document_source(
+    source: Option<extern "C" fn(*const u8, i32, *mut c_void) -> i32>,
+) {
+    crate::imported_prefabs::set_source(source);
+}
+
+extern "C" fn document_source_write(sink: *mut c_void, bytes: *const u8, length: i32) {
+    unsafe { crate::imported_prefabs::write(sink, bytes, length) };
 }
 
 extern "C" fn plugin_set_log(sink: Option<extern "C" fn(i32, *const u8, i32)>) {

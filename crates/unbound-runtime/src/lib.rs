@@ -11,6 +11,7 @@ pub mod fonts;
 pub mod game;
 pub mod gamepads;
 pub mod graphics_device;
+pub mod imported_prefabs;
 pub mod ime;
 pub mod lighting;
 mod models;
