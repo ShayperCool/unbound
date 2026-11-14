@@ -270,6 +270,7 @@ namespace Unbound.Tests
             {
                 Assert.Equal(Quaternion.identity, Quaternion.LookRotation(Vector3.zero, Vector3.up));
                 Assert.Equal(Quaternion.identity, Quaternion.LookRotationSilent(Vector3.zero, Vector3.up));
+                Assert.Equal(Quaternion.identity, QuaternionMath.LookRotation(Vector3.zero, Vector3.up));
                 Quaternion lerp = Quaternion.Lerp(default, default, 0.5f);
                 Assert.True(float.IsNaN(lerp.w));
                 _ = Matrix4x4.zero.rotation;
@@ -293,6 +294,26 @@ namespace Unbound.Tests
                 "Assert: Invalid AABB *this",
                 "Assert: Invalid AABB rkBox",
             }, logs.ToArray());
+        }
+
+        [Fact]
+        public void TheEnginesLookRotationTurnsForwardOntoTheDirectionInDoublePrecision()
+        {
+            // The engine's own look rotation (lights' shadow views, particles, physics frames):
+            // +Z onto the normalized direction, +Y into the plane of the direction and the up
+            // vector; a direction along the up vector takes FromToRotation from +Z.
+            var forward = new Vector3(0.3f, -0.4f, 2f);
+            var up = new Vector3(0.1f, 1f, 0.2f);
+            var q = QuaternionMath.LookRotation(forward, up);
+            Assert.Equal(1f, Mathf.Sqrt(QuaternionMath.Dot(q, q)), 6);
+            var z = q * Vector3.forward;
+            var n = forward.normalized;
+            Assert.Equal(n.x, z.x, 5); Assert.Equal(n.y, z.y, 5); Assert.Equal(n.z, z.z, 5);
+            Assert.Equal(0f, Vector3.Dot(q * Vector3.right, up), 5);
+            Assert.True(Vector3.Dot(q * Vector3.up, up) > 0f);
+            var along = QuaternionMath.LookRotation(Vector3.up, Vector3.up);
+            Assert.Equal(Quaternion.FromToRotation(Vector3.forward, Vector3.up), along);
+            Assert.Equal(QuaternionMath.LookRotation(forward, Vector3.up), QuaternionMath.LookRotation(forward));
         }
 
         sealed class Capture : ILogHandler

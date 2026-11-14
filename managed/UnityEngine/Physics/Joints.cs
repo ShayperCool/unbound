@@ -213,7 +213,7 @@ namespace UnityEngine
             }
             z.Normalize();
             var y = Vector3.Cross(z, x);
-            return Quaternion.LookRotationSilent(z, y);
+            return QuaternionMath.LookRotation(z, y);
         }
 
         /// <summary>Creates or updates the native joint (after bodies and shapes exist).</summary>

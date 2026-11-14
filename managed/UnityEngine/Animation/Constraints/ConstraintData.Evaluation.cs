@@ -128,7 +128,7 @@ namespace Unbound.Runtime
             if (Kind == ConstraintKind.LookAt)
             {
                 if (UseUpObject) up = (UpObject != null ? UpObject.position : Vector3.zero) - Owner.transform.position;
-                var look = Quaternion.LookRotationSilent(forward, up) * QuaternionMath.AngleAxis(-Roll, Vector3.forward);
+                var look = QuaternionMath.LookRotation(forward, up) * QuaternionMath.AngleAxis(-Roll, Vector3.forward);
                 return LocalRotation(look) * Quaternion.Euler(RotationOffset);
             }
             switch (UpType)
@@ -139,7 +139,7 @@ namespace Unbound.Runtime
                 case AimConstraint.WorldUpType.None:
                     return LocalRotation(Quaternion.FromToRotation(Aim, forward)) * Quaternion.Euler(RotationOffset);
             }
-            return LocalRotation(Quaternion.LookRotationSilent(forward, up) * Quaternion.Inverse(Quaternion.LookRotationSilent(Aim, Up))) * Quaternion.Euler(RotationOffset);
+            return LocalRotation(QuaternionMath.LookRotation(forward, up) * Quaternion.Inverse(QuaternionMath.LookRotation(Aim, Up))) * Quaternion.Euler(RotationOffset);
         }
 
         float SourceTotal()

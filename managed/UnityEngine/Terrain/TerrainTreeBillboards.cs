@@ -367,7 +367,7 @@ namespace UnityEngine
         {
             if (m_Billboards.Count == 0) return;
             var cameraObject = camera.Camera;
-            var euler = cameraObject != null ? cameraObject.transform.eulerAngles : Quaternion.LookRotationSilent(camera.Forward).eulerAngles;
+            var euler = cameraObject != null ? cameraObject.transform.eulerAngles : QuaternionMath.LookRotation(camera.Forward).eulerAngles;
             // Drawn again when the camera turns or the lights it was lit by change (measured: a
             // sun's intensity alone, tests/projects/treebillboards sunonly).
             GatherTreeLights();

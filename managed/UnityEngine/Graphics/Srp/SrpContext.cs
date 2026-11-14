@@ -216,7 +216,7 @@ namespace UnityEngine.Rendering
             if (!LocalLight(activeLightIndex, LightType.Spot, out var light, out float near)) return false;
             var world = light.localToWorldMatrix;
             var position = new Vector3(world.m03, world.m13, world.m23);
-            var rotation = Quaternion.LookRotationSilent(world.GetColumn(2), world.GetColumn(1));
+            var rotation = QuaternionMath.LookRotation(world.GetColumn(2), world.GetColumn(1));
             viewMatrix = Matrix4x4.Scale(new Vector3(1, 1, -1)) * Matrix4x4.TRS(position, rotation, Vector3.one).inverseDoublePrecision;
             projMatrix = Matrix4x4.PerspectiveDoublePrecision(light.spotAngle, 1f, near, light.range);
             SetFrustumCulling(ref shadowSplitData, projMatrix * viewMatrix, near);

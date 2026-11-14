@@ -2391,7 +2391,7 @@ namespace UnityEngine
                     float blend = Mathf.Abs(Vector3.Dot(forward, childForward));
                     var up = Vector3.LerpUnclamped(childForward, childRotation * Vector3.up, blend);
                     float along = Vector3.Dot(forward, up);
-                    var align = Mathf.Abs(along) < 1f - 1e-6f ? Quaternion.LookRotationSilent(forward, up)
+                    var align = Mathf.Abs(along) < 1f - 1e-6f ? QuaternionMath.LookRotation(forward, up)
                         : along > 0f ? simRotation : simRotation * QuaternionMath.AngleAxis(180f, Vector3.up);
                     var parentTransform = parentSystem.m_GameObject.m_Transform.rotation;
                     frame = align * (Quaternion.Inverse(parentTransform) * m_GameObject.m_Transform.rotation);

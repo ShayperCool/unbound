@@ -249,7 +249,7 @@ namespace UnityEngine
             var x = new Vector3((float)v[0, 0], (float)v[1, 0], (float)v[2, 0]);
             var y = new Vector3((float)v[0, 1], (float)v[1, 1], (float)v[2, 1]);
             var z = Vector3.Cross(x, y);
-            axes = Quaternion.LookRotationSilent(z, y);
+            axes = QuaternionMath.LookRotation(z, y);
         }
 
         // Targets are sent when the command is issued so PhysX exposes the wake immediately.

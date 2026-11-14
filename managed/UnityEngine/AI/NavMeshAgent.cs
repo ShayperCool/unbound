@@ -1964,7 +1964,7 @@ namespace Unbound.Runtime
             float speed = heading.magnitude;
             if (speed < 1e-3f) return;
             var rotation = agent.transform.rotation;
-            var target = Quaternion.LookRotationSilent(heading);
+            var target = QuaternionMath.LookRotation(heading);
             float left = QuaternionMath.Angle(rotation, target);
             float step = Mathf.Min(agent.angularSpeed * dt, (TurnGain + speed) * left * dt);
             agent.transform.rotation = QuaternionMath.RotateTowards(rotation, target, step);

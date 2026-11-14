@@ -378,7 +378,7 @@ namespace UnityEngine
         {
             var m = Matrix4x4.TRS(position, rotation, c.transform.lossyScale) * c.m_ShapeMatrix.inverseDoublePrecision;
             p = m.GetColumn(3);
-            q = Quaternion.LookRotationSilent(m.GetColumn(2), m.GetColumn(1));
+            q = QuaternionMath.LookRotation(m.GetColumn(2), m.GetColumn(1));
         }
 
         // ------------------------------------------------------------------ rays
