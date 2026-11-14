@@ -77,20 +77,50 @@ namespace UnityEngine
             input->ScreenHeight = s_Height;
         }
 
-        /// <summary>A rendering position in window pixels (a cursor warp).</summary>
+        /// <summary>The centered default Game view scale, measured at one display pixel per
+        /// point in Unity 6000.0.71f1, tests/projects/gameview. Larger targets shrink uniformly;
+        /// smaller targets use an integer zoom. Other releases retain their previous stretch.</summary>
+        internal static Rect PresentationRect
+        {
+            get
+            {
+                if (!Compat.RenderingMeasured || s_RenderingWidth <= 0 || s_WindowWidth <= 0 || s_WindowHeight <= 0)
+                    return new Rect(0, 0, s_WindowWidth, s_WindowHeight);
+                float scale = Mathf.Min((float)s_WindowWidth / s_RenderingWidth, (float)s_WindowHeight / s_RenderingHeight);
+                if (scale > 1f) scale = Mathf.Floor(scale);
+                float width = s_RenderingWidth * scale, height = s_RenderingHeight * scale;
+                return new Rect((s_WindowWidth - width) * 0.5f, (s_WindowHeight - height) * 0.5f, width, height);
+            }
+        }
+
+        /// <summary>A rendering position in window pixels, including the presentation border.</summary>
         internal static Vector2 RenderingToWindow(Vector2 position)
         {
             if (s_RenderingWidth <= 0 || s_WindowWidth <= 0 || s_WindowHeight <= 0) return position;
-            return new Vector2(position.x * s_WindowWidth / s_RenderingWidth, position.y * s_WindowHeight / s_RenderingHeight);
+            var rect = PresentationRect;
+            return new Vector2(rect.x + position.x * rect.width / s_RenderingWidth,
+                rect.y + position.y * rect.height / s_RenderingHeight);
         }
 
-        /// <summary>A window position in rendering pixels (the same point when the view follows
-        /// the window).</summary>
+        /// <summary>A window position in rendering pixels. Points in a presentation border
+        /// remain outside the rendering area, as documented for Input.mousePosition.</summary>
         internal static void WindowToRendering(ref float x, ref float y)
         {
             if (s_RenderingWidth <= 0 || s_WindowWidth <= 0 || s_WindowHeight <= 0) return;
-            x *= (float)s_RenderingWidth / s_WindowWidth;
-            y *= (float)s_RenderingHeight / s_WindowHeight;
+            var rect = PresentationRect;
+            x = (x - rect.x) * s_RenderingWidth / rect.width;
+            y = (y - rect.y) * s_RenderingHeight / rect.height;
+        }
+
+        internal static Rect NormalizedPresentationRect
+        {
+            get
+            {
+                if (s_WindowWidth <= 0 || s_WindowHeight <= 0) return new Rect(0, 0, 1, 1);
+                var rect = PresentationRect;
+                return new Rect(rect.x / s_WindowWidth, rect.y / s_WindowHeight,
+                    rect.width / s_WindowWidth, rect.height / s_WindowHeight);
+            }
         }
 
         internal static bool ConsumeSizeChanged()

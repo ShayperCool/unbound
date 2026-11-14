@@ -86,7 +86,7 @@ use std::ffi::c_void;
 /// 75: external texture binding carries the native image metadata.
 /// 76: sampled compute texture properties admit the depth-element selector.
 /// 77: the managed engine writes the documents of ScriptedImporter prefabs.
-pub const NATIVE_API_VERSION: u32 = 77;
+pub const NATIVE_API_VERSION: u32 = 78;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

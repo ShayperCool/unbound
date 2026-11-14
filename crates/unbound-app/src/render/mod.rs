@@ -51,7 +51,7 @@ struct Presenter {
     /// Per output kind (non-sRGB, sRGB): the present mode parameters.
     params: [Option<wgpu::Buffer>; 2],
     /// What this frame presents.
-    current: Option<(wgpu::RenderPipeline, wgpu::BindGroup)>,
+    current: Option<(wgpu::RenderPipeline, wgpu::BindGroup, [f32; 4])>,
 }
 
 impl Plugin for UnityRenderPlugin {
@@ -183,7 +183,7 @@ fn prepare_present(presenter: Option<ResMut<Presenter>>, views: Query<&ViewTarge
             },
         ],
     });
-    presenter.current = Some((pipeline, bind_group));
+    presenter.current = Some((pipeline, bind_group, frame.presentation));
 }
 
 fn encode_present(
@@ -195,7 +195,7 @@ fn encode_present(
         return;
     };
     let target = view.into_inner();
-    let Some((pipeline, bind_group)) = &presenter.current else {
+    let Some((pipeline, bind_group, rect)) = &presenter.current else {
         return;
     };
     // Taken as Bevy's output attachment, which marks the window's texture as drawn: Bevy only
@@ -212,6 +212,17 @@ fn encode_present(
         occlusion_query_set: None,
         multiview_mask: None,
     });
+    let size = target.main_texture().size();
+    let width = size.width as f32;
+    let height = size.height as f32;
+    let x = (rect[0] * width).round_ties_even().clamp(0.0, width);
+    let y = (rect[1] * height).round_ties_even().clamp(0.0, height);
+    let w = (rect[2] * width).min(width - x);
+    let h = (rect[3] * height).min(height - y);
+    if w <= 0.0 || h <= 0.0 {
+        return;
+    }
+    pass.set_viewport(x, y, w, h, 0.0, 1.0);
     pass.set_pipeline(pipeline);
     pass.set_bind_group(0, bind_group, &[]);
     pass.draw(0..3, 0..1);

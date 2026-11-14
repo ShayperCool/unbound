@@ -184,6 +184,8 @@ pub enum Command {
         screen_width: i32,
         screen_height: i32,
         color_space: i32,
+        /// The image rectangle within the host window, in normalized top-left coordinates.
+        presentation: [f32; 4],
     },
     /// The frame is complete: the screen is shown.
     EndFrame,
@@ -609,6 +611,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 screen_width: r.i32()?,
                 screen_height: r.i32()?,
                 color_space: r.i32()?,
+                presentation: [r.f32()?, r.f32()?, r.f32()?, r.f32()?],
             },
             op::END_FRAME => Command::EndFrame,
             op::SET_TARGET => Command::SetTarget {
@@ -1035,11 +1038,15 @@ impl Writer {
                 screen_width,
                 screen_height,
                 color_space,
+                presentation,
             } => {
                 self.bytes.push(op::BEGIN_FRAME);
                 self.u32(*screen_width as u32);
                 self.u32(*screen_height as u32);
                 self.u32(*color_space as u32);
+                for value in presentation {
+                    self.u32(value.to_bits());
+                }
             }
             Command::EndFrame => self.bytes.push(op::END_FRAME),
             Command::SetTarget {
@@ -1461,6 +1468,7 @@ mod tests {
                 screen_width: 960,
                 screen_height: 540,
                 color_space: 1,
+                presentation: [0.1, 0.0, 0.8, 1.0],
             },
             Command::SetTarget {
                 color: 0,
@@ -1883,7 +1891,7 @@ mod tests {
     /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts, 73 BatchRendererGroup indirect draws.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 77);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 78);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

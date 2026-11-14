@@ -216,6 +216,8 @@ namespace Unbound.Runtime
             I32(screenWidth);
             I32(screenHeight);
             I32(colorSpace == ColorSpace.Linear ? 1 : 0);
+            var presentation = Screen.NormalizedPresentationRect;
+            F32(presentation.x); F32(presentation.y); F32(presentation.width); F32(presentation.height);
         }
 
         /// <summary>A frame that does not draw on the screen (OnDemandRendering): the frame's sprite

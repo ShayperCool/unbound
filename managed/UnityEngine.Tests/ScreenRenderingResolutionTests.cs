@@ -63,6 +63,34 @@ namespace UnityEngine.Tests
             Assert.Equal(new Vector2(100, 60), Screen.RenderingToWindow(new Vector2(50, 30)));
         }
 
+        [Theory]
+        [InlineData(640, 360, 320, 320, 160, 20, 320, 320)]
+        [InlineData(360, 640, 640, 320, 0, 230, 360, 180)]
+        [InlineData(640, 360, 160, 90, 0, 0, 640, 360)]
+        [InlineData(640, 360, 1280, 720, 0, 0, 640, 360)]
+        [InlineData(641, 361, 320, 200, 160.5, 80.5, 320, 200)]
+        [InlineData(360, 640, 180, 640, 90, 0, 180, 640)]
+        [InlineData(1000, 600, 100, 100, 200, 0, 600, 600)]
+        public void PresentationAndInputUseTheSameCenteredRect(int ww, int wh, int rw, int rh,
+            float left, float top, float width, float height)
+        {
+            Screen.Update(ww, wh);
+            UnityEditor.PlayModeWindow.SetCustomRenderingResolution((uint)rw, (uint)rh, "test");
+            Screen.BeginRendering();
+            Assert.Equal(new Rect(left, top, width, height), Screen.PresentationRect);
+            // Borders must not be mistaken for points inside the rendered image.
+            float x = 0, y = 0;
+            Screen.WindowToRendering(ref x, ref y);
+            Assert.Equal(-left * rw / width, x);
+            Assert.Equal(-top * rh / height, y);
+            Assert.Equal(Vector2.zero, Screen.RenderingToWindow(new Vector2(x, y)));
+            var inside = Screen.RenderingToWindow(new Vector2(rw * 0.25f, rh * 0.75f));
+            x = inside.x; y = inside.y;
+            Screen.WindowToRendering(ref x, ref y);
+            Assert.Equal(rw * 0.25f, x);
+            Assert.Equal(rh * 0.75f, y);
+        }
+
         /// <summary>A screen read shorter than the rect asked for is refused (the screen has
         /// another size than the frame began with); an exact or empty one is read.</summary>
         [Theory]

@@ -124,6 +124,7 @@ const RANDOM_WRITE_TARGET: &str = "<RandomWriteTarget>";
 pub struct Presented {
     pub color: wgpu::TextureView,
     pub color_space: i32,
+    pub presentation: [f32; 4],
     /// The screen's rows are stored top-down (see `DeviceConventions::top_down`).
     pub top_down: bool,
     /// Changes with every frame (bind groups compare it).
@@ -616,6 +617,7 @@ pub struct UnityRenderer {
     pass_tags: Vec<String>,
     state: State,
     presented: Arc<Mutex<Option<Presented>>>,
+    presentation: [f32; 4],
     started: Instant,
     warned: HashSet<String>,
     /// Whether the instances an instance multiplier adds to mesh instancing were warned of
@@ -740,6 +742,7 @@ impl UnityRenderer {
                 draw_indices: None,
             },
             presented,
+            presentation: [0.0, 0.0, 1.0, 1.0],
             started: Instant::now(),
             warned: HashSet::default(),
             multiplied_instances_warned: false,
@@ -2776,9 +2779,11 @@ impl UnityRenderer {
                     screen_width,
                     screen_height,
                     color_space,
+                    presentation,
                 } => {
                     self.screen_size = (screen_width.max(1) as u32, screen_height.max(1) as u32);
                     self.color_space = color_space.clamp(0, 1);
+                    self.presentation = presentation;
                     self.screen_slot = (self.screen_slot + 1) % self.screens.len();
                     self.screen_touched = false;
                     self.frame_number += 1;
@@ -3613,6 +3618,7 @@ impl UnityRenderer {
             let screen = self.ensure_screen(slot).view(space).0.clone();
             *self.presented.lock().unwrap() = Some(Presented {
                 color: screen,
+                presentation: self.presentation,
                 color_space: self.color_space,
                 top_down: self.conventions.top_down(true),
                 frame: self.frame_number,
