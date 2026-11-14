@@ -129,7 +129,8 @@ def json_references(text):
     try:
         return list(suite_references(json.loads(text)))
     except json.JSONDecodeError as error:
-        lines = [line for line in text.splitlines() if line.strip()]
+        # Only \n ends a record: JSON strings may hold raw U+2028/U+2029.
+        lines = [line for line in text.split('\n') if line.strip()]
         if len(lines) < 2:
             raise
         found = []
@@ -167,7 +168,8 @@ def promoted_suite_paths(cache):
         for directory, directories, files in os.walk(root, followlinks=False, onerror=walk_error):
             for name in [*directories, *files]:
                 path = Path(directory)/name
-                # lstat raises on unreadable or vanished entries, unlike is_file().
+                # lstat raises on unreadable or vanished entries, unlike is_file(),
+                # so discovery stops and the next run retries.
                 mode = os.lstat(path).st_mode
                 if stat.S_ISLNK(mode):
                     protected.update((path, path.resolve()))

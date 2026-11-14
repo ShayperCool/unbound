@@ -529,7 +529,7 @@ class JanitorTests(unittest.TestCase):
         logs.mkdir(parents=True)
         (logs/'Output.log.json').write_text('')
         (logs/'Blank.log.json').write_text(' \n\n')
-        (logs/'Lines.log.json').write_text(json.dumps({'Message': 'a'})+'\n'+json.dumps({'artifact': str(logged)})+'\n')
+        (logs/'Lines.log.json').write_text(json.dumps({'Message': 'a\u2028b'}, ensure_ascii=False)+'\n'+json.dumps({'artifact': str(logged)})+'\n')
         nested = work/'probe/report.json'
         nested.mkdir(parents=True)
         (nested/'metadata.json').write_text(json.dumps({'artifact': str(declared)}))
@@ -571,6 +571,7 @@ class JanitorTests(unittest.TestCase):
             (work/'Output.log.json').write_text(json.dumps({'Message': 'a'})+'\n{"artifact": "'+str(declared)+'"\n')
         self.unreadable_suite_fails_closed(write, 'Extra data')
 
+    @unittest.skipIf(os.geteuid() == 0, 'root can search any directory')
     def test_promoted_suite_unreadable_json_stops_discovery(self):
         def write(work, declared):
             sealed = work/'sealed'
