@@ -63,9 +63,6 @@ namespace UnityEngine
                 realtimeLightmapIndex = terrain.realtimeLightmapIndex;
                 realtimeLightmapScaleOffset = terrain.realtimeLightmapScaleOffset;
                 m_RealtimeLightmapFromData = terrain.m_RealtimeLightmapFromData;
-                if (m_RealtimeLightmapFromData && BakedLighting.IsLightmapIndex(realtimeLightmapIndex))
-                    Unbound.Runtime.Stubs.Ignored("Terrain.realtimeLightmapIndex",
-                        "realtime GI terrain charts and dynamic lightmap textures are not supported yet; only baked lightmaps are drawn");
                 m_PropertyBlock = terrain.SplatProperties;
                 UpdateMaterials(terrain, data);
                 if (m_Passes.Length > 0)

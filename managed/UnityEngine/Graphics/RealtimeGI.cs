@@ -226,7 +226,6 @@ namespace UnityEngine
                         var offset = s.GetProperty("offset");
                         float atlas = loaded.Atlases[system.Atlas].width;
                         renderer.realtimeLightmapIndex = system.Atlas;
-                        renderer.m_RealtimeLightmapFromData = true;
                         renderer.realtimeLightmapScaleOffset = new Vector4(
                             inSystem.x * system.Width / atlas, inSystem.y * system.Height / atlas,
                             (inSystem.z * system.Width + offset[0].GetInt32()) / atlas,

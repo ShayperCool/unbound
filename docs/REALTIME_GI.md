@@ -967,10 +967,11 @@ it, as when a script sets one in a scene without realtime GI, draws as the Edito
 `unity_DynamicLightmap` decoded as above, and in a directional lightmaps mode the same texture as
 `unity_DynamicDirectionality` with `DIRLIGHTMAP_COMBINED`, beside its baked lightmap if it has one
 (tests/projects/terrainlightmaps cases 12 to 14, 19 and 29 to 35: terrains and mesh renderers,
-both color spaces, the NVIDIA OpenGL Core device only). An index the scene's realtime GI gives (its
-lighting data, or Unbound's own bake), and one at which a loaded scene's realtime GI has a
-lightmap, keep a realtime lightmap behind them; when Unbound has none for the renderer (its
-realtime GI not read or a system not drawn, each with a warning) it draws without one.
+both color spaces, the NVIDIA OpenGL Core device only). An index the scene's lighting data gives (until a
+script changes it), and one at which a loaded scene's realtime GI has a lightmap (Unbound's own
+bake included), keep a realtime lightmap behind them; when Unbound has none for the renderer
+(realtime GI off in the Lighting Settings or not read, a system not drawn, a terrain's realtime
+charts, a script's index at another renderer's atlas) it draws without one and says so once.
 
 ## Residuals
 
@@ -1054,7 +1055,7 @@ measure):
   one both the Editor and Unbound ran on.
 - Realtime lightmap indices of lighting data whose scene's Lighting Settings turn realtime GI
   off, and a script's index on a renderer of a scene with realtime GI that points at another
-  system's atlas: unmeasured (Unbound draws the baked part, and the renderer's own atlas).
+  system's atlas: unmeasured (Unbound draws without a realtime lightmap and warns).
 - Devices: drawn through Vulkan the material textures lack each chart's last corner texel, and
   the Editor's own Vulkan capture differs from its OpenGL Core one; no rule covers both yet
   ([Material inputs](#material-inputs)).

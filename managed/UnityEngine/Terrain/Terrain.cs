@@ -123,7 +123,16 @@ namespace UnityEngine
         public float splatmapDistance { get => basemapDistance; set => basemapDistance = value; }
 
         public int lightmapIndex { get => m_LightmapIndex; set => m_LightmapIndex = NormalizeLightmapIndex(value); }
-        public int realtimeLightmapIndex { get => m_RealtimeLightmapIndex; set => m_RealtimeLightmapIndex = NormalizeLightmapIndex(value); }
+        public int realtimeLightmapIndex
+        {
+            get => m_RealtimeLightmapIndex;
+            set
+            {
+                int index = NormalizeLightmapIndex(value);
+                if (index != m_RealtimeLightmapIndex) m_RealtimeLightmapFromData = false;
+                m_RealtimeLightmapIndex = index;
+            }
+        }
         /// <summary>Its realtime lightmap index came from its scene's lighting data (<see cref="Renderer.m_RealtimeLightmapFromData"/>).</summary>
         internal bool m_RealtimeLightmapFromData;
         // The native terrain stores 16-bit indices. 0xFFFE is the no-lightmap sentinel

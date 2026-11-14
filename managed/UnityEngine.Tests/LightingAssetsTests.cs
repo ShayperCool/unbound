@@ -661,6 +661,89 @@ LightingSettings:
             }
         }
 
+        /// <summary>Realtime lightmap indices with a realtime lightmap behind them that Unbound
+        /// has not made draw without one and say so once: an index the scene's lighting data gives
+        /// (until a script changes it), and one at which a loaded scene's realtime GI has an atlas
+        /// (Unbound's own bake gives its renderers such indices). Past the loaded atlases a
+        /// script's index draws grey.</summary>
+        [Fact]
+        public void RealtimeIndicesOfRealtimeGIDrawWithoutTheGreyLightmap()
+        {
+            const System.Reflection.BindingFlags Hidden = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var previous = LightmapSettings.lightmaps;
+            var mode = LightmapSettings.lightmapsMode;
+            var scenes = (System.Collections.IList)typeof(RealtimeGI).GetField("s_Scenes", Hidden).GetValue(null);
+            var type = typeof(RealtimeGI).GetNestedType("GIScene", Hidden);
+            var loaded = Activator.CreateInstance(type, true);
+            type.GetField("Atlases", Hidden).SetValue(loaded, new Texture2D[1]);
+            var go = new GameObject("Indexed");
+            int map = Shader.PropertyToID("unity_DynamicLightmap");
+            int Hits() => Unbound.Runtime.Stubs.HitReport().Where(h => h.Key == "Renderer.realtimeLightmapIndex").Select(h => h.Value).FirstOrDefault();
+            try
+            {
+                LightmapSettings.lightmaps = Array.Empty<LightmapData>();
+                var renderer = go.AddComponent<MeshRenderer>();
+                var file = new LoadedFile();
+                file.Objects[1] = renderer;
+                BakedLighting.Read(LightingData(Renderer(1, 3)), file);
+                LightmapSettings.lightmapsMode = LightmapsMode.NonDirectional;
+                Assert.Equal(3, renderer.realtimeLightmapIndex);
+                Assert.True(renderer.m_RealtimeLightmapFromData);
+                BakedLighting.s_WarnedUnmadeRealtimeLightmap = false;
+                int before = Hits();
+                var keywords = new List<string>();
+                var properties = BakedLighting.Apply(renderer, null, keywords, probes: false);
+                Assert.Empty(keywords);
+                Assert.True(properties == null || !properties.ContainsKey(map));
+                Assert.Equal(before + 1, Hits());
+                BakedLighting.Apply(renderer, null, new List<string>(), probes: false);
+                Assert.Equal(before + 1, Hits());
+
+                // A script's other index: none of the lighting data's; past every atlas, grey.
+                renderer.realtimeLightmapIndex = 3;
+                Assert.True(renderer.m_RealtimeLightmapFromData);
+                renderer.realtimeLightmapIndex = 4;
+                Assert.False(renderer.m_RealtimeLightmapFromData);
+                keywords.Clear();
+                properties = BakedLighting.Apply(renderer, null, keywords, probes: false);
+                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON" }, keywords);
+                Assert.Same(DefaultTextures.HalfGray, properties[map]);
+
+                // At a loaded scene's atlas (as Unbound's own bake gives them): without it.
+                scenes.Add(loaded);
+                renderer.realtimeLightmapIndex = 0;
+                keywords.Clear();
+                properties = BakedLighting.Apply(renderer, null, keywords, probes: false);
+                Assert.Empty(keywords);
+                renderer.realtimeLightmapIndex = 1;
+                keywords.Clear();
+                BakedLighting.Apply(renderer, null, keywords, probes: false);
+                Assert.Equal(new[] { "DYNAMICLIGHTMAP_ON" }, keywords);
+
+                // A terrain's index from lighting data, then a script's.
+                var terrain = new GameObject("Terrain").AddComponent<Terrain>();
+                try
+                {
+                    file.Objects[2] = terrain;
+                    BakedLighting.Read(LightingData(Renderer(2, 3)), file);
+                    Assert.True(terrain.m_RealtimeLightmapFromData);
+                    terrain.realtimeLightmapIndex = 5;
+                    Assert.False(terrain.m_RealtimeLightmapFromData);
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(terrain.gameObject);
+                }
+            }
+            finally
+            {
+                scenes.Remove(loaded);
+                UnityEngine.Object.DestroyImmediate(go);
+                LightmapSettings.lightmaps = previous;
+                LightmapSettings.lightmapsMode = mode;
+            }
+        }
+
         [Fact]
         public void TheDoctorChecksSettingsTogetherWithSceneLightingData()
         {

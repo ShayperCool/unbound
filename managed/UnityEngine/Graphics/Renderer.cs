@@ -199,7 +199,14 @@ namespace UnityEngine
         public int realtimeLightmapIndex
         {
             get { MainThreadCheck.Check("GetLightmapIndex"); return m_RealtimeLightmapIndex; }
-            set { MainThreadCheck.Check("SetLightmapIndex"); m_RealtimeLightmapIndex = value; Dirty(); }
+            set
+            {
+                MainThreadCheck.Check("SetLightmapIndex");
+                // Another index is a script's own: no realtime GI data stands behind it.
+                if (value != m_RealtimeLightmapIndex) m_RealtimeLightmapFromData = false;
+                m_RealtimeLightmapIndex = value;
+                Dirty();
+            }
         }
         Vector4 m_LightmapScaleOffset = new Vector4(1, 1, 0, 0);
         public Vector4 lightmapScaleOffset
@@ -213,9 +220,9 @@ namespace UnityEngine
         internal Texture2D m_RealtimeLightmap;
         /// <summary>That atlas's directionality, once a directional scene's update made it.</summary>
         internal Texture2D m_RealtimeDirectionality;
-        /// <summary>Its realtime lightmap index came from its scene's realtime GI (its lighting
-        /// data, or Unbound's own bake of it), so a realtime lightmap stands behind it even while
-        /// Unbound has none for it.</summary>
+        /// <summary>Its realtime lightmap index came from its scene's lighting data, so a realtime
+        /// lightmap stands behind it even while Unbound has none for it; cleared when the index
+        /// changes.</summary>
         internal bool m_RealtimeLightmapFromData;
         public Vector4 realtimeLightmapScaleOffset
         {

@@ -243,6 +243,7 @@ namespace UnityEngine
         static readonly object s_GammaRealtimeDecode = new Vector4(1f, 1f / 2.2f, 0f, 0f);
         static readonly int s_DynamicDirectionality = Shader.PropertyToID("unity_DynamicDirectionality");
         static Texture2D s_FlatDirection;
+        internal static bool s_WarnedUnmadeRealtimeLightmap;
 
         /// <summary>A directionality that leaves a lightmap's light as it is whatever the shaded
         /// normal: no direction (1/2 in each channel), and a rebalancing term of 1/2, the half
@@ -290,8 +291,14 @@ namespace UnityEngine
             // the scene's realtime GI gave or has a lightmap at, which Unbound did not produce
             // for this renderer, keeps the fallback without it.
             bool indexed = lightmaps && IsLightmapIndex(renderer.realtimeLightmapIndex);
-            bool absent = indexed && renderer.m_RealtimeLightmap == null && !renderer.m_RealtimeLightmapFromData
-                && !RealtimeGI.HasRealtimeLightmap(renderer.realtimeLightmapIndex);
+            bool unmade = indexed && renderer.m_RealtimeLightmap == null;
+            bool absent = unmade && !renderer.m_RealtimeLightmapFromData && !RealtimeGI.HasRealtimeLightmap(renderer.realtimeLightmapIndex);
+            if (unmade && !absent && !s_WarnedUnmadeRealtimeLightmap)
+            {
+                s_WarnedUnmadeRealtimeLightmap = true;
+                Unbound.Runtime.Stubs.Ignored("Renderer.realtimeLightmapIndex",
+                    "points at a realtime lightmap Unbound has not made (realtime GI off in the scene's Lighting Settings or not read, a system not drawn, a terrain's realtime charts, or a script's index at another renderer's atlas): drawn without it");
+            }
             bool realtime = indexed && (renderer.m_RealtimeLightmap != null || absent);
             bool directional = LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional;
             bool realtimeDirectional = realtime && directional && (renderer.m_RealtimeDirectionality != null || absent);
