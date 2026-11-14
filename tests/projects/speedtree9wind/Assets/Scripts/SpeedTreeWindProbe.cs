@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// Records the SpeedTree 9 wind constants trees draw with, frame by frame, while wind zones come,
@@ -33,18 +34,20 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
     static readonly int[] k_Recorded =
     {
         1, 2, 10, 11, 12, 13, 15, 20, 30, 45, 51, 52, 55, 70, 76, 77, 80, 90, 100,
-        106, 107, 115, 121, 125, 131, 132, 140, 160, 200, 201,
+        106, 107, 115, 121, 125, 131, 132, 140, 160, 200, 201, 250, 300, 330, 340,
+        341, 345, 351, 355, 361, 362, 370, 400, 401, 402, 410, 420,
     };
-    const int LastFrame = 201;
+    const int LastFrame = 420;
 
     readonly StringBuilder m_Out = new StringBuilder();
-    /// <summary>Each tree's camera and how many constants it records: a renderer without
-    /// per-object motion vectors gets no SpeedTreeWindHistory binding (the buffer holds whatever
-    /// an earlier draw left), so only its 11 current constants are recorded.</summary>
-    readonly List<(string Name, Camera Camera, int Count)> m_Trees = new List<(string, Camera, int)>();
+    /// <summary>Each tree's camera and the constants it records: a renderer without per-object
+    /// motion vectors gets no SpeedTreeWindHistory binding (the buffer holds whatever an earlier
+    /// draw left), so only its 11 current constants; and a wind part its asset turns off is never
+    /// written (its constants hold whatever the memory held), so not those.</summary>
+    readonly List<(string Name, Camera Camera, bool[] Recorded)> m_Trees = new List<(string, Camera, bool[])>();
     RenderTexture m_Target;
     Texture2D m_Read;
-    WindZone m_A, m_B, m_Sphere;
+    WindZone m_A, m_B, m_Sphere, m_Still, m_Again;
     int m_Frame;
     bool m_Failed;
 
@@ -71,7 +74,8 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
             // The same asset turned and scaled, drawing per-object motion vectors (the history constants).
             Tree("GustyB", gusty, dump, 30, new Vector3(200f, 0f, 0f), Quaternion.Euler(0f, 40f, 0f), new Vector3(1.5f, 1.5f, 1.5f),
                 MotionVectorGenerationMode.Object);
-            Tree("Calm", calm, dump, 31, new Vector3(300f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object);
+            // Calm has no first branch level (constants 5 and 6).
+            Tree("Calm", calm, dump, 31, new Vector3(300f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object, 5, 6);
 
             Rec("hasSpeedTreeWind/level0", gusty.transform.GetChild(0).GetComponent<Tree>().hasSpeedTreeWind ? "true" : "false");
             Rec("hasSpeedTreeWind/level1", gusty.transform.GetChild(1).GetComponent<Tree>().hasSpeedTreeWind ? "true" : "false");
@@ -87,8 +91,15 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
     /// <summary>A copy of the asset's first level drawing a quad with the dump material on a
     /// layer of its own, and an orthographic camera that sees only it.</summary>
     void Tree(string name, GameObject prefab, Material material, int layer, Vector3 at, Quaternion rotation, Vector3 scale,
-        MotionVectorGenerationMode motion)
+        MotionVectorGenerationMode motion, params int[] partsOff)
     {
+        var recorded = new bool[k_Names.Length];
+        for (int i = 0; i < recorded.Length; i++) recorded[i] = motion == MotionVectorGenerationMode.Object || i < k_Names.Length / 2;
+        foreach (int i in partsOff)
+        {
+            recorded[i] = false;
+            recorded[i + k_Names.Length / 2] = false;
+        }
         var copy = Instantiate(prefab.transform.GetChild(0).gameObject, at, rotation);
         copy.name = name;
         copy.layer = layer;
@@ -112,7 +123,7 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         camera.backgroundColor = Color.clear;
         camera.targetTexture = m_Target;
         camera.enabled = false;
-        m_Trees.Add((name, camera, motion == MotionVectorGenerationMode.Object ? k_Names.Length : k_Names.Length / 2));
+        m_Trees.Add((name, camera, recorded));
     }
 
     void Update()
@@ -138,6 +149,25 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
             m_B.gameObject.SetActive(false);
             m_Sphere.gameObject.SetActive(false);
         }
+        // The winds have settled by then: a spherical zone alone, then a directional zone without
+        // wind, then a wind again.
+        if (m_Frame == 340) m_Sphere.gameObject.SetActive(true);
+        if (m_Frame == 350)
+        {
+            m_Sphere.gameObject.SetActive(false);
+            m_Still = Zone("Still", null, WindZoneMode.Directional, 0f, Quaternion.Euler(0f, 90f, 0f), Vector3.zero);
+        }
+        if (m_Frame == 360)
+        {
+            m_Still.gameObject.SetActive(false);
+            m_Again = Zone("Again", null, WindZoneMode.Directional, 0.5f, Quaternion.Euler(0f, -45f, 0f), Vector3.zero);
+        }
+        // The same wind drawn through the built-in render pipeline.
+        if (m_Frame == 400)
+        {
+            GraphicsSettings.defaultRenderPipeline = null;
+            QualitySettings.renderPipeline = null;
+        }
     }
 
     static WindZone Zone(string name, Transform parent, WindZoneMode mode, float main, Quaternion rotation, Vector3 position)
@@ -162,8 +192,12 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         }
         bool record = Array.IndexOf(k_Recorded, m_Frame) >= 0;
         string frame = "f" + m_Frame.ToString("000");
-        if (record) Rec(frame + "/time", F(Time.time));
-        foreach (var (name, camera, count) in m_Trees)
+        if (record)
+        {
+            Rec(frame + "/time", F(Time.time));
+            Rec(frame + "/pipeline", GraphicsSettings.currentRenderPipeline == null ? "builtin" : GraphicsSettings.currentRenderPipeline.GetType().Name);
+        }
+        foreach (var (name, camera, recordedConstants) in m_Trees)
         {
             camera.Render();
             if (!record) continue;
@@ -172,8 +206,9 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
             m_Read.ReadPixels(new Rect(0, 0, 22, 1), 0, 0);
             m_Read.Apply();
             RenderTexture.active = previous;
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < k_Names.Length; i++)
             {
+                if (!recordedConstants[i]) continue;
                 var c = m_Read.GetPixel(i, 0);
                 Rec(frame + "/" + name + "/" + k_Names[i], F(c.r) + " " + F(c.g) + " " + F(c.b) + " " + F(c.a));
             }

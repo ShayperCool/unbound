@@ -15,15 +15,20 @@ frame. `GustyA` draws camera motion vectors, `GustyB` (the same asset, turned an
 `Calm` per-object motion vectors. The scene has no wind at first; then a directional zone comes
 (frame 10), its main wind rises above 1 (50), it turns around (75), a second directional zone
 under a mirrored, turned parent comes (105), a spherical zone far from every tree comes (120),
-and all zones go (130). At 30 frames between 1 and 201 the probe records Time.time and each
+and all zones go (130); once the winds have settled the spherical zone comes back alone (340),
+then a directional zone without wind (350), then a directional wind again (360); from frame 400
+the same wind is drawn through the built-in render pipeline. At 42 frames between 1 and 420 the
+probe records Time.time, the pipeline and each
 tree's constants (floats as the hex of their bits; values compare exactly), and once each
 `Tree.hasSpeedTreeWind` of the asset's two levels and of an added Tree.
 
 Measured in the Unity 6000.0.71f1 Editor (two identical captures, OpenGL Core, NVIDIA driver): the
 Editor binds the constants as constant buffers per tree (a renderer's property block shows no
 wind vectors); `SpeedTreeWindHistory` only for a renderer drawing per-object motion vectors (for
-`GustyA` it holds what an earlier draw left, so its history is not recorded). Spherical zones
-whose radius reaches a tree, and the built-in render pipeline, are not covered.
+`GustyA` it holds what an earlier draw left, so its history is not recorded); the constants of a
+wind part the asset turns off are never written (they held other memory in a built-in pipeline
+capture), so `Calm`'s first branch level is not recorded. Spherical zones whose radius reaches a
+tree are not covered.
 
     python3 tests/projects/speedtree9wind/make_trees.py              # rewrite the trees
     python3 tests/projects/speedtree9wind/run.py record --label A     # Editor capture (GPU)
