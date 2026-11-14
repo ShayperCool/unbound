@@ -282,6 +282,10 @@ namespace UnityEngine.Tests
             info.Supported.Add(true);
             Assert.Equal(1, FrameBuilder.DeferredPass(material));
             Assert.True(info.HasPassFor(new List<string> { "Deferred" }));
+            material.SetShaderPassEnabled("ForwardAdd", false);
+            Assert.Equal(new[] { 1 }, FrameBuilder.TaggedPasses(material, info, new List<string> { "Deferred" }));
+            Assert.Equal(new[] { 1 }, FrameBuilder.TaggedPasses(material, info, new List<string> { "Deferred" }, includeDisabled: true));
+
         }
 
         /// <summary>When the limit leaves no SubShader in reach, the names are those of the

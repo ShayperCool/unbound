@@ -928,7 +928,7 @@ namespace Unbound.Runtime
         /// <summary>The passes a renderer list draws of a material: per LightMode of the list in
         /// order, the first pass with it, unless the material disables that LightMode (and
         /// <paramref name="includeDisabled"/> is false).</summary>
-        static List<int> TaggedPasses(Material material, ShaderPassInfo info, List<string> lightModes, bool includeDisabled = false)
+        internal static List<int> TaggedPasses(Material material, ShaderPassInfo info, List<string> lightModes, bool includeDisabled = false)
         {
             s_TaggedScratch.Clear();
             foreach (var mode in lightModes)
@@ -936,7 +936,7 @@ namespace Unbound.Runtime
                 if (!includeDisabled && material.PassDisabled(mode)) continue;
                 for (int p = 0; p < info.Passes.Count; p++)
                 {
-                    if (info.LightMode(p) != mode) continue;
+                    if (!info.CanDraw(p) || info.LightMode(p) != mode) continue;
                     if (!s_TaggedScratch.Contains(p)) s_TaggedScratch.Add(p);
                     break;
                 }

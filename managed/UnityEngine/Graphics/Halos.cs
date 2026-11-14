@@ -16,7 +16,7 @@ namespace Unbound.Runtime
     /// BeforeHaloAndLensFlares hides the halos (not the flares); empty buffers and buffers setting a
     /// global float do not (see <see cref="HalosHidden"/>).</item>
     /// <item>A halo is a square fan of eight triangles in view space,
-    /// half as wide as the halo's size (a Halo component's size, a light's range times
+    /// with half side equal to the halo's size (a Halo component's size, a light's range times
     /// <c>RenderSettings.haloStrength</c>), its center vertex 0.333 of that size nearer the
     /// camera, sampling <c>_HaloFalloff</c>: the scene's halo texture, else a 64x64 alpha texture
     /// of <c>1 - r²</c>.</item>
