@@ -520,6 +520,42 @@ class JanitorTests(unittest.TestCase):
             self.assertTrue(self.j.remove(unpromoted, kind='task'))
         self.assertTrue((linked/'output').exists())
 
+    def test_promoted_suite_empty_json_and_json_named_directories(self):
+        work = self.directory('q1/sheriff-S20-example')
+        declared = self.directory('q1/nested-output')
+        unpromoted = self.directory('q1/sheriff-S21-unpromoted')
+        logs = work/'project/Library/Unbound/ProjectView/Logs'
+        logs.mkdir(parents=True)
+        (logs/'Output.log.json').write_text('')
+        nested = work/'probe/report.json'
+        nested.mkdir(parents=True)
+        (nested/'metadata.json').write_text(json.dumps({'artifact': str(declared)}))
+        self.promote_fixture(work)
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            candidates = {path for path, _, _ in self.j.candidates()}
+            self.assertNotIn(work, candidates)
+            self.assertNotIn(declared, candidates)
+            self.j.apply = True
+            self.assertFalse(self.j.remove(declared, kind='task'))
+            self.assertIn(unpromoted, candidates)
+
+    def test_promoted_suite_truncated_json_stops_discovery(self):
+        work = self.directory('q1/sheriff-S20-example')
+        declared = self.directory('q1/json-output')
+        (work/'report.json').write_text('{"artifact": "'+str(declared)+'"')
+        self.promote_fixture(work)
+        with patch.object(janitor.time, 'time', return_value=self.future), self.guards():
+            code = janitor.main(['--repo', str(self.repo), '--apply'])
+        self.assertEqual(code, 1)
+        logs = list((self.cache/'agents/janitor').glob('*.jsonl'))
+        rows = [json.loads(line) for line in logs[0].read_text().splitlines()]
+        self.assertIn('Expecting', next(row for row in rows if row['action'] == 'error')['error'])
+        self.assertTrue(rows[-1]['failed'])
+        self.assertEqual(rows[-1]['removals'], 0)
+        self.assertTrue(declared.exists())
+
     def test_late_promotion_and_metadata_edit_protect_new_references(self):
         work = self.directory('q1/sheriff-S20-example')
         first = self.directory('q1/first')

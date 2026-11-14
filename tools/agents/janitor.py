@@ -148,8 +148,16 @@ def promoted_suite_paths(cache):
                 path = Path(directory)/name
                 if path.is_symlink():
                     protected.update((path, path.resolve()))
+                elif not path.is_file():
+                    # Directories named *.json (report.json/) are walked themselves;
+                    # FIFOs, sockets and files removed meanwhile hold no references.
+                    continue
                 elif path.suffix == '.json':
-                    protected.update(suite_references(json.loads(path.read_text())))
+                    text = path.read_text()
+                    # An empty file (e.g. an empty engine log named *.json) names nothing.
+                    # Any other unparsable file stops discovery: its references are unknown.
+                    if text.strip():
+                        protected.update(suite_references(json.loads(text)))
                 elif path.suffix == '.log':
                     # Stream full logs: drivers can print output paths that are
                     # implicit in their command's label rather than arguments.
