@@ -7942,12 +7942,9 @@ namespace UnityEditor
         public int Position { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorElementUpdater.Position"); return default; } }
         public int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorElementUpdater.Count"); return default; } }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class EditorExtensionMethods
+    unsafe static partial class EditorExtensionMethods
     {
         [global::Unbound.Stub] internal static bool MainActionKeyForControl(this global::UnityEngine.Event evt, int controlId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorExtensionMethods.MainActionKeyForControl"); return default; }
-        [global::Unbound.Stub] internal static bool IsArrayOrList(this global::System.Type listType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorExtensionMethods.IsArrayOrList"); return default; }
-        [global::Unbound.Stub] internal static global::System.Type GetArrayOrListElementType(this global::System.Type listType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorExtensionMethods.GetArrayOrListElementType"); return default; }
         [global::Unbound.Stub] internal static global::System.Collections.Generic.List<global::System.Enum> EnumGetNonObsoleteValues(this global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorExtensionMethods.EnumGetNonObsoleteValues"); return new global::System.Collections.Generic.List<global::System.Enum>(); }
     }
     [global::System.Flags]
@@ -13054,31 +13051,12 @@ namespace UnityEditor
         bool animationIsEditable { get; }
         int id { get; }
     }
-    internal unsafe partial interface IStructuralComparable
-    {
-        int CompareTo(object other, global::System.Collections.IComparer comparer);
-    }
-    internal unsafe partial interface IStructuralEquatable
-    {
-        bool Equals(object other, global::System.Collections.IEqualityComparer comparer);
-        int GetHashCode(global::System.Collections.IEqualityComparer comparer);
-    }
     internal unsafe partial interface IToolModeOwner
     {
         int GetInstanceID();
         global::UnityEngine.Bounds GetWorldBoundsOfTargets();
         bool ModeSurvivesSelectionChange(int toolMode);
         bool areToolModesAvailable { get; }
-    }
-    internal unsafe partial interface ITuple
-    {
-        int Length { get; }
-        object this[int p0] { get; }
-    }
-    internal unsafe partial interface ITupleInternal : global::UnityEditor.ITuple
-    {
-        string ToString(global::System.Text.StringBuilder sb);
-        int GetHashCode(global::System.Collections.IEqualityComparer comparer);
     }
     internal unsafe partial interface IUIPlatformProperties : global::UnityEditor.IPlatformProperties
     {
@@ -26380,196 +26358,15 @@ namespace UnityEditor
         [global::Unbound.Stub] public override void OnSceneViewGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TriggerModuleUI.OnSceneViewGUI"); }
         [global::Unbound.Stub] public override void UpdateCullingSupportedString(ref string text) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TriggerModuleUI.UpdateCullingSupportedString"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class Tuple
+    unsafe static partial class Tuple
     {
-        [global::Unbound.Stub] public static global::UnityEditor.Tuple<T1> Create<T1>(T1 item1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.Create"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Tuple<T1, T2> Create<T1, T2>(T1 item1, T2 item2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.Create"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Tuple<T1, T2, T3> Create<T1, T2, T3>(T1 item1, T2 item2, T3 item3) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.Create"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Tuple<T1, T2, T3, T4> Create<T1, T2, T3, T4>(T1 item1, T2 item2, T3 item3, T4 item4) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.Create"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Tuple<T1, T2, T3, T4, T5> Create<T1, T2, T3, T4, T5>(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.Create"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Tuple<T1, T2, T3, T4, T5, T6> Create<T1, T2, T3, T4, T5, T6>(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.Create"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7> Create<T1, T2, T3, T4, T5, T6, T7>(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.Create"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, global::UnityEditor.Tuple<T8>> Create<T1, T2, T3, T4, T5, T6, T7, T8>(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.Create"); return default; }
-        [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
         [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2, int h3) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
         [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2, int h3, int h4) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
         [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2, int h3, int h4, int h5) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
         [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2, int h3, int h4, int h5, int h6) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
         [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2, int h3, int h4, int h5, int h6, int h7) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
         [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2, int h3, int h4, int h5, int h6, int h7, int h8) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class Tuple<T1> : global::UnityEditor.IStructuralEquatable, global::UnityEditor.IStructuralComparable, global::System.IComparable, global::UnityEditor.ITupleInternal, global::UnityEditor.ITuple
-    {
-        [global::Unbound.Stub] public Tuple(T1 item1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.Equals"); return default; }
-        [global::Unbound.Stub] bool global::UnityEditor.IStructuralEquatable.Equals(object other, global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.Equals"); return default; }
-        [global::Unbound.Stub] int global::System.IComparable.CompareTo(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.CompareTo"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralComparable.CompareTo(object other, global::System.Collections.IComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.CompareTo"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralEquatable.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.ITupleInternal.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.ToString"); return default; }
-        [global::Unbound.Stub] string global::UnityEditor.ITupleInternal.ToString(global::System.Text.StringBuilder sb) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.ToString"); return default; }
-        int global::UnityEditor.ITuple.Length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.Length"); return default; } }
-        object global::UnityEditor.ITuple.this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.this[]"); return default; } }
-        public T1 Item1 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1>.Item1"); return default; } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class Tuple<T1, T2> : global::UnityEditor.IStructuralEquatable, global::UnityEditor.IStructuralComparable, global::System.IComparable, global::UnityEditor.ITupleInternal, global::UnityEditor.ITuple
-    {
-        [global::Unbound.Stub] public Tuple(T1 item1, T2 item2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.Equals"); return default; }
-        [global::Unbound.Stub] bool global::UnityEditor.IStructuralEquatable.Equals(object other, global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.Equals"); return default; }
-        [global::Unbound.Stub] int global::System.IComparable.CompareTo(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.CompareTo"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralComparable.CompareTo(object other, global::System.Collections.IComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.CompareTo"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralEquatable.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.ITupleInternal.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.ToString"); return default; }
-        [global::Unbound.Stub] string global::UnityEditor.ITupleInternal.ToString(global::System.Text.StringBuilder sb) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.ToString"); return default; }
-        int global::UnityEditor.ITuple.Length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.Length"); return default; } }
-        object global::UnityEditor.ITuple.this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.this[]"); return default; } }
-        public T1 Item1 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.Item1"); return default; } }
-        public T2 Item2 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2>.Item2"); return default; } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class Tuple<T1, T2, T3> : global::UnityEditor.IStructuralEquatable, global::UnityEditor.IStructuralComparable, global::System.IComparable, global::UnityEditor.ITupleInternal, global::UnityEditor.ITuple
-    {
-        [global::Unbound.Stub] public Tuple(T1 item1, T2 item2, T3 item3) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.Equals"); return default; }
-        [global::Unbound.Stub] bool global::UnityEditor.IStructuralEquatable.Equals(object other, global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.Equals"); return default; }
-        [global::Unbound.Stub] int global::System.IComparable.CompareTo(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.CompareTo"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralComparable.CompareTo(object other, global::System.Collections.IComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.CompareTo"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralEquatable.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.ITupleInternal.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.ToString"); return default; }
-        [global::Unbound.Stub] string global::UnityEditor.ITupleInternal.ToString(global::System.Text.StringBuilder sb) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.ToString"); return default; }
-        int global::UnityEditor.ITuple.Length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.Length"); return default; } }
-        object global::UnityEditor.ITuple.this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.this[]"); return default; } }
-        public T1 Item1 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.Item1"); return default; } }
-        public T2 Item2 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.Item2"); return default; } }
-        public T3 Item3 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3>.Item3"); return default; } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class Tuple<T1, T2, T3, T4> : global::UnityEditor.IStructuralEquatable, global::UnityEditor.IStructuralComparable, global::System.IComparable, global::UnityEditor.ITupleInternal, global::UnityEditor.ITuple
-    {
-        [global::Unbound.Stub] public Tuple(T1 item1, T2 item2, T3 item3, T4 item4) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.Equals"); return default; }
-        [global::Unbound.Stub] bool global::UnityEditor.IStructuralEquatable.Equals(object other, global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.Equals"); return default; }
-        [global::Unbound.Stub] int global::System.IComparable.CompareTo(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.CompareTo"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralComparable.CompareTo(object other, global::System.Collections.IComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.CompareTo"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralEquatable.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.ITupleInternal.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.ToString"); return default; }
-        [global::Unbound.Stub] string global::UnityEditor.ITupleInternal.ToString(global::System.Text.StringBuilder sb) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.ToString"); return default; }
-        int global::UnityEditor.ITuple.Length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.Length"); return default; } }
-        object global::UnityEditor.ITuple.this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.this[]"); return default; } }
-        public T1 Item1 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.Item1"); return default; } }
-        public T2 Item2 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.Item2"); return default; } }
-        public T3 Item3 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.Item3"); return default; } }
-        public T4 Item4 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4>.Item4"); return default; } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class Tuple<T1, T2, T3, T4, T5> : global::UnityEditor.IStructuralEquatable, global::UnityEditor.IStructuralComparable, global::System.IComparable, global::UnityEditor.ITupleInternal, global::UnityEditor.ITuple
-    {
-        [global::Unbound.Stub] public Tuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.Equals"); return default; }
-        [global::Unbound.Stub] bool global::UnityEditor.IStructuralEquatable.Equals(object other, global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.Equals"); return default; }
-        [global::Unbound.Stub] int global::System.IComparable.CompareTo(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.CompareTo"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralComparable.CompareTo(object other, global::System.Collections.IComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.CompareTo"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralEquatable.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.ITupleInternal.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.ToString"); return default; }
-        [global::Unbound.Stub] string global::UnityEditor.ITupleInternal.ToString(global::System.Text.StringBuilder sb) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.ToString"); return default; }
-        int global::UnityEditor.ITuple.Length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.Length"); return default; } }
-        object global::UnityEditor.ITuple.this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.this[]"); return default; } }
-        public T1 Item1 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.Item1"); return default; } }
-        public T2 Item2 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.Item2"); return default; } }
-        public T3 Item3 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.Item3"); return default; } }
-        public T4 Item4 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.Item4"); return default; } }
-        public T5 Item5 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5>.Item5"); return default; } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class Tuple<T1, T2, T3, T4, T5, T6> : global::UnityEditor.IStructuralEquatable, global::UnityEditor.IStructuralComparable, global::System.IComparable, global::UnityEditor.ITupleInternal, global::UnityEditor.ITuple
-    {
-        [global::Unbound.Stub] public Tuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.Equals"); return default; }
-        [global::Unbound.Stub] bool global::UnityEditor.IStructuralEquatable.Equals(object other, global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.Equals"); return default; }
-        [global::Unbound.Stub] int global::System.IComparable.CompareTo(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.CompareTo"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralComparable.CompareTo(object other, global::System.Collections.IComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.CompareTo"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralEquatable.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.ITupleInternal.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.ToString"); return default; }
-        [global::Unbound.Stub] string global::UnityEditor.ITupleInternal.ToString(global::System.Text.StringBuilder sb) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.ToString"); return default; }
-        int global::UnityEditor.ITuple.Length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.Length"); return default; } }
-        object global::UnityEditor.ITuple.this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.this[]"); return default; } }
-        public T1 Item1 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.Item1"); return default; } }
-        public T2 Item2 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.Item2"); return default; } }
-        public T3 Item3 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.Item3"); return default; } }
-        public T4 Item4 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.Item4"); return default; } }
-        public T5 Item5 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.Item5"); return default; } }
-        public T6 Item6 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6>.Item6"); return default; } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class Tuple<T1, T2, T3, T4, T5, T6, T7> : global::UnityEditor.IStructuralEquatable, global::UnityEditor.IStructuralComparable, global::System.IComparable, global::UnityEditor.ITupleInternal, global::UnityEditor.ITuple
-    {
-        [global::Unbound.Stub] public Tuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.Equals"); return default; }
-        [global::Unbound.Stub] bool global::UnityEditor.IStructuralEquatable.Equals(object other, global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.Equals"); return default; }
-        [global::Unbound.Stub] int global::System.IComparable.CompareTo(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.CompareTo"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralComparable.CompareTo(object other, global::System.Collections.IComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.CompareTo"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralEquatable.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.ITupleInternal.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.ToString"); return default; }
-        [global::Unbound.Stub] string global::UnityEditor.ITupleInternal.ToString(global::System.Text.StringBuilder sb) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.ToString"); return default; }
-        int global::UnityEditor.ITuple.Length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.Length"); return default; } }
-        object global::UnityEditor.ITuple.this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.this[]"); return default; } }
-        public T1 Item1 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.Item1"); return default; } }
-        public T2 Item2 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.Item2"); return default; } }
-        public T3 Item3 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.Item3"); return default; } }
-        public T4 Item4 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.Item4"); return default; } }
-        public T5 Item5 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.Item5"); return default; } }
-        public T6 Item6 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.Item6"); return default; } }
-        public T7 Item7 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7>.Item7"); return default; } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class Tuple<T1, T2, T3, T4, T5, T6, T7, TRest> : global::UnityEditor.IStructuralEquatable, global::UnityEditor.IStructuralComparable, global::System.IComparable, global::UnityEditor.ITupleInternal, global::UnityEditor.ITuple
-    {
-        [global::Unbound.Stub] public Tuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, TRest rest) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.ctor"); }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Equals"); return default; }
-        [global::Unbound.Stub] bool global::UnityEditor.IStructuralEquatable.Equals(object other, global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Equals"); return default; }
-        [global::Unbound.Stub] int global::System.IComparable.CompareTo(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.CompareTo"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralComparable.CompareTo(object other, global::System.Collections.IComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.CompareTo"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.IStructuralEquatable.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.GetHashCode"); return default; }
-        [global::Unbound.Stub] int global::UnityEditor.ITupleInternal.GetHashCode(global::System.Collections.IEqualityComparer comparer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.ToString"); return default; }
-        [global::Unbound.Stub] string global::UnityEditor.ITupleInternal.ToString(global::System.Text.StringBuilder sb) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.ToString"); return default; }
-        int global::UnityEditor.ITuple.Length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Length"); return default; } }
-        object global::UnityEditor.ITuple.this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.this[]"); return default; } }
-        public T1 Item1 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Item1"); return default; } }
-        public T2 Item2 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Item2"); return default; } }
-        public T3 Item3 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Item3"); return default; } }
-        public T4 Item4 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Item4"); return default; } }
-        public T5 Item5 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Item5"); return default; } }
-        public T6 Item6 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Item6"); return default; } }
-        public T7 Item7 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Item7"); return default; } }
-        public TRest Rest { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, TRest>.Rest"); return default; } }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
