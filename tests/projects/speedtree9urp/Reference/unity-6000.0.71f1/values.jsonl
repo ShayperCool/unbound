@@ -1,0 +1,279 @@
+{"k":"pipeline","v":"UniversalRenderPipelineAsset"}
+{"k":"colorSpace","v":"Linear"}
+{"k":"Full/renderer/LOD0","v":"Bark,Leaves"}
+{"k":"Full/renderer/LOD1","v":"Bark,Leaves"}
+{"k":"Full/renderer/LOD2","v":"Bark"}
+{"k":"Full/renderer/LOD3","v":"Billboard"}
+{"k":"Full/material/Bark","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2000 instancing True doubleSidedGI False flags BakedEmissive"}
+{"k":"Full/material/Bark/keywords","v":""}
+{"k":"Full/material/Bark/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Full/material/Bark/tags","v":"RenderType= Queue="}
+{"k":"Full/material/Bark/rawQueue","v":"-1"}
+{"k":"Full/material/Bark/prop/_MainTex","v":"Bark_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Bark/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/material/Bark/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"Full/material/Bark/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"Full/material/Bark/prop/_NormalMapKwToggle","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_NormalMap","v":"Bark_Normal 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Bark/prop/EFFECT_EXTRA_TEX","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_ExtraTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Bark/prop/_Glossiness","v":"3f000000"}
+{"k":"Full/material/Bark/prop/_Metallic","v":"00000000"}
+{"k":"Full/material/Bark/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Full/material/Bark/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Full/material/Bark/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/material/Bark/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Bark/prop/_AlphaClipThreshold","v":"3dcccccd"}
+{"k":"Full/material/Bark/prop/Backface_Normal_Mode","v":"00000000"}
+{"k":"Full/material/Bark/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Full/material/Bark/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_WIND_BRANCH1","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_WIND_BRANCH2","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_WIND_SHIMMER","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_WIND_RIPPLE","v":"3f800000"}
+{"k":"Full/material/Bark/prop/_QueueOffset","v":"00000000"}
+{"k":"Full/material/Bark/prop/_QueueControl","v":"00000000"}
+{"k":"Full/material/Bark/prop/unity_Lightmaps","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Bark/prop/unity_LightmapsInd","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Bark/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Billboard","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2000 instancing True doubleSidedGI False flags BakedEmissive"}
+{"k":"Full/material/Billboard/keywords","v":"_BILLBOARD"}
+{"k":"Full/material/Billboard/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Full/material/Billboard/tags","v":"RenderType= Queue="}
+{"k":"Full/material/Billboard/rawQueue","v":"-1"}
+{"k":"Full/material/Billboard/prop/_MainTex","v":"Billboard_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Billboard/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/material/Billboard/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"Full/material/Billboard/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_NormalMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Billboard/prop/EFFECT_EXTRA_TEX","v":"3f800000"}
+{"k":"Full/material/Billboard/prop/_ExtraTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Billboard/prop/_Glossiness","v":"3f000000"}
+{"k":"Full/material/Billboard/prop/_Metallic","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Full/material/Billboard/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/material/Billboard/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Billboard/prop/_AlphaClipThreshold","v":"3dcccccd"}
+{"k":"Full/material/Billboard/prop/Backface_Normal_Mode","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_BillboardKwToggle","v":"3f800000"}
+{"k":"Full/material/Billboard/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Full/material/Billboard/prop/_WIND_BRANCH1","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_WIND_RIPPLE","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_QueueOffset","v":"00000000"}
+{"k":"Full/material/Billboard/prop/_QueueControl","v":"00000000"}
+{"k":"Full/material/Billboard/prop/unity_Lightmaps","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Billboard/prop/unity_LightmapsInd","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Billboard/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Leaves","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2000 instancing True doubleSidedGI True flags BakedEmissive"}
+{"k":"Full/material/Leaves/keywords","v":""}
+{"k":"Full/material/Leaves/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Full/material/Leaves/tags","v":"RenderType= Queue="}
+{"k":"Full/material/Leaves/rawQueue","v":"-1"}
+{"k":"Full/material/Leaves/prop/_MainTex","v":"Leaf_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Leaves/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/material/Leaves/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"Full/material/Leaves/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"Full/material/Leaves/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Full/material/Leaves/prop/_NormalMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Leaves/prop/EFFECT_EXTRA_TEX","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_ExtraTex","v":"Leaf_Extra 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Leaves/prop/_Glossiness","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_Metallic","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Full/material/Leaves/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Full/material/Leaves/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Full/material/Leaves/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Leaves/prop/_AlphaClipThreshold","v":"3dcccccd"}
+{"k":"Full/material/Leaves/prop/Backface_Normal_Mode","v":"00000000"}
+{"k":"Full/material/Leaves/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Full/material/Leaves/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_WIND_BRANCH1","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_WIND_BRANCH2","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_WIND_SHIMMER","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_WIND_RIPPLE","v":"3f800000"}
+{"k":"Full/material/Leaves/prop/_QueueOffset","v":"00000000"}
+{"k":"Full/material/Leaves/prop/_QueueControl","v":"00000000"}
+{"k":"Full/material/Leaves/prop/unity_Lightmaps","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Leaves/prop/unity_LightmapsInd","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Full/material/Leaves/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/renderer/LOD0","v":"Bark,Leaves"}
+{"k":"Settings/renderer/LOD1","v":"BarkLOD1,LeavesLOD1"}
+{"k":"Settings/renderer/LOD2","v":"Bark"}
+{"k":"Settings/renderer/LOD3","v":"Billboard"}
+{"k":"Settings/material/Bark","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2000 instancing True doubleSidedGI False flags BakedEmissive"}
+{"k":"Settings/material/Bark/keywords","v":""}
+{"k":"Settings/material/Bark/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Settings/material/Bark/tags","v":"RenderType= Queue="}
+{"k":"Settings/material/Bark/rawQueue","v":"-1"}
+{"k":"Settings/material/Bark/prop/_MainTex","v":"Bark_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Bark/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/Bark/prop/_HueVariationKwToggle","v":"3f800000"}
+{"k":"Settings/material/Bark/prop/_HueVariationColor","v":"3e4cccca 3f19999a 3dccccc9 3e99999a"}
+{"k":"Settings/material/Bark/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_NormalMap","v":"Bark_Normal 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Bark/prop/EFFECT_EXTRA_TEX","v":"3f800000"}
+{"k":"Settings/material/Bark/prop/_ExtraTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Bark/prop/_Glossiness","v":"3f000000"}
+{"k":"Settings/material/Bark/prop/_Metallic","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Settings/material/Bark/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/Bark/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Bark/prop/_AlphaClipThreshold","v":"3dcccccd"}
+{"k":"Settings/material/Bark/prop/Backface_Normal_Mode","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Settings/material/Bark/prop/_WIND_BRANCH1","v":"3f800000"}
+{"k":"Settings/material/Bark/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_WIND_RIPPLE","v":"3f800000"}
+{"k":"Settings/material/Bark/prop/_QueueOffset","v":"00000000"}
+{"k":"Settings/material/Bark/prop/_QueueControl","v":"00000000"}
+{"k":"Settings/material/Bark/prop/unity_Lightmaps","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Bark/prop/unity_LightmapsInd","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Bark/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/BarkLOD1","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2000 instancing True doubleSidedGI False flags BakedEmissive"}
+{"k":"Settings/material/BarkLOD1/keywords","v":""}
+{"k":"Settings/material/BarkLOD1/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Settings/material/BarkLOD1/tags","v":"RenderType= Queue="}
+{"k":"Settings/material/BarkLOD1/rawQueue","v":"-1"}
+{"k":"Settings/material/BarkLOD1/prop/_MainTex","v":"Bark_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_HueVariationKwToggle","v":"3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_HueVariationColor","v":"3e4cccca 3f19999a 3dccccc9 3e99999a"}
+{"k":"Settings/material/BarkLOD1/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_NormalMap","v":"Bark_Normal 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/BarkLOD1/prop/EFFECT_EXTRA_TEX","v":"3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_ExtraTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_Glossiness","v":"3f000000"}
+{"k":"Settings/material/BarkLOD1/prop/_Metallic","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Settings/material/BarkLOD1/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_AlphaClipThreshold","v":"3dcccccd"}
+{"k":"Settings/material/BarkLOD1/prop/Backface_Normal_Mode","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_WIND_BRANCH1","v":"3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_WIND_RIPPLE","v":"3f800000"}
+{"k":"Settings/material/BarkLOD1/prop/_QueueOffset","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/_QueueControl","v":"00000000"}
+{"k":"Settings/material/BarkLOD1/prop/unity_Lightmaps","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/BarkLOD1/prop/unity_LightmapsInd","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/BarkLOD1/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Billboard","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2000 instancing True doubleSidedGI False flags BakedEmissive"}
+{"k":"Settings/material/Billboard/keywords","v":"_BILLBOARD"}
+{"k":"Settings/material/Billboard/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Settings/material/Billboard/tags","v":"RenderType= Queue="}
+{"k":"Settings/material/Billboard/rawQueue","v":"-1"}
+{"k":"Settings/material/Billboard/prop/_MainTex","v":"Billboard_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Billboard/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/Billboard/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_HueVariationColor","v":"3e4cccca 3f19999a 3dccccc9 3e99999a"}
+{"k":"Settings/material/Billboard/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_NormalMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Billboard/prop/EFFECT_EXTRA_TEX","v":"3f800000"}
+{"k":"Settings/material/Billboard/prop/_ExtraTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Billboard/prop/_Glossiness","v":"3f000000"}
+{"k":"Settings/material/Billboard/prop/_Metallic","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Settings/material/Billboard/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/Billboard/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Billboard/prop/_AlphaClipThreshold","v":"3e800000"}
+{"k":"Settings/material/Billboard/prop/Backface_Normal_Mode","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_BillboardKwToggle","v":"3f800000"}
+{"k":"Settings/material/Billboard/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Settings/material/Billboard/prop/_WIND_BRANCH1","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_WIND_RIPPLE","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_QueueOffset","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/_QueueControl","v":"00000000"}
+{"k":"Settings/material/Billboard/prop/unity_Lightmaps","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Billboard/prop/unity_LightmapsInd","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Billboard/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Leaves","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2000 instancing True doubleSidedGI True flags BakedEmissive"}
+{"k":"Settings/material/Leaves/keywords","v":""}
+{"k":"Settings/material/Leaves/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Settings/material/Leaves/tags","v":"RenderType= Queue="}
+{"k":"Settings/material/Leaves/rawQueue","v":"-1"}
+{"k":"Settings/material/Leaves/prop/_MainTex","v":"Leaf_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Leaves/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/Leaves/prop/_HueVariationKwToggle","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_HueVariationColor","v":"3e4cccca 3f19999a 3dccccc9 3e99999a"}
+{"k":"Settings/material/Leaves/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/_NormalMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Leaves/prop/EFFECT_EXTRA_TEX","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_ExtraTex","v":"Leaf_Extra 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Leaves/prop/_Glossiness","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_Metallic","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Settings/material/Leaves/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/Leaves/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Leaves/prop/_AlphaClipThreshold","v":"3e800000"}
+{"k":"Settings/material/Leaves/prop/Backface_Normal_Mode","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_WIND_BRANCH1","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/_WIND_RIPPLE","v":"3f800000"}
+{"k":"Settings/material/Leaves/prop/_QueueOffset","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/_QueueControl","v":"00000000"}
+{"k":"Settings/material/Leaves/prop/unity_Lightmaps","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Leaves/prop/unity_LightmapsInd","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/Leaves/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/LeavesLOD1","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2000 instancing True doubleSidedGI True flags BakedEmissive"}
+{"k":"Settings/material/LeavesLOD1/keywords","v":""}
+{"k":"Settings/material/LeavesLOD1/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:0 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"Settings/material/LeavesLOD1/tags","v":"RenderType= Queue="}
+{"k":"Settings/material/LeavesLOD1/rawQueue","v":"-1"}
+{"k":"Settings/material/LeavesLOD1/prop/_MainTex","v":"Leaf_Color 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_HueVariationKwToggle","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_HueVariationColor","v":"3e4cccca 3f19999a 3dccccc9 3e99999a"}
+{"k":"Settings/material/LeavesLOD1/prop/_NormalMapKwToggle","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_NormalMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/EFFECT_EXTRA_TEX","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_ExtraTex","v":"Leaf_Extra 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_Glossiness","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_Metallic","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_AlphaClipThreshold","v":"3e800000"}
+{"k":"Settings/material/LeavesLOD1/prop/Backface_Normal_Mode","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_WIND_SHARED","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_WIND_BRANCH1","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_WIND_BRANCH2","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_WIND_RIPPLE","v":"3f800000"}
+{"k":"Settings/material/LeavesLOD1/prop/_QueueOffset","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/_QueueControl","v":"00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/unity_Lightmaps","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/unity_LightmapsInd","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"Settings/material/LeavesLOD1/prop/unity_ShadowMasks","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000 00000000 00000000"}
+{"k":"shader","v":"Universal Render Pipeline/Nature/SpeedTree9_URP queue 2000 subshaders 2 passes 1"}
+{"k":"shader/subshader0","v":"RenderType=Opaque Queue=AlphaTest RenderPipeline=UniversalPipeline"}
+{"k":"shader/subshader1","v":"RenderType= Queue= RenderPipeline="}
+{"k":"shader/fresh","v":"queue 2000 raw -1"}
+{"k":"shader/fresh/passes","v":"UniversalForward:1 ShadowCaster:1 DepthOnly:1 DepthNormals:1 MotionVectors:1 Meta:1 SceneSelectionPass:1 Picking:1"}
+{"k":"shader/fresh/tags","v":"RenderType= Queue="}
+{"k":"shader/fresh/clearedOverride","v":"RenderType= fallbacks=Opaque"}
+{"k":"texture/Bark_Color.png","v":"srgb True format DXT1 mips 5"}
+{"k":"texture/Bark_Normal.png","v":"srgb False format DXT5 mips 5"}
+{"k":"texture/Billboard_Color.png","v":"srgb True format DXT5 mips 5"}
+{"k":"texture/Leaf_Color.png","v":"srgb True format DXT5 mips 5"}
+{"k":"texture/Leaf_Extra.png","v":"srgb False format DXT1 mips 5"}
+{"k":"complete","v":true}

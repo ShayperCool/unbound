@@ -1,0 +1,81 @@
+fileFormatVersion: 2
+guid: 368d84b72e720e53ea4ccd83fbcb3e0b
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 12405, guid: 0000000000000000e000000000000000, type: 0}
+  meshSettings:
+    unitConversion: 0
+    scaleFactor: 1
+  materialSettings:
+    mainColor: {r: 0.9, g: 0.8, b: 0.7, a: 1}
+    hueVariation: {r: 0.2, g: 0.6, b: 0.1, a: 0.3}
+    alphaClipThreshold: 0.25
+    transmissionScale: 0.5
+    enableHueVariation: 1
+    enableBumpMapping: 0
+    enableSubsurfaceScattering: 0
+    diffusionProfileAssetID: {x: 0, y: 0, z: 0, w: 0}
+    diffusionProfileID: 0
+  lightingSettings:
+    enableShadowCasting: 0
+    enableShadowReceiving: 1
+    enableLightProbes: 0
+    reflectionProbeEnumValue: 0
+  additionalSettings:
+    motionVectorModeEnumValue: 0
+    generateColliders: 0
+    generateRigidbody: 0
+  lODSettings:
+    enableSmoothLODTransition: 1
+    animateCrossFading: 0
+    billboardTransitionCrossFadeWidth: 0.3
+    fadeOutWidth: 0.2
+    hasBillboard: 1
+  perLODSettings:
+  - enableSettingOverride: 0
+    height: 0.6
+    castShadows: 1
+    receiveShadows: 1
+    useLightProbes: 1
+    reflectionProbeUsage: 1
+    enableBump: 1
+    enableHue: 0
+    enableSubsurface: 1
+  - enableSettingOverride: 1
+    height: 0.3
+    castShadows: 0
+    receiveShadows: 0
+    useLightProbes: 1
+    reflectionProbeUsage: 2
+    enableBump: 0
+    enableHue: 1
+    enableSubsurface: 0
+  - enableSettingOverride: 0
+    height: 0.15
+    castShadows: 1
+    receiveShadows: 1
+    useLightProbes: 1
+    reflectionProbeUsage: 1
+    enableBump: 1
+    enableHue: 0
+    enableSubsurface: 1
+  - enableSettingOverride: 1
+    height: 0.05
+    castShadows: 1
+    receiveShadows: 1
+    useLightProbes: 0
+    reflectionProbeUsage: 0
+    enableBump: 1
+    enableHue: 0
+    enableSubsurface: 1
+  windSettings:
+    enableWind: 1
+    strenghResponse: 7
+    directionResponse: 3
+    randomness: 0.25
+  materialVersion: 1

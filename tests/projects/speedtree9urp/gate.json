@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/speedtree9urp/run.py gate"
+  ],
+  "summary": "speedtree9urp: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/SpeedTree9/",
+    "managed/UnityEngine/Editor/ScriptedImporter.cs"
+  ]
+}
