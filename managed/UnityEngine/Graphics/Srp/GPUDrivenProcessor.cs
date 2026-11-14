@@ -299,7 +299,7 @@ namespace UnityEngine.Rendering
             // the ordinary path.
             if (Lightmapped(renderer.lightmapIndex)) return RefusedByUnbound(renderer, RefusedLightmapped);
             if (Lightmapped(renderer.realtimeLightmapIndex)) return RefusedByUnbound(renderer, RefusedRealtimeGI);
-            if (SortingLayer.GetLayerValueFromID(renderer.m_SortingLayerID) != 0 || renderer.m_SortingOrder != 0 || renderer.sortingGroupID != 0) return false;
+            if (SortingLayer.GetLayerValueFromID(renderer.m_SortingLayerID) != 0 || renderer.m_SortingOrder != 0 || SortingGroup.Enclosing(renderer) != null) return false;
             var group = renderer.m_LODGroup;
             return group is null || !group || !group.animateCrossFading;
         }

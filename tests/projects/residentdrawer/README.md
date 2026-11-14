@@ -40,7 +40,7 @@ holds.
 
     python3 tests/projects/residentdrawer/run.py native --label L [--profile occlusion|controls]   # two Editor captures
     python3 tests/projects/residentdrawer/run.py publish L-1 L-2 [--profile occlusion|controls]
-    python3 tests/projects/residentdrawer/run.py check [--profile occlusion]              # the land gate
+    python3 tests/projects/residentdrawer/run.py check [--profile occlusion|controls]              # the land gate
 
 Recording: a windowed Editor with `-force-vulkan` on the GPU-backed display :0 (the drawer
 dispatches its changes from the player loop, which a batch-mode Editor does not run between

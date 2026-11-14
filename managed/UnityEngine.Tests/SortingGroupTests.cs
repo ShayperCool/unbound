@@ -28,7 +28,7 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A renderer's groups, outermost first: a group at the root, one between it and
-        /// the renderer, a disabled one skipped; the renderer's sorting group is the nearest.</summary>
+        /// the renderer, a disabled one skipped; the renderer's enclosing group is the nearest.</summary>
         [Fact]
         public void TheGroupsAboveARendererEndAtTheRoot()
         {
@@ -47,11 +47,11 @@ namespace UnityEngine.Tests
             {
                 var groups = FrameBuilder.GroupsOf(renderer, new FrameBuilder.CameraContext());
                 Assert.Equal(new[] { outer.GetInstanceID(), inner.GetInstanceID() }, System.Array.ConvertAll(groups, g => g.Id));
-                Assert.Equal(inner.GetInstanceID(), renderer.sortingGroupID);
+                Assert.Same(inner, UnityEngine.Rendering.SortingGroup.Enclosing(renderer));
                 inner.enabled = false;
-                Assert.Equal(outer.GetInstanceID(), renderer.sortingGroupID);
+                Assert.Same(outer, UnityEngine.Rendering.SortingGroup.Enclosing(renderer));
                 outer.enabled = false;
-                Assert.Equal(0, renderer.sortingGroupID);
+                Assert.Null(UnityEngine.Rendering.SortingGroup.Enclosing(renderer));
                 Assert.Null(FrameBuilder.GroupsOf(renderer, new FrameBuilder.CameraContext()));
             }
             finally
