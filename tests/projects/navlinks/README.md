@@ -317,3 +317,37 @@ already found, marked stale even though a fresh query is partial. The following
 AI update repairs that route and clears its stale flag. Both controls record that
 following update; an indefinitely fresh complete result is a regression. All 272 values match, previously 26 differing values. Their
 GPU Editor repeats agree and preserve the previously committed reference prefix.
+
+
+Q462 checks placement and completed-destination state on Unity 6000.0.71f1.
+Enabling an agent clears its reported velocity immediately, including after manual
+velocity control and after reactivating its GameObject. A newly placed agent takes
+in its transform on the first position synchronization, even when its coordinates
+already match. Moving an agent without a destination renews its single-polygon
+corridor, endpoint and stale version. This applies to Move, nextPosition and a
+coupled transform move, including the pending move after Warp or enabling.
+An unchanged position read on an already settled agent keeps its stale flag until
+the next AI update. An arrived agent still has a destination: moving it away keeps
+that endpoint and makes it resume the route on the next update.
+
+The four `reenable.*` controls start with a nonzero velocity. Twelve `staleread.*`
+controls distinguish a settled agent from pending placement, ResetPath, explicit
+movement and a retained destination, including one already reached. They record
+staleness before reading position, after that read and after the next AI update.
+The same-position Warp control requires synchronization even with no coordinate
+difference. Two GPU Editor repeats agree byte for byte, and all previous 30,843
+reference rows remain an unchanged byte prefix. All 64 added rows match. These
+mechanisms use Compat for 6000.0.71f1; other releases retain their previous,
+unmeasured reports and cancellation of the completed destination request.
+
+The strict original count falls from 258 to 255. The remaining cases are
+`crosstile` 118, `endatlink` 81, `areamask` 54, and one stale report each in `disableagent` and `targets`. Every missing, extra or failing value remains in the strict comparison.
+No reference row, comparator or tolerance was changed to remove a discrepancy.
+
+[Move, Unity 6000.0](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent.Move.html)
+documents relative movement and adjustment of an existing path.
+[nextPosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-nextPosition.html)
+and [updatePosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-updatePosition.html)
+document surface constraints and transform coupling. The staleness, placement and
+completed-destination sequences above are measured behavior, rather than additional
+timing guarantees from those pages.
