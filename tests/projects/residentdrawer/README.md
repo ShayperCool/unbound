@@ -46,7 +46,8 @@ three seconds after opening the scene, with no compilation or import running), a
 Play in an open Editor does: entered at once, the first Play mode frames still see that work (the
 switch to the project's gamma colour space, URP's re-import of every material), which reloads
 every material and so has URP's material inspector validate the materials the probe makes at run
-time (its transparent Lit sphere then blends premultiplied and casts no shadow). The drawer's culling statistics are not read (turning them on turns URP's debug display
+time (its transparent Lit sphere then blends premultiplied: source factor One with
+_ALPHAPREMULTIPLY_ON). The drawer's culling statistics are not read (turning them on turns URP's debug display
 on, which compiles other variants), and the probe has no ObjectDispatcher of its own tracking the
 drawer's types (in the Editor, one of the probe's read every frame left the drawer holding none of
 the renderers made before it; why is not studied). The references are two identical captures
