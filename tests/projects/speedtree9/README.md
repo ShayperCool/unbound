@@ -19,6 +19,16 @@ indices, the UV distribution metrics) and each material (shader, keywords, queue
 double-sided GI and every shader property). Floats are the hex of their bits; values compare
 exactly. The project uses the built-in pipeline (`Nature/SpeedTree9`).
 
+Instances: `Assets/Prefabs/FullVariant.prefab` is a variant of `Full` that adds a child to its first
+level (its LODGroup's renderers), turns a level's shadows off, remaps a material slot, removes the
+Rigidbody and a collision object and adds a collider (the edits a URP 17 sample's tree prefabs
+make). `Probe.unity` places that variant, an instance of `Simple` (moved, turned, scaled, a level's
+shadow receiving off) and one of `Assets/Boxes/Crate.crate`, which the project's own ScriptedImporter
+(`Assets/Editor/CrateImporter.cs`) imports to a hierarchy with a mesh, a material, a collider and a
+script (`CrateMarker`); its instance overrides the script's field and the collider. A scene object
+(`Pointer`) references objects of the instances. The probe records the crate's objects and the
+scene's objects in Play mode.
+
 Measured in the Unity 6000.0.71f1 Editor (two identical captures, NVIDIA driver): see
 `docs/COMPATIBILITY_GAPS.md` (SpeedTree 9 row). `residuals.json` lists the values Unbound does not
 reproduce yet with their causes.

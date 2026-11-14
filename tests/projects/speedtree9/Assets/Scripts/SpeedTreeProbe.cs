@@ -60,6 +60,9 @@ public sealed class SpeedTreeProbe : MonoBehaviour
             Rec("pipeline", GraphicsSettings.currentRenderPipeline == null ? "builtin" : GraphicsSettings.currentRenderPipeline.GetType().Name);
             foreach (var path in Directory.GetFiles("Assets/Trees", "*.st9").OrderBy(p => p, StringComparer.Ordinal))
                 DumpTree(path.Replace('\\', '/'));
+            foreach (var path in Directory.GetFiles("Assets/Boxes", "*.crate").OrderBy(p => p, StringComparer.Ordinal))
+                DumpObjects(path.Replace('\\', '/'));
+            DumpScene();
             m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
             if (string.IsNullOrEmpty(dir)) Debug.Log(m_Out.ToString());
             else
@@ -105,6 +108,39 @@ public sealed class SpeedTreeProbe : MonoBehaviour
         foreach (var m in materials.OrderBy(m => m.name, StringComparer.Ordinal)) DumpMaterial(t + "/material/" + m.name, m);
     }
 
+    /// <summary>A scripted import's objects (class, name, local file id) and its main object's
+    /// hierarchy.</summary>
+    void DumpObjects(string path)
+    {
+        string t = Path.GetFileNameWithoutExtension(path);
+        var main = AssetDatabase.LoadMainAssetAtPath(path);
+        Rec(t + "/main", main == null ? "null" : main.GetType().Name + " " + main.name);
+        var rows = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var o in AssetDatabase.LoadAllAssetsAtPath(path))
+        {
+            if (o == null) continue;
+            AssetDatabase.TryGetGUIDAndLocalFileIdentifier(o, out string guid, out long id);
+            string name = o is Component c ? HierarchyPath(c.transform) + ":" + o.GetType().Name
+                : o is GameObject g ? HierarchyPath(g.transform) : o.name;
+            rows[t + "/object/" + o.GetType().Name + "/" + name] = id.ToString(CultureInfo.InvariantCulture);
+        }
+        foreach (var row in rows) Rec(row.Key, row.Value);
+        if (main is GameObject root) Hierarchy(t, root.transform);
+    }
+
+    /// <summary>The scene's objects in Play mode: the instances of the trees, of the variant of a
+    /// tree and of the crate, with what the instances override, and a scene object's references
+    /// into them.</summary>
+    void DumpScene()
+    {
+        var roots = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects()
+            .Where(g => g.name != "SpeedTreeProbe").OrderBy(g => g.name, StringComparer.Ordinal).ToArray();
+        Rec("scene/roots", string.Join(",", roots.Select(g => g.name)));
+        foreach (var root in roots) Hierarchy("scene", root.transform);
+    }
+
+    static string PathOf(Component c) => c == null ? "null" : HierarchyPath(c.transform) + ":" + c.GetType().Name;
+
     static string HierarchyPath(Transform t) => t.parent == null ? t.name : HierarchyPath(t.parent) + "/" + t.name;
 
     void Hierarchy(string t, Transform tr)
@@ -144,6 +180,15 @@ public sealed class SpeedTreeProbe : MonoBehaviour
                     break;
                 case SphereCollider s:
                     Rec(p + "/SphereCollider", F(s.radius) + " center " + V(s.center) + " trigger " + s.isTrigger);
+                    break;
+                case BoxCollider s:
+                    Rec(p + "/BoxCollider", V(s.size) + " center " + V(s.center) + " trigger " + s.isTrigger + " enabled " + s.enabled);
+                    break;
+                case CrateMarker m:
+                    Rec(p + "/CrateMarker", m.count + " label " + m.label + " lid " + PathOf(m.lid));
+                    break;
+                case Pointer m:
+                    Rec(p + "/Pointer", PathOf(m.treeRenderer) + " lid " + PathOf(m.crateLid) + " root " + (m.variantRoot == null ? "null" : HierarchyPath(m.variantRoot.transform)));
                     break;
                 case CapsuleCollider s:
                     Rec(p + "/CapsuleCollider", F(s.radius) + " height " + F(s.height) + " direction " + s.direction + " center " + V(s.center) + " trigger " + s.isTrigger);

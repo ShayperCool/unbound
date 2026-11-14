@@ -604,4 +604,94 @@
 {"k":"Simple/material/Leaves/prop/_WIND_BRANCH2","v":"00000000"}
 {"k":"Simple/material/Leaves/prop/_WIND_RIPPLE","v":"00000000"}
 {"k":"Simple/material/Leaves/prop/_WIND_SHIMMER","v":"00000000"}
+{"k":"Crate/main","v":"GameObject Crate"}
+{"k":"Crate/object/BoxCollider/Crate:BoxCollider","v":"-8681718477779340123"}
+{"k":"Crate/object/CrateMarker/Crate:CrateMarker","v":"-8219280681519085033"}
+{"k":"Crate/object/GameObject/Crate","v":"7543798876515437504"}
+{"k":"Crate/object/GameObject/Crate/Lid","v":"3375877180286330758"}
+{"k":"Crate/object/Material/CrateMaterial","v":"586645097001841572"}
+{"k":"Crate/object/Mesh/CrateMesh","v":"-8670151273213183110"}
+{"k":"Crate/object/MeshFilter/Crate:MeshFilter","v":"5099980647951809068"}
+{"k":"Crate/object/MeshRenderer/Crate:MeshRenderer","v":"-3038826788557195006"}
+{"k":"Crate/object/Transform/Crate/Lid:Transform","v":"5577846704246966830"}
+{"k":"Crate/object/Transform/Crate:Transform","v":"4073879193826973672"}
+{"k":"Crate/go/Crate","v":"active layer 0 tag Untagged static False"}
+{"k":"Crate/go/Crate/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Crate/go/Crate/components","v":"Transform MeshFilter MeshRenderer BoxCollider CrateMarker"}
+{"k":"Crate/go/Crate/MeshFilter","v":"CrateMesh"}
+{"k":"Crate/go/Crate/MeshRenderer","v":"CrateMaterial cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 00000000 00000000 00000000 3f800000 00000000 3f800000"}
+{"k":"Crate/go/Crate/BoxCollider","v":"40000000 3f800000 40000000 center 00000000 3f000000 00000000 trigger False enabled True"}
+{"k":"Crate/go/Crate/CrateMarker","v":"3 label crate lid Crate/Lid:Transform"}
+{"k":"Crate/go/Crate/Lid","v":"active layer 0 tag Untagged static False"}
+{"k":"Crate/go/Crate/Lid/transform","v":"00000000 3f800000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"Crate/go/Crate/Lid/components","v":"Transform"}
+{"k":"scene/roots","v":"CrateInScene,Holder,SimpleInScene,VariantInScene"}
+{"k":"scene/go/CrateInScene","v":"active layer 0 tag Untagged static False"}
+{"k":"scene/go/CrateInScene/transform","v":"00000000 00000000 c0000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"scene/go/CrateInScene/components","v":"Transform MeshFilter MeshRenderer BoxCollider CrateMarker"}
+{"k":"scene/go/CrateInScene/MeshFilter","v":"CrateMesh"}
+{"k":"scene/go/CrateInScene/MeshRenderer","v":"CrateMaterial cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 00000000 00000000 00000000 3f800000 00000000 3f800000"}
+{"k":"scene/go/CrateInScene/BoxCollider","v":"40800000 3f800000 40000000 center 00000000 3f000000 00000000 trigger False enabled True"}
+{"k":"scene/go/CrateInScene/CrateMarker","v":"7 label crate lid CrateInScene/Lid:Transform"}
+{"k":"scene/go/CrateInScene/Lid","v":"active layer 0 tag Untagged static False"}
+{"k":"scene/go/CrateInScene/Lid/transform","v":"00000000 3f800000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"scene/go/CrateInScene/Lid/components","v":"Transform"}
+{"k":"scene/go/Holder","v":"active layer 0 tag Untagged static False"}
+{"k":"scene/go/Holder/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"scene/go/Holder/components","v":"Transform Pointer"}
+{"k":"scene/go/Holder/Pointer","v":"SimpleInScene/LOD0:MeshRenderer lid CrateInScene/Lid:Transform root VariantInScene"}
+{"k":"scene/go/SimpleInScene","v":"active layer 0 tag Untagged static False"}
+{"k":"scene/go/SimpleInScene/transform","v":"c0000000 00000000 3f800000 00000000 3ec3ef15 00000000 3f6c835e 3fc00000 3fc00000 3fc00000"}
+{"k":"scene/go/SimpleInScene/components","v":"Transform Rigidbody LODGroup"}
+{"k":"scene/go/SimpleInScene/Rigidbody","v":"gravity False kinematic True mass 3f800000 interpolation None detection Discrete constraints None"}
+{"k":"scene/go/SimpleInScene/LODGroup","v":"CrossFade animate True billboard False size 3f624895 ref 00000000 3ee24895 00000000 count 1 enabled True"}
+{"k":"scene/go/SimpleInScene/LODGroup/lod0","v":"3c23d70a fade 00000000 renderers LOD0"}
+{"k":"scene/go/SimpleInScene/LOD0","v":"active layer 0 tag Untagged static False"}
+{"k":"scene/go/SimpleInScene/LOD0/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"scene/go/SimpleInScene/LOD0/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"scene/go/SimpleInScene/LOD0/MeshFilter","v":"LOD0_Mesh"}
+{"k":"scene/go/SimpleInScene/LOD0/MeshRenderer","v":"Bark,Leaves cast On receive False probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 00000000 3ee24895 00000000 3eaba9d2 3ee24895 3e79b132"}
+{"k":"scene/go/SimpleInScene/LOD0/Tree","v":"null data null"}
+{"k":"scene/go/VariantInScene","v":"active layer 0 tag Untagged static False"}
+{"k":"scene/go/VariantInScene/transform","v":"40000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"scene/go/VariantInScene/components","v":"Transform LODGroup"}
+{"k":"scene/go/VariantInScene/LODGroup","v":"CrossFade animate True billboard True size 3fa7c30e ref 00000000 3f27c30e 00000000 count 4 enabled True"}
+{"k":"scene/go/VariantInScene/LODGroup/lod0","v":"3f000000 fade 00000000 renderers LOD0,Extra"}
+{"k":"scene/go/VariantInScene/LODGroup/lod1","v":"3e800000 fade 00000000 renderers LOD1"}
+{"k":"scene/go/VariantInScene/LODGroup/lod2","v":"3e000000 fade 00000000 renderers LOD2"}
+{"k":"scene/go/VariantInScene/LODGroup/lod3","v":"3c23d70a fade 00000000 renderers LOD3"}
+{"k":"scene/go/VariantInScene/LOD0","v":"active layer 0 tag Untagged static False"}
+{"k":"scene/go/VariantInScene/LOD0/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"scene/go/VariantInScene/LOD0/components","v":"Transform MeshFilter MeshRenderer Tree BoxCollider"}
+{"k":"scene/go/VariantInScene/LOD0/MeshFilter","v":"LOD0_Mesh"}
+{"k":"scene/go/VariantInScene/LOD0/MeshRenderer","v":"Bark,Remap cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 00000000 3f27c30e 00000000 3eaba9d2 3f27c30e 3e583d60"}
+{"k":"scene/go/VariantInScene/LOD0/Tree","v":"SpeedTreeWind data null"}
+{"k":"scene/go/VariantInScene/LOD0/BoxCollider","v":"3e800000 3f000000 3f400000 center 00000000 3e800000 00000000 trigger True enabled True"}
+{"k":"scene/go/VariantInScene/LOD1","v":"active layer 0 tag Untagged static False"}
+{"k":"scene/go/VariantInScene/LOD1/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"scene/go/VariantInScene/LOD1/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"scene/go/VariantInScene/LOD1/MeshFilter","v":"LOD1_Mesh"}
+{"k":"scene/go/VariantInScene/LOD1/MeshRenderer","v":"Bark,Leaves cast Off receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3d79b130 3f105a71 00000000 3e8c73ac 3f105a71 3e583d60"}
+{"k":"scene/go/VariantInScene/LOD1/Tree","v":"SpeedTreeWind data null"}
+{"k":"scene/go/VariantInScene/LOD2","v":"active layer 0 tag Untagged static False"}
+{"k":"scene/go/VariantInScene/LOD2/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"scene/go/VariantInScene/LOD2/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"scene/go/VariantInScene/LOD2/MeshFilter","v":"LOD2_Mesh"}
+{"k":"scene/go/VariantInScene/LOD2/MeshRenderer","v":"Bark cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3cbb44e6 3eea161e 00000000 3d8c73ac 3eea161e 3da22e08"}
+{"k":"scene/go/VariantInScene/LOD2/Tree","v":"SpeedTreeWind data null"}
+{"k":"scene/go/VariantInScene/LOD3","v":"active layer 0 tag Untagged static False"}
+{"k":"scene/go/VariantInScene/LOD3/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"scene/go/VariantInScene/LOD3/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"scene/go/VariantInScene/LOD3/MeshFilter","v":"LOD3_Mesh"}
+{"k":"scene/go/VariantInScene/LOD3/MeshRenderer","v":"Billboard cast On receive True probes Off reflection Off motion Object layerMask 1 enabled True bounds 00000000 3f1c0ebf 00000000 3e9c0ebf 3f1c0ebf 00000000"}
+{"k":"scene/go/VariantInScene/LOD3/Tree","v":"SpeedTreeWind data null"}
+{"k":"scene/go/VariantInScene/Collider1","v":"active layer 0 tag Untagged static False"}
+{"k":"scene/go/VariantInScene/Collider1/transform","v":"00000000 3eea161e 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"scene/go/VariantInScene/Collider1/components","v":"Transform SphereCollider"}
+{"k":"scene/go/VariantInScene/Collider1/SphereCollider","v":"3df9b132 center 00000000 00000000 00000000 trigger False"}
+{"k":"scene/go/VariantInScene/Extra","v":"active layer 0 tag Untagged static False"}
+{"k":"scene/go/VariantInScene/Extra/transform","v":"3f000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"scene/go/VariantInScene/Extra/components","v":"Transform MeshFilter MeshRenderer"}
+{"k":"scene/go/VariantInScene/Extra/MeshFilter","v":"LOD2_Mesh"}
+{"k":"scene/go/VariantInScene/Extra/MeshRenderer","v":"Bark cast ShadowsOnly receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3cbb44e6 3eea161e 00000000 3d8c73ac 3eea161e 3da22e08"}
 {"k":"complete","v":true}
