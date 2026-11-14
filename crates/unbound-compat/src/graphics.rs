@@ -5,16 +5,17 @@
 //! [`GraphicsDevice`]: SystemInfo's answers, the shader compilation target and its conventions,
 //! the renderer's clip space and target orientation, and the native plugin interface.
 //!
-//! The choice follows the Unity 6000.0.71f1 Editor on Linux: a `-force-glcore*` / `-force-opengl`
-//! or `-force-vulkan` option decides; else the Player Settings graphics API list of the Editor's
-//! own standalone platform (StandaloneLinux64 on Linux, StandaloneOSX on macOS), when it is not
-//! automatic, followed by that platform's first default API; else the platform's defaults (Linux:
-//! OpenGL Core, then Vulkan; macOS: Metal). The first device that starts wins, OpenGL Core last.
-//! The Manual (Configure graphics APIs) documents the list order and falling back to the next
-//! API. Measured on the Linux Editor: no options or settings give OpenGL Core (tests/projects/urp
-//! `paths-opengl`), `-force-vulkan` gives Vulkan (`paths-vulkan`), and a Vulkan-first
-//! LinuxStandaloneSupport list gives Vulkan without options. Not measured: that the active build
-//! target's list is not read, macOS.
+//! The choice follows the Unity 6000.0.71f1 Editor of the OS. On Linux a `-force-glcore*` /
+//! `-force-opengl` or `-force-vulkan` option decides; else the Player Settings graphics API list
+//! of the Editor's own standalone platform (StandaloneLinux64), when it is not automatic, followed
+//! by that platform's first default API; else the platform's defaults (OpenGL Core, then Vulkan).
+//! The first device that starts wins, OpenGL Core last. The Manual (Configure graphics APIs)
+//! documents the list order and falling back to the next API. Measured on the Linux Editor: no
+//! options or settings give OpenGL Core (tests/projects/urp `paths-opengl`), `-force-vulkan` gives
+//! Vulkan (`paths-vulkan`), and a Vulkan-first LinuxStandaloneSupport list gives Vulkan without
+//! options. The macOS Editor runs Metal, its only device: with `-force-glcore`, `-force-vulkan`
+//! and a MacStandaloneSupport list of OpenGL Core and Vulkan too (tests/projects/urp CapsProbe,
+//! `caps-metal.jsonl`; arm64). Not measured: that the active build target's list is not read.
 
 use std::fmt;
 
@@ -23,7 +24,7 @@ use std::fmt;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[repr(i32)]
 pub enum GraphicsDevice {
-    /// `GraphicsDeviceType.Metal`: not drawn by Unbound yet (macOS).
+    /// `GraphicsDeviceType.Metal`: the macOS Editor's.
     Metal = 16,
     /// `GraphicsDeviceType.OpenGLCore`.
     #[default]
@@ -154,9 +155,10 @@ impl GraphicsDevice {
         matches!((self, os), (Self::OpenGLCore, HostOs::Linux))
     }
 
-    /// Whether Unbound can draw with the device.
-    pub fn drawable(self) -> bool {
-        !matches!(self, Self::Metal)
+    /// Whether Unbound can draw with the device on `os`: the devices of that OS's Editor (Metal
+    /// on macOS; OpenGL Core and Vulkan on Linux).
+    pub fn drawable(self, os: HostOs) -> bool {
+        os.default_devices().contains(&self)
     }
 }
 
@@ -189,6 +191,14 @@ impl HostOs {
             Self::Linux => "LinuxStandaloneSupport",
             Self::MacOs => "MacStandaloneSupport",
         }
+    }
+
+    /// Whether the OS's Editor starts the device a command-line option forces or the project's
+    /// list names: the Linux Editor does, the macOS Editor runs Metal whatever is asked
+    /// (tests/projects/urp CapsProbe on macOS, `-force-glcore`, `-force-vulkan` and an OpenGL
+    /// Core and Vulkan list).
+    pub fn honours_device_requests(self) -> bool {
+        matches!(self, Self::Linux)
     }
 
     /// The standalone platform's default graphics APIs (its automatic list).
@@ -227,8 +237,12 @@ pub struct DeviceRequest {
     pub project_list: Option<Vec<i32>>,
 }
 
-/// The devices to try, in order: the first one that starts is the run's device.
+/// The devices to try, in order: the first one that starts is the run's device. On an OS whose
+/// Editor ignores what is asked ([`HostOs::honours_device_requests`]) its defaults alone.
 pub fn candidates(request: &DeviceRequest, os: HostOs) -> Vec<GraphicsDevice> {
+    if !os.honours_device_requests() {
+        return os.default_devices().to_vec();
+    }
     let mut order = Vec::new();
     let mut push = |d: GraphicsDevice| {
         if !order.contains(&d) {
@@ -261,7 +275,7 @@ pub fn select(
 ) -> Result<GraphicsDevice, String> {
     let order = candidates(request, os);
     for device in &order {
-        if device.drawable() && starts(*device) {
+        if device.drawable(os) && starts(*device) {
             return Ok(*device);
         }
     }
@@ -332,10 +346,25 @@ mod tests {
             forced: None,
             project_list: Some(vec![2, 21]),
         };
+        assert_eq!(candidates(&request, HostOs::Linux), [Vulkan, OpenGLCore]);
+    }
+
+    #[test]
+    fn macos_runs_metal_whatever_is_asked() {
         assert_eq!(
-            candidates(&request, HostOs::MacOs),
-            [Vulkan, Metal, OpenGLCore]
+            candidates(&DeviceRequest::default(), HostOs::MacOs),
+            [Metal]
         );
+        let request = DeviceRequest {
+            forced: Some(OpenGLCore),
+            project_list: Some(vec![17, 21]),
+        };
+        assert_eq!(candidates(&request, HostOs::MacOs), [Metal]);
+        assert_eq!(select(&request, HostOs::MacOs, |_| true), Ok(Metal));
+        assert!(select(&request, HostOs::MacOs, |_| false).is_err());
+        // Each OS draws its own Editor's devices only.
+        assert!(Metal.drawable(HostOs::MacOs) && !Metal.drawable(HostOs::Linux));
+        assert!(!OpenGLCore.drawable(HostOs::MacOs) && Vulkan.drawable(HostOs::Linux));
     }
 
     #[test]
@@ -349,11 +378,6 @@ mod tests {
             Ok(OpenGLCore)
         );
         assert!(select(&request, HostOs::Linux, |_| false).is_err());
-        // Metal is not drawn: the macOS default falls through to OpenGL Core.
-        assert_eq!(
-            select(&DeviceRequest::default(), HostOs::MacOs, |_| true),
-            Ok(OpenGLCore)
-        );
     }
 
     #[test]
@@ -368,6 +392,8 @@ mod tests {
         assert!(!OpenGLCore.conventions().reversed_z);
         assert!(Vulkan.conventions().reversed_z && Vulkan.conventions().uv_starts_at_top);
         assert_eq!(Vulkan.shader_api(), "SHADER_API_VULKAN");
+        assert!(Metal.conventions().reversed_z && Metal.conventions().uv_starts_at_top);
+        assert_eq!(Metal.shader_api(), "SHADER_API_METAL");
         assert_eq!(GraphicsDevice::from_device_type(17), Some(OpenGLCore));
     }
 }

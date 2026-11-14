@@ -115,7 +115,14 @@ fn choose_graphics_device(
     windowed: bool,
 ) -> Result<unbound_compat::GraphicsDevice> {
     let request = project.settings.device_request(forced);
-    let device = unbound_compat::select_device(&request, unbound_compat::HostOs::current(), |d| {
+    let os = unbound_compat::HostOs::current();
+    if let Some(forced) = forced.filter(|_| !os.honours_device_requests()) {
+        tracing::warn!(
+            "the {forced} graphics device is not started: this OS's Editor runs {} whatever is forced",
+            os.default_devices()[0]
+        );
+    }
+    let device = unbound_compat::select_device(&request, os, |d| {
         let starts = !windowed || unbound_app::start_device(d);
         if !starts {
             tracing::warn!("the {d} graphics device did not start; trying the next one");
