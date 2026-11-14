@@ -17,7 +17,8 @@ namespace UnityEngine.Tests
     /// <see cref="PlayableGraph.Evaluate(float)"/>) allocate nothing either, for plain, script,
     /// mixer and multi-output graphs, visible or culled. Measured over 4000 frames after a
     /// warm-up, so tiered JIT and lazily grown buffers do not count (a periodic allocation still
-    /// shows in the window).</summary>
+    /// shows in the window). Each window starts with this thread's allocation context emptied
+    /// (<see cref="EmptyAllocationContext"/>).</summary>
     [Collection("Animation")]
     public sealed class AnimationAllocationTests
     {
@@ -26,6 +27,14 @@ namespace UnityEngine.Tests
         const int QuietFrames = 300, MaxWarmup = 5000, Frames = 4000;
         // A unit sum: the supported humanoid mixer context.
         static readonly float[] InputWeights = { 0.2f, 0.3f, 0.5f };
+
+        /// <summary>Empties this thread's allocation context with a collection of its own: a
+        /// background collection on another thread (a test or the runtime's) counts the unused rest
+        /// of a non-empty context as allocated (up to the allocation quantum, 8 KiB) without an
+        /// allocation, and its count changes only when it ends; an empty context stays empty while
+        /// nothing is allocated, so the window then counts only what the code allocates
+        /// (<see cref="TheEmptiedAllocationContextCountsNoCollection"/>).</summary>
+        static void EmptyAllocationContext() => GC.Collect();
 
         /// <summary>One frame; the bytes the Animators' own update allocated.</summary>
         static long Frame()
@@ -51,6 +60,60 @@ namespace UnityEngine.Tests
             PlayableGraphData.DeliverAllNotifications();
             PlayableGraphData.LateUpdate();
             return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        /// <summary>Why each window starts with <see cref="EmptyAllocationContext"/>: another
+        /// thread's background collection retires this thread's allocation context, and the
+        /// runtime's counter then includes the context's unused rest though nothing was allocated
+        /// (a few attempts: the rest may happen to be empty); after an own collection it counts
+        /// nothing.</summary>
+        [Fact]
+        public void TheEmptiedAllocationContextCountsNoCollection()
+        {
+            using var go = new System.Threading.ManualResetEventSlim();
+            using var done = new System.Threading.ManualResetEventSlim();
+            bool stop = false;
+            var collector = new System.Threading.Thread(() =>
+            {
+                while (true)
+                {
+                    go.Wait();
+                    go.Reset();
+                    if (System.Threading.Volatile.Read(ref stop)) return;
+                    GC.Collect(2, GCCollectionMode.Forced, blocking: false);
+                    GC.WaitForPendingFinalizers();
+                    done.Set();
+                }
+            });
+            collector.Start();
+            long CollectElsewhere()
+            {
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                go.Set();
+                done.Wait();
+                done.Reset();
+                return GC.GetAllocatedBytesForCurrentThread() - before;
+            }
+            try
+            {
+                long counted = 0;
+                object primed = null;
+                for (int attempt = 0; attempt < 5 && counted == 0; attempt++)
+                {
+                    primed = new byte[64]; // the context has room left
+                    counted = CollectElsewhere();
+                }
+                GC.KeepAlive(primed);
+                Assert.InRange(counted, 1, 1 << 16);
+                EmptyAllocationContext();
+                Assert.Equal(0, CollectElsewhere());
+            }
+            finally
+            {
+                System.Threading.Volatile.Write(ref stop, true);
+                go.Set();
+                collector.Join();
+            }
         }
 
         sealed class CountingBehaviour : PlayableBehaviour
@@ -143,6 +206,7 @@ namespace UnityEngine.Tests
                 }
                 var values = new float[bindings.FloatCount];
                 for (int i = 0; i < 1000; i++) PoseWriter.CombineLayers(bindings, layers, layers.Length, values, null, overDefaults: true);
+                EmptyAllocationContext();
                 long before = GC.GetAllocatedBytesForCurrentThread();
                 for (int i = 0; i < 1000; i++) PoseWriter.CombineLayers(bindings, layers, layers.Length, values, null, overDefaults: true);
                 Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
@@ -206,6 +270,7 @@ namespace UnityEngine.Tests
                 for (int i = 0, quiet = 0; i < MaxWarmup && quiet < QuietFrames; i++)
                     quiet = Frame() == 0 ? quiet + 1 : 0;
                 long allocated = 0;
+                EmptyAllocationContext();
                 for (int i = 0; i < Frames; i++) allocated += Frame();
                 Assert.True(allocated == 0, $"{shape}/{mode}: {allocated} bytes over {Frames} frames ({allocated / (double)Frames:F1} per frame)");
                 if (human) Assert.True(animator.deltaPosition.magnitude > 0f);
@@ -291,6 +356,7 @@ namespace UnityEngine.Tests
                 long allocated = 0;
                 int prepares = behaviour?.Prepares ?? 0;
                 double time = plain.GetTime();
+                EmptyAllocationContext();
                 for (int i = 0; i < Frames; i++) allocated += GraphFrame(manual);
                 Assert.True(allocated == 0, $"{shape}/{mode}: {allocated} bytes over {Frames} frames ({allocated / (double)Frames:F1} per frame)");
                 // The passes ran: the plain Playable above the clips advanced every frame, culled or not.
