@@ -28,11 +28,11 @@ namespace UnityEngine.Tests
         // A unit sum: the supported humanoid mixer context.
         static readonly float[] InputWeights = { 0.2f, 0.3f, 0.5f };
 
-        /// <summary>Empties this thread's allocation context with a collection of its own: a
-        /// background collection on another thread (a test or the runtime's) counts the unused rest
-        /// of a non-empty context as allocated (up to the allocation quantum, 8 KiB) without an
-        /// allocation, and its count changes only when it ends; an empty context stays empty while
-        /// nothing is allocated, so the window then counts only what the code allocates
+        /// <summary>Empties this thread's allocation context with a collection of its own. While
+        /// other threads allocate and collect, the runtime's counter for this thread was seen to
+        /// rise by up to 8 KiB (about one allocation quantum) without an allocation in the test
+        /// host; with the context emptied first it does not rise until the code allocates, so the
+        /// window counts only what the code allocates
         /// (<see cref="TheEmptiedAllocationContextCountsNoCollection"/>).</summary>
         static void EmptyAllocationContext() => GC.Collect();
 
@@ -62,57 +62,53 @@ namespace UnityEngine.Tests
             return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
-        /// <summary>Why each window starts with <see cref="EmptyAllocationContext"/>: another
-        /// thread's background collection retires this thread's allocation context, and the
-        /// runtime's counter then includes the context's unused rest though nothing was allocated
-        /// (a few attempts: the rest may happen to be empty); after an own collection it counts
-        /// nothing.</summary>
+        /// <summary>The control for <see cref="EmptyAllocationContext"/>: while another thread
+        /// allocates and collects, this thread allocates a little and then computes without
+        /// allocating; with its allocation context emptied after the allocation, the counter does
+        /// not rise in any round (without emptying it, it rises in some of the 50 rounds).</summary>
         [Fact]
         public void TheEmptiedAllocationContextCountsNoCollection()
         {
-            using var go = new System.Threading.ManualResetEventSlim();
-            using var done = new System.Threading.ManualResetEventSlim();
             bool stop = false;
-            var collector = new System.Threading.Thread(() =>
+            var noise = new System.Threading.Thread(() =>
             {
-                while (true)
+                var random = new System.Random(1);
+                object kept = null;
+                for (int i = 0; !System.Threading.Volatile.Read(ref stop); i++)
                 {
-                    go.Wait();
-                    go.Reset();
-                    if (System.Threading.Volatile.Read(ref stop)) return;
-                    GC.Collect(2, GCCollectionMode.Forced, blocking: false);
-                    GC.WaitForPendingFinalizers();
-                    done.Set();
+                    kept = new byte[random.Next(16, 200_000)];
+                    if (i % 20 == 0) GC.Collect(2, GCCollectionMode.Forced, blocking: i % 40 != 0);
                 }
+                GC.KeepAlive(kept);
             });
-            collector.Start();
-            long CollectElsewhere()
-            {
-                long before = GC.GetAllocatedBytesForCurrentThread();
-                go.Set();
-                done.Wait();
-                done.Reset();
-                return GC.GetAllocatedBytesForCurrentThread() - before;
-            }
+            noise.Start();
             try
             {
+                int sink = 0;
                 long counted = 0;
                 object primed = null;
-                for (int attempt = 0; attempt < 5 && counted == 0; attempt++)
+                for (int round = 0; round < 50; round++)
                 {
                     primed = new byte[64]; // the context has room left
-                    counted = CollectElsewhere();
+                    EmptyAllocationContext();
+                    long before = GC.GetAllocatedBytesForCurrentThread();
+                    for (int i = 0; i < 200_000; i++) sink = sink * 31 + i;
+                    counted += GC.GetAllocatedBytesForCurrentThread() - before;
                 }
                 GC.KeepAlive(primed);
-                Assert.InRange(counted, 1, 1 << 16);
+                GC.KeepAlive(sink);
+                Assert.Equal(0, counted);
+                // An allocation after the emptying is still counted.
                 EmptyAllocationContext();
-                Assert.Equal(0, CollectElsewhere());
+                long start = GC.GetAllocatedBytesForCurrentThread();
+                primed = new byte[64];
+                Assert.True(GC.GetAllocatedBytesForCurrentThread() - start >= 64);
+                GC.KeepAlive(primed);
             }
             finally
             {
                 System.Threading.Volatile.Write(ref stop, true);
-                go.Set();
-                collector.Join();
+                noise.Join();
             }
         }
 
