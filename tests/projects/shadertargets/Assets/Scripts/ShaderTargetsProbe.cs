@@ -81,6 +81,9 @@ public class UitkProbe : MonoBehaviour
             }
             SurfaceIndices(rows, target, readback);
             InstancedTarget(rows, target, readback);
+            // Framebuffer fetch: Metal's rows only (the other devices' references stay as they are).
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Metal)
+                Fetch(rows, target, readback);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -123,6 +126,31 @@ public class UitkProbe : MonoBehaviour
         }
         DestroyImmediate(mesh);
         DestroyImmediate(material);
+    }
+
+    /// <summary>The fetch shaders drawn once and twice over a texel cleared to (0.5, 0.25, 0.75, 1):
+    /// what the fetch path reads is the color before each draw.</summary>
+    static void Fetch(StringBuilder rows, RenderTexture target, Texture2D readback)
+    {
+        foreach (var name in new[] { "Plain", "Required" })
+        {
+            var material = new Material(Shader.Find("Probe/Fetch/" + name));
+            foreach (int draws in new[] { 1, 2 })
+            {
+                var previous = RenderTexture.active;
+                RenderTexture.active = target;
+                GL.Clear(true, true, new Color(0.5f, 0.25f, 0.75f, 1f));
+                RenderTexture.active = previous;
+                for (int i = 0; i < draws; i++)
+                    Graphics.Blit(null, target, material);
+                RenderTexture.active = target;
+                readback.ReadPixels(new Rect(0, 0, 1, 1), 0, 0);
+                readback.Apply();
+                RenderTexture.active = previous;
+                Row(rows, "fetch." + name + "." + draws, readback.GetPixel(0, 0));
+            }
+            DestroyImmediate(material);
+        }
     }
 
     static void SurfaceIndices(StringBuilder rows, RenderTexture target, Texture2D readback)
