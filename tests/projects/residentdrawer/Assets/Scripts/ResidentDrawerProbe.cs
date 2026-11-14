@@ -258,6 +258,23 @@ public class ResidentDrawerProbe : MonoBehaviour
             r.sharedMaterials = materials;
             Row("ManyMaterials.materials", r.sharedMaterials.Length);
         });
+        // The controls profile's renderers (RESIDENT_DRAWER_CONTROLS): rules the other profiles do
+        // not measure.
+        if (Environment.GetEnvironmentVariable("RESIDENT_DRAWER_CONTROLS") == "1")
+        {
+            Control("BecameInvisible", r => r.gameObject.AddComponent<BecameInvisible>());
+            Control("SortingGroup", r => r.gameObject.AddComponent<SortingGroup>());
+            Control("SortingGroupChild", r =>
+            {
+                var parent = new GameObject("SortingGroupParent");
+                parent.transform.position = r.transform.position;
+                parent.AddComponent<SortingGroup>();
+                r.transform.SetParent(parent.transform, true);
+            });
+            Control("SortingGroupDisabled", r => r.gameObject.AddComponent<SortingGroup>().enabled = false);
+            Control("SortingLayer", r => r.sortingLayerName = "Probe");
+            Control("ShadowsOnly", r => r.shadowCastingMode = ShadowCastingMode.ShadowsOnly);
+        }
         // Streams on a renderer the ordinary path draws first (in view, with a property block
         // until frame 16).
         var drawn = Make("StreamsDrawn", PrimitiveType.Cube, new Vector3(-1.0f, 0.2f, -4.2f), m_Yellow).GetComponent<MeshRenderer>();

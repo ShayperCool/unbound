@@ -7,7 +7,7 @@
     run.py check                  an Unbound capture compared with the reference (the land gate)
     run.py compare REF ACTUAL     compares two capture directories
 
---profile selects the drawer's settings: direct (the default: occlusion culling off, so the drawer
+--profile selects the drawer's settings (controls: direct's, with the controls below added): direct (the default: occlusion culling off, so the drawer
 draws with direct draw commands) or occlusion (GPU occlusion culling in cameras on, so the main
 camera's commands are indirect ones the drawer's compute shaders fill). Both sides use the Vulkan
 device: the Editor windowed with -force-vulkan on the GPU-backed display :0 (the drawer dispatches
@@ -97,10 +97,22 @@ def stage(label):
     if PROFILE == 'occlusion':
         edit(project/'Assets/Settings/ProbeURP.asset', 'm_GPUResidentDrawerEnableOcclusionCullingInCameras: 0',
              'm_GPUResidentDrawerEnableOcclusionCullingInCameras: 1')
+    if PROFILE == 'controls':
+        # A second sorting layer for the SortingLayer control.
+        edit(project/'ProjectSettings/TagManager.asset', '  - name: Default\n    uniqueID: 0\n    locked: 0\n',
+             '  - name: Default\n    uniqueID: 0\n    locked: 0\n  - name: Probe\n    uniqueID: 1876543210\n    locked: 0\n')
     for part in ('Scripts', 'Editor', 'Shaders'):
         shutil.copytree(ROOT/'Assets'/part, project/'Assets'/part)
         shutil.copy2(ROOT/'Assets'/(part+'.meta'), project/'Assets'/(part+'.meta'))
     return work, project
+
+
+def probe_env(work):
+    """The probe's environment: its capture directory, and the controls profile's switch."""
+    env = {'RESIDENT_DRAWER_OUT': str(work/CAPTURE)}
+    if PROFILE == 'controls':
+        env['RESIDENT_DRAWER_CONTROLS'] = '1'
+    return env
 
 
 def native(label):
@@ -108,7 +120,7 @@ def native(label):
     for repeat in (f'{label}-1', f'{label}-2'):
         work, project = stage(repeat)
         jobs.append(editor_runner.EditorJob(project, work/'editor.log', work, ['-executeMethod', 'ResidentDrawerRunner.Record'],
-                                            batch=False, graphics=True, env={'RESIDENT_DRAWER_OUT': str(work/CAPTURE)},
+                                            batch=False, graphics=True, env=probe_env(work),
                                             vulkan=True, timeout=1800, label='residentdrawer-'+repeat))
     # The Vulkan Editors share the display :0: one after the other.
     results = [editor_runner.run(job) for job in jobs]
@@ -120,7 +132,7 @@ def native(label):
 def engine(label):
     work, project = stage(label)
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
-    env = dict(os.environ, RESIDENT_DRAWER_OUT=str(work/CAPTURE))
+    env = dict(os.environ, **probe_env(work))
     command = [str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '-s', 'KILL', '1500', cli, 'run', '-p', str(project),
                '--no-watch', '--frames', str(FRAMES), '--size', '320x180', '--force-vulkan']
     with (work/'process.log').open('w') as log:
@@ -283,7 +295,7 @@ def main():
     parser.add_argument('mode', choices=['native', 'engine', 'publish', 'check', 'compare'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
-    parser.add_argument('--profile', choices=('direct', 'occlusion'), default='direct')
+    parser.add_argument('--profile', choices=('direct', 'occlusion', 'controls'), default='direct')
     args = parser.parse_args()
     global PROFILE
     PROFILE = args.profile

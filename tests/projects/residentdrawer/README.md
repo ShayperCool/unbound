@@ -30,10 +30,16 @@ variants setting and a new ObjectDispatcher's history length.
 Profiles (`--profile`): `direct` (occlusion culling off: the drawer draws with direct draw
 commands) and `occlusion` (GPU occlusion culling in cameras on: the main camera's commands are
 indirect ones the drawer's compute shaders fill from the previous frame's depth pyramid). The two
-references are identical (occlusion culling hides only what is hidden).
+references are identical (occlusion culling hides only what is hidden). `controls` is `direct` with
+more renderers out of view, for rules the others do not measure (the staged project gets a second
+sorting layer, `Probe`): one with an OnBecameInvisible script, one with a sorting group, one under a
+GameObject with a sorting group, one with a disabled sorting group, one on the `Probe` sorting layer
+and one casting shadows only. The drawer refuses the first, second, third and fifth and holds the
+disabled group's and the shadows-only one, which is visible though out of view, as every renderer it
+holds.
 
-    python3 tests/projects/residentdrawer/run.py native --label L [--profile occlusion]   # two Editor captures
-    python3 tests/projects/residentdrawer/run.py publish L-1 L-2 [--profile occlusion]
+    python3 tests/projects/residentdrawer/run.py native --label L [--profile occlusion|controls]   # two Editor captures
+    python3 tests/projects/residentdrawer/run.py publish L-1 L-2 [--profile occlusion|controls]
     python3 tests/projects/residentdrawer/run.py check [--profile occlusion]              # the land gate
 
 Recording: a windowed Editor with `-force-vulkan` on the GPU-backed display :0 (the drawer
