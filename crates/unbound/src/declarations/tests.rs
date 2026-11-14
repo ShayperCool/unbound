@@ -1098,7 +1098,7 @@ fn a_pass_the_device_does_not_run_is_not_among_the_passes() {
     scratch.write(
         "Assets/Dropped.shader",
         "Shader \"Tests/Dropped\" {\n\
-         SubShader { Pass { Name \"FORWARD\" } Pass { Name \"GBUFFER\" HLSLPROGRAM\n#pragma exclude_renderers gles3 glcore\n#pragma multi_compile _ KW_GBUFFER_ONLY\n#pragma vertex vert\nENDHLSL } Pass { Name \"META\" } }\n\
+         SubShader { Pass { Name \"FORWARD\" HLSLPROGRAM\n#pragma multi_compile _ KW_FIRST\n#pragma vertex vert\nENDHLSL } Pass { Name \"GBUFFER\" HLSLPROGRAM\n#pragma exclude_renderers gles3 glcore\n#pragma multi_compile _ KW_GBUFFER_ONLY\n#pragma vertex vert\nENDHLSL } Pass { Name \"META\" HLSLPROGRAM\n#pragma multi_compile_local _ KW_LAST\n#pragma vertex vert\nENDHLSL } }\n\
          SubShader { Pass { Name \"OTHER\" } UsePass \"Tests/Dropped/GBUFFER\" }\n}",
     );
     let provider = Provider::new(inputs(
@@ -1127,11 +1127,15 @@ fn a_pass_the_device_does_not_run_is_not_among_the_passes() {
     assert_eq!(subs[1]["restricted"], true);
     // The keyword space is every declared pass's, the dropped one's and its UsePass's included.
     assert_eq!(answer["keywords_known"], true, "{answer}");
-    let keywords = answer["keywords"].as_array().unwrap();
-    assert!(
-        keywords.iter().any(|k| k["name"] == "KW_GBUFFER_ONLY"),
-        "{answer}"
-    );
+    // In declaration order, the dropped pass's keyword where it is declared.
+    let mine: Vec<&str> = answer["keywords"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|k| k["name"].as_str())
+        .filter(|n| n.starts_with("KW_"))
+        .collect();
+    assert_eq!(mine, ["KW_FIRST", "KW_GBUFFER_ONLY", "KW_LAST"], "{answer}");
 }
 
 #[test]

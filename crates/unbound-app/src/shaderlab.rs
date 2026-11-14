@@ -699,6 +699,15 @@ impl ShaderLab {
         }
     }
 
+    /// The first pass any SubShader declares by this name (compared case-insensitively), one the
+    /// device does not run included.
+    pub fn declared_pass(&self, name: &str) -> Option<&PassInfo> {
+        self.subshaders
+            .iter()
+            .flat_map(|s| s.declared.iter())
+            .find(|p| p.name.eq_ignore_ascii_case(name))
+    }
+
     /// Whether a pass by this name (compared case-insensitively) is one the device does not run
     /// and no SubShader runs one by the name.
     pub fn drops_pass(&self, name: &str) -> bool {
@@ -951,6 +960,8 @@ pub struct SubShader {
     pub lod: u32,
     /// The passes it declares that the device does not run, in order.
     pub dropped: Vec<PassInfo>,
+    /// Every pass it declares, the dropped ones included, in order.
+    pub declared: Vec<PassInfo>,
     /// Every pass it has is one the device does not run, so it is not chosen (Unbound's
     /// reading: unmeasured, where only a dropped pass among others is).
     pub unsupported: bool,
@@ -1225,6 +1236,7 @@ impl Parser<'_> {
             passes: Vec::new(),
             lod: 0,
             dropped: Vec::new(),
+            declared: Vec::new(),
             unsupported: false,
         };
         if self.next() != Some(Token::Open) {
@@ -1329,8 +1341,7 @@ impl Parser<'_> {
         self.includes.truncate(scope);
         // States set after a pass apply to it too: ShaderLab states are SubShader-wide.
         sub.tags = states.tags.clone();
-        let declared = passes.len();
-        let (kept, dropped): (Vec<_>, Vec<_>) = passes
+        sub.declared = passes
             .into_iter()
             .map(|mut pass| {
                 if pass.use_pass.is_none() {
@@ -1339,10 +1350,13 @@ impl Parser<'_> {
                 }
                 pass
             })
+            .collect();
+        (sub.passes, sub.dropped) = sub
+            .declared
+            .iter()
+            .cloned()
             .partition(|pass| pass.runs_on(self.renderer));
-        sub.passes = kept;
-        sub.dropped = dropped;
-        sub.unsupported = declared > 0 && sub.passes.is_empty();
+        sub.unsupported = !sub.declared.is_empty() && sub.passes.is_empty();
         sub
     }
 

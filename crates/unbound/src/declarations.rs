@@ -625,13 +625,7 @@ impl State {
         let unresolved = || Unknown::fixed(format!("its UsePass \"{target}\" names no pass"));
         let (shader, pass) = target.rsplit_once('/').ok_or_else(unresolved)?;
         if let Some(lab) = self.project(inputs).get(shader).cloned() {
-            let found = lab
-                .subshaders
-                .iter()
-                .flat_map(|s| s.passes.iter().chain(s.dropped.iter()))
-                .find(|p| p.name.eq_ignore_ascii_case(pass))
-                .cloned()
-                .ok_or_else(unresolved)?;
+            let found = lab.declared_pass(pass).cloned().ok_or_else(unresolved)?;
             return match &found.use_pass {
                 Some(next) if depth < 4 => self.use_pass_meta(inputs, next, depth + 1),
                 Some(_) => Err(unresolved()),
@@ -665,13 +659,7 @@ impl State {
     ) -> Result<PassInfo, Unknown> {
         let unresolved = || Unknown::fixed(format!("its UsePass \"{target}\" names no pass"));
         let (shader, pass) = target.rsplit_once('/').ok_or_else(unresolved)?;
-        let find = |lab: &ShaderLab| {
-            lab.subshaders
-                .iter()
-                .flat_map(|s| s.passes.iter().chain(s.dropped.iter()))
-                .find(|p| p.name.eq_ignore_ascii_case(pass))
-                .cloned()
-        };
+        let find = |lab: &ShaderLab| lab.declared_pass(pass).cloned();
         let found = match self.project(inputs).get(shader).map(find) {
             Some(found) => found,
             None => {
@@ -708,13 +696,10 @@ impl State {
         let Some((shader, name)) = target.rsplit_once('/') else {
             return true;
         };
-        let found = self.project(inputs).get(shader).and_then(|lab| {
-            lab.subshaders
-                .iter()
-                .flat_map(|s| s.passes.iter().chain(s.dropped.iter()))
-                .find(|p| p.name.eq_ignore_ascii_case(name))
-                .cloned()
-        });
+        let found = self
+            .project(inputs)
+            .get(shader)
+            .and_then(|lab| lab.declared_pass(name).cloned());
         match found {
             Some(found) if depth < 4 => self.pass_limits_renderers(inputs, &found, depth + 1),
             Some(_) => true,
@@ -753,7 +738,7 @@ impl State {
                 }
             }
             let listed: Vec<&PassInfo> = if kept.is_empty() {
-                sub.passes.iter().chain(sub.dropped.iter()).collect()
+                sub.declared.iter().collect()
             } else {
                 kept
             };
@@ -842,7 +827,7 @@ impl State {
         let mut space = Space::shader();
         for sub in &lab.subshaders {
             let mut surface_done = false;
-            for pass in sub.passes.iter().chain(sub.dropped.iter()) {
+            for pass in &sub.declared {
                 if pass.grab.is_some() {
                     continue;
                 }
