@@ -840,16 +840,16 @@ impl ShaderCompiler {
             w.strip_prefix("forcemaxcount:")
                 .and_then(|n| n.parse::<u32>().ok())
         });
-        let (vertex_source, _) = fetch::rewrite(&vertex.text, &vertex_entry, false)
-            .with_context(|| program.file.display().to_string())?;
         // Only a device with framebuffer fetch takes an `inout` color target.
         let fetches = self
             .settings
             .platform_defines
             .iter()
             .any(|k| k == FRAMEBUFFER_FETCH_AVAILABLE);
+        let (vertex_source, _) = fetch::rewrite(&vertex.text, &vertex_entry, fetches, false)
+            .with_context(|| program.file.display().to_string())?;
         let (fragment_source, framebuffer_fetch) =
-            fetch::rewrite(&fragment.text, &fragment_entry, fetches)
+            fetch::rewrite(&fragment.text, &fragment_entry, fetches, true)
                 .with_context(|| program.file.display().to_string())?;
         if framebuffer_fetch
             && self
@@ -3339,9 +3339,8 @@ float4 frag(v2f i) : SV_Target
             "float4 frag(v2f i) : SV_Target\n{",
             "void frag(v2f i, inout float4 target : SV_Target)\n{\ntarget = 1;\n}\nfloat4 unused(v2f i)\n{",
         );
-        if let Ok(c) = other.compile(&program(&unread, false), &[], false) {
-            assert!(!c.framebuffer_fetch);
-        }
+        let c = other.compile(&program(&unread, false), &[], false);
+        assert!(!c.is_ok_and(|c| c.framebuffer_fetch));
         // A program without one reads nothing.
         let plain = compiler
             .compile(&program(PROGRAM, false), &[], false)
@@ -3907,6 +3906,16 @@ struct targets { half4 a : SV_Target0; half4 b : SV_Target1; };
 v2f vert(float4 vertex : POSITION) { v2f o; o.pos = UnityObjectToClipPos(vertex); return o; }
 targets frag(v2f i) { targets t; t.a = 1; t.b = 0.5; return t; }
 "#;
+        // Vertex colors (`COLOR`, which HLSLSupport names `VCOLOR` with fetch enabled) in, through
+        // and out, as UI, sprite and particle programs have them.
+        let colored = r#"
+#pragma vertex vert
+#pragma fragment frag
+struct appdata { float4 vertex : POSITION; fixed4 color : COLOR; };
+struct v2f { float4 pos : SV_POSITION; fixed4 color : COLOR; };
+v2f vert(appdata v) { v2f o; o.pos = UnityObjectToClipPos(v.vertex); o.color = v.color; return o; }
+fixed4 frag(v2f i) : COLOR { return i.color; }
+"#;
         let mut defines: Vec<String> = DESKTOP_DEFINES.iter().map(|d| d.to_string()).collect();
         defines.extend(
             [
@@ -3938,6 +3947,10 @@ targets frag(v2f i) { targets t; t.a = 1; t.b = 0.5; return t; }
         let c = compiler.compile(&program(plain, true), &[], false).unwrap();
         assert!(!c.framebuffer_fetch);
         assert!(c.fragment.contains("location(1)"), "{}", c.fragment);
+        let c = compiler
+            .compile(&program(colored, true), &[], false)
+            .unwrap();
+        assert!(!c.framebuffer_fetch);
     }
 
     /// A UI program on the installed Unity release's includes (skipped without one).
