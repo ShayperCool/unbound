@@ -279,7 +279,7 @@ namespace UnityEngine.Rendering
         /// <summary>
         /// A directional light's cascade: as the Editor computes it (measured in
         /// tests/projects/urp, ShadowMatrixProbe). The shadow distance's slice ends at the depth
-        /// <see cref="ShadowSliceFar"/>; cascades split it by the ratios. A cascade's culling sphere
+        /// the share <see cref="ShadowSliceShare"/> of the view frustum; cascades split it by the ratios. A cascade's culling sphere
         /// is the bounding sphere of its slice from the camera's near plane, centered on the view
         /// axis. The light's camera looks along the light from 1.2 radii before the sphere's center,
         /// snapped to whole texels across, with an orthographic size of the radius (plus 5 texels
@@ -301,7 +301,7 @@ namespace UnityEngine.Rendering
             if (!DirectionalShadowSlice(data.Camera, visible.localToWorldMatrix, splitIndex, splitCount, splitRatio, shadowResolution,
                 parameters.shadowDistance, out viewMatrix, out projMatrix, out var sphere, out float cullingNear,
                 conservative: parameters.conservativeEnclosingSphere, iterations: parameters.numIterationsEnclosingSphere,
-                nearPlaneOffset: shadowNearPlaneOffset)) return false;
+                nearPlaneOffset: shadowNearPlaneOffset, sliceNearOffset: parameters.shadowNearPlaneOffset)) return false;
             shadowSplitData.cullingSphere = sphere;
             shadowSplitData.cullingNearPlane = cullingNear;
             shadowSplitData.cullingMatrix = projMatrix * viewMatrix;
@@ -372,7 +372,8 @@ namespace UnityEngine.Rendering
         /// cascades are the same, measured): its view and projection, culling sphere and near plane.</summary>
         internal static bool DirectionalShadowSlice(Camera camera, Matrix4x4 lightLocalToWorld, int splitIndex, int splitCount, Vector3 splitRatio,
             int shadowResolution, float distance, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out Vector4 cullingSphere, out float cullingNear,
-            bool sliceFromPreviousSplit = false, bool conservative = false, int iterations = 0, float nearPlaneOffset = BuiltInNearPlaneOffset)
+            bool sliceFromPreviousSplit = false, bool conservative = false, int iterations = 0, float nearPlaneOffset = BuiltInNearPlaneOffset,
+            float sliceNearOffset = 0f)
         {
             viewMatrix = projMatrix = Matrix4x4.identity;
             cullingSphere = default;
@@ -380,9 +381,11 @@ namespace UnityEngine.Rendering
             if (camera == null || splitCount < 1 || splitIndex < 0 || splitIndex >= splitCount || shadowResolution <= 0) return false;
             float near = camera.nearClipPlane;
             if (distance <= near) return false;
-            // Conservative enclosing spheres (ScriptableCullingParameters, URP's asset asks for them)
-            // bound the view out to the shadow distance itself.
-            float far = conservative ? distance : ShadowSliceFar(camera, near, distance);
+            // The share of the view frustum (from its near plane) the shadow distance's slice
+            // covers; conservative enclosing spheres (ScriptableCullingParameters, URP's asset asks
+            // for them) bound the view out to the shadow distance itself.
+            float share = ShadowSliceShare(camera, distance, sliceNearOffset, conservative, out float from);
+            float far = near + share * (camera.farClipPlane - near);
             float Ratio(int i) => i >= splitCount - 1 ? 1f : i switch { 0 => splitRatio.x, 1 => splitRatio.y, _ => splitRatio.z };
             // A scriptable pipeline's cascades slice the view from the near plane; the built-in
             // pipeline's from the previous split (measured, tests/projects/lighting's globals).
@@ -390,7 +393,7 @@ namespace UnityEngine.Rendering
             float previous = splitIndex > 0 ? near + Ratio(splitIndex - 1) * (far - near) : near;
             float sliceNear = (sliceFromPreviousSplit || conservative) && splitIndex > 0 ? previous : near;
             var sphere = conservative
-                ? ConservativeSliceSphere(camera, splitIndex > 0 ? Ratio(splitIndex - 1) : 0f, Ratio(splitIndex), distance, iterations)
+                ? ConservativeSliceSphere(camera, splitIndex > 0 ? Ratio(splitIndex - 1) : 0f, Ratio(splitIndex), share, iterations)
                 : SliceSphere(camera, sliceNear, near + Ratio(splitIndex) * (far - near));
             float radius = sphere.w;
             float half = splitCount > 1 ? radius * (1f + 10f / shadowResolution) : radius;
@@ -410,7 +413,9 @@ namespace UnityEngine.Rendering
             float zNear = 0.1f * radius - 10f * Math.Max(nearPlaneOffset, 0f), zFar = 2.3f * radius;
             projMatrix = Matrix4x4.Ortho(-half, half, -half, half, zNear, zFar);
             cullingSphere = sphere;
-            cullingNear = splitIndex == 0 ? near : conservative ? previous : SliceSphereDepth(camera, near, previous);
+            // The culling starts where the cascade's share of the slice does, from e (measured with
+            // shadowNearPlaneOffset 0, 5 and -2 on the first cascade, 0 on the others).
+            cullingNear = from + (camera.farClipPlane - from) * ((splitIndex > 0 ? Ratio(splitIndex - 1) : 0f) * share);
             return true;
         }
 
@@ -419,13 +424,54 @@ namespace UnityEngine.Rendering
         /// Light.shadowNearPlane is not measured).</summary>
         internal const float BuiltInNearPlaneOffset = 3f;
 
-        /// <summary>The view depth where the shadow distance's slice ends: n + (d − n)·s, s the
-        /// Editor's (measured for fields of view 30–90 and aspects 0.5–1.8; this fit is within 1% for
-        /// common cameras, 4% at 90° — the exact rule is not known yet).</summary>
-        internal static float ShadowSliceFar(Camera camera, float near, float distance)
+        /// <summary>
+        /// The share of the view frustum, from its near plane to its far one, that the shadow
+        /// distance's slice covers: (d − e)·s / (f − e), with d the shadow distance, f the far plane
+        /// and e the near plane less <paramref name="nearOffset"/> (a scriptable pipeline's culling
+        /// parameters' shadowNearPlaneOffset, the built-in pipeline's none). s is 1 for conservative
+        /// enclosing spheres; else, with L the length of the frustum's far corner ray per unit of
+        /// view depth (from the projection inverted in single precision) and o the sphere offset
+        /// (<see cref="ShadowSphereOffset"/>), s = (o + √(o² + L²(1 − o)² − L²o²)) / L², and 1 for a
+        /// projection whose far corner lies at infinity. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/urp ShadowMatrixProbe (fields of view 30–90, aspects 0.5–1.8, near planes
+        /// 0.3 and 2; offsets other than 0 checked once in the Editor, not recorded).
+        /// </summary>
+        internal static float ShadowSliceShare(Camera camera, float distance, float nearOffset, bool conservative, out float from)
         {
-            float k = SliceCornerFactor(camera);
-            return near + (distance - near) / Mathf.Sqrt(1f + 1.5f * k);
+            float far = camera.farClipPlane;
+            from = camera.nearClipPlane - nearOffset;
+            float s = 1f;
+            if (!conservative)
+            {
+                var inverse = Matrix4x4.InverseSingle(camera.projectionMatrix);
+                float w = inverse.m30 + inverse.m31 + inverse.m32 + inverse.m33;
+                if (Math.Abs(w) > FarCornerEpsilon)
+                {
+                    float scale = 1f / w;
+                    float x = (inverse.m00 + inverse.m01 + inverse.m02 + inverse.m03) * scale;
+                    float y = (inverse.m10 + inverse.m11 + inverse.m12 + inverse.m13) * scale;
+                    float z = scale * (inverse.m20 + inverse.m21 + inverse.m22 + inverse.m23);
+                    float length = MathF.Sqrt(z * z + (y * y + x * x)) / far;
+                    float squared = length * length;
+                    float o = ShadowSphereOffset(camera.orthographic, camera.fieldOfView);
+                    float rest = 1f - o;
+                    s = (o + MathF.Sqrt(o * o + (squared * rest * rest - squared * o * o))) / squared;
+                }
+            }
+            return (distance - from) * s / (far - from);
+        }
+
+        /// <summary>Below this the projection's far corner lies at infinity.</summary>
+        const float FarCornerEpsilon = 1e-7f;
+
+        /// <summary>The sphere offset of a camera's shadow slice: 0.4 for an orthographic camera,
+        /// else 0.4·(1 − fov/180) with the vertical field of view in degrees, 0 from 180° on.</summary>
+        static float ShadowSphereOffset(bool orthographic, float fieldOfView)
+        {
+            const float MaximumOffset = 0.4f;
+            if (orthographic) return MaximumOffset;
+            float share = fieldOfView / -180f + 1f;
+            return share < 0f ? 0f : Math.Min(share, 1f) * MaximumOffset;
         }
 
         /// <summary>(tan² of the corner ray's angle from the view axis): lateral² per depth².</summary>
@@ -444,7 +490,8 @@ namespace UnityEngine.Rendering
 
         /// <summary>
         /// A conservative enclosing sphere of a cascade's view slice, from the split ratios
-        /// <paramref name="from"/> to <paramref name="to"/> of the view up to the shadow distance:
+        /// <paramref name="from"/> to <paramref name="to"/> of the view up to the shadow distance (the
+        /// frustum's <paramref name="share"/>, <see cref="ShadowSliceShare"/>):
         /// the slice's corners lie between the view frustum's (from its projection inverted in
         /// single precision), near ones then far ones, each left-bottom, right-bottom, right-top,
         /// left-top. The sphere starts around their mean through the farthest; each of
@@ -452,7 +499,7 @@ namespace UnityEngine.Rendering
         /// and grows it again over the corners from a corner one further on, and the smallest is
         /// kept. Matches the Unity 6000.0.71f1 Editor, tests/projects/brg shadows.
         /// </summary>
-        internal static Vector4 ConservativeSliceSphere(Camera camera, float from, float to, float distance, int iterations)
+        internal static Vector4 ConservativeSliceSphere(Camera camera, float from, float to, float share, int iterations)
         {
             var inverse = Matrix4x4.InverseSingle(camera.projectionMatrix);
             Span<Vector3> frustum = stackalloc Vector3[8];
@@ -463,8 +510,6 @@ namespace UnityEngine.Rendering
                 var v = inverse * clip;
                 frustum[i] = new Vector3(v.x, v.y, v.z) / v.w;
             }
-            float near = camera.nearClipPlane;
-            float share = (distance - near) / (camera.farClipPlane - near);
             Span<Vector3> points = stackalloc Vector3[8];
             float t0 = from * share, t1 = to * share;
             for (int i = 0; i < 4; i++)
