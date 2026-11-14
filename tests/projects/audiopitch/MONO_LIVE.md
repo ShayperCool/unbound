@@ -111,3 +111,35 @@ The complete 135-control comparison retains 29650/31060 gate failures at
 and twelve callback metadata values. The separate six-control comparison retains
 123337/123586 gate failures out of 917566 values per rate. No tolerance, sample
 range, oracle value or residual allowance was changed to exclude these failures.
+
+## Q449 recheck
+
+Fresh independent GPU Editor repeats on an NVIDIA RTX 4060 reproduce all
+19,399,899 values per rate in `mono-live` byte for byte, including the committed
+references. The current engine still reports 29,650/31,060 gate failures at
+48000/44100 Hz. This recheck changes no reference, float bound, device-step gate
+or engine behavior.
+
+The Stereo/Quad source LowPass/Chorus and Reverb/Echo compositions account for
+93/116 failing Master samples. Their observed absolute errors range from about
+`2.13e-5` to `3.06e-5`. The isolated LowPass and Reverb Master controls pass the
+same bounds. Downstream delay-history quantization is a candidate explanation
+for the composed differences, but the exact arithmetic rule is unresolved.
+These samples remain failures; passing isolated units does not qualify their
+compositions.
+
+For isolated Mono source Echo, fading the delayed tap over 2048 frames also
+inside feedback matches the captured Master floats within `3e-8`. Fading only
+the audible return leaves 2317/2443 samples outside the original float bounds.
+This is a model of that startup response, not a rule for when a graph must
+retain or cancel the transition. Construction and parameter publication still
+need a shared history model before an engine correction can be admitted.
+Single-unit Reverb and the already qualified Echo/Chorus histories remain
+controls against treating this as a general Mono fold or fixed-delay defect.
+
+Fresh repeats of the separate six-control simultaneous-listener diagnostic also
+match all 917,566 values per rate byte for byte, including its committed
+reference. The engine retains 123,337/123,586 gate failures. This reproduces the
+live-history discrepancy without extending the documented one-active-listener
+contract or imposing a global ordering rule. Both the single-owner and invalid
+simultaneous-owner histories remain visible for a later publication correction.
