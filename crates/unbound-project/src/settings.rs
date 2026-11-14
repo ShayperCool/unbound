@@ -408,9 +408,12 @@ impl Settings {
     /// tier the Editor runs, which `UNITY_HARDWARE_TIER3` names only when the tiers differ.
     /// `UNITY_LIGHT_PROBE_PROXY_VOLUME` is left out: proxy volumes are not supported, and
     /// without one its branch is off. The Metal device adds framebuffer fetch, and its fallback
-    /// for GPUs without it while the macOS standalone platform's graphics API list has Metal
-    /// (an automatic list has): measured with the macOS Editor's standalone target active
-    /// (tests/projects/urp CapsProbe `HasShaderDefine.*`, `caps-metal.jsonl`).
+    /// for GPUs without it while the standalone target is active and the macOS standalone
+    /// platform's graphics API list has Metal (an automatic list has): measured on the macOS
+    /// Editor (tests/projects/urp CapsProbe `HasShaderDefine.*`: `caps-metal.jsonl`; without the
+    /// fallback with Android active, `caps-metal-android.jsonl`, and with a list of OpenGL Core
+    /// and Vulkan, `caps-metal-list.jsonl`). Other targets (iOS, WebGL) are unmeasured and
+    /// taken as Android.
     pub fn shader_defines(
         &self,
         group: &str,
@@ -462,10 +465,11 @@ impl Settings {
         if device == unbound_compat::GraphicsDevice::Metal {
             defines.push("UNITY_FRAMEBUFFER_FETCH_AVAILABLE");
             let metal = unbound_compat::GraphicsDevice::Metal.device_type();
-            if self
-                .graphics_apis
-                .get(unbound_compat::HostOs::MacOs.standalone_platform())
-                .is_none_or(|list| list.contains(&metal))
+            if id == 1
+                && self
+                    .graphics_apis
+                    .get(unbound_compat::HostOs::MacOs.standalone_platform())
+                    .is_none_or(|list| list.contains(&metal))
             {
                 defines.push("UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK");
             }
@@ -677,6 +681,11 @@ mod tests {
             .graphics_apis
             .insert("MacStandaloneSupport".into(), vec![17, 16]);
         assert_eq!(settings.shader_defines("Standalone", Metal), metal);
+        // With Android active: framebuffer fetch without the fallback.
+        assert_eq!(
+            Settings::default().shader_defines("Android", Metal).last(),
+            Some(&"UNITY_FRAMEBUFFER_FETCH_AVAILABLE")
+        );
     }
 
     #[test]

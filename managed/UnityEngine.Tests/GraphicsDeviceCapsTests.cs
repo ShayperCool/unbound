@@ -257,6 +257,41 @@ namespace Unbound.Tests
                 }
         }
 
+        /// <summary>The framebuffer fetch defines on Metal with the defines the host passes
+        /// (unbound_project's shader_defines): depth fetch is answered where the fallback is not
+        /// compiled. The macOS Editor with the standalone target (`caps-metal.jsonl`), with a
+        /// list of OpenGL Core and Vulkan (`caps-metal-list.jsonl`) and with Android active
+        /// (`caps-metal-android.jsonl`, whose other mobile defines are tested elsewhere).</summary>
+        [Fact]
+        public void MetalFetchDefinesAsTheMacEditor()
+        {
+            var desktop = new[] { "SHADER_API_DESKTOP", "UNITY_PBS_USE_BRDF1", "UNITY_SPECCUBE_BOX_PROJECTION", "UNITY_SPECCUBE_BLENDING",
+                "UNITY_ENABLE_DETAIL_NORMALMAP", "UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS", "UNITY_HARDWARE_TIER3" };
+            var mobile = new[] { "SHADER_API_MOBILE", "UNITY_NO_DXT5nm", "UNITY_PBS_USE_BRDF2", "UNITY_NO_SCREENSPACE_SHADOWS", "UNITY_HARDWARE_TIER3" };
+            var cases = new (string, string[])[]
+            {
+                ("caps-metal.jsonl", desktop.Concat(new[] { "UNITY_FRAMEBUFFER_FETCH_AVAILABLE", "UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK" }).ToArray()),
+                ("caps-metal-list.jsonl", desktop.Concat(new[] { "UNITY_FRAMEBUFFER_FETCH_AVAILABLE" }).ToArray()),
+                ("caps-metal-android.jsonl", mobile.Concat(new[] { "UNITY_FRAMEBUFFER_FETCH_AVAILABLE" }).ToArray()),
+            };
+            var fetch = new[] { BuiltinShaderDefine.UNITY_FRAMEBUFFER_FETCH_AVAILABLE, BuiltinShaderDefine.UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK,
+                BuiltinShaderDefine.UNITY_PLATFORM_SUPPORTS_DEPTH_FETCH };
+            try
+            {
+                foreach (var (reference, defines) in cases)
+                {
+                    var editor = Read(Reference("unity-6000.0.71f1/" + reference));
+                    GraphicsSettings.SetPlatformShaderDefines(defines);
+                    foreach (var define in fetch)
+                        Assert.Equal(editor["HasShaderDefine." + define], GraphicsSettings.HasShaderDefine(define) ? "True" : "False");
+                }
+            }
+            finally
+            {
+                GraphicsSettings.SetPlatformShaderDefines(desktop.Append("UNITY_LIGHT_PROBE_PROXY_VOLUME").Where(d => d != "UNITY_HARDWARE_TIER3"));
+            }
+        }
+
         [Fact]
         public void MetalAnswersAsTheMacEditor()
         {

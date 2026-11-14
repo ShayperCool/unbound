@@ -265,6 +265,11 @@ is written from the captures by `caps_table.py`.
   and UNITY_PLATFORM_SUPPORTS_DEPTH_FETCH true (the automatic list: true, false).
 - `Reference/unity-6000.0.71f1/caps-metal-linear.jsonl`: the same Editor with the project in Linear
   color space (two identical captures): `GetGraphicsFormat(LDR)` is B8G8R8A8_SRGB.
+- `Reference/unity-6000.0.71f1/caps-metal-list.jsonl`: the list control above (two identical
+  captures; the `-force-*` captures equal `caps-metal.jsonl` byte for byte).
+- `Reference/unity-6000.0.71f1/caps-metal-android.jsonl`: the macOS Editor with `-buildTarget
+  Android` (two identical captures): Android's built-in defines, framebuffer fetch without the
+  fallback, depth fetch.
 
     CAPS_PROBE_OUT=/tmp/caps.jsonl CAPS_PROBE_DEVICE_OUT=/tmp/device.jsonl \
         /Applications/Unity/Hub/Editor/6000.0.71f1/Unity.app/Contents/MacOS/Unity -batchmode \
