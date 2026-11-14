@@ -145,9 +145,6 @@ fn message_line(message: &UnsupportedMessage) -> String {
     )
 }
 
-/// Adds the non-stripped documents of one Unity YAML file to `found`: class id, the type name
-/// (the document's single top-level key), its keys, and which of [`DATA_KEYS`] reference an
-/// object. Not a full parse: document headers and the first indentation level only.
 /// The GUIDs of the prefabs a scene's or prefab's instances come from (`m_SourcePrefab`).
 fn prefab_sources(text: &str) -> impl Iterator<Item = &str> {
     text.lines().filter_map(|line| {
@@ -157,6 +154,27 @@ fn prefab_sources(text: &str) -> impl Iterator<Item = &str> {
     })
 }
 
+/// Adds to `instances` the file `path` (a scene or prefab, `text`) under each ScriptedImporter
+/// asset its prefab instances come from (`scripted`: asset paths by GUID).
+fn add_scripted_instances(
+    text: &str,
+    path: &str,
+    scripted: &BTreeMap<String, String>,
+    instances: &mut BTreeMap<String, BTreeSet<String>>,
+) {
+    for source in prefab_sources(text) {
+        if let Some(asset) = scripted.get(source) {
+            instances
+                .entry(asset.clone())
+                .or_default()
+                .insert(path.to_string());
+        }
+    }
+}
+
+/// Adds the non-stripped documents of one Unity YAML file to `found`: class id, the type name
+/// (the document's single top-level key), its keys, and which of [`DATA_KEYS`] reference an
+/// object. Not a full parse: document headers and the first indentation level only.
 fn scan(text: &str, path: &str, found: &mut BTreeMap<i32, Found>) {
     let mut current: Option<i32> = None;
     let mut expect_name = false;
@@ -288,14 +306,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             files += 1;
             let text = String::from_utf8_lossy(&bytes);
             if !scripted.is_empty() {
-                for source in prefab_sources(&text) {
-                    if let Some(path) = scripted.get(source) {
-                        scripted_instances
-                            .entry(path.clone())
-                            .or_default()
-                            .insert(asset.path.clone());
-                    }
-                }
+                add_scripted_instances(&text, &asset.path, &scripted, &mut scripted_instances);
             }
             scan(&text, &asset.path, &mut found);
         } else if let Some(result) = fields::read_documents(&asset.file) {
@@ -489,6 +500,43 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lists_the_files_with_prefab_instances_of_scripted_importer_assets() {
+        let scene = "--- !u!1001 &100\nPrefabInstance:\n  m_ObjectHideFlags: 0\n  m_SourcePrefab: {fileID: 100100000, guid: aaaa0000000000000000000000000001, type: 3}\n--- !u!1001 &200\nPrefabInstance:\n  m_SourcePrefab: {fileID: 100100000, guid: bbbb0000000000000000000000000002, type: 3}\n--- !u!1001 &300\nPrefabInstance:\n  m_SourcePrefab: {fileID: 0}\n";
+        assert_eq!(
+            prefab_sources(scene).collect::<Vec<_>>(),
+            [
+                "aaaa0000000000000000000000000001",
+                "bbbb0000000000000000000000000002"
+            ]
+        );
+        // Only the scripted asset's instances are listed, once per file.
+        let scripted = BTreeMap::from([(
+            "aaaa0000000000000000000000000001".to_string(),
+            "Assets/Trees/Tree.st9".to_string(),
+        )]);
+        let mut instances = BTreeMap::new();
+        add_scripted_instances(scene, "Assets/Scenes/A.unity", &scripted, &mut instances);
+        add_scripted_instances(scene, "Assets/Scenes/A.unity", &scripted, &mut instances);
+        add_scripted_instances(scene, "Assets/Prefabs/B.prefab", &scripted, &mut instances);
+        add_scripted_instances(
+            "m_SourcePrefab: {fileID: 1, guid: bbbb0000000000000000000000000002, type: 3}\n",
+            "Assets/Scenes/C.unity",
+            &scripted,
+            &mut instances,
+        );
+        assert_eq!(
+            instances,
+            BTreeMap::from([(
+                "Assets/Trees/Tree.st9".to_string(),
+                BTreeSet::from([
+                    "Assets/Prefabs/B.prefab".to_string(),
+                    "Assets/Scenes/A.unity".to_string()
+                ])
+            )])
+        );
+    }
 
     #[test]
     fn q67_classification_and_real_reader_consumption() {
