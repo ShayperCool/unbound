@@ -12,8 +12,24 @@ namespace UnityEngine.Tests
     /// document reads back, through the scene loader's readers, to the state it was written from;
     /// references inside the hierarchy are local, to the import's assets by its GUID; a class
     /// without a writer fails loudly.</summary>
-    public class ImportedPrefabDocumentsTests
+    public class ImportedPrefabDocumentsTests : IDisposable
     {
+        /// <summary>Everything a test makes is destroyed after it: colliders would stay in the
+        /// physics world other tests share.</summary>
+        readonly List<Object> m_Made = new List<Object>();
+
+        T Made<T>(T o) where T : Object
+        {
+            m_Made.Add(o);
+            return o;
+        }
+
+        public void Dispose()
+        {
+            using var engine = MainThreadCheck.Engine();
+            foreach (var o in m_Made)
+                if (o != null) Object.DestroyImmediate(o, true);
+        }
         const string Guid = "9d7c89a9f6418f5886659b04a7e86b6b";
 
         public sealed class Marker : MonoBehaviour
@@ -31,15 +47,15 @@ namespace UnityEngine.Tests
             internal SpeedTreeWindAsset Wind;
         }
 
-        static Built Build()
+        Built Build()
         {
             var b = new Built
             {
-                Root = new GameObject("Tree") { layer = 3, tag = "Untagged" },
-                Child = new GameObject("LOD0"),
-                Mesh = new Mesh { name = "LOD0_Mesh" },
-                Material = new Material(Shader.Create("Test/Bark", 2000)) { name = "Bark" },
-                Wind = new SpeedTreeWindAsset(1, new SpeedTreeWindConfig9()) { name = "SpeedTreeWind" },
+                Root = Made(new GameObject("Tree") { layer = 3, tag = "Untagged" }),
+                Child = Made(new GameObject("LOD0")),
+                Mesh = Made(new Mesh { name = "LOD0_Mesh" }),
+                Material = Made(new Material(Shader.Create("Test/Bark", 2000)) { name = "Bark" }),
+                Wind = Made(new SpeedTreeWindAsset(1, new SpeedTreeWindConfig9()) { name = "SpeedTreeWind" }),
             };
             b.Child.transform.SetParent(b.Root.transform, false);
             b.Child.transform.localPosition = new Vector3(1f, 2f, 3f);
@@ -134,7 +150,7 @@ namespace UnityEngine.Tests
             }
             Component Read(Component original)
             {
-                var go = new GameObject("copy");
+                var go = Made(new GameObject("copy"));
                 var copy = original is Transform ? go.transform : go.AddComponent(original.GetType());
                 ObjectGraphBuilder.ReadComponent(copy, docs[IdOf(b.File, original)].Body, b.File);
                 return copy;
@@ -191,10 +207,10 @@ namespace UnityEngine.Tests
         public void SpriteRenderersReadBackFromTheirDocuments()
         {
             using var engine = MainThreadCheck.Engine();
-            var texture = new Texture2D(4, 4) { name = "Atlas" };
-            var sprite = Sprite.Create(texture, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f));
+            var texture = Made(new Texture2D(4, 4) { name = "Atlas" });
+            var sprite = Made(Sprite.Create(texture, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f)));
             sprite.name = "Arm";
-            var root = new GameObject("Character");
+            var root = Made(new GameObject("Character"));
             var r = root.AddComponent<SpriteRenderer>();
             r.sprite = sprite;
             r.color = new Color(1f, 0.5f, 0.25f, 0.75f);
@@ -212,7 +228,7 @@ namespace UnityEngine.Tests
             var docs = Parse(ImportedPrefabDocuments.Write(file, root));
             Assert.Equal(212, docs[3].ClassId);
             Assert.Equal((4L, Guid), (docs[3].Body.Ref("m_Sprite").FileId, docs[3].Body.Ref("m_Sprite").Guid));
-            var copy = new GameObject("copy").AddComponent<SpriteRenderer>();
+            var copy = Made(new GameObject("copy")).AddComponent<SpriteRenderer>();
             ObjectGraphBuilder.ReadComponent(copy, docs[3].Body, file);
             Assert.Same(sprite, copy.sprite);
             Assert.Equal((r.color, r.flipX, r.flipY, r.drawMode, r.size, r.maskInteraction, r.spriteSortPoint, r.sortingOrder),
