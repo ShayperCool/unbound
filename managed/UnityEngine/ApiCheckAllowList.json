@@ -1025,8 +1025,8 @@
     "Release": "6000.0.71f1",
     "Category": "layout",
     "Type": "UnityEngine.WaitForSeconds",
-    "Message": "storage layout is NotPublic,pack=0,size=0, Unity's is SequentialLayout,pack=0,size=0",
-    "Reason": "Q410-wrapper-layouts: UnityEngine.WaitForSeconds uses managed object handles, property backing and lifetime state. Match the selected instance field layout together with the base hierarchy before applying SequentialLayout; a flag alone cannot establish interop compatibility and can invalidate derived types. Preserve existing serialization while adding field-offset/ownership controls."
+    "Message": "storage layout is SequentialLayout,pack=8,size=0, Unity's is SequentialLayout,pack=0,size=0",
+    "Reason": "Q410-wrapper-layouts: UnityEngine.WaitForSeconds now has the selected empty-base/float payload and sequential layout. Unity 6000.0.71f1 encodes default packing as 0 but exposes 8 at runtime; CoreCLR exposes 0 unless 8 is explicit. Keep this exact metadata discrepancy while explicit packing preserves the 37 strict yieldlayouts size, offset, round-trip and derived-coroutine controls. A shared reflection/default-packing bridge is needed to remove the exception without losing that runtime behavior."
   },
   {
     "Release": "6000.0.71f1",
@@ -1074,8 +1074,8 @@
     "Release": "6000.0.71f1",
     "Category": "layout",
     "Type": "UnityEngine.YieldInstruction",
-    "Message": "storage layout is NotPublic,pack=0,size=0, Unity's is SequentialLayout,pack=0,size=0",
-    "Reason": "Q410-wrapper-layouts: UnityEngine.YieldInstruction uses managed operation, completion and callback state. Match the selected instance field layout together with the base hierarchy before applying SequentialLayout; a flag alone cannot establish interop compatibility and can invalidate derived types. Preserve existing serialization while adding field-offset/ownership controls."
+    "Message": "storage layout is SequentialLayout,pack=8,size=0, Unity's is SequentialLayout,pack=0,size=0",
+    "Reason": "Q410-wrapper-layouts: UnityEngine.YieldInstruction now has the selected empty-base/float payload and sequential layout. Unity 6000.0.71f1 encodes default packing as 0 but exposes 8 at runtime; CoreCLR exposes 0 unless 8 is explicit. Keep this exact metadata discrepancy while explicit packing preserves the 37 strict yieldlayouts size, offset, round-trip and derived-coroutine controls. A shared reflection/default-packing bridge is needed to remove the exception without losing that runtime behavior."
   },
   {
     "Release": "6000.0.71f1",

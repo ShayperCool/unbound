@@ -17,6 +17,9 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Coroutines
     {
+        // Runtime packing observed by tests/projects/yieldlayouts; the metadata exception
+        // retains the selected release's default-packing discrepancy.
+        internal const int YieldWrapperPacking = 8;
         internal enum Phase
         {
             Update,
@@ -379,10 +382,12 @@ namespace UnityEngine
         }
     }
 
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, Pack = Unbound.Runtime.Coroutines.YieldWrapperPacking)]
     public partial class YieldInstruction
     {
     }
 
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, Pack = Unbound.Runtime.Coroutines.YieldWrapperPacking)]
     public sealed partial class WaitForSeconds : YieldInstruction
     {
         internal float m_Seconds;

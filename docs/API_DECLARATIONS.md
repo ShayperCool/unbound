@@ -406,7 +406,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-slide-result-serialization` | 2 | Nondefault collision-hit backing payloads and overwrite controls. |
 | `Q410-unconstrained-pixel-data` | 1 | Shared allocation-free unconstrained array transfer and invalid/reference-containing input controls. |
 | `Q410-value-layout-payloads` | 8 | Eight value-payload/size migrations with field-order and nondefault-copy controls. |
-| `Q410-wrapper-layouts` | 60 | Sixty wrapper payload/base-layout migrations with interop and ownership controls. |
+| `Q410-wrapper-layouts` | 60 | YieldInstruction and WaitForSeconds now marshal their complete payloads in `yieldlayouts`; their two exact default-packing metadata discrepancies remain. The other 58 wrappers still need payload/base-layout and ownership migration. |
 
 The earlier strict navlinks run retained 325 value differences and the texture-pixel
 run retained three VolumeRGFloat rows per Gamma/Linear profile. Earlier parent/current
@@ -435,3 +435,13 @@ GPU repeats, including nondefault Resources assets, separate clone ownership, ru
 controls, scalar ranges and diagnostics. A shared release-specific compatibility mechanism
 corrects material property validation discovered by those controls. Other release profiles
 retain their previous unmeasured storage; arbitrary YAML normalization is unmeasured.
+
+The yield-wrapper slice fixes sequential marshalling for the complete empty-base/float
+payloads of YieldInstruction and WaitForSeconds. Its 37 strict controls preserve sizes,
+offsets, nondefault bit patterns and derived coroutine operation. Two exact exceptions
+remain for explicit pack eight versus selected default pack zero: the Editor reports
+eight at runtime, while CoreCLR reports zero without an explicit value. Raw metadata
+differences stay visible and the declaration total remains 173. A shared reflection/default-
+packing bridge is queued. GUIContent requires its additional serialized cache/event
+payload; Coroutine requires a pointer/ownership migration. Neither is fixed by a layout
+flag alone. Other wrapper hierarchies remain queued with their exact reasons.
