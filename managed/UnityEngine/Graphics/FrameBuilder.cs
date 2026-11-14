@@ -121,7 +121,7 @@ namespace Unbound.Runtime
         internal static SortLevel[] GroupsOf(Renderer renderer, CameraContext camera)
         {
             s_GroupScratch.Clear();
-            for (var group = SortingGroup.Enclosing(renderer); group != null; group = SortingGroup.Enclosing(renderer, group.transform.m_Parent))
+            for (var group = SortingGroup.Enclosing(renderer); group != null; group = SortingGroup.NearestFrom(group.transform.m_Parent))
             {
                 var t = group.transform;
                 s_GroupScratch.Add(new SortLevel

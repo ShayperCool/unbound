@@ -27,10 +27,14 @@ namespace UnityEngine.Rendering
         public bool sortAtRoot { get => m_SortAtRoot; set => m_SortAtRoot = value; }
 
         /// <summary>The nearest active and enabled sorting group on a renderer's GameObject or above
-        /// it (<paramref name="from"/> starts the walk higher up).</summary>
-        internal static SortingGroup Enclosing(Renderer renderer, Transform from = null)
+        /// it.</summary>
+        internal static SortingGroup Enclosing(Renderer renderer) => NearestFrom(renderer.m_GameObject?.m_Transform);
+
+        /// <summary>The nearest active and enabled sorting group on <paramref name="start"/>'s
+        /// GameObject or above it; none from a null transform.</summary>
+        internal static SortingGroup NearestFrom(Transform start)
         {
-            for (var t = from ?? renderer.m_GameObject?.m_Transform; t != null; t = t.m_Parent)
+            for (var t = start; t != null; t = t.m_Parent)
             {
                 var group = t.m_GameObject.GetComponent<SortingGroup>();
                 if (group != null && group.isActiveAndEnabled) return group;

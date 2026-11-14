@@ -27,6 +27,39 @@ namespace UnityEngine.Tests
             return s;
         }
 
+        /// <summary>A renderer's groups, outermost first: a group at the root, one between it and
+        /// the renderer, a disabled one skipped; the renderer's sorting group is the nearest.</summary>
+        [Fact]
+        public void TheGroupsAboveARendererEndAtTheRoot()
+        {
+            var root = new GameObject("root");
+            var middle = new GameObject("middle");
+            var disabled = new GameObject("disabled");
+            var leaf = new GameObject("leaf");
+            middle.transform.SetParent(root.transform);
+            disabled.transform.SetParent(middle.transform);
+            leaf.transform.SetParent(disabled.transform);
+            var outer = root.AddComponent<UnityEngine.Rendering.SortingGroup>();
+            var inner = middle.AddComponent<UnityEngine.Rendering.SortingGroup>();
+            disabled.AddComponent<UnityEngine.Rendering.SortingGroup>().enabled = false;
+            var renderer = leaf.AddComponent<MeshRenderer>();
+            try
+            {
+                var groups = FrameBuilder.GroupsOf(renderer, new FrameBuilder.CameraContext());
+                Assert.Equal(new[] { outer.GetInstanceID(), inner.GetInstanceID() }, System.Array.ConvertAll(groups, g => g.Id));
+                Assert.Equal(inner.GetInstanceID(), renderer.sortingGroupID);
+                inner.enabled = false;
+                Assert.Equal(outer.GetInstanceID(), renderer.sortingGroupID);
+                outer.enabled = false;
+                Assert.Equal(0, renderer.sortingGroupID);
+                Assert.Null(FrameBuilder.GroupsOf(renderer, new FrameBuilder.CameraContext()));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
         [Fact]
         public void AGroupSortsAsOneUnitByItsOwnOrder()
         {
