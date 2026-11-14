@@ -186,6 +186,8 @@ rows; both devices have two identical NVIDIA captures.
 
 OpenGL compute kernels that combine comparison sampling with integer-coordinate Load use
 two bindings of the same texture property: its comparison view and a raw-value view.
+This path supports non-array, single-sampled 2D fetches at constant mip zero; broader
+shapes and mip accesses are refused explicitly because the raw depth copy has one mip.
 This avoids a GLSL shadow-sampler fetch. Graphics programs with this combination remain
 explicitly unsupported, and unresolved access patterns retain their existing diagnostics.
 Shader cache format 46 invalidates older compiled kernels.
@@ -200,5 +202,5 @@ follow each device's conventions.
 Contracts: the [Unity 6000.0 SetTexture documentation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ComputeShader.SetTexture.html)
 binds the specified texture per kernel. The [HLSL Load documentation](https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-to-load)
 defines integer texel coordinates and explicit mip selection without filtering.
-The source-switch controls test differing stored data, and the compiler's array control
-preserves layer 1 and mip 2. Runtime GPU evidence here covers 2D inputs.
+The source-switch controls test differing stored data, and compiler controls reject arrays, nonzero mips and dynamic mips on OpenGL while
+retaining them on Vulkan. A 2D fetch at different integer coordinates also compiles. Runtime GPU evidence here covers 2D inputs.

@@ -544,7 +544,16 @@ pub(crate) fn one_sampler_per_texture(
 /// Integer-coordinate fetches use a non-comparing alias of a compared texture's property.
 pub(crate) fn separate_depth_fetches(words: &[u32]) -> Result<Vec<u32>> {
     const OP_IMAGE_FETCH: u32 = 95;
+    const OP_CONSTANT: u32 = 43;
+    const IMAGE_OPERAND_LOD: u32 = 2;
+    const DIM_2D: u32 = 1;
     let scan = Sampling::scan(words)?;
+    let zero_constants: HashSet<_> = (0..scan.list.len())
+        .filter_map(|k| {
+            let w = scan.inst(k);
+            (scan.op(k) == OP_CONSTANT && w.len() == 4 && w[3] == 0).then(|| w[2])
+        })
+        .collect();
     let mut fetches = BTreeMap::new();
     let mut variables = BTreeSet::new();
     for k in 0..scan.list.len() {
@@ -554,6 +563,13 @@ pub(crate) fn separate_depth_fetches(words: &[u32]) -> Result<Vec<u32>> {
             && let Some(variable) = scan.origin(w[3])
             && scan.depth.contains(&variable)
         {
+            // The renderer's raw depth copy has one mip. Broader fetches retain the
+            // previous explicit refusal until their resource views are supported.
+            if w.get(5) != Some(&IMAGE_OPERAND_LOD)
+                || !w.get(6).is_some_and(|lod| zero_constants.contains(lod))
+            {
+                bail!("OpenGL compared texture Load supports only constant mip zero");
+            }
             fetches.insert(k, variable);
             variables.insert(variable);
         }
@@ -587,6 +603,15 @@ pub(crate) fn separate_depth_fetches(words: &[u32]) -> Result<Vec<u32>> {
                 let t = (0..scan.list.len())
                     .find(|&k| scan.op(k) == OP_TYPE_IMAGE && scan.inst(k)[1] == image_type)
                     .ok_or_else(|| anyhow::anyhow!("a compared texture Load has no image type"))?;
+                let source_image = scan.inst(t);
+                if source_image.get(3) != Some(&DIM_2D)
+                    || source_image.get(5) != Some(&0)
+                    || source_image.get(6) != Some(&0)
+                {
+                    bail!(
+                        "OpenGL compared texture Load supports only non-array, single-sampled 2D textures"
+                    );
+                }
                 let (raw_image, raw_pointer) = (id(), id());
                 let mut image = scan.inst(t).to_vec();
                 image[1] = raw_image;

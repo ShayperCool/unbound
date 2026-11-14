@@ -735,58 +735,37 @@ void Scale(uint3 id : SV_DispatchThreadID)
     }
 
     #[test]
-    fn compared_array_fetches_keep_the_layer_and_mip_operands() {
-        let program = ComputeProgram {
-            file: PathBuf::from("ArrayDepth.compute"),
-            source: "#pragma kernel K\nTexture2DArray<float> _Depth; SamplerComparisonState sampler_Depth; RWStructuredBuffer<float2> _Out; [numthreads(1,1,1)] void K(uint3 id : SV_DispatchThreadID) { _Out[0] = float2(_Depth.SampleCmpLevelZero(sampler_Depth, float3(.25,.5,1), .5), _Depth.Load(int4(0,0,1,2))); }".into(),
+    fn compared_fetches_reject_unavailable_depth_copy_shapes_and_mips() {
+        let compile = |array: bool, location: &str, gl: bool| {
+            let (texture, sample_coord) = if array {
+                ("Texture2DArray<float>", "float3(.25,.5,1)")
+            } else {
+                ("Texture2D<float>", "float2(.25,.5)")
+            };
+            let program = ComputeProgram {
+                file: PathBuf::from("DepthFetch.compute"),
+                source: format!(
+                    "#pragma kernel K\n{texture} _Depth; SamplerComparisonState sampler_Depth; RWStructuredBuffer<float2> _Out; [numthreads(1,1,1)] void K(uint3 id : SV_DispatchThreadID) {{ _Out[0] = float2(_Depth.SampleCmpLevelZero(sampler_Depth, {sample_coord}, .5), _Depth.Load({location})); }}"
+                ),
+            };
+            ShaderCompiler::new(Settings {
+                opengl_shading_language: gl,
+                ..Settings::default()
+            })
+            .unwrap()
+            .compile_kernel(&program, "K", &[], &[])
         };
-        let mut compiler = ShaderCompiler::new(Settings {
-            opengl_shading_language: true,
-            ..Settings::default()
-        })
-        .unwrap();
-        let kernel = compiler.compile_kernel(&program, "K", &[], &[]).unwrap();
-        let textures: Vec<_> = kernel
-            .resources
-            .iter()
-            .filter(|r| matches!(r.kind, ResourceKind::Texture { .. }))
-            .collect();
-        assert_eq!(textures.len(), 2);
-        assert!(textures.iter().all(|r| r.name == "_Depth"
-            && matches!(
-                r.kind,
-                ResourceKind::Texture {
-                    dim: TextureDim::D2Array,
-                    ..
-                }
-            )));
-        let module = naga::front::wgsl::parse_str(&kernel.wgsl).unwrap();
-        let functions = module
-            .functions
-            .iter()
-            .map(|(_, f)| f)
-            .chain(module.entry_points.iter().map(|e| &e.function));
-        assert!(
-            functions
-                .into_iter()
-                .any(|f| f.expressions.iter().any(|(_, expression)| {
-                    let naga::Expression::ImageLoad {
-                        array_index: Some(layer),
-                        level: Some(level),
-                        ..
-                    } = expression
-                    else {
-                        return false;
-                    };
-                    matches!(
-                        f.expressions[*layer],
-                        naga::Expression::Literal(naga::Literal::I32(1) | naga::Literal::U32(1))
-                    ) && matches!(
-                        f.expressions[*level],
-                        naga::Expression::Literal(naga::Literal::I32(2) | naga::Literal::U32(2))
-                    )
-                }))
-        );
+        // Coordinates outside the original two-texel probe remain valid.
+        compile(false, "int3(3,5,0)", true).unwrap();
+        for (array, location, message) in [
+            (true, "int4(0,0,1,0)", "non-array, single-sampled 2D"),
+            (false, "int3(0,0,2)", "constant mip zero"),
+            (false, "int3(0,0,id.x)", "constant mip zero"),
+        ] {
+            let error = compile(array, location, true).unwrap_err();
+            assert!(format!("{error:#}").contains(message), "{error:#}");
+            compile(array, location, false).unwrap();
+        }
     }
 
     #[test]
