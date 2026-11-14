@@ -310,3 +310,10 @@ documents staleness after link changes.
 describes acquiring a path after invalidation and at the end of a stale partial
 route. The immediate-query and next-update reporting sequence above is measured
 behavior, not a timing guarantee from those pages.
+
+Two `activation.pending.*` controls change the link while a path request is still
+pending under a one-iteration budget. A request can publish the complete route it
+already found, marked stale even though a fresh query is partial. The following
+AI update repairs that route and clears its stale flag. Both controls record that
+following update; an indefinitely fresh complete result is a regression. All 272 values match, previously 26 differing values. Their
+GPU Editor repeats agree and preserve the previously committed reference prefix.

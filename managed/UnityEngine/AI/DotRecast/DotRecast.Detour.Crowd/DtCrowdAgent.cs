@@ -84,6 +84,9 @@ namespace DotRecast.Detour.Crowd
         public RcVec3f steerPos;
         public int steerFlags;
 
+        /// <summary>The owning agent validates this newly applied stale path at its next update.</summary>
+        public bool deferPathValidation;
+
         /// Unbound: the first corner becomes the steering corner (none without corners).
         public void KeepSteer()
         {

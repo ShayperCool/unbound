@@ -122,6 +122,37 @@ namespace UnityEngine.Tests
             });
         }
 
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        public void ActivationValidatesACompletedStaleSearchAtTheNextUpdate(int searchSteps)
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                int budget = NavMesh.pathfindingIterationsPerFrame;
+                try
+                {
+                    NavMesh.pathfindingIterationsPerFrame = 1;
+                    var agent = Agent(new Vector3(-7f, 0f, 0f));
+                    agent.speed = 0f;
+                    agent.autoRepath = false;
+                    Assert.True(agent.SetDestination(new Vector3(7f, 0f, 0f)));
+                    for (int i = 0; i < searchSteps; i++) AgentSystem.Step();
+                    Assert.True(agent.pathPending);
+                    NavMesh.SetLinkActive(m_Link, false);
+                    for (int i = 0; i < 30 && agent.pathPending; i++) AgentSystem.Step();
+                    Assert.False(agent.pathPending);
+                    if (agent.pathStatus == NavMeshPathStatus.PathComplete) Assert.True(agent.isPathStale);
+                    AgentSystem.Step();
+                    Assert.Equal(NavMeshPathStatus.PathPartial, agent.pathStatus);
+                    Assert.False(agent.isPathStale);
+                    Assert.True(agent.pathEndPosition.x < 0f);
+                }
+                finally { NavMesh.pathfindingIterationsPerFrame = budget; }
+            });
+        }
+
         [Fact]
         public void ActivationRestoredBeforeUpdateKeepsTheRouteAndItsStaleFlag()
         {

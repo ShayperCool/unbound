@@ -229,6 +229,8 @@ namespace UnityEngine.AI
             internal NavMeshPath Result;
             /// <summary>Where the search starts, on the NavMesh.</summary>
             internal Vector3 Origin => m_Start;
+            internal int ActivationVersion;
+            internal int PathStaleVersion;
 
             internal static PathSearch Begin(NavWorld.Surface surface, Vector3 source, Vector3 target, AreaFilter filter, int agentTypeID)
             {
@@ -244,6 +246,8 @@ namespace UnityEngine.AI
                     m_EndRef = endRef,
                     m_Start = start,
                     m_End = end,
+                    ActivationVersion = NavWorld.LinkActivationVersion,
+                    PathStaleVersion = NavWorld.PathStaleVersion,
                 };
                 search.m_Query.InitSlicedFindPath(startRef, endRef, V(start), V(end), filter, 0);
                 return search;

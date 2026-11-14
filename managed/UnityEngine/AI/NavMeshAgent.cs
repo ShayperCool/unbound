@@ -932,12 +932,15 @@ namespace Unbound.Runtime
         /// frame (Unity 6000.0.71f1, tests/projects/navlinks activation and waitrebuild).</summary>
         static void RevalidateActivatedLinks()
         {
-            if (!Compat.NavMeshLinkActivationMeasured || s_LinkActivationVersion == NavWorld.LinkActivationVersion) return;
+            if (!Compat.NavMeshLinkActivationMeasured) return;
+            bool changed = s_LinkActivationVersion != NavWorld.LinkActivationVersion;
             s_LinkActivationVersion = NavWorld.LinkActivationVersion;
             foreach (var agent in s_Agents)
             {
                 var ag = agent.m_Crowd;
-                if (ag == null || !agent.FollowingPath || agent.pathPending || agent.isOnOffMeshLink) continue;
+                if (ag == null || (!changed && !ag.deferPathValidation)) continue;
+                ag.deferPathValidation = false;
+                if (!agent.FollowingPath || agent.pathPending || agent.isOnOffMeshLink) continue;
                 var path = ag.corridor.GetPath();
                 int count = ag.corridor.GetPathCount();
                 for (int i = 0; i < count; i++)
@@ -1532,6 +1535,13 @@ namespace Unbound.Runtime
                 }
                 // The corridor starts where the search did (see PathOrigin).
                 ApplyPath(agent, search.Result, NavMesh.V(search.Origin));
+                if (Compat.NavMeshLinkActivationMeasured && search.ActivationVersion != NavWorld.LinkActivationVersion)
+                {
+                    // A request completed across an activation change reports its result stale
+                    // until the next AI update validates it (tests/projects/navlinks activation.pending).
+                    agent.RestoreStaleness((false, search.PathStaleVersion));
+                    agent.m_Crowd.deferPathValidation = true;
+                }
             }
         }
 

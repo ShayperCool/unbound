@@ -470,7 +470,7 @@ namespace DotRecast.Detour.Crowd
             for (var i = 0; i < agents.Count; i++)
             {
                 var ag = agents[i];
-                if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING)
+                if (ag.deferPathValidation || ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING)
                 {
                     continue;
                 }

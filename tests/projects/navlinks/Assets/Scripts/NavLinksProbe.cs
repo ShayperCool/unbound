@@ -740,6 +740,7 @@ public class NavLinksProbe : MonoBehaviour
         yield return RecordUpAxisEdges();
         yield return RecordRotationWrites();
         yield return RecordActivationControls();
+        yield return RecordPendingActivationControls();
         Finish(0);
     }
 
@@ -965,6 +966,37 @@ public class NavLinksProbe : MonoBehaviour
             Line(lane.Name, "a", 5, State(lane, agent));
             DestroyImmediate(agent.gameObject);
         }
+    }
+
+    IEnumerator RecordPendingActivationControls()
+    {
+        var source = m_Lanes.Find(lane => lane.Name == "crosstile");
+        int budget = NavMesh.pathfindingIterationsPerFrame;
+        NavMesh.pathfindingIterationsPerFrame = 1;
+        foreach (int steps in new[] { 1, 2 })
+        {
+            var lane = new Lane { Name = "activation.pending." + steps, O = source.O, Link = source.Link };
+            source.Link.activated = true;
+            var agent = Agent(lane, "a", new Vector3(-8f, 0f, 0f), new Vector3(8f, 0f, 0f), a =>
+            {
+                a.speed = 0f;
+                a.autoRepath = false;
+                a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            });
+            for (int i = 0; i < steps; i++) yield return null;
+            Line(lane.Name, "-", 1, "\"pendingBeforeChange\":" + B(agent.pathPending));
+            source.Link.activated = false;
+            yield return null;
+            for (int i = 0; i < 30 && agent.pathPending; i++) yield return null;
+            var query = new NavMeshPath();
+            NavMesh.CalculatePath(lane.O + new Vector3(-8f, 0f, 0f), lane.O + new Vector3(8f, 0f, 0f), NavMesh.AllAreas, query);
+            Line(lane.Name, "a", 2, State(lane, agent) + ",\"queryStatus\":" + Text(query.status.ToString()));
+            yield return null;
+            Line(lane.Name, "a", 3, State(lane, agent));
+            DestroyImmediate(agent.gameObject);
+        }
+        source.Link.activated = true;
+        NavMesh.pathfindingIterationsPerFrame = budget;
     }
 
     string State(Lane lane, NavMeshAgent agent)
