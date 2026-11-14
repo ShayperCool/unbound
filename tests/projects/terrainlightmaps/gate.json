@@ -1,3 +1,4 @@
 {
+  "engine_paths": ["managed/UnityEngine/Graphics/Lightmapping.cs"],
   "exclusive": true
 }
