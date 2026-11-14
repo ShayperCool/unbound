@@ -7,30 +7,12 @@
 
 namespace UnityEngine.XR
 {
-    [global::System.Flags]
-    internal enum AvailableTrackingData
-    {
-        None = 0,
-        PositionAvailable = 1,
-        RotationAvailable = 2,
-        VelocityAvailable = 4,
-        AngularVelocityAvailable = 8,
-        AccelerationAvailable = 16,
-        AngularAccelerationAvailable = 32,
-    }
-    unsafe partial struct Bone : global::System.IEquatable<global::UnityEngine.XR.Bone>
+    unsafe partial struct Bone
     {
         [global::Unbound.Stub] public bool TryGetPosition(out global::UnityEngine.Vector3 position) { position = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.TryGetPosition"); return default; }
         [global::Unbound.Stub] public bool TryGetRotation(out global::UnityEngine.Quaternion rotation) { rotation = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.TryGetRotation"); return default; }
         [global::Unbound.Stub] public bool TryGetParentBone(out global::UnityEngine.XR.Bone parentBone) { parentBone = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.TryGetParentBone"); return default; }
         [global::Unbound.Stub] public bool TryGetChildBones(global::System.Collections.Generic.List<global::UnityEngine.XR.Bone> childBones) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.TryGetChildBones"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.XR.Bone other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.XR.Bone a, global::UnityEngine.XR.Bone b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.XR.Bone a, global::UnityEngine.XR.Bone b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.op_Inequality"); return default; }
-        internal ulong deviceId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.deviceId"); return default; } }
-        internal uint featureIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Bone.featureIndex"); return default; } }
     }
     internal enum ConnectionChangeType : uint
     {
@@ -43,7 +25,7 @@ namespace UnityEngine.XR
         Left = 0,
         Right = 1,
     }
-    unsafe partial struct Eyes : global::System.IEquatable<global::UnityEngine.XR.Eyes>
+    unsafe partial struct Eyes
     {
         [global::Unbound.Stub] public bool TryGetLeftEyePosition(out global::UnityEngine.Vector3 position) { position = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.TryGetLeftEyePosition"); return default; }
         [global::Unbound.Stub] public bool TryGetRightEyePosition(out global::UnityEngine.Vector3 position) { position = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.TryGetRightEyePosition"); return default; }
@@ -52,25 +34,11 @@ namespace UnityEngine.XR
         [global::Unbound.Stub] public bool TryGetFixationPoint(out global::UnityEngine.Vector3 fixationPoint) { fixationPoint = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.TryGetFixationPoint"); return default; }
         [global::Unbound.Stub] public bool TryGetLeftEyeOpenAmount(out float openAmount) { openAmount = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.TryGetLeftEyeOpenAmount"); return default; }
         [global::Unbound.Stub] public bool TryGetRightEyeOpenAmount(out float openAmount) { openAmount = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.TryGetRightEyeOpenAmount"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.XR.Eyes other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.XR.Eyes a, global::UnityEngine.XR.Eyes b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.XR.Eyes a, global::UnityEngine.XR.Eyes b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.op_Inequality"); return default; }
-        internal ulong deviceId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.deviceId"); return default; } }
-        internal uint featureIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Eyes.featureIndex"); return default; } }
     }
-    unsafe partial struct Hand : global::System.IEquatable<global::UnityEngine.XR.Hand>
+    unsafe partial struct Hand
     {
         [global::Unbound.Stub] public bool TryGetRootBone(out global::UnityEngine.XR.Bone boneOut) { boneOut = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Hand.TryGetRootBone"); return default; }
         [global::Unbound.Stub] public bool TryGetFingerBones(global::UnityEngine.XR.HandFinger finger, global::System.Collections.Generic.List<global::UnityEngine.XR.Bone> bonesOut) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Hand.TryGetFingerBones"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Hand.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.XR.Hand other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Hand.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Hand.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.XR.Hand a, global::UnityEngine.XR.Hand b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Hand.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.XR.Hand a, global::UnityEngine.XR.Hand b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Hand.op_Inequality"); return default; }
-        internal ulong deviceId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Hand.deviceId"); return default; } }
-        internal uint featureIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.Hand.featureIndex"); return default; } }
     }
     public enum HandFinger
     {
@@ -79,20 +47,6 @@ namespace UnityEngine.XR
         Middle = 2,
         Ring = 3,
         Pinky = 4,
-    }
-    unsafe partial struct HapticCapabilities : global::System.IEquatable<global::UnityEngine.XR.HapticCapabilities>
-    {
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.XR.HapticCapabilities other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.XR.HapticCapabilities a, global::UnityEngine.XR.HapticCapabilities b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.XR.HapticCapabilities a, global::UnityEngine.XR.HapticCapabilities b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.op_Inequality"); return default; }
-        public uint numChannels { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.numChannels"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.numChannels"); } }
-        public bool supportsImpulse { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.supportsImpulse"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.supportsImpulse"); } }
-        public bool supportsBuffer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.supportsBuffer"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.supportsBuffer"); } }
-        public uint bufferFrequencyHz { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.bufferFrequencyHz"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.bufferFrequencyHz"); } }
-        public uint bufferMaxSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.bufferMaxSize"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.bufferMaxSize"); } }
-        public uint bufferOptimalSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.bufferOptimalSize"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.HapticCapabilities.bufferOptimalSize"); } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class HashCodeHelper
@@ -459,24 +413,6 @@ namespace UnityEngine.XR
     {
         [global::Unbound.Stub] public int blitMode;
         [global::Unbound.Stub] public string blitModeDesc;
-    }
-    unsafe partial struct XRNodeState
-    {
-        [global::Unbound.Stub] public bool TryGetPosition(out global::UnityEngine.Vector3 position) { position = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.TryGetPosition"); return default; }
-        [global::Unbound.Stub] public bool TryGetRotation(out global::UnityEngine.Quaternion rotation) { rotation = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.TryGetRotation"); return default; }
-        [global::Unbound.Stub] public bool TryGetVelocity(out global::UnityEngine.Vector3 velocity) { velocity = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.TryGetVelocity"); return default; }
-        [global::Unbound.Stub] public bool TryGetAngularVelocity(out global::UnityEngine.Vector3 angularVelocity) { angularVelocity = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.TryGetAngularVelocity"); return default; }
-        [global::Unbound.Stub] public bool TryGetAcceleration(out global::UnityEngine.Vector3 acceleration) { acceleration = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.TryGetAcceleration"); return default; }
-        [global::Unbound.Stub] public bool TryGetAngularAcceleration(out global::UnityEngine.Vector3 angularAcceleration) { angularAcceleration = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.TryGetAngularAcceleration"); return default; }
-        public ulong uniqueID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.uniqueID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.uniqueID"); } }
-        public global::UnityEngine.XR.XRNode nodeType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.nodeType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.nodeType"); } }
-        public bool tracked { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.tracked"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.tracked"); } }
-        public global::UnityEngine.Vector3 position { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.position"); } }
-        public global::UnityEngine.Quaternion rotation { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.rotation"); } }
-        public global::UnityEngine.Vector3 velocity { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.velocity"); } }
-        public global::UnityEngine.Vector3 angularVelocity { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.angularVelocity"); } }
-        public global::UnityEngine.Vector3 acceleration { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.acceleration"); } }
-        public global::UnityEngine.Vector3 angularAcceleration { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.XR.XRNodeState.angularAcceleration"); } }
     }
 }
 namespace UnityEngine.XR.Provider

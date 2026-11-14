@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/xrvalues/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/XR/**"
+  ]
+}

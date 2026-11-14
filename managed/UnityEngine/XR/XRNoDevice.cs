@@ -415,11 +415,6 @@ namespace UnityEngine.XR
         HardwareTracker = 8,
     }
 
-    public partial struct Hand { }
-    public partial struct Bone { }
-    public partial struct Eyes { }
-    public partial struct HapticCapabilities { }
-    public partial struct XRNodeState { }
     public partial class XRInputSubsystem : IntegratedSubsystem<XRInputSubsystemDescriptor> { }
     public partial class XRInputSubsystemDescriptor : IntegratedSubsystemDescriptor<XRInputSubsystem> { }
 }

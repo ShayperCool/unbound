@@ -112,18 +112,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After physics/text adapters |
+| Category | Before Q410 | After XR value payloads |
 | --- | ---: | ---: |
 | Attributes | 938 | 23 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 4 |
-| Layout | 68 | 68 |
-| Interfaces | 65 | 58 |
+| Layout | 68 | 63 |
+| Interfaces | 65 | 54 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 173 |
+| Total | 1,332 | 164 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -376,7 +376,7 @@ Its four gradient aggregates and variable random seed remain queued.
 The tooling slice removes 133 exact policy-only entries after the final-shapes
 slice reduced the queue from 370 to 341. The GUI payload slice removes another
 32 entries. Physics material and text adapters remove three more interface entries,
-leaving 173 exact entries, each with a
+and XR value payloads remove nine layout/interface entries, leaving 164 exact entries, each with a
 specific follow-up reason. No allow-list is regenerated from a passing report.
 The generator format changes with the comparison policy and the committed stubs
 are regenerated from the selected release. Existing probe references and strict
@@ -394,7 +394,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-ObjectIdentifier-serialization` | 1 | Empty composite eligibility that preserves initializer values during cloning. |
 | `Q410-UI-command-events` | 1 | Command/IME event pooling and propagation before the exact interest list. |
 | `Q410-UI-interfaces` | 12 | Binding notifications, panel/group ownership, animations and internal equality cleanup. |
-| `Q410-XR-value-payloads` | 4 | Distinct provider/handle payloads before equality and hashing interfaces. |
+| `Q410-XR-value-payloads` | 0 | Done for value identity, equality, hashing and capability storage by `xrvalues`; physical feature-provider queries remain unsupported and outside this payload slice. |
 | `Q410-animation-job-producer` | 1 | Animation producer payload and scheduling/lifetime controls. |
 | `Q410-asset-interface-adapters` | 30 | PhysicsMaterial, PhysicsMaterial2D and TextAsset are migrated to external adapters with load/copy/coverage controls in `assetadapters`. Other asset types still need migration; retain mixer subasset restrictions. |
 | `Q410-built-in-inspector-registration` | 3 | Target-specific single/multiple-object inspector behavior before registry annotations. |
@@ -405,7 +405,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-measured-lookup-policies` | 11 | Retain the eleven direct/inherited discovery policies and their controls. |
 | `Q410-slide-result-serialization` | 2 | Nondefault collision-hit backing payloads and overwrite controls. |
 | `Q410-unconstrained-pixel-data` | 1 | Shared allocation-free unconstrained array transfer and invalid/reference-containing input controls. |
-| `Q410-value-layout-payloads` | 8 | Eight value-payload/size migrations with field-order and nondefault-copy controls. |
+| `Q410-value-layout-payloads` | 3 | Five XR payloads now have selected field order, sizes and nondefault unmanaged round trips in `xrvalues`. AnimationInfo, LocationInfo and ray-tracing BuildSettings still need their payload migrations. |
 | `Q410-wrapper-layouts` | 60 | YieldInstruction and WaitForSeconds now marshal their complete payloads in `yieldlayouts`; their two exact default-packing metadata discrepancies remain. The other 58 wrappers still need payload/base-layout and ownership migration. |
 
 The earlier strict navlinks run retained 325 value differences and the texture-pixel
@@ -441,7 +441,19 @@ payloads of YieldInstruction and WaitForSeconds. Its 37 strict controls preserve
 offsets, nondefault bit patterns and derived coroutine operation. Two exact exceptions
 remain for explicit pack eight versus selected default pack zero: the Editor reports
 eight at runtime, while CoreCLR reports zero without an explicit value. Raw metadata
-differences stay visible and the declaration total remains 173. A shared reflection/default-
+differences stay visible; this slice removes no declaration exceptions. A shared reflection/default-
 packing bridge is queued. GUIContent requires its additional serialized cache/event
 payload; Coroutine requires a pointer/ownership migration. Neither is fixed by a layout
 flag alone. Other wrapper hierarchies remain queued with their exact reasons.
+
+
+## XR value payloads
+
+`tests/projects/xrvalues` records distinct Bone, Eyes and Hand identities, capability values,
+collection equality/hash behavior, field offsets and unmanaged round trips in Unity 6000.0.71f1.
+XRNodeState stores independent tracking fields and availability bits. Nondefault values with
+cleared bits return the measured unavailable outputs; setting each field makes that field
+available without setting the others. Structure copies retain independent values and masks.
+The no-provider controls overwrite seeded handle/capability outputs with defaults. Physical
+provider queries on the handle types remain unsupported; this change does not claim XR hardware
+support. Runtime default packing remains the separate discrepancy documented by `yieldlayouts`.
