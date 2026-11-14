@@ -198,7 +198,11 @@ pub fn run(
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: options.title.clone(),
-                    resolution: WindowResolution::new(options.width.max(1), options.height.max(1)),
+                    // Unity's screen sizes are pixels (`Screen.width`, `Screen.SetResolution`), so is
+                    // the size the run asks for: on a display that scales its windows (a HiDPI Mac,
+                    // 2x) the window has that many pixels, not that many points.
+                    resolution: WindowResolution::new(options.width.max(1), options.height.max(1))
+                        .with_scale_factor_override(1.0),
                     resizable: true,
                     // Any size the run asks for (`--size`, `Screen.SetResolution`): Bevy's default
                     // minimum of 180x120 goes into the X11 size hints, and a smaller window is
@@ -543,12 +547,13 @@ fn drive(
         }
     }
     // The game's IME request (`Input.imeCompositionMode`, `Input.compositionCursorPos` in window
-    // pixels from the top left; Bevy places the input method's windows in logical pixels).
+    // pixels from the top left; Bevy places the input method's windows in the system's logical
+    // pixels, whatever scale the window's resolution overrides).
     if let Some(request) = unbound_runtime::ime::take_request()
         && settings.remote.is_none()
         && let Ok(mut window) = windows.single_mut()
     {
-        let position = Vec2::from(request.position) / window.scale_factor();
+        let position = Vec2::from(request.position) / window.resolution.base_scale_factor();
         if window.ime_enabled != request.enabled {
             window.ime_enabled = request.enabled;
         }
