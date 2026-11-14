@@ -257,9 +257,10 @@ namespace UnityEngine.Rendering
             projMatrix = Matrix4x4.Perspective(90f + fovBias, 1f, near, light.range * 1.01f);
             SetFrustumCulling(ref shadowSplitData, projMatrix * viewMatrix, near);
             // The culling matrix keeps the face's vertical axis upright (the view above turns it
-            // for the cube map), and on a device with reversed depth also turns its depth axis:
-            // measured, tests/projects/brg local_shadows on OpenGL Core and Vulkan (a spot
-            // light's is the same on both).
+            // for the cube map), and on Vulkan also turns its depth axis: measured,
+            // tests/projects/brg local_shadows on OpenGL Core and Vulkan only (a spot light's is
+            // the same on both); that it follows the reversed depth, not another device property,
+            // is assumed (other devices are unmeasured).
             shadowSplitData.cullingMatrix = (SystemInfo.usesReversedZBuffer ? s_FlipYZ : s_FlipY) * shadowSplitData.cullingMatrix;
             return true;
         }

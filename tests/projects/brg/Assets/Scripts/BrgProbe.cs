@@ -489,36 +489,42 @@ public unsafe class BrgProbe : MonoBehaviour
         var supported = typeof(UniversalRenderPipelineAsset).GetField("m_AdditionalLightShadowsSupported", BindingFlags.NonPublic | BindingFlags.Instance);
         bool wasSupported = (bool)supported.GetValue(urp);
         supported.SetValue(urp, true);
-        var spot = new GameObject("Local Shadow Spot").AddComponent<Light>();
-        spot.type = LightType.Spot;
-        spot.transform.SetPositionAndRotation(new Vector3(-0.5f, 2.5f, 0.2f), Quaternion.Euler(70f, 10f, 0f));
-        spot.range = 6f;
-        spot.spotAngle = 70f;
-        spot.intensity = 3f;
-        spot.shadows = LightShadows.Hard;
-        var point = new GameObject("Local Shadow Point").AddComponent<Light>();
-        point.type = LightType.Point;
-        point.transform.position = new Vector3(1.2f, 1.2f, 0.4f);
-        point.range = 4f;
-        point.intensity = 2f;
-        point.shadows = LightShadows.Hard;
-        m_LocalLights = new[] { spot, point };
-        var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-        ground.transform.position = new Vector3(0f, -0.45f, 1.5f);
-        ground.transform.localScale = new Vector3(0.8f, 1f, 0.5f);
-        m_LightOnly = new BatchRendererGroup(OnPerformCulling, (IntPtr)2);
-        m_LightOnly.SetEnabledViewTypes(new[] { BatchCullingViewType.Light });
-        m_Shadows = true;
-        Scenario("local_shadows");
-        RecordViews();
-        m_Shadows = false;
-        m_LightOnly.Dispose();
-        m_LightOnly = null;
-        m_LocalLights = null;
-        DestroyImmediate(ground);
-        DestroyImmediate(spot.gameObject);
-        DestroyImmediate(point.gameObject);
-        supported.SetValue(urp, wasSupported);
+        try
+        {
+            var spot = new GameObject("Local Shadow Spot").AddComponent<Light>();
+            spot.type = LightType.Spot;
+            spot.transform.SetPositionAndRotation(new Vector3(-0.5f, 2.5f, 0.2f), Quaternion.Euler(70f, 10f, 0f));
+            spot.range = 6f;
+            spot.spotAngle = 70f;
+            spot.intensity = 3f;
+            spot.shadows = LightShadows.Hard;
+            var point = new GameObject("Local Shadow Point").AddComponent<Light>();
+            point.type = LightType.Point;
+            point.transform.position = new Vector3(1.2f, 1.2f, 0.4f);
+            point.range = 4f;
+            point.intensity = 2f;
+            point.shadows = LightShadows.Hard;
+            m_LocalLights = new[] { spot, point };
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            ground.transform.position = new Vector3(0f, -0.45f, 1.5f);
+            ground.transform.localScale = new Vector3(0.8f, 1f, 0.5f);
+            m_LightOnly = new BatchRendererGroup(OnPerformCulling, (IntPtr)2);
+            m_LightOnly.SetEnabledViewTypes(new[] { BatchCullingViewType.Light });
+            m_Shadows = true;
+            Scenario("local_shadows");
+            RecordViews();
+            m_Shadows = false;
+            m_LightOnly.Dispose();
+            m_LightOnly = null;
+            m_LocalLights = null;
+            DestroyImmediate(ground);
+            DestroyImmediate(spot.gameObject);
+            DestroyImmediate(point.gameObject);
+        }
+        finally
+        {
+            supported.SetValue(urp, wasSupported);
+        }
     }
 
     /// <summary>The local_shadows scenario's lights, which its contexts name.</summary>
