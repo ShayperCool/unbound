@@ -288,6 +288,7 @@ public partial class NativeGfxVulkanProbe : MonoBehaviour
             try { action(); }
             finally { Application.logMessageReceived += OnLog; }
         });
+        AllocationControls();
         PluginRecord();
         if (logs.Count > 0) Value("logs", L(logs));
         Value("complete", B(code == 0));

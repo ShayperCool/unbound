@@ -1358,6 +1358,17 @@ pub fn norm_texel_to_f32(format: wgpu::TextureFormat, texel: &[u8]) -> Option<[f
     })
 }
 
+/// Multisample color storage is sampled only when bindTextureMS exposes the samples.
+/// GL retains texture storage because native plugins access its texture name.
+fn multisample_color_usage(device: &wgpu::Device, bind_ms: bool) -> wgpu::TextureUsages {
+    // SAFETY: only the backend identity is inspected while the device is alive.
+    #[cfg(target_os = "linux")]
+    if !bind_ms && unsafe { device.as_hal::<wgpu::hal::api::Vulkan>() }.is_some() {
+        return wgpu::TextureUsages::RENDER_ATTACHMENT;
+    }
+    wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING
+}
+
 /// Creates (or rewrites in place, when the shape is unchanged) a texture from a packet.
 pub fn upload_texture(
     device: &wgpu::Device,
@@ -1609,11 +1620,9 @@ pub fn upload_texture_with(
                     sample_count: samples,
                     dimension: wgpu::TextureDimension::D2,
                     format,
-                    // A texture, as Unity's devices make it (not a render buffer): native
-                    // plugins get it by name (tests/projects/nativegfx `shape.msaa.target.color`,
-                    // `shape.rt.msaa.color.depth`).
-                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                        | wgpu::TextureUsages::TEXTURE_BINDING,
+                    // Vulkan needs sampled usage only when shaders access the samples.
+                    // Keep GL storage as a texture for native plugin interop.
+                    usage: multisample_color_usage(device, t.bind_ms),
                     view_formats,
                 });
                 let raw = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -1962,6 +1971,66 @@ fn gpu_mip_count(width: u32, height: u32, layers: u32, volume: bool, requested: 
 mod tests {
     use super::*;
     use unbound_runtime::render_protocol::{SubMeshPacket, Vector3, Vector4};
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn vulkan_multisample_color_has_only_requested_shader_access() {
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::VULKAN,
+            ..wgpu::InstanceDescriptor::new_without_display_handle_from_env()
+        });
+        let Some(adapter) =
+            bevy::tasks::block_on(instance.enumerate_adapters(wgpu::Backends::VULKAN))
+                .into_iter()
+                .next()
+        else {
+            eprintln!("skipped: no Vulkan adapter");
+            return;
+        };
+        let (device, _) = bevy::tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+            required_features: adapter.features()
+                & wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
+            required_limits: adapter.limits(),
+            ..Default::default()
+        }))
+        .unwrap();
+        for bound in [false, true] {
+            for format in [
+                wgpu::TextureFormat::Rgba8Unorm,
+                wgpu::TextureFormat::Rgba16Float,
+            ] {
+                let texture = device.create_texture(&wgpu::TextureDescriptor {
+                    label: None,
+                    size: wgpu::Extent3d {
+                        width: 7,
+                        height: 3,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: 4,
+                    dimension: wgpu::TextureDimension::D2,
+                    format,
+                    usage: multisample_color_usage(&device, bound),
+                    view_formats: &[],
+                });
+                let raw = unsafe { texture.as_hal::<wgpu::hal::api::Vulkan>() }.unwrap();
+                assert_eq!(
+                    raw.raw_usage().contains(ash::vk::ImageUsageFlags::SAMPLED),
+                    bound
+                );
+                assert!(
+                    raw.raw_usage()
+                        .contains(ash::vk::ImageUsageFlags::COLOR_ATTACHMENT)
+                );
+                assert_eq!(
+                    texture
+                        .usage()
+                        .contains(wgpu::TextureUsages::TEXTURE_BINDING),
+                    bound
+                );
+            }
+        }
+    }
 
     #[test]
     fn volumes_deeper_than_wide_keep_every_level() {

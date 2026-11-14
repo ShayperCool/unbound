@@ -1,8 +1,5 @@
 {
  "Vulkan: a DontCare event from a script outside rendering gets the Editor's command buffer only while it has one recording (after resource access it has none); Unbound gives its own: unspecified by the interface (DontCare), accepted": [
   "plugin.dontcare.update"
- ],
- "The owned multisampled color buffer retains sampled-image usage in Unbound (151), while this Unity 6000.0.71f1 NVIDIA buffer has attachment, input and transfer usages without sampled usage (147). Both values describe the actual allocation; changing the multisampled storage policy remains queued.": [
-  "plugin.msaa.buffer"
  ]
 }

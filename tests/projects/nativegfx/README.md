@@ -8,9 +8,11 @@ uses the low-level native plugin interface and records what it gets; the scripts
     python3 tests/projects/nativegfx/run.py check      # engine run compared with Reference/
 
 Current NVIDIA results against Unity 6000.0.71f1 are OpenGL Core 516/564 with
-48 declared residuals, Vulkan 516/518 with two, and the separate OpenGL stencil
-profile 544/605 with 61. The Vulkan attachment-capability change closes 62 of its
-64 prior differences. References and comparator tolerances are unchanged.
+48 declared residuals, Vulkan 566/567 with one, and the separate OpenGL stencil
+profile 544/605 with 61. Vulkan attachment capabilities and multisample color
+usage close 63 of its 64 earlier differences. All 518 earlier Vulkan reference
+rows are byte-identical; 49 allocation controls are appended. Comparator
+tolerances are unchanged.
 
 Recorded:
 
@@ -318,10 +320,22 @@ NVIDIA result without changing any reference rows. GPU unit controls also use a
 7x3 attachment, sample counts 1 and 4, a conservative borrowed view, a sampled
 copy destination and volume initialization.
 
-The remaining Vulkan rows retain their raw differences: plugin.dontcare.update
-has a command buffer in Unbound and none in this Editor history; the interface
-leaves DontCare unconstrained. plugin.msaa.buffer has sampled usage in Unbound,
-which this Editor buffer lacks. Broader multisampled allocation policy is queued.
+The physical Vulkan multisample color attachment has sampled usage only when
+bindTextureMS exposes its samples to shaders. Otherwise it is an attachment and
+resolve source. OpenGL retains texture storage for native plugin access. This is
+a backend resource permission, selected at allocation without changing the
+public texture format or the release profile. The [bindTextureMS contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture-bindTextureMS.html)
+permits shader access to multisampled storage; it does not specify native usage
+flags. The measured flags are 147 without shader access and 151 with it, on
+NVIDIA only. allocation.* records 7x3 RGBA8 and RGBAHalf targets at 2, 4 and 8
+samples, before a clear, after a clear and after native pointer access. All 36
+physical-image observations match. A GPU unit control independently checks the
+actual sampled and attachment usage flags for both formats and bind modes.
+
+The remaining Vulkan row retains its raw difference: plugin.dontcare.update
+has a command buffer in Unbound and none in this Editor history. The SDK header
+IUnityGraphicsVulkan.h leaves DontCare unconstrained; no recording-state policy
+is inferred from that one history.
 
 OpenGL's 42 original residuals remain: 39 callback error records, two attachment
 kind differences and Editor profiler activity. Six added multisample-compute

@@ -623,3 +623,16 @@ EXPORT void NativeGfxVk_ExternalDestroy(void)
 #undef DEVICE_PROC
 
 EXPORT int NativeGfxVk_SameImage(void* a, void* b) { return a && b && *(VkImage*)a == *(VkImage*)b; }
+
+// Observe the actual color attachment across initialization and pointer access.
+static void on_allocation_event(int event_id)
+{
+    (void)event_id;
+    UnityVulkanImage image;
+    memset(&image, 0, sizeof image);
+    int ok = s_device_buffer && s_vulkan->AccessRenderBufferTexture(s_device_buffer, NULL,
+        VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_ACCESS_MEMORY_READ_BIT,
+        ObserveOnly, &image);
+    record_image(s_step, ok, &image, NULL);
+}
+EXPORT void* NativeGfxVk_AllocationEvent(void) { return (void*)on_allocation_event; }
