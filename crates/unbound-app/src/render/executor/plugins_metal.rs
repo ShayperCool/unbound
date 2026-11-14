@@ -275,12 +275,17 @@ extern "C" fn end_current_command_encoder() {
     });
 }
 
+/// The descriptor of the current encoder: nil until one is begun and after it ends, as the
+/// header says and the macOS Editor answers (nativegfx `plugin.mutate`: `before=0`).
 extern "C" fn current_render_pass_descriptor() -> Object {
     with_scope(|s| {
         if s.pass.is_none() && s.screen {
             warn_screen();
         }
-        s.pass.as_ref().map_or(std::ptr::null_mut(), object)
+        match (&s.encoder, &s.pass) {
+            (Some(_), Some(pass)) => object(pass),
+            _ => std::ptr::null_mut(),
+        }
     })
     .unwrap_or_else(|| {
         warn_outside("current render pass descriptor");
@@ -415,8 +420,8 @@ pub(super) struct MetalPlugins {
     targets: Vec<u64>,
     /// The render textures' images a callback's scope holds (reused, lent to the scope).
     images: HashMap<u64, Images>,
-    /// The last render pass made, by its images, level and slice.
-    pass: Option<([usize; 5], Shared<MTLRenderPassDescriptor>)>,
+    /// The render pass descriptor callbacks' encoders begin from (filled again for each).
+    pass: Option<Shared<MTLRenderPassDescriptor>>,
 }
 
 impl MetalPlugins {
@@ -560,8 +565,7 @@ impl UnityRenderer {
     }
 
     /// The render pass over the current target that encoders begin from, or None (the screen,
-    /// a target not drawn into); the last one is kept and given again while the target's
-    /// images are the same.
+    /// a target not drawn into).
     fn metal_pass(&mut self) -> Option<Retained<MTLRenderPassDescriptor>> {
         let (color, depth) = self.target_handles;
         if color == 0 {
@@ -580,7 +584,8 @@ impl UnityRenderer {
         let gpu = self.textures.get(&color)?;
         let (volume, layered) = (gpu.volume, gpu.cube || gpu.cube_array || gpu.array);
         let (multisampled, depth_only) = (gpu.msaa.is_some(), gpu.format == 5);
-        let (width, samples) = (gpu.width >> level, gpu.samples.max(1));
+        let (width, height, samples) =
+            (gpu.width >> level, gpu.height >> level, gpu.samples.max(1));
         let color_image = if depth_only {
             0
         } else {
@@ -599,7 +604,9 @@ impl UnityRenderer {
                 let buffer = self.textures.get(&owner)?.depth_texture.as_ref()?;
                 let fits = depth_only
                     || (buffer.sample_count().max(1) == samples
-                        && (buffer.width() >> level).max(1) == width.max(1));
+                        && (level as u32) < buffer.mip_level_count()
+                        && (buffer.width() >> level).max(1) == width.max(1)
+                        && (buffer.height() >> level).max(1) == height.max(1));
                 if !fits && !WARNED_DEPTH.swap(true, Ordering::Relaxed) {
                     tracing::warn!(
                         "a native plugin callback's render pass leaves out a depth buffer whose \
@@ -613,68 +620,72 @@ impl UnityRenderer {
         if depth_only && depth_image == 0 {
             return None;
         }
-        let key = [color_image, resolved, depth_image, level, slice];
         let plugins = self.metal_plugins.as_mut()?;
-        if let Some((kept, pass)) = &plugins.pass
-            && *kept == key
-        {
-            return Some(pass.0.clone());
-        }
-        let pass = MTLRenderPassDescriptor::new();
-        if color_image != 0 {
-            // SAFETY: index 0 is within the attachments' range.
-            let attachment = unsafe { pass.colorAttachments().objectAtIndexedSubscript(0) };
-            // SAFETY: the cache holds the textures.
-            attachment.setTexture(Some(unsafe { held(color_image) }));
-            attachment.setLevel(level);
-            if volume {
-                attachment.setDepthPlane(slice);
-            } else if layered {
-                attachment.setSlice(slice);
+        // One descriptor object, kept; every field Unbound draws with is set again for each
+        // callback, as plugins may change the one they are given.
+        let pass = match &plugins.pass {
+            Some(kept) => kept.0.clone(),
+            None => {
+                let made = MTLRenderPassDescriptor::new();
+                plugins.pass = Some(Shared(made.clone()));
+                made
             }
+        };
+        pass.setRenderTargetArrayLength(0);
+        pass.setRenderTargetWidth(0);
+        pass.setRenderTargetHeight(0);
+        pass.setDefaultRasterSampleCount(0);
+        let colors = pass.colorAttachments();
+        for index in 0..8 {
+            // SAFETY: the index is within the attachments' range (8 colors).
+            let attachment = unsafe { colors.objectAtIndexedSubscript(index) };
+            let (texture, resolve) = match index {
+                0 => (color_image, resolved),
+                _ => (0, 0),
+            };
+            // SAFETY: the cache holds the textures (0: none).
+            attachment.setTexture((texture != 0).then(|| unsafe { held(texture) }));
+            attachment.setResolveTexture((resolve != 0).then(|| unsafe { held(resolve) }));
+            attachment.setLevel(level);
+            attachment.setSlice(if layered { slice } else { 0 });
+            attachment.setDepthPlane(if volume { slice } else { 0 });
+            attachment.setResolveLevel(level);
+            attachment.setResolveSlice(if layered { slice } else { 0 });
+            attachment.setResolveDepthPlane(if volume { slice } else { 0 });
             attachment.setLoadAction(MTLLoadAction::Load);
-            if resolved != 0 {
-                attachment.setResolveTexture(Some(unsafe { held(resolved) }));
-                attachment.setResolveLevel(level);
-                if volume {
-                    attachment.setResolveDepthPlane(slice);
-                } else if layered {
-                    attachment.setResolveSlice(slice);
-                }
-                attachment.setStoreAction(MTLStoreAction::StoreAndMultisampleResolve);
+            attachment.setStoreAction(if resolve != 0 {
+                MTLStoreAction::StoreAndMultisampleResolve
             } else {
-                attachment.setStoreAction(MTLStoreAction::Store);
-            }
+                MTLStoreAction::Store
+            });
         }
-        if depth_image != 0 {
-            // SAFETY: the cache holds it.
-            let texture = unsafe { held(depth_image) };
-            // A 3D target's depth buffer is one image; an array's or a cube's has a layer for
-            // each of the color's.
-            let depth_slice = layered.then_some(slice);
-            let attachment = pass.depthAttachment();
-            attachment.setTexture(Some(texture));
-            attachment.setLevel(level);
-            if let Some(slice) = depth_slice {
-                attachment.setSlice(slice);
-            }
-            attachment.setLoadAction(MTLLoadAction::Load);
-            attachment.setStoreAction(MTLStoreAction::Store);
-            if matches!(
-                texture.pixelFormat(),
+        // SAFETY: the cache holds it (0: none).
+        let depth_texture = (depth_image != 0).then(|| unsafe { held(depth_image) });
+        let stencil_texture = depth_texture.filter(|t| {
+            matches!(
+                t.pixelFormat(),
                 MTLPixelFormat::Depth32Float_Stencil8 | MTLPixelFormat::Depth24Unorm_Stencil8
-            ) {
-                let stencil = pass.stencilAttachment();
-                stencil.setTexture(Some(texture));
-                stencil.setLevel(level);
-                if let Some(slice) = depth_slice {
-                    stencil.setSlice(slice);
-                }
-                stencil.setLoadAction(MTLLoadAction::Load);
-                stencil.setStoreAction(MTLStoreAction::Store);
-            }
-        }
-        plugins.pass = Some((key, Shared(pass.clone())));
+            )
+        });
+        // A 3D target's depth buffer is one image; an array's or a cube's has a layer for each
+        // of the color's.
+        let depth_slice = if layered { slice } else { 0 };
+        let attachment = pass.depthAttachment();
+        attachment.setTexture(depth_texture);
+        attachment.setLevel(level);
+        attachment.setSlice(depth_slice);
+        attachment.setDepthPlane(0);
+        attachment.setResolveTexture(None);
+        attachment.setLoadAction(MTLLoadAction::Load);
+        attachment.setStoreAction(MTLStoreAction::Store);
+        let stencil = pass.stencilAttachment();
+        stencil.setTexture(stencil_texture);
+        stencil.setLevel(level);
+        stencil.setSlice(depth_slice);
+        stencil.setDepthPlane(0);
+        stencil.setResolveTexture(None);
+        stencil.setLoadAction(MTLLoadAction::Load);
+        stencil.setStoreAction(MTLStoreAction::Store);
         Some(pass)
     }
 

@@ -57,7 +57,8 @@ static const Guid kMetalV2 = {0xF58857784FEF46ECULL, 0x9DB7A8803B87DA3DULL};
 static const Guid kVulkan = {0x95355348d4ef4e11ULL, 0x9789313dfcffcc87ULL};
 
 // The probe's events, after the reserved base.
-enum { EventState = 0, EventDraw = 1, EventEndBlit = 2, EventCommit = 3, EventQueueBlit = 4, EventCopy = 5, EventCount = 6 };
+enum { EventState = 0, EventDraw = 1, EventEndBlit = 2, EventCommit = 3, EventQueueBlit = 4, EventCopy = 5, EventMutate = 6,
+       EventCount = 7 };
 
 // ------------------------------------------------------------------ record
 
@@ -321,6 +322,19 @@ static void commit(void)
            after ? (long)after.status : -1L, encoder_kind(s_v2->v1.CurrentCommandEncoder()));
 }
 
+/// The descriptor before and after the current encoder exists; then the plugin changes it (a
+/// clear to red where the pass loads) and ends the encoder.
+static void mutate_pass(void)
+{
+    MTLRenderPassDescriptor* before = s_v1->CurrentRenderPassDescriptor();
+    id<MTLCommandEncoder> current = s_v1->CurrentCommandEncoder();
+    MTLRenderPassDescriptor* pass = s_v1->CurrentRenderPassDescriptor();
+    pass.colorAttachments[0].loadAction = MTLLoadActionClear;
+    pass.colorAttachments[0].clearColor = MTLClearColorMake(1, 0, 0, 1);
+    s_v1->EndCurrentCommandEncoder();
+    record("mutate step=%s before=%d encoder=%s pass=%d", s_step, before ? 1 : 0, encoder_kind(current), pass ? 1 : 0);
+}
+
 static void on_event(int id)
 {
     int event = id - s_eventBase;
@@ -332,6 +346,7 @@ static void on_event(int id)
     case EventCommit: record_state("state"); commit(); break;
     case EventQueueBlit: record_state("state"); queue_blit(); break;
     case EventCopy: end_and_copy(); break;
+    case EventMutate: mutate_pass(); break;
     default: record("event step=%s unknown=%d", s_step, event); break;
     }
 }

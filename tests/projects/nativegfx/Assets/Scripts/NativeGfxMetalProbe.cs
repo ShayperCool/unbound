@@ -36,7 +36,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
     [DllImport(Plugin)] static extern int NativeGfxMtl_Record(byte[] buffer, int capacity);
 
     // The plugin's events after its reserved base.
-    const int State = 0, Draw = 1, EndBlit = 2, Commit = 3, QueueBlit = 4, Copy = 5;
+    const int State = 0, Draw = 1, EndBlit = 2, Commit = 3, QueueBlit = 4, Copy = 5, Mutate = 6;
 
     readonly StringBuilder records = new StringBuilder();
     readonly List<string> logs = new List<string>();
@@ -44,7 +44,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
     string output;
     IntPtr callback;
     int eventBase;
-    RenderTexture target, cameraTarget, secondTarget, executed, executedMsaa, executedCopy;
+    RenderTexture target, cameraTarget, secondTarget, executed, executedMsaa, executedCopy, mutated;
     Texture2D texture;
     Camera firstCamera, secondCamera;
 
@@ -148,6 +148,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
         executed = Target("executed", 0);
         executedMsaa = Target("executedmsaa", 0, samples: 4);
         executedCopy = Target("executedcopy", 0);
+        mutated = Target("mutated", 0);
         var multisampled = Target("multisampled", 24, samples: 4);
         var srgbTarget = Target("srgbtarget", 0, readWrite: RenderTextureReadWrite.sRGB);
         var half = Target("half", 0, RenderTextureFormat.ARGBHalf);
@@ -276,6 +277,17 @@ public class NativeGfxMetalProbe : MonoBehaviour
                     NativeGfxMtl_Step("execute.msaa");
                     Graphics.ExecuteCommandBuffer(cmd);
                 }
+                // A plugin changes the descriptor it is given; the next event's encoder keeps the
+                // target's contents.
+                using (var cmd = new CommandBuffer { name = "mutated" })
+                {
+                    cmd.SetRenderTarget(mutated);
+                    cmd.ClearRenderTarget(true, true, Color.green);
+                    cmd.IssuePluginEvent(callback, eventBase + Mutate);
+                    cmd.IssuePluginEvent(callback, eventBase + State);
+                    NativeGfxMtl_Step("mutate");
+                    Graphics.ExecuteCommandBuffer(cmd);
+                }
                 using (var cmd = new CommandBuffer { name = "plain" })
                 {
                     cmd.IssuePluginEvent(callback, eventBase + State);
@@ -294,6 +306,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
         Value("executed.pixels", Pixels(executed, 8, 8));
         Value("executedmsaa.pixels", Pixels(executedMsaa, 8, 8));
         Value("executedcopy.pixels", Pixels(executedCopy, 8, 8));
+        Value("mutated.pixels", Pixels(mutated, 8, 8));
         NativeGfxMtl_SetColor(0f, 0f, 1f, 1f);
         var pointer = NativeGfxMtl_MakeTexture();
         var external = Texture2D.CreateExternalTexture(4, 4, TextureFormat.RGBA32, false, true, pointer);

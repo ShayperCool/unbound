@@ -6,6 +6,7 @@
 {"k":"executed.pixels","v":["00ffffff*8","00ffffff*8","00ffffff*8","00ffffff*8","00ffffff*8","00ffffff*8","00ffffff*8","00ffffff*8"]}
 {"k":"executedmsaa.pixels","v":["ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8"]}
 {"k":"executedcopy.pixels","v":["ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8"]}
+{"k":"mutated.pixels","v":["00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8"]}
 {"k":"external.pixels","v":["0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
 {"k":"external.pointer","v":true}
 {"k":"plugin.load","v":"load renderer=16 metal=1 v1=1 v2=1 vulkan=0 v1_is_plain=0"}
@@ -138,6 +139,14 @@
 {"k":"plugin.state.color0.execute.msaa","v":"state.color0 step=execute.msaa texture=other resolve=other level=0 slice=0 format=70 type=4 size=8x8x1 mips=1 layers=1 samples=4"}
 {"k":"plugin.state.color0.actions.execute.msaa","v":"state.color0.actions step=execute.msaa load=2 store=4"}
 {"k":"plugin.draw.execute.msaa","v":"draw step=execute.msaa drawn=1"}
+{"k":"plugin.mutate.mutate","v":"mutate step=mutate before=0 encoder=render pass=1"}
+{"k":"plugin.state.mutate","v":"state step=mutate main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
+{"k":"plugin.state.color0.mutate","v":"state.color0 step=mutate texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.mutate","v":"state.color0.actions step=mutate load=0 store=4"}
+{"k":"plugin.state.depth.mutate","v":"state.depth step=mutate texture=other format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.mutate","v":"state.depth.actions step=mutate load=0 store=4"}
+{"k":"plugin.state.stencil.mutate","v":"state.stencil step=mutate texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.mutate","v":"state.stencil.actions step=mutate load=0 store=4"}
 {"k":"plugin.state.execute.plain","v":"state step=execute.plain main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
 {"k":"plugin.state.color0.execute.plain","v":"state.color0 step=execute.plain texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
 {"k":"plugin.state.color0.actions.execute.plain","v":"state.color0.actions step=execute.plain load=1 store=4"}

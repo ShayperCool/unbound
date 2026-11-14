@@ -85,19 +85,25 @@
   "plugin.state.update",
   "plugin.state.update.2"
  ],
- "After EndCurrentCommandEncoder inside a camera's pass the Editor begins its next encoder over the screen (contents not loaded) and the camera's target keeps what it had; Unbound begins it over the same target with its contents loaded, so the plugin's next draw lands in the target (the interface leaves it to the device)": [
+ "After EndCurrentCommandEncoder inside a render texture target's pass (a camera's, an executed command buffer's) the Editor begins its next encoder over the screen (contents not loaded) and the target keeps what it had; Unbound begins it over the same target with its contents loaded, so a plugin's next draw lands in the target (the interface leaves it to the device)": [
   "plugin.state.color0.actions.camera2.2",
   "plugin.state.color0.actions.camera2.3",
+  "plugin.state.color0.actions.mutate",
   "plugin.state.color0.camera2.2",
   "plugin.state.color0.camera2.3",
+  "plugin.state.color0.mutate",
   "plugin.state.depth.actions.camera2.2",
   "plugin.state.depth.actions.camera2.3",
+  "plugin.state.depth.actions.mutate",
   "plugin.state.depth.camera2.2",
   "plugin.state.depth.camera2.3",
+  "plugin.state.depth.mutate",
   "plugin.state.stencil.actions.camera2.2",
   "plugin.state.stencil.actions.camera2.3",
+  "plugin.state.stencil.actions.mutate",
   "plugin.state.stencil.camera2.2",
   "plugin.state.stencil.camera2.3",
+  "plugin.state.stencil.mutate",
   "second.pixels"
  ]
 }
