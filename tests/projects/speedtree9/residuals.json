@@ -22,7 +22,13 @@
   "Settings/go/Settings/LOD1/transform",
   "Settings/go/Settings/LOD2/transform",
   "Settings/go/Settings/LOD3/transform",
-  "Simple/go/Simple/LOD0/transform"
+  "Simple/go/Simple/LOD0/transform",
+  "scene/go/SimpleInScene/LOD0/transform",
+  "scene/go/VariantInScene/Collider1/transform",
+  "scene/go/VariantInScene/LOD0/transform",
+  "scene/go/VariantInScene/LOD1/transform",
+  "scene/go/VariantInScene/LOD2/transform",
+  "scene/go/VariantInScene/LOD3/transform"
  ],
  "Transform.LookAt gives a rotation 1 ulp off in z for the capsule collider (Quaternion arithmetic follow-up)": [
   "Full/go/Full/Collider2/transform"

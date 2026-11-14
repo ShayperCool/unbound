@@ -50,6 +50,14 @@ namespace Unbound.Runtime
                 throw new InvalidOperationException($"native API version {api->Version}, managed expects {NativeApi.CurrentVersion}");
             s_Api = *api;
             s_Ready = true;
+            // Scene and prefab instances of ScriptedImporter prefabs expand from documents this writes.
+            if (s_Api.SetDocumentSource != null) s_Api.SetDocumentSource(&ImportedPrefabDocuments.Write);
+        }
+
+        /// <summary>Appends to the sink of a native call to <see cref="ImportedPrefabDocuments.Write"/>.</summary>
+        internal static void WriteDocumentSource(void* sink, byte* bytes, int length)
+        {
+            if (s_Ready && s_Api.DocumentSourceWrite != null) s_Api.DocumentSourceWrite(sink, bytes, length);
         }
 
         internal static bool IsReady => s_Ready;

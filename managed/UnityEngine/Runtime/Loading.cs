@@ -765,7 +765,7 @@ namespace Unbound.Runtime
         internal static bool IsMainLoaded(string guid) =>
             s_Files.TryGetValue(guid, out var f) && f != null && f.MainObject != null;
 
-        static LoadedFile LoadFile(string guid)
+        internal static LoadedFile LoadFile(string guid)
         {
             if (s_Files.TryGetValue(guid, out var loaded)) return loaded;
             if (!s_Loading.Add(guid))

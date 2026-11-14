@@ -654,6 +654,24 @@ namespace UnityEngine
             if (!anchor.IsNull) probeAnchor = resolver.Resolve(anchor, typeof(Transform)) as Transform;
         }
 
+        internal void WriteRendererData(UnityYamlWriter.Writer w)
+        {
+            w.Bool("m_Enabled", m_Enabled);
+            w.Int("m_CastShadows", (int)m_CastShadows);
+            w.Bool("m_ReceiveShadows", m_ReceiveShadows);
+            w.Int("m_MotionVectors", (int)motionVectorGenerationMode);
+            w.Int("m_LightProbeUsage", (int)lightProbeUsage);
+            w.Int("m_ReflectionProbeUsage", (int)reflectionProbeUsage);
+            w.Int("m_RayTracingMode", (int)rayTracingMode);
+            w.Bool("m_RayTracingAccelStructBuildFlagsOverride", rayTracingAccelerationStructureBuildFlagsOverride);
+            w.Int("m_RayTracingAccelStructBuildFlags", (int)rayTracingAccelerationStructureBuildFlags);
+            w.Int("m_RenderingLayerMask", m_RenderingLayerMask);
+            w.RefList("m_Materials", m_Materials);
+            w.Ref("m_ProbeAnchor", probeAnchor);
+            w.Int("m_SortingLayerID", m_SortingLayerID);
+            w.Int("m_SortingOrder", m_SortingOrder);
+        }
+
         internal void CopyRendererData(Renderer source)
         {
             m_Enabled = source.m_Enabled;
@@ -735,6 +753,8 @@ namespace UnityEngine
             var r = body.Ref("m_Mesh");
             m_Mesh = r.IsNull ? null : resolver.Resolve(r, typeof(Mesh)) as Mesh;
         }
+
+        internal override void WriteSerialized(UnityYamlWriter.Writer w) => w.Ref("m_Mesh", m_Mesh);
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
@@ -873,6 +893,18 @@ namespace UnityEngine
             m_AutoUVMaxAngle = body.Float("m_AutoUVMaxAngle", 89f);
             m_IgnoreNormalsForChartDetection = body.Bool("m_IgnoreNormalsForChartDetection");
             m_LightmapParameters = body.Ref("m_LightmapParameters");
+        }
+
+        internal override void WriteSerialized(UnityYamlWriter.Writer w)
+        {
+            WriteRendererData(w);
+            w.Float("m_ScaleInLightmap", scaleInLightmap);
+            w.Bool("m_PreserveUVs", m_PreserveUVs);
+            w.Int("m_MinimumChartSize", m_MinimumChartSize);
+            w.Float("m_AutoUVMaxDistance", m_AutoUVMaxDistance);
+            w.Float("m_AutoUVMaxAngle", m_AutoUVMaxAngle);
+            w.Bool("m_IgnoreNormalsForChartDetection", m_IgnoreNormalsForChartDetection);
+            w.Line(1, "m_LightmapParameters", UnityYamlWriter.Writer.ReferenceText(m_LightmapParameters));
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)

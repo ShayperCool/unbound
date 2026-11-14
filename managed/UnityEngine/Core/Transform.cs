@@ -331,6 +331,18 @@ namespace UnityEngine
             m_LocalEulerAnglesHint = body.Vector3("m_LocalEulerAnglesHint");
         }
 
+        internal override void WriteSerialized(UnityYamlWriter.Writer w)
+        {
+            w.Int("serializedVersion", 2);
+            w.Quaternion("m_LocalRotation", m_LocalRotation);
+            w.Vector3("m_LocalPosition", m_LocalPosition);
+            w.Vector3("m_LocalScale", m_LocalScale);
+            w.Bool("m_ConstrainProportionsScale", m_ConstrainProportionsScale);
+            w.RefList("m_Children", m_Children);
+            w.Ref("m_Father", m_Parent);
+            w.Vector3("m_LocalEulerAnglesHint", m_LocalEulerAnglesHint);
+        }
+
         // ------------------------------------------------------------------ space conversion
 
         public Vector3 TransformPoint(Vector3 position)

@@ -111,5 +111,16 @@ namespace UnityEngine
             get => m_WindAsset;
             set => m_WindAsset = value;
         }
+
+        internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
+        {
+            var wind = body.Ref("m_SpeedTreeWindAsset");
+            m_WindAsset = wind.IsNull ? null : resolver.Resolve(wind, typeof(SpeedTreeWindAsset)) as SpeedTreeWindAsset;
+        }
+
+        internal override void CopyFrom(Component source, System.Func<Object, Object> remap) =>
+            m_WindAsset = ((Tree)source).m_WindAsset;
+
+        internal override void WriteSerialized(UnityYamlWriter.Writer w) => w.Ref("m_SpeedTreeWindAsset", m_WindAsset);
     }
 }

@@ -275,6 +275,33 @@ namespace UnityEngine
             SetLODs(lods.ToArray());
         }
 
+        internal override void WriteSerialized(UnityYamlWriter.Writer w)
+        {
+            w.Vector3("m_LocalReferencePoint", m_LocalReferencePoint);
+            w.Float("m_Size", m_Size);
+            w.Int("m_FadeMode", (int)m_FadeMode);
+            w.Bool("m_AnimateCrossFading", m_AnimateCrossFading);
+            w.Bool("m_LastLODIsBillboard", m_LastLODIsBillboard);
+            if (m_LODs.Length == 0) w.Line(1, "m_LODs", "[]");
+            else
+            {
+                w.Key("m_LODs", 1);
+                foreach (var lod in m_LODs)
+                {
+                    w.Item("screenRelativeHeight", UnityYamlWriter.Writer.Number(lod.screenRelativeTransitionHeight), 1);
+                    w.Float("fadeTransitionWidth", lod.fadeTransitionWidth, 2);
+                    var renderers = lod.renderers ?? Array.Empty<Renderer>();
+                    if (renderers.Length == 0) w.Line(2, "renderers", "[]");
+                    else
+                    {
+                        w.Key("renderers", 2);
+                        foreach (var renderer in renderers) w.Item("renderer", w.ReferenceText(renderer), 2);
+                    }
+                }
+            }
+            w.Bool("m_Enabled", m_Enabled);
+        }
+
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var s = (LODGroup)source;

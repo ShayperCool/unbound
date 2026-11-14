@@ -977,6 +977,25 @@ namespace UnityEngine
             m_CollisionDetection = (CollisionDetectionMode)body.Int("m_CollisionDetection");
         }
 
+        internal override void WriteSerialized(UnityYamlWriter.Writer w)
+        {
+            w.Float("m_Mass", m_Mass);
+            w.Float("m_LinearDamping", m_LinearDamping);
+            w.Float("m_AngularDamping", m_AngularDamping);
+            w.Vector3("m_CenterOfMass", m_CenterOfMass);
+            w.Vector3("m_InertiaTensor", m_InertiaTensor);
+            w.Quaternion("m_InertiaRotation", m_InertiaRotation);
+            w.Mask("m_IncludeLayers", m_IncludeLayers);
+            w.Mask("m_ExcludeLayers", m_ExcludeLayers);
+            w.Bool("m_ImplicitCom", m_ImplicitCom);
+            w.Bool("m_ImplicitTensor", m_ImplicitTensor);
+            w.Bool("m_UseGravity", m_UseGravity);
+            w.Bool("m_IsKinematic", m_IsKinematic);
+            w.Int("m_Interpolate", (int)m_Interpolation);
+            w.Int("m_Constraints", (int)m_Constraints);
+            w.Int("m_CollisionDetection", (int)m_CollisionDetection);
+        }
+
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var s = (Rigidbody)source;

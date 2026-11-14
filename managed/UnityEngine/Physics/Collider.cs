@@ -338,6 +338,17 @@ namespace UnityEngine
             m_Enabled = body.Bool("m_Enabled", true);
         }
 
+        internal void WriteColliderData(UnityYamlWriter.Writer w)
+        {
+            w.Ref("m_Material", m_Material);
+            w.Mask("m_IncludeLayers", m_IncludeLayers);
+            w.Mask("m_ExcludeLayers", m_ExcludeLayers);
+            w.Int("m_LayerOverridePriority", m_LayerOverridePriority);
+            w.Bool("m_IsTrigger", m_IsTrigger);
+            w.Bool("m_ProvidesContacts", m_ProvidesContacts);
+            w.Bool("m_Enabled", m_Enabled);
+        }
+
         internal void CopyColliderData(Collider s)
         {
             m_Enabled = s.m_Enabled;
@@ -400,6 +411,13 @@ namespace UnityEngine
             m_Center = body.Vector3("m_Center");
         }
 
+        internal override void WriteSerialized(UnityYamlWriter.Writer w)
+        {
+            WriteColliderData(w);
+            w.Vector3("m_Size", m_Size);
+            w.Vector3("m_Center", m_Center);
+        }
+
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var s = (BoxCollider)source;
@@ -443,6 +461,13 @@ namespace UnityEngine
             ReadColliderData(body, resolver);
             m_Radius = body.Float("m_Radius", 0.5f);
             m_Center = body.Vector3("m_Center");
+        }
+
+        internal override void WriteSerialized(UnityYamlWriter.Writer w)
+        {
+            WriteColliderData(w);
+            w.Float("m_Radius", m_Radius);
+            w.Vector3("m_Center", m_Center);
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
@@ -538,6 +563,15 @@ namespace UnityEngine
             m_Height = body.Float("m_Height", 1f);
             m_Direction = body.Int("m_Direction", 1);
             m_Center = body.Vector3("m_Center");
+        }
+
+        internal override void WriteSerialized(UnityYamlWriter.Writer w)
+        {
+            WriteColliderData(w);
+            w.Float("m_Radius", m_Radius);
+            w.Float("m_Height", m_Height);
+            w.Int("m_Direction", m_Direction);
+            w.Vector3("m_Center", m_Center);
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
@@ -710,6 +744,14 @@ namespace UnityEngine
             m_CookingOptions = (MeshColliderCookingOptions)body.Int("m_CookingOptions", 30);
             var mesh = body.Ref("m_Mesh");
             m_Mesh = mesh.IsNull ? null : resolver.Resolve(mesh, typeof(Mesh)) as Mesh;
+        }
+
+        internal override void WriteSerialized(UnityYamlWriter.Writer w)
+        {
+            WriteColliderData(w);
+            w.Bool("m_Convex", m_Convex);
+            w.Int("m_CookingOptions", (int)m_CookingOptions);
+            w.Ref("m_Mesh", m_Mesh);
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)

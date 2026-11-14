@@ -159,18 +159,84 @@ namespace Unbound.Runtime
             return sb.ToString();
         }
 
-        sealed class Writer
+        /// <summary>Writes one document's fields. References to objects of the same file are by
+        /// <c>ids</c>; to assets in <c>assets</c> (an import's own meshes and materials) by their GUID
+        /// and file id; to other assets by where the asset database has them.</summary>
+        internal sealed class Writer
         {
             readonly StringBuilder m_Out;
             readonly Dictionary<Object, long> m_Ids;
+            readonly Dictionary<Object, (string Guid, long FileId)> m_Assets;
 
-            internal Writer(StringBuilder output, Dictionary<Object, long> ids)
+            internal Writer(StringBuilder output, Dictionary<Object, long> ids, Dictionary<Object, (string Guid, long FileId)> assets = null)
             {
                 m_Out = output;
                 m_Ids = ids;
+                m_Assets = assets;
             }
 
             void Indent(int level) => m_Out.Append(' ', level * 2);
+
+            // Typed fields of native objects, at the document's top level unless a level is given.
+            internal void Float(string key, float value, int level = 1) => Line(level, key, F(value));
+            internal void Int(string key, long value, int level = 1) => Line(level, key, value.ToString(CultureInfo.InvariantCulture));
+            internal void Bool(string key, bool value, int level = 1) => Line(level, key, value ? "1" : "0");
+            internal void String(string key, string value, int level = 1) => Line(level, key, Scalar(value));
+            internal void Vector3(string key, Vector3 value, int level = 1) => Line(level, key, Flow(value, typeof(Vector3), Shape.Vector3));
+            internal void Quaternion(string key, Quaternion value, int level = 1) => Line(level, key, Flow(value, typeof(Quaternion), Shape.Quaternion));
+            internal void Ref(string key, Object value, int level = 1) => Line(level, key, Reference(value));
+            internal void Mask(string key, int bits, int level = 1)
+            {
+                Indent(level);
+                m_Out.Append(key).Append(":\n");
+                Line(level + 1, "serializedVersion", "2");
+                Line(level + 1, "m_Bits", ((uint)bits).ToString(CultureInfo.InvariantCulture));
+            }
+
+            /// <summary>A list of references (<c>m_Materials</c>, <c>m_Children</c>): flow items at
+            /// the key's indentation.</summary>
+            internal void RefList<T>(string key, IEnumerable<T> values, int level = 1) where T : Object
+            {
+                int start = m_Out.Length;
+                Indent(level);
+                m_Out.Append(key).Append(":\n");
+                int items = 0;
+                foreach (var value in values)
+                {
+                    Indent(level);
+                    m_Out.Append("- ").Append(Reference(value)).Append('\n');
+                    items++;
+                }
+                if (items == 0)
+                {
+                    m_Out.Length = start;
+                    Line(level, key, "[]");
+                }
+            }
+
+            /// <summary>A sequence item's first field, the dash at the key's indentation
+            /// (<c>- key: value</c>); its further fields go at <c>level + 1</c>.</summary>
+            internal void Item(string key, string value, int level)
+            {
+                Indent(level);
+                m_Out.Append("- ").Append(key).Append(':');
+                m_Out.Append(value.Length > 0 ? " " + value : " ").Append('\n');
+            }
+
+            internal void Key(string key, int level)
+            {
+                Indent(level);
+                m_Out.Append(key).Append(":\n");
+            }
+
+            internal static string Number(float value) => F(value);
+            internal string ReferenceText(Object value) => Reference(value);
+
+            /// <summary>A reference kept as read (an asset Unbound does not load).</summary>
+            internal static string ReferenceText(ObjectRef value) =>
+                value.IsNull ? "{fileID: 0}"
+                : value.Guid == null ? $"{{fileID: {value.FileId}}}"
+                : $"{{fileID: {value.FileId}, guid: {value.Guid}, type: {value.Type}}}";
 
             internal void Header(Object o)
             {
@@ -186,7 +252,7 @@ namespace Unbound.Runtime
                 Line(1, "m_EditorClassIdentifier", "");
             }
 
-            void Line(int level, string key, string value)
+            internal void Line(int level, string key, string value)
             {
                 Indent(level);
                 m_Out.Append(key).Append(':');
@@ -348,6 +414,7 @@ namespace Unbound.Runtime
             {
                 if (o == null) return "{fileID: 0}";
                 if (m_Ids.TryGetValue(o, out var local)) return $"{{fileID: {local}}}";
+                if (m_Assets != null && m_Assets.TryGetValue(o, out var asset)) return $"{{fileID: {asset.FileId}, guid: {asset.Guid}, type: 3}}";
                 if (o is MonoScript script && script.m_Guid is string scriptGuid && scriptGuid.Length > 0)
                     return $"{{fileID: 11500000, guid: {scriptGuid}, type: 3}}";
                 if (AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))

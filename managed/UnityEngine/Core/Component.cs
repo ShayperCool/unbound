@@ -178,6 +178,12 @@ namespace UnityEngine
 
         /// <summary>Reads the engine state of a built-in component from its serialized document.</summary>
         internal virtual void ReadSerialized(Unbound.Runtime.YNode body, Unbound.Runtime.IReferenceResolver resolver) { }
+
+        /// <summary>Writes, after the document's header, the fields <see cref="ReadSerialized"/>
+        /// reads, in Unity's text serialization (the documents of an imported prefab). Only a class
+        /// that declares it can be written (<see cref="Unbound.Runtime.ImportedPrefabDocuments"/>).</summary>
+        internal virtual void WriteSerialized(Unbound.Runtime.UnityYamlWriter.Writer writer) =>
+            throw new NotSupportedException($"{GetType().Name} components cannot be written as documents yet");
     }
 
     public partial class Behaviour : Component
