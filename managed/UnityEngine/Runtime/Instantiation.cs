@@ -33,11 +33,7 @@ namespace Unbound.Runtime
                 clone = copy;
                 ((ScriptableObject)clone).RunCreationCallbacks();
             }
-            else if (original is ICloneable cloneable)
-            {
-                clone = cloneable.CloneObject();
-            }
-            else
+            else if (!AssetAdapters.TryClone(original, out clone))
             {
                 throw new ArgumentException($"Instantiating an object of type {original.GetType().Name} is not supported.");
             }

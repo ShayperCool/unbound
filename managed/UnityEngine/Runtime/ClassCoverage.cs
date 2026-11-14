@@ -124,7 +124,7 @@ namespace Unbound.Runtime
 
         static bool ReadsUncached(Type type)
         {
-            if (typeof(ScriptableObject).IsAssignableFrom(type) || typeof(ISerializedAsset).IsAssignableFrom(type)) return true;
+            if (typeof(ScriptableObject).IsAssignableFrom(type) || AssetAdapters.Reader(type) != null) return true;
             if (!typeof(Component).IsAssignableFrom(type)) return false;
             var method = type.GetMethod("ReadSerialized", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                 null, new[] { typeof(YNode), typeof(IReferenceResolver) }, null);

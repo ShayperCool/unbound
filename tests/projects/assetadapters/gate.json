@@ -1,0 +1,17 @@
+{
+  "commands": [
+    "python3 tests/projects/assetadapters/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Runtime/AssetAdapters.cs",
+    "managed/UnityEngine/Runtime/Instantiation.cs",
+    "managed/UnityEngine/Runtime/Loading.cs",
+    "managed/UnityEngine/Runtime/ClassCoverage.cs",
+    "managed/UnityEngine/Runtime/FieldCoverage.cs",
+    "managed/UnityEngine/Physics/PhysicsTypes.cs",
+    "managed/UnityEngine/Physics2D/Physics2DTypes.cs",
+    "managed/UnityEngine/Graphics/TextAsset.cs",
+    "managed/UnityEngine/Graphics/TextAsset.Clone.cs"
+  ]
+}

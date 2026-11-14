@@ -7,7 +7,7 @@ namespace UnityEngine
 {
     /// <summary>Friction and bounciness of 3D colliders.</summary>
     [ClassId(134)]
-    public partial class PhysicsMaterial : Object, ISerializedAsset, Instantiation.ICloneable
+    public partial class PhysicsMaterial : Object
     {
         float m_DynamicFriction = 0.6f;
         float m_StaticFriction = 0.6f;
@@ -29,19 +29,19 @@ namespace UnityEngine
         public float bounciness
         {
             get => m_Bounciness;
-            set { m_Bounciness = value; m_ChangeVersion++; }
+            set { if (PhysicsMaterialValues.Set3D(this, nameof(bounciness), value, 1f, ref m_Bounciness)) m_ChangeVersion++; }
         }
 
         public float dynamicFriction
         {
             get => m_DynamicFriction;
-            set { m_DynamicFriction = value; m_ChangeVersion++; }
+            set { if (PhysicsMaterialValues.Set3D(this, nameof(dynamicFriction), value, PhysicsMaterialValues.MaxFriction3D, ref m_DynamicFriction)) m_ChangeVersion++; }
         }
 
         public float staticFriction
         {
             get => m_StaticFriction;
-            set { m_StaticFriction = value; m_ChangeVersion++; }
+            set { if (PhysicsMaterialValues.Set3D(this, nameof(staticFriction), value, PhysicsMaterialValues.MaxFriction3D, ref m_StaticFriction)) m_ChangeVersion++; }
         }
 
         public PhysicsMaterialCombine frictionCombine
@@ -66,7 +66,7 @@ namespace UnityEngine
             m_ChangeVersion++;
         }
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_DynamicFriction = body.Float("dynamicFriction", body.Float("m_DynamicFriction", 0.6f));
             m_StaticFriction = body.Float("staticFriction", body.Float("m_StaticFriction", 0.6f));
@@ -76,7 +76,7 @@ namespace UnityEngine
             m_ChangeVersion++;
         }
 
-        Object Instantiation.ICloneable.CloneObject()
+        internal Object CloneObject()
         {
             var copy = new PhysicsMaterial();
             copy.CopyValues(this);

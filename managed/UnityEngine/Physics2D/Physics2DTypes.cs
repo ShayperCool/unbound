@@ -6,7 +6,7 @@ namespace UnityEngine
 {
     /// <summary>Friction and bounciness of 2D colliders (Box2D fixture properties).</summary>
     [ClassId(62)]
-    public sealed partial class PhysicsMaterial2D : Object, ISerializedAsset, Instantiation.ICloneable
+    public sealed partial class PhysicsMaterial2D : Object
     {
         float m_Friction = 0.4f;
         float m_Bounciness;
@@ -23,13 +23,13 @@ namespace UnityEngine
         public float bounciness
         {
             get => m_Bounciness;
-            set => m_Bounciness = value;
+            set => PhysicsMaterialValues.Set2D(this, nameof(bounciness), value, ref m_Bounciness);
         }
 
         public float friction
         {
             get => m_Friction;
-            set => m_Friction = value;
+            set => PhysicsMaterialValues.Set2D(this, nameof(friction), value, ref m_Friction);
         }
 
         public PhysicsMaterialCombine2D frictionCombine
@@ -59,7 +59,7 @@ namespace UnityEngine
             }
         }
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_Friction = body.Float("friction", body.Float("m_Friction", 0.4f));
             m_Bounciness = body.Float("bounciness", body.Float("m_Bounciness", 0f));
@@ -67,7 +67,7 @@ namespace UnityEngine
             m_BounceCombine = (PhysicsMaterialCombine2D)body.Int("bounceCombine", body.Int("m_BounceCombine", (int)PhysicsMaterialCombine2D.Maximum));
         }
 
-        Object Instantiation.ICloneable.CloneObject() => new PhysicsMaterial2D
+        internal Object CloneObject() => new PhysicsMaterial2D
         {
             m_Friction = m_Friction,
             m_Bounciness = m_Bounciness,

@@ -112,18 +112,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After GUI payloads |
+| Category | Before Q410 | After physics/text adapters |
 | --- | ---: | ---: |
 | Attributes | 938 | 23 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 4 |
 | Layout | 68 | 68 |
-| Interfaces | 65 | 61 |
+| Interfaces | 65 | 58 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 176 |
+| Total | 1,332 | 173 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -375,7 +375,8 @@ Its four gradient aggregates and variable random seed remain queued.
 
 The tooling slice removes 133 exact policy-only entries after the final-shapes
 slice reduced the queue from 370 to 341. The GUI payload slice removes another
-32 entries, leaving 176 exact entries, each with a
+32 entries. Physics material and text adapters remove three more interface entries,
+leaving 173 exact entries, each with a
 specific follow-up reason. No allow-list is regenerated from a passing report.
 The generator format changes with the comparison policy and the committed stubs
 are regenerated from the selected release. Existing probe references and strict
@@ -395,7 +396,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-UI-interfaces` | 12 | Binding notifications, panel/group ownership, animations and internal equality cleanup. |
 | `Q410-XR-value-payloads` | 4 | Distinct provider/handle payloads before equality and hashing interfaces. |
 | `Q410-animation-job-producer` | 1 | Animation producer payload and scheduling/lifetime controls. |
-| `Q410-asset-interface-adapters` | 33 | Move loading/cloning from implementation-only interfaces to external adapters; retain mixer subasset restrictions. |
+| `Q410-asset-interface-adapters` | 30 | PhysicsMaterial, PhysicsMaterial2D and TextAsset are migrated to external adapters with load/copy/coverage controls in `assetadapters`. Other asset types still need migration; retain mixer subasset restrictions. |
 | `Q410-built-in-inspector-registration` | 3 | Target-specific single/multiple-object inspector behavior before registry annotations. |
 | `Q410-enumerator-current-state` | 1 | Writable cached Current integrated with MoveNext, Reset and completion. |
 | `Q410-generic-equality-interfaces` | 1 | Scene comparer migration preserving collection equality and hashing. |
@@ -426,3 +427,11 @@ root versus nested JSON, replacement of a supplied style payload during overwrit
 skin loading, references and independent copies. Standalone GUIStyleState remains an
 empty composite; style-owned states use the built-in payload. No persistent importer or
 cache output changes. Default-state and existing attribute references remain unchanged.
+
+Physics/text adapters remove three interface entries while preserving the original load
+and copy operations. Class and field coverage resolve the same reader methods through
+the adapter registry. The `assetadapters` reference has 145 exact values from independent
+GPU repeats, including nondefault Resources assets, separate clone ownership, runtime
+controls, scalar ranges and diagnostics. A shared release-specific compatibility mechanism
+corrects material property validation discovered by those controls. Other release profiles
+retain their previous unmeasured storage; arbitrary YAML normalization is unmeasured.

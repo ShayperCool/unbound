@@ -9,6 +9,9 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Material scalar validation measured by assetadapters on 6000.0.71f1.
+        /// Other releases retain the previous, unmeasured value storage.</summary>
+        internal static bool PhysicsMaterialValuesMeasured => Release == (6000, 0, 71, 'f', 1);
         // Attribute URL observed by attributeinheritance on 6000.0.71f1.
         internal static string RayTracingShaderHelpURL => Release == (6000, 0, 71, 'f', 1)
             ? "https://docs.unity3d.com//6000.0/Documentation/ScriptReference/Rendering.RayTracingShader.html"

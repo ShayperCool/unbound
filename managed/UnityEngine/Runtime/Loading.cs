@@ -436,9 +436,8 @@ namespace Unbound.Runtime
         {
             if (asset is ScriptableObject)
                 new YamlReader(file).ReadScriptObject(asset, doc.Body);
-            else if (asset is ISerializedAsset serialized)
+            else if (AssetAdapters.TryRead(asset, doc.Body, file))
             {
-                serialized.ReadSerialized(doc.Body, file);
                 Trace.NoteUnread(asset.GetType().Name, doc.Body);
             }
             // Otherwise a class Unbound knows but cannot read: it loads with default settings

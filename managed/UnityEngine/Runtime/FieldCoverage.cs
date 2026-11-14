@@ -159,10 +159,8 @@ namespace Unbound.Runtime
                             {
                                 Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadName), 2, 1);
                                 if (typeof(ScriptableObject).IsAssignableFrom(type)) new YamlReader(new References()).ScanScriptObject(type, body);
-                                else if (typeof(ISerializedAsset).IsAssignableFrom(type))
+                                else if (AssetAdapters.Reader(type) is System.Reflection.MethodInfo method)
                                 {
-                                    var map = type.GetInterfaceMap(typeof(ISerializedAsset));
-                                    var method = map.TargetMethods[0];
                                     Schema(method.DeclaringType, method.Name, method.GetParameters().Length);
                                 }
                             }

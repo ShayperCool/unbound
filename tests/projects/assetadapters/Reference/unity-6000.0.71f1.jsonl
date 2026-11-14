@@ -1,0 +1,145 @@
+{"key":"range.dynamic3d.0.bits","value":"00000000"}
+{"key":"range.dynamic3d.0.messages","value":"Error:Physics material range3d cannot have dynamicFriction = -2.000000"}
+{"key":"range.dynamic3d.1.bits","value":"80000000"}
+{"key":"range.dynamic3d.1.messages","value":""}
+{"key":"range.dynamic3d.2.bits","value":"00000000"}
+{"key":"range.dynamic3d.2.messages","value":""}
+{"key":"range.dynamic3d.3.bits","value":"3f000000"}
+{"key":"range.dynamic3d.3.messages","value":""}
+{"key":"range.dynamic3d.4.bits","value":"40000000"}
+{"key":"range.dynamic3d.4.messages","value":""}
+{"key":"range.dynamic3d.5.bits","value":"47c35080"}
+{"key":"range.dynamic3d.5.messages","value":""}
+{"key":"range.dynamic3d.6.bits","value":"7f7ffffe"}
+{"key":"range.dynamic3d.6.messages","value":"Error:Physics material range3d cannot have dynamicFriction = 340282346638528859811704183484516925440.000000"}
+{"key":"range.dynamic3d.7.bits","value":"7f7ffffe"}
+{"key":"range.dynamic3d.7.messages","value":"Error:Physics material range3d cannot have dynamicFriction = inf"}
+{"key":"range.dynamic3d.8.bits","value":"00000000"}
+{"key":"range.dynamic3d.8.messages","value":"Error:Physics material range3d cannot have dynamicFriction = -inf"}
+{"key":"range.dynamic3d.9.bits","value":"ffc00000"}
+{"key":"range.dynamic3d.9.messages","value":""}
+{"key":"range.static3d.0.bits","value":"00000000"}
+{"key":"range.static3d.0.messages","value":"Error:Physics material range3d cannot have staticFriction = -2.000000"}
+{"key":"range.static3d.1.bits","value":"80000000"}
+{"key":"range.static3d.1.messages","value":""}
+{"key":"range.static3d.2.bits","value":"00000000"}
+{"key":"range.static3d.2.messages","value":""}
+{"key":"range.static3d.3.bits","value":"3f000000"}
+{"key":"range.static3d.3.messages","value":""}
+{"key":"range.static3d.4.bits","value":"40000000"}
+{"key":"range.static3d.4.messages","value":""}
+{"key":"range.static3d.5.bits","value":"47c35080"}
+{"key":"range.static3d.5.messages","value":""}
+{"key":"range.static3d.6.bits","value":"7f7ffffe"}
+{"key":"range.static3d.6.messages","value":"Error:Physics material range3d cannot have staticFriction = 340282346638528859811704183484516925440.000000"}
+{"key":"range.static3d.7.bits","value":"7f7ffffe"}
+{"key":"range.static3d.7.messages","value":"Error:Physics material range3d cannot have staticFriction = inf"}
+{"key":"range.static3d.8.bits","value":"00000000"}
+{"key":"range.static3d.8.messages","value":"Error:Physics material range3d cannot have staticFriction = -inf"}
+{"key":"range.static3d.9.bits","value":"ffc00000"}
+{"key":"range.static3d.9.messages","value":""}
+{"key":"range.bounce3d.0.bits","value":"00000000"}
+{"key":"range.bounce3d.0.messages","value":"Error:Physics material range3d cannot have bounciness = -2.000000"}
+{"key":"range.bounce3d.1.bits","value":"80000000"}
+{"key":"range.bounce3d.1.messages","value":""}
+{"key":"range.bounce3d.2.bits","value":"00000000"}
+{"key":"range.bounce3d.2.messages","value":""}
+{"key":"range.bounce3d.3.bits","value":"3f000000"}
+{"key":"range.bounce3d.3.messages","value":""}
+{"key":"range.bounce3d.4.bits","value":"3f800000"}
+{"key":"range.bounce3d.4.messages","value":"Error:Physics material range3d cannot have bounciness = 2.000000"}
+{"key":"range.bounce3d.5.bits","value":"3f800000"}
+{"key":"range.bounce3d.5.messages","value":"Error:Physics material range3d cannot have bounciness = 100001.000000"}
+{"key":"range.bounce3d.6.bits","value":"3f800000"}
+{"key":"range.bounce3d.6.messages","value":"Error:Physics material range3d cannot have bounciness = 340282346638528859811704183484516925440.000000"}
+{"key":"range.bounce3d.7.bits","value":"3f800000"}
+{"key":"range.bounce3d.7.messages","value":"Error:Physics material range3d cannot have bounciness = inf"}
+{"key":"range.bounce3d.8.bits","value":"00000000"}
+{"key":"range.bounce3d.8.messages","value":"Error:Physics material range3d cannot have bounciness = -inf"}
+{"key":"range.bounce3d.9.bits","value":"ffc00000"}
+{"key":"range.bounce3d.9.messages","value":""}
+{"key":"range.friction2d.0.bits","value":"00000000"}
+{"key":"range.friction2d.0.messages","value":""}
+{"key":"range.friction2d.1.bits","value":"80000000"}
+{"key":"range.friction2d.1.messages","value":""}
+{"key":"range.friction2d.2.bits","value":"00000000"}
+{"key":"range.friction2d.2.messages","value":""}
+{"key":"range.friction2d.3.bits","value":"3f000000"}
+{"key":"range.friction2d.3.messages","value":""}
+{"key":"range.friction2d.4.bits","value":"40000000"}
+{"key":"range.friction2d.4.messages","value":""}
+{"key":"range.friction2d.5.bits","value":"47c35000"}
+{"key":"range.friction2d.5.messages","value":""}
+{"key":"range.friction2d.6.bits","value":"47c35000"}
+{"key":"range.friction2d.6.messages","value":""}
+{"key":"range.friction2d.7.bits","value":"3f200000"}
+{"key":"range.friction2d.7.messages","value":"Error:PhysicsMaterial2D.friction assign attempt for 'range2d' is not valid. Input friction is { Infinity }."}
+{"key":"range.friction2d.8.bits","value":"3f200000"}
+{"key":"range.friction2d.8.messages","value":"Error:PhysicsMaterial2D.friction assign attempt for 'range2d' is not valid. Input friction is { -Infinity }."}
+{"key":"range.friction2d.9.bits","value":"3f200000"}
+{"key":"range.friction2d.9.messages","value":"Error:PhysicsMaterial2D.friction assign attempt for 'range2d' is not valid. Input friction is { NaN }."}
+{"key":"range.bounce2d.0.bits","value":"00000000"}
+{"key":"range.bounce2d.0.messages","value":""}
+{"key":"range.bounce2d.1.bits","value":"80000000"}
+{"key":"range.bounce2d.1.messages","value":""}
+{"key":"range.bounce2d.2.bits","value":"00000000"}
+{"key":"range.bounce2d.2.messages","value":""}
+{"key":"range.bounce2d.3.bits","value":"3f000000"}
+{"key":"range.bounce2d.3.messages","value":""}
+{"key":"range.bounce2d.4.bits","value":"40000000"}
+{"key":"range.bounce2d.4.messages","value":""}
+{"key":"range.bounce2d.5.bits","value":"47c35000"}
+{"key":"range.bounce2d.5.messages","value":""}
+{"key":"range.bounce2d.6.bits","value":"47c35000"}
+{"key":"range.bounce2d.6.messages","value":""}
+{"key":"range.bounce2d.7.bits","value":"3f200000"}
+{"key":"range.bounce2d.7.messages","value":"Error:PhysicsMaterial2D.bounciness assign attempt for 'range2d' is not valid. Input bounciness is { Infinity }."}
+{"key":"range.bounce2d.8.bits","value":"3f200000"}
+{"key":"range.bounce2d.8.messages","value":"Error:PhysicsMaterial2D.bounciness assign attempt for 'range2d' is not valid. Input bounciness is { -Infinity }."}
+{"key":"range.bounce2d.9.bits","value":"3f200000"}
+{"key":"range.bounce2d.9.messages","value":"Error:PhysicsMaterial2D.bounciness assign attempt for 'range2d' is not valid. Input bounciness is { NaN }."}
+{"key":"interfaces.PhysicsMaterial","value":""}
+{"key":"interfaces.PhysicsMaterial2D","value":""}
+{"key":"interfaces.TextAsset","value":""}
+{"key":"3d.loaded","value":"True"}
+{"key":"3d.dynamic","value":"0.125"}
+{"key":"3d.static","value":"0.375"}
+{"key":"3d.bounce","value":"0.625"}
+{"key":"3d.friction-mode","value":"1"}
+{"key":"3d.bounce-mode","value":"3"}
+{"key":"3d.distinct","value":"True"}
+{"key":"3d.clone-name","value":"Payload3D(Clone)"}
+{"key":"3d.clone-dynamic","value":"0.125"}
+{"key":"3d.clone-static","value":"0.375"}
+{"key":"3d.clone-bounce","value":"0.625"}
+{"key":"3d.clone-friction-mode","value":"1"}
+{"key":"3d.clone-bounce-mode","value":"3"}
+{"key":"3d.original-dynamic","value":"0.125"}
+{"key":"3d.original-static","value":"0.375"}
+{"key":"3d.original-bounce","value":"0.625"}
+{"key":"2d.loaded","value":"True"}
+{"key":"2d.friction","value":"0.25"}
+{"key":"2d.bounce","value":"0.75"}
+{"key":"2d.friction-mode","value":"3"}
+{"key":"2d.bounce-mode","value":"0"}
+{"key":"2d.distinct","value":"True"}
+{"key":"2d.clone-name","value":"Payload2D(Clone)"}
+{"key":"2d.clone-friction","value":"0.25"}
+{"key":"2d.clone-bounce","value":"0.75"}
+{"key":"2d.clone-friction-mode","value":"3"}
+{"key":"2d.clone-bounce-mode","value":"0"}
+{"key":"2d.original-friction","value":"0.25"}
+{"key":"2d.original-bounce","value":"0.75"}
+{"key":"text.loaded","value":"True"}
+{"key":"text.content","value":"café\nasset λ"}
+{"key":"text.bytes","value":"63-61-66-C3-A9-0A-61-73-73-65-74-20-CE-BB"}
+{"key":"text.distinct","value":"True"}
+{"key":"text.clone-name","value":"PayloadText(Clone)"}
+{"key":"text.clone-content","value":"café\nasset λ"}
+{"key":"text.clone-bytes","value":"63-61-66-C3-A9-0A-61-73-73-65-74-20-CE-BB"}
+{"key":"text.returned-array","value":"café\nasset λ"}
+{"key":"text.original","value":"café\nasset λ"}
+{"key":"text.destroyed-original","value":"runtime snapshot"}
+{"key":"3d.nonfinite","value":"True"}
+{"key":"3d.negative","value":"0"}
+{"key":"complete","value":"1"}
