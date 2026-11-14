@@ -208,14 +208,22 @@ namespace UnityEngine.Tests
         public void AZoneUnderAMirroredParentBlowsMirrored()
         {
             var parent = new GameObject("Mirror").transform;
-            parent.localScale = new Vector3(-1f, 1f, 1f);
             var zone = new GameObject("Zone").AddComponent<WindZone>();
-            zone.transform.SetParent(parent, false);
-            zone.transform.localRotation = Quaternion.Euler(0f, 30f, 0f);
-            var direction = zone.SpeedTreeDirection();
-            Assert.Equal(-0.5f, direction.x, 6);
-            Assert.Equal(0f, direction.y, 6);
-            Assert.Equal(0.8660254f, direction.z, 6);
+            try
+            {
+                parent.localScale = new Vector3(-1f, 1f, 1f);
+                zone.transform.SetParent(parent, false);
+                zone.transform.localRotation = Quaternion.Euler(0f, 30f, 0f);
+                var direction = zone.SpeedTreeDirection();
+                Assert.Equal(-0.5f, direction.x, 6);
+                Assert.Equal(0f, direction.y, 6);
+                Assert.Equal(0.8660254f, direction.z, 6);
+            }
+            finally
+            {
+                Object.DestroyImmediate(zone.gameObject);
+                Object.DestroyImmediate(parent.gameObject);
+            }
         }
     }
 }
