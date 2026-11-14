@@ -235,10 +235,11 @@ namespace UnityEngine
     /// which moves once a frame in PreUpdate.WindUpdate toward the sum of the active directional
     /// wind zones (each its forward, through the hierarchy's rotations and scale signs,
     /// normalized, times windMain; pulse and turbulence take no part) at Time.time. A tree's
-    /// renderer draws with zero constants until it is first drawn while the world has wind (a
-    /// directional wind, a spherical zone or a wind still moving); from then on it draws with its
-    /// wind's constants of each frame, also once the wind has settled (its last direction, no
-    /// strength, its noise where it stopped). A spherical zone's own wind on the trees inside its
+    /// renderer gets its constants when it first draws while the world has wind (a directional
+    /// wind, a spherical zone or a wind still moving; not a zone without wind) and from then on
+    /// draws with its wind's constants of each frame, also once the wind has settled (its last
+    /// direction, no strength, its noise where it stopped). Before that it draws with zeros (the
+    /// Editor's draw reads whatever an earlier draw left). A spherical zone's own wind on the trees inside its
     /// radius is not simulated: such a tree is warned about and keeps the directional wind.
     /// </summary>
     internal static class SpeedTreeWindSystem

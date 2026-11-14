@@ -125,7 +125,8 @@ namespace UnityEngine
         }
 
         /// <summary>Whether the tree refers to a wind asset (Unity 6000.0.71f1,
-        /// tests/projects/speedtree9wind).</summary>
+        /// tests/projects/speedtree9wind; a reference to a destroyed asset still counts, which
+        /// is unmeasured).</summary>
         public bool hasSpeedTreeWind => m_WindAsset is not null;
 
         internal override void OnEngineEnable() => SpeedTreeWindSystem.TreeEnabled(this);

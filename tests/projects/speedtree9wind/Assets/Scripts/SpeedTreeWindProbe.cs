@@ -34,8 +34,8 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
     static readonly int[] k_Recorded =
     {
         1, 2, 10, 11, 12, 13, 15, 20, 30, 45, 51, 52, 55, 70, 76, 77, 80, 90, 100,
-        106, 107, 115, 121, 125, 131, 132, 140, 160, 200, 201, 250, 300, 330, 340,
-        341, 345, 351, 355, 361, 362, 370, 400, 401, 402, 410, 420,
+        106, 107, 115, 121, 125, 131, 132, 140, 160, 200, 201, 250, 300, 301, 330, 336, 340,
+        341, 345, 351, 353, 355, 361, 362, 370, 400, 401, 402, 410, 420,
     };
     const int LastFrame = 420;
 
@@ -44,9 +44,13 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
     /// motion vectors gets no SpeedTreeWindHistory binding (the buffer holds whatever an earlier
     /// draw left), so only its 11 current constants; and a wind part its asset turns off is never
     /// written (its constants hold whatever the memory held), so not those.</summary>
-    readonly List<(string Name, Camera Camera, bool[] Recorded)> m_Trees = new List<(string, Camera, bool[])>();
+    readonly List<(string Name, Camera Camera, bool[] Recorded, string Twin)> m_Trees = new List<(string, Camera, bool[], string)>();
+    /// <summary>The tree extents each tree drew with this frame.</summary>
+    readonly Dictionary<string, Color> m_Extents = new Dictionary<string, Color>();
     RenderTexture m_Target;
     Texture2D m_Read;
+    GameObject m_Gusty, m_Calm;
+    Material m_Dump;
     WindZone m_A, m_B, m_Sphere, m_Still, m_Again;
     int m_Frame;
     bool m_Failed;
@@ -65,11 +69,11 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
     {
         try
         {
-            var gusty = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Trees/Gusty.st9");
-            var calm = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Trees/Calm.st9");
+            var gusty = m_Gusty = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Trees/Gusty.st9");
+            var calm = m_Calm = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Trees/Calm.st9");
             m_Target = new RenderTexture(22, 1, 0, RenderTextureFormat.ARGBFloat);
             m_Read = new Texture2D(22, 1, TextureFormat.RGBAFloat, false);
-            var dump = new Material(AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/WindDump.shader"));
+            var dump = m_Dump = new Material(AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/WindDump.shader"));
             Tree("GustyA", gusty, dump, 29, new Vector3(100f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Camera);
             // The same asset turned and scaled, drawing per-object motion vectors (the history constants).
             Tree("GustyB", gusty, dump, 30, new Vector3(200f, 0f, 0f), Quaternion.Euler(0f, 40f, 0f), new Vector3(1.5f, 1.5f, 1.5f),
@@ -89,8 +93,14 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
     }
 
     /// <summary>A copy of the asset's first level drawing a quad with the dump material on a
-    /// layer of its own, and an orthographic camera that sees only it.</summary>
+    /// layer of its own, and an orthographic camera that sees only it. A tree with a twin (an
+    /// earlier tree of the same asset) is one that first draws late: until it draws its own wind
+    /// it reads what an earlier draw left, so it records whether its extents are its twin's, and
+    /// its constants only when they are.</summary>
     void Tree(string name, GameObject prefab, Material material, int layer, Vector3 at, Quaternion rotation, Vector3 scale,
+        MotionVectorGenerationMode motion, params int[] partsOff) => Tree(name, null, prefab, material, layer, at, rotation, scale, motion, partsOff);
+
+    void Tree(string name, string twin, GameObject prefab, Material material, int layer, Vector3 at, Quaternion rotation, Vector3 scale,
         MotionVectorGenerationMode motion, params int[] partsOff)
     {
         var recorded = new bool[k_Names.Length];
@@ -123,7 +133,7 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         camera.backgroundColor = Color.clear;
         camera.targetTexture = m_Target;
         camera.enabled = false;
-        m_Trees.Add((name, camera, recorded));
+        m_Trees.Add((name, camera, recorded, twin));
     }
 
     void Update()
@@ -149,8 +159,15 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
             m_B.gameObject.SetActive(false);
             m_Sphere.gameObject.SetActive(false);
         }
-        // The winds have settled by then: a spherical zone alone, then a directional zone without
-        // wind, then a wind again.
+        // The winds have settled by then. Trees that first draw now: one with no wind in the
+        // world, one under a spherical zone alone, one under a directional zone without wind.
+        if (m_Frame == 300)
+            Tree("LateSettled", "GustyB", m_Gusty, m_Dump, 26, new Vector3(400f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object);
+        if (m_Frame == 335)
+            Tree("LateSpherical", "GustyB", m_Gusty, m_Dump, 27, new Vector3(500f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object);
+        if (m_Frame == 351)
+            Tree("LateStill", "Calm", m_Calm, m_Dump, 28, new Vector3(600f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object, 5, 6);
+        // A spherical zone alone, then a directional zone without wind, then a wind again.
         if (m_Frame == 340) m_Sphere.gameObject.SetActive(true);
         if (m_Frame == 350)
         {
@@ -197,7 +214,7 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
             Rec(frame + "/time", F(Time.time));
             Rec(frame + "/pipeline", GraphicsSettings.currentRenderPipeline == null ? "builtin" : GraphicsSettings.currentRenderPipeline.GetType().Name);
         }
-        foreach (var (name, camera, recordedConstants) in m_Trees)
+        foreach (var (name, camera, recordedConstants, twin) in m_Trees)
         {
             camera.Render();
             if (!record) continue;
@@ -206,6 +223,13 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
             m_Read.ReadPixels(new Rect(0, 0, 22, 1), 0, 0);
             m_Read.Apply();
             RenderTexture.active = previous;
+            m_Extents[name] = m_Read.GetPixel(1, 0);
+            if (twin != null)
+            {
+                bool own = m_Extents[name] == m_Extents[twin];
+                Rec(frame + "/" + name + "/ownWind", own ? "true" : "false");
+                if (!own) continue;
+            }
             for (int i = 0; i < k_Names.Length; i++)
             {
                 if (!recordedConstants[i]) continue;
