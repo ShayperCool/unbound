@@ -3,7 +3,7 @@ Shader "Probe/SurfaceIndices/Plain"
     SubShader
     {
         CGPROGRAM
-        #pragma surface surf Lambert 
+        #pragma surface surf Lambert
         struct Input { float2 uv_MainTex; };
         void surf(Input i, inout SurfaceOutput o) { o.Albedo = 0; o.Emission = float3(0.1,0.2,0.3); o.Alpha = 1; }
         ENDCG
