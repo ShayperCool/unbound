@@ -207,13 +207,13 @@ that commit, the same commit from a script outside callbacks (a blit with the cu
 buffer, committed and waited on), a copy from a texture updated with `Apply` just before the
 event in the same frame (the plugin copies its earlier texels: the update runs after), a draw
 into a multisampled render texture sampled right after in the same command buffer, the render
-pass descriptor before the current encoder exists (nil) and a change the plugin makes to it
-before ending the encoder (the target keeps its contents), the pointers of 2D, sRGB, mip-mapped, three-channel, cube, array and 3D textures and
+pass descriptor before the current encoder exists (nil after only a clear) and a change the
+plugin makes to it before ending the encoder (the target keeps its contents), the pointers of 2D, sRGB, mip-mapped, three-channel, cube, array and 3D textures and
 of render textures (color, depth, multisampled samples, depth-only), what the render buffer
 pointers give (`RenderBufferFromHandle` returns the pointer; their texture, resolved texture,
 stencil texture), an external texture of the plugin's, and the pixels.
 
-Unbound matches 64/163 records with 99 declared residuals (`residuals-metal.json`, each with its
+Unbound matches 63/163 records with 100 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load and store actions (the Editor's are the
 pass it began, clearing, its store left unknown; Unbound begins a pass of its own that loads and

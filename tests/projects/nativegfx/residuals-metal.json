@@ -105,5 +105,8 @@
   "plugin.state.stencil.camera2.3",
   "plugin.state.stencil.mutate",
   "second.pixels"
+ ],
+ "The render pass descriptor before an encoder exists: the macOS Editor answers nil in a command buffer that only set and cleared its target (its encoder is not begun yet); Unbound answers the descriptor of the pass the next encoder begins, as the Editor most likely does where it already drew (unmeasured), so plugins that read the formats first get them": [
+  "plugin.mutate.mutate"
  ]
 }
