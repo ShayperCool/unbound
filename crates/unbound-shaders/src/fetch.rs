@@ -22,16 +22,13 @@ const TARGET: &str = "CoLoR";
 /// The vertex color semantic HLSLSupport.cginc names `COLOR` as with fetch enabled.
 const VERTEX_COLOR: &str = "VCOLOR";
 
-/// A program preprocessed for a device with framebuffer fetch (`enabled`; other devices' are
-/// kept as they are): its semantics named `SV_Target<n>` and `COLOR<n>` again and, in a fragment
-/// program, its entry's `inout` color target reading [`TEXTURE`]; whether it reads it.
-pub fn rewrite(source: &str, entry: &str, enabled: bool, fragment: bool) -> Result<(String, bool)> {
-    if !enabled {
-        return Ok((source.to_string(), false));
-    }
+/// A fragment program preprocessed for a device with framebuffer fetch (its semantics named
+/// again: [`semantics`]) with its entry's `inout` color target reading [`TEXTURE`]; whether it
+/// reads it.
+pub fn rewrite(source: &str, entry: &str) -> Result<(String, bool)> {
     let mut text = source.to_string();
     let mut reads = false;
-    if fragment && let Some(function) = find_definition(&text, entry) {
+    if let Some(function) = find_definition(&text, entry) {
         let params = split_params(&text[function.open + 1..function.close]);
         let mut fetched = Vec::new();
         let mut position = None;
@@ -107,6 +104,12 @@ pub fn rewrite(source: &str, entry: &str, enabled: bool, fragment: bool) -> Resu
         }
     }
     Ok((rename_semantics(&text), reads))
+}
+
+/// A text preprocessed with fetch enabled with its color semantics by their usual names:
+/// `CoLoR<n>` is `SV_Target<n>` and `VCOLOR<n>` `COLOR<n>` again.
+pub fn semantics(text: &str) -> String {
+    rename_semantics(text)
 }
 
 /// Whether a fragment input semantic is the fragment's position (`SV_Position`, `VPOS`, or a
@@ -306,7 +309,7 @@ mod tests {
         let source = "float4 vert(float4 v : POSITION) : SV_POSITION { return v; }\n\
                       void frag(float4 pos : SV_POSITION, inout half4 ocol : CoLoR)\n\
                       {\n    ocol = ocol * 0.5;\n}\n";
-        let (text, reads) = rewrite(source, "frag", true, true).unwrap();
+        let (text, reads) = rewrite(source, "frag").unwrap();
         assert!(reads);
         assert!(text.contains("Texture2D<float4> _UnboundFramebufferFetch0;\nvoid frag("));
         assert!(text.contains("out half4 ocol : SV_Target)"), "{text}");
@@ -322,14 +325,14 @@ mod tests {
     fn the_position_comes_from_a_structure_or_a_parameter_of_its_own() {
         let source = "struct v2f { float4 vertex : SV_POSITION; float2 uv : TEXCOORD0; };\n\
                       void frag(v2f i, inout float4 c : CoLoR0) { c += 1; }\n";
-        let (text, _) = rewrite(source, "frag", true, true).unwrap();
+        let (text, _) = rewrite(source, "frag").unwrap();
         assert!(
             text.contains("Load(int3(int2((i.vertex).xy), 0))"),
             "{text}"
         );
         let source = "struct v2f { float2 uv : TEXCOORD0; };\n\
                       void frag(v2f i, inout float4 c : CoLoR) { c += 1; }\n";
-        let (text, _) = rewrite(source, "frag", true, true).unwrap();
+        let (text, _) = rewrite(source, "frag").unwrap();
         assert!(
             text.contains("out float4 c : SV_Target, float4 _unbound_FragCoord : SV_Position)"),
             "{text}"
@@ -343,28 +346,21 @@ mod tests {
                       o frag(float4 p : SV_POSITION);\n\
                       o frag(float4 p : SV_POSITION) { o r; r.a = 1; r.b = 0; return r; }\n\
                       half4 COLORS; half4 CoLoRful;\n";
-        let (text, reads) = rewrite(source, "frag", true, true).unwrap();
+        let (text, reads) = rewrite(source, "frag").unwrap();
         assert!(!reads);
         assert!(text.contains("half4 a : SV_Target0; half4 b : SV_Target1;"));
         assert!(text.contains("half4 COLORS; half4 CoLoRful;"));
-        let (vertex, _) = rewrite("float4 v : CoLoR;", "vert", true, false).unwrap();
-        assert_eq!(vertex, "float4 v : SV_Target;");
+        assert_eq!(semantics("float4 v : CoLoR;"), "float4 v : SV_Target;");
     }
 
     #[test]
-    fn vertex_colors_are_colors_again_and_other_devices_keep_their_text() {
+    fn vertex_colors_are_colors_again() {
         let source = "struct a { float4 c : VCOLOR; float4 d : VCOLOR1; };\n\
                       half4 frag(float4 c : VCOLOR0) : CoLoR { half4 VCOLOR = c; return VCOLOR; }\n";
-        let (text, reads) = rewrite(source, "frag", true, true).unwrap();
-        assert!(!reads);
         assert_eq!(
-            text,
+            semantics(source),
             "struct a { float4 c : COLOR; float4 d : COLOR1; };\n\
              half4 frag(float4 c : COLOR0) : SV_Target { half4 VCOLOR = c; return VCOLOR; }\n"
-        );
-        assert_eq!(
-            rewrite(source, "frag", false, true).unwrap(),
-            (source.into(), false)
         );
     }
 
@@ -372,7 +368,7 @@ mod tests {
     fn a_dx9_position_is_the_fragment_position() {
         let source = "struct v2f { float4 pos : POSITION; };\n\
                       void frag(v2f i, inout half4 c : CoLoR) { c *= 2; }\n";
-        let (text, _) = rewrite(source, "frag", true, true).unwrap();
+        let (text, _) = rewrite(source, "frag").unwrap();
         assert!(text.contains("Load(int3(int2((i.pos).xy), 0))"), "{text}");
         assert!(!text.contains("_unbound_FragCoord"));
     }
@@ -381,12 +377,12 @@ mod tests {
     fn a_structure_of_targets_taken_inout_is_refused() {
         let source = "struct o { half4 a : CoLoR0; half4 b : CoLoR1; };\n\
                       void frag(float4 p : SV_POSITION, inout o r) { }\n";
-        assert!(rewrite(source, "frag", true, true).is_err());
+        assert!(rewrite(source, "frag").is_err());
     }
 
     #[test]
     fn a_further_target_is_refused() {
         let source = "void frag(float4 p : SV_POSITION, inout half4 c : CoLoR1) { }\n";
-        assert!(rewrite(source, "frag", true, true).is_err());
+        assert!(rewrite(source, "frag").is_err());
     }
 }

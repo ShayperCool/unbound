@@ -846,11 +846,13 @@ impl ShaderCompiler {
             .platform_defines
             .iter()
             .any(|k| k == FRAMEBUFFER_FETCH_AVAILABLE);
-        let (vertex_source, _) = fetch::rewrite(&vertex.text, &vertex_entry, fetches, false)
-            .with_context(|| program.file.display().to_string())?;
-        let (fragment_source, framebuffer_fetch) =
-            fetch::rewrite(&fragment.text, &fragment_entry, fetches, true)
-                .with_context(|| program.file.display().to_string())?;
+        let vertex_source = vertex.text;
+        let (fragment_source, framebuffer_fetch) = if fetches {
+            fetch::rewrite(&fragment.text, &fragment_entry)
+                .with_context(|| program.file.display().to_string())?
+        } else {
+            (fragment.text, false)
+        };
         if framebuffer_fetch
             && self
                 .warned
@@ -1061,8 +1063,15 @@ impl ShaderCompiler {
         }
         // The program's own lines start after a marker, so errors can name them.
         source.push_str(&program.source);
-        pp.run(&source, Some(&program.file))
-            .with_context(|| format!("preprocessing {}", program.file.display()))
+        let mut out = pp
+            .run(&source, Some(&program.file))
+            .with_context(|| format!("preprocessing {}", program.file.display()))?;
+        // With fetch enabled HLSLSupport renames color semantics: every reader of the text
+        // (surface analysis, the compilers) gets them by their usual names.
+        if defines.iter().any(|(k, _)| k == FRAMEBUFFER_FETCH_ENABLED) {
+            out.text = fetch::semantics(&out.text);
+        }
+        Ok(out)
     }
 
     fn glslang(
@@ -3339,8 +3348,12 @@ float4 frag(v2f i) : SV_Target
             "float4 frag(v2f i) : SV_Target\n{",
             "void frag(v2f i, inout float4 target : SV_Target)\n{\ntarget = 1;\n}\nfloat4 unused(v2f i)\n{",
         );
-        let c = other.compile(&program(&unread, false), &[], false);
-        assert!(!c.is_ok_and(|c| c.framebuffer_fetch));
+        // An inout color target does not compile there (HLSLSupport.cginc: "a compiler error,
+        // unless SV_Target is defined to COLOR"): the parameter's input clashes.
+        let error = other
+            .compile(&program(&unread, false), &[], false)
+            .unwrap_err();
+        assert!(format!("{error:#}").contains("location"), "{error:#}");
         // A program without one reads nothing.
         let plain = compiler
             .compile(&program(PROGRAM, false), &[], false)
@@ -3951,6 +3964,43 @@ fixed4 frag(v2f i) : COLOR { return i.color; }
             .compile(&program(colored, true), &[], false)
             .unwrap();
         assert!(!c.framebuffer_fetch);
+        // A surface shader's vertex color reaches its Input (the analysis reads COLOR too).
+        let surface = r#"
+#pragma surface surf Lambert
+sampler2D _MainTex;
+struct Input { float2 uv_MainTex; float4 color : COLOR; };
+void surf(Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_MainTex).rgb * IN.color.rgb; }
+"#;
+        let mut surface = program(surface, true);
+        surface.light_mode = Some("ForwardBase".into());
+        let c = compiler.compile(&surface, &[], false).unwrap();
+        // The same shader without the vertex color in its Input neither reads nor passes it.
+        let mut uncolored = program(
+            &surface
+                .source
+                .replace(" float4 color : COLOR;", "")
+                .replace(" * IN.color.rgb", ""),
+            true,
+        );
+        uncolored.light_mode = Some("ForwardBase".into());
+        let u = compiler.compile(&uncolored, &[], false).unwrap();
+        let locations = |v: &str| v.matches("@location(").count();
+        assert!(locations(&c.vertex) > locations(&u.vertex), "{}", c.vertex);
+        let text = compiler
+            .preprocess(
+                &surface,
+                &compiler.defines(
+                    &surface,
+                    &[],
+                    &targets::Requirements::default()
+                        .variant(&[], unbound_compat::GraphicsDevice::Metal),
+                    false,
+                    "SHADER_STAGE_VERTEX",
+                ),
+            )
+            .unwrap()
+            .text;
+        assert!(text.contains(": COLOR") && !text.contains("VCOLOR"));
     }
 
     /// A UI program on the installed Unity release's includes (skipped without one).
