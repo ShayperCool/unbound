@@ -234,16 +234,17 @@ def publish(labels):
     """A capture replaces an existing reference only when it keeps every row of it as it is, in
     its order (a probe with added records, recorded again)."""
     target = reference()
-    if DEVICE == 'metal':
-        return macos_editor.publish([WORK/label for label in labels], target, OUT)
     fresh = target.with_name(target.name + '.new')
 
     def write(path, first):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(first/OUT, path)
     fresh.unlink(missing_ok=True)
-    code = editor_runner.publish([WORK/label for label in labels], fresh, lambda d: [OUT], write,
-                                 complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
+    if DEVICE == 'metal':
+        code = macos_editor.publish([WORK/label for label in labels], fresh, OUT)
+    else:
+        code = editor_runner.publish([WORK/label for label in labels], fresh, lambda d: [OUT], write,
+                                     complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
     if code:
         return code
     if target.exists():
