@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/linkedpool/run.py check"],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": ["managed/UnityEngine/Platform/Pool.cs"]
+}

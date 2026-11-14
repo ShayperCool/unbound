@@ -117,13 +117,13 @@ Editor and collection-validation methods.
 | Attributes | 938 | 22 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
-| Accessors | 70 | 3 |
+| Accessors | 70 | 2 |
 | Layout | 68 | 61 |
 | Interfaces | 65 | 53 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 159 |
+| Total | 1,332 | 158 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -227,8 +227,8 @@ change NavMesh costs and resource paths through reflection, with independent str
 copy, agent and attribute-field controls. Startup focus keeps its existing callback
 phase and texture increments retain their public counter.
 
-Q410-Accessor-state retains three exact entries after the enumerator slice.
-LinkedPool<T>.CountInactive needs a counter integrated with its shared ObjectPool.
+Q410-Accessor-state retains two exact entries after the linked-pool slice.
+LinkedPool<T>.CountInactive now owns the counter used by its linked storage, covered by `linkedpool`.
 EditorApplication.isFocused and EditorAssemblies.loadedAssemblies retain the live
 focus and game-domain state migration already tracked above. No no-op setters are added. The strict texture-pixel run retains three VolumeRGFloat
 row differences per Gamma and Linear profile. The exact landed parent and this
@@ -378,7 +378,7 @@ slice reduced the queue from 370 to 341. The GUI payload slice removes another
 and XR value payloads remove nine layout/interface entries. LocationInfo and the retired
 AnimationInfo value remove two more layout entries. FrameRate serialization removes one
 field annotation entry. Scene value equality removes one extra interface and cached
-enumerator state removes one accessor entry, leaving 159 exact entries, each with a
+enumerator state removes one accessor entry, leaving 158 exact entries, each with a
 specific follow-up reason. No allow-list is regenerated from a passing report.
 The generator format changes with the comparison policy and the committed stubs
 are regenerated from the selected release. Existing probe references and strict
@@ -403,7 +403,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-enumerator-current-state` | 0 | Done by `propertyenumerator`: Current caches each advance, including false, and preserves its state across Reset/Dispose for enumerable, list, indexed and default forms. |
 | `Q410-generic-equality-interfaces` | 0 | Done by `scenevalues`: generic collections use Scene object equality/hash behavior after removal of the extra interface; internal registries already use their own handles and keys. |
 | `Q410-job-container-payloads` | 5 | Mesh/light-query ownership and safety metadata used by the job scheduler. |
-| `Q410-linked-pool-counter` | 1 | Counter state integrated with the existing shared pool implementation. |
+| `Q410-linked-pool-counter` | 0 | Done by `linkedpool`: counter, storage, capacity and callbacks share one pool state; null, reentrant release, overflow and independent ObjectPool controls are recorded. |
 | `Q410-measured-lookup-policies` | 11 | Retain the eleven direct/inherited discovery policies and their controls. |
 | `Q410-slide-result-serialization` | 2 | Nondefault collision-hit backing payloads and overwrite controls. |
 | `Q410-unconstrained-pixel-data` | 1 | Shared allocation-free unconstrained array transfer and invalid/reference-containing input controls. |
@@ -518,3 +518,18 @@ One exact setter exception is removed.
 The [remaining behavior audit](API_DECLARATION_FOLLOWUPS.md) records concrete payload,
 ownership, integration and control requirements for every remaining row and the three
 separate runtime follow-ups. Their exact exceptions and raw comparisons stay visible.
+
+
+## Linked pool counter and storage
+
+`tests/projects/linkedpool` records 161 exact Unity 6000.0.71f1 values. LinkedPool
+uses its own reusable linked storage and writable counter, replacing ObjectPool
+delegation. Get checks actual storage, Release checks the counter against capacity,
+and Clear resets both. Divergent private counts, integer limits, nondefault values,
+nulls, reference identity, reentrant callbacks and callback failures are controlled.
+Reference-counted membership keeps duplicate checks independent of user equality and
+avoids scanning the pool on each return. Empty nodes drop their retained value and
+are reused. ObjectPool retains its separate reuse order and now shares reference-membership checks,
+fixing rejection of distinct objects with equal values. Null slots and reentrant
+ObjectPool releases are recorded as independent controls. One exact accessor
+exception is removed.

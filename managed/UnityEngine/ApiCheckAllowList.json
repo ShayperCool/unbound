@@ -15,13 +15,6 @@
   },
   {
     "Release": "6000.0.71f1",
-    "Category": "accessors",
-    "Type": "UnityEngine.Pool.LinkedPool`1",
-    "Message": "P:CountInactive():System.Int32 setter is absent, Unity's is private",
-    "Reason": "Q410-linked-pool-counter: CountInactive currently derives the shared ObjectPool storage. The selected private counter setter needs a common pool-state adaptation and get/release/clear controls, not a disconnected counter."
-  },
-  {
-    "Release": "6000.0.71f1",
     "Category": "attributes",
     "Type": "UnityEditor.EditorWindow",
     "Message": "F:m_TitleContent:UnityEngine.GUIContent attributes is [], Unity's is [UnityEngine.HideInInspector:M:.ctor`0():System.Void(){};UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",

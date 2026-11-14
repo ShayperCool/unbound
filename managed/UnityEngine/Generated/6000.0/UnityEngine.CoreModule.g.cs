@@ -4156,18 +4156,6 @@ namespace UnityEngine.PlayerLoop
 }
 namespace UnityEngine.Pool
 {
-    unsafe partial class LinkedPool<T>
-    {
-        [global::Unbound.Stub] internal global::UnityEngine.Pool.LinkedPool<T>.LinkedPoolItem m_PoolFirst;
-        [global::Unbound.Stub] internal global::UnityEngine.Pool.LinkedPool<T>.LinkedPoolItem m_NextAvailableListItem;
-        [global::Unbound.Stub]
-        internal unsafe partial class LinkedPoolItem
-        {
-            [global::Unbound.Stub] internal global::UnityEngine.Pool.LinkedPool<T>.LinkedPoolItem poolNext;
-            [global::Unbound.Stub] internal T value;
-            [global::Unbound.Stub] public LinkedPoolItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pool.LinkedPool<T>.LinkedPoolItem.ctor"); }
-        }
-    }
     unsafe partial class ObjectPool<T>
     {
         [global::Unbound.Stub] internal bool HasElement(T element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pool.ObjectPool<T>.HasElement"); return default; }

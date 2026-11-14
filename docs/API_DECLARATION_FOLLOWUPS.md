@@ -3,7 +3,7 @@
 This audit covers the remaining Q410 behavior rows after Q453's payload, adapter,
 value, equality and enumerator slices. The exact selected-release exceptions remain in
 `managed/UnityEngine/ApiCheckAllowList.json`; the table below does not replace them.
-The retained count is 159 for Unity 6000.0.71f1. Selected declaration payloads and
+The retained count is 158 for Unity 6000.0.71f1. Selected declaration payloads and
 current callers were audited before assigning these follow-ups. An audit establishes
 scope, not runtime parity. Each follow-up still needs its own divergent-state Editor
 controls, implementation and independent review.
@@ -27,7 +27,7 @@ The completed slices and strict probe counts are recorded in
 | UI command events | 1 | Command/IME event pooling and text propagation must route correctly before changing TextElement's interest declaration. Use nondefault text/selection, disabled-state and event reuse/propagation controls. |
 | Animation job producer | 1 | Producer reflection data must contain the selected animation job payload and integrate with scheduling, stream ownership and lifetime. An annotation without a working producer is insufficient. Coordinate animation work. |
 | Built-in inspectors | 3 | Current GameObject/Transform inspectors have empty setup; material preview preparation is omitted. Registry annotations would select incomplete target-specific behavior. Test single/multiple distinct targets, serialized editing and preview/resource lifetime before registration. Material preview also needs rendering ownership. |
-| Linked pool counter | 1 | LinkedPool delegates storage/counting to ObjectPool, whose count is derived from the list. A writable cache would diverge from storage. Capture forced private-count divergence across Get, Release, capacity rejection, Clear and callbacks, then integrate the counter into the shared pool mechanism. |
+| Linked pool counter | 0 | Done by `linkedpool`: linked storage, independent writable count, capacity and callbacks are integrated. The 161 exact controls include forced count/storage divergence, nulls, reference identity, reentrant releases, callback failures and an ObjectPool control. |
 | Slide result serialization | 2 | Existing slide code explicitly records unverified hit payload serialization. Seed real nondefault slide/surface hits and object references; compare root/nested JSON and overwrite before marking the backing fields. Default hits cannot distinguish the missing behavior. |
 | Unconstrained pixel data | 1 | The current struct-constrained transfer shares MemoryMarshal-based code with layered textures. Settle allocation-free arbitrary-array transfer for null, empty, bool, reference-containing and ordinary pixel values; preserve all shared callers with the rendering owner. |
 | Measured lookup policies | 11 | Retain the exact selected-release lookup policies and all canonical discovery controls unless a new capture contradicts them. No global ordering or stronger inheritance guarantee is inferred. |

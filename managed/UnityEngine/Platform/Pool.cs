@@ -3,6 +3,28 @@ using System.Collections.Generic;
 
 namespace UnityEngine.Pool
 {
+    // Both pool layouts check object identity, independently of user equality and counters.
+    sealed class PoolReferences<T> where T : class
+    {
+        static readonly object s_NullItem = new object();
+        readonly Dictionary<object, int> m_Counts = new Dictionary<object, int>(ReferenceEqualityComparer.Instance);
+        internal bool Contains(T item) => m_Counts.ContainsKey((object)item ?? s_NullItem);
+        internal void Add(T item)
+        {
+            object key = (object)item ?? s_NullItem;
+            m_Counts.TryGetValue(key, out int count);
+            m_Counts[key] = count + 1;
+        }
+        internal void Remove(T item)
+        {
+            object key = (object)item ?? s_NullItem;
+            int count = m_Counts[key];
+            if (count == 1) m_Counts.Remove(key);
+            else m_Counts[key] = count - 1;
+        }
+        internal void Clear() => m_Counts.Clear();
+    }
+
     internal partial interface IPool
     {
         void Clear();
@@ -48,6 +70,7 @@ namespace UnityEngine.Pool
         readonly int m_MaxSize;
         internal bool m_CollectionCheck;
         T m_FreshlyReleased;
+        PoolReferences<T> m_References;
 
         public int CountAll { get; private set; }
         public int CountActive => CountAll - CountInactive;
@@ -64,6 +87,7 @@ namespace UnityEngine.Pool
             m_ActionOnRelease = actionOnRelease;
             m_ActionOnDestroy = actionOnDestroy;
             m_CollectionCheck = collectionCheck;
+            if (collectionCheck) m_References = new PoolReferences<T>();
         }
 
         public T Get()
@@ -73,6 +97,7 @@ namespace UnityEngine.Pool
             {
                 element = m_FreshlyReleased;
                 m_FreshlyReleased = null;
+                m_References?.Remove(element);
             }
             else if (m_List.Count == 0)
             {
@@ -84,6 +109,7 @@ namespace UnityEngine.Pool
                 int index = m_List.Count - 1;
                 element = m_List[index];
                 m_List.RemoveAt(index);
+                m_References?.Remove(element);
             }
             m_ActionOnGet?.Invoke(element);
             return element;
@@ -93,15 +119,30 @@ namespace UnityEngine.Pool
 
         public void Release(T element)
         {
-            if (m_CollectionCheck && (element == m_FreshlyReleased || (m_List.Count > 0 && m_List.Contains(element))))
-                throw new InvalidOperationException("Trying to release an object that has already been released to the pool.");
+            if (m_CollectionCheck)
+            {
+                // Internal consumers may enable checks after constructing an unchecked pool.
+                if (m_References == null)
+                {
+                    m_References = new PoolReferences<T>();
+                    if (m_FreshlyReleased != null) m_References.Add(m_FreshlyReleased);
+                    foreach (var stored in m_List) m_References.Add(stored);
+                }
+                if (CountInactive > 0 && (ReferenceEquals(element, m_FreshlyReleased) || m_References.Contains(element)))
+                    throw new InvalidOperationException("Trying to release an object that has already been released to the pool.");
+            }
             m_ActionOnRelease?.Invoke(element);
             if (m_FreshlyReleased == null)
             {
                 m_FreshlyReleased = element;
+                if (element != null) m_References?.Add(element);
                 return;
             }
-            if (CountInactive < m_MaxSize) m_List.Add(element);
+            if (CountInactive < m_MaxSize)
+            {
+                m_List.Add(element);
+                m_References?.Add(element);
+            }
             else
             {
                 CountAll--;
@@ -118,6 +159,7 @@ namespace UnityEngine.Pool
             }
             m_FreshlyReleased = null;
             m_List.Clear();
+            m_References?.Clear();
             CountAll = 0;
         }
 
@@ -126,19 +168,83 @@ namespace UnityEngine.Pool
 
     public partial class LinkedPool<T> : IDisposable, IObjectPool<T>, IPool where T : class
     {
-        readonly ObjectPool<T> m_Pool;
+        readonly Func<T> m_CreateFunc;
+        readonly Action<T> m_ActionOnGet, m_ActionOnRelease, m_ActionOnDestroy;
+        readonly int m_Limit;
+        readonly PoolReferences<T> m_Inactive;
+        internal LinkedPoolItem m_PoolFirst, m_NextAvailableListItem;
+
+        internal partial class LinkedPoolItem
+        {
+            internal LinkedPoolItem poolNext;
+            internal T value;
+            public LinkedPoolItem() { }
+        }
 
         public LinkedPool(Func<T> createFunc, Action<T> actionOnGet = null, Action<T> actionOnRelease = null, Action<T> actionOnDestroy = null, bool collectionCheck = true, int maxSize = 10000)
         {
-            m_Pool = new ObjectPool<T>(createFunc, actionOnGet, actionOnRelease, actionOnDestroy, collectionCheck, 10, maxSize);
+            if (createFunc == null) throw new ArgumentNullException(nameof(createFunc));
+            if (maxSize <= 0) throw new ArgumentException(nameof(maxSize), "Max size must be greater than 0");
+            m_CreateFunc = createFunc;
+            m_ActionOnGet = actionOnGet;
+            m_ActionOnRelease = actionOnRelease;
+            m_ActionOnDestroy = actionOnDestroy;
+            if (collectionCheck) m_Inactive = new PoolReferences<T>();
+            m_Limit = maxSize;
         }
 
-        public int CountInactive => m_Pool.CountInactive;
-        public T Get() => m_Pool.Get();
+        public int CountInactive { get; private set; }
+
+        public T Get()
+        {
+            T result;
+            if (m_PoolFirst == null) result = m_CreateFunc();
+            else
+            {
+                var node = m_PoolFirst;
+                m_PoolFirst = node.poolNext;
+                result = node.value;
+                m_Inactive?.Remove(result);
+                node.value = null;
+                node.poolNext = m_NextAvailableListItem;
+                m_NextAvailableListItem = node;
+                CountInactive = unchecked(CountInactive - 1);
+            }
+            m_ActionOnGet?.Invoke(result);
+            return result;
+        }
+
         public PooledObject<T> Get(out T v) => new PooledObject<T>(v = Get(), this);
-        public void Release(T item) => m_Pool.Release(item);
-        public void Clear() => m_Pool.Clear();
-        public void Dispose() => m_Pool.Dispose();
+
+        public void Release(T item)
+        {
+            if (m_Inactive != null && m_Inactive.Contains(item))
+                throw new InvalidOperationException("Trying to release an object that has already been released to the pool.");
+            m_ActionOnRelease?.Invoke(item);
+            if (CountInactive >= m_Limit) { m_ActionOnDestroy?.Invoke(item); return; }
+            // Reuse empty nodes so a warmed pool does not allocate during Get/Release.
+            var available = m_NextAvailableListItem;
+            if (available == null) available = new LinkedPoolItem();
+            else m_NextAvailableListItem = available.poolNext;
+            m_Inactive?.Add(item);
+            available.value = item;
+            available.poolNext = m_PoolFirst;
+            m_PoolFirst = available;
+            CountInactive = unchecked(CountInactive + 1);
+        }
+
+        public void Clear()
+        {
+            if (m_ActionOnDestroy != null)
+                for (var node = m_PoolFirst; node != null; node = node.poolNext)
+                    m_ActionOnDestroy(node.value);
+            m_Inactive?.Clear();
+            m_PoolFirst = null;
+            m_NextAvailableListItem = null;
+            CountInactive = 0;
+        }
+
+        public void Dispose() => Clear();
     }
 
     public partial class GenericPool<T> where T : class, new()
