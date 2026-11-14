@@ -96,6 +96,18 @@ namespace UnityEngine.Tests
             try
             {
                 Assert.Same(material, importer.GetExternalObjectMap()[new AssetImporter.SourceAssetIdentifier(typeof(Material), "Bark")]);
+                // AddRemap and RemoveRemap before the first map query replace the .meta's entry.
+                var bark = new AssetImporter.SourceAssetIdentifier(typeof(Material), "Bark");
+                var added = Model(
+                    "  externalObjects:\n  - first:\n      type: UnityEngine:Material\n      assembly: UnityEngine.CoreModule\n      name: Bark\n" +
+                    $"    second: {{fileID: {MaterialId}, guid: {MaterialGuid}, type: 2}}\n");
+                added.AddRemap(bark, null);
+                Assert.Null(added.GetExternalObjectMap()[bark]);
+                var removed = Model(
+                    "  externalObjects:\n  - first:\n      type: UnityEngine:Material\n      assembly: UnityEngine.CoreModule\n      name: Bark\n" +
+                    $"    second: {{fileID: {MaterialId}, guid: {MaterialGuid}, type: 2}}\n");
+                Assert.True(removed.RemoveRemap(bark));
+                Assert.Empty(removed.GetExternalObjectMap());
             }
             finally
             {
