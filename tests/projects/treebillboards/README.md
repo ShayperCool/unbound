@@ -14,7 +14,10 @@ to 380 units ahead of the cameras, of several width and height scales and colors
 - `start20` (billboards from 20 units), `fade40` (from 25 units, a fade of 40), `distance150`
   (tree distance 150), `turned` (the camera turned 30 degrees about up), `brightsun` (the sun
   tinted and at intensity 1.6), `maxmesh3` (treeMaximumFullLODCount 3) and `sunonly` (the sun's
-  intensity alone changed, the view unchanged): the ground view with other settings.
+  intensity alone changed, the view unchanged), `twolights` (a second, bluish directional light),
+  `pointlight` (a point light among the near trees), `wide` (every fifth tree a third prototype
+  made at run time, the round tree flattened to three times its width and 0.4 of its height) and
+  `many` (2400 trees in a dense grid): the ground view with other settings.
 
 What it shows (Unity 6000.0.71f1, NVIDIA): such trees are drawn as their meshes up to the billboard
 start plus the fade (distances across the ground), squashed towards the billboard across the fade,

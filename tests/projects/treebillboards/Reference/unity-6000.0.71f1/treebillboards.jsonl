@@ -10,3 +10,8 @@
 {"image":"brightsun","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
 {"image":"maxmesh3","treeMaximumFullLODCount":3,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
 {"image":"sunonly","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"image":"twolights","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"image":"pointlight","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"image":"wide","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"image":"many","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"atlasSampler":"Tree Imposter Texture","anisoLevel":1,"autoGenerateMips":true,"mipmapCount":9}

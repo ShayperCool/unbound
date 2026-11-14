@@ -12,7 +12,8 @@ using UnityEngine;
 /// and colors, drawn as meshes near the camera and as billboards past treeBillboardDistance.
 /// Images from the ground, from above at two pitches, with a nearer billboard start, a long cross
 /// fade and a short tree distance, turned about up, under a brighter tinted sun and with at most
-/// three mesh trees, and the billboard atlas as the ground view left it. Every fourth tree is the
+/// three mesh trees, with a second directional light, with a point light, with a third prototype
+/// wider than tall and with 2400 trees, and the billboard atlas as the ground view left it. Every fourth tree is the
 /// tall prototype. Writes <c>treebillboards.jsonl</c> (the settings each image used)
 /// and PNGs into <c>TREE_BILLBOARD_PROBE_OUT</c>, then quits.
 /// </summary>
@@ -81,6 +82,70 @@ public class TreeBillboardProbe : MonoBehaviour
         sun.intensity = 1.6f;
         Capture(dir, "sunonly", terrain, new Vector3(0f, 7f, -10f), new Vector3(0f, 4f, 200f), 50f, 5f, 5000f);
         sun.intensity = intensity;
+        var ground = (position: new Vector3(0f, 7f, -10f), target: new Vector3(0f, 4f, 200f));
+        // A second directional light, bluish, from another side.
+        var second = new GameObject("Second Light").AddComponent<Light>();
+        second.type = LightType.Directional;
+        second.transform.rotation = Quaternion.Euler(30f, -120f, 0f);
+        second.color = new Color(0.6f, 0.7f, 1f);
+        second.intensity = 0.8f;
+        Capture(dir, "twolights", terrain, ground.position, ground.target, 50f, 5f, 5000f);
+        DestroyImmediate(second.gameObject);
+        // A point light among the near trees.
+        var point = new GameObject("Point Light").AddComponent<Light>();
+        point.type = LightType.Point;
+        point.transform.position = new Vector3(0f, 5f, 40f);
+        point.range = 30f;
+        point.intensity = 2f;
+        point.color = new Color(1f, 0.6f, 0.3f);
+        Capture(dir, "pointlight", terrain, ground.position, ground.target, 50f, 5f, 5000f);
+        DestroyImmediate(point.gameObject);
+        // A prototype wider than tall: the round tree's mesh flattened, every fifth tree.
+        var round = data.treePrototypes[0].prefab;
+        var flat = Instantiate(round.GetComponent<MeshFilter>().sharedMesh);
+        var vertices = flat.vertices;
+        for (int i = 0; i < vertices.Length; i++) vertices[i] = Vector3.Scale(vertices[i], new Vector3(3f, 0.4f, 3f));
+        flat.vertices = vertices;
+        flat.RecalculateBounds();
+        var wide = new GameObject("Wide");
+        wide.transform.position = new Vector3(0f, -500f, 0f);
+        wide.AddComponent<MeshFilter>().sharedMesh = flat;
+        wide.AddComponent<MeshRenderer>().sharedMaterials = round.GetComponent<MeshRenderer>().sharedMaterials;
+        var prototypes = new List<TreePrototype>(data.treePrototypes) { new TreePrototype { prefab = wide } };
+        data.treePrototypes = prototypes.ToArray();
+        var widened = new List<TreeInstance>(trees);
+        for (int i = 4; i < widened.Count; i += 5)
+        {
+            var tree = widened[i];
+            tree.prototypeIndex = 2;
+            widened[i] = tree;
+        }
+        data.SetTreeInstances(widened.ToArray(), false);
+        terrain.Flush();
+        Capture(dir, "wide", terrain, ground.position, ground.target, 50f, 5f, 5000f);
+        // More than 500 trees, in a dense grid of overlapping billboards.
+        var many = new List<TreeInstance>();
+        for (int z = 0; z < 48; z++)
+            for (int x = 0; x < 50; x++)
+            {
+                int n = many.Count;
+                many.Add(new TreeInstance
+                {
+                    prototypeIndex = n % 4 == 3 ? 1 : 0,
+                    position = new Vector3((x * 7.5f + 12f) / 400f, 0f, (60f + z * 6.5f) / 400f),
+                    widthScale = 0.8f + 0.1f * (n % 5),
+                    heightScale = 0.75f + 0.15f * (n % 4),
+                    rotation = 0.7f * n,
+                    color = n % 3 == 0 ? Color.white : new Color(1f, 0.85f + 0.05f * (n % 3), 0.7f, 1f),
+                    lightmapColor = Color.white,
+                });
+            }
+        data.SetTreeInstances(many.ToArray(), false);
+        terrain.Flush();
+        Capture(dir, "many", terrain, ground.position, ground.target, 50f, 5f, 5000f);
+        foreach (var rt in Resources.FindObjectsOfTypeAll<RenderTexture>())
+            if (rt.name == "Tree Imposter Texture")
+                m_Out.Append($"{{\"atlasSampler\":\"{rt.name}\",\"anisoLevel\":{rt.anisoLevel},\"autoGenerateMips\":{(rt.autoGenerateMips ? "true" : "false")},\"mipmapCount\":{rt.mipmapCount}}}\n");
         File.WriteAllText(Path.Combine(dir, "treebillboards.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
