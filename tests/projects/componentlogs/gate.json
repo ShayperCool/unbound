@@ -1,0 +1,10 @@
+{
+  "commands": ["python3 tests/projects/componentlogs/run.py gate"],
+  "summary": "componentlogs: \\d+/\\d+ values match, \\d+ failures",
+  "engine_paths": [
+    "managed/UnityEngine/Runtime/Components.cs",
+    "managed/UnityEngine/Core/Debug.cs",
+    "managed/UnityEngine/Core/Application.cs",
+    "managed/UnityEngine/Runtime/Compat.cs"
+  ]
+}

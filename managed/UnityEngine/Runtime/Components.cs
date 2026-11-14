@@ -74,7 +74,14 @@ namespace Unbound.Runtime
             }
             if (Disallowed(go, type, out var existing))
             {
-                Debug.LogError($"The component '{type.Name}' can't be added to '{go.name}' because it already contains the same component ({existing.GetType().Name}).", go);
+                string message = $"The component '{type.Name}' can't be added to '{go.name}' because it already contains the same component ({existing.GetType().Name}).";
+                // Component rejection reaches Application callbacks independently of the public logger.
+                // Measured on 6000.0.71f1 by tests/projects/componentlogs.
+                if (Compat.ComponentFactoryEligibilityMeasured)
+                    Log.Write(LogType.Log, message, Application.GetStackTraceLogType(LogType.Log) == StackTraceLogType.None
+                        ? "" : new System.Diagnostics.StackTrace(1, true).ToString(), go);
+                else
+                    Debug.LogError(message, go);
                 return null;
             }
             foreach (var required in RequiredComponents(type))

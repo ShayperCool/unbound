@@ -26,6 +26,7 @@ namespace UnityEngine.Tests
         readonly List<GameObject> m_Objects = new List<GameObject>();
         readonly List<string> m_Errors = new List<string>();
         readonly List<string> m_Warnings = new List<string>();
+        readonly List<LogType> m_DuplicateLogs = new List<LogType>();
         readonly ILogger m_Logger = Debug.unityLogger;
         readonly ILogHandler m_PreviousHandler;
         readonly VirtualAudioBackend m_Backend = new VirtualAudioBackend();
@@ -164,15 +165,22 @@ namespace UnityEngine.Tests
             AudioBackend.Use(m_Backend);
             m_PreviousHandler = m_Logger.logHandler;
             m_Logger.logHandler = new CaptureHandler(m_PreviousHandler, m_Errors, m_Warnings);
+            Application.logMessageReceivedThreaded += DuplicateLog;
         }
 
         public void Dispose()
         {
+            Application.logMessageReceivedThreaded -= DuplicateLog;
             m_Logger.logHandler = m_PreviousHandler;
             foreach (var go in m_Objects)
                 if (go != null) Object.DestroyImmediate(go);
             AudioSystem.ResetForTests();
             ProjectInfo.UnityVersion = m_Release;
+        }
+
+        void DuplicateLog(string message, string trace, LogType type)
+        {
+            if (message.Contains("already contains the same component")) m_DuplicateLogs.Add(type);
         }
 
         sealed class CaptureHandler : ILogHandler
@@ -555,7 +563,8 @@ namespace UnityEngine.Tests
             Assert.Null(source.gameObject.AddComponent<AudioDistortionFilter>());
             Assert.Equal(.6f, first.distortionLevel);
             Assert.Single(source.GetComponents<AudioDistortionFilter>());
-            Assert.Single(Errors("already contains the same component"));
+            Assert.Equal(new[] { LogType.Log }, m_DuplicateLogs);
+            Assert.Empty(Errors("already contains the same component"));
         }
 
         [Theory]
@@ -572,11 +581,13 @@ namespace UnityEngine.Tests
                 var source = Source("filter uniqueness");
                 var first = (Behaviour)source.gameObject.AddComponent(type);
                 first.enabled = enabled;
-                int errors = Errors("already contains the same component").Count;
+                int logs = m_DuplicateLogs.Count;
                 Assert.Null(source.gameObject.AddComponent(type));
                 Assert.Same(first, source.gameObject.GetComponent(type));
                 Assert.Single(source.gameObject.GetComponents(type));
-                Assert.Equal(errors + 1, Errors("already contains the same component").Count);
+                Assert.Equal(logs + 1, m_DuplicateLogs.Count);
+                Assert.Equal(LogType.Log, m_DuplicateLogs[logs]);
+                Assert.Empty(Errors("already contains the same component"));
 
                 Object.DestroyImmediate(first);
                 Assert.NotNull(source.gameObject.AddComponent(type));
