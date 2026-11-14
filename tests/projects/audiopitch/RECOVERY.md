@@ -84,3 +84,25 @@ The separate [sample scheduling profile](SCHEDULE.md) resolves whole-sample
 start conversion and start edits before/after audio-update publication. Its
 future starts use an integer DSP-frame anchor and an eight-buffer lead. It does
 not replace the immediate or scheduled diagnostic histories above.
+
+## Q449 immediate-repeat check
+
+Two further independent GPU Editor captures per rate repeat the unchanged
+62-control immediate diagnostic, including its original preceding controls and
+startup history. On the NVIDIA driver with a private eight-channel PulseAudio
+device, the 48000 Hz pair agrees exactly on all 24,543,998 values. The 44100 Hz
+pair differs on 665,500 of the same number of values: 248,639 Master floats and
+416,861 device samples, with no metadata differences.
+
+The differences occur in 7.1-to-Quad dry output, Quad-to-7.1 mixer Reverb and
+5.0-to-5.1 listener Reverb. All remaining immediate controls agree exactly.
+This new pair supplies a current counterexample even though the unchanged
+Q416 recovery pairs agreed at both rates. Neither observation supersedes the
+other history. A fixed playback-publication offset remains unsupported; no
+engine correction or reset PCM reference is published from a disagreeing pair.
+
+The completed immediate pairs settle that repeatability check. Additional
+scheduled re-records were stopped without a completed result; their partial
+logs remain outside Git. The earlier scheduled counterexamples and the separate
+qualified scheduling controls remain unchanged. All new immediate PCM and full
+difference reports are retained alongside the earlier Q449 topology results.
