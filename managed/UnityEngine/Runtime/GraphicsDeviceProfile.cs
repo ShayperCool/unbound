@@ -10,9 +10,12 @@ namespace Unbound.Runtime
     /// graphics API list, the Editor's default). Every device-dependent answer reads the selected
     /// profile; nothing compares device types elsewhere. Answers are the Unity 6000.0.71f1 Linux
     /// Editor's on an NVIDIA RTX 4060 (tests/projects/urp CapsProbe, `caps-6000.0.71f1.jsonl`
-    /// for OpenGL Core and `unity-6000.0.71f1/caps-vulkan.jsonl` for Vulkan); where the devices
-    /// answer alike the answer stays in SystemInfo. Not followed: the Vulkan Editor's GPU recorder
-    /// and foveation image support (Unbound's renderer has neither; both answer as on OpenGL Core).
+    /// for OpenGL Core and `unity-6000.0.71f1/caps-vulkan.jsonl` for Vulkan) and the macOS
+    /// Editor's on an Apple M2 Pro (`unity-6000.0.71f1/caps-metal.jsonl`, `device-metal.jsonl`
+    /// for Metal); where the devices answer alike the answer stays in SystemInfo (tested against
+    /// all three: GraphicsDeviceCapsTests). Not followed: the Vulkan Editor's GPU recorder, the
+    /// Vulkan and Metal Editors' foveation support and the Metal Editor's HDR display (Unbound's
+    /// renderer has none of them; they answer as on OpenGL Core).
     /// </summary>
     internal sealed class GraphicsDeviceProfile
     {
@@ -35,6 +38,45 @@ namespace Unbound.Runtime
         /// <summary>The device's format table (GraphicsCaps.Generated.cs).</summary>
         internal readonly GraphicsCapsTable.Device Caps;
         readonly System.Lazy<MachineIdentity.Gpu> m_Identity;
+
+        /// <summary>SystemInfo.GetGraphicsFormat(DefaultFormat.LDR) and the Default render
+        /// texture format are B8G8R8A8 (Metal), else R8G8B8A8.</summary>
+        internal bool BgraLdr { get; init; }
+        /// <summary>The most samples GetRenderTextureSupportedMSAASampleCount answers.</summary>
+        internal int MaxMsaaSamples { get; init; } = 8;
+        internal bool DepthFetchInRenderPass { get; init; } = true;
+        internal int MaxTexture3DSize { get; init; } = 16384;
+        internal int MaxComputeWorkGroupSizeZ { get; init; } = 64;
+        /// <summary>What the Editor's device answers for geometry shaders and conservative
+        /// rasterization; Unbound's renderer has neither and answers false (warned where the
+        /// Editor answers true).</summary>
+        internal bool EditorGeometryShaders { get; init; } = true;
+        internal bool EditorConservativeRaster { get; init; } = true;
+        internal bool HiddenSurfaceRemovalOnGPU { get; init; }
+        /// <summary>SystemInfo.supportsTextureWrapMirrorOnce: 1 where the Editor's device answers
+        /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>
+        internal int TextureWrapMirrorOnce { get; init; } = 1;
+
+        /// <summary>The render texture formats SystemInfo.SupportsRandomWriteOnRenderTextureFormat
+        /// answers true for: OpenGL Core's (tests/projects/urp CapsProbe; the Vulkan Editor also
+        /// answers BGRA32, whose storage Unbound's renderer does not request of the device),
+        /// Metal's own list.</summary>
+        internal RenderTextureFormat[] RandomWriteFormats { get; init; } = s_RandomWrite;
+
+        static readonly RenderTextureFormat[] s_RandomWrite =
+        {
+            RenderTextureFormat.ARGB32, RenderTextureFormat.ARGBHalf, RenderTextureFormat.Default, RenderTextureFormat.ARGB2101010,
+            RenderTextureFormat.DefaultHDR, RenderTextureFormat.ARGB64, RenderTextureFormat.ARGBFloat, RenderTextureFormat.RGFloat,
+            RenderTextureFormat.RGHalf, RenderTextureFormat.RFloat, RenderTextureFormat.RHalf, RenderTextureFormat.R8,
+            RenderTextureFormat.ARGBInt, RenderTextureFormat.RGInt, RenderTextureFormat.RInt, RenderTextureFormat.RGB111110Float,
+            RenderTextureFormat.RG32, RenderTextureFormat.RGBAUShort, RenderTextureFormat.RG16, RenderTextureFormat.R16,
+        };
+
+        /// <summary>The LDR format (DefaultFormat.LDR, the Default render texture format) in
+        /// the color space's form.</summary>
+        internal GraphicsFormat Ldr(bool srgb) => BgraLdr
+            ? (srgb ? GraphicsFormat.B8G8R8A8_SRGB : GraphicsFormat.B8G8R8A8_UNorm)
+            : (srgb ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm);
 
         /// <summary>The GPU as the device names it (read once, when first asked).</summary>
         internal MachineIdentity.Gpu Identity => m_Identity.Value;
@@ -71,6 +113,31 @@ namespace Unbound.Runtime
             RenderingThreadingMode.SingleThreaded, GraphicsFormat.D32_SFloat_S8_UInt,
             BatchBufferTarget.RawBuffer, GraphicsCapsTable.Vulkan, VulkanIdentity.Read, framebufferReadback: false);
 
+        /// <summary>The macOS Editor's device (tests/projects/urp CapsProbe
+        /// `unity-6000.0.71f1/caps-metal.jsonl`, arm64, Apple M2 Pro).</summary>
+        internal static readonly GraphicsDeviceProfile Metal = new GraphicsDeviceProfile(
+            GraphicsDeviceType.Metal, uvStartsAtTop: true, reversedZ: true, loadStore: true,
+            resolveStencil: true, autoResolve: true, cbufferAlignment: 256,
+            RenderingThreadingMode.SingleThreaded, GraphicsFormat.D32_SFloat_S8_UInt,
+            BatchBufferTarget.RawBuffer, GraphicsCapsTable.Metal, MetalIdentity.Read, framebufferReadback: false)
+        {
+            BgraLdr = true,
+            MaxMsaaSamples = 4,
+            DepthFetchInRenderPass = false,
+            MaxTexture3DSize = 2048,
+            MaxComputeWorkGroupSizeZ = 1024,
+            EditorGeometryShaders = false,
+            EditorConservativeRaster = false,
+            HiddenSurfaceRemovalOnGPU = true,
+            TextureWrapMirrorOnce = 0,
+            RandomWriteFormats = new[]
+            {
+                RenderTextureFormat.ARGB32, RenderTextureFormat.ARGBHalf, RenderTextureFormat.DefaultHDR, RenderTextureFormat.ARGBFloat,
+                RenderTextureFormat.RFloat, RenderTextureFormat.RHalf, RenderTextureFormat.R8, RenderTextureFormat.ARGBInt,
+                RenderTextureFormat.RInt, RenderTextureFormat.RGBAUShort,
+            },
+        };
+
         /// <summary>The run's device: OpenGL Core until the host says (tests, tools).</summary>
         internal static GraphicsDeviceProfile Current { get; private set; } = OpenGLCore;
 
@@ -82,6 +149,7 @@ namespace Unbound.Runtime
         {
             null or "" or "OpenGLCore" => OpenGLCore,
             "Vulkan" => Vulkan,
+            "Metal" => Metal,
             _ => throw new System.ArgumentException($"Unbound has no {name} graphics device"),
         };
 

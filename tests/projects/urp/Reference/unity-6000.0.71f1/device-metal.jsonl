@@ -86,3 +86,7 @@
 {"key":"SystemInfo.supportsVibration","value":"False"}
 {"key":"SystemInfo.usesLoadStoreActions","value":"True"}
 {"key":"SystemInfo.usesReversedZBuffer","value":"True"}
+{"key":"GL.GetGPUProjectionMatrix.perspective.False","value":"0.974278569 0 0 0 0 1.73205078 0 0 0 0 0.000300049782 -1 0 0 0.300090015 0"}
+{"key":"GL.GetGPUProjectionMatrix.perspective.True","value":"0.974278569 0 0 0 0 -1.73205078 0 0 0 0 0.000300049782 -1 0 0 0.300090015 0"}
+{"key":"GL.GetGPUProjectionMatrix.ortho.False","value":"0.2 0 0 0 0 0.333333343 0 0 0 0 0.1 0 0 0 1.1 1"}
+{"key":"GL.GetGPUProjectionMatrix.ortho.True","value":"0.2 0 0 0 0 -0.333333343 0 0 0 0 0.1 0 0 0 1.1 1"}

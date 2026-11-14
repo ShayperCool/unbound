@@ -163,6 +163,18 @@ namespace UnityEngine.Experimental.Rendering
             _ => GraphicsFormat.D32_SFloat_S8_UInt,
         };
 
+        /// <summary>The depth format of a Shadowmap descriptor's bit count: depth without stencil,
+        /// 24 bits as D24_UNorm where the device renders it, else its compatible format (D32_SFloat
+        /// on Metal; measured: tests/projects/urp CapsProbe RenderTextureDescriptor.depthStencilFormat.Shadowmap
+        /// on the three devices; 16 and 32 bits are unmeasured).</summary>
+        internal static GraphicsFormat ShadowmapDepthFormatForBits(int bits) => bits switch
+        {
+            <= 0 => GraphicsFormat.None,
+            <= 16 => GraphicsFormat.D16_UNorm,
+            <= 24 => SystemInfo.GetCompatibleFormat(GraphicsFormat.D24_UNorm, GraphicsFormatUsage.Render),
+            _ => GraphicsFormat.D32_SFloat,
+        };
+
         public static bool IsIEEE754Format(GraphicsFormat format) => Of(format).Float && !Of(format).Packed && !Of(format).Compressed && Of(format).DepthBits == 0;
         public static bool IsFloatFormat(GraphicsFormat format) => Of(format).Float && !Of(format).Half;
         public static bool IsHalfFormat(GraphicsFormat format) => Of(format).Half;
@@ -376,8 +388,10 @@ namespace UnityEngine.Experimental.Rendering
             switch (format)
             {
                 case RenderTextureFormat.ARGB32:
-                case RenderTextureFormat.Default:
                     return isSRGB ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm;
+                // The device's LDR format (B8G8R8A8 on Metal: tests/projects/urp CapsProbe).
+                case RenderTextureFormat.Default:
+                    return Unbound.Runtime.GraphicsDeviceProfile.Current.Ldr(isSRGB);
                 case RenderTextureFormat.BGRA32: return isSRGB ? GraphicsFormat.B8G8R8A8_SRGB : GraphicsFormat.B8G8R8A8_UNorm;
                 case RenderTextureFormat.ARGBHalf:
                 case RenderTextureFormat.DefaultHDR: return GraphicsFormat.R16G16B16A16_SFloat;

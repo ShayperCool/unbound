@@ -186,6 +186,22 @@ public static class CapsProbe
             lines.Append("{\"key\":\"SystemInfo.").Append(property.Name).Append("\",\"value\":\"")
                 .Append((value ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n")).Append("\"}\n");
         }
+        // GL.GetGPUProjectionMatrix of a perspective and an orthographic projection, into a
+        // render texture and not.
+        var projections = new (string, Matrix4x4)[]
+        {
+            ("perspective", Matrix4x4.Perspective(60f, 16f / 9f, 0.3f, 1000f)),
+            ("ortho", Matrix4x4.Ortho(-5f, 5f, -3f, 3f, 1f, 11f)),
+        };
+        foreach (var (name, projection) in projections)
+            foreach (var texture in new[] { false, true })
+            {
+                var m = GL.GetGPUProjectionMatrix(projection, texture);
+                var values = new float[16];
+                for (int i = 0; i < 16; i++) values[i] = m[i];
+                lines.Append("{\"key\":\"GL.GetGPUProjectionMatrix.").Append(name).Append('.').Append(texture)
+                    .Append("\",\"value\":\"").Append(Floats(values)).Append("\"}\n");
+            }
         File.WriteAllText(path, lines.ToString());
     }
 }

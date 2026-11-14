@@ -658,7 +658,8 @@ namespace UnityEngine
             : this(width, height, colorFormat, depthBufferBits, mipCount, RenderTextureReadWrite.Linear) { }
 
         public RenderTextureDescriptor(int width, int height, RenderTextureFormat colorFormat, int depthBufferBits, int mipCount, RenderTextureReadWrite readWrite)
-            : this(width, height, GraphicsFormatUtility.GetGraphicsFormat(colorFormat, readWrite), GraphicsFormatUtility.DepthStencilFormatForBits(depthBufferBits), mipCount)
+            : this(width, height, GraphicsFormatUtility.GetGraphicsFormat(colorFormat, readWrite),
+                colorFormat == RenderTextureFormat.Shadowmap ? GraphicsFormatUtility.ShadowmapDepthFormatForBits(depthBufferBits) : GraphicsFormatUtility.DepthStencilFormatForBits(depthBufferBits), mipCount)
         {
             if (colorFormat == RenderTextureFormat.Shadowmap) shadowSamplingMode = ShadowSamplingMode.CompareDepths;
         }

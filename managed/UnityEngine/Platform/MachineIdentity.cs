@@ -30,7 +30,8 @@ namespace Unbound.Runtime
         {
             get
             {
-                if (OperatingSystem.IsLinux()) return GraphicsDeviceProfile.Current.Identity;
+                if (OperatingSystem.IsLinux() || (OperatingSystem.IsMacOS() && GraphicsDeviceProfile.Current.Type == UnityEngine.Rendering.GraphicsDeviceType.Metal))
+                    return GraphicsDeviceProfile.Current.Identity;
                 Stubs.Ignored("SystemInfo graphics device", "is not read on this OS yet: the device name, vendor, version, ids and memory answer placeholders");
                 return null;
             }

@@ -139,8 +139,8 @@ namespace UnityEngine
         public static int graphicsShaderLevel => 50;
         [Unbound.EditorFaithful("measured renderingThreadingMode is Direct (tests/projects/urp CapsProbe): no render thread")]
         public static bool graphicsMultiThreaded => false;
-        [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
-        public static bool hasHiddenSurfaceRemovalOnGPU => false;
+        [Unbound.EditorFaithful("measured on the three devices (Metal: true, the GPU's own; tests/projects/urp device-metal.jsonl)")]
+        public static bool hasHiddenSurfaceRemovalOnGPU => Device.HiddenSurfaceRemovalOnGPU;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool hasDynamicUniformArrayIndexingInFragmentShaders => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
@@ -185,7 +185,15 @@ namespace UnityEngine
         public static bool supportsSeparatedRenderTargetsBlend => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static int supportsMultisampledTextures => 1;
-        public static int supportsTextureWrapMirrorOnce { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsTextureWrapMirrorOnce", "is claimed, but MirrorOnce samples as Mirror"); return 1; } }
+        public static int supportsTextureWrapMirrorOnce
+        {
+            get
+            {
+                int answer = Device.TextureWrapMirrorOnce;
+                if (answer != 0) Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsTextureWrapMirrorOnce", "is claimed, but MirrorOnce samples as Mirror");
+                return answer;
+            }
+        }
         [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe")]
         public static bool usesReversedZBuffer => Device.ReversedZ;
         [Unbound.EditorFaithful("the Editor caps texture sizes at 16384")]
@@ -230,15 +238,9 @@ namespace UnityEngine
         public static bool SupportsBlendingOnRenderTextureFormat(RenderTextureFormat format) =>
             IsFormatSupported(GraphicsFormatUtility.GetGraphicsFormat(format, false), GraphicsFormatUsage.Blend);
 
-        public static bool SupportsRandomWriteOnRenderTextureFormat(RenderTextureFormat format) => format switch
-        {
-            RenderTextureFormat.ARGB32 or RenderTextureFormat.ARGBHalf or RenderTextureFormat.Default or RenderTextureFormat.ARGB2101010
-                or RenderTextureFormat.DefaultHDR or RenderTextureFormat.ARGB64 or RenderTextureFormat.ARGBFloat or RenderTextureFormat.RGFloat
-                or RenderTextureFormat.RGHalf or RenderTextureFormat.RFloat or RenderTextureFormat.RHalf or RenderTextureFormat.R8
-                or RenderTextureFormat.ARGBInt or RenderTextureFormat.RGInt or RenderTextureFormat.RInt or RenderTextureFormat.RGB111110Float
-                or RenderTextureFormat.RG32 or RenderTextureFormat.RGBAUShort or RenderTextureFormat.RG16 or RenderTextureFormat.R16 => true,
-            _ => false,
-        };
+        /// <summary>The device's formats (Unbound.Runtime.GraphicsDeviceProfile.RandomWriteFormats).</summary>
+        public static bool SupportsRandomWriteOnRenderTextureFormat(RenderTextureFormat format) =>
+            Array.IndexOf(Device.RandomWriteFormats, format) >= 0;
 
         // ------------------------------------------------------------ graphics formats (the Editor's table)
 
@@ -273,7 +275,7 @@ namespace UnityEngine
 
         public static GraphicsFormat GetGraphicsFormat(DefaultFormat format) => format switch
         {
-            DefaultFormat.LDR => QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm,
+            DefaultFormat.LDR => Device.Ldr(QualitySettings.activeColorSpace == ColorSpace.Linear),
             DefaultFormat.HDR => GraphicsFormat.R16G16B16A16_SFloat,
             DefaultFormat.DepthStencil => Device.DefaultDepthStencil,
             DefaultFormat.Shadow => GraphicsFormat.D16_UNorm,
@@ -283,8 +285,9 @@ namespace UnityEngine
 
         // Measured on the reference device in cameramsaa: non-power-of-two requests round
         // down, independently of whether a camera chooses quality or target samples.
+        // The device's most samples bound it (8; Metal 4: tests/projects/urp CapsProbe).
         public static int GetRenderTextureSupportedMSAASampleCount(RenderTextureDescriptor desc) =>
-            desc.msaaSamples >= 8 ? 8 : desc.msaaSamples >= 4 ? 4 : desc.msaaSamples >= 2 ? 2 : 1;
+            Math.Min(Device.MaxMsaaSamples, desc.msaaSamples >= 8 ? 8 : desc.msaaSamples >= 4 ? 4 : desc.msaaSamples >= 2 ? 2 : 1);
 
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool supportsMultisampleResolveDepth => true;
@@ -298,8 +301,8 @@ namespace UnityEngine
         public static bool supportsMultisampledBackBuffer => false;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static HDRDisplaySupportFlags hdrDisplaySupportFlags => HDRDisplaySupportFlags.None;
-        [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
-        public static bool supportsDepthFetchInRenderPass => true;
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp CapsProbe")]
+        public static bool supportsDepthFetchInRenderPass => Device.DepthFetchInRenderPass;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool supportsSetConstantBuffer => true;
         [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe")]
@@ -326,15 +329,15 @@ namespace UnityEngine
         public static int maxComputeWorkGroupSizeX => 1024;
         [Unbound.EditorFaithful("measured: tests/projects/renderapi volumeCompute.limits")]
         public static int maxComputeWorkGroupSizeY => 1024;
-        [Unbound.EditorFaithful("the Editor's OpenGLCore device answers 64 too, and the renderer does it")]
-        public static int maxComputeWorkGroupSizeZ => 64;
-        [Unbound.EditorFaithful("measured on the OpenGL Core device: tests/projects/urp caps; the GPU backend requests the adapter's limits")]
-        public static int maxTexture3DSize => 16384;
+        [Unbound.EditorFaithful("the Editor's OpenGLCore device answers 64, its Metal device 1024 (tests/projects/urp device-metal.jsonl), and the renderer does it")]
+        public static int maxComputeWorkGroupSizeZ => Device.MaxComputeWorkGroupSizeZ;
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp CapsProbe (Metal: 2048); the GPU backend requests the adapter's limits")]
+        public static int maxTexture3DSize => Device.MaxTexture3DSize;
         [Unbound.EditorFaithful("measured: tests/projects/renderapi volumeCompute.limits; the GPU backend requests adapter limits")]
         public static int maxTextureArraySlices => 2048;
-        public static bool supportsGeometryShaders { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsGeometryShaders", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
+        public static bool supportsGeometryShaders { get { if (Device.EditorGeometryShaders) Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsGeometryShaders", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
         public static bool supportsTessellationShaders { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsTessellationShaders", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
-        public static bool supportsConservativeRaster { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsConservativeRaster", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
+        public static bool supportsConservativeRaster { get { if (Device.EditorConservativeRaster) Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsConservativeRaster", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool supportsMultiview => false;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe; indirect draws run (Graphics.DrawMeshInstancedIndirect, DrawProceduralIndirect)")]

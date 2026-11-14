@@ -251,7 +251,8 @@ Deferred recordings have no Unbound counterpart (docs/COMPATIBILITY_GAPS.md).
 graphics device's SystemInfo answers the render pipelines read, format support and
 `GraphicsSettings.HasShaderDefine`; with `CAPS_PROBE_DEVICE_OUT=<file>` also every public static
 SystemInfo property except the ones the machine decides (names, model, processor, memory sizes,
-operating system release, battery). `managed/UnityEngine/Platform/GraphicsCaps.Generated.cs`
+operating system release, battery), and `GL.GetGPUProjectionMatrix` of a perspective and an
+orthographic projection. `managed/UnityEngine/Platform/GraphicsCaps.Generated.cs`
 is written from the captures by `caps_table.py`.
 
 - `Reference/caps-6000.0.71f1.jsonl`: OpenGL Core, the Linux Editor on an NVIDIA RTX 4060.
@@ -259,8 +260,11 @@ is written from the captures by `caps_table.py`.
 - `Reference/unity-6000.0.71f1/caps-metal.jsonl`, `device-metal.jsonl`: Metal, the macOS
   Editor (arm64, Apple M2 Pro, batchmode with graphics), two identical captures. The macOS Editor
   ran Metal with `-force-glcore`, with `-force-vulkan` (two captures each) and with a
-  MacStandaloneSupport graphics API list of OpenGL Core and Vulkan (one capture): it has no other
-  device.
+  MacStandaloneSupport graphics API list of OpenGL Core and Vulkan (two captures): it has no other
+  device; with that list `HasShaderDefine` answers UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK false
+  and UNITY_PLATFORM_SUPPORTS_DEPTH_FETCH true (the automatic list: true, false).
+- `Reference/unity-6000.0.71f1/caps-metal-linear.jsonl`: the same Editor with the project in Linear
+  color space (two identical captures): `GetGraphicsFormat(LDR)` is B8G8R8A8_SRGB.
 
     CAPS_PROBE_OUT=/tmp/caps.jsonl CAPS_PROBE_DEVICE_OUT=/tmp/device.jsonl \
         /Applications/Unity/Hub/Editor/6000.0.71f1/Unity.app/Contents/MacOS/Unity -batchmode \

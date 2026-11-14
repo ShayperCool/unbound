@@ -5,7 +5,8 @@ device supports and its compatible formats for rendering, sampling, blending and
 
     python3 tests/projects/urp/caps_table.py \\
         OpenGLCore=tests/projects/urp/Reference/caps-6000.0.71f1.jsonl \\
-        Vulkan=tests/projects/urp/Reference/unity-6000.0.71f1/caps-vulkan.jsonl
+        Vulkan=tests/projects/urp/Reference/unity-6000.0.71f1/caps-vulkan.jsonl \\
+        Metal=tests/projects/urp/Reference/unity-6000.0.71f1/caps-metal.jsonl
 """
 import json
 import sys
@@ -39,7 +40,7 @@ recorded = [(name, read(path)) for name, path in devices]
 size = 1 + max(int(k.split(".")[1]) for _, values in recorded for k in values if k.startswith("usages."))
 
 out = [
-    "// Generated from the Unity Editor's graphics device answers on Linux, recorded by",
+    "// Generated from the Unity Editor's graphics device answers (Linux: OpenGLCore, Vulkan; macOS: Metal), recorded by",
     "// tests/projects/urp/Assets/Editor/CapsProbe.cs. Do not edit by hand; regenerate with",
     "//   python3 tests/projects/urp/caps_table.py " + " ".join(f"{n}={p}" for n, p in devices),
     "namespace Unbound.Runtime",

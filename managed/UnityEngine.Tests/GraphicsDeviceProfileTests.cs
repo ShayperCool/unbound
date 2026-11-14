@@ -55,6 +55,7 @@ namespace Unbound.Tests
         public void HostNamesNameTheProfiles()
         {
             Assert.Same(GraphicsDeviceProfile.Vulkan, GraphicsDeviceProfile.Named("Vulkan"));
+            Assert.Same(GraphicsDeviceProfile.Metal, GraphicsDeviceProfile.Named("Metal"));
             Assert.Same(GraphicsDeviceProfile.OpenGLCore, GraphicsDeviceProfile.Named(""));
             Assert.Same(GraphicsDeviceProfile.OpenGLCore, GraphicsDeviceProfile.Named("OpenGLCore"));
             Assert.Throws<System.ArgumentException>(() => GraphicsDeviceProfile.Named("Direct3D11"));
