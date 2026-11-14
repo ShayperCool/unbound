@@ -112,7 +112,7 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After enumerator state |
+| Category | Before Q410 | After linked-pool state |
 | --- | ---: | ---: |
 | Attributes | 938 | 22 |
 | Modifiers | 87 | 8 |
@@ -377,8 +377,8 @@ slice reduced the queue from 370 to 341. The GUI payload slice removes another
 32 entries. Physics material and text adapters remove three more interface entries,
 and XR value payloads remove nine layout/interface entries. LocationInfo and the retired
 AnimationInfo value remove two more layout entries. FrameRate serialization removes one
-field annotation entry. Scene value equality removes one extra interface and cached
-enumerator state removes one accessor entry, leaving 158 exact entries, each with a
+field annotation entry. Scene value equality removes one extra interface; cached
+enumerator and linked-pool state each remove one accessor entry, leaving 158 exact entries, each with a
 specific follow-up reason. No allow-list is regenerated from a passing report.
 The generator format changes with the comparison policy and the committed stubs
 are regenerated from the selected release. Existing probe references and strict
