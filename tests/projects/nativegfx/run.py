@@ -13,7 +13,11 @@ device, on a private display through VirtualGL; Unbound with --force-glcore) or 
 with -force-vulkan on the GPU-backed display :0, Unbound with --force-vulkan). On Vulkan the
 probe's Vulkan plugin (Plugins/nativegfx_vulkan.c, libNativeGfxVulkan.so, against the system's
 Vulkan headers) and NativeGfxVulkanProbe.cs record the Vulkan plugin interface instead; their
-reference is Reference/unity-<version>/vulkan.jsonl.
+reference is Reference/unity-<version>/vulkan.jsonl. metal (macOS arm64 only: the macOS Editor's
+one device, run directly in batchmode; Unbound's default there) records the Metal plugin interface
+with the probe's Metal plugin (Plugins/nativegfx_metal.m, libNativeGfxMetal.dylib, against the
+system's Metal framework) and NativeGfxMetalProbe.cs; its reference is
+Reference/unity-<version>/metal.jsonl.
 
 Each run builds the probe's plugin (Plugins/nativegfx_probe.c, the C compiler `cc`, else $CC)
 into the project copy's Assets/Plugins/x86_64, three times: libNativeGfxProbe.so, which the
@@ -56,6 +60,7 @@ LIBRARY = 'libNativeGfxProbe.so'
 # The libraries built from the plugin source: the record prefix of the variants no script calls.
 LIBRARIES = ((LIBRARY, None), ('libNativeGfxPreload.so', 'preload'), ('libGfxPluginNativeGfxPrefix.so', 'prefix'))
 VULKAN_LIBRARY = 'libNativeGfxVulkan.so'
+METAL_LIBRARY = 'libNativeGfxMetal.dylib'
 DEVICE = 'opengl'
 STENCIL = False
 
@@ -65,6 +70,10 @@ MACOS = sys.platform == 'darwin' and platform.machine() == 'arm64'
 
 
 def require_platform(engine=False):
+    if DEVICE == 'metal':
+        if MACOS:
+            return
+        raise SystemExit('nativegfx: the Metal probe runs on macOS arm64 only')
     if LINUX or (engine and MACOS and DEVICE == 'opengl'):
         return
     raise SystemExit('nativegfx: the probe plugin draws with OpenGL on Linux x86_64 only '
@@ -115,6 +124,11 @@ def copy_project(target):
         subprocess.run([str(HEAVY), '--kind', 'build', *compiler, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-o', str(plugins/VULKAN_LIBRARY),
                         str(ROOT/'Plugins/nativegfx_vulkan.c'), '-lpthread'], check=True)
         shutil.copyfile(ROOT/'Plugins'/(VULKAN_LIBRARY + '.meta'), plugins/(VULKAN_LIBRARY + '.meta'))
+    if DEVICE == 'metal':
+        subprocess.run([str(HEAVY), '--kind', 'build', *compiler, '-shared', '-fPIC', '-O2', '-fvisibility=hidden', '-fobjc-arc',
+                        '-o', str(plugins/METAL_LIBRARY), str(ROOT/'Plugins/nativegfx_metal.m'), '-framework', 'Metal',
+                        '-framework', 'Foundation'], check=True)
+        shutil.copyfile(ROOT/'Plugins'/(METAL_LIBRARY + '.meta'), plugins/(METAL_LIBRARY + '.meta'))
 
 
 def assemble(out):
@@ -148,24 +162,72 @@ def assemble(out):
 def environment(out):
     if DEVICE == 'vulkan':
         return {'NATIVEGFX_VULKAN_OUT': str(out/OUT)}
+    if DEVICE == 'metal':
+        return {'NATIVEGFX_METAL_OUT': str(out/OUT)}
     return {'NATIVEGFX_PROBE_OUT': str(out/SCRIPTS_OUT), 'NATIVEGFX_PLUGIN_LOG': str(out/PLUGIN_LOG),
             'NATIVEGFX_STENCIL': '1' if STENCIL else '0'}
 
 
 def finish(out):
     """The capture's values.jsonl: assembled from the OpenGL probe's records; written whole by
-    the Vulkan probe."""
-    return (out/OUT).exists() if DEVICE == 'vulkan' else assemble(out)
+    the Vulkan and Metal probes."""
+    return (out/OUT).exists() if DEVICE in ('vulkan', 'metal') else assemble(out)
 
 
 def reference():
     if STENCIL:
         return ROOT/'Reference'/f'unity-{unity_version()}'/'stencil.jsonl'
-    return reference_file(ROOT, 'jsonl') if DEVICE == 'opengl' else ROOT/'Reference'/f'unity-{unity_version()}'/'vulkan.jsonl'
+    if DEVICE == 'opengl':
+        return reference_file(ROOT, 'jsonl')
+    return ROOT/'Reference'/f'unity-{unity_version()}'/f'{DEVICE}.jsonl'
+
+
+def macos_editor():
+    return Path(f'/Applications/Unity/Hub/Editor/{unity_version()}/Unity.app/Contents/MacOS/Unity')
+
+
+def native_macos(label):
+    """The Metal captures: the macOS Editor in batchmode on its Metal device, one after the other."""
+    if os.environ.get('UNBOUND_SUITE_NO_EDITOR'):
+        raise SystemExit('nativegfx: refusing to start the Unity Editor in a suite run')
+    ok = True
+    for repeat in (f'{label}-1', f'{label}-2'):
+        out = WORK/repeat
+        copy_project(out/'project')
+        command = ['timeout', '-s', 'KILL', '900', str(macos_editor()), '-batchmode', '-projectPath', str(out/'project'),
+                   '-executeMethod', 'ProbeRunner.Record', '-logFile', str(out/'editor.log')]
+        with (out/'editor.out').open('w') as log:
+            code = subprocess.run(command, env=dict(os.environ, **environment(out)), stdout=log, stderr=subprocess.STDOUT).returncode
+        (out/'editor-exit').write_text(f'{code}\n')
+        print(repeat, 'exit', code)
+        ok = ok and code == 0 and finish(out)
+    return 0 if ok else 1
+
+
+def publish_macos(labels, target):
+    """Two byte-identical macOS Editor captures that exited 0 and completed become `target`."""
+    if len(labels) < 2:
+        raise SystemExit('publishing needs two independent repeats')
+    captures = []
+    for label in labels:
+        out = WORK/label
+        problem = editor_runner.jsonl_complete(OUT)(out)
+        if (out/'editor-exit').read_text().strip() != '0' or problem:
+            raise SystemExit(f'{label}: the Editor did not exit 0 with a complete record ({problem}); not publishing')
+        captures.append((out/OUT).read_bytes())
+    if any(capture != captures[0] for capture in captures):
+        raise SystemExit('the repeats differ; not publishing')
+    if target.exists():
+        raise SystemExit(f'refusing to overwrite reference: {target}')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(captures[0])
+    return 0
 
 
 def native(label):
     require_platform()
+    if DEVICE == 'metal':
+        return native_macos(label)
     jobs = []
     for repeat in (f'{label}-1', f'{label}-2'):
         out = WORK/repeat
@@ -188,7 +250,7 @@ def engine(label):
     copy_project(out/'project')
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = dict(os.environ, **environment(out))
-    # macOS has one device (the default); Linux selects the probe's.
+    # macOS has one device, Metal (the default); Linux selects the probe's.
     device = [] if MACOS else ['--force-' + ('vulkan' if DEVICE == 'vulkan' else 'glcore')]
     command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(out/'project'),
                '--no-watch', '--frames', '400', '--size', '64x32', *device]
@@ -202,6 +264,8 @@ def publish(labels):
     """A capture replaces an existing reference only when it keeps every row of it as it is, in
     its order (a probe with added records, recorded again)."""
     target = reference()
+    if DEVICE == 'metal':
+        return publish_macos(labels, target)
     fresh = target.with_name(target.name + '.new')
 
     def write(path, first):
@@ -231,7 +295,7 @@ def main():
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
-    parser.add_argument('--device', choices=('opengl', 'vulkan'), default='opengl')
+    parser.add_argument('--device', choices=('opengl', 'vulkan', 'metal'), default='opengl')
     parser.add_argument('--stencil', action='store_true', help='OpenGL retained-stencil controls')
     args = parser.parse_args()
     global DEVICE, STENCIL

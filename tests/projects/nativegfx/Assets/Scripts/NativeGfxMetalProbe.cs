@@ -1,0 +1,324 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
+using UnityEngine;
+using UnityEngine.Rendering;
+
+/// <summary>
+/// The Metal plugin interface, measured with the probe's Metal plugin (Plugins/nativegfx_metal.m)
+/// on the Metal device (NATIVEGFX_METAL_OUT): the interfaces and device at load, the command
+/// buffer, command encoder and render pass descriptor of rendering callbacks (from Update, a
+/// camera's command buffer and an executed command buffer), drawing with the current render
+/// encoder, ending it and blitting with the current command buffer inside a camera's pass, blitting
+/// with a command buffer of the plugin's own from the queue (V2), committing the current one, the
+/// textures behind native pointers and render buffers, and an external texture of the plugin's.
+/// Pixels are read back.
+/// </summary>
+public class NativeGfxMetalProbe : MonoBehaviour
+{
+    const string Plugin = "NativeGfxMetal";
+    [DllImport(Plugin)] static extern IntPtr NativeGfxMtl_Event();
+    [DllImport(Plugin)] static extern int NativeGfxMtl_EventBase();
+    [DllImport(Plugin)] static extern void NativeGfxMtl_Step(string step);
+    [DllImport(Plugin)] static extern void NativeGfxMtl_SetColor(float r, float g, float b, float a);
+    [DllImport(Plugin)] static extern void NativeGfxMtl_SetTexture(int index, IntPtr pointer);
+    [DllImport(Plugin)] static extern void NativeGfxMtl_SetRenderBuffer(int index, IntPtr pointer);
+    [DllImport(Plugin)] static extern int NativeGfxMtl_DeviceName(byte[] buffer, int capacity);
+    [DllImport(Plugin)] static extern void NativeGfxMtl_Describe(string what, IntPtr pointer);
+    [DllImport(Plugin)] static extern void NativeGfxMtl_DescribeRenderBuffer(string what, IntPtr handle);
+    [DllImport(Plugin)] static extern IntPtr NativeGfxMtl_MakeTexture();
+    [DllImport(Plugin)] static extern int NativeGfxMtl_Record(byte[] buffer, int capacity);
+
+    // The plugin's events after its reserved base.
+    const int State = 0, Draw = 1, EndBlit = 2, Commit = 3, QueueBlit = 4;
+
+    readonly StringBuilder records = new StringBuilder();
+    readonly List<string> logs = new List<string>();
+    readonly List<UnityEngine.Object> made = new List<UnityEngine.Object>();
+    string output;
+    IntPtr callback;
+    int eventBase;
+    RenderTexture target, cameraTarget, secondTarget, executed;
+    Camera firstCamera, secondCamera;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Boot()
+    {
+        if (Environment.GetEnvironmentVariable("NATIVEGFX_METAL_OUT") == null) return;
+        new GameObject("NativeGfxMetalProbe").AddComponent<NativeGfxMetalProbe>();
+    }
+
+    void Value(string k, string json) { records.Append("{\"k\":\"").Append(k).Append("\",\"v\":").Append(json).Append("}\n"); }
+    static string Q(string s) => "\"" + (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "") + "\"";
+    static string B(bool b) => b ? "true" : "false";
+    static string L(IEnumerable<string> values) => "[" + string.Join(",", values.Select(Q)) + "]";
+    void OnLog(string condition, string stack, LogType type) => logs.Add(type + ": " + condition);
+    T Keep<T>(T o) where T : UnityEngine.Object { made.Add(o); return o; }
+
+    void Start()
+    {
+        output = Environment.GetEnvironmentVariable("NATIVEGFX_METAL_OUT");
+        Directory.CreateDirectory(Path.GetDirectoryName(output));
+        Application.logMessageReceived += OnLog;
+        StartCoroutine(Run());
+    }
+
+    /// <summary>A texture's pixels as rows (bottom first) of runs "rrggbbaa*count".</summary>
+    string Pixels(Texture source, int width, int height)
+    {
+        var previous = RenderTexture.active;
+        var readback = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+        Graphics.Blit(source, readback);
+        var cpu = new Texture2D(width, height, TextureFormat.RGBA32, false, true);
+        RenderTexture.active = readback;
+        cpu.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+        RenderTexture.active = previous;
+        RenderTexture.ReleaseTemporary(readback);
+        var pixels = cpu.GetPixels32();
+        DestroyImmediate(cpu);
+        var rows = new List<string>();
+        for (int y = 0; y < height; y++)
+        {
+            var row = new StringBuilder();
+            int x = 0;
+            while (x < width)
+            {
+                var c = pixels[y * width + x];
+                int n = 1;
+                while (x + n < width && pixels[y * width + x + n].Equals(c)) n++;
+                if (row.Length > 0) row.Append(' ');
+                row.Append($"{c.r:x2}{c.g:x2}{c.b:x2}{c.a:x2}*{n}");
+                x += n;
+            }
+            rows.Add(row.ToString());
+        }
+        return L(rows);
+    }
+
+    static void Clear(RenderTexture texture, Color color)
+    {
+        var previous = RenderTexture.active;
+        RenderTexture.active = texture;
+        GL.Clear(true, true, color);
+        RenderTexture.active = previous;
+    }
+
+    RenderTexture Target(string name, int depth, RenderTextureFormat format = RenderTextureFormat.ARGB32,
+        RenderTextureReadWrite readWrite = RenderTextureReadWrite.Linear, int samples = 1)
+    {
+        var texture = Keep(new RenderTexture(8, 8, depth, format, readWrite) { name = name, antiAliasing = samples });
+        texture.Create();
+        return texture;
+    }
+
+    Camera MakeCamera(string name, RenderTexture texture, params int[] events)
+    {
+        var camera = new GameObject(name).AddComponent<Camera>();
+        camera.enabled = false;
+        camera.targetTexture = texture;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = Color.black;
+        camera.cullingMask = 0;
+        var cmd = new CommandBuffer { name = name };
+        foreach (var id in events) cmd.IssuePluginEvent(callback, eventBase + id);
+        camera.AddCommandBuffer(CameraEvent.AfterForwardOpaque, cmd);
+        return camera;
+    }
+
+    void Setup()
+    {
+        callback = NativeGfxMtl_Event();
+        eventBase = NativeGfxMtl_EventBase();
+        Value("device", Q(SystemInfo.graphicsDeviceType.ToString()));
+        var name = new byte[256];
+        int length = NativeGfxMtl_DeviceName(name, name.Length);
+        Value("device.name", B(Encoding.UTF8.GetString(name, 0, Math.Min(length, name.Length - 1)) == SystemInfo.graphicsDeviceName));
+
+        target = Target("target", 0);
+        Clear(target, Color.white);
+        cameraTarget = Target("camera", 24);
+        secondTarget = Target("second", 24);
+        executed = Target("executed", 0);
+        var multisampled = Target("multisampled", 24, samples: 4);
+        var srgbTarget = Target("srgbtarget", 0, readWrite: RenderTextureReadWrite.sRGB);
+        var half = Target("half", 0, RenderTextureFormat.ARGBHalf);
+        var single = Target("single", 0, RenderTextureFormat.RFloat);
+        var depthOnly = Target("depthonly", 24, RenderTextureFormat.Depth);
+        var texture = Keep(new Texture2D(8, 8, TextureFormat.RGBA32, false, true) { name = "texture" });
+        texture.Apply();
+        var srgb = Keep(new Texture2D(8, 8, TextureFormat.RGBA32, false, false) { name = "srgb" });
+        srgb.Apply();
+        var mipped = Keep(new Texture2D(8, 8, TextureFormat.RGBA32, true, true) { name = "mipped" });
+        mipped.Apply();
+        var rgb = Keep(new Texture2D(8, 8, TextureFormat.RGB24, false, true) { name = "rgb" });
+        rgb.Apply();
+        var cube = Keep(new Cubemap(8, TextureFormat.RGBA32, true) { name = "cube" });
+        cube.Apply(false);
+        var array = Keep(new Texture2DArray(8, 4, 3, TextureFormat.RGBA32, false, true) { name = "array" });
+        array.Apply(false);
+        var volume = Keep(new Texture3D(4, 4, 2, TextureFormat.RGBA32, false) { name = "volume" });
+        volume.Apply(false);
+
+        var pointers = new (string, IntPtr)[]
+        {
+            ("target", target.GetNativeTexturePtr()),
+            ("camera", cameraTarget.GetNativeTexturePtr()),
+            ("camera.depth", cameraTarget.GetNativeDepthBufferPtr()),
+            ("second", secondTarget.GetNativeTexturePtr()),
+            ("second.depth", secondTarget.GetNativeDepthBufferPtr()),
+            ("executed", executed.GetNativeTexturePtr()),
+            ("multisampled", multisampled.GetNativeTexturePtr()),
+            ("multisampled.depth", multisampled.GetNativeDepthBufferPtr()),
+            ("srgbtarget", srgbTarget.GetNativeTexturePtr()),
+            ("half", half.GetNativeTexturePtr()),
+            ("single", single.GetNativeTexturePtr()),
+            ("depthonly", depthOnly.GetNativeTexturePtr()),
+            ("depthonly.depth", depthOnly.GetNativeDepthBufferPtr()),
+            ("texture", texture.GetNativeTexturePtr()),
+            ("srgb", srgb.GetNativeTexturePtr()),
+            ("mipped", mipped.GetNativeTexturePtr()),
+        };
+        for (int i = 0; i < pointers.Length; i++)
+        {
+            NativeGfxMtl_SetTexture(i, pointers[i].Item2);
+            NativeGfxMtl_Describe($"t{i}.{pointers[i].Item1}", pointers[i].Item2);
+        }
+        foreach (var (what, shape) in new (string, Texture)[] { ("rgb", rgb), ("cube", cube), ("array", array), ("volume", volume) })
+            NativeGfxMtl_Describe(what, shape.GetNativeTexturePtr());
+        var buffers = new (string, IntPtr)[]
+        {
+            ("camera.color", cameraTarget.colorBuffer.GetNativeRenderBufferPtr()),
+            ("camera.depth", cameraTarget.depthBuffer.GetNativeRenderBufferPtr()),
+            ("multisampled.color", multisampled.colorBuffer.GetNativeRenderBufferPtr()),
+            ("multisampled.depth", multisampled.depthBuffer.GetNativeRenderBufferPtr()),
+            ("target.color", target.colorBuffer.GetNativeRenderBufferPtr()),
+        };
+        for (int i = 0; i < buffers.Length; i++)
+        {
+            NativeGfxMtl_SetRenderBuffer(i, buffers[i].Item2);
+            NativeGfxMtl_DescribeRenderBuffer($"b{i}.{buffers[i].Item1}", buffers[i].Item2);
+        }
+
+        firstCamera = MakeCamera("first", cameraTarget, Draw);
+        // Ending Unity's encoder inside the camera's pass: is the pass there for the next draw?
+        // Without HDR and MSAA the camera draws into its target itself.
+        secondCamera = MakeCamera("second", secondTarget, EndBlit, State, Draw);
+        secondCamera.allowHDR = false;
+        secondCamera.allowMSAA = false;
+    }
+
+    void Issue(int id) => GL.IssuePluginEvent(callback, eventBase + id);
+
+    void Frame(int frame)
+    {
+        switch (frame)
+        {
+            case 1:
+                NativeGfxMtl_Step("update");
+                NativeGfxMtl_SetColor(0f, 1f, 0f, 1f);
+                Issue(State);
+                Issue(Draw);
+                break;
+            case 2:
+                // The work before (the target's clear) is committed first, then the plugin's own
+                // command buffer writes into the target.
+                NativeGfxMtl_Step("commit");
+                Issue(Commit);
+                Issue(QueueBlit);
+                Issue(State);
+                break;
+            case 3:
+                NativeGfxMtl_Step("camera");
+                NativeGfxMtl_SetColor(1f, 0f, 0f, 1f);
+                firstCamera.Render();
+                NativeGfxMtl_Step("camera2");
+                NativeGfxMtl_SetColor(0f, 0f, 1f, 1f);
+                secondCamera.Render();
+                break;
+            case 4:
+                NativeGfxMtl_SetColor(0f, 1f, 1f, 1f);
+                using (var cmd = new CommandBuffer { name = "executed" })
+                {
+                    cmd.SetRenderTarget(executed);
+                    cmd.ClearRenderTarget(true, true, Color.yellow);
+                    cmd.IssuePluginEvent(callback, eventBase + Draw);
+                    NativeGfxMtl_Step("execute");
+                    Graphics.ExecuteCommandBuffer(cmd);
+                }
+                using (var cmd = new CommandBuffer { name = "plain" })
+                {
+                    cmd.IssuePluginEvent(callback, eventBase + State);
+                    NativeGfxMtl_Step("execute.plain");
+                    Graphics.ExecuteCommandBuffer(cmd);
+                }
+                break;
+        }
+    }
+
+    void Finish()
+    {
+        Value("target.pixels", Pixels(target, 8, 8));
+        Value("camera.pixels", Pixels(cameraTarget, 8, 8));
+        Value("second.pixels", Pixels(secondTarget, 8, 8));
+        Value("executed.pixels", Pixels(executed, 8, 8));
+        NativeGfxMtl_SetColor(0f, 0f, 1f, 1f);
+        var pointer = NativeGfxMtl_MakeTexture();
+        var external = Texture2D.CreateExternalTexture(4, 4, TextureFormat.RGBA32, false, true, pointer);
+        Value("external.pixels", Pixels(external, 4, 4));
+        Value("external.pointer", B(external.GetNativeTexturePtr() == pointer));
+        foreach (var o in made) if (o != null) DestroyImmediate(o);
+    }
+
+    /// <summary>The plugin's record, one key per line: <c>plugin.&lt;what&gt;[.&lt;step&gt;]</c>
+    /// (numbered when repeated).</summary>
+    void PluginRecord()
+    {
+        var bytes = new byte[1 << 20];
+        int length = NativeGfxMtl_Record(bytes, bytes.Length);
+        var lines = Encoding.UTF8.GetString(bytes, 0, Math.Min(length, bytes.Length - 1)).Split('\n').Where(s => s.Length > 0);
+        var seen = new Dictionary<string, int>();
+        foreach (var line in lines)
+        {
+            var words = line.Split(' ');
+            var key = "plugin." + words[0];
+            var step = words.FirstOrDefault(w => w.StartsWith("step="));
+            if (step != null) key += "." + step.Substring(5);
+            seen[key] = seen.TryGetValue(key, out var n) ? n + 1 : 1;
+            if (seen[key] > 1) key += "." + seen[key];
+            Value(key, Q(line));
+        }
+    }
+
+    IEnumerator Run()
+    {
+        yield return null;
+        int code = 0;
+        try { Setup(); }
+        catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
+        for (int frame = 1; frame <= 4 && code == 0; frame++)
+        {
+            try { Frame(frame); }
+            catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
+            yield return null;
+        }
+        if (code == 0)
+        {
+            try { Finish(); }
+            catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
+        }
+        PluginRecord();
+        if (logs.Count > 0) Value("logs", L(logs));
+        Value("complete", B(code == 0));
+        File.WriteAllText(output, records.ToString());
+        Application.logMessageReceived -= OnLog;
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.Exit(code);
+#else
+        Application.Quit(code);
+#endif
+    }
+}

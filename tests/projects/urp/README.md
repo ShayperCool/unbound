@@ -244,3 +244,24 @@ hypothesis). Unbound has no Vulkan device, so the
 Deferred recordings have no Unbound counterpart (docs/COMPATIBILITY_GAPS.md).
 
     URP_PROBE_DEFERRED_DIR=/tmp/paths unbound run -p tests/projects/urp --no-watch --frames 200 --size 320x180
+
+## Device answers (CapsProbe)
+
+`Editor/CapsProbe.Record` (`-executeMethod CapsProbe.Record`, `CAPS_PROBE_OUT=<file>`) writes the
+graphics device's SystemInfo answers the render pipelines read, format support and
+`GraphicsSettings.HasShaderDefine`; with `CAPS_PROBE_DEVICE_OUT=<file>` also every public static
+SystemInfo property except the ones the machine decides (names, model, processor, memory sizes,
+operating system release, battery). `managed/UnityEngine/Platform/GraphicsCaps.Generated.cs`
+is written from the captures by `caps_table.py`.
+
+- `Reference/caps-6000.0.71f1.jsonl`: OpenGL Core, the Linux Editor on an NVIDIA RTX 4060.
+- `Reference/unity-6000.0.71f1/caps-vulkan.jsonl`: the same Editor with `-force-vulkan`.
+- `Reference/unity-6000.0.71f1/caps-metal.jsonl`, `device-metal.jsonl`: Metal, the macOS
+  Editor (arm64, Apple M2 Pro, batchmode with graphics), two identical captures. The macOS Editor
+  ran Metal with `-force-glcore`, with `-force-vulkan` (two captures each) and with a
+  MacStandaloneSupport graphics API list of OpenGL Core and Vulkan (one capture): it has no other
+  device.
+
+    CAPS_PROBE_OUT=/tmp/caps.jsonl CAPS_PROBE_DEVICE_OUT=/tmp/device.jsonl \
+        /Applications/Unity/Hub/Editor/6000.0.71f1/Unity.app/Contents/MacOS/Unity -batchmode \
+        -projectPath <copy of tests/projects/urp> -executeMethod CapsProbe.Record -logFile /tmp/caps.log

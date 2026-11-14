@@ -157,6 +157,35 @@ public static class CapsProbe
                 UnityEngine.Object.DestroyImmediate(go);
             }
         File.WriteAllText(Environment.GetEnvironmentVariable("CAPS_PROBE_OUT"), s_Out.ToString());
+        var device = Environment.GetEnvironmentVariable("CAPS_PROBE_DEVICE_OUT");
+        if (!string.IsNullOrEmpty(device)) RecordDevice(device);
         EditorApplication.Exit(0);
+    }
+
+    /// <summary>Every public static property of SystemInfo (with <c>CAPS_PROBE_DEVICE_OUT</c>),
+    /// in name order, as JSON lines; the ones the machine decides (its names, model, processor,
+    /// memory sizes, operating system release, battery) are left out. A property that throws
+    /// records its exception's type.</summary>
+    static void RecordDevice(string path)
+    {
+        var skipped = new HashSet<string>
+        {
+            "batteryLevel", "batteryStatus", "deviceModel", "deviceName", "deviceUniqueIdentifier", "graphicsDeviceName",
+            "graphicsMemorySize", "maxGraphicsBufferSize", "operatingSystem", "processorCount", "processorFrequency",
+            "processorManufacturer", "processorModel", "processorType", "systemMemorySize",
+        };
+        var lines = new StringBuilder();
+        var properties = typeof(SystemInfo).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        Array.Sort(properties, (a, b) => string.CompareOrdinal(a.Name, b.Name));
+        foreach (var property in properties)
+        {
+            if (skipped.Contains(property.Name) || property.GetCustomAttributes(typeof(ObsoleteAttribute), false).Length > 0) continue;
+            string value;
+            try { value = Convert.ToString(property.GetValue(null), System.Globalization.CultureInfo.InvariantCulture); }
+            catch (Exception e) { value = "throws " + (e.InnerException ?? e).GetType().Name; }
+            lines.Append("{\"key\":\"SystemInfo.").Append(property.Name).Append("\",\"value\":\"")
+                .Append((value ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n")).Append("\"}\n");
+        }
+        File.WriteAllText(path, lines.ToString());
     }
 }
