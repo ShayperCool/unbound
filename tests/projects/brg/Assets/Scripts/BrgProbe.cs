@@ -89,6 +89,7 @@ public unsafe class BrgProbe : MonoBehaviour
             Errors();
             ForwardPlus();
             LocalShadows();
+            Sorting();
         }
         catch (Exception e)
         {
@@ -476,6 +477,7 @@ public unsafe class BrgProbe : MonoBehaviour
         RenderTexture.active = null;
         m_ViewCamera.targetTexture = null;
         target.Release();
+        m_LastImage = texture;
         if (!string.IsNullOrEmpty(s_Out)) File.WriteAllBytes(Path.Combine(s_Out, name + ".png"), texture.EncodeToPNG());
     }
 
@@ -530,6 +532,237 @@ public unsafe class BrgProbe : MonoBehaviour
     /// <summary>The local_shadows scenario's lights, which its contexts name.</summary>
     Light[] m_LocalLights;
 
+    // ---- sorting scenario (inserted into BrgProbe) ----
+
+    /// <summary>The sorting scenario's batch: transparent quads (thin cubes facing the camera) and
+    /// the commands' sorting positions and approximate depths.</summary>
+    GraphicsBuffer m_SortBuffer;
+    BatchID m_SortBatch;
+    BatchMaterialID m_Transparent;
+    Material m_TransparentMaterial;
+    /// <summary>Per sorting instance: its place, colour and the sorting position its command gives.</summary>
+    readonly List<Vector3> m_SortPlaces = new List<Vector3>();
+    readonly List<Color> m_SortColors = new List<Color>();
+    readonly List<Vector3> m_SortPositions = new List<Vector3>();
+    /// <summary>The scenario's commands: first instance, instance count, flagged, approximate depth.</summary>
+    readonly List<(int First, int Count, bool Flagged, int Depth)> m_SortCommands = new List<(int, int, bool, int)>();
+    Texture2D m_LastImage;
+    /// <summary>The c5 rows' approximate depths, around minus the blue renderer's distance (about
+    /// 6.3) and minus its square (about 40).</summary>
+    static readonly float[] s_ApproximateDepths = { -50f, -20f, -10f, -5f, -2f, 0f, 3f, 1000000f, -1000000f };
+
+    static readonly Color SortGreen = new Color(0.1f, 0.9f, 0.2f, 0.5f), SortRed = new Color(0.95f, 0.1f, 0.1f, 0.5f),
+        SortBlue = new Color(0.1f, 0.2f, 0.95f, 0.5f);
+
+    /// <summary>A place in front of the camera: <paramref name="depth"/> along its view,
+    /// <paramref name="x"/> and <paramref name="y"/> along its right and up axes.</summary>
+    Vector3 Place(float x, float y, float depth)
+    {
+        var t = m_Camera.transform;
+        return t.position + t.forward * depth + t.right * x + t.up * y;
+    }
+
+    int SortInstance(Vector3 place, Color color, Vector3 sortingPosition)
+    {
+        m_SortPlaces.Add(place);
+        m_SortColors.Add(color);
+        m_SortPositions.Add(sortingPosition);
+        return m_SortPlaces.Count - 1;
+    }
+
+    /// <summary>Transparent BatchRendererGroup commands of overlapping half-transparent quads at
+    /// one place, whose drawing order shows in the overlap's colour, with ordinary transparent
+    /// renderers beside some (URP Unlit, alpha blended). Row 1, left to right:
+    /// c1: two commands, green then red, flagged HasSortingPosition, green's position near the
+    ///     camera, red's far;
+    /// c2: the same unflagged, sortingPosition (an approximate depth) 1 for green, 1000 for red;
+    /// c2b: the same with 1000 for green, 1 for red;
+    /// c3: the same, both 0;
+    /// c4: one flagged command of two instances, green (near) then red (far);
+    /// c4b: the same with red (far) first;
+    /// c4c: one unflagged command of two instances, green then red.
+    /// Rows on the right: c5, an unflagged red command over an ordinary blue renderer at the same
+    /// place, at distance D from the camera, the command's approximate depths
+    /// <see cref="s_ApproximateDepths"/>; c6, a flagged red command whose position is 1 nearer, 1
+    /// farther than the blue renderer; c7, one flagged command of two instances, red 1 nearer and
+    /// green 1 farther than a blue renderer at the same place.</summary>
+    void Sorting()
+    {
+        var unlit = Shader.Find("Universal Render Pipeline/Unlit");
+        var t = m_TransparentMaterial = new Material(unlit);
+        // As URP's material validation sets an alpha-blended transparent surface.
+        t.SetFloat("_Surface", 1f);
+        t.SetFloat("_Blend", 0f);
+        t.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+        t.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+        t.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+        t.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
+        t.SetFloat("_ZWrite", 0f);
+        t.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        t.SetOverrideTag("RenderType", "Transparent");
+        t.renderQueue = (int)RenderQueue.Transparent;
+        t.SetShaderPassEnabled("DepthOnly", false);
+        t.SetShaderPassEnabled("ShadowCaster", false);
+        t.SetColor("_BaseColor", Color.white);
+        m_Transparent = m_Brg.RegisterMaterial(t);
+        Row("sorting.ids.material", m_Transparent.value);
+
+        const float Depth = 6f;
+        var fwd = m_Camera.transform.forward;
+        var added = new List<GameObject>();
+        void Pair(float x, bool flagged, int greenDepth, int redDepth)
+        {
+            var p = Place(x, 1.1f, Depth);
+            int g = SortInstance(p, SortGreen, p - fwd * 3f);
+            SortInstance(p, SortRed, p + fwd * 10f);
+            m_SortCommands.Add((g, 1, flagged, greenDepth));
+            m_SortCommands.Add((g + 1, 1, flagged, redDepth));
+        }
+        Pair(-3.2f, true, 0, 0);
+        Pair(-2.4f, false, 1, 1000);
+        Pair(-1.6f, false, 1000, 1);
+        Pair(-0.8f, false, 0, 0);
+        void Instances(float x, bool flagged, bool redFirst)
+        {
+            var p = Place(x, 1.1f, Depth);
+            int first = redFirst ? SortInstance(p, SortRed, p + fwd * 10f) : SortInstance(p, SortGreen, p - fwd * 3f);
+            if (redFirst) SortInstance(p, SortGreen, p - fwd * 3f);
+            else SortInstance(p, SortRed, p + fwd * 10f);
+            m_SortCommands.Add((first, 2, flagged, 0));
+        }
+        Instances(0f, true, false);
+        Instances(0.8f, true, true);
+        Instances(1.6f, false, false);
+        GameObject Blue(Vector3 place)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            DestroyImmediate(go.GetComponent<Collider>());
+            go.transform.SetPositionAndRotation(place, m_Camera.transform.rotation);
+            go.transform.localScale = new Vector3(0.5f, 0.25f, 0.02f);
+            var material = new Material(t);
+            material.SetColor("_BaseColor", SortBlue);
+            go.GetComponent<MeshRenderer>().sharedMaterial = material;
+            added.Add(go);
+            return go;
+        }
+        float[] rows = { 1.3f, 1f, 0.65f, 0.35f, 0f, -0.35f, -0.65f, -1f, -1.3f };
+        for (int r = 0; r < rows.Length; r++)
+        {
+            var p = Place(2.4f, rows[r], Depth);
+            float d = (p - m_Camera.transform.position).magnitude;
+            Blue(p);
+            float depth = s_ApproximateDepths[r];
+            int i = SortInstance(p, SortRed, p);
+            m_SortCommands.Add((i, 1, false, (int)depth));
+            Row("sorting.c5.r" + r + ".approximateDepth", (int)depth);
+            Row("sorting.c5.r" + r + ".distance", Round(d));
+        }
+        for (int r = 0; r < 2; r++)
+        {
+            var p = Place(3.2f, rows[r], Depth);
+            Blue(p);
+            int i = SortInstance(p, SortRed, p + fwd * (r == 0 ? -1f : 1f));
+            m_SortCommands.Add((i, 1, true, 0));
+        }
+
+        {
+            // c7: one flagged command of two instances, red 1 nearer and green 1 farther than an
+            // ordinary blue renderer at the same place.
+            var p = Place(3.2f, rows[4], Depth);
+            Blue(p);
+            int first = SortInstance(p, SortRed, p - fwd);
+            SortInstance(p, SortGreen, p + fwd);
+            m_SortCommands.Add((first, 2, true, 0));
+        }
+
+        // The batch: a zeroed block, then matrices and colours per instance.
+        int n = m_SortPlaces.Count;
+        int objectToWorld = SizeOfPackedMatrix * 2, worldToObject = objectToWorld + SizeOfPackedMatrix * n, colors = worldToObject + SizeOfPackedMatrix * n;
+        int bytes = (colors + SizeOfFloat4 * n + 255) / 256 * 256;
+        var data = new float[bytes / 4];
+        for (int i = 0; i < n; i++)
+        {
+            var m = Matrix4x4.TRS(m_SortPlaces[i], m_Camera.transform.rotation, new Vector3(0.5f, 0.25f, 0.02f));
+            Pack(data, objectToWorld / 4 + i * 12, m);
+            Pack(data, worldToObject / 4 + i * 12, m.inverse);
+            var c = m_SortColors[i];
+            int o = colors / 4 + i * 4;
+            data[o] = c.r; data[o + 1] = c.g; data[o + 2] = c.b; data[o + 3] = c.a;
+        }
+        m_SortBuffer = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer
+            ? new GraphicsBuffer(GraphicsBuffer.Target.Constant, bytes / 16, 16)
+            : new GraphicsBuffer(GraphicsBuffer.Target.Raw, bytes / 4, 4);
+        m_SortBuffer.SetData(data);
+        var metadata = new NativeArray<MetadataValue>(3, Allocator.Temp);
+        metadata[0] = new MetadataValue { NameID = Shader.PropertyToID("unity_ObjectToWorld"), Value = PerInstance | (uint)objectToWorld };
+        metadata[1] = new MetadataValue { NameID = Shader.PropertyToID("unity_WorldToObject"), Value = PerInstance | (uint)worldToObject };
+        metadata[2] = new MetadataValue { NameID = Shader.PropertyToID("_BaseColor"), Value = PerInstance | (uint)colors };
+        m_SortBatch = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer
+            ? m_Brg.AddBatch(metadata, m_SortBuffer.bufferHandle, 0, (uint)bytes)
+            : m_Brg.AddBatch(metadata, m_SortBuffer.bufferHandle);
+        metadata.Dispose();
+
+        Scenario("sorting");
+        RecordViews();
+        // The colour at each command's first quad's centre (the overlaps show the drawing order),
+        // projected as the 320x180 target renders it.
+        var target = RenderTexture.GetTemporary(Width, Height, 24);
+        m_Camera.targetTexture = target;
+        for (int c = 0; c < m_SortCommands.Count; c++)
+        {
+            var place = m_SortPlaces[m_SortCommands[c].First];
+            var v = m_Camera.WorldToViewportPoint(place);
+            var pixel = m_LastImage.GetPixel((int)(v.x * Width), (int)(v.y * Height));
+            Row("sorting.command" + c + ".pixel", new double[] { Math.Round(pixel.r, 3), Math.Round(pixel.g, 3), Math.Round(pixel.b, 3) });
+        }
+        m_Camera.targetTexture = null;
+        RenderTexture.ReleaseTemporary(target);
+        foreach (var go in added) DestroyImmediate(go);
+        m_Brg.RemoveBatch(m_SortBatch);
+        m_SortBuffer.Dispose();
+        m_SortCommands.Clear();
+    }
+
+    /// <summary>The sorting scenario's commands (camera views only; one range).</summary>
+    void SortingCommands(BatchCullingOutputDrawCommands* commands)
+    {
+        int count = m_SortCommands.Count, instances = m_SortPlaces.Count;
+        int alignment = UnsafeUtility.AlignOf<long>();
+        commands->drawCommands = (BatchDrawCommand*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommand>() * count, alignment, Allocator.TempJob);
+        commands->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>(), alignment, Allocator.TempJob);
+        commands->visibleInstances = (int*)UnsafeUtility.Malloc(instances * sizeof(int), alignment, Allocator.TempJob);
+        commands->instanceSortingPositions = (float*)UnsafeUtility.Malloc(instances * 3 * sizeof(float), alignment, Allocator.TempJob);
+        commands->instanceSortingPositionFloatCount = instances * 3;
+        commands->drawCommandPickingInstanceIDs = null;
+        commands->drawCommandCount = count;
+        commands->drawRangeCount = 1;
+        commands->visibleInstanceCount = instances;
+        for (int i = 0; i < instances; i++)
+        {
+            commands->visibleInstances[i] = i;
+            var s = m_SortPositions[i];
+            commands->instanceSortingPositions[3 * i] = s.x;
+            commands->instanceSortingPositions[3 * i + 1] = s.y;
+            commands->instanceSortingPositions[3 * i + 2] = s.z;
+        }
+        for (int c = 0; c < count; c++)
+        {
+            var (first, n, flagged, depth) = m_SortCommands[c];
+            commands->drawCommands[c] = new BatchDrawCommand
+            {
+                visibleOffset = (uint)first, visibleCount = (uint)n, batchID = m_SortBatch, materialID = m_Transparent, meshID = m_Cube,
+                submeshIndex = 0, splitVisibilityMask = 0xff,
+                flags = flagged ? BatchDrawCommandFlags.HasSortingPosition : BatchDrawCommandFlags.None,
+                sortingPosition = flagged ? first * 3 : depth,
+            };
+        }
+        commands->drawRanges[0] = new BatchDrawRange
+        {
+            drawCommandsType = BatchDrawCommandType.Direct, drawCommandsBegin = 0, drawCommandsCount = (uint)count,
+            filterSettings = new BatchFilterSettings { renderingLayerMask = 0xffffffff },
+        };
+    }
+
     JobHandle OnPerformCulling(BatchRendererGroup group, BatchCullingContext context, BatchCullingOutput output, IntPtr user)
     {
         int call = m_Calls++;
@@ -541,6 +774,11 @@ public unsafe class BrgProbe : MonoBehaviour
             m_Views[view] = m_Views.TryGetValue(view, out int n) ? n + 1 : 1;
         }
         if (group != m_Brg || m_NoCommands) return new JobHandle();
+        if (m_Scenario == "sorting")
+        {
+            if (context.viewType == BatchCullingViewType.Camera) SortingCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
+            return new JobHandle();
+        }
         // The pillar's range (the shadows and cameras scenarios).
         bool masked = m_Scenario != "basic";
         bool errors = m_Scenario == "errors";
