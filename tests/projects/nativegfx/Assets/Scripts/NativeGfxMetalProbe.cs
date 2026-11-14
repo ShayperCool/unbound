@@ -33,6 +33,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
     [DllImport(Plugin)] static extern void NativeGfxMtl_DescribeRenderBuffer(string what, IntPtr handle);
     [DllImport(Plugin)] static extern IntPtr NativeGfxMtl_MakeTexture();
     [DllImport(Plugin)] static extern void NativeGfxMtl_ScriptCommit();
+    [DllImport(Plugin)] static extern void NativeGfxMtl_ScriptPeek();
     [DllImport(Plugin)] static extern int NativeGfxMtl_Record(byte[] buffer, int capacity);
 
     // The plugin's events after its reserved base.
@@ -351,6 +352,32 @@ public class NativeGfxMetalProbe : MonoBehaviour
                 {
                     cmd.IssuePluginEvent(callback, eventBase + State);
                     NativeGfxMtl_Step("execute.plain");
+                    Graphics.ExecuteCommandBuffer(cmd);
+                }
+                // The screen as the target: the descriptor before the encoder, after the plugin
+                // ends it (in the same and the next event), and the encoder asked for after that.
+                using (var cmd = new CommandBuffer { name = "screen" })
+                {
+                    cmd.IssuePluginEvent(callback, eventBase + Peek);
+                    cmd.IssuePluginEvent(callback, eventBase + EndPeek);
+                    cmd.IssuePluginEvent(callback, eventBase + Peek);
+                    cmd.IssuePluginEvent(callback, eventBase + State);
+                    NativeGfxMtl_Step("screen");
+                    Graphics.ExecuteCommandBuffer(cmd);
+                }
+                // The same from the script, outside callbacks.
+                NativeGfxMtl_Step("outside");
+                NativeGfxMtl_ScriptPeek();
+                // CommitCurrentCommandBuffer inside a render texture's pass: where the next
+                // encoder goes.
+                using (var cmd = new CommandBuffer { name = "commit rt" })
+                {
+                    cmd.SetRenderTarget(drawn);
+                    cmd.ClearRenderTarget(true, true, Color.blue);
+                    cmd.DrawMesh(quad, Matrix4x4.identity, colored, 0, 0);
+                    cmd.IssuePluginEvent(callback, eventBase + Commit);
+                    cmd.IssuePluginEvent(callback, eventBase + State);
+                    NativeGfxMtl_Step("commitrt");
                     Graphics.ExecuteCommandBuffer(cmd);
                 }
                 break;

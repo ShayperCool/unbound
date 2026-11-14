@@ -166,4 +166,31 @@
 {"k":"plugin.state.depth.actions.execute.plain","v":"state.depth.actions step=execute.plain load=1 store=4"}
 {"k":"plugin.state.stencil.execute.plain","v":"state.stencil step=execute.plain texture=other same_as_depth=1"}
 {"k":"plugin.state.stencil.actions.execute.plain","v":"state.stencil.actions step=execute.plain load=1 store=4"}
+{"k":"plugin.peek.screen","v":"peek step=screen before=1"}
+{"k":"plugin.endpeek.screen","v":"endpeek step=screen encoder=render after=0"}
+{"k":"plugin.peek.screen.2","v":"peek step=screen before=0"}
+{"k":"plugin.state.screen","v":"state step=screen main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
+{"k":"plugin.state.color0.screen","v":"state.color0 step=screen texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.screen","v":"state.color0.actions step=screen load=0 store=4"}
+{"k":"plugin.state.depth.screen","v":"state.depth step=screen texture=other format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.screen","v":"state.depth.actions step=screen load=0 store=4"}
+{"k":"plugin.state.stencil.screen","v":"state.stencil step=screen texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.screen","v":"state.stencil.actions step=screen load=0 store=4"}
+{"k":"plugin.peek.outside","v":"peek step=outside before=1"}
+{"k":"plugin.endpeek.outside","v":"endpeek step=outside encoder=render after=0"}
+{"k":"plugin.peek.outside.2","v":"peek step=outside before=0"}
+{"k":"plugin.state.outside","v":"state step=outside main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
+{"k":"plugin.state.color0.outside","v":"state.color0 step=outside texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.outside","v":"state.color0.actions step=outside load=0 store=4"}
+{"k":"plugin.state.depth.outside","v":"state.depth step=outside texture=other format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.outside","v":"state.depth.actions step=outside load=0 store=4"}
+{"k":"plugin.state.stencil.outside","v":"state.stencil step=outside texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.outside","v":"state.stencil.actions step=outside load=0 store=4"}
+{"k":"plugin.state.commitrt","v":"state step=commitrt main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
+{"k":"plugin.state.color0.commitrt","v":"state.color0 step=commitrt texture=other resolve=none level=0 slice=0 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.commitrt","v":"state.color0.actions step=commitrt load=2 store=4"}
+{"k":"plugin.commit.commitrt","v":"commit step=commitrt returned_current=1 status=2 new_buffer=1 after_status=0 encoder=render"}
+{"k":"plugin.state.commitrt.2","v":"state step=commitrt main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
+{"k":"plugin.state.color0.commitrt.2","v":"state.color0 step=commitrt texture=other resolve=none level=0 slice=0 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.commitrt.2","v":"state.color0.actions step=commitrt load=2 store=4"}
 {"k":"complete","v":true}

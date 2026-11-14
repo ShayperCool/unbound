@@ -487,6 +487,17 @@ EXPORT void NativeGfxMtl_ScriptCommit(void)
            committed == buffer ? 1 : 0, committed ? (long)committed.status : -1L, after && after != buffer ? 1 : 0);
 }
 
+/// From a script, outside rendering callbacks: the descriptor before the encoder is asked for,
+/// after the plugin ends the encoder, and the encoder asked for after that.
+EXPORT void NativeGfxMtl_ScriptPeek(void)
+{
+    if (!s_v1) return;
+    peek();
+    end_peek();
+    peek();
+    record_state("state");
+}
+
 EXPORT int NativeGfxMtl_Record(char* out, int capacity)
 {
     pthread_mutex_lock(&s_lock);
