@@ -165,8 +165,8 @@ struct Scope {
     pass: Option<Retained<MTLRenderPassDescriptor>>,
     /// The screen is the target (it has no pass: not shared with plugins).
     screen: bool,
-    /// Something was drawn into the target since it was set (the Editor's encoder exists), and
-    /// the plugin has not ended an encoder in this callback.
+    /// The Editor's encoder exists (the executor's flag at the callback's start), until the
+    /// plugin ends or commits it in this callback.
     drawn: bool,
     images: HashMap<u64, Images>,
     /// Buffers committed by `CommitCurrentCommandBuffer` in this callback, kept until it ends
@@ -389,7 +389,8 @@ extern "C" fn current_render_pass_descriptor() -> Object {
 
 /// Commits the current command buffer and goes on in a new one; the committed one is returned
 /// (nativegfx `plugin.commit.*`: status Committed, a new current buffer; `plugin.script.commit`
-/// outside callbacks).
+/// outside callbacks). The encoder ends with it, so the descriptor is nil until the plugin
+/// asks for an encoder again (unmeasured).
 extern "C" fn commit_current_command_buffer() -> Object {
     let inside = with_scope(|s| {
         if let Some(encoder) = s.encoder.take() {

@@ -501,8 +501,9 @@ pub struct UnityRenderer {
     /// The Metal device's plugin interface (`plugins_metal`).
     #[cfg(target_os = "macos")]
     metal_plugins: Option<plugins_metal::MetalPlugins>,
-    /// Something was drawn into the current target since it was set: the Editor's Metal encoder
-    /// over it exists then (`plugins_metal`).
+    /// The Editor's Metal encoder over the current target exists: something was drawn into it
+    /// since it was set, or a plugin's encoder was left begun, and no plugin ended it since
+    /// (`plugins_metal`).
     #[cfg(target_os = "macos")]
     plugin_target_drawn: bool,
     /// The last frame (counted from 1) whose GPU work is done: plugins' `safeFrameNumber`.
