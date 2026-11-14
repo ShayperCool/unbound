@@ -1831,9 +1831,9 @@ impl<'a> Builder<'a> {
             // frame: 31 frames at 30 a second are 1.0333334 s, one step past the range's 1.0333333
             // (tests/projects/modelclips HumanLong), and frames 1 to 31 of a take are 1.00000012 s
             // (`ShapesOff`); a Legacy clip at its range's end (tests/projects/modelaxis Reduced:
-            // Drift, 3 s). A Humanoid clip's end is set again from its last muscle key when its
-            // curves are converted (`HumanLate`, frames 1 to 31 of its take: 0.99999994). A clip
-            // without keys has the range (0, 1) of an empty AnimationClip.
+            // Drift, 3 s). Open: a Humanoid clip on frames 1 to 31 of its take (`HumanLate`) is
+            // 0.99999994 s long in the Editor, its last muscle key, where this gives 1.00000012.
+            // A clip without keys has the range (0, 1) of an empty AnimationClip.
             let length = if empty {
                 1.0
             } else if self.settings.animation_type == 1 {

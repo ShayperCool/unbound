@@ -445,9 +445,6 @@ namespace UnityEngine
             int inRange = times.Length;
             while (inRange > 0 && times[inRange - 1] > stop) inRange--;
             curvesOut.Keep(inRange);
-            // The clip ends at its last muscle key (HumanLong: 1.03333342, the frame count times
-            // the frame length; HumanLate, frames 1 to 31 of its take: 0.99999994).
-            if (m_HasRange && inRange > 0) m_StopTime = m_StartTime + times[inRange - 1];
             m_Curves = kept;
             var keptKeys = m_HumanKeyReduction > 0f ? new List<int>() : null;
             for (int i = 0; i < HumanClipImport.CurveCount; i++)

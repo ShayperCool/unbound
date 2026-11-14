@@ -243,8 +243,10 @@ frames 1..31 of a take that starts at frame 1 (`ProbeRunner.CreateHumanLate`); `
 were recorded after the `Shapes*` records, the same way. Its 64 muscle curves that are not float
 noise have 31 keys each: the conversion steps one frame length at a time on the take's times from
 the clip's start and moves the samples back (0, 0.0333333351, 0.06666668, ..., 0.966666639,
-0.99999994), and the clip ends at its last key, 0.99999994. Unbound matches every key time and
-the length exactly (on the clip's own frame times before, 63 records were outside the tolerance).
+0.99999994), and the clip ends at its last key, 0.99999994. Unbound matches every key time
+exactly (on the clip's own frame times before, 63 records were outside the tolerance); its clip
+is 1.00000012 long, its last transform key (open: which ranges end at their last muscle key,
+which ones lose a frame there, and how events and parameter curves move with it are unmeasured).
 
 ## Whole-curve reduction
 

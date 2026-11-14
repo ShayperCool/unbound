@@ -161,8 +161,6 @@ namespace UnityEngine
         {
             get
             {
-                // A Humanoid model clip ends at its last muscle key (see ConvertHumanCurvesOnce).
-                ConvertHumanCurves();
                 if (m_HasRange) return Math.Max(0f, m_StopTime - m_StartTime);
                 if (!Compat.DefaultConstructorStateMeasured) return CurveEnd();
                 bool found = m_HasRetainedVectorEnd;
