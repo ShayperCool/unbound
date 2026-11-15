@@ -4,6 +4,7 @@
   ],
   "summary": "defaulttextures: .*",
   "engine_paths": [
-    "crates/unbound-app/src/render/resources.rs"
+    "crates/unbound-app/src/render/resources.rs",
+    "managed/UnityEngine/Graphics/Texture2D.cs"
   ]
 }

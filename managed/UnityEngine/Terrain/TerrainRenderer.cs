@@ -338,11 +338,13 @@ namespace UnityEngine
                 material.SetFloat("_Smoothness0", 0f);
                 material.SetFloat("_NormalScale0", 1f);
                 material.SetTexture("_Mask0", null);
+                material.SetFloat("_LayerHasMask0", 0f);
                 material.SetVector("_DiffuseRemapScale0", Vector4.one);
                 material.SetVector("_MaskMapRemapOffset0", Vector4.zero);
                 material.SetVector("_MaskMapRemapScale0", Vector4.one);
                 for (int k = 1; k < 4; k++) material.SetTexture("_Splat" + k, null);
                 material.DisableKeyword("_NORMALMAP");
+                material.DisableKeyword("_MASKMAP");
                 return;
             }
             for (int k = 0; k < 4; k++)
@@ -359,8 +361,9 @@ namespace UnityEngine
                 material.SetTexture("_Splat" + n, layer.diffuseTexture);
                 material.SetTextureScale("_Splat" + n, new Vector2(size.x / tile.x, size.z / tile.y));
                 material.SetTextureOffset("_Splat" + n, new Vector2(layer.tileOffset.x / tile.x, layer.tileOffset.y / tile.y));
-                // A layer without a normal map gets the flat normal texture, one without a mask
-                // the black texture, whatever the shader's defaults.
+                // A layer without a normal map gets the flat normal texture whatever the shader's
+                // default (tests/projects/urpterrain masks); one without a mask the black texture
+                // (unmeasured: URP's shaders ignore a layer's mask unless _LayerHasMask flags it).
                 normals |= layer.normalMapTexture != null;
                 material.SetTexture("_Normal" + n, layer.normalMapTexture != null ? layer.normalMapTexture : Texture2D.normalTexture);
                 material.SetFloat("_NormalScale" + n, layer.normalScale);
