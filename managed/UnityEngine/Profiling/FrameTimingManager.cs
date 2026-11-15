@@ -159,8 +159,9 @@ namespace Unbound.Runtime
 
         internal static void EndRendering() => Engine.EndRendering(Now());
 
-        /// <summary>The sync interval reads the display's refresh rate in the measured Editor,
-        /// whatever vSyncCount is (asyncread timing.vSync*).</summary>
-        internal static void Present() => Engine.Present(Now(), (uint)Math.Round(Screen.currentResolution.refreshRateRatio.value));
+        /// <summary>The sync interval reads the refresh rate of <c>Screen.currentResolution</c>
+        /// in the measured Editor, whatever vSyncCount is (asyncread timing.vSync*). It is read
+        /// without warning: a game that never reads <c>Screen</c> gets no display warning.</summary>
+        internal static void Present() => Engine.Present(Now(), (uint)Math.Round(Screen.CurrentRefreshRateQuietly));
     }
 }

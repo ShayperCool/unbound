@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using Unbound.Runtime;
+using Unbound.Runtime.Jobs;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.IO.LowLevel.Unsafe;
@@ -220,6 +221,66 @@ namespace UnityEngine.Tests
                 UnsafeUtility.Free(commands, Allocator.Persistent);
                 UnsafeUtility.Free(array, Allocator.Persistent);
             }
+        }
+
+        /// <summary>Red: a close without a dependency did not wait for a read queued before it,
+        /// which then failed on the closed file.</summary>
+        [Fact]
+        public void ACloseWithoutADependencyWaitsForTheQueuedReads()
+        {
+            using var buffer = new Buffer(8);
+            var file = AsyncReadManager.OpenFileAsync(m_Path);
+            var command = new ReadCommand { Offset = 512, Size = 8, Buffer = buffer.Bytes };
+            var array = new ReadCommandArray { ReadCommands = &command, CommandCount = 1 };
+            s_Release.Reset();
+            try
+            {
+                var hold = new HoldJob().Schedule();
+                JobHandle.ScheduleBatchedJobs();
+                var read = AsyncReadManager.ReadDeferred(file, &array, hold);
+                var close = file.Close();
+                Assert.False(close.IsCompleted);
+                Assert.Equal(ReadStatus.InProgress, read.Status);
+                s_Release.Set();
+                close.Complete();
+                Assert.Equal(ReadStatus.Complete, read.Status);
+                for (int i = 0; i < 8; i++) Assert.Equal(Expected(512 + i), buffer.Bytes[i]);
+                read.Dispose();
+                hold.Complete();
+            }
+            finally
+            {
+                s_Release.Set();
+            }
+        }
+
+        /// <summary>Red: requests whose handles were never completed kept their job records for
+        /// the rest of the session.</summary>
+        [Fact]
+        public void FinishedRequestsAreReleasedAndCallersJobsStayTheCallers()
+        {
+            using var buffer = new Buffer(8);
+            var command = new ReadCommand { Offset = 0, Size = 8, Buffer = buffer.Bytes };
+            var read = AsyncReadManager.Read(m_Path, &command, 1);
+            var job = read.JobHandle;
+            Assert.True(JobSystem.RecordOf(job).Finished.Wait(10_000));
+            read.Dispose();
+            Assert.Null(JobSystem.RecordOf(job));
+
+            var file = AsyncReadManager.OpenFileAsync(m_Path);
+            var array = new ReadCommandArray { ReadCommands = &command, CommandCount = 1 };
+            var user = new MarkJob().Schedule();
+            JobHandle.ScheduleBatchedJobs();
+            var deferred = AsyncReadManager.ReadDeferred(file, &array, user);
+            var deferredJob = deferred.JobHandle;
+            Assert.True(JobSystem.RecordOf(deferredJob).Finished.Wait(10_000));
+            deferred.Dispose();
+            // Syncing the read would sync the caller's job: it waits for the caller.
+            Assert.NotNull(JobSystem.RecordOf(deferredJob));
+            Assert.NotNull(JobSystem.RecordOf(user));
+            user.Complete();
+            file.Close().Complete();
+            Assert.Null(JobSystem.RecordOf(deferredJob));
         }
 
         [Fact]

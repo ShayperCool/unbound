@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unbound.Runtime;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -280,6 +281,25 @@ namespace UnityEngine.Tests
                 NextFrame();
             }
             Assert.Contains("remote", Assert.Single(m_Warnings));
+        }
+
+        /// <summary>Red: frame timings read Screen.currentResolution every frame and warned in
+        /// every run without a display, also for games that never read Screen.</summary>
+        [Fact]
+        public void FrameTimingsDoNotWarnAndTheGamesFirstReadDoes()
+        {
+            m_Answer = _ => Unavailable(1, "headless");
+            for (int i = 0; i < 3; i++)
+            {
+                FrameTimings.Present();
+                Assert.Equal(60.0, Screen.CurrentRefreshRateQuietly);
+                NextFrame();
+            }
+            Assert.Empty(m_Warnings);
+            Assert.Equal(60u, Screen.currentResolution.refreshRateRatio.numerator);
+            Assert.Contains("headless", Assert.Single(m_Warnings));
+            Assert.Equal(96f, Screen.dpi);
+            Assert.Single(m_Warnings);
         }
 
         /// <summary>Red: without remembering that the host does not answer, it is asked every

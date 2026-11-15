@@ -169,6 +169,10 @@ namespace UnityEngine
         /// <summary>The actual host refresh used for frame pacing.</summary>
         internal static double HostRefreshRate => HostDisplay()?.HostRefreshRate ?? 60;
 
+        /// <summary><c>currentResolution</c>'s refresh rate for the engine's own per-frame use:
+        /// a fallback warning is held back until game code reads <c>Screen</c> itself.</summary>
+        internal static double CurrentRefreshRateQuietly => HostDisplay(quiet: true)?.Current.refreshRateRatio.value ?? 60;
+
         /// <summary>The host monitor's size, name, exact refresh ratio and desktop work area.
         /// DisplayInfo preserves the OS ratio; Screen.currentResolution separately describes the
         /// Editor's 60 Hz resolution choices on the measured Linux release.</summary>
@@ -199,6 +203,8 @@ namespace UnityEngine
         static bool s_DisplayUnanswered;
         /// <summary>The reasons for falling back already warned about: each once a session.</summary>
         static readonly HashSet<string> s_DisplayWarned = new HashSet<string>(StringComparer.Ordinal);
+        /// <summary>A warning an engine-side read found and held back (<see cref="CurrentRefreshRateQuietly"/>).</summary>
+        static string s_DeferredDisplayWarning;
 
         /// <summary>Stands in for the native call in tests: (method, request) → answer, or throws
         /// as the native call does.</summary>
@@ -216,6 +222,7 @@ namespace UnityEngine
                 s_DisplayAskedFrame = int.MinValue;
                 s_DisplayUnanswered = false;
                 s_DisplayWarned.Clear();
+                s_DeferredDisplayWarning = null;
             }
         }
 
@@ -223,18 +230,27 @@ namespace UnityEngine
         /// window opens, a headless run, a remote session, no monitor, or a host that does not
         /// answer. Those keep Unbound's constants, with one warning for each reason. Without a
         /// native side at all (no host) the constants stay, quietly.</summary>
-        static DisplayAnswer HostDisplay()
+        static DisplayAnswer HostDisplay(bool quiet = false)
         {
             var call = s_DisplayCallForTests;
             if (call == null && !Native.IsReady) return null;
             int frame = s_DisplayFrameForTests ?? s_DisplayFrame;
             string warning = null;
+            string deferred = null;
             DisplayAnswer answer;
             lock (s_DisplayLock)
             {
-                if (s_DisplayUnanswered) return s_Display;
-                if (s_DisplayFrameForTests == null ? s_DisplayVersion == s_HostDisplayVersion : frame == s_DisplayAskedFrame)
-                    return s_Display;
+                // A warning an engine-side read held back goes to the game's first own read.
+                if (!quiet)
+                {
+                    deferred = s_DeferredDisplayWarning;
+                    s_DeferredDisplayWarning = null;
+                }
+                if (s_DisplayUnanswered || (s_DisplayFrameForTests == null ? s_DisplayVersion == s_HostDisplayVersion : frame == s_DisplayAskedFrame))
+                {
+                    answer = s_Display;
+                    goto Answered;
+                }
                 s_DisplayAskedFrame = frame;
                 try
                 {
@@ -256,11 +272,20 @@ namespace UnityEngine
                 }
                 answer = s_Display;
                 if (warning != null && !s_DisplayWarned.Add(warning)) warning = null;
+                if (quiet && warning != null)
+                {
+                    s_DeferredDisplayWarning = warning;
+                    warning = null;
+                }
             }
-            if (warning != null)
-                Debug.LogWarning("Unbound: Screen.currentResolution, Screen.resolutions, Screen.dpi and Screen.mainWindowDisplayInfo: " + warning);
+        Answered:
+            if (deferred != null) WarnDisplay(deferred);
+            if (warning != null) WarnDisplay(warning);
             return answer;
         }
+
+        static void WarnDisplay(string warning) =>
+            Debug.LogWarning("Unbound: Screen.currentResolution, Screen.resolutions, Screen.dpi and Screen.mainWindowDisplayInfo: " + warning);
 
         const string Kept = "Unbound's constants are kept (the window's size at 60 Hz, 96 DPI)";
 

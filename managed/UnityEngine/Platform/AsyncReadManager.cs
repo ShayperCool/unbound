@@ -255,8 +255,8 @@ namespace Unbound.Runtime
             internal volatile FileStatus Status = FileStatus.Pending;
             internal JobHandle OpenJob;
             /// <summary>The reads queued on the file that may not have run: a close waits for
-            /// them. Whether each waits for a job of the caller's.</summary>
-            internal readonly List<(JobHandle Job, bool CallerDependency)> Reads = new List<(JobHandle, bool)>();
+            /// them. Each with the job of the caller's it waits for, if any.</summary>
+            internal readonly List<(JobHandle Job, JobHandle Caller)> Reads = new List<(JobHandle, JobHandle)>();
 
             internal OpenFile(string path) => Path = path;
 
@@ -307,9 +307,6 @@ namespace Unbound.Runtime
             internal ReadCommandArray* Deferred;
             internal ulong* BytesRead;
             internal long ReadCount;
-            /// <summary>The request waits for a job of the caller's: releasing it must not sync
-            /// that job.</summary>
-            internal bool CallerDependency;
             int m_Status = (int)ReadStatus.InProgress;
             internal JobHandle Job;
 
@@ -491,18 +488,26 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>Jobs that wait only for other requests' jobs: they are synced once they ran,
-        /// as a native request's resources are released, so a caller that never completes
-        /// them does not keep them. Jobs that wait for one of the caller's are the caller's
-        /// to complete.</summary>
-        static readonly List<JobHandle> s_Owned = new List<JobHandle>();
+        /// <summary>The requests' jobs: each is synced once it ran, as a native request's
+        /// resources are released, so a caller that never completes it does not keep it. One
+        /// that waits for jobs of the caller's is synced only after the caller synced those
+        /// (syncing it syncs its dependencies, which must stay the caller's to complete).</summary>
+        static readonly List<(JobHandle Job, JobHandle[] Callers)> s_Owned = new List<(JobHandle, JobHandle[])>();
 
-        static void Own(JobHandle job)
+        static void Own(JobHandle job, JobHandle[] callers)
         {
-            lock (s_Lock) s_Owned.Add(job);
+            lock (s_Lock) s_Owned.Add((job, callers));
         }
 
-        /// <summary>Syncs the owned jobs that ran (on the main thread, where syncing belongs).</summary>
+        static bool CallersSynced(JobHandle[] callers)
+        {
+            if (callers == null) return true;
+            foreach (var caller in callers)
+                if (JobSystem.RecordOf(caller) != null) return false;
+            return true;
+        }
+
+        /// <summary>Syncs the owned jobs that may be (on the main thread, where syncing belongs).</summary>
         static void Sweep()
         {
             if (!PlayerLoopDriver.IsMainThread) return;
@@ -511,8 +516,8 @@ namespace Unbound.Runtime
             {
                 for (int i = s_Owned.Count - 1; i >= 0; i--)
                 {
-                    var record = JobSystem.RecordOf(s_Owned[i]);
-                    if (record != null && !record.Done) continue;
+                    var record = JobSystem.RecordOf(s_Owned[i].Job);
+                    if (record != null && (!record.Done || !CallersSynced(s_Owned[i].Callers))) continue;
                     if (record != null) (done ??= new List<Jobs.JobRecord>()).Add(record);
                     s_Owned.RemoveAt(i);
                 }
@@ -579,7 +584,7 @@ namespace Unbound.Runtime
             var request = new ReadRequest { Kind = Kind.ReadByName, Path = path };
             request.TakeCommands(commands, (int)Math.Min(count, int.MaxValue));
             var handle = Start(request, default);
-            Own(request.Job);
+            Own(request.Job, null);
             return handle;
         }
 
@@ -587,22 +592,23 @@ namespace Unbound.Runtime
         {
             var request = new ReadRequest { Kind = Kind.FileInfo, Path = path, InfoResult = result };
             var handle = Start(request, default);
-            Own(request.Job);
+            Own(request.Job, null);
             return handle;
         }
 
         internal static ReadHandle ReadFile(OpenFile file, ReadCommandArray commands, ReadCommandArray* deferred, JobHandle dependency)
         {
-            var request = new ReadRequest { Kind = Kind.ReadFile, File = file, Deferred = deferred, CallerDependency = !dependency.Equals(default(JobHandle)) };
+            var request = new ReadRequest { Kind = Kind.ReadFile, File = file, Deferred = deferred };
             if (deferred == null) request.TakeCommands(commands.ReadCommands, commands.CommandCount);
             // The read waits for the open (Unity: "The read will automatically wait for the
             // FileHandle.JobHandle to be complete").
             var handle = Start(request, JobHandle.CombineDependencies(dependency, file.OpenJob));
-            if (!request.CallerDependency) Own(request.Job);
+            bool callerDependency = !dependency.Equals(default(JobHandle));
+            Own(request.Job, callerDependency ? new[] { dependency } : null);
             lock (file.Reads)
             {
                 file.Reads.RemoveAll(read => JobSystem.RecordOf(read.Job) is not { Done: false });
-                file.Reads.Add((request.Job, request.CallerDependency));
+                file.Reads.Add((request.Job, dependency));
             }
             return handle;
         }
@@ -633,7 +639,7 @@ namespace Unbound.Runtime
                 version = s_FileVersions[slot];
             }
             file.OpenJob = Schedule(file, Work.Open, default);
-            Own(file.OpenJob);
+            Own(file.OpenJob, null);
             return new FileHandle((IntPtr)(slot + 1), version);
         }
 
@@ -651,7 +657,8 @@ namespace Unbound.Runtime
                 s_Files[slot] = null;
                 s_FreeFiles.Push(slot);
             }
-            bool callerDependency = !dependency.Equals(default(JobHandle));
+            List<JobHandle> callers = null;
+            if (!dependency.Equals(default(JobHandle))) (callers = new List<JobHandle>()).Add(dependency);
             JobHandle after;
             lock (file.Reads)
             {
@@ -663,13 +670,13 @@ namespace Unbound.Runtime
                 foreach (var read in file.Reads)
                 {
                     jobs[count++] = read.Job;
-                    callerDependency |= read.CallerDependency;
+                    if (!read.Caller.Equals(default(JobHandle))) (callers ??= new List<JobHandle>()).Add(read.Caller);
                 }
                 file.Reads.Clear();
                 fixed (JobHandle* pointer = jobs) after = JobSystem.Combine(pointer, count);
             }
             var close = Schedule(file, Work.Close, after);
-            if (!callerDependency) Own(close);
+            Own(close, callers?.ToArray());
             return close;
         }
     }

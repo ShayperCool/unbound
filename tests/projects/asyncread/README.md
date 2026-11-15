@@ -52,7 +52,8 @@ Left out because they crash the 6000.0.71f1 Editor or are timing-dependent there
 (the Editor writes past the array's end and later crashes in its garbage collector),
 `GetVSyncsPerSecond` (crash on OpenGLCore), and the status read right after `Cancel` (either
 `Canceled` or `InProgress`). How many frames exist before the first `Update` depends on the
-Editor frames before Play mode, so only the per-frame growth is recorded. macOS is not measured.
+Editor frames before Play mode (28 in both captures, which an engine run starts without), so
+only the per-frame growth (at most one, never fewer) is recorded. macOS is not measured.
 
 Contracts: [AsyncReadManager.Read](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Unity.IO.LowLevel.Unsafe.AsyncReadManager.Read.html)
 (commands are copied), [ReadDeferred](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Unity.IO.LowLevel.Unsafe.AsyncReadManager.ReadDeferred.html)
