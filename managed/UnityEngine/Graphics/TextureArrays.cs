@@ -105,6 +105,28 @@ namespace UnityEngine
             if (Blocks) throw new ArgumentException("texture uses an unsupported format.");
         }
 
+        /// <summary>Texel `index` of a level of block storage, decoding only its block, as
+        /// Texture2D's GetPixel reads a compressed texel (float for BC6H and ASTC HDR).</summary>
+        unsafe Color BlockTexel(int image, int mip, int index)
+        {
+            int w = W(mip), h = H(mip), side = BlockFormats.Footprint(Format), size = BlockFormats.BlockBytes(Format);
+            int z = index / (w * h), x = index % w, y = index / w % h;
+            int at = Offset(image, mip) + z * (LevelBytes(mip) / D(mip)) + ((y / side) * ((w + side - 1) / side) + x / side) * size;
+            var block = new ReadOnlySpan<byte>(Data, at, size);
+            int k = (y % side) * side + x % side;
+            if (BlockFormats.NativeDecoded(Format))
+            {
+                Color pixel = default;
+                fixed (byte* input = block)
+                    if (!Native.DecodeBlockTexel((int)Format, input, (uint)k, &pixel))
+                        throw new UnityException("Compressed texel decoding failed.");
+                if (Format == TextureFormat.BC6H) pixel.a = 1f;
+                return pixel;
+            }
+            Color32 c = BlockFormats.DecodeTexel(Format, block, k);
+            return new Color(c.r / 255f, c.g / 255f, c.b / 255f, c.a / 255f);
+        }
+
         /// <summary>A level of block storage decoded to RGBA8 (or float RGBA), its depth slices
         /// one after another, as GetPixels reads compressed textures.</summary>
         byte[] DecodedBlocks(int image, int mip, bool floats)
@@ -173,9 +195,20 @@ namespace UnityEngine
         internal Color[] GetPixels(int image, int mip)
         {
             var result = new Color[Size(mip)];
-            if (Blocks && BlockFormats.IsAstcHdr(Format))
+            if (Blocks)
             {
-                PixelFormats.DecodeFloat(TextureFormat.RGBAFloat, DecodedBlocks(image, mip, true), result);
+                if (BlockFormats.IsAstcHdr(Format))
+                {
+                    PixelFormats.DecodeFloat(TextureFormat.RGBAFloat, DecodedBlocks(image, mip, true), result);
+                    return result;
+                }
+                // As Texture2D's: BC6H read back clamped to 0..1 in 8-bit steps, warned.
+                if (Format == TextureFormat.BC6H)
+                    Stubs.Ignored("layered BC6H blocks", "read back clamped to 0..1 in 8-bit steps: Unbound has no float decoding of them");
+                var rgba = DecodedBlocks(image, mip, false);
+                for (int i = 0; i < result.Length; i++)
+                    result[i] = new Color(rgba[i * 4] * (1f / 255f), rgba[i * 4 + 1] * (1f / 255f), rgba[i * 4 + 2] * (1f / 255f),
+                        Format == TextureFormat.BC6H ? 1f : rgba[i * 4 + 3] * (1f / 255f));
                 return result;
             }
             if (Hdr)
@@ -200,11 +233,7 @@ namespace UnityEngine
         /// byte b is b / 255 (not GetPixels' b × (1 / 255); tests/projects/texturepixels).</summary>
         internal Color GetPixel(int image, int mip, int index)
         {
-            if (Blocks)
-            {
-                var c32 = GetPixels32(image, mip)[index];
-                return BlockFormats.IsAstcHdr(Format) ? GetPixels(image, mip)[index] : new Color(c32.r / 255f, c32.g / 255f, c32.b / 255f, c32.a / 255f);
-            }
+            if (Blocks) return BlockTexel(image, mip, index);
             int size = PixelFormats.Size(Format, 1, 1);
             var bytes = new byte[size];
             Buffer.BlockCopy(Data, Offset(image, mip) + index * size, bytes, 0, size);
@@ -410,7 +439,7 @@ namespace UnityEngine
         /// unmeasured).</summary>
         internal static void CheckTexelWrite(LayeredPixels pixels, string api, string name)
         {
-            if (pixels.Blocks && api != null && api.Contains(".SetPixel", StringComparison.Ordinal))
+            if (pixels.Blocks)
                 throw new ArgumentException($"{api}: texture uses an unsupported format. (Texture '{name}')");
         }
 
@@ -594,12 +623,12 @@ namespace UnityEngine
             return m_Pixels;
         }
 
-        LayeredPixels Level(string api, int element, int mip)
+        LayeredPixels Level(string api, int element, int mip, bool write = false)
         {
             var pixels = Pixels(api);
             if (element < 0 || element >= m_Depth) throw new ArgumentException($"Invalid array element {element}.", nameof(element));
             if (mip < 0 || mip >= pixels.Mips) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
-            LayeredTextures.CheckTexelWrite(pixels, api, name);
+            if (write) LayeredTextures.CheckTexelWrite(pixels, api, name);
             return pixels;
         }
 
@@ -609,10 +638,10 @@ namespace UnityEngine
         public Color32[] GetPixels32(int arrayElement, int miplevel) => Level("Texture2DArray.GetPixels32", arrayElement, miplevel).GetPixels32(arrayElement, miplevel);
         public Color32[] GetPixels32(int arrayElement) => GetPixels32(arrayElement, 0);
 
-        public void SetPixels(Color[] colors, int arrayElement, int miplevel) => Level("Texture2DArray.SetPixels", arrayElement, miplevel).SetPixels(arrayElement, miplevel, colors);
+        public void SetPixels(Color[] colors, int arrayElement, int miplevel) => Level("Texture2DArray.SetPixels", arrayElement, miplevel, write: true).SetPixels(arrayElement, miplevel, colors);
         public void SetPixels(Color[] colors, int arrayElement) => SetPixels(colors, arrayElement, 0);
 
-        public void SetPixels32(Color32[] colors, int arrayElement, int miplevel) => Level("Texture2DArray.SetPixels32", arrayElement, miplevel).SetPixels32(arrayElement, miplevel, colors);
+        public void SetPixels32(Color32[] colors, int arrayElement, int miplevel) => Level("Texture2DArray.SetPixels32", arrayElement, miplevel, write: true).SetPixels32(arrayElement, miplevel, colors);
         public void SetPixels32(Color32[] colors, int arrayElement) => SetPixels32(colors, arrayElement, 0);
 
         public NativeArray<T> GetPixelData<T>(int mipLevel, int element) where T : struct => Level(null, element, mipLevel).View<T>(element, mipLevel);
@@ -772,13 +801,13 @@ namespace UnityEngine
             return m_Pixels;
         }
 
-        LayeredPixels Level(string api, CubemapFace face, int element, int mip)
+        LayeredPixels Level(string api, CubemapFace face, int element, int mip, bool write = false)
         {
             Pixels(api);
             if (face < CubemapFace.PositiveX || face > CubemapFace.NegativeZ) throw new ArgumentException($"Invalid cubemap face {face}.", nameof(face));
             if (element < 0 || element >= m_Count) throw new ArgumentException($"Invalid array element {element}.", nameof(element));
             if (mip < 0 || mip >= m_Pixels.Mips) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
-            LayeredTextures.CheckTexelWrite(m_Pixels, api, name);
+            if (write) LayeredTextures.CheckTexelWrite(m_Pixels, api, name);
             return m_Pixels;
         }
 
@@ -790,10 +819,10 @@ namespace UnityEngine
         public Color32[] GetPixels32(CubemapFace face, int arrayElement) => GetPixels32(face, arrayElement, 0);
 
         public void SetPixels(Color[] colors, CubemapFace face, int arrayElement, int miplevel) =>
-            Level("CubemapArray.SetPixels", face, arrayElement, miplevel).SetPixels(Image(face, arrayElement), miplevel, colors);
+            Level("CubemapArray.SetPixels", face, arrayElement, miplevel, write: true).SetPixels(Image(face, arrayElement), miplevel, colors);
         public void SetPixels(Color[] colors, CubemapFace face, int arrayElement) => SetPixels(colors, face, arrayElement, 0);
         public void SetPixels32(Color32[] colors, CubemapFace face, int arrayElement, int miplevel) =>
-            Level("CubemapArray.SetPixels32", face, arrayElement, miplevel).SetPixels32(Image(face, arrayElement), miplevel, colors);
+            Level("CubemapArray.SetPixels32", face, arrayElement, miplevel, write: true).SetPixels32(Image(face, arrayElement), miplevel, colors);
         public void SetPixels32(Color32[] colors, CubemapFace face, int arrayElement) => SetPixels32(colors, face, arrayElement, 0);
 
         public NativeArray<T> GetPixelData<T>(int mipLevel, CubemapFace face, int element) where T : struct =>
@@ -949,11 +978,11 @@ namespace UnityEngine
             return m_Pixels;
         }
 
-        LayeredPixels Level(string api, int mip)
+        LayeredPixels Level(string api, int mip, bool write = false)
         {
             Pixels(api);
             if (mip < 0 || mip >= m_Pixels.Mips) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
-            LayeredTextures.CheckTexelWrite(m_Pixels, api, name);
+            if (write) LayeredTextures.CheckTexelWrite(m_Pixels, api, name);
             return m_Pixels;
         }
 
@@ -962,9 +991,9 @@ namespace UnityEngine
         public Color32[] GetPixels32(int miplevel) => Level("Texture3D.GetPixels32", miplevel).GetPixels32(0, miplevel);
         public Color32[] GetPixels32() => GetPixels32(0);
 
-        public void SetPixels(Color[] colors, int miplevel) => Level("Texture3D.SetPixels", miplevel).SetPixels(0, miplevel, colors);
+        public void SetPixels(Color[] colors, int miplevel) => Level("Texture3D.SetPixels", miplevel, write: true).SetPixels(0, miplevel, colors);
         public void SetPixels(Color[] colors) => SetPixels(colors, 0);
-        public void SetPixels32(Color32[] colors, int miplevel) => Level("Texture3D.SetPixels32", miplevel).SetPixels32(0, miplevel, colors);
+        public void SetPixels32(Color32[] colors, int miplevel) => Level("Texture3D.SetPixels32", miplevel, write: true).SetPixels32(0, miplevel, colors);
         public void SetPixels32(Color32[] colors) => SetPixels32(colors, 0);
 
         public NativeArray<T> GetPixelData<T>(int mipLevel) where T : struct => Level(null, mipLevel).View<T>(0, mipLevel);
@@ -993,7 +1022,7 @@ namespace UnityEngine
 
         public void SetPixel(int x, int y, int z, Color color, int mipLevel)
         {
-            var pixels = Level("Texture3D.SetPixel", mipLevel);
+            var pixels = Level("Texture3D.SetPixel", mipLevel, write: true);
             int w = pixels.W(mipLevel), h = pixels.H(mipLevel), d = pixels.D(mipLevel);
             if (x < 0 || y < 0 || z < 0 || x >= w || y >= h || z >= d) return;
             pixels.SetPixel(0, mipLevel, (z * h + y) * w + x, color);
