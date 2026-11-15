@@ -74,6 +74,41 @@ class DirectoryIndex:
         return [value for group in self.pool.map(lambda group: [function(item) for item in group], groups)
                 for value in group]
 
+    # Inode reads of a whole cache in parallel before a full walk. A cold full walk of about
+    # 2.3 million directories took 26-37 minutes; stating them all on 64 threads took 132 s.
+    prefetch_workers = 64
+
+    def warm_all(self):
+        """Stat every indexed directory on many threads, so that the walk that follows finds
+        their inodes cached. Only a cache hint: the walk still stats and watches each one."""
+        def touch(group):
+            for path in group:
+                if self.deadline is not None and time.monotonic() > self.deadline:
+                    return
+                try:
+                    os.stat(path)
+                except OSError:
+                    pass
+        started = time.monotonic()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.prefetch_workers) as pool:
+            running, group, count = [], [], 0
+            for (path,) in self.execute('SELECT path FROM directories'):
+                group.append(path)
+                if len(group) == 256:
+                    running.append(pool.submit(touch, group))
+                    count += len(group)
+                    group = []
+                    if len(running) >= 4*self.prefetch_workers:
+                        running.pop(0).result()
+                if self.deadline is not None and time.monotonic() > self.deadline:
+                    break
+            running.append(pool.submit(touch, group))
+            count += len(group)
+            for future in running:
+                future.result()
+        print(f'run-cache index: {count} directories prefetched in {time.monotonic()-started:.0f}s',
+              file=sys.stderr, flush=True)
+
     def warm(self, paths):
         """Read the directories' inodes in parallel, so that serial per-directory work after
         it (a watch, a stat) finds them cached instead of waiting for the disk one by one."""

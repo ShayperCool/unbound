@@ -12,6 +12,35 @@ import slot
 
 
 class IndexTests(unittest.TestCase):
+    def test_prefetch_stats_every_indexed_directory_and_stops_at_the_deadline(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)/'cache'
+            base.mkdir()
+            paths = []
+            for index in range(600):
+                path = base/f'd{index}'
+                path.mkdir()
+                paths.append(path)
+            index = DirectoryIndex(base, seconds=None)
+            index.db.executemany('INSERT INTO directories VALUES (?,?,?)',
+                                 [(str(path), 'stamp', '[]') for path in [*paths, base/'gone']])
+            index.db.commit()
+            seen = []
+            real_stat = os.stat
+            def stat(path, *args, **kwargs):
+                seen.append(str(path))
+                return real_stat(path, *args, **kwargs)
+            with mock.patch('run_cache_index.os.stat', side_effect=stat), \
+                 mock.patch('sys.stderr'):
+                index.warm_all()
+            self.assertEqual(sorted(seen), sorted(str(path) for path in [*paths, base/'gone']))
+            index.deadline = 0
+            seen.clear()
+            with mock.patch('run_cache_index.os.stat', side_effect=stat), mock.patch('sys.stderr'):
+                index.warm_all()
+            self.assertEqual(seen, [])
+            index.close()
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

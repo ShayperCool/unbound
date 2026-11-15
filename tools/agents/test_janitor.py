@@ -402,18 +402,80 @@ class JanitorTests(unittest.TestCase):
             self.assertTrue(self.j.remove(run, kind='run', hours=72))
         self.assertTrue(run.is_dir())
 
-    def test_directory_move_outside_watched_roots_defers_cleanup(self):
+    def test_listed_directory_moved_outside_roots_does_not_block_cleanup(self):
+        # Its contents were listed while watched, so nothing unseen left the view.
         run = self.directory('unbound-validation/runs/probe-20261101-old')
         source = self.cache/'source'
         source.mkdir()
+        (source/'existing.txt').write_text('listed')
         with self.guards():
             self.j.discover()
             self.addCleanup(self.j.watch.close)
             source.rename(self.root/'outside-watched-roots')
             self.j.apply = True
-            with self.assertRaisesRegex(OSError, 'reference directory moved'):
+            self.assertTrue(self.j.remove(run, kind='run', hours=72))
+        self.assertFalse(run.exists())
+
+    def test_known_link_moved_outside_roots_keeps_its_target_and_cleanup_continues(self):
+        target = self.directory('q1/target')
+        other = self.directory('q1/other')
+        (self.cache/'reference').symlink_to(target/'output')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            (self.cache/'reference').rename(self.root/'outside-reference')
+            self.j.apply = True
+            self.assertFalse(self.j.remove(target, kind='task'))
+            self.assertTrue(self.j.remove(other, kind='task'))
+        self.assertTrue(target.exists())
+
+    def test_inspected_new_file_moved_outside_roots_does_not_block_cleanup(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            (self.cache/'temporary').write_text('regular file')
+            self.j.refresh_links()  # poll() sees a regular file
+            (self.cache/'temporary').rename(self.root/'outside-file')
+            self.j.apply = True
+            self.assertTrue(self.j.remove(run, kind='run', hours=72))
+
+    def test_uninspected_new_file_moved_outside_roots_defers_cleanup(self):
+        # Created and moved out before any poll: it could have been a link.
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            (self.cache/'temporary').write_text('regular file')
+            (self.cache/'temporary').rename(self.root/'outside-file')
+            self.j.apply = True
+            with self.assertRaisesRegex(OSError, 'for example: .*temporary'):
                 self.j.remove(run, kind='run', hours=72)
         self.assertTrue(run.is_dir())
+
+    def test_new_directory_moved_outside_before_inspection_defers_cleanup(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            (self.cache/'fresh').mkdir()
+            (self.cache/'fresh').rename(self.root/'outside-fresh')
+            self.j.apply = True
+            with self.assertRaises(janitor.ReferenceChanged):
+                self.j.remove(run, kind='run', hours=72)
+        self.assertTrue(run.is_dir())
+
+    def test_too_many_unverified_names_fail_closed(self):
+        watcher = janitor.ReferenceWatch()
+        self.addCleanup(watcher.close)
+        watcher.add(self.cache)
+        with patch.object(janitor, 'MAX_UNVERIFIED_NAMES', 3):
+            for index in range(5):
+                (self.cache/f'short-{index}').write_text('x')
+                (self.cache/f'short-{index}').unlink()
+            with self.assertRaisesRegex(OSError, 'too many short-lived names'):
+                watcher.poll()
+        self.assertTrue(watcher.broken)
 
     def test_events_beyond_the_kernel_queue_are_kept_between_polls(self):
         # More changes than fs.inotify.max_queued_events arrive while nothing polls (index

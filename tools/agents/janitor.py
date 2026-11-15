@@ -44,6 +44,9 @@ DEFAULT_RUN_SECONDS = 2100
 # Change events the reader thread may hold between polls before monitoring counts as broken,
 # as a kernel queue overflow does (the service's memory limit is 4 GiB).
 MAX_BUFFERED_EVENT_BYTES = 256*2**20
+# Unverified names tracked at most (each a short-lived name gone before it could be inspected);
+# beyond that monitoring counts as broken.
+MAX_UNVERIFIED_NAMES = 2_000_000
 MAX_REDISCOVERIES = 2
 # Keep land's lock independent of a service manager or a historical backlog.
 GATE_HANDOFF_SECONDS = 2
@@ -294,6 +297,9 @@ class ReferenceWatch:
         self.metadata_roots = set(metadata_roots)
         self.metadata_dirty = False
         self.unresolved, self.file_moves = {}, {}
+        # Names that appeared (created or moved in) and were gone before poll() could see what
+        # they were: {directory path: {names}}. Only these can be links nobody has seen.
+        self.unverified, self.unverified_count = {}, 0
         self.broken = False
         # Millions of watched directories on a busy volume fill the kernel's event queue
         # (fs.inotify.max_queued_events) within seconds. A reader thread moves events into
@@ -355,6 +361,45 @@ class ReferenceWatch:
             self.moves = {cookie: source for cookie, source in self.moves.items() if source != old}
         self.directories[descriptor] = directory
 
+    def unverify(self, directory, name):
+        names = self.unverified.setdefault(str(directory), set())
+        if name not in names:
+            names.add(name)
+            self.unverified_count += 1
+            if self.unverified_count > MAX_UNVERIFIED_NAMES:
+                self.broken = True
+                raise ReferenceChanged('too many short-lived names to track; remaining work retained')
+
+    def unverified_under(self, path):
+        """Whether an unverified name is path itself or lies anywhere inside it."""
+        prefix = str(path)
+        return (path.name in self.unverified.get(str(path.parent), ()) or
+                any(key == prefix or key.startswith(prefix+os.sep) for key in self.unverified))
+
+    def settle_moves(self):
+        """Forget unpaired moves that cannot hide an unseen link, and return the others.
+
+        An unpaired move left the watched view (its destination is excluded or outside the scan
+        roots, where links are not protected anyway). What it moved was either seen when its
+        directory was listed (links among it are already protected) or appeared later: then
+        poll() saw its type, or recorded its name as unverified because it was gone by then.
+        Only a move of an unverified name, or of a directory holding one, can take an unseen
+        link out of view."""
+        unsafe = []
+        for cookie, path in list(self.file_moves.items()):
+            if path.name in self.unverified.get(str(path.parent), ()):
+                unsafe.append(path)
+            else:
+                del self.file_moves[cookie]
+        for table in (self.moves, self.unresolved):
+            for key, path in list(table.items()):
+                if self.unverified_under(path):
+                    unsafe.append(path)
+                else:
+                    del table[key]
+                    self.retired.add(path)
+        return unsafe
+
     def relocate(self, source, destination, *, handled=True):
         # A parent rename changes the location of every descendant watch. Rescan
         # the moved tree too: existing relative links may now name new targets.
@@ -363,6 +408,9 @@ class ReferenceWatch:
         if len({previous for _, previous in updates}) != len(updates):
             self.broken = True
             raise ReferenceChanged('ambiguous replacement directory identity; remaining work retained')
+        prefix = str(source)
+        for key in [key for key in self.unverified if key == prefix or key.startswith(prefix+os.sep)]:
+            self.unverified_count -= len(self.unverified.pop(key))
         for descriptor, previous in updates:
             self.directories[descriptor] = destination/previous.relative_to(source)
             if previous == source and handled:
@@ -443,9 +491,12 @@ class ReferenceWatch:
                             elif path.is_dir() and not any(inside(path, p) for p in self.excluded):
                                 self.add(path)
                                 pending.add(path)
+                            elif not os.path.lexists(path):
+                                self.unverify(directory, name)
                         except OSError as error:
                             if not gone(error):
                                 raise
+                            self.unverify(directory, name)
             except BaseException:
                 self.broken = True
                 raise
@@ -464,7 +515,7 @@ def link_target(path):
         return error
 
 
-def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root=None, prune=True):
+def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root=None, prune=True, prefetch=False):
     """Resolve links at any depth, including directory aliases and link chains.
 
     A link within a removal candidate conservatively keeps its target too. We
@@ -482,6 +533,8 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
     index = DirectoryIndex(index_root or roots[0], seconds=seconds)
     join = os.path.join
     try:
+        if prefetch:
+            index.warm_all()
         pending = [str(root) for root in roots if root.exists()]
         while pending:
             batch = pending[-index.batch_size:]
@@ -555,10 +608,10 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                     watcher.invalidated.clear()
         if watcher:
             found.update(watcher.references)
-            if watcher.unresolved or watcher.moves or watcher.file_moves:
+            unsafe = watcher.settle_moves()
+            if unsafe:
                 # Name a few of the moves, so that churn that keeps runs from deleting can be traced.
-                moved = [str(path) for path in [*watcher.unresolved.values(), *watcher.moves.values(),
-                                                *watcher.file_moves.values()]][:5]
+                moved = [str(path) for path in unsafe][:5]
                 raise ReferenceChanged('reference directory moved or link names left the discovered view; '
                                        'remaining work retained; for example: ' + ', '.join(moved))
         if prune:
@@ -649,7 +702,7 @@ class Janitor:
         else:
             self.watch.metadata_roots.update(self.suite_roots)
         links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_budget(),
-                                     watcher=self.watch, index_root=self.cache)
+                                     watcher=self.watch, index_root=self.cache, prefetch=True)
         self.links = getattr(self, 'links', set()) | links
         self.refresh_baseline(force=True)
         self.emit('references_ready', watched_directories=len(self.watch.directories), references=len(self.links))
@@ -747,8 +800,10 @@ class Janitor:
         if self.watch is None:
             return
         pending = self.watch.poll()
-        if pending or self.watch.unresolved or self.watch.moves or self.watch.file_moves:
-            full = bool(self.watch.unresolved or self.watch.moves or self.watch.file_moves)
+        # A pending walk can rediscover moved directories; it settles the moves itself.
+        unsafe = [] if pending else self.watch.settle_moves()
+        if pending or unsafe:
+            full = bool(unsafe)
             roots = self.scan_roots if full else pending
             try:
                 links = reference_paths(roots, excluded=self.excluded, seconds=self.scan_budget(),
