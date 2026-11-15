@@ -224,6 +224,38 @@ fn odd_paths(text: &str) -> bool {
     renamed || climbing_group
 }
 
+/// The packages a manifest depends on under another name (`package = "x"`, `'x'`, a quoted
+/// `"package"` key, a dotted `foo.package`), and whether it holds a `package` key whose value
+/// it cannot read. The `[package]` table's header is no such key.
+fn renamed_packages(manifest: &str) -> (Vec<String>, bool) {
+    let mut out = Vec::new();
+    let mut unsure = false;
+    for (at, _) in manifest.match_indices("package") {
+        let before = manifest[..at].chars().next_back();
+        let after = &manifest[at + "package".len()..];
+        // A key: not part of a longer word, and followed (past a closing quote) by `=`.
+        if before.is_some_and(|c| is_ident(c) || c == '-') || after.starts_with(is_ident) {
+            continue;
+        }
+        let after = after
+            .strip_prefix(['"', '\''])
+            .unwrap_or(after)
+            .trim_start();
+        let Some(value) = after.strip_prefix('=') else {
+            continue;
+        };
+        let value = value.trim_start();
+        match value.chars().next() {
+            Some(quote @ ('"' | '\'')) => match value[1..].split(quote).next() {
+                Some(name) => out.push(name.to_string()),
+                None => unsure = true,
+            },
+            _ => unsure = true,
+        }
+    }
+    (out, unsure)
+}
+
 /// Whether a text starts with the keyword `as`.
 fn is_as(text: &str) -> bool {
     text.strip_prefix("as")
@@ -673,16 +705,20 @@ pub fn producing_sources(
             files.insert(dir.join("Cargo.toml"));
             files.insert(lib_path.clone());
             // A workspace crate depended on under another name (`foo = { package =
-            // "unbound-x", .. }`) is named by paths the reading does not follow: all of it.
-            let manifest = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap_or_default();
-            for (at, _) in manifest.match_indices("package") {
-                let value = manifest[at + "package".len()..].trim_start();
-                if let Some(value) = value.strip_prefix('=')
-                    && let Some(quoted) = value.trim_start().strip_prefix('"')
-                    && let Some(package) = quoted.split('"').next()
-                    && package.starts_with("unbound-")
-                {
-                    changes.push((package.replace('-', "_"), Change::Whole));
+            // "unbound-x", .. }`, here or in the workspace's dependencies) is named by paths
+            // the reading does not follow: all of it.
+            for manifest in [dir.join("Cargo.toml"), root.join("Cargo.toml")] {
+                let text = std::fs::read_to_string(&manifest).unwrap_or_default();
+                let (renamed, unsure) = renamed_packages(&text);
+                if unsure {
+                    changes.push((name.clone(), Change::Whole));
+                }
+                for package in renamed {
+                    let other = package.replace('-', "_");
+                    let other_dir = root.join("crates").join(crate_dir(&other));
+                    if other_dir.join("src/lib.rs").is_file() {
+                        changes.push((other, Change::Whole));
+                    }
                 }
             }
             let module_files = |m: &str| -> io::Result<Vec<PathBuf>> {

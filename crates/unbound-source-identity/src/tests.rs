@@ -508,14 +508,40 @@ fn spaced_paths_and_renamed_dependencies_reach_what_they_name() {
             "{case}"
         );
     }
-    let ws = compiler_and_rules("renamed-dependency");
-    ws.write(
-        "crates/unbound-compiler/Cargo.toml",
-        "[package]\n[dependencies]\nrules = { package = \"unbound-rules\", path = \"../unbound-rules\" }\n",
-    );
-    ws.write(
-        "crates/unbound-compiler/src/fit.rs",
-        "fn f() { rules::Audio; }\n",
-    );
-    assert!(ws.sources("unbound_compiler", &[]).contains(&audio));
+    // Renamed in the crate's manifest (double or single quotes, a quoted key) or in the
+    // workspace's dependencies.
+    for (case, manifest, workspace) in [
+        (
+            "renamed-dependency",
+            "[package]\n[dependencies]\nrules = { package = \"unbound-rules\", path = \"../unbound-rules\" }\n",
+            "",
+        ),
+        (
+            "single-quotes",
+            "[package]\n[dependencies]\nrules = { package = 'unbound-rules', path = '../unbound-rules' }\n",
+            "",
+        ),
+        (
+            "quoted-key",
+            "[package]\n[dependencies]\nrules = { \"package\" = \"unbound-rules\", path = \"../unbound-rules\" }\n",
+            "",
+        ),
+        (
+            "workspace",
+            "[package]\n[dependencies]\nrules.workspace = true\n",
+            "[workspace.dependencies]\nrules = { package = \"unbound-rules\", path = \"crates/unbound-rules\" }\n",
+        ),
+    ] {
+        let ws = compiler_and_rules(case);
+        ws.write("crates/unbound-compiler/Cargo.toml", manifest);
+        ws.write("Cargo.toml", workspace);
+        ws.write(
+            "crates/unbound-compiler/src/fit.rs",
+            "fn f() { rules::Audio; }\n",
+        );
+        assert!(
+            ws.sources("unbound_compiler", &[]).contains(&audio),
+            "{case}"
+        );
+    }
 }
