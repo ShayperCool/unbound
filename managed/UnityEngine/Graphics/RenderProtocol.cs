@@ -70,6 +70,10 @@ namespace Unbound.Runtime
         internal int Dimension;
         /// <summary>TextureWrapMode along W (NativeApi 14).</summary>
         internal int WrapW;
+        /// <summary>A dynamically scaled render texture's size before scaling, which its
+        /// _TexelSize gives (0: Width and Height, which hold the scaled size; NativeApi 81).</summary>
+        internal int LogicalWidth;
+        internal int LogicalHeight;
     }
 
     [StructLayout(LayoutKind.Sequential)]

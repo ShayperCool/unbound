@@ -508,6 +508,8 @@ pub struct GpuTexture {
     pub volume_targets: Vec<(wgpu::TextureView, Option<wgpu::TextureView>)>,
     pub width: u32,
     pub height: u32,
+    /// A dynamically scaled render texture's size before scaling, which its `_TexelSize` gives.
+    pub logical: Option<(u32, u32)>,
     pub format: i32,
     pub mip_count: u32,
     pub render_target: bool,
@@ -1567,6 +1569,7 @@ pub fn upload_texture_with(
         Some(mut e) => {
             e.sampler_key = sampler_key;
             e.depth_compare = t.depth_compare;
+            e.logical = t.logical;
             e.bind_groups = [None, None];
             e
         }
@@ -1827,6 +1830,7 @@ pub fn upload_texture_with(
                 storage_views,
                 width,
                 height,
+                logical: t.logical,
                 format: t.format,
                 mip_count,
                 render_target,
@@ -2028,6 +2032,7 @@ pub fn default_textures(
         depth_bits: 0,
         layers: 1,
         dimension: 2,
+        logical: None,
     };
     use texture_format::{LINEAR_RGBA8, SRGB_RGBA8};
     let mut map = HashMap::new();

@@ -4393,10 +4393,11 @@ impl UnityRenderer {
                 {
                     handle = *h;
                 }
-                // A depth element is the size of its texture.
+                // A depth element is the size of its texture; a dynamically scaled one gives
+                // its size before scaling (tests/projects/nativegfx `dynres.*.texelsize`).
                 textures
                     .get(&handle::split(handle).0)
-                    .map(|t| (t.width, t.height))
+                    .map(|t| t.logical.unwrap_or((t.width, t.height)))
             };
             // A buffer bound by a cbuffer's name: the draw's, the material's, else a global one.
             let buffers = &self.buffers;
@@ -4610,6 +4611,7 @@ impl UnityRenderer {
                 depth_bits: 0,
                 layers: 1,
                 dimension: 2,
+                logical: None,
             };
             // A blue-first source (the screen on such a device) is grabbed into the same storage,
             // so the copy stays a copy of its texels. The texture is rewritten in place only in

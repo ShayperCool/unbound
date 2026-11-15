@@ -168,6 +168,7 @@ fn texture(width: i32, height: i32, format: i32, data: Vec<u8>, filter: i32) -> 
         depth_bits: 0,
         layers: 1,
         dimension: 2,
+        logical: None,
     }
 }
 
@@ -362,6 +363,7 @@ impl Demo {
                 depth_bits: 24,
                 layers: 1,
                 dimension: 2,
+                logical: None,
                 ..texture(160, 120, 0, Vec::new(), 1)
             },
         );

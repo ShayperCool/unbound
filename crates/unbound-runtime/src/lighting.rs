@@ -208,6 +208,7 @@ pub fn load_texture_object(
             depth_bits: 0,
             layers: t.image_count,
             dimension: t.dimension,
+            logical: None,
         },
     );
     Ok(json!({

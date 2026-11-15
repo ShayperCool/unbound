@@ -351,6 +351,10 @@ pub struct TexturePacket {
     pub dimension: i32,
     /// Unity's TextureWrapMode along W, the depth of a Texture3D (`NativeApi` 14).
     pub wrap_w: i32,
+    /// A dynamically scaled render texture's size before scaling, which its `_TexelSize` gives
+    /// (0: `width` and `height`, which hold the scaled size).
+    pub logical_width: i32,
+    pub logical_height: i32,
 }
 
 /// Metadata accompanying an externally owned native texture. Native storage must match it.
@@ -538,6 +542,9 @@ pub mod owned {
         pub layers: i32,
         /// Unity's TextureDimension (2 2D, 4 cube).
         pub dimension: i32,
+        /// A dynamically scaled render texture's size before scaling (its `_TexelSize`); none:
+        /// the texture's own.
+        pub logical: Option<(u32, u32)>,
     }
 
     impl Texture {
@@ -567,6 +574,8 @@ pub mod owned {
                 depth_bits: p.depth_bits,
                 layers: p.layers.max(1),
                 dimension: if p.dimension == 0 { 2 } else { p.dimension },
+                logical: (p.logical_width > 0 && p.logical_height > 0)
+                    .then_some((p.logical_width as u32, p.logical_height as u32)),
             }
         }
     }
@@ -975,7 +984,9 @@ mod tests {
         // The packet itself does not change (NativeApi layout).
         assert_eq!(offset_of!(TexturePacket, format), 8);
         assert_eq!(offset_of!(TexturePacket, wrap_w), 64);
-        assert_eq!(size_of::<TexturePacket>(), 72);
+        assert_eq!(offset_of!(TexturePacket, logical_width), 68);
+        assert_eq!(offset_of!(TexturePacket, logical_height), 72);
+        assert_eq!(size_of::<TexturePacket>(), 80);
     }
 }
 

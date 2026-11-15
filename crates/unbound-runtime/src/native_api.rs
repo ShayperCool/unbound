@@ -88,7 +88,8 @@ use std::ffi::c_void;
 /// 77: the managed engine writes the documents of ScriptedImporter prefabs.
 /// 79: imported textures report the usage mode of HDR radiance stored as bytes.
 /// 80: texture packets distinguish 24-bit depth without stencil from depth with stencil.
-pub const NATIVE_API_VERSION: u32 = 80;
+/// 81: a dynamically scaled render texture's size before scaling at the end of `TexturePacket`.
+pub const NATIVE_API_VERSION: u32 = 81;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
