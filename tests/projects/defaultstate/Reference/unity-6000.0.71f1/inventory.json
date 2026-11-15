@@ -8781,6 +8781,12 @@
     {
       "category": "class",
       "module": "UnityEngine.VFXModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.VFX.VFXExpressionValues"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.VFXModule",
       "status": "static",
       "type": "UnityEngine.VFX.VFXManager"
     },
@@ -8801,6 +8807,18 @@
       "module": "UnityEngine.VFXModule",
       "status": "candidate",
       "type": "UnityEngine.VFX.VFXRenderer"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEngine.VFXModule",
+      "status": "abstract",
+      "type": "UnityEngine.VFX.VFXSpawnerCallbacks"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.VFXModule",
+      "status": "candidate",
+      "type": "UnityEngine.VFX.VFXSpawnerState"
     },
     {
       "category": "component",

@@ -1853,6 +1853,9 @@ public sealed class DefaultStateProbe : MonoBehaviour
                 { Emit(key,"requires-context","a keyword initialized from a shader keyword space");continue; }
                 if (type.FullName == "UnityEngine.Rendering.LocalKeywordSpace" && property != null)
                 { Emit(key,"requires-context","a keyword space obtained from a shader or compute shader");continue; }
+                if (type.FullName == "UnityEngine.VFX.VFXSpawnerState" && property != null
+                    && (property.Name == "spawnCount" || property.Name == "vfxEventAttribute"))
+                { Emit(key,"requires-context","a spawner state filled by VisualEffect.GetSpawnSystemInfo: one made with new has no event attributes");continue; }
                 if (property != null && IsIntegratedDescriptor(type))
                 { Emit(key,"requires-context","an integrated subsystem descriptor returned by SubsystemManager");continue; }
                 Progress(key);

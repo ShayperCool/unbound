@@ -595,3 +595,11 @@ The graphics tier slice adds `UnityEditor.Rendering.TierSettings` (a struct of z
 `UnityEditor.LightingDataAsset` (no public parameterless constructor) to the handwritten
 inventory. Two independent 6000.0.71f1 GPU Editor captures agree on all 14 of their rows,
 appended before the completion row; every earlier row and inventory entry is byte-identical.
+
+The Visual Effect simulation slice adds `VFXSpawnerState`, `VFXExpressionValues` and
+`VFXSpawnerCallbacks`. Two independent 6000.0.71f1 GPU Editor captures agree on their 15 rows,
+appended before the completion row; every earlier row and inventory entry is byte-identical. A
+new `VFXSpawnerState` is finished and loops without end (duration -1, count -1). Its `spawnCount`
+and `vfxEventAttribute` are recorded as `requires-context`: a state made with `new` has no event
+attributes (reading its spawn count stops the Editor), a state filled by
+`VisualEffect.GetSpawnSystemInfo` has them (`tests/projects/vfx`, `spawner state/copy*`).

@@ -13281,4 +13281,19 @@
 {"key":"UnityEditor.Rendering.TierSettings/Field/UnityEditor.Rendering.TierSettings/renderingPath","status":"value","value":"enum:0"}
 {"key":"UnityEditor.Rendering.TierSettings/Field/UnityEditor.Rendering.TierSettings/semitransparentShadows","status":"value","value":"false"}
 {"key":"UnityEditor.Rendering.TierSettings/Field/UnityEditor.Rendering.TierSettings/standardShaderQuality","status":"value","value":"enum:0"}
+{"key":"UnityEngine.VFX.VFXExpressionValues/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEngine.VFX.VFXSpawnerCallbacks/@factory","status":"excluded","value":"abstract"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/@factory","status":"value","value":"class"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/delayAfterLoop","status":"value","value":"0"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/delayBeforeLoop","status":"value","value":"0"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/deltaTime","status":"value","value":"0"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/loopCount","status":"value","value":"-1"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/loopDuration","status":"value","value":"-1"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/loopIndex","status":"value","value":"0"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/loopState","status":"value","value":"enum:0"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/newLoop","status":"value","value":"false"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/playing","status":"value","value":"false"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/spawnCount","status":"requires-context","value":"a spawner state filled by VisualEffect.GetSpawnSystemInfo: one made with new has no event attributes"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/totalTime","status":"value","value":"0"}
+{"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/vfxEventAttribute","status":"requires-context","value":"a spawner state filled by VisualEffect.GetSpawnSystemInfo: one made with new has no event attributes"}
 {"key":"complete","status":"value","value":"1"}
