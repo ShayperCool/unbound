@@ -36,7 +36,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 55;
+pub const FORMAT_VERSION: u32 = 56;
 
 /// The identity of this build's compiler (`src/identity.rs`, made by the build script): the
 /// hash of the sources that decide its output. Cache entries are keyed by it beside
@@ -624,6 +624,10 @@ fn words(w: &[&str]) -> Vec<String> {
 /// Internal variant for CPU-expanded mesh instances. Matrices and property elements are
 /// supplied per draw; the GPU instance input still carries the logical ID.
 pub const MESH_INSTANCE_REPLAY: &str = "UNBOUND_MESH_INSTANCE_REPLAY";
+
+/// The keyword Unbound adds for the variant of a framebuffer-fetching program drawn into a
+/// multisampled target: its fetch reads each fragment's own sample ([`fetch::rewrite`]).
+pub const FETCH_MULTISAMPLED: &str = "UNBOUND_FETCH_MULTISAMPLED";
 const MESH_INSTANCE_MACROS: &str = r#"
 #define INSTANCING_ON 1
 #define UNITY_INSTANCING_ENABLED
@@ -810,6 +814,10 @@ impl ShaderCompiler {
         if keywords.iter().any(|k| k == MESH_INSTANCE_REPLAY) {
             selected.push(MESH_INSTANCE_REPLAY.into());
         }
+        let fetch_multisampled = keywords.iter().any(|k| k == FETCH_MULTISAMPLED);
+        if fetch_multisampled {
+            selected.push(FETCH_MULTISAMPLED.into());
+        }
         let key = (program.clone(), selected.clone(), linear);
         if let Some(c) = self.memory.get(&key) {
             return Ok(c.clone());
@@ -883,7 +891,7 @@ impl ShaderCompiler {
             .any(|k| k == FRAMEBUFFER_FETCH_AVAILABLE);
         let vertex_source = vertex.text;
         let (fragment_source, framebuffer_fetch) = if fetches {
-            fetch::rewrite(&fragment.text, &fragment_entry)
+            fetch::rewrite(&fragment.text, &fragment_entry, fetch_multisampled)
                 .with_context(|| program.file.display().to_string())?
         } else {
             (fragment.text, 0)

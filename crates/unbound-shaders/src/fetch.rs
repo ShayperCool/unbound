@@ -49,7 +49,7 @@ const VERTEX_COLOR: &str = "VCOLOR";
 /// A fragment program preprocessed for a device with framebuffer fetch (its semantics named
 /// again: [`semantics`]) with its entry's `inout` color targets reading [`texture`]s; the color
 /// targets it reads, one bit each.
-pub fn rewrite(source: &str, entry: &str) -> Result<(String, u8)> {
+pub fn rewrite(source: &str, entry: &str, multisampled: bool) -> Result<(String, u8)> {
     let mut text = source.to_string();
     let mut reads = 0u8;
     if let Some(function) = find_definition(&text, entry) {
@@ -114,11 +114,36 @@ pub fn rewrite(source: &str, entry: &str) -> Result<(String, u8)> {
                     "_unbound_FragCoord".into()
                 }
             };
+            // A multisampled target: each sample's fragment reads its own sample (the macOS
+            // Editor's Metal device, shadertargets `fetch.Msaa.squared`).
+            let sample = if multisampled {
+                let own = params.iter().find_map(|p| {
+                    let (declaration, semantic) = p.rsplit_once(':')?;
+                    semantic
+                        .trim()
+                        .eq_ignore_ascii_case("SV_SampleIndex")
+                        .then(|| declaration.split_whitespace().last().map(str::to_string))
+                        .flatten()
+                });
+                Some(own.unwrap_or_else(|| {
+                    list.push("uint _unbound_SampleIndex : SV_SampleIndex".into());
+                    "_unbound_SampleIndex".into()
+                }))
+            } else {
+                None
+            };
             let loads: String = fetched
                 .iter()
                 .map(|(_, ty, name, index)| {
                     let texture = texture(*index);
-                    format!("\n{name} = ({ty}){texture}.Load(int3(int2(({position}).xy), 0));")
+                    match &sample {
+                        Some(sample) => format!(
+                            "\n{name} = ({ty}){texture}.Load(int2(({position}).xy), {sample});"
+                        ),
+                        None => format!(
+                            "\n{name} = ({ty}){texture}.Load(int3(int2(({position}).xy), 0));"
+                        ),
+                    }
                 })
                 .collect();
             for (.., index) in &fetched {
@@ -126,7 +151,14 @@ pub fn rewrite(source: &str, entry: &str) -> Result<(String, u8)> {
             }
             let declarations: String = (0..TARGETS)
                 .filter(|index| reads & 1 << index != 0)
-                .map(|index| format!("Texture2D<float4> {};\n", texture(index)))
+                .map(|index| {
+                    let ty = if multisampled {
+                        "Texture2DMS<float4>"
+                    } else {
+                        "Texture2D<float4>"
+                    };
+                    format!("{ty} {};\n", texture(index))
+                })
                 .collect();
             let mut rewritten = String::with_capacity(text.len() + 256);
             rewritten.push_str(&text[..function.line]);
@@ -352,7 +384,7 @@ mod tests {
         let source = "float4 vert(float4 v : POSITION) : SV_POSITION { return v; }\n\
                       void frag(float4 pos : SV_POSITION, inout half4 ocol : CoLoR)\n\
                       {\n    ocol = ocol * 0.5;\n}\n";
-        let (text, reads) = rewrite(source, "frag").unwrap();
+        let (text, reads) = rewrite(source, "frag", false).unwrap();
         assert_eq!(reads, 1);
         assert!(text.contains("Texture2D<float4> _UnboundFramebufferFetch0;\nvoid frag("));
         assert!(text.contains("out half4 ocol : SV_Target0)"), "{text}");
@@ -368,14 +400,14 @@ mod tests {
     fn the_position_comes_from_a_structure_or_a_parameter_of_its_own() {
         let source = "struct v2f { float4 vertex : SV_POSITION; float2 uv : TEXCOORD0; };\n\
                       void frag(v2f i, inout float4 c : CoLoR0) { c += 1; }\n";
-        let (text, _) = rewrite(source, "frag").unwrap();
+        let (text, _) = rewrite(source, "frag", false).unwrap();
         assert!(
             text.contains("Load(int3(int2((i.vertex).xy), 0))"),
             "{text}"
         );
         let source = "struct v2f { float2 uv : TEXCOORD0; };\n\
                       void frag(v2f i, inout float4 c : CoLoR) { c += 1; }\n";
-        let (text, _) = rewrite(source, "frag").unwrap();
+        let (text, _) = rewrite(source, "frag", false).unwrap();
         assert!(
             text.contains("out float4 c : SV_Target0, float4 _unbound_FragCoord : SV_Position)"),
             "{text}"
@@ -389,7 +421,7 @@ mod tests {
                       o frag(float4 p : SV_POSITION);\n\
                       o frag(float4 p : SV_POSITION) { o r; r.a = 1; r.b = 0; return r; }\n\
                       half4 COLORS; half4 CoLoRful;\n";
-        let (text, reads) = rewrite(source, "frag").unwrap();
+        let (text, reads) = rewrite(source, "frag", false).unwrap();
         assert_eq!(reads, 0);
         assert!(text.contains("half4 a : SV_Target0; half4 b : SV_Target1;"));
         assert!(text.contains("half4 COLORS; half4 CoLoRful;"));
@@ -411,7 +443,7 @@ mod tests {
     fn a_dx9_position_is_the_fragment_position() {
         let source = "struct v2f { float4 pos : POSITION; };\n\
                       void frag(v2f i, inout half4 c : CoLoR) { c *= 2; }\n";
-        let (text, _) = rewrite(source, "frag").unwrap();
+        let (text, _) = rewrite(source, "frag", false).unwrap();
         assert!(text.contains("Load(int3(int2((i.pos).xy), 0))"), "{text}");
         assert!(!text.contains("_unbound_FragCoord"));
     }
@@ -420,14 +452,41 @@ mod tests {
     fn a_structure_of_targets_taken_inout_is_refused() {
         let source = "struct o { half4 a : CoLoR0; half4 b : CoLoR1; };\n\
                       void frag(float4 p : SV_POSITION, inout o r) { }\n";
-        assert!(rewrite(source, "frag").is_err());
+        assert!(rewrite(source, "frag", false).is_err());
+    }
+
+    /// On a multisampled target each fragment reads its own sample: the copies are multisampled
+    /// textures loaded at the fragment's sample index (its own parameter, or one added).
+    #[test]
+    fn multisampled_targets_read_the_fragments_sample() {
+        let source = "void frag(float4 p : SV_POSITION, inout half4 c : CoLoR) { c *= c; }\n";
+        let (text, reads) = rewrite(source, "frag", true).unwrap();
+        assert_eq!(reads, 1);
+        assert!(
+            text.contains("Texture2DMS<float4> _UnboundFramebufferFetch0;\nvoid frag("),
+            "{text}"
+        );
+        assert!(
+            text.contains("uint _unbound_SampleIndex : SV_SampleIndex)"),
+            "{text}"
+        );
+        assert!(
+            text.contains(
+                "c = (half4)_UnboundFramebufferFetch0.Load(int2((p).xy), _unbound_SampleIndex);"
+            ),
+            "{text}"
+        );
+        let own = "void frag(float4 p : SV_POSITION, uint s : SV_SampleIndex, inout half4 c : CoLoR) { }\n";
+        let (text, _) = rewrite(own, "frag", true).unwrap();
+        assert!(text.contains("Load(int2((p).xy), s);"), "{text}");
+        assert!(!text.contains("_unbound_SampleIndex"));
     }
 
     /// Any color target can be read (each from its own copy); a ninth one does not exist.
     #[test]
     fn further_targets_read_their_own_copies() {
         let source = "void frag(float4 p : SV_POSITION, out half4 a : CoLoR0, inout half4 b : CoLoR1, inout half4 c : SV_Target7) { a = b; }\n";
-        let (text, reads) = rewrite(source, "frag").unwrap();
+        let (text, reads) = rewrite(source, "frag", false).unwrap();
         assert_eq!(reads, 0b1000_0010);
         assert!(
             text.contains("Texture2D<float4> _UnboundFramebufferFetch1;\nTexture2D<float4> _UnboundFramebufferFetch7;\nvoid frag("),
@@ -443,6 +502,6 @@ mod tests {
         assert!(text.contains("c = (half4)_UnboundFramebufferFetch7.Load(int3(int2((p).xy), 0));"));
         assert!(!text.contains("_UnboundFramebufferFetch0"));
         let source = "void frag(float4 p : SV_POSITION, inout half4 c : CoLoR8) { }\n";
-        assert!(rewrite(source, "frag").is_err());
+        assert!(rewrite(source, "frag", false).is_err());
     }
 }

@@ -1439,7 +1439,11 @@ fn multisample_color_usage(device: &wgpu::Device, bind_ms: bool) -> wgpu::Textur
     if !bind_ms && unsafe { device.as_hal::<wgpu::hal::api::Vulkan>() }.is_some() {
         return wgpu::TextureUsages::RENDER_ATTACHMENT;
     }
-    wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING
+    // Copied whole (a framebuffer fetch's copy of a multisampled target, its samples kept).
+    wgpu::TextureUsages::RENDER_ATTACHMENT
+        | wgpu::TextureUsages::TEXTURE_BINDING
+        | wgpu::TextureUsages::COPY_SRC
+        | wgpu::TextureUsages::COPY_DST
 }
 
 /// Creates (or rewrites in place, when the shape is unchanged) a texture from a packet.

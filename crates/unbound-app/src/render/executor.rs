@@ -78,8 +78,9 @@ struct GpuMaterial {
     pass_textures: Vec<Option<ProgramTextures>>,
     /// The program variant (and whether it is the error shader's) per (pass, global keyword
     /// set, linear colour space, standalone mesh replay).
-    /// By pass, keyword set, color space and instancing mode ([`InstancingMode`]).
-    variants: rustc_hash::FxHashMap<(usize, u32, bool, InstancingMode), (Option<u32>, bool)>,
+    /// By pass, keyword set, color space, instancing mode ([`InstancingMode`]) and whether the
+    /// target is multisampled (a framebuffer-fetching program's variant reads samples).
+    variants: rustc_hash::FxHashMap<(usize, u32, bool, InstancingMode, bool), (Option<u32>, bool)>,
     /// Its uniform block per program variant (see `CompiledPrograms::material_block`).
     blocks: rustc_hash::FxHashMap<u32, Arc<compiled::MaterialBlock>>,
 }
@@ -4132,7 +4133,8 @@ impl UnityRenderer {
             } else {
                 InstancingMode::None
             };
-            let key = (pass_index, self.keyword_set, linear, mode);
+            let multisampled = target.samples > 1;
+            let key = (pass_index, self.keyword_set, linear, mode, multisampled);
             let cached = self
                 .materials
                 .get(&draw.material)
@@ -4154,13 +4156,28 @@ impl UnityRenderer {
                         InstancingMode::Dots => keywords.push(DOTS_INSTANCING_KEYWORD.into()),
                         InstancingMode::None => {}
                     }
-                    let (mut id, errored) = self.variant_or_error(
+                    let (mut id, mut errored) = self.variant_or_error(
                         &resolved.shader,
                         &pass.program,
                         &keywords,
                         linear,
                         &layout,
                     );
+                    // A program reading its color targets draws into a multisampled one with
+                    // its variant that reads each fragment's own sample.
+                    if multisampled
+                        && !errored
+                        && id.is_some_and(|id| self.compiled.program(id).framebuffer_fetch != 0)
+                    {
+                        keywords.push(unbound_shaders::FETCH_MULTISAMPLED.into());
+                        (id, errored) = self.variant_or_error(
+                            &resolved.shader,
+                            &pass.program,
+                            &keywords,
+                            linear,
+                            &layout,
+                        );
+                    }
                     // A BatchRendererGroup draw of a pass without DOTS instancing (or that does
                     // not compile) is skipped, decided once: its instances would all draw at the
                     // draw's own place.
@@ -4289,20 +4306,22 @@ impl UnityRenderer {
                     });
                     continue;
                 }
-                if target.samples > 1 {
-                    let shader = resolved.shader.clone();
-                    self.warn_once(format!("fetchmsaa{shader}#{pass_index}"), || {
-                        format!(
-                            "shader `{shader}` pass {pass_index} reads a multisampled color target (framebuffer fetch): Unbound reads the resolved color, not the fragment's sample"
-                        )
-                    });
-                }
                 for index in (0..unbound_shaders::fetch::TARGETS).filter(|i| reads & 1 << i != 0) {
+                    // A multisampled target's samples themselves (its color view's texture).
                     let (texture, alpha_one) = match index {
+                        0 if target.samples > 1 => (
+                            Some((target.color.texture().clone(), 0, 0)),
+                            target.alpha_one,
+                        ),
                         0 => (target.texture.clone(), target.alpha_one),
                         _ => {
                             let e = &target.extra[index as usize - 1];
-                            (e.texture.clone(), e.alpha_one)
+                            let texture = if target.samples > 1 {
+                                Some((e.color.texture().clone(), 0, 0))
+                            } else {
+                                e.texture.clone()
+                            };
+                            (texture, e.alpha_one)
                         }
                     };
                     let name = unbound_shaders::fetch::texture(index);
@@ -4527,6 +4546,8 @@ impl UnityRenderer {
             return None;
         }
         let (source, layer, mip) = texture?;
+        // A multisampled source (a framebuffer fetch's target) is copied whole, samples kept.
+        let samples = source.sample_count();
         let format = match source.format().remove_srgb_suffix() {
             wgpu::TextureFormat::Rgba16Float => 2,
             wgpu::TextureFormat::R32Float => 6,
@@ -4560,6 +4581,7 @@ impl UnityRenderer {
             t.width == width
                 && t.height == height
                 && same_storage(t.texture.format(), source.format())
+                && t.samples == samples
         });
         if !fits {
             self.generation += 1;
@@ -4575,14 +4597,14 @@ impl UnityRenderer {
                 wrap_v: 1,
                 wrap_w: 0,
                 aniso_level: 0,
-                render_target: false,
+                render_target: samples > 1,
                 random_write: false,
                 auto_generate_mips: false,
                 defer_mips: false,
                 retain_resolve: false,
-                bind_ms: false,
+                bind_ms: samples > 1,
                 depth_compare: None,
-                samples: 1,
+                samples,
                 depth_bits: 0,
                 layers: 1,
                 dimension: 2,
@@ -4618,7 +4640,10 @@ impl UnityRenderer {
             );
             self.textures.insert(handle, gpu);
         }
-        let destination = self.textures[&handle].texture.clone();
+        let destination = match (samples > 1, &self.textures[&handle].msaa) {
+            (true, Some((samples_view, _))) => samples_view.texture().clone(),
+            _ => self.textures[&handle].texture.clone(),
+        };
         self.set_global_texture(name, handle);
         let texel = [
             1.0 / width as f32,
