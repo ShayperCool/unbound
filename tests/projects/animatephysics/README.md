@@ -30,7 +30,9 @@ more than half as far as the platform:
 
 Not measured: root motion applied to kinematic bodies, non-kinematic animated bodies, Rigidbody2D
 under such an Animator, the legacy Animation component's animatePhysics (which stays a Fixed-update
-switch here and teleports), script writes from the Animator's own callbacks, and other releases.
+switch here and teleports), script writes from the Animator's own callbacks, a script reparenting
+a body onto a transform the Animator wrote in the same frame (Unbound moves it kinematically),
+prefab instances of older-format Animators that override the update mode, and other releases.
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
