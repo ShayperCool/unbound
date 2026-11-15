@@ -677,7 +677,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
         }
         "texture-decode-blocks" => {
             // One level of BC blocks (Unity's TextureFormat `format`) as RGBA8, as GetPixels32
-            // reads it.
+            // reads it; with `floats`, BC6H and ASTC HDR as RGBA floats.
             #[derive(Deserialize)]
             struct Request {
                 format: i32,
@@ -729,14 +729,16 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 }
                 rgba
             } else if r.floats {
-                anyhow::ensure!(
-                    format.is_astc_hdr(),
-                    "float decoding requires ASTC HDR blocks"
-                );
-                unbound_assets::texture::decode_blocks_f32(&blocks, r.width, r.height, format)
-                    .into_iter()
-                    .flat_map(f32::to_le_bytes)
-                    .collect()
+                let floats = if format == unbound_assets::texture::BlockFormat::Bc6h {
+                    unbound_assets::texture::decode_bc6h_f32(&blocks, r.width, r.height)
+                } else {
+                    anyhow::ensure!(
+                        format.is_astc_hdr(),
+                        "float decoding requires BC6H or ASTC HDR blocks"
+                    );
+                    unbound_assets::texture::decode_blocks_f32(&blocks, r.width, r.height, format)
+                };
+                floats.into_iter().flat_map(f32::to_le_bytes).collect()
             } else {
                 unbound_assets::texture::decode_blocks(format, &blocks, r.width, r.height)
             };

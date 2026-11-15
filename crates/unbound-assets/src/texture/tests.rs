@@ -1965,8 +1965,21 @@ fn individual_block_reads_match_bulk_decoding_without_a_pixel_buffer() {
         let block = &payload[..format.block_bytes()];
         let rgba = decode_blocks(format, block, side, side);
         for i in 0..(side * side) as usize {
+            let texel = decode_block_texel(format, block, i).unwrap();
+            if format == BlockFormat::Bc6h {
+                // Floats, unclamped; the bulk bytes are them clamped to 0..1.
+                for c in 0..3 {
+                    let byte = texel[c].clamp(0.0, 1.0) * 255.0;
+                    assert!(
+                        (byte - f32::from(rgba[i * 4 + c])).abs() <= 1.0,
+                        "texel {i}"
+                    );
+                }
+                assert_eq!(texel[3], 1.0);
+                continue;
+            }
             assert_eq!(
-                decode_block_texel(format, block, i).unwrap(),
+                texel,
                 std::array::from_fn(|c| f32::from(rgba[i * 4 + c]) / 255.0),
                 "format {number}, texel {i}"
             );
@@ -2118,4 +2131,73 @@ fn hdr_size_fallbacks_filter_before_encoding_rgb_or_rgbm_bytes() {
             );
         }
     }
+}
+
+/// BC6H texels read one by one keep HDR values above 1 (a script's GetPixel of blocks it wrote).
+#[test]
+fn bc6h_texels_decode_to_unclamped_floats() {
+    let colour = [2.5f32, 0.5, 0.125, 1.0];
+    let level: Vec<u8> = colour
+        .iter()
+        .flat_map(|v| v.to_le_bytes())
+        .collect::<Vec<_>>()
+        .repeat(16);
+    let block = bcn::compress_level_f32(&level, 4, 4);
+    let decoded = bcn::decode_bc6h_f32(&block, 4, 4);
+    for i in 0..16 {
+        let texel = decode_block_texel(BlockFormat::Bc6h, &block, i).unwrap();
+        for c in 0..3 {
+            assert!(
+                (texel[c] - colour[c]).abs() <= colour[c] * 0.01,
+                "{texel:?}"
+            );
+        }
+        assert_eq!(texel[3], 1.0);
+        // A whole level reads the same floats as single texels.
+        assert_eq!(decoded[i * 4..i * 4 + 4], texel);
+    }
+    // A 2x2 level reads its block's top-left texels.
+    assert_eq!(bcn::decode_bc6h_f32(&block, 2, 2)[..4], decoded[..4]);
+}
+
+/// A BC6H import's pixels are what its blocks decode to, as for every other block format: an
+/// HDR value above 1 stays above 1, alpha reads 1.
+#[test]
+fn a_bc6h_imports_pixels_are_its_decoded_blocks() {
+    let mut exr = Vec::new();
+    let image = image::Rgba32FImage::from_fn(8, 8, |x, _| {
+        image::Rgba([1.0 + x as f32 * 0.5, 0.25, 0.125, 0.5])
+    });
+    image::DynamicImage::ImageRgba32F(image)
+        .write_to(
+            &mut std::io::Cursor::new(&mut exr),
+            image::ImageFormat::OpenExr,
+        )
+        .unwrap();
+    let importer = TextureImporter {
+        build_target: "Standalone".into(),
+        compress: true,
+        gamma: false,
+        ..TextureImporter::default()
+    };
+    let meta = unbound_yaml::parse_value(
+        "TextureImporter:\n  mipmaps:\n    sRGBTexture: 0\n  platformSettings:\n  - buildTarget: DefaultTexturePlatform\n    textureFormat: -1\n    textureCompression: 1\n",
+    )
+    .unwrap();
+    let tex = importer
+        .import(Path::new("Assets/sky.exr"), &exr, &meta)
+        .unwrap();
+    let blocks = tex.blocks.as_ref().expect("an HDR import is BC6H");
+    assert_eq!(blocks.format, BlockFormat::Bc6h);
+    for (mip, level) in tex.mips.iter().zip(&blocks.mips) {
+        let decoded: Vec<u8> = bcn::decode_bc6h_f32(level, mip.width, mip.height)
+            .into_iter()
+            .flat_map(f32::to_le_bytes)
+            .collect();
+        assert_eq!(mip.data, decoded);
+    }
+    let red =
+        |x: usize| f32::from_le_bytes(tex.mips[0].data[x * 16..x * 16 + 4].try_into().unwrap());
+    assert!(red(7) > 4.0, "{}", red(7));
+    assert_eq!(&tex.mips[0].data[12..16], &1.0f32.to_le_bytes());
 }

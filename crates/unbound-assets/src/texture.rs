@@ -558,8 +558,7 @@ pub struct ImportedTexture {
     /// [`TextureSettings::hash`].
     pub import_settings_hash: u64,
     /// The texture as the build target stores it, block-compressed ([`storage`]); then
-    /// [`ImportedTexture::mips`] holds what the blocks decode to (BC6H: the float pixels before
-    /// compression).
+    /// [`ImportedTexture::mips`] holds what the blocks decode to (BC6H and ASTC HDR: floats).
     pub blocks: Option<Blocks>,
     /// Encoded Crunch data; `blocks` contains its transcoded GPU blocks.
     #[serde(default)]
@@ -970,7 +969,7 @@ pub fn storage(
 }
 
 /// Compresses `texture` to `format` and replaces its pixels by what the blocks decode to (BC6H
-/// keeps its float colour, Unbound has no float decoding of the blocks, and reads alpha 1).
+/// and ASTC HDR to floats, BC6H with alpha 1).
 fn compress_blocks(
     texture: &mut ImportedTexture,
     format: BlockFormat,
@@ -1025,26 +1024,23 @@ fn compress_blocks(
             })
         })
         .collect();
-    if format == BlockFormat::Bc6h {
-        for mip in &mut texture.mips {
-            for texel in mip.data.chunks_exact_mut(16) {
-                texel[12..].copy_from_slice(&1.0f32.to_le_bytes());
-            }
-        }
-    } else {
-        for (mip, blocks) in texture.mips.iter_mut().zip(&mips) {
-            mip.data = if format.is_astc_hdr() {
-                astc::decode_f32(blocks, mip.width, mip.height, format)
-                    .into_iter()
-                    .flat_map(f32::to_le_bytes)
-                    .collect()
-            } else {
-                bcn::decode_level(format, blocks, mip.width, mip.height)
-            };
-            if cube {
-                let row = row_bytes(mip);
-                flip_rows(&mut mip.data, row);
-            }
+    for (mip, blocks) in texture.mips.iter_mut().zip(&mips) {
+        mip.data = if format == BlockFormat::Bc6h {
+            bcn::decode_bc6h_f32(blocks, mip.width, mip.height)
+                .into_iter()
+                .flat_map(f32::to_le_bytes)
+                .collect()
+        } else if format.is_astc_hdr() {
+            astc::decode_f32(blocks, mip.width, mip.height, format)
+                .into_iter()
+                .flat_map(f32::to_le_bytes)
+                .collect()
+        } else {
+            bcn::decode_level(format, blocks, mip.width, mip.height)
+        };
+        if cube {
+            let row = row_bytes(mip);
+            flip_rows(&mut mip.data, row);
         }
     }
     if format.approximates_editor() {
@@ -1490,7 +1486,8 @@ impl Importer for TextureImporter {
     // 44: float lightmaps and HDR cubemaps take the build target's double LDR or RGBM encoding;
     //     8-bit lightmap mips are filtered as stored.
     // 45: cubemaps are block-compressed as the build target stores them, faces top-down.
-    const VERSION: u32 = 45;
+    // 46: BC6H imports' pixels are what their blocks decode to (floats).
+    const VERSION: u32 = 46;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let settings = self.settings(meta);
@@ -2901,14 +2898,21 @@ pub fn decode_block_texel(format: BlockFormat, block: &[u8], index: usize) -> Op
             f32::from(texels[index * 4 + c]) / 255.0
         }));
     }
+    if format == BlockFormat::Bc6h {
+        // Floats (RGB; alpha 1), unclamped.
+        let mut texels = [0.0f32; 16 * 3];
+        bcn::bc6h_block_f32(block, &mut texels);
+        let [r, g, b] = texels[index * 3..index * 3 + 3].try_into().unwrap();
+        return Some([r, g, b, 1.0]);
+    }
     let mut texels = [[0; 4]; 16];
     bcn::decode_block_into(format, block, false, &mut texels);
     Some(texels[index].map(|v| f32::from(v) / 255.0))
 }
 pub use astc::{decode_f32 as decode_blocks_f32, decode_hdr_block};
 pub use bcn::{
-    BlockFormat, compress_level, compress_runtime_level, decode_level as decode_blocks,
-    decode_level_as_gpu,
+    BlockFormat, compress_level, compress_runtime_level, decode_bc6h_f32,
+    decode_level as decode_blocks, decode_level_as_gpu,
 };
 mod cubemap;
 mod mipmaps;
