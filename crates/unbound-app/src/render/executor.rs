@@ -331,6 +331,34 @@ fn same_storage(a: wgpu::TextureFormat, b: wgpu::TextureFormat) -> bool {
     a.remove_srgb_suffix() == b.remove_srgb_suffix()
 }
 
+/// The handles of `GrabPass` textures: one per name and 8-bit channel order, so a name grabbed
+/// from the blue-first screen and from RGBA8 targets keeps a texture for each (copies between
+/// the two storages are invalid) instead of remaking one at every switch. Handles count down
+/// from `handle::PLAIN_MAX`.
+#[derive(Default)]
+struct GrabSlots {
+    by_name: HashMap<String, [Option<u64>; 2]>,
+    count: u64,
+}
+
+impl GrabSlots {
+    /// The handle of `name`'s texture for a source stored in `format`.
+    fn handle(&mut self, name: &str, format: wgpu::TextureFormat) -> u64 {
+        let order = (format.remove_srgb_suffix() == wgpu::TextureFormat::Bgra8Unorm) as usize;
+        if let Some(handle) = self.by_name.get(name).and_then(|slots| slots[order]) {
+            return handle;
+        }
+        let handle = handle::PLAIN_MAX - self.count;
+        self.count += 1;
+        self.by_name.entry(name.to_string()).or_default()[order] = Some(handle);
+        handle
+    }
+
+    fn contains(&self, handle: u64) -> bool {
+        handle <= handle::PLAIN_MAX && handle > handle::PLAIN_MAX - self.count
+    }
+}
+
 /// Vulkan BGRA imports currently support identical physical storage. Cross-order and
 /// cross-encoding copies need a conversion path; the other backends keep their existing
 /// compatible-format rule.
@@ -586,10 +614,10 @@ pub struct UnityRenderer {
     /// The render target with a depth copy being drawn into (a depth-only one, or one whose depth
     /// element draws sample), whose depth is copied for sampling when drawing moves on.
     depth_target: Option<u64>,
-    /// The pipelines (and their layouts) that copy a depth buffer into a float color texture:
-    /// single-sample and multisampled.
     /// [`Self::repack_texture`]'s textures, oldest first.
     repack_textures: Vec<wgpu::Texture>,
+    /// The pipelines (and their layouts) that copy a depth buffer into a float color texture:
+    /// single-sample and multisampled.
     depth_copy_pipelines: [Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>;
         CopyKind::COUNT * COPY_SAMPLE_CLASSES],
     /// The `CopyDepth` pipelines, by (source multisampled, destination samples, per sample).
@@ -668,8 +696,9 @@ pub struct UnityRenderer {
     multiplied_past_batch_warned: bool,
     traced_frames: u64,
     compiled: compiled::CompiledPrograms,
-    /// `GrabPass` textures by name, and the named ones grabbed in this camera's render.
-    grabs: HashMap<String, u64>,
+    /// `GrabPass` textures by name and storage, and the named ones grabbed in this camera's
+    /// render.
+    grabs: GrabSlots,
     grabbed: HashSet<String>,
 }
 
@@ -791,7 +820,7 @@ impl UnityRenderer {
             multiplied_instances_warned: false,
             multiplied_past_batch_warned: false,
             traced_frames: 0,
-            grabs: HashMap::default(),
+            grabs: GrabSlots::default(),
             grabbed: HashSet::default(),
             compiled,
         }
@@ -4367,8 +4396,7 @@ impl UnityRenderer {
             wgpu::TextureFormat::Rg8Unorm => texture_format::RG8_UNORM,
             f => resources::integer_code(f).unwrap_or(0),
         };
-        let next = handle::PLAIN_MAX - self.grabs.len() as u64;
-        let handle = *self.grabs.entry(name.to_string()).or_insert(next);
+        let handle = self.grabs.handle(name, source.format());
         let fits = self.textures.get(&handle).is_some_and(|t| {
             t.width == width
                 && t.height == height
@@ -4524,7 +4552,7 @@ impl UnityRenderer {
             });
             return None;
         }
-        let screen_end = |handle: u64| handle == 0 || self.grabs.values().any(|&g| g == handle);
+        let screen_end = |handle: u64| handle == 0 || self.grabs.contains(handle);
         let screen_order =
             self.conventions.screen_bgra && (screen_end(source) || screen_end(destination));
         let channel_kind =
@@ -5687,10 +5715,26 @@ mod tests {
     }
 
     /// A grab of the blue-first screen and one of an RGBA8 target of the same size do not share
-    /// a texture (copies between the two storages are invalid).
+    /// a texture (copies between the two storages are invalid); alternating between them keeps
+    /// both.
     #[test]
     fn grabs_keep_their_source_storage() {
         use wgpu::TextureFormat as F;
+        let mut slots = GrabSlots::default();
+        assert!(!slots.contains(handle::PLAIN_MAX));
+        let rgba = slots.handle("_GrabTexture", F::Rgba8Unorm);
+        let bgra = slots.handle("_GrabTexture", F::Bgra8Unorm);
+        assert_ne!(rgba, bgra);
+        for _ in 0..3 {
+            assert_eq!(slots.handle("_GrabTexture", F::Rgba8UnormSrgb), rgba);
+            assert_eq!(slots.handle("_GrabTexture", F::Bgra8UnormSrgb), bgra);
+        }
+        // Other storages share the red-first slot (their format code tells them apart).
+        assert_eq!(slots.handle("_GrabTexture", F::Rgba16Float), rgba);
+        let named = slots.handle("_Named", F::Rgba8Unorm);
+        assert!(![rgba, bgra].contains(&named));
+        assert!(slots.contains(rgba) && slots.contains(bgra) && slots.contains(named));
+        assert!(!slots.contains(named - 1) && !slots.contains(0));
         assert!(same_storage(F::Bgra8Unorm, F::Bgra8UnormSrgb));
         assert!(same_storage(F::Rgba8UnormSrgb, F::Rgba8Unorm));
         assert!(!same_storage(F::Bgra8Unorm, F::Rgba8Unorm));
