@@ -25,8 +25,9 @@ namespace Unbound.Tests
             public void LogException(Exception exception, Object context) => Errors.Add(exception.Message);
         }
 
+        // The stream's CopyTexture command (its opcode, 10) with its source handle.
         static byte[] CopyOf(ulong source) =>
-            new byte[] { GfxStream.CopyTextureOp }.Concat(BitConverter.GetBytes(source)).ToArray();
+            new byte[] { 10 }.Concat(BitConverter.GetBytes(source)).ToArray();
 
         static int Occurrences(byte[] bytes, byte[] part)
         {
