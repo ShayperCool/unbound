@@ -134,8 +134,11 @@ tools/validation/README.md for why that is unsafe).
      run through the suite against the current sheriff baseline when present, preserving its
      existing failures and regression rules. Without a baseline every check must pass.
      Recipe lookup uses the candidate checkout in a guarded process with a printed 10 s budget.
-     Automatic checks run in bounded parallel groups with declared exclusivity barriers and share a printed 600 s wall-clock budget, at most 300 s each. A timeout or
-     exhausted budget fails the gate. Supply a complete declared recipe as explicit `--probe`
+     Automatic checks run in bounded parallel groups with declared exclusivity barriers and share a printed 600 s wall-clock budget, at most 300 s each. When nothing else failed,
+     every check stopped by its time limit or by the exhausted budget runs once more after the
+     batch, at most the engine pool's slot count at a time and with nothing else of the gate
+     beside it, again with at most 300 s; a load-induced timeout therefore does not fail a train.
+     A check over its limit again, or any other failure, fails the gate. Supply a complete declared recipe as explicit `--probe`
      commands, or a suite `--only` command, for longer checks. Exact explicit commands are not
      repeated. A train selects checks for each branch, then unites them by command and release
      under the same total budget, retaining prefix checks during failure isolation. Suite output

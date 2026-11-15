@@ -1493,13 +1493,83 @@ class AutomaticProbeTests(unittest.TestCase):
             self.gate.run_automatic_probes()
         self.assertEqual(step.call_args.kwargs['env'][land.RELEASE_VARIABLE], land.default_release())
 
-    def test_total_budget_exhaustion_fails_before_starting_another_check(self):
+    def test_total_budget_exhaustion_starts_no_further_check_and_runs_it_alone_after(self):
         self.gate.automatic = [('a', 'first', 'fast check'), ('b', 'second', 'fast check')]
-        with mock.patch.object(self.gate, 'step', return_value=0) as step, mock.patch.object(land.time, 'monotonic', side_effect=[0, 0, land.AUTO_PROBE_BUDGET_SECONDS+1]):
-            with self.assertRaises(SystemExit) as error:
-                self.gate.run_automatic_probes()
+        with mock.patch.object(self.gate, 'step', return_value=0) as step, \
+             mock.patch.object(land.time, 'monotonic', side_effect=[0, 0, land.AUTO_PROBE_BUDGET_SECONDS+1]), \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.gate.run_automatic_probes()
+        self.assertEqual([call.args[1] for call in step.call_args_list], ['first', 'second'])
+        retry = step.call_args_list[1]
+        self.assertTrue(retry.args[0].endswith('(retry)'))
+        self.assertEqual(retry.kwargs['timeout'], land.AUTO_PROBE_TIMEOUT_SECONDS)
+        self.assertIn('budget exhausted', (self.gate.log.with_suffix('.automatic')/'002.log').read_text())
+
+    def test_a_check_still_over_its_limit_when_run_again_fails_the_gate(self):
+        self.gate.automatic = [('a', 'first', 'fast check'), ('b', 'second', 'fast check')]
+        codes = {'first': 0, 'second': land.TIME_LIMIT_EXIT}
+        with mock.patch.object(self.gate, 'step', side_effect=lambda name, command, **k: codes[command]) as step, \
+             contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as errors, \
+             self.assertRaises(SystemExit) as error:
+            self.gate.run_automatic_probes()
         self.assertEqual(error.exception.code, 5)
-        self.assertEqual(step.call_count, 1)
+        self.assertEqual(step.call_count, 3)
+        self.assertIn('auto b (fast check, ', errors.getvalue())
+        self.assertIn('longer checks can be supplied with --probe', errors.getvalue())
+        text = self.gate.log.read_text()
+        self.assertIn('1 automatic checks reached a time limit beside 1 other checks', text)
+        self.assertRegex(text, r'land: auto b \(fast check, \S+\) \(retry\): exit 124')
+
+    def test_time_limited_checks_pass_when_run_again_and_get_fresh_suite_labels(self):
+        suite_command = 'python3 tools/agents/suite.py --only b --jobs 1 --label recorded'
+        self.gate.automatic = [('a', 'first', 'fast check'), ('b', suite_command, 'changed files'),
+                               ('c', 'third', 'fast check')]
+        calls = []
+        def step(name, command, **kwargs):
+            calls.append((name, command, kwargs.get('timeout')))
+            return 0 if name.endswith('(retry)') or command == 'first' else land.TIME_LIMIT_EXIT
+        with mock.patch.object(self.gate, 'step', side_effect=step), contextlib.redirect_stdout(io.StringIO()):
+            self.gate.run_automatic_probes()
+        retries = [call for call in calls if call[0].endswith('(retry)')]
+        self.assertEqual(len(retries), 2)
+        first = next(call[1] for call in calls if 'suite.py' in call[1] and not call[0].endswith('(retry)'))
+        again = next(call[1] for call in retries if 'suite.py' in call[1])
+        labels = [land.suite_label(land.suite_arguments(command)) for command in (first, again)]
+        self.assertNotEqual(labels[0], labels[1])
+        self.assertTrue(all(label.startswith('land-') and label.endswith('-b') for label in labels))
+        self.assertEqual(land.without_suite_label(land.suite_arguments(first)),
+                         land.without_suite_label(land.suite_arguments(again)))
+        self.assertTrue(all(call[2] == land.AUTO_PROBE_TIMEOUT_SECONDS for call in retries))
+        logs = self.gate.log.with_suffix('.automatic')
+        self.assertTrue((logs/'002.retry.log').is_file() and (logs/'003.retry.log').is_file())
+
+    def test_other_failures_fail_the_gate_without_running_time_limited_checks_again(self):
+        self.gate.automatic = [('a', 'broken', 'fast check'), ('b', 'slow', 'fast check')]
+        codes = {'broken': 1, 'slow': land.TIME_LIMIT_EXIT}
+        with mock.patch.object(self.gate, 'step', side_effect=lambda name, command, **k: codes[command]) as step, \
+             contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()), \
+             self.assertRaises(SystemExit):
+            self.gate.run_automatic_probes()
+        self.assertEqual(step.call_count, 2)
+
+    def test_time_limited_checks_run_again_at_most_engine_slots_at_a_time(self):
+        self.gate.automatic = [(name, name, 'fast check') for name in 'abcdef']
+        active, peak, lock = 0, 0, threading.Lock()
+        def step(name, command, **kwargs):
+            nonlocal active, peak
+            if not name.endswith('(retry)'):
+                return land.TIME_LIMIT_EXIT
+            with lock:
+                active += 1
+                peak = max(peak, active)
+            time.sleep(.2)
+            with lock:
+                active -= 1
+            return 0
+        with mock.patch.object(land, 'retry_workers', return_value=2), \
+             mock.patch.object(self.gate, 'step', side_effect=step), contextlib.redirect_stdout(io.StringIO()):
+            self.gate.run_automatic_probes()
+        self.assertEqual(peak, 2)
 
     def test_automatic_drivers_overlap_with_separate_logs_and_releases(self):
         checks = []
@@ -1550,9 +1620,12 @@ class AutomaticProbeTests(unittest.TestCase):
              self.assertRaises(SystemExit) as error:
             self.gate.run_automatic_probes()
         self.assertEqual(error.exception.code, 5)
-        self.assertLess(time.monotonic()-began, 3)
-        self.assertFalse((self.root/'third.started').exists())
-        self.assertIn('budget exhausted', (self.gate.log.with_suffix('.automatic')/'003.log').read_text())
+        self.assertLess(time.monotonic()-began, 10)
+        logs = self.gate.log.with_suffix('.automatic')
+        self.assertIn('budget exhausted', (logs/'003.log').read_text())
+        # Each check ran once more alone, still within the per-check limit.
+        for index in ('001', '002', '003'):
+            self.assertIn('exceeded its 0.1s time budget', (logs/f'{index}.retry.log').read_text())
 
     def test_timeout_stops_the_process_tree_and_reports_failure(self):
         command = shlex.join([sys.executable, '-c', 'import time; time.sleep(30)'])
