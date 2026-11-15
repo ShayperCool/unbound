@@ -113,6 +113,42 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
+        [InlineData(LightType.Point, false)]
+        [InlineData(LightType.Spot, false)]
+        [InlineData(LightType.Directional, true)]
+        [InlineData(LightType.Point, true)]
+        [InlineData(LightType.Spot, true)]
+        public void UnmeasuredShadowContextsFailWithAClearDiagnostic(LightType type, bool srp)
+        {
+            string version = ProjectInfo.UnityVersion;
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            var light = new GameObject("light").AddComponent<Light>();
+            var line = new GameObject("line").AddComponent<LineRenderer>();
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                light.type = type;
+                var context = new FrameBuilder.CameraContext { Camera = camera, View = camera.worldToCameraMatrix };
+                using (new FrameBuilder.StripShadowScope(context, true, light, srp))
+                {
+                    var draws = new System.Collections.Generic.List<FrameBuilder.DrawItem>();
+                    var error = Assert.Throws<NotSupportedException>(() => line.CollectDraws(context, draws));
+                    Assert.Contains("supported only for built-in directional lights", error.Message);
+                    Assert.Empty(draws);
+                }
+                Assert.False(context.StripShadowPass);
+                Assert.False(context.StripShadowSrp);
+            }
+            finally
+            {
+                ProjectInfo.UnityVersion = version;
+                Object.DestroyImmediate(line.gameObject);
+                Object.DestroyImmediate(light.gameObject);
+                Object.DestroyImmediate(camera.gameObject);
+            }
+        }
+
+        [Theory]
         [InlineData(0f)]
         [InlineData(-0.2f)]
         [InlineData(float.NaN)]

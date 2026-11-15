@@ -141,6 +141,8 @@ namespace UnityEngine
                 throw new NotSupportedException("Unbound: line and trail shadow geometry requires a measured rendering profile.");
             if (context.StripShadowLight == null)
                 throw new NotSupportedException("Unbound: a line or trail shadow draw requires its culling light.");
+            if (context.StripShadowSrp || context.StripShadowLight.type != LightType.Directional)
+                throw new NotSupportedException("Unbound: line and trail shadow geometry is supported only for built-in directional lights; other light types and SRP shadow lists are unmeasured.");
             return parameters.Alignment == LineAlignment.View ? parameters.ShadowBias : -parameters.ShadowBias;
         }
 

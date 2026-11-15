@@ -25,6 +25,7 @@ namespace Unbound.Runtime
             internal Matrix4x4 View;
             // Geometry generation has its own light frame; shader and sorting views stay unchanged.
             internal bool StripShadowPass;
+            internal bool StripShadowSrp;
             internal Light StripShadowLight;
             internal Matrix4x4 StripShadowView;
             internal Matrix4x4 Projection;
@@ -55,16 +56,19 @@ namespace Unbound.Runtime
         {
             readonly CameraContext m_Context;
             readonly bool m_PreviousPass;
+            readonly bool m_PreviousSrp;
             readonly Light m_PreviousLight;
             readonly Matrix4x4 m_PreviousView;
 
-            internal StripShadowScope(CameraContext context, bool shadows, Light light)
+            internal StripShadowScope(CameraContext context, bool shadows, Light light, bool srp = false)
             {
                 m_Context = context;
                 m_PreviousPass = context.StripShadowPass;
+                m_PreviousSrp = context.StripShadowSrp;
                 m_PreviousLight = context.StripShadowLight;
                 m_PreviousView = context.StripShadowView;
                 context.StripShadowPass = shadows;
+                context.StripShadowSrp = shadows && srp;
                 context.StripShadowLight = light;
                 // Strip casters face the light's unscaled axes, with positive forward z.
                 context.StripShadowView = light != null
@@ -75,6 +79,7 @@ namespace Unbound.Runtime
             public void Dispose()
             {
                 m_Context.StripShadowPass = m_PreviousPass;
+                m_Context.StripShadowSrp = m_PreviousSrp;
                 m_Context.StripShadowLight = m_PreviousLight;
                 m_Context.StripShadowView = m_PreviousView;
             }
@@ -788,7 +793,7 @@ namespace Unbound.Runtime
             var context = ContextOf(data.Camera);
             var stripLight = shadows.HasValue && shadowLight >= 0 && shadowLight < data.Lights.Length
                 ? data.Lights[shadowLight].light : null;
-            using var stripShadows = new StripShadowScope(context, shadows.HasValue, stripLight);
+            using var stripShadows = new StripShadowScope(context, shadows.HasValue, stripLight, srp: true);
             SpriteMasking.Begin(data.Camera, context);
             var sorting = drawing.sortingSettings;
             context.Position = sorting.cameraPosition;

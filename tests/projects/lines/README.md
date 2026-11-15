@@ -327,4 +327,7 @@ the bias sign because that frame reverses depth. Ordinary rendering and BakeMesh
 unbiased. Each renderer reuses distinct meshes for each camera and shadow light; destroying
 either owner releases those meshes. Cascades and cube faces share the light's geometry.
 Spot lights, point lights, multiple cascades and SRP shadow lists remain unmeasured by this
-directional-light diagnostic. No stronger device or pipeline parity is claimed.
+directional-light diagnostic. Strip shadow draws explicitly reject other light types and
+SRP lists; ordinary strip drawing remains available. Multiple cascades share the supported
+directional light frame, but have no capture here. No stronger device or pipeline parity
+is claimed.
