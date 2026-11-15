@@ -759,7 +759,11 @@ namespace UnityEngine
             get => m_EdgeRadius;
             set
             {
-                m_EdgeRadius = Mathf.Max(0f, value);
+                // A new radius takes the current default contact offset, as a new size does
+                // (matches the Unity 6000.0.71f1 Editor, tests/projects/shapes2d).
+                value = Mathf.Max(0f, value);
+                if (m_EdgeRadius != value) CaptureSkin();
+                m_EdgeRadius = value;
                 ShapeChanged();
             }
         }
@@ -1142,7 +1146,11 @@ namespace UnityEngine
             get => m_EdgeRadius;
             set
             {
-                m_EdgeRadius = Mathf.Max(0f, value);
+                // A new radius takes the current default contact offset, as a new size does
+                // (matches the Unity 6000.0.71f1 Editor, tests/projects/shapes2d).
+                value = Mathf.Max(0f, value);
+                if (m_EdgeRadius != value) CaptureSkin();
+                m_EdgeRadius = value;
                 ShapeChanged();
             }
         }

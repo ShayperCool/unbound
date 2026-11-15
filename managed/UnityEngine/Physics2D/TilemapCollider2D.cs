@@ -28,12 +28,31 @@ namespace UnityEngine.Tilemaps
             internal Vector3Int Position;
             internal List<Vector2[]> Outlines;
             internal Matrix4x4 Transform;
+            // What the outlines came from: a change that leaves these as they were does nothing.
+            internal Sprite Sprite;
+            internal Tile.ColliderType Collider;
+            /// <summary>The fixtures the cell made when the shapes were last built (-1: unknown).</summary>
+            internal int ShapeCount = -1;
         }
 
         /// <summary>The cells' shapes in Unity's order: all cells in z, y, x order when built
         /// whole, then each changed cell moves to the end (measured).</summary>
         readonly List<CellShape> m_Cells = new List<CellShape>();
         bool m_Processed;
+
+        /// <summary>One step of the shape hash's history since the shapes were last built: a
+        /// changed cell's removed shapes (last first) or an added cell's new shapes.</summary>
+        struct HashStep
+        {
+            internal List<Shape> Removed;
+            internal CellShape Added;
+        }
+
+        /// <summary>The hash before the pending tile changes and their steps in order; consumed
+        /// when the shapes are built again.</summary>
+        readonly List<HashStep> m_HashSteps = new List<HashStep>();
+        bool m_HashPending;
+        uint m_HashBase;
 
         public TilemapCollider2D() { }
 
@@ -93,14 +112,12 @@ namespace UnityEngine.Tilemaps
             {
                 m_Cells.Clear();
                 foreach (var pair in map.m_Cells) Outline(map, pair.Key, pair.Value);
+                m_HashPending = false;
+                m_HashSteps.Clear();
             }
             else
             {
-                foreach (var p in map.m_ShapeChanges)
-                {
-                    m_Cells.RemoveAll(c => c.Position == p);
-                    if (map.m_Cells.TryGetValue(p, out var cell)) Outline(map, p, cell);
-                }
+                ApplyChanges(map);
             }
             m_PassOutlines.Clear();
             m_Processed = true;
@@ -108,14 +125,107 @@ namespace UnityEngine.Tilemaps
             ShapeChanged();
         }
 
+        /// <summary>
+        /// The changed cells in change order. A change that leaves the cell's sprite, collider
+        /// type and transform as they were does nothing; otherwise the cell's shapes go and its
+        /// new ones come last. The shape hash takes each removed shape (the cell's last first),
+        /// then each added one, on top of its previous value (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/shapes2d).
+        /// </summary>
+        void ApplyChanges(Tilemap map)
+        {
+            // Start from the shapes as built so far; without them the hash restarts when built.
+            W.Flush();
+            var shapes = BuiltShapes();
+            if (shapes != null && !m_HashPending)
+            {
+                m_HashBase = GetShapeHash();
+                m_HashPending = true;
+            }
+            foreach (var p in map.m_ShapeChanges)
+            {
+                int index = m_Cells.FindIndex(c => c.Position == p);
+                map.m_Cells.TryGetValue(p, out var cell);
+                if (index >= 0 && cell != null && SameSource(m_Cells[index], cell)) continue;
+                if (index >= 0)
+                {
+                    var old = m_Cells[index];
+                    if (shapes != null && old.ShapeCount >= 0)
+                    {
+                        int start = 0;
+                        for (int i = 0; i < index; i++) start += m_Cells[i].ShapeCount;
+                        var removed = shapes.GetRange(start, old.ShapeCount);
+                        removed.Reverse();
+                        shapes.RemoveRange(start, old.ShapeCount);
+                        m_HashSteps.Add(new HashStep { Removed = removed });
+                    }
+                    else shapes = null;
+                    m_Cells.RemoveAt(index);
+                }
+                if (cell != null && Outline(map, p, cell)) m_HashSteps.Add(new HashStep { Added = m_Cells[m_Cells.Count - 1] });
+            }
+            if (shapes == null)
+            {
+                m_HashPending = false;
+                m_HashSteps.Clear();
+            }
+        }
+
+        static bool SameSource(CellShape shape, Tilemap.Cell cell) =>
+            ReferenceEquals(shape.Sprite, cell.Sprite) && shape.Collider == cell.Collider && shape.Transform == cell.Transform;
+
+        /// <summary>The built fixtures' shapes, when they are the cells' (each cell's count known).</summary>
+        List<Shape> BuiltShapes()
+        {
+            int total = 0;
+            foreach (var cell in m_Cells)
+            {
+                if (cell.ShapeCount < 0) return null;
+                total += cell.ShapeCount;
+            }
+            if (total != m_Fixtures.Count) return null;
+            var shapes = new List<Shape>(total);
+            foreach (var fixture in m_Fixtures) shapes.Add(fixture.Shape);
+            return shapes;
+        }
+
+        /// <summary>After an incremental pass the hash carries the pass's removed and added shapes;
+        /// any other rebuild recreates every shape from the seed.</summary>
+        internal override void ShapesRebuilt()
+        {
+            m_ShapeHashCarried = false;
+            if (!m_HashPending) return;
+            m_HashPending = false;
+            uint hash = m_HashBase;
+            bool valid = BuiltShapes() != null;
+            foreach (var step in m_HashSteps)
+            {
+                if (!valid) break;
+                if (step.Removed != null)
+                {
+                    foreach (var shape in step.Removed) hash = ShapeHash(shape, hash);
+                    continue;
+                }
+                int index = m_Cells.IndexOf(step.Added);
+                if (index < 0) continue;
+                int start = 0;
+                for (int i = 0; i < index; i++) start += m_Cells[i].ShapeCount;
+                for (int i = 0; i < step.Added.ShapeCount; i++) hash = ShapeHash(m_Fixtures[start + i].Shape, hash);
+            }
+            m_HashSteps.Clear();
+            if (!valid) return;
+            m_CarriedShapeHash = hash;
+            m_ShapeHashCarried = true;
+        }
+
         /// <summary>Each sprite's collider outline, during one pass over the cells.</summary>
         readonly Dictionary<Sprite, Vector2[][]> m_PassOutlines = new Dictionary<Sprite, Vector2[][]>();
 
         /// <summary>The collider outlines of one cell, around its center before its transform:
         /// the cell's shape (Grid), or the sprite's collider outline, else its rectangle (Sprite).</summary>
-        void Outline(Tilemap map, Vector3Int position, Tilemap.Cell cell)
+        bool Outline(Tilemap map, Vector3Int position, Tilemap.Cell cell)
         {
-            if (cell.Tile == null || cell.Collider == Tile.ColliderType.None) return;
+            if (cell.Tile == null || cell.Collider == Tile.ColliderType.None) return false;
             var outlines = new List<Vector2[]>();
             if (cell.Collider == Tile.ColliderType.Grid)
             {
@@ -124,7 +234,7 @@ namespace UnityEngine.Tilemaps
             else
             {
                 var sprite = cell.Sprite;
-                if (sprite == null) return;
+                if (sprite == null) return false;
                 // The physics shape, else the traced outline (measured: tests/projects/spriteoutlines).
                 if (!m_PassOutlines.TryGetValue(sprite, out var traced)) m_PassOutlines[sprite] = traced = sprite.ColliderOutline();
                 foreach (var shape in traced)
@@ -138,7 +248,8 @@ namespace UnityEngine.Tilemaps
                     outlines.Add(new[] { new Vector2(max.x, min.y), max, new Vector2(min.x, max.y), min });
                 }
             }
-            m_Cells.Add(new CellShape { Position = position, Outlines = outlines, Transform = cell.Transform });
+            m_Cells.Add(new CellShape { Position = position, Outlines = outlines, Transform = cell.Transform, Sprite = cell.Sprite, Collider = cell.Collider });
+            return true;
         }
 
         /// <summary>A cell's outline around its center: the cell's rectangle, hexagon or diamond.</summary>
@@ -205,9 +316,12 @@ namespace UnityEngine.Tilemaps
                 BuildLegacyShapes(toBody, shapes);
                 return;
             }
-            int dropped = 0;
+            // A full rebuild takes the cells in z, y, x order; an incremental pass keeps its order.
+            if (!m_HashPending) m_Cells.Sort((a, b) => Tilemap.CellOrder.Instance.Compare(a.Position, b.Position));
+            int dropped = 0, cellIndex = 0;
             foreach (var cell in CellGeometry())
             {
+                int before = shapes.Count;
                 var contours = new List<IReadOnlyList<System.Numerics.Vector2>>(cell.Outlines.Count);
                 foreach (var outline in cell.Outlines)
                 {
@@ -232,6 +346,7 @@ namespace UnityEngine.Tilemaps
                     if (shape == null) { dropped++; continue; }
                     shapes.Add(shape);
                 }
+                m_Cells[cellIndex++].ShapeCount = shapes.Count - before;
             }
             m_ErrorState = dropped > 0 ? ColliderErrorState2D.RemovedShapes : ColliderErrorState2D.None;
         }

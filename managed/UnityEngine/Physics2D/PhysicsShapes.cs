@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unbound.Box2D.Collision.Shapes;
+using Shape = Unbound.Box2D.Collision.Shapes.Shape;
+using XxHash32 = Unbound.Runtime.XxHash32;
 using B2Settings = Unbound.Box2D.Common.Settings;
 using W = Unbound.Runtime.Physics2DWorld;
 
@@ -309,5 +311,179 @@ namespace UnityEngine
             }
             return physicsShapeGroup.shapeCount;
         }
+
+        /// <summary>The hash of a collider without shapes and the seed of the first shape's hash
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/shapes2d).</summary>
+        internal const uint ShapeHashSeed = 0x8f37154bu;
+
+        // Shape type numbers inside the hashed circle and capsule records.
+        const int CircleShapeTypeId = 0;
+        const int CapsuleShapeTypeId = 4;
+
+        /// <summary>
+        /// The hash of the collider's shapes as they are now: each shape's hash is seeded with the
+        /// previous one's, in shape order. A polygon hashes its radius and then its vertices (as the
+        /// rigidbody space holds them, in hull order), a chain likewise; a lone edge leaves the hash
+        /// unchanged. A circle or capsule hashes an eight-byte record header, its type, radius and
+        /// points: the header is zero here, but Unity's differs between Editor processes, so only
+        /// equality within one run is reproducible for those (tests/projects/shapes2d).
+        /// </summary>
+        public uint GetShapeHash()
+        {
+            W.Flush();
+            return m_ShapeHashCarried ? m_CarriedShapeHash : FreshShapeHash();
+        }
+
+        /// <summary>The hash as a full recreation of the shapes leaves it: every shape in order
+        /// from the seed.</summary>
+        internal uint FreshShapeHash()
+        {
+            uint hash = ShapeHashSeed;
+            foreach (var fixture in m_Fixtures) hash = ShapeHash(fixture.Shape, hash);
+            return hash;
+        }
+
+        /// <summary>Set when the shapes changed in place (a tilemap's processed tile changes):
+        /// the hash then carries the removed and added shapes on top of the previous value
+        /// instead of starting from the seed.</summary>
+        internal bool m_ShapeHashCarried;
+        internal uint m_CarriedShapeHash;
+
+        /// <summary>After the fixtures were created again: a full recreation unless a subclass
+        /// carries the hash over.</summary>
+        internal virtual void ShapesRebuilt() => m_ShapeHashCarried = false;
+
+        internal static uint ShapeHash(Shape shape, uint seed)
+        {
+            Span<byte> record = stackalloc byte[32];
+            record.Clear();
+            switch (shape)
+            {
+                case CircleShape circle:
+                    WriteHeader(record, CircleShapeTypeId, circle.Radius);
+                    WriteFloats(record.Slice(16), circle.Position.X, circle.Position.Y);
+                    return XxHash32.Hash(record.Slice(0, 24), seed);
+                case CapsuleShape capsule:
+                    WriteHeader(record, CapsuleShapeTypeId, capsule.Radius);
+                    WriteFloats(record.Slice(16), capsule.P1.X, capsule.P1.Y);
+                    WriteFloats(record.Slice(24), capsule.P2.X, capsule.P2.Y);
+                    return XxHash32.Hash(record, seed);
+                case PolygonShape polygon:
+                    return PointsHash(polygon.Radius, polygon.Vertices.AsSpan(0, polygon.Count), seed);
+                case ChainShape chain:
+                    return PointsHash(chain.Radius, chain.Vertices.AsSpan(0, chain.Count), seed);
+                default:
+                    return seed;
+            }
+        }
+
+        static void WriteHeader(Span<byte> record, int type, float radius)
+        {
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(record.Slice(8), type);
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(record.Slice(12), radius);
+        }
+
+        static void WriteFloats(Span<byte> record, float x, float y)
+        {
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(record, x);
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(record.Slice(4), y);
+        }
+
+        static uint PointsHash(float radius, ReadOnlySpan<System.Numerics.Vector2> points, uint seed)
+        {
+            if (points.Length == 0) return seed;
+            Span<byte> radiusBytes = stackalloc byte[4];
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(radiusBytes, radius);
+            seed = XxHash32.Hash(radiusBytes, seed);
+            return XxHash32.Hash(System.Runtime.InteropServices.MemoryMarshal.AsBytes(points), seed);
+        }
+
+        /// <summary>
+        /// Each shape's bounds (the union of its children's) in rigidbody space, or in world space,
+        /// and their union. Circles and capsules always include their radius; with
+        /// <paramref name="useRadii"/>, polygons and edges include the radius beyond the current
+        /// default contact offset, or their whole radius when it is no larger. The z center is the
+        /// collider transform's, the z extent zero. A collider without shapes returns its
+        /// transform's position with no extent and leaves the list as it was; pending transform
+        /// changes are not synchronized first (tests/projects/shapes2d).
+        /// </summary>
+        public Bounds GetShapeBounds(List<Bounds> bounds, bool useRadii, bool useWorldSpace)
+        {
+            W.Flush();
+            var position = m_GameObject.m_Transform.position;
+            if (m_Fixtures.Count == 0) return new Bounds(position, Vector3.zero);
+            bounds?.Clear();
+            var frame = useWorldSpace ? m_Fixtures[0].Body.GetTransform()
+                : new Unbound.Box2D.Common.Transform(System.Numerics.Vector2.Zero, new Unbound.Box2D.Common.Rotation(0f, 1f));
+            var lower = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            var upper = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            foreach (var fixture in m_Fixtures)
+            {
+                ShapeBounds(fixture.Shape, frame, useRadii, out var min, out var max);
+                bounds?.Add(Box(min, max, position.z));
+                lower = Vector2.Min(lower, min);
+                upper = Vector2.Max(upper, max);
+            }
+            return Box(lower, upper, position.z);
+        }
+
+        static Bounds Box(Vector2 min, Vector2 max, float z)
+        {
+            var box = new Bounds();
+            box.center = new Vector3((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f, z);
+            box.extents = new Vector3((max.x - min.x) * 0.5f, (max.y - min.y) * 0.5f, 0f);
+            return box;
+        }
+
+        static void ShapeBounds(Shape shape, in Unbound.Box2D.Common.Transform frame, bool useRadii, out Vector2 min, out Vector2 max)
+        {
+            ReadOnlySpan<System.Numerics.Vector2> points;
+            float radius;
+            switch (shape)
+            {
+                case CircleShape circle:
+                    points = new ReadOnlySpan<System.Numerics.Vector2>(in circle.Position);
+                    radius = circle.Radius;
+                    break;
+                case CapsuleShape capsule:
+                    points = capsule.Vertices.AsSpan(0, 2);
+                    radius = capsule.Radius;
+                    break;
+                case PolygonShape polygon:
+                    points = polygon.Vertices.AsSpan(0, polygon.Count);
+                    radius = useRadii ? EffectiveRadius(polygon.Radius) : 0f;
+                    break;
+                case ChainShape chain:
+                    points = chain.Vertices.AsSpan(0, chain.Count);
+                    radius = useRadii ? EffectiveRadius(chain.Radius) : 0f;
+                    break;
+                case EdgeShape edge:
+                {
+                    var a = Unbound.Box2D.Common.MathUtils.Mul(frame, edge.Vertex1);
+                    var b = Unbound.Box2D.Common.MathUtils.Mul(frame, edge.Vertex2);
+                    float r = useRadii ? EffectiveRadius(edge.Radius) : 0f;
+                    min = new Vector2(Math.Min(a.X, b.X) - r, Math.Min(a.Y, b.Y) - r);
+                    max = new Vector2(Math.Max(a.X, b.X) + r, Math.Max(a.Y, b.Y) + r);
+                    return;
+                }
+                default:
+                    throw new NotSupportedException("Unknown 2D shape " + shape.GetType().Name);
+            }
+            min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            foreach (var point in points)
+            {
+                var p = Unbound.Box2D.Common.MathUtils.Mul(frame, point);
+                min = new Vector2(Math.Min(min.x, p.X), Math.Min(min.y, p.Y));
+                max = new Vector2(Math.Max(max.x, p.X), Math.Max(max.y, p.Y));
+            }
+            min.x -= radius; min.y -= radius;
+            max.x += radius; max.y += radius;
+        }
+
+        /// <summary>The part of a polygon or edge radius beyond the default contact offset, or the
+        /// whole radius when it is no larger than the offset.</summary>
+        static float EffectiveRadius(float radius) =>
+            radius <= B2Settings.PolygonRadius ? radius : radius - B2Settings.PolygonRadius;
     }
 }

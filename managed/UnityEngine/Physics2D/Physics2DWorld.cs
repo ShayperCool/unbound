@@ -397,6 +397,7 @@ namespace Unbound.Runtime
             }
             if (c.m_AttachedBody != null) c.m_AttachedBody.m_MassDirty = true;
             c.m_Fixtures.Clear();
+            c.m_ShapeHashCarried = false;
         }
 
         /// <summary>Recreates a collider's fixtures on the body it attaches to now.</summary>
@@ -474,6 +475,7 @@ namespace Unbound.Runtime
                 c.m_Fixtures.Add(fixture);
             }
             s_ShapeBuffer.Clear();
+            c.ShapesRebuilt();
             if (rb != null)
             {
                 rb.m_MassDirty = true;
@@ -502,6 +504,7 @@ namespace Unbound.Runtime
                 for (int i = 0; i < c.m_Fixtures.Count; i++) c.m_Fixtures[i].ReplaceGeometry(s_ShapeBuffer[i]);
                 foreach (var fixture in c.m_Fixtures) fixture.CreateProxies(broadPhase, c.m_StaticBody.GetTransform());
                 c.m_ShapeMatrix = matrix;
+                c.m_ShapeHashCarried = false;
                 s_World.HasNewContacts = true;
                 return true;
             }

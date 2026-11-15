@@ -11,8 +11,6 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] public global::UnityEngine.Mesh CreateMesh(bool useBodyPosition, bool useBodyRotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.CreateMesh"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Mesh CreateMesh(bool useBodyPosition, bool useBodyRotation, bool useDelaunay = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.CreateMesh"); return default; }
-        [global::Unbound.Stub] public uint GetShapeHash() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.GetShapeHash"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Bounds GetShapeBounds(global::System.Collections.Generic.List<global::UnityEngine.Bounds> bounds, bool useRadii, bool useWorldSpace) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.GetShapeBounds"); return default; }
         public global::UnityEngine.CompositeCollider2D composite { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.composite"); return default; } }
         internal global::UnityEngine.LayerMask contactMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Collider2D.contactMask"); return default; } }
     }
