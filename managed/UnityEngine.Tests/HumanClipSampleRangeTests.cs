@@ -146,15 +146,18 @@ namespace UnityEngine.Tests
             Assert.Equal(2f * frame, HumanClipImport.SampleTimes(0f, stop, 30f, 1)[2]);
         }
 
-        /// <summary>A converted clip ends at its last key: on frames 1 to 31 of a take at 30 fps
+        /// <summary>A converted clip ends at its last key or event: on frames 1 to 31 of a take at 30 fps
         /// its transform keys end at 1.00000012 (the importer's range), its muscle keys at
         /// 0.99999994, which is its length (tests/projects/modelclips keys.HumanLate); a transform
         /// curve the clip keeps that ends at 1.00000012 keeps that length
-        /// (ends.HumanTwistLate).</summary>
+        /// (ends.HumanTwistLate).
+        /// An event at the range's end (1, the span) ends the clip there too, and lies at its
+        /// normalized end (ends.HumanLateEvents); the settings' stop time agrees when read first.</summary>
         [Theory]
-        [InlineData(false, 0.99999994f)]
-        [InlineData(true, 1.00000012f)]
-        public void AConvertedClipEndsAtItsLastKey(bool keptCurve, float length)
+        [InlineData(false, false, 0.99999994f)]
+        [InlineData(true, false, 1.00000012f)]
+        [InlineData(false, true, 1f)]
+        public void AConvertedClipEndsAtItsLastKey(bool keptCurve, bool endEvent, float length)
         {
             var root = AnimationHumanStreamTests.Humanoid(out var animator);
             m_Created.Add(root);
@@ -185,14 +188,17 @@ namespace UnityEngine.Tests
                     Binding = new CurveBinding { Path = "Extra", Attribute = "m_LocalScale.x", ClassId = EngineTypes.TransformId },
                     Curve = new AnimationCurve(kept),
                 });
+            if (endEvent) clip.AddEvent(new AnimationEvent { time = 1f, functionName = "End" });
             clip.m_HumanAvatar = animator.avatar;
             clip.m_TakeStart = frame;
             clip.m_StartTime = 0f;
             clip.m_StopTime = 1.00000012f;
             clip.m_HasRange = true;
-            // Reading the length converts the clip first.
+            // Reading the settings or the length converts the clip first.
+            Assert.Equal(length, UnityEditor.AnimationUtility.GetAnimationClipSettings(clip).stopTime);
             Assert.Equal(length, clip.length);
             Assert.True(clip.HasHumanCurves);
+            if (endEvent) Assert.Equal(clip.length, clip.events[0].time);
         }
     }
 }

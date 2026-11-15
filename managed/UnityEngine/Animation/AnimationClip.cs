@@ -464,8 +464,16 @@ namespace UnityEngine
         /// <summary>The clip settings' start time (AnimationUtility.GetAnimationClipSettings).</summary>
         internal float SettingsStartTime => m_KeptSettingsRange is { } k && k.Version == m_Version ? k.Start : StartTime;
 
-        /// <summary>The clip settings' stop time: the imported range's stop, else the curves' length.</summary>
-        internal float SettingsStopTime => m_KeptSettingsRange is { } k && k.Version == m_Version ? k.Stop : m_HasRange ? m_StopTime : length;
+        /// <summary>The clip settings' stop time: the imported range's stop (a Humanoid model
+        /// clip's once it is converted, as its <see cref="length"/>), else the curves' length.</summary>
+        internal float SettingsStopTime
+        {
+            get
+            {
+                if (m_HumanAvatar != null && !m_HumanConverted) ConvertHumanCurves();
+                return m_KeptSettingsRange is { } k && k.Version == m_Version ? k.Stop : m_HasRange ? m_StopTime : length;
+            }
+        }
 
         /// <summary>The Euler angles' curve name (localEulerAngles in scripts).</summary>
         const string EulerScriptName = "localEulerAnglesRaw";

@@ -1858,6 +1858,12 @@ impl<'a> Builder<'a> {
             if let Some(node) = motion_node.filter(|_| !no_frames) {
                 floats.extend(self.motion_curves(node, &stack.anim, start, end, fps));
             }
+            // Event and parameter curve times are normalized to the range's span, its end less
+            // its start (frames 1 to 31 at 30 a second: 1, where the last key is at 1.00000012
+            // and a Humanoid clip's last muscle key at 0.99999994; tests/projects/modelclips
+            // events.HumanLateEvents, ends.HumanLateCurve). A range of no frames takes its
+            // length of 1.
+            let span = if empty { length } else { (end - start) as f32 };
             clips.push(ModelClip {
                 file_id: file_id.into(),
                 name: range.name,
@@ -1871,12 +1877,11 @@ impl<'a> Builder<'a> {
                 cycle_offset: range.cycle_offset,
                 curves,
                 floats,
-                // Event and parameter curve times are normalized to the clip's length.
                 events: range
                     .events
                     .iter()
                     .map(|e| ClipEvent {
-                        time: e.time * length,
+                        time: e.time * span,
                         ..e.clone()
                     })
                     .collect(),
@@ -1888,17 +1893,9 @@ impl<'a> Builder<'a> {
                             .keys
                             .iter()
                             .map(|k| CurveKey {
-                                time: k.time * length,
-                                in_slope: if length > 0.0 {
-                                    k.in_slope / length
-                                } else {
-                                    0.0
-                                },
-                                out_slope: if length > 0.0 {
-                                    k.out_slope / length
-                                } else {
-                                    0.0
-                                },
+                                time: k.time * span,
+                                in_slope: if span > 0.0 { k.in_slope / span } else { 0.0 },
+                                out_slope: if span > 0.0 { k.out_slope / span } else { 0.0 },
                                 ..*k
                             })
                             .collect(),
