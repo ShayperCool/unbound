@@ -120,6 +120,38 @@ public class RectMessagesProbe : MonoBehaviour
             });
             thread.Start(); thread.Join(); Put(write ? "thread.set-flag" : "thread.get-flag", result);
         }
+        var deferredParent = Rect("deferred-parent"); var deferredChild = Rect("deferred-child", deferredParent);
+        deferredParent.gameObject.AddComponent<Canvas>().renderMode = RenderMode.WorldSpace;
+        var deferredGroup = deferredParent.gameObject.AddComponent<HorizontalLayoutGroup>();
+        deferredGroup.childControlWidth = deferredGroup.childControlHeight = false;
+        deferredGroup.childForceExpandWidth = deferredGroup.childForceExpandHeight = false;
+        var deferredFit = deferredParent.gameObject.AddComponent<ContentSizeFitter>();
+        deferredFit.horizontalFit = deferredFit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        Canvas.ForceUpdateCanvases();
+        yield return null; yield return null;
+        Put("deferred.initial-parent-size", deferredParent.rect.size);
+        deferredChild.sizeDelta += new Vector2(29, 17);
+        Put("deferred.immediate-parent-size", deferredParent.rect.size);
+        yield return null;
+        Put("deferred.next-parent-size", deferredParent.rect.size);
+        deferredParent.sendChildDimensionsChange = false;
+        deferredChild.sizeDelta += new Vector2(7, 5);
+        Put("deferred.off.immediate-parent-size", deferredParent.rect.size);
+        yield return null;
+        Put("deferred.off.next-parent-size", deferredParent.rect.size);
+        Put("deferred.off.child-size", deferredChild.rect.size);
+        yield return null; yield return null;
+        Put("deferred.settled.initial-parent-size", deferredParent.rect.size);
+        deferredChild.sizeDelta += new Vector2(11, 7);
+        Put("deferred.settled.off.immediate-parent-size", deferredParent.rect.size);
+        yield return null;
+        Put("deferred.settled.off.next-parent-size", deferredParent.rect.size);
+        deferredParent.sendChildDimensionsChange = true;
+        deferredChild.sizeDelta += new Vector2(5, 3);
+        Put("deferred.settled.on.immediate-parent-size", deferredParent.rect.size);
+        yield return null;
+        Put("deferred.settled.on.next-parent-size", deferredParent.rect.size);
+        DestroyImmediate(deferredParent.gameObject);
         Put("complete", 1); output.Dispose(); output = null; EditorApplication.Exit(0);
     }
 }

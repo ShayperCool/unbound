@@ -119,4 +119,15 @@
 {"key":"matrix.sibling-world-final","value":"(-75.00, -50.00, 0.00)"}
 {"key":"thread.get-flag","value":"UnityEngine.UnityException:get_sendChildDimensionsChange can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
 {"key":"thread.set-flag","value":"UnityEngine.UnityException:set_sendChildDimensionsChange can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"deferred.initial-parent-size","value":"(100.00, 80.00)"}
+{"key":"deferred.immediate-parent-size","value":"(100.00, 80.00)"}
+{"key":"deferred.next-parent-size","value":"(129.00, 97.00)"}
+{"key":"deferred.off.immediate-parent-size","value":"(129.00, 97.00)"}
+{"key":"deferred.off.next-parent-size","value":"(136.00, 102.00)"}
+{"key":"deferred.off.child-size","value":"(136.00, 102.00)"}
+{"key":"deferred.settled.initial-parent-size","value":"(136.00, 102.00)"}
+{"key":"deferred.settled.off.immediate-parent-size","value":"(136.00, 102.00)"}
+{"key":"deferred.settled.off.next-parent-size","value":"(136.00, 102.00)"}
+{"key":"deferred.settled.on.immediate-parent-size","value":"(136.00, 102.00)"}
+{"key":"deferred.settled.on.next-parent-size","value":"(152.00, 112.00)"}
 {"key":"complete","value":"1"}
