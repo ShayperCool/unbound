@@ -1,5 +1,10 @@
 {"k":"device","v":"Metal"}
 {"k":"device.name","v":true}
+{"k":"screencopy.texture.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
+{"k":"screencopy.logs","v":["Error: Graphics.CopyTexture called with null source texture","Error: Graphics.CopyTexture called with null destination texture"]}
+{"k":"screencamera.copy.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
+{"k":"screencamera.drawn.pixels","v":["ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8"]}
+{"k":"screencamera.logs","v":["Error: Graphics.CopyTexture called with null source texture","Error: Graphics.CopyTexture called with null destination texture"]}
 {"k":"target.pixels","v":["ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4"]}
 {"k":"camera.pixels","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
 {"k":"second.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
@@ -193,4 +198,11 @@
 {"k":"plugin.state.commitrt.2","v":"state step=commitrt main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
 {"k":"plugin.state.color0.commitrt.2","v":"state.color0 step=commitrt texture=other resolve=none level=0 slice=0 format=70 type=2 size=8x8x1 mips=1 layers=1 samples=1"}
 {"k":"plugin.state.color0.actions.commitrt.2","v":"state.color0.actions step=commitrt load=2 store=4"}
+{"k":"plugin.state.screencamera","v":"state step=screencamera main=1 renderer=16 buffer=1 status=0 queue_match=1 encoder=render"}
+{"k":"plugin.state.color0.screencamera","v":"state.color0 step=screencamera texture=other resolve=none level=0 slice=0 format=80 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.color0.actions.screencamera","v":"state.color0.actions step=screencamera load=1 store=4"}
+{"k":"plugin.state.depth.screencamera","v":"state.depth step=screencamera texture=other format=260 type=2 size=64x64x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.state.depth.actions.screencamera","v":"state.depth.actions step=screencamera load=1 store=4"}
+{"k":"plugin.state.stencil.screencamera","v":"state.stencil step=screencamera texture=other same_as_depth=1"}
+{"k":"plugin.state.stencil.actions.screencamera","v":"state.stencil.actions step=screencamera load=1 store=4"}
 {"k":"complete","v":true}

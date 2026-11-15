@@ -42,10 +42,13 @@ public class NativeGfxMetalProbe : MonoBehaviour
 
     readonly StringBuilder records = new StringBuilder();
     readonly List<string> logs = new List<string>();
+    // The screen copy controls' messages, kept apart from the earlier ones.
+    List<string> screenLogs;
     readonly List<UnityEngine.Object> made = new List<UnityEngine.Object>();
     string output;
     IntPtr callback;
     int eventBase;
+    RenderTexture screenSource;
     RenderTexture target, cameraTarget, secondTarget, executed, executedMsaa, executedCopy, mutated, drawn, again;
     Mesh quad;
     Material colored;
@@ -63,7 +66,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
     static string Q(string s) => "\"" + (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "") + "\"";
     static string B(bool b) => b ? "true" : "false";
     static string L(IEnumerable<string> values) => "[" + string.Join(",", values.Select(Q)) + "]";
-    void OnLog(string condition, string stack, LogType type) => logs.Add(type + ": " + condition);
+    void OnLog(string condition, string stack, LogType type) => (screenLogs ?? logs).Add(type + ": " + condition);
     T Keep<T>(T o) where T : UnityEngine.Object { made.Add(o); return o; }
 
     void Start()
@@ -87,6 +90,11 @@ public class NativeGfxMetalProbe : MonoBehaviour
         RenderTexture.ReleaseTemporary(readback);
         var pixels = cpu.GetPixels32();
         DestroyImmediate(cpu);
+        return Rows(pixels, width, height);
+    }
+
+    static string Rows(Color32[] pixels, int width, int height)
+    {
         var rows = new List<string>();
         for (int y = 0; y < height; y++)
         {
@@ -381,7 +389,71 @@ public class NativeGfxMetalProbe : MonoBehaviour
                     Graphics.ExecuteCommandBuffer(cmd);
                 }
                 break;
+            case 5:
+                ScreenCopies();
+                break;
+            case 6:
+                ScreenCameraCopies();
+                break;
         }
+    }
+
+    /// <summary>The screen (BGRA8Unorm on Metal) and RGBA8 render textures, copied both ways with
+    /// <c>CommandBuffer.CopyTexture</c> from an executed buffer, outside cameras: the screen
+    /// cleared to a color whose red and blue differ, its corner copied into a render texture,
+    /// another render texture's corner copied into the screen at (2, 2).</summary>
+    void ScreenCopies()
+    {
+        screenLogs = new List<string>();
+        var copied = Target("screencopy", 0);
+        Clear(copied, Color.black);
+        screenSource = Target("screensource", 0);
+        Clear(screenSource, new Color(0.25f, 0.5f, 1f, 1f));
+        using (var cmd = new CommandBuffer { name = "screen copy" })
+        {
+            cmd.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
+            cmd.ClearRenderTarget(true, true, new Color(1f, 0.5f, 0.25f, 0.75f));
+            cmd.CopyTexture(BuiltinRenderTextureType.CameraTarget, 0, 0, 0, 0, 8, 8, copied, 0, 0, 0, 0);
+            cmd.CopyTexture(screenSource, 0, 0, 0, 0, 4, 4, BuiltinRenderTextureType.CameraTarget, 0, 0, 2, 2);
+            Graphics.ExecuteCommandBuffer(cmd);
+        }
+        Value("screencopy.texture.pixels", Pixels(copied, 8, 8));
+        Value("screencopy.logs", L(screenLogs));
+        screenLogs = null;
+    }
+
+    /// <summary>The same copies inside a camera drawing to the screen (no HDR, no MSAA), from its
+    /// command buffer after everything: the target the plugin finds there, the camera target's
+    /// corner copied out, another corner copied in at (2, 2), and the camera target drawn into a
+    /// render texture after that.</summary>
+    void ScreenCameraCopies()
+    {
+        screenLogs = new List<string>();
+        var copied = Target("screencameracopy", 0);
+        Clear(copied, Color.black);
+        var drawnBack = Target("screencameradrawn", 0);
+        Clear(drawnBack, Color.black);
+        var camera = new GameObject("screen camera").AddComponent<Camera>();
+        camera.enabled = false;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(1f, 0.5f, 0.25f, 0.75f);
+        camera.cullingMask = 0;
+        camera.allowHDR = false;
+        camera.allowMSAA = false;
+        var cmd = new CommandBuffer { name = "screen camera copy" };
+        cmd.IssuePluginEvent(callback, eventBase + State);
+        cmd.CopyTexture(BuiltinRenderTextureType.CameraTarget, 0, 0, 0, 0, 8, 8, copied, 0, 0, 0, 0);
+        cmd.CopyTexture(screenSource, 0, 0, 0, 0, 4, 4, BuiltinRenderTextureType.CameraTarget, 0, 0, 2, 2);
+        cmd.Blit(BuiltinRenderTextureType.CameraTarget, drawnBack);
+        camera.AddCommandBuffer(CameraEvent.AfterEverything, cmd);
+        NativeGfxMtl_Step("screencamera");
+        camera.Render();
+        Value("screencamera.copy.pixels", Pixels(copied, 8, 8));
+        Value("screencamera.drawn.pixels", Pixels(drawnBack, 8, 8));
+        Value("screencamera.logs", L(screenLogs));
+        screenLogs = null;
+        cmd.Release();
+        DestroyImmediate(camera.gameObject);
     }
 
     void Finish()
@@ -428,7 +500,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
         int code = 0;
         try { Setup(); }
         catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
-        for (int frame = 1; frame <= 4 && code == 0; frame++)
+        for (int frame = 1; frame <= 6 && code == 0; frame++)
         {
             try { Frame(frame); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
