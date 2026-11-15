@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/sortinglookup/run.py check --release $UNBOUND_PROBE_UNITY_VERSION"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/SortingGroup.cs",
+    "managed/UnityEngine/Graphics/Renderer.cs"
+  ]
+}

@@ -5041,11 +5041,8 @@ namespace UnityEngine.Rendering
     }
     unsafe partial class SortingGroup
     {
-        [global::Unbound.Stub] internal static global::UnityEngine.Rendering.SortingGroup GetSortingGroupByIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.GetSortingGroupByIndex"); return default; }
-        internal static int invalidSortingGroupID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.invalidSortingGroupID"); return default; } }
         internal int sortingGroupID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingGroupID"); return default; } }
         internal int sortingGroupOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingGroupOrder"); return default; } }
-        internal int index { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.index"); return default; } }
         internal uint sortingKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SortingGroup.sortingKey"); return default; } }
     }
     [global::Unbound.Stub]

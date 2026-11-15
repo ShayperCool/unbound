@@ -273,7 +273,7 @@ namespace UnityEngine
             set { MainThreadCheck.Check("set_sortingOrder"); m_SortingOrder = (short)Mathf.Clamp(value, short.MinValue, short.MaxValue); Dirty(); }
         }
 
-        internal int sortingGroupID { get; set; }
+        internal int sortingGroupID { get; set; } = SortingGroup.InvalidIndex;
         internal int sortingGroupOrder { get; set; }
 
         // ------------------------------------------------------------------ materials
