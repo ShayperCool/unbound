@@ -280,7 +280,16 @@ after a camera rendered; GL.LoadOrtho's inside a GL.LoadOrtho), the right way up
 matrices do not last past it (a DrawMeshNow after it takes GL's). `compressed.formats` lists the
 TextureFormat values `GraphicsFormatUtility.IsCompressedFormat` answers true for.
 
-Unbound matches 248/284 records with 36 declared residuals (`residuals-metal.json`, each with its
+Windowed (`run.py native --device metal --windowed`, the Editor with its windows, Play mode in
+its Game view, Run In Background set in the copy): `Reference/unity-6000.0.71f1/metal-windowed.jsonl`
+holds the rows other than the plugin's records (whose order varies with the windowed Editor's
+render thread), two captures identical in them. There the screen is the Game view's
+BGRA8Unorm_sRGB texture (607x505 in these captures), `CommandBuffer.CopyTexture` of
+`CameraTarget` is refused as in batch mode, `active.*` match batch mode, and `outside.fresh`,
+`corner` and `after` draw nothing (GL's matrices outside cameras are not identity there). The
+engine run is compared with the batch-mode reference only.
+
+Unbound matches 253/289 records with 36 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a screen
