@@ -23,7 +23,7 @@ namespace UnityEngine.VFX
     /// starting at the graph's values. A read of a name the layout lacks, or with another type,
     /// answers the type's default; such a write does nothing (no message: Unity 6000.0.71f1,
     /// tests/projects/vfx). Not measured: one name with different types in two graphs (a custom
-    /// attribute), where a copy takes the other set's word count clamped to this set.
+    /// attribute); a copy whose value does not fit this set stops there and says so.
     /// </summary>
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public sealed partial class VFXEventAttribute : IDisposable
@@ -102,9 +102,13 @@ namespace UnityEngine.VFX
                 var source = eventAttibute.m_Layout[other];
                 int words = VFXExpressionHelper.GetSizeOfType(source.type);
                 int at = (int)m_Layout[i].offset.element, sourceAt = (int)source.offset.element;
-                // The same name with a larger type in the other layout: what fits this set.
-                words = Math.Min(words, Math.Min(into.Length - at, from.Length - sourceAt));
-                if (words > 0) Array.Copy(from, sourceAt, into, at, words);
+                if (at + words > into.Length || sourceAt + words > from.Length)
+                {
+                    // The same name with a larger type in the other set than this set has room for.
+                    Debug.LogError($"Unbound: VFXEventAttribute.CopyValuesFrom: '{m_Layout[i].name}' is a {source.type} in the other set and does not fit this one; the copy stopped there (two graphs giving one attribute name different types is not measured against the Editor).");
+                    return;
+                }
+                Array.Copy(from, sourceAt, into, at, words);
             }
         }
 

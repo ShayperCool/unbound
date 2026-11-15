@@ -490,6 +490,37 @@ VisualEffect:
             }
         }
 
+        [Fact]
+        public void AnAttributeCopyThatDoesNotFitStopsAndSaysSo()
+        {
+            // "x" is a vector in the first graph and a float at the end of the second.
+            var first = Effect(WithAttributes(5, Attribute("spawnCount", VFXValueType.Float, 0, 5), Attribute("x", VFXValueType.Float3, 1, 5),
+                Attribute("y", VFXValueType.Float, 4, 5)));
+            var second = Effect(WithAttributes(3, Attribute("spawnCount", VFXValueType.Float, 0, 3), Attribute("y", VFXValueType.Float, 1, 3),
+                Attribute("x", VFXValueType.Float, 2, 3)));
+            try
+            {
+                var a = first.CreateVFXEventAttribute();
+                a.SetFloat("spawnCount", 5f);
+                a.SetVector3("x", new Vector3(1f, 2f, 3f));
+                a.SetFloat("y", 7f);
+                var b = second.CreateVFXEventAttribute();
+                b.SetFloat("x", 9f);
+                using var capture = new Capture();
+                b.CopyValuesFrom(a);
+                // What came before the value that does not fit is copied; that value is not.
+                Assert.Equal(5f, b.GetFloat("spawnCount"));
+                Assert.Equal(7f, b.GetFloat("y"));
+                Assert.Equal(9f, b.GetFloat("x"));
+                Assert.Contains("'x' is a Float3 in the other set and does not fit this one", Assert.Single(capture.Errors));
+            }
+            finally
+            {
+                Object.DestroyImmediate(first.gameObject);
+                Object.DestroyImmediate(second.gameObject);
+            }
+        }
+
         sealed class Warnings : ILogHandler, IDisposable
         {
             readonly ILogHandler m_Previous = Debug.unityLogger.logHandler;

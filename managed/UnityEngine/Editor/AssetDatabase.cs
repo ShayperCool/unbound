@@ -244,13 +244,15 @@ namespace UnityEditor
                 case "scene": case "sceneasset": return ext == ".unity";
                 case "texture": case "texture2d": return e.Kind == "texture";
                 case "sprite": return e.Kind == "texture";
-                case "material": return ext == ".mat";
+                case "material": return ext == ".mat" || e.Kind == "vfx" && VisualEffectImports.Imports<Material>(e.Guid);
                 case "audioclip": return e.Kind == "audio";
                 case "animationclip": return ext == ".anim";
                 case "animatorcontroller": case "runtimeanimatorcontroller": return ext == ".controller";
                 case "textasset": return e.Kind == "text";
-                case "shader": return e.Kind == "shader";
-                // Graph files by what they import to: an effect asset, or a subgraph by its extension.
+                case "shader": return e.Kind == "shader" || e.Kind == "vfx" && VisualEffectImports.Imports<Shader>(e.Guid);
+                case "computeshader": return e.Kind == "compute" || e.Kind == "vfx" && VisualEffectImports.Imports<ComputeShader>(e.Guid);
+                // Graph files by what they import to: an effect asset, or a subgraph by its extension
+                // (and, above, the shaders, compute shaders and materials a compiled graph has).
                 case "visualeffectobject": return e.Kind == "vfx";
                 case "visualeffectasset": return e.Kind == "vfx" && ext == UnityEditor.VFX.VisualEffectResource.Extension;
                 case "visualeffectsubgraph": return e.Kind == "vfx" && ext != UnityEditor.VFX.VisualEffectResource.Extension;

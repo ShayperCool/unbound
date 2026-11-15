@@ -162,6 +162,17 @@ namespace Unbound.Runtime
             return file != null ? FindResource(file) : null;
         }
 
+        /// <summary>Whether the graph file of a GUID imports an object of a type (a shader, a
+        /// compute shader, a material): what a type filter over assets asks. The graph is
+        /// imported to know, as the Editor's database knows from its import.</summary>
+        internal static bool Imports<T>(string guid) where T : Object
+        {
+            if (!(AssetDatabaseRuntime.LoadFile(guid)?.MainObject is VisualEffectAsset asset)) return false;
+            foreach (var o in asset.m_Imported)
+                if (o is T) return true;
+            return false;
+        }
+
         internal static bool IsGraphPath(string path) =>
             path.EndsWith(VisualEffectResource.Extension, StringComparison.OrdinalIgnoreCase)
             || path.EndsWith(VisualEffectSubgraphOperator.Extension, StringComparison.OrdinalIgnoreCase)
