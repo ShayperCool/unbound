@@ -118,7 +118,7 @@ namespace UnityEngine.Tests
         /// <summary>A clip's length follows the curves it has. AnimationClip.SetCurve on a component of
         /// a Transform vector property (position, rotation, Euler angles, scale) keys every component
         /// of the vector at the union of their key times, legacy and non-legacy clips alike (a new
-        /// component is 0, or 1 for scale and rotation w); removing one component that way logs the
+        /// component is 0, or 1 for scale); removing one component that way logs the
         /// Editor's error and keeps it; the whole property's name removes the vector; SetEditorCurve
         /// sets and removes single components. Matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/editorui `ClipLength.*` (recorded with the macOS Editor) and
@@ -330,6 +330,45 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(close);
             Object.DestroyImmediate(alone);
             Object.DestroyImmediate(shifted);
+        }
+
+        /// <summary>SetCurve keys a vector's missing components with 1 for scale and 0 for a
+        /// rotation, its w too, and so a component without keys other than the one set; the
+        /// component set without keys is 0 (tests/projects/editorui SetCurveKeys.*.aloneScale,
+        /// .aloneRotation, .emptyScale, .emptyScaleAfter, .emptyRotation).</summary>
+        [Fact]
+        public void SetCurveKeysMissingScaleAt1AndMissingRotationAt0()
+        {
+            float[] Values(AnimationClip c, string head, char axis) => UnityEditor.AnimationUtility.GetEditorCurve(c,
+                UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), head + "." + axis)).keys.Select(k => k.value).ToArray();
+            var rise = AnimationCurve.Linear(0f, 0.5f, 1f, 2f);
+            var rotation = new AnimationClip();
+            rotation.SetCurve("", typeof(Transform), "localRotation.y", rise);
+            foreach (char axis in "xzw") Assert.Equal(new[] { 0f, 0f }, Values(rotation, "m_LocalRotation", axis));
+            var go = new GameObject("Alone");
+            go.transform.localScale = new Vector3(3f, 4f, 5f);
+            rotation.SampleAnimation(go, 0.5f); // (0, 1.25, 0, 0): half a turn about y
+            Near.Equal(1f, Mathf.Abs(go.transform.localRotation.y), 1e-5f);
+            Assert.Equal(new Vector3(3f, 4f, 5f), go.transform.localScale);
+
+            var scale = new AnimationClip();
+            scale.SetCurve("", typeof(Transform), "localScale.y", rise);
+            foreach (char axis in "xz") Assert.Equal(new[] { 1f, 1f }, Values(scale, "m_LocalScale", axis));
+            // The component set without keys afterwards is 0; set first, it takes the default when
+            // another component is keyed.
+            scale.SetCurve("", typeof(Transform), "localScale.x", new AnimationCurve());
+            Assert.Equal(new[] { 0f, 0f }, Values(scale, "m_LocalScale", 'x'));
+            Assert.Equal(new[] { 1f, 1f }, Values(scale, "m_LocalScale", 'z'));
+            var first = new AnimationClip();
+            first.SetCurve("", typeof(Transform), "localScale.x", new AnimationCurve());
+            first.SetCurve("", typeof(Transform), "localScale.y", rise);
+            Assert.Equal(new[] { 1f, 1f }, Values(first, "m_LocalScale", 'x'));
+            var firstRotation = new AnimationClip();
+            firstRotation.SetCurve("", typeof(Transform), "localRotation.x", new AnimationCurve());
+            firstRotation.SetCurve("", typeof(Transform), "localRotation.y", rise);
+            Assert.Equal(new[] { 0f, 0f }, Values(firstRotation, "m_LocalRotation", 'w'));
+            Object.DestroyImmediate(go);
+            foreach (var c in new[] { rotation, scale, first, firstRotation }) Object.DestroyImmediate(c);
         }
 
         /// <summary>Removing the Euler angles by m_LocalEuler leaves the clip settings' range until

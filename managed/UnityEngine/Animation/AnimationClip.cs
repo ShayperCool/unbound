@@ -485,15 +485,17 @@ namespace UnityEngine
         /// rotation, Euler angles, scale) keys every component of that vector at the union of their
         /// key times, legacy and non-legacy clips alike: the times the vector had, then each of the
         /// new component's times not within <see cref="KeyTimeTolerance"/> of a time already
-        /// there (the vector's or the component's own earlier one). A missing
-        /// component is its default value (1 for scale and rotation w, else 0) at every time. Where
+        /// there (the vector's or the component's own earlier one). A missing component, or one
+        /// without keys other than the one set, is <see cref="ComponentDefault"/> at every time; the
+        /// component set with a curve without keys is 0 there. Where
         /// the union starts before a component's first key, that key's in-tangent becomes 0, and
         /// where it ends after its last key, that key's out-tangent; at a time a component lacks it
         /// gets a key on its own curve there (value and slope; on a stepped segment the value it
         /// holds and that infinite slope), or outside its keys their end value with flat slopes; a
         /// component's keys take the times in order (<see cref="KeysAtTimes"/>). Matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/editorui `ClipLength.*` (key times, lengths; the macOS Editor) and
-        /// `SetCurveKeys.*` (every key's value and tangents, a stepped segment, a rotation).
+        /// `SetCurveKeys.*` (every key's value and tangents, a stepped segment, a rotation; the
+        /// components without keys and alone of a scale and a rotation, the macOS Editor).
         /// </summary>
         void KeyVectorTogether(string path, string head, string setAttribute, string[] axes, Type type)
         {
@@ -522,7 +524,7 @@ namespace UnityEngine
                 var c = components[a];
                 if (c == null)
                 {
-                    float value = head == "m_LocalScale" || (head == "m_LocalRotation" && axes[a] == "w") ? 1f : 0f;
+                    float value = ComponentDefault(head);
                     var keys = new Keyframe[times.Count];
                     for (int i = 0; i < keys.Length; i++) keys[i] = new Keyframe(times[i], value);
                     m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForType(path, head + "." + axes[a], type), Curve = new AnimationCurve(keys) });
@@ -535,10 +537,11 @@ namespace UnityEngine
                 Keyframe[] merged;
                 if (own.Length == 0)
                 {
-                    // A curve without keys is 0 at every time (measured for a position; for scale
-                    // and rotation, whose missing components are 1, unmeasured).
+                    // The curve set without keys is 0 at every time, another component without
+                    // keys its default (SetCurveKeys.*.empty, .emptyScale, .emptyScaleAfter).
+                    float value = c == set ? 0f : ComponentDefault(head);
                     merged = new Keyframe[times.Count];
-                    for (int i = 0; i < merged.Length; i++) merged[i] = new Keyframe(times[i], 0f);
+                    for (int i = 0; i < merged.Length; i++) merged[i] = new Keyframe(times[i], value);
                 }
                 else
                 {
@@ -576,6 +579,12 @@ namespace UnityEngine
             }
             m_Curves.InsertRange(Math.Min(at, m_Curves.Count), ordered.Where(c => c != null));
         }
+
+        /// <summary>The value SetCurve keys a Transform vector's missing components with: 1 for
+        /// scale, 0 for the others, a rotation's w too (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/editorui SetCurveKeys.*.aloneScale, .aloneRotation: a rotation keyed by
+        /// its y alone plays as half a turn about y).</summary>
+        static float ComponentDefault(string head) => head == "m_LocalScale" ? 1f : 0f;
 
         /// <summary>Key times within this many seconds of one another count as one when a vector's
         /// components are keyed together (matches the Unity 6000.0.71f1 Editor,
