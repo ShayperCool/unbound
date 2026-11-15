@@ -18,7 +18,7 @@ use bevy::{
     render::{
         Render, RenderApp, RenderSystems,
         renderer::{RenderAdapter, RenderContext, RenderDevice, RenderQueue, ViewQuery},
-        view::ViewTarget,
+        view::{ExtractedWindow, ViewTarget},
     },
 };
 use executor::{Presented, UnityRenderer};
@@ -40,6 +40,31 @@ pub struct UnityRenderPlugin {
     pub shader_compiler: Option<unbound_shaders::Settings>,
 }
 
+/// A capture of the window's image ([`WindowCaptures`]).
+pub struct WindowCapture {
+    /// The PNG file written.
+    pub path: PathBuf,
+    /// Called once the file is written (or failed to be).
+    pub written: Box<dyn FnOnce() + Send>,
+}
+
+/// Captures of the window's image the main world asks for: each is the image the window shows
+/// at the next render, the latest frame presented as on the window (its size, its format, the
+/// fixed Game view's rectangle), drawn apart from the window. A window macOS reports covered
+/// gets no image of its own to read (no surface texture is acquired while it is occluded), so a
+/// capture of the window's own image would be black there.
+#[derive(Resource, Clone, Default)]
+pub struct WindowCaptures(pub Arc<Mutex<Vec<WindowCapture>>>);
+
+impl WindowCaptures {
+    pub fn request(&self, path: PathBuf, written: impl FnOnce() + Send + 'static) {
+        self.0.lock().unwrap().push(WindowCapture {
+            path,
+            written: Box::new(written),
+        });
+    }
+}
+
 /// Shows the latest complete frame on the window.
 #[derive(Resource)]
 struct Presenter {
@@ -52,13 +77,18 @@ struct Presenter {
     params: [Option<wgpu::Buffer>; 2],
     /// What this frame presents.
     current: Option<(wgpu::RenderPipeline, wgpu::BindGroup, (u32, u32), bool)>,
+    /// The window's size and image format this frame.
+    output: Option<((u32, u32), wgpu::TextureFormat)>,
 }
 
 impl Plugin for UnityRenderPlugin {
     fn build(&self, app: &mut App) {
+        let captures = WindowCaptures::default();
+        app.insert_resource(captures.clone());
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
         };
+        render_app.insert_resource(captures);
         let mut schedule = Schedule::new(UnityFrameGraph);
         schedule.set_build_settings(ScheduleBuildSettings {
             auto_insert_apply_deferred: false,
@@ -68,7 +98,9 @@ impl Plugin for UnityRenderPlugin {
             .add_schedule(schedule)
             .add_systems(
                 Render,
-                prepare_present.in_set(RenderSystems::PrepareResources),
+                (prepare_present, capture_window)
+                    .chain()
+                    .in_set(RenderSystems::PrepareResources),
             )
             .add_systems(UnityFrameGraph, encode_present);
     }
@@ -120,24 +152,34 @@ impl Plugin for UnityRenderPlugin {
             sampler,
             params: [None, None],
             current: None,
+            output: None,
         });
     }
 }
 
-/// Picks the frame to show and its present pipeline and bind group.
-fn prepare_present(presenter: Option<ResMut<Presenter>>, views: Query<&ViewTarget>) {
+/// Picks the frame to show and its present pipeline and bind group, for the window's image
+/// format (its surface's, viewed as sRGB as the window's camera views it), known also while the
+/// window is covered.
+fn prepare_present(
+    presenter: Option<ResMut<Presenter>>,
+    windows: Query<&ExtractedWindow, With<bevy::window::PrimaryWindow>>,
+) {
     let Some(mut presenter) = presenter else {
         return;
     };
     let presenter = &mut *presenter;
     presenter.current = None;
-    let Some(format) = views
-        .iter()
-        .next()
-        .and_then(ViewTarget::out_texture_view_format)
+    presenter.output = None;
+    let Ok(window) = windows.single() else {
+        return;
+    };
+    let Some(format) = window.swap_chain_texture_view_format.or(window
+        .swap_chain_texture_format
+        .map(|f| f.add_srgb_suffix()))
     else {
         return;
     };
+    presenter.output = Some(((window.physical_width, window.physical_height), format));
     let Some(frame) = presenter.latest.lock().unwrap().clone() else {
         return;
     };
@@ -213,9 +255,27 @@ fn encode_present(
         multiview_mask: None,
     });
     let size = target.main_texture().size();
-    let rect = presentation_rect((size.width, size.height), *screen, *fixed_game_view);
-    let width = size.width as f32;
-    let height = size.height as f32;
+    draw_present(
+        &mut pass,
+        (pipeline, bind_group),
+        (size.width, size.height),
+        *screen,
+        *fixed_game_view,
+    );
+}
+
+/// Draws the presented frame into a pass on an output of `output` pixels: the whole output, or
+/// the fixed Game view's rectangle of it.
+fn draw_present(
+    pass: &mut wgpu::RenderPass,
+    (pipeline, bind_group): (&wgpu::RenderPipeline, &wgpu::BindGroup),
+    output: (u32, u32),
+    screen: (u32, u32),
+    fixed_game_view: bool,
+) {
+    let rect = presentation_rect(output, screen, fixed_game_view);
+    let width = output.0 as f32;
+    let height = output.1 as f32;
     let x = rect[0].round_ties_even().clamp(0.0, width);
     let y = rect[1].round_ties_even().clamp(0.0, height);
     let w = rect[2].min(width - x);
@@ -227,6 +287,160 @@ fn encode_present(
     pass.set_pipeline(pipeline);
     pass.set_bind_group(0, bind_group, &[]);
     pass.draw(0..3, 0..1);
+}
+
+/// Draws the window captures asked for since the last render ([`WindowCaptures`]): the frame
+/// presented, as on the window, into a texture of the window's size and image format, read
+/// back and written as PNG off the render thread. Before the first frame they wait.
+fn capture_window(presenter: Option<Res<Presenter>>, captures: Res<WindowCaptures>) {
+    let Some(presenter) = presenter else {
+        return;
+    };
+    let (Some((pipeline, bind_group, screen, fixed_game_view)), Some((size, format))) =
+        (&presenter.current, presenter.output)
+    else {
+        return;
+    };
+    let pending = std::mem::take(&mut *captures.0.lock().unwrap());
+    if pending.is_empty() {
+        return;
+    }
+    let device = presenter.device.wgpu_device();
+    let (width, height) = (size.0.max(1), size.1.max(1));
+    let extent = wgpu::Extent3d {
+        width,
+        height,
+        depth_or_array_layers: 1,
+    };
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("unbound window capture"),
+        size: extent,
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+        view_formats: &[],
+    });
+    let row_bytes = (width * 4).next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+    let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("unbound window capture"),
+        size: u64::from(row_bytes) * u64::from(height),
+        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("unbound window capture"),
+    });
+    {
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("unbound window capture"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &view,
+                depth_slice: None,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
+        draw_present(
+            &mut pass,
+            (pipeline, bind_group),
+            (width, height),
+            *screen,
+            *fixed_game_view,
+        );
+    }
+    encoder.copy_texture_to_buffer(
+        texture.as_image_copy(),
+        wgpu::TexelCopyBufferInfo {
+            buffer: &buffer,
+            layout: wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(row_bytes),
+                rows_per_image: Some(height),
+            },
+        },
+        extent,
+    );
+    presenter.queue.submit([encoder.finish()]);
+    let mapped = buffer.clone();
+    buffer
+        .slice(..)
+        .map_async(wgpu::MapMode::Read, move |result| {
+            // Encoding PNGs is no work for the thread that polls the device.
+            std::thread::spawn(move || {
+                let image = result.map_err(anyhow::Error::from).and_then(|()| {
+                    let data = mapped
+                        .slice(..)
+                        .get_mapped_range()
+                        .map_err(|e| anyhow::anyhow!("{e}"))?;
+                    rgba_rows(&data, width, height, row_bytes, format)
+                });
+                for capture in pending {
+                    match image
+                        .as_ref()
+                        .map_err(|e| anyhow::anyhow!("{e:#}"))
+                        .and_then(|image| write_png(image, &capture.path))
+                    {
+                        Ok(()) => {
+                            tracing::info!("screenshot written to {}", capture.path.display())
+                        }
+                        Err(e) => tracing::error!(
+                            "writing the screenshot {}: {e:#}",
+                            capture.path.display()
+                        ),
+                    }
+                    (capture.written)();
+                }
+            });
+        });
+}
+
+/// A window image read back (rows `row_bytes` apart, RGBA or BGRA, 8 bits) as an RGBA image.
+fn rgba_rows(
+    data: &[u8],
+    width: u32,
+    height: u32,
+    row_bytes: u32,
+    format: wgpu::TextureFormat,
+) -> anyhow::Result<image::RgbaImage> {
+    use wgpu::TextureFormat as F;
+    let bgra = match format {
+        F::Bgra8Unorm | F::Bgra8UnormSrgb => true,
+        F::Rgba8Unorm | F::Rgba8UnormSrgb => false,
+        other => anyhow::bail!("unsupported window image format {other:?}"),
+    };
+    let mut rgba = Vec::with_capacity((width * height * 4) as usize);
+    for row in data.chunks(row_bytes as usize).take(height as usize) {
+        for px in row[..(width * 4) as usize].as_chunks::<4>().0 {
+            let [r, g, b] = if bgra {
+                [px[2], px[1], px[0]]
+            } else {
+                [px[0], px[1], px[2]]
+            };
+            rgba.extend_from_slice(&[r, g, b, 255]);
+        }
+    }
+    image::RgbaImage::from_raw(width, height, rgba)
+        .ok_or_else(|| anyhow::anyhow!("the window image's size does not match its data"))
+}
+
+fn write_png(image: &image::RgbaImage, path: &std::path::Path) -> anyhow::Result<()> {
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
+    }
+    image.save_with_format(path, image::ImageFormat::Png)?;
+    Ok(())
 }
 
 /// Presentation follows host resizes even when rendering retains an older screen frame.

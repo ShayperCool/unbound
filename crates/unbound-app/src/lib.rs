@@ -25,10 +25,7 @@ use bevy::{
         mouse::{AccumulatedMouseMotion, MouseScrollUnit, MouseWheel},
     },
     prelude::*,
-    render::{
-        camera::CameraRenderGraph,
-        view::window::screenshot::{Screenshot, ScreenshotCaptured},
-    },
+    render::camera::CameraRenderGraph,
     window::{
         CursorGrabMode, CursorIcon, CursorOptions, CustomCursor, CustomCursorImage, ExitCondition,
         PresentMode, PrimaryWindow, SystemCursorIcon, WindowCloseRequested, WindowEvent,
@@ -308,6 +305,7 @@ fn drive(
     motion: Res<AccumulatedMouseMotion>,
     mut cursors: Query<(Entity, &mut CursorOptions), With<PrimaryWindow>>,
     mut images: ResMut<Assets<Image>>,
+    captures: Res<render::WindowCaptures>,
     mut commands: Commands,
     mut exit: MessageWriter<AppExit>,
 ) {
@@ -325,9 +323,7 @@ fn drive(
             settings.screenshot_requested = true;
             let path = settings.screenshot.clone().unwrap();
             let saved = settings.saved.clone();
-            capture(&mut commands, path, move || {
-                saved.store(true, Ordering::SeqCst)
-            });
+            captures.request(path, move || saved.store(true, Ordering::SeqCst));
         }
         return;
     }
@@ -569,7 +565,7 @@ fn drive(
     for (_, path) in settings.snapshots.iter().filter(|(at, _)| *at == frame) {
         let pending = settings.pending.clone();
         pending.fetch_add(1, Ordering::SeqCst);
-        capture(&mut commands, path.clone(), move || {
+        captures.request(path.clone(), move || {
             pending.fetch_sub(1, Ordering::SeqCst);
         });
     }
@@ -659,54 +655,6 @@ fn finish_run(
         driver.stop();
         exit.write(AppExit::Success);
     }
-}
-
-/// Captures the window's next presented image to a PNG file, then calls `written`.
-fn capture(commands: &mut Commands, path: PathBuf, written: impl Fn() + Send + Sync + 'static) {
-    commands.spawn(Screenshot::primary_window()).observe(
-        move |captured: On<ScreenshotCaptured>| {
-            match save_png(&captured.image, &path) {
-                Ok(()) => tracing::info!("screenshot written to {}", path.display()),
-                Err(e) => tracing::error!("writing the screenshot: {e:#}"),
-            }
-            written();
-        },
-    );
-}
-
-/// Writes a captured window image (RGBA or BGRA, 8 bits) as PNG.
-fn save_png(image: &Image, path: &std::path::Path) -> Result<()> {
-    use bevy::render::render_resource::TextureFormat;
-    let width = image.width();
-    let height = image.height();
-    let data = image
-        .data
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("the screenshot has no data"))?;
-    let format = image.texture_descriptor.format;
-    let mut rgba = Vec::with_capacity((width * height * 4) as usize);
-    match format {
-        TextureFormat::Bgra8Unorm | TextureFormat::Bgra8UnormSrgb => {
-            for px in data.as_chunks::<4>().0 {
-                rgba.extend_from_slice(&[px[2], px[1], px[0], 255]);
-            }
-        }
-        TextureFormat::Rgba8Unorm | TextureFormat::Rgba8UnormSrgb => {
-            for px in data.as_chunks::<4>().0 {
-                rgba.extend_from_slice(&[px[0], px[1], px[2], 255]);
-            }
-        }
-        other => anyhow::bail!("unsupported screenshot format {other:?}"),
-    }
-    if let Some(parent) = path.parent()
-        && !parent.as_os_str().is_empty()
-    {
-        std::fs::create_dir_all(parent)?;
-    }
-    let buffer = image::RgbaImage::from_raw(width, height, rgba)
-        .ok_or_else(|| anyhow::anyhow!("the screenshot's size does not match its data"))?;
-    buffer.save_with_format(path, image::ImageFormat::Png)?;
-    Ok(())
 }
 
 /// Makes host display answers available to Awake/OnEnable before the window is created.
