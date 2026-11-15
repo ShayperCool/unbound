@@ -7,12 +7,12 @@ Component controls include AudioDistortionFilter and AudioChorusFilter on source
 mono input clips and listeners. The listener controls retain the upstream Master
 sink as well as the processed device output.
 
-The canonical profile contains 163 cases and eleven independent sessions per rate, declared by
+The canonical profile contains 175 cases and twelve independent sessions per rate, declared by
 `live.sections()`. Each session begins with a fresh Editor or engine process.
 The device output includes preceding mixers' tails inside that session, so the
 same session boundaries are part of both recording and replay. The merged
 capture records these case lists in `sessions`; every earlier sample is retained.
-The seven original sessions retain all 10,223,827 checked values per rate. The four appended lifecycle sessions add 5,800,054 values from independently agreeing Editor repeats. See [live component histories](LIFECYCLE.md). Separate
+The seven original sessions retain all 10,223,827 checked values per rate. The four appended lifecycle sessions add 5,800,054 values from independently agreeing Editor repeats. See [live component histories](LIFECYCLE.md). The appended `echo_delays` session adds 1,179,648 values; see [Echo delay changes](#echo-delay-changes). Separate
 public parameter/time traces of the timed Pitch control agree across another 96
 fields per rate; `parameter_trace.py` checks them exactly during engine replay.
 
@@ -65,3 +65,20 @@ every sample with the original 2e-5 absolute plus 2e-4 relative bounds, and reco
 both a strict report and a separate one-device-PCM-step gate report. No float-sink
 slack or sample limits are added. Reports and both independent repeats remain in
 the cache. Existing static and spatial references are unchanged.
+
+## Echo delay changes
+
+The `echo_delays` session changes the delay of a running Echo: AudioEchoFilter on a
+stereo source, on mono input and on the listener, and the AudioMixer Echo through an
+exposed parameter. Changes follow the main schedule (buffers 6, 12, 13 and 18), so the
+buffer-13 submission arrives while the buffer-12 change is still crossfading. They cover a
+decrease (37 to 11 ms), increases within the history (300 ms), just past it (498 ms)
+and well past it (800 ms), a mixer delay of 20.52 ms that rounds to a different
+eight-frame boundary than truncation would, and a component delay of 20.52 ms. One control
+submits a delay during a crossfade and changes `wetMix` five buffers later.
+
+| Basis | Contract or observation |
+| --- | --- |
+| Documented, Unity 6000.0 | The [Echo component](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioEchoFilter.html), [AudioEchoFilter.delay](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioEchoFilter-delay.html) and the [Echo effect](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioEchoEffect.html) define the delay in milliseconds. They specify no transition when it changes. |
+| Measured, Unity 6000.0.71f1, this offline profile | The history is a ring of whole half-seconds holding at least 128 frames beyond the delay. A delay change keeps it: the read position moves, and over 2048 frames the previous tap fades out linearly while the new one fades in; the feedback path hears the blend. A delay submitted during that crossfade is not applied, and the next submission of any parameter of that unit applies it. A delay beyond the ring's headroom moves the whole ring into a larger one that ends at the write position, fades its oldest 128 frames in, and reads silence where nothing was written yet. The delay rounds to whole frames before the eight-frame boundary; the component setter keeps whole milliseconds. `Compat.MixerEffectTransitionsMeasured` selects this rule; other releases keep restarting the history empty. |
+

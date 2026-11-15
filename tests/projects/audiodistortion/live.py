@@ -44,6 +44,7 @@ SECTION_ENDS = (
     ('lifecycle_controls', 'life_echo_stopwait_shot'),
     ('lifecycle_swaps', 'life_swap_listener'),
     ('filter_slews', 'life_lowpass_cutoff_near_mono'),
+    ('echo_delays', 'echo_delay_round'),
 )
 
 

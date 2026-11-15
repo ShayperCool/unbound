@@ -191,6 +191,18 @@ public class LiveEffectProbe : MonoBehaviour
         new LiveCase("life_highpass_cutoff_down", "HighPass", "cutoffFrequency", 17000f, 1700f, "life_parameter"),
         new LiveCase("life_highpass_resonance", "HighPass", "resonance", 1f, 9f, "life_parameter", "cutoffFrequency=1700"),
         new LiveCase("life_lowpass_cutoff_near_mono", "LowPass", "cutoffFrequency", 1700f, 1720f, "life_parameter_mono"),
+        new LiveCase("life_echo_delay_down", "Echo", "delay", 37f, 11f, "life_parameter"),
+        new LiveCase("life_echo_delay_up", "Echo", "delay", 37f, 300f, "life_parameter"),
+        new LiveCase("life_echo_delay_edge", "Echo", "delay", 37f, 498f, "life_parameter"),
+        new LiveCase("life_echo_delay_beyond", "Echo", "delay", 37f, 800f, "life_parameter"),
+        new LiveCase("life_echo_delay_down_mono", "Echo", "delay", 37f, 11f, "life_parameter_mono"),
+        new LiveCase("life_output_echo_delay_down", "Echo", "delay", 37f, 11f, "life_out_parameter"),
+        new LiveCase("life_output_echo_delay_beyond", "Echo", "delay", 37f, 800f, "life_out_parameter"),
+        new LiveCase("echo_delay_set", "Echo", "Delay", 37f, 11f, "set"),
+        new LiveCase("echo_delay_set_beyond", "Echo", "Delay", 37f, 800f, "set"),
+        new LiveCase("life_echo_delay_round", "Echo", "delay", 37f, 20.52f, "life_parameter"),
+        new LiveCase("life_echo_delay_pending", "Echo", "delay", 37f, 11f, "life_echo_pending"),
+        new LiveCase("echo_delay_round", "Echo", "Delay", 37f, 20.52f, "set"),
     };
     const BindingFlags Flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
     static bool Engine => Environment.GetEnvironmentVariable("EFFECT_PROBE_ENGINE") == "1";
@@ -356,10 +368,16 @@ public class LiveEffectProbe : MonoBehaviour
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, c.Key+".f32"))))
             using (var master = new BinaryWriter(File.Create(Path.Combine(output, c.Key+".master.f32")))) {
                 for (int block = 0; block < Blocks; block++) {
-                    if (lifecycle) {
+                    if (c.Mode == "life_echo_pending") {
+                        // A delay submitted during the crossfade, then an unrelated Echo parameter.
+                        var echo = (AudioEchoFilter)component;
+                        if (block == 6) echo.delay = c.Changed;
+                        else if (block == 7) echo.delay = c.Initial;
+                        else if (block == 12) echo.wetMix = .5f;
+                    } else if (lifecycle) {
                         if (block == 6 || block == 12 || block == 13 || block == 18) {
                             bool changed = block == 6 || block == 13;
-                            if (c.Mode.StartsWith("life_parameter")) SetComponent(component, c.Parameter, changed ? c.Changed : c.Initial);
+                            if (c.Mode.StartsWith("life_parameter") || c.Mode == "life_out_parameter") SetComponent(component, c.Parameter, changed ? c.Changed : c.Initial);
                             else if (swap) { swap.enabled = changed; component.enabled = !changed; }
                             else if (c.Mode.StartsWith("life_enabled") || c.Mode == "life_out_enabled") component.enabled = !changed;
                             else if (c.Mode.StartsWith("life_listener")) source.bypassListenerEffects = changed;
