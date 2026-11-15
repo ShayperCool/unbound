@@ -219,16 +219,18 @@ cameras here look straight at them), and where a draw of many quads is split int
 
 ## A built asset
 
-The authoring step builds an AssetBundle with the `Basic` graph's asset
-(`Assets/StreamingAssets/VfxProbe/vfxgraphs`: the compiled graph, without the graph file; the
-probe's own script is compiled for the Editor only, since the build compiles the project's
-scripts for a player). The probe loads it (`bundle/*`): the bundle and the asset's name in it,
+The authoring step builds an AssetBundle with the asset of a graph of its own
+(`Assets/BundleGraphs/Bundled.vfx`: a rate that is exposed, an output textured with one of the
+probe's images, since an output left at its default would have the package's texture built in)
+into `Assets/StreamingAssets/VfxProbe/vfxgraphs`: the compiled graph, without the graph file.
+The probe's own script is compiled for the Editor only, since the build compiles the project's
+scripts for a player. The probe loads it (`bundle/*`): the bundle and the asset's name in it,
 the asset (an object of its own, not the project's), its events and exposed properties, and an
 effect that uses it (its systems, and at frames 3 and 20 whether it is culled and awake).
 
 Known residuals (`residuals.json`): Unbound loads the built asset as a live object with its
-name, but does not read its compiled graph yet, so its events, the effect's systems and the
-effect's state differ; the load says so.
+name, but does not read its compiled graph yet, so its events and exposed properties, the
+effect's systems and the effect's state differ; the load says so.
 
 ## Not covered yet
 

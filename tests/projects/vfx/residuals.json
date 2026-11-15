@@ -4,6 +4,7 @@
  ],
  "The compiled graph of a built VisualEffectAsset (an AssetBundle's, a player's) is not read yet: the asset loads as a live object with its name and answers as an asset without a graph, so an effect that uses it has no systems and does nothing; the load says that the class's data is not read (follow-up: read built assets' runtime data; their generated shaders come compiled for the build's graphics device)": [
   "bundle/asset/events",
+  "bundle/asset/exposed",
   "bundle/effect/systems",
   "bundle/effect/f003",
   "bundle/effect/f020"

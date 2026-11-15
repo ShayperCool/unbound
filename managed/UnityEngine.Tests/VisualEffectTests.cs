@@ -24,7 +24,8 @@ namespace UnityEngine.Tests
             public readonly List<string> Errors = new List<string>();
             public Capture() { Debug.unityLogger.logHandler = this; }
             public void Dispose() { Debug.unityLogger.logHandler = m_Previous; }
-            public void LogException(Exception exception, Object context) { }
+            public int Exceptions;
+            public void LogException(Exception exception, Object context) => Exceptions++;
             public void LogFormat(LogType type, Object context, string format, params object[] args)
             {
                 if (type == LogType.Error) Errors.Add(string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args));
@@ -540,10 +541,18 @@ VisualEffect:
                 // A class whose own constructor makes its engine object loads as before (a
                 // mesh's may not be run as a script's constructor).
                 const string meshYaml = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!43 &4300000\nMesh:\n  m_Name: Shape\n";
-                var meshFile = ObjectGraphBuilder.Build(Unbound.Tests.UnityYaml.Parse(meshYaml), "shape.asset", null, ObjectGraphBuilder.Kind.Asset, null);
-                var mesh = Assert.IsType<Mesh>(meshFile.Objects[4300000]);
+                Mesh mesh;
+                using (var log = new Capture())
+                {
+                    var meshFile = ObjectGraphBuilder.Build(Unbound.Tests.UnityYaml.Parse(meshYaml), "shape.asset", null, ObjectGraphBuilder.Kind.Asset, null);
+                    mesh = Assert.IsType<Mesh>(meshFile.Objects[4300000]);
+                    // Its constructor ran as the engine's own, without an error.
+                    Assert.Empty(log.Errors);
+                    Assert.Equal(0, log.Exceptions);
+                }
                 Assert.True(mesh != null);
                 Assert.Equal("Shape", mesh.name);
+                Assert.NotEqual(0, mesh.GetInstanceID());
                 Object.DestroyImmediate(mesh, true);
                 Assert.True(asset != null);
                 Assert.Equal("Built", asset.name);

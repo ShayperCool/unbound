@@ -51,12 +51,26 @@ public static class GraphAuthoring
     /// project's in the Editor and in the engine alike).</summary>
     public const string BundleFolder = "Assets/StreamingAssets/VfxProbe", BundleName = "vfxgraphs";
 
-    /// <summary>An AssetBundle holding the Basic graph's asset as the Editor builds it: its
-    /// compiled graph, without the graph file.</summary>
+    const string BundleGraphFolder = "Assets/BundleGraphs";
+
+    /// <summary>An AssetBundle holding a graph's asset as the Editor builds it: its compiled
+    /// graph, without the graph file. The graph is one of its own whose output is textured
+    /// with an image of the probe's (an output left at its default would have the package's
+    /// texture built into the bundle), with a rate that is exposed.</summary>
     static void Bundled()
     {
+        Directory.CreateDirectory(BundleGraphFolder);
+        AssetDatabase.Refresh();
+        var graph = NewGraph("Bundled", BundleGraphFolder);
+        var (spawn, _, _, output) = System(graph, 16);
+        var rate = Make<VFXSpawnerConstantRate>();
+        spawn.AddChild(rate);
+        Link(Parameter(graph, typeof(float), "Rate", 5f).outputSlots[0], rate.inputSlots[0]);
+        Input(output, "mainTexture").value = Object<Texture2D>("ImageA");
+        Save(graph);
+        AssetDatabase.SaveAssets();
         Directory.CreateDirectory(BundleFolder);
-        var build = new AssetBundleBuild { assetBundleName = BundleName, assetNames = new[] { Folder + "/Basic.vfx" } };
+        var build = new AssetBundleBuild { assetBundleName = BundleName, assetNames = new[] { BundleGraphFolder + "/Bundled.vfx" } };
         BuildPipeline.BuildAssetBundles(BundleFolder, new[] { build }, BuildAssetBundleOptions.None, BuildTarget.StandaloneLinux64);
         AssetDatabase.Refresh();
     }
