@@ -37,11 +37,14 @@ DEFAULT_IDLE_HOURS = 24
 DEFAULT_MIN_FREE_GIB = 20
 # Walks of the measured 2.3-million-directory cache took 8-18 minutes with warm caches and 26-37
 # minutes cold on the loaded machine. A discovery attempt that runs out of time is continued by
-# the next attempt of the same run (the watches stay), so the run budget bounds the whole walk;
-# it keeps about 10 minutes for an admitted batch and kache gc inside the service's 60-minute
-# start timeout (install_janitor.py).
-DEFAULT_SCAN_SECONDS = 2700
-DEFAULT_RUN_SECONDS = 3000
+# the next attempt of the same run (the watches stay), so the run budget bounds the whole walk.
+# These defaults fit a 45-minute service limit; install_janitor.py installs the hourly service
+# with a 60-minute limit and passes longer budgets (SERVICE_SCAN_SECONDS, SERVICE_RUN_SECONDS),
+# each keeping about 10 minutes for an admitted batch and kache gc.
+DEFAULT_SCAN_SECONDS = 1800
+DEFAULT_RUN_SECONDS = 2100
+SERVICE_SCAN_SECONDS = 2700
+SERVICE_RUN_SECONDS = 3000
 # Change events the reader thread may hold between polls before monitoring counts as broken,
 # as a kernel queue overflow does (the service's memory limit is 4 GiB).
 MAX_BUFFERED_EVENT_BYTES = 256*2**20
@@ -749,11 +752,17 @@ def link_target(path):
         return error
 
 
+class WalkPaused(TimeoutError):
+    """A reference walk ran out of time between batches; its Walk continues it."""
+
+
 class Walk:
     """Where an unfinished reference walk stands, so that a later call continues it. Valid only
     with the same watcher: its watches cover every directory already walked."""
     def __init__(self):
         self.pending, self.visited, self.found, self.vanished_before = None, {}, set(), set()
+        # Roots walked so far and the index rows listed so far (kept from pruning).
+        self.roots, self.seen = set(), set()
 
 
 def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root=None, prune=True, prefetch=False,
@@ -776,7 +785,8 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
     # One shared cache index for every scan root. No index files in checkouts.
     index = DirectoryIndex(index_root or roots[0], seconds=seconds)
     # Time runs out only between batches, so that the walk can be continued where it stopped.
-    deadline, index.deadline = index.deadline, None
+    deadline, index.deadline_in_entries = index.deadline, False
+    index.seen.update(walk.seen)
     join = os.path.join
     if not resuming:
         # Directories that vanished before this walk; ones vanishing during it stay unsafe.
@@ -784,15 +794,16 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
     vanished_before = walk.vanished_before
     try:
         if prefetch and not resuming:
-            index.deadline = deadline
             index.warm_all()
-            index.deadline = None
-        pending = walk.pending if resuming else [str(root) for root in roots]
+        pending = walk.pending if resuming else []
+        # Roots added since the walk started (a new worktree, new suite roots) join it.
+        pending.extend(str(root) for root in roots if str(root) not in walk.roots)
+        walk.roots.update(str(root) for root in roots)
         walk.pending = None
         while True:
             if deadline is not None and time.monotonic() > deadline:
-                walk.pending = pending
-                raise TimeoutError(f'run-cache index exceeded {seconds}s; the walk continues in the next attempt')
+                walk.pending, walk.seen = pending, set(index.seen)
+                raise WalkPaused(f'run-cache index exceeded {seconds}s; the walk continues in the next attempt')
             if not pending and watcher and watcher.arrived:
                 arrivals = set()
                 watcher.take_arrivals(arrivals)
@@ -977,8 +988,9 @@ class Janitor:
             self.watch = ReferenceWatch(self.excluded, self.suite_roots)
         else:
             self.watch.metadata_roots.update(self.suite_roots)
-        # An attempt that ran out of time left its walk; this attempt continues it.
-        self.walk = self.walk or Walk()
+        # An attempt that ran out of time between batches left its walk; this attempt continues it.
+        if self.walk is None or self.walk.pending is None:
+            self.walk = Walk()
         links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_budget(),
                                      watcher=self.watch, index_root=self.cache, prefetch=True, complete=True,
                                      walk=self.walk)

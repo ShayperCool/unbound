@@ -932,6 +932,18 @@ class JanitorTests(unittest.TestCase):
                 self.j.remove(run, kind='run', hours=72)
         self.assertTrue(run.is_dir())
 
+    def paused_walk(self, batches):
+        """reference_paths patched to run out of time after `batches` batches."""
+        calls = {'batches': 0}
+        original = janitor.DirectoryIndex.stat_many
+        def stat_many(index, paths):
+            calls['batches'] += 1
+            return original(index, paths)
+        clock = {'now': 0.0}
+        def monotonic():
+            return 1e9 if calls['batches'] >= batches else clock['now']
+        return calls, stat_many, monotonic
+
     def test_a_walk_out_of_time_is_continued_by_the_next_call(self):
         target = self.directory('q1/target')
         for index in range(6):
@@ -940,21 +952,45 @@ class JanitorTests(unittest.TestCase):
         watcher = janitor.ReferenceWatch()
         self.addCleanup(watcher.close)
         walk = janitor.Walk()
-        clock = iter([0.0, 0.0] + [1e9]*1000)  # the deadline passes after the first batch
+        calls, stat_many, monotonic = self.paused_walk(3)
         with patch.object(janitor.DirectoryIndex, 'batch_size', 1), \
-             patch('run_cache_index.time.monotonic', lambda: 0.0), \
-             patch.object(janitor.time, 'monotonic', lambda: next(clock)):
-            with self.assertRaisesRegex(TimeoutError, 'continues in the next attempt'):
+             patch.object(janitor.DirectoryIndex, 'stat_many', stat_many), \
+             patch('time.monotonic', monotonic):
+            with self.assertRaises(janitor.WalkPaused):
                 janitor.reference_paths([self.cache], seconds=1, watcher=watcher, index_root=self.cache, walk=walk)
-        self.assertIsNotNone(walk.pending)
         self.assertTrue(walk.pending)
-        # A link created meanwhile, in a directory walked before the pause or not, is seen.
-        (self.cache/'late-link').symlink_to(target/'late')
+        self.assertEqual(len(walk.visited), 3)
+        walked = [path for path in walk.visited.values() if path != str(self.cache)]
+        # A link created during the pause in a directory already walked is seen through its watch.
+        (Path(walked[0])/'late-link').symlink_to(target/'late')
         found = janitor.reference_paths([self.cache], seconds=None, watcher=watcher, index_root=self.cache, walk=walk)
         self.assertIsNone(walk.pending)
         self.assertIn(target/'output', found)
         self.assertIn(target/'late', found)
-        self.assertTrue(all((self.cache/f'd{index}'/'deeper') in watcher.directories.values() for index in range(6)))
+        # The listings of the part walked before the pause stay in the index.
+        index = janitor.DirectoryIndex(self.cache, seconds=None)
+        self.addCleanup(index.close)
+        rows = {path for (path,) in index.db.execute('SELECT path FROM directories')}
+        self.assertTrue(set(walk.visited.values()) <= rows, set(walk.visited.values()) - rows)
+
+    def test_a_continued_walk_adds_roots_that_appeared_meanwhile(self):
+        target = self.directory('q1/target')
+        (self.cache/'a'/'b').mkdir(parents=True)
+        extra = self.root/'new-worktree'
+        extra.mkdir()
+        (extra/'link').symlink_to(target/'output')
+        watcher = janitor.ReferenceWatch()
+        self.addCleanup(watcher.close)
+        walk = janitor.Walk()
+        calls, stat_many, monotonic = self.paused_walk(1)
+        with patch.object(janitor.DirectoryIndex, 'batch_size', 1), \
+             patch.object(janitor.DirectoryIndex, 'stat_many', stat_many), \
+             patch('time.monotonic', monotonic):
+            with self.assertRaises(janitor.WalkPaused):
+                janitor.reference_paths([self.cache], seconds=1, watcher=watcher, index_root=self.cache, walk=walk)
+        found = janitor.reference_paths([self.cache, extra], seconds=None, watcher=watcher,
+                                        index_root=self.cache, walk=walk)
+        self.assertIn(target/'output', found)
 
     def test_discovery_attempts_continue_one_walk(self):
         target = self.directory('q1/target')

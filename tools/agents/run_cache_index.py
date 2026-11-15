@@ -179,8 +179,12 @@ class DirectoryIndex:
             raise OSError(f'run-cache directory changed during indexing: {path}; retry reap')
         return values
 
+    # A caller that pauses between its own batches turns this check off (the deadline still
+    # bounds waits for the database).
+    deadline_in_entries = True
+
     def entries(self, path, info):
-        if self.deadline is not None and time.monotonic() > self.deadline:
+        if self.deadline_in_entries and self.deadline is not None and time.monotonic() > self.deadline:
             raise TimeoutError(f'run-cache index exceeded {self.seconds}s; listings saved; reap needs a complete validation')
         stamp = self.stamp(info)
         key = os.fspath(path)

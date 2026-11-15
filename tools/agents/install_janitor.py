@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 from slot import main_checkout
+import janitor
 
 
 def units(repo, environment):
@@ -23,7 +24,7 @@ Type=oneshot
 SuccessExitStatus=3
 WorkingDirectory={str(repo).replace('%', '%%')}
 {env}
-ExecStart={quote(sys.executable)} {quote(repo/'tools/agents/janitor.py')} --apply --repo {quote(repo)}
+ExecStart={quote(sys.executable)} {quote(repo/'tools/agents/janitor.py')} --apply --repo {quote(repo)} --scan-seconds {janitor.SERVICE_SCAN_SECONDS} --run-seconds {janitor.SERVICE_RUN_SECONDS}
 Nice=15
 IOSchedulingClass=idle
 MemoryMax=4G
