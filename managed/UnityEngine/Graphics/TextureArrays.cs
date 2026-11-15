@@ -48,8 +48,11 @@ namespace UnityEngine
                         texels += (long)W(mip) * H(mip) * D(mip) * Images;
                         total += LevelBytesLong(mip) * Images;
                     }
-                    // Blocks go up as they are; texels as RGBA8 or float RGBA.
-                    upload = Blocks ? total : texels * (GraphicsFormatUtility.IsHDRFormat(format) ? 16 : 4);
+                    // Blocks go up as they are (EAC as the 16-bit channels they decode to); texels as
+                    // RGBA8 or float RGBA.
+                    upload = Blocks
+                        ? (BlockFormats.IsEac(format) ? texels * (format == TextureFormat.EAC_R ? 2 : 4) : total)
+                        : texels * (GraphicsFormatUtility.IsHDRFormat(format) ? 16 : 4);
                 }
             }
             catch (OverflowException)

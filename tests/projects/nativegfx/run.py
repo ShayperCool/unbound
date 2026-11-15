@@ -205,7 +205,10 @@ def native_macos(label):
         if WINDOWED:
             # Play mode keeps running while the Editor's window is not in front.
             settings = out/'project'/'ProjectSettings'/'ProjectSettings.asset'
-            settings.write_text(settings.read_text().replace('runInBackground: 0', 'runInBackground: 1'))
+            text = settings.read_text()
+            if 'runInBackground: 0' not in text:
+                raise SystemExit(f'{settings}: no runInBackground: 0 to turn on')
+            settings.write_text(text.replace('runInBackground: 0', 'runInBackground: 1'))
         code = macos_editor.capture(out/'project', out, ['-executeMethod', 'ProbeRunner.Record'], environment(out),
                                     windowed=WINDOWED)
         print(repeat, 'exit', code)
@@ -300,6 +303,8 @@ def main():
     WINDOWED = args.windowed
     DEVICE = args.device
     STENCIL = args.stencil
+    if WINDOWED and DEVICE != 'metal':
+        parser.error('--windowed records the macOS Editor (--device metal) only')
     if STENCIL and (not LINUX or DEVICE not in ('opengl', 'vulkan')):
         parser.error('--stencil is measured on Linux OpenGL and Vulkan only')
     if args.mode in ('native', 'engine') and (not args.label or Path(args.label).name != args.label):
