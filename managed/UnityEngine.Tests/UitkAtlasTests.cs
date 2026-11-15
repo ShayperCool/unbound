@@ -142,6 +142,7 @@ namespace UnityEngine.Tests
                 Unbound.Runtime.GfxStream.Scissor(scissor);
                 for (int i = 0; i < 8; i++) { UaAtlasBlitter.Copy(source, target, rect, true); Unbound.Runtime.GfxStream.Flush(); }
                 int uploads = Unbound.Runtime.Immediate.BlitQuad.m_SyncVersion;
+                Assert.True(uploads > 0);
                 AllocationMeasurement.EmptyAllocationContext();
                 long before = GC.GetAllocatedBytesForCurrentThread();
                 for (int i = 0; i < 4; i++) { UaAtlasBlitter.Copy(source, target, rect, true); Unbound.Runtime.GfxStream.Flush(); }
@@ -158,6 +159,8 @@ namespace UnityEngine.Tests
                     int size = packet[offset] switch { 3 => 25, 5 => 17, 6 => 133, _ => throw new InvalidOperationException("Unexpected atlas copy command") };
                     offset += size;
                 }
+                ulong drawnMesh = System.Buffers.Binary.BinaryPrimitives.ReadUInt64LittleEndian(packet.Slice(offset + 1, 8));
+                Assert.Equal(Unbound.Runtime.Immediate.BlitQuad.m_Handle, drawnMesh);
                 // Draw's fixed fields: mesh, submesh, material, pass, model, color, main texture.
                 byte flags = packet[offset + 1 + 8 + 4 + 8 + 4 + 64 + 16 + 8];
                 Assert.Equal(0, flags & 1);
