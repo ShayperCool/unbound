@@ -234,10 +234,12 @@ and the game thread, which draws Unity's cameras and reads render textures back
 Measured on the NVIDIA 580 driver only (OpenGL 4.5 through EGL, X11 window): without the wait,
 tests/projects/lod read one to three of its 15,600 9x9 render-texture samples wrong in most
 runs on a loaded machine (a quadrant with a corner at the target's centre held transparent
-zeros or another image; never on the Vulkan device). The wrong samples came at a frame
+zeros or another image; not seen in 4 runs on the Vulkan device). The wrong samples came at a frame
 boundary, while the render thread presented. In experiment builds, waiting for the game thread's
 own submissions, resetting the context's state before each submission, and delaying object
 deletion did not remove the wrong samples. Keeping the render thread's present apart from the
 game thread's rendering removed them. So did waiting only here. Which driver operation
 overlaps is not known (inferred, not measured). Other drivers are unmeasured.
-
+Cost: the present's thread waits for the GPU once per presented frame, holding the context
+while it waits, so the game thread's rendering does not overlap that wait. The probe's run
+time did not change measurably under load. The cost on an idle machine is unmeasured.

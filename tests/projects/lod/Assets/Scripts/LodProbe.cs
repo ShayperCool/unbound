@@ -25,6 +25,12 @@ public class LodProbe : MonoBehaviour
     /// the default.</summary>
     readonly System.Diagnostics.Stopwatch m_SinceRender = System.Diagnostics.Stopwatch.StartNew();
     double m_WaitMs = 2.0;
+    /// <summary>LOD_PROBE_REPEAT: renders each sample again this many times in the same frame and
+    /// writes every repeat whose pixels differ from the sample's own read to <c>repeat.jsonl</c>
+    /// (a stress check for reads of a render texture that come back wrong under load; off for
+    /// the reference).</summary>
+    int m_Repeat;
+    string m_Dir;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("LodProbe").AddComponent<LodProbe>();
@@ -53,6 +59,7 @@ public class LodProbe : MonoBehaviour
         RenderTexture.active = m_Target;
         m_Read.ReadPixels(new Rect(0, 0, 9, 9), 0, 0);
         RenderTexture.active = null;
+        if (m_Repeat > 0) Repeat(camera);
         camera.targetTexture = null;
         var c = m_Read.GetPixel(4, 4);
         if (c.r > 0.5f && c.g < 0.5f && c.b < 0.5f) return 0;
@@ -61,12 +68,45 @@ public class LodProbe : MonoBehaviour
         return -1;
     }
 
+    static string Hex(Color32[] pixels)
+    {
+        var text = new StringBuilder();
+        foreach (var p in pixels) text.Append($"{p.r:x2}{p.g:x2}{p.b:x2}{p.a:x2} ");
+        return text.ToString().TrimEnd();
+    }
+
+    /// <summary>Renders the camera's sample again <see cref="m_Repeat"/> times and records each
+    /// read that differs from the first; the first read stays in <see cref="m_Read"/>.</summary>
+    void Repeat(Camera camera)
+    {
+        var first = m_Read.GetPixels32();
+        var again = new Texture2D(9, 9, TextureFormat.RGBA32, false);
+        for (int r = 0; r < m_Repeat; r++)
+        {
+            camera.Render();
+            RenderTexture.active = m_Target;
+            again.ReadPixels(new Rect(0, 0, 9, 9), 0, 0);
+            RenderTexture.active = null;
+            var pixels = again.GetPixels32();
+            bool same = true;
+            for (int i = 0; i < pixels.Length && same; i++) same = pixels[i].Equals(first[i]);
+            if (!same)
+                File.AppendAllText(Path.Combine(m_Dir, "repeat.jsonl"),
+                    $"{{\"frame\":{Time.frameCount},\"repeat\":{r},\"first\":\"{Hex(first)}\",\"again\":\"{Hex(pixels)}\"}}\n");
+        }
+        Destroy(again);
+        m_SinceRender.Restart();
+    }
+
     IEnumerator Start()
     {
         var dir = System.Environment.GetEnvironmentVariable("LOD_PROBE_OUT") ?? "/tmp/lod";
         Directory.CreateDirectory(dir);
         var waitSetting = System.Environment.GetEnvironmentVariable("LOD_PROBE_WAIT_MS");
         if (!string.IsNullOrEmpty(waitSetting)) m_WaitMs = double.Parse(waitSetting, CultureInfo.InvariantCulture);
+        var repeatSetting = System.Environment.GetEnvironmentVariable("LOD_PROBE_REPEAT");
+        if (!string.IsNullOrEmpty(repeatSetting)) m_Repeat = int.Parse(repeatSetting, CultureInfo.InvariantCulture);
+        m_Dir = dir;
         m_Target = new RenderTexture(9, 9, 24, RenderTextureFormat.ARGB32);
         m_Read = new Texture2D(9, 9, TextureFormat.RGBA32, false);
         float startBias = QualitySettings.lodBias;

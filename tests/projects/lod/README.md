@@ -31,3 +31,10 @@ camera's distance times 2 tan(fov / 2) / lodBias (for an orthographic camera twi
 the bias) is less than the group's world size over the level's transition height; at equality
 the next level is drawn (the fov 90 sweep's last level ends at 5.0, the orthographic one at
 size 5.0).
+
+Stress check for render-texture reads under load (not part of the reference or the gate):
+`LOD_PROBE_REPEAT=10` renders every sample ten more times in its frame and writes each repeat
+whose 9x9 pixels differ from the sample's own read to `repeat.jsonl` next to `lod.jsonl`
+(nothing is written when all repeats agree). On the OpenGL Core device, before the window
+present waited for its copy (vendor/wgpu-sampler/PATCHES.md `gl-present-wait.patch`), a loaded
+machine gave about one or two such samples per run; measured on the NVIDIA driver only.
