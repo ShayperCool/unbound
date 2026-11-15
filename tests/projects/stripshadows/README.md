@@ -59,3 +59,10 @@ regular-mesh failures. Receiver-volume containment across cascades remains open;
 controls must vary the receiver frustum, sphere shrink/blending and culling flags before
 changing the shared caster selection. These failures are outside the default one-cascade
 gate, which retains all 145 strict checks without exceptions.
+
+SRP lists retain renderers whose coarse bounds are unmeasured, including non-rigid skins,
+while still respecting split exclusions. Measured strip face selection and trusted mesh
+bounds keep their split-plane filtering. A renderer-list regression control places a loaded
+two-bone skin's fallback box outside the selected plane while its baked pose lies inside;
+the skin draws, an outside regular mesh does not, and an excluded split rejects the skin.
+This conservatively preserves previously drawn geometry without inventing tighter skin bounds.

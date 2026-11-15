@@ -831,7 +831,11 @@ namespace Unbound.Runtime
                     if (shadows.HasValue)
                     {
                         renderer.PrepareCullingBounds();
-                        if (!ShadowCasterCulling.SeesSplit(data, shadowLight, shadowSplit, renderer.CullingBounds, shadowCulling)) continue;
+                        // Unknown coarse bounds cannot reject posed geometry. Retain split exclusions
+                        // while keeping measured strip face selection and trusted mesh bounds.
+                        var bounds = Culler.TrustsBounds(renderer) || renderer is LineRenderer || renderer is TrailRenderer
+                            ? renderer.CullingBounds : default;
+                        if (!ShadowCasterCulling.SeesSplit(data, shadowLight, shadowSplit, bounds, shadowCulling)) continue;
                         renderer.MarkRendered();
                     }
                     try { renderer.CollectDraws(context, s_Items); }
