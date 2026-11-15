@@ -70,7 +70,8 @@ frame's last camera's matrices for the end-of-frame callbacks, gives them back a
 `Camera.Render` and loads the screen's pixel matrix for each OnGUI Repaint, leaving it after the
 GUI. Declared residuals per device: the windowed Editors' pixel matrix between frames (10) and
 `DrawMeshNow`'s view inside OnGUI (1). Unmeasured: a last camera with image effects, a scriptable pipeline's
-frame, overlay canvases and the windowed macOS Editor. The Scripting API pages for
+frame, overlay canvases, several OnGUI scripts (Unbound loads the pixel matrix before each),
+`DrawMeshNow` after a script's own `GL.LoadPixelMatrix`, and the windowed macOS Editor. The Scripting API pages for
 [Graphics.ExecuteCommandBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.ExecuteCommandBuffer.html)
 and [RenderTexture.active](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture-active.html)
 state neither rule; both are observed in these captures. The OnGUI pixel matrix gives
