@@ -29,11 +29,10 @@ const MAX_ROUNDS: usize = 32;
 /// A top-level function with counter buffer parameters: a definition, or a declaration only.
 struct Function<'a> {
     name: &'a str,
-    /// Tokens: the item's first, the name, the parameter list's parentheses, and the last (the
+    /// Tokens: the item's first, the name, the parameter list's closing parenthesis, and the last (the
     /// brace closing the body, or the declaration's `;`).
     item: usize,
     name_token: usize,
-    open: usize,
     close: usize,
     last: usize,
     defined: bool,
@@ -152,7 +151,6 @@ fn declarations<'a>(source: &'a str, toks: &[Token]) -> (Vec<Function<'a>>, Hash
                 name: text(source, &toks[k - 1]),
                 item: item_start(source, toks, k, 0),
                 name_token: k - 1,
-                open: k,
                 close,
                 last,
                 defined: text(source, &toks[after]) == "{",

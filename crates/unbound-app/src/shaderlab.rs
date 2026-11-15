@@ -1922,7 +1922,8 @@ mod tests {
     fn a_selection_leaves_separators_of_the_name_itself() {
         let own = "Hidden/VFX/Graph/System (1)/Output Particle|Unlit Quad";
         assert_eq!(Selection::parse(own), (own, Selection::default()));
-        let (name, selection) = Selection::parse(&format!("{own}|lod=200|vertexlit"));
+        let suffixed = format!("{own}|lod=200|vertexlit");
+        let (name, selection) = Selection::parse(&suffixed);
         assert_eq!(name, own);
         assert_eq!((selection.max_lod, selection.vertex_lit), (Some(200), true));
         let (name, selection) = Selection::parse("A|B|tag=RenderType=Opaque");
