@@ -629,32 +629,56 @@ fn reexported_from(root: &str, ident: &str) -> Option<String> {
 }
 
 /// Whether a workspace crate's manifest plainly names its library after its directory: no
-/// escape or multi-line string, no `lib` or `project` table or key (by which a library takes
-/// another name or file), and every `name` key is `name = "<dir>"` under a bare `[package]`
-/// (or names a binary, example, test or bench target).
-/// Anything else may name the library otherwise, and paths to it would not be followed.
+/// escape or multi-line string, nothing before its first table, only the tables a plain crate
+/// has (`[package]`, dependency tables, also per target, `[features]`, `[lints]`, binary,
+/// example, test and bench targets), no `lib`, `project` or `package` key, and every line that
+/// says `name` outside a target is `name = "<dir>"` under `[package]`. Anything else may name
+/// the library otherwise or put it at another file, and paths to it would not be followed.
 fn plain_manifest(manifest: &str, dir_name: &str) -> bool {
+    const TABLES: [&str; 6] = [
+        "[package]",
+        "[dependencies]",
+        "[dev-dependencies]",
+        "[build-dependencies]",
+        "[features]",
+        "[lints]",
+    ];
+    const TARGETS: [&str; 4] = ["[[bin]]", "[[example]]", "[[test]]", "[[bench]]"];
     if manifest.contains('\\') || manifest.contains("\"\"\"") || manifest.contains("'''") {
         return false;
     }
-    let mut section = "";
+    let mut section: Option<&str> = None;
     for line in manifest.lines() {
         let line = line.trim();
-        if line.starts_with('[') {
-            section = line;
+        if line.is_empty() || line.starts_with('#') {
+            continue;
         }
-        let bare = line.trim_start_matches('[').trim_start_matches(['"', '\'']);
-        for word in ["lib", "project"] {
-            if bare.starts_with(word)
-                && !bare[word.len()..].starts_with(|c: char| is_ident(c) || c == '-')
-            {
+        if line.starts_with('[') {
+            // Per-target dependencies: `[target.'cfg(..)'.dependencies]` and the like.
+            let per_target = line.starts_with("[target.")
+                && ["dependencies]", "dev-dependencies]", "build-dependencies]"]
+                    .iter()
+                    .any(|t| line.ends_with(&format!(".{t}")));
+            if !(TABLES.contains(&line) || TARGETS.contains(&line) || per_target) {
                 return false;
             }
+            section = Some(line);
+            continue;
         }
-        let key = line.split('=').next().unwrap_or("");
-        // A binary's, example's, test's or bench's name names no library.
-        let target = ["[[bin]]", "[[example]]", "[[test]]", "[[bench]]"].contains(&section);
-        if word_starts(key, "name").next().is_some() && !line.starts_with('[') && !target {
+        let Some(section) = section else {
+            // A key before any table (`package = { .. }`, `lib.name = ..`).
+            return false;
+        };
+        let key = line.split('=').next().unwrap_or("").trim();
+        let first = key
+            .trim_matches(['"', '\''])
+            .split(['.', ' ', '\t', '"', '\''])
+            .next()
+            .unwrap_or("");
+        if matches!(first, "lib" | "project" | "package") {
+            return false;
+        }
+        if word_starts(line, "name").next().is_some() && !TARGETS.contains(&section) {
             let plain = format!("name = \"{dir_name}\"");
             if section != "[package]" || line != plain {
                 return false;
@@ -683,12 +707,12 @@ fn libraries_renamed(root: &Path) -> io::Result<bool> {
     Ok(false)
 }
 
-/// The workspace crates of `crates/` (by Rust name): those with a `src/lib.rs`.
+/// The workspace crates of `crates/` (by Rust name): its directories with a manifest.
 fn workspace_crates(root: &Path) -> io::Result<Vec<String>> {
     let mut out = Vec::new();
     for entry in std::fs::read_dir(root.join("crates"))? {
         let path = entry?.path();
-        if path.join("src/lib.rs").is_file()
+        if path.join("Cargo.toml").is_file()
             && let Some(dir) = path.file_name()
         {
             out.push(dir.to_string_lossy().replace('-', "_"));
@@ -782,7 +806,11 @@ pub fn producing_sources(
             let src = dir.join("src");
             let lib_path = src.join("lib.rs");
             files.insert(dir.join("Cargo.toml"));
-            files.insert(lib_path.clone());
+            // A crate without a root file (its library elsewhere) counts whole: its files are
+            // all read.
+            if lib_path.is_file() {
+                files.insert(lib_path.clone());
+            }
             // A workspace crate depended on under another name (`foo = { package =
             // "unbound-x", .. }`, here or in the workspace's dependencies) is named by paths
             // the reading does not follow: all of it.
@@ -798,7 +826,7 @@ pub fn producing_sources(
                 for package in renamed {
                     let other = package.replace('-', "_");
                     let other_dir = root.join("crates").join(crate_dir(&other));
-                    if other_dir.join("src/lib.rs").is_file() {
+                    if other_dir.join("Cargo.toml").is_file() {
                         changes.push((other, Change::Whole));
                     }
                 }
@@ -815,8 +843,8 @@ pub fn producing_sources(
             // what the reading cannot follow (`#[path]`, an alias, a computed include), is not
             // read apart: a crate only partly reached counts whole.
             if !r.whole {
-                let root = code(&std::fs::read_to_string(&lib_path)?);
-                if root.unsure || !root_code(&root.text).trim().is_empty() {
+                let root = code(&std::fs::read_to_string(&lib_path).unwrap_or_default());
+                if !lib_path.is_file() || root.unsure || !root_code(&root.text).trim().is_empty() {
                     changes.push((name.clone(), Change::Whole));
                 }
             }

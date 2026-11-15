@@ -613,6 +613,16 @@ fn libraries_under_other_names_count_every_crate() {
         ),
         ("project", "[project]\nname = \"rules\"\n", ""),
         (
+            "inline-package",
+            "package = { name = \"rules\", version = \"0.1.0\" }\n",
+            "",
+        ),
+        (
+            "spaced-lib-header",
+            "[package]\nname = \"unbound-rules\"\n[ lib ]\npath = \"src/lib.rs\"\n",
+            "",
+        ),
+        (
             "root-backslash",
             "[package]\nname = \"unbound-rules\"\n",
             "[workspace.dependencies]\nrules = { package = \"unbound\\u002Drules\" }\n",
@@ -656,8 +666,7 @@ fn a_library_without_its_root_file_counts_every_crate() {
         "[package]\nname = \"unbound-other\"\n[lib]\nname = \"other\"\npath = \"src/other.rs\"\n",
     );
     ws.write("crates/unbound-other/src/other.rs", "pub struct Other;\n");
-    assert!(
-        ws.sources("unbound_compiler", &[])
-            .contains(&"crates/unbound-rules/src/audio.rs".to_string())
-    );
+    let sources = ws.sources("unbound_compiler", &[]);
+    assert!(sources.contains(&"crates/unbound-rules/src/audio.rs".to_string()));
+    assert!(sources.contains(&"crates/unbound-other/src/other.rs".to_string()));
 }
