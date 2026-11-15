@@ -160,14 +160,17 @@ fn modules_of_a_crate_and_what_they_include() {
             ("crates/unbound-assets/Cargo.toml", "[package]"),
             (
                 "crates/unbound-assets/src/lib.rs",
-                "mod gen;\nmod parse;\nmod other;\npub const VERSION: u32 = 1;\n",
+                "mod gen;\nmod parse;\nmod other;\npub use parse::VERSION;\n",
             ),
             (
                 "crates/unbound-assets/src/gen.rs",
                 "use crate::parse::File;\nconst T: &str = include_str!(\"../data/t.txt\");\n\
                  fn v() -> u32 { crate::VERSION }\n",
             ),
-            ("crates/unbound-assets/src/parse.rs", "pub struct File;\n"),
+            (
+                "crates/unbound-assets/src/parse.rs",
+                "pub struct File;\npub const VERSION: u32 = 1;\n",
+            ),
             ("crates/unbound-assets/src/other.rs", "pub struct Other;\n"),
             ("crates/unbound-assets/data/t.txt", "template"),
         ],
@@ -185,6 +188,15 @@ fn modules_of_a_crate_and_what_they_include() {
     let before = ws.identity("unbound_assets", &["gen"]);
     ws.write("crates/unbound-assets/data/t.txt", "another template");
     assert_ne!(ws.identity("unbound_assets", &["gen"]), before);
+    // A root with code of its own is not read apart: the whole crate counts.
+    ws.write(
+        "crates/unbound-assets/src/lib.rs",
+        "mod gen;\nmod parse;\nmod other;\npub use parse::VERSION;\npub fn helper() {}\n",
+    );
+    assert!(
+        ws.sources("unbound_assets", &["gen"])
+            .contains(&"crates/unbound-assets/src/other.rs".to_string())
+    );
 }
 
 /// The shader compiler of this workspace reaches the device rules of `unbound-compat`, not its
@@ -309,4 +321,52 @@ fn hidden_and_unfollowable_names_reach_what_they_name() {
             "{case}"
         );
     }
+}
+
+/// A root with code of its own, a byte or C raw string, a top-level `use super::*` beside an
+/// inline module and `{self as r}`: each reaches the rules crate's `audio` module.
+#[test]
+fn root_code_raw_strings_and_more_aliases_reach_what_they_name() {
+    let audio = "crates/unbound-rules/src/audio.rs".to_string();
+    let rules_root = |extra: &str| format!("{RULES_ROOT}{extra}");
+    for (case, root) in [
+        (
+            "root-use",
+            rules_root("use audio::Audio;\npub fn mix() -> u32 { Audio::gain() }\n"),
+        ),
+        (
+            "root-impl",
+            rules_root("impl Device { pub fn conv(&self) { audio::Audio; } }\n"),
+        ),
+    ] {
+        let ws = compiler_and_rules(case);
+        ws.write("crates/unbound-rules/src/lib.rs", &root);
+        assert!(
+            ws.sources("unbound_compiler", &[]).contains(&audio),
+            "{case}"
+        );
+    }
+    for (case, fit) in [
+        (
+            "byte-raw",
+            "const B: &[u8] = br#\"a\"b\"#;\nuse unbound_rules::Audio;\n",
+        ),
+        (
+            "self-as",
+            "use unbound_rules::{self as r};\nfn f() { r::Audio; }\n",
+        ),
+    ] {
+        let ws = compiler_and_rules(case);
+        ws.write("crates/unbound-compiler/src/fit.rs", fit);
+        assert!(
+            ws.sources("unbound_compiler", &[]).contains(&audio),
+            "{case}"
+        );
+    }
+    let ws = compiler_and_rules("super-glob");
+    ws.write(
+        "crates/unbound-rules/src/device.rs",
+        "use super::*;\nmod inner { }\npub enum Device { A }\npub fn select() {}\n",
+    );
+    assert!(ws.sources("unbound_compiler", &[]).contains(&audio));
 }

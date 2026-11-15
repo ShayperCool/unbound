@@ -9,8 +9,6 @@ use std::path::{Path, PathBuf};
 struct Reach {
     /// The modules (by name) reached.
     modules: BTreeSet<String>,
-    /// Items with code of the crate's root were named: they are read like a module.
-    root_code: bool,
     /// The whole crate counts.
     whole: bool,
 }
@@ -20,7 +18,6 @@ struct Reach {
 enum Change {
     None,
     Whole,
-    RootCode,
     Module(String),
 }
 
@@ -72,7 +69,6 @@ fn code(text: &str) -> Code {
     while i < chars.len() {
         let c = chars[i];
         let next = chars.get(i + 1).copied();
-        let prev_ident = out.chars().next_back().is_some_and(is_ident);
         if c == '/' && next == Some('/') {
             while i < chars.len() && chars[i] != '\n' {
                 i += 1;
@@ -95,7 +91,7 @@ fn code(text: &str) -> Code {
             }
             out.push(' ');
         } else if c == 'r'
-            && !prev_ident
+            && raw_prefix_ok(&out)
             && matches!(next, Some('"' | '#'))
             && raw_string_start(&chars[i + 1..]).is_some()
         {
@@ -162,6 +158,7 @@ fn code(text: &str) -> Code {
             word_starts(&text, m).any(|at| !text[at + m.len()..].trim_start().starts_with('"'))
         });
     let unsure = computed_include
+        || use_renames_self(&text)
         || text.contains("#[path")
         || text.contains("#![path")
         || text.contains("macro_rules!")
@@ -173,6 +170,27 @@ fn code(text: &str) -> Code {
         includes,
         unsure,
     }
+}
+
+/// Whether an `r` after `before` can open a raw string: it starts a token, or follows the `b`
+/// or `c` that starts one (`br"..."`, `cr#"..."#`).
+fn raw_prefix_ok(before: &str) -> bool {
+    let mut back = before.chars().rev();
+    match back.next() {
+        None => true,
+        Some('b' | 'c') => !back.next().is_some_and(is_ident),
+        Some(c) => !is_ident(c),
+    }
+}
+
+/// Whether a `use` names a module under another name (`use crate::{self as c}`), which the
+/// reading does not follow (`self as i32` in an expression is a cast).
+fn use_renames_self(text: &str) -> bool {
+    word_starts(text, "use").any(|at| {
+        let statement = &text[at..];
+        let statement = &statement[..statement.find(';').unwrap_or(statement.len())];
+        word_starts(statement, "self").any(|s| statement[s + 4..].trim_start().starts_with("as "))
+    })
 }
 
 /// How many `#` open a raw string at the start of `rest` (after its `r`), if one does.
@@ -302,9 +320,9 @@ fn named_after(text: &str, prefix: &str) -> Vec<String> {
     out
 }
 
-/// The paths a text names through `super::`: how many `super::` each chains, and the first
-/// identifier after them (`*` for a glob or anything else).
-fn super_paths(text: &str) -> Vec<(usize, String)> {
+/// The paths a text names through `super::`: where each stands, how many `super::` it chains,
+/// and the first identifier after them (`*` for a glob or anything else).
+fn super_paths(text: &str) -> Vec<(usize, usize, String)> {
     const SUPER: &str = "super::";
     let mut out = Vec::new();
     for start in word_starts(text, SUPER) {
@@ -322,7 +340,7 @@ fn super_paths(text: &str) -> Vec<(usize, String)> {
         let head = &rest[..rest.find(';').unwrap_or(rest.len())];
         let named = named_after(&format!("{SUPER}{head}"), SUPER);
         for ident in named.into_iter().take(first_group(rest)) {
-            out.push((supers, ident));
+            out.push((start, supers, ident));
         }
     }
     out
@@ -347,6 +365,13 @@ fn named_crates(text: &str) -> BTreeMap<String, Vec<String>> {
             continue;
         }
         let prefix = format!("{name}::");
+        // `unbound_x::{self as y}`: under another name too.
+        let group_end = after.find(['}', ';']).unwrap_or(after.len());
+        if word_starts(&after[..group_end], "self")
+            .any(|at| after[at + 4..group_end].trim_start().starts_with("as "))
+        {
+            out.entry(name.clone()).or_default().push("*".into());
+        }
         let items = named_after(&text[start..], &prefix);
         // `named_after` reads every later use too: the first group is this one's.
         let first = first_group(&text[start + prefix.len()..]);
@@ -528,7 +553,9 @@ fn root_code(root: &str) -> String {
                 }
             }
             let body = body.strip_prefix("pub ").unwrap_or(body).trim_start();
-            let declaration = (body.starts_with("mod ") && body.ends_with(';'))
+            // A group's closing brace ends a statement early: its `;` alone is nothing.
+            let declaration = body.trim() == ";"
+                || (body.starts_with("mod ") && body.ends_with(';'))
                 || body.starts_with("use ")
                 || body.starts_with("extern crate ");
             if !declaration {
@@ -601,8 +628,10 @@ fn resolve(src: &Path, ident: &str) -> io::Result<Change> {
             false => Change::Whole,
         });
     }
+    // An item of the root's own code: the crate counts whole (its root's code is not read
+    // apart).
     if defines(&root_code(&lib), ident) {
-        return Ok(Change::RootCode);
+        return Ok(Change::Whole);
     }
     Ok(Change::Whole)
 }
@@ -657,6 +686,14 @@ pub fn producing_sources(
             };
             // A crate that defines macros: what their uses expand to is not read, so a crate
             // only partly reached counts whole.
+            // A root with code of its own (items, impls, the `use` lines they rely on) is not
+            // read apart: a crate only partly reached counts whole.
+            if !r.whole {
+                let root_text = code(&std::fs::read_to_string(&lib_path)?).text;
+                if !root_code(&root_text).trim().is_empty() {
+                    changes.push((name.clone(), Change::Whole));
+                }
+            }
             if !r.whole {
                 for path in rust_files(&src)? {
                     let text = code(&std::fs::read_to_string(&path)?).text;
@@ -681,12 +718,6 @@ pub fn producing_sources(
                     for path in found {
                         texts.push((path.clone(), code(&std::fs::read_to_string(&path)?)));
                     }
-                }
-                if r.root_code {
-                    let root_text = std::fs::read_to_string(&lib_path)?;
-                    let mut root_items = code(&root_text);
-                    root_items.text = root_code(&root_items.text);
-                    texts.push((lib_path.clone(), root_items));
                 }
             }
             for (path, read) in &texts {
@@ -731,10 +762,13 @@ pub fn producing_sources(
                     true => dirs.saturating_sub(1),
                     false => dirs,
                 };
-                let inline = has_inline_module(text);
-                for (supers, ident) in super_paths(text) {
-                    // From an inline module (`mod tests { use super::*; }`), the file itself.
-                    let in_file = inline && (ident == "*" || defines(text, &ident));
+                let brace_depth = depths(text);
+                for (at, supers, ident) in super_paths(text) {
+                    // From inside an inline module (`mod tests { use super::*; }`), the file
+                    // itself.
+                    let in_file = brace_depth[at] > 0
+                        && has_inline_module(text)
+                        && (ident == "*" || defines(text, &ident));
                     if supers > depth && !in_file {
                         named.push(ident);
                     }
@@ -776,7 +810,6 @@ pub fn producing_sources(
             changed |= match change {
                 Change::None => false,
                 Change::Whole => !std::mem::replace(&mut r.whole, true),
-                Change::RootCode => !std::mem::replace(&mut r.root_code, true),
                 Change::Module(m) => r.modules.insert(m),
             };
         }
