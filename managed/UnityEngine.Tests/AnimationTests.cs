@@ -310,18 +310,31 @@ namespace UnityEngine.Tests
             close.SetCurve("", typeof(Transform), "localScale.x", new AnimationCurve(new Keyframe(0.5f, 3f), new Keyframe(1.5f, 3f), new Keyframe(1.5000005f, 3f)));
             Assert.Equal(new[] { 0f, 0.5f, 1.5f, 2f }, UnityEditor.AnimationUtility.GetEditorCurve(close,
                 UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalScale.x")).keys.Select(k => k.time).ToArray());
-            // Alone, a curve keeps keys however close.
+            // Alone, a curve keeps keys however close (SetCurveKeys.*.alone).
             var alone = new AnimationClip();
             alone.SetCurve("", typeof(Transform), "localScale.x", new AnimationCurve(new Keyframe(0.5f, 3f), new Keyframe(1.5f, 3f), new Keyframe(1.5000005f, 3f)));
             Assert.Equal(3, UnityEditor.AnimationUtility.GetEditorCurve(alone,
                 UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalScale.x")).length);
+            // A key dropped for its closeness shifts the keys after it onto the next times
+            // (SetCurveKeys.*.tolerance): 1.9e-6 s apart is one time, 2.1e-6 s two.
+            var shifted = new AnimationClip();
+            shifted.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+            shifted.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0.5f, 1f), new Keyframe(0.5000019f, 2f),
+                new Keyframe(1f, 3f), new Keyframe(1.0000021f, 4f), new Keyframe(100f, 5f), new Keyframe(100.0000076f, 6f)));
+            var sx = UnityEditor.AnimationUtility.GetEditorCurve(shifted, UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.x")).keys;
+            Assert.Equal(new[] { 0f, 0.5f, 1f, 1.0000021f, 2f, 100f, 100.0000076f }, sx.Select(k => k.time).ToArray());
+            Assert.Equal(new[] { 1f, 1f, 2f, 3f, 4f }, sx.Take(5).Select(k => k.value).ToArray());
+            Near.Equal(4.00030375f, sx[5].value, 1e-5f);
+            Assert.Equal(5f, sx[6].value);
             Object.DestroyImmediate(clip);
             Object.DestroyImmediate(close);
             Object.DestroyImmediate(alone);
+            Object.DestroyImmediate(shifted);
         }
 
         /// <summary>Removing the Euler angles by m_LocalEuler leaves the clip settings' range until
-        /// the clip changes again (tests/projects/editorui ClipLength.*.serializedRemoval).</summary>
+        /// the clip changes again (tests/projects/editorui ClipLength.*.serializedRemoval,
+        /// SetCurveKeys.*.eulerRemovalThenLight).</summary>
         [Fact]
         public void EulerRemovalKeepsTheSettingsRangeUntilTheNextChange()
         {

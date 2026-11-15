@@ -490,7 +490,7 @@ namespace UnityEngine
         /// where it ends after its last key, that key's out-tangent; at a time a component lacks it
         /// gets a key on its own curve there (value and slope; on a stepped segment the value it
         /// holds and that infinite slope), or outside its keys their end value with flat slopes; a
-        /// key within the tolerance of a time stands for it. Matches the Unity 6000.0.71f1 Editor,
+        /// component's keys take the times in order (<see cref="KeysAtTimes"/>). Matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/editorui `ClipLength.*` (key times, lengths; the macOS Editor) and
         /// `SetCurveKeys.*` (every key's value and tangents, a stepped segment, a rotation).
         /// </summary>
@@ -511,15 +511,11 @@ namespace UnityEngine
                     return;
                 }
                 if (name == setAttribute) { set = components[a]; continue; }
-                foreach (var k in components[a].Curve.keys) AddKeyTime(times, k.time, tolerant: false);
+                times = MergeKeyTimes(times, components[a].Curve.keys, tolerant: false);
             }
             // A vector without other keys is the new component's curve as it is.
             bool alone = times.Count == 0;
-            if (set != null)
-                foreach (var k in set.Curve.keys) AddKeyTime(times, k.time, tolerant: !alone);
-            times.Sort();
-            if (times.Count == 0) return;
-            float first = times[0], last = times[times.Count - 1];
+            if (set != null) times = MergeKeyTimes(times, set.Curve.keys, tolerant: !alone);
             for (int a = 0; a < axes.Length; a++)
             {
                 var c = components[a];
@@ -534,33 +530,24 @@ namespace UnityEngine
                 if (alone && c == set) continue;
                 var curve = c.Curve;
                 var own = curve.keys;
-                if (own.Length == 0) continue;
-                // Every time has its key already: the curve stays as it is.
-                if (times.TrueForAll(t => Array.Exists(own, k => Math.Abs(k.time - t) <= KeyTimeTolerance)) && own.Length == times.Count) continue;
-                // A weighted segment would change shape when split (unmeasured): such a curve keeps
-                // its keys.
-                if (own.Any(k => k.weightedMode != WeightedMode.None))
+                if (own.Length == times.Count && Enumerable.Range(0, own.Length).All(i => own[i].time == times[i])) continue;
+                Keyframe[] merged;
+                if (own.Length == 0)
                 {
-                    Debug.LogWarning($"Unbound: AnimationClip.SetCurve on '{this.name}': {path}/{c.Binding.Attribute} has weighted keys and keeps its key times; the Editor keys it at the other components' times too.", this);
-                    continue;
+                    // A curve without keys is 0 at every time.
+                    merged = new Keyframe[times.Count];
+                    for (int i = 0; i < merged.Length; i++) merged[i] = new Keyframe(times[i], 0f);
                 }
-                // Flat outside its own keys where the vector goes on.
-                if (first < own[0].time) own[0].inTangent = 0f;
-                if (last > own[own.Length - 1].time) own[own.Length - 1].outTangent = 0f;
-                var shape = new AnimationCurve(own) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
-                var merged = new Keyframe[times.Count];
-                for (int i = 0; i < times.Count; i++)
+                else
                 {
-                    float t = times[i];
-                    int match = Array.FindIndex(own, k => Math.Abs(k.time - t) <= KeyTimeTolerance);
-                    if (match >= 0)
+                    // A weighted segment would change shape when split (unmeasured): such a curve
+                    // keeps its keys.
+                    if (own.Any(k => k.weightedMode != WeightedMode.None))
                     {
-                        merged[i] = own[match];
-                        merged[i].time = t;
+                        Debug.LogWarning($"Unbound: AnimationClip.SetCurve on '{this.name}': {path}/{c.Binding.Attribute} has weighted keys and keeps its key times; the Editor keys it at the other components' times too.", this);
                         continue;
                     }
-                    float slope = SlopeAt(shape, t);
-                    merged[i] = new Keyframe(t, shape.Evaluate(t), slope, slope);
+                    merged = KeysAtTimes(own, times);
                 }
                 // Replaced, not edited: copies of the clip (Animation.AddClip under another name)
                 // share the curves they were made with.
@@ -590,14 +577,72 @@ namespace UnityEngine
 
         /// <summary>Key times within this many seconds of one another count as one when a vector's
         /// components are keyed together (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/editorui SetCurveKeys.*.stepped: a key 5e-7 s after another is dropped).</summary>
+        /// tests/projects/editorui SetCurveKeys.*.stepped, .tolerance: keys 5e-7 s and 1.9e-6 s
+        /// after another are dropped, 2.1e-6 s after it kept).</summary>
         const float KeyTimeTolerance = 2e-6f;
 
-        static void AddKeyTime(List<float> times, float time, bool tolerant)
+        /// <summary>The sorted union of <paramref name="times"/> (sorted) and the keys' times; with
+        /// <paramref name="tolerant"/> a key within <see cref="KeyTimeTolerance"/> of a time already
+        /// there adds nothing.</summary>
+        static List<float> MergeKeyTimes(List<float> times, Keyframe[] keys, bool tolerant)
         {
-            foreach (var t in times)
-                if (tolerant ? Math.Abs(t - time) <= KeyTimeTolerance : t == time) return;
-            times.Add(time);
+            var merged = new List<float>(times.Count + keys.Length);
+            int i = 0;
+            foreach (var k in keys)
+            {
+                float t = k.time;
+                while (i < times.Count && times[i] < t) merged.Add(times[i++]);
+                float near = tolerant ? KeyTimeTolerance : 0f;
+                bool covered = (merged.Count > 0 && t - merged[merged.Count - 1] <= near)
+                    || (i < times.Count && times[i] - t <= near);
+                if (!covered) merged.Add(t);
+            }
+            while (i < times.Count) merged.Add(times[i++]);
+            return merged;
+        }
+
+        /// <summary>A component's keys at the vector's sorted <paramref name="times"/>: its own keys,
+        /// flat on the outer side where the times go past them, with a key added at every time not
+        /// within <see cref="KeyTimeTolerance"/> of one of them (on its Hermite segment, or its end
+        /// value with flat tangents outside its keys); then, in order, these keys take the times
+        /// one by one, so that a key of its own within the tolerance of another time, or of
+        /// another key of its own, shifts the keys after it (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/editorui SetCurveKeys.*.tolerance).</summary>
+        static Keyframe[] KeysAtTimes(Keyframe[] own, List<float> times)
+        {
+            Keyframe first = own[0], last = own[own.Length - 1];
+            if (times[0] < first.time) own[0].inTangent = 0f;
+            if (times[times.Count - 1] > last.time) own[own.Length - 1].outTangent = 0f;
+            var shape = new AnimationCurve(own);
+            var all = new List<Keyframe>(own.Length + times.Count);
+            int j = 0;
+            foreach (float t in times)
+            {
+                while (j < own.Length && own[j].time <= t + KeyTimeTolerance)
+                {
+                    if (own[j].time < t - KeyTimeTolerance) { all.Add(own[j++]); continue; }
+                    break;
+                }
+                bool near = (j < own.Length && Math.Abs(own[j].time - t) <= KeyTimeTolerance)
+                    || (j > 0 && Math.Abs(own[j - 1].time - t) <= KeyTimeTolerance);
+                if (near) continue;
+                if (t < first.time || t > last.time)
+                    all.Add(new Keyframe(t, t < first.time ? first.value : last.value, 0f, 0f));
+                else
+                {
+                    float slope = SlopeAt(shape, t);
+                    all.Add(new Keyframe(t, shape.Evaluate(t), slope, slope));
+                }
+            }
+            while (j < own.Length) all.Add(own[j++]);
+            all.Sort((a, b) => a.time.CompareTo(b.time));
+            var result = new Keyframe[times.Count];
+            for (int i = 0; i < result.Length; i++)
+            {
+                result[i] = i < all.Count ? all[i] : new Keyframe(times[i], last.value, 0f, 0f);
+                result[i].time = times[i];
+            }
+            return result;
         }
 
         /// <summary>A curve's slope at a time between its keys (the Hermite segment's derivative, so
@@ -806,6 +851,8 @@ namespace UnityEngine
             };
             foreach (var e in m_Events) clip.m_Events.Add(e.Copy());
             clip.m_Name = m_Name;
+            if (m_KeptSettingsRange is { } kept && kept.Version == m_Version)
+                clip.m_KeptSettingsRange = (clip.m_Version, kept.Start, kept.Stop);
             return clip;
         }
 
