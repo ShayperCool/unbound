@@ -176,6 +176,20 @@ public partial class ParticleRenderProbe
             var e = s.emission; e.rateOverTime = 6f; e.SetBursts(new ParticleSystem.Burst[0]);
         }, sub: false);
         var procRandom = systems[systems.Count - 1].Item2;
+        // Stepped prewarms longer than 5 and 10 s without sub-emitters (World space, so not
+        // procedural; a rate under gravity), and Birth children of parents whose duration is below
+        // the long steps (0.5 and 0.1 s).
+        foreach (float lifetime in new[] { 8f, 12f })
+            Case("plain_gravity" + lifetime, s =>
+            {
+                var m = s.main; m.startLifetime = lifetime; m.startSpeed = 2f; m.gravityModifier = 0.3f;
+                m.simulationSpace = ParticleSystemSimulationSpace.World;
+                var e = s.emission; e.rateOverTime = 1f; e.SetBursts(new ParticleSystem.Burst[0]);
+            }, sub: false);
+        Case("birth_child12_dur05", s => { var m = s.main; m.duration = 0.5f; m.startLifetime = 0.35f; },
+            s => { var m = s.main; m.startLifetime = 12f; });
+        Case("birth_child8_dur01", s => { var m = s.main; m.duration = 0.1f; m.startLifetime = 0.07f; },
+            s => { var m = s.main; m.startLifetime = 8f; var e = s.emission; e.rateOverTime = 30f; });
         foreach (var ps in played) ps.Play();
         foreach (var (key, ps) in systems) RecordPrewarm(key + "/start", ps);
         RecordInherited("prewarm/proc_random/values/start", procRandom);
