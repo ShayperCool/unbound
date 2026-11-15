@@ -29,10 +29,24 @@ public class NetworkStreamingProbe : MonoBehaviour
         log.Flush();
     }
     void Release(string name) => File.WriteAllText(Path.Combine(Out, name + ".release"), "");
-    IEnumerator Wait(Func<bool> predicate, float seconds = 4)
+    // Every condition the probe waits for comes true in the Editor (the server holds the rest of
+    // each body until the probe releases it), so a wait ends with its condition; the cap only
+    // stops a run whose condition never comes, and a wait that reaches it is recorded (a key the
+    // reference does not have) instead of letting the next records observe an earlier state.
+    const float WaitCap = 60;
+    int timedOut;
+    IEnumerator Wait(Func<bool> predicate)
     {
-        var end = Time.realtimeSinceStartup + seconds;
-        while (!predicate() && Time.realtimeSinceStartup < end) yield return null;
+        var end = Time.realtimeSinceStartup + WaitCap;
+        while (!predicate())
+        {
+            if (Time.realtimeSinceStartup >= end)
+            {
+                Write("wait-timed-out." + ++timedOut, WaitCap);
+                yield break;
+            }
+            yield return null;
+        }
     }
     IEnumerator Start()
     {
@@ -60,6 +74,8 @@ public class NetworkStreamingProbe : MonoBehaviour
         public ulong length;
         public bool main = true, order = true, same = true, bounded = true;
         public bool reject;
+        // The handler has refused the request: returned false, thrown, or aborted it.
+        public bool refused;
         public string throws;
         public Action onData, onHeader;
         readonly List<byte[]> arrays = new List<byte[]>();
@@ -83,7 +99,7 @@ public class NetworkStreamingProbe : MonoBehaviour
             order &= calls == 0 && completes == 0;
             lengths++; length = n;
             onHeader?.Invoke();
-            if (throws == "throw-header") throw new InvalidOperationException("network oracle header failure");
+            if (throws == "throw-header") { refused = true; throw new InvalidOperationException("network oracle header failure"); }
         }
         protected override bool ReceiveData(byte[] data, int n)
         {
@@ -99,6 +115,7 @@ public class NetworkStreamingProbe : MonoBehaviour
             }
             calls++; bytes += n;
             onData?.Invoke();
+            refused |= reject || throws == "throw-data";
             if (throws == "throw-data") throw new InvalidOperationException("network oracle data failure");
             return !reject;
         }
@@ -119,15 +136,18 @@ public class NetworkStreamingProbe : MonoBehaviour
         h.throws = mode;
         var r = new UnityWebRequest(url + name, "GET", h, null);
         if (mode == "timeout") r.timeout = 1;
-        if (mode == "callback-abort") h.onData = () => { if (h.bytes >= First) r.Abort(); };
-        if (mode == "header-abort") h.onHeader = r.Abort;
+        if (mode == "callback-abort") h.onData = () => { if (h.bytes >= First) { h.refused = true; r.Abort(); } };
+        if (mode == "header-abort") h.onHeader = () => { h.refused = true; r.Abort(); };
                 if (mode == "dispose-retain") r.disposeDownloadHandlerOnDispose = false;
         bool eventMain = true, eventAfterContent = false;
         int events = 0;
         var op = r.SendWebRequest();
         op.completed += _ => { events++; eventMain &= Thread.CurrentThread.ManagedThreadId == Main; eventAfterContent = h.completes > 0; };
         bool empty = mode == "empty";
-        yield return Wait(() => empty ? r.isDone : h.bytes >= First || r.isDone);
+        // Until the first part has arrived, or the handler has refused the request (the server
+        // holds the rest of the body until the release, which may also hold back the end of a
+        // refused request).
+        yield return Wait(() => empty ? r.isDone : h.bytes >= First || r.isDone || h.refused);
         bool selfTerminates = mode == "reject" || mode == "throw-data" || mode == "throw-header" || mode == "header-abort" || mode == "callback-abort";
         if (!selfTerminates) Write(name + ".partial", h.bytes >= First && !r.isDone);
         if (!empty && !selfTerminates)
@@ -145,7 +165,7 @@ public class NetworkStreamingProbe : MonoBehaviour
         Release(name);
         if (disposed)
         {
-            yield return Wait(() => events > 0, 1);
+            yield return Wait(() => events > 0);
             Write(name + ".post-dispose-bytes", h.bytes - atDispose);
         }
         else
