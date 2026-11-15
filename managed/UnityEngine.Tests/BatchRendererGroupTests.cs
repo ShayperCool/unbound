@@ -706,6 +706,30 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>New ShadowDrawingSettings name no split (the release's -1); such a light's
+        /// lists take its splits in the order they are made in the culling, as URP makes one
+        /// per cascade (tests/projects/brg split_masks, split_masks_second); an explicit split
+        /// index is kept.</summary>
+        [Fact]
+        public void ShadowListsWithoutASplitTakeTheLightsSplitsInOrder()
+        {
+            Assert.True(m_Camera.TryGetCullingParameters(out var parameters));
+            var results = new CullingResults { ptr = Culling.Cull(ref parameters) };
+            var settings = new ShadowDrawingSettings(results, 0);
+            Assert.Equal(-1, settings.splitIndex);
+            var context = new ScriptableRenderContext();
+            Assert.Equal(0, RendererLists.SplitOf(context.CreateShadowRendererList(ref settings)));
+            Assert.Equal(1, RendererLists.SplitOf(context.CreateShadowRendererList(ref settings)));
+            var other = new ShadowDrawingSettings(results, 1);
+            Assert.Equal(0, RendererLists.SplitOf(context.CreateShadowRendererList(ref other)));
+            var explicitSplit = new ShadowDrawingSettings(results, 0) { splitIndex = 3 };
+            Assert.Equal(3, RendererLists.SplitOf(context.CreateShadowRendererList(ref explicitSplit)));
+            Assert.Equal(2, RendererLists.SplitOf(context.CreateShadowRendererList(ref settings)));
+            // Another culling counts afresh.
+            var again = new ShadowDrawingSettings(new CullingResults { ptr = Culling.Cull(ref parameters) }, 0);
+            Assert.Equal(0, RendererLists.SplitOf(context.CreateShadowRendererList(ref again)));
+        }
+
         /// <summary>The Scripting API (BatchCullingContext.cullingLayerMask): a draw command on a
         /// layer a camera culling's mask leaves out is discarded; a light culling's casters are
         /// drawn whatever their layer (measured, tests/projects/brg shadows).</summary>

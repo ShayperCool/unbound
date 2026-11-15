@@ -786,7 +786,7 @@ namespace Unbound.Runtime
         /// <param name="shadows">A shadow caster list: renderers that cast shadows (with
         /// ShadowsOnly ones), else renderers drawn normally (without ShadowsOnly ones).</param>
         internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames, ShadowObjectsFilter? shadows = null,
-            RendererLists.TaggedStates tagged = null, int shadowLight = -1, int shadowSplit = 0)
+            RendererLists.TaggedStates tagged = null, int shadowLight = -1, int shadowSplit = -1)
         {
             // The draws' merged properties live until the list is written.
             using var pooled = DrawPropertyPool.Begin();

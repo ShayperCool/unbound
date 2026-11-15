@@ -952,8 +952,12 @@ namespace UnityEngine.Rendering
             m_ObjectsFilter = ShadowObjectsFilter.AllObjects;
             m_ProjectionType = BatchCullingProjectionType.Unknown;
             m_BatchLayerMask = uint.MaxValue;
-            m_SplitIndex = 0;
+            m_SplitIndex = UnassignedSplit;
         }
+
+        /// <summary>The release's split index of new settings: none given, the light's lists take
+        /// their splits in the order they are made (Unbound.Runtime.RendererLists.Shadows).</summary>
+        internal const int UnassignedSplit = -1;
 
         [Obsolete("ShadowDrawingSettings(CullingResults, int, BatchCullingProjectionType) is deprecated. Use ShadowDrawingSettings(CullingResults, int) instead.")]
         public ShadowDrawingSettings(CullingResults cullingResults, int lightIndex, BatchCullingProjectionType projectionType) : this(cullingResults, lightIndex) =>

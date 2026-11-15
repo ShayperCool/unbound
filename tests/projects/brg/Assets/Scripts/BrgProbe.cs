@@ -90,7 +90,10 @@ public unsafe class BrgProbe : MonoBehaviour
             ForwardPlus();
             LocalShadows();
             Sorting();
-            SplitMasks();
+            SplitMasks("split_masks", 0.25f);
+            // The same pillars with the cascades split at 1/20 of the shadow distance: their
+            // shadows fall in the second cascade.
+            SplitMasks("split_masks_second", 0.05f);
         }
         catch (Exception e)
         {
@@ -779,14 +782,17 @@ public unsafe class BrgProbe : MonoBehaviour
 
     /// <summary>The sun casts hard shadows in two cascades (URP's split at a quarter of the 50
     /// unit shadow distance) onto a large ground; pillars near the camera (their shadows in the
-    /// first cascade) are drawn by commands whose splitVisibilityMask is 1, 2, 0 and 3. Records each pillar's colour and the ground's where
+    /// first cascade, or with the split at <paramref name="cascadeSplit"/> in the second) are drawn
+    /// by commands whose splitVisibilityMask is 1, 2, 0 and 3. Records each pillar's colour and the ground's where
     /// its shadow falls.</summary>
-    void SplitMasks()
+    void SplitMasks(string name, float cascadeSplit)
     {
         m_Light = FindFirstObjectByType<Light>();
         var urp = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
         int cascades = urp.shadowCascadeCount;
+        float split = urp.cascade2Split;
         urp.shadowCascadeCount = 2;
+        urp.cascade2Split = cascadeSplit;
         m_Light.shadows = LightShadows.Hard;
         var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.transform.position = new Vector3(0f, -0.45f, 15f);
@@ -817,7 +823,7 @@ public unsafe class BrgProbe : MonoBehaviour
             : m_Brg.AddBatch(metadata, m_MaskBuffer.bufferHandle);
         metadata.Dispose();
 
-        Scenario("split_masks");
+        Scenario(name);
         RecordViews();
         // Each pillar's colour at its centre and the ground's where its centre's shadow falls,
         // projected as the 320x180 target renders it.
@@ -830,9 +836,9 @@ public unsafe class BrgProbe : MonoBehaviour
             // The shadow of a point near the pillar's top, which falls beside the pillar.
             var top = place + Vector3.up * (scale.y * 0.4f);
             var shadow = top + toGround * ((top.y + 0.45f) / -toGround.y);
-            Row("split_masks.p" + i + ".mask", (int)mask);
-            Row("split_masks.p" + i + ".body", Pixel(place));
-            Row("split_masks.p" + i + ".shadow", Pixel(shadow));
+            Row(name + ".p" + i + ".mask", (int)mask);
+            Row(name + ".p" + i + ".body", Pixel(place));
+            Row(name + ".p" + i + ".shadow", Pixel(shadow));
         }
         m_Camera.targetTexture = null;
         RenderTexture.ReleaseTemporary(target);
@@ -842,6 +848,7 @@ public unsafe class BrgProbe : MonoBehaviour
         DestroyImmediate(ground);
         m_Light.shadows = LightShadows.None;
         urp.shadowCascadeCount = cascades;
+        urp.cascade2Split = split;
     }
 
     /// <summary>The last scenario image's colour at a world point (the camera's target set).</summary>
@@ -894,7 +901,7 @@ public unsafe class BrgProbe : MonoBehaviour
             m_Views[view] = m_Views.TryGetValue(view, out int n) ? n + 1 : 1;
         }
         if (group != m_Brg || m_NoCommands) return new JobHandle();
-        if (m_Scenario == "split_masks")
+        if (m_Scenario.StartsWith("split_masks", StringComparison.Ordinal))
         {
             SplitMaskCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
             return new JobHandle();

@@ -342,7 +342,7 @@ namespace Unbound.Runtime
 
         // Unsupported parts of draw commands (bits of s_Warned).
         const int UnsupportedIndirectTopology = 0, UnsupportedProcedural = 1, UnsupportedProceduralIndirect = 2, UnsupportedLightmap = 3,
-            UnsupportedCrossFadeKeyword = 4, UnsupportedMissingArrays = 5, UnsupportedSortingPosition = 6;
+            UnsupportedCrossFadeKeyword = 4, UnsupportedMissingArrays = 5, UnsupportedSortingPosition = 6, UnsupportedSplit = 7;
 
         /// <summary>The view slice of a spot or point light's culling (a directional light's is 0):
         /// measured, tests/projects/brg local_shadows.</summary>
@@ -357,6 +357,7 @@ namespace Unbound.Runtime
             "BatchRendererGroup draw commands flagged LODCrossFadeKeyword draw without LOD_FADE_CROSSFADE (not enabled yet).",
             "a BatchRendererGroup culling callback gave draw commands or visible instances without allocating their arrays; its output is not drawn.",
             "a BatchRendererGroup draw command flagged HasSortingPosition points outside instanceSortingPositions; it sorts by its sortingPosition as an approximate depth.",
+            "a shadow caster list's split is not one of the six a BatchRendererGroup splitVisibilityMask covers; its commands are drawn whatever their mask.",
         };
 
         /// <summary>The invalid-ID errors logged so far: the Editor logs each distinct message once.</summary>
@@ -395,7 +396,10 @@ namespace Unbound.Runtime
         /// filters as a camera list's.</summary>
         internal static void CollectShadows(CullingData data, FilteringSettings filtering, int light, int split, List<FrameBuilder.DrawItem> into, ref long sequence)
         {
-            if (light >= 0) Collect(null, data, filtering, -1, light, into, ref sequence, SplitBit(split));
+            if (light < 0) return;
+            var bit = SplitBit(split);
+            if (bit == 0) WarnOnce(UnsupportedSplit);
+            Collect(null, data, filtering, -1, light, into, ref sequence, bit);
         }
 
         /// <summary>The splitVisibilityMask bit of a shadow split: "the least significant bit

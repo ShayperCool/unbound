@@ -1064,6 +1064,9 @@ namespace Unbound.Runtime
         internal int[] ProbeIndexMap;
         /// <summary>The BatchRendererGroup callbacks' outputs for this culling.</summary>
         internal readonly List<Unbound.Runtime.BatchCulling.Output> Batches = new List<Unbound.Runtime.BatchCulling.Output>();
+        /// <summary>Per visible light, the shadow renderer lists made without a split index so
+        /// far: the next one's split.</summary>
+        internal readonly Dictionary<int, int> ShadowListsMade = new Dictionary<int, int>();
 
         internal void Dispose()
         {
@@ -1083,6 +1086,7 @@ namespace Unbound.Runtime
             Visible.Clear();
             Queued.Clear();
             QueuedVisible.Clear();
+            ShadowListsMade.Clear();
             Lights = default;
             OffscreenVertexLights = default;
             Probes = default;
@@ -1293,6 +1297,8 @@ namespace Unbound.Runtime
             internal TaggedStates Tagged;
             internal Camera Camera;
             internal ShadowDrawingSettings ShadowSettings;
+            /// <summary>A shadow list's culling split (-1: none known).</summary>
+            internal int Split;
         }
 
         static readonly List<Entry> s_Lists = new List<Entry>();
@@ -1305,10 +1311,28 @@ namespace Unbound.Runtime
 
         internal static bool IsValid(RendererList list) => list.index < s_Lists.Count;
 
+        /// <summary>The culling split a shadow list draws (-1: none known).</summary>
+        internal static int SplitOf(RendererList list) => IsValid(list) ? s_Lists[(int)list.index].Split : -1;
+
         internal static RendererList Empty() => Add(new Entry { Kind = Kind.Empty });
         internal static RendererList Skybox(Camera camera) => Add(new Entry { Kind = Kind.Skybox, Camera = camera });
         internal static RendererList UIOverlay(Camera camera) => Add(new Entry { Kind = Kind.UIOverlay, Camera = camera });
-        internal static RendererList Shadows(ShadowDrawingSettings settings) => Add(new Entry { Kind = Kind.Shadows, ShadowSettings = settings });
+        /// <summary>A light's shadow caster list. Settings without a split index (URP makes one
+        /// list per cascade or cube face from the same settings) take the light's splits in the
+        /// order its lists are made in the culling: the first list the first split (measured:
+        /// tests/projects/brg split_masks, URP's two cascades, whose lists the Editor draws with
+        /// the first and the second split's casters).</summary>
+        internal static RendererList Shadows(ShadowDrawingSettings settings)
+        {
+            int split = settings.splitIndex;
+            var data = settings.cullingResults.Data;
+            if (split < 0 && data != null)
+            {
+                data.ShadowListsMade.TryGetValue(settings.lightIndex, out split);
+                data.ShadowListsMade[settings.lightIndex] = split + 1;
+            }
+            return Add(new Entry { Kind = Kind.Shadows, ShadowSettings = settings, Split = split });
+        }
 
         internal static RendererList Create(RendererListParams p, RenderStateBlock? stateBlock = null)
         {
@@ -1405,7 +1429,7 @@ namespace Unbound.Runtime
                 case Kind.Renderers: DrawRenderers(e); break;
                 case Kind.UIOverlay: DrawUIOverlay(e.Camera); break;
                 case Kind.Skybox: FrameBuilder.DrawSkybox(e.Camera); break;
-                case Kind.Shadows: DrawShadowCasters(e.ShadowSettings); break;
+                case Kind.Shadows: DrawShadowCasters(e.ShadowSettings, e.Split); break;
             }
         }
 
@@ -1413,13 +1437,13 @@ namespace Unbound.Runtime
 
         /// <summary>A light's shadow casters: the culled renderers that cast shadows, with their
         /// ShadowCaster pass (front to back, by queue).</summary>
-        static void DrawShadowCasters(ShadowDrawingSettings settings)
+        static void DrawShadowCasters(ShadowDrawingSettings settings, int split)
         {
             var data = settings.cullingResults.Data;
             if (data == null || data.Camera == null) return;
             var drawing = new DrawingSettings(s_ShadowCaster, new SortingSettings(data.Camera) { criteria = SortingCriteria.CommonOpaque });
             var filtering = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
-            FrameBuilder.DrawRendererList(data, drawing, filtering, new List<ShaderTagId> { s_ShadowCaster }, shadows: settings.objectsFilter, shadowLight: settings.lightIndex, shadowSplit: settings.splitIndex);
+            FrameBuilder.DrawRendererList(data, drawing, filtering, new List<ShaderTagId> { s_ShadowCaster }, shadows: settings.objectsFilter, shadowLight: settings.lightIndex, shadowSplit: split);
         }
 
         static void DrawRenderers(Entry e)
