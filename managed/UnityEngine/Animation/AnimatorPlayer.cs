@@ -1561,6 +1561,13 @@ namespace Unbound.Runtime
 
         bool[] m_OutputBound = Array.Empty<bool>(), m_OutputObjectBound = Array.Empty<bool>();
 
+        /// <summary>The pose's channel weights before a blend tree state samples its children.</summary>
+        float[] m_WeightBeforeState = Array.Empty<float>();
+
+        /// <summary>A tree's children whose weights sum to the state's weight leave nothing: the
+        /// sum may round a few float steps below it.</summary>
+        const float TreeGapTolerance = 1e-5f;
+
         void SampleState(LayerRun layer, int layerIndex, StateRun run, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
         {
             if (weight <= 0f) return;
@@ -1572,6 +1579,14 @@ namespace Unbound.Runtime
             m_SamplingGoals = m_PlacedHuman != null && !layer.Def.Additive ? m_StateGoals ??= new Unbound.Runtime.Humanoid.HumanStateGoals(Bindings) : null;
             m_SamplingGoals?.BeginState();
             m_SamplingStateWeight = weight;
+            // A blend tree's children may animate different channels: what a child does not
+            // animate is left to the state's rule below with that child's share of the weight.
+            bool tree = motion is BlendTreeMotion && !layer.Def.Additive;
+            if (tree)
+            {
+                if (m_WeightBeforeState.Length < Bindings.FloatCount) m_WeightBeforeState = new float[pose.Weight.Length];
+                Array.Copy(pose.Weight, m_WeightBeforeState, Bindings.FloatCount);
+            }
             SampleMotion(layer, layerIndex, run, motion, mirror, normalized, weight, pose, mask, objectMask);
             m_SamplingGoals?.EndState(pose, mask, weight, humanoid: AnimatesGoals(motion, mirror));
             m_SamplingGoals = null;
@@ -1605,10 +1620,20 @@ namespace Unbound.Runtime
                     Bindings.FloatCount, Bindings.ObjectCount);
             for (int c = 0; c < Bindings.FloatCount; c++)
             {
-                if ((c < animated.Length && animated[c]) || (mask != null && !mask[c])) continue;
+                if (mask != null && !mask[c]) continue;
+                float left = weight;
+                if (c < animated.Length && animated[c])
+                {
+                    // Only a blend tree leaves part of an animated channel: the weight of the
+                    // children without it (matches the Unity 6000.0.71f1 Editor,
+                    // tests/projects/animpartial tree.*).
+                    if (!tree) continue;
+                    left = weight - (pose.Weight[c] - m_WeightBeforeState[c]);
+                    if (!(left > weight * TreeGapTolerance)) continue;
+                }
                 if (run.Def.WriteDefaults && (c >= inLayer.Length || !inLayer[c]) && !(outputBound && m_OutputBound[c])) continue;
                 if (holds && c < layer.Held.Length && layer.Held[c]) continue;
-                leftAs[c] += weight;
+                leftAs[c] += left;
             }
             if (!run.Def.WriteDefaults || layerIndex > 0) return;
             for (int c = 0; c < Bindings.ObjectCount && c < objectsInLayer.Length; c++)
