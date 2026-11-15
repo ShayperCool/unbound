@@ -123,7 +123,7 @@ namespace Unbound.Runtime
         /// instead of the pose; the caller adds the body and the goals the clip's state blends
         /// (<see cref="Unbound.Runtime.Humanoid.HumanStateGoals"/>).</summary>
         internal static void Sample(BoundClip bound, float time, float weight, AnimationPose pose, bool[] mask = null, bool[] objectMask = null,
-            float[] reference = null, bool loopPose = false, Unbound.Runtime.Humanoid.HumanStateGoals goals = null)
+            float[] reference = null, bool loopPose = false, Unbound.Runtime.Humanoid.HumanStateGoals goals = null, bool rawQuaternions = false)
         {
             if (weight <= 0f) return;
             pose.Total += weight;
@@ -136,7 +136,7 @@ namespace Unbound.Runtime
                 var curve = curves[i];
                 if (curve.QuaternionStart && i + 3 < curves.Count)
                 {
-                    SampleQuaternion(bound, i, time, weight, pose, mask, reference, phase);
+                    SampleQuaternion(bound, i, time, weight, pose, mask, reference, phase, rawQuaternions);
                     i += 3;
                     continue;
                 }
@@ -204,7 +204,12 @@ namespace Unbound.Runtime
             }
         }
 
-        static void SampleQuaternion(BoundClip bound, int first, float time, float weight, AnimationPose pose, bool[] mask, float[] reference, float phase)
+        /// <summary>A rotation's four curves, normalized unless <paramref name="raw"/> (legacy
+        /// Animation blends and differences the curves' values as they are: an additive state's
+        /// rotation between two keys turns by less than the normalized difference, matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/animpartial legacy.additive).</summary>
+        static void SampleQuaternion(BoundClip bound, int first, float time, float weight, AnimationPose pose, bool[] mask, float[] reference, float phase,
+            bool raw)
         {
             var curves = bound.Clip.m_Curves;
             int cx = bound.Float[first], cy = bound.Float[first + 1], cz = bound.Float[first + 2], cw = bound.Float[first + 3];
@@ -216,7 +221,7 @@ namespace Unbound.Runtime
             float w = curves[first + 3].Evaluate(time);
             float m = MathF.Sqrt(x * x + y * y + z * z + w * w);
             if (m < 1e-6f) return;
-            x /= m; y /= m; z /= m; w /= m;
+            if (!raw) { x /= m; y /= m; z /= m; w /= m; }
             if (phase >= 0f)
             {
                 var looped = bound.Clip.LoopPose(first, new Quaternion(x, y, z, w), phase);
@@ -300,6 +305,8 @@ namespace Unbound.Runtime
             internal float[] Result = Array.Empty<float>();
             internal float[] Kept = Array.Empty<float>();
             internal bool[] Touched = Array.Empty<bool>();
+            /// <summary>Touched by the blend of the states (legacy: before additive states).</summary>
+            internal bool[] Blended = Array.Empty<bool>();
             internal Object[] Objects = Array.Empty<Object>();
             internal bool[] ObjectTouched = Array.Empty<bool>();
             internal readonly List<MonoBehaviour> Scripts = new List<MonoBehaviour>();
@@ -313,6 +320,7 @@ namespace Unbound.Runtime
                     Result = new float[size];
                     Kept = new float[size];
                     Touched = new bool[size];
+                    Blended = new bool[size];
                 }
                 if (Objects.Length < objects)
                 {
@@ -598,36 +606,46 @@ namespace Unbound.Runtime
         }
 
         /// <summary>
-        /// The legacy Animation rule: higher layers take weight first, lower layers get what is left;
-        /// a channel's weight below one is completed with its default value. Additive states add their
-        /// difference to the defaults on top.
+        /// The legacy Animation rule, per channel, over the states that animate it (layer poses
+        /// hold their states' weighted sums, highest layer first): a layer's states share what the
+        /// layers above leave, its sum counting as at most 1 (remaining × w / max(sum, 1) each), and
+        /// leave the rest times (1 − sum) to the layers below; the result is the sum of the shares
+        /// normalized to full weight. A channel no state animates is not written. Additive states
+        /// then add their differences from their clips' first keys to the result (or to the current
+        /// value), by their weight up to 1, on a Transform's position, rotation and scale only:
+        /// rotations by the difference turned towards the identity by the weight. (Matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/animpartial legacy.*.)
         /// </summary>
-        internal static void WriteLegacy(AnimationBindings b, AnimationPose[] layersHighFirst, int count, AnimationPose additive)
+        internal static void WriteLegacy(AnimationBindings b, AnimationPose[] layersHighFirst, int count,
+            List<(AnimationPose Pose, float Weight)> additives)
         {
             var s = Rent(b);
             try
             {
                 int n = b.FloatCount;
+                Array.Clear(s.Blended, 0, n);
                 for (int c = 0; c < n; c++)
                 {
-                    float remaining = 1f, acc = 0f;
-                    bool any = false;
+                    var owner = b.FloatOwner[c];
+                    if (owner != null && owner.IsQuaternion && owner.First == c && owner.Width == 4 && c + 3 < n)
+                    {
+                        LegacyRotation(layersHighFirst, count, s, c);
+                        c += 3;
+                        continue;
+                    }
+                    float remaining = 1f, acc = 0f, total = 0f;
                     for (int l = 0; l < count && remaining > 0f; l++)
                     {
                         float w = layersHighFirst[l].Weight[c];
                         if (w <= 0f) continue;
-                        any = true;
-                        float use = Math.Min(w, remaining);
-                        acc += layersHighFirst[l].Value[c] * (use / w);
-                        remaining -= use;
+                        float share = remaining / Math.Max(w, 1f);
+                        acc += layersHighFirst[l].Value[c] * share;
+                        total += w * share;
+                        remaining = Math.Max(0f, remaining - w * remaining);
                     }
-                    if (additive != null && additive.Weight[c] > 0f)
-                    {
-                        if (!any) { acc = b.Defaults[c]; remaining = 0f; any = true; }
-                        acc += additive.Value[c] - additive.Weight[c] * b.Defaults[c];
-                    }
-                    s.Touched[c] = any;
-                    if (any) s.Result[c] = acc + remaining * b.Defaults[c];
+                    if (!(total > AnimationState.WeightEpsilon)) continue;
+                    s.Result[c] = acc / total;
+                    s.Touched[c] = s.Blended[c] = true;
                 }
                 for (int c = 0; c < b.ObjectCount; c++)
                 {
@@ -641,12 +659,70 @@ namespace Unbound.Runtime
                         }
                     }
                 }
+                // The additive states' channels start from the blend or the current value.
+                foreach (var (pose, _) in additives)
+                    for (int c = 0; c < n; c++)
+                        if (pose.Weight[c] > 0f && b.FloatOwner[c] is { IsTransformTrs: true } trs)
+                            for (int i = 0; i < trs.Width; i++) s.Touched[trs.First + i] = true;
                 ReadCurrent(b, s);
+                for (int c = 0; c < n; c++)
+                    if (s.Touched[c] && !s.Blended[c]) s.Result[c] = s.Current[c];
+                foreach (var (pose, weight) in additives) AddLegacyAdditive(b, s, pose, weight);
                 Write(b, s);
             }
             finally
             {
                 Return(s);
+            }
+        }
+
+        /// <summary><see cref="WriteLegacy"/> for a rotation's four channels: the layers' weighted
+        /// quaternion sums (each in the hemisphere of the sum so far), normalized.</summary>
+        static void LegacyRotation(AnimationPose[] layersHighFirst, int count, Scratch s, int c)
+        {
+            float remaining = 1f, total = 0f, x = 0f, y = 0f, z = 0f, w = 0f;
+            for (int l = 0; l < count && remaining > 0f; l++)
+            {
+                var pose = layersHighFirst[l];
+                float lw = pose.Weight[c];
+                if (lw <= 0f) continue;
+                float share = remaining / Math.Max(lw, 1f);
+                float qx = pose.Value[c], qy = pose.Value[c + 1], qz = pose.Value[c + 2], qw = pose.Value[c + 3];
+                if (x * qx + y * qy + z * qz + w * qw < 0f) share = -share;
+                x += qx * share; y += qy * share; z += qz * share; w += qw * share;
+                total += lw * Math.Abs(share);
+                remaining = Math.Max(0f, remaining - lw * remaining);
+            }
+            if (!(total > AnimationState.WeightEpsilon)) return;
+            float m = MathF.Sqrt(x * x + y * y + z * z + w * w);
+            if (m < 1e-6f) return;
+            s.Result[c] = x / m; s.Result[c + 1] = y / m; s.Result[c + 2] = z / m; s.Result[c + 3] = w / m;
+            for (int i = 0; i < 4; i++) s.Touched[c + i] = s.Blended[c + i] = true;
+        }
+
+        /// <summary>Adds one legacy additive state's differences (<paramref name="pose"/>, sampled at
+        /// weight 1 against its clip's first keys) to a Transform's position, rotation and scale.</summary>
+        static void AddLegacyAdditive(AnimationBindings b, Scratch s, AnimationPose pose, float weight)
+        {
+            int n = b.FloatCount;
+            for (int c = 0; c < n; c++)
+            {
+                if (!(pose.Weight[c] > 0f) || b.FloatOwner[c] is not { IsTransformTrs: true } owner) continue;
+                if (owner.IsQuaternion && owner.First == c && owner.Width == 4 && c + 3 < n)
+                {
+                    var current = new Quaternion(s.Result[c], s.Result[c + 1], s.Result[c + 2], s.Result[c + 3]);
+                    float dx = pose.Value[c], dy = pose.Value[c + 1], dz = pose.Value[c + 2], dw = pose.Value[c + 3];
+                    if (dw < 0f) { dx = -dx; dy = -dy; dz = -dz; dw = -dw; }
+                    float qx = dx * weight, qy = dy * weight, qz = dz * weight, qw = 1f + (dw - 1f) * weight;
+                    float m = MathF.Sqrt(qx * qx + qy * qy + qz * qz + qw * qw);
+                    if (m < 1e-6f) { c += 3; continue; }
+                    var r = current * new Quaternion(qx / m, qy / m, qz / m, qw / m);
+                    s.Result[c] = r.x; s.Result[c + 1] = r.y; s.Result[c + 2] = r.z; s.Result[c + 3] = r.w;
+                    c += 3;
+                    continue;
+                }
+                if (owner.IsQuaternion) continue;
+                s.Result[c] += weight * pose.Value[c];
             }
         }
 

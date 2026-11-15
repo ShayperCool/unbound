@@ -25,7 +25,6 @@ namespace UnityEngine
         AnimationBindings m_Bindings;
         bool m_Registered;
         AnimationPose[] m_LayerPoses = Array.Empty<AnimationPose>();
-        AnimationPose m_AdditivePose;
 
         public Animation() { }
 
@@ -558,6 +557,7 @@ namespace UnityEngine
             state.m_WaitingInQueue = false;
             state.m_Weight = 1f;
             state.m_Fading = false;
+            state.m_FadeOutLength = 0f;
             if (!state.m_Playing) state.Begin();
             return true;
         }
@@ -583,12 +583,16 @@ namespace UnityEngine
             return false;
         }
 
+        /// <summary>Play stops the other states of the layer (or all) and leaves them at weight 0
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/animpartial legacy.play).</summary>
         void StopOthers(AnimationState keep, PlayMode mode)
         {
             foreach (var s in States.ToArray())
             {
                 if (s == keep || s.m_WaitingInQueue) continue;
-                if (mode == PlayMode.StopAll || s.m_Layer == keep.m_Layer) s.StopInternal();
+                if (mode != PlayMode.StopAll && s.m_Layer != keep.m_Layer) continue;
+                s.StopInternal();
+                s.m_Weight = 0f;
             }
         }
 
@@ -610,7 +614,7 @@ namespace UnityEngine
         void CrossFadeState(AnimationState state, float fadeLength, PlayMode mode)
         {
             if (!CheckLegacy(state)) return;
-            if (fadeLength <= 0f)
+            if (fadeLength <= AnimationState.ImmediateFade)
             {
                 Play(state.m_Name, mode);
                 return;
@@ -620,14 +624,15 @@ namespace UnityEngine
                 if (s == state || s.m_WaitingInQueue || !s.m_Enabled) continue;
                 if (mode == PlayMode.StopAll || s.m_Layer == state.m_Layer) s.FadeTo(0f, fadeLength, stopWhenFaded: true);
             }
+            // The state fades in from the weight it has (a stopped state keeps its weight).
             if (!state.m_Enabled || !state.m_Playing)
             {
-                state.m_Weight = state.m_Enabled ? state.m_Weight : 0f;
                 state.m_Enabled = true;
                 state.Begin();
             }
             state.m_WaitingInQueue = false;
             state.FadeTo(1f, fadeLength, stopWhenFaded: false);
+            state.m_FadeOutLength = fadeLength;
         }
 
         public void Blend(string animation) => Blend(animation, 1f, 0.3f);
@@ -643,21 +648,16 @@ namespace UnityEngine
                 return;
             }
             if (!CheckLegacy(state)) return;
+            // A fade of any length, from the weight the state has: a state enabled now reaches its
+            // weight in the update after its first (matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/animpartial legacy.blend, legacy.two).
             if (!state.m_Enabled)
             {
-                state.m_Weight = 0f;
                 state.m_Enabled = true;
                 state.Begin();
             }
-            if (fadeLength <= 0f)
-            {
-                state.m_Weight = targetWeight;
-                state.m_Fading = false;
-            }
-            else
-            {
-                state.FadeTo(targetWeight, fadeLength, stopWhenFaded: false);
-            }
+            state.FadeTo(targetWeight, fadeLength, stopWhenFaded: false);
+            state.m_FadeOutLength = fadeLength;
         }
 
         public AnimationState CrossFadeQueued(string animation) => CrossFadeQueued(animation, 0.3f, QueueMode.CompleteOthers, PlayMode.StopSameLayer);
@@ -715,6 +715,7 @@ namespace UnityEngine
                 StopOthers(clone, clone.m_QueuePlayMode);
                 clone.m_Enabled = true;
                 clone.m_Weight = 1f;
+                clone.m_FadeOutLength = 0f;
                 clone.Begin();
             }
         }
@@ -848,6 +849,9 @@ namespace UnityEngine
                 m_Registered = true;
                 AnimationSystem.Add(this);
             }
+            // States kept through a disabled component resume where they were.
+            m_CatchUp = m_DisabledPlaying;
+            m_DisabledPlaying = false;
             if (m_PlayAutomatically && m_Animation != null && !isPlaying) Play();
         }
 
@@ -858,13 +862,29 @@ namespace UnityEngine
                 m_Registered = false;
                 AnimationSystem.Remove(this);
             }
-            // Deactivating rewinds: the default clip plays from the start when enabled again.
+            // Disabling the component keeps its states: their time catches up with the time the
+            // component missed when it is enabled again. Deactivating the GameObject stops them,
+            // keeping their weights (matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/animpartial legacy.disable, legacy.deactivate).
+            if (m_GameObject != null && m_GameObject.ActiveInHierarchyNoThrow && !m_Destroyed)
+            {
+                m_DisabledPlaying = m_LastStepTime >= 0.0;
+                return;
+            }
+            m_DisabledPlaying = false;
             foreach (var s in m_States.ToArray())
             {
                 if (s.m_IsClone) RemoveState(s);
                 else s.StopInternal();
             }
         }
+
+        /// <summary>The game time of the last update (culled or not), -1 before the first.</summary>
+        double m_LastStepTime = -1.0;
+        /// <summary>The component was disabled after an update and its states were kept.</summary>
+        bool m_DisabledPlaying;
+        /// <summary>The next update advances by the time since the last one, not by its own delta.</summary>
+        bool m_CatchUp;
 
         internal override void OnEngineDestroy()
         {
@@ -881,6 +901,10 @@ namespace UnityEngine
         /// update that runs.</summary>
         internal void Step(float deltaTime)
         {
+            double now = m_AnimatePhysics ? Time.fixedTimeAsDouble : Time.timeAsDouble;
+            if (m_CatchUp && m_LastStepTime >= 0.0 && now - m_LastStepTime > deltaTime) deltaTime = (float)(now - m_LastStepTime);
+            m_CatchUp = false;
+            m_LastStepTime = now;
             if (m_CullingType != AnimationCullingType.AlwaysAnimate && Culled())
             {
                 // A state's first update, which samples its start without advancing, is spent even
@@ -956,76 +980,106 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>A state in one evaluation: where its time went, where it samples and whether
+        /// it stopped in this update.</summary>
+        struct Playing
+        {
+            internal AnimationState State;
+            internal double From, To;
+            internal bool Fresh, Stopped;
+            internal float SampleTime, Weight, WeightBefore;
+        }
+
+        readonly List<Playing> m_Playing = new List<Playing>();
+        int[] m_PoseLayers = Array.Empty<int>();
+        readonly List<(AnimationPose Pose, float Weight)> m_Additives = new List<(AnimationPose, float)>();
+        readonly List<AnimationPose> m_AdditivePoses = new List<AnimationPose>();
+
+        /// <summary>The weight a state that stopped in this update samples its last time with:
+        /// just above <see cref="AnimationState.WeightEpsilon"/>, so that it leaves what only it
+        /// animates at its last value and hardly changes what others animate (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/animpartial legacy.crossfade, legacy.once).</summary>
+        const float StoppedSampleWeight = 1.001e-4f;
+
         void EvaluateCore(float deltaTime, bool advance)
         {
             var states = States;
             if (advance) UpdateQueue();
             m_Bindings ??= new AnimationBindings(m_GameObject);
 
-            var playing = new List<(AnimationState State, double From, double To, bool Fresh, bool Finished)>();
+            m_Playing.Clear();
             var synced = advance ? SyncedNormalizedSpeeds(states) : null;
-            foreach (var s in states.ToArray())
+            for (int i = 0; i < states.Count; i++)
             {
+                var s = states[i];
                 if (!s.m_Enabled || s.m_WaitingInQueue || s.m_Clip == null || !s.m_Clip.m_Legacy) continue;
                 double from = s.m_Time;
-                bool finished = false;
+                bool stopped = false;
+                float before = s.m_Weight;
                 if (advance)
                 {
-                    float speed = AdvanceSpeed(s, synced);
-                    // A state started since the last update is sampled where it starts (measured).
-                    if (!s.m_Fresh) s.m_Time += deltaTime * speed;
-                    s.UpdateFade(deltaTime);
-                    if (!s.m_Enabled) continue; // faded out
-                    var wrap = s.EffectiveWrap;
-                    float length = s.length;
-                    if (wrap == WrapMode.Once && (speed >= 0f ? s.m_Time >= length : s.m_Time <= 0.0))
-                        finished = true;
+                    // A state enabled since the last update is sampled where it starts: neither
+                    // its time nor its fade moves in that update (measured).
+                    float delta = s.m_Fresh ? 0f : deltaTime;
+                    s.m_Time += delta * AdvanceSpeed(s, synced);
                 }
-                playing.Add((s, from, s.m_Time, s.m_Fresh, finished));
+                double to = s.m_Time;
+                float sampleTime = s.SampleTime();
+                if (advance) stopped = s.UpdateFade(s.m_Fresh ? 0f : deltaTime);
+                m_Playing.Add(new Playing
+                {
+                    State = s, From = from, To = to, Fresh = s.m_Fresh, Stopped = stopped,
+                    SampleTime = sampleTime, Weight = stopped ? StoppedSampleWeight : s.m_Weight, WeightBefore = before,
+                });
             }
 
             // Bind first: binding a clip may add channels, and poses are sized by the channel count.
-            foreach (var p in playing) m_Bindings.Bind(p.State.m_Clip);
+            foreach (var p in m_Playing) m_Bindings.Bind(p.State.m_Clip);
 
-            // Layers, highest first.
-            var layers = new SortedDictionary<int, AnimationPose>(Comparer<int>.Create((a, b) => b.CompareTo(a)));
-            AnimationPose additive = null;
-            foreach (var (s, _, _, _, _) in playing)
+            // Layer poses, highest layer first; additive states each on their own pose.
+            int layerCount = 0;
+            m_Additives.Clear();
+            foreach (var p in m_Playing)
             {
+                var s = p.State;
+                // States at a weight of 1e-4 or less add nothing (matches the Unity 6000.0.71f1 Editor).
+                if (!(p.Weight > AnimationState.WeightEpsilon)) continue;
                 var bound = m_Bindings.Bind(s.m_Clip);
-                AnimationPose pose;
+                var mask = s.m_Mixing != null ? s.MixingMask(m_Bindings) : null;
                 if (s.m_BlendMode == AnimationBlendMode.Additive)
                 {
-                    pose = additive ??= TakePose(-1);
+                    var additive = TakeAdditivePose(m_Additives.Count);
+                    ClipSampling.Sample(bound, p.SampleTime, 1f, additive, mask, reference: m_Bindings.AdditiveReference(bound), rawQuaternions: true);
+                    m_Additives.Add((additive, Math.Min(p.Weight, 1f)));
+                    continue;
                 }
-                else if (!layers.TryGetValue(s.m_Layer, out pose))
+                int k = 0;
+                while (k < layerCount && m_PoseLayers[k] > s.m_Layer) k++;
+                if (k == layerCount || m_PoseLayers[k] != s.m_Layer)
                 {
-                    pose = TakePose(layers.Count);
-                    layers[s.m_Layer] = pose;
+                    InsertLayerPose(k, layerCount, s.m_Layer);
+                    layerCount++;
                 }
-                var mask = s.m_Mixing != null ? s.MixingMask(m_Bindings) : null;
-                ClipSampling.Sample(bound, s.SampleTime(), s.m_Weight, pose, mask);
+                ClipSampling.Sample(bound, p.SampleTime, p.Weight, m_LayerPoses[k], mask, rawQuaternions: true);
             }
-            if (layers.Count > 0 || additive != null)
-            {
-                var ordered = new AnimationPose[layers.Count];
-                layers.Values.CopyTo(ordered, 0);
-                PoseWriter.WriteLegacy(m_Bindings, ordered, ordered.Length, additive);
-            }
+            if (layerCount > 0 || m_Additives.Count > 0)
+                PoseWriter.WriteLegacy(m_Bindings, m_LayerPoses, layerCount, m_Additives);
 
-            foreach (var (s, from, to, fresh, finished) in playing)
+            for (int i = 0; i < m_Playing.Count; i++)
             {
+                var p = m_Playing[i];
+                var s = p.State;
                 if (advance) s.m_Fresh = false;
-                if (advance && s.m_Weight > 0f)
+                if (advance && (s.m_Weight > 0f || p.WeightBefore > 0f))
                 {
                     float length = s.length;
-                    if (length > 0f || fresh)
+                    if (length > 0f || p.Fresh)
                     {
                         var wrap = s.EffectiveWrap;
                         bool loop = wrap == WrapMode.Loop || wrap == WrapMode.PingPong;
-                        double n0 = length > 0f ? from / length : 0.0, n1 = length > 0f ? to / length : 0.0;
+                        double n0 = length > 0f ? p.From / length : 0.0, n1 = length > 0f ? p.To / length : 0.0;
                         var source = s;
-                        AnimationEvents.FireCrossed(s.m_Clip, n0, n1, loop, fresh, e =>
+                        AnimationEvents.FireCrossed(s.m_Clip, n0, n1, loop, p.Fresh, e =>
                         {
                             var fired = e.Copy();
                             fired.m_Source = AnimationEventSource.Legacy;
@@ -1034,24 +1088,35 @@ namespace UnityEngine
                         });
                     }
                 }
-                if (finished)
-                {
-                    if (s.m_IsClone) RemoveState(s);
-                    else s.StopInternal();
-                }
+                if (p.Stopped && s.m_IsClone) RemoveState(s);
             }
+            m_Playing.Clear();
         }
 
-        AnimationPose TakePose(int index)
+        /// <summary>Makes room for a layer's pose at <paramref name="index"/> of the
+        /// <paramref name="count"/> in use (layers in descending order).</summary>
+        void InsertLayerPose(int index, int count, int layer)
         {
-            if (index < 0)
+            if (m_LayerPoses.Length <= count)
             {
-                m_AdditivePose ??= new AnimationPose();
-                m_AdditivePose.Reset(m_Bindings.FloatCount, m_Bindings.ObjectCount);
-                return m_AdditivePose;
+                Array.Resize(ref m_LayerPoses, count + 1);
+                Array.Resize(ref m_PoseLayers, count + 1);
             }
-            if (m_LayerPoses.Length <= index) Array.Resize(ref m_LayerPoses, index + 1);
-            var pose = m_LayerPoses[index] ??= new AnimationPose();
+            var pose = m_LayerPoses[count] ?? new AnimationPose();
+            for (int j = count; j > index; j--)
+            {
+                m_LayerPoses[j] = m_LayerPoses[j - 1];
+                m_PoseLayers[j] = m_PoseLayers[j - 1];
+            }
+            pose.Reset(m_Bindings.FloatCount, m_Bindings.ObjectCount);
+            m_LayerPoses[index] = pose;
+            m_PoseLayers[index] = layer;
+        }
+
+        AnimationPose TakeAdditivePose(int index)
+        {
+            while (m_AdditivePoses.Count <= index) m_AdditivePoses.Add(new AnimationPose());
+            var pose = m_AdditivePoses[index];
             pose.Reset(m_Bindings.FloatCount, m_Bindings.ObjectCount);
             return pose;
         }
@@ -1122,8 +1187,14 @@ namespace UnityEngine
 
         internal bool m_Fading;
         internal float m_TargetWeight;
+        /// <summary>Weight per second, signed.</summary>
         internal float m_FadeSpeed;
         internal bool m_StopWhenFaded;
+        /// <summary>A clip played once fades out over this long before its end (the fade length
+        /// of the CrossFade or Blend that started it; 0 for Play).</summary>
+        internal float m_FadeOutLength;
+        /// <summary>The fade out before a once clip's end has started.</summary>
+        internal bool m_EndFade;
 
         internal bool m_IsClone;
         internal bool m_WaitingInQueue;
@@ -1316,40 +1387,84 @@ namespace UnityEngine
             m_Fresh = true;
         }
 
+        /// <summary>Stops the state: its time goes back to 0, its weight stays.</summary>
         internal void StopInternal()
         {
             m_Enabled = false;
             m_Playing = false;
             m_Fading = false;
+            m_EndFade = false;
             m_Time = 0.0;
         }
 
+        /// <summary>Fades shorter than this (seconds) are immediate: CrossFade plays at once, and
+        /// a fade's speed is the weight change times <see cref="ImmediateFadeSpeed"/>.</summary>
+        internal const float ImmediateFade = 0.001f;
+        const float ImmediateFadeSpeed = 100000f;
+        /// <summary>Weight differences and speeds at most this small count as none.</summary>
+        internal const float WeightEpsilon = 1e-4f;
+
+        /// <summary>Starts a fade to <paramref name="target"/> over <paramref name="length"/>
+        /// seconds, at a constant speed from the current weight. It takes effect as the state
+        /// updates: not in the update a state enabled now starts in. A fade to the target already
+        /// fading keeps the faster speed. (Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/animpartial legacy.*.)</summary>
         internal void FadeTo(float target, float length, bool stopWhenFaded)
         {
+            float speed = target - m_Weight;
+            speed = length <= ImmediateFade ? speed * ImmediateFadeSpeed : speed / length;
+            if (m_Fading && Math.Abs(m_TargetWeight - target) <= WeightEpsilon && Math.Abs(speed) < Math.Abs(m_FadeSpeed))
+                speed = m_FadeSpeed;
+            if (Math.Abs(speed) <= WeightEpsilon) speed = ImmediateFadeSpeed;
+            m_FadeSpeed = speed;
             m_TargetWeight = target;
-            m_FadeSpeed = Math.Abs(target - m_Weight) / Math.Max(length, 1e-6f);
             m_StopWhenFaded = stopWhenFaded;
+            m_EndFade = false;
             m_Fading = true;
-            if (m_FadeSpeed == 0f) FinishFade();
         }
 
-        internal void UpdateFade(float deltaTime)
+        /// <summary>Moves the weight by <paramref name="deltaTime"/> of its fade; a fade ends when the
+        /// weight passes its target (reaching it exactly ends it an update later). A clip played
+        /// once (or by default) fades out to 0 over <see cref="m_FadeOutLength"/> before its end,
+        /// starting with the time it has run past that point, and stops there. True when the
+        /// state stopped (it was stopped with its time reset; the caller removes clones).</summary>
+        internal bool UpdateFade(float deltaTime)
         {
-            if (!m_Fading) return;
-            float step = m_FadeSpeed * deltaTime;
-            if (Math.Abs(m_TargetWeight - m_Weight) <= step) FinishFade();
-            else m_Weight += Math.Sign(m_TargetWeight - m_Weight) * step;
-        }
-
-        void FinishFade()
-        {
-            m_Weight = m_TargetWeight;
-            m_Fading = false;
-            if (m_StopWhenFaded && m_TargetWeight <= 0f)
+            if (!m_EndFade && EffectiveWrap == WrapMode.Once)
             {
-                if (m_IsClone) m_Owner?.RemoveState(this);
-                StopInternal();
+                float length = this.length;
+                double past = m_Speed >= 0f ? m_Time - (double)(length - m_FadeOutLength) : (double)m_FadeOutLength - m_Time;
+                if ((float)past > 0f)
+                {
+                    float speed = -m_Weight;
+                    speed = m_FadeOutLength <= ImmediateFade ? speed * ImmediateFadeSpeed : speed / m_FadeOutLength;
+                    if (!m_Fading || Math.Abs(m_TargetWeight) > WeightEpsilon || Math.Abs(m_FadeSpeed) <= Math.Abs(speed)) m_FadeSpeed = speed;
+                    if (Math.Abs(m_FadeSpeed) <= WeightEpsilon) m_FadeSpeed = ImmediateFadeSpeed;
+                    m_TargetWeight = 0f;
+                    m_Fading = m_StopWhenFaded = m_EndFade = true;
+                    m_Weight += (float)past * m_FadeSpeed;
+                    if (m_FadeOutLength == 0f || (m_FadeSpeed > 0f && m_Weight > 0f) || (m_FadeSpeed <= 0f && m_Weight < 0f))
+                    {
+                        m_Weight = 0f;
+                        StopInternal();
+                        return true;
+                    }
+                }
             }
+            if (!m_Fading) return false;
+            m_Weight += deltaTime * m_FadeSpeed;
+            if (m_FadeSpeed > 0f ? m_Weight > m_TargetWeight : m_Weight < m_TargetWeight)
+            {
+                m_Weight = m_TargetWeight;
+                m_Fading = false;
+                m_EndFade = false;
+                if (m_StopWhenFaded)
+                {
+                    StopInternal();
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }

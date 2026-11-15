@@ -23,6 +23,9 @@ namespace Unbound.Runtime
         internal bool IsQuaternion;
         /// <summary>A Transform's scale (an additive reference without it subtracts one).</summary>
         internal bool IsScale;
+        /// <summary>A Transform's local position, rotation, Euler angles or scale (what legacy
+        /// additive states add to).</summary>
+        internal bool IsTransformTrs;
         /// <summary>A humanoid body curve (RootT, RootQ): additive layers leave it to the root
         /// motion pass, which composes their body differences (<see cref="AnimatorPlayer"/>).</summary>
         internal bool HumanBody;
@@ -1203,7 +1206,14 @@ namespace Unbound.Runtime
         /// <summary>The binding key of a skeleton node's property (keyed on the Animator).</summary>
         internal static string SkeletonKey(int node, TransformProperty property) => "skeleton:" + node + ":" + TransformKey(property);
 
-        internal static PropertyGroup TransformGroup(Transform t, TransformProperty property) => property switch
+        internal static PropertyGroup TransformGroup(Transform t, TransformProperty property)
+        {
+            var group = NewTransformGroup(t, property);
+            group.IsTransformTrs = true;
+            return group;
+        }
+
+        static PropertyGroup NewTransformGroup(Transform t, TransformProperty property) => property switch
         {
             TransformProperty.Position => new AccessorGroup(t, 3, () => t.localPosition, v => t.localPosition = v),
             TransformProperty.Rotation => new AccessorGroup(t, 4,
