@@ -9,8 +9,9 @@
 //! whole, with every file outside them that a string of their code names (included data, a
 //! module at another path). No reading of the code decides what to leave out: what an output
 //! must not depend on stays in crates of its own (the device rules, `unbound-graphics`, apart
-//! from the rest of `unbound-compat`). What a build script reads outside its crate by a computed
-//! path is not hashed.
+//! from the rest of `unbound-compat`). The workspace's manifest and every directory it patches
+//! packages with are hashed too. What a build script reads outside its crate by a computed path
+//! is not hashed.
 //!
 //! The identities are made by the build script, one per cache producer, from the workspace the
 //! crate is built in: [`SHADER_COMPILER`] (`unbound-shaders`, the program and kernel cache) and
