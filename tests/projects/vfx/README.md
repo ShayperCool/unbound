@@ -207,15 +207,22 @@ and the draw), the kind Unbound draws:
   them each step).
 - `many` (frame 5): twenty thousand small quads, more than one draw's 16-bit indices reach
   (16384): drawn as instances of 2048.
-- `textured` (frame 5): nine opaque quads with an image of the project's as texture.
+- `textured` (frame 5): nine opaque quads with an image of the project's as texture
+  (`Assets/Objects/ImageC.png`, whose four quarters differ: a texture drawn turned or mirrored
+  would show).
 
-The images are compared pixel by pixel (`image_limits.json`).
+The images are compared pixel by pixel (`image_limits.json`: no difference where both ran, one
+machine with an NVIDIA driver; the quads' edges fall between pixel centres, so another GPU may
+decide an edge pixel differently). Not shown by them: quads turned to face a camera (the
+cameras here look straight at them), and where a draw of many quads is split into instances
+(the image is the same either way; a unit test holds the split).
 
 ## Not covered yet
 
 Outputs that are sorted or culled per camera (alpha blended ones are, by default: the effects
-of the simulation controls), drawn through an indirect buffer, strips, meshes and primitives
-other than quads; output events, GPU events, bounds computed on the GPU and the `VFXManager`
+of the simulation controls), drawn through an indirect buffer, lit outputs, soft particles,
+motion vectors, Shader Graph outputs, shadows, strips, meshes and primitives other than quads
+(Unbound draws none of these and says so); output events, GPU events, bounds computed on the GPU and the `VFXManager`
 camera hooks. Expression operations without a control: the inverse of a general matrix and an
 event attribute read in a spawn context (no operator of the package gives either here), and
 the ones the runtime does not do yet (matrices built from or split into rows, columns and axes,

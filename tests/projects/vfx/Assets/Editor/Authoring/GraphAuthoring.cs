@@ -55,6 +55,13 @@ public static class GraphAuthoring
             texture.SetPixels(new[] { color, color, color, color });
             File.WriteAllBytes(ObjectFolder + "/" + name + ".png", texture.EncodeToPNG());
         }
+        // An image whose four quarters differ, so that a texture drawn turned or mirrored
+        // shows: red and green below, blue and yellow above (quarters of whole 4x4 blocks).
+        var quarters = new Texture2D(8, 8, TextureFormat.RGBA32, false);
+        for (int y = 0; y < 8; y++)
+            for (int x = 0; x < 8; x++)
+                quarters.SetPixel(x, y, y < 4 ? (x < 4 ? Color.red : Color.green) : (x < 4 ? Color.blue : Color.yellow));
+        File.WriteAllBytes(ObjectFolder + "/ImageC.png", quarters.EncodeToPNG());
         foreach (var name in new[] { "ShapeA", "ShapeB" })
         {
             var mesh = new Mesh
@@ -643,12 +650,12 @@ public static class GraphAuthoring
         SetVector(manyInit, "color", new Vector3(0.3f, 0.6f, 1f));
         Save(many);
 
-        // Nine opaque quads with an image of the project's for texture.
+        // Nine opaque quads with an image of the project's for texture (its quarters differ).
         var (textured, texturedSpawn, texturedInit, texturedOutput) = Quads("DrawTextured", 16, VFXAbstractRenderedOutput.BlendMode.Opaque);
         Burst(texturedSpawn, false, 9f, 0f);
         SetRandom(texturedInit, "position", new Vector3(-1f, -1f, -1f), new Vector3(1f, 1f, 1f));
         Set(texturedInit, "size", 0.6f);
-        Input(texturedOutput, "mainTexture").value = Object<Texture2D>("ImageB");
+        Input(texturedOutput, "mainTexture").value = Object<Texture2D>("ImageC");
         Save(textured);
     }
 

@@ -7,6 +7,10 @@
     "managed/UnityEngine/VFX/",
     "managed/UnityEngine/Editor/VFX/",
     "managed/UnityEngine/Editor/AssetPostprocessing.cs",
-    "managed/UnityEngine/Editor/Tuples.cs"
+    "managed/UnityEngine/Editor/Tuples.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/Graphics/IndirectDraws.cs",
+    "crates/unbound-shaders/src/fit.rs",
+    "crates/unbound-app/src/shaderlab.rs"
   ]
 }
