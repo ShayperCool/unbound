@@ -275,10 +275,12 @@ Failed to create texture because of invalid parameters.`).
 Frame state (`mipbias.*`, `active.*`, `outside.*`): `Texture.mipMapBias` changes nothing (the
 level sampled at one texel per pixel is 0 for biases 0, 1, 2 and -1, point, bilinear and
 trilinear); a render texture made active in one frame's Update is no longer active in the next
-frame's; a command buffer executed outside cameras draws with identity view and projection, also
-right after a camera rendered.
+frame's; a command buffer executed outside cameras draws with GL's matrices (identity, also right
+after a camera rendered; GL.LoadOrtho's inside a GL.LoadOrtho), the right way up, and its own
+matrices do not last past it (a DrawMeshNow after it takes GL's). `compressed.formats` lists the
+TextureFormat values `GraphicsFormatUtility.IsCompressedFormat` answers true for.
 
-Unbound matches 237/280 records with 43 declared residuals (`residuals-metal.json`, each with its
+Unbound matches 241/284 records with 43 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a screen
