@@ -18,8 +18,6 @@ mod buffer_parameters;
 mod exponents;
 pub mod fetch;
 mod fit;
-#[cfg(test)]
-mod identity;
 mod matrix_swizzles;
 mod samplers;
 mod scopes;
@@ -38,11 +36,11 @@ use std::{
 /// never used).
 pub const FORMAT_VERSION: u32 = 56;
 
-/// The identity of this build's compiler (`src/identity.rs`, made by the build script): the
-/// hash of the sources that decide its output. Cache entries are keyed by it beside
+/// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
+/// of the sources that decide its output. Cache entries are keyed by it beside
 /// [`FORMAT_VERSION`], so a build never reads another compiler's entries, whatever format
 /// number each declares.
-pub const COMPILER: &str = env!("UNBOUND_SHADERS_COMPILER");
+pub const COMPILER: &str = unbound_source_identity::SHADER_COMPILER;
 
 /// Starts a cache key with what every entry is keyed by: the format and the compiler.
 pub(crate) fn cache_key_hasher() -> blake3::Hasher {
@@ -721,7 +719,12 @@ fn left_out_warning(file: &Path, what: &str) -> String {
 }
 
 impl ShaderCompiler {
-    pub fn new(settings: Settings) -> Result<ShaderCompiler> {
+    /// A compiler; its cache entries go to the directory of this compiler's format and
+    /// identity below `settings.cache_dir` ([`unbound_source_identity::keyed_dir`]).
+    pub fn new(mut settings: Settings) -> Result<ShaderCompiler> {
+        settings.cache_dir = settings
+            .cache_dir
+            .map(|dir| unbound_source_identity::keyed_dir(&dir, FORMAT_VERSION, COMPILER));
         Ok(ShaderCompiler {
             settings,
             compiler: shaderc::Compiler::new().context("starting glslang (shaderc)")?,
@@ -2230,6 +2233,32 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
         );
         value.as_object_mut().unwrap().remove("sampler");
         assert!(serde_json::from_value::<TextureSlot>(value).is_err());
+    }
+
+    /// The identity built into the crate is that of the sources its output is made by now, and
+    /// a compiler's cache entries go to the directory of its format and identity.
+    #[test]
+    fn the_compiler_identity_is_that_of_its_sources() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let (files, _) =
+            unbound_source_identity::producing_sources(&root, "unbound_shaders", &[]).unwrap();
+        let id =
+            unbound_source_identity::identity(&root, &files, &["naga", "shaderc", "shaderc-sys"])
+                .unwrap();
+        assert_eq!(COMPILER, id);
+        let compiler = ShaderCompiler::new(Settings {
+            cache_dir: Some(PathBuf::from("cache")),
+            ..Settings::default()
+        })
+        .unwrap();
+        assert_eq!(
+            compiler.settings.cache_dir,
+            Some(unbound_source_identity::keyed_dir(
+                Path::new("cache"),
+                FORMAT_VERSION,
+                COMPILER
+            ))
+        );
     }
 
     /// Every cache key starts with this build's format and compiler: another compiler's keys
