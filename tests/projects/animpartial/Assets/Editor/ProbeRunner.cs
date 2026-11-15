@@ -189,13 +189,14 @@ public static class ProbeRunner
     }
 
     /// <summary>LE (legacy, 1 s, loops): A's x position from 0 to 1, and events calling
-    /// PartialTarget.Hit at 0.3125, 0.4375, 0.5625 and 0.6875 s (between the 0.125 s frames).</summary>
-    static AnimationClip LE()
+    /// PartialTarget.Hit at 0.3125, 0.4375, 0.5625 and 0.6875 s (between the 0.125 s frames); LZ
+    /// the same with events at 0 and 0.3125 s.</summary>
+    static AnimationClip Evented(string name, string prefix, params float[] times)
     {
-        var clip = new AnimationClip { name = "LE", frameRate = 60f, legacy = true };
+        var clip = new AnimationClip { name = name, frameRate = 60f, legacy = true };
         Float(clip, "A", typeof(Transform), "m_LocalPosition.x", 0f, 0f, 1f, 1f);
-        AnimationUtility.SetAnimationEvents(clip, Array.ConvertAll(new[] { 0.3125f, 0.4375f, 0.5625f, 0.6875f },
-            t => new AnimationEvent { time = t, functionName = "Hit", stringParameter = "e" + t.ToString("R", System.Globalization.CultureInfo.InvariantCulture) }));
+        AnimationUtility.SetAnimationEvents(clip, Array.ConvertAll(times,
+            t => new AnimationEvent { time = t, functionName = "Hit", stringParameter = prefix + t.ToString("R", System.Globalization.CultureInfo.InvariantCulture) }));
         return Save(clip);
     }
 
@@ -227,7 +228,9 @@ public static class ProbeRunner
 
     public static void Create()
     {
-        P(true); Q(true); R(true); S(true); Bools(true); LE();
+        P(true); Q(true); R(true); S(true); Bools(true);
+        Evented("LE", "e", 0.3125f, 0.4375f, 0.5625f, 0.6875f);
+        Evented("LZ", "z", 0f, 0.3125f);
         var p = P(false);
         var q = Q(false);
         Any("Any", p, q);

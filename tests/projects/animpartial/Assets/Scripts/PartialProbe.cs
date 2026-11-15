@@ -265,13 +265,14 @@ public class PartialProbe : MonoBehaviour
         public Transform Root;
         public Animation Animation;
         public Action<LegacyCase, int> Act;
-        public bool Events;
+        /// <summary>The evented clip whose events and state the case records (null: none).</summary>
+        public string Events;
     }
 
     readonly List<LegacyCase> m_Legacy = new List<LegacyCase>();
     int m_Frame;
 
-    void Legacy(string key, Action<LegacyCase, int> act, Action<Animation> setup = null, bool events = false)
+    void Legacy(string key, Action<LegacyCase, int> act, Action<Animation> setup = null, string events = null)
     {
         var root = Rig();
         var animation = root.AddComponent<Animation>();
@@ -353,12 +354,23 @@ public class PartialProbe : MonoBehaviour
         // LE's events while a CrossFade to Q over 0.25 s fades it out and stops it, while Stop
         // stops it, and at weight 0 (recorded per frame in .events records).
         Legacy("legacy.events.fade", At((0, c => c.Animation.Play("LE")), (2, c => c.Animation.CrossFade("LQ", 0.25f))),
-            animation => animation.AddClip(Resources.Load<AnimationClip>("LE"), "LE"), events: true);
+            animation => animation.AddClip(Resources.Load<AnimationClip>("LE"), "LE"), events: "LE");
         Legacy("legacy.events.stop", At((0, c => c.Animation.Play("LE")), (3, c => c.Animation.Stop("LE"))),
-            animation => animation.AddClip(Resources.Load<AnimationClip>("LE"), "LE"), events: true);
+            animation => animation.AddClip(Resources.Load<AnimationClip>("LE"), "LE"), events: "LE");
         // LE enabled at weight 0 from frame 1 (it keeps playing).
         Legacy("legacy.events.zero", At((0, c => c.Animation.Play("LE")), (1, c => c.Animation["LE"].weight = 0f)),
-            animation => animation.AddClip(Resources.Load<AnimationClip>("LE"), "LE"), events: true);
+            animation => animation.AddClip(Resources.Load<AnimationClip>("LE"), "LE"), events: "LE");
+        // LZ's event at its start (and at 0.3125 s) when it starts: cross-faded in from weight 0 over
+        // 0.25 s, blended in from weight 0 to 0.5 over 0.25 s, played, and played and set to weight 0.
+        Action<Animation> lz = animation => animation.AddClip(Resources.Load<AnimationClip>("LZ"), "LZ");
+        Legacy("legacy.events.start.crossfade", At((0, c => c.Animation.Play("LP")), (2, c => c.Animation.CrossFade("LZ", 0.25f))), lz, "LZ");
+        Legacy("legacy.events.start.blend", At((0, c => c.Animation.Play("LP")), (2, c => c.Animation.Blend("LZ", 0.5f, 0.25f))), lz, "LZ");
+        Legacy("legacy.events.start.play", At((0, c => c.Animation.Play("LP")), (2, c => c.Animation.Play("LZ"))), lz, "LZ");
+        Legacy("legacy.events.start.zero", At((0, c => c.Animation.Play("LP")), (2, c =>
+        {
+            c.Animation.Play("LZ");
+            c.Animation["LZ"].weight = 0f;
+        })), lz, "LZ");
     }
 
     /// <summary>Plays a state backwards from its end: speed -1, time at its length; a fade length
@@ -390,10 +402,10 @@ public class PartialProbe : MonoBehaviour
         foreach (var c in m_Legacy)
         {
             Record(c.Key + ".frame" + m_Frame, Snapshot(c.Root) + "," + States(c.Animation));
-            if (!c.Events) continue;
+            if (c.Events == null) continue;
             var target = c.Root.GetComponent<PartialTarget>();
-            var state = c.Animation["LE"];
-            Record(c.Key + ".frame" + m_Frame + ".events", "\"hits\":[" + string.Join(",", target.Hits.ConvertAll(S)) + "],\"LE\":["
+            var state = c.Animation[c.Events];
+            Record(c.Key + ".frame" + m_Frame + ".events", "\"hits\":[" + string.Join(",", target.Hits.ConvertAll(S)) + "],\"" + c.Events + "\":["
                 + (state.enabled ? "1" : "0") + "," + F(state.weight) + "," + F(state.time) + "]");
             target.Hits.Clear();
         }

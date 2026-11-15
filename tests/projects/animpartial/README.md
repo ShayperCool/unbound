@@ -48,7 +48,8 @@ disabled and the GameObject deactivated for two frames, the Bools clip, the Once
 backwards from its end (speed -1) alone and cross-faded in, and LE (A's x position, events at
 0.3125, 0.4375, 0.5625 and 0.6875 s calling `PartialTarget.Hit`) with the events each frame
 received in `.events` records: cross-faded out to Q over 0.25 s (its fade stops it), stopped by
-`Stop`, and at weight 0.
+`Stop`, and at weight 0; and LZ (events at 0 and 0.3125 s) started over P by `CrossFade` (0.25 s),
+`Blend` (to 0.5 over 0.25 s), `Play`, and `Play` with its weight set to 0 (`legacy.events.start.*`).
 
 The records before the Any State, humanoid, reversed and event cases are two identical windowed
 GPU Editor captures on Linux. Those cases were added from two identical batchmode captures of the

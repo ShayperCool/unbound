@@ -107,16 +107,24 @@ def batch(work, release):
 
 def merge(work, reference):
     """Appends the records of the identical batch captures that the reference lacks, before its
-    completion record; the reference's own records stay as they are."""
+    completion record; the reference's own records stay as they are, and the captures' records of
+    the same keys must match them (the comparator's tolerance)."""
     first, second = (work / r / 'values.jsonl' for r in REPEATS)
     if first.read_bytes() != second.read_bytes():
         raise SystemExit('the two captures differ')
+    lines = [line for line in first.read_text().splitlines() if line.strip()]
+    if len({json.loads(line)['k'] for line in lines}) != len(lines):
+        raise SystemExit('duplicate keys in the capture')
     old = [line for line in reference.read_text().splitlines() if line.strip()]
     keys = {json.loads(line)['k'] for line in old}
     complete = json.dumps({'k': 'complete', 'v': True}, separators=(',', ':'))
     if old[-1] != complete:
         raise SystemExit('the reference does not end with its completion record')
-    new = [line for line in first.read_text().splitlines() if line.strip() and json.loads(line)['k'] not in keys]
+    overlap = work / 'merge-overlap.jsonl'
+    overlap.write_text(''.join(line + '\n' for line in lines if json.loads(line)['k'] in keys))
+    if compare(reference, overlap):
+        raise SystemExit('the captures differ from the reference in its own records')
+    new = [line for line in lines if json.loads(line)['k'] not in keys]
     reference.write_text('\n'.join(old[:-1] + new + [complete]) + '\n')
     print('added', len(new), 'records to', reference.relative_to(REPO))
     return 0
