@@ -587,3 +587,50 @@ fn a_rename_to_another_package_adds_nothing() {
         ]
     );
 }
+
+/// A workspace library under another name (`[lib] name`, a `[package] name` that is not its
+/// directory's), or a workspace manifest the rename reading cannot be sure of, counts every
+/// workspace crate whole, also one nothing names.
+#[test]
+fn libraries_under_other_names_count_every_crate() {
+    let third = "crates/unbound-third/src/lib.rs".to_string();
+    for (case, rules_manifest, workspace) in [
+        (
+            "lib-name",
+            "[package]\nname = \"unbound-rules\"\n[lib]\nname = \"rules\"\n",
+            "",
+        ),
+        ("package-name", "[package]\nname = \"rules\"\n", ""),
+        (
+            "root-backslash",
+            "[package]\nname = \"unbound-rules\"\n",
+            "[workspace.dependencies]\nrules = { package = \"unbound\\u002Drules\" }\n",
+        ),
+    ] {
+        let ws = compiler_and_rules(case);
+        ws.write("crates/unbound-rules/Cargo.toml", rules_manifest);
+        ws.write("Cargo.toml", workspace);
+        std::fs::create_dir_all(ws.0.join("crates/unbound-third/src")).unwrap();
+        ws.write(
+            "crates/unbound-third/Cargo.toml",
+            "[package]\nname = \"unbound-third\"\n",
+        );
+        ws.write("crates/unbound-third/src/lib.rs", "pub struct Third;\n");
+        let sources = ws.sources("unbound_compiler", &[]);
+        assert!(sources.contains(&third), "{case}");
+        assert!(
+            sources.contains(&"crates/unbound-rules/src/audio.rs".to_string()),
+            "{case}"
+        );
+    }
+    // A manifest naming its own directory's package changes nothing.
+    let ws = compiler_and_rules("own-name");
+    ws.write(
+        "crates/unbound-rules/Cargo.toml",
+        "[package]\nname = \"unbound-rules\"\n",
+    );
+    assert!(
+        !ws.sources("unbound_compiler", &[])
+            .contains(&"crates/unbound-rules/src/audio.rs".to_string())
+    );
+}

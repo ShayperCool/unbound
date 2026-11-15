@@ -628,6 +628,45 @@ fn reexported_from(root: &str, ident: &str) -> Option<String> {
     None
 }
 
+/// Whether a workspace crate's library goes by another name than its directory's (`[lib]
+/// name = ..`, a `[package] name` that is not the directory's, or one this reading cannot
+/// tell): paths to it are then not followed.
+fn renamed_library(manifest: &str, dir_name: &str) -> bool {
+    let mut section = String::new();
+    for line in manifest.lines() {
+        let line = line.trim();
+        if let Some(header) = line.strip_prefix('[') {
+            section = header.trim_end_matches(']').trim().to_string();
+            continue;
+        }
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+        let key = key.trim().trim_matches(['"', '\'']);
+        let (table, key) = match key.rsplit_once('.') {
+            Some((table, key)) => (
+                table.trim().trim_matches(['"', '\'']).to_string(),
+                key.trim(),
+            ),
+            None => (section.clone(), key),
+        };
+        if key.trim_matches(['"', '\'']) != "name" {
+            continue;
+        }
+        match table.as_str() {
+            "lib" => return true,
+            "package" => {
+                let value = value.trim().trim_matches(['"', '\'']);
+                if value != dir_name {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
 /// The workspace crates of `crates/` (by Rust name): those with a `src/lib.rs`.
 fn workspace_crates(root: &Path) -> io::Result<Vec<String>> {
     let mut out = Vec::new();
@@ -724,6 +763,19 @@ pub fn producing_sources(
             // A workspace crate depended on under another name (`foo = { package =
             // "unbound-x", .. }`, here or in the workspace's dependencies) is named by paths
             // the reading does not follow: all of it.
+            // A workspace crate whose library goes by another name is named by paths the
+            // reading does not follow: every workspace crate counts whole.
+            for other in workspace_crates(root)? {
+                let other_dir = root.join("crates").join(crate_dir(&other));
+                let manifest =
+                    std::fs::read_to_string(other_dir.join("Cargo.toml")).unwrap_or_default();
+                if renamed_library(&manifest, &crate_dir(&other)) {
+                    for every in workspace_crates(root)? {
+                        changes.push((every, Change::Whole));
+                    }
+                    break;
+                }
+            }
             for manifest in [dir.join("Cargo.toml"), root.join("Cargo.toml")] {
                 let text = std::fs::read_to_string(&manifest).unwrap_or_default();
                 let Some(renamed) = renamed_packages(&text) else {
