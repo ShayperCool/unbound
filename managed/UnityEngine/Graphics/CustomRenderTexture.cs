@@ -239,7 +239,7 @@ namespace UnityEngine
             && a.dimension == b.dimension && a.volumeDepth == b.volumeDepth && a.msaaSamples == b.msaaSamples && a.useMipMap == b.useMipMap
             && a.mipCount == b.mipCount;
 
-        internal new void ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             ReadRenderTexture(body);
             m_Material = resolver.Resolve(body.Ref("m_Material"), typeof(Material)) as Material;
@@ -267,7 +267,7 @@ namespace UnityEngine
             m_WrapZones = body.Bool("m_WrapUpdateZones");
         }
 
-        internal new Object CloneObject()
+        internal override Object CloneObject()
         {
             var copy = new CustomRenderTexture();
             copy.descriptor = descriptor;

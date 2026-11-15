@@ -54,7 +54,7 @@ namespace UnityEngine
         /// <summary>A `.renderTexture` asset: its size, formats, samples, mips, dimension and
         /// sampler as saved (measured: tests/projects/builtinrp rt.*). Older files name the formats
         /// by RenderTextureFormat and depth bits.</summary>
-        internal void ReadSerialized(YNode body, IReferenceResolver resolver) => ReadRenderTexture(body);
+        internal virtual void ReadSerialized(YNode body, IReferenceResolver resolver) => ReadRenderTexture(body);
 
         /// <summary>The render texture fields of a serialized render texture (custom render
         /// textures read theirs after these).</summary>

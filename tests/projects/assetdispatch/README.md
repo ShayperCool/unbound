@@ -13,15 +13,15 @@ row exactly.
   (color, render queue, shader), a Texture2D (pixels, filter and wrap modes), a Cubemap (a face
   pixel), a RenderTexture (size, format, wrap mode), a CustomRenderTexture (update mode,
   initialization color, double buffering), a legacy AnimationClip (frame rate, length, wrap mode as a
-  number), LightingSettings, a ShaderVariantCollection, a Sprite and an AnimatorOverrideController.
-  A cloned Shader keeps its name.
+  number), LightingSettings and a ShaderVariantCollection. A Sprite and a default
+  AnimatorOverrideController are cloned without a later change. A cloned Shader keeps its name.
 
 | Unity 6000.0 documentation | Discriminating control |
 | --- | --- |
 | [Object.Instantiate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Object.Instantiate.html) | Each `*.changedCopy` against `*.original`. |
 
-Not compared: Object.Instantiate of the types Unbound only reads (it is unsupported and fails
-loudly), the mixer group and snapshot (Editor subasset duplication), and other releases.
+Not compared: Object.Instantiate of the types Unbound only reads, the mixer group and snapshot
+included (unsupported, it fails loudly, while the reference allows it), and other releases.
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1

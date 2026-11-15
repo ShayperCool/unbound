@@ -221,14 +221,14 @@
     "Category": "interfaces",
     "Type": "UnityEngine.Audio.AudioMixerGroup",
     "Message": "type interfaces is , Unity's is UnityEngine.Internal.ISubAssetNotDuplicatable",
-    "Reason": "Q410-asset-interface-adapters: UnityEngine.Audio.AudioMixerGroup reads through the typed asset registry; the remaining UnityEngine.Internal.ISubAssetNotDuplicatable marker governs Editor duplication of mixer subassets, which is not implemented. Object.Instantiate of groups and snapshots is supported and keeps their owning mixer (measured in the 6000.0.71f1 Editor); declare the marker together with subasset duplication."
+    "Reason": "Q410-asset-interface-adapters: UnityEngine.Audio.AudioMixerGroup reads through the typed asset registry; the remaining UnityEngine.Internal.ISubAssetNotDuplicatable marker belongs to Editor duplication of mixer subassets, which is not implemented. Unbound also does not yet support Object.Instantiate of mixer groups and snapshots (it throws), which the reference allows; implement both with clone-ownership controls before declaring the marker."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
     "Type": "UnityEngine.Audio.AudioMixerSnapshot",
     "Message": "type interfaces is , Unity's is UnityEngine.Internal.ISubAssetNotDuplicatable",
-    "Reason": "Q410-asset-interface-adapters: UnityEngine.Audio.AudioMixerSnapshot reads through the typed asset registry; the remaining UnityEngine.Internal.ISubAssetNotDuplicatable marker governs Editor duplication of mixer subassets, which is not implemented. Object.Instantiate of groups and snapshots is supported and keeps their owning mixer (measured in the 6000.0.71f1 Editor); declare the marker together with subasset duplication."
+    "Reason": "Q410-asset-interface-adapters: UnityEngine.Audio.AudioMixerSnapshot reads through the typed asset registry; the remaining UnityEngine.Internal.ISubAssetNotDuplicatable marker belongs to Editor duplication of mixer subassets, which is not implemented. Unbound also does not yet support Object.Instantiate of mixer groups and snapshots (it throws), which the reference allows; implement both with clone-ownership controls before declaring the marker."
   },
   {
     "Release": "6000.0.71f1",
