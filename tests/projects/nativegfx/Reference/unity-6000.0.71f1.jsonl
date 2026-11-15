@@ -556,6 +556,55 @@
 {"k":"device.resolveDestination.4.0.True","v":[0,1,0,1]}
 {"k":"device.resolveDestination.4.24.False","v":[0,1,0,1]}
 {"k":"device.resolveDestination.4.24.True","v":[0,1,0,1]}
+{"k":"depthShape.Tex2D.ARGB32.False.created","v":true}
+{"k":"depthShape.Tex2D.ARGB32.False.publicMips","v":1}
+{"k":"depthShape.Tex2D.ARGB32.False.before.images","v":["shape color 2d 8x8x1 format=0x8058 levels=1 samples=0","shape depth 2d 8x8x1 format=0x88f0 levels=1 samples=0"]}
+{"k":"depthShape.Tex2D.ARGB32.False.after.images","v":["shape color 2d 8x8x1 format=0x8058 levels=1 samples=0","shape depth 2d 8x8x1 format=0x88f0 levels=1 samples=0"]}
+{"k":"depthShape.Tex2D.ARGB32.True.created","v":true}
+{"k":"depthShape.Tex2D.ARGB32.True.publicMips","v":4}
+{"k":"depthShape.Tex2D.ARGB32.True.before.images","v":["shape color 2d 8x8x1 format=0x8058 levels=4 samples=0","shape depth 2d 8x8x1 format=0x88f0 levels=1 samples=0"]}
+{"k":"depthShape.Tex2D.ARGB32.True.after.images","v":["shape color 2d 8x8x1 format=0x8058 levels=4 samples=0","shape depth 2d 8x8x1 format=0x88f0 levels=1 samples=0"]}
+{"k":"depthShape.Tex2D.Shadowmap.False.created","v":true}
+{"k":"depthShape.Tex2D.Shadowmap.False.publicMips","v":1}
+{"k":"depthShape.Tex2D.Shadowmap.False.before.images","v":["shape color 2d 8x8x1 format=0x81a6 levels=1 samples=0","shape depth 2d 8x8x1 format=0x81a6 levels=1 samples=0"]}
+{"k":"depthShape.Tex2D.Shadowmap.False.after.images","v":["shape color 2d 8x8x1 format=0x81a6 levels=1 samples=0","shape depth 2d 8x8x1 format=0x81a6 levels=1 samples=0"]}
+{"k":"depthShape.Tex2D.Shadowmap.True.created","v":true}
+{"k":"depthShape.Tex2D.Shadowmap.True.publicMips","v":4}
+{"k":"depthShape.Tex2D.Shadowmap.True.before.images","v":["shape color 2d 8x8x1 format=0x81a6 levels=1 samples=0","shape depth 2d 8x8x1 format=0x81a6 levels=1 samples=0"]}
+{"k":"depthShape.Tex2D.Shadowmap.True.after.images","v":["shape color 2d 8x8x1 format=0x81a6 levels=1 samples=0","shape depth 2d 8x8x1 format=0x81a6 levels=1 samples=0"]}
+{"k":"depthShape.Tex2DArray.ARGB32.False.created","v":true}
+{"k":"depthShape.Tex2DArray.ARGB32.False.publicMips","v":1}
+{"k":"depthShape.Tex2DArray.ARGB32.False.before.images","v":["shape color array 8x8x3 format=0x8058 levels=1 samples=0","shape depth array 8x8x3 format=0x88f0 levels=1 samples=0"]}
+{"k":"depthShape.Tex2DArray.ARGB32.False.after.images","v":["shape color array 8x8x3 format=0x8058 levels=1 samples=0","shape depth array 8x8x3 format=0x88f0 levels=1 samples=0"]}
+{"k":"depthShape.Tex2DArray.ARGB32.True.created","v":true}
+{"k":"depthShape.Tex2DArray.ARGB32.True.publicMips","v":4}
+{"k":"depthShape.Tex2DArray.ARGB32.True.before.images","v":["shape color array 8x8x3 format=0x8058 levels=4 samples=0","shape depth array 8x8x3 format=0x88f0 levels=1 samples=0"]}
+{"k":"depthShape.Tex2DArray.ARGB32.True.after.images","v":["shape color array 8x8x3 format=0x8058 levels=4 samples=0","shape depth array 8x8x3 format=0x88f0 levels=1 samples=0"]}
+{"k":"depthShape.Tex2DArray.Shadowmap.False.created","v":true}
+{"k":"depthShape.Tex2DArray.Shadowmap.False.publicMips","v":1}
+{"k":"depthShape.Tex2DArray.Shadowmap.False.before.images","v":["shape color array 8x8x3 format=0x81a6 levels=1 samples=0","shape depth array 8x8x3 format=0x81a6 levels=1 samples=0"]}
+{"k":"depthShape.Tex2DArray.Shadowmap.False.after.images","v":["shape color array 8x8x3 format=0x81a6 levels=1 samples=0","shape depth array 8x8x3 format=0x81a6 levels=1 samples=0"]}
+{"k":"depthShape.Tex2DArray.Shadowmap.True.created","v":true}
+{"k":"depthShape.Tex2DArray.Shadowmap.True.publicMips","v":4}
+{"k":"depthShape.Tex2DArray.Shadowmap.True.before.images","v":["shape color array 8x8x3 format=0x81a6 levels=1 samples=0","shape depth array 8x8x3 format=0x81a6 levels=1 samples=0"]}
+{"k":"depthShape.Tex2DArray.Shadowmap.True.after.images","v":["shape color array 8x8x3 format=0x81a6 levels=1 samples=0","shape depth array 8x8x3 format=0x81a6 levels=1 samples=0"]}
+{"k":"depthShape.Cube.ARGB32.False.created","v":true}
+{"k":"depthShape.Cube.ARGB32.False.publicMips","v":1}
+{"k":"depthShape.Cube.ARGB32.False.before.images","v":["shape color cube 8x8x1 format=0x8058 levels=1 samples=0","shape depth cube 8x8x1 format=0x8058 levels=1 samples=0"]}
+{"k":"depthShape.Cube.ARGB32.False.after.images","v":["shape color cube 8x8x1 format=0x8058 levels=1 samples=0","shape depth cube 8x8x1 format=0x8058 levels=1 samples=0"]}
+{"k":"depthShape.Cube.ARGB32.True.created","v":true}
+{"k":"depthShape.Cube.ARGB32.True.publicMips","v":4}
+{"k":"depthShape.Cube.ARGB32.True.before.images","v":["shape color cube 8x8x1 format=0x8058 levels=4 samples=0","shape depth cube 8x8x1 format=0x8058 levels=4 samples=0"]}
+{"k":"depthShape.Cube.ARGB32.True.after.images","v":["shape color cube 8x8x1 format=0x8058 levels=4 samples=0","shape depth cube 8x8x1 format=0x8058 levels=4 samples=0"]}
+{"k":"depthShape.Cube.Shadowmap.False.created","v":true}
+{"k":"depthShape.Cube.Shadowmap.False.publicMips","v":1}
+{"k":"depthShape.Cube.Shadowmap.False.before.images","v":["shape color cube 8x8x1 format=0x81a6 levels=1 samples=0","shape depth cube 8x8x1 format=0x81a6 levels=1 samples=0"]}
+{"k":"depthShape.Cube.Shadowmap.False.after.images","v":["shape color cube 8x8x1 format=0x81a6 levels=1 samples=0","shape depth cube 8x8x1 format=0x81a6 levels=1 samples=0"]}
+{"k":"depthShape.Cube.Shadowmap.True.created","v":true}
+{"k":"depthShape.Cube.Shadowmap.True.publicMips","v":4}
+{"k":"depthShape.Cube.Shadowmap.True.before.images","v":["shape color cube 8x8x1 format=0x81a6 levels=1 samples=0","shape depth cube 8x8x1 format=0x81a6 levels=1 samples=0"]}
+{"k":"depthShape.Cube.Shadowmap.True.after.images","v":["shape color cube 8x8x1 format=0x81a6 levels=1 samples=0","shape depth cube 8x8x1 format=0x81a6 levels=1 samples=0"]}
+{"k":"depthShape.logs","v":["Assert: OPENGL NATIVE PLUG-IN ERROR: GL_INVALID_OPERATION: Operation illegal in current state","Assert: Assertion failed on expression: 'rs->dim == kTexDim2D || rs->dim == kTexDimCUBE'","Assert: Assertion failed on expression: 'rs->dim == kTexDim2D || rs->dim == kTexDimCUBE'"]}
 {"k":"plugin.exit","v":["device event=1 renderer=17 thread=main gl=1","device event=1 renderer=17 thread=main gl=1"]}
 {"k":"plugin.preloaded","v":["preload load thread=main gl=1","preload device event=1 renderer=17 thread=main gl=1","preload device event=1 renderer=17 thread=main gl=1"]}
 {"k":"plugin.prefixed","v":[]}

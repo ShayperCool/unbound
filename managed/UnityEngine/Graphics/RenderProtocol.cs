@@ -49,6 +49,8 @@ namespace Unbound.Runtime
     {
         // Packet tag for 32-bit floating depth with stencil; positive 32 has no stencil.
         internal const int Depth32StencilBits = -32;
+        // Positive 24 keeps stencil; this tag preserves explicit depth-only storage.
+        internal const int Depth24Bits = -24;
 
         internal int Width;
         internal int Height;

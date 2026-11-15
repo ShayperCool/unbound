@@ -285,7 +285,7 @@ TexturePacket {
                        // 8 deferred mip updates, 16 retained resolve, 32 bind native MSAA;
                        // 64 compares depth, 128 carries depth sampler state;
                        // bits 8..15 contain the MSAA sample count
-  i32 depth_bits;      // 0 none, 16 depth, 24 depth+stencil, 32 float depth, -32 float depth+stencil
+  i32 depth_bits;      // 0 none, 16 depth, 24 depth+stencil, -24 depth only, 32 float depth, -32 float depth+stencil
   i32 layers, dimension; // each layer has a mip chain; dimension is Unity's TextureDimension
   i32 wrap_w;          // TextureWrapMode along W (NativeApi 14): a Texture3D's depth
 }

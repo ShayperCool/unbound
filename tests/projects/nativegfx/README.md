@@ -7,14 +7,17 @@ uses the low-level native plugin interface and records what it gets; the scripts
 
     python3 tests/projects/nativegfx/run.py check      # engine run compared with Reference/
 
-Current NVIDIA results against Unity 6000.0.71f1 are OpenGL Core 516/564 with
-48 declared residuals, Vulkan 932/935 with three, the OpenGL stencil profile
-544/605 with 61, and Vulkan stencil 942/960 with 18. Vulkan attachment capabilities and multisample color
+Current NVIDIA results against Unity 6000.0.71f1 are OpenGL Core 554/613 with
+59 declared residuals, Vulkan 989/1008 with 19, the OpenGL stencil profile
+582/654 with 72, and Vulkan stencil 999/1033 with 34. Vulkan attachment capabilities and multisample color
 usage close 63 of its 64 earlier differences. All 518 earlier Vulkan reference
 rows are byte-identical; 49 allocation controls and 298 resolve-access and
 setter controls are appended. The foreign-format extension adds 70 rows to both Vulkan profiles; the stencil
 profile also includes its 25 publication rows.
-Comparator tolerances are unchanged.
+The depth-shape extension adds 49 OpenGL rows and 73 Vulkan rows to both profiles.
+It exposes 11 OpenGL and 16 Vulkan depth-storage or diagnostic differences; these are
+recorded separately from the earlier residuals. All prior 564, 935, 605 and 960 rows
+remain byte-identical within their respective profiles. Comparator tolerances are unchanged.
 
 Recorded:
 
@@ -92,6 +95,21 @@ Recorded:
   and explicit self-resolves. Unbound matches the single-sample controls but retains
   the initialized value in 15 multisample content rows. These remain explicit
   residuals in the separate canonical profile. Other drivers remain unmeasured.
+* **Depth storage and mip attachments** (`depthShape.*`): 2D targets, three-layer arrays
+  and cubes, both with and without mipmaps, distinguish ARGB32 attachments from Shadowmap
+  depth-only images. Public mip counts and native image metadata are recorded before and
+  after a clear at level 1 or level 0, using array layer 2 and cube face NegativeZ.
+  On the measured NVIDIA devices, separate depth images have one physical level even when
+  the public mip count is four; a normal cube target's depth pointer instead names its color
+  image. Shadowmap storage has no stencil. The render packet now preserves 24-bit depth
+  without stencil, including when a descriptor requests that format directly.
+  The mip allocation and binding-diagnostic differences remain explicit
+  residuals. These metadata controls do not establish depth content at another mip or layer,
+  or successful binding where the Editor logs an assertion.
+  The Unity 6000.0 [D24_UNorm contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Experimental.Rendering.GraphicsFormat.D24_UNorm.html)
+  specifies depth without stencil; D24_UNorm_S8_UInt includes stencil. The no-mipmap Shadowmap
+  and ARGB32 controls distinguish the two physical storages. The managed release controls
+  retain the earlier packet mapping for unmeasured releases.
 * **External textures** (`external.*`): `Texture2D.CreateExternalTexture` and
   `UpdateExternalTexture` with textures the plugin made, and with another texture's pointer
   (the same texture), also a render texture with depth and mips, which works on after the

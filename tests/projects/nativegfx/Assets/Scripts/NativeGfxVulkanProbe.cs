@@ -291,6 +291,7 @@ public partial class NativeGfxVulkanProbe : MonoBehaviour
         AllocationControls();
         BindMsSetterControls();
         if (Environment.GetEnvironmentVariable("NATIVEGFX_STENCIL") == "1") VulkanStencilControls();
+        DepthShapeControls();
         PluginRecord();
         if (logs.Count > 0) Value("logs", L(logs));
         Value("complete", B(code == 0));

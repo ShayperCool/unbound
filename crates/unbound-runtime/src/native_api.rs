@@ -87,7 +87,8 @@ use std::ffi::c_void;
 /// 76: sampled compute texture properties admit the depth-element selector.
 /// 77: the managed engine writes the documents of ScriptedImporter prefabs.
 /// 79: imported textures report the usage mode of HDR radiance stored as bytes.
-pub const NATIVE_API_VERSION: u32 = 79;
+/// 80: texture packets distinguish 24-bit depth without stencil from depth with stencil.
+pub const NATIVE_API_VERSION: u32 = 80;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

@@ -22,5 +22,23 @@
  "Nine-digit decimal midpoint formatting differs between the Editor and managed runtime; both spellings round to the same float bits (Unity 6000.0.71f1, NVIDIA sRGB block mip controls)": [
   "externalVkFormats.DXT1.srgb.sample1",
   "externalVkFormats.DXT5.srgb.sample1"
+ ],
+ "Depth storage still allocates mip chains for depth images that have one physical level in the Unity 6000.0.71f1 NVIDIA captures; depthShape metadata preserves this allocation and attachment-mip follow-up": [
+  "plugin.depthShape.Tex2D.ARGB32.True.before.depth",
+  "plugin.depthShape.Tex2D.ARGB32.True.after.depth",
+  "plugin.depthShape.Tex2D.Shadowmap.True.before.color",
+  "plugin.depthShape.Tex2D.Shadowmap.True.before.depth",
+  "plugin.depthShape.Tex2D.Shadowmap.True.after.color",
+  "plugin.depthShape.Tex2D.Shadowmap.True.after.depth",
+  "plugin.depthShape.Tex2DArray.ARGB32.True.before.depth",
+  "plugin.depthShape.Tex2DArray.ARGB32.True.after.depth",
+  "plugin.depthShape.Tex2DArray.Shadowmap.True.before.color",
+  "plugin.depthShape.Tex2DArray.Shadowmap.True.before.depth",
+  "plugin.depthShape.Tex2DArray.Shadowmap.True.after.color",
+  "plugin.depthShape.Tex2DArray.Shadowmap.True.after.depth",
+  "plugin.depthShape.Cube.Shadowmap.True.before.color",
+  "plugin.depthShape.Cube.Shadowmap.True.before.depth",
+  "plugin.depthShape.Cube.Shadowmap.True.after.color",
+  "plugin.depthShape.Cube.Shadowmap.True.after.depth"
  ]
 }

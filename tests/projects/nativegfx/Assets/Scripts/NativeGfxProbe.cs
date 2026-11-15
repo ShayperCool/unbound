@@ -220,6 +220,7 @@ public partial class NativeGfxProbe : MonoBehaviour
         DeviceControls();
         MsaaControls.Run(Value);
         if (Environment.GetEnvironmentVariable("NATIVEGFX_STENCIL") == "1") StencilControls();
+        DepthShapeControls();
         NativeGfx_Mark("exit");
         Value("complete", B(code == 0));
         File.WriteAllText(output, records.ToString());

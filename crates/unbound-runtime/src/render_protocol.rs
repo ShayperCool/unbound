@@ -8,6 +8,9 @@ pub use crate::render_commands as commands;
 /// Positive 32 means depth without stencil; 16 and 24 retain their existing meanings.
 pub const DEPTH32_STENCIL_BITS: i32 = -32;
 
+/// TexturePacket.depth_bits tag for 24-bit depth without stencil; positive 24 keeps stencil.
+pub const DEPTH24_BITS: i32 = -24;
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Vector3 {

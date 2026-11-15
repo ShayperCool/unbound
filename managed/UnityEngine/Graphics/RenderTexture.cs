@@ -649,12 +649,15 @@ namespace UnityEngine
 
         /// <summary>The depth bits of the buffer the renderer stores for a depth-stencil format;
         /// a 16-bit format with stencil gets 24 bits. A 32-bit stencil format uses the packet's
-        /// dedicated tag, keeping 32-bit depth without stencil distinct.</summary>
+        /// dedicated tag, keeping 32-bit depth without stencil distinct. The measured profile
+        /// also preserves 24-bit depth without stencil.</summary>
         internal static int StoredDepthBits(GraphicsFormat format)
         {
             int bits = GraphicsFormatUtility.GetDepthBits(format);
-            if (bits == 32 && GraphicsFormatUtility.IsStencilFormat(format)) return TexturePacket.Depth32StencilBits;
-            return bits == 16 && GraphicsFormatUtility.IsStencilFormat(format) ? 24 : bits;
+            bool stencil = GraphicsFormatUtility.IsStencilFormat(format);
+            if (bits == 24 && !stencil && Compat.RenderingMeasured) return TexturePacket.Depth24Bits;
+            if (bits == 32 && stencil) return TexturePacket.Depth32StencilBits;
+            return bits == 16 && stencil ? 24 : bits;
         }
 
         internal static GraphicsFormat GetCompatibleFormat(RenderTextureFormat renderTextureFormat, RenderTextureReadWrite readWrite) =>

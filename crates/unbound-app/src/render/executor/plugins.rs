@@ -286,7 +286,7 @@ impl UnityRenderer {
             return self.metal_native_texture(handle, depth);
         }
         let shared = self.share(handle).and_then(|names| {
-            if depth || (self.textures[&handle].format == 5 && !self.textures[&handle].cube) {
+            if depth || self.textures[&handle].format == 5 {
                 self.depth_pointer(handle, names)
             } else {
                 Ok(if self.textures[&handle].bind_ms {
@@ -319,7 +319,7 @@ impl UnityRenderer {
                 }));
         }
         match names.samples {
-            None if gpu.cube => Ok(names.color),
+            None if gpu.depth_pointer_is_color() => Ok(names.color),
             None => Ok(names.depth.unwrap_or(names.color)),
             Some((samples, None)) => Ok(samples),
             Some((_, Some(_))) => names
@@ -1089,6 +1089,9 @@ pub(super) fn descriptor(gpu: &GpuTexture) -> owned::Texture {
         samples: gpu.samples,
         depth_bits: match gpu.depth_format() {
             Some(wgpu::TextureFormat::Depth16Unorm) => 16,
+            Some(wgpu::TextureFormat::Depth24Plus) => {
+                unbound_runtime::render_protocol::DEPTH24_BITS
+            }
             Some(wgpu::TextureFormat::Depth32Float) => 32,
             Some(wgpu::TextureFormat::Depth32FloatStencil8) => {
                 unbound_runtime::render_protocol::DEPTH32_STENCIL_BITS

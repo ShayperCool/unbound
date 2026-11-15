@@ -38,6 +38,25 @@ namespace Unbound.Tests
             finally { ProjectInfo.UnityVersion = version; }
         }
 
+        [Theory]
+        [InlineData("6000.0.71f1", -24)]
+        [InlineData("6000.0.70f1", 24)]
+        [InlineData("2022.3.10f1", 24)]
+        public void DepthStorageKeepsStencilPresenceOnTheMeasuredProfile(string release, int depthOnly)
+        {
+            string version = ProjectInfo.UnityVersion;
+            try
+            {
+                ProjectInfo.UnityVersion = release;
+                Assert.Equal(depthOnly, RenderTexture.StoredDepthBits(UnityEngine.Experimental.Rendering.GraphicsFormat.D24_UNorm));
+                Assert.Equal(24, RenderTexture.StoredDepthBits(UnityEngine.Experimental.Rendering.GraphicsFormat.D24_UNorm_S8_UInt));
+                Assert.Equal(16, RenderTexture.StoredDepthBits(UnityEngine.Experimental.Rendering.GraphicsFormat.D16_UNorm));
+                Assert.Equal(32, RenderTexture.StoredDepthBits(UnityEngine.Experimental.Rendering.GraphicsFormat.D32_SFloat));
+                Assert.Equal(-32, RenderTexture.StoredDepthBits(UnityEngine.Experimental.Rendering.GraphicsFormat.D32_SFloat_S8_UInt));
+            }
+            finally { ProjectInfo.UnityVersion = version; }
+        }
+
         /// <summary>The parsed release follows a change of the project's version string.</summary>
         [Fact]
         public void TheParsedReleaseFollowsTheVersionString()

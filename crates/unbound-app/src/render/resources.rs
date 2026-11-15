@@ -434,11 +434,12 @@ pub fn depth_copy_view(
 pub const TEX2D_ARRAY: i32 = 5;
 
 /// A texture packet's depth storage. The managed compatibility profile chooses the requested
-/// format; the 32-bit stencil tag preserves the distinction from depth without stencil.
+/// format; packet tags preserve depth-only and stencil storage.
 pub fn depth_format(device: &wgpu::Device, bits: i32) -> wgpu::TextureFormat {
-    use unbound_runtime::render_protocol::DEPTH32_STENCIL_BITS;
+    use unbound_runtime::render_protocol::{DEPTH24_BITS, DEPTH32_STENCIL_BITS};
     match bits {
         16 => wgpu::TextureFormat::Depth16Unorm,
+        DEPTH24_BITS => wgpu::TextureFormat::Depth24Plus,
         32 => wgpu::TextureFormat::Depth32Float,
         DEPTH32_STENCIL_BITS
             if device
@@ -534,6 +535,12 @@ impl GpuTexture {
             (Some(srgb), 1) => srgb,
             _ => &self.view,
         }
+    }
+
+    /// Color cube targets expose color through their native depth pointer; depth-only cubes
+    /// expose their depth image (Unity 6000.0.71f1, tests/projects/nativegfx depthShape).
+    pub fn depth_pointer_is_color(&self) -> bool {
+        self.cube && self.format != 5
     }
 
     /// The format a camera renders into this texture with.

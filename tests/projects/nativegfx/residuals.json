@@ -69,5 +69,20 @@
   "device.colorResolve.4.True.compute.depth",
   "device.colorResolve.8.True.compute.color",
   "device.colorResolve.8.True.compute.depth"
+ ],
+ "Depth storage still allocates mip chains for depth images that have one physical level in the Unity 6000.0.71f1 NVIDIA captures; depthShape metadata preserves this allocation and attachment-mip follow-up": [
+  "depthShape.Tex2D.ARGB32.True.before.images",
+  "depthShape.Tex2D.ARGB32.True.after.images",
+  "depthShape.Tex2D.Shadowmap.True.before.images",
+  "depthShape.Tex2D.Shadowmap.True.after.images",
+  "depthShape.Tex2DArray.ARGB32.True.before.images",
+  "depthShape.Tex2DArray.ARGB32.True.after.images",
+  "depthShape.Tex2DArray.Shadowmap.True.before.images",
+  "depthShape.Tex2DArray.Shadowmap.True.after.images",
+  "depthShape.Cube.Shadowmap.True.before.images",
+  "depthShape.Cube.Shadowmap.True.after.images"
+ ],
+ "OpenGL depthShape retains the Editor callback error and depth-only array binding assertions; these diagnostic histories are not reproduced by the renderer (Unity 6000.0.71f1, NVIDIA only)": [
+  "depthShape.logs"
  ]
 }

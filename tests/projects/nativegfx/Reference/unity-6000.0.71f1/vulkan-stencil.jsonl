@@ -641,6 +641,31 @@
 {"k":"vulkanStencil.8.redraw","v":91}
 {"k":"vulkanStencil.8.again","v":91}
 {"k":"vulkanStencil.logs","v":[]}
+{"k":"depthShape.Tex2D.ARGB32.False.created","v":true}
+{"k":"depthShape.Tex2D.ARGB32.False.publicMips","v":1}
+{"k":"depthShape.Tex2D.ARGB32.True.created","v":true}
+{"k":"depthShape.Tex2D.ARGB32.True.publicMips","v":4}
+{"k":"depthShape.Tex2D.Shadowmap.False.created","v":true}
+{"k":"depthShape.Tex2D.Shadowmap.False.publicMips","v":1}
+{"k":"depthShape.Tex2D.Shadowmap.True.created","v":true}
+{"k":"depthShape.Tex2D.Shadowmap.True.publicMips","v":4}
+{"k":"depthShape.Tex2DArray.ARGB32.False.created","v":true}
+{"k":"depthShape.Tex2DArray.ARGB32.False.publicMips","v":1}
+{"k":"depthShape.Tex2DArray.ARGB32.True.created","v":true}
+{"k":"depthShape.Tex2DArray.ARGB32.True.publicMips","v":4}
+{"k":"depthShape.Tex2DArray.Shadowmap.False.created","v":true}
+{"k":"depthShape.Tex2DArray.Shadowmap.False.publicMips","v":1}
+{"k":"depthShape.Tex2DArray.Shadowmap.True.created","v":true}
+{"k":"depthShape.Tex2DArray.Shadowmap.True.publicMips","v":4}
+{"k":"depthShape.Cube.ARGB32.False.created","v":true}
+{"k":"depthShape.Cube.ARGB32.False.publicMips","v":1}
+{"k":"depthShape.Cube.ARGB32.True.created","v":true}
+{"k":"depthShape.Cube.ARGB32.True.publicMips","v":4}
+{"k":"depthShape.Cube.Shadowmap.False.created","v":true}
+{"k":"depthShape.Cube.Shadowmap.False.publicMips","v":1}
+{"k":"depthShape.Cube.Shadowmap.True.created","v":true}
+{"k":"depthShape.Cube.Shadowmap.True.publicMips","v":4}
+{"k":"depthShape.logs","v":[]}
 {"k":"plugin.load","v":"load renderer=21 vulkan=1 vulkanV2=1"}
 {"k":"plugin.interfaces","v":"interfaces profilerCallbacks=1 profilerCallbacksV2=1 eventQueue=1"}
 {"k":"plugin.intercept.late","v":"intercept.late=0"}
@@ -956,5 +981,53 @@
 {"k":"plugin.setter.4.True.True.True.after.depth","v":"setter.4.True.True.True.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
 {"k":"plugin.setter.4.True.True.True.recreated.color","v":"setter.4.True.True.True.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
 {"k":"plugin.setter.4.True.True.True.recreated.depth","v":"setter.4.True.True.True.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.depthShape.Tex2D.ARGB32.False.before.color","v":"depthShape.Tex2D.ARGB32.False.before.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.ARGB32.False.before.depth","v":"depthShape.Tex2D.ARGB32.False.before.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.ARGB32.False.after.color","v":"depthShape.Tex2D.ARGB32.False.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.ARGB32.False.after.depth","v":"depthShape.Tex2D.ARGB32.False.after.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.ARGB32.True.before.color","v":"depthShape.Tex2D.ARGB32.True.before.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=4"}
+{"k":"plugin.depthShape.Tex2D.ARGB32.True.before.depth","v":"depthShape.Tex2D.ARGB32.True.before.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.ARGB32.True.after.color","v":"depthShape.Tex2D.ARGB32.True.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=4"}
+{"k":"plugin.depthShape.Tex2D.ARGB32.True.after.depth","v":"depthShape.Tex2D.ARGB32.True.after.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.Shadowmap.False.before.color","v":"depthShape.Tex2D.Shadowmap.False.before.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.Shadowmap.False.before.depth","v":"depthShape.Tex2D.Shadowmap.False.before.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.Shadowmap.False.after.color","v":"depthShape.Tex2D.Shadowmap.False.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.Shadowmap.False.after.depth","v":"depthShape.Tex2D.Shadowmap.False.after.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.Shadowmap.True.before.color","v":"depthShape.Tex2D.Shadowmap.True.before.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.Shadowmap.True.before.depth","v":"depthShape.Tex2D.Shadowmap.True.before.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.Shadowmap.True.after.color","v":"depthShape.Tex2D.Shadowmap.True.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2D.Shadowmap.True.after.depth","v":"depthShape.Tex2D.Shadowmap.True.after.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.ARGB32.False.before.color","v":"depthShape.Tex2DArray.ARGB32.False.before.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.ARGB32.False.before.depth","v":"depthShape.Tex2DArray.ARGB32.False.before.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.ARGB32.False.after.color","v":"depthShape.Tex2DArray.ARGB32.False.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.ARGB32.False.after.depth","v":"depthShape.Tex2DArray.ARGB32.False.after.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.ARGB32.True.before.color","v":"depthShape.Tex2DArray.ARGB32.True.before.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=4"}
+{"k":"plugin.depthShape.Tex2DArray.ARGB32.True.before.depth","v":"depthShape.Tex2DArray.ARGB32.True.before.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.ARGB32.True.after.color","v":"depthShape.Tex2DArray.ARGB32.True.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=4"}
+{"k":"plugin.depthShape.Tex2DArray.ARGB32.True.after.depth","v":"depthShape.Tex2DArray.ARGB32.True.after.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.Shadowmap.False.before.color","v":"depthShape.Tex2DArray.Shadowmap.False.before.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.Shadowmap.False.before.depth","v":"depthShape.Tex2DArray.Shadowmap.False.before.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.Shadowmap.False.after.color","v":"depthShape.Tex2DArray.Shadowmap.False.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.Shadowmap.False.after.depth","v":"depthShape.Tex2DArray.Shadowmap.False.after.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.Shadowmap.True.before.color","v":"depthShape.Tex2DArray.Shadowmap.True.before.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.Shadowmap.True.before.depth","v":"depthShape.Tex2DArray.Shadowmap.True.before.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.Shadowmap.True.after.color","v":"depthShape.Tex2DArray.Shadowmap.True.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Tex2DArray.Shadowmap.True.after.depth","v":"depthShape.Tex2DArray.Shadowmap.True.after.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=3 mips=1"}
+{"k":"plugin.depthShape.Cube.ARGB32.False.before.color","v":"depthShape.Cube.ARGB32.False.before.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=1"}
+{"k":"plugin.depthShape.Cube.ARGB32.False.before.depth","v":"depthShape.Cube.ARGB32.False.before.depth ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=1"}
+{"k":"plugin.depthShape.Cube.ARGB32.False.after.color","v":"depthShape.Cube.ARGB32.False.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=1"}
+{"k":"plugin.depthShape.Cube.ARGB32.False.after.depth","v":"depthShape.Cube.ARGB32.False.after.depth ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=1"}
+{"k":"plugin.depthShape.Cube.ARGB32.True.before.color","v":"depthShape.Cube.ARGB32.True.before.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=4"}
+{"k":"plugin.depthShape.Cube.ARGB32.True.before.depth","v":"depthShape.Cube.ARGB32.True.before.depth ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=4"}
+{"k":"plugin.depthShape.Cube.ARGB32.True.after.color","v":"depthShape.Cube.ARGB32.True.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=4"}
+{"k":"plugin.depthShape.Cube.ARGB32.True.after.depth","v":"depthShape.Cube.ARGB32.True.after.depth ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=4"}
+{"k":"plugin.depthShape.Cube.Shadowmap.False.before.color","v":"depthShape.Cube.Shadowmap.False.before.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=1"}
+{"k":"plugin.depthShape.Cube.Shadowmap.False.before.depth","v":"depthShape.Cube.Shadowmap.False.before.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=1"}
+{"k":"plugin.depthShape.Cube.Shadowmap.False.after.color","v":"depthShape.Cube.Shadowmap.False.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=1"}
+{"k":"plugin.depthShape.Cube.Shadowmap.False.after.depth","v":"depthShape.Cube.Shadowmap.False.after.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=1"}
+{"k":"plugin.depthShape.Cube.Shadowmap.True.before.color","v":"depthShape.Cube.Shadowmap.True.before.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=1"}
+{"k":"plugin.depthShape.Cube.Shadowmap.True.before.depth","v":"depthShape.Cube.Shadowmap.True.before.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=1"}
+{"k":"plugin.depthShape.Cube.Shadowmap.True.after.color","v":"depthShape.Cube.Shadowmap.True.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=1"}
+{"k":"plugin.depthShape.Cube.Shadowmap.True.after.depth","v":"depthShape.Cube.Shadowmap.True.after.depth ok=1 image=1 pointer.image=1 layout=0 aspect=2 usage=167 format=125 extent=8x8x1 tiling=0 type=1 samples=1 layers=6 mips=1"}
 {"k":"logs","v":["Warning: Releasing render texture that is set to be RenderTexture.active!","Warning: Releasing render texture that is set to be RenderTexture.active!","Warning: Releasing render texture that is set to be RenderTexture.active!","Warning: Releasing render texture that is set to be RenderTexture.active!","Warning: Releasing render texture that is set to be RenderTexture.active!"]}
 {"k":"complete","v":true}

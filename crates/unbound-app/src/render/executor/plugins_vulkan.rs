@@ -1505,10 +1505,9 @@ impl UnityRenderer {
     /// the texture (`depth`: its depth buffer's). 0 for an unknown texture.
     pub(super) fn vulkan_native_texture(&mut self, handle: u64, depth: bool) -> u64 {
         // A texture without a depth buffer gives its color image for it.
-        let depth = self
-            .textures
-            .get(&handle)
-            .is_some_and(|t| (depth || t.format == 5) && t.depth_texture.is_some());
+        let depth = self.textures.get(&handle).is_some_and(|t| {
+            (depth || t.format == 5) && t.depth_texture.is_some() && !t.depth_pointer_is_color()
+        });
         let image = self.textures.get(&handle).and_then(|t| {
             let texture = if depth {
                 t.native_depth
