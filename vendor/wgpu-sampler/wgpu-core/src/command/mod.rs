@@ -19,6 +19,7 @@ mod encoder;
 mod encoder_command;
 pub mod ffi;
 mod memory_init;
+mod native_vulkan_pass;
 mod pass;
 mod query;
 mod ray_tracing;
@@ -27,6 +28,7 @@ mod render_command;
 mod timestamp_writes;
 mod transfer;
 mod transition_resources;
+pub use native_vulkan_pass::NativeVulkanDepthPass;
 
 use alloc::{borrow::ToOwned as _, boxed::Box, string::String, sync::Arc, vec::Vec};
 use core::convert::Infallible;
@@ -1282,6 +1284,9 @@ impl CommandEncoder {
                     }
                     ArcCommand::BuildAccelerationStructures { blas, tlas } => {
                         ray_tracing::build_acceleration_structures(&mut state, blas, tlas)?;
+                    }
+                    ArcCommand::NativeVulkanDepthPass(pass) => {
+                        native_vulkan_pass::encode(&mut state, &pass)?;
                     }
                     ArcCommand::TransitionResources {
                         buffer_transitions,

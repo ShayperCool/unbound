@@ -9,6 +9,13 @@ use crate::{
     *,
 };
 
+/// A cached Vulkan depth/stencil pass prepared for the ordinary command stream.
+#[derive(Debug, Clone)]
+pub struct NativeVulkanDepthPass {
+    #[cfg(wgpu_core)]
+    pub(crate) inner: Arc<wgpu_core::command::NativeVulkanDepthPass>,
+}
+
 /// Encodes a series of GPU operations.
 ///
 /// A command encoder can record [`RenderPass`]es, [`ComputePass`]es,
@@ -247,6 +254,19 @@ impl CommandEncoder {
     }
 
     impl_deferred_command_buffer_actions!();
+
+    /// Records a prepared native depth/stencil pass in order, using this encoder's submission.
+    /// Returns false for unsupported backends, tracing, or an invalid encoder.
+    pub fn run_native_vulkan_depth_pass(&mut self, pass: &NativeVulkanDepthPass) -> bool {
+        #[cfg(wgpu_core)]
+        if let Some(encoder) = self.inner.as_core_mut_opt() {
+            return encoder
+                .context
+                .command_encoder_run_native_vulkan_depth_pass(encoder, &pass.inner);
+        }
+        let _ = pass;
+        false
+    }
 
     /// Get the [`wgpu_hal`] command encoder from this `CommandEncoder`.
     ///

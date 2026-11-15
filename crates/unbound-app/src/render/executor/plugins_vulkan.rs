@@ -1091,6 +1091,8 @@ pub(super) struct VulkanPlugins {
     passes: HashMap<PassKey, vk::RenderPass>,
     /// Framebuffers over render texture targets, by the target's (color, depth) handles.
     framebuffers: HashMap<(u64, u64), CachedFramebuffer>,
+    depth_resolves: HashMap<u64, (PluginPass, CachedFramebuffer, wgpu::NativeVulkanDepthPass)>,
+    depth_resolve_supported: bool,
     /// What callbacks submitted (and framebuffers replaced), freed once the GPU finished their
     /// frame.
     retired: Vec<Retired>,
@@ -1103,6 +1105,7 @@ struct PassKey {
     samples: vk::SampleCountFlags,
     depth: Option<vk::Format>,
     resolve: bool,
+    depth_resolve: bool,
 }
 
 /// A framebuffer over a target's views, which it holds (their handles cannot be reused while it
@@ -1156,6 +1159,25 @@ impl VulkanPlugins {
             queue_family_index: family,
             reserved: [0; 8],
         };
+        let depth_resolve_supported = if shared.instance_api_version() >= vk::API_VERSION_1_2 {
+            let mut resolve = vk::PhysicalDeviceDepthStencilResolveProperties::default();
+            let mut properties = vk::PhysicalDeviceProperties2::default().push_next(&mut resolve);
+            // SAFETY: the query chain is valid for this instance version and physical device.
+            unsafe {
+                shared
+                    .raw_instance()
+                    .get_physical_device_properties2(hal.raw_physical_device(), &mut properties)
+            };
+            properties.properties.api_version >= vk::API_VERSION_1_2
+                && resolve
+                    .supported_depth_resolve_modes
+                    .contains(vk::ResolveModeFlags::SAMPLE_ZERO)
+                && resolve
+                    .supported_stencil_resolve_modes
+                    .contains(vk::ResolveModeFlags::SAMPLE_ZERO)
+        } else {
+            false
+        };
         with_state(|s| s.instance = instance);
         Some(Self {
             device: raw,
@@ -1165,13 +1187,22 @@ impl VulkanPlugins {
             external: std::collections::HashSet::new(),
             passes: HashMap::new(),
             framebuffers: HashMap::new(),
+            depth_resolves: HashMap::new(),
+            depth_resolve_supported,
             retired: Vec::new(),
         })
     }
 
     /// A released texture's native pointers stop naming an image, and framebuffers over it go
     /// once the GPU is done with them.
+    pub(super) fn release_depth_resolve(&mut self, handle: u64) {
+        if let Some((_, framebuffer, _)) = self.depth_resolves.remove(&handle) {
+            self.retire_framebuffer(framebuffer);
+        }
+    }
+
     pub fn release(&mut self, handle: u64) {
+        self.release_depth_resolve(handle);
         self.external.remove(&handle);
         self.slots.remove(&(handle, false));
         self.slots.remove(&(handle, true));
@@ -1211,6 +1242,7 @@ impl VulkanPlugins {
             samples: target.samples,
             depth: target.depth.map(|(_, format)| format),
             resolve: target.resolve.is_some(),
+            depth_resolve: target.depth_resolve.is_some(),
         };
         let render_pass = match self.passes.get(&key) {
             Some(&pass) => pass,
@@ -1263,6 +1295,116 @@ impl VulkanPlugins {
         })
     }
 
+    /// Prepares a reusable depth/stencil publication pass for one texture allocation.
+    pub(super) fn prepare_depth_resolve(
+        &mut self,
+        adapter: &wgpu::Adapter,
+        device: &wgpu::Device,
+        handle: u64,
+        source: &wgpu::TextureView,
+        destination: &wgpu::TextureView,
+        frame: u64,
+    ) -> bool {
+        if !self.depth_resolve_supported
+            || !depth_resolve_compatible(source.texture(), destination.texture())
+        {
+            return false;
+        }
+        let Some(format) = vk_format(adapter, source.texture().format()) else {
+            return false;
+        };
+        let key = PassKey {
+            color: vk::Format::UNDEFINED,
+            samples: vk::SampleCountFlags::from_raw(source.texture().sample_count()),
+            depth: Some(format),
+            resolve: true,
+            depth_resolve: true,
+        };
+        let render_pass = match self.passes.get(&key) {
+            Some(&pass) => pass,
+            None => {
+                let Some(pass) = (unsafe { create_depth_resolve_pass(&self.device, key) }) else {
+                    return false;
+                };
+                self.passes.insert(key, pass);
+                pass
+            }
+        };
+        // SAFETY: only reading handles; the cached views keep the images alive.
+        let raw = unsafe {
+            [source, destination]
+                .into_iter()
+                .map(|view| view.as_hal::<Vulkan>().map(|raw| raw.raw_handle()))
+                .collect::<Option<Vec<_>>>()
+        };
+        let Some(raw) = raw else { return false };
+        let size = source.texture().size();
+        let extent = vk::Extent2D {
+            width: size.width,
+            height: size.height,
+        };
+        let framebuffer = unsafe {
+            self.device.create_framebuffer(
+                &vk::FramebufferCreateInfo::default()
+                    .render_pass(render_pass)
+                    .attachments(&raw)
+                    .width(extent.width)
+                    .height(extent.height)
+                    .layers(1),
+                None,
+            )
+        };
+        let Ok(framebuffer) = framebuffer else {
+            return false;
+        };
+        if let Some((_, old, _)) = self.depth_resolves.remove(&handle) {
+            self.retire_framebuffer(old);
+        }
+        // SAFETY: this cache owns the compatible pass/framebuffer and retains both views
+        // until the GPU completion fence; initialization is established before first recording.
+        use ash::vk::Handle;
+        let Some(prepared) = (unsafe {
+            device.prepare_native_vulkan_depth_pass(
+                source,
+                destination,
+                render_pass.as_raw(),
+                framebuffer.as_raw(),
+                extent.width,
+                extent.height,
+            )
+        }) else {
+            unsafe { self.device.destroy_framebuffer(framebuffer, None) };
+            return false;
+        };
+        self.depth_resolves.insert(
+            handle,
+            (
+                PluginPass {
+                    render_pass,
+                    framebuffer,
+                    extent,
+                },
+                CachedFramebuffer {
+                    framebuffer,
+                    raw,
+                    extent,
+                    _views: vec![source.clone(), destination.clone()],
+                    last_used: frame,
+                },
+                prepared,
+            ),
+        );
+        true
+    }
+
+    pub(super) fn depth_resolve(&mut self, handle: u64, frame: u64) -> Option<DepthStencilResolve> {
+        let (_, cached, prepared) = self.depth_resolves.get_mut(&handle)?;
+        cached.last_used = frame;
+        Some(DepthStencilResolve {
+            prepared: prepared.clone(),
+        })
+    }
+
     /// Frees what callbacks of frames the GPU finished used.
     pub fn free_retired(&mut self, completed: u64) {
         let device = &self.device;
@@ -1307,6 +1449,10 @@ impl Drop for VulkanPlugins {
                 }
             }
             for (_, framebuffer) in self.framebuffers.drain() {
+                self.device
+                    .destroy_framebuffer(framebuffer.framebuffer, None);
+            }
+            for (_, (_, framebuffer, _)) in self.depth_resolves.drain() {
                 self.device
                     .destroy_framebuffer(framebuffer.framebuffer, None);
             }
@@ -1994,9 +2140,25 @@ impl UnityRenderer {
             )),
             None => None,
         };
+        let depth_handle = if self.target_handles.1 == 0 {
+            self.target_handles.0
+        } else {
+            self.target_handles.1
+        };
+        let depth_resolve = self
+            .vulkan_plugins
+            .as_ref()
+            .filter(|p| p.depth_resolves.contains_key(&depth_handle))
+            .and_then(|_| self.textures.get(&depth_handle))
+            .filter(|gpu| {
+                depth.is_some_and(|(_, _, view)| gpu.depth_texture.as_ref() == Some(view.texture()))
+            })
+            .and_then(|gpu| gpu.native_depth.as_ref())
+            .and_then(|r| unsafe { r.view.as_hal::<Vulkan>().map(|v| (v.raw_handle(), &r.view)) });
         let views: Vec<&wgpu::TextureView> = std::iter::once(&target.color)
             .chain(depth.map(|(_, _, d)| d))
             .chain(resolve.map(|(_, r)| r))
+            .chain(depth_resolve.map(|(_, r)| r))
             .collect();
         Some(PassTarget {
             color,
@@ -2004,6 +2166,7 @@ impl UnityRenderer {
             color_format,
             depth: depth.map(|(raw, format, _)| (raw, format)),
             resolve: resolve.map(|(raw, _)| raw),
+            depth_resolve: depth_resolve.map(|(raw, _)| raw),
             textures: views.iter().map(|v| v.texture().clone()).collect(),
             // SAFETY: raw handles only read.
             images: views
@@ -2059,6 +2222,7 @@ struct PassTarget {
     extent: vk::Extent2D,
     /// The single-sample view a multisampled color resolves into.
     resolve: Option<vk::ImageView>,
+    depth_resolve: Option<vk::ImageView>,
     /// The attachments' textures (put in their resting layouts first), images, and views (held
     /// by the framebuffer made over them).
     textures: Vec<wgpu::Texture>,
@@ -2072,13 +2236,129 @@ impl PassTarget {
         std::iter::once(self.color)
             .chain(self.depth.map(|(view, _)| view))
             .chain(self.resolve)
+            .chain(self.depth_resolve)
             .collect()
     }
+}
+
+/// Cached publication work. Its views outlive the submission; framebuffer retirement follows
+/// the same completed-frame fence as plugin render passes.
+#[derive(Clone)]
+pub(super) struct DepthStencilResolve {
+    prepared: wgpu::NativeVulkanDepthPass,
+}
+
+fn depth_resolve_compatible(source: &wgpu::Texture, destination: &wgpu::Texture) -> bool {
+    source.sample_count() > 1
+        && destination.sample_count() == 1
+        && source.format() == destination.format()
+        && source.format().has_stencil_aspect()
+        && source.dimension() == wgpu::TextureDimension::D2
+        && destination.dimension() == wgpu::TextureDimension::D2
+        && source.depth_or_array_layers() == 1
+        && destination.depth_or_array_layers() == 1
+        && source.size() == destination.size()
+        && source
+            .usage()
+            .contains(wgpu::TextureUsages::RENDER_ATTACHMENT)
+        && destination
+            .usage()
+            .contains(wgpu::TextureUsages::RENDER_ATTACHMENT)
+}
+
+impl DepthStencilResolve {
+    pub(super) fn encode(&self, encoder: &mut wgpu::CommandEncoder) {
+        if !encoder.run_native_vulkan_depth_pass(&self.prepared) {
+            tracing::error!("Unbound: Vulkan depth/stencil publication could not be recorded");
+        }
+    }
+}
+
+unsafe fn create_depth_resolve_pass(device: &ash::Device, key: PassKey) -> Option<vk::RenderPass> {
+    let format = key.depth?;
+    let has_color = key.color != vk::Format::UNDEFINED;
+    let attachment = |format, samples, depth| {
+        vk::AttachmentDescription2::default()
+            .format(format)
+            .samples(samples)
+            .load_op(vk::AttachmentLoadOp::LOAD)
+            .store_op(vk::AttachmentStoreOp::STORE)
+            .stencil_load_op(vk::AttachmentLoadOp::LOAD)
+            .stencil_store_op(vk::AttachmentStoreOp::STORE)
+            .initial_layout(if depth {
+                vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            } else {
+                vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL
+            })
+            .final_layout(if depth {
+                vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            } else {
+                vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL
+            })
+    };
+    let mut attachments = Vec::with_capacity(4);
+    if has_color {
+        attachments.push(attachment(key.color, key.samples, false));
+    }
+    let source = vk::AttachmentReference2::default()
+        .attachment(attachments.len() as u32)
+        .layout(vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    attachments.push(attachment(format, key.samples, true));
+    let color = [vk::AttachmentReference2::default()
+        .attachment(0)
+        .layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)];
+    let color_resolve = [vk::AttachmentReference2::default()
+        .attachment(attachments.len() as u32)
+        .layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)];
+    if has_color && key.resolve {
+        attachments.push(attachment(key.color, vk::SampleCountFlags::TYPE_1, false));
+    }
+    let destination = vk::AttachmentReference2::default()
+        .attachment(attachments.len() as u32)
+        .layout(vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    attachments.push(attachment(format, vk::SampleCountFlags::TYPE_1, true));
+    let mut resolve = vk::SubpassDescriptionDepthStencilResolve::default()
+        .depth_resolve_mode(vk::ResolveModeFlags::SAMPLE_ZERO)
+        .stencil_resolve_mode(vk::ResolveModeFlags::SAMPLE_ZERO)
+        .depth_stencil_resolve_attachment(&destination);
+    let mut subpass = vk::SubpassDescription2::default()
+        .pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS)
+        .depth_stencil_attachment(&source)
+        .push_next(&mut resolve);
+    if has_color {
+        subpass = subpass.color_attachments(&color);
+    }
+    if has_color && key.resolve {
+        subpass = subpass.resolve_attachments(&color_resolve);
+    }
+    let subpasses = [subpass];
+    let dependencies = [(vk::SUBPASS_EXTERNAL, 0), (0, vk::SUBPASS_EXTERNAL)].map(|(src, dst)| {
+        vk::SubpassDependency2::default()
+            .src_subpass(src)
+            .dst_subpass(dst)
+            .src_stage_mask(vk::PipelineStageFlags::ALL_COMMANDS)
+            .dst_stage_mask(vk::PipelineStageFlags::ALL_COMMANDS)
+            .src_access_mask(vk::AccessFlags::MEMORY_WRITE)
+            .dst_access_mask(vk::AccessFlags::MEMORY_READ | vk::AccessFlags::MEMORY_WRITE)
+    });
+    unsafe {
+        device.create_render_pass2(
+            &vk::RenderPassCreateInfo2::default()
+                .attachments(&attachments)
+                .subpasses(&subpasses)
+                .dependencies(&dependencies),
+            None,
+        )
+    }
+    .ok()
 }
 
 /// A render pass over a target as `key` describes it (attachments loaded and stored, in their
 /// resting layouts) whose contents are secondary command buffers.
 unsafe fn create_render_pass(device: &ash::Device, key: PassKey) -> Option<vk::RenderPass> {
+    if key.depth_resolve {
+        return unsafe { create_depth_resolve_pass(device, key) };
+    }
     let mut attachments = vec![
         vk::AttachmentDescription::default()
             .format(key.color)
@@ -2692,6 +2972,148 @@ mod tests {
         unsafe { configure_event(7, &config) };
         assert_eq!(with_state(|s| s.configs.get(&7).copied()), Some(config));
     }
+    #[test]
+    fn depth_stencil_publication_copies_stencil_and_retires_in_flight_views() {
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::VULKAN,
+            ..wgpu::InstanceDescriptor::new_without_display_handle_from_env()
+        });
+        let Some(adapter) =
+            bevy::tasks::block_on(instance.enumerate_adapters(wgpu::Backends::VULKAN))
+                .into_iter()
+                .next()
+        else {
+            return;
+        };
+        let (device, queue) =
+            bevy::tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+                required_features: adapter.features()
+                    & (wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
+                        | wgpu::Features::DEPTH32FLOAT_STENCIL8),
+                required_limits: adapter.limits(),
+                ..Default::default()
+            }))
+            .unwrap();
+        let mut plugins = VulkanPlugins::new(&device, &queue).unwrap();
+        if !plugins.depth_resolve_supported {
+            return;
+        }
+        for (handle, format) in [
+            (901, wgpu::TextureFormat::Depth24PlusStencil8),
+            (902, wgpu::TextureFormat::Depth32FloatStencil8),
+        ] {
+            if !adapter
+                .get_texture_format_features(format)
+                .flags
+                .sample_count_supported(4)
+            {
+                continue;
+            }
+            let texture = |samples, width, format| {
+                device.create_texture(&wgpu::TextureDescriptor {
+                    label: None,
+                    size: wgpu::Extent3d {
+                        width,
+                        height: 3,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: samples,
+                    dimension: wgpu::TextureDimension::D2,
+                    format,
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                        | if samples == 1 {
+                            wgpu::TextureUsages::COPY_SRC
+                        } else {
+                            wgpu::TextureUsages::empty()
+                        },
+                    view_formats: &[],
+                })
+            };
+            let source = texture(4, 7, format);
+            let destination = texture(1, 7, format);
+            // A single-sample source, a size mismatch and a stencil-free destination cannot resolve.
+            assert!(!depth_resolve_compatible(&destination, &destination));
+            assert!(!depth_resolve_compatible(&source, &texture(1, 9, format)));
+            assert!(!depth_resolve_compatible(
+                &source,
+                &texture(1, 7, wgpu::TextureFormat::Depth32Float)
+            ));
+            let source_view = source.create_view(&Default::default());
+            let destination_view = destination.create_view(&Default::default());
+            assert!(plugins.prepare_depth_resolve(
+                &adapter,
+                &device,
+                handle,
+                &source_view,
+                &destination_view,
+                1
+            ));
+            let resolve = plugins.depth_resolve(handle, 1).unwrap();
+            let mut encoder = device.create_command_encoder(&Default::default());
+            for (view, depth, stencil) in [(&source_view, 0.25, 197), (&destination_view, 0.75, 17)]
+            {
+                drop(encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    color_attachments: &[],
+                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                        view,
+                        depth_ops: Some(wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(depth),
+                            store: wgpu::StoreOp::Store,
+                        }),
+                        stencil_ops: Some(wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(stencil),
+                            store: wgpu::StoreOp::Store,
+                        }),
+                    }),
+                    ..Default::default()
+                }));
+            }
+            resolve.encode(&mut encoder);
+            // Release while the submitted raw pass can still be in flight.
+            plugins.release(handle);
+            assert!(!plugins.retired.is_empty());
+            let download = device.create_buffer(&wgpu::BufferDescriptor {
+                label: None,
+                size: 256 * 3,
+                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+                mapped_at_creation: false,
+            });
+            encoder.copy_texture_to_buffer(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &destination,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::StencilOnly,
+                },
+                wgpu::TexelCopyBufferInfo {
+                    buffer: &download,
+                    layout: wgpu::TexelCopyBufferLayout {
+                        offset: 0,
+                        bytes_per_row: Some(256),
+                        rows_per_image: Some(3),
+                    },
+                },
+                destination.size(),
+            );
+            queue.submit([encoder.finish()]);
+            let (tx, rx) = std::sync::mpsc::channel();
+            download.map_async(wgpu::MapMode::Read, .., move |r| {
+                tx.send(r).unwrap();
+            });
+            device.poll(wgpu::PollType::wait_indefinitely()).unwrap();
+            rx.recv().unwrap().unwrap();
+            let bytes = download.get_mapped_range(..).unwrap();
+            for row in bytes.chunks(256) {
+                assert_eq!(&row[..7], &[197; 7]);
+            }
+            drop(bytes);
+            download.unmap();
+            plugins.free_retired(1);
+            assert!(plugins.retired.is_empty());
+        }
+    }
+
     #[test]
     fn owned_image_capabilities_preserve_import_and_initialization_contracts() {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {

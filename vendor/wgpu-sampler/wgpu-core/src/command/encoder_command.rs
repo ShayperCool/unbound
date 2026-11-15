@@ -115,6 +115,8 @@ attribute_alias! {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", apply(serde_object_reference_struct))]
 pub enum Command<R: ReferenceType> {
+    #[cfg_attr(feature = "serde", serde(skip))]
+    NativeVulkanDepthPass(Arc<crate::command::NativeVulkanDepthPass>),
     CopyBufferToBuffer {
         src: R::Buffer,
         src_offset: wgt::BufferAddress,

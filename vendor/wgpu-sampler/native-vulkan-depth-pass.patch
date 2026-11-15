@@ -1,0 +1,368 @@
+diff --git a/wgpu-core/src/command/encoder_command.rs b/wgpu-core/src/command/encoder_command.rs
+index 2dfe24590..417783c91 100644
+--- a/wgpu-core/src/command/encoder_command.rs
++++ b/wgpu-core/src/command/encoder_command.rs
+@@ -115,6 +115,8 @@ attribute_alias! {
+ #[derive(Clone, Debug)]
+ #[cfg_attr(feature = "serde", apply(serde_object_reference_struct))]
+ pub enum Command<R: ReferenceType> {
++    #[cfg_attr(feature = "serde", serde(skip))]
++    NativeVulkanDepthPass(Arc<crate::command::NativeVulkanDepthPass>),
+     CopyBufferToBuffer {
+         src: R::Buffer,
+         src_offset: wgt::BufferAddress,
+diff --git a/wgpu-core/src/command/mod.rs b/wgpu-core/src/command/mod.rs
+index e61429e7b..4c86c68b3 100644
+--- a/wgpu-core/src/command/mod.rs
++++ b/wgpu-core/src/command/mod.rs
+@@ -19,6 +19,7 @@ mod encoder;
+ mod encoder_command;
+ pub mod ffi;
+ mod memory_init;
++mod native_vulkan_pass;
+ mod pass;
+ mod query;
+ mod ray_tracing;
+@@ -27,6 +28,7 @@ mod render_command;
+ mod timestamp_writes;
+ mod transfer;
+ mod transition_resources;
++pub use native_vulkan_pass::NativeVulkanDepthPass;
+ 
+ use alloc::{borrow::ToOwned as _, boxed::Box, string::String, sync::Arc, vec::Vec};
+ use core::convert::Infallible;
+@@ -1283,6 +1285,9 @@ impl CommandEncoder {
+                     ArcCommand::BuildAccelerationStructures { blas, tlas } => {
+                         ray_tracing::build_acceleration_structures(&mut state, blas, tlas)?;
+                     }
++                    ArcCommand::NativeVulkanDepthPass(pass) => {
++                        native_vulkan_pass::encode(&mut state, &pass)?;
++                    }
+                     ArcCommand::TransitionResources {
+                         buffer_transitions,
+                         texture_transitions,
+diff --git a/wgpu-core/src/device/trace/record.rs b/wgpu-core/src/device/trace/record.rs
+index 1748b3def..ed3fd54c1 100644
+--- a/wgpu-core/src/device/trace/record.rs
++++ b/wgpu-core/src/device/trace/record.rs
+@@ -279,6 +279,7 @@ impl IntoTrace for ArcCommand {
+                     tlas: tlas.into_iter().map(|b| b.into_trace()).collect(),
+                 }
+             }
++            ArcCommand::NativeVulkanDepthPass(_) => panic!("Native Vulkan passes cannot be traced"),
+             ArcCommand::TransitionResources {
+                 buffer_transitions: _,
+                 texture_transitions: _,
+diff --git a/wgpu-hal/src/vulkan/mod.rs b/wgpu-hal/src/vulkan/mod.rs
+index e50c3e766..96aa3fc6d 100644
+--- a/wgpu-hal/src/vulkan/mod.rs
++++ b/wgpu-hal/src/vulkan/mod.rs
+@@ -1127,6 +1127,35 @@ impl Drop for CommandEncoder {
+ }
+ 
+ impl CommandEncoder {
++    /// Records a compatible externally owned depth/stencil pass between ordinary commands.
++    ///
++    /// # Safety
++    /// The pass and framebuffer must remain valid through completion. Both initialized
++    /// attachments must be in DEPTH_STENCIL_ATTACHMENT_OPTIMAL, and the pass must leave them there.
++    pub unsafe fn run_native_depth_pass(
++        &mut self,
++        pass: u64,
++        framebuffer: u64,
++        width: u32,
++        height: u32,
++    ) {
++        use ash::vk::Handle;
++        unsafe {
++            self.device.raw.cmd_begin_render_pass(
++                self.active,
++                &vk::RenderPassBeginInfo::default()
++                    .render_pass(vk::RenderPass::from_raw(pass))
++                    .framebuffer(vk::Framebuffer::from_raw(framebuffer))
++                    .render_area(vk::Rect2D {
++                        offset: vk::Offset2D::default(),
++                        extent: vk::Extent2D { width, height },
++                    }),
++                vk::SubpassContents::INLINE,
++            );
++            self.device.raw.cmd_end_render_pass(self.active);
++        }
++    }
++
+     /// # Safety
+     ///
+     /// - The command buffer handle must not be manually destroyed
+diff --git a/wgpu/src/api/command_encoder.rs b/wgpu/src/api/command_encoder.rs
+index 77648d40f..87ae35673 100644
+--- a/wgpu/src/api/command_encoder.rs
++++ b/wgpu/src/api/command_encoder.rs
+@@ -9,6 +9,13 @@ use crate::{
+     *,
+ };
+ 
++/// A cached Vulkan depth/stencil pass prepared for the ordinary command stream.
++#[derive(Debug, Clone)]
++pub struct NativeVulkanDepthPass {
++    #[cfg(wgpu_core)]
++    pub(crate) inner: Arc<wgpu_core::command::NativeVulkanDepthPass>,
++}
++
+ /// Encodes a series of GPU operations.
+ ///
+ /// A command encoder can record [`RenderPass`]es, [`ComputePass`]es,
+@@ -248,6 +255,19 @@ impl CommandEncoder {
+ 
+     impl_deferred_command_buffer_actions!();
+ 
++    /// Records a prepared native depth/stencil pass in order, using this encoder's submission.
++    /// Returns false for unsupported backends, tracing, or an invalid encoder.
++    pub fn run_native_vulkan_depth_pass(&mut self, pass: &NativeVulkanDepthPass) -> bool {
++        #[cfg(wgpu_core)]
++        if let Some(encoder) = self.inner.as_core_mut_opt() {
++            return encoder
++                .context
++                .command_encoder_run_native_vulkan_depth_pass(encoder, &pass.inner);
++        }
++        let _ = pass;
++        false
++    }
++
+     /// Get the [`wgpu_hal`] command encoder from this `CommandEncoder`.
+     ///
+     /// The returned command encoder will be ready to record onto.
+diff --git a/wgpu/src/api/device.rs b/wgpu/src/api/device.rs
+index 7baff5e56..e580224e9 100644
+--- a/wgpu/src/api/device.rs
++++ b/wgpu/src/api/device.rs
+@@ -491,6 +491,43 @@ impl Device {
+         Sampler { inner: sampler }
+     }
+ 
++    /// Prepares a reusable native Vulkan depth/stencil pass, or returns None when unsupported.
++    ///
++    /// # Safety
++    /// The raw pass/framebuffer must belong to this device and retain the supplied views through
++    /// every GPU use. The source and destination must be initialized, matching depth/stencil
++    /// attachments, multisampled and single-sampled respectively. The framebuffer extent must
++    /// match the supplied dimensions. The pass must load/store both aspects in
++    /// DEPTH_STENCIL_ATTACHMENT_OPTIMAL without changing descriptor or pipeline bindings.
++    pub unsafe fn prepare_native_vulkan_depth_pass(
++        &self,
++        source: &TextureView,
++        destination: &TextureView,
++        pass: u64,
++        framebuffer: u64,
++        width: u32,
++        height: u32,
++    ) -> Option<NativeVulkanDepthPass> {
++        #[cfg(wgpu_core)]
++        if let Some(device) = self.inner.as_core_opt() {
++            let source = source.inner.as_core_opt()?;
++            let destination = destination.inner.as_core_opt()?;
++            return unsafe {
++                device.prepare_native_vulkan_depth_pass(
++                    source,
++                    destination,
++                    pass,
++                    framebuffer,
++                    width,
++                    height,
++                )
++            }
++            .map(|inner| NativeVulkanDepthPass { inner });
++        }
++        let _ = (source, destination, pass, framebuffer, width, height);
++        None
++    }
++
+     /// Maximum native sampler LOD bias, or `None` when the native extension is unsupported.
+     pub fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
+         #[cfg(wgpu_core)]
+diff --git a/wgpu/src/backend/wgpu_core.rs b/wgpu/src/backend/wgpu_core.rs
+index 6b4472bb0..f6122755e 100644
+--- a/wgpu/src/backend/wgpu_core.rs
++++ b/wgpu/src/backend/wgpu_core.rs
+@@ -230,6 +230,16 @@ impl ContextWgpuCore {
+         unsafe { self.0.texture_view_as_hal::<A>(texture_view.id) }
+     }
+ 
++    pub fn command_encoder_run_native_vulkan_depth_pass(
++        &self,
++        encoder: &CoreCommandEncoder,
++        pass: &Arc<wgc::command::NativeVulkanDepthPass>,
++    ) -> bool {
++        self.0
++            .command_encoder_run_native_vulkan_depth_pass(encoder.id, pass)
++            .is_ok()
++    }
++
+     /// This method will start the wgpu_core level command recording.
+     pub unsafe fn command_encoder_as_hal_mut<
+         A: hal::Api,
+@@ -471,6 +481,28 @@ pub struct CoreDevice {
+ }
+ 
+ impl CoreDevice {
++    pub(crate) unsafe fn prepare_native_vulkan_depth_pass(
++        &self,
++        source: &CoreTextureView,
++        destination: &CoreTextureView,
++        pass: u64,
++        framebuffer: u64,
++        width: u32,
++        height: u32,
++    ) -> Option<Arc<wgc::command::NativeVulkanDepthPass>> {
++        unsafe {
++            self.context.0.device_prepare_native_vulkan_depth_pass(
++                self.id,
++                source.id,
++                destination.id,
++                pass,
++                framebuffer,
++                width,
++                height,
++            )
++        }
++    }
++
+     pub(crate) fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
+         self.context.0.device_native_sampler_lod_bias_limit(self.id)
+     }
+diff --git a/wgpu-core/src/command/native_vulkan_pass.rs b/wgpu-core/src/command/native_vulkan_pass.rs
+new file mode 100644
+index 000000000..7b51bd391
+--- /dev/null
++++ b/wgpu-core/src/command/native_vulkan_pass.rs
+@@ -0,0 +1,131 @@
++//! Prepared Vulkan depth/stencil passes recorded in the ordinary command stream.
++use crate::{
++    command::{encoder::EncodingState, ArcCommand, CommandEncoderError, EncoderStateError},
++    device::DeviceError,
++    global::Global,
++    id::{CommandEncoderId, DeviceId, TextureViewId},
++    resource::{ParentDevice, RawResourceAccess, TextureView},
++};
++use alloc::sync::Arc;
++
++/// A reusable native pass whose attachments stay owned by Core.
++#[derive(Debug)]
++pub struct NativeVulkanDepthPass {
++    views: [Arc<TextureView>; 2],
++    pass: u64,
++    framebuffer: u64,
++    width: u32,
++    height: u32,
++}
++
++impl Global {
++    /// Prepares an externally owned Vulkan pass. See the frontend's safety contract.
++    pub unsafe fn device_prepare_native_vulkan_depth_pass(
++        &self,
++        device_id: DeviceId,
++        source: TextureViewId,
++        destination: TextureViewId,
++        pass: u64,
++        framebuffer: u64,
++        width: u32,
++        height: u32,
++    ) -> Option<Arc<NativeVulkanDepthPass>> {
++        let device = self.hub.devices.get(device_id);
++        #[cfg(vulkan)]
++        if device.raw().as_any().is::<hal::vulkan::Device>()
++            && pass != 0
++            && framebuffer != 0
++            && width > 0
++            && height > 0
++        {
++            #[cfg(feature = "trace")]
++            if device.trace.lock().is_some() {
++                return None;
++            }
++            let source = self.hub.texture_views.get(source).get().ok()?;
++            let destination = self.hub.texture_views.get(destination).get().ok()?;
++            source.same_device(&device).ok()?;
++            destination.same_device(&device).ok()?;
++            return Some(Arc::new(NativeVulkanDepthPass {
++                views: [source, destination],
++                pass,
++                framebuffer,
++                width,
++                height,
++            }));
++        }
++        let _ = (
++            device,
++            source,
++            destination,
++            pass,
++            framebuffer,
++            width,
++            height,
++        );
++        None
++    }
++
++    /// Adds a prepared pass without allocating another encoder or command payload.
++    pub fn command_encoder_run_native_vulkan_depth_pass(
++        &self,
++        id: CommandEncoderId,
++        pass: &Arc<NativeVulkanDepthPass>,
++    ) -> Result<(), EncoderStateError> {
++        let encoder = self.hub.command_encoders.get(id);
++        if !Arc::ptr_eq(&encoder.device, &pass.views[0].device) {
++            return Err(EncoderStateError::Invalid);
++        }
++        #[cfg(feature = "trace")]
++        if encoder.device.trace.lock().is_some() {
++            return Err(EncoderStateError::Invalid);
++        }
++        let result = encoder
++            .data
++            .lock()
++            .push_with(|| Ok::<_, DeviceError>(ArcCommand::NativeVulkanDepthPass(pass.clone())));
++        result
++    }
++}
++
++pub(crate) fn encode(
++    state: &mut EncodingState,
++    pass: &NativeVulkanDepthPass,
++) -> Result<(), CommandEncoderError> {
++    #[cfg(vulkan)]
++    {
++        for view in &pass.views {
++            view.same_device(state.device)?;
++            let raw = view.parent.try_raw(state.snatch_guard)?;
++            state.tracker.views.insert_single(view.clone());
++            for pending in state.tracker.textures.set_single(
++                &view.parent,
++                view.selector.clone(),
++                wgt::TextureUses::DEPTH_STENCIL_WRITE,
++            ) {
++                let barrier = pending.into_hal(raw);
++                // SAFETY: Core owns the live textures; the native pass uses their full attachment views.
++                unsafe {
++                    state
++                        .raw_encoder
++                        .transition_textures(core::slice::from_ref(&barrier));
++                }
++            }
++        }
++        let encoder = state
++            .raw_encoder
++            .as_any_mut()
++            .downcast_mut::<hal::vulkan::CommandEncoder>()
++            .ok_or(DeviceError::Lost)?;
++        // SAFETY: the frontend contract retains the compatible pass/framebuffer through GPU completion.
++        unsafe {
++            encoder.run_native_depth_pass(pass.pass, pass.framebuffer, pass.width, pass.height);
++        }
++        return Ok(());
++    }
++    #[cfg(not(vulkan))]
++    {
++        let _ = (state, pass);
++        Err(DeviceError::Lost.into())
++    }
++}

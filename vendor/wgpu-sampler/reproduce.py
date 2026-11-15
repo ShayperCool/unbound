@@ -44,4 +44,7 @@ def main():
         subprocess.run(['patch','--batch','--forward','-p1','-i',str(ROOT/patch)], cwd=destination, check=True)
     print(destination)
 
+# Publication commands are applied after the backend allocation patches.
+PATCHES.append('native-vulkan-depth-pass.patch')
+
 if __name__ == '__main__': main()

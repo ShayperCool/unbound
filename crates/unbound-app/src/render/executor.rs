@@ -468,6 +468,10 @@ impl IndirectArgsPool {
 /// A depth buffer drawn into another of its size (`CopyDepth`): each destination sample takes the
 /// source's sample of its index (equal sample counts) or its only or first one.
 struct DepthBlit {
+    #[cfg(target_os = "linux")]
+    native: Option<plugins_vulkan::DepthStencilResolve>,
+    #[cfg(target_os = "linux")]
+    native_after: Option<plugins_vulkan::DepthStencilResolve>,
     resolve_sample: u32,
     group: Option<wgpu::BindGroup>,
     source: wgpu::TextureView,
@@ -481,6 +485,7 @@ struct DepthBlit {
 
 /// A render pass being built: consecutive commands on one target.
 struct Pass {
+    native_depth: Option<DepthBlit>,
     target: Target,
     /// The previous frame's screen, copied into the frame's screen before the pass when it loads
     /// its color (the frame's first use of the screen).
@@ -878,6 +883,52 @@ impl UnityRenderer {
             }
         }
         self.prepare_resolve_history(&gpu, packet.retain_resolve, packet.dimension);
+        #[cfg(target_os = "linux")]
+        if let Some(plugins) = self.vulkan_plugins.as_mut() {
+            plugins.release_depth_resolve(handle);
+        }
+        #[cfg(target_os = "linux")]
+        if let Some(plugins) = self.vulkan_plugins.as_mut()
+            && let (Some(source), Some(destination)) = (&gpu.depth, &gpu.native_depth)
+            && source.texture().format().has_stencil_aspect()
+        {
+            if plugins.prepare_depth_resolve(
+                &self.adapter,
+                &device,
+                handle,
+                source,
+                &destination.view,
+                self.frame_number + 1,
+            ) {
+                // Establish wgpu's initialization state before raw publication or plugin writes.
+                let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("unbound native depth initialization"),
+                });
+                for view in [source, &destination.view] {
+                    drop(encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("unbound native depth initialization"),
+                        color_attachments: &[],
+                        depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                            view,
+                            depth_ops: Some(wgpu::Operations {
+                                load: wgpu::LoadOp::Load,
+                                store: wgpu::StoreOp::Store,
+                            }),
+                            stencil_ops: Some(wgpu::Operations {
+                                load: wgpu::LoadOp::Load,
+                                store: wgpu::StoreOp::Store,
+                            }),
+                        }),
+                        ..Default::default()
+                    }));
+                }
+                self.queue.submit([encoder.finish()]);
+            } else {
+                tracing::warn!(
+                    "Unbound: Vulkan depth/stencil publication requires matching 2D attachments and sample-zero depth/stencil resolve support; stencil publication is unsupported on this device"
+                );
+            }
+        }
         if let Some(resolve) = &mut gpu.native_depth {
             if resolve.group.is_none() {
                 let (_, layout) = self.depth_blit_pipeline(
@@ -2331,12 +2382,21 @@ impl UnityRenderer {
                 .and_then(|t| Some((t.depth.clone()?, t.depth_format()?)))
         };
         let to = end(self, destination);
+        #[cfg(target_os = "linux")]
+        let native_after = self
+            .vulkan_plugins
+            .as_mut()
+            .and_then(|p| p.depth_resolve(destination, self.frame_number + 1));
         match (from, to, to_view) {
             (
                 Some((source, source_samples, size)),
                 Some((_, samples, to_size)),
                 Some((destination, format)),
             ) if size == to_size => Some(DepthBlit {
+                #[cfg(target_os = "linux")]
+                native: None,
+                #[cfg(target_os = "linux")]
+                native_after,
                 resolve_sample: 0,
                 group: None,
                 source,
@@ -2354,10 +2414,28 @@ impl UnityRenderer {
         }
     }
 
-    fn native_depth_resolve(&self, handle: u64) -> Option<DepthBlit> {
+    fn native_depth_resolve(&mut self, handle: u64) -> Option<DepthBlit> {
+        let publication = self.native_depth_publication(handle)?;
+        // Vulkan already published both aspects at the preceding attachment-write boundary.
+        // Resolving or sampling it again preserves later native edits (nativegfx forcedSelf).
+        #[cfg(target_os = "linux")]
+        if publication.native.is_some() {
+            return None;
+        }
+        Some(publication)
+    }
+
+    fn native_depth_publication(&mut self, handle: u64) -> Option<DepthBlit> {
         let gpu = self.textures.get(&handle)?;
         let resolve = gpu.native_depth.as_ref()?;
         Some(DepthBlit {
+            #[cfg(target_os = "linux")]
+            native: self
+                .vulkan_plugins
+                .as_mut()
+                .and_then(|p| p.depth_resolve(handle, self.frame_number + 1)),
+            #[cfg(target_os = "linux")]
+            native_after: None,
             resolve_sample: self.conventions.depth_resolve_sample(gpu.samples),
             group: resolve.group.clone(),
             source: gpu.depth_msaa.clone()?,
@@ -2818,7 +2896,29 @@ impl UnityRenderer {
     }
 
     fn new_pass(&mut self, target: Target) -> Pass {
+        // Vulkan publishes both aspects after ordinary attachment writes. OpenGL retains its
+        // published image until a clear, shader read or explicit self-resolve.
+        #[cfg(target_os = "linux")]
+        let native_depth = if self.vulkan_plugins.is_some() {
+            let handle = if self.target_handles.1 == 0 {
+                self.target_handles.0
+            } else {
+                self.target_handles.1
+            };
+            self.native_depth_publication(handle).filter(|r| {
+                r.native.is_some()
+                    && target
+                        .depth
+                        .as_ref()
+                        .is_some_and(|d| d.texture() == r.source.texture())
+            })
+        } else {
+            None
+        };
+        #[cfg(not(target_os = "linux"))]
+        let native_depth = None;
         let mut pass = Pass {
+            native_depth,
             target,
             seed: None,
             color_load: wgpu::LoadOp::Load,
@@ -4803,6 +4903,11 @@ impl UnityRenderer {
                     continue;
                 }
                 Op::DepthBlit(b) => {
+                    #[cfg(target_os = "linux")]
+                    if let Some(native) = &b.native {
+                        native.encode(&mut encoder);
+                        continue;
+                    }
                     let (pipeline, layout) = self.depth_blit_pipeline(
                         b.source_samples > 1,
                         b.samples,
@@ -4843,6 +4948,11 @@ impl UnityRenderer {
                     rp.set_pipeline(&pipeline);
                     rp.set_bind_group(0, &group, &[]);
                     rp.draw(0..3, 0..1);
+                    drop(rp);
+                    #[cfg(target_os = "linux")]
+                    if let Some(native) = &b.native_after {
+                        native.encode(&mut encoder);
+                    }
                     continue;
                 }
                 Op::DepthCopy(c) => {
@@ -5116,6 +5226,10 @@ impl UnityRenderer {
                 }
             }
             drop(rp);
+            #[cfg(target_os = "linux")]
+            if let Some(native) = pass.native_depth.as_ref().and_then(|d| d.native.as_ref()) {
+                native.encode(&mut encoder);
+            }
             if pass.target.auto_mips {
                 if let Some((texture, layer, _)) = &pass.target.texture {
                     self.mipmaps

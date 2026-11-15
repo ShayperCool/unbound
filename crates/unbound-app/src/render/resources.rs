@@ -490,7 +490,8 @@ pub struct GpuTexture {
     /// Texture-owned comparison state for measured render textures; absent for other releases.
     pub depth_compare: Option<bool>,
     /// Published single-sample depth for native plugins. Clears, shader reads and explicit
-    /// self-resolves publish it; ordinary draws leave it unchanged (tests/projects/nativegfx).
+    /// self-resolves publish it. Vulkan also publishes stencil and ordinary attachment writes
+    /// when the device supports depth/stencil resolves (tests/projects/nativegfx).
     pub native_depth: Option<NativeDepthResolve>,
     /// Images (6 for a cubemap) and whether the views are a cube's.
     pub layers: u32,

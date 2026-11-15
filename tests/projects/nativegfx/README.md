@@ -9,12 +9,12 @@ uses the low-level native plugin interface and records what it gets; the scripts
 
 Current NVIDIA primary results against Unity 6000.0.71f1 are OpenGL Core 554/613 with
 59 declared residuals and Vulkan 1040/1062 with 22. The OpenGL stencil profile is
-582/654 with 72; the Vulkan stencil reference contains 1087 rows with 37 declared
-residual keys. Vulkan attachment capabilities and multisample color
+582/654 with 72; the Vulkan stencil profile is 1274/1296 with 22 declared
+residuals. Vulkan attachment capabilities and multisample color
 usage close 63 of its 64 earlier differences. All 518 earlier Vulkan reference
 rows are byte-identical; 49 allocation controls and 298 resolve-access and
 setter controls are appended. The foreign-format extension adds 70 rows to both Vulkan profiles; the stencil
-profile also includes its 25 publication rows.
+profile also includes its 25 publication rows and 209 publication controls.
 The depth-shape extension adds 49 OpenGL rows and 73 Vulkan rows to both profiles.
 It exposes 11 OpenGL and 16 Vulkan depth-storage or diagnostic differences; these are
 recorded separately from the earlier residuals. All prior 564, 935, 605 and 960 rows
@@ -92,10 +92,21 @@ Recorded:
   stencil. The separate canonical profile includes every primary row and the raw callback
   error logs. Run it with `python3 tests/projects/nativegfx/run.py check --stencil`.
   The Vulkan profile uses `--device vulkan --stencil`. At 1, 2, 4 and 8 samples,
-  the Editor publishes the initialized stencil, clear, two divergent stencil writes
-  and explicit self-resolves. Unbound matches the single-sample controls but retains
-  the initialized value in 15 multisample content rows. These remain explicit
-  residuals in the separate canonical profile. Other drivers remain unmeasured.
+  the Editor publishes the initialized stencil, clear, two successive writes
+  and explicit self-resolves. Unbound matches all 25 publication rows.
+  `sampleStencil.*` additionally writes 37 into sample zero and 91 into the other
+  samples, then changes only the left half of sample zero to 203. Two depth/stencil
+  formats, 7x3 storage, 1/2/4/8 samples and explicit self-resolves select sample zero
+  while preserving the other half. One native pointer is reused across all writes.
+  Overwriting the published stencil with 113 before an explicit self-resolve
+  shows that a previously published image keeps native edits. A later color-only
+  clear, color-only draw, or partial stencil clear inside a native plugin pass
+  publishes the attachment again. The single-sample controls distinguish direct
+  edits from a separate published image. All 209 new rows match; two independent
+  NVIDIA captures preserve every earlier 1087 reference row. Other drivers remain
+  unmeasured. Within one callback, `sameCallbackRead` records a partial stencil
+  clear of 173 after `EnsureOutsideRenderPass`; `sameCallbackAfter` confirms that
+  the callback's later edit to 113 survives its return.
 * **Depth storage and mip attachments** (`depthShape.*`): 2D targets, three-layer arrays
   and cubes, both with and without mipmaps, distinguish ARGB32 attachments from Shadowmap
   depth-only images. Public mip counts and native image metadata are recorded before and
@@ -440,9 +451,39 @@ synthesize those diagnostic histories or replace real GPU resources with
 metadata. Retained-color publication for bindTextureMS, multisampled arrays,
 other foreign Vulkan formats/layout handoffs and other drivers remain queued.
 The OpenGL stencil profile's content controls match; its additional callback
-error rows remain visible. Vulkan multisample stencil publication requires a
-depth-and-stencil resolve mechanism; the current depth publication preserves
-stencil and leaves all 15 content differences visible. Broader depth-image
+error rows remain visible. Vulkan now publishes both aspects of supported 2D
+single-layer multisample depth/stencil attachments, including ordinary writes.
+Broader depth-image
 shapes and mip allocation also remain queued. Exploratory 2D, array and cube
 measurements distinguish public mip counts from actual depth storage; implementing
 those allocation rules requires corresponding attachment and shader-load controls.
+
+### Vulkan depth and stencil publication
+
+The selected release's retained-depth flag also enables publication of stencil on
+Vulkan. Render passes and framebuffers are prepared with each texture allocation,
+reused for writes, and retired through the GPU completion fence when storage is
+replaced or released. Both images are initialized through wgpu before native
+writes. A prepared native command records the cached pass and both attachment
+transitions in the existing wgpu command stream, retaining both Core views for
+submission. Recording reuses that command without creating extra encoders,
+labels or transition vectors. Plugin passes include the depth/stencil resolve
+attachment so publication happens before later outside segments of that callback.
+The device must provide Vulkan 1.2 and sample-zero resolve support for both aspects;
+matching formats, extents and single-layer 2D storage are required. Unsupported
+devices retain depth-only publication with a diagnostic, and stencil remains an
+explicit unsupported case there. Multisample arrays remain outside this measured
+publication scope. Ordinary attachment passes, native plugin passes and internal
+depth-copy passes share the publication operation. Subsequent shader reads and
+explicit self-resolves do not repeat an already completed Vulkan publication.
+
+| Basis | Unity 6000.0.71f1 contract or measured control |
+| --- | --- |
+| [ResolveAntiAliasedSurface](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture.ResolveAntiAliasedSurface.html) | An omitted target resolves into the source. The native stencil image is already published after drawing; `sampleStencil.*.overwritten` and `.forcedSelf` record that a later explicit call preserves native edits. No stronger stencil guarantee is inferred from this color-surface API. |
+| [GetNativeDepthBufferPtr](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture.GetNativeDepthBufferPtr.html) | Supplies the graphics resource for native manipulation. `sampleStencil.*` reuses that pointer before and after attachment writes. |
+| [Vulkan plugin SDK](https://github.com/Unity-Technologies/NativeRenderingPlugin/blob/master/PluginSource/source/Unity/IUnityGraphicsVulkan.h) | Ending a plugin pass permits outside work. `sameCallbackRead` observes the attachment write before the following native image edit, all in one callback. The SDK leaves use with the SRP RenderPass API undefined; these controls use built-in pipeline targets. |
+| [Vulkan depth/stencil resolve rules](https://docs.vulkan.org/refpages/latest/refpages/source/VkSubpassDescriptionDepthStencilResolve.html) | Both resolve modes must be supported; the source is multisampled and the destination single-sampled with matching depth/stencil components. The implementation queries both modes and resolves both with sample zero. |
+
+Sample selection and publication timing are observations on NVIDIA, not a public
+Unity guarantee for other devices. OpenGL's retained-stencil controls continue to
+use depth-only publication, which preserves destination stencil.

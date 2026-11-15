@@ -732,6 +732,7 @@ EXPORT void* NativeGfxVk_AllocationEvent(void) { return (void*)on_allocation_eve
 enum { STENCIL_SENTINEL = 113, STENCIL_READBACK_BYTES = 32 };
 static void* s_stencil_pointer;
 static int s_stencil_initialize, s_stencil_status;
+static int s_stencil_x, s_stencil_y;
 static VkBuffer s_stencil_buffer;
 static VkDeviceMemory s_stencil_memory;
 static void* s_stencil_mapping;
@@ -763,7 +764,8 @@ static void on_stencil_event(int event_id)
         DEVICE_PROC(PFN_vkCmdCopyImageToBuffer, vkCmdCopyImageToBuffer);
         DEVICE_PROC(PFN_vkCmdPipelineBarrier, vkCmdPipelineBarrier);
         if (!vkCmdCopyImageToBuffer || !vkCmdPipelineBarrier || !stencil_buffer()) return;
-        VkBufferImageCopy copy={.imageSubresource={VK_IMAGE_ASPECT_STENCIL_BIT,0,0,1},.imageExtent={1,1,1}};
+        VkBufferImageCopy copy={.imageSubresource={VK_IMAGE_ASPECT_STENCIL_BIT,0,0,1},
+            .imageOffset={s_stencil_x,s_stencil_y,0},.imageExtent={1,1,1}};
         vkCmdCopyImageToBuffer(state.commandBuffer,image.image,layout,s_stencil_buffer,1,&copy);
         VkBufferMemoryBarrier barrier={.sType=VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
             .srcAccessMask=VK_ACCESS_TRANSFER_WRITE_BIT,.dstAccessMask=VK_ACCESS_HOST_READ_BIT,
@@ -773,6 +775,7 @@ static void on_stencil_event(int event_id)
     }
     s_stencil_status=0;
 }
+EXPORT void NativeGfxVk_StencilPosition(int x,int y) {s_stencil_x=x;s_stencil_y=y;}
 EXPORT void NativeGfxVk_StencilPrepare(void* pointer,int initialize) {s_stencil_pointer=pointer;s_stencil_initialize=initialize;}
 EXPORT void* NativeGfxVk_StencilEvent(void) {return (void*)on_stencil_event;}
 EXPORT int NativeGfxVk_StencilValue(void) {return s_stencil_status ? s_stencil_status : s_stencil_mapping ? *(unsigned char*)s_stencil_mapping : -3;}
@@ -787,3 +790,28 @@ EXPORT void NativeGfxVk_StencilDestroy(void)
     s_stencil_mapping=NULL;s_stencil_buffer=VK_NULL_HANDLE;s_stencil_memory=VK_NULL_HANDLE;
 }
 #undef DEVICE_PROC
+
+// A partial stencil write through the active plugin render pass.
+static void stencil_attachment_clear(unsigned reference)
+{
+    UnityVulkanRecordingState state; memset(&state,0,sizeof state);
+    if (!s_vulkan->CommandRecordingState(&state,0) || !state.commandBuffer || !state.renderPass || !vk.CmdClearAttachments) return;
+    VkClearAttachment attachment={.aspectMask=VK_IMAGE_ASPECT_STENCIL_BIT,
+        .clearValue.depthStencil={.stencil=reference}};
+    VkClearRect rectangle={.rect={{0,0},{3,3}},.baseArrayLayer=0,.layerCount=1};
+    vk.CmdClearAttachments(state.commandBuffer,1,&attachment,1,&rectangle);
+}
+static void on_stencil_attachment_event(int event_id) { (void)event_id; stencil_attachment_clear(61); }
+EXPORT void* NativeGfxVk_StencilAttachmentEvent(void) {return (void*)on_stencil_attachment_event;}
+static void on_stencil_chain_event(int event_id)
+{
+    (void)event_id;
+    stencil_attachment_clear(173);
+    s_vulkan->EnsureOutsideRenderPass();
+    s_stencil_initialize=0; s_stencil_x=0; s_stencil_y=1;
+    on_stencil_event(event_id);
+    s_stencil_initialize=1;
+    on_stencil_event(event_id);
+    s_stencil_initialize=0;
+}
+EXPORT void* NativeGfxVk_StencilChainEvent(void) {return (void*)on_stencil_chain_event;}

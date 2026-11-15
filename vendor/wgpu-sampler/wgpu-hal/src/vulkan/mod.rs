@@ -1127,6 +1127,35 @@ impl Drop for CommandEncoder {
 }
 
 impl CommandEncoder {
+    /// Records a compatible externally owned depth/stencil pass between ordinary commands.
+    ///
+    /// # Safety
+    /// The pass and framebuffer must remain valid through completion. Both initialized
+    /// attachments must be in DEPTH_STENCIL_ATTACHMENT_OPTIMAL, and the pass must leave them there.
+    pub unsafe fn run_native_depth_pass(
+        &mut self,
+        pass: u64,
+        framebuffer: u64,
+        width: u32,
+        height: u32,
+    ) {
+        use ash::vk::Handle;
+        unsafe {
+            self.device.raw.cmd_begin_render_pass(
+                self.active,
+                &vk::RenderPassBeginInfo::default()
+                    .render_pass(vk::RenderPass::from_raw(pass))
+                    .framebuffer(vk::Framebuffer::from_raw(framebuffer))
+                    .render_area(vk::Rect2D {
+                        offset: vk::Offset2D::default(),
+                        extent: vk::Extent2D { width, height },
+                    }),
+                vk::SubpassContents::INLINE,
+            );
+            self.device.raw.cmd_end_render_pass(self.active);
+        }
+    }
+
     /// # Safety
     ///
     /// - The command buffer handle must not be manually destroyed

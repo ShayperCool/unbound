@@ -230,6 +230,16 @@ impl ContextWgpuCore {
         unsafe { self.0.texture_view_as_hal::<A>(texture_view.id) }
     }
 
+    pub fn command_encoder_run_native_vulkan_depth_pass(
+        &self,
+        encoder: &CoreCommandEncoder,
+        pass: &Arc<wgc::command::NativeVulkanDepthPass>,
+    ) -> bool {
+        self.0
+            .command_encoder_run_native_vulkan_depth_pass(encoder.id, pass)
+            .is_ok()
+    }
+
     /// This method will start the wgpu_core level command recording.
     pub unsafe fn command_encoder_as_hal_mut<
         A: hal::Api,
@@ -471,6 +481,28 @@ pub struct CoreDevice {
 }
 
 impl CoreDevice {
+    pub(crate) unsafe fn prepare_native_vulkan_depth_pass(
+        &self,
+        source: &CoreTextureView,
+        destination: &CoreTextureView,
+        pass: u64,
+        framebuffer: u64,
+        width: u32,
+        height: u32,
+    ) -> Option<Arc<wgc::command::NativeVulkanDepthPass>> {
+        unsafe {
+            self.context.0.device_prepare_native_vulkan_depth_pass(
+                self.id,
+                source.id,
+                destination.id,
+                pass,
+                framebuffer,
+                width,
+                height,
+            )
+        }
+    }
+
     pub(crate) fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
         self.context.0.device_native_sampler_lod_bias_limit(self.id)
     }

@@ -10,7 +10,8 @@ The SHA-256 values below identify the published `.crate` archives and are checke
 | wgpu-core | `14c018fce9b6270aa203c2fdd56f3cce996713534bd757e4ea58c8560b121f14` |
 | wgpu-hal | `b6b7fb58561a792bc237628ba0792e332de418fefe145f13b5ed8201e6d52f58` |
 
-`reproduce.py` applies `native-lod-bias.patch`, `gl-device.patch`,
+`reproduce.py` finishes with `native-vulkan-depth-pass.patch` after applying
+`native-lod-bias.patch`, `gl-device.patch`,
 `native-mirror-clamp.patch`, `native-depth-state.patch`,
 `native-external-texture.patch`, `native-gl-mirror-clamp.patch`,
 `native-vulkan-attachment-usage.patch` and `native-metal-image-load.patch` in that order. Together they contain every
@@ -41,6 +42,29 @@ are required; Cargo's patch entries replace only these three packages.
 
 NativeApi12, render-command protocol5, texture packet layouts and PhysX shim9 are unchanged.
 These are Rust dependency APIs, not additions to the managed/native packet contract.
+
+## Vulkan depth/stencil publication commands
+
+`native-vulkan-depth-pass.patch` adds a prepared depth/stencil pass to Core's
+ordinary deferred command stream. Preparation retains two Core attachment views
+and the external pass/framebuffer description. Recording clones that prepared
+object into the existing command list; it creates no encoder, label, transition
+vector or separate submission per pass. Encoding transitions the two textures
+with stack barriers and retains both views in the command buffer's resource
+tracker. Vulkan HAL records the cached pass between ordinary commands.
+
+The native preparation API is unsafe. The caller must initialize both matching
+attachments through wgpu, own a compatible load/store render pass and framebuffer,
+and retain those raw objects until GPU completion. Both attachments enter and
+leave DEPTH_STENCIL_ATTACHMENT_OPTIMAL. The pass may not change descriptor or
+pipeline bindings. Non-Vulkan devices and tracing reject preparation. Ordinary
+WebGPU methods and the prohibition on mixing as_hal_mut with Core recording are
+unchanged. No dependency version or persistent cache format changes.
+
+The renderer uses this operation for the Unity 6000.0.71f1 NVIDIA stencil
+publication controls in tests/projects/nativegfx. Its GPU unit control checks
+stencil transfer and retirement after submission; the probe covers divergent
+samples, native image edits, color-only passes and plugin pass boundaries.
 
 ## Measured cause and controls
 

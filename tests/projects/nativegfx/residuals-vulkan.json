@@ -2,23 +2,6 @@
  "Vulkan: a DontCare event from a script outside rendering gets the Editor's command buffer only while it has one recording (after resource access it has none); Unbound gives its own: unspecified by the interface (DontCare), accepted": [
   "plugin.dontcare.update"
  ],
- "Vulkan multisample stencil publication is not implemented: clear, draw and explicit resolve retain the plugin-initialized resolved stencil instead of publishing the source stencil (Unity 6000.0.71f1, NVIDIA only)": [
-  "vulkanStencil.2.clear",
-  "vulkanStencil.2.draw",
-  "vulkanStencil.2.self",
-  "vulkanStencil.2.redraw",
-  "vulkanStencil.2.again",
-  "vulkanStencil.4.clear",
-  "vulkanStencil.4.draw",
-  "vulkanStencil.4.self",
-  "vulkanStencil.4.redraw",
-  "vulkanStencil.4.again",
-  "vulkanStencil.8.clear",
-  "vulkanStencil.8.draw",
-  "vulkanStencil.8.self",
-  "vulkanStencil.8.redraw",
-  "vulkanStencil.8.again"
- ],
  "Nine-digit decimal midpoint formatting differs between the Editor and managed runtime; both spellings round to the same float bits (Unity 6000.0.71f1, NVIDIA sRGB block mip controls)": [
   "externalVkFormats.DXT1.srgb.sample1",
   "externalVkFormats.DXT5.srgb.sample1"

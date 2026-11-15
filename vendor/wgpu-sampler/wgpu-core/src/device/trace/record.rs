@@ -279,6 +279,7 @@ impl IntoTrace for ArcCommand {
                     tlas: tlas.into_iter().map(|b| b.into_trace()).collect(),
                 }
             }
+            ArcCommand::NativeVulkanDepthPass(_) => panic!("Native Vulkan passes cannot be traced"),
             ArcCommand::TransitionResources {
                 buffer_transitions: _,
                 texture_transitions: _,

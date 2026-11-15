@@ -491,6 +491,43 @@ impl Device {
         Sampler { inner: sampler }
     }
 
+    /// Prepares a reusable native Vulkan depth/stencil pass, or returns None when unsupported.
+    ///
+    /// # Safety
+    /// The raw pass/framebuffer must belong to this device and retain the supplied views through
+    /// every GPU use. The source and destination must be initialized, matching depth/stencil
+    /// attachments, multisampled and single-sampled respectively. The framebuffer extent must
+    /// match the supplied dimensions. The pass must load/store both aspects in
+    /// DEPTH_STENCIL_ATTACHMENT_OPTIMAL without changing descriptor or pipeline bindings.
+    pub unsafe fn prepare_native_vulkan_depth_pass(
+        &self,
+        source: &TextureView,
+        destination: &TextureView,
+        pass: u64,
+        framebuffer: u64,
+        width: u32,
+        height: u32,
+    ) -> Option<NativeVulkanDepthPass> {
+        #[cfg(wgpu_core)]
+        if let Some(device) = self.inner.as_core_opt() {
+            let source = source.inner.as_core_opt()?;
+            let destination = destination.inner.as_core_opt()?;
+            return unsafe {
+                device.prepare_native_vulkan_depth_pass(
+                    source,
+                    destination,
+                    pass,
+                    framebuffer,
+                    width,
+                    height,
+                )
+            }
+            .map(|inner| NativeVulkanDepthPass { inner });
+        }
+        let _ = (source, destination, pass, framebuffer, width, height);
+        None
+    }
+
     /// Maximum native sampler LOD bias, or `None` when the native extension is unsupported.
     pub fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
         #[cfg(wgpu_core)]
