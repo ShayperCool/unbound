@@ -275,7 +275,10 @@ and texel loads (`Texture2D.Load`) outside a texture read zero. Volumes (`volume
 blocks are sampled per slice and read by GetPixels32 (`*.cpu`); a volume of every compressed TextureFormat is made, except Crunched
 ones (`ArgumentException: Crunched Texture3D is not supported.`) and PVRTC, ETC and EAC ones
 (`Metal does not support <format> texture format for Texture3D` logged, then `UnityException:
-Failed to create texture because of invalid parameters.`).
+Failed to create texture because of invalid parameters.`). Arrays of ETC2_RGBA1, signed EAC and
+PVRTC (`array.make.*`, `array.decode.*`, 8x8 arrays of the same bytes) keep their blocks (a 4x4
+PVRTC level is 32 bytes at 2 and 4 bits); GetPixels32 decodes ETC2_RGBA1 and PVRTC (the RGB ones
+keep the alpha they decode to) and throws for signed EAC (`texture uses an unsupported format`).
 
 Frame state (`mipbias.*`, `active.*`, `outside.*`): `Texture.mipMapBias` changes nothing (the
 level sampled at one texel per pixel is 0 for biases 0, 1, 2 and -1, point, bilinear and
@@ -320,13 +323,13 @@ drawing left). Plugin events run later there, on the Editor's render thread: `ca
 `executed.pixels` show colors the scripts set after the events. The engine run is compared with
 the batch-mode reference only.
 
-Unbound matches 334/374 records with 40 declared residuals before Q515 (328/371 with 43 expected
+Unbound matches 342/382 records with 40 declared residuals before Q515 (328/371 with 43 expected
 after it, the four `outside.*` rows; not rerun on macOS for that change) (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a Blit from a
-screen camera's target green 1/255 apart (the batch-mode screen is not sRGB-encoded), ETC2_RGBA1, signed EAC and
-PVRTC arrays kept as texels, a dynamically scaled texture's content after a change of scale
+screen camera's target green 1/255 apart (the batch-mode screen is not sRGB-encoded), PVRTC arrays' texels (an
+approximate decoder), a dynamically scaled texture's content after a change of scale
 (Unbound's is remade cleared), what a Blit into one leaves there (zero in the Editor), a screen
 camera's target blitted onto itself (white in the Editor) and ReadPixels of the screen in such a
 camera (Unbound's bytes sRGB-encoded). The screen is shared:
