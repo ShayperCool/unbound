@@ -329,18 +329,31 @@ mod tests {
     #[test]
     fn many_groups_are_read_in_one_pass() {
         // One group per face, each returning once: the work stays proportional to the file.
-        let mut text = String::from("v 0 0 0\n");
-        for _ in 0..2 {
-            for g in 0..100_000 {
-                text += &format!("g part{g}\nf 1 1 1\n");
+        let file = |groups: usize| {
+            let mut text = String::from("v 0 0 0\n");
+            for _ in 0..2 {
+                for g in 0..groups {
+                    text += &format!("g part{g}\nf 1 1 1\n");
+                }
             }
-        }
-        let start = std::time::Instant::now();
-        let (out, warning) = regrouped(&text);
+            text
+        };
+        let (large, small) = (file(40_000), file(10_000));
+        let (out, warning) = regrouped(&large);
         assert!(warning.is_none());
-        assert_eq!(out.matches("\ng ").count(), 100_000);
-        assert_eq!(out.matches("\nf ").count(), 200_000);
-        assert!(start.elapsed().as_secs() < 20, "{:?}", start.elapsed());
+        assert_eq!(out.matches("\ng ").count(), 40_000);
+        assert_eq!(out.matches("\nf ").count(), 80_000);
+        // Four times the groups take about four times as long (4.0 to 4.4 measured; with groups
+        // looked up one by one, 12.7 to 13.1 times as long, in debug and release builds alike).
+        // Measured as the least CPU time on this thread, which a loaded machine does not stretch
+        // as it does the wall clock, and as a ratio, which does not depend on the machine.
+        let (four, one) = crate::cpu_time::least_cpu_times(
+            3,
+            || drop(regroup(large.as_bytes())),
+            || drop(regroup(small.as_bytes())),
+        );
+        let ratio = four.as_secs_f64() / one.as_secs_f64();
+        assert!(ratio < 8.0, "{four:?} for 4 times the groups of {one:?}");
     }
 
     #[test]

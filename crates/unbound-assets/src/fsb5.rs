@@ -493,16 +493,48 @@ mod tests {
         assert_eq!(checked, 7);
     }
 
-    /// A full search (every quality FMOD's headers are tried at) stays well under a frame's worth
-    /// of a second per channel count and rate.
+    /// A full search (every quality FMOD's headers are tried at) writes each header without an
+    /// encoder's analyser, whose tables make most of an encoder's start-up.
     #[test]
     fn searches_the_qualities_quickly() {
-        let start = std::time::Instant::now();
-        let n = qualities().filter_map(|q| headers(2, 44100, q)).count();
-        let elapsed = start.elapsed();
-        assert!(n > 1000);
-        // Tens of milliseconds; an encoder's analyser set up for each would take seconds.
-        assert!(elapsed.as_secs_f64() < 1.5, "{n} headers in {elapsed:?}");
+        use crate::cpu_time::least_cpu_times;
+        let found: Vec<Headers> = qualities().filter_map(|q| headers(2, 44100, q)).collect();
+        assert!(found.len() > 1000);
+        // Measured against a decoder's start-up from the headers (which reads them back and
+        // builds the decoder's tables), per header, as the least CPU time on this thread: a
+        // ratio, which neither a loaded machine nor the build profile changes. The headers take
+        // 0.09 to 0.17 of a decoder's start-up; with an encoder's analyser set up for each,
+        // 2.5 to 6.4 times as much (one to six channels, 32 to 48 kHz, debug and release).
+        let sample: Vec<&Headers> = found.iter().step_by(16).collect();
+        let (search, decoders) = least_cpu_times(
+            3,
+            || {
+                let n = qualities().filter_map(|q| headers(2, 44100, q)).count();
+                assert_eq!(n, found.len());
+            },
+            || {
+                for h in &sample {
+                    let decoder = unsafe {
+                        uav_decoder_new(
+                            h.ident.as_ptr(),
+                            h.ident.len() as i32,
+                            h.setup.as_ptr(),
+                            h.setup.len() as i32,
+                        )
+                    };
+                    assert!(!decoder.is_null());
+                    unsafe { uav_decoder_free(decoder) };
+                }
+            },
+        );
+        let ratio = (search.as_secs_f64() / found.len() as f64)
+            / (decoders.as_secs_f64() / sample.len() as f64);
+        assert!(
+            ratio < 1.0,
+            "{} headers in {search:?}, {} decoders in {decoders:?}",
+            found.len(),
+            sample.len()
+        );
     }
 
     #[test]
