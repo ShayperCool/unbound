@@ -47,6 +47,11 @@ namespace Unbound.Tests
                 Assert.Equal(BuildTargetGroup.Switch, NamedBuildTarget.NintendoSwitch.ToBuildTargetGroup());
                 Assert.Equal(NamedBuildTarget.WindowsStoreApps, NamedBuildTarget.FromBuildTargetGroup(BuildTargetGroup.WSA));
                 Assert.Equal(NamedBuildTarget.iOS, NamedBuildTarget.FromBuildTargetGroup(BuildTargetGroup.iOS));
+                Assert.Equal(NamedBuildTarget.Unknown, NamedBuildTarget.FromBuildTargetGroup(BuildTargetGroup.Unknown));
+                Assert.Equal(NamedBuildTarget.LinuxHeadlessSimulation, NamedBuildTarget.FromBuildTargetGroup(BuildTargetGroup.LinuxHeadlessSimulation));
+                Assert.Equal("GameCoreScarlett", NamedBuildTarget.FromBuildTargetGroup(BuildTargetGroup.GameCoreXboxSeries).TargetName);
+                Assert.Equal(BuildTargetGroup.GameCoreXboxSeries, NamedBuildTarget.FromBuildTargetGroup(BuildTargetGroup.GameCoreXboxSeries).ToBuildTargetGroup());
+                Assert.Throws<ArgumentException>(() => NamedBuildTarget.FromBuildTargetGroup((BuildTargetGroup)2));
             }
             finally
             {

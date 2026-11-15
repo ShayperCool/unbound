@@ -351,28 +351,45 @@ namespace UnityEditor.Build
         public static readonly NamedBuildTarget EmbeddedLinux = new NamedBuildTarget("EmbeddedLinux");
         public static readonly NamedBuildTarget QNX = new NamedBuildTarget("QNX");
 
-        /// <summary>The target names that are not the group's enum name (the Server target builds
-        /// for the Standalone group).</summary>
-        static readonly (string Name, BuildTargetGroup Group)[] s_Names =
+        /// <summary>The release's named target of each platform group; other groups have none.</summary>
+        public static NamedBuildTarget FromBuildTargetGroup(BuildTargetGroup buildTargetGroup) => buildTargetGroup switch
         {
-            ("iPhone", BuildTargetGroup.iOS),
-            ("Windows Store Apps", BuildTargetGroup.WSA),
-            ("Nintendo Switch", BuildTargetGroup.Switch),
-            ("Nintendo Switch 2", BuildTargetGroup.Switch2),
+            BuildTargetGroup.Unknown => Unknown,
+            BuildTargetGroup.Standalone => Standalone,
+            BuildTargetGroup.iOS => iOS,
+            BuildTargetGroup.Android => Android,
+            BuildTargetGroup.WebGL => WebGL,
+            BuildTargetGroup.WSA => WindowsStoreApps,
+            BuildTargetGroup.PS4 => PS4,
+            BuildTargetGroup.XboxOne => XboxOne,
+            BuildTargetGroup.tvOS => tvOS,
+            BuildTargetGroup.VisionOS => VisionOS,
+            BuildTargetGroup.Switch => NintendoSwitch,
+            BuildTargetGroup.Switch2 => NintendoSwitch2,
+            BuildTargetGroup.LinuxHeadlessSimulation => LinuxHeadlessSimulation,
+            BuildTargetGroup.EmbeddedLinux => EmbeddedLinux,
+            BuildTargetGroup.QNX => QNX,
+            BuildTargetGroup.GameCoreXboxSeries => new NamedBuildTarget("GameCoreScarlett"),
+            BuildTargetGroup.GameCoreXboxOne => new NamedBuildTarget("GameCoreXboxOne"),
+            BuildTargetGroup.PS5 => PS5,
+            BuildTargetGroup.Kepler => new NamedBuildTarget("Kepler"),
+            _ => throw new ArgumentException($"There is no a valid NamedBuildTarget for BuildTargetGroup '{buildTargetGroup}'"),
         };
 
-        public static NamedBuildTarget FromBuildTargetGroup(BuildTargetGroup buildTargetGroup)
-        {
-            foreach (var (name, group) in s_Names)
-                if (group == buildTargetGroup) return new NamedBuildTarget(name);
-            return new NamedBuildTarget(buildTargetGroup.ToString());
-        }
-
+        /// <summary>The platform group a named target builds for: Server's is Standalone, every
+        /// other target's the group <see cref="FromBuildTargetGroup"/> names it by.</summary>
         public BuildTargetGroup ToBuildTargetGroup()
         {
             if (TargetName == Server.TargetName) return BuildTargetGroup.Standalone;
-            foreach (var (name, group) in s_Names)
-                if (name == TargetName) return group;
+            switch (TargetName)
+            {
+                case "": return BuildTargetGroup.Unknown;
+                case "iPhone": return BuildTargetGroup.iOS;
+                case "Windows Store Apps": return BuildTargetGroup.WSA;
+                case "Nintendo Switch": return BuildTargetGroup.Switch;
+                case "Nintendo Switch 2": return BuildTargetGroup.Switch2;
+                case "GameCoreScarlett": return BuildTargetGroup.GameCoreXboxSeries;
+            }
             return Enum.TryParse<BuildTargetGroup>(TargetName, out var g) ? g : BuildTargetGroup.Unknown;
         }
 

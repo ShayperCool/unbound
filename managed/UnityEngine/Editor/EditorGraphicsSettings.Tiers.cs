@@ -27,6 +27,7 @@ namespace UnityEditor.Rendering
 
         public static TierSettings GetTierSettings(BuildTargetGroup target, GraphicsTier tier)
         {
+            // A tier out of range is refused (what the Editor does with one is unmeasured).
             if (tier < GraphicsTier.Tier1 || tier > GraphicsTier.Tier3)
                 throw new ArgumentOutOfRangeException(nameof(tier), tier, "Unbound: not a graphics tier.");
             if (s_Tiers.TryGetValue(((int)target, (int)tier), out var settings) || s_Tiers.TryGetValue((OtherGroup, (int)tier), out settings))
