@@ -14,8 +14,9 @@ namespace UnityEngine.Tests
     /// quaternion keys are realigned for the shortest interpolation path; the playable's query
     /// returns whether the parameter is controlled by a curve. Not documented in 6000.0 (no page):
     /// SyncLayer; that it synchronizes the playback speed of all animations in the layer is
-    /// Unbound's reading of its purpose, unmeasured. No Reference capture measures any of them: expected
-    /// values beyond those contracts are Unbound's unmeasured choices and are marked so. Created
+    /// Unbound's reading of its purpose, unmeasured. EnsureQuaternionContinuity is measured
+    /// (tests/projects/editorui EnsureQuaternionContinuity.*); the other two are not: expected values
+    /// beyond their contracts are Unbound's unmeasured choices and are marked so. Created
     /// objects are destroyed in <see cref="Dispose"/>, which also fails on unexpected warnings.
     /// </summary>
     [Collection("Animation")]
@@ -171,33 +172,34 @@ namespace UnityEngine.Tests
                 $"got {go.transform.localRotation.ToString("R")}");
         }
 
-        /// <summary>Unbound's choice (unmeasured): a negated key's in and out tangents are negated
-        /// with its value; its weights and weighted mode are kept. RED at b988: nothing changes.</summary>
+        /// <summary>Every key of a realigned rotation takes the slope between its neighbours as both
+        /// tangents (one-sided at the ends), whatever tangents and weights it had (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/editorui EnsureQuaternionContinuity.*).</summary>
         [Fact]
-        public void ANegatedKeyKeepsItsShapeAboutTheKey()
+        public void EveryKeyTakesTheSlopeBetweenItsNeighbours()
         {
             var q1 = AboutZ(60f);
             var clip = Keep(new AnimationClip { legacy = true, name = "shaped" });
             for (int a = 0; a < 4; a++)
             {
                 var k1 = a == 3
-                    ? new Keyframe(1f, -q1.w, 0.1f, 0.2f, 0.25f, 0.4f)
+                    ? new Keyframe(1f, -q1.w, 0.1f, 0.2f, 0.25f, 0.4f) { weightedMode = WeightedMode.Both }
                     : new Keyframe(1f, -Component(q1, a), a == 2 ? 0.3f : 0f, a == 2 ? -0.2f : 0f);
                 clip.SetCurve("", typeof(Transform), "localRotation." + s_Axes[a],
-                    new AnimationCurve(new Keyframe(0f, Component(Quaternion.identity, a)), k1));
+                    new AnimationCurve(new Keyframe(0f, Component(Quaternion.identity, a), 5f, 5f), k1, new Keyframe(3f, Component(q1, a))));
             }
             clip.EnsureQuaternionContinuity();
-            var z = Keys(clip, "m_LocalRotation.z")[1];
-            Near.Equal(q1.z, z.value, 1e-6f);
-            Near.Equal(-0.3f, z.inTangent, 1e-6f);
-            Near.Equal(0.2f, z.outTangent, 1e-6f);
-            var w = Keys(clip, "m_LocalRotation.w")[1];
-            Near.Equal(q1.w, w.value, 1e-6f);
-            Near.Equal(-0.1f, w.inTangent, 1e-6f);
-            Near.Equal(-0.2f, w.outTangent, 1e-6f);
-            Near.Equal(0.25f, w.inWeight, 1e-6f);
-            Near.Equal(0.4f, w.outWeight, 1e-6f);
-            Assert.Equal(WeightedMode.Both, w.weightedMode);
+            var z = Keys(clip, "m_LocalRotation.z");
+            Near.Equal(q1.z, z[1].value, 1e-6f);
+            Assert.Equal(q1.z / 1f, z[0].inTangent);
+            Assert.Equal(z[0].inTangent, z[0].outTangent);
+            Assert.Equal((q1.z - 0f) / 3f, z[1].inTangent);
+            Assert.Equal(z[1].inTangent, z[1].outTangent);
+            Assert.Equal(0f, z[2].outTangent);
+            var w = Keys(clip, "m_LocalRotation.w");
+            Near.Equal(q1.w, w[1].value, 1e-6f);
+            Assert.Equal((q1.w - 1f) / 3f, w[1].outTangent);
+            Assert.Equal(WeightedMode.None, w[1].weightedMode);
         }
 
         /// <summary>Unbound's choice (unmeasured): realigned curves redo the clip's bindings (its
@@ -221,11 +223,11 @@ namespace UnityEngine.Tests
                 $"got {go.transform.localRotation.ToString("R")}");
         }
 
-        /// <summary>Unbound's choice (unmeasured): a rotation whose x, y, z, w curves have keys at
-        /// different times keeps its keys, with a warning naming it on every call. RED at b988: no
-        /// such warning is logged (and the stub's own warning is unexpected).</summary>
+        /// <summary>A rotation whose x, y, z, w curves have keys at different times keeps its keys,
+        /// silently (matches the Unity 6000.0.71f1 Editor, tests/projects/editorui
+        /// EnsureQuaternionContinuity.*, the second clip).</summary>
         [Fact]
-        public void ARotationWithKeysAtDifferentTimesKeepsItsKeysWithAWarning()
+        public void ARotationWithKeysAtDifferentTimesKeepsItsKeys()
         {
             var q1 = Negated(AboutZ(60f));
             var clip = Keep(new AnimationClip { legacy = true, name = "uneven" });
@@ -236,19 +238,16 @@ namespace UnityEngine.Tests
             UnityEditor.AnimationUtility.SetEditorCurve(clip, UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalRotation.w"),
                 new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.5f, 0f), new Keyframe(1f, q1.w)));
             int version = clip.m_Version;
-            m_Expected.Add(KeptKeys);
             clip.EnsureQuaternionContinuity();
-            clip.EnsureQuaternionContinuity();
-            var warnings = m_Logs.FindAll(l => l.Contains(KeptKeys) && l.Contains("'uneven'") && l.Contains("different numbers of keys"));
-            Assert.Equal(2, warnings.Count);
+            Assert.DoesNotContain(m_Logs, l => l.Contains(KeptKeys));
             Assert.Equal(version, clip.m_Version);
             Near.Equal(q1.z, Keys(clip, "m_LocalRotation.z")[1].value, 0f);
             Near.Equal(q1.w, Keys(clip, "m_LocalRotation.w")[2].value, 0f);
         }
 
-        /// <summary>Guard, not a red (green at b988 too): a continuous rotation, Euler angle curves
-        /// and other float curves keep their keys, and the clip's version stays (Unbound's choice,
-        /// unmeasured: only quaternion keys are realigned, and only a flip bumps the version).</summary>
+        /// <summary>A continuous rotation keeps its key values and takes the neighbours' slopes as its
+        /// tangents; Euler angle curves and other float curves keep their keys (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/editorui EnsureQuaternionContinuity.*, the control).</summary>
         [Fact]
         public void ContinuousRotationsAndEulerCurvesAreKeptAsTheyAre()
         {
@@ -258,8 +257,10 @@ namespace UnityEngine.Tests
             int version = clip.m_Version;
             m_Expected.Add("does not flip quaternion keys yet"); // b988's stub warning, once per process
             clip.EnsureQuaternionContinuity();
-            Assert.Equal(version, clip.m_Version);
+            // Its tangents are the neighbours' slopes now (the editorui control), so the clip changed.
+            Assert.Equal(version + 1, clip.m_Version);
             SameComponents(AboutZ(60f), KeyAt(clip, 1), 0f);
+            Assert.Equal((AboutZ(120f).z - 0f) / 2f, Keys(clip, "m_LocalRotation.z")[1].outTangent);
             var euler = Keys(clip, "localEulerAnglesRaw.y");
             Assert.Equal(350f, euler[0].value);
             Assert.Equal(-10f, euler[1].value);

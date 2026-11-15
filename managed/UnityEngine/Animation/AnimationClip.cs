@@ -691,17 +691,17 @@ namespace UnityEngine
         /// Realigns quaternion keys for the shortest interpolation path (documented, 6000.0
         /// AnimationClip.EnsureQuaternionContinuity): q and −q are the same rotation, so a key whose
         /// quaternion lies in the opposite hemisphere from the key before it (a negative dot product,
-        /// that key already realigned) is negated, from the first key on.
-        /// <para>Unbound's choice (unmeasured): the rotations realigned are the clip's quaternion
-        /// rotation curves (four marked curves from a clip file's rotation curves) and the
-        /// m_LocalRotation.x, .y, .z, .w curves of one Transform (SetCurve's localRotation); Euler
-        /// angle curves and float curves on the Animator are kept as they are. A negated key's finite
-        /// in and out tangents are negated with it (its weights and infinite tangents are kept), so
-        /// the curve keeps its shape about the key and a stepped segment holds the same key. Legacy and non-legacy clips are treated alike. The clip's curves are
-        /// replaced only when a key is negated, which also redoes the clip's bindings; clips made
-        /// from it before (Animation.AddClip with frames) keep their keys.</para>
-        /// <para>A rotation whose four curves do not have their keys at the same times, or that is a
-        /// player clip's compiled curve, keeps its keys, with a warning naming it on every call.</para>
+        /// that key already realigned) is negated, from the first key on. Every key of the rotation
+        /// then takes the slope between its neighbours as both tangents (one-sided at the ends), with
+        /// or without a key negated, whatever tangents, steps or weights it had; Euler angle curves
+        /// keep theirs, and a rotation whose four curves do not have their keys at the same times is
+        /// left as it is (matches the Unity 6000.0.71f1 Editor, tests/projects/editorui
+        /// EnsureQuaternionContinuity.*, legacy and non-legacy clips).
+        /// <para>The rotations realigned are the clip's quaternion rotation curves (four marked curves
+        /// from a clip file's rotation curves) and the m_LocalRotation.x, .y, .z, .w curves of one
+        /// Transform (SetCurve's localRotation). Clips made from it before (Animation.AddClip with
+        /// frames) keep their keys. A player clip's compiled rotation keeps its keys, with a warning
+        /// naming it on every call.</para>
         /// </summary>
         public void EnsureQuaternionContinuity()
         {
@@ -779,28 +779,39 @@ namespace UnityEngine
                 keys[k] = c.Curve.keys;
             }
             int n = keys[0].Length;
+            // Components keyed at different times are left as they are (measured).
             for (int k = 1; k < 4; k++)
-                if (keys[k].Length != n) return "its x, y, z and w curves have different numbers of keys";
+                if (keys[k].Length != n) return null;
             for (int i = 0; i < n; i++)
                 for (int k = 1; k < 4; k++)
-                    if (keys[k][i].time != keys[0][i].time) return "its x, y, z and w curves have keys at different times";
-            bool flipped = false;
+                    if (keys[k][i].time != keys[0][i].time) return null;
+            var values = new float[4][];
+            for (int k = 0; k < 4; k++)
+            {
+                values[k] = new float[n];
+                for (int i = 0; i < n; i++) values[k][i] = keys[k][i].value;
+            }
             for (int i = 1; i < n; i++)
             {
                 float dot = 0f;
-                for (int k = 0; k < 4; k++) dot += keys[k][i - 1].value * keys[k][i].value;
+                for (int k = 0; k < 4; k++) dot += values[k][i - 1] * values[k][i];
                 if (!(dot < 0f)) continue;
-                for (int k = 0; k < 4; k++) keys[k][i] = AnimationCurve.Negated(keys[k][i]);
-                flipped = true;
+                for (int k = 0; k < 4; k++) values[k][i] = -values[k][i];
             }
-            if (!flipped) return null;
             for (int k = 0; k < 4; k++)
             {
                 var c = m_Curves[group[k]];
+                var rebuilt = new Keyframe[n];
+                for (int i = 0; i < n; i++)
+                {
+                    int a = i > 0 ? i - 1 : i, b = i < n - 1 ? i + 1 : i;
+                    float slope = b > a ? (values[k][b] - values[k][a]) / (keys[k][b].time - keys[k][a].time) : 0f;
+                    rebuilt[i] = new Keyframe(keys[k][i].time, values[k][i], slope, slope);
+                }
                 m_Curves[group[k]] = new ClipCurve
                 {
                     Binding = c.Binding,
-                    Curve = new AnimationCurve(keys[k]) { preWrapMode = c.Curve.preWrapMode, postWrapMode = c.Curve.postWrapMode },
+                    Curve = new AnimationCurve(rebuilt) { preWrapMode = c.Curve.preWrapMode, postWrapMode = c.Curve.postWrapMode },
                     QuaternionStart = c.QuaternionStart,
                     EulerStart = c.EulerStart,
                 };
