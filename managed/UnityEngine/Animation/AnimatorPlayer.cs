@@ -557,14 +557,23 @@ namespace Unbound.Runtime
             if (hold) Enter(layer, requested, dt);
             if (!hold || layer.Current != requested) Advance(layer, layer.Current, dt);
             if (layer.Next != null && (!hold || layer.Next != requested)) Advance(layer, layer.Next, dt);
+            bool completed = false;
             if (layer.Transition != null)
             {
                 var t = layer.Transition;
                 t.Elapsed += dt;
                 t.Progress = t.Duration > 0f ? (float)Math.Min(1.0, t.Elapsed / t.Duration) : 1f;
-                if (t.Progress >= 1f) CompleteTransition(layer);
+                if (t.Progress >= 1f)
+                {
+                    CompleteTransition(layer);
+                    completed = true;
+                }
             }
-            EvaluateTransitions(layer, dt);
+            // The state a request enters and the state a transition completes into in this
+            // update start their transitions from the next update (matches the Unity 6000.0.71f1
+            // Editor, tests/projects/animpartial play.*, crossfade.*, switch.*.bounce; the default
+            // state's are checked in the first update, switch.*.first).
+            if (!hold && !completed) EvaluateTransitions(layer, dt);
         }
 
         /// <summary>A state entered in this update at its current time: its root motion covers the
