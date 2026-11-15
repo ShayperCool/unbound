@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEditor.VFX;
 using UnityEditor.VFX.Block;
+using UnityEditor.VFX.Operator;
 using UnityEngine;
 using UnityEngine.VFX;
 
@@ -36,6 +37,8 @@ public static class GraphAuthoring
         Attributes();
         Attributes2();
         Simulated();
+        Expressions();
+        Chained();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -376,6 +379,204 @@ public static class GraphAuthoring
         }
     }
 
+    static void Link(VFXSlot from, VFXSlot to)
+    {
+        if (!from.Link(to)) throw new InvalidOperationException("cannot link " + from.property.type.Name + " '" + from.name + "' to " + to.property.type.Name + " '" + to.name + "'");
+    }
+
+    /// <summary>A graph whose spawn context has the probe's block, with operators over exposed
+    /// properties (so nothing folds into a constant) connected to the block's inputs: what the
+    /// block reads is what the effect's expressions evaluate to. Also a block that sets event
+    /// attributes, and a particle lifetime taken from a texture.</summary>
+    static void Expressions()
+    {
+        var (graph, spawn, init) = Counting("SimExpressions", 8);
+        ConstantRate(spawn, 30f);
+        var block = Make<VFXSpawnerCustomWrapper>();
+        block.SetSettingValue("m_customType", new SerializableType(typeof(ProbeInputs)));
+        spawn.AddChild(block);
+        int[] next = new int[8];
+        // An input a value cannot be connected to (no conversion between the types) keeps its default.
+        void To(char kind, int index, VFXSlot value) => value.Link(Input(block, kind + (next[index]++).ToString("00")));
+        void Floats(params VFXSlot[] values) { foreach (var value in values) To('f', 0, value); }
+        void Ints(params VFXSlot[] values) { foreach (var value in values) To('i', 1, value); }
+        void Uints(params VFXSlot[] values) { foreach (var value in values) To('u', 2, value); }
+        void Bools(params VFXSlot[] values) { foreach (var value in values) To('b', 3, value); }
+        void Vectors(params VFXSlot[] values) { foreach (var value in values) To('v', 4, value); }
+        void Quads(params VFXSlot[] values) { foreach (var value in values) To('q', 5, value); }
+        void GameTimes(params VFXSlot[] values) { foreach (var value in values) To('g', 6, value); }
+        void Matrices(params VFXSlot[] values) { foreach (var value in values) To('m', 7, value); }
+
+        VFXSlot Exposed(Type type, string name, object value) => Parameter(graph, type, name, value).outputSlots[0];
+        VFXSlot A = Exposed(typeof(float), "A", 2.5f), B = Exposed(typeof(float), "B", -2.5f), C = Exposed(typeof(float), "C", 0.75f), Z = Exposed(typeof(float), "Z", 0f);
+        VFXSlot I = Exposed(typeof(int), "I", -9), J = Exposed(typeof(int), "J", 0), K = Exposed(typeof(int), "K", 4);
+        VFXSlot U = Exposed(typeof(uint), "U", 4294967280u), V = Exposed(typeof(uint), "V", 33u), W = Exposed(typeof(uint), "W", 0u);
+        VFXSlot P = Exposed(typeof(bool), "P", true), Q = Exposed(typeof(bool), "Q", false);
+        VFXSlot T = Exposed(typeof(Vector3), "T", new Vector3(1f, 2f, 3f)), S = Exposed(typeof(Vector3), "S", new Vector3(0.5f, -4f, 8f));
+        VFXSlot R = Exposed(typeof(Vector4), "R", new Vector4(1f, 2f, 3f, 1f));
+        var frame = Exposed(typeof(UnityEditor.VFX.Transform), "Frame", new UnityEditor.VFX.Transform { position = new Vector3(10f, 20f, 30f), angles = new Vector3(30f, 45f, 60f), scale = new Vector3(2f, 3f, 4f) });
+
+        VFXSlot Uniform<O>(Type type, params VFXSlot[] inputs) where O : VFXOperatorNumericUniform
+        {
+            var op = Make<O>();
+            graph.AddChild(op);
+            op.SetOperandType(type);
+            for (int k = 0; k < inputs.Length; k++) Link(inputs[k], op.inputSlots[k]);
+            return op.outputSlots[0];
+        }
+        VFXSlot Cascaded<O>(Type type, VFXSlot a, VFXSlot b) where O : VFXOperatorNumericCascadedUnified
+        {
+            var op = Make<O>();
+            graph.AddChild(op);
+            op.SetOperandType(0, type);
+            op.SetOperandType(1, type);
+            Link(a, op.inputSlots[0]);
+            Link(b, op.inputSlots[1]);
+            return op.outputSlots[0];
+        }
+        VFXSlot Plain<O>(params VFXSlot[] inputs) where O : VFXOperator
+        {
+            var op = Make<O>();
+            graph.AddChild(op);
+            for (int k = 0; k < inputs.Length; k++) if (inputs[k] != null) Link(inputs[k], op.inputSlots[k]);
+            return op.outputSlots[0];
+        }
+        VFXSlot Compare(Type type, VFXCondition condition, VFXSlot a, VFXSlot b)
+        {
+            var op = Make<Condition>();
+            graph.AddChild(op);
+            op.SetOperandType(type);
+            op.SetSettingValue("condition", condition);
+            Link(a, op.inputSlots[0]);
+            Link(b, op.inputSlots[1]);
+            return op.outputSlots[0];
+        }
+        VFXSlot Choose(Type type, VFXSlot predicate, VFXSlot a, VFXSlot b)
+        {
+            var op = Make<Branch>();
+            graph.AddChild(op);
+            op.SetOperandType(type);
+            Link(predicate, op.inputSlots[0]);
+            Link(a, op.inputSlots[1]);
+            Link(b, op.inputSlots[2]);
+            return op.outputSlots[0];
+        }
+
+        Type f = typeof(float), i = typeof(int), u = typeof(uint), v3 = typeof(Vector3);
+        // Functions of one float, and of two.
+        Floats(Uniform<Sine>(f, A), Uniform<Cosine>(f, A), Uniform<Tangent>(f, C), Uniform<Asin>(f, C), Uniform<Acos>(f, C), Uniform<Atan>(f, B),
+            Uniform<Absolute>(f, B), Uniform<Sign>(f, B), Uniform<Sign>(f, Z), Uniform<Saturate>(f, A), Uniform<Saturate>(f, B), Uniform<Ceiling>(f, B),
+            Uniform<Round>(f, A), Uniform<Round>(f, B), Uniform<Fractional>(f, B), Uniform<Floor>(f, B),
+            Cascaded<Add>(f, A, C), Cascaded<Subtract>(f, A, C), Cascaded<Multiply>(f, A, B), Cascaded<Divide>(f, A, C), Cascaded<Divide>(f, A, Z),
+            Cascaded<Minimum>(f, C, B), Cascaded<Maximum>(f, C, B), Cascaded<Power>(f, A, C), Uniform<Atan2>(f, A, B), Uniform<Modulo>(f, A, C), Uniform<Log>(f, A));
+        // Values of other types converted where they meet a float input, and a branch each way.
+        Floats(I, U, P, Choose(f, P, A, C), Choose(f, Q, A, C));
+        // A number drawn once for the effect's seed, and one drawn at each evaluation.
+        foreach (bool constant in new[] { true, false })
+        {
+            var random = Make<UnityEditor.VFX.Operator.Random>();
+            graph.AddChild(random);
+            random.SetSettingValue("seed", VFXSeedMode.PerVFXComponent);
+            random.SetSettingValue("constant", constant);
+            Link(C, random.inputSlots[0]);
+            Link(A, random.inputSlots[1]);
+            Floats(random.outputSlots[0]);
+        }
+        // Whole numbers.
+        Ints(Cascaded<Add>(i, I, K), Cascaded<Subtract>(i, I, K), Cascaded<Multiply>(i, I, K), Cascaded<Divide>(i, I, K), Cascaded<Divide>(i, I, J),
+            Cascaded<Minimum>(i, I, K), Cascaded<Maximum>(i, I, K), Uniform<Absolute>(i, I), Uniform<Sign>(i, I), B, U);
+        Uints(Cascaded<Add>(u, U, V), Cascaded<Subtract>(u, W, V), Cascaded<Multiply>(u, U, V), Cascaded<Divide>(u, U, V), Cascaded<Divide>(u, U, W),
+            Cascaded<Minimum>(u, U, V), Cascaded<Maximum>(u, U, V),
+            Plain<BitwiseAnd>(U, V), Plain<BitwiseOr>(U, V), Plain<BitwiseXor>(U, V), Plain<BitwiseLeftShift>(U, V), Plain<BitwiseRightShift>(U, V), Plain<BitwiseComplement>(V),
+            B, I, A);
+        // Comparisons of each kind and type, and logic.
+        Bools(Compare(f, VFXCondition.Equal, A, A), Compare(f, VFXCondition.NotEqual, A, C), Compare(f, VFXCondition.Less, A, C), Compare(f, VFXCondition.LessOrEqual, A, A),
+            Compare(f, VFXCondition.Greater, A, C), Compare(f, VFXCondition.GreaterOrEqual, C, A), Compare(i, VFXCondition.Less, I, K), Compare(u, VFXCondition.Greater, U, V),
+            Compare(f, VFXCondition.Less, Z, A), Compare(f, VFXCondition.Equal, Z, Z),
+            Plain<LogicalAnd>(P, Q), Plain<LogicalOr>(P, Q), Plain<LogicalNot>(P), Plain<LogicalNand>(P, Q), Plain<LogicalNor>(P, Q), I);
+        // Vectors, component by component, and through the frame's matrix and its inverse.
+        var inverse = Plain<InverseTRSMatrix>(frame);
+        Vectors(Cascaded<Add>(v3, T, S), Cascaded<Multiply>(v3, T, S), Uniform<Absolute>(v3, S),
+            Plain<TransformPosition>(frame, T), Plain<TransformVector>(frame, T), Plain<TransformDirection>(frame, T));
+        VFXSlot transposed = Plain<TransposeMatrix>(inverse), product = Plain<TransformMatrix>(frame, inverse);
+        Quads(Plain<TransformVector4>(frame, R), Plain<TransformVector4>(inverse, R), Plain<TransformVector4>(transposed, R), Plain<TransformVector4>(product, R));
+        Matrices(frame, inverse, transposed, product);
+        // The effect's and the game's time, and the spawn context's own state.
+        var time = Make<VFXDynamicBuiltInParameter>();
+        graph.AddChild(time);
+        time.SetSettingValue("m_BuiltInParameters", VFXDynamicBuiltInParameter.BuiltInFlag.VfxDeltaTime | VFXDynamicBuiltInParameter.BuiltInFlag.VfxUnscaledDeltaTime
+            | VFXDynamicBuiltInParameter.BuiltInFlag.VfxTotalTime | VFXDynamicBuiltInParameter.BuiltInFlag.VfxPlayRate | VFXDynamicBuiltInParameter.BuiltInFlag.VfxManagerFixedTimeStep
+            | VFXDynamicBuiltInParameter.BuiltInFlag.VfxManagerMaxDeltaTime);
+        foreach (var output in time.outputSlots) Floats(output);
+        var game = Make<VFXDynamicBuiltInParameter>();
+        graph.AddChild(game);
+        game.SetSettingValue("m_BuiltInParameters", VFXDynamicBuiltInParameter.BuiltInFlag.GameDeltaTime | VFXDynamicBuiltInParameter.BuiltInFlag.GameUnscaledDeltaTime
+            | VFXDynamicBuiltInParameter.BuiltInFlag.GameSmoothDeltaTime | VFXDynamicBuiltInParameter.BuiltInFlag.GameTotalTime | VFXDynamicBuiltInParameter.BuiltInFlag.GameUnscaledTotalTime
+            | VFXDynamicBuiltInParameter.BuiltInFlag.GameTotalTimeSinceSceneLoad | VFXDynamicBuiltInParameter.BuiltInFlag.GameTimeScale);
+        foreach (var output in game.outputSlots) GameTimes(output);
+        var seed = Make<VFXDynamicBuiltInParameter>();
+        graph.AddChild(seed);
+        seed.SetSettingValue("m_BuiltInParameters", VFXDynamicBuiltInParameter.BuiltInFlag.SystemSeed);
+        Uints(seed.outputSlots[0]);
+        var state = Make<SpawnState>();
+        graph.AddChild(state);
+        Bools(state.outputSlots.First(s => s.name == "NewLoop"));
+        Uints(state.outputSlots.First(s => s.name == "LoopState"));
+        // The manager's update count: the last unsigned input (the probe records how it grows).
+        var frameIndex = Make<VFXDynamicBuiltInParameter>();
+        graph.AddChild(frameIndex);
+        frameIndex.SetSettingValue("m_BuiltInParameters", VFXDynamicBuiltInParameter.BuiltInFlag.VfxFrameIndex);
+        Link(frameIndex.outputSlots[0], Input(block, "u19"));
+        Ints(state.outputSlots.First(s => s.name == "LoopIndex"), state.outputSlots.First(s => s.name == "LoopCount"));
+        Floats(state.outputSlots.First(s => s.name == "SpawnCount"), state.outputSlots.First(s => s.name == "SpawnDeltaTime"), state.outputSlots.First(s => s.name == "SpawnTotalTime"),
+            state.outputSlots.First(s => s.name == "LoopDuration"), state.outputSlots.First(s => s.name == "DelayBeforeLoop"), state.outputSlots.First(s => s.name == "DelayAfterLoop"));
+
+        // A block that sets two event attributes; the particles take them from the event.
+        foreach (var (attribute, value) in new[] { ("lifetime", Cascaded<Add>(f, A, C)), ("color", T) })
+        {
+            var set = Make<VFXSpawnerSetAttribute>();
+            set.SetSettingValue("attribute", attribute);
+            spawn.AddChild(set);
+            Link(value, set.inputSlots[0]);
+        }
+        Inherit(init, "color");
+        Save(graph);
+
+        // Ten particles whose lifetime is a hundred times the red of a texture: with the
+        // default image (red) they live, with a green one they die at once.
+        var (textured, texturedSpawn, texturedInit) = Counting("SimTexture", 16);
+        Burst(texturedSpawn, false, 10f, 0f);
+        var image = Parameter(textured, typeof(Texture2D), "Image", Object<Texture2D>("ImageA"));
+        var sample = Make<SampleTexture2D>();
+        textured.AddChild(sample);
+        Link(image.outputSlots[0], sample.inputSlots[0]);
+        var hundredfold = Make<Multiply>();
+        textured.AddChild(hundredfold);
+        Link(sample.outputSlots[0][0], hundredfold.inputSlots[0]);
+        hundredfold.inputSlots[1].value = 100f;
+        var lifetime = Set(texturedInit, "lifetime", 1f);
+        Link(hundredfold.outputSlots[0], lifetime.inputSlots[0]);
+        Save(textured);
+    }
+
+    /// <summary>Spawn contexts wired to each other: the first's burst starts the second, a
+    /// third's burst stops it.</summary>
+    static void Chained()
+    {
+        var graph = NewGraph("SimChain", SimulationFolder);
+        var (second, init, _, _) = System(graph, 64);
+        ConstantRate(second, 30f);
+        var first = Make<VFXBasicSpawner>();
+        graph.AddChild(first);
+        Burst(first, false, 2f, 0.1f);
+        first.LinkTo(second, 0, 0);
+        var third = Make<VFXBasicSpawner>();
+        graph.AddChild(third);
+        Burst(third, false, 1f, 0.3f);
+        third.LinkTo(second, 0, 1);
+        Save(graph);
+    }
+
     /// <summary>The probe scene: effects saved with their serialized state, one with overrides.</summary>
     static void BuildScene()
     {
@@ -413,6 +614,12 @@ public static class GraphAuthoring
         var events = new GameObject("Events").AddComponent<VisualEffect>();
         events.visualEffectAsset = AssetDatabase.LoadAssetAtPath<VisualEffectAsset>(Folder + "/Events.vfx");
         events.transform.position = new Vector3(-3f, 0f, 0f);
+
+        var expressions = new GameObject("Expressions").AddComponent<VisualEffect>();
+        expressions.visualEffectAsset = AssetDatabase.LoadAssetAtPath<VisualEffectAsset>(SimulationFolder + "/SimExpressions.vfx");
+        expressions.startSeed = 7;
+        expressions.resetSeedOnPlay = false;
+        expressions.SetFloat("C", 0.5f);
 
         var none = new GameObject("NoAsset").AddComponent<VisualEffect>();
         none.transform.position = new Vector3(0f, 3f, 0f);

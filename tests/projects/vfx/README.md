@@ -32,15 +32,15 @@ own models; its assembly carries the name of one of the package's friend assembl
 
 - `SimRate`, `SimRateDelta`, `SimRateExact`, `SimRateNoCull`, `SimRateBoundsOnly`,
   `SimRatePrewarm`, `SimBurst`, `SimRandom`, `SimLoop`, `SimLoopRandom`, `SimKill`, `SimKeep`:
-  the simulation controls' graphs (below), kept in `Assets/SimGraphs` apart from the graphs the
-  import rows list.
+  `SimExpressions`, `SimTexture`, `SimChain`: the simulation controls' graphs (below), kept in
+  `Assets/SimGraphs` apart from the graphs the import rows list.
 
 `Exposed`'s texture and mesh properties default to `Assets/Objects/ImageA.png` and
 `ShapeA.asset`, which the authoring script also makes (with `ImageB` and `ShapeB`).
 
 `Assets/Scenes/Probe.unity` holds effects saved by the Editor: `Plain` (Basic), `Overridden`
 (Exposed with overridden numbers, vectors, a curve, a gradient, a texture and a mesh, a start
-seed, an initial event), `Events`, `NoAsset`.
+seed, an initial event), `Events`, `NoAsset`, `Expressions` (SimExpressions with one override).
 
 `Assets/Editor/Authoring/RuntimeDataCases.cs` (the same friend assembly) hands a resource
 compiled graphs made by hand, one case each: valid ones, system layers that decrease, are equal
@@ -124,21 +124,62 @@ the alive count is the particles spawned so far, exactly, each frame:
   frames late and once in 60 frames: the rows are taken where the count is settled), with the
   system's info and `HasAnySystemAwake`.
 - `errors/*`: the system getters with names of the other kind, unknown names and a null state.
+- `expressions` (`inputs/<play><update or stop>/<input>`): a spawn context with a block written
+  as a script (`Assets/Callbacks/ProbeInputs.cs`, a `VFXSpawnerCallbacks`) whose inputs are fed
+  by operators over exposed properties, so that nothing folds into a constant: what the block
+  reads through `VFXExpressionValues` when the context plays, in the three updates after, when
+  it stops and when it plays again is what the effect's expressions evaluated to. Inputs: `f*`
+  functions of one and two floats, values of other types met by a float input, a branch each
+  way, a number drawn once for the effect's seed and one drawn at each evaluation, the effect's
+  time; `i*`, `u*` whole numbers (division by zero, wrapping, bit operations, conversions, the
+  seed, the spawn state, how far the manager's update count moved); `b*` comparisons and logic;
+  `v*`, `q*` vectors through a transform's matrix, its inverse, its transpose and their
+  product; `m*` those matrices; `g*` whether the game's time as the graph reads it is
+  `Time`'s. An input the block does not have, and an input read as another type, are recorded
+  too. The same effect's rows record two event attributes a block of the context sets.
+- `expressions others`: the same graph with other values (a NaN, a divisor of zero, other
+  signs, a frame of no depth), set in the frame the effect is made and again at frame 4.
+  `expressions scene`, `expressions copy`: the scene's effect of that graph (saved with one
+  override) and a copy of it made in the first frame, each given another value at once.
+  `expressions late`: one made at frame 20 and given a value at once. `override timing/*`:
+  where in the first frames a value set from script reads back.
+- `late fresh`, `late second`: effects of a graph no other effect uses, made at frames 20 and
+  24 and given a rate at once.
+- `chain`: a spawn context whose burst starts another, and one whose burst stops it.
+- `texture`, `texture other`, `texture later` (`settled/*`): ten particles whose lifetime is a
+  hundred times the red of a texture, read by the initialize kernel on the GPU: the graph's red
+  image; a green one set in the first frame; a green one set at frame 4 of an effect started
+  over at frame 5.
+- `toggle`, `toggle object`: an effect disabled at frame 6 and enabled at frame 10, by its
+  component and by its object. `disabled`, `inactive`, `manager/components`: which effects
+  `VFXManager.GetComponents` lists, and what their getters answer.
+- `math/inverse affine/*`: `Matrix4x4.Inverse3DAffine` of the expressions' frame (the numbers a
+  graph's inverse gives) and of a matrix without an inverse.
 
 Observed and kept: effects made in the first frame run their first step one frame later than
 one made in frame 20 (no camera has culled before the first frame's update: effects update only
 after a camera culled, or when one simulates while culled); an effect counts as culled until
 its first update, and is not culled in that update; `aliveParticleCount` is -1 for a system
-whose particles die until its first count arrives.
+whose particles die until its first count arrives. A value a script gives a property in the
+first frame of play reads back in that frame and is the saved one from the second frame on,
+for effects of the scene, copies and effects made by script alike; values set in later frames
+stay, also on an effect made in that frame. An effect enabled again starts over, and its first
+update after that takes its initial event without simulating (no camera drew it while it was
+off). A value no expression evaluated yet has every bit set. The smallest int divided by -1 in
+a graph stops the Editor, as reading the spawn count of a `VFXSpawnerState` made with `new`
+does: neither is among the controls.
 
 ## Not covered yet
 
 Drawing (images), output events, GPU events, strips, bounds computed on the GPU and the `VFXManager`
-camera hooks. The expression evaluator is exercised through what the controls' graphs
-evaluate (constants, the step's time, values drawn per spawn, the effect's matrices); a control
-per operation (a custom spawner block reading its inputs) is to come, as are the update modes
-that ignore the time scale: the Editor's unscaled delta time under a capture frame rate is the
-wall clock's, so they cannot be compared frame by frame here. One attribute name with different
+camera hooks. Expression operations without a control: the inverse of a general matrix and an
+event attribute read in a spawn context (no operator of the package gives either here), and
+the ones the runtime does not do yet (matrices built from or split into rows, columns and axes,
+angles and scales taken from a matrix, colour spaces, curves and gradients, meshes, the main
+camera, noise, texture and buffer sizes). The update modes that ignore the time scale are not
+compared: the Editor's unscaled delta time under a capture frame rate is the wall clock's.
+Whether the first frame's loss of script-set values also follows a scene loaded later is not
+measured. One attribute name with different
 types in two graphs (a custom attribute) is not measured for `CopyValuesFrom`.
 Everything was measured in the Linux Editor on the OpenGL Core device (NVIDIA driver); the
 frames at which a count read back from the GPU arrives depend on the device (the rows avoid them).

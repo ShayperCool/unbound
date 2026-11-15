@@ -82,12 +82,35 @@ public sealed class VfxProbe : MonoBehaviour
             Rec("manager/maxDeltaTime", F(VFXManager.maxDeltaTime));
             BeginSimulation();
             SpawnerStates(m_Running[0].Effect);
+            AffineInverse();
         }
         catch (Exception e)
         {
             Rec("failed", e.ToString());
             Debug.LogError("vfx probe failed: " + e);
             Finish();
+        }
+    }
+
+    /// <summary>Where in a frame a property set from script is read back (a value set in the
+    /// first frame is not the one read in the second).</summary>
+    VisualEffect m_Timed, m_TimedLater;
+
+    void ReadTimed(string where)
+    {
+        if (m_Timed == null || m_Frame > 5) return;
+        Rec("sim/override timing/f" + m_Frame.ToString("000") + " " + where, F(m_Timed.GetFloat("A")) + " " + (m_TimedLater != null ? F(m_TimedLater.GetFloat("A")) : "none"));
+    }
+
+    void LateUpdate() => ReadTimed("2 late update");
+
+    System.Collections.IEnumerator EndOfFrames()
+    {
+        var wait = new WaitForEndOfFrame();
+        for (int i = 0; i < 5; i++)
+        {
+            yield return wait;
+            ReadTimed("3 end of frame");
         }
     }
 
@@ -132,6 +155,10 @@ public sealed class VfxProbe : MonoBehaviour
         /// <summary>Whether the alive count is recorded each frame (a system whose particles
         /// die reads its count back from the GPU some frames late: recorded where it is settled).</summary>
         public bool Alive = true;
+        /// <summary>Event attributes of the first spawn system recorded each frame.</summary>
+        public string[] Attributes;
+        /// <summary>A float property read back each frame.</summary>
+        public string Property;
     }
 
     const int k_LastFrame = 170;
@@ -199,6 +226,72 @@ public sealed class VfxProbe : MonoBehaviour
             }
         });
         events.Alive = false;
+        // Operators over exposed properties read by a script's spawner block (what it read is
+        // recorded at frame 12), stopped at frame 5 and played again at frame 7.
+        Action<int, VisualEffect> again = (frame, effect) =>
+        {
+            if (frame == 5) effect.Stop();
+            if (frame == 7) effect.Play();
+        };
+        Run("expressions", "SimExpressions", 12, act: again).Attributes = new[] { "lifetime", "color", "spawnCount" };
+        // With other values, set in the frame the effect is made and again at frame 4.
+        var others = Run("expressions others", "SimExpressions", 12, act: (frame, effect) =>
+        {
+            if (frame == 4) OtherValues(effect);
+            again(frame, effect);
+        });
+        others.Attributes = new[] { "lifetime", "color" };
+        others.Property = "A";
+        OtherValues(others.Effect);
+        others.Effect.playRate = 0.5f;
+        // The scene's effect of that graph (saved with C = 0.5), given another A in the first frame,
+        // and a copy of it made in the first frame and given another A at once.
+        var sceneExpressions = new Running { Key = "sim/expressions scene", Effect = GameObject.Find("Expressions").GetComponent<VisualEffect>(), Last = 12, Act = again, Property = "A" };
+        m_Running.Add(sceneExpressions);
+        var copy = Instantiate(sceneExpressions.Effect.gameObject);
+        copy.name = "Expressions copy";
+        var copied = new Running { Key = "sim/expressions copy", Effect = copy.GetComponent<VisualEffect>(), Last = 12, Act = again, Property = "A" };
+        m_Running.Add(copied);
+        sceneExpressions.Effect.SetFloat("A", 1.25f);
+        copied.Effect.SetFloat("A", 1.5f);
+        // One effect given a value in the first frame and one given it in the second, read back
+        // at three points of each of the first frames.
+        m_Timed = Run("override first frame", "SimExpressions", 5).Effect;
+        m_Timed.SetFloat("A", 7f);
+        StartCoroutine(EndOfFrames());
+        // Spawn contexts that start and stop another.
+        Run("chain", "SimChain", 16);
+        // A lifetime read from a texture on the GPU: the graph's image; another set in the first
+        // frame; and another set at frame 4 of an effect started over at frame 5.
+        Run("texture", "SimTexture", k_LastFrame).Alive = false;
+        var green = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Objects/ImageB.png");
+        var otherTexture = Run("texture other", "SimTexture", k_LastFrame);
+        otherTexture.Alive = false;
+        otherTexture.Effect.SetTexture("Image", green);
+        Run("texture later", "SimTexture", k_LastFrame, act: (frame, effect) =>
+        {
+            if (frame == 4) effect.SetTexture("Image", green);
+            if (frame == 5) effect.Reinit();
+        }).Alive = false;
+        // Disabled and enabled again, by its component and by its object.
+        Run("toggle", "SimRate", 16, act: (frame, effect) =>
+        {
+            if (frame == 6) effect.enabled = false;
+            if (frame == 10) effect.enabled = true;
+        });
+        Run("toggle object", "SimRate", 16, act: (frame, effect) =>
+        {
+            if (frame == 6) effect.gameObject.SetActive(false);
+            if (frame == 10) effect.gameObject.SetActive(true);
+        });
+        // The effects the manager lists: not a disabled one, nor one on an inactive object.
+        var disabled = Run("disabled", "SimRate", 3);
+        disabled.Effect.enabled = false;
+        var inactive = Run("inactive", "SimRate", 3);
+        inactive.Effect.gameObject.SetActive(false);
+        var listed = VFXManager.GetComponents();
+        Rec("sim/manager/components", "disabled " + (Array.IndexOf(listed, disabled.Effect) >= 0 ? 1 : 0) + " inactive " + (Array.IndexOf(listed, inactive.Effect) >= 0 ? 1 : 0)
+            + " enabled " + (Array.IndexOf(listed, m_Running[0].Effect) >= 0 ? 1 : 0) + " without asset " + (Array.IndexOf(listed, GameObject.Find("NoAsset").GetComponent<VisualEffect>()) >= 0 ? 1 : 0));
         // The scene's own effects, as loaded (their particles die: no counts).
         foreach (var name in new[] { "Plain", "Events", "Overridden" })
             m_Running.Add(new Running { Key = "sim/scene " + name, Effect = GameObject.Find(name).GetComponent<VisualEffect>(), Last = 8, Alive = false });
@@ -229,7 +322,35 @@ public sealed class VfxProbe : MonoBehaviour
         m_Names.Clear();
         effect.GetSpawnSystemNames(m_Names);
         foreach (var name in m_Names) row.Append(" | ").Append(name).Append(": ").Append(State(effect.GetSpawnSystemInfo(name)));
+        if (running.Attributes != null)
+        {
+            var attribute = effect.GetSpawnSystemInfo(m_Names[0]).vfxEventAttribute;
+            foreach (var name in running.Attributes)
+                row.Append(" | ").Append(name).Append('=').Append(attribute.HasFloat(name) ? F(attribute.GetFloat(name)) : attribute.HasVector3(name) ? V(attribute.GetVector3(name)) : "none");
+        }
+        if (running.Property != null) row.Append(" | ").Append(running.Property).Append('=').Append(F(effect.GetFloat(running.Property)));
         Rec(key, row.ToString());
+    }
+
+    /// <summary>Other values for the expression graph's properties: a NaN, zero divisors, other signs.</summary>
+    static void OtherValues(VisualEffect effect)
+    {
+        effect.SetFloat("A", float.NaN);
+        effect.SetFloat("B", 3.5f);
+        effect.SetFloat("C", -0.25f);
+        effect.SetFloat("Z", -0f);
+        // (The smallest int divided by -1 stops the Editor: not among the values.)
+        effect.SetInt("I", int.MaxValue);
+        effect.SetInt("J", 0);
+        effect.SetInt("K", -4);
+        effect.SetUInt("U", 7u);
+        effect.SetUInt("V", 3u);
+        effect.SetUInt("W", 5u);
+        effect.SetBool("P", false);
+        effect.SetBool("Q", false);
+        effect.SetVector3("T", new Vector3(-1f, 0f, 2.5f));
+        effect.SetVector3("Frame_angles", new Vector3(0f, 90f, 0f));
+        effect.SetVector3("Frame_scale", new Vector3(1f, 1f, 0f));
     }
 
     void Simulate()
@@ -239,8 +360,34 @@ public sealed class VfxProbe : MonoBehaviour
         if (m_Frame == 40) Time.captureFramerate = 30;
         if (m_Frame == 41) Time.timeScale = 0.5f;
         if (m_Frame == 45) Time.timeScale = 1f;
-        // An effect made while the others run.
-        if (m_Frame == 20) Run("late", "SimRate", 30);
+        ReadTimed("1 update");
+        if (m_Frame == 2)
+        {
+            m_TimedLater = Run("override second frame", "SimExpressions", 5).Effect;
+            m_TimedLater.SetFloat("A", 9f);
+            ReadTimed("1 update after the set");
+        }
+        // Effects made while the others run: of a graph in use; of a graph in use with a property
+        // set at once; of a graph no effect used yet, with a property set at once; and a second
+        // of that graph four frames later.
+        if (m_Frame == 20)
+        {
+            Run("late", "SimRate", 30);
+            var late = Run("expressions late", "SimExpressions", 30);
+            late.Property = "A";
+            late.Effect.SetFloat("A", 1.75f);
+            var fresh = Run("late fresh", "Exposed2", 30);
+            fresh.Alive = false;
+            fresh.Property = "Rate";
+            fresh.Effect.SetFloat("Rate", 30f);
+        }
+        if (m_Frame == 24)
+        {
+            var second = Run("late second", "Exposed2", 30);
+            second.Alive = false;
+            second.Property = "Rate";
+            second.Effect.SetFloat("Rate", 60f);
+        }
         Rec("sim/time/f" + m_Frame.ToString("000"), F(Time.deltaTime));
         for (int i = 0; i < m_Running.Count; i++)
         {
@@ -250,9 +397,40 @@ public sealed class VfxProbe : MonoBehaviour
             if (running.Alive) Record(running, running.Key + "/f" + m_Frame.ToString("000"));
             else if (running.Last < k_LastFrame || m_Frame <= 1) Record(running, running.Key + "/f" + m_Frame.ToString("000"));
         }
+        if (m_Frame == 12 || m_Frame == 30)
+        {
+            // What the script's block read (at each play, in the updates after it, at each stop), per effect.
+            foreach (var (name, key) in m_Frame == 30 ? new[] { ("sim expressions late", "expressions late") }
+                : new[] { ("sim expressions", "expressions"), ("sim expressions others", "expressions others"), ("Expressions", "expressions scene"), ("Expressions copy", "expressions copy") })
+            {
+                int row = 0;
+                uint firstFrameIndex = 0;
+                bool hasFrameIndex = false;
+                foreach (var line in ProbeInputs.Logs.TryGetValue(name, out var log) ? log : new List<string>())
+                {
+                    // One value a row: a difference names the input.
+                    var parts = line.Split(' ');
+                    if (parts[0] == "missing" || parts[0] == "float" || parts[0] == "other") { Rec("sim/" + key + "/inputs/" + (row++).ToString("00") + " " + parts[0], line); continue; }
+                    foreach (var part in parts)
+                    {
+                        if (!part.Contains("=")) continue;
+                        string input = part.Substring(0, part.IndexOf('=')), value = part.Substring(part.IndexOf('=') + 1);
+                        // The manager's update count started before the probe: how far it moved since the first play.
+                        if (input == "u19")
+                        {
+                            uint index = uint.Parse(value);
+                            if (!hasFrameIndex) { firstFrameIndex = index; hasFrameIndex = true; }
+                            value = "+" + (index - firstFrameIndex);
+                        }
+                        Rec("sim/" + key + "/inputs/" + parts[0] + "/" + input, value);
+                    }
+                }
+                Rec("sim/" + key + "/inputs/lines", ProbeInputs.Logs.TryGetValue(name, out var all) ? all.Count : -1);
+            }
+        }
         if (m_Frame == 1 || m_Frame == 100 || m_Frame == k_LastFrame)
         {
-            foreach (var key in new[] { "sim/kill", "sim/keep" })
+            foreach (var key in new[] { "sim/kill", "sim/keep", "sim/texture", "sim/texture other", "sim/texture later" })
             {
                 var effect = m_Running.First(r => r.Key == key).Effect;
                 var info = effect.GetParticleSystemInfo("System (1)");
@@ -262,6 +440,25 @@ public sealed class VfxProbe : MonoBehaviour
             var rate = m_Running[0].Effect;
             var rateInfo = rate.GetParticleSystemInfo("System (1)");
             Rec("sim/rate/info/f" + m_Frame.ToString("000"), rateInfo.aliveCount + "/" + rateInfo.capacity + " sleeping=" + (rateInfo.sleeping ? 1 : 0) + " awake=" + (rate.HasAnySystemAwake() ? 1 : 0));
+        }
+    }
+
+    /// <summary>The scripting API's inverse of an affine matrix, with the matrix the expression
+    /// controls invert (a graph's inverse of a transform gives the same numbers) and with one
+    /// that has no inverse.</summary>
+    void AffineInverse()
+    {
+        foreach (var (name, matrix) in new[]
+        {
+            ("frame", Matrix4x4.TRS(new Vector3(10f, 20f, 30f), Quaternion.Euler(30f, 45f, 60f), new Vector3(2f, 3f, 4f))),
+            ("flat", Matrix4x4.TRS(new Vector3(10f, 20f, 30f), Quaternion.Euler(0f, 90f, 0f), new Vector3(1f, 1f, 0f))),
+        })
+        {
+            var result = Matrix4x4.identity;
+            bool inverted = Matrix4x4.Inverse3DAffine(matrix, ref result);
+            var cells = new string[16];
+            for (int i = 0; i < 16; i++) cells[i] = F(result[i]);
+            Rec("math/inverse affine/" + name, (inverted ? "1 " : "0 ") + string.Join(",", cells));
         }
     }
 
