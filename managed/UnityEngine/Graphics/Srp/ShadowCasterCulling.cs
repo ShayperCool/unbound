@@ -24,6 +24,55 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class ShadowCasterCulling
     {
+        /// <summary>Retains the culling's split planes until its shadow lists have drawn.
+        /// The supplied native arrays may be disposed after the culling call.</summary>
+        internal static void StoreSplits(CullingData data, ShadowCastersCullingInfos infos)
+        {
+            if (data == null) return;
+            data.ShadowSplits.Clear();
+            data.ShadowLights.Clear();
+            if (!infos.perLightInfos.IsCreated || !infos.splitBuffer.IsCreated) return;
+            for (int i = 0; i < infos.splitBuffer.Length; i++) data.ShadowSplits.Add(infos.splitBuffer[i]);
+            for (int i = 0; i < infos.perLightInfos.Length; i++) data.ShadowLights.Add(infos.perLightInfos[i]);
+        }
+
+        /// <summary>Tests ordinary shadow casters against their light's selected split.
+        /// Matches Unity 6000.0.71f1, tests/projects/stripshadows point-face controls.</summary>
+        internal static bool SeesSplit(CullingData data, int light, int split, Bounds bounds, in ShadowSplitData fallback)
+        {
+            if (!Compat.RenderingMeasured) return true;
+            if ((uint)light < (uint)data.ShadowLights.Count)
+            {
+                var info = data.ShadowLights[light];
+                if (split >= 0 && split < info.splitRange.length)
+                {
+                    if (split < 8 && (info.splitExclusionMask & (1 << split)) != 0) return false;
+                    long index = (long)info.splitRange.start + split;
+                    if (index >= 0 && index < data.ShadowSplits.Count)
+                    {
+                        var culling = data.ShadowSplits[(int)index];
+                        return InsidePlanes(bounds, culling);
+                    }
+                }
+            }
+            return InsidePlanes(bounds, fallback);
+        }
+
+        internal static bool InsidePlanes(Bounds bounds, in ShadowSplitData split)
+        {
+            var extent = bounds.extents;
+            if (extent.x <= 0 && extent.y <= 0 && extent.z <= 0) return true;
+            var center = bounds.center;
+            for (int i = 0; i < split.cullingPlaneCount; i++)
+            {
+                var plane = split.GetCullingPlane(i);
+                var normal = plane.normal;
+                float radius = Mathf.Abs(normal.x) * extent.x + Mathf.Abs(normal.y) * extent.y + Mathf.Abs(normal.z) * extent.z;
+                if (plane.GetDistanceToPoint(center) + radius < 0) return false;
+            }
+            return true;
+        }
+
         /// <summary>Whether a light lights anything inside the camera's culling planes.</summary>
         internal static bool LightVisible(Light light, ref ScriptableCullingParameters parameters)
         {

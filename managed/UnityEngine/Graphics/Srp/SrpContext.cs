@@ -972,7 +972,11 @@ namespace UnityEngine.Rendering
         /// <summary>Shadow caster culling: the BatchRendererGroups' light cullings (renderers'
         /// casters are not culled per split: shadow lists draw every caster, which gives the same
         /// shadow map).</summary>
-        public void CullShadowCasters(CullingResults cullingResults, ShadowCastersCullingInfos infos) => Unbound.Runtime.BatchCulling.CullShadows(cullingResults.Data, infos);
+        public void CullShadowCasters(CullingResults cullingResults, ShadowCastersCullingInfos infos)
+        {
+            ShadowCasterCulling.StoreSplits(cullingResults.Data, infos);
+            Unbound.Runtime.BatchCulling.CullShadows(cullingResults.Data, infos);
+        }
 
         public RendererList CreateRendererList(RendererUtils.RendererListDesc desc)
         {
@@ -1071,6 +1075,8 @@ namespace Unbound.Runtime
         /// <summary>Per visible light, the shadow renderer lists made without a split index so
         /// far: the next one's split.</summary>
         internal readonly Dictionary<int, int> ShadowListsMade = new Dictionary<int, int>();
+        internal readonly List<ShadowSplitData> ShadowSplits = new List<ShadowSplitData>();
+        internal readonly List<LightShadowCasterCullingInfo> ShadowLights = new List<LightShadowCasterCullingInfo>();
 
         internal void Dispose()
         {
@@ -1091,6 +1097,8 @@ namespace Unbound.Runtime
             Queued.Clear();
             QueuedVisible.Clear();
             ShadowListsMade.Clear();
+            ShadowSplits.Clear();
+            ShadowLights.Clear();
             Lights = default;
             OffscreenVertexLights = default;
             Probes = default;
@@ -1447,7 +1455,7 @@ namespace Unbound.Runtime
             if (data == null || data.Camera == null) return;
             var drawing = new DrawingSettings(s_ShadowCaster, new SortingSettings(data.Camera) { criteria = SortingCriteria.CommonOpaque });
             var filtering = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
-            FrameBuilder.DrawRendererList(data, drawing, filtering, new List<ShaderTagId> { s_ShadowCaster }, shadows: settings.objectsFilter, shadowLight: settings.lightIndex, shadowSplit: split);
+            FrameBuilder.DrawRendererList(data, drawing, filtering, new List<ShaderTagId> { s_ShadowCaster }, shadows: settings.objectsFilter, shadowLight: settings.lightIndex, shadowSplit: split, shadowCulling: settings.splitData);
         }
 
         static void DrawRenderers(Entry e)

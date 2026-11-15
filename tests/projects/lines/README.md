@@ -326,9 +326,9 @@ are constructed and before caps and corners choose their orientation. TransformZ
 the bias sign because that frame reverses depth. Ordinary rendering and BakeMesh remain
 unbiased. Each renderer reuses distinct meshes for each camera and shadow light; destroying
 either owner releases those meshes. Cascades and cube faces share the light's geometry.
-Multiple cascades and SRP shadow lists remain unmeasured by this
-directional-light diagnostic. Strip shadow draws explicitly reject area lights and
-SRP lists; ordinary strip drawing remains available. Multiple cascades share the supported
+Multiple cascades remain unmeasured by this directional-light diagnostic. URP shadow lists
+have separate controls in tests/projects/stripshadows. Strip shadow draws explicitly reject
+area lights; ordinary strip drawing remains available. Multiple cascades share the supported
 directional light frame, but have no capture here. No stronger device or pipeline parity
 is claimed.
 

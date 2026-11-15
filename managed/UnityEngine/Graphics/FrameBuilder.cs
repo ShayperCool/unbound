@@ -788,7 +788,7 @@ namespace Unbound.Runtime
         /// <param name="shadows">A shadow caster list: renderers that cast shadows (with
         /// ShadowsOnly ones), else renderers drawn normally (without ShadowsOnly ones).</param>
         internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames, ShadowObjectsFilter? shadows = null,
-            RendererLists.TaggedStates tagged = null, int shadowLight = -1, int shadowSplit = -1)
+            RendererLists.TaggedStates tagged = null, int shadowLight = -1, int shadowSplit = -1, ShadowSplitData shadowCulling = default)
         {
             // The draws' merged properties live until the list is written.
             using var pooled = DrawPropertyPool.Begin();
@@ -828,7 +828,12 @@ namespace Unbound.Runtime
                         int value = SortingLayer.GetLayerValueFromID(renderer.sortingLayerID);
                         if (value < layers.lowerBound || value > layers.upperBound) continue;
                     }
-                    if (shadows.HasValue) renderer.MarkRendered();
+                    if (shadows.HasValue)
+                    {
+                        renderer.PrepareCullingBounds();
+                        if (!ShadowCasterCulling.SeesSplit(data, shadowLight, shadowSplit, renderer.CullingBounds, shadowCulling)) continue;
+                        renderer.MarkRendered();
+                    }
                     try { renderer.CollectDraws(context, s_Items); }
                     catch (Exception e) { Debug.LogException(e, renderer); }
                 }
@@ -841,6 +846,8 @@ namespace Unbound.Runtime
                 var casting = q.Lighting.Cast;
                 if (shadows.HasValue ? casting == ShadowCastingMode.Off : casting == ShadowCastingMode.ShadowsOnly) continue;
                 if ((filtering.layerMask & (1 << q.Layer)) == 0) continue;
+                if (shadows.HasValue && !ShadowCasterCulling.SeesSplit(data, shadowLight, shadowSplit,
+                    q.WorldBounds ?? WorldBounds(q.Mesh.bounds, q.Matrix), shadowCulling)) continue;
                 if ((filtering.renderingLayerMask & q.RenderingLayerMask) == 0) continue;
                 if (!defaultSortingLayer) continue;
                 s_Items.Add(QueuedItem(context, q));

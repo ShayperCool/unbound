@@ -232,7 +232,7 @@ namespace UnityEngine.Tests
                         tags, shadows: ShadowObjectsFilter.AllObjects, shadowLight: 0);
                     Assert.True(observer.ShadowPass);
                     Assert.True(observer.Srp);
-                    Assert.Equal(0, observer.Draws);
+                    Assert.Equal(1, observer.Draws);
                     context = observer.Context;
                 }
                 else
@@ -245,14 +245,14 @@ namespace UnityEngine.Tests
                     else Assert.Contains(casters, item => ReferenceEquals(item.Renderer, strip));
                 }
                 var errors = logs.Errors.FindAll(entry => ReferenceEquals(entry.Context, strip));
-                if (srp || type == LightType.Rectangle)
+                if (type == LightType.Rectangle)
                 {
                     var error = Assert.Single(errors).Error;
                     Assert.IsType<NotSupportedException>(error);
-                    Assert.Contains("supported only for built-in directional, point and spot lights", error.Message);
+                    Assert.Contains("supported only for directional, point and spot lights", error.Message);
                 }
                 else Assert.Empty(errors);
-                Assert.Equal(before, FrameBuilder.s_DrawCount);
+                Assert.Equal(before + (srp ? 1 : 0), FrameBuilder.s_DrawCount);
                 Assert.False(context.StripShadowPass);
                 Assert.False(context.StripShadowSrp);
                 Assert.Null(context.StripShadowLight);
