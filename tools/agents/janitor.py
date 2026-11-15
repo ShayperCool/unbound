@@ -35,11 +35,12 @@ GIB = 1024**3
 DEFAULT_RUN_DAYS = 3
 DEFAULT_IDLE_HOURS = 24
 DEFAULT_MIN_FREE_GIB = 20
-# A cold walk of the measured 2.3-million-directory cache took 25-30 minutes under load; the
-# discovery budget must hold one complete walk, and the run must end within the service's
+# Walks of the measured 2.3-million-directory cache took 18 minutes with warm caches and 26-37
+# minutes cold on the loaded machine, so a cold walk can still overrun this budget. The run
+# budget keeps about 10 minutes for an admitted batch and kache gc inside the service's
 # 45-minute start timeout (install_janitor.py).
-DEFAULT_SCAN_SECONDS = 2100
-DEFAULT_RUN_SECONDS = 2400
+DEFAULT_SCAN_SECONDS = 1800
+DEFAULT_RUN_SECONDS = 2100
 # Change events the reader thread may hold between polls before monitoring counts as broken,
 # as a kernel queue overflow does (the service's memory limit is 4 GiB).
 MAX_BUFFERED_EVENT_BYTES = 256*2**20
@@ -383,66 +384,71 @@ class ReferenceWatch:
                         yield os.read(self.fd, 1024*1024)
                     except BlockingIOError:
                         return
-        # Closing the stream releases the reader lock even when an event raises.
+        # Closing the stream releases the reader lock even when an event raises; the events
+        # left in it are lost then, so monitoring counts as broken.
         with contextlib.closing(events()) as stream:
-            for data in stream:
-                offset = 0
-                while offset < len(data):
-                    descriptor, mask, cookie, length = struct.unpack_from('iIII', data, offset)
-                    name = os.fsdecode(data[offset+16:offset+16+length].split(b'\0', 1)[0])
-                    offset += 16+length
-                    if mask & self.OVERFLOW:
-                        self.broken = True
-                        raise ReferenceChanged('reference change queue overflowed; batch deferred')
-                    directory = self.directories.get(descriptor)
-                    if directory is None or any(inside(directory, p) for p in self.retired):
-                        continue
-                    if any(inside(directory, root) for root in self.metadata_roots):
-                        self.metadata_dirty = True
-                    if mask & self.DELETE_SELF:
-                        # Its links are already protected. The watched parent catches
-                        # any replacement directory and its new links.
-                        self.directories.pop(descriptor, None)
-                        old = self.unresolved.pop(descriptor, directory)
-                        self.moves = {cookie: source for cookie, source in self.moves.items() if source != old}
-                        continue
-                    if mask & self.MOVE_SELF:
-                        if descriptor in self.handled_moves:
-                            self.handled_moves.remove(descriptor)
+            try:
+                for data in stream:
+                    offset = 0
+                    while offset < len(data):
+                        descriptor, mask, cookie, length = struct.unpack_from('iIII', data, offset)
+                        name = os.fsdecode(data[offset+16:offset+16+length].split(b'\0', 1)[0])
+                        offset += 16+length
+                        if mask & self.OVERFLOW:
+                            self.broken = True
+                            raise ReferenceChanged('reference change queue overflowed; batch deferred')
+                        directory = self.directories.get(descriptor)
+                        if directory is None or any(inside(directory, p) for p in self.retired):
                             continue
-                        self.unresolved[descriptor] = directory
-                        continue
-                    if mask & self.IGNORED:
-                        self.directories.pop(descriptor, None)
-                        continue
-                    path = directory/name
-                    if mask & self.MOVED_FROM:
-                        if mask & self.ISDIR:
-                            self.moves[cookie] = path
-                        else:
-                            self.file_moves[cookie] = path
-                        continue
-                    # The destination may have moved again or been deleted by now.
-                    # Pair recorded directory events before inspecting current paths.
-                    if mask & self.MOVED_TO:
-                        self.file_moves.pop(cookie, None)
-                    if mask & self.MOVED_TO and mask & self.ISDIR:
-                        source = self.moves.pop(cookie, None)
-                        if source is not None:
-                            self.relocate(source, path)
-                    try:
-                        if path.is_symlink():
-                            raw = path.readlink()
-                            target = raw if raw.is_absolute() else path.parent/raw
-                            self.references.update((Path(os.path.abspath(target)), target.resolve()))
-                            if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
-                                pending.add(target.resolve())
-                        elif path.is_dir() and not any(inside(path, p) for p in self.excluded):
-                            self.add(path)
-                            pending.add(path)
-                    except OSError as error:
-                        if not gone(error):
-                            raise
+                        if any(inside(directory, root) for root in self.metadata_roots):
+                            self.metadata_dirty = True
+                        if mask & self.DELETE_SELF:
+                            # Its links are already protected. The watched parent catches
+                            # any replacement directory and its new links.
+                            self.directories.pop(descriptor, None)
+                            old = self.unresolved.pop(descriptor, directory)
+                            self.moves = {cookie: source for cookie, source in self.moves.items() if source != old}
+                            continue
+                        if mask & self.MOVE_SELF:
+                            if descriptor in self.handled_moves:
+                                self.handled_moves.remove(descriptor)
+                                continue
+                            self.unresolved[descriptor] = directory
+                            continue
+                        if mask & self.IGNORED:
+                            self.directories.pop(descriptor, None)
+                            continue
+                        path = directory/name
+                        if mask & self.MOVED_FROM:
+                            if mask & self.ISDIR:
+                                self.moves[cookie] = path
+                            else:
+                                self.file_moves[cookie] = path
+                            continue
+                        # The destination may have moved again or been deleted by now.
+                        # Pair recorded directory events before inspecting current paths.
+                        if mask & self.MOVED_TO:
+                            self.file_moves.pop(cookie, None)
+                        if mask & self.MOVED_TO and mask & self.ISDIR:
+                            source = self.moves.pop(cookie, None)
+                            if source is not None:
+                                self.relocate(source, path)
+                        try:
+                            if path.is_symlink():
+                                raw = path.readlink()
+                                target = raw if raw.is_absolute() else path.parent/raw
+                                self.references.update((Path(os.path.abspath(target)), target.resolve()))
+                                if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
+                                    pending.add(target.resolve())
+                            elif path.is_dir() and not any(inside(path, p) for p in self.excluded):
+                                self.add(path)
+                                pending.add(path)
+                        except OSError as error:
+                            if not gone(error):
+                                raise
+            except BaseException:
+                self.broken = True
+                raise
         return pending
 
 
