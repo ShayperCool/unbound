@@ -168,6 +168,52 @@ class GatePriorityTests(unittest.TestCase):
                 self.assertEqual(gate.env.get('UNBOUND_LAND_GATE'), '1' if priority else None)
 
 
+class GateTimingTests(unittest.TestCase):
+    def test_steps_and_phases_are_timestamped_in_their_logs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            gate = land.Gate(root, 'HEAD', [], False, root/'gate.log')
+            private = root/'step.log'
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(gate.step('control', [sys.executable, '-c', 'print("body")']), 0)
+                self.assertEqual(gate.step('failing', [sys.executable, '-c', 'raise SystemExit(3)'], log=private), 3)
+            gate.note('phase marker')
+            stamp = r'\d{4}-\d\d-\d\d \d\d:\d\d:\d\d'
+            text = (root/'gate.log').read_text()
+            self.assertRegex(text, rf'=== control: .*\nland: control: started {stamp}\nbody\n')
+            self.assertRegex(text, rf'land: control: exit 0 after \d+s, finished {stamp}\n')
+            self.assertRegex(text, rf'land: phase marker {stamp}\n')
+            self.assertNotIn('failing', text)
+            self.assertRegex(private.read_text(), rf'land: failing: exit 3 after \d+s, finished {stamp}\n')
+            self.assertIn(private, gate.durations)
+
+    def test_every_lock_hold_is_journaled_even_when_the_holder_fails(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+             mock.patch.object(land, 'STATE', Path(temporary)), \
+             contextlib.redirect_stdout(io.StringIO()):
+            with land.land_lock('slot/first'):
+                self.assertTrue((Path(temporary)/'land.holder').is_file())
+            with self.assertRaises(SystemExit):
+                with land.land_lock('slot/second'):
+                    land.die(5, 'control failure')
+            rows = [json.loads(line) for line in (Path(temporary)/'land-lock.jsonl').read_text().splitlines()]
+        self.assertEqual([row['branch'] for row in rows], ['slot/first', 'slot/second'])
+        for row in rows:
+            self.assertLessEqual(row['requested'], row['acquired'])
+            self.assertLessEqual(row['acquired'], row['released'])
+            self.assertEqual(row['pid'], os.getpid())
+            self.assertGreaterEqual(row['held_s'], 0)
+
+    def test_journal_write_failure_does_not_affect_landing(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+             mock.patch.object(land, 'STATE', Path(temporary)), \
+             contextlib.redirect_stdout(io.StringIO()):
+            (Path(temporary)/'land-lock.jsonl').mkdir()
+            with land.land_lock('slot/first'):
+                pass
+            self.assertFalse((Path(temporary)/'land.holder').exists())
+
+
 class ParallelProbeTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()

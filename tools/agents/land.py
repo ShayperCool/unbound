@@ -131,6 +131,10 @@ def require_clean(where, label, allow_untracked=False):
         die(2, f'{label} has tracked paths hidden by index flags; preserve any work and clear the flags first')
 
 
+def stamp():
+    return f'{datetime.datetime.now():%F %T}'
+
+
 def tail(log, lines=30):
     text = log.read_text(errors='replace').splitlines()
     return '\n'.join(text[-lines:])
@@ -365,6 +369,12 @@ class Gate:
         self.process_lock = threading.Lock()
         self.processes = set()
         self.cancelled = False
+        self.durations = {}
+
+    def note(self, text):
+        """A timestamped line in the gate log for phases that are not commands."""
+        with self.log.open('a') as out:
+            out.write(f'land: {text} {stamp()}\n')
 
     def step(self, name, command, shell=False, env=None, guard_editor=False, timeout=None, log=None):
         if guard_editor:
@@ -373,7 +383,7 @@ class Gate:
         started = time.time()
         with (log or self.log).open('a') as out:
             shown = command if shell else shlex.join(command)
-            out.write(f'\n=== {name}: {shown}\n')
+            out.write(f'\n=== {name}: {shown}\nland: {name}: started {stamp()}\n')
             out.flush()
             with self.process_lock:
                 if self.cancelled:
@@ -402,6 +412,8 @@ class Gate:
             if editor:
                 out.write(f'\nland: {EDITOR_MARK}: {editor}\n')
                 code = EDITOR_EXIT
+            out.write(f'\nland: {name}: exit {code} after {time.time() - started:.0f}s, finished {stamp()}\n')
+        self.durations[log or self.log] = time.time() - started
         print(f'land: {name}: exit {code} after {time.time() - started:.0f}s', flush=True)
         return code
 
@@ -410,6 +422,7 @@ class Gate:
         die(5, f'gate failed at {name}; full log: {self.log}')
 
     def run(self):
+        self.note('gate started')
         changed = self.changed if self.changed is not None else git(
             'diff', '--name-only', '--no-renames', f'{self.base}...HEAD', cwd=self.worktree).splitlines()
         guard = subprocess.run([sys.executable, str(HERE/'oracle_guard.py'), self.base, 'HEAD'],
@@ -448,11 +461,15 @@ class Gate:
             if self.step('rust tests', [*build_py, '--', 'test', '--release', '--locked', *args]):
                 self.fail('rust tests')
 
+        self.note('probe runtime snapshot started')
         self.prepare_probe_runtime(target)
+        self.note('probe runtime snapshot finished')
         self.run_probes()
         if self.automatic is None:
+            self.note('automatic probe selection started')
             self.automatic = automatic_checks(self.worktree, changed, self.probes, full=self.full)
         self.run_automatic_probes()
+        self.note('gate passed')
 
     def prepare_probe_runtime(self, target):
         """Freeze matching build outputs before any probe, retaining their run reference."""
@@ -500,6 +517,7 @@ class Gate:
         if not self.probes:
             return
         require_process_watch()
+        self.note('explicit probes started')
         specs = self.probe_specs()
         commands = []
         logs = self.log.with_suffix('.probes')
@@ -564,7 +582,9 @@ class Gate:
         with self.log.open('a') as out:
             for row, code in results:
                 name, _, _, log, _ = row
-                out.write(f'\nland: {name}: exit {code}; log {log}\n')
+                seconds = self.durations.get(log)
+                took = f' after {seconds:.0f}s' if seconds is not None else ''
+                out.write(f'\nland: {name}: exit {code}{took}; log {log}\n')
                 if code:
                     failed.append(name)
                     out.write(tail(log)+'\n')
@@ -578,6 +598,7 @@ class Gate:
               f'budget {AUTO_PROBE_BUDGET_SECONDS}s total, '
               f'{AUTO_PROBE_TIMEOUT_SECONDS}s per check; explicit --probe commands are separate', flush=True)
         deadline = time.monotonic()+AUTO_PROBE_BUDGET_SECONDS
+        self.note('automatic probes started')
         specs = self.probe_specs()
         logs = self.log.with_suffix('.automatic')
         logs.mkdir(parents=True, exist_ok=True)
@@ -800,21 +821,36 @@ def run_gate(worktree, base, probes, full, branch, priority=False, *, log=None, 
     return gate.probe_runtime
 
 
+def journal_lock(entry):
+    """One line per land-lock hold, for lock occupancy; a failed write never affects landing."""
+    try:
+        with (STATE/'land-lock.jsonl').open('a') as stream:
+            stream.write(json.dumps(entry)+'\n')
+    except OSError:
+        pass
+
+
 @contextlib.contextmanager
 def land_lock(branch):
     STATE.mkdir(parents=True, exist_ok=True)
     holder = STATE/'land.holder'
     with open(STATE/'land.lock', 'a+') as handle:
+        requested = time.time()
         try:
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             who = holder.read_text().strip() if holder.exists() else 'unknown'
             print(f'land: waiting for the land lock, held by {who}', flush=True)
             fcntl.flock(handle, fcntl.LOCK_EX)
+        acquired = time.time()
         holder.write_text(f'{branch} pid {os.getpid()} since {datetime.datetime.now():%F %T}\n')
         try:
             yield
         finally:
+            released = time.time()
+            journal_lock({'branch': branch, 'pid': os.getpid(), 'requested': round(requested, 1),
+                          'acquired': round(acquired, 1), 'released': round(released, 1),
+                          'waited_s': round(acquired-requested, 1), 'held_s': round(released-acquired, 1)})
             holder.unlink(missing_ok=True)
             fcntl.flock(handle, fcntl.LOCK_UN)
 

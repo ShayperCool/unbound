@@ -12,7 +12,8 @@ Machine-local state lives in `~/.cache/unbound/agents/` (not in Git):
 | `landed.jsonl` | one line per landed branch, including its train ID and gate log |
 | `land-queue.json` | queued callers, requested probes, and recoverable results |
 | `land-publications.json` | durable publication receipts, retained until the push is queued |
-| `logs/` | gate logs |
+| `logs/` | gate logs, with start and finish times of every gate step |
+| `land-lock.jsonl` | one line per land-lock hold: request, acquisition and release times |
 | `suite/<label>/` | `summary.json` of each `tools/agents/suite.py` run |
 | `baseline/` | the sheriff's last full-suite results (a promoted `summary.json`) |
 
