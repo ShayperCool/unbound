@@ -15717,7 +15717,6 @@ namespace UnityEditor
     }
     unsafe partial class Menu
     {
-        [global::Unbound.Stub] public static bool GetEnabled(string menuPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.GetEnabled"); return default; }
         [global::Unbound.Stub] internal static void UpdateContextMenu(global::UnityEngine.Object[] context, int userData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.UpdateContextMenu"); }
         [global::Unbound.Stub] internal static bool GetEnabledWithContext(string menuPath, global::UnityEngine.Object[] context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.GetEnabledWithContext"); return default; }
         [global::Unbound.Stub] internal static void GetMenuItemDefaultShortcuts(global::System.Collections.Generic.List<string> outItemNames, global::System.Collections.Generic.List<string> outItemDefaultShortcuts) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.GetMenuItemDefaultShortcuts"); }
@@ -15725,8 +15724,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static string GetHotkey(string menuPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.GetHotkey"); return default; }
         [global::Unbound.Stub] internal static string[] ExtractSubmenus(string menuPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.ExtractSubmenus"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] internal static global::UnityEditor.ScriptingMenuItem[] GetMenuItems(string menuPath, bool includeSeparators, bool localized) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.GetMenuItems"); return global::System.Array.Empty<global::UnityEditor.ScriptingMenuItem>(); }
-        [global::Unbound.Stub] internal static void AddMenuItem(string name, string shortcut, bool @checked, int priority, global::System.Action execute, global::System.Func<bool> validate) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.AddMenuItem"); }
-        [global::Unbound.Stub] internal static void RemoveMenuItem(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.RemoveMenuItem"); }
         [global::Unbound.Stub] internal static void AddSeparator(string name, int priority) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.AddSeparator"); }
         [global::Unbound.Stub] internal static void RebuildAllMenus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.RebuildAllMenus"); }
         [global::Unbound.Stub] internal static int FindHotkeyStartIndex(string menuPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.FindHotkeyStartIndex"); return default; }
@@ -35845,17 +35842,6 @@ namespace UnityEditor.Networking.PlayerConnection
         [global::Unbound.Stub] public static string GetLastIPString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Networking.PlayerConnection.AttachToPlayerPlayerIPWindow.GetLastIPString"); return default; }
         [global::Unbound.Stub] public AttachToPlayerPlayerIPWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Networking.PlayerConnection.AttachToPlayerPlayerIPWindow.ctor"); }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class ConnectedPlayer
-    {
-        [global::Unbound.Stub] public ConnectedPlayer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Networking.PlayerConnection.ConnectedPlayer.ctor"); }
-        [global::Unbound.Stub] public ConnectedPlayer(int playerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Networking.PlayerConnection.ConnectedPlayer.ctor"); }
-        [global::Unbound.Stub] public ConnectedPlayer(int playerId, string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Networking.PlayerConnection.ConnectedPlayer.ctor"); }
-        [global::System.Obsolete("Use playerId instead (UnityUpgradable) -> playerId")] public int PlayerId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Networking.PlayerConnection.ConnectedPlayer.PlayerId"); return default; } }
-        public int playerId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Networking.PlayerConnection.ConnectedPlayer.playerId"); return default; } }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Networking.PlayerConnection.ConnectedPlayer.name"); return default; } }
-    }
     internal enum ConnectionDropDownColumns
     {
         DisplayName = 0,
@@ -35972,10 +35958,9 @@ namespace UnityEditor.Networking.PlayerConnection
             [global::Unbound.Stub] public static string Logging;
         }
     }
-    unsafe partial class EditorConnection : global::UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection
+    unsafe partial class EditorConnection
     {
         [global::Unbound.Stub] internal static global::UnityEngine.IPlayerEditorConnectionNative connectionNative;
-        public global::System.Collections.Generic.List<global::UnityEditor.Networking.PlayerConnection.ConnectedPlayer> ConnectedPlayers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Networking.PlayerConnection.EditorConnection.ConnectedPlayers"); return new global::System.Collections.Generic.List<global::UnityEditor.Networking.PlayerConnection.ConnectedPlayer>(); } }
     }
     internal enum EditorConnectionTarget
     {

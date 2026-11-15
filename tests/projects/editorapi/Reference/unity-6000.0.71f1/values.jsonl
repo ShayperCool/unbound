@@ -1,3 +1,4 @@
+{"key":"editorConnection.persistent.beforePlay","value":"0:5"}
 {"key":"unsupported.developerMode","value":"False"}
 {"key":"unsupported.developerBuild","value":"False"}
 {"key":"asset.open.Assets/Scenes/Probe.unity","value":"True:"}
@@ -117,6 +118,90 @@
 {"key":"registry.dynamicCreate","value":"RegistryControls+DynamicInspector"}
 {"key":"registry.rebuildRemovesDynamic","value":"<null>"}
 {"key":"registry.rebuildRetainsAttribute","value":"RegistryControls+BaseInspector"}
+{"key":"menus.builtin.playing","value":"True:True:True"}
+{"key":"menus.builtin.checked","value":"True:False:False"}
+{"key":"menus.hotkey.enabled","value":"True"}
+{"key":"menus.hotkey.execute","value":"True:1:0"}
+{"key":"menus.script.disabled","value":"False"}
+{"key":"menus.script.validates","value":"True"}
+{"key":"menus.script.enabled","value":"True"}
+{"key":"menus.script.execEnabled","value":"True:1"}
+{"key":"menus.script.disabledAgain","value":"False"}
+{"key":"menus.script.execDisabled","value":"False:0"}
+{"key":"menus.script.checkDisabled","value":"True"}
+{"key":"menus.unknown","value":"False"}
+{"key":"menus.empty","value":"False"}
+{"key":"menus.null","value":"False"}
+{"key":"menus.dynamic.add","value":"ok"}
+{"key":"menus.dynamic.checked","value":"True"}
+{"key":"menus.dynamic.disabled","value":"False"}
+{"key":"menus.dynamic.execDisabled","value":"False:0"}
+{"key":"menus.dynamic.enabled","value":"True"}
+{"key":"menus.dynamic.exec","value":"True:1"}
+{"key":"menus.dynamic.validates","value":"True"}
+{"key":"menus.dynamic.parent","value":"True"}
+{"key":"menus.dynamic.parentChecked","value":"True"}
+{"key":"menus.dynamic.replace","value":"False:True:1"}
+{"key":"menus.dynamic.throwingValidator","value":"True"}
+{"key":"menus.dynamic.remove","value":"False"}
+{"key":"menus.dynamic.removedEnabled","value":"False"}
+{"key":"menus.dynamic.removedExec","value":"False:0"}
+{"key":"menus.dynamic.freshThrowingValidator","value":"False"}
+{"key":"menus.dynamic.removeUnknown","value":"ok"}
+{"key":"menus.tree.add","value":"True"}
+{"key":"menus.tree.removeLeaf","value":"True"}
+{"key":"menus.tree.readd","value":"ok"}
+{"key":"menus.tree.removeParent","value":"False"}
+{"key":"menus.thread.execute","value":"UnityException:ExecuteMenuItemInternal can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"menus.thread.getEnabled","value":"UnityException:GetEnabled can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"menus.thread.add","value":"UnityException:AddMenuItem can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"menus.thread.remove","value":"UnityException:RemoveMenuItem can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"menus.thread.unchanged","value":"True:False"}
+{"key":"menus.thread.executeUnchanged","value":"True"}
+{"key":"editorConnection.peers","value":"0"}
+{"key":"editorConnection.singleton","value":"True"}
+{"key":"editorConnection.initialize","value":"ok"}
+{"key":"editorConnection.register","value":"ArgumentException:Could not register callback <Run>b__5_0 on . The class null does not derive from UnityEngine.Object"}
+{"key":"editorConnection.registerNull","value":"ok"}
+{"key":"editorConnection.registerEmpty","value":"ArgumentException:Cant be Guid.Empty:messageId"}
+{"key":"editorConnection.send","value":"ok"}
+{"key":"editorConnection.sendNull","value":"ok"}
+{"key":"editorConnection.trySend","value":"False"}
+{"key":"editorConnection.trySendNull","value":"False"}
+{"key":"editorConnection.trySendEmpty","value":"ArgumentException:Can not be Guid.Empty:messageId"}
+{"key":"editorConnection.subscribe","value":"ArgumentException:Could not register callback <Run>b__5_1 on . The class null does not derive from UnityEngine.Object"}
+{"key":"editorConnection.unregister","value":"ok"}
+{"key":"editorConnection.unregisterNull","value":"NullReferenceException"}
+{"key":"editorConnection.unregisterUnknown","value":"ok"}
+{"key":"editorConnection.unsubscribe","value":"InvalidCastException:Specified cast is not valid."}
+{"key":"editorConnection.unsubscribeNull","value":"NullReferenceException"}
+{"key":"editorConnection.thread.initialize","value":"UnityException:Initialize can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"editorConnection.thread.send","value":"UnityException:SendMessageInternal can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"editorConnection.thread.trySend","value":"UnityException:TrySendMessageInternal can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"editorConnection.thread.disconnect","value":"UnityException:DisconnectAll can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"editorConnection.thread.registerCold","value":"UnityException:RegisterInternal can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"key":"editorConnection.persistent.instance","value":"1:True:9"}
+{"key":"editorConnection.persistent.static","value":"1:True:4"}
+{"key":"editorConnection.player.default","value":"0:<null>"}
+{"key":"editorConnection.player.id","value":"17:<null>"}
+{"key":"editorConnection.player.named","value":"18:peer"}
+{"key":"editorConnection.connectedReplay","value":"10"}
+{"key":"editorConnection.object.register","value":"ok"}
+{"key":"editorConnection.object.deliverOne","value":"1"}
+{"key":"editorConnection.object.registerDuplicate","value":"ok"}
+{"key":"editorConnection.object.deliverDuplicate","value":"2"}
+{"key":"editorConnection.object.unregister","value":"ok"}
+{"key":"editorConnection.object.deliverAfterOneUnregister","value":"2"}
+{"key":"editorConnection.object.unregisterAgain","value":"ok"}
+{"key":"editorConnection.object.deliverAfterAllUnregister","value":"0"}
+{"key":"editorConnection.static.register","value":"ok"}
+{"key":"editorConnection.static.unregister","value":"ok"}
+{"key":"editorConnection.object.subscribe","value":"ok"}
+{"key":"editorConnection.object.unsubscribe","value":"ok"}
+{"key":"editorConnection.static.subscribe","value":"ok"}
+{"key":"editorConnection.static.unsubscribe","value":"ok"}
+{"key":"editorConnection.persistent.destroyed","value":"0"}
+{"key":"editorConnection.disconnect","value":"0"}
 {"key":"event.subscribe.PrefabStage.prefabStageOpened","value":"ok"}
 {"key":"event.subscribe.PrefabStage.prefabStageClosing","value":"ok"}
 {"key":"event.subscribe.PrefabUtility.prefabInstanceReverting","value":"ok"}

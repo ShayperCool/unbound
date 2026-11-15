@@ -143,36 +143,21 @@ namespace UnityEditor
         [Unbound.EditorFaithful("no Hierarchy window is open (as the batch-mode Editor)")]
         public static void DirtyHierarchyWindowSorting() { }
 
-        /// <summary>Runs a project's [MenuItem] method (after its validate function, if any); the
-        /// Editor's own menu items are not available.</summary>
+        /// <summary>Runs a registered script or dynamic menu command after validation.</summary>
         public static bool ExecuteMenuItem(string menuItemPath)
         {
-            System.Reflection.MethodInfo run = null, check = null;
-            foreach (var method in TypeCache.GetMethodsWithAttribute<MenuItem>())
-            {
-                if (!method.IsStatic || method.GetParameters().Length != 0) continue;
-                foreach (MenuItem item in method.GetCustomAttributes(typeof(MenuItem), false))
-                {
-                    if (Menu.NormalizeItemPath(item.menuItem) != menuItemPath) continue;
-                    if (item.validate) check ??= method;
-                    else run ??= method;
-                }
-            }
-            if (run == null)
-            {
-                Stubs.Ignored("EditorApplication.ExecuteMenuItem", "runs only the project's own [MenuItem] methods without parameters");
-                return false;
-            }
+            MainThreadCheck.Check("ExecuteMenuItemInternal");
             try
             {
-                if (check != null && check.ReturnType == typeof(bool) && !(bool)check.Invoke(null, null)) return false;
-                run.Invoke(null, null);
+                if (Menu.TryExecute(menuItemPath, out bool result)) return result;
             }
-            catch (System.Reflection.TargetInvocationException e)
+            catch (System.Reflection.TargetInvocationException error)
             {
-                Debug.LogException(e.InnerException ?? e);
+                Debug.LogException(error.InnerException ?? error);
+                return true;
             }
-            return true;
+            Stubs.Ignored("EditorApplication.ExecuteMenuItem", "runs registered script and dynamic commands; other built-in commands are not available");
+            return false;
         }
 
         [Unbound.EditorFaithful("Unbound never reloads assemblies while playing")]

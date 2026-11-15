@@ -95,7 +95,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1> tuple)) throw new ArgumentException(Compat.EditorManagedResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             return comparer.Compare(m_Item1, tuple.m_Item1);
         }
@@ -165,7 +165,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2> tuple)) throw new ArgumentException(Compat.EditorManagedResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             return comparer.Compare(m_Item2, tuple.m_Item2);
@@ -243,7 +243,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2, T3> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2, T3> tuple)) throw new ArgumentException(Compat.EditorManagedResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             if ((c = comparer.Compare(m_Item2, tuple.m_Item2)) != 0) return c;
@@ -329,7 +329,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2, T3, T4> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2, T3, T4> tuple)) throw new ArgumentException(Compat.EditorManagedResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             if ((c = comparer.Compare(m_Item2, tuple.m_Item2)) != 0) return c;
@@ -423,7 +423,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2, T3, T4, T5> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2, T3, T4, T5> tuple)) throw new ArgumentException(Compat.EditorManagedResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             if ((c = comparer.Compare(m_Item2, tuple.m_Item2)) != 0) return c;
@@ -525,7 +525,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2, T3, T4, T5, T6> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2, T3, T4, T5, T6> tuple)) throw new ArgumentException(Compat.EditorManagedResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             if ((c = comparer.Compare(m_Item2, tuple.m_Item2)) != 0) return c;
@@ -635,7 +635,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2, T3, T4, T5, T6, T7> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2, T3, T4, T5, T6, T7> tuple)) throw new ArgumentException(Compat.EditorManagedResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             if ((c = comparer.Compare(m_Item2, tuple.m_Item2)) != 0) return c;
@@ -714,7 +714,7 @@ namespace UnityEditor
 
         public Tuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, TRest rest)
         {
-            if (!(rest is ITupleInternal)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleLastArgumentNotATuple" : "The last element of an eight element tuple must be a Tuple.");
+            if (!(rest is ITupleInternal)) throw new ArgumentException(Compat.EditorManagedResourceErrors ? "ArgumentException_TupleLastArgumentNotATuple" : "The last element of an eight element tuple must be a Tuple.");
             m_Item1 = item1;
             m_Item2 = item2;
             m_Item3 = item3;
@@ -754,7 +754,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2, T3, T4, T5, T6, T7, TRest> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2, T3, T4, T5, T6, T7, TRest> tuple)) throw new ArgumentException(Compat.EditorManagedResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             if ((c = comparer.Compare(m_Item2, tuple.m_Item2)) != 0) return c;

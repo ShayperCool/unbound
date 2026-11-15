@@ -13,6 +13,9 @@
     "managed/UnityEngine/Editor/Menu.cs",
     "managed/UnityEngine/Editor/Undo.cs",
     "managed/UnityEngine/Platform/PlayerConnection.cs",
-    "managed/UnityEngine/Core/Events.cs"
+    "managed/UnityEngine/Core/Events.cs",
+    "managed/UnityEngine/Editor/EditorConnection.cs",
+    "managed/UnityEngine/Runtime/ConnectionMessageRegistry.cs",
+    "managed/UnityEngine/Editor/EditorApplication.cs"
   ]
 }

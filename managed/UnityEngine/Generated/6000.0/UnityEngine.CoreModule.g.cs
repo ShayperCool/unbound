@@ -3411,7 +3411,6 @@ namespace UnityEngine.Events
     unsafe partial class UnityEvent
     {
         [global::Unbound.Stub] internal override global::UnityEngine.Events.BaseInvokableCall GetDelegate(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent.GetDelegate"); return default; }
-        [global::Unbound.Stub] internal void AddPersistentListener(global::UnityEngine.Events.UnityAction call, global::UnityEngine.Events.UnityEventCallState callState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent.AddPersistentListener"); }
         [global::Unbound.Stub] internal void RegisterPersistentListener(int index, global::UnityEngine.Events.UnityAction call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent.RegisterPersistentListener"); }
     }
     unsafe partial class UnityEventBase
@@ -3428,7 +3427,6 @@ namespace UnityEngine.Events
         [global::Unbound.Stub] internal void AddPersistentListener() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.AddPersistentListener"); }
         [global::Unbound.Stub] protected void RegisterPersistentListener(int index, object targetObj, global::System.Reflection.MethodInfo method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.RegisterPersistentListener"); }
         [global::Unbound.Stub] protected void RegisterPersistentListener(int index, object targetObj, global::System.Type targetObjType, global::System.Reflection.MethodInfo method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.RegisterPersistentListener"); }
-        [global::Unbound.Stub] internal void RemovePersistentListener(global::UnityEngine.Object target, global::System.Reflection.MethodInfo method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.RemovePersistentListener"); }
         [global::Unbound.Stub] internal void RemovePersistentListener(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.RemovePersistentListener"); }
         [global::Unbound.Stub] internal void UnregisterPersistentListener(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.UnregisterPersistentListener"); }
         [global::Unbound.Stub] internal void AddVoidPersistentListener(global::UnityEngine.Events.UnityAction call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.AddVoidPersistentListener"); }
@@ -3455,29 +3453,21 @@ namespace UnityEngine.Events
     unsafe partial class UnityEvent<T0>
     {
         [global::Unbound.Stub] internal override global::UnityEngine.Events.BaseInvokableCall GetDelegate(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0>.GetDelegate"); return default; }
-        [global::Unbound.Stub] internal void AddPersistentListener(global::UnityEngine.Events.UnityAction<T0> call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0>.AddPersistentListener"); }
-        [global::Unbound.Stub] internal void AddPersistentListener(global::UnityEngine.Events.UnityAction<T0> call, global::UnityEngine.Events.UnityEventCallState callState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0>.AddPersistentListener"); }
         [global::Unbound.Stub] internal void RegisterPersistentListener(int index, global::UnityEngine.Events.UnityAction<T0> call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0>.RegisterPersistentListener"); }
     }
     unsafe partial class UnityEvent<T0, T1>
     {
         [global::Unbound.Stub] internal override global::UnityEngine.Events.BaseInvokableCall GetDelegate(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1>.GetDelegate"); return default; }
-        [global::Unbound.Stub] internal void AddPersistentListener(global::UnityEngine.Events.UnityAction<T0, T1> call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1>.AddPersistentListener"); }
-        [global::Unbound.Stub] internal void AddPersistentListener(global::UnityEngine.Events.UnityAction<T0, T1> call, global::UnityEngine.Events.UnityEventCallState callState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1>.AddPersistentListener"); }
         [global::Unbound.Stub] internal void RegisterPersistentListener(int index, global::UnityEngine.Events.UnityAction<T0, T1> call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1>.RegisterPersistentListener"); }
     }
     unsafe partial class UnityEvent<T0, T1, T2>
     {
         [global::Unbound.Stub] internal override global::UnityEngine.Events.BaseInvokableCall GetDelegate(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1, T2>.GetDelegate"); return default; }
-        [global::Unbound.Stub] internal void AddPersistentListener(global::UnityEngine.Events.UnityAction<T0, T1, T2> call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1, T2>.AddPersistentListener"); }
-        [global::Unbound.Stub] internal void AddPersistentListener(global::UnityEngine.Events.UnityAction<T0, T1, T2> call, global::UnityEngine.Events.UnityEventCallState callState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1, T2>.AddPersistentListener"); }
         [global::Unbound.Stub] internal void RegisterPersistentListener(int index, global::UnityEngine.Events.UnityAction<T0, T1, T2> call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1, T2>.RegisterPersistentListener"); }
     }
     unsafe partial class UnityEvent<T0, T1, T2, T3>
     {
         [global::Unbound.Stub] internal override global::UnityEngine.Events.BaseInvokableCall GetDelegate(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1, T2, T3>.GetDelegate"); return default; }
-        [global::Unbound.Stub] internal void AddPersistentListener(global::UnityEngine.Events.UnityAction<T0, T1, T2, T3> call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1, T2, T3>.AddPersistentListener"); }
-        [global::Unbound.Stub] internal void AddPersistentListener(global::UnityEngine.Events.UnityAction<T0, T1, T2, T3> call, global::UnityEngine.Events.UnityEventCallState callState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1, T2, T3>.AddPersistentListener"); }
         [global::Unbound.Stub] internal void RegisterPersistentListener(int index, global::UnityEngine.Events.UnityAction<T0, T1, T2, T3> call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1, T2, T3>.RegisterPersistentListener"); }
     }
 }

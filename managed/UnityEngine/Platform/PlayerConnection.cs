@@ -10,12 +10,7 @@ namespace UnityEngine.Networking.PlayerConnection
     [Serializable]
     public partial class PlayerConnection : ScriptableObject, IEditorPlayerConnection
     {
-        sealed class Subscription
-        {
-            internal readonly UnityEvent<MessageEventArgs> Event = new UnityEvent<MessageEventArgs>();
-            internal int Count;
-        }
-        readonly Dictionary<Guid, Subscription> m_Messages = new Dictionary<Guid, Subscription>();
+        readonly ConnectionMessageRegistry m_Messages = new ConnectionMessageRegistry();
         readonly UnityEvent<int> m_Connected = new UnityEvent<int>();
         readonly UnityEvent<int> m_Disconnected = new UnityEvent<int>();
         static PlayerConnection s_Instance;
@@ -47,22 +42,13 @@ namespace UnityEngine.Networking.PlayerConnection
         public void Register(Guid messageId, UnityAction<MessageEventArgs> callback)
         {
             Validate(messageId);
-            if (!m_Messages.TryGetValue(messageId, out var entry))
-            {
-                MainThreadCheck.Check("RegisterInternal");
-                m_Messages.Add(messageId, entry = new Subscription());
-            }
-            entry.Count++;
-            entry.Event.AddListener(callback);
+            if (!m_Messages.Contains(messageId)) MainThreadCheck.Check("RegisterInternal");
+            m_Messages.Register(messageId, callback, persistent: false);
         }
         public void Unregister(Guid messageId, UnityAction<MessageEventArgs> callback)
         {
-            if (m_Messages.TryGetValue(messageId, out var entry))
-            {
-                entry.Event.RemoveListener(callback);
-                if (--entry.Count <= 0) m_Messages.Remove(messageId);
-            }
-            if (!m_Messages.ContainsKey(messageId)) MainThreadCheck.Check("UnregisterInternal");
+            m_Messages.Unregister(messageId, callback);
+            if (!m_Messages.Contains(messageId)) MainThreadCheck.Check("UnregisterInternal");
         }
         public void RegisterConnection(UnityAction<int> callback) => m_Connected.AddListener(callback);
         public void RegisterDisconnection(UnityAction<int> callback) => m_Disconnected.AddListener(callback);

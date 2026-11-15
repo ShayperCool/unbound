@@ -34,7 +34,7 @@ namespace UnityEngine.Events
 
         /// <summary>Unity's UnityEventTools.TidyAssemblyTypeName: drops version, culture and key,
         /// and names UnityEngine.*Module types as in UnityEngine.</summary>
-        static string TidyAssemblyTypeName(string name)
+        internal static string TidyAssemblyTypeName(string name)
         {
             if (string.IsNullOrEmpty(name)) return name;
             int cut = int.MaxValue;
@@ -63,18 +63,31 @@ namespace UnityEngine.Events
         [FormerlySerializedAs("enabled")] [FormerlySerializedAs("m_Enabled")] [SerializeField] UnityEventCallState m_CallState = UnityEventCallState.RuntimeOnly;
 
         public Object target => m_Target;
-        public string targetAssemblyTypeName => m_TargetAssemblyTypeName;
+        public string targetAssemblyTypeName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(m_TargetAssemblyTypeName) && m_Target != null)
+                    m_TargetAssemblyTypeName = ArgumentCache.TidyAssemblyTypeName(m_Target.GetType().AssemblyQualifiedName);
+                return m_TargetAssemblyTypeName;
+            }
+        }
         public string methodName => m_MethodName;
         public PersistentListenerMode mode { get => m_Mode; set => m_Mode = value; }
         public ArgumentCache arguments => m_Arguments;
         public UnityEventCallState callState { get => m_CallState; set => m_CallState = value; }
 
-        public bool IsValid() => m_Target != null && !string.IsNullOrEmpty(m_MethodName);
+        public bool IsValid() => !string.IsNullOrEmpty(targetAssemblyTypeName) && !string.IsNullOrEmpty(m_MethodName);
 
         internal void Register(Object target, string method, PersistentListenerMode mode)
         {
+            Register(target, target?.GetType(), method, mode);
+        }
+
+        internal void Register(Object target, Type targetType, string method, PersistentListenerMode mode)
+        {
             m_Target = target;
-            m_TargetAssemblyTypeName = target?.GetType().AssemblyQualifiedName;
+            m_TargetAssemblyTypeName = ArgumentCache.TidyAssemblyTypeName(targetType?.AssemblyQualifiedName);
             m_MethodName = method;
             m_Mode = mode;
         }
@@ -82,9 +95,12 @@ namespace UnityEngine.Events
         /// <summary>A callable for this entry, or null when the target or method is missing.</summary>
         internal Action<object[]> Resolve(UnityEventBase owner)
         {
-            if (m_CallState == UnityEventCallState.Off || m_Target == null || string.IsNullOrEmpty(m_MethodName))
+            if (m_CallState == UnityEventCallState.Off || !IsValid())
                 return null;
-            var targetType = m_Target.GetType();
+            if (m_CallState == UnityEventCallState.RuntimeOnly
+                && (!Unbound.Runtime.EditorSession.IsPlaying || (m_Target != null && !Application.IsPlaying(m_Target)))) return null;
+            var targetType = m_Target != null ? m_Target.GetType() : Unbound.Runtime.TypeResolver.FindByAssemblyQualifiedName(targetAssemblyTypeName);
+            if (targetType == null) return null;
             MethodInfo method;
             object[] fixedArgs = null;
             switch (m_Mode)
@@ -132,7 +148,7 @@ namespace UnityEngine.Events
             var target = m_Target;
             return args =>
             {
-                if (target == null) return;
+                if (target == null && !method.IsStatic) return;
                 try
                 {
                     method.Invoke(method.IsStatic ? null : target, fixedArgs ?? args);
@@ -205,6 +221,39 @@ namespace UnityEngine.Events
         }
 
         internal void AddCall(Delegate call) => m_RuntimeCalls.Add(call);
+
+        internal void UaAddPersistentCall(Delegate callback, UnityEventCallState state)
+        {
+            var call = new PersistentCall();
+            m_PersistentCalls.AddListener(call);
+            if (callback == null) Debug.LogWarning("Registering a Listener requires an action");
+            else
+            {
+                var method = callback.Method;
+                var target = callback.Target as Object;
+                if (method.DeclaringType == null)
+                    throw new NullReferenceException($"Method '{method.Name}' declaring type is null, global methods are not supported");
+                if (!method.IsStatic && (target == null || target.GetInstanceID() == 0))
+                    throw new ArgumentException($"Could not register callback {method.Name} on {target}. The class {(target == null ? "null" : target.GetType().ToString())} does not derive from UnityEngine.Object");
+                if (FindMethod_Impl(method.Name, method.IsStatic ? method.DeclaringType : target.GetType()) == null)
+                    Debug.LogWarning($"Could not register listener {target}.{method} on {GetType()} the method could not be found.");
+                else call.Register(target, method.DeclaringType, method.Name, PersistentListenerMode.EventDefined);
+            }
+            call.callState = state;
+            DirtyPersistentCalls();
+        }
+
+        internal void RemovePersistentListener(Object target, MethodInfo method)
+        {
+            if (method == null) return;
+            for (int i = m_PersistentCalls.Count - 1; i >= 0; i--)
+            {
+                var call = m_PersistentCalls.GetListener(i);
+                if (call.target == target && call.methodName == method.Name) m_PersistentCalls.RemoveListener(i);
+            }
+            DirtyPersistentCalls();
+        }
+
 
         protected void RemoveListener(object targetObj, MethodInfo method)
         {
@@ -313,7 +362,8 @@ namespace UnityEngine.Events
 
         public void Invoke() => InvokeRuntime<UnityAction>(a => a(), Array.Empty<object>());
 
-        internal void AddPersistentListener(UnityAction call) => AddCall(call);
+        internal void AddPersistentListener(UnityAction call) => AddPersistentListener(call, UnityEventCallState.RuntimeOnly);
+        internal void AddPersistentListener(UnityAction call, UnityEventCallState callState) => UaAddPersistentCall(call, callState);
     }
 
     [Serializable]
@@ -322,6 +372,9 @@ namespace UnityEngine.Events
         public UnityEvent() { }
 
         public void AddListener(UnityAction<T0> call) => AddCall(call);
+
+        internal void AddPersistentListener(UnityAction<T0> call) => AddPersistentListener(call, UnityEventCallState.RuntimeOnly);
+        internal void AddPersistentListener(UnityAction<T0> call, UnityEventCallState callState) => UaAddPersistentCall(call, callState);
         public void RemoveListener(UnityAction<T0> call) => RemoveCall(call);
 
         protected override MethodInfo FindMethod_Impl(string name, Type targetObjType) => GetValidMethodInfo(targetObjType, name, new[] { typeof(T0) });
@@ -337,6 +390,9 @@ namespace UnityEngine.Events
         public UnityEvent() { }
 
         public void AddListener(UnityAction<T0, T1> call) => AddCall(call);
+
+        internal void AddPersistentListener(UnityAction<T0, T1> call) => AddPersistentListener(call, UnityEventCallState.RuntimeOnly);
+        internal void AddPersistentListener(UnityAction<T0, T1> call, UnityEventCallState callState) => UaAddPersistentCall(call, callState);
         public void RemoveListener(UnityAction<T0, T1> call) => RemoveCall(call);
 
         protected override MethodInfo FindMethod_Impl(string name, Type targetObjType) => GetValidMethodInfo(targetObjType, name, new[] { typeof(T0), typeof(T1) });
@@ -352,6 +408,9 @@ namespace UnityEngine.Events
         public UnityEvent() { }
 
         public void AddListener(UnityAction<T0, T1, T2> call) => AddCall(call);
+
+        internal void AddPersistentListener(UnityAction<T0, T1, T2> call) => AddPersistentListener(call, UnityEventCallState.RuntimeOnly);
+        internal void AddPersistentListener(UnityAction<T0, T1, T2> call, UnityEventCallState callState) => UaAddPersistentCall(call, callState);
         public void RemoveListener(UnityAction<T0, T1, T2> call) => RemoveCall(call);
 
         protected override MethodInfo FindMethod_Impl(string name, Type targetObjType) => GetValidMethodInfo(targetObjType, name, new[] { typeof(T0), typeof(T1), typeof(T2) });
@@ -367,6 +426,9 @@ namespace UnityEngine.Events
         public UnityEvent() { }
 
         public void AddListener(UnityAction<T0, T1, T2, T3> call) => AddCall(call);
+
+        internal void AddPersistentListener(UnityAction<T0, T1, T2, T3> call) => AddPersistentListener(call, UnityEventCallState.RuntimeOnly);
+        internal void AddPersistentListener(UnityAction<T0, T1, T2, T3> call, UnityEventCallState callState) => UaAddPersistentCall(call, callState);
         public void RemoveListener(UnityAction<T0, T1, T2, T3> call) => RemoveCall(call);
 
         protected override MethodInfo FindMethod_Impl(string name, Type targetObjType) => GetValidMethodInfo(targetObjType, name, new[] { typeof(T0), typeof(T1), typeof(T2), typeof(T3) });

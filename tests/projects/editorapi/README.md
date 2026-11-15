@@ -1,6 +1,6 @@
 # Editor APIs in Play mode
 
-The Unity 6000.0.71f1 reference contains 162 exact rows from two independent windowed
+The Unity 6000.0.71f1 reference contains 247 exact rows from two independent windowed
 GPU Editor captures. Both exited normally on the NVIDIA GeForce RTX 4060. The probe
 records all requested event subscriptions, 30 idle frames, queries, constructors,
 disconnected messaging, thread checks, reflected client requirements and an active Undo
@@ -30,8 +30,13 @@ queued, unexpected and stale entries. Nothing is removed from the reference comp
 - Menu checkmarks are stored independently of Play state. Existing project commands and
   Play/Pause/Step entries accept changes; unknown, null and empty paths stay unchecked.
   A project command registered with a hotkey also executes through its ordinary menu path.
-  Get/Set reject worker calls without changing a prior checkmark. Other built-in Editor
-  menus and dynamic menu registration remain outside the supported command registry.
+  Get/Set and command execution reject worker calls without changing state.
+  The registry now also owns dynamic commands, validation and parent menu entries.
+  Removing a parent removes its descendants; removing a leaf retains its parents.
+  Duplicate dynamic registration updates the checkmark and retains the original callbacks.
+  Script validators bind to the full attribute registration string, including shortcut text.
+  A fresh throwing validator reports its exception and returns disabled. Other built-in
+  Editor commands and context commands remain outside the supported command registry.
 - Case-sensitive type-name lookup reuses the complete 333-class table already recorded by
   `tests/projects/classids`, with an exact release selection through Compat. Names and
   persistent IDs remain available for classes without an importer. Unknown names return
@@ -46,6 +51,17 @@ queued, unexpected and stale entries. Nothing is removed from the reference comp
   sends, unregister transitions and disconnect reject worker calls with the measured
   validation order. Empty-event null removal is also checked directly. Attached-peer
   transport and receive polling remain unsupported.
+- EditorConnection reports an empty connected-player list without a player. Its subscriptions
+  use persistent UnityEvents, so ordinary CLR instance targets are rejected while Unity
+  objects and static methods work. Duplicate message callbacks remain persistent after one
+  unregister, and disappear when the message membership count reaches zero. Controls invoke
+  the incoming message entry with a payload and player ID. Existing-player replay is checked
+  by changing the public list before registration. Runtime callbacks use the same message
+  membership helper with ordinary listeners, and retain their effective removal behavior.
+  The shared persistent event controls exercise static calls, missing stored target-type
+  recovery, destroyed targets, and RuntimeOnly versus EditorAndRuntime in Edit mode.
+  Sends, registration transitions and initialization retain their measured thread checks.
+  Attached-peer transport and receive polling remain unsupported.
 - Memory snapshot metadata stores its description, and `CreatingMetadata` retains
   subscribers. Snapshot production remains unsupported. Developer queries answer for the
   measured retail Editor profile.
@@ -104,3 +120,14 @@ regular versus exact fallback control makes that guarantee affect the result.
 [Editor.CreateEditor](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Editor.CreateEditor.html)
 uses the matching registration when no explicit editor type is supplied. The dynamic
 registration control starts from an unregistered target and verifies the resulting editor.
+
+[Menu.GetEnabled](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Menu.GetEnabled.html)
+reports command availability. The validator controls toggle the result and verify that disabled
+commands do not execute. [UnityEventCallState](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Events.UnityEventCallState.html)
+distinguishes RuntimeOnly from EditorAndRuntime. The Edit-mode control invokes the same listener
+before and after changing that state, and records `0:5`.
+
+The Play/Pause/Step availability controls cover ordinary Play mode on 6000.0.71f1.
+`Compat.EditorPlayMenusMeasured` selects that context. Other releases and availability
+queries outside Play mode remain explicitly unsupported. Broader menu construction
+phases and notifications caused by pause changes remain follow-ups.

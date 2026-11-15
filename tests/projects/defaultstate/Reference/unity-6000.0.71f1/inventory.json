@@ -1489,6 +1489,12 @@
       "type": "UnityEditor.MonoScript"
     },
     {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Networking.PlayerConnection.ConnectedPlayer"
+    },
+    {
       "category": "scriptable",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",

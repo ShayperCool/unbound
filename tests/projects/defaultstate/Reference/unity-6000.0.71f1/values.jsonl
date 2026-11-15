@@ -660,6 +660,10 @@
 {"key":"UnityEditor.MonoScript/Property/UnityEngine.TextAsset/bytes","status":"value","value":"[]"}
 {"key":"UnityEditor.MonoScript/Property/UnityEngine.TextAsset/dataSize","status":"value","value":"0"}
 {"key":"UnityEditor.MonoScript/Property/UnityEngine.TextAsset/text","status":"value","value":"string:"}
+{"key":"UnityEditor.Networking.PlayerConnection.ConnectedPlayer/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.Networking.PlayerConnection.ConnectedPlayer/Property/UnityEditor.Networking.PlayerConnection.ConnectedPlayer/PlayerId","status":"value","value":"0"}
+{"key":"UnityEditor.Networking.PlayerConnection.ConnectedPlayer/Property/UnityEditor.Networking.PlayerConnection.ConnectedPlayer/name","status":"value","value":"null"}
+{"key":"UnityEditor.Networking.PlayerConnection.ConnectedPlayer/Property/UnityEditor.Networking.PlayerConnection.ConnectedPlayer/playerId","status":"value","value":"0"}
 {"key":"UnityEditor.Networking.PlayerConnection.EditorConnection/@factory","status":"value","value":"scriptable"}
 {"key":"UnityEditor.Networking.PlayerConnection.EditorConnection/Property/UnityEditor.Networking.PlayerConnection.EditorConnection/ConnectedPlayers","status":"value","value":"[]"}
 {"key":"UnityEditor.Networking.PlayerConnection.EditorConnection/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:0"}

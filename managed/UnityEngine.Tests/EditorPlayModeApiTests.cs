@@ -103,7 +103,7 @@ namespace UnityEngine.Tests
             }
         }
 
-        sealed class DiagnosticCapture : ILogHandler
+        internal sealed class DiagnosticCapture : ILogHandler
         {
             readonly ILogHandler m_Next;
             internal readonly List<string> Warnings = new List<string>();

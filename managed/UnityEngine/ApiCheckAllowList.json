@@ -205,13 +205,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEditor.Networking.PlayerConnection.EditorConnection",
-    "Message": "type interfaces is , Unity's is UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection",
-    "Reason": "Q410-Editor-interfaces: UnityEditor.Networking.PlayerConnection.EditorConnection needs player-connection registration, target selection and message lifetime. Selected interface members must use that state and receive divergent-state controls rather than empty implementations."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEditor.PackageManager.Requests.Request",
     "Message": "type interfaces is , Unity's is UnityEngine.ISerializationCallbackReceiver",
     "Reason": "Q410-Editor-interfaces: UnityEditor.PackageManager.Requests.Request needs request status/error payload restoration callbacks. Selected interface members must use that state and receive divergent-state controls rather than empty implementations."
@@ -978,13 +971,6 @@
     "Type": "UnityEditor.CustomEditor",
     "Message": "UnityEngine/Editor/CustomEditorAttributes.cs Initialize: type.GetCustomAttribute<CustomEditor>(false): inherit is False, reference AttributeUsage is True",
     "Reason": "Q410-measured-lookup-policies: CustomEditor registration uses the editor class declaration; editorForChildClasses separately controls target inheritance. Native base, no-children and children controls and the unmarked editor subclass are recorded in tests/projects/attributeinheritance."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "lookup",
-    "Type": "UnityEditor.MenuItem",
-    "Message": "UnityEngine/Editor/EditorApplication.cs ExecuteMenuItem: method.GetCustomAttributes(typeof(MenuItem), false): inherit is False, reference AttributeUsage is True",
-    "Reason": "Q410-measured-lookup-policies: Menu registration uses each declared static method. Native menu controls execute the marked base method once and omit the hiding method, tests/projects/attributeinheritance."
   },
   {
     "Release": "6000.0.71f1",

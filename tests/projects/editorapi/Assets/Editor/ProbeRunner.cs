@@ -30,6 +30,12 @@ public static class ProbeRunner
         string output = Environment.GetEnvironmentVariable("EDITORAPI_PROBE_OUT");
         // Unbound runs the probe by itself and quits through EditorApplication.Exit.
         bool unbound = typeof(Camera).Assembly.GetType("Unbound.Runtime.FrameBuilder") != null;
+        if (output != null && !Application.isPlaying && !SessionState.GetBool("EditorApiProbe.beforePlay", false))
+        {
+            SessionState.SetBool("EditorApiProbe.beforePlay", true);
+            Directory.CreateDirectory(output);
+            File.WriteAllText(Path.Combine(output, "persistent-before-play.txt"), EditorConnectionControls.BeforePlay());
+        }
         if (output == null || Application.isBatchMode || unbound) return;
         if (SessionState.GetBool("EditorApiProbe.finished", false))
         {
