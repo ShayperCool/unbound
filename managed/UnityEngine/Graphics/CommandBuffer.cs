@@ -633,7 +633,8 @@ namespace UnityEngine.Rendering
             var destinationTexture = Resolve(dst, c);
             // The screen is no texture to copy: CameraTarget of a camera drawing to the screen (and
             // outside cameras) names none, nor does the texture standing for it (measured on the
-            // macOS Editor's Metal device: tests/projects/nativegfx metal.jsonl screencopy.*,
+            // macOS Editor's Metal device, in batch mode and windowed in Play mode's Game view:
+            // tests/projects/nativegfx metal.jsonl and metal-windowed.jsonl screencopy.*,
             // screencamera.*; the copy is skipped with these errors).
             if (sourceTexture == null || sourceTexture == RenderTexture.ScreenStandIn)
             {
