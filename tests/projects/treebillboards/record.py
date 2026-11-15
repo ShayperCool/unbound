@@ -37,7 +37,7 @@ def complete(directory):
     path = directory/'treebillboards.jsonl'
     lines = path.read_text().splitlines() if path.is_file() else []
     if sum('"image"' in line for line in lines) != 19 or sum('"atlasImage"' in line for line in lines) != 3 \
-            or not any('"defaults"' in line for line in lines) or not any('"atlas"' in line for line in lines):
+            or not any('"defaults"' in line for line in lines) or not any(line.startswith('{"atlas":"') for line in lines):
         return 'missing or incomplete treebillboards.jsonl'
     return None
 

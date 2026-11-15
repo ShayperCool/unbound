@@ -20,10 +20,11 @@ namespace UnityEngine
     /// pitch and yaw, redrawn when either turns by more than 0.1 degree or its lights change; drawn back to front with
     /// Hidden/TerrainEngine/BillboardTree, whose vertex program drops those past treeDistance.</item>
     /// </list>
-    /// Unmeasured: wind zones (warned; trees drawn unbent), several lights (the first four
-    /// directional lights light the atlas), more than 500 trees (the Editor batches them by area,
-    /// drawing far areas in another order). treeMaximumFullLODCount changes nothing (measured,
-    /// tests/projects/treebillboards maxmesh3).
+    /// The first four directional lights made light the atlas (measured with six,
+    /// tests/projects/treebillboards sixlights). Unmeasured: wind zones (warned; trees drawn
+    /// unbent), more than 500 trees (the Editor batches them by area, drawing far areas in another
+    /// order). treeMaximumFullLODCount changes nothing (measured, tests/projects/treebillboards
+    /// maxmesh3).
     /// </summary>
     internal sealed partial class TerrainRenderer
     {
