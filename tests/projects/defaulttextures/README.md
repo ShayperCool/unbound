@@ -19,9 +19,9 @@ Measured in the Unity 6000.0.71f1 Editor (two identical captures, NVIDIA driver)
   textures `R8G8B8A8_SRGB`; `blackTexture` and `redTexture` have alpha 0, `grayTexture` 127/255 in
   every channel.
 
-The engine matches every value (`residuals.json` is empty); the built-in textures' colours,
+The engine matches every value (no residuals); the built-in textures' colours,
 colour spaces and mips are also recorded by tests/projects/lightmapencoding `default/*` on
-Standalone and Android, in linear and gamma projects.
+Standalone and Android in linear projects and on Android in gamma projects.
 
     python3 tests/projects/defaulttextures/run.py record --label A   # Editor capture (GPU)
     python3 tests/projects/defaulttextures/run.py record --label B
