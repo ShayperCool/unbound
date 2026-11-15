@@ -302,6 +302,34 @@ mod tests {
         }
     }
 
+    /// The built-in Materials' records carry the render queue override the install stores, as
+    /// text (a Native asset-state observation of the resource files; the managed side reads it
+    /// from these records): 3000 and 2000 overrides, -1 for none.
+    #[test]
+    fn builtin_material_records_carry_their_stored_queue() {
+        let Some(data) = installed() else { return };
+        for (guid, file_id, name, queue) in [
+            (EXTRA_GUID, 10301, "Default-Particle", "-1"),
+            (EXTRA_GUID, 10303, "Default-Material", "-1"),
+            (EXTRA_GUID, 10304, "Default-Skybox", "-1"),
+            (EXTRA_GUID, 10308, "Default-ParticleSystem", "3000"),
+            (EXTRA_GUID, 10754, "Sprites-Default", "-1"),
+            (EXTRA_GUID, 15302, "SpatialMappingOcclusion", "2000"),
+            (EXTRA_GUID, 15303, "SpatialMappingWireframe", "2000"),
+            (
+                DEFAULT_GUID,
+                10756,
+                "FrameDebuggerRenderTargetDisplay",
+                "-1",
+            ),
+        ] {
+            let answer = get(&data, guid, file_id).unwrap();
+            assert_eq!(answer["classId"], 21, "{file_id}");
+            assert_eq!(answer["fields"]["m_Name"], name, "{file_id}");
+            assert_eq!(answer["fields"]["m_CustomRenderQueue"], queue, "{file_id}");
+        }
+    }
+
     /// The Editor's resources by GUID answer exactly what the path-id request answers.
     #[test]
     fn the_editor_guid_answers_as_the_path_id_request() {

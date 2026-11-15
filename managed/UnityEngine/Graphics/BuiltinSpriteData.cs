@@ -147,10 +147,10 @@ namespace Unbound.Runtime
                     throw new FormatException("the material has no shader");
                 if (BuiltinShaders.Resolve(shaderGuid, shaderFileId) is not Shader)
                     throw new FormatException($"its shader {{fileID: {shaderFileId}, guid: {shaderGuid}}} is not a built-in shader");
-                int queue = StoredRenderQueue(fields);
+                // Checked strictly here; the record's reader then takes it as a project material's.
+                StoredRenderQueue(fields);
                 material = new Material { name = name };
                 material.ReadBuiltinRecord(fields);
-                material.m_CustomRenderQueue = queue;
                 return material;
             }
             catch (Exception e)
