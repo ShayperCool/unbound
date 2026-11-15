@@ -1204,13 +1204,11 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Registers the objects of a loaded file again after an import changed them:
-        /// objects it no longer has are forgotten, new ones found by their file ids.</summary>
-        internal static void RefreshObjects(LoadedFile file)
+        /// the file ids it gave up are forgotten, its objects found by their file ids.</summary>
+        internal static void RefreshObjects(LoadedFile file, List<long> removed)
         {
-            var stale = new List<(string, long)>();
-            foreach (var key in s_Objects.Keys)
-                if (string.Equals(key.Item1, file.Guid, StringComparison.OrdinalIgnoreCase) && !file.Objects.ContainsKey(key.Item2)) stale.Add(key);
-            foreach (var key in stale) s_Objects.Remove(key);
+            foreach (long id in removed)
+                if (!file.Objects.ContainsKey(id)) s_Objects.Remove((file.Guid, id));
             foreach (var pair in file.Objects) s_Objects[(file.Guid, pair.Key)] = pair.Value;
         }
 

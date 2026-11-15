@@ -250,6 +250,12 @@ namespace UnityEditor
                 case "animatorcontroller": case "runtimeanimatorcontroller": return ext == ".controller";
                 case "textasset": return e.Kind == "text";
                 case "shader": return e.Kind == "shader";
+                // Graph files by what they import to: an effect asset, or a subgraph by its extension.
+                case "visualeffectobject": return e.Kind == "vfx";
+                case "visualeffectasset": return e.Kind == "vfx" && ext == UnityEditor.VFX.VisualEffectResource.Extension;
+                case "visualeffectsubgraph": return e.Kind == "vfx" && ext != UnityEditor.VFX.VisualEffectResource.Extension;
+                case "visualeffectsubgraphoperator": return ext == UnityEditor.VFX.VisualEffectSubgraphOperator.Extension;
+                case "visualeffectsubgraphblock": return ext == UnityEditor.VFX.VisualEffectSubgraphBlock.Extension;
                 case "font": return e.Kind == "font";
                 case "model": case "mesh": return e.Kind == "model";
                 case "monoscript": case "script": return e.Kind == "script";

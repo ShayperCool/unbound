@@ -22,7 +22,8 @@ namespace UnityEngine.VFX
     /// asset's spawn contexts read, laid out as the compiled graph's event attribute buffer and
     /// starting at the graph's values. A read of a name the layout lacks, or with another type,
     /// answers the type's default; such a write does nothing (no message: Unity 6000.0.71f1,
-    /// tests/projects/vfx).
+    /// tests/projects/vfx). Not measured: one name with different types in two graphs (a custom
+    /// attribute), where a copy takes the other set's word count clamped to this set.
     /// </summary>
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public sealed partial class VFXEventAttribute : IDisposable
@@ -80,12 +81,31 @@ namespace UnityEngine.VFX
 
         uint[] Words => m_Words ?? throw new NullReferenceException();
 
-        /// <summary>Takes the values of another attribute set of the same layout.</summary>
+        /// <summary>Takes the values of another attribute set, attribute by attribute: each
+        /// attribute of this layout takes the value the other set has under the same name, where
+        /// it has one (as many words as the other's type has); the rest keep their values.</summary>
         public void CopyValuesFrom(VFXEventAttribute eventAttibute)
         {
             if (eventAttibute == null) throw new ArgumentNullException(nameof(eventAttibute));
-            int count = Math.Min(Words.Length, eventAttibute.Words.Length);
-            Array.Copy(eventAttibute.Words, Words, count);
+            var from = eventAttibute.Words;
+            var into = Words;
+            if (ReferenceEquals(m_Layout, eventAttibute.m_Layout))
+            {
+                Array.Copy(from, into, Math.Min(from.Length, into.Length));
+                return;
+            }
+            var names = eventAttibute.m_Data.EventAttributeIds;
+            for (int i = 0; i < m_Layout.Length; i++)
+            {
+                int other = Array.IndexOf(names, m_Data.EventAttributeIds[i]);
+                if (other < 0) continue;
+                var source = eventAttibute.m_Layout[other];
+                int words = VFXExpressionHelper.GetSizeOfType(source.type);
+                int at = (int)m_Layout[i].offset.element, sourceAt = (int)source.offset.element;
+                // The same name with a larger type in the other layout: what fits this set.
+                words = Math.Min(words, Math.Min(into.Length - at, from.Length - sourceAt));
+                if (words > 0) Array.Copy(from, sourceAt, into, at, words);
+            }
         }
 
         /// <summary>The first word of an attribute of a name and type; -1 without one.</summary>

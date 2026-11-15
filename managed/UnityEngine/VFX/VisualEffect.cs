@@ -33,9 +33,11 @@ namespace UnityEngine.VFX
     /// default, the write does nothing;</item>
     /// <item><see cref="ResetOverride(int)"/> gives an overridden property the asset's value back;</item>
     /// <item>a texture of another dimension than the property's is refused with an error;</item>
-    /// <item>overrides outlive an asset change: they are kept by name and type, and a property
-    /// of the new asset (or of the first one, assigned again later) with the same name and type
-    /// takes its override back.</item>
+    /// <item>an asset change keeps overrides by name and type: the new sheet takes the
+    /// component's saved overrides and, over them, the current ones. The saved overrides are
+    /// those the component was loaded with, or had when it was last serialized (cloned) after an
+    /// override changed; an asset change itself saves nothing, so an override that only lived
+    /// in the sheet is gone once an asset without that property has been assigned.</item>
     /// </list>
     /// </summary>
     [ClassId(2083052967)]
@@ -71,7 +73,10 @@ namespace UnityEngine.VFX
         uint m_ResourceVersion;
         bool m_Pause;
         float m_PlayRate = 1f;
+        /// <summary>The saved overrides: the serialized sheet, as loaded or last written back.</summary>
         List<SerializedOverride> m_Serialized;
+        /// <summary>Whether an override changed since the saved overrides were written back.</summary>
+        bool m_SheetChanged;
 
         // The runtime sheet: one entry per exposed property of the asset, in the asset's order.
         VisualEffectCompiledData m_Data = VisualEffectCompiledData.Empty;
@@ -86,7 +91,7 @@ namespace UnityEngine.VFX
         /// <c>unbound doctor</c> say it).</summary>
         internal const string NotSimulated = "Visual Effect Graph systems are not simulated or drawn yet: the effect shows nothing";
 
-        static bool s_WarnedNotSimulated;
+        internal static bool s_WarnedNotSimulated;
 
         internal override void OnEngineEnable() => WarnNotSimulated();
 
@@ -107,10 +112,12 @@ namespace UnityEngine.VFX
             get => m_Asset;
             set
             {
-                KeepOverrides();
+                // The saved overrides with the current ones over them, for the new sheet only.
+                var merged = m_Serialized == null ? null : new List<SerializedOverride>(m_Serialized);
+                WriteBack(ref merged);
                 m_Asset = value;
                 CreateSheet();
-                ApplySerialized();
+                Apply(merged);
                 WarnNotSimulated();
             }
         }
@@ -181,7 +188,7 @@ namespace UnityEngine.VFX
             m_ResourceVersion = (uint)body.Long("m_ResourceVersion");
             m_Serialized = ReadSheet(body.Get("m_PropertySheet"), resolver);
             CreateSheet();
-            ApplySerialized();
+            Apply(m_Serialized);
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
@@ -196,11 +203,16 @@ namespace UnityEngine.VFX
             m_ResourceVersion = s.m_ResourceVersion;
             m_Pause = s.m_Pause;
             m_PlayRate = s.m_PlayRate;
-            // The copy has the source's overrides, as a copy of its serialized sheet would.
-            s.KeepOverrides();
+            // A copy is made of the source as serialized: the source writes its changed overrides
+            // back into its saved ones first, and the copy starts from those.
+            if (s.m_SheetChanged)
+            {
+                s.WriteBack(ref s.m_Serialized);
+                s.m_SheetChanged = false;
+            }
             m_Serialized = s.m_Serialized == null ? null : new List<SerializedOverride>(s.m_Serialized);
             CreateSheet();
-            ApplySerialized();
+            Apply(m_Serialized);
         }
 
         /// <summary>A new sheet for the current asset: every property at the asset's value.</summary>
@@ -328,11 +340,11 @@ namespace UnityEngine.VFX
             }
         }
 
-        /// <summary>Writes the sheet back into the serialized overrides before the sheet is
-        /// replaced: a property's entry (the first of its name in the list of its type) takes its
-        /// current value and overridden flag; an overridden property without an entry gets one.
-        /// Entries of other names and types stay as they are.</summary>
-        void KeepOverrides()
+        /// <summary>Writes the sheet into a list of overrides: a property's entry (the first of
+        /// its name in the list of its type) takes its current value and overridden flag; an
+        /// overridden property without an entry gets one. Entries of other names and types stay
+        /// as they are.</summary>
+        void WriteBack(ref List<SerializedOverride> entries)
         {
             for (int i = 0; i < m_Overridden.Length; i++)
             {
@@ -341,8 +353,8 @@ namespace UnityEngine.VFX
                 var kind = KindOf(type);
                 int nameId = m_Data.ExposedId(i);
                 int at = -1;
-                for (int e = 0; m_Serialized != null && e < m_Serialized.Count; e++)
-                    if (m_Serialized[e].Kind == kind && m_Serialized[e].NameId == nameId)
+                for (int e = 0; entries != null && e < entries.Count; e++)
+                    if (entries[e].Kind == kind && entries[e].NameId == nameId)
                     {
                         at = e;
                         break;
@@ -365,18 +377,18 @@ namespace UnityEngine.VFX
                         break;
                     default: entry.Object = m_Values.GetObject(expression); break;
                 }
-                if (at < 0) (m_Serialized ??= new List<SerializedOverride>()).Add(entry);
-                else m_Serialized[at] = entry;
+                if (at < 0) (entries ??= new List<SerializedOverride>()).Add(entry);
+                else entries[at] = entry;
             }
         }
 
-        /// <summary>Applies the serialized overrides to the sheet: an entry names the first
-        /// property of its name; when that property has the entry's type it takes the entry's
-        /// overridden flag, and its value when overridden. Other entries are left out.</summary>
-        void ApplySerialized()
+        /// <summary>Applies overrides to the sheet: an entry names the first property of its
+        /// name; when that property has the entry's type it takes the entry's overridden flag,
+        /// and its value when overridden. Other entries are left out.</summary>
+        void Apply(List<SerializedOverride> entries)
         {
-            if (m_Serialized == null) return;
-            foreach (var entry in m_Serialized)
+            if (entries == null) return;
+            foreach (var entry in entries)
             {
                 int index = m_Data.ExposedIndex(entry.NameId);
                 if (index < 0) continue;
@@ -492,6 +504,7 @@ namespace UnityEngine.VFX
             int index = Find(nameID, type);
             if (index < 0) return;
             m_Overridden[index] = true;
+            m_SheetChanged = true;
             m_Values.SetWord(Expression(index), word);
         }
 
@@ -500,6 +513,7 @@ namespace UnityEngine.VFX
             int index = Find(nameID, type);
             if (index < 0) return;
             m_Overridden[index] = true;
+            m_SheetChanged = true;
             m_Values.SetVector(Expression(index), value, components);
         }
 
@@ -508,6 +522,7 @@ namespace UnityEngine.VFX
             int index = Find(nameID, type);
             if (index < 0) return;
             m_Overridden[index] = true;
+            m_SheetChanged = true;
             m_Values.SetObject(Expression(index), value);
         }
 
@@ -524,6 +539,7 @@ namespace UnityEngine.VFX
             int index = Find(nameID, VFXValueType.Matrix4x4);
             if (index < 0) return;
             m_Overridden[index] = true;
+            m_SheetChanged = true;
             m_Values.SetMatrix(Expression(index), v);
         }
 
@@ -556,6 +572,7 @@ namespace UnityEngine.VFX
                 }
             }
             m_Overridden[index] = true;
+            m_SheetChanged = true;
             m_Values.SetObject(Expression(index), t);
         }
 
@@ -728,6 +745,7 @@ namespace UnityEngine.VFX
             int index = m_Data.ExposedIndex(nameID);
             if (index < 0 || !m_Overridden[index]) return;
             m_Overridden[index] = false;
+            m_SheetChanged = true;
             m_Values.LoadConstant(Expression(index));
         }
 

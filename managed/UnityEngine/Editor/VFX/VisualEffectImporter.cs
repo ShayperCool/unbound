@@ -128,7 +128,7 @@ namespace Unbound.Runtime
             resource.m_Object = main;
             // The asset is what the import makes: the file's own objects are its source.
             file.SourceObjects = new HashSet<Object>(contents, ReferenceEqualityComparer.Instance) { resource };
-            if (main is VisualEffectAsset asset) Build(resource, asset, file);
+            if (main is VisualEffectAsset asset) Build(resource, asset, file, null);
             NotifyImported(info.Path);
             return file;
         }
@@ -180,15 +180,17 @@ namespace Unbound.Runtime
             if (resource == null) return false;
             if (resource.m_Object is VisualEffectAsset asset)
             {
-                Build(resource, asset, file);
-                AssetDatabaseRuntime.RefreshObjects(file);
+                var removed = new List<long>();
+                Build(resource, asset, file, removed);
+                AssetDatabaseRuntime.RefreshObjects(file, removed);
             }
             return true;
         }
 
         /// <summary>Compiles the resource's graph and gives the asset the result: steps 2 to 5 of
         /// the import.</summary>
-        static void Build(VisualEffectResource resource, VisualEffectAsset asset, LoadedFile file)
+        /// <param name="removed">Takes the file ids of the objects a previous import made, which this one replaces.</param>
+        static void Build(VisualEffectResource resource, VisualEffectAsset asset, LoadedFile file, List<long> removed)
         {
             if (VisualEffectResource.onCompileResource == null)
             {
@@ -215,7 +217,7 @@ namespace Unbound.Runtime
             foreach (var previous in asset.m_Imported)
             {
                 if (previous == null) continue;
-                RemoveObject(file, previous);
+                if (RemoveObject(file, previous, out long id)) removed?.Add(id);
                 Object.DestroyImmediate(previous, true);
             }
 
@@ -348,18 +350,16 @@ namespace Unbound.Runtime
 
         const int MaterialClassId = 21, ShaderClassId = 48, ComputeShaderClassId = 72;
 
-        static void RemoveObject(LoadedFile file, Object obj)
+        static bool RemoveObject(LoadedFile file, Object obj, out long id)
         {
-            long found = 0;
-            bool any = false;
+            id = 0;
             foreach (var pair in file.Objects)
                 if (ReferenceEquals(pair.Value, obj))
                 {
-                    found = pair.Key;
-                    any = true;
-                    break;
+                    id = pair.Key;
+                    return file.Objects.Remove(id);
                 }
-            if (any) file.Objects.Remove(found);
+            return false;
         }
 
         /// <summary>The index of the shader source a task's processor in the asset was made from:
