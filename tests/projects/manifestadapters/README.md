@@ -16,7 +16,9 @@ Unity's [manifest API](https://docs.unity3d.com/6000.0/Documentation/ScriptRefer
 provides bundle names, hashes and dependencies. [Unload](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetBundle.Unload.html)
 distinguishes retained loaded objects from object destruction. The probe observes
 those contracts with live manifest objects before and after each operation. Clone
-ownership and ASCII name matching are selected-release observations.
+ownership and ASCII name matching are selected-release observations. Returned-array
+order is unspecified by the API documentation; its measured order is not a guarantee
+for callers.
 
 Set `UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1` for each command:
 

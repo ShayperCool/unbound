@@ -497,7 +497,6 @@ namespace UnityEngine
             {
                 char value = query[i];
                 if (value >= 'A' && value <= 'Z') value = (char)(value + ('a' - 'A'));
-                if (value == '\\') value = '/';
                 if (stored[i] != value) return false;
             }
             return true;
@@ -524,12 +523,13 @@ namespace UnityEngine
         {
             var result = new List<string>();
             var pending = new Queue<int>();
-            if (m_Infos.TryGetValue(IndexOf(assetBundleName), out var start))
+            int root = IndexOf(assetBundleName);
+            if (m_Infos.TryGetValue(root, out var start))
                 foreach (var d in start.Dependencies) pending.Enqueue(d);
             while (pending.Count > 0)
             {
                 int d = pending.Dequeue();
-                if (!m_Names.TryGetValue(d, out var name) || result.Contains(name) || name == assetBundleName) continue;
+                if (!m_Names.TryGetValue(d, out var name) || result.Contains(name) || d == root) continue;
                 result.Add(name);
                 if (m_Infos.TryGetValue(d, out var info))
                     foreach (var next in info.Dependencies) pending.Enqueue(next);

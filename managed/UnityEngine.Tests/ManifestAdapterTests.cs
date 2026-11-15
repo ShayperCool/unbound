@@ -76,12 +76,13 @@ AssetBundleManifest:
         public void ManifestLookupFoldsAsciiWithoutUsingTheCurrentCulture()
         {
             var previous = CultureInfo.CurrentCulture;
-            var manifest = Load();
+            var manifest = Load("things");
             try
             {
                 CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("tr-TR");
                 Assert.Equal(manifest.GetAssetBundleHash("scene"), manifest.GetAssetBundleHash("SCENE"));
-                Assert.Equal(new[] { "base" }, manifest.GetDirectDependencies("ScEnE"));
+                Assert.Equal(new[] { "things" }, manifest.GetDirectDependencies("ScEnE"));
+                Assert.Equal(manifest.GetAssetBundleHash("things"), manifest.GetAssetBundleHash("THINGS"));
                 foreach (var name in new[] { "ſcene", "scene ", " scene", "scene/", "", null })
                 {
                     Assert.Empty(manifest.GetAllDependencies(name));
@@ -89,6 +90,29 @@ AssetBundleManifest:
                 }
             }
             finally { CultureInfo.CurrentCulture = previous; Object.DestroyImmediate(manifest); }
+        }
+
+        [Fact]
+        public void CyclicDependenciesExcludeTheResolvedRootForEveryQuerySpelling()
+        {
+            var manifest = Load();
+            try
+            {
+                Assert.True(AssetAdapters.TryRead(manifest, TestYaml.DocumentBody(@"
+AssetBundleManifest:
+  AssetBundleInfos:
+  - first: 1
+    second:
+      AssetBundleDependencies:
+      - 3
+      - 1
+"), null));
+                foreach (var query in new[] { "scene", "SCENE", "ScEnE" })
+                    Assert.Equal(new[] { "base" }, manifest.GetAllDependencies(query));
+                foreach (var query in new[] { "base", "BASE", "BaSe" })
+                    Assert.Equal(new[] { "scene" }, manifest.GetAllDependencies(query));
+            }
+            finally { Object.DestroyImmediate(manifest); }
         }
 
         [Fact]
