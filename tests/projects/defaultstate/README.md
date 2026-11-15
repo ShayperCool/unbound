@@ -550,3 +550,14 @@ The SpeedTree 9 import slice adds seven types to the handwritten inventory:
 byte-identical (12,761 rows). `SpeedTreeWindConfig9`'s parameterless constructor stores the
 release's gust and response defaults. The two queued TextCore instance ids keep their reference
 values; their exact implementation values move by the 36 objects the new rows create first.
+
+The Visual Effect slice adds nine types to the handwritten inventory: `VFXEventAttribute`,
+`VFXExposedProperty`, `VFXManager`, `VFXOutputEventArgs`, `VFXParticleSystemInfo`, `VFXRenderer`,
+`VisualEffect`, `VisualEffectAsset` and `VisualEffectObject`. Two independent 6000.0.71f1 GPU
+Editor captures agree on all 107 of their rows, appended before the completion row; every earlier
+row and inventory entry is byte-identical (12,868 rows). A new `VFXRenderer` has no material
+slots, casts and receives no shadows and uses no probes; a new `VisualEffect` is culled, has no
+asset and starts with `OnPlay`; a `VisualEffectAsset` made with `new` is an uncreated wrapper.
+`VisualEffect.initialEventID` is queued with a pattern: it is the session's number for the name
+`OnPlay` (282 in both captures), which each runtime assigns in the order names are first used;
+`tests/projects/vfx` checks that it equals `Shader.PropertyToID(initialEventName)`.

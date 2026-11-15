@@ -8587,6 +8587,60 @@
       "type": "UnityEngine.UnityException"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.VFXModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.VFX.VFXEventAttribute"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.VFXModule",
+      "status": "candidate",
+      "type": "UnityEngine.VFX.VFXExposedProperty"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.VFXModule",
+      "status": "static",
+      "type": "UnityEngine.VFX.VFXManager"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.VFXModule",
+      "status": "candidate",
+      "type": "UnityEngine.VFX.VFXOutputEventArgs"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.VFXModule",
+      "status": "candidate",
+      "type": "UnityEngine.VFX.VFXParticleSystemInfo"
+    },
+    {
+      "category": "component",
+      "module": "UnityEngine.VFXModule",
+      "status": "candidate",
+      "type": "UnityEngine.VFX.VFXRenderer"
+    },
+    {
+      "category": "component",
+      "module": "UnityEngine.VFXModule",
+      "status": "candidate",
+      "type": "UnityEngine.VFX.VisualEffect"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.VFXModule",
+      "status": "candidate",
+      "type": "UnityEngine.VFX.VisualEffectAsset"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.VFXModule",
+      "status": "abstract",
+      "type": "UnityEngine.VFX.VisualEffectObject"
+    },
+    {
       "category": "struct",
       "module": "UnityEngine.CoreModule",
       "status": "candidate",

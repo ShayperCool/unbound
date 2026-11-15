@@ -3406,6 +3406,13 @@
         "status": "value",
         "value": "29"
       }
+    },
+    {
+      "key": "UnityEngine.VFX.VisualEffect/Property/UnityEngine.VFX.VisualEffect/initialEventID",
+      "module": "UnityEngine.VFXModule",
+      "reason": "Q420 session-numbered identifier: the id Shader.PropertyToID gives the initial event's name (\"OnPlay\"). Each runtime numbers property names in the order its session first uses them, so the number carries nothing by itself (282 in both Editor captures). The relation is checked by tests/projects/vfx (initialEventID rows: equal to PropertyToID(initialEventName)). The raw row remains visible; this entry does not establish a default contract.",
+      "expectedPattern": "[0-9]+",
+      "actualPattern": "[0-9]+"
     }
   ],
   "constructorStores": []
