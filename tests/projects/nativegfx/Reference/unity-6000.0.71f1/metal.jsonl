@@ -56,6 +56,25 @@
 {"k":"volume.make.ASTC_HDR_8x8","v":["made"]}
 {"k":"volume.make.ASTC_HDR_10x10","v":["made"]}
 {"k":"volume.make.ASTC_HDR_12x12","v":["made"]}
+{"k":"mipbias.Point.0","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Point.1","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Point.2","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Point.-1","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Bilinear.0","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Bilinear.1","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Bilinear.2","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Bilinear.-1","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Trilinear.0","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Trilinear.1","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Trilinear.2","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Trilinear.-1","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.logs","v":[]}
+{"k":"active.sameframe","v":"activeleft"}
+{"k":"active.nextframe","v":"null"}
+{"k":"outside.fresh","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
+{"k":"outside.aftercamera","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
+{"k":"outside.identity","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
+{"k":"outside.logs","v":[]}
 {"k":"target.pixels","v":["ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4"]}
 {"k":"camera.pixels","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
 {"k":"second.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}

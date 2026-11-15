@@ -48,7 +48,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
     string output;
     IntPtr callback;
     int eventBase;
-    RenderTexture screenSource;
+    RenderTexture screenSource, activeLeft;
     RenderTexture target, cameraTarget, secondTarget, executed, executedMsaa, executedCopy, mutated, drawn, again;
     Mesh quad;
     Material colored;
@@ -404,6 +404,20 @@ public class NativeGfxMetalProbe : MonoBehaviour
             case 9:
                 CompressedVolumes();
                 break;
+            case 10:
+                MipBias();
+                break;
+            case 11:
+                // Left active at the end of this frame; read in the next.
+                activeLeft = Target("activeleft", 0);
+                RenderTexture.active = activeLeft;
+                Value("active.sameframe", Q(RenderTexture.active == null ? "null" : RenderTexture.active.name));
+                break;
+            case 12:
+                Value("active.nextframe", Q(RenderTexture.active == null ? "null" : RenderTexture.active.name));
+                RenderTexture.active = null;
+                OutsideDraws();
+                break;
         }
     }
 
@@ -620,6 +634,71 @@ public class NativeGfxMetalProbe : MonoBehaviour
         screenLogs = null;
     }
 
+    /// <summary><c>Texture.mipMapBias</c>: an 8x8 texture whose levels are red, green, blue and
+    /// white, drawn at one texel per pixel (level 0) with each filter mode and biases 0, 1, 2 and
+    /// -1; the color drawn says which level was sampled.</summary>
+    void MipBias()
+    {
+        screenLogs = new List<string>();
+        var levels = new[] { new Color32(255, 0, 0, 255), new Color32(0, 255, 0, 255), new Color32(0, 0, 255, 255), new Color32(255, 255, 255, 255) };
+        var mipped = Keep(new Texture2D(8, 8, TextureFormat.RGBA32, true, true) { name = "mipbias", wrapMode = TextureWrapMode.Clamp });
+        for (int level = 0; level < mipped.mipmapCount; level++)
+        {
+            int size = Math.Max(1, 8 >> level);
+            mipped.SetPixels32(Enumerable.Repeat(levels[level], size * size).ToArray(), level);
+        }
+        mipped.Apply(false);
+        foreach (var filter in new[] { FilterMode.Point, FilterMode.Bilinear, FilterMode.Trilinear })
+            foreach (var bias in new[] { 0f, 1f, 2f, -1f })
+            {
+                mipped.filterMode = filter;
+                mipped.mipMapBias = bias;
+                var output = Target("mipbias" + filter + bias, 0);
+                var active = RenderTexture.active;
+                Graphics.Blit(mipped, output);
+                RenderTexture.active = active;
+                Value("mipbias." + filter + "." + bias.ToString(System.Globalization.CultureInfo.InvariantCulture), Pixels(output, 8, 8));
+            }
+        Value("mipbias.logs", L(screenLogs));
+        screenLogs = null;
+    }
+
+    /// <summary>A command buffer's <c>DrawMesh</c> outside cameras (a quad over clip space with
+    /// the identity matrix, white, no culling, no depth test): at the start of a frame, after a
+    /// camera at (0, 0, -5) rendered, and with the view and projection set to identity.</summary>
+    void OutsideDraws()
+    {
+        screenLogs = new List<string>();
+        var white = Keep(new Material(Shader.Find("Hidden/Internal-Colored")) { color = Color.white });
+        white.SetInt("_Cull", 0);
+        white.SetInt("_ZTest", (int)CompareFunction.Always);
+        void Draw(string key, bool identity)
+        {
+            var output = Target("outside" + key, 0);
+            using (var cmd = new CommandBuffer { name = "outside " + key })
+            {
+                cmd.SetRenderTarget(output);
+                cmd.ClearRenderTarget(true, true, Color.black);
+                if (identity) cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+                cmd.DrawMesh(quad, Matrix4x4.identity, white, 0, 0);
+                Graphics.ExecuteCommandBuffer(cmd);
+            }
+            Value("outside." + key, Pixels(output, 8, 8));
+        }
+        Draw("fresh", false);
+        var camera = new GameObject("outside camera").AddComponent<Camera>();
+        camera.enabled = false;
+        camera.transform.position = new Vector3(0f, 0f, -5f);
+        camera.targetTexture = Target("outsidecamera", 16);
+        camera.cullingMask = 0;
+        camera.Render();
+        Draw("aftercamera", false);
+        Draw("identity", true);
+        DestroyImmediate(camera.gameObject);
+        Value("outside.logs", L(screenLogs));
+        screenLogs = null;
+    }
+
     void Finish()
     {
         Value("target.pixels", Pixels(target, 8, 8));
@@ -664,7 +743,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
         int code = 0;
         try { Setup(); }
         catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
-        for (int frame = 1; frame <= 9 && code == 0; frame++)
+        for (int frame = 1; frame <= 12 && code == 0; frame++)
         {
             try { Frame(frame); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
