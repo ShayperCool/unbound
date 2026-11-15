@@ -3,7 +3,8 @@
   "python3 tests/projects/residentdrawer/run.py check",
   "python3 tests/projects/residentdrawer/run.py check --profile occlusion",
   "python3 tests/projects/residentdrawer/run.py check --profile controls",
-  "python3 tests/projects/residentdrawer/run.py check --profile lightmaps"
+  "python3 tests/projects/residentdrawer/run.py check --profile lightmaps",
+  "python3 tests/projects/residentdrawer/run.py check --profile shadowmask"
  ],
  "summary": "\\d+/\\d+ records match.*",
  "engine_paths": [

@@ -8,7 +8,7 @@
     run.py compare REF ACTUAL     compares two capture directories
 
 --profile selects the drawer's settings (controls: direct's, with more refusal controls, see the
-README; lightmaps: the URP probe's baked Subtractive scene as it is): direct (the default: occlusion culling off, so the drawer
+README; lightmaps and shadowmask: the URP probe's baked Subtractive and Shadowmask scenes as they are): direct (the default: occlusion culling off, so the drawer
 draws with direct draw commands) or occlusion (GPU occlusion culling in cameras on, so the main
 camera's commands are indirect ones the drawer's compute shaders fill). Both sides use the Vulkan
 device: the Editor windowed with -force-vulkan on the GPU-backed display :0 (the drawer dispatches
@@ -57,6 +57,9 @@ PROFILE = 'direct'
 FRAMES = 600
 MEAN_BOUND = 0.5
 OVER_SHARE = 0.005
+# The profiles that record a baked scene of the URP probe (tests/projects/urp) as it is: Subtractive
+# (non-directional lightmaps), Shadowmask (directional lightmaps, a shadow mask, a mixed sun).
+SCENES = {'lightmaps': 'Subtractive', 'shadowmask': 'Shadowmask'}
 
 
 def reference():
@@ -80,8 +83,8 @@ def stage(label):
     if work.exists():
         sys.exit(f'refusing to overwrite run: {work}')
     project = work/'project'
-    # The lightmaps profile records the URP probe's baked Subtractive scene (lightmapped renderers).
-    source = ROOT.parent/('urp' if PROFILE == 'lightmaps' else 'shadergraph')
+    # The lightmaps and shadowmask profiles record a baked scene of the URP probe as it is.
+    source = ROOT.parent/('urp' if PROFILE in SCENES else 'shadergraph')
     for part in ('Packages', 'ProjectSettings'):
         shutil.copytree(source/part, project/part)
     shutil.copytree(source/'Assets', project/'Assets', ignore=lambda d, names: ['Scripts', 'Scripts.meta', 'Editor', 'Editor.meta'] if Path(d) == source/'Assets' else [])
@@ -103,7 +106,7 @@ def stage(label):
         # A second sorting layer for the SortingLayer control.
         edit(project/'ProjectSettings/TagManager.asset', '  - name: Default\n    uniqueID: 0\n    locked: 0\n',
              '  - name: Default\n    uniqueID: 0\n    locked: 0\n  - name: Probe\n    uniqueID: 1876543210\n    locked: 0\n')
-    for part in ('Scripts', 'Editor') if PROFILE == 'lightmaps' else ('Scripts', 'Editor', 'Shaders'):
+    for part in ('Scripts', 'Editor') if PROFILE in SCENES else ('Scripts', 'Editor', 'Shaders'):
         shutil.copytree(ROOT/'Assets'/part, project/'Assets'/part)
         shutil.copy2(ROOT/'Assets'/(part+'.meta'), project/'Assets'/(part+'.meta'))
     return work, project
@@ -112,8 +115,8 @@ def stage(label):
 def probe_env(work):
     """The probe's environment: its capture directory, and the controls profile's switch."""
     env = {'RESIDENT_DRAWER_OUT': str(work/CAPTURE)}
-    if PROFILE == 'lightmaps':
-        env['RESIDENT_DRAWER_SCENE'] = 'Subtractive'
+    if PROFILE in SCENES:
+        env['RESIDENT_DRAWER_SCENE'] = SCENES[PROFILE]
     if PROFILE == 'controls':
         env['RESIDENT_DRAWER_CONTROLS'] = '1'
     return env
@@ -139,8 +142,8 @@ def engine(label):
     env = dict(os.environ, **probe_env(work))
     command = [str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '-s', 'KILL', '1500', cli, 'run', '-p', str(project),
                '--no-watch', '--frames', str(FRAMES), '--size', '320x180', '--force-vulkan']
-    if PROFILE == 'lightmaps':
-        command += ['--scene', 'Assets/Scenes/Subtractive.unity']
+    if PROFILE in SCENES:
+        command += ['--scene', f'Assets/Scenes/{SCENES[PROFILE]}.unity']
     with (work/'process.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     values = work/CAPTURE/VALUES
@@ -301,7 +304,7 @@ def main():
     parser.add_argument('mode', choices=['native', 'engine', 'publish', 'check', 'compare'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
-    parser.add_argument('--profile', choices=('direct', 'occlusion', 'controls', 'lightmaps'), default='direct')
+    parser.add_argument('--profile', choices=('direct', 'occlusion', 'controls', *SCENES), default='direct')
     args = parser.parse_args()
     global PROFILE
     PROFILE = args.profile

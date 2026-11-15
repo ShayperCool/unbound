@@ -38,12 +38,14 @@ and one casting shadows only. The drawer refuses the first, second, third and fi
 disabled group's and the shadows-only one, which is visible though out of view, as every renderer it
 holds.
 
-`lightmaps` stages the URP probe's project (tests/projects/urp) instead and records its baked
-`Subtractive` scene as it is (`RESIDENT_DRAWER_SCENE`): each renderer's lightmap index and scale
+`lightmaps` and `shadowmask` stage the URP probe's project (tests/projects/urp) instead and record
+its baked `Subtractive` scene (non-directional lightmaps) and `Shadowmask` scene (directional
+lightmaps, a shadow mask, a mixed sun casting realtime shadows) as they are (`RESIDENT_DRAWER_SCENE`): each renderer's lightmap index and scale
 and offset, then at frames 8 and 14 the image, the renderers' isVisible and the renderers the drawer
 holds. The drawer holds the lightmapped ground, wall and block with the probe-lit ones, and leaves out
 the sphere with a light probe proxy volume; its commands carry each renderer's lightmap index with
-the legacy lightmaps keyword flag, and the lightmapped renderers are drawn with their lightmaps.
+the legacy lightmaps keyword flag, and the lightmapped renderers are drawn with their lightmaps
+(with their directions and shadow mask in `shadowmask`).
 
     python3 tests/projects/residentdrawer/run.py native --label L [--profile occlusion|controls]   # two Editor captures
     python3 tests/projects/residentdrawer/run.py publish L-1 L-2 [--profile occlusion|controls]
