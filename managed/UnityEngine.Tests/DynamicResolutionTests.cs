@@ -24,6 +24,8 @@ namespace Unbound.Tests
 
         /// <summary>Each upload: (handle, width, height, logical width, logical height).</summary>
         static readonly List<(ulong Handle, int Width, int Height, int LogicalWidth, int LogicalHeight)> s_Uploads = new();
+        /// <summary>Each read asked for: (x, y, width, height); the stand-in reads nothing.</summary>
+        static readonly List<(int X, int Y, int Width, int Height)> s_Reads = new();
 
         readonly object m_PreviousApi = Api.GetValue(null), m_PreviousReady = Ready.GetValue(null);
         readonly GraphicsDeviceProfile m_PreviousDevice = GraphicsDeviceProfile.Current;
@@ -32,10 +34,11 @@ namespace Unbound.Tests
         public DynamicResolutionTests()
         {
             s_Uploads.Clear();
+            s_Reads.Clear();
             var api = new NativeApi
             {
                 Version = NativeApi.CurrentVersion, SubmitCommands = &Submit, ReleaseMaterial = &Release,
-                ReleaseTexture = &Release, ReleaseMesh = &Release, UploadTexture = &Upload,
+                ReleaseTexture = &Release, ReleaseMesh = &Release, UploadTexture = &Upload, ReadTexture = &Read,
             };
             Native.Initialize(&api);
             GraphicsDeviceProfile.Select("Metal");
@@ -61,6 +64,13 @@ namespace Unbound.Tests
         [UnmanagedCallersOnly]
         static void Upload(ulong handle, TexturePacket* packet) =>
             s_Uploads.Add((handle, packet->Width, packet->Height, packet->LogicalWidth, packet->LogicalHeight));
+
+        [UnmanagedCallersOnly]
+        static int Read(ulong texture, int mip, int layer, int x, int y, int width, int height, int flags, NativeBuffer* buffer)
+        {
+            s_Reads.Add((x, y, width, height));
+            return 0;
+        }
 
         T Keep<T>(T o) where T : Object { m_Made.Add(o); return o; }
 
@@ -89,6 +99,14 @@ namespace Unbound.Tests
             Assert.Equal(0.0500000119f, ScalableBufferManager.heightScaleFactor);
             // The Editor's 0.0500000119 (Mono's "R" text): these bits, the float after 0.05f by three.
             Assert.Equal(0x3D4CCCD0, BitConverter.SingleToInt32Bits(ScalableBufferManager.heightScaleFactor));
+            // dynres.factors.nan: NaN keeps 1, printed as the Editor prints it.
+            logs.Clear();
+            ScalableBufferManager.ResizeBuffers(0.5f, 0.25f);
+            Application.logMessageReceived += OnLog;
+            try { ScalableBufferManager.ResizeBuffers(float.NaN, 0.5f); }
+            finally { Application.logMessageReceived -= OnLog; }
+            Assert.Equal(new[] { "Assert: Invalid widthScale: nan" }, logs);
+            Assert.Equal((1f, 0.5f), (ScalableBufferManager.widthScaleFactor, ScalableBufferManager.heightScaleFactor));
         }
 
         [Fact]
@@ -126,6 +144,72 @@ namespace Unbound.Tests
             ScalableBufferManager.ResizeBuffers(1f, 1f);
             dynamic.EnsureCreated();
             Assert.Equal((15, 13, 0, 0), Last(dynamic));
+        }
+
+        /// <summary>A texture marked useDynamicScaleExplicit too scales only when
+        /// ApplyDynamicScale applies the factors of the time (dynres.explicit.*), and keeps them
+        /// until the next call; ApplyDynamicScale changes nothing for other textures.</summary>
+        [Fact]
+        public void ExplicitTexturesScaleWhenTheScaleIsApplied()
+        {
+            var explicitTarget = Keep(new RenderTexture(16, 16, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+                { useDynamicScale = true, useDynamicScaleExplicit = true });
+            explicitTarget.Create();
+            var dynamic = Target(16, 16, true);
+            ScalableBufferManager.ResizeBuffers(0.5f, 0.25f);
+            Assert.Equal((16, 16, 0, 0), Last(explicitTarget));
+            Assert.False(explicitTarget.DynamicallyScaled);
+            Assert.Equal((8, 4, 16, 16), Last(dynamic));
+            explicitTarget.ApplyDynamicScale();
+            dynamic.ApplyDynamicScale();
+            Assert.Equal((8, 4, 16, 16), Last(explicitTarget));
+            Assert.Equal((8, 4, 16, 16), Last(dynamic));
+            // The factors change: the explicit one keeps the applied ones until applied again.
+            ScalableBufferManager.ResizeBuffers(1f, 1f);
+            Assert.Equal((8, 4, 16, 16), Last(explicitTarget));
+            Assert.Equal((16, 16, 0, 0), Last(dynamic));
+            explicitTarget.ApplyDynamicScale();
+            Assert.Equal((16, 16, 0, 0), Last(explicitTarget));
+            // Explicit alone, without useDynamicScale, does not scale (unmeasured; as documented).
+            var alone = Keep(new RenderTexture(16, 16, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { useDynamicScaleExplicit = true });
+            alone.Create();
+            ScalableBufferManager.ResizeBuffers(0.5f, 0.25f);
+            alone.ApplyDynamicScale();
+            Assert.Equal((16, 16, 0, 0), Last(alone));
+        }
+
+        sealed class Capture : ILogHandler
+        {
+            public readonly List<string> Messages = new List<string>();
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                Messages.Add(logType + ": " + (args == null || args.Length == 0 ? format : string.Format(format, args)));
+            public void LogException(Exception exception, Object context) => Messages.Add("Exception: " + exception.Message);
+        }
+
+        /// <summary>AsyncGPUReadback of a scaled texture reads its scaled images: a region past
+        /// them fails with an Unbound error (unmeasured), and a whole-texture request asks for the
+        /// images' size.</summary>
+        [Fact]
+        public void ReadbackPastTheScaledImagesFails()
+        {
+            var dynamic = Target(16, 16, true);
+            ScalableBufferManager.ResizeBuffers(0.5f, 0.25f);
+            var capture = new Capture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = capture;
+            try
+            {
+                var past = AsyncReadbacks.Texture(dynamic, 0, 0, 16, 0, 16, 0, 1, ReadbackFormat.Of(TextureFormat.RGBA32), null, true);
+                Assert.True(past.HasError);
+                Assert.Contains(capture.Messages, m => m.StartsWith("Error: Unbound: AsyncGPUReadback of the dynamically scaled render texture") && m.Contains("(8x4)"));
+                Assert.Empty(s_Reads);
+                // The whole texture: its 8x4 images are read.
+                capture.Messages.Clear();
+                UnityEngine.Rendering.AsyncGPUReadback.Request(dynamic);
+                Assert.DoesNotContain(capture.Messages, m => m.Contains("past its scaled images") || m.Contains("Out of bounds"));
+                Assert.Equal(new[] { (0, 0, 8, 4) }, s_Reads);
+            }
+            finally { Debug.unityLogger.logHandler = previous; }
         }
 
         [Fact]

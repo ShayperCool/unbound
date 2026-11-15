@@ -54,8 +54,9 @@ namespace Unbound.Runtime
         internal bool EditorConservativeRaster { get; init; } = true;
         internal bool HiddenSurfaceRemovalOnGPU { get; init; }
         /// <summary>The Editor's device scales buffers dynamically (Metal: SystemInfo answers true,
-        /// a camera keeps allowDynamicResolution and ScalableBufferManager.ResizeBuffers sets the
-        /// factors; two macOS Editor captures). Unbound's renderer does not, and answers false.</summary>
+        /// a camera keeps allowDynamicResolution, ScalableBufferManager.ResizeBuffers sets the
+        /// factors and dynamically scaled render textures take the scaled size;
+        /// tests/projects/nativegfx dynres.*). Unbound scales them as it does.</summary>
         internal bool EditorDynamicResolution { get; init; }
         /// <summary>SystemInfo.supportsTextureWrapMirrorOnce: 1 where the Editor's device answers
         /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>

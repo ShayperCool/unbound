@@ -19,8 +19,11 @@ namespace UnityEngine
         internal bool m_PooledFree;
         internal long m_PoolLease;
         internal int m_LastUsedFrame;
-        /// <summary>The <see cref="ScalableBufferManager.Version"/> the texture was made at.</summary>
-        int m_ScaleVersion;
+        /// <summary>The size the texture's images were made at.</summary>
+        int m_AllocatedWidth, m_AllocatedHeight;
+        /// <summary>The factors <see cref="ApplyDynamicScale"/> last applied to a texture marked
+        /// useDynamicScaleExplicit.</summary>
+        float m_ExplicitWidthScale = 1f, m_ExplicitHeightScale = 1f;
 
         static RenderTexture s_Active;
         /// <summary>Whether a script made the texture (<see cref="descriptor"/>).</summary>
@@ -344,6 +347,7 @@ namespace UnityEngine
         public IntPtr GetNativeDepthBufferPtr()
         {
             if (!m_Created) return IntPtr.Zero;
+            EnsureCreated();
             return NativePlugins.TexturePointer(m_NativeHandle, true, depth > 0);
         }
 
@@ -414,8 +418,16 @@ namespace UnityEngine
             return true;
         }
 
-        [Unbound.EditorFaithful("the Linux Editor's devices have no dynamic resolution: the scale stays 1 (as ScalableBufferManager, which warns on Metal)")]
-        public void ApplyDynamicScale() { }
+        /// <summary>Applies ScalableBufferManager's current factors to a texture marked both
+        /// useDynamicScale and useDynamicScaleExplicit, which scales only then (as documented; the
+        /// macOS Editor's Metal device: tests/projects/nativegfx dynres.explicit.*); other textures
+        /// ignore it. The Linux Editor's devices keep the factors 1.</summary>
+        public void ApplyDynamicScale()
+        {
+            if (!m_Descriptor.useDynamicScale || !m_Descriptor.useDynamicScaleExplicit) return;
+            m_ExplicitWidthScale = ScalableBufferManager.widthScaleFactor;
+            m_ExplicitHeightScale = ScalableBufferManager.heightScaleFactor;
+        }
 
         public void SetGlobalShaderProperty(string propertyName) => Shader.SetGlobalTexture(propertyName, this);
 
@@ -479,20 +491,29 @@ namespace UnityEngine
 
         /// <summary>The size of the texture's images: a dynamically scaled one's is scaled
         /// (<see cref="ScalableBufferManager"/>), its width and height staying as they were.</summary>
-        internal int ScaledWidth => m_Descriptor.useDynamicScale ? ScalableBufferManager.ScaledWidth(m_Descriptor.width) : m_Descriptor.width;
+        internal int ScaledWidth => ScalableBufferManager.Scaled(m_Descriptor.width, WidthScale);
 
-        internal int ScaledHeight => m_Descriptor.useDynamicScale ? ScalableBufferManager.ScaledHeight(m_Descriptor.height) : m_Descriptor.height;
+        internal int ScaledHeight => ScalableBufferManager.Scaled(m_Descriptor.height, HeightScale);
 
-        /// <summary>A dynamically scaled texture whose images are smaller than its size.</summary>
-        internal bool DynamicallyScaled => m_Descriptor.useDynamicScale && ScalableBufferManager.Scaling;
+        /// <summary>The factors the texture is scaled by: ScalableBufferManager's for one marked
+        /// useDynamicScale, those last applied by ApplyDynamicScale for one marked
+        /// useDynamicScaleExplicit too (tests/projects/nativegfx dynres.explicit.*), else 1.</summary>
+        float WidthScale => !m_Descriptor.useDynamicScale ? 1f
+            : m_Descriptor.useDynamicScaleExplicit ? m_ExplicitWidthScale : ScalableBufferManager.widthScaleFactor;
+
+        float HeightScale => !m_Descriptor.useDynamicScale ? 1f
+            : m_Descriptor.useDynamicScaleExplicit ? m_ExplicitHeightScale : ScalableBufferManager.heightScaleFactor;
+
+        /// <summary>A texture scaled by a factor other than 1.</summary>
+        internal bool DynamicallyScaled => WidthScale != 1f || HeightScale != 1f;
 
         internal unsafe ulong EnsureCreated()
         {
             m_LastUsedFrame = Time.frameCount;
-            // Created, unless it scales and the factors changed since: then it is remade at its
-            // new size, as the Editor's Metal device resizes existing textures (the content of
-            // the remade one is not kept).
-            if (m_Created && (!m_Descriptor.useDynamicScale || m_ScaleVersion == ScalableBufferManager.Version))
+            // Created, unless it scales and its scaled size changed since: then it is remade at
+            // its new size, as the Editor's Metal device resizes existing textures (the content
+            // of the remade one is not kept).
+            if (m_Created && (!m_Descriptor.useDynamicScale || (Math.Max(1, ScaledWidth) == m_AllocatedWidth && Math.Max(1, ScaledHeight) == m_AllocatedHeight)))
                 return m_NativeHandle;
             if (m_Descriptor.dimension == TextureDimension.Tex3D && depth > 0)
             {
@@ -530,7 +551,7 @@ namespace UnityEngine
             UploadTexture(&packet);
             m_AllocatedMipCount = Compat.RenderingMeasured ? mipCount : null;
             m_Created = true;
-            m_ScaleVersion = ScalableBufferManager.Version;
+            (m_AllocatedWidth, m_AllocatedHeight) = (packet.Width, packet.Height);
             return m_NativeHandle;
         }
 

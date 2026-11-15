@@ -47,5 +47,9 @@
  ],
  "A dynamically scaled render texture's content after a change of scale: the macOS Editor's still holds the color it was cleared to at the old scale (uniform, so whether it is stretched or kept in place is not measured); Unbound remakes the texture at the new size, cleared. Queued": [
   "dynres.reset.texels"
+ ],
+ "A Graphics.Blit into a dynamically scaled render texture with a shader writing _ScreenParams (Shaders/DynamicParams.shader pass 2), read back by sampling: the macOS Editor's image holds zero (zero screen parameters, or nothing drawn: not resolved, no control over a plain texture), Unbound's draw sees its scaled 8x4 (a camera's command buffer draw sees 8x4 in both, cameraparams.sampled). Queued": [
+  "dynres.next.blitparams.sampled",
+  "dynres.same.blitparams.sampled"
  ]
 }

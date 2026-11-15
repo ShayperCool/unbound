@@ -273,6 +273,20 @@ namespace Unbound.Runtime
                 return result;
             }
             int lw = Math.Max(1, src.width >> mip), lh = Math.Max(1, src.height >> mip), ld = Layers(src, mip);
+            // A dynamically scaled render texture's images are smaller than its size: what the
+            // Editor reads back from them is unmeasured (ReadPixels reads zeros there); Unbound
+            // reads the images, and refuses a region past them.
+            if (src is RenderTexture scaled && scaled.DynamicallyScaled)
+            {
+                int sw = Math.Max(1, scaled.ScaledWidth >> mip), sh = Math.Max(1, scaled.ScaledHeight >> mip);
+                Unbound.Runtime.Stubs.Ignored("AsyncGPUReadback of a dynamically scaled render texture", "reads its scaled images (unmeasured)");
+                if (x + width > sw || y + height > sh)
+                {
+                    Debug.LogError($"Unbound: AsyncGPUReadback of the dynamically scaled render texture '{src.name}': the region ({x},{y}) {width}x{height} is past its scaled images ({sw}x{sh}); the request fails (unmeasured).");
+                    result.HasError = true;
+                    return result;
+                }
+            }
             if (x < 0 || y < 0 || z < 0 || width <= 0 || height <= 0 || depth <= 0 || x + width > lw || y + height > lh || z + depth > ld)
             {
                 Debug.LogError($"AsyncGPUReadback - Out of bounds arguments - src offset:({x},{y},{z}) dst dim:({width},{height},{depth}) src dim:({lw},{lh},{ld})");
@@ -516,7 +530,9 @@ namespace UnityEngine.Rendering
         static AsyncReadbacks.Result Texture(Texture src, int mipIndex, ReadbackFormat format, Action<AsyncGPUReadbackRequest> callback, bool reportUnsupported = false)
         {
             if (src == null) throw new ArgumentNullException("src");
-            int w = Math.Max(1, src.width >> Math.Max(0, mipIndex)), h = Math.Max(1, src.height >> Math.Max(0, mipIndex));
+            // A dynamically scaled render texture's whole images (their scaled size).
+            int fullWidth = src is RenderTexture rt ? rt.ScaledWidth : src.width, fullHeight = src is RenderTexture rh ? rh.ScaledHeight : src.height;
+            int w = Math.Max(1, fullWidth >> Math.Max(0, mipIndex)), h = Math.Max(1, fullHeight >> Math.Max(0, mipIndex));
             return AsyncReadbacks.Texture(src, mipIndex, 0, w, 0, h, 0, AsyncReadbacks.LayerCount(src, mipIndex), format, callback, reportUnsupported);
         }
 
