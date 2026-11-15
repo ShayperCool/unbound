@@ -457,6 +457,9 @@ public class NativeGfxMetalProbe : MonoBehaviour
             case 16:
                 DecodedArrays();
                 break;
+            case 17:
+                DynamicContent();
+                break;
         }
     }
 
@@ -529,6 +532,31 @@ public class NativeGfxMetalProbe : MonoBehaviour
             }
         }
         Value("array.decode.logs", L(screenLogs));
+        screenLogs = null;
+    }
+
+    /// <summary>A dynamically scaled texture's content across changes of scale: a pattern (left
+    /// half red, right half green) blitted into it at 0.5 then read at 1 (ReadPixels), and blitted
+    /// at 1 then read at 0.5 (sampled by a Blit, ReadPixels reading zeros there).</summary>
+    void DynamicContent()
+    {
+        screenLogs = new List<string>();
+        var pattern = Keep(new Texture2D(2, 1, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Point });
+        pattern.SetPixels32(new[] { new Color32(255, 0, 0, 255), new Color32(0, 255, 0, 255) });
+        pattern.Apply();
+        var content = Keep(new RenderTexture(16, 16, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+            { name = "dyncontent", useDynamicScale = true });
+        content.Create();
+        ScalableBufferManager.ResizeBuffers(0.5f, 0.5f);
+        Graphics.Blit(pattern, content);
+        ScalableBufferManager.ResizeBuffers(1f, 1f);
+        Value("dynres.content.up", Read(content, 16, 16));
+        Graphics.Blit(pattern, content);
+        ScalableBufferManager.ResizeBuffers(0.5f, 0.5f);
+        Value("dynres.content.down", Pixels(content, 8, 8));
+        ScalableBufferManager.ResizeBuffers(1f, 1f);
+        Value("dynres.content.back", Read(content, 16, 16));
+        Value("dynres.content.logs", L(screenLogs));
         screenLogs = null;
     }
 
@@ -1065,7 +1093,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
         int code = 0;
         try { Setup(); }
         catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
-        for (int frame = 1; frame <= 16 && code == 0; frame++)
+        for (int frame = 1; frame <= 17 && code == 0; frame++)
         {
             try { Frame(frame); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
