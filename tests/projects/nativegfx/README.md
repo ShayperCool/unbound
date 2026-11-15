@@ -257,7 +257,9 @@ stencil texture), an external texture of the plugin's, and the pixels.
 
 The screen's color texture is BGRA8Unorm (format 80), as Unbound's screen on Metal is; a screen
 camera with command buffers draws into a texture standing for the screen, stored as the screen is,
-which a callback in its buffer finds as that format too. Screen
+which a callback in its buffer finds as that format too. Such a camera's buffer blitting
+`CameraTarget` onto itself through a shader (`screenself.blit`) samples white there, and
+ReadPixels in its onPostRender (`screenself.read`) reads the screen's unencoded bytes. Screen
 copies (`screencopy.*`, `screencamera.*`, appended to the reference by two further identical
 captures): in this batch-mode Editor, which has no Game view, `CommandBuffer.CopyTexture` naming
 `CameraTarget`, from an executed buffer and inside a camera drawing to the screen (the plugin finds
@@ -318,14 +320,16 @@ drawing left). Plugin events run later there, on the Editor's render thread: `ca
 `executed.pixels` show colors the scripts set after the events. The engine run is compared with
 the batch-mode reference only.
 
-Unbound matches 333/371 records with 38 declared residuals before Q515 (328/371 with 43 expected
+Unbound matches 334/374 records with 40 declared residuals before Q515 (328/371 with 43 expected
 after it, the four `outside.*` rows; not rerun on macOS for that change) (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a Blit from a
 screen camera's target green 1/255 apart (the batch-mode screen is not sRGB-encoded), ETC2_RGBA1, signed EAC and
 PVRTC arrays kept as texels, a dynamically scaled texture's content after a change of scale
-(Unbound's is remade cleared) and what a Blit into one leaves there (zero in the Editor). The screen is shared:
+(Unbound's is remade cleared), what a Blit into one leaves there (zero in the Editor), a screen
+camera's target blitted onto itself (white in the Editor) and ReadPixels of the screen in such a
+camera (Unbound's bytes sRGB-encoded). The screen is shared:
 outside render texture targets the current encoder is over the screen's color texture and depth
 buffer (loaded), in callbacks and from scripts, and its descriptor is there before the plugin asks
 for the encoder (`plugin.peek.screen`, `plugin.peek.outside`); store actions are unknown until the
