@@ -345,4 +345,19 @@
 {"k":"primitive/Cube","v":"Mesh default 10202 'Cube' vertices 24 submeshes 1 indices 36 bounds 0,0,0 1,1,1 readable True"}
 {"k":"primitive/Plane","v":"Mesh default 10209 'Plane' vertices 121 submeshes 1 indices 600 bounds 0,0,0 10,0,10 readable True"}
 {"k":"primitive/Quad","v":"Mesh default 10210 'Quad' vertices 4 submeshes 1 indices 6 bounds 0,0,0 1,1,0 readable True"}
+{"k":"state/R/LegacyRuntime.ttf","v":"keywords [] gi EmissiveIsBlack instancing False doubleSidedGI False"}
+{"k":"state/R/PerformanceTools/FrameDebuggerRenderTargetDisplay.mat","v":"keywords [] gi EmissiveIsBlack instancing False doubleSidedGI False"}
+{"k":"state/E/Default-Terrain-Diffuse.mat","v":"keywords [] gi EmissiveIsBlack instancing True doubleSidedGI False"}
+{"k":"state/E/Default-Terrain-Specular.mat","v":"keywords [] gi EmissiveIsBlack instancing True doubleSidedGI False"}
+{"k":"state/E/Default-Terrain-Standard.mat","v":"keywords [] gi EmissiveIsBlack instancing True doubleSidedGI False"}
+{"k":"state/E/Sprites-Default.mat","v":"keywords [] gi EmissiveIsBlack instancing False doubleSidedGI False"}
+{"k":"state/E/Sprites-Mask.mat","v":"keywords [] gi RealtimeEmissive, EmissiveIsBlack instancing False doubleSidedGI False"}
+{"k":"state/E/Default-Particle.mat","v":"keywords [] gi EmissiveIsBlack instancing False doubleSidedGI False"}
+{"k":"state/E/Default-Diffuse.mat","v":"keywords [] gi EmissiveIsBlack instancing False doubleSidedGI False"}
+{"k":"state/E/Default-Material.mat","v":"keywords [] gi RealtimeEmissive, EmissiveIsBlack instancing False doubleSidedGI False"}
+{"k":"state/E/Default-Skybox.mat","v":"keywords [_SUNDISK_SIMPLE] gi RealtimeEmissive, EmissiveIsBlack instancing False doubleSidedGI False"}
+{"k":"state/E/Default-Line.mat","v":"keywords [] gi EmissiveIsBlack instancing False doubleSidedGI False"}
+{"k":"state/E/Default-ParticleSystem.mat","v":"keywords [_ALPHABLEND_ON] gi None instancing False doubleSidedGI False"}
+{"k":"state/E/VR/Materials/SpatialMappingOcclusion.mat","v":"keywords [_EMISSION] gi RealtimeEmissive instancing False doubleSidedGI False"}
+{"k":"state/E/VR/Materials/SpatialMappingWireframe.mat","v":"keywords [_EMISSION] gi RealtimeEmissive instancing False doubleSidedGI False"}
 {"k":"complete","v":true}

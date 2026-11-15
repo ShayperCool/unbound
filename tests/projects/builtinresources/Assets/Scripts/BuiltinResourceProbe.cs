@@ -89,6 +89,15 @@ public static class BuiltinResourceProbe
         return s;
     }
 
+    /// <summary>A material's keywords (sorted), global illumination flags, instancing and double-sided GI.</summary>
+    static string State(Material material)
+    {
+        var keywords = material.shaderKeywords;
+        Array.Sort(keywords, StringComparer.Ordinal);
+        return "keywords [" + string.Join(",", keywords) + "] gi " + material.globalIlluminationFlags
+            + " instancing " + material.enableInstancing + " doubleSidedGI " + material.doubleSidedGI;
+    }
+
     /// <summary>One call: its answer (or exception) and the messages it logged.</summary>
     static string Call(Func<Object> call)
     {
@@ -154,6 +163,14 @@ public static class BuiltinResourceProbe
                     var mesh = go.GetComponent<MeshFilter>().sharedMesh;
                     Row("primitive/" + primitive, Describe(mesh));
                     Object.DestroyImmediate(go);
+                }
+                // Each registered Material's stored state: its keywords, GI flags and instancing.
+                foreach (var line in list.Split('\n'))
+                {
+                    var parts = line.Split('\t');
+                    if (parts.Length < 3 || parts[2] != "Material") continue;
+                    if (Get(parts[0], typeof(Material), parts[1]) is Material material)
+                        Row("state/" + parts[0] + "/" + parts[1], State(material));
                 }
                 output.Write("{\"k\":\"complete\",\"v\":true}\n");
             }

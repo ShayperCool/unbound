@@ -14,7 +14,8 @@ Controls outside the table: another letter case, a missing name, a base type (`O
 unrelated type, a script class's bases for the GameSkin (`MonoBehaviour`, `ScriptableObject`), each
 file's paths asked of the other lookup, `Arial.ttf` (as a Font and as a Material, through both
 lookups), a null and an empty path; whether two calls answer the same object; the mesh of each
-`GameObject.CreatePrimitive` shape.
+`GameObject.CreatePrimitive` shape; last each registered Material's stored state (`state/*`: its
+sorted keywords, global illumination flags, instancing and double-sided GI).
 
 Measured in the Unity 6000.0.71f1 Editor (two identical captures on the NVIDIA driver): a path
 matches case-sensitively and only with the object's own class; a miss logs the assertion
@@ -23,7 +24,9 @@ file!` and answers null; a null or empty path throws `ArgumentException: Invalid
 is looked up as `LegacyRuntime.ttf` (with that lookup's messages) and then throws; `Sphere.fbx`,
 `Cylinder.fbx`, `Plane.fbx` and `Capsule.fbx` are the old meshes (pSphere1, ...) and the `New-*.fbx`
 paths the primitives' meshes; the registered DXT1 texture `VR/UnitySplash-HolographicTrackingLoss.png`
-is not loaded (only the error). `residuals.json` names the classes and properties Unbound does not
+is not loaded (only the error); the built-in Materials carry their stored keywords and flags
+(Default-Skybox `_SUNDISK_SIMPLE`, where its shader's default is the high-quality sun disk;
+Default-ParticleSystem `_ALPHABLEND_ON`; the terrain materials with instancing). `residuals.json` names the classes and properties Unbound does not
 reproduce.
 
     python3 tests/projects/builtinresources/run.py record --label A   # Editor capture (GPU)
