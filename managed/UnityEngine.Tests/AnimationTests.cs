@@ -579,6 +579,18 @@ namespace UnityEngine.Tests
             animation.Step(0f);
             for (int i = 0; i < 15 && animation.IsPlaying("s"); i++) animation.Step(0.1f);
             Assert.False(animation.IsPlaying("s"));
+
+            // A weight set during the fade out ends it too: the next update starts it again from
+            // the time past its start (0.4 s at speed -2 from 1) and the step (0.1 s), to 0.
+            animation.CrossFade("s", 0.5f);
+            animation.Step(0f);
+            for (int i = 0; i < 8; i++) animation.Step(0.1f); // 0.8 s
+            animation["s"].weight = 1f;
+            Assert.Equal(1f, animation["s"].weight);
+            animation.Step(0.1f);
+            Assert.True(animation["s"].weight <= 1e-5f);
+            animation.Step(0.1f);
+            Assert.False(animation.IsPlaying("s"));
             Object.DestroyImmediate(go);
         }
 
