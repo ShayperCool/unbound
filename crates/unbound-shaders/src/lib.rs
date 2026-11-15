@@ -5,9 +5,9 @@
 //! platform (`SHADER_API_GLCORE`: the renderer's matrices and texture rows are OpenGL's), glslang
 //! (through shaderc) from HLSL to SPIR-V, naga from SPIR-V to its IR, where the program is fitted
 //! to the renderer (see [`fit`]), and WGSL out. Results are cached on disk by a hash of the
-//! preprocessed sources, [`FORMAT_VERSION`] and the compiler's identity ([`COMPILER`]). Surface shaders compile as the forward base pass
-//! Unity generates for them (see [`surface`]); fixed-function passes as the program their
-//! commands stand for (see [`fixed`]).
+//! preprocessed sources, [`FORMAT_VERSION`] and the compiler's identity ([`COMPILER`]). Surface
+//! shaders compile as the forward base pass Unity generates for them (see [`surface`]);
+//! fixed-function passes as the program their commands stand for (see [`fixed`]).
 pub mod compute;
 pub mod fixed;
 pub mod keywords;
@@ -18,6 +18,7 @@ mod buffer_parameters;
 mod exponents;
 pub mod fetch;
 mod fit;
+#[cfg(test)]
 mod identity;
 mod matrix_swizzles;
 mod samplers;
@@ -37,7 +38,7 @@ use std::{
 /// never used).
 pub const FORMAT_VERSION: u32 = 52;
 
-/// The identity of this build's compiler ([`identity`]): the hash of the sources that decide its
+/// The identity of this build's compiler (`src/identity.rs`, made by the build script): the hash of the sources that decide its
 /// output. Cache entries are keyed by it beside [`FORMAT_VERSION`], so a build never reads
 /// another compiler's entries, whatever format number each declares.
 pub const COMPILER: &str = env!("UNBOUND_SHADERS_COMPILER");

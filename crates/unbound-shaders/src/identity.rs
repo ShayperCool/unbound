@@ -9,14 +9,22 @@
 use std::path::{Path, PathBuf};
 
 /// The source directories of the compiler's output, relative to the workspace root: this crate
-/// and the device rules it compiles by (`unbound-compat`).
+/// and the device rules it compiles by (`unbound-compat`). Their Rust files count.
 pub const SOURCE_DIRECTORIES: [&str; 2] =
     ["crates/unbound-shaders/src", "crates/unbound-compat/src"];
+
+/// The manifests of the compiler's crates (the features they build naga with), relative to the
+/// workspace root.
+pub const MANIFESTS: [&str; 2] = [
+    "crates/unbound-shaders/Cargo.toml",
+    "crates/unbound-compat/Cargo.toml",
+];
 
 /// The lockfile packages that compile programs: naga (SPIR-V in, WGSL out) and glslang (shaderc).
 pub const LOCKED_PACKAGES: [&str; 3] = ["naga", "shaderc", "shaderc-sys"];
 
-/// Every file under `directory`, sorted by path.
+/// Every Rust file under `directory`, sorted by path (an editor's backup or a folder's metadata
+/// beside them is not the compiler).
 fn files(directory: &Path) -> std::io::Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     let mut pending = vec![directory.to_path_buf()];
@@ -25,7 +33,7 @@ fn files(directory: &Path) -> std::io::Result<Vec<PathBuf>> {
             let path = entry?.path();
             if path.is_dir() {
                 pending.push(path);
-            } else {
+            } else if path.extension().is_some_and(|e| e == "rs") {
                 out.push(path);
             }
         }
@@ -47,21 +55,24 @@ fn locked_packages(lock: &str) -> String {
         .collect()
 }
 
-/// The compiler identity of the workspace at `root`: the hex hash of the files of
-/// [`SOURCE_DIRECTORIES`] (each by its path from the root and its bytes) and the locked
-/// [`LOCKED_PACKAGES`].
+/// The compiler identity of the workspace at `root`: the hex hash of the Rust files of
+/// [`SOURCE_DIRECTORIES`] and the [`MANIFESTS`] (each by its path from the root and its bytes)
+/// and the locked [`LOCKED_PACKAGES`].
 pub fn compiler_identity(root: &Path) -> std::io::Result<String> {
     let mut h = blake3::Hasher::new();
     let mut field = |bytes: &[u8]| {
         h.update(&(bytes.len() as u64).to_le_bytes());
         h.update(bytes);
     };
+    let mut paths = Vec::new();
     for directory in SOURCE_DIRECTORIES {
-        for path in files(&root.join(directory))? {
-            let relative = path.strip_prefix(root).unwrap_or(&path);
-            field(relative.to_string_lossy().replace('\\', "/").as_bytes());
-            field(&std::fs::read(&path)?);
-        }
+        paths.extend(files(&root.join(directory))?);
+    }
+    paths.extend(MANIFESTS.iter().map(|m| root.join(m)));
+    for path in paths {
+        let relative = path.strip_prefix(root).unwrap_or(&path);
+        field(relative.to_string_lossy().replace('\\', "/").as_bytes());
+        field(&std::fs::read(&path)?);
     }
     let lock = std::fs::read_to_string(root.join("Cargo.lock"))?;
     field(locked_packages(&lock).as_bytes());
@@ -90,6 +101,9 @@ mod tests {
             std::fs::write(root.join(directory).join("lib.rs"), "a").unwrap();
             std::fs::write(root.join(directory).join("nested/more.rs"), "b").unwrap();
         }
+        for manifest in MANIFESTS {
+            std::fs::write(root.join(manifest), "[package]").unwrap();
+        }
         let lock = |naga: &str, other: &str| {
             format!(
                 "version = 4\n\n[[package]]\nname = \"naga\"\nversion = \"{naga}\"\n\n[[package]]\nname = \"other\"\nversion = \"{other}\"\ndependencies = [\n \"naga\",\n]\n"
@@ -107,9 +121,16 @@ mod tests {
         std::fs::write(&nested, "c").unwrap();
         let source = compiler_identity(&root).unwrap();
         assert_ne!(source, naga);
+        // A file beside the sources that is not one leaves it alone; a manifest does not.
+        std::fs::write(nested.with_file_name("more.rs~"), "backup").unwrap();
+        std::fs::write(root.join(SOURCE_DIRECTORIES[0]).join(".DS_Store"), "x").unwrap();
+        assert_eq!(compiler_identity(&root).unwrap(), source);
+        std::fs::write(root.join(MANIFESTS[0]), "[package]\n[features]").unwrap();
+        let manifest = compiler_identity(&root).unwrap();
+        assert_ne!(manifest, source);
         // The same bytes under another name are another source.
         std::fs::rename(&nested, nested.with_file_name("renamed.rs")).unwrap();
-        assert_ne!(compiler_identity(&root).unwrap(), source);
+        assert_ne!(compiler_identity(&root).unwrap(), manifest);
         std::fs::remove_dir_all(&root).ok();
     }
 }

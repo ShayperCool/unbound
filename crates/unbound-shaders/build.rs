@@ -7,8 +7,11 @@ use std::path::Path;
 
 fn main() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    for directory in identity::SOURCE_DIRECTORIES {
-        println!("cargo:rerun-if-changed={}", root.join(directory).display());
+    for path in identity::SOURCE_DIRECTORIES
+        .iter()
+        .chain(&identity::MANIFESTS)
+    {
+        println!("cargo:rerun-if-changed={}", root.join(path).display());
     }
     println!(
         "cargo:rerun-if-changed={}",
