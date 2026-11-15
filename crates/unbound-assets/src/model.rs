@@ -1817,10 +1817,10 @@ impl<'a> Builder<'a> {
             // 24 fps is 0.33333337 s). A Generic or Humanoid clip ends at the clip time of its last
             // frame: 31 frames at 30 a second are 1.0333334 s, one step past the range's 1.0333333
             // (tests/projects/modelclips HumanLong), and frames 1 to 31 of a take are 1.00000012 s
-            // (`ShapesOff`); a Legacy clip at its range's span, its end less its start in single
-            // precision (tests/projects/modelaxis Reduced: Drift, 3 s; modelclips
-            // ends.LegacyEvents117: frames 1 to 17 at 30 a second, 0.533333361, one step past the
-            // difference of the ends in single precision). A Humanoid clip ends at its last key after its conversion into
+            // (`ShapesOff`); a Legacy clip at its range's span, its end less its start rounded
+            // once to single precision (tests/projects/modelaxis Reduced: Drift, 3 s; modelclips
+            // ends.LegacyEvents117: frames 1 to 17 at 30 a second, 0.533333361, one step past
+            // the difference of the ends each in single precision). A Humanoid clip ends at its last key after its conversion into
             // muscle curves (managed `HumanClip`: `HumanLate` is 0.99999994 s long, its last
             // muscle key). A clip without keys has the range (0, 1) of an empty AnimationClip.
             let length = if empty {

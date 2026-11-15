@@ -266,7 +266,9 @@ as Generic; `events.<model>.<clip>` records the events.
 
 - The events lie at 0.5 and 1 and the parameter curve's keys at 0 and 1, Humanoid and Generic
   alike: normalized times are placed on the range's span, its end less its start (1), not on the
-  last key's time (Legacy clips unmeasured; Unbound keeps them on their range's length).
+  last key's time (Legacy model clips have no events: `LegacyEvents117` below).
+- Both Humanoid clips are 1 long, their last event's (and parameter key's) time, past the muscle
+  keys' 0.99999994: a clip ends at its last key or event.
 - The Generic clip stays 1.00000012 long, its last rotation key (its positions end at
   0.99999994).
 
@@ -280,8 +282,6 @@ Speed curve too), and frames 1..31 as Generic with an event at normalized 1.25.
   position at 0.5333333: a last-bit residual).
 - The Generic clips place events and the parameter curve on the span and end at their last event:
   0.333333343, one step past the last key, and 1.25.
-- Both clips are 1 long, their last event's (and parameter key's) time, past the muscle keys'
-  0.99999994: a clip ends at its last key or event.
 
 ## Signs of the axis conversions
 

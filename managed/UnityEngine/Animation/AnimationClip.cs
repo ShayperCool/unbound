@@ -693,7 +693,8 @@ namespace UnityEngine
         /// quaternion lies in the opposite hemisphere from the key before it (a negative dot product,
         /// that key already realigned) is negated, from the first key on. Every key of the rotation
         /// then takes the slope between its neighbours as both tangents (one-sided at the ends), with
-        /// or without a key negated, whatever tangents, steps or weights it had; Euler angle curves
+        /// or without a key negated, whatever tangents or steps it had (its weights are reset too,
+        /// unmeasured: the measured keys have none); Euler angle curves
         /// keep theirs, and a rotation whose four curves do not have their keys at the same times is
         /// left as it is (matches the Unity 6000.0.71f1 Editor, tests/projects/editorui
         /// EnsureQuaternionContinuity.*, legacy and non-legacy clips).

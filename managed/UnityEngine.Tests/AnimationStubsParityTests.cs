@@ -173,8 +173,9 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>Every key of a realigned rotation takes the slope between its neighbours as both
-        /// tangents (one-sided at the ends), whatever tangents and weights it had (matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/editorui EnsureQuaternionContinuity.*).</summary>
+        /// tangents (one-sided at the ends), whatever tangents it had (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/editorui EnsureQuaternionContinuity.*; that weights are reset with
+        /// them is Unbound's choice, unmeasured).</summary>
         [Fact]
         public void EveryKeyTakesTheSlopeBetweenItsNeighbours()
         {

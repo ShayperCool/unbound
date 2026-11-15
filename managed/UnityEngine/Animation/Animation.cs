@@ -1205,7 +1205,8 @@ namespace UnityEngine
         /// <summary>A time set by script (time, normalizedTime, Rewind): the next update that moves
         /// the time fires the events from it on, one at that very time too (matches the Unity
         /// 6000.0.71f1 Editor, tests/projects/animpartial legacy.events.timeset: a playing state set
-        /// back to its event's time fires it in the next update; legacy.events.start.timeset,
+        /// back to its event's time fires it in the next update, legacy.events.rewind and
+        /// .normalizedtimeset through Rewind and normalizedTime; legacy.events.start.timeset,
         /// .speed0.timeset: before its first move).</summary>
         internal void SetTimeForEvents(double time)
         {

@@ -735,6 +735,14 @@ namespace UnityEngine.Tests
             animation["z"].time = 0.0625f;
             animation.Step(0.125f);
             Assert.Single(receiver.Calls);
+            // Rewind and normalizedTime are time sets too (legacy.events.rewind,
+            // legacy.events.normalizedtimeset).
+            animation.Rewind("z");
+            animation.Step(0.125f);
+            Assert.Equal(2, receiver.Calls.Count);
+            animation["z"].normalizedTime = 0f;
+            animation.Step(0.125f);
+            Assert.Equal(3, receiver.Calls.Count);
             Object.DestroyImmediate(go);
         }
 
