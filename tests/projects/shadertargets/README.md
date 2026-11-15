@@ -93,9 +93,9 @@ twice over the texel (`fetch.Overlap`: the second triangle reads what the first 
 draws), a fetch of color target 1 (`fetch.Second.*`; over a single target, which lacks target 1, nothing is
 drawn: `fetch.*.missing`), and a 4x multisampled texel half covered,
 then squared by a fetch (`fetch.Msaa.*`: each sample is squared, so the resolve stays 0.5). Unbound
-matches 149 of the 151 Metal records (`run.py check --device metal`, macOS only); the other two,
-overlapping triangles and multisampled targets (Unbound reads copies made before the draw, the
-multisampled one resolved), are declared in `residuals-metal.json`.
+matches 150 of the 151 Metal records (`run.py check --device metal`, macOS only; a multisampled
+target's fragments read their own sample from a multisampled copy); the other one, overlapping
+triangles (Unbound reads a copy made before the draw), is declared in `residuals-metal.json`.
 
 ## Generated pass indices
 
