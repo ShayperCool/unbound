@@ -46,7 +46,11 @@ lack: inside and outside each curve's keys, on a Hermite segment with unequal ta
 segments (with a key 5e-7 s after another), and on a rotation, for legacy and non-legacy clips;
 then key times about 1.9e-6 s and 2.1e-6 s apart and at 100 s, a component set alone with keys
 5e-7 s apart, curves without keys, and the clip settings' range after the Euler angles' removal
-and a later SetCurve.
+and a later SetCurve. The scale and rotation cases among them (`emptyScale`, `aloneScale`,
+`emptyScaleAfter` and the same for Rotation: a component without keys set before and after a keyed
+one, and a keyed component alone, sampled) were added from two identical captures of the macOS
+Editor, whose other records equal the reference's but for one log of
+`EditorUtility.DisplayDialogComplex` that the macOS Editor writes.
 Infinite tangents are recorded as "+inf"/"-inf".
 
 Every call matches but one expected difference: Unity's reorderable list keeps its elements'

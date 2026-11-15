@@ -459,8 +459,10 @@ public static class EditorUIProbe
     }
 
     /// <summary>Edges of SetCurve's vector keys: key times about 1.9e-6 s and 2.1e-6 s apart and
-    /// at 100 s, a component set alone with keys 5e-7 s apart, curves without keys, and the clip
-    /// settings' range after the Euler angles' removal and a later change.</summary>
+    /// at 100 s, a component set alone with keys 5e-7 s apart, curves without keys (of a position,
+    /// and of a scale and a rotation before and after a keyed component), a scale and a rotation
+    /// component alone (sampled too), and the clip settings' range after the Euler angles' removal
+    /// and a later change.</summary>
     static void InsertedKeyEdges()
     {
         foreach (var legacy in new[] { true, false })
@@ -495,6 +497,46 @@ public static class EditorUIProbe
                 UnityEngine.Object.DestroyImmediate(c);
                 return steps;
             });
+            // Scale and rotation components without keys, set before and after a keyed component,
+            // and a keyed component alone.
+            foreach (var (name, vector, components) in new[] { ("Scale", "localScale", "xyz"), ("Rotation", "localRotation", "xyzw") })
+            {
+                string serialized = vector == "localScale" ? "m_LocalScale" : "m_LocalRotation";
+                object All(AnimationClip c) => components.Select(k => Keys(c, serialized + "." + k)).ToArray();
+                Call("SetCurveKeys." + tag + ".empty" + name, () =>
+                {
+                    var c = new AnimationClip { legacy = legacy };
+                    c.SetCurve("", typeof(Transform), vector + ".x", new AnimationCurve());
+                    var steps = new List<object> { AnimationUtility.GetCurveBindings(c).Length, All(c) };
+                    c.SetCurve("", typeof(Transform), vector + ".y", AnimationCurve.Linear(0f, 0.5f, 1f, 2f));
+                    steps.Add(All(c));
+                    UnityEngine.Object.DestroyImmediate(c);
+                    return steps;
+                });
+                // One keyed component alone: the others' keys, and the clip sampled at 0.5 s.
+                Call("SetCurveKeys." + tag + ".alone" + name, () =>
+                {
+                    var c = new AnimationClip { legacy = legacy };
+                    c.SetCurve("", typeof(Transform), vector + ".y", AnimationCurve.Linear(0f, 0.5f, 1f, 2f));
+                    var go = new GameObject("SetCurveAlone");
+                    go.transform.localRotation = Quaternion.Euler(10f, 20f, 30f);
+                    go.transform.localScale = new Vector3(3f, 4f, 5f);
+                    c.SampleAnimation(go, 0.5f);
+                    var result = new object[] { All(c), go.transform.localRotation.ToString("F5"), go.transform.localScale.ToString("F5") };
+                    UnityEngine.Object.DestroyImmediate(go);
+                    UnityEngine.Object.DestroyImmediate(c);
+                    return result;
+                });
+                Call("SetCurveKeys." + tag + ".empty" + name + "After", () =>
+                {
+                    var c = new AnimationClip { legacy = legacy };
+                    c.SetCurve("", typeof(Transform), vector + ".y", AnimationCurve.Linear(0f, 0.5f, 1f, 2f));
+                    c.SetCurve("", typeof(Transform), vector + ".x", new AnimationCurve());
+                    var result = All(c);
+                    UnityEngine.Object.DestroyImmediate(c);
+                    return result;
+                });
+            }
             Call("SetCurveKeys." + tag + ".eulerRemovalThenLight", () =>
             {
                 var c = new AnimationClip { legacy = legacy };
