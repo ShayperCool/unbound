@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.InteropServices;
 using Unbound.Runtime;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -7,16 +6,17 @@ using Unity.Collections.LowLevel.Unsafe;
 namespace UnityEngine
 {
     /// <summary>
-    /// LockBufferForWrite: the release's checks and messages, an array over the locked range's
-    /// current contents, written back whole when the lock ends. Matches the Unity 6000.0.71f1
-    /// Editor on OpenGL Core, tests/projects/srpmembers lock.*.
+    /// LockBufferForWrite: the release's checks and messages, and an array over the locked range
+    /// of the buffer's CPU copy (<see cref="GpuBufferStorage.Mirror"/>), written to the GPU whole
+    /// when the lock ends: writes past countWritten are kept and elements the array does not write
+    /// keep their contents. Matches the Unity 6000.0.71f1 Editor on OpenGL Core,
+    /// tests/projects/srpmembers lock.*.
     /// </summary>
     public sealed partial class GraphicsBuffer
     {
         /// <summary>The safety handle of the array the open lock handed out.</summary>
         AtomicSafetyHandle m_Safety;
-        /// <summary>The open lock's memory (writes past countWritten are kept: lock.writePartial).</summary>
-        unsafe byte* m_Locked;
+        bool m_Locked;
         long m_LockedOffset, m_LockedSize;
 
         public unsafe NativeArray<T> LockBufferForWrite<T>(int bufferStartIndex, int count) where T : struct
@@ -52,34 +52,39 @@ namespace UnityEngine
             EndBufferWrite();
         }
 
-        /// <summary>Opens a lock on a byte range; a lock still open ends first.</summary>
+        /// <summary>Opens a lock on a byte range; a lock still open ends first, its array released.</summary>
         unsafe void* BeginBufferWrite(long offset, long size)
         {
             EndBufferWrite();
-            m_Locked = (byte*)NativeMemory.Alloc((nuint)Math.Max(size, 1));
-            var locked = new Span<byte>(m_Locked, (int)size);
-            var current = size > 0 ? Native.ReadBuffer(m_Storage.Handle, offset, size) : null;
-            if (current != null) current.AsSpan(0, Math.Min(current.Length, locked.Length)).CopyTo(locked);
-            else locked.Clear();
+            byte* mirror = m_Storage.EnsureMirror();
             m_LockedOffset = offset;
             m_LockedSize = size;
+            m_Locked = true;
             m_Storage.Locked = true;
-            return m_Locked;
+            return mirror + offset;
         }
 
         unsafe void EndBufferWrite()
         {
-            if (m_Locked == null) return;
-            if (m_LockedSize > 0) m_Storage.Write(m_LockedOffset, new ReadOnlySpan<byte>(m_Locked, (int)m_LockedSize));
+            if (!m_Locked) return;
+            if (m_LockedSize > 0) m_Storage.Write(m_LockedOffset, new ReadOnlySpan<byte>(m_Storage.Mirror + m_LockedOffset, (int)m_LockedSize));
             DropLock();
         }
 
-        unsafe void DropLock()
+        /// <summary>Ends the lock without writing; an array still handed out is released, so it
+        /// throws rather than write into memory the buffer may free.</summary>
+        void DropLock()
         {
-            if (m_Locked == null) return;
-            NativeMemory.Free(m_Locked);
-            m_Locked = null;
+            if (!m_Locked) return;
+            ReleaseLockSafety(m_Safety);
+            m_Safety = default;
+            m_Locked = false;
             m_Storage.Locked = false;
+        }
+
+        static void ReleaseLockSafety(AtomicSafetyHandle safety)
+        {
+            if (safety.versionNode != IntPtr.Zero && Safety.IsAlive(safety)) AtomicSafetyHandle.Release(safety);
         }
     }
 }

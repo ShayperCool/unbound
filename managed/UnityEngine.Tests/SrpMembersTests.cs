@@ -116,6 +116,39 @@ namespace Unbound.Tests
             Assert.False(buffer.Storage?.Locked ?? false);
         }
 
+        /// <summary>Red: the array of an earlier lock still wrote into memory the next lock or a
+        /// Release freed.</summary>
+        [Fact]
+        public void AnArrayDiesWithItsLockAndUnwrittenElementsKeepTheirContents()
+        {
+            var buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, GraphicsBuffer.UsageFlags.LockBufferForWrite, 4, 4);
+            // The first lock makes the CPU copy (from the GPU's contents, which tests have none
+            // of); every later write keeps it current.
+            buffer.LockBufferForWrite<int>(0, 0);
+            buffer.UnlockBufferAfterWrite<int>(0);
+            buffer.SetData(new[] { 10, 11, 12, 13 });
+            var first = buffer.LockBufferForWrite<int>(0, 4);
+            first[0] = 1;
+            var second = buffer.LockBufferForWrite<int>(0, 2);
+            Assert.Throws<ObjectDisposedException>(() => first[1] = 2);
+            // The lock reads the buffer's contents: an element it does not write keeps its value.
+            Assert.Equal(1, second[0]);
+            Assert.Equal(11, second[1]);
+            second[1] = 21;
+            buffer.UnlockBufferAfterWrite<int>(1);
+            unsafe
+            {
+                var mirror = (int*)buffer.Storage.Mirror;
+                Assert.Equal(new[] { 1, 21, 12, 13 }, new[] { mirror[0], mirror[1], mirror[2], mirror[3] });
+            }
+            // SetData keeps the copy current for the next lock.
+            buffer.SetData(new[] { 30 }, 0, 3, 1);
+            var third = buffer.LockBufferForWrite<int>(3, 1);
+            Assert.Equal(30, third[0]);
+            buffer.Release();
+            Assert.Throws<ObjectDisposedException>(() => third[0] = 31);
+        }
+
         [Theory]
         [InlineData(GraphicsFormat.R8G8B8A8_UNorm, "R G B A")]
         [InlineData(GraphicsFormat.B8G8R8A8_SRGB, "B G R A")]
@@ -232,6 +265,11 @@ namespace Unbound.Tests
                 Assert.Empty(Immediate.Queued);
                 Graphics.DrawMeshInstanced(mesh, 0, material, matrices, 2, null, ShadowCastingMode.On, true, 0, null, LightProbeUsage.Off, null);
                 Assert.Equal(2, Immediate.Queued.Count);
+                // A proxy volume lights the instances as Blend Probes does.
+                Immediate.Queued.Clear();
+                var volume = new GameObject("Volume").AddComponent<LightProbeProxyVolume>();
+                Graphics.DrawMeshInstanced(mesh, 0, material, matrices, 1, null, ShadowCastingMode.On, true, 0, null, LightProbeUsage.UseProxyVolume, volume);
+                Assert.Equal(LightProbeUsage.BlendProbes, Assert.Single(Immediate.Queued).Lighting.Probes);
             }
             finally
             {

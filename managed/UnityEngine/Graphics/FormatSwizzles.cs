@@ -25,6 +25,30 @@ namespace UnityEngine.Experimental.Rendering
         static readonly FormatSwizzle[] s_Rgba = { FormatSwizzle.FormatSwizzleR, FormatSwizzle.FormatSwizzleG, FormatSwizzle.FormatSwizzleB, FormatSwizzle.FormatSwizzleA };
         static readonly FormatSwizzle[] s_Bgra = { FormatSwizzle.FormatSwizzleB, FormatSwizzle.FormatSwizzleG, FormatSwizzle.FormatSwizzleR, FormatSwizzle.FormatSwizzleA };
 
+        /// <summary>The swizzles of every named format, packed four to an int (a byte a channel),
+        /// made once from the format descriptions on first use (a nested class, so the
+        /// descriptions exist by then).</summary>
+        static class Swizzles
+        {
+            internal static readonly System.Collections.Generic.Dictionary<GraphicsFormat, int> Table = Build();
+
+            static System.Collections.Generic.Dictionary<GraphicsFormat, int> Build()
+            {
+                var table = new System.Collections.Generic.Dictionary<GraphicsFormat, int>();
+                foreach (GraphicsFormat format in System.Enum.GetValues(typeof(GraphicsFormat)))
+                {
+                    int packed = 0;
+                    for (int channel = 0; channel < 4; channel++) packed |= (int)SwizzleOf(format, channel) << (8 * channel);
+                    table[format] = packed;
+                }
+                return table;
+            }
+        }
+
+        static FormatSwizzle Swizzle(GraphicsFormat format, int channel) =>
+            Swizzles.Table.TryGetValue(format, out int packed) ? (FormatSwizzle)((packed >> (8 * channel)) & 0xFF)
+                : channel == 3 ? FormatSwizzle.FormatSwizzle1 : FormatSwizzle.FormatSwizzle0;
+
         /// <summary>
         /// A format's channels read in order (blue first for the blue-first families); the
         /// channels it lacks read 0, and a missing alpha 1. Formats without color (None, the Auto
@@ -35,7 +59,7 @@ namespace UnityEngine.Experimental.Rendering
         /// reads as three channels, RGB_A1_ETC2 as four. The TextureFormat overloads go through
         /// GetGraphicsFormat, so they share its known differences (formatmapping residuals.json).
         /// </summary>
-        static FormatSwizzle Swizzle(GraphicsFormat format, int channel)
+        static FormatSwizzle SwizzleOf(GraphicsFormat format, int channel)
         {
             var info = Of(format);
             var name = info.Name;

@@ -123,6 +123,9 @@ namespace UnityEngine
         {
             CheckInstanced(mesh, submeshIndex, material, matrices, count, lightProbeUsage, lightProbeProxyVolume);
             if (count == 0) return;
+            // A proxy volume lights the instances as Blend Probes does, as it lights renderers
+            // (LightProbeProxyVolume; rendering through the volume itself is not measured).
+            if (lightProbeUsage == LightProbeUsage.UseProxyVolume) lightProbeUsage = LightProbeUsage.BlendProbes;
             var lighting = ImmediateLighting.Of(castShadows, receiveShadows, lightProbeUsage);
             // The box around every drawn instance's mesh bounds (the union of each instance's
             // bounds through its matrix: Unbound's choice of how the box is built, unmeasured).

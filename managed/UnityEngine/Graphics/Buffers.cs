@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Unbound.Runtime;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace Unbound.Runtime
 {
@@ -76,6 +77,29 @@ namespace Unbound.Runtime
             if (m_GpuReleased) return;
             m_GpuReleased = true;
             GfxStream.ReleaseBuffer(Handle);
+            FreeMirror();
+        }
+
+        /// <summary>The buffer's contents on the CPU, kept once a LockBufferForWrite asks for them:
+        /// buffers that can be locked are read-only on the GPU (the release's constructor refuses
+        /// CopyDestination for them), so every later write passes <see cref="Write"/>, which keeps
+        /// the copy current, and a lock needs no read back.</summary>
+        internal unsafe byte* Mirror;
+
+        internal unsafe byte* EnsureMirror()
+        {
+            if (Mirror != null) return Mirror;
+            Mirror = (byte*)NativeMemory.AllocZeroed((nuint)Math.Max(Size, 1));
+            var current = Native.ReadBuffer(Handle, 0, Size);
+            if (current != null) current.AsSpan(0, (int)Math.Min(current.Length, Size)).CopyTo(new Span<byte>(Mirror, (int)Size));
+            return Mirror;
+        }
+
+        unsafe void FreeMirror()
+        {
+            if (Mirror == null) return;
+            NativeMemory.Free(Mirror);
+            Mirror = null;
         }
 
         static int ElementSize(Type type) => type == typeof(bool) ? 1 : type == typeof(char) ? 2 : Marshal.SizeOf(type);
@@ -139,9 +163,15 @@ namespace Unbound.Runtime
         /// <summary>A GraphicsBuffer.LockBufferForWrite is open on the buffer.</summary>
         internal bool Locked;
 
-        internal void Write(long offset, ReadOnlySpan<byte> bytes)
+        internal unsafe void Write(long offset, ReadOnlySpan<byte> bytes)
         {
             if (Released) return;
+            if (Mirror != null)
+            {
+                var mirrored = new Span<byte>(Mirror + offset, bytes.Length);
+                fixed (byte* source = bytes)
+                    if (source != Mirror + offset) bytes.CopyTo(mirrored);
+            }
             // A buffer change comes after what was recorded before it.
             GfxStream.BufferData(Handle, offset, bytes);
         }
@@ -260,6 +290,8 @@ namespace UnityEngine
         {
             if (m_Storage?.MeshOwned == true && m_Ptr != IntPtr.Zero)
                 MainThreadContext.Instance.Post(static state => ((GpuBufferStorage)state).ReleaseView(), m_Storage);
+            // A lock's array outlives a buffer collected without Release only as a released array.
+            if (m_Locked) MainThreadContext.Instance.Post(static state => ReleaseLockSafety((AtomicSafetyHandle)state), m_Safety);
         }
 
         internal ulong Handle => m_Storage.Handle;
