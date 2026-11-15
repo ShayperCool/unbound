@@ -1,0 +1,239 @@
+{"k":"authored lights","v":"AuthoredBright,AuthoredShadowed"}
+{"k":"authored sun","v":"AuthoredShadowed"}
+{"k":"authored forward light","v":"AuthoredShadowed"}
+{"k":"authored forward color","v":[0.0100228256,0.0100228256,0.0100228256]}
+{"k":"authored forward position","v":[-0.8137977,0.342020154,-0.4698463,0]}
+{"k":"authored sky light","v":"AuthoredShadowed"}
+{"k":"authored sky color","v":[0.0100228256,0.0100228256,0.0100228256]}
+{"k":"authored sky position","v":[-0.8137977,0.342020154,-0.4698463,0]}
+{"k":"authored sun after","v":"AuthoredShadowed"}
+{"k":"no lights sun","v":"null"}
+{"k":"no lights forward light","v":"none"}
+{"k":"no lights forward color","v":[0,0,0]}
+{"k":"no lights forward position","v":[0,0,0,0]}
+{"k":"no lights sky light","v":"other"}
+{"k":"no lights sky color","v":[0,0,0]}
+{"k":"no lights sky position","v":[0,0,-1,0]}
+{"k":"no lights sun after","v":"null"}
+{"k":"point only sun","v":"null"}
+{"k":"point only forward light","v":"none"}
+{"k":"point only forward color","v":[0,0,0]}
+{"k":"point only forward position","v":[0,0,0,0]}
+{"k":"point only sky light","v":"other"}
+{"k":"point only sky color","v":[0,0,0]}
+{"k":"point only sky position","v":[0,0,-1,0]}
+{"k":"point only sun after","v":"null"}
+{"k":"one directional sun","v":"A"}
+{"k":"one directional forward light","v":"A"}
+{"k":"one directional forward color","v":[1,1,1]}
+{"k":"one directional forward position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"one directional sky light","v":"A"}
+{"k":"one directional sky color","v":[1,1,1]}
+{"k":"one directional sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"one directional sun after","v":"A"}
+{"k":"shadows outweigh sun","v":"Shadowed"}
+{"k":"shadows outweigh forward light","v":"Shadowed"}
+{"k":"shadows outweigh forward color","v":[0.0100228256,0.0100228256,0.0100228256]}
+{"k":"shadows outweigh forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"shadows outweigh sky light","v":"Shadowed"}
+{"k":"shadows outweigh sky color","v":[0.0100228256,0.0100228256,0.0100228256]}
+{"k":"shadows outweigh sky position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"shadows outweigh sun after","v":"Shadowed"}
+{"k":"shadows short sun","v":"Plain"}
+{"k":"shadows short forward light","v":"Plain"}
+{"k":"shadows short forward color","v":[1,1,1]}
+{"k":"shadows short forward position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"shadows short sky light","v":"Plain"}
+{"k":"shadows short sky color","v":[1,1,1]}
+{"k":"shadows short sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"shadows short sun after","v":"Plain"}
+{"k":"shadows hard sun","v":"Hard"}
+{"k":"shadows hard forward light","v":"Hard"}
+{"k":"shadows hard forward color","v":[0.0100228256,0.0100228256,0.0100228256]}
+{"k":"shadows hard forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"shadows hard sky light","v":"Hard"}
+{"k":"shadows hard sky color","v":[0.0100228256,0.0100228256,0.0100228256]}
+{"k":"shadows hard sky position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"shadows hard sun after","v":"Hard"}
+{"k":"channel weights sun","v":"Red"}
+{"k":"channel weights forward light","v":"Red"}
+{"k":"channel weights forward color","v":[1,0,0]}
+{"k":"channel weights forward position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"channel weights sky light","v":"Red"}
+{"k":"channel weights sky color","v":[1,0,0]}
+{"k":"channel weights sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"channel weights sun after","v":"Red"}
+{"k":"channel weights green sun","v":"Green"}
+{"k":"channel weights green forward light","v":"Green"}
+{"k":"channel weights green forward color","v":[0,1,0]}
+{"k":"channel weights green forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"channel weights green sky light","v":"Green"}
+{"k":"channel weights green sky color","v":[0,1,0]}
+{"k":"channel weights green sky position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"channel weights green sun after","v":"Green"}
+{"k":"hdr color sun","v":"Bright"}
+{"k":"hdr color forward light","v":"Bright"}
+{"k":"hdr color forward color","v":[4.594794,4.594794,4.594794]}
+{"k":"hdr color forward position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"hdr color sky light","v":"Bright"}
+{"k":"hdr color sky color","v":[4.594794,4.594794,4.594794]}
+{"k":"hdr color sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"hdr color sun after","v":"Bright"}
+{"k":"force vertex sun","v":"Auto"}
+{"k":"force vertex forward light","v":"Auto"}
+{"k":"force vertex forward color","v":[1,1,1]}
+{"k":"force vertex forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"force vertex sky light","v":"Auto"}
+{"k":"force vertex sky color","v":[1,1,1]}
+{"k":"force vertex sky position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"force vertex sun after","v":"Auto"}
+{"k":"force pixel sun","v":"Auto"}
+{"k":"force pixel forward light","v":"Auto"}
+{"k":"force pixel forward color","v":[1,1,1]}
+{"k":"force pixel forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"force pixel sky light","v":"Auto"}
+{"k":"force pixel sky color","v":[1,1,1]}
+{"k":"force pixel sky position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"force pixel sun after","v":"Auto"}
+{"k":"disabled and inactive sun","v":"Enabled"}
+{"k":"disabled and inactive forward light","v":"Enabled"}
+{"k":"disabled and inactive forward color","v":[1,1,1]}
+{"k":"disabled and inactive forward position","v":[0.222288266,0.6946584,-0.6841328,0]}
+{"k":"disabled and inactive sky light","v":"Enabled"}
+{"k":"disabled and inactive sky color","v":[1,1,1]}
+{"k":"disabled and inactive sky position","v":[0.222288266,0.6946584,-0.6841328,0]}
+{"k":"disabled and inactive sun after","v":"Enabled"}
+{"k":"zero intensity sun","v":"Zero"}
+{"k":"zero intensity forward light","v":"none"}
+{"k":"zero intensity forward color","v":[0,0,0]}
+{"k":"zero intensity forward position","v":[0,0,0,0]}
+{"k":"zero intensity sky light","v":"Zero"}
+{"k":"zero intensity sky color","v":[0,0,0]}
+{"k":"zero intensity sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"zero intensity sun after","v":"Zero"}
+{"k":"zero and point sun","v":"Zero"}
+{"k":"zero and point forward light","v":"none"}
+{"k":"zero and point forward color","v":[0,0,0]}
+{"k":"zero and point forward position","v":[0,0,0,0]}
+{"k":"zero and point sky light","v":"Zero"}
+{"k":"zero and point sky color","v":[0,0,0]}
+{"k":"zero and point sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"zero and point sun after","v":"Zero"}
+{"k":"culling mask none sun","v":"Masked"}
+{"k":"culling mask none forward light","v":"Open"}
+{"k":"culling mask none forward color","v":[1,1,1]}
+{"k":"culling mask none forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"culling mask none sky light","v":"Masked"}
+{"k":"culling mask none sky color","v":[4.594794,4.594794,4.594794]}
+{"k":"culling mask none sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"culling mask none sun after","v":"Masked"}
+{"k":"cookie sun","v":"Cookie"}
+{"k":"cookie forward light","v":"Plain"}
+{"k":"cookie forward color","v":[1,1,1]}
+{"k":"cookie forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"cookie sky light","v":"Cookie"}
+{"k":"cookie sky color","v":[4.594794,4.594794,4.594794]}
+{"k":"cookie sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"cookie sun after","v":"Cookie"}
+{"k":"baked sun","v":"Baked"}
+{"k":"baked forward light","v":"Baked"}
+{"k":"baked forward color","v":[4.594794,4.594794,4.594794]}
+{"k":"baked forward position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"baked sky light","v":"Baked"}
+{"k":"baked sky color","v":[4.594794,4.594794,4.594794]}
+{"k":"baked sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"baked sun after","v":"Baked"}
+{"k":"color temperature sun","v":"Warm"}
+{"k":"color temperature forward light","v":"Warm"}
+{"k":"color temperature forward color","v":[1,1,1]}
+{"k":"color temperature forward position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"color temperature sky light","v":"Warm"}
+{"k":"color temperature sky color","v":[1,1,1]}
+{"k":"color temperature sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"color temperature sun after","v":"Warm"}
+{"k":"tie sun","v":"First"}
+{"k":"tie sky light","v":"First"}
+{"k":"tie sky color","v":[1,1,1]}
+{"k":"tie sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"tie sun after","v":"First"}
+{"k":"tie reenabled sun","v":"Second"}
+{"k":"tie reenabled sky light","v":"Second"}
+{"k":"tie reenabled sky color","v":[1,1,1]}
+{"k":"tie reenabled sky position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"tie reenabled sun after","v":"Second"}
+{"k":"tie reactivated sun","v":"Second"}
+{"k":"tie reactivated sky light","v":"Second"}
+{"k":"tie reactivated sky color","v":[1,1,1]}
+{"k":"tie reactivated sky position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"tie reactivated sun after","v":"Second"}
+{"k":"named dim sun","v":"Named"}
+{"k":"named dim forward light","v":"Brighter"}
+{"k":"named dim forward color","v":[1,1,1]}
+{"k":"named dim forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"named dim sky light","v":"Named"}
+{"k":"named dim sky color","v":[0.0331047624,0.0331047624,0.0331047624]}
+{"k":"named dim sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"named dim sun after","v":"Named"}
+{"k":"named disabled sun","v":"Named"}
+{"k":"named disabled forward light","v":"Other"}
+{"k":"named disabled forward color","v":[4.594794,4.594794,4.594794]}
+{"k":"named disabled forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"named disabled sky light","v":"Named"}
+{"k":"named disabled sky color","v":[1,1,1]}
+{"k":"named disabled sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"named disabled sun after","v":"Named"}
+{"k":"named inactive sun","v":"Named"}
+{"k":"named inactive forward light","v":"Other"}
+{"k":"named inactive forward color","v":[4.594794,4.594794,4.594794]}
+{"k":"named inactive forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"named inactive sky light","v":"Named"}
+{"k":"named inactive sky color","v":[1,1,1]}
+{"k":"named inactive sky position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"named inactive sun after","v":"Named"}
+{"k":"named point sun","v":"NamedPoint"}
+{"k":"named point forward light","v":"Other"}
+{"k":"named point forward color","v":[0.214041144,0.214041144,0.214041144]}
+{"k":"named point forward position","v":[0.5566704,0.50000006,-0.6634139,0]}
+{"k":"named point sky light","v":"other"}
+{"k":"named point sky color","v":[1,1,1]}
+{"k":"named point sky position","v":[-0.336824119,0.173648164,-0.9254166,0]}
+{"k":"named point sun after","v":"NamedPoint"}
+{"k":"named spot alone sun","v":"NamedSpot"}
+{"k":"named spot alone forward light","v":"none"}
+{"k":"named spot alone forward color","v":[0,0,0]}
+{"k":"named spot alone forward position","v":[0,0,0,0]}
+{"k":"named spot alone sky light","v":"other"}
+{"k":"named spot alone sky color","v":[1,1,1]}
+{"k":"named spot alone sky position","v":[-0.336824119,0.173648164,-0.9254166,0]}
+{"k":"named spot alone sun after","v":"NamedSpot"}
+{"k":"named destroyed sun","v":"Remaining"}
+{"k":"named destroyed forward light","v":"Remaining"}
+{"k":"named destroyed forward color","v":[1,1,1]}
+{"k":"named destroyed forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"named destroyed sky light","v":"Remaining"}
+{"k":"named destroyed sky color","v":[1,1,1]}
+{"k":"named destroyed sky position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"named destroyed sun after","v":"Remaining"}
+{"k":"named cleared before","v":"Named"}
+{"k":"named cleared sun","v":"Brighter"}
+{"k":"named cleared forward light","v":"Brighter"}
+{"k":"named cleared forward color","v":[1,1,1]}
+{"k":"named cleared forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"named cleared sky light","v":"Brighter"}
+{"k":"named cleared sky color","v":[1,1,1]}
+{"k":"named cleared sky position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"named cleared sun after","v":"Brighter"}
+{"k":"live before","v":"A"}
+{"k":"live intensity","v":"B"}
+{"k":"live lowered","v":"A"}
+{"k":"live shadows","v":"B"}
+{"k":"live type","v":"A"}
+{"k":"live sun","v":"B"}
+{"k":"live forward light","v":"B"}
+{"k":"live forward color","v":[0.787412345,0.787412345,0.787412345]}
+{"k":"live forward position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"live sky light","v":"B"}
+{"k":"live sky color","v":[0.787412345,0.787412345,0.787412345]}
+{"k":"live sky position","v":[0.387186229,0.601815045,-0.698502362,0]}
+{"k":"live sun after","v":"B"}
+{"k":"complete","v":true}

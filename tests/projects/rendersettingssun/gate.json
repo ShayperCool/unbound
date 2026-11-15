@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/rendersettingssun/run.py gate"
+  ],
+  "summary": "rendersettingssun: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Lighting.cs",
+    "managed/UnityEngine/Graphics/LightImportance.cs",
+    "managed/UnityEngine/Graphics/ForwardLights.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.cs"
+  ]
+}
