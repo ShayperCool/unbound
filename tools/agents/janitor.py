@@ -609,13 +609,14 @@ class ReferenceWatch:
 
 
 def link_target(path):
-    """(lexical target, resolved target, whether it is a directory), or the OSError."""
+    """(lexical target, resolved target, whether it is a directory, whether it exists), or the
+    OSError. Read on the I/O threads."""
     try:
         path = Path(path)
         target = Path(os.readlink(path))
         target = target if target.is_absolute() else path.parent/target
         resolved = target.resolve()
-        return Path(os.path.abspath(target)), resolved, target.is_dir()
+        return Path(os.path.abspath(target)), resolved, target.is_dir(), os.path.lexists(resolved)
     except OSError as error:
         return error
 
@@ -703,11 +704,12 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                             raise result
                         # Keep lexical and resolved destinations. Lexical paths
                         # protect intermediate links in a chain too.
-                        lexical, target, is_dir = result
+                        lexical, target, is_dir, exists = result
                         found.update((lexical, target))
                         if watcher:
                             watcher.references.update((lexical, target))
-                            watcher.dangle(target)
+                            if not exists:
+                                watcher.dangle(target)
                         if is_dir and not any(inside(target, p) for p in excluded):
                             pending.append(str(target))
                     elif entry.kind == 'dir':
