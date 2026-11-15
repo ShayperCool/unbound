@@ -537,6 +537,14 @@ VisualEffect:
                 Assert.True(new VisualEffectAsset() == null);
                 var file = ObjectGraphBuilder.Build(Unbound.Tests.UnityYaml.Parse(yaml), "built.asset", null, ObjectGraphBuilder.Kind.Asset, null);
                 asset = Assert.IsType<VisualEffectAsset>(file.Objects[2100000]);
+                // A class whose own constructor makes its engine object loads as before (a
+                // mesh's may not be run as a script's constructor).
+                const string meshYaml = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!43 &4300000\nMesh:\n  m_Name: Shape\n";
+                var meshFile = ObjectGraphBuilder.Build(Unbound.Tests.UnityYaml.Parse(meshYaml), "shape.asset", null, ObjectGraphBuilder.Kind.Asset, null);
+                var mesh = Assert.IsType<Mesh>(meshFile.Objects[4300000]);
+                Assert.True(mesh != null);
+                Assert.Equal("Shape", mesh.name);
+                Object.DestroyImmediate(mesh, true);
                 Assert.True(asset != null);
                 Assert.Equal("Built", asset.name);
                 // It answers as an asset without a graph, and an effect takes it.

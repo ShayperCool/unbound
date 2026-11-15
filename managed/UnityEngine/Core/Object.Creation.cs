@@ -14,10 +14,12 @@ namespace UnityEngine
             m_Destroyed = true;
         }
 
+        /// <summary>Whether the wrapper has no engine object behind it (and never had one).</summary>
+        internal bool IsUncreated => m_InstanceID == 0 && m_Destroyed && Compat.UncreatedObjectWrappersMeasured;
+
         internal void ThrowIfUncreated()
         {
-            if (m_InstanceID == 0 && m_Destroyed && Compat.UncreatedObjectWrappersMeasured)
-                throw new NullReferenceException();
+            if (IsUncreated) throw new NullReferenceException();
         }
 
         internal void PreserveCreationIdentity()

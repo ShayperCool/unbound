@@ -418,9 +418,10 @@ namespace Unbound.Runtime
             }
             var engine = EngineTypes.ForClassId(doc.ClassId, doc.TypeName, warn: false);
             if (engine == null || typeof(Component).IsAssignableFrom(engine)) return null;
-            // The engine's own object: a class whose wrappers made by scripts stay uncreated
-            // (a VisualEffectAsset made with `new` equals null, as in the Editor) still loads live.
-            var asset = ObjectConstruction.CreateWithBacking(engine);
+            var asset = (Object)Activator.CreateInstance(engine, nonPublic: true);
+            // A class whose wrappers made by scripts stay uncreated (a VisualEffectAsset made
+            // with `new` equals null, as in the Editor) still loads live: the engine's own object.
+            if (asset.IsUncreated) asset = ObjectConstruction.CreateWithBacking(engine);
             ReadName(asset, doc.Body);
             return asset;
         }
