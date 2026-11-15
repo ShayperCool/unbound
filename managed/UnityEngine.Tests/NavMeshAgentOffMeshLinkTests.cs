@@ -571,12 +571,19 @@ namespace UnityEngine.Tests
             Assert.True(NavMesh.IsLinkOccupied(m_Link));
         }
 
-        /// <summary>Completing a link at the path's end: the agent does not walk on, and its transform
-        /// reaches the link's end at the next early AI update (documented, NavMeshAgent.nextPosition:
-        /// the transform matches the simulated position when Update is called).</summary>
-        [Fact]
-        public void CompletingALinkAtThePathsEndMovesTheTransformAtTheEarlyUpdate()
+        /// <summary>Completing a link at the path's end: its transform reaches the agent's position
+        /// at the next early AI update (documented, NavMeshAgent.nextPosition: the transform matches
+        /// the simulated position when Update is called). 6000.0.71f1 walks on from the link's end
+        /// a full step along the link and brakes back to the destination above it (measured in the
+        /// Editor with tests/projects/navlinks' manualwait and lowmanual lanes ending at their link's
+        /// end, a change outside the probe's reference, whose lanes show the same full step after a
+        /// completion); other releases stop at the link's end.</summary>
+        [Theory]
+        [InlineData(TestRelease.Measured)]
+        [InlineData(TestRelease.Unmeasured)]
+        public void CompletingALinkAtThePathsEndMovesTheTransformAtTheEarlyUpdate(string release)
         {
+            using var pinned = TestRelease.Pin(release);
             var go = new GameObject("agent");
             m_Objects.Add(go);
             go.transform.position = new Vector3(-7f, 0f, 0f);
@@ -588,10 +595,14 @@ namespace UnityEngine.Tests
             agent.CompleteOffMeshLink();
             Step();
             Step();
-            Assert.Equal(LinkEnd.x, agent.nextPosition.x, 3);
+            bool walksOn = Unbound.Runtime.Compat.NavMeshBrakingArrivalMeasured;
+            Assert.Equal(LinkEnd.x + (walksOn ? agent.speed * Dt : 0f), agent.nextPosition.x, 3);
             AgentSystem.SyncTransforms();
             Assert.NotEqual(waiting, agent.transform.position);
             Assert.Equal(agent.nextPosition, agent.transform.position);
+            for (int i = 0; i < 4; i++) Step();
+            Assert.Equal(LinkEnd.x, agent.nextPosition.x, 3);
+            Assert.False(agent.hasPath);
         }
 
         [Fact]
