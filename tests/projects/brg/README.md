@@ -62,8 +62,10 @@ view type how many callbacks ran. Scenarios:
   near the camera, their shadows in the first cascade, are drawn by commands of
   `splitVisibilityMask` 1, 2, 0 and 3 (`split_masks.p<i>.body`, `.shadow`: the pillar's colour and
   the ground's where the shadow of a point near its top falls). The camera draws every pillar;
-  only masks 1 and 3 cast a shadow there. The second cascade's bit is not measured (pillars far
-  enough for it cast no shadow where the record could sample it).
+  only masks 1 and 3 cast a shadow there. `split_masks_second`: the same with the cascades split
+  at 1/20 of the shadow distance, so the shadows fall in the second cascade: only masks 2 and 3
+  cast. URP makes one shadow list per cascade from the same settings, whose split index is
+  unset (-1), so the light's lists take its splits in the order they are made.
 
 Light contexts record their receiver planes again as `receiver<i>`, compared exactly.
 
@@ -74,6 +76,6 @@ Light contexts record their receiver planes again as `receiver<i>`, compared exa
 The references (`Reference/unity-6000.0.71f1/opengl`, `.../vulkan`) are two identical captures each
 of the Editor on its OpenGL Core and Vulkan devices, measured on the NVIDIA driver only. The
 Editor draws the batch on both devices (the Manual's platform list names only Vulkan for Linux);
-the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: every value on both devices (1859 records on OpenGL Core, 1856 on Vulkan), the cascades'
+the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: every value on both devices (2063 records on OpenGL Core, 2060 on Vulkan), the cascades'
 caster culling planes, culling matrices and conservative culling spheres of the light contexts
 included; every image matches exactly.
