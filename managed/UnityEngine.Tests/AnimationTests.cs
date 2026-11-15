@@ -430,17 +430,173 @@ namespace UnityEngine.Tests
             animation.Step(0f);
             animation.Step(0.1f);
             animation.CrossFade("b", 0.5f);
-            animation.Step(0.25f); // halfway: a fades to 0.5, b in to 0.5
-            Near.Equal(15f, go.transform.localPosition.x, 1e-3f);
-            animation.Step(0.3f);
+            // b, enabled now, fades in from the next update; a fades out at once, and its weight
+            // alone counts in full (tests/projects/animpartial legacy.crossfade).
+            animation.Step(0.25f);
+            Near.Equal(0.5f, animation["a"].weight);
+            Near.Equal(0f, animation["b"].weight);
+            Near.Equal(10f, go.transform.localPosition.x, 1e-3f);
+            animation.Step(0.25f); // a reaches 0 and stays enabled until it passes it; b is at 0.5
+            Assert.True(animation.IsPlaying("a"));
+            Near.Equal(20f, go.transform.localPosition.x, 1e-3f);
+            animation.Step(0.25f); // a stops, sampled once more at a weight of 1e-4
             Assert.False(animation.IsPlaying("a"));
             Assert.True(animation.IsPlaying("b"));
-            Near.Equal(20f, go.transform.localPosition.x, 1e-3f);
+            Near.Equal(20f, go.transform.localPosition.x, 2e-3f);
 
             var queued = animation.PlayQueued("a", QueueMode.PlayNow);
             Assert.NotNull(queued);
             Assert.True(animation.IsPlaying("a"));
             Object.DestroyImmediate(go);
+        }
+
+        static AnimationClip LegacyClip(string name, WrapMode wrap, params (string Property, AnimationCurve Curve)[] curves)
+        {
+            var clip = new AnimationClip { legacy = true, wrapMode = wrap, name = name };
+            foreach (var (property, curve) in curves) clip.SetCurve("", typeof(Transform), property, curve);
+            return clip;
+        }
+
+        static void EnableAt(Animation animation, string name, float weight, int layer = 0)
+        {
+            var state = animation[name];
+            state.layer = layer;
+            state.enabled = true;
+            state.weight = weight;
+        }
+
+        /// <summary>Legacy states share each channel among those that animate it, higher layers
+        /// first, and the shares are normalized: a lone state at half weight plays in full, a
+        /// layer below gets what the layer above leaves (1 − 0.6) times its own weight, and what
+        /// no state animates keeps the value a script gave it (tests/projects/animpartial
+        /// legacy.half, legacy.layers.low).</summary>
+        [Fact]
+        public void LegacyChannelsAreSharedAmongTheirStatesAndNormalized()
+        {
+            var go = new GameObject("Legacy");
+            var animation = go.AddComponent<Animation>();
+            animation.AddClip(LegacyClip("p", WrapMode.Loop, ("localPosition.x", AnimationCurve.Constant(0f, 1f, 10f)),
+                ("localScale.y", AnimationCurve.Constant(0f, 1f, 20f))), "p");
+            animation.AddClip(LegacyClip("q", WrapMode.Loop, ("localPosition.x", AnimationCurve.Constant(0f, 1f, -10f))), "q");
+            go.transform.localRotation = Quaternion.Euler(0f, 30f, 0f);
+            EnableAt(animation, "p", 0.5f);
+            animation.Step(0f);
+            Near.Equal(10f, go.transform.localPosition.x, 1e-5f);
+            Near.Equal(20f, go.transform.localScale.y, 1e-5f);
+            EnableAt(animation, "q", 0.6f, layer: 1);
+            animation.Step(0.1f);
+            // x: q's 0.6 and p's 0.5 × (1 − 0.6), normalized; y only p animates.
+            Near.Equal((0.6f * -10f + 0.2f * 10f) / 0.8f, go.transform.localPosition.x, 1e-4f);
+            Near.Equal(20f, go.transform.localScale.y, 1e-5f);
+            Near.Equal(30f, go.transform.localEulerAngles.y, 1e-3f);
+            // At a weight of 1e-4 or less a state adds nothing.
+            animation["q"].weight = 1e-4f;
+            animation.Step(0.1f);
+            Near.Equal(10f, go.transform.localPosition.x, 1e-5f);
+            Object.DestroyImmediate(go);
+        }
+
+        /// <summary>A cross-faded-out state reaches weight 0 and stops an update later; in that
+        /// update it is sampled once more, so what only it animates keeps its last value
+        /// (tests/projects/animpartial legacy.crossfade).</summary>
+        [Fact]
+        public void LegacyStateStoppingInAnUpdateLeavesItsLastPose()
+        {
+            var go = new GameObject("Legacy");
+            var animation = go.AddComponent<Animation>();
+            // A clip with a curve of one position component writes the whole position (the
+            // others at 0): what only p animates here is its scale.
+            animation.AddClip(LegacyClip("p", WrapMode.Loop, ("localPosition.x", AnimationCurve.Constant(0f, 2f, 1f)),
+                ("localScale.y", AnimationCurve.Linear(0f, 0f, 2f, 2f))), "p");
+            animation.AddClip(LegacyClip("q", WrapMode.Loop, ("localPosition.x", AnimationCurve.Constant(0f, 2f, 5f))), "q");
+            animation.Play("p");
+            animation.Step(0f);
+            animation.Step(0.5f);
+            Near.Equal(0.5f, go.transform.localScale.y, 1e-5f);
+            animation.CrossFade("q", 0.25f);
+            animation.Step(0.25f); // p at weight 0, q not faded in yet: nothing is written
+            Near.Equal(0f, animation["p"].weight);
+            Assert.True(animation.IsPlaying("p"));
+            Near.Equal(0.5f, go.transform.localScale.y, 1e-5f);
+            Near.Equal(1f, go.transform.localPosition.x, 1e-5f);
+            animation.Step(0.25f); // p passes 0 and stops at its time of 1 s
+            Assert.False(animation.IsPlaying("p"));
+            Near.Equal(0f, animation["p"].time);
+            Near.Equal(1f, go.transform.localScale.y, 1e-4f);
+            Near.Equal(5f, go.transform.localPosition.x, 1e-3f);
+            Object.DestroyImmediate(go);
+        }
+
+        /// <summary>A legacy additive state adds its difference from its clip's first keys, by its
+        /// weight up to 1, to what the other states write, or to the current value where none
+        /// does (which then accumulates), on a Transform's position (tests/projects/animpartial
+        /// legacy.additive).</summary>
+        [Fact]
+        public void LegacyAdditiveStatesAddTheirDifferenceToTheCurrentValue()
+        {
+            var go = new GameObject("Legacy");
+            var animation = go.AddComponent<Animation>();
+            animation.AddClip(LegacyClip("base", WrapMode.Loop, ("localPosition.x", AnimationCurve.Constant(0f, 2f, 1f))), "base");
+            animation.AddClip(LegacyClip("add", WrapMode.Loop, ("localPosition.x", AnimationCurve.Linear(0f, 3f, 2f, 5f)),
+                ("localScale.y", AnimationCurve.Linear(0f, 3f, 2f, 5f))), "add");
+            go.transform.localScale = new Vector3(1f, 7f, 1f);
+            animation["add"].blendMode = AnimationBlendMode.Additive;
+            animation.Play("base");
+            EnableAt(animation, "add", 0.5f, layer: 1);
+            animation.Step(0f);
+            animation.Step(0.5f);
+            // x: base 1 + 0.5 × (3.5 − 3); the scale's y: 7 + 0.25, then + 0.5 more.
+            Near.Equal(1.25f, go.transform.localPosition.x, 1e-4f);
+            Near.Equal(new Vector3(1f, 7.25f, 1f), go.transform.localScale, 1e-4f);
+            animation.Step(0.5f);
+            Near.Equal(1.5f, go.transform.localPosition.x, 1e-4f);
+            Near.Equal(new Vector3(1f, 7.75f, 1f), go.transform.localScale, 1e-4f);
+            animation["add"].weight = 3f; // counts as 1
+            animation.Step(0.5f);
+            Near.Equal(2.5f, go.transform.localPosition.x, 1e-4f);
+            Near.Equal(new Vector3(1f, 9.25f, 1f), go.transform.localScale, 1e-4f);
+            Object.DestroyImmediate(go);
+        }
+
+        [Fact]
+        public void AnimatedBoolsAreTrueBeyondAThousandthOfZero()
+        {
+            foreach (var (value, expected) in new[] { (0f, false), (0.001f, false), (-0.001f, false), (0.0011f, true), (-0.0011f, true),
+                         (0.25f, true), (1f, true), (float.NaN, false) })
+                Assert.Equal(expected, Unbound.Runtime.AnimationBindings.AnimatedBool(value));
+        }
+
+        /// <summary>A blend tree child's share of a channel it has no curve for takes the default
+        /// value with write defaults, the current value without (tests/projects/animpartial tree.*):
+        /// Slow (x 0) with WaveClip (y 4) at 0.25, on a body resting at (8, 1, 0).</summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void BlendTreeChildrenLeaveWhatTheyDoNotAnimateToTheStatesWriteDefaults(bool writeDefaults)
+        {
+            var yaml = AnimationFixtures.Layers
+                .Replace("    m_Motion: {fileID: 7400002}\n    m_Threshold: 1", "    m_Motion: {fileID: 7400003}\n    m_Threshold: 1")
+                .Replace("  m_WriteDefaultValues: 1\n  m_Motion: {fileID: 20600001}", "  m_WriteDefaultValues: " + (writeDefaults ? 1 : 0) + "\n  m_Motion: {fileID: 20600001}");
+            Assert.Contains("m_Motion: {fileID: 7400003}\n    m_Threshold: 1", yaml);
+            var file = Load(yaml);
+            var root = Hierarchy("Character", "Body");
+            var body = root.transform.Find("Body");
+            body.localPosition = new Vector3(8f, 1f, 0f);
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
+            animator.SetLayerWeight(1, 0f);
+            animator.SetLayerWeight(2, 0f);
+            animator.SetFloat("Blend", 0.25f);
+            animator.Update(0.1f);
+            Near.Equal(new Vector3(2f, 1.75f, 0f), body.localPosition, 1e-4f);
+            animator.Update(0.1f);
+            Near.Equal(writeDefaults ? new Vector3(2f, 1.75f, 0f) : new Vector3(0.5f, 2.3125f, 0f), body.localPosition, 1e-4f);
+            // Only WaveClip: with write defaults Slow's x returns to its default.
+            animator.SetFloat("Blend", 1f);
+            animator.Update(0.1f);
+            Near.Equal(writeDefaults ? 8f : 0.5f, body.localPosition.x, 1e-4f);
+            Near.Equal(4f, body.localPosition.y, 1e-4f);
+            Object.DestroyImmediate(root);
         }
 
         [Fact]

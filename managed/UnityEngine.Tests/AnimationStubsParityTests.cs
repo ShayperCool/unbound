@@ -306,6 +306,13 @@ namespace UnityEngine.Tests
             return animation;
         }
 
+        /// <summary>Enables a state at a weight at once (a Blend's weight takes an update).</summary>
+        static void Enable(Animation animation, string name, float weight)
+        {
+            animation[name].enabled = true;
+            animation[name].weight = weight;
+        }
+
         /// <summary>Not documented in 6000.0; Unbound's reading (unmeasured): the playback speed of
         /// the layer's animations is synchronized. Hypotheses (unmeasured): the layer stays synchronized from a call made before its states
         /// play; its states advance by the weight-weighted mean normalizedSpeed (0.5·1/1 + 0.5·1/2
@@ -319,9 +326,9 @@ namespace UnityEngine.Tests
             m_Expected.Add("Animation.SyncLayer"); // the once-per-process unmeasured-semantics notice
             animation.SyncLayer(1);
             animation.Play("C");
-            animation.Blend("A", 0.5f, 0f);
-            animation.Blend("B", 0.5f, 0f);
-            animation.Blend("D", 0f, 0f);
+            Enable(animation, "A", 0.5f);
+            Enable(animation, "B", 0.5f);
+            Enable(animation, "D", 0f);
             animation.Step(0f); // started states are sampled where they start
             animation.Step(0.2f);
             Near.Equal(0.15f, animation["A"].normalizedTime);
@@ -343,8 +350,8 @@ namespace UnityEngine.Tests
             m_Expected.Add("Animation.SyncLayer"); // the once-per-process unmeasured-semantics notice
             animation.SyncLayer(2);
             animation["A"].speed = 2f;
-            animation.Blend("A", 0.25f, 0f);
-            animation.Blend("B", 0.75f, 0f);
+            Enable(animation, "A", 0.25f);
+            Enable(animation, "B", 0.75f);
             animation.Step(0f);
             animation["B"].normalizedTime = 0.5f;
             animation.Step(0.4f);
