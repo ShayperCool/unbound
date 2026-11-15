@@ -49,10 +49,10 @@
   "dynres.next.blitparams.sampled",
   "dynres.same.blitparams.sampled"
  ],
- "Outside cameras at the start of a frame and after Camera.Render, the batchmode macOS Editor draws with identity GL matrices; Unbound follows the windowed Editor, whose GL matrices there are its last window drawing's pixel matrix, so these clip-space draws draw nothing, as metal-windowed.jsonl records (and tests/projects/framestate on the Linux windowed Editors)": [
-  "outside.fresh",
-  "outside.aftercamera",
-  "outside.corner",
-  "outside.after"
+ "ReadPixels of the screen in a screen camera's onPostRender: Unbound reads its stand-in's bytes, sRGB-encoded as its screen holds them (0x7f; the windowed Editor's Game view is sRGB too), the batch-mode Editor's screen is not encoded (0x37, the camera's linear 0.214)": [
+  "screenself.read.pixels"
+ ],
+ "A screen camera's command buffer blitting CameraTarget onto itself through a shader: the batch-mode Editor's shader samples white (half of 1 everywhere), Unbound's samples the camera's image (a copy made before the draw); one measured case, the Editor's mechanism not established. Queued": [
+  "screenself.blit.pixels"
  ]
 }

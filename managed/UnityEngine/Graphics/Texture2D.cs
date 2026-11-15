@@ -463,23 +463,26 @@ namespace UnityEngine
             // Update: tests/projects/screencapture read.update), with an error.
             if (active == null && Camera.current == null && !FrameBuilder.InDrawingFrame)
                 Debug.LogError("ReadPixels was called to read pixels from system frame buffer, while not inside drawing frame.");
+            // A screen camera's stand-in is read as the screen it stands for (its texels, the
+            // screen's checks: tests/projects/nativegfx screenself.read.pixels).
+            var target = active != null && ReferenceEquals(active, RenderTexture.ScreenStandIn) ? null : active;
             // The Editor's OpenGLCore device cannot read an integer target (a GL error; the texels
             // stay as they were: tests/projects/textureformats).
-            if (active != null && RenderTexture.IntegerPacketFormat(active.graphicsFormat) >= 0)
+            if (target != null && RenderTexture.IntegerPacketFormat(target.graphicsFormat) >= 0)
             {
-                Debug.LogError($"Unbound: ReadPixels cannot read the integer render texture '{active.name}' ({active.graphicsFormat}); the texture is left unchanged.");
+                Debug.LogError($"Unbound: ReadPixels cannot read the integer render texture '{target.name}' ({target.graphicsFormat}); the texture is left unchanged.");
                 return;
             }
             bool conversion = Compat.DeviceTextureReadback && !GraphicsDeviceProfile.Current.FramebufferReadback;
-            if (conversion && active != null && !SystemInfo.IsFormatSupported(active.graphicsFormat, GraphicsFormatUsage.ReadPixels))
+            if (conversion && target != null && !SystemInfo.IsFormatSupported(target.graphicsFormat, GraphicsFormatUsage.ReadPixels))
             {
-                Debug.LogError($"ReadPixels is unsupported for {active.graphicsFormat}; the texture is left unchanged.");
+                Debug.LogError($"ReadPixels is unsupported for {target.graphicsFormat}; the texture is left unchanged.");
                 return;
             }
-            int channels = active == null ? 4 : (int)GraphicsFormatUtility.GetComponentCount(active.graphicsFormat);
-            bool signedTransfer = Compat.DeviceTextureReadback && !conversion && active != null
-                && GraphicsFormatUtility.IsSNormFormat(active.graphicsFormat);
-            int componentBits = signedTransfer ? (int)GraphicsFormatUtility.GetBlockSize(active.graphicsFormat) * 8 / Math.Max(1, channels) : 0;
+            int channels = target == null ? 4 : (int)GraphicsFormatUtility.GetComponentCount(target.graphicsFormat);
+            bool signedTransfer = Compat.DeviceTextureReadback && !conversion && target != null
+                && GraphicsFormatUtility.IsSNormFormat(target.graphicsFormat);
+            int componentBits = signedTransfer ? (int)GraphicsFormatUtility.GetBlockSize(target.graphicsFormat) * 8 / Math.Max(1, channels) : 0;
             var bytes = level ? Native.ReadTexture(activeHandle, mip, layer, x0, y0, w, h, true, currentAttachment: true)
                 : Native.ReadPixels(activeHandle, x0, y0, w, h, true);
             if (bytes == null)
@@ -490,7 +493,7 @@ namespace UnityEngine
             // ReadPixels copies attachment values, including float-to-byte reads, regardless
             // of the destination's linear flag; the screen's are its 8-bit (in Linear,
             // sRGB-encoded) bytes.
-            bool eightBit = active != null && ReadsAsBytes(active.graphicsFormat);
+            bool eightBit = target != null && ReadsAsBytes(target.graphicsFormat);
             unsafe
             {
                 fixed (byte* p = bytes)
