@@ -302,12 +302,12 @@ struct ChannelCopy {
 }
 
 /// The [`ChannelCopy`] kind from `source` storage into `destination` storage: between R8 and
-/// RGBA8, and (`screen_order`: one end is a screen stored blue first) between BGRA8 and RGBA8.
-/// Scripts' `CopyTexture` never names the screen (the Editor finds no texture there:
-/// tests/projects/nativegfx `metal.jsonl` `screencopy.*`, `screencamera.*`); Unbound's own
-/// copies of it (a camera seeded from the screen, `CaptureScreenshotIntoRenderTexture`) keep
-/// each channel's stored value. Textures stored blue first elsewhere (a Vulkan plugin's) keep
-/// their exact-storage rule (`raw_copy_compatible`).
+/// RGBA8, and (`screen_order`: one end is the screen stored blue first, or a grab of it) between
+/// BGRA8 and RGBA8, keeping each channel's stored value as copies between the screen and render
+/// textures did where both were RGBA8 (a camera seeded from the screen,
+/// `CaptureScreenshotIntoRenderTexture`, a script's `CopyTexture` of `CameraTarget`; the batch-mode
+/// macOS Editor copies nothing there, tests/projects/nativegfx `residuals-metal.json`). Textures
+/// stored blue first elsewhere (a plugin's) keep their exact-storage rule (`raw_copy_compatible`).
 fn channel_copy_kind(
     source: wgpu::TextureFormat,
     destination: wgpu::TextureFormat,
@@ -323,6 +323,12 @@ fn channel_copy_kind(
         (F::Rgba8Unorm, F::Bgra8Unorm) if screen_order => Some(CopyKind::ToBgra8),
         _ => None,
     }
+}
+
+/// Whether two formats keep their texels alike (they may differ in sRGB decoding): a grab
+/// texture is kept for a source of the same storage only, BGRA8 and RGBA8 being two.
+fn same_storage(a: wgpu::TextureFormat, b: wgpu::TextureFormat) -> bool {
+    a.remove_srgb_suffix() == b.remove_srgb_suffix()
 }
 
 /// Vulkan BGRA imports currently support identical physical storage. Cross-order and
@@ -4366,7 +4372,7 @@ impl UnityRenderer {
         let fits = self.textures.get(&handle).is_some_and(|t| {
             t.width == width
                 && t.height == height
-                && t.texture.format().remove_srgb_suffix() == source.format().remove_srgb_suffix()
+                && same_storage(t.texture.format(), source.format())
         });
         if !fits {
             self.generation += 1;
@@ -4394,10 +4400,14 @@ impl UnityRenderer {
                 layers: 1,
                 dimension: 2,
             };
-            let old = self.textures.remove(&handle);
             // A blue-first source (the screen on such a device) is grabbed into the same storage,
-            // so the copy stays a copy of its texels.
+            // so the copy stays a copy of its texels. The texture is rewritten in place only in
+            // the source's storage: the packet's format code is the same for both orders.
             let stored = source.format().remove_srgb_suffix();
+            let old = self
+                .textures
+                .remove(&handle)
+                .filter(|t| same_storage(t.texture.format(), stored));
             let device = self.device.clone();
             let gpu = resources::upload_texture_with(
                 &self.device,
@@ -4514,7 +4524,9 @@ impl UnityRenderer {
             });
             return None;
         }
-        let screen_order = self.conventions.screen_bgra && (source == 0 || destination == 0);
+        let screen_end = |handle: u64| handle == 0 || self.grabs.values().any(|&g| g == handle);
+        let screen_order =
+            self.conventions.screen_bgra && (screen_end(source) || screen_end(destination));
         let channel_kind =
             channel_copy_kind(src.format(), dst.format(), screen_order).filter(|_| {
                 src.dimension() == wgpu::TextureDimension::D2
@@ -5672,6 +5684,18 @@ mod tests {
         );
         assert_eq!(channel_copy_kind(F::Bgra8Unorm, F::Rgba8Unorm, false), None);
         assert_eq!(channel_copy_kind(F::Rgba8Unorm, F::Bgra8Unorm, false), None);
+    }
+
+    /// A grab of the blue-first screen and one of an RGBA8 target of the same size do not share
+    /// a texture (copies between the two storages are invalid).
+    #[test]
+    fn grabs_keep_their_source_storage() {
+        use wgpu::TextureFormat as F;
+        assert!(same_storage(F::Bgra8Unorm, F::Bgra8UnormSrgb));
+        assert!(same_storage(F::Rgba8UnormSrgb, F::Rgba8Unorm));
+        assert!(!same_storage(F::Bgra8Unorm, F::Rgba8Unorm));
+        assert!(!same_storage(F::Rgba8Unorm, F::Bgra8UnormSrgb));
+        assert!(!same_storage(F::Rgba16Float, F::Rgba8Unorm));
     }
 
     #[test]
