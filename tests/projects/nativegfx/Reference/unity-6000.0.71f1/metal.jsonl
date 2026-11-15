@@ -23,6 +23,11 @@
 {"k":"volume.astc.slice0","v":["ff0000ff*4","ff0000ff*4","ff0000ff*4","ff0000ff*4"]}
 {"k":"volume.astc.slice1","v":["0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
 {"k":"volume.astc.cpu","v":["ff0000ff*4","ff0000ff*4","ff0000ff*4","ff0000ff*4","0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
+{"k":"array.eac.cpu","v":["[\"c80000ff*4\",\"c80000ff*4\",\"c80000ff*4\",\"c80000ff*4\"]","[\"280000ff*4\",\"280000ff*4\",\"280000ff*4\",\"280000ff*4\"]"]}
+{"k":"array.make.ETC2_RGBA1","v":"made 8"}
+{"k":"array.make.PVRTC_RGBA4","v":"made 32"}
+{"k":"array.make.PVRTC_RGB2","v":"made 32"}
+{"k":"array.make.EAC_R_SIGNED","v":"made 8"}
 {"k":"volume.logs","v":["Error: Metal does not support RGB Compressed ETC2 UNorm texture format for Texture3D"]}
 {"k":"volume.make.DXT1","v":["made"]}
 {"k":"volume.make.DXT5","v":["made"]}

@@ -609,6 +609,36 @@ public class NativeGfxMetalProbe : MonoBehaviour
                 Value(key + ".exception", Q(e.GetType().Name + ": " + e.Message));
             }
         }
+        // Arrays: an EAC_R array of two slices (one block each, base codewords 200 and 40, no
+        // modifier) read back decoded, and per other compressed format whether a 4x4x2 array is
+        // made and how many bytes its level 0 holds.
+        try
+        {
+            var eac = Keep(new Texture2DArray(4, 4, 2, TextureFormat.EAC_R, false, true) { name = "eacarray" });
+            eac.SetPixelData(new byte[] { 200, 0, 0, 0, 0, 0, 0, 0 }, 0, 0);
+            eac.SetPixelData(new byte[] { 40, 0, 0, 0, 0, 0, 0, 0 }, 0, 1);
+            eac.Apply(false);
+            Value("array.eac.cpu", L(new[] { 0, 1 }.Select(slice => Rows(eac.GetPixels32(slice), 4, 4))));
+        }
+        catch (Exception e)
+        {
+            Value("array.eac.exception", Q(e.GetType().Name + ": " + e.Message));
+        }
+        foreach (var format in new[] { TextureFormat.ETC2_RGBA1, TextureFormat.PVRTC_RGBA4, TextureFormat.PVRTC_RGB2, TextureFormat.EAC_R_SIGNED })
+        {
+            string result;
+            try
+            {
+                var array = new Texture2DArray(4, 4, 2, format, false, true);
+                result = "made " + array.GetPixelData<byte>(0, 0).Length;
+                DestroyImmediate(array);
+            }
+            catch (Exception e)
+            {
+                result = e.GetType().Name + ": " + e.Message;
+            }
+            Value("array.make." + format, Q(result));
+        }
         Value("volume.logs", L(screenLogs));
         // Every compressed format (in TextureFormat's order): whether a 4x4x2 volume of it can be
         // made, and what is logged.
