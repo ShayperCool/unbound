@@ -1727,7 +1727,7 @@ pub fn upload_texture_with(
                 let raw = texture.create_view(&wgpu::TextureViewDescriptor::default());
                 let srgb = color.then(|| {
                     texture.create_view(&wgpu::TextureViewDescriptor {
-                        format: Some(srgb_format),
+                        format: Some(texture.format().add_srgb_suffix()),
                         ..Default::default()
                     })
                 });
