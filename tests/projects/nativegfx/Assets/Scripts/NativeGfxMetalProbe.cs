@@ -449,6 +449,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
                 // Back at full size: the native texture, and what is left of its texels.
                 NativeGfxMtl_Describe("dynres.reset", dynamicTarget.GetNativeTexturePtr());
                 Value("dynres.reset.texels", Read(dynamicTarget, 16, 16));
+                DynamicScaleExplicit();
                 break;
         }
     }
@@ -489,6 +490,32 @@ public class NativeGfxMetalProbe : MonoBehaviour
             Value($"dynres.{key}.size", Q($"{texture.width}x{texture.height}"));
         }
         RenderTexture.ReleaseTemporary(temporary);
+    }
+
+    /// <summary>After the return to 1: at 0.5 and 0.25 again, a texture marked
+    /// <c>useDynamicScaleExplicit</c> too, before and after <c>ApplyDynamicScale</c>, and a plain
+    /// dynamic one for comparison; then a NaN factor.</summary>
+    void DynamicScaleExplicit()
+    {
+        screenLogs = new List<string>();
+        ScalableBufferManager.ResizeBuffers(0.5f, 0.25f);
+        var explicitTarget = Keep(new RenderTexture(16, 16, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+            { name = "explicit", useDynamicScale = true, useDynamicScaleExplicit = true });
+        explicitTarget.Create();
+        Clear(explicitTarget, Color.green);
+        Clear(dynamicTarget, Color.green);
+        NativeGfxMtl_Describe("dynres.explicit.created", explicitTarget.GetNativeTexturePtr());
+        NativeGfxMtl_Describe("dynres.explicit.plain", dynamicTarget.GetNativeTexturePtr());
+        explicitTarget.ApplyDynamicScale();
+        Clear(explicitTarget, Color.green);
+        NativeGfxMtl_Describe("dynres.explicit.applied", explicitTarget.GetNativeTexturePtr());
+        dynamicTarget.ApplyDynamicScale();
+        NativeGfxMtl_Describe("dynres.explicit.plainapplied", dynamicTarget.GetNativeTexturePtr());
+        ScalableBufferManager.ResizeBuffers(float.NaN, 0.5f);
+        Value("dynres.factors.nan", Factors());
+        ScalableBufferManager.ResizeBuffers(1f, 1f);
+        Value("dynres.explicit.logs", L(screenLogs));
+        screenLogs = null;
     }
 
     /// <summary>A render texture's texels read with <c>ReadPixels</c> (no sampling).</summary>
@@ -552,8 +579,11 @@ public class NativeGfxMetalProbe : MonoBehaviour
         camera.RemoveAllCommandBuffers();
         drawParams.Release();
         Value($"dynres.{when}.cameraparams", Read(dynamicTarget, 8, 4));
+        Value($"dynres.{when}.cameraparams.sampled", Pixels(dynamicTarget, 1, 1));
         Graphics.Blit(null, dynamicTarget, dynamicParams, 1);
         Value($"dynres.{when}.blitparams", Read(dynamicTarget, 8, 4));
+        Graphics.Blit(null, dynamicTarget, dynamicParams, 2);
+        Value($"dynres.{when}.blitparams.sampled", Pixels(dynamicTarget, 1, 1));
         camera.targetTexture = oddBefore;
         Value($"dynres.{when}.oddbefore.camera", Q($"pixel {camera.pixelWidth}x{camera.pixelHeight} scaled {camera.scaledPixelWidth}x{camera.scaledPixelHeight} rect {camera.pixelRect}"));
         NativeGfxMtl_Describe("dynres." + when, dynamicTarget.GetNativeTexturePtr());
