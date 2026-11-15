@@ -3175,13 +3175,5 @@
       }
     }
   ],
-  "constructorStores": [
-    {
-      "actual": "i4:0",
-      "constructor": "UnityEngine.Rendering.ShadowDrawingSettings/instance System.Void(UnityEngine.Rendering.CullingResults,System.Int32)",
-      "expected": "i4:-1",
-      "field": "m_SplitIndex:System.Int32@UnityEngine.Rendering.ShadowDrawingSettings",
-      "reason": "Q403 Rendering constructor migration: initialize the parameterized ShadowDrawingSettings split index to the release value; add a divergent parameterized-constructor Editor control before changing runtime behavior."
-    }
-  ]
+  "constructorStores": []
 }
