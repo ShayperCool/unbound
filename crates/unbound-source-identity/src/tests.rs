@@ -205,10 +205,24 @@ fn workspace_dependency_tables_count() {
     );
     ws.write(
         "Cargo.toml",
-        "[workspace]\n[workspace.dependencies.rules]\npackage = \"unbound-rules\"\npath = \"crates/unbound-rules\"\n",
+        "[workspace]\n[workspace.dependencies.rules] # the rules\npath = \"crates/unbound-rules\"\n",
     );
     assert!(
         ws.sources("unbound-compiler")
             .contains(&"crates/unbound-rules/src/audio.rs".to_string())
     );
+}
+
+/// The files of a package the workspace patches with a directory of its own count.
+#[test]
+fn patched_packages_count() {
+    let ws = workspace("patched", DEPENDS);
+    ws.write("vendor/naga/src/lib.rs", "pub fn parse() {}\n");
+    ws.write(
+        "Cargo.toml",
+        "[workspace]\n[patch.crates-io]\nnaga = { path = \"vendor/naga\" }\n",
+    );
+    let before = ws.identity("unbound-compiler");
+    ws.write("vendor/naga/src/lib.rs", "pub fn parse() { let _ = 1; }\n");
+    assert_ne!(ws.identity("unbound-compiler"), before);
 }

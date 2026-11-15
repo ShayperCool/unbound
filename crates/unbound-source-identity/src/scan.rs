@@ -145,7 +145,9 @@ fn workspace_entries(workspace: &str) -> Vec<String> {
             if let Some(entry) = table.take() {
                 out.push(entry);
             }
-            let header = trimmed.trim_matches(['[', ']']).trim();
+            // The header up to its closing bracket (a comment may follow it).
+            let header = trimmed.trim_start_matches('[');
+            let header = header[..header.find(']').unwrap_or(header.len())].trim();
             if let Some((parent, key)) = header.rsplit_once('.')
                 && parent.trim().ends_with("dependencies")
             {
@@ -162,6 +164,39 @@ fn workspace_entries(workspace: &str) -> Vec<String> {
         }
     }
     out.extend(table);
+    out
+}
+
+/// The directories the workspace's manifest patches packages with (`path = ..` under a
+/// `[patch.*]` table, inline or as a table of its own).
+fn patched_directories(root: &Path, workspace: &str) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    let mut in_patch = false;
+    for line in workspace.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('[') {
+            in_patch = trimmed
+                .trim_start_matches('[')
+                .trim_start()
+                .starts_with("patch");
+            continue;
+        }
+        if !in_patch {
+            continue;
+        }
+        for (at, _) in trimmed.match_indices("path") {
+            let value = trimmed[at + 4..].trim_start();
+            if let Some(value) = value.strip_prefix('=')
+                && let Some(quoted) = value.trim_start().strip_prefix(['"', '\''])
+                && let Some(path) = quoted.split(['"', '\'']).next()
+            {
+                let dir = lexical(&root.join(path));
+                if dir.is_dir() {
+                    out.push(dir);
+                }
+            }
+        }
+    }
     out
 }
 
@@ -234,9 +269,14 @@ pub fn producing_sources(
                 .filter(|d| *d != name),
         );
     }
-    // The workspace's manifest too: its dependency features and patches decide what is built.
+    // The workspace's manifest too: its dependency features and patches decide what is built;
+    // and the files of the packages it patches with directories of the workspace's.
     let mut files = BTreeSet::from([root.join("Cargo.toml")]);
     let mut watched = BTreeSet::from([root.join("Cargo.toml")]);
+    for dir in patched_directories(root, &workspace) {
+        watched.insert(dir.clone());
+        files.extend(all_files(&dir)?);
+    }
     for name in &reached {
         let dir = root.join("crates").join(name);
         watched.insert(dir.clone());
