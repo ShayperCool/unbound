@@ -79,10 +79,7 @@ namespace UnityEngine.Tests
         public void SavedSettingsAreTheEditors()
         {
             var probe = Path.Combine(Repo(), "tests", "projects", "settings");
-            var project = Path.Combine(Path.GetTempPath(), "unbound-settings-" + System.Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path.Combine(project, "ProjectSettings"));
-            foreach (var f in Directory.GetFiles(Path.Combine(probe, "ProjectSettings")))
-                File.Copy(f, Path.Combine(project, "ProjectSettings", Path.GetFileName(f)));
+            var project = CopyOfProbeSettings();
             var before = ProjectInfo.ProjectPath;
             bool playing = EditorSession.IsPlaying;
             ProjectInfo.ProjectPath = project;
@@ -145,6 +142,51 @@ namespace UnityEngine.Tests
                 SettingsAssets.Reset();
                 Directory.Delete(project, true);
             }
+        }
+
+        /// <summary>Under 6000.0.71f1, where a wrapper scripts make of a settings class stays
+        /// uncreated (defaultstate), the settings objects AssetDatabase loads are live: each of the
+        /// probe's UnityEditorInternal.ProjectSettingsBase files loads, is its class's singleton and
+        /// opens in a SerializedObject (tests/projects/settings `load`, `singleton`).</summary>
+        [Fact]
+        public void SettingsObjectsLoadLiveUnderTheMeasuredRelease()
+        {
+            var project = CopyOfProbeSettings();
+            var before = ProjectInfo.ProjectPath;
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.ProjectPath = project;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            SettingsAssets.Reset();
+            try
+            {
+                foreach (var name in new[] { "AudioManager", "InputManager", "MemorySettings", "Physics2DSettings", "PresetManager", "TagManager", "TimeManager", "UnityConnectSettings", "VFXManager" })
+                {
+                    var loaded = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/" + name + ".asset");
+                    Assert.True(loaded.Length == 1 && loaded[0] != null, name);
+                    Assert.IsAssignableFrom<UnityEditorInternal.ProjectSettingsBase>(loaded[0]);
+                    Assert.Same(loaded[0], Unsupported.GetSerializedAssetInterfaceSingleton(name));
+                    var properties = new SerializedObject(loaded[0]).GetIterator();
+                    Assert.True(properties.Next(true), name);
+                }
+            }
+            finally
+            {
+                ProjectInfo.ProjectPath = before;
+                ProjectInfo.UnityVersion = version;
+                SettingsAssets.Reset();
+                Directory.Delete(project, true);
+            }
+        }
+
+        /// <summary>A temporary project with the settings probe's ProjectSettings files.</summary>
+        static string CopyOfProbeSettings()
+        {
+            var probe = Path.Combine(Repo(), "tests", "projects", "settings");
+            var project = Path.Combine(Path.GetTempPath(), "unbound-settings-" + System.Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(project, "ProjectSettings"));
+            foreach (var f in Directory.GetFiles(Path.Combine(probe, "ProjectSettings")))
+                File.Copy(f, Path.Combine(project, "ProjectSettings", Path.GetFileName(f)));
+            return project;
         }
 
         internal static string FirstDifference(string a, string b)

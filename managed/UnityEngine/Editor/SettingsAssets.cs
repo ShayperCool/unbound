@@ -169,7 +169,9 @@ namespace Unbound.Runtime
             Object obj;
             using (ObjectRegistry.AsAssets())
             {
-                try { obj = (Object)Activator.CreateInstance(type, nonPublic: true); }
+                // The engine's own object, so a class whose script-made wrappers stay uncreated
+                // (UnityEditorInternal.ProjectSettingsBase) still loads live.
+                try { obj = ObjectConstruction.CreateWithBacking(type); }
                 catch (Exception) { obj = (Object)RuntimeHelpers.GetUninitializedObject(type); }
             }
             obj.m_Name = file.ObjectName;
