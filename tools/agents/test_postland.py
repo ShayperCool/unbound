@@ -291,6 +291,22 @@ class PostlandTests(unittest.TestCase):
         self.assertEqual(self.reports()[-1]['culprit']['new'], culprit['new'])
         self.assertEqual(landed, [1])
 
+    def test_a_probe_removed_in_the_range_never_blames_a_later_landing(self):
+        check = ['probe', 'probe-check', 'engine paths', 'r']
+        self.land_branch('first', {'a.txt': '1'}, [check])
+        self.git('rm', '-q', '-r', 'tests/projects/probe')
+        self.land_branch('removal', {'b.txt': '1'}, [])
+        self.land_branch('innocent', {'c.txt': '1'}, [])
+        removal = self.rows[1]['new']
+        checker = self.checker(lambda commit, check, label:
+                               subprocess.run(['git', 'cat-file', '-e', f'{commit}:tests/projects/probe'],
+                                              cwd=self.repo).returncode != 0)
+        self.assertTrue(checker.round())
+        report = self.reports()[-1]
+        self.assertEqual(report['kind'], 'undecided')
+        self.assertEqual(report['result'], 'probe missing')
+        self.assertIn(report['at'], (removal, self.rows[2]['new'], self.rows[2]['old']))
+
     def test_unexpected_errors_are_written_for_the_orchestrator(self):
         self.land_branch('first', {'a.txt': '1'}, [['probe', 'probe-check', 'fast check', 'r']])
         with mock.patch.object(postland.Checker, 'round', side_effect=ValueError('bad landed line')):

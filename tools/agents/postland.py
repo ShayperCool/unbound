@@ -240,7 +240,15 @@ class Checker:
         base = rows[0]['old']
         common = {'range': [base, target], 'landings': [
             {key: row.get(key) for key in ('branch', 'old', 'new', 'request_id', 'log')} for row in rows]}
-        if self.exists(base, check):
+        # A probe the range adds cannot pass or fail before it exists; one that exists at the
+        # base and is missing later was removed or renamed, which decides nothing.
+        added = not self.exists(base, check)
+
+        def result_at(commit, label):
+            if self.exists(commit, check):
+                return self.decide(commit, check, label, logs)
+            return 'pass' if added else 'probe missing'
+        if not added:
             result = self.decide(base, check, 'base', logs)
             if result == 'fail':
                 return self.report(check, 'fails before the range', logs=logs, **common)
@@ -250,7 +258,7 @@ class Checker:
         while high-low > 1:
             middle = (low+high)//2
             commit = rows[middle]['new']
-            result = self.decide(commit, check, 'bisect', logs) if self.exists(commit, check) else 'pass'
+            result = result_at(commit, 'bisect')
             if result == 'pass':
                 low = middle
             elif result == 'fail':
@@ -264,8 +272,7 @@ class Checker:
             return self.report(check, 'no single landing', culprit=culprit, logs=logs, **common)
         # Confirm before touching main: twice failing at the tip, twice passing at the parent.
         tip = self.decide(culprit['new'], check, 'confirm', logs)
-        parent = (self.decide(culprit['old'], check, 'confirm', logs)
-                  if self.exists(culprit['old'], check) else 'pass')
+        parent = result_at(culprit['old'], 'confirm')
         if (tip, parent) != ('fail', 'pass'):
             return self.report(check, 'undecided', at=culprit['new'], result=f'tip {tip}, parent {parent}',
                                culprit=culprit, logs=logs, **common)

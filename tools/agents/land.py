@@ -6,9 +6,9 @@ Run from a worker worktree with everything committed:
     python3 tools/agents/land.py --check --probe 'python3 tests/projects/foo/run.py ...'
     python3 tools/agents/land.py         --probe 'python3 tests/projects/foo/run.py ...'
 
---check runs the gate on the current tree without the lock and without merging. A pass is
-remembered per tree and probe list. Landing right after a passing --check, with main
-unchanged, therefore does not rebuild. Landing registers the branch and its probes in a queue.
+--check runs the gate on the current tree without the lock and without merging, including the
+automatic checks that trains leave to the post-land checker. A pass is remembered per tree and
+probe list; a train does not reuse it for a code change. Landing registers the branch and its probes in a queue.
 The machine-wide lock holder rebases queued branches in order and runs one combined gate in
 an integration worktree. On pass it fast-forwards main through every branch and pushes once.
 Conflicts reject only their branch. A failed train is bisected to land the passing prefix;
