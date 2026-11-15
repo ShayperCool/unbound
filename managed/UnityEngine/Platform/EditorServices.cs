@@ -24,7 +24,7 @@ namespace Unbound.Runtime
             foreach (var doc in Native.LoadDocuments(path))
             {
                 if (doc.ClassId != 310) continue;
-                Configured = doc.Body.Bool("m_Enabled");
+                Configured = doc.Body.Get("UnityAnalyticsSettings")?.Bool("m_Enabled") == true;
                 var crash = doc.Body.Get("CrashReportingSettings");
                 if (crash == null) continue;
                 CaptureExceptions = crash.Bool("m_EnableCloudDiagnosticsReporting");

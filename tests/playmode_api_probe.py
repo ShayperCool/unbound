@@ -52,16 +52,18 @@ def compare(reference, actual, report):
     return int(bool(failures) or problem is not None)
 
 
-def stage(probe, destination, release):
+def stage(probe, destination, release, configure=None):
     if destination.exists():
         raise ValueError(f'refusing to overwrite {destination}')
     for part in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(probe/part, destination/part)
     (destination/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+release+'\n')
+    if configure:
+        configure(destination)
     return destination
 
 
-def main(probe, output_variable):
+def main(probe, output_variable, *, compare_rows=compare, configure=None):
     probe = Path(probe).resolve()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=('editor', 'publish', 'unbound'))
@@ -78,7 +80,7 @@ def main(probe, output_variable):
     if args.mode == 'editor':
         jobs = []
         for name in ('native1', 'native2'):
-            project = stage(probe, work/name/'project', args.release)
+            project = stage(probe, work/name/'project', args.release, configure)
             out = work/name/'out'
             out.mkdir()
             jobs.append(EditorJob(project, out/'Editor.log', out, env={output_variable: str(out)},
@@ -98,7 +100,7 @@ def main(probe, output_variable):
     work.mkdir(parents=True, exist_ok=False)
     cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
     runtime = shared_runtime(cli, work/'runtime', os.environ.get('UNBOUND_MANAGED_DIR'))
-    project = stage(probe, work/'project', args.release)
+    project = stage(probe, work/'project', args.release, configure)
     out = work/'out'
     out.mkdir()
     env = dict(os.environ, **{output_variable: str(out), 'UNBOUND_MANAGED_DIR': str(runtime/'managed')})
@@ -110,5 +112,5 @@ def main(probe, output_variable):
     problem = complete(out)
     if result.returncode or problem:
         print(f'engine capture failed: exit {result.returncode}; {problem}; log {out / "unbound.log"}')
-    verdict = compare(reference_root(probe)/'values.jsonl', out/'values.jsonl', work/'report.json')
+    verdict = compare_rows(reference_root(probe)/'values.jsonl', out/'values.jsonl', work/'report.json')
     return int(bool(result.returncode or problem or verdict))

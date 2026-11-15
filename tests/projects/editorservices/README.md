@@ -6,6 +6,13 @@ The fixture disables Unity services in `UnityConnectSettings.asset`. Analytics s
 disabled even after assigning `enabled = true`; the controls verify this before calling
 events or transactions. No service data is sent. The probe never requests a crash.
 
+An additional pair with global Unity services enabled and legacy analytics disabled
+produces the same 147 rows. Both repeats exited normally on the same NVIDIA GPU. The
+`--global-enabled` runner variant applies those settings to a staged copy, directs service
+URLs to a closed loopback port and also rejects unexpected unsupported-analytics diagnostics.
+The original reference rows are unchanged. Support is scoped to disabled legacy analytics;
+legacy-enabled settings remain explicit unsupported context regardless of the global flag.
+
 The controls cover consent assignment, repeated values, one-field changes, duplicate
 subscriptions, removal, unknown enum values, preference writes and `DeleteAll`;
 crash-reporting state, buffer limits, missing/replaced/removed metadata, null and empty
@@ -37,7 +44,7 @@ launcher, verifies Editor completion and repeat equality before publishing, and 
 an immutable runtime snapshot for engine captures. Comparisons retain every missing,
 extra or different value in `report.json` and return nonzero for any difference.
 
-Unmeasured contexts remain open: configured Unity services, fresh-session malformed
+Unmeasured contexts remain open: enabled legacy analytics, fresh-session malformed
 consent preferences, consent changes across domain reloads, and crash-report upload or
 snapshot production. `ForceCrash` is outside this probe. Other releases retain the
 previous complete preference deletion until their service-owned keys are measured.
