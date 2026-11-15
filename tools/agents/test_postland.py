@@ -329,6 +329,18 @@ class PostlandTests(unittest.TestCase):
         self.assertTrue(checker.round())
         self.assertEqual(self.reports()[-1]['result'], 'probe missing')
 
+    def test_a_probe_removed_and_readded_in_the_range_never_blames_a_landing(self):
+        check = ['probe', 'probe-check', 'engine paths', 'r']
+        self.land_branch('breaker', {'value.txt': 'broken\n'}, [check])
+        self.git('rm', '-q', '-r', 'tests/projects/probe')
+        self.land_branch('removal', {'b.txt': '1'}, [])
+        (self.repo/'tests/projects/probe').mkdir()
+        self.land_branch('readd', {'tests/projects/probe/gate.json': '{}\n'}, [check])
+        self.land_branch('innocent', {'c.txt': '1'}, [])
+        checker = self.checker(lambda commit, check, label: self.git('show', f'{commit}:value.txt') == 'broken')
+        self.assertTrue(checker.round())
+        self.assertEqual(self.reports()[-1]['result'], 'probe missing')
+
     def test_unexpected_errors_are_written_for_the_orchestrator(self):
         self.land_branch('first', {'a.txt': '1'}, [['probe', 'probe-check', 'fast check', 'r']])
         with mock.patch.object(postland.Checker, 'round', side_effect=ValueError('bad landed line')):
