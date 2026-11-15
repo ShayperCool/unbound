@@ -107,13 +107,14 @@ namespace UnityEngine.Tests
         {
             readonly ILogHandler m_Next;
             internal readonly List<string> Warnings = new List<string>();
+            internal readonly List<Exception> Exceptions = new List<Exception>();
             internal DiagnosticCapture(ILogHandler next) { m_Next = next; }
             public void LogFormat(LogType type, Object context, string format, params object[] args)
             {
                 if (type == LogType.Warning) Warnings.Add(string.Format(format, args));
                 m_Next.LogFormat(type, context, format, args);
             }
-            public void LogException(Exception error, Object context) => m_Next.LogException(error, context);
+            public void LogException(Exception error, Object context) { Exceptions.Add(error); m_Next.LogException(error, context); }
         }
 
         [Fact]

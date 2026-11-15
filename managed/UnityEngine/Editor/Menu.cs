@@ -15,7 +15,7 @@ namespace UnityEditor
             internal bool Supported = true;
             internal bool Builtin;
         }
-        static readonly Dictionary<string, Item> s_Items = new Dictionary<string, Item>(StringComparer.Ordinal);
+        static Dictionary<string, Item> s_Items = new Dictionary<string, Item>(StringComparer.Ordinal);
         static object s_Assemblies;
         static int s_Generation = -1;
         static int s_AssemblyCount;
@@ -86,13 +86,14 @@ namespace UnityEditor
                 if (path == name || path.StartsWith(name + "/", StringComparison.Ordinal)) removed.Add(path);
             foreach (var path in removed) s_Items.Remove(path);
         }
-        static void AddParents(string path)
+        static void AddParents(string path, Dictionary<string, Item> items = null)
         {
+            items ??= s_Items;
             int slash = path.IndexOf('/');
             while (slash >= 0)
             {
                 string parent = path.Substring(0, slash);
-                if (!s_Items.ContainsKey(parent)) s_Items[parent] = new Item();
+                if (!items.ContainsKey(parent)) items[parent] = new Item();
                 slash = path.IndexOf('/', slash + 1);
             }
         }
@@ -100,36 +101,47 @@ namespace UnityEditor
         {
             var assemblies = GameDomain.Assemblies();
             if (ReferenceEquals(assemblies, s_Assemblies) && s_Generation == GameDomain.Generation && s_AssemblyCount == assemblies.Count) return;
-            s_Assemblies = assemblies;
-            s_Generation = GameDomain.Generation;
-            s_AssemblyCount = assemblies.Count;
-            s_Items.Clear();
-            AddParents("Edit/Play");
-            s_Items.Add("Edit/Play", new Item { Builtin = true });
-            s_Items.Add("Edit/Pause", new Item { Builtin = true });
-            s_Items.Add("Edit/Step", new Item { Builtin = true });
+            var items = new Dictionary<string, Item>(StringComparer.Ordinal);
+            AddParents("Edit/Play", items);
+            items.Add("Edit/Play", new Item { Builtin = true });
+            items.Add("Edit/Pause", new Item { Builtin = true });
+            items.Add("Edit/Step", new Item { Builtin = true });
             var validators = new Dictionary<string, MethodInfo>(StringComparer.Ordinal);
             var commands = new Dictionary<string, MethodInfo>(StringComparer.Ordinal);
             foreach (var method in TypeCache.GetMethodsWithAttribute<MenuItem>())
                 foreach (MenuItem annotation in method.GetCustomAttributes(typeof(MenuItem), true))
                 {
-                    if (!method.IsStatic || annotation.menuItem == null) continue;
+                    if (!method.IsStatic || method.ContainsGenericParameters || annotation.menuItem == null) continue;
                     var destination = annotation.validate ? validators : commands;
                     if (!destination.ContainsKey(annotation.menuItem)) destination.Add(annotation.menuItem, method);
                 }
             foreach (var command in commands)
             {
                 string path = NormalizeItemPath(command.Key);
-                AddParents(path);
+                AddParents(path, items);
                 var item = new Item();
                 var method = command.Value;
-                item.Supported = method.GetParameters().Length == 0 && method.ReturnType == typeof(void);
-                if (item.Supported) item.Execute = method.CreateDelegate<Action>();
+                item.Supported = method.GetParameters().Length == 0;
+                if (item.Supported)
+                {
+                    try
+                    {
+                        item.Execute = method.ReturnType == typeof(void) ? method.CreateDelegate<Action>() : () => method.Invoke(null, null);
+                    }
+                    catch (ArgumentException error) { item.Supported = false; UnityEngine.Debug.LogWarning(error.Message); }
+                }
                 if (validators.TryGetValue(command.Key, out var validator)
                     && validator.GetParameters().Length == 0 && validator.ReturnType == typeof(bool))
-                    item.Validate = validator.CreateDelegate<Func<bool>>();
-                s_Items[path] = item;
+                {
+                    try { item.Validate = validator.CreateDelegate<Func<bool>>(); }
+                    catch (ArgumentException error) { item.Supported = false; UnityEngine.Debug.LogWarning(error.Message); }
+                }
+                items[path] = item;
             }
+            s_Items = items;
+            s_Assemblies = assemblies;
+            s_Generation = GameDomain.Generation;
+            s_AssemblyCount = assemblies.Count;
         }
         internal static string NormalizeItemPath(string name)
         {

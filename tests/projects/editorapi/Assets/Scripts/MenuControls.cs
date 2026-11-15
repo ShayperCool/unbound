@@ -15,6 +15,16 @@ public static class MenuControls
     static int calls, validations;
     [MenuItem(Script)] static void Execute() { calls++; }
     [MenuItem(Script, true)] static bool Validate() { validations++; return enabled; }
+    const string Throwing = "Tools/Registry probe/Throwing script";
+    const string Generic = "Tools/Registry probe/Open generic";
+    const string GenericValidator = "Tools/Registry probe/Generic validator";
+    const string Nonvoid = "Tools/Registry probe/Nonvoid";
+    static int throwCalls, genericCalls, nonvoidCalls;
+    [MenuItem(Throwing)] static void ThrowScript() { throwCalls++; throw new InvalidOperationException("execution-control"); }
+    [MenuItem(Generic)] static void OpenGeneric<T>() { genericCalls++; }
+    [MenuItem(GenericValidator)] static void WithGenericValidator() { }
+    [MenuItem(GenericValidator,true)] static bool OpenValidator<T>() => false;
+    [MenuItem(Nonvoid)] static int NonvoidCommand() { nonvoidCalls++; return 1; }
     public static string BuiltinState() => Menu.GetEnabled("Edit/Play")+":"+Menu.GetEnabled("Edit/Pause")+":"+Menu.GetEnabled("Edit/Step");
     public static void Run(Action<string,Func<object>> check)
     {
@@ -66,6 +76,12 @@ public static class MenuControls
         });thread.Start();thread.Join();
         check("menus.thread.unchanged",()=>Menu.GetChecked(Script)+":"+Menu.GetChecked(Dynamic));
         check("menus.thread.executeUnchanged",()=>calls==beforeThreadCalls);
+        check("menus.throw.script",()=>EditorApplication.ExecuteMenuItem(Throwing)+":"+throwCalls);
+        check("menus.throw.dynamic",()=>{add.Invoke(null,new object[]{Dynamic+" execution throw","",false,200,(Action)(()=>throw new InvalidOperationException("execution-control")),null});try{return EditorApplication.ExecuteMenuItem(Dynamic+" execution throw");}finally{remove.Invoke(null,new object[]{Dynamic+" execution throw"});}});
+        check("menus.generic.enabled",()=>Menu.GetEnabled(Generic));
+        check("menus.generic.validator",()=>Menu.GetEnabled(GenericValidator));
+        check("menus.generic.control",()=>Menu.GetEnabled(Script));
+        check("menus.nonvoid",()=>EditorApplication.ExecuteMenuItem(Nonvoid)+":"+nonvoidCalls);
         Menu.SetChecked(Script,false);
     }
 }

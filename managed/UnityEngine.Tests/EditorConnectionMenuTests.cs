@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Linq;
 using Unbound.Runtime;
 using UnityEditor;
 using UnityEditor.Networking.PlayerConnection;
@@ -51,6 +52,57 @@ namespace UnityEngine.Tests
                 Assert.Equal(2, calls);
             }
             finally { Menu.RemoveMenuItem(root); }
+        }
+
+        const string GenericPath = "Tools/Menu robustness/Generic";
+        const string RobustPath = "Tools/Menu robustness/Valid";
+        static int s_RobustCalls;
+        [MenuItem(GenericPath)] static void GenericCommand<T>() { }
+        [MenuItem(RobustPath)] static void RobustCommand() { s_RobustCalls++; }
+        [MenuItem(RobustPath, true)] static bool GenericValidator<T>() => false;
+
+        [Fact]
+        public void OpenGenericEntriesCannotBreakOtherCommandsOrLeaveAPartialCache()
+        {
+            using var engine = MainThreadCheck.Engine();
+            var assemblies = (System.Collections.Generic.List<Assembly>)typeof(GameDomain).GetField("s_Assemblies", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+            var generation = typeof(GameDomain).GetField("s_Generation", BindingFlags.Static | BindingFlags.NonPublic);
+            var original = assemblies.ToArray(); int oldGeneration = (int)generation.GetValue(null);
+            try
+            {
+                assemblies.Clear(); assemblies.Add(typeof(EditorConnectionMenuTests).Assembly);
+                generation.SetValue(null, oldGeneration + 1);
+                Assert.False(Menu.GetChecked(GenericPath));
+                Assert.True(Menu.GetEnabled(RobustPath));
+                int before = s_RobustCalls;
+                Assert.True(EditorApplication.ExecuteMenuItem(RobustPath));
+                Assert.Equal(before + 1, s_RobustCalls);
+                Assert.True(Menu.GetEnabled(RobustPath));
+            }
+            finally
+            {
+                assemblies.Clear(); assemblies.AddRange(original); generation.SetValue(null, oldGeneration);
+            }
+        }
+
+        [Fact]
+        public void DirectMenuExceptionsAreLoggedAndDoNotEscapeExecution()
+        {
+            using var engine = MainThreadCheck.Engine();
+            const string path = "Unit throwing menu";
+            var logger = Debug.unityLogger; var previous = logger.logHandler;
+            bool enabled = logger.logEnabled; var filter = logger.filterLogType;
+            var capture = new EditorPlayModeApiTests.DiagnosticCapture(previous);
+            int calls = 0;
+            try
+            {
+                logger.logHandler = capture; logger.logEnabled = true; logger.filterLogType = LogType.Log;
+                Menu.AddMenuItem(path, "", false, 200, () => { calls++; throw new InvalidOperationException("execution-control"); }, null);
+                Assert.True(EditorApplication.ExecuteMenuItem(path));
+                Assert.Equal(1, calls);
+                Assert.Contains(capture.Exceptions, error => error is InvalidOperationException && error.Message == "execution-control");
+            }
+            finally { logger.logHandler = previous; logger.logEnabled = enabled; logger.filterLogType = filter; Menu.RemoveMenuItem(path); }
         }
 
         [Fact]

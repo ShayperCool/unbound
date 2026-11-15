@@ -1,6 +1,6 @@
 # Editor APIs in Play mode
 
-The Unity 6000.0.71f1 reference contains 247 exact rows from two independent windowed
+The Unity 6000.0.71f1 reference contains 253 exact rows from two independent windowed
 GPU Editor captures. Both exited normally on the NVIDIA GeForce RTX 4060. The probe
 records all requested event subscriptions, 30 idle frames, queries, constructors,
 disconnected messaging, thread checks, reflected client requirements and an active Undo
@@ -131,3 +131,8 @@ The Play/Pause/Step availability controls cover ordinary Play mode on 6000.0.71f
 `Compat.EditorPlayMenusMeasured` selects that context. Other releases and availability
 queries outside Play mode remain explicitly unsupported. Broader menu construction
 phases and notifications caused by pause changes remain follow-ups.
+
+Throwing script and dynamic commands log their exceptions and retain a successful
+execution result. Open generic commands and validators are ignored; they do not prevent
+other commands from being discovered. Non-void script commands execute with an ignored
+return value. The command cache becomes current after construction completes.

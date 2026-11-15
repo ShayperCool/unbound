@@ -156,6 +156,11 @@ namespace UnityEditor
                 Debug.LogException(error.InnerException ?? error);
                 return true;
             }
+            catch (Exception error)
+            {
+                Debug.LogException(error);
+                return true;
+            }
             Stubs.Ignored("EditorApplication.ExecuteMenuItem", "runs registered script and dynamic commands; other built-in commands are not available");
             return false;
         }

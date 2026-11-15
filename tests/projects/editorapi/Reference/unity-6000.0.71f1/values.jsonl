@@ -158,6 +158,12 @@
 {"key":"menus.thread.remove","value":"UnityException:RemoveMenuItem can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
 {"key":"menus.thread.unchanged","value":"True:False"}
 {"key":"menus.thread.executeUnchanged","value":"True"}
+{"key":"menus.throw.script","value":"True:1"}
+{"key":"menus.throw.dynamic","value":"True"}
+{"key":"menus.generic.enabled","value":"False"}
+{"key":"menus.generic.validator","value":"True"}
+{"key":"menus.generic.control","value":"False"}
+{"key":"menus.nonvoid","value":"True:1"}
 {"key":"editorConnection.peers","value":"0"}
 {"key":"editorConnection.singleton","value":"True"}
 {"key":"editorConnection.initialize","value":"ok"}
