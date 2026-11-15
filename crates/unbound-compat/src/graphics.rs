@@ -149,6 +149,14 @@ impl GraphicsDevice {
         matches!(self, Self::Metal)
     }
 
+    /// Whether sampling applies `Texture.mipMapBias`: the macOS Editor's Metal device samples the
+    /// level its derivatives choose whatever the bias, with every filter mode (tests/projects/
+    /// nativegfx `metal.jsonl` `mipbias.*`, two captures on an Apple M2 Pro; Metal samplers have
+    /// no bias). OpenGL Core and Vulkan apply it (tests/projects/samplerbias).
+    pub fn applies_mip_bias(self) -> bool {
+        !matches!(self, Self::Metal)
+    }
+
     /// Whether a graphics program samples a texture through the texture's own sampler state
     /// whatever sampler it names, an inline one or another texture's: OpenGL Core, where the
     /// state is the texture's. The other devices sample through the sampler a program names
@@ -412,6 +420,9 @@ mod tests {
         assert!(Metal.conventions().reversed_z && Metal.conventions().uv_starts_at_top);
         assert_eq!(Metal.shader_api(), "SHADER_API_METAL");
         assert!(Metal.screen_bgra() && !Vulkan.screen_bgra() && !OpenGLCore.screen_bgra());
+        assert!(
+            !Metal.applies_mip_bias() && Vulkan.applies_mip_bias() && OpenGLCore.applies_mip_bias()
+        );
         assert_eq!(GraphicsDevice::from_device_type(17), Some(OpenGLCore));
     }
 }

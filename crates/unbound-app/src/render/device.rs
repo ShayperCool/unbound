@@ -132,6 +132,8 @@ pub struct DeviceConventions {
     pub compute_depth_sampler_state: bool,
     /// The screen's 8-bit color is stored blue first (`GraphicsDevice::screen_bgra`).
     pub screen_bgra: bool,
+    /// Sampling applies `Texture.mipMapBias` (`GraphicsDevice::applies_mip_bias`).
+    pub mip_bias: bool,
 }
 
 impl DeviceConventions {
@@ -148,6 +150,7 @@ impl DeviceConventions {
             depth_resolve_samples: [1, 2, 4, 8].map(|samples| device.depth_resolve_sample(samples)),
             compute_depth_sampler_state: device.compute_depth_sampler_state(),
             screen_bgra: device.screen_bgra(),
+            mip_bias: device.applies_mip_bias(),
         }
     }
 

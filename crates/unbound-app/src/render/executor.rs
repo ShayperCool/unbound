@@ -1104,7 +1104,11 @@ impl UnityRenderer {
                 self.texture_mip_biases.insert(handle, bias);
                 if let Some(texture) = self.textures.get_mut(&handle) {
                     self.generation += 1;
-                    let bias = if bias == 0.0 { 0 } else { bias.to_bits() };
+                    let bias = if bias == 0.0 || !self.conventions.mip_bias {
+                        0
+                    } else {
+                        bias.to_bits()
+                    };
                     if texture.sampler_key.lod_bias_bits != bias {
                         self.compute_bindings.release_sampler(&texture.texture);
                         texture.sampler_key.lod_bias_bits = bias;
@@ -1163,9 +1167,14 @@ impl UnityRenderer {
     /// sampler's own LOD bias, which keeps implicit and explicit gradients. Each device's
     /// backend has its Editor's anisotropic transition as it is (tests/projects/samplerbias,
     /// both devices).
+    /// A texture's `mipMapBias` as its samplers take it (none where the device ignores it).
     fn sampler_lod_bias(&self, handle: u64) -> u32 {
         let bias = self.texture_mip_biases.get(&handle).copied().unwrap_or(0.0);
-        if bias == 0.0 { 0 } else { bias.to_bits() }
+        if bias == 0.0 || !self.conventions.mip_bias {
+            0
+        } else {
+            bias.to_bits()
+        }
     }
 
     fn sampler(&mut self, key: SamplerKey) -> wgpu::Sampler {
