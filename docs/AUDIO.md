@@ -9,8 +9,10 @@ The managed components are in `managed/UnityEngine/Audio/AudioFilterComponents.c
 per-source chain is in `crates/unbound-runtime/src/audio/mixer.rs`.
 
 Status: source ready, unvalidated for LowPass and HighPass on an AudioSource.
-Echo source/listener controls below measure static delay conversion and the shared kernel;
-other source Echo transitions remain unmeasured. The DSP reuses the AudioMixer Lowpass, Highpass and Echo kernels in `effects.rs`.
+Echo source/listener controls below measure static delay conversion and the shared kernel.
+Runtime delay changes on sources, mono input, the listener and AudioMixer Echo are measured by
+the audiodistortion live `echo_delays` session (tests/projects/audiodistortion/LIVE.md); other
+source Echo transitions remain unmeasured. The DSP reuses the AudioMixer Lowpass, Highpass and Echo kernels in `effects.rs`.
 Those kernels were measured on mixer groups by `tests/projects/mixerfilters` and
 `tests/projects/mixerecho` (Unity 6000.0.71f1, Linux, 48000 and 44100 Hz). Those captures do not
 establish parity for component chains.

@@ -711,19 +711,38 @@ impl ParamEq {
     }
 }
 
-/// Unity 6000.0.71f1 Echo kernels, independently captured at both output rates.
+/// Echo history samples are signed 16-bit values scaled by this factor.
+const ECHO_SAMPLE_SCALE: f32 = 1.0 / 32767.0;
+/// Frames over which a measured delay change crossfades from the previous tap to the new one.
+const ECHO_CROSSFADE_FRAMES: u32 = 2048;
+/// A history ring keeps at least this many frames beyond the delay; growing past that bound
+/// reallocates it and fades the oldest retained frames in over the same length.
+const ECHO_HEADROOM_FRAMES: usize = 128;
+
+/// Unity 6000.0.71f1 Echo kernels, independently captured at both output rates. The history
+/// is a ring larger than the delay, read `frames` behind the write position.
+/// tests/projects/audiodistortion live `echo_delays` measures runtime delay changes.
 #[derive(Default)]
 struct Echo {
     history: Vec<[i16; 2]>,
-    position: usize,
+    write: usize,
+    read: usize,
+    /// The previous delay's read position while `crossfade` frames remain.
+    previous: usize,
+    crossfade: u32,
+    /// The delay (ms) and its length in frames that the read position currently follows.
+    delay: f32,
+    frames: usize,
+    rate: u32,
 }
 impl Echo {
     fn frames(delay: f32, rate: u32) -> anyhow::Result<usize> {
         // MAX_HISTORY_BYTES is a backend resource limit, not a restriction of Unity's range.
         anyhow::ensure!(delay.is_finite(), "AudioMixer Echo delay must be finite");
-        // Truncate fractional frames, then round up to the measured eight-frame boundary.
-        let frames = (delay.clamp(1.0, 5000.0) * rate as f32 / 1000.0) as usize;
-        let frames = frames.checked_add(7).map(|n| (n & !7).max(8));
+        // Round to whole frames, then up to the measured eight-frame boundary.
+        let exact = delay.clamp(1.0, 5000.0) / 1000.0 * rate as f32 + 0.5;
+        let frames = (exact as usize).checked_add(7).map(|n| (n & !7).max(8));
+        // The bound applies to the delay; its ring adds at most half a second.
         let frames = frames.filter(|n| *n <= MAX_HISTORY_BYTES / std::mem::size_of::<[i16; 2]>());
         frames.ok_or_else(|| {
             anyhow::anyhow!(
@@ -731,30 +750,145 @@ impl Echo {
             )
         })
     }
-    fn tune(&mut self, delay: f32, rate: u32) -> anyhow::Result<()> {
-        let frames = Self::frames(delay, rate)?;
-        if self.history.len() != frames {
-            let mut history = Vec::new();
-            history.try_reserve_exact(frames)?;
-            history.resize(frames, [0; 2]);
-            self.history = history;
-            self.position = 0;
+    /// The ring length for `frames` of delay: the next whole multiple of half a second that
+    /// leaves at least [`ECHO_HEADROOM_FRAMES`], rounded up to eight frames.
+    fn capacity(frames: usize, rate: u32) -> usize {
+        let half = (rate / 2).max(1) as usize;
+        let span = frames + ECHO_HEADROOM_FRAMES - 1;
+        (half * (span / half + 1) + 7) & !7
+    }
+    /// The 16-bit history value, saturating outside [-1, 1].
+    fn quantize(value: f32) -> i16 {
+        if value > 1.0 {
+            i16::MAX
+        } else if value < -1.0 {
+            i16::MIN
+        } else {
+            (value * 32767.0) as i16
         }
+    }
+    /// A new empty history at `delay`.
+    fn allocate(&mut self, delay: f32, rate: u32) -> anyhow::Result<()> {
+        let frames = Self::frames(delay, rate)?;
+        let capacity = Self::capacity(frames, rate);
+        let mut history = Vec::new();
+        history.try_reserve_exact(capacity)?;
+        history.resize(capacity, [0; 2]);
+        *self = Self {
+            history,
+            delay,
+            frames,
+            rate,
+            ..Self::default()
+        };
+        self.reset();
         Ok(())
+    }
+    /// Takes a submitted delay. A changed delay at the same rate keeps the history when the
+    /// change is `measured`: the read position moves and the previous tap crossfades into the
+    /// new one. A delay submitted during that crossfade is not applied (a later submission
+    /// re-evaluates it). Unmeasured releases restart the history empty instead.
+    fn tune(&mut self, delay: f32, rate: u32, measured: bool) -> anyhow::Result<()> {
+        if self.history.is_empty() || self.rate != rate {
+            return self.allocate(delay, rate);
+        }
+        if delay == self.delay || (measured && self.crossfade != 0) {
+            return Ok(());
+        }
+        let frames = Self::frames(delay, rate)?;
+        if !measured {
+            return if frames == self.frames {
+                self.delay = delay;
+                Ok(())
+            } else {
+                self.allocate(delay, rate)
+            };
+        }
+        let capacity = self.history.len();
+        let previous = if capacity >= frames + ECHO_HEADROOM_FRAMES {
+            let previous = self.read;
+            self.read = (self.write + capacity - frames) % capacity;
+            previous
+        } else {
+            self.grow(frames, rate)?
+        };
+        self.previous = previous;
+        self.crossfade = if previous != self.read {
+            ECHO_CROSSFADE_FRAMES
+        } else {
+            0
+        };
+        self.delay = delay;
+        self.frames = frames;
+        Ok(())
+    }
+    /// Reallocates the ring for a delay beyond its headroom. The whole previous ring moves,
+    /// oldest frame first, to end just before the new write position; its oldest frames fade
+    /// in and the remaining new frames start silent. Returns the previous tap's position.
+    fn grow(&mut self, frames: usize, rate: u32) -> anyhow::Result<usize> {
+        let (old, old_capacity) = (&self.history, self.history.len());
+        let delay = (self.write + old_capacity - self.read) % old_capacity;
+        let capacity = Self::capacity(frames, rate);
+        let mut history = Vec::new();
+        history.try_reserve_exact(capacity)?;
+        history.resize(capacity, [0; 2]);
+        let start = (frames + capacity - old_capacity % capacity) % capacity;
+        for offset in 0..old_capacity {
+            history[(start + offset) % capacity] = old[(self.write + offset) % old_capacity];
+        }
+        let step = 1.0 / (ECHO_HEADROOM_FRAMES + 1) as f32;
+        let mut gain = step;
+        for offset in 0..ECHO_HEADROOM_FRAMES {
+            let scale = gain * ECHO_SAMPLE_SCALE;
+            for sample in &mut history[(start + offset) % capacity] {
+                *sample = Self::quantize(*sample as f32 * scale);
+            }
+            gain += step;
+        }
+        self.history = history;
+        self.read = 0;
+        self.write = frames;
+        Ok(if delay == 0 { 0 } else { frames - delay })
+    }
+    /// Empties the history; the delay and its ring stay.
+    fn reset(&mut self) {
+        self.history.fill([0; 2]);
+        self.read = 0;
+        self.write = self.frames;
+        self.previous = 0;
+        self.crossfade = 0;
     }
     fn process(&mut self, samples: &mut [f32], spec: &EffectSpec) {
         let decay = spec.decay.clamp(0.0, 1.0);
         let dry = spec.dry_mix.clamp(0.0, 1.0);
         let wet = spec.wet_mix.clamp(0.0, 1.0);
+        let capacity = self.history.len();
         for stereo in samples.chunks_exact_mut(2) {
-            let history = &mut self.history[self.position];
+            let tap = self.history[self.read];
+            let weights = (self.crossfade != 0).then(|| {
+                let previous = self.crossfade as f32 * (1.0 / ECHO_CROSSFADE_FRAMES as f32);
+                (self.history[self.previous], previous, 1.0 - previous)
+            });
+            let mut written = [0; 2];
             for (channel, input) in stereo.iter_mut().enumerate() {
                 // The reciprocal multiply is observable in the tone feedback tail.
-                let delayed = history[channel] as f32 * (1.0 / 32767.0);
-                history[channel] = ((*input + delayed * decay) * 32767.0) as i16;
+                let delayed = match weights {
+                    Some((old, previous, next)) => {
+                        (old[channel] as f32 * previous + tap[channel] as f32 * next)
+                            * ECHO_SAMPLE_SCALE
+                    }
+                    None => tap[channel] as f32 * ECHO_SAMPLE_SCALE,
+                };
+                written[channel] = Self::quantize(*input + delayed * decay);
                 *input = *input * dry + delayed * wet;
             }
-            self.position = (self.position + 1) % self.history.len();
+            self.history[self.write] = written;
+            self.read = (self.read + 1) % capacity;
+            self.write = (self.write + 1) % capacity;
+            if self.crossfade != 0 {
+                self.previous = (self.previous + 1) % capacity;
+                self.crossfade -= 1;
+            }
         }
     }
 }
@@ -976,7 +1110,8 @@ impl Effect {
         }
         let kind = EffectKind::parse(&spec.kind);
         if kind == Some(EffectKind::Echo) {
-            self.echo.tune(spec.delay, rate)?;
+            self.echo
+                .tune(spec.delay, rate, spec.effect_transitions_measured)?;
         }
         if let Some(sfx) = &spec.sfx {
             let reverb = match &mut self.reverb {
@@ -1066,8 +1201,7 @@ impl Effect {
         if !restart {
             self.lowpass = Default::default();
         }
-        self.echo.history.fill([0; 2]);
-        self.echo.position = 0;
+        self.echo.reset();
         if let Some(reverb) = &mut self.reverb {
             reverb.clear();
         }
@@ -2500,5 +2634,183 @@ mod tests {
         };
         let gain = response(eq.b) / response([1.0, eq.a[0], eq.a[1]]);
         assert!((gain - 9.0).abs() < 1e-9);
+    }
+
+    fn echo_spec(delay: f32, dry: f32, wet: f32, decay: f32, measured: bool) -> EffectSpec {
+        serde_json::from_value(serde_json::json!({
+            "id": "echo", "kind": "Echo", "delay": delay, "decay": decay,
+            "dryMix": dry, "wetMix": wet, "effectTransitionsMeasured": measured,
+        }))
+        .unwrap()
+    }
+
+    /// The live probe's input: one silent buffer, then deterministic noise per channel.
+    fn live_noise(channels: usize, blocks: usize) -> Vec<f32> {
+        let mut seed = 12345u32;
+        let mut out = Vec::with_capacity(blocks * 1024 * channels);
+        for frame in 0..blocks * 1024 {
+            for _ in 0..channels {
+                seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+                let value = ((seed >> 18) as i32 - 8192) as f32 / 32768.0;
+                out.push(if frame < 1024 { 0.0 } else { value });
+            }
+        }
+        out
+    }
+
+    fn live_master(case: &str, rate: u32) -> Vec<f32> {
+        use std::io::Read;
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
+            "../../tests/projects/audiodistortion/Reference/unity-6000.0.71f1/live-rate-{rate}/{case}.master.f32.gz"
+        ));
+        let mut bytes = Vec::new();
+        flate2::read::GzDecoder::new(std::fs::File::open(path).unwrap())
+            .read_to_end(&mut bytes)
+            .unwrap();
+        bytes
+            .chunks_exact(4)
+            .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
+            .collect()
+    }
+
+    #[test]
+    fn echo_delay_changes_match_the_recorded_master_bit_for_bit() {
+        // (case, initial, changed, dry, wet, decay, schedule of (buffer, delay or None for
+        // a wet-mix submission)). Component delays arrive truncated to whole milliseconds.
+        type Step = (usize, Option<f32>);
+        let main = |changed: f32| -> Vec<Step> {
+            vec![
+                (6, Some(changed)),
+                (12, Some(37.0)),
+                (13, Some(changed)),
+                (18, Some(37.0)),
+            ]
+        };
+        let cases: [(&str, f32, f32, f32, f32, Vec<Step>); 9] = [
+            ("life_echo_delay_down", 0.4, 0.7, 0.6, 11.0, main(11.0)),
+            ("life_echo_delay_up", 0.4, 0.7, 0.6, 300.0, main(300.0)),
+            ("life_echo_delay_edge", 0.4, 0.7, 0.6, 498.0, main(498.0)),
+            ("life_echo_delay_beyond", 0.4, 0.7, 0.6, 800.0, main(800.0)),
+            ("life_echo_delay_round", 0.4, 0.7, 0.6, 20.0, main(20.0)),
+            ("echo_delay_set", 1.0, 1.0, 0.0, 11.0, main(11.0)),
+            ("echo_delay_set_beyond", 1.0, 1.0, 0.0, 800.0, main(800.0)),
+            ("echo_delay_round", 1.0, 1.0, 0.0, 20.52, main(20.52)),
+            (
+                "life_echo_delay_pending",
+                0.4,
+                0.7,
+                0.6,
+                11.0,
+                vec![(6, Some(11.0)), (7, Some(37.0)), (12, None)],
+            ),
+        ];
+        let input = live_noise(2, 24);
+        for rate in [48000, 44100] {
+            for (case, dry, wet, decay, _, schedule) in &cases {
+                let mut spec = echo_spec(37.0, *dry, *wet, *decay, true);
+                let mut effect = Effect::new(spec.clone(), rate, 1024).unwrap();
+                let mut output = input.clone();
+                for (block, samples) in output.chunks_mut(2048).enumerate() {
+                    for (_, step) in schedule.iter().filter(|(at, _)| *at == block) {
+                        match step {
+                            Some(delay) => spec.delay = *delay,
+                            None => spec.wet_mix = 0.5,
+                        }
+                        effect.update(spec.clone(), rate, 1024).unwrap();
+                    }
+                    effect.process(samples, false);
+                }
+                let reference = live_master(case, rate);
+                let first = output
+                    .iter()
+                    .zip(&reference)
+                    .position(|(a, b)| a.to_bits() != b.to_bits());
+                assert_eq!(first, None, "{case} at {rate} Hz");
+            }
+        }
+    }
+
+    #[test]
+    fn echo_delay_frames_round_and_rings_keep_headroom() {
+        assert_eq!(Echo::frames(20.52, 48000).unwrap(), 992);
+        assert_eq!(Echo::frames(20.52, 44100).unwrap(), 912);
+        assert_eq!(Echo::frames(37.0, 44100).unwrap(), 1632);
+        // Half-second multiples at least 128 frames beyond the delay, in whole eight frames.
+        assert_eq!(Echo::capacity(1776, 48000), 24000);
+        assert_eq!(Echo::capacity(23872, 48000), 24000);
+        assert_eq!(Echo::capacity(23880, 48000), 48000);
+        assert_eq!(Echo::capacity(1632, 44100), 22056);
+        assert_eq!(Echo::capacity(21968, 44100), 44104);
+        for delay in [1.0, 11.0, 498.0, 5000.0] {
+            for rate in [8000, 44100, 48000, 96000] {
+                let frames = Echo::frames(delay, rate).unwrap();
+                assert!(Echo::capacity(frames, rate) >= frames + ECHO_HEADROOM_FRAMES);
+            }
+        }
+        assert_eq!(Echo::quantize(-1.000_01), i16::MIN);
+        assert_eq!(Echo::quantize(-1.0), -32767);
+        assert_eq!(Echo::quantize(1.5), i16::MAX);
+        assert_eq!(Echo::quantize(f32::NAN), 0);
+    }
+
+    #[test]
+    fn a_delay_submitted_during_the_crossfade_waits_for_the_next_submission() {
+        let mut echo = Echo::default();
+        echo.tune(37.0, 48000, true).unwrap();
+        echo.tune(11.0, 48000, true).unwrap();
+        assert_eq!(echo.crossfade, ECHO_CROSSFADE_FRAMES);
+        echo.tune(300.0, 48000, true).unwrap();
+        assert_eq!((echo.delay, echo.frames), (11.0, 528));
+        let spec = echo_spec(300.0, 1.0, 1.0, 0.0, true);
+        echo.process(&mut [0.0; 2 * 2048], &spec);
+        assert_eq!(echo.crossfade, 0);
+        // Processing alone does not apply it; the next submission does.
+        assert_eq!(echo.delay, 11.0);
+        echo.tune(300.0, 48000, true).unwrap();
+        assert_eq!((echo.delay, echo.frames), (300.0, 14400));
+        assert_eq!(echo.crossfade, ECHO_CROSSFADE_FRAMES);
+        // An equal frame count moves no tap and needs no crossfade.
+        let mut echo = Echo::default();
+        echo.tune(37.0, 48000, true).unwrap();
+        echo.tune(37.01, 48000, true).unwrap();
+        assert_eq!(echo.crossfade, 0);
+    }
+
+    #[test]
+    fn unmeasured_releases_restart_the_echo_history_on_a_delay_change() {
+        let spec = echo_spec(37.0, 0.0, 1.0, 0.0, false);
+        let mut echo = Echo::default();
+        echo.tune(37.0, 48000, false).unwrap();
+        let mut impulse = vec![0.0; 2 * 1024];
+        impulse[0] = 0.5;
+        echo.process(&mut impulse, &spec);
+        echo.tune(11.0, 48000, false).unwrap();
+        assert_eq!(echo.crossfade, 0);
+        let mut tail = vec![0.0; 2 * 4096];
+        echo.process(&mut tail, &spec);
+        assert!(tail.iter().all(|x| *x == 0.0));
+        // The measured rule keeps the impulse, now heard through the crossfade.
+        let mut echo = Echo::default();
+        echo.tune(37.0, 48000, true).unwrap();
+        let mut impulse = vec![0.0; 2 * 1024];
+        impulse[0] = 0.5;
+        echo.process(&mut impulse, &spec);
+        echo.tune(11.0, 48000, true).unwrap();
+        let mut tail = vec![0.0; 2 * 4096];
+        echo.process(&mut tail, &spec);
+        assert!(tail.iter().any(|x| *x != 0.0));
+    }
+
+    #[test]
+    fn a_reset_echo_keeps_its_delay_and_ring() {
+        let mut echo = Echo::default();
+        echo.tune(37.0, 44100, true).unwrap();
+        echo.tune(11.0, 44100, true).unwrap();
+        let spec = echo_spec(11.0, 1.0, 1.0, 0.5, true);
+        echo.process(&mut [0.25; 2 * 512], &spec);
+        echo.reset();
+        assert_eq!((echo.read, echo.write, echo.crossfade), (0, echo.frames, 0));
+        assert_eq!((echo.history.len(), echo.frames), (22056, 488));
+        assert!(echo.history.iter().all(|h| *h == [0; 2]));
     }
 }
