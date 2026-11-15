@@ -11,5 +11,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/NoData.unity
     guid: 6387258a71a442e5bfaf5f3f598a364c
+  - enabled: 1
+    path: Assets/Scenes/Masks.unity
+    guid: 4e43ca89cb0ac68b6a5afaab66571c19
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

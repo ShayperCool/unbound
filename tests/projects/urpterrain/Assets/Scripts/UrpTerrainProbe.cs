@@ -10,7 +10,8 @@ using UnityEngine.SceneManagement;
 /// A terrain drawn with the Universal Render Pipeline's terrain shaders: five layers in stripes, seen
 /// from above on its splat passes (base map distance 1000), on its base map (0), and half on each
 /// (120, split into its four patches: the far two), with a smooth metallic sphere (the pipeline's Lit shader) beside it reflecting the scene's
-/// default reflection, then the same scene without lighting data (<c>nodata</c>, the grazing view). Writes <c>urpterrain.jsonl</c> (the settings each image used, then the base
+/// default reflection, then the same scene without lighting data (<c>nodata</c>, the grazing view), then
+/// two terrains whose layers have mask maps (<c>masks</c>, <c>masksbase</c>, <c>masksgrazing</c>). Writes <c>urpterrain.jsonl</c> (the settings each image used, then the base
 /// maps the terrain made) and PNGs into <c>URP_TERRAIN_PROBE_OUT</c>, then quits.
 /// </summary>
 public class UrpTerrainProbe : MonoBehaviour
@@ -53,6 +54,16 @@ public class UrpTerrainProbe : MonoBehaviour
         yield return null;
         terrain = FindAnyObjectByType<Terrain>();
         Capture(dir, "nodata", terrain, new Vector3(0f, 6f, -15f), new Vector3(0f, 0f, 60f), 1000f);
+        // Layers with mask maps (Masks: a five-layer and a four-layer terrain side by side): from
+        // above on the splat passes and on the base maps, and low over the ground facing the sun.
+        SceneManager.LoadScene("Masks");
+        yield return null;
+        yield return null;
+        var terrains = FindObjectsByType<Terrain>(FindObjectsSortMode.None);
+        Array.Sort(terrains, (a, b) => string.CompareOrdinal(a.name, b.name));
+        CaptureAll(dir, "masks", terrains, new Vector3(0f, 75f, -20f), new Vector3(0f, 0f, 50f), 1000f);
+        CaptureAll(dir, "masksbase", terrains, new Vector3(0f, 75f, -20f), new Vector3(0f, 0f, 50f), 0f);
+        CaptureAll(dir, "masksgrazing", terrains, new Vector3(30f, 8f, 95f), new Vector3(-10f, 0f, 55f), 1000f);
         File.WriteAllText(Path.Combine(dir, "urpterrain.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -74,6 +85,13 @@ public class UrpTerrainProbe : MonoBehaviour
             maps[row] = count + 1;
         }
         foreach (var pair in maps) m_Out.Append(pair.Key).Append($",\"count\":{pair.Value}}}\n");
+    }
+
+    /// <summary><see cref="Capture"/> with every terrain at the base map distance.</summary>
+    void CaptureAll(string dir, string name, Terrain[] terrains, Vector3 position, Vector3 target, float basemapDistance)
+    {
+        foreach (var terrain in terrains) terrain.basemapDistance = basemapDistance;
+        Capture(dir, name, terrains[0], position, target, basemapDistance);
     }
 
     void Capture(string dir, string name, Terrain terrain, Vector3 position, Vector3 target, float basemapDistance)

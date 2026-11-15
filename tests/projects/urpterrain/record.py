@@ -2,6 +2,7 @@
 """Editor side of the URP terrain probe, in copies of the project under the validation cache.
 
     record.py create  --release 6000.0.71f1   # run ProbeRunner.Create, copy Assets/ back
+    record.py create  --release 6000.0.71f1 --method ProbeRunner.CreateMasks   # add the Masks scene
     record.py record  --release 6000.0.71f1   # two independent GPU captures
     record.py publish --release 6000.0.71f1   # write Reference/unity-<release>/ when both agree; an existing
                                               # reference only gains rows after its own and new images
@@ -38,7 +39,7 @@ def outputs(directory):
 def complete(directory):
     path = directory/'urpterrain.jsonl'
     lines = path.read_text().splitlines() if path.is_file() else []
-    if sum('"image"' in line for line in lines) != 6 or not any('"basemap"' in line for line in lines):
+    if sum('"image"' in line for line in lines) != 9 or not any('"basemap"' in line for line in lines):
         return 'missing or incomplete urpterrain.jsonl'
     return None
 
@@ -49,6 +50,7 @@ def main():
     parser.add_argument('--release', required=True)
     parser.add_argument('--label', default='record')
     parser.add_argument('--color-space', choices=SPACES, default='linear')
+    parser.add_argument('--method', default='ProbeRunner.Create', help='create: the Editor method that makes the assets')
     args = parser.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = cache_artifact_path(run_root(PROBE, args.label)).resolve()
@@ -60,7 +62,7 @@ def main():
         out = work/'create'
         project = copy_project(out/'project', args.release)
         result = run(EditorJob(project, out/'editor.log', out, batch=True,
-                               args=['-quit', '-executeMethod', 'ProbeRunner.Create'], timeout=900))
+                               args=['-quit', '-executeMethod', args.method], timeout=900))
         reason = result_problem(out, gpu=True)
         if reason or result.get('exit_code') != 0:
             print(f'Editor create failed: {reason or result}', file=sys.stderr)
