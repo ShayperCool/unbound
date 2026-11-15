@@ -743,6 +743,15 @@ namespace UnityEngine.Tests
             animation["z"].normalizedTime = 0f;
             animation.Step(0.125f);
             Assert.Equal(3, receiver.Calls.Count);
+            animation.Rewind();
+            animation.Step(0.125f);
+            Assert.Equal(4, receiver.Calls.Count);
+            // normalizedTime is a fraction of the clip's length (legacy.normalizedtime.scaled).
+            var two = new AnimationClip { legacy = true, wrapMode = WrapMode.Loop, name = "two" };
+            two.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 2f, 2f));
+            animation.AddClip(two, "two");
+            animation["two"].normalizedTime = 0.5f;
+            Assert.Equal(1f, animation["two"].time);
             Object.DestroyImmediate(go);
         }
 
