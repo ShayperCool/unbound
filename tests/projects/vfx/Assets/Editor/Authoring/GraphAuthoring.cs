@@ -26,6 +26,7 @@ public static class GraphAuthoring
     {
         Directory.CreateDirectory(Folder);
         Directory.CreateDirectory(SimulationFolder);
+        Directory.CreateDirectory(DrawFolder);
         Directory.CreateDirectory(ObjectFolder);
         AssetDatabase.Refresh();
         Objects();
@@ -39,6 +40,7 @@ public static class GraphAuthoring
         Simulated();
         Expressions();
         Chained();
+        Drawn();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -533,6 +535,9 @@ public static class GraphAuthoring
         Bools(U, A);
         Ints(P);
         Link(P, Input(block, "u20"));
+        // The same to a bool from numbers that are zero (W, and Z until the probe sets it).
+        Bools(W);
+        Link(Z, Input(block, "b20"));
         Floats(state.outputSlots.First(s => s.name == "SpawnCount"), state.outputSlots.First(s => s.name == "SpawnDeltaTime"), state.outputSlots.First(s => s.name == "SpawnTotalTime"),
             state.outputSlots.First(s => s.name == "LoopDuration"), state.outputSlots.First(s => s.name == "DelayBeforeLoop"), state.outputSlots.First(s => s.name == "DelayAfterLoop"));
 
@@ -561,6 +566,89 @@ public static class GraphAuthoring
         hundredfold.inputSlots[1].value = 100f;
         var lifetime = Set(texturedInit, "lifetime", 1f);
         Link(hundredfold.outputSlots[0], lifetime.inputSlots[0]);
+        Save(textured);
+    }
+
+    const string DrawFolder = "Assets/DrawGraphs";
+
+    /// <summary>A vector as the slot takes it: a position, a direction and a vector have types
+    /// of their own (a plain vector given to one of them is not taken).</summary>
+    static object Spaced(VFXSlot slot, Vector3 value)
+    {
+        var type = slot.property.type;
+        if (type == typeof(Position)) return (Position)value;
+        if (type == typeof(Vector)) return (Vector)value;
+        if (type == typeof(DirectionType)) return (DirectionType)value;
+        return value;
+    }
+
+    /// <summary>A block that sets an attribute to a vector.</summary>
+    static SetAttribute SetVector(VFXContext context, string attribute, Vector3 value)
+    {
+        var block = Make<SetAttribute>();
+        block.SetSettingValue("attribute", attribute);
+        context.AddChild(block);
+        block.inputSlots[0].value = Spaced(block.inputSlots[0], value);
+        return block;
+    }
+
+    /// <summary>A block that draws an attribute for each particle, component by component,
+    /// between two vectors.</summary>
+    static SetAttribute SetRandom(VFXContext context, string attribute, Vector3 from, Vector3 to)
+    {
+        var block = Make<SetAttribute>();
+        block.SetSettingValue("attribute", attribute);
+        block.SetSettingValue("Random", RandomMode.PerComponent);
+        context.AddChild(block);
+        block.inputSlots[0].value = Spaced(block.inputSlots[0], from);
+        block.inputSlots[1].value = Spaced(block.inputSlots[1], to);
+        return block;
+    }
+
+    /// <summary>The graphs the drawing controls show (README.md, "Drawing"): quads drawn
+    /// without sorting, so in one draw of the particles in the order they are kept.</summary>
+    static void Drawn()
+    {
+        (VFXGraph, VFXBasicSpawner, VFXBasicInitialize, VFXPlanarPrimitiveOutput) Quads(string name, uint capacity, VFXAbstractRenderedOutput.BlendMode blend)
+        {
+            var graph = NewGraph(name, DrawFolder);
+            var (spawn, init, _, output) = System(graph, capacity);
+            output.SetSettingValue("blendMode", blend);
+            return (graph, spawn, init, output);
+        }
+
+        // Forty opaque quads at once, each with a place, a depth and a colour of its own.
+        var (opaque, opaqueSpawn, opaqueInit, _) = Quads("DrawOpaque", 64, VFXAbstractRenderedOutput.BlendMode.Opaque);
+        Burst(opaqueSpawn, false, 40f, 0f);
+        SetRandom(opaqueInit, "position", new Vector3(-1f, -1f, -1f), new Vector3(1f, 1f, 1f));
+        Set(opaqueInit, "size", 0.4f);
+        SetRandom(opaqueInit, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
+        Save(opaque);
+
+        // Thirty a second rising from a line and living half a second, added to what is behind.
+        var (additive, additiveSpawn, additiveInit, _) = Quads("DrawAdditive", 64, VFXAbstractRenderedOutput.BlendMode.Additive);
+        ConstantRate(additiveSpawn, 30f);
+        SetRandom(additiveInit, "position", new Vector3(-1f, -1f, 0f), new Vector3(1f, -1f, 0f));
+        SetVector(additiveInit, "velocity", new Vector3(0f, 2f, 0f));
+        Set(additiveInit, "lifetime", 0.5f);
+        Set(additiveInit, "size", 0.3f);
+        SetVector(additiveInit, "color", new Vector3(1f, 0.5f, 0.2f));
+        Save(additive);
+
+        // More quads than one draw's indices reach.
+        var (many, manySpawn, manyInit, _) = Quads("DrawMany", 20000, VFXAbstractRenderedOutput.BlendMode.Additive);
+        Burst(manySpawn, false, 20000f, 0f);
+        SetRandom(manyInit, "position", new Vector3(-1.4f, -1.4f, 0f), new Vector3(1.4f, 1.4f, 0f));
+        Set(manyInit, "size", 0.05f);
+        SetVector(manyInit, "color", new Vector3(0.3f, 0.6f, 1f));
+        Save(many);
+
+        // Nine opaque quads with an image of the project's for texture.
+        var (textured, texturedSpawn, texturedInit, texturedOutput) = Quads("DrawTextured", 16, VFXAbstractRenderedOutput.BlendMode.Opaque);
+        Burst(texturedSpawn, false, 9f, 0f);
+        SetRandom(texturedInit, "position", new Vector3(-1f, -1f, -1f), new Vector3(1f, 1f, 1f));
+        Set(texturedInit, "size", 0.6f);
+        Input(texturedOutput, "mainTexture").value = Object<Texture2D>("ImageB");
         Save(textured);
     }
 

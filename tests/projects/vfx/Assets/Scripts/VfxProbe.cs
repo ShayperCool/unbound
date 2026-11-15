@@ -81,6 +81,7 @@ public sealed class VfxProbe : MonoBehaviour
             Rec("manager/fixedTimeStep", F(VFXManager.fixedTimeStep));
             Rec("manager/maxDeltaTime", F(VFXManager.maxDeltaTime));
             BeginSimulation();
+            BeginDrawing();
             SpawnerStates(m_Running[0].Effect);
             AffineInverse();
         }
@@ -107,10 +108,78 @@ public sealed class VfxProbe : MonoBehaviour
     System.Collections.IEnumerator EndOfFrames()
     {
         var wait = new WaitForEndOfFrame();
-        for (int i = 0; i < 5; i++)
+        while (m_Running.Count != 0)
         {
             yield return wait;
             ReadTimed("3 end of frame");
+            Shoot();
+        }
+    }
+
+    // --------------------------------------------------------------------------- drawing
+
+    /// <summary>An effect that is drawn, far from the others, in front of a camera of its own
+    /// that renders into a small texture: the frames named are saved as images.</summary>
+    sealed class Stage
+    {
+        public string Key;
+        public VisualEffect Effect;
+        public Camera Camera;
+        public int[] Frames;
+    }
+
+    readonly List<Stage> m_Stages = new List<Stage>();
+    Texture2D m_Shot;
+
+    void Draw(string key, string graph, params int[] frames)
+    {
+        var origin = new Vector3(1000f + 100f * m_Stages.Count, 0f, 0f);
+        var go = new GameObject("draw " + key);
+        go.transform.position = origin;
+        var effect = go.AddComponent<VisualEffect>();
+        effect.resetSeedOnPlay = false;
+        effect.startSeed = 11;
+        effect.visualEffectAsset = AssetDatabase.LoadAssetAtPath<VisualEffectAsset>("Assets/DrawGraphs/" + graph + ".vfx");
+        var eye = new GameObject("eye " + key);
+        eye.transform.position = origin + new Vector3(0f, 0f, -10f);
+        var camera = eye.AddComponent<Camera>();
+        camera.orthographic = true;
+        camera.orthographicSize = 1.5f;
+        camera.nearClipPlane = 1f;
+        camera.farClipPlane = 20f;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(0.1f, 0.1f, 0.1f, 1f);
+        camera.targetTexture = new RenderTexture(64, 64, 24);
+        m_Stages.Add(new Stage { Key = key, Effect = effect, Camera = camera, Frames = frames });
+    }
+
+    void BeginDrawing()
+    {
+        Draw("opaque", "DrawOpaque", 3, 10);
+        Draw("additive", "DrawAdditive", 12, 30);
+        Draw("many", "DrawMany", 5);
+        Draw("textured", "DrawTextured", 5);
+    }
+
+    /// <summary>At the end of a frame: the stages whose image this frame is, with what the
+    /// effect says of itself.</summary>
+    void Shoot()
+    {
+        foreach (var stage in m_Stages)
+        {
+            if (Array.IndexOf(stage.Frames, m_Frame) < 0) continue;
+            string name = "draw-" + stage.Key + "-f" + m_Frame.ToString("000");
+            Rec("draw/" + stage.Key + "/f" + m_Frame.ToString("000"), "alive=" + stage.Effect.aliveParticleCount + " culled=" + (stage.Effect.culled ? 1 : 0)
+                + " awake=" + (stage.Effect.HasAnySystemAwake() ? 1 : 0) + " renderer " + RendererState(stage.Effect));
+            var dir = Environment.GetEnvironmentVariable("VFX_PROBE_OUT");
+            if (string.IsNullOrEmpty(dir)) continue;
+            if (m_Shot == null) m_Shot = new Texture2D(64, 64, TextureFormat.RGBA32, false);
+            var active = RenderTexture.active;
+            RenderTexture.active = stage.Camera.targetTexture;
+            m_Shot.ReadPixels(new Rect(0f, 0f, 64f, 64f), 0, 0);
+            m_Shot.Apply();
+            RenderTexture.active = active;
+            File.WriteAllBytes(Path.Combine(dir, name + ".png"), m_Shot.EncodeToPNG());
         }
     }
 
@@ -157,7 +226,9 @@ public sealed class VfxProbe : MonoBehaviour
     void Finish()
     {
         Rec("capture/graphs imported while playing", string.Join(", ", ImportsWhilePlaying.Graphs.OrderBy(p => p, StringComparer.Ordinal)));
-        m_Out.Append("{\"k\": \"complete\", \"v\": true}\n");
+        // A capture with such an import is not one to publish: it stays incomplete.
+        if (ImportsWhilePlaying.Graphs.Count != 0) Debug.LogError("vfx probe: graphs were imported while playing; the capture is not complete");
+        else m_Out.Append("{\"k\": \"complete\", \"v\": true}\n");
         var dir = Environment.GetEnvironmentVariable("VFX_PROBE_OUT");
         if (!string.IsNullOrEmpty(dir)) File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
         EditorApplication.ExitPlaymode();

@@ -34,6 +34,8 @@ own models; its assembly carries the name of one of the package's friend assembl
   `SimRatePrewarm`, `SimBurst`, `SimRandom`, `SimLoop`, `SimLoopRandom`, `SimKill`, `SimKeep`:
   `SimExpressions`, `SimTexture`, `SimChain`: the simulation controls' graphs (below), kept in
   `Assets/SimGraphs` apart from the graphs the import rows list.
+- `DrawOpaque`, `DrawAdditive`, `DrawMany`, `DrawTextured` (`Assets/DrawGraphs`): the drawing
+  controls' graphs (below).
 
 `Exposed`'s texture and mesh properties default to `Assets/Objects/ImageA.png` and
 `ShapeA.asset`, which the authoring script also makes (with `ImageB` and `ShapeB`).
@@ -135,8 +137,9 @@ the alive count is the particles spawned so far, exactly, each frame:
   seed, the spawn state, how far the manager's update count moved); `b*` comparisons and logic;
   `v*`, `q*` vectors through a transform's matrix, its inverse, its transpose and their
   product; `m*` those matrices; `g*` whether the game's time as the graph reads it is
-  `Time`'s. An input the block does not have, and an input read as another type, are recorded
-  too. The same effect's rows record two event attributes a block of the context sets.
+  `Time`'s; `b17` to `b20` a bool from an unsigned number and from a float, each from one that
+  is not zero and from one that is. An input the block does not have, and an input read as
+  another type, are recorded too. The same effect's rows record two event attributes a block of the context sets.
 - `expressions others`: the same graph with other values (a NaN, a divisor of zero, other
   signs, a frame of no depth), set in the frame the effect is made and again at frame 4.
   `expressions scene`, `expressions copy`: the scene's effect of that graph (saved with one
@@ -168,7 +171,8 @@ the alive count is the particles spawned so far, exactly, each frame:
   again in the Editor's first update (their versions in the project settings, the render
   pipeline's material upgrade), and an import between two frames makes every effect anew from
   what was saved: the capture lets the Editor settle before it plays
-  (`Assets/Editor/ProbeRunner.cs`), and this row shows that it did.
+  (`Assets/Editor/ProbeRunner.cs`), and this row shows that it did. A capture that lists a
+  graph here is left without its last row, so it cannot be published.
 
 Observed and kept: an effect counts as culled until its first update, and is not culled in
 that update, whenever it is made (the first frame or frame 20); `aliveParticleCount` is -1 for a
@@ -186,13 +190,32 @@ the frame resumes in the first frame in this capture and from the second frame i
 which follows what `tests/projects/eofstartup` measured. What makes the two captures differ
 (the render pipeline, how long the Editor settles, the Game view's focus) is not isolated.
 
-To do with the next capture: the inputs that convert an unsigned number and a float to a bool
-(`b17`, `b18`) only ever hold numbers other than zero (zero is covered by unit tests only), and
-a capture that lists graphs in `capture/graphs imported while playing` is not refused yet.
+## Drawing
+
+Effects of four graphs kept in `Assets/DrawGraphs`, each far from everything else in front of an
+orthographic camera of its own that renders into a 64x64 texture; at the frames named, at the
+end of the frame, the texture is saved (`draw-<control>-f<frame>.png`) with what the effect
+says of itself (`draw/<control>/f<frame>`). Their outputs are quads the output draws itself
+(opaque or additive: nothing sorts them, and no buffer of indices stands between the system
+and the draw), the kind Unbound draws:
+
+- `opaque` (frames 3, 10): forty opaque quads spawned at once, each with a place, a depth and
+  a colour drawn for it (the particles' random numbers, the attributes the vertex program
+  reads, the depth test between quads).
+- `additive` (frames 12, 30): thirty a second from places along a line, rising and living
+  half a second (particles that die are left out by the vertex program; the velocity moves
+  them each step).
+- `many` (frame 5): twenty thousand small quads, more than one draw's 16-bit indices reach
+  (16384): drawn as instances of 2048.
+- `textured` (frame 5): nine opaque quads with an image of the project's as texture.
+
+The images are compared pixel by pixel (`image_limits.json`).
 
 ## Not covered yet
 
-Drawing (images), output events, GPU events, strips, bounds computed on the GPU and the `VFXManager`
+Outputs that are sorted or culled per camera (alpha blended ones are, by default: the effects
+of the simulation controls), drawn through an indirect buffer, strips, meshes and primitives
+other than quads; output events, GPU events, bounds computed on the GPU and the `VFXManager`
 camera hooks. Expression operations without a control: the inverse of a general matrix and an
 event attribute read in a spawn context (no operator of the package gives either here), and
 the ones the runtime does not do yet (matrices built from or split into rows, columns and axes,

@@ -1,0 +1,38 @@
+{
+ "draw-additive-f012.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly (Linux Editor on OpenGL Core, NVIDIA driver; Unbound on the same machine): quads on whole and half pixels of a 64x64 orthographic view, so no edge is left to a rasterizer's rule."
+ },
+ "draw-additive-f030.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly (Linux Editor on OpenGL Core, NVIDIA driver; Unbound on the same machine): quads on whole and half pixels of a 64x64 orthographic view, so no edge is left to a rasterizer's rule."
+ },
+ "draw-many-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly (Linux Editor on OpenGL Core, NVIDIA driver; Unbound on the same machine): quads on whole and half pixels of a 64x64 orthographic view, so no edge is left to a rasterizer's rule."
+ },
+ "draw-opaque-f003.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly (Linux Editor on OpenGL Core, NVIDIA driver; Unbound on the same machine): quads on whole and half pixels of a 64x64 orthographic view, so no edge is left to a rasterizer's rule."
+ },
+ "draw-opaque-f010.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly (Linux Editor on OpenGL Core, NVIDIA driver; Unbound on the same machine): quads on whole and half pixels of a 64x64 orthographic view, so no edge is left to a rasterizer's rule."
+ },
+ "draw-textured-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly (Linux Editor on OpenGL Core, NVIDIA driver; Unbound on the same machine): quads on whole and half pixels of a 64x64 orthographic view, so no edge is left to a rasterizer's rule."
+ }
+}
