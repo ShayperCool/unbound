@@ -702,6 +702,33 @@ namespace UnityEngine.Tests
             Assert.StartsWith("it fades against the camera's depth (soft particles)", VFXOutput.SourceRefusal(unlit.Replace("#define USE_SOFT_PARTICLE 0", "#define USE_SOFT_PARTICLE 1")));
             Assert.Equal("its pass 'MotionVectors' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"ShadowCaster\"", "\"MotionVectors\"")));
             Assert.Equal("its pass 'UniversalGBuffer' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"DepthOnly\"", "\"UniversalGBuffer\"")));
+            // Read for each output task of a compiled graph from the shader source it names:
+            // not for a kernel, a task without a source of the graph's, or a source out of range.
+            var compiled = new[]
+            {
+                new VFXEditorSystemDesc { name = "Spawn", type = VFXSystemType.Spawner },
+                new VFXEditorSystemDesc
+                {
+                    name = "Particles", type = VFXSystemType.Particle,
+                    tasks = new[]
+                    {
+                        new VFXEditorTaskDesc { type = VFXTaskType.Update, shaderSourceIndex = 0 },
+                        new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, shaderSourceIndex = 1 },
+                        new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, shaderSourceIndex = 2 },
+                        new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, shaderSourceIndex = 7 },
+                        new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, externalProcessor = material },
+                    },
+                },
+            };
+            var sources = new[]
+            {
+                new VFXShaderSourceDesc { compute = true, source = "#define URP_LIT 1" },
+                new VFXShaderSourceDesc { source = unlit },
+                new VFXShaderSourceDesc { source = unlit.Replace("#define VFX_PRIMITIVE_QUAD 1", "#define URP_LIT 1") },
+            };
+            var found = VFXOutput.SourceRefusals(compiled, sources);
+            Assert.Empty(found[0]);
+            Assert.Equal(new[] { null, null, "it is lit, and lit outputs are not drawn yet", null, null }, found[1]);
             // The reason found in the source is the output's when nothing of its task refuses first.
             Assert.Equal("it is lit, and lit outputs are not drawn yet", VFXOutput.Refusal(system, quads, material, "it is lit, and lit outputs are not drawn yet"));
 

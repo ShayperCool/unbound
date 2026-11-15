@@ -118,6 +118,26 @@ namespace Unbound.Runtime
         /// camera's depth for particles that fade against it.</summary>
         const string LitDefine = "#define URP_LIT 1", SoftParticleDefine = "#define USE_SOFT_PARTICLE 1";
 
+        /// <summary>Per system and task of a compiled graph: what each output's generated
+        /// shader does that is not drawn yet (null for a task that is no output, has no shader
+        /// of the graph's, or only does what is drawn).</summary>
+        internal static string[][] SourceRefusals(VFXEditorSystemDesc[] systems, VFXShaderSourceDesc[] sources)
+        {
+            var refusals = new string[systems.Length][];
+            for (int s = 0; s < systems.Length; s++)
+            {
+                var tasks = systems[s].tasks ?? Array.Empty<VFXEditorTaskDesc>();
+                refusals[s] = new string[tasks.Length];
+                for (int t = 0; t < tasks.Length; t++)
+                {
+                    int index = tasks[t].shaderSourceIndex;
+                    if (index >= 0 && index < sources.Length && !sources[index].compute && IsOutput(tasks[t].type))
+                        refusals[s][t] = SourceRefusal(sources[index].source);
+                }
+            }
+            return refusals;
+        }
+
         /// <summary>What the generated shader of an output does that is not drawn yet, read
         /// off its source; null when it does only what the probe measured
         /// (tests/projects/vfx, `draw-*`).</summary>
