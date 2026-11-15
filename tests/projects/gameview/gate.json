@@ -1,5 +1,13 @@
 {
-  "commands": ["python3 tests/projects/gameview/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label \"gate-$(date +%s%N)\""],
-  "summary": "\\d+/\\d+ records match",
-  "engine_paths": ["managed/UnityEngine/Core/Input.cs", "managed/UnityEngine/Graphics/CommandStream.cs", "crates/unbound-app/src/render/mod.rs", "crates/unbound-runtime/src/render_commands.rs"]
+ "commands": [
+  "python3 -m unittest discover -s tests/projects/gameview -p \"test_*.py\"",
+  "python3 tests/projects/gameview/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label \"gate-$(date +%s%N)\""
+ ],
+ "summary": "\\d+/\\d+ records match",
+ "engine_paths": [
+  "managed/UnityEngine/Core/Input.cs",
+  "managed/UnityEngine/Graphics/CommandStream.cs",
+  "crates/unbound-app/src/render/mod.rs",
+  "crates/unbound-runtime/src/render_commands.rs"
+ ]
 }

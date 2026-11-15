@@ -3,7 +3,9 @@
 Unity 6000.0.71f1, Linux, NVIDIA OpenGL Core, one display pixel per Editor point.
 Two independent windowed Editor captures agree on all 50 records. The Game view is a
 floating window with its toolbar hidden and its default zoom, with real X pointer movement.
-Xvfb atomically assigns each private display before a capture starts.
+Xvfb atomically assigns each private display before a capture starts and keeps it from
+resetting between client connections. A reconnect control checks 300 independent X clients,
+covering the handoff from adapter probing to window creation.
 
 Six window/target pairs cover square, wide, tall, integer enlargement, fractional reduction
 and odd window dimensions. Records include the available view rectangle, the image rectangle,

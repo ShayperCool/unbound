@@ -17,7 +17,7 @@ def display():
     # X assigns and reserves the display before returning its number, including across runners.
     import select
     reader, writer = os.pipe()
-    server = subprocess.Popen(['Xvfb','-displayfd',str(writer),'-screen','0','1280x720x24','-nolisten','tcp'],
+    server = subprocess.Popen(['Xvfb','-displayfd',str(writer),'-noreset','-screen','0','1280x720x24','-nolisten','tcp'],
                               pass_fds=(writer,),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     os.close(writer)
     try:
