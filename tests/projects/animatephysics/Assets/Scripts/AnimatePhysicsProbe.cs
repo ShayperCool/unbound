@@ -19,7 +19,7 @@ public class AnimatePhysicsProbe : MonoBehaviour
         public string name;
         public Rigidbody body;
         public Rigidbody box;
-        public float bodyStart, boxStart;
+        public float bodyStart, boxStart, fastest;
         public Transform scripted;
     }
 
@@ -42,7 +42,7 @@ public class AnimatePhysicsProbe : MonoBehaviour
     {
         var property = typeof(Animator).GetProperty("animatePhysics");
         Put("property.obsolete", property.IsDefined(typeof(ObsoleteAttribute), false));
-        foreach (var name in new[] { "AuthoredFixedOff", "AuthoredNormalOn" })
+        foreach (var name in new[] { "AuthoredFixedOff", "AuthoredNormalOn", "LegacyFixed", "LegacyNormal" })
         {
             var authored = GameObject.Find(name).GetComponent<Animator>();
             Put(name + ".animatePhysics", authored.animatePhysics);
@@ -166,6 +166,10 @@ public class AnimatePhysicsProbe : MonoBehaviour
         steps++;
         foreach (var c in cases)
             if (c.scripted != null) c.scripted.position += new Vector3(0.02f, 0, 0);
+        // In Normal mode a fixed step without an Update before it has no new pose: the fastest of
+        // the last ten steps is compared.
+        if (steps > MeasureStep - 10)
+            foreach (var c in cases) c.fastest = Mathf.Max(c.fastest, c.body.linearVelocity.x);
         if (steps != MeasureStep) return;
         try
         {
@@ -173,7 +177,7 @@ public class AnimatePhysicsProbe : MonoBehaviour
             {
                 float travel = c.body.position.x - c.bodyStart;
                 Put(c.name + ".travelled", travel > 1f);
-                Put(c.name + ".moving", c.body.linearVelocity.x > 0.5f);
+                Put(c.name + ".moving", c.fastest > 0.5f);
                 Put(c.name + ".carried", c.box.position.x - c.boxStart > 0.5f * travel && travel > 1f);
             }
             Put("complete", 1);

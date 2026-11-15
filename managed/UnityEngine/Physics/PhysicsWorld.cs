@@ -1109,12 +1109,14 @@ namespace Unbound.Runtime
                 var rb = s_Rigidbodies[i];
                 if (rb.m_Body == 0) continue;
                 var t = rb.m_GameObject.m_Transform;
+                // Every sync consumes the stamps so far, so an older animated write on a new
+                // ancestor never turns a later script move into a kinematic move.
+                long animatedSince = rb.m_AnimatedPhysicsSeen;
+                rb.m_AnimatedPhysicsSeen = AnimatedPhysicsWrites.s_LastStamp;
                 if (t.m_Version == rb.m_TransformVersion) continue;
                 rb.m_TransformVersion = t.m_Version;
                 var position = t.position;
                 var rotation = t.rotation;
-                int animatedSince = rb.m_AnimatedPhysicsSeen;
-                rb.m_AnimatedPhysicsSeen = AnimatedPhysicsWrites.s_LastStamp;
                 if (SamePose(position, rotation, rb.m_SyncPosition, rb.m_SyncRotation)) continue;
                 rb.m_SyncPosition = position;
                 rb.m_SyncRotation = rotation;

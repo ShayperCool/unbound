@@ -12,11 +12,11 @@ namespace Unbound.Runtime
     internal readonly struct AnimatedPhysicsWrites : IDisposable
     {
         /// <summary>The last stamp handed out; stamps only grow.</summary>
-        internal static int s_LastStamp;
+        internal static long s_LastStamp;
 
-        readonly int m_Outer;
+        readonly long m_Outer;
 
-        AnimatedPhysicsWrites(int outer) => m_Outer = outer;
+        AnimatedPhysicsWrites(long outer) => m_Outer = outer;
 
         /// <summary>Opens the writes of <paramref name="animator"/>; writes of an Animator without
         /// animatePhysics (or of none) are left unstamped, also inside another one's.</summary>
@@ -31,7 +31,7 @@ namespace Unbound.Runtime
 
         /// <summary>Whether an animatePhysics write changed <paramref name="t"/> or an ancestor after
         /// <paramref name="since"/>.</summary>
-        internal static bool MovedSince(Transform t, int since)
+        internal static bool MovedSince(Transform t, long since)
         {
             for (; t != null; t = t.m_Parent)
                 if (t.m_AnimatedPhysicsStamp > since) return true;

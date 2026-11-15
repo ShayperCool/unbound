@@ -267,7 +267,7 @@ namespace UnityEngine
         }
 
         /// <summary>The last animatePhysics write stamp the transform sync looked at.</summary>
-        internal int m_AnimatedPhysicsSeen;
+        internal long m_AnimatedPhysicsSeen;
 
         /// <summary>A kinematic body's Transform moved by an Animator with animatePhysics: a move to
         /// the pose over the next step, not a teleport.</summary>

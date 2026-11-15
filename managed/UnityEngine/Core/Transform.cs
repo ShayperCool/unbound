@@ -28,9 +28,9 @@ namespace UnityEngine
 
         /// <summary>While an Animator with animatePhysics writes its pose: the stamp of that write
         /// (<see cref="Unbound.Runtime.AnimatedPhysicsWrites"/>); 0 otherwise.</summary>
-        internal static int s_AnimatedPhysicsStamp;
+        internal static long s_AnimatedPhysicsStamp;
         /// <summary>The stamp of the last such write that changed this transform.</summary>
-        internal int m_AnimatedPhysicsStamp;
+        internal long m_AnimatedPhysicsStamp;
 
         protected Transform()
         {

@@ -7,6 +7,14 @@
 {"key":"AuthoredNormalOn.updateMode","value":"Normal"}
 {"key":"AuthoredNormalOn.clone.animatePhysics","value":"True"}
 {"key":"AuthoredNormalOn.clone.updateMode","value":"Normal"}
+{"key":"LegacyFixed.animatePhysics","value":"True"}
+{"key":"LegacyFixed.updateMode","value":"Fixed"}
+{"key":"LegacyFixed.clone.animatePhysics","value":"True"}
+{"key":"LegacyFixed.clone.updateMode","value":"Fixed"}
+{"key":"LegacyNormal.animatePhysics","value":"False"}
+{"key":"LegacyNormal.updateMode","value":"Normal"}
+{"key":"LegacyNormal.clone.animatePhysics","value":"False"}
+{"key":"LegacyNormal.clone.updateMode","value":"Normal"}
 {"key":"new.animatePhysics","value":"False"}
 {"key":"new.updateMode","value":"Normal"}
 {"key":"setOn.animatePhysics","value":"True"}

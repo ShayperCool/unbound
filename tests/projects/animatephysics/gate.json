@@ -7,6 +7,9 @@
     "managed/UnityEngine/Animation/AnimatedPhysicsWrites.cs",
     "managed/UnityEngine/Animation/Animator.cs",
     "managed/UnityEngine/Physics/PhysicsWorld.cs",
-    "managed/UnityEngine/Physics/Rigidbody.cs"
+    "managed/UnityEngine/Physics/Rigidbody.cs",
+    "managed/UnityEngine/Core/Transform.cs",
+    "managed/UnityEngine/Animation/AnimationPose.cs",
+    "managed/UnityEngine/Animation/Human/AnimatorHuman.cs"
   ]
 }

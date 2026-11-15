@@ -45,7 +45,7 @@ namespace UnityEngine.Tests
             var off = new GameObject("off").AddComponent<Animator>();
             try
             {
-                int since = AnimatedPhysicsWrites.s_LastStamp;
+                long since = AnimatedPhysicsWrites.s_LastStamp;
                 child.transform.localPosition = new Vector3(1, 0, 0);
                 Assert.False(AnimatedPhysicsWrites.MovedSince(child.transform, since));
                 using (AnimatedPhysicsWrites.Begin(off)) root.transform.localPosition = new Vector3(2, 0, 0);
@@ -59,7 +59,7 @@ namespace UnityEngine.Tests
                 }
                 // The parent's write moves the child; writes after the scope do not.
                 Assert.True(AnimatedPhysicsWrites.MovedSince(child.transform, since));
-                int later = AnimatedPhysicsWrites.s_LastStamp;
+                long later = AnimatedPhysicsWrites.s_LastStamp;
                 root.transform.localPosition = new Vector3(5, 0, 0);
                 Assert.False(AnimatedPhysicsWrites.MovedSince(child.transform, later));
             }
@@ -67,6 +67,47 @@ namespace UnityEngine.Tests
             {
                 Object.DestroyImmediate(root);
                 Object.DestroyImmediate(off.gameObject);
+            }
+        }
+
+        [Fact]
+        public void AnimatedWritesMoveKinematicBodiesAndOlderOnesDoNotTurnLaterMovesIntoMoves()
+        {
+            var mode = Physics.simulationMode;
+            Physics.simulationMode = SimulationMode.Script;
+            const float dt = 0.02f;
+            var bone = new GameObject("bone");
+            var animator = bone.AddComponent<Animator>();
+            animator.animatePhysics = true;
+            var platform = new GameObject("platform");
+            platform.transform.SetParent(bone.transform, false);
+            platform.AddComponent<BoxCollider>();
+            var body = platform.AddComponent<Rigidbody>();
+            body.isKinematic = true;
+            var other = new GameObject("other");
+            other.transform.position = new Vector3(0, 0, 10);
+            other.AddComponent<BoxCollider>();
+            var otherBody = other.AddComponent<Rigidbody>();
+            otherBody.isKinematic = true;
+            try
+            {
+                Physics.Simulate(dt);
+                // The Animator's write of the parent moves the child body with velocity.
+                using (AnimatedPhysicsWrites.Begin(animator)) bone.transform.position = new Vector3(0.02f, 0, 0);
+                Physics.Simulate(dt);
+                Assert.True(body.linearVelocity.x > 0.5f);
+                // A script move of a body teleports, also onto a bone an older animated write stamped.
+                Physics.Simulate(dt);
+                other.transform.SetParent(bone.transform, false);
+                Physics.Simulate(dt);
+                Assert.Equal(0f, otherBody.linearVelocity.x);
+                Assert.Equal(0.02f, otherBody.position.x, 4);
+            }
+            finally
+            {
+                Object.DestroyImmediate(bone);
+                Object.DestroyImmediate(other);
+                Physics.simulationMode = mode;
             }
         }
     }

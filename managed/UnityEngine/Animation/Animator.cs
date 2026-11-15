@@ -1118,7 +1118,9 @@ namespace UnityEngine
             m_CullingMode = (AnimatorCullingMode)body.Int("m_CullingMode");
             m_UpdateMode = (AnimatorUpdateMode)body.Int("m_UpdateMode");
             m_ApplyRootMotion = body.Bool("m_ApplyRootMotion");
-            m_AnimatePhysics = body.Bool("m_AnimatePhysics");
+            // Animators saved before the field existed animated physics through the old
+            // AnimatePhysics update mode (now Fixed), and still do.
+            m_AnimatePhysics = body.Bool("m_AnimatePhysics", m_UpdateMode == AnimatorUpdateMode.Fixed);
             m_KeepAnimatorStateOnDisable = body.Bool("m_KeepAnimatorStateOnDisable") || body.Bool("m_KeepAnimatorControllerStateOnDisable");
             m_WriteDefaultValuesOnDisable = body.Bool("m_WriteDefaultValuesOnDisable");
             m_NoHierarchy = !body.Bool("m_HasTransformHierarchy", true);
