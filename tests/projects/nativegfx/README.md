@@ -250,7 +250,12 @@ captures): in this batch-mode Editor, which has no Game view, `CommandBuffer.Cop
 the screen's own color texture there), copies nothing and logs `Graphics.CopyTexture called with
 null source texture` (or `destination`); a `Blit` from that camera's target reads it.
 
-Unbound matches 172/208 records with 36 declared residuals (`residuals-metal.json`, each with its
+Device conversions (`srgb.*`, `loadoutside.*`, appended the same way): an sRGB render texture
+drawn into with a color whose encoded red lies exactly half way between two bytes stores 127 (a
+clear stores the encoded value as given), its texels decode to 32-bit floats (191 to 0.52088),
+and texel loads (`Texture2D.Load`) outside a texture read zero.
+
+Unbound matches 179/215 records with 36 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a screen
