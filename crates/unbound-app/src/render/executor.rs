@@ -4168,6 +4168,19 @@ impl UnityRenderer {
             // made right before the draw (`unbound_shaders::fetch`).
             let reads = self.compiled.program(id).framebuffer_fetch;
             if !errored && reads != 0 {
+                // A color target the draw lacks: the macOS Editor does not draw (shadertargets
+                // `fetch.Second.missing`, `fetch.SecondHalf.missing`).
+                let lacking = (1..unbound_shaders::fetch::TARGETS)
+                    .find(|&i| reads & 1 << i != 0 && target.extra.len() < i as usize);
+                if let Some(index) = lacking {
+                    let shader = resolved.shader.clone();
+                    self.warn_once(format!("fetchlacks{shader}#{pass_index}/{index}"), || {
+                        format!(
+                            "shader `{shader}` pass {pass_index} reads color target {index} (framebuffer fetch), which the draw does not have: not drawn"
+                        )
+                    });
+                    continue;
+                }
                 if target.samples > 1 {
                     let shader = resolved.shader.clone();
                     self.warn_once(format!("fetchmsaa{shader}#{pass_index}"), || {
@@ -4177,28 +4190,23 @@ impl UnityRenderer {
                     });
                 }
                 for index in (0..unbound_shaders::fetch::TARGETS).filter(|i| reads & 1 << i != 0) {
-                    let source = match index {
-                        0 => Some((target.texture.clone(), target.alpha_one)),
-                        _ => target
-                            .extra
-                            .get(index as usize - 1)
-                            .map(|e| (e.texture.clone(), e.alpha_one)),
+                    let (texture, alpha_one) = match index {
+                        0 => (target.texture.clone(), target.alpha_one),
+                        _ => {
+                            let e = &target.extra[index as usize - 1];
+                            (e.texture.clone(), e.alpha_one)
+                        }
                     };
-                    let copy = source.and_then(|(texture, alpha_one)| {
-                        self.grab(
-                            unbound_shaders::fetch::texture(index),
-                            texture,
-                            (target.width, target.height),
-                            alpha_one,
-                        )
-                    });
-                    match copy {
+                    let name = unbound_shaders::fetch::texture(index);
+                    match self.grab(name, texture, (target.width, target.height), alpha_one) {
                         Some(copy) => planned.push(Planned::Grab(copy)),
                         None => {
+                            // Not an earlier draw's copy: nothing.
+                            self.set_global_texture(name, 0);
                             let shader = resolved.shader.clone();
                             self.warn_once(format!("fetch{shader}#{pass_index}/{index}"), || {
                                 format!(
-                                    "shader `{shader}` pass {pass_index} reads color target {index} (framebuffer fetch), which the draw has no texture of to copy: it reads black"
+                                    "shader `{shader}` pass {pass_index} reads color target {index} (framebuffer fetch), which has no texture to copy: it reads the default texture"
                                 )
                             });
                         }
@@ -4378,6 +4386,19 @@ impl UnityRenderer {
         planned
     }
 
+    /// Sets the global texture `name` (0: none, the slots read their defaults).
+    fn set_global_texture(&mut self, name: &str, handle: u64) {
+        let value = owned::PropertyValue::Texture {
+            handle,
+            st: [1.0, 1.0, 0.0, 0.0],
+        };
+        let globals = Arc::make_mut(&mut self.globals);
+        match globals.iter_mut().find(|(n, _)| n == name) {
+            Some(slot) => slot.1 = value,
+            None => globals.push((name.to_string(), value)),
+        }
+    }
+
     /// A `GrabPass` into `name`: the texture (the target's size and format, made or remade as
     /// needed) and its `_TexelSize` set as globals, and the copy of the target into it; none
     /// when a named texture was grabbed in this camera's render already (measured: Unity grabs
@@ -4490,30 +4511,24 @@ impl UnityRenderer {
             self.textures.insert(handle, gpu);
         }
         let destination = self.textures[&handle].texture.clone();
-        let globals = Arc::make_mut(&mut self.globals);
+        self.set_global_texture(name, handle);
         let texel = [
             1.0 / width as f32,
             1.0 / height as f32,
             width as f32,
             height as f32,
         ];
-        for (key, value) in [
-            (
-                name.to_string(),
-                owned::PropertyValue::Texture {
-                    handle,
-                    st: [1.0, 1.0, 0.0, 0.0],
-                },
-            ),
-            (
+        let texel_size = |n: &str| {
+            n.strip_prefix(name)
+                .is_some_and(|rest| rest == "_TexelSize")
+        };
+        let globals = Arc::make_mut(&mut self.globals);
+        match globals.iter_mut().find(|(n, _)| texel_size(n)) {
+            Some(slot) => slot.1 = owned::PropertyValue::Vector(texel),
+            None => globals.push((
                 format!("{name}_TexelSize"),
                 owned::PropertyValue::Vector(texel),
-            ),
-        ] {
-            match globals.iter_mut().find(|(n, _)| *n == key) {
-                Some(slot) => slot.1 = value,
-                None => globals.push((key, value)),
-            }
+            )),
         }
         Some(Copy {
             channels: None,
