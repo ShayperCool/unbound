@@ -2281,10 +2281,14 @@ Pass { Name "TAIL" }
     fn a_use_pass_of_a_pass_the_device_does_not_run_goes_with_it() {
         let dir = std::env::temp_dir().join(format!("unbound-usepass-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
+        // The tests run for the OS's default device (OpenGL Core on Linux, Metal on macOS).
+        let renderer = unbound_runtime::graphics_device::get().pragma_renderer();
         std::fs::write(
             dir.join("Source.shader"),
-            "Shader \"Tests/Source\" { SubShader { Pass { Name \"KEPT\" } \
-             Pass { Name \"GONE\" HLSLPROGRAM\n#pragma exclude_renderers glcore\nENDHLSL } } }",
+            format!(
+                "Shader \"Tests/Source\" {{ SubShader {{ Pass {{ Name \"KEPT\" }} \
+                 Pass {{ Name \"GONE\" HLSLPROGRAM\n#pragma exclude_renderers {renderer}\nENDHLSL }} }} }}"
+            ),
         )
         .unwrap();
         std::fs::write(
@@ -2301,7 +2305,6 @@ Pass { Name "TAIL" }
             .map(|p| p.name.clone())
             .collect();
         std::fs::remove_dir_all(&dir).ok();
-        // The tests run for the default device, OpenGL Core.
         assert_eq!(names, ["KEPT"]);
     }
 
