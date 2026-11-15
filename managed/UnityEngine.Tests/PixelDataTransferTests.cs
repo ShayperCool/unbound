@@ -14,6 +14,13 @@ namespace UnityEngine.Tests
         struct ValueFirst { public int value; public string name; }
         struct Mixed { public byte a; public string name; public short b; public string other; public int c; }
         struct Nested { public int x; public NamedValue inner; public int y; }
+        struct Names { public string first; public string second; }
+        struct Labeled { public string label; public Color32 color; public byte tail; }
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, Pack = 1)]
+        struct Packed { public byte a; public int b; }
+        struct WithPacked { public Packed packed; public byte tail; public string name; }
+        struct Optional { public string name; public int? count; public byte tail; }
+        struct Callback { public Action action; public int value; }
         [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
         struct Overlaid { [System.Runtime.InteropServices.FieldOffset(0)] public string name; [System.Runtime.InteropServices.FieldOffset(8)] public int value; }
         struct Pair<T> { public T first; public T second; }
@@ -90,12 +97,41 @@ namespace UnityEngine.Tests
             Fill(texture, nested, 0);
             Assert.Equal(new byte[] { 10, 10, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 12, 12, 12, 0, 0, 0, 0, 11, 11, 11, 11, 0, 0, 0, 0 },
                 Without(texture.GetPixelData<byte>(0).ToArray(), 8)[..32]);
+            // References in every slot: both addresses are written, whatever their low bytes.
+            var names = new Names[8];
+            for (int i = 0; i < names.Length; i++) names[i] = new Names { first = "a", second = "b" };
+            Fill(texture, names, 0);
+            var written = texture.GetPixelData<byte>(0).ToArray();
+            Assert.Equal(new byte[64], Without(written, 0, 8, 16, 24, 32, 40, 48, 56));
+            Assert.All(new[] { 0, 8 }, slot => Assert.NotEqual(0L, BitConverter.ToInt64(written, slot)));
+            // A struct without references is a block of its own bytes at its fields' alignment
+            // (Color32 four, a Pack = 1 struct one); a Nullable is its flag then its value.
+            var labeled = new Labeled[8];
+            for (int i = 0; i < labeled.Length; i++) labeled[i] = new Labeled { label = "l", color = new Color32(1, 2, 3, (byte)i), tail = 9 };
+            Fill(texture, labeled, 0);
+            Assert.Equal(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 1, 9, 0, 0, 0 },
+                Without(texture.GetPixelData<byte>(0).ToArray(), 0, 16)[..32]);
+            var withPacked = new WithPacked[4];
+            for (int i = 0; i < withPacked.Length; i++) withPacked[i] = new WithPacked { packed = new Packed { a = 7, b = 0x01020304 }, tail = 5, name = "p" };
+            Fill(texture, withPacked, 0);
+            Assert.Equal(new byte[] { 7, 4, 3, 2, 1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, Without(texture.GetPixelData<byte>(0).ToArray(), 8)[..16]);
+            var optional = new Optional[4];
+            optional[0] = new Optional { name = "o", count = 0x0A0B0C0D, tail = 6 };
+            optional[1] = new Optional { name = "o", count = null, tail = 7 };
+            Fill(texture, optional, 0);
+            Assert.Equal(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0x0D, 0x0C, 0x0B, 0x0A, 6, 0, 0, 0, 0, 0, 0, 0,
+                                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0 },
+                Without(texture.GetPixelData<byte>(0).ToArray(), 0, 24)[..48]);
+            var callbacks = new Callback[4];
+            for (int i = 0; i < callbacks.Length; i++) callbacks[i] = new Callback { action = () => { }, value = 0x33 + i };
+            Fill(texture, callbacks, 0);
+            Assert.Equal(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0x33, 0, 0, 0, 0, 0, 0, 0 }, Without(texture.GetPixelData<byte>(0).ToArray(), 0)[..16]);
             // Boxed values in an object[] are the array's own memory, addresses.
             Fill(texture, new object[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }, 0);
             // An explicit layout holding references is unsupported, after the size checks.
             var before = texture.GetPixelData<byte>(0).ToArray();
             Assert.IsType<ArgumentException>(Thrown(() => Fill(texture, new Overlaid[3], 0)));
-            Assert.StartsWith("Unbound: Texture2D.SetPixelData of Overlaid elements is not supported: Overlaid has an explicit layout",
+            Assert.StartsWith("Unbound: Texture2D.SetPixelData of Overlaid elements is not supported: Overlaid holds references with LayoutKind.Explicit",
                 Assert.IsType<UnityException>(Thrown(() => Fill(texture, new Overlaid[8], 0))).Message);
             Assert.Equal(before, texture.GetPixelData<byte>(0).ToArray());
 

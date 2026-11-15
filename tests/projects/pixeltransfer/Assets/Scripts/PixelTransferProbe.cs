@@ -20,6 +20,13 @@ public class PixelTransferProbe : MonoBehaviour
     public struct ValueFirst { public int value; public string name; }
     public struct Mixed { public byte a; public string name; public short b; public string other; public int c; }
     public struct Nested { public int x; public NamedValue inner; public int y; }
+    public struct Names { public string first; public string second; }
+    public struct Labeled { public string label; public Color32 color; public byte tail; }
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, Pack = 1)]
+    public struct Packed { public byte a; public int b; }
+    public struct WithPacked { public Packed packed; public byte tail; public string name; }
+    public struct Optional { public string name; public int? count; public byte tail; }
+    public struct Callback { public Action action; public int value; }
 
     StreamWriter output;
     readonly List<string> logs = new List<string>();
@@ -124,6 +131,23 @@ public class PixelTransferProbe : MonoBehaviour
         var nested = new Nested[4];
         for (int i = 0; i < nested.Length; i++) nested[i] = new Nested { x = 0x0A0A0A00 + i, inner = new NamedValue { name = "i", value = 0x0C0C0C00 + i }, y = 0x0B0B0B00 + i };
         Call("r8.nested", () => r8.SetPixelData(nested, 0), Masked(8, 40));
+        var names = new Names[8];
+        for (int i = 0; i < names.Length; i++) names[i] = new Names { first = "a", second = "b" };
+        Call("r8.names", () => r8.SetPixelData(names, 0), Masked(0, 8, 16, 24, 32, 40, 48, 56));
+        var labeled = new Labeled[8];
+        for (int i = 0; i < labeled.Length; i++) labeled[i] = new Labeled { label = "l", color = new Color32(1, 2, 3, (byte)i), tail = 9 };
+        Call("r8.labeled", () => r8.SetPixelData(labeled, 0), Masked(0, 16, 32, 48));
+        var withPacked = new WithPacked[4];
+        for (int i = 0; i < withPacked.Length; i++) withPacked[i] = new WithPacked { packed = new Packed { a = (byte)(7 + i), b = 0x01020304 }, tail = 5, name = "p" };
+        Call("r8.withPacked", () => r8.SetPixelData(withPacked, 0), Masked(8, 24, 40, 56));
+        var optional = new Optional[4];
+        optional[0] = new Optional { name = "o", count = 0x0A0B0C0D, tail = 6 };
+        optional[1] = new Optional { name = "o", count = null, tail = 7 };
+        optional[2] = new Optional { name = "o", count = -2, tail = 8 };
+        Call("r8.optional", () => r8.SetPixelData(optional, 0), Masked(0, 24, 48));
+        var callbacks = new Callback[4];
+        for (int i = 0; i < callbacks.Length; i++) callbacks[i] = new Callback { action = Install, value = 0x33 + i };
+        Call("r8.callback", () => r8.SetPixelData(callbacks, 0), Masked(0, 16, 32, 48));
         r8.SetPixelData(Pattern(64, 5), 0);
         var generic = new Pair<byte>[40];
         for (int i = 0; i < generic.Length; i++) generic[i] = new Pair<byte> { first = (byte)i, second = (byte)(i + 50) };
