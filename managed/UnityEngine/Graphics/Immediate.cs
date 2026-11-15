@@ -452,7 +452,14 @@ namespace UnityEngine
         {
             if (buffer == null) throw new ArgumentNullException(nameof(buffer));
             var active = RenderTexture.ActiveTarget;
+            // Outside a camera's rendering the commands draw with identity view and projection,
+            // also right after a camera rendered (measured on the batch-mode macOS Editor:
+            // tests/projects/nativegfx metal.jsonl outside.*); the stream's matrices come back after.
+            bool outside = Camera.current == null;
+            var saved = GfxStream.Current;
+            if (outside) GfxStream.Camera(Matrix4x4.identity, Matrix4x4.identity, saved.Flags);
             buffer.Execute(null);
+            if (outside) GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
             RenderTexture.SetActiveQuietly(active);
         }
 

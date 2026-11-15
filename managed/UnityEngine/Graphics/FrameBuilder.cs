@@ -215,8 +215,15 @@ namespace Unbound.Runtime
         {
             PlayerLoopDriver.RegisterFrameRendering(Render);
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.FinishFrameRendering), RenderLegacyFrame);
-            // The frame's drawing ends after its end-of-frame callbacks.
-            PlayerLoopDriver.RegisterFrameCleanup(() => InDrawingFrame = false);
+            // The frame's drawing ends after its end-of-frame callbacks; the next frame starts with
+            // no active render texture (measured on the batch-mode macOS Editor: tests/projects/
+            // nativegfx metal.jsonl active.*; a texture made active in one frame's Update is not in
+            // the next one's).
+            PlayerLoopDriver.RegisterFrameCleanup(() =>
+            {
+                InDrawingFrame = false;
+                if (RenderTexture.active != null) RenderTexture.active = null;
+            });
             UnityEngine.Rendering.OnDemandRendering.EnsureRegistered();
         }
 
