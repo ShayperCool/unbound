@@ -26,7 +26,8 @@ namespace Unbound.Runtime
                     if (!string.IsNullOrEmpty(project))
                     {
                         string physicalProject = Resolve(project);
-                        projectRoot = System.IO.Path.Combine(physicalProject, "Library", "Unbound");
+                        // Library can itself be an alias, as it is in the runtime project view.
+                        projectRoot = Resolve(System.IO.Path.Combine(project, "Library", "Unbound"));
                         var visited = new HashSet<string>(StringComparer.Ordinal);
                         foreach (string part in new[] { "Assets", "Packages", "ProjectSettings" })
                         {

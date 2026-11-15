@@ -27,12 +27,12 @@ namespace Unbound.Runtime
             }
         }
 
-        internal static string Choose(string[] args, string project)
+        internal static (string path, bool isDefault) Choose(string[] args, string project)
         {
             for (int i = 0; i + 1 < args.Length; i++)
                 if (string.Equals(args[i], "-logFile", StringComparison.OrdinalIgnoreCase))
-                    return args[i + 1] == "-" ? null : System.IO.Path.GetFullPath(args[i + 1]);
-            return string.IsNullOrEmpty(project) ? null : System.IO.Path.Combine(project, "Library", "Unbound", "Editor.log");
+                    return (args[i + 1] == "-" ? null : System.IO.Path.GetFullPath(args[i + 1]), false);
+            return (string.IsNullOrEmpty(project) ? null : System.IO.Path.Combine(project, "Library", "Unbound", "Editor.log"), true);
         }
 
         static void Open()
@@ -42,7 +42,8 @@ namespace Unbound.Runtime
             string path = null;
             try
             {
-                path = Choose(EditorProcess.GetCommandLineArgs(), UnityEngine.ProjectInfo.ProjectPath);
+                var choice = Choose(EditorProcess.GetCommandLineArgs(), UnityEngine.ProjectInfo.ProjectPath);
+                path = choice.path;
                 if (path == null) return;
                 // Resolve and validate both destinations before even creating the parent directory.
                 var cache = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
@@ -57,8 +58,8 @@ namespace Unbound.Runtime
                     File.Move(path, previous, true);
                 var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
                 s_Writer = new StreamWriter(stream) { AutoFlush = true };
-                // Reporting preserves the requested spelling; all I/O uses checked physical paths.
-                s_Path = reportedPath;
+                // Explicit requests keep their spelling; defaults name the physical project log.
+                s_Path = choice.isDefault ? path : reportedPath;
             }
             catch (Exception e)
             {

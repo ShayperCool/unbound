@@ -117,6 +117,33 @@ namespace UnityEngine.Tests
             Assert.False(File.Exists(Path.Combine(Environment.CurrentDirectory, "-")));
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Project_view_logs_use_the_physical_library_and_keep_authored_vetoes(bool explicitPath)
+        {
+            Directory.CreateDirectory(Logs);
+            string view = Path.Combine(Logs, "ProjectView");
+            Directory.CreateDirectory(view);
+            foreach (string part in new[] { "Assets", "Packages", "ProjectSettings", "Library" })
+                Directory.CreateSymbolicLink(Path.Combine(view, part), Path.Combine(Project, part));
+            ProjectInfo.ProjectPath = view;
+            string requested = Path.Combine(view, "Library/Unbound/session.log");
+            EditorProcess.s_CommandLine = explicitPath ? new[] { "Unity", "-logFile", requested } : new[] { "Unity" };
+            ConsoleLog.Append("first view session");
+            string physical = Path.Combine(Logs, explicitPath ? "session.log" : "Editor.log");
+            Assert.Equal(explicitPath ? requested : physical, ConsoleLog.Path);
+            Assert.Contains("first view session", File.ReadAllText(physical));
+            ConsoleLog.Reset();
+            ConsoleLog.Append("second view session");
+            Assert.Contains("first view session", File.ReadAllText(Path.Combine(Logs, explicitPath ? "session-prev.log" : "Editor-prev.log")));
+            Assert.Contains("second view session", File.ReadAllText(physical));
+            var before = Authored();
+            Open(Path.Combine(view, "Assets/sentinel.cs"));
+            Assert.Equal("", ConsoleLog.Path);
+            Assert.Equal(before, Authored());
+        }
+
         [Fact]
         public void Project_alias_and_relocated_global_cache_are_supported()
         {
