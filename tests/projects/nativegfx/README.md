@@ -245,17 +245,18 @@ stencil texture), an external texture of the plugin's, and the pixels.
 
 The screen's color texture is BGRA8Unorm (format 80), as Unbound's screen on Metal is. Screen
 copies (`screencopy.*`, `screencamera.*`, appended to the reference by two further identical
-captures): `CommandBuffer.CopyTexture` naming `CameraTarget`, from an executed buffer and inside a
-camera drawing to the screen (the plugin finds the screen's own color texture there), copies
-nothing and logs `Graphics.CopyTexture called with null source texture` (or `destination`); a
-`Blit` from that camera's target reads it.
+captures): in this batch-mode Editor, which has no Game view, `CommandBuffer.CopyTexture` naming
+`CameraTarget`, from an executed buffer and inside a camera drawing to the screen (the plugin finds
+the screen's own color texture there), copies nothing and logs `Graphics.CopyTexture called with
+null source texture` (or `destination`); a `Blit` from that camera's target reads it.
 
-Unbound matches 176/208 records with 32 declared residuals (`residuals-metal.json`, each with its
+Unbound matches 172/208 records with 36 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a screen
-camera with command buffers drawing into Unbound's texture standing for the screen, and one
-channel 1/255 apart in the Blit from it. The screen is shared:
+camera with command buffers drawing into Unbound's texture standing for the screen, one channel
+1/255 apart in the Blit from it, and the screen copies, which Unbound makes (copying the screen
+worked before it was BGRA8; the windowed Editor's Game view is unmeasured). The screen is shared:
 outside render texture targets the current encoder is over the screen's color texture and depth
 buffer (loaded), in callbacks and from scripts, and its descriptor is there before the plugin asks
 for the encoder (`plugin.peek.screen`, `plugin.peek.outside`); store actions are unknown until the
