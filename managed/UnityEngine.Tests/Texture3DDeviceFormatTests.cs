@@ -67,6 +67,41 @@ namespace Unbound.Tests
             Assert.Equal(recorded, compressed);
         }
 
+        /// <summary>Block-compressed volumes and arrays keep their blocks: SetPixelData takes a
+        /// level's blocks (a volume level's depth slices one after another) and GetPixelData gives
+        /// them back; texel access fails with a message.</summary>
+        [Fact]
+        public void CompressedLayeredTexturesKeepTheirBlocks()
+        {
+            var red = new byte[] { 0x00, 0xF8, 0x00, 0xF8, 0, 0, 0, 0 };
+            var blue = new byte[] { 0x1F, 0x00, 0x1F, 0x00, 0, 0, 0, 0 };
+            var volume = new Texture3D(4, 4, 2, TextureFormat.DXT1, true);
+            var array = new Texture2DArray(8, 8, 2, TextureFormat.BC7, false, true);
+            try
+            {
+                var blocks = red.Concat(blue).ToArray();
+                volume.SetPixelData(blocks, 0);
+                Assert.Equal(blocks, volume.GetPixelData<byte>(0).ToArray());
+                // Level 1 (2x2x1): one block.
+                Assert.Equal(8, volume.GetPixelData<byte>(1).Length);
+                volume.Apply(true);
+                Assert.Equal(blocks, volume.GetPixelData<byte>(0).ToArray());
+                Assert.Throws<UnityException>(() => volume.GetPixels(0));
+                Assert.Throws<UnityException>(() => volume.SetPixels32(new Color32[32], 0));
+                // BC7 8x8: four 16-byte blocks per slice.
+                var slice = Enumerable.Range(0, 64).Select(i => (byte)i).ToArray();
+                array.SetPixelData(slice, 0, 1);
+                Assert.Equal(slice, array.GetPixelData<byte>(0, 1).ToArray());
+                Assert.Throws<UnityException>(() => array.GetPixels32(0));
+                array.Apply(false);
+            }
+            finally
+            {
+                Object.DestroyImmediate(volume);
+                Object.DestroyImmediate(array);
+            }
+        }
+
         [Fact]
         public void VolumesOfCompressedFormatsAsTheDeviceMakesThem()
         {

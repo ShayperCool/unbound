@@ -219,9 +219,6 @@ namespace Unbound.Tests
                 "supportsSparseTextures: True -> False",
                 // Dynamic resolution: the Metal Editor scales its buffers, Unbound's renderer not.
                 "supportsDynamicResolution: True -> False",
-                // Compressed volume textures are not decoded where a device lacks their blocks in 3D:
-                // not answered (a stub).
-                "supportsCompressed3DTextures: True -> False",
             };
             expected.AddRange(s_NotDrawn);
             Assert.Equal(Sorted(expected), Sorted(differences));

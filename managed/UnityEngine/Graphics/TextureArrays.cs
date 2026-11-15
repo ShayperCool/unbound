@@ -38,15 +38,18 @@ namespace UnityEngine
             if (offsets > Array.MaxLength / sizeof(int))
                 throw new UnityException($"Unbound: a {width}x{height}x{layers} texture with {mips} mips needs {offsets} pixel offsets, exceeding one managed array.");
             // Check every product and sum before allocating storage or exposing a raw-data view.
-            long texel = PixelFormats.Size(format, 1, 1), at = 0, texels = 0, total, upload;
+            long texel = PixelFormats.Size(format, 1, 1), at = 0, texels = 0, total = 0, upload;
             try
             {
                 checked
                 {
                     for (int mip = 0; mip < mips; mip++)
+                    {
                         texels += (long)W(mip) * H(mip) * D(mip) * Images;
-                    total = texel * texels;
-                    upload = texels * (GraphicsFormatUtility.IsHDRFormat(format) ? 16 : 4);
+                        total += LevelBytesLong(mip) * Images;
+                    }
+                    // Blocks go up as they are; texels as RGBA8 or float RGBA.
+                    upload = Blocks ? total : texels * (GraphicsFormatUtility.IsHDRFormat(format) ? 16 : 4);
                 }
             }
             catch (OverflowException)
@@ -69,15 +72,39 @@ namespace UnityEngine
             Data = data ?? new byte[at];
         }
 
-        /// <summary>Whether Unbound reads and writes pixels of the format.</summary>
-        internal static bool Supported(TextureFormat format) => PixelFormats.Size(format, 1, 1) > 0;
+        /// <summary>Whether Unbound keeps a layered texture of the format: its texels (which it
+        /// reads and writes), or the blocks of a block format the renderer samples (DXT, BC, ETC
+        /// and ETC2 color, ASTC), which only GetPixelData and SetPixelData reach.</summary>
+        internal static bool Supported(TextureFormat format) => PixelFormats.Size(format, 1, 1) > 0 || BlockStored(format);
+
+        static bool BlockStored(TextureFormat format) => format == BlockFormats.Uncrunched(format)
+            && BlockFormats.BlockBytes(format) > 0 && !BlockFormats.IsEac(format);
+
+        /// <summary>The storage holds blocks (<see cref="Supported"/>).</summary>
+        internal bool Blocks => BlockStored(Format);
 
         internal int Images => Volume ? 1 : Layers;
         internal int W(int mip) => Math.Max(1, Width >> mip);
         internal int H(int mip) => Math.Max(1, Height >> mip);
         internal int D(int mip) => Volume ? Math.Max(1, Layers >> mip) : 1;
         internal int Size(int mip) => W(mip) * H(mip) * D(mip);
-        internal int LevelBytes(int mip) => PixelFormats.Size(Format, W(mip), H(mip)) * D(mip);
+        internal int LevelBytes(int mip) => (int)LevelBytesLong(mip);
+
+        long LevelBytesLong(int mip)
+        {
+            if (!Blocks) return (long)PixelFormats.Size(Format, W(mip), H(mip)) * D(mip);
+            int footprint = BlockFormats.Footprint(Format);
+            return (long)((W(mip) + footprint - 1) / footprint) * ((H(mip) + footprint - 1) / footprint)
+                * BlockFormats.BlockBytes(Format) * D(mip);
+        }
+
+        /// <summary>Texel access to block storage fails with a message (its blocks are not decoded
+        /// or encoded here).</summary>
+        void RequireTexels()
+        {
+            if (Blocks)
+                throw new UnityException($"Unbound: the texels of a {Format} layered texture are not read or written; GetPixelData and SetPixelData reach its blocks.");
+        }
         int Offset(int image, int mip) => m_Offsets[image * Mips + mip];
         bool Hdr => GraphicsFormatUtility.IsHDRFormat(Format);
 
@@ -90,6 +117,7 @@ namespace UnityEngine
         /// Unity 6000.0 Editor's array and volume readers do: tests/projects/texturearrays).</summary>
         internal Color32[] GetPixels32(int image, int mip)
         {
+            RequireTexels();
             var result = new Color32[Size(mip)];
             if (Hdr)
             {
@@ -109,6 +137,7 @@ namespace UnityEngine
         /// single precision (not b / 255; measured in tests/projects/texturearrays).</summary>
         internal Color[] GetPixels(int image, int mip)
         {
+            RequireTexels();
             var result = new Color[Size(mip)];
             if (Hdr)
             {
@@ -132,6 +161,7 @@ namespace UnityEngine
         /// byte b is b / 255 (not GetPixels' b × (1 / 255); tests/projects/texturepixels).</summary>
         internal Color GetPixel(int image, int mip, int index)
         {
+            RequireTexels();
             int size = PixelFormats.Size(Format, 1, 1);
             var bytes = new byte[size];
             Buffer.BlockCopy(Data, Offset(image, mip) + index * size, bytes, 0, size);
@@ -151,6 +181,7 @@ namespace UnityEngine
         /// half way between two values upward (tests/projects/texturepixels VolumeSetPixel).</summary>
         internal void SetPixel(int image, int mip, int index, Color color)
         {
+            RequireTexels();
             static byte Channel(float v) => (byte)Math.Floor(Mathf.Clamp01(v) * 255f + 0.5f);
             var bytes = Hdr ? PixelFormats.EncodeFloat(Format, new[] { color })
                 : PixelFormats.Encode(Format, new[] { new Color32(Channel(color.r), Channel(color.g), Channel(color.b), Channel(color.a)) });
@@ -160,6 +191,7 @@ namespace UnityEngine
 
         internal void SetPixels(int image, int mip, Color[] colors)
         {
+            RequireTexels();
             if (colors == null || colors.Length != Size(mip)) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
             if (Hdr)
             {
@@ -173,6 +205,7 @@ namespace UnityEngine
 
         internal void SetPixels32(int image, int mip, Color32[] colors)
         {
+            RequireTexels();
             if (colors == null || colors.Length != Size(mip)) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
             if (Hdr)
             {
@@ -207,6 +240,8 @@ namespace UnityEngine
         /// <summary>Each mip a box filter of the one above (in x, y, and z for a volume).</summary>
         internal void BuildMips()
         {
+            // Blocks keep the levels they were given (encoding new ones is not done; unmeasured).
+            if (Blocks) return;
             for (int image = 0; image < Images; image++)
                 for (int m = 1; m < Mips; m++)
                 {
@@ -240,6 +275,11 @@ namespace UnityEngine
         internal unsafe void Upload(ulong handle, bool linear, FilterMode filter, TextureWrapMode wrapU, TextureWrapMode wrapV, TextureWrapMode wrapW, int aniso,
             TextureDimension? dimension = null)
         {
+            if (Blocks)
+            {
+                UploadBlocks(handle, linear, filter, wrapU, wrapV, wrapW, aniso, dimension);
+                return;
+            }
             bool hdr = Hdr;
             int channels = hdr ? -1 : PixelFormats.GpuChannelFormat(Format, linear);
             int code = hdr ? PixelFormats.GpuFloatFormat(Format) : channels >= 0 ? channels : linear ? 1 : 0;
@@ -274,6 +314,18 @@ namespace UnityEngine
                         at += level.Length * texelBytes;
                     }
                 }
+            Send(handle, code, data, data.Length, filter, wrapU, wrapV, wrapW, aniso, dimension);
+        }
+
+        /// <summary>The blocks as stored: each image's levels in turn, a volume level's depth
+        /// slices one after another.</summary>
+        void UploadBlocks(ulong handle, bool linear, FilterMode filter, TextureWrapMode wrapU, TextureWrapMode wrapV,
+            TextureWrapMode wrapW, int aniso, TextureDimension? dimension) =>
+            Send(handle, BlockFormats.GpuCode(Format, linear), Data, m_Offsets[^1], filter, wrapU, wrapV, wrapW, aniso, dimension);
+
+        unsafe void Send(ulong handle, int code, byte[] data, int length, FilterMode filter, TextureWrapMode wrapU,
+            TextureWrapMode wrapV, TextureWrapMode wrapW, int aniso, TextureDimension? dimension)
+        {
             fixed (byte* p = data)
             {
                 var packet = new TexturePacket
@@ -283,7 +335,7 @@ namespace UnityEngine
                     Format = code,
                     MipCount = Mips,
                     Data = p,
-                    DataLength = data.Length,
+                    DataLength = length,
                     FilterMode = (int)filter,
                     WrapU = (int)wrapU,
                     WrapV = (int)wrapV,

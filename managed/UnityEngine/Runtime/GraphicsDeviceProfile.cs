@@ -67,6 +67,9 @@ namespace Unbound.Runtime
         /// constructor's sRGB format is unmeasured). Null: none refused (unmeasured on OpenGL Core
         /// and Vulkan).</summary>
         internal System.Collections.Generic.IReadOnlyDictionary<TextureFormat, string> RefusedVolumeFormats { get; init; }
+        /// <summary>SystemInfo.supportsCompressed3DTextures where it is measured (Metal: true,
+        /// tests/projects/nativegfx `metal.jsonl` volume.compressed3d); null elsewhere (a stub).</summary>
+        internal bool? Compressed3DTextures { get; init; }
 
         /// <summary>SystemInfo.maxTiledPixelStorageSize where it is measured (Metal: 64, tests/projects/urp
         /// `device-metal.jsonl`; OpenGL Core: int.MaxValue, tests/projects/srpmembers tiled.max);
@@ -165,6 +168,7 @@ namespace Unbound.Runtime
             HiddenSurfaceRemovalOnGPU = true,
             TextureWrapMirrorOnce = 0,
             EditorDynamicResolution = true,
+            Compressed3DTextures = true,
             RefusedVolumeFormats = new System.Collections.Generic.Dictionary<TextureFormat, string>
             {
                 [TextureFormat.PVRTC_RGB2] = "RGB Compressed PVRTC 2BPP UNorm",

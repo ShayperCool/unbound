@@ -383,6 +383,19 @@ namespace UnityEngine
             Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfo.GetTiledRenderTargetStorageSize");
             return 0;
         }
+        /// <summary>The Metal Editor's answer (true: block-compressed volumes are kept and sampled,
+        /// or decoded where the renderer's device lacks their blocks in 3D); a stub on the other
+        /// devices.</summary>
+        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/nativegfx metal.jsonl volume.compressed3d")]
+        public static bool supportsCompressed3DTextures
+        {
+            get
+            {
+                if (Device.Compressed3DTextures is bool supported) return supported;
+                Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfo.supportsCompressed3DTextures");
+                return false;
+            }
+        }
         /// <summary>False, what Unbound's renderer does: the Metal Editor answers true and scales
         /// its buffers (ScalableBufferManager here keeps 1); unmeasured on the other devices.</summary>
         public static bool supportsDynamicResolution
