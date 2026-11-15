@@ -10,6 +10,20 @@ namespace UnityEngine.Tests
     public class FontEngineTests
     {
         [Fact]
+        public void MarkRecordsRetainSignedCoordinatesAndSequentialLayout()
+        {
+            var anchor = new GlyphAnchorPoint { xCoordinate = -123.5f, yCoordinate = 456.25f };
+            var offset = new MarkPositionAdjustment(12.5f, -34.5f);
+            var record = new MarkToBaseAdjustmentRecord { baseGlyphID = 7, markGlyphID = 9, baseGlyphAnchorPoint = anchor, markPositionAdjustment = offset };
+            Assert.Equal(-123.5f, record.baseGlyphAnchorPoint.xCoordinate);
+            Assert.Equal(-34.5f, record.markPositionAdjustment.yPositionAdjustment);
+            Assert.Equal(4, System.Runtime.InteropServices.Marshal.OffsetOf<MarkToBaseAdjustmentRecord>("m_BaseGlyphAnchorPoint").ToInt32());
+            Assert.Equal(12, System.Runtime.InteropServices.Marshal.OffsetOf<MarkToBaseAdjustmentRecord>("m_MarkGlyphID").ToInt32());
+            Assert.Equal(24, System.Runtime.InteropServices.Marshal.SizeOf<MarkToBaseAdjustmentRecord>());
+            Assert.Equal(24, System.Runtime.InteropServices.Marshal.SizeOf<MarkToMarkAdjustmentRecord>());
+        }
+
+        [Fact]
         public void LigatureEqualityUsesComponentsAndReplacement()
         {
             var first = new LigatureSubstitutionRecord { componentGlyphIDs = new uint[] { 4, 5 }, ligatureGlyphID = 6 };

@@ -585,3 +585,25 @@ pub fn ligatures(handle: u64, glyphs: Option<&[u32]>, lookup: Option<i32>) -> Re
     let face = face(handle).context("no such face")?;
     Ok(serde_json::to_value(face.ligatures(glyphs, lookup))?)
 }
+
+/// A mark query's list and null-anchor conventions are selected by the managed API overload.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarkRequest {
+    handle: u64,
+    glyphs: Option<Vec<u32>>,
+    lookup: Option<i32>,
+    mark_to_mark: bool,
+    zero_terminated: bool,
+    preserve_missing: bool,
+}
+pub fn marks(request: &MarkRequest) -> Result<Json> {
+    let face = face(request.handle).context("no such face")?;
+    Ok(serde_json::to_value(face.marks(
+        request.glyphs.as_deref(),
+        request.lookup,
+        request.mark_to_mark,
+        request.zero_terminated,
+        request.preserve_missing,
+    ))?)
+}

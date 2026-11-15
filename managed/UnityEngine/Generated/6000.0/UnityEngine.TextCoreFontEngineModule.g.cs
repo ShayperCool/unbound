@@ -70,16 +70,6 @@ namespace UnityEngine.TextCore.LowLevel
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphAdjustmentRecord[] GetSingleAdjustmentRecords(int lookupIndex, global::System.Collections.Generic.List<uint> glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetSingleAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphAdjustmentRecord>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord[] GetPairAdjustmentRecords(int lookupIndex, uint glyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetPairAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord[] GetPairAdjustmentRecords(int lookupIndex, global::System.Collections.Generic.List<uint> glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetPairAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.GlyphPairAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord[] GetAllMarkToBaseAdjustmentRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetAllMarkToBaseAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord[] GetMarkToBaseAdjustmentRecords(uint baseGlyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetMarkToBaseAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord GetMarkToBaseAdjustmentRecord(uint baseGlyphIndex, uint markGlyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetMarkToBaseAdjustmentRecord"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord[] GetMarkToBaseAdjustmentRecords(global::System.Collections.Generic.List<uint> glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetMarkToBaseAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord[] GetMarkToBaseAdjustmentRecords(int lookupIndex, global::System.Collections.Generic.List<uint> glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetMarkToBaseAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord[] GetAllMarkToMarkAdjustmentRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetAllMarkToMarkAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord[] GetMarkToMarkAdjustmentRecords(uint baseMarkGlyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetMarkToMarkAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord GetMarkToMarkAdjustmentRecord(uint firstGlyphIndex, uint secondGlyphIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetMarkToMarkAdjustmentRecord"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord[] GetMarkToMarkAdjustmentRecords(global::System.Collections.Generic.List<uint> glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetMarkToMarkAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord[] GetMarkToMarkAdjustmentRecords(int lookupIndex, global::System.Collections.Generic.List<uint> glyphIndexes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.GetMarkToMarkAdjustmentRecords"); return global::System.Array.Empty<global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord>(); }
         [global::Unbound.Stub] internal static void RenderBufferToTexture(global::UnityEngine.Texture2D srcTexture, int padding, global::UnityEngine.TextCore.LowLevel.GlyphRenderMode renderMode, global::UnityEngine.Texture2D dstTexture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngine.RenderBufferToTexture"); }
     }
     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
@@ -88,13 +78,6 @@ namespace UnityEngine.TextCore.LowLevel
     {
         [global::Unbound.Stub] internal static bool Approximately(float a, float b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngineUtilities.Approximately"); return default; }
         [global::Unbound.Stub] internal static int MaxValue(int a, int b, int c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.FontEngineUtilities.MaxValue"); return default; }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial struct GlyphAnchorPoint
-    {
-        public float xCoordinate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.GlyphAnchorPoint.xCoordinate"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.GlyphAnchorPoint.xCoordinate"); } }
-        public float yCoordinate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.GlyphAnchorPoint.yCoordinate"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.GlyphAnchorPoint.yCoordinate"); } }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -147,32 +130,6 @@ namespace UnityEngine.TextCore.LowLevel
         SDF32 = 32806,
         SDFAA_HINTED = 4169,
         SDFAA = 4165,
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial struct MarkPositionAdjustment
-    {
-        [global::Unbound.Stub] public MarkPositionAdjustment(float x, float y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkPositionAdjustment.ctor"); }
-        public float xPositionAdjustment { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkPositionAdjustment.xPositionAdjustment"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkPositionAdjustment.xPositionAdjustment"); } }
-        public float yPositionAdjustment { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkPositionAdjustment.yPositionAdjustment"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkPositionAdjustment.yPositionAdjustment"); } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial struct MarkToBaseAdjustmentRecord
-    {
-        public uint baseGlyphID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord.baseGlyphID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord.baseGlyphID"); } }
-        public global::UnityEngine.TextCore.LowLevel.GlyphAnchorPoint baseGlyphAnchorPoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord.baseGlyphAnchorPoint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord.baseGlyphAnchorPoint"); } }
-        public uint markGlyphID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord.markGlyphID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord.markGlyphID"); } }
-        public global::UnityEngine.TextCore.LowLevel.MarkPositionAdjustment markPositionAdjustment { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord.markPositionAdjustment"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord.markPositionAdjustment"); } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial struct MarkToMarkAdjustmentRecord
-    {
-        public uint baseMarkGlyphID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord.baseMarkGlyphID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord.baseMarkGlyphID"); } }
-        public global::UnityEngine.TextCore.LowLevel.GlyphAnchorPoint baseMarkGlyphAnchorPoint { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord.baseMarkGlyphAnchorPoint"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord.baseMarkGlyphAnchorPoint"); } }
-        public uint combiningMarkGlyphID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord.combiningMarkGlyphID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord.combiningMarkGlyphID"); } }
-        public global::UnityEngine.TextCore.LowLevel.MarkPositionAdjustment combiningMarkPositionAdjustment { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord.combiningMarkPositionAdjustment"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord.combiningMarkPositionAdjustment"); } }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]

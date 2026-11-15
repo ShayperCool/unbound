@@ -1,0 +1,1 @@
+{"commands":["python3 tests/projects/fontmarks/run.py check"],"engine_paths":["crates/unbound-assets/src/font_features.rs","managed/UnityEngine/Text/FontEngine.Marks.cs","managed/UnityEngine/Text/FontEngine.Features.cs","tests/projects/fontfeatures/Assets/Fonts/"]}

@@ -166,6 +166,10 @@ namespace Unbound.Runtime
         /// single-precision arithmetic.</summary>
         internal static bool QuaternionApiPrecisionMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Null mark matrix anchors retain header coordinates in the measured queries.
+        /// tests/projects/fontmarks, Unity 6000.0.71f1.</summary>
+        internal static bool FontMarkNullAnchorMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>The measured font feature lookup-index queries return records only for -1.
         /// tests/projects/fontfeatures, Unity 6000.0.71f1.</summary>
         internal static bool FontFeatureLookupIndexQueriesMeasured => Release == (6000, 0, 71, 'f', 1);

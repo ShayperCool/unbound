@@ -43,21 +43,9 @@ namespace UnityEngine.TextCore.LowLevel
             var request = JsonSerializer.Serialize(new { handle = s_Face.Handle, glyphs, lookup = lookup == -1 ? null : lookup });
             var source = JsonSerializer.Deserialize<LigatureJson[]>(Native.Call("font-ligatures", request), s_Json);
             int count = source.Length;
-            if (!all && count == 0) return null;
-            LigatureSubstitutionRecord[] result;
-            if (all) result = new LigatureSubstitutionRecord[count];
-            else
-            {
-                if (s_LigatureRecords == null || s_LigatureRecords.Length <= count)
-                {
-                    int capacity = 1;
-                    while (capacity <= count) capacity *= 2;
-                    s_LigatureRecords = new LigatureSubstitutionRecord[capacity];
-                }
-                result = s_LigatureRecords;
-            }
+            var result = FeatureBuffer(count, ref s_LigatureRecords, all);
+            if (result == null) return null;
             for (int i = 0; i < count; i++) result[i] = new LigatureSubstitutionRecord { componentGlyphIDs = source[i].Components, ligatureGlyphID = source[i].Glyph };
-            if (!all) result[count] = default;
             return result;
         }
 
@@ -66,6 +54,20 @@ namespace UnityEngine.TextCore.LowLevel
         internal static LigatureSubstitutionRecord[] GetLigatureSubstitutionRecords(List<uint> glyphIndexes) => Ligatures(FeatureGlyphList(glyphIndexes), null, false);
         internal static LigatureSubstitutionRecord[] GetLigatureSubstitutionRecords(int lookupIndex, uint glyphIndex) => Ligatures(new[] { glyphIndex }, lookupIndex, false);
         internal static LigatureSubstitutionRecord[] GetLigatureSubstitutionRecords(int lookupIndex, List<uint> glyphIndexes) => Ligatures(FeatureGlyphList(glyphIndexes), lookupIndex, false);
+
+        static T[] FeatureBuffer<T>(int count, ref T[] cache, bool exact)
+        {
+            if (exact) return new T[count];
+            if (count == 0) return null;
+            if (cache == null || cache.Length <= count)
+            {
+                int capacity = 1;
+                while (capacity <= count) capacity *= 2;
+                cache = new T[capacity];
+            }
+            cache[count] = default;
+            return cache;
+        }
 
         static List<uint> FeatureGlyphList(List<uint> glyphs)
         {
