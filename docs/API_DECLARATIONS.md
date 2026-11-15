@@ -408,7 +408,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-linked-pool-counter` | 0 | Done by `linkedpool`: counter, storage, capacity and callbacks share one pool state; null, reentrant release, overflow and independent ObjectPool controls are recorded. |
 | `Q410-measured-lookup-policies` | 11 | Retain the eleven direct/inherited discovery policies and their controls. |
 | `Q410-slide-result-serialization` | 2 | Nondefault collision-hit backing payloads and overwrite controls. |
-| `Q410-unconstrained-pixel-data` | 1 | Shared allocation-free unconstrained array transfer and invalid/reference-containing input controls. |
+| `Q410-unconstrained-pixel-data` | 0 | Done by `pixeltransfer`: Texture2D and the layered textures share one allocation-free transfer sized by the first element's marshaled size; invalid, generic, Nullable and non-marshalable inputs are controlled, and reference-holding elements fail loudly. |
 | `Q410-value-layout-payloads` | 1 | Five XR payloads are covered by `xrvalues`; LocationInfo and the empty retired AnimationInfo value are covered by `valuepayloads`. Ray-tracing BuildSettings still needs its payload migration with the rendering owner. |
 | `Q410-wrapper-layouts` | 60 | YieldInstruction and WaitForSeconds now marshal their complete payloads in `yieldlayouts`; their two exact default-packing metadata discrepancies remain. The other 58 wrappers still need payload/base-layout and ownership migration. |
 
