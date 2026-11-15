@@ -50,7 +50,12 @@ backwards from its end (speed -1) alone and cross-faded in, and LE (A's x positi
 received in `.events` records: cross-faded out to Q over 0.25 s (its fade stops it), stopped by
 `Stop`, and at weight 0; and LZ (events at 0 and 0.3125 s) started over P by `CrossFade` (0.25 s),
 `Blend` (to 0.5 over 0.25 s), `Play`, `Play` with its weight set to 0, and `Play` at speed 0 for
-three updates before speed 1 (`legacy.events.start.*`).
+three updates before speed 1 (`legacy.events.start.*`); a time set on LZ in the update Play starts it,
+while it is held at speed 0, and while it plays (`legacy.events.start.timeset`,
+`legacy.events.start.speed0.timeset`, `legacy.events.timeset`); Blend and CrossFade of P after Stop
+(`legacy.stop.blend`, `legacy.stop.crossfade`) and Play of S during the fade out its CrossFade gave
+it (`legacy.once.fade.play`); and Flags (LFlags), the Bools values on a SpriteRenderer's flips and
+a CanvasGroup's bools and alpha, on a second rig (`flags.*` with an Animator, `legacy.flags.*`).
 
 The records before the Any State, humanoid, reversed and event cases are two identical windowed
 GPU Editor captures on Linux. Those cases were added from two identical batchmode captures of the

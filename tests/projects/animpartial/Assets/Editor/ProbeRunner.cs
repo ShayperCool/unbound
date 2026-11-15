@@ -188,6 +188,24 @@ public static class ProbeRunner
         return Save(clip, loop: false);
     }
 
+    /// <summary>Flags (1.375 s, once): the Bools clip's values around the bool threshold, one per
+    /// 0.125 s key, on E's SpriteRenderer flipX and flipY and E's CanvasGroup interactable,
+    /// blocksRaycasts and ignoreParentGroups, and its alpha from 0 to 1 over the clip.</summary>
+    static AnimationClip Flags(bool legacy)
+    {
+        var clip = new AnimationClip { name = (legacy ? "L" : "") + "Flags", frameRate = 60f, legacy = legacy };
+        float[] flags = { -0.002f, -0.0011f, -0.001f, -0.0009f, 0f, 0.0009f, 0.001f, 0.0011f, 0.25f, 0.5f, 1f, 0f };
+        var pairs = new float[flags.Length * 2];
+        for (int k = 0; k < flags.Length; k++) { pairs[2 * k] = k * 0.125f; pairs[2 * k + 1] = flags[k]; }
+        Float(clip, "E", typeof(SpriteRenderer), "m_FlipX", pairs);
+        Float(clip, "E", typeof(SpriteRenderer), "m_FlipY", pairs);
+        Float(clip, "E", typeof(CanvasGroup), "m_Interactable", pairs);
+        Float(clip, "E", typeof(CanvasGroup), "m_BlocksRaycasts", pairs);
+        Float(clip, "E", typeof(CanvasGroup), "m_IgnoreParentGroups", pairs);
+        Float(clip, "E", typeof(CanvasGroup), "m_Alpha", 0f, 0f, 1.375f, 1f);
+        return Save(clip, loop: false);
+    }
+
     /// <summary>LE (legacy, 1 s, loops): A's x position from 0 to 1, and events calling
     /// PartialTarget.Hit at 0.3125, 0.4375, 0.5625 and 0.6875 s (between the 0.125 s frames); LZ
     /// the same with events at 0 and 0.3125 s.</summary>
@@ -231,6 +249,11 @@ public static class ProbeRunner
         P(true); Q(true); R(true); S(true); Bools(true);
         Evented("LE", "e", 0.3125f, 0.4375f, 0.5625f, 0.6875f);
         Evented("LZ", "z", 0f, 0.3125f);
+        Flags(true);
+        {
+            var c = AnimatorController.CreateAnimatorControllerAtPath(Dir + "Flags.controller");
+            c.layers[0].stateMachine.AddState("Flags").motion = Flags(false);
+        }
         var p = P(false);
         var q = Q(false);
         Any("Any", p, q);

@@ -43,7 +43,8 @@ def prepare(project, release):
     shutil.copytree(PROBE / 'Assets', project / 'Assets')
     shutil.copytree(base / 'Assets/Scenes', project / 'Assets/Scenes')
     (project / 'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: ' + release + '\n')
-    dependencies = {f'com.unity.modules.{name}': '1.0.0' for name in ('animation',)}
+    # ui: the CanvasGroup the flags cases animate.
+    dependencies = {f'com.unity.modules.{name}': '1.0.0' for name in ('animation', 'ui')}
     (project / 'Packages/manifest.json').write_text(json.dumps({'dependencies': dependencies}))
     (project / 'Assets/Resources').mkdir(exist_ok=True)
     rig = project / 'Assets/Rig/Resources'

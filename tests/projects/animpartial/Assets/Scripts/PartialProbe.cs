@@ -70,6 +70,28 @@ public class PartialProbe : MonoBehaviour
             + ",\"b\":" + (target.b ? "1" : "0") + ",\"i\":" + target.i;
     }
 
+    /// <summary>A rig with E (a SpriteRenderer and a CanvasGroup) for the Flags clips.</summary>
+    static GameObject FlagsRig()
+    {
+        var root = new GameObject("FlagsRig");
+        var e = new GameObject("E");
+        e.transform.SetParent(root.transform, false);
+        e.AddComponent<SpriteRenderer>();
+        var group = e.AddComponent<CanvasGroup>();
+        group.interactable = true; group.blocksRaycasts = true; group.ignoreParentGroups = true; group.alpha = 0.7f;
+        return root;
+    }
+
+    static string FlagsSnapshot(Transform root)
+    {
+        var e = root.Find("E");
+        var sr = e.GetComponent<SpriteRenderer>();
+        var group = e.GetComponent<CanvasGroup>();
+        return "\"flipX\":" + (sr.flipX ? "1" : "0") + ",\"flipY\":" + (sr.flipY ? "1" : "0")
+            + ",\"interactable\":" + (group.interactable ? "1" : "0") + ",\"blocksRaycasts\":" + (group.blocksRaycasts ? "1" : "0")
+            + ",\"ignoreParentGroups\":" + (group.ignoreParentGroups ? "1" : "0") + ",\"alpha\":" + F(group.alpha);
+    }
+
     static void Record(string key, string values) =>
         s_Output.Append("{\"k\":\"").Append(key).Append("\",\"v\":").Append(values == "true" ? values : "{" + values + "}").Append("}\n");
 
@@ -102,6 +124,18 @@ public class PartialProbe : MonoBehaviour
     static void Animators()
     {
         Case("bools", "Bools");
+        // SpriteRenderer flips and CanvasGroup bools around the bool threshold (FlagsRig).
+        {
+            var root = FlagsRig();
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("Flags");
+            for (int step = 0; step <= 12; step++)
+            {
+                animator.Update(step == 0 ? 0f : Step);
+                Record("flags.step" + step, FlagsSnapshot(root.transform));
+            }
+            DestroyImmediate(root);
+        }
         // An Any State transition to Q whose condition becomes true in the update a Play request
         // enters P (any.request), without the request (any.plain), and before the first update.
         Case("any.request", "Any", (animator, step) =>
@@ -300,8 +334,16 @@ public class PartialProbe : MonoBehaviour
         return string.Join(",", parts);
     }
 
+    Animation m_LegacyFlags;
+
     void LegacyCases()
     {
+        {
+            var root = FlagsRig();
+            m_LegacyFlags = root.AddComponent<Animation>();
+            m_LegacyFlags.playAutomatically = false;
+            m_LegacyFlags.AddClip(Resources.Load<AnimationClip>("LFlags"), "LFlags");
+        }
         Legacy("legacy.play", At((0, c => c.Animation.Play("LP")), (4, c => c.Animation.Play("LQ"))));
         Legacy("legacy.crossfade", At((0, c => c.Animation.Play("LP")), (3, c => c.Animation.CrossFade("LQ", 0.5f))));
         Legacy("legacy.crossfade.back", At((0, c => c.Animation.Play("LP")), (3, c => c.Animation.CrossFade("LQ", 0.25f)),
@@ -343,6 +385,14 @@ public class PartialProbe : MonoBehaviour
         // A clip played once (0.5 s), and cross-faded in over 0.25 s, which also fades it out before its end.
         Legacy("legacy.once", At((0, c => c.Animation.Play("LS"))));
         Legacy("legacy.once.fade", At((0, c => c.Animation.Play("LP")), (1, c => c.Animation.CrossFade("LS", 0.25f))));
+        // Blend and CrossFade of a state Stop left at its weight (1), and Play of a once clip during
+        // the fade out a CrossFade gave it before its end.
+        Legacy("legacy.stop.blend", At((0, c => c.Animation.Play("LP")), (2, c => c.Animation.Stop("LP")),
+            (4, c => c.Animation.Blend("LP", 0.5f, 0.25f))));
+        Legacy("legacy.stop.crossfade", At((0, c => c.Animation.Play("LP")), (2, c => c.Animation.Stop("LP")),
+            (3, c => c.Animation.Play("LQ")), (5, c => c.Animation.CrossFade("LP", 0.25f))));
+        Legacy("legacy.once.fade.play", At((0, c => c.Animation.Play("LP")), (1, c => c.Animation.CrossFade("LS", 0.25f)),
+            (3, c => c.Animation.Play("LS"))));
         // The GameObject deactivated for two frames.
         Legacy("legacy.deactivate", At((0, c => c.Animation.Play("LP")), (4, c => c.Root.gameObject.SetActive(false)),
             (6, c => c.Root.gameObject.SetActive(true))));
@@ -372,6 +422,19 @@ public class PartialProbe : MonoBehaviour
             c.Animation.Play("LZ");
             c.Animation["LZ"].weight = 0f;
         })), lz, "LZ");
+        // A time set on LZ: in the update Play starts it (to its 0.3125 s event), while it is held
+        // at speed 0 (frame 4) before it moves, and while it plays (frame 4, back from 0.5).
+        Legacy("legacy.events.start.timeset", At((0, c => c.Animation.Play("LP")), (2, c =>
+        {
+            c.Animation.Play("LZ");
+            c.Animation["LZ"].time = 0.3125f;
+        })), lz, "LZ");
+        Legacy("legacy.events.start.speed0.timeset", At((0, c => c.Animation.Play("LP")), (2, c =>
+        {
+            c.Animation["LZ"].speed = 0f;
+            c.Animation.Play("LZ");
+        }), (4, c => c.Animation["LZ"].time = 0.3125f), (5, c => c.Animation["LZ"].speed = 1f)), lz, "LZ");
+        Legacy("legacy.events.timeset", At((0, c => c.Animation.Play("LZ")), (4, c => c.Animation["LZ"].time = 0.3125f)), lz, "LZ");
         // Played at speed 0 for three updates (its start and two more), then at speed 1.
         Legacy("legacy.events.start.speed0", At((0, c => c.Animation.Play("LP")), (2, c =>
         {
@@ -402,6 +465,7 @@ public class PartialProbe : MonoBehaviour
     void Update()
     {
         foreach (var c in m_Legacy) c.Act(c, m_Frame);
+        if (m_Frame == 0) m_LegacyFlags.Play("LFlags");
     }
 
     void LateUpdate()
@@ -416,6 +480,7 @@ public class PartialProbe : MonoBehaviour
                 + (state.enabled ? "1" : "0") + "," + F(state.weight) + "," + F(state.time) + "]");
             target.Hits.Clear();
         }
+        Record("legacy.flags.frame" + m_Frame, FlagsSnapshot(m_LegacyFlags.transform));
         if (++m_Frame < Frames) return;
         enabled = false;
         Record("complete", "true");
