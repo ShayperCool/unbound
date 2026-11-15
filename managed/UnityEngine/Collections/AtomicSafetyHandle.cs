@@ -228,6 +228,8 @@ namespace Unity.Collections.LowLevel.Unsafe
 
         internal static void DisposeHandle(ref AtomicSafetyHandle safety)
         {
+            // A default handle (a container that was never created) reports itself deallocated.
+            if (IsDefaultValue(safety)) throw Safety.Deallocated(safety);
             CheckDeallocateAndThrow(safety);
             // A temp container's handle stays valid until its scope ends (copies keep working).
             if (IsTempMemoryHandle(safety))

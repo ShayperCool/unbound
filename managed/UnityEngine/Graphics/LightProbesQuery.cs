@@ -51,8 +51,7 @@ namespace UnityEngine
         public void Dispose()
         {
             if (m_LightProbeContextWrapper == IntPtr.Zero) throw new ObjectDisposedException("The LightProbesQuery is already disposed.");
-            AtomicSafetyHandle.CheckDeallocateAndThrow(m_Safety);
-            AtomicSafetyHandle.Release(m_Safety);
+            AtomicSafetyHandle.DisposeHandle(ref m_Safety);
             GCHandle.FromIntPtr(m_LightProbeContextWrapper).Free();
             m_LightProbeContextWrapper = IntPtr.Zero;
         }

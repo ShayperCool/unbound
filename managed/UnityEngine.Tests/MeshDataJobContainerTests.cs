@@ -27,6 +27,19 @@ namespace UnityEngine.Tests
             }
         }
 
+        struct WriteVertices : IJob
+        {
+            public NativeArray<Vector3> vertices;
+            public void Execute() => vertices[0] = Vector3.one;
+        }
+
+        struct ReadVertices : IJob
+        {
+            [ReadOnly] public NativeArray<Vector3> vertices;
+            public NativeArray<float> sum;
+            public void Execute() => sum[0] = vertices[1].y;
+        }
+
         [Fact]
         public void MeshDataArrayIsARangeRestrictedContainer()
         {
@@ -70,6 +83,13 @@ namespace UnityEngine.Tests
                 Assert.Equal("The UNKNOWN_OBJECT_TYPE has been declared as [ReadOnly], but you are writing to it.",
                     Assert.Throws<InvalidOperationException>(() => vertices[0] = Vector3.one).Message);
                 var error = Assert.Throws<InvalidOperationException>(() => new WriteFirst { data = acquired }.Schedule().Complete());
+                // Any container sharing the read-only handle: a vertex view as a job field.
+                var viewError = Assert.Throws<InvalidOperationException>(() => new WriteVertices { vertices = vertices }.Schedule().Complete());
+                Assert.EndsWith("WriteVertices.vertices must be marked [ReadOnly] in the job MeshDataJobContainerTests:WriteVertices, because the container itself is marked read only.", viewError.Message);
+                var sum = new NativeArray<float>(1, Allocator.TempJob);
+                new ReadVertices { vertices = vertices, sum = sum }.Schedule().Complete();
+                Assert.Equal(1f, sum[0]);
+                sum.Dispose();
                 Assert.Equal("The UNKNOWN_OBJECT_TYPE WriteFirst.data must be marked [ReadOnly] in the job MeshDataJobContainerTests:WriteFirst, because the container itself is marked read only.", error.Message);
             }
             finally

@@ -222,6 +222,7 @@ namespace UnityEngine
                 {
                     AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
                     var store = (MeshDataStore)GCHandle.FromIntPtr(m_Ptr).Target;
+                    // The read-only view refuses first; this holds without safety checks.
                     if (store.ReadOnly) throw new InvalidOperationException("Not allowed to modify MeshData from Mesh.AcquireReadOnlyMeshData");
                     return store;
                 }
@@ -476,8 +477,6 @@ namespace UnityEngine
 
             public void Dispose()
             {
-                // A default array has no handle, which reports itself deallocated.
-                if (AtomicSafetyHandle.IsDefaultValue(m_Safety)) throw Unbound.Runtime.Safety.Deallocated(m_Safety);
                 AtomicSafetyHandle.DisposeHandle(ref m_Safety);
                 if (m_Ptrs == null) return;
                 for (int i = 0; i < m_Length; i++)
