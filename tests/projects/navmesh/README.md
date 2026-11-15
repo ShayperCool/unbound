@@ -84,7 +84,7 @@ Q385 neighbour prediction, measured on Unity 6000.0.71f1, inserts each agent ove
 its radius and the travel of its current velocity within the prediction time.
 Climber's failing records fall from 196 to 3, right's from 225 to 1. This resolves
 their initial divergences at 13 and 17. The 212 remaining frame scenarios include
-walker from 33, blocked from 191, left's hasPath at 222 and right's arrival at 241.
+walker from 33, blocked from 191, left's hasPath at 222 and right's arrival at 241. (Q493 later resolves right's arrival.)
 Climber retains three three-decimal velocity-string differences at 21, 85 and 88;
 raw vertical velocity differs by at most 0.0000254 m/s, height by 0.00000018 m.
 They stay in the strict report and the insignificant-residual table.
@@ -133,7 +133,7 @@ keeps the desired velocity for one more update (frame 33 still moves at 3.499, 0
 how Unity treats a hit exactly at one of an edge's vertices is inferred from that alone.
 No constant or tolerance is changed for this, and the sampling weights are unchanged.
 The other agents' residuals (blocked corners from 191, left hasPath at 222, right
-arrival at 241, climber rounding) remain as described above.
+arrival at 241, climber rounding) remain as described above (Q493 later resolves right's arrival.)
 
 Q426 rechecks the remaining agents against two identical GPU Editor diagnostics
 with `NAVMESH_PROBE_STEER=250`. At frame 191, blocked has exactly the same horizontal
@@ -190,8 +190,8 @@ on the polygon edge z = -2.5, which left walks along, and its hasPath at 222 dep
 the boundary point falls on. Like walker's vertex, this is an exact-geometry tie; no rule is fitted.
 
 The default rerun remains at 212 differing frame scenarios. The deferred walker
-vertex tie, three climber rounding records, left's frame-222 hasPath and right's
-frame-241 arrival remain visible. Avoidance retains two near configurations and
+vertex tie, three climber rounding records and left's frame-222 hasPath remain
+visible; right's frame-241 arrival is resolved by Q493 (above). Avoidance retains two near configurations and
 one speed configuration. All three differ only in the second-frame steeringTarget,
 whose x coordinate is 42.6666679 in the reference and 50 in Unbound; position,
 velocity, desired velocity and next position match. This leaves corner or corridor

@@ -67,6 +67,10 @@ namespace UnityEngine.Tests
         // own; the next step passes and lands (Editor: 54).
         [InlineData("6000.0.71f1", 6f, 60f, false, 6f, -95f + 120 * 1.5f, 54)]
         [InlineData("6000.0.72f1", 1f, 8f, true, 4.0959f, -95f + 44 * 1.5f, 253)]
+        // A lane outside the probe (0.8 m/s, 3.333 m): the Editor lands at 269 (a separate
+        // capture of 20 such lanes matches all 20); the previous rule lands at 268.
+        [InlineData("6000.0.71f1", 0.8f, 8f, true, 3.333f, -90.5f, 269)]
+        [InlineData("6000.0.72f1", 0.8f, 8f, true, 3.333f, -90.5f, 268)]
         public void AgentsArriveOnTheMeasuredFrame(string release, float speed, float acceleration, bool braking, float distance, float z, int frame)
         {
             NavigationTestRelease.At(release, () => Level(() =>

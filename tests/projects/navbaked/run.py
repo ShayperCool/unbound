@@ -136,7 +136,8 @@ def unbound(work):
 # loading time, whose residuals are recorded in docs/COMPATIBILITY_GAPS.md: they are compared and
 # listed, not gated.
 GATED = ('awake', 'areas', 'baked', 'paths', 'additive', 'agent2', 'unloaded', 'sample', 'jump',
-         'resume.unload', 'resume.held', 'resume.resources', 'resume.instantiate', 'height', 'warp.sync')
+         'resume.unload', 'resume.held', 'resume.resources', 'resume.instantiate', 'height', 'warp.sync',
+         'height.agents')
 
 
 def check(work):
