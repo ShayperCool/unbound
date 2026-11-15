@@ -34,6 +34,7 @@ p.add_argument('--listener-diagnostics', action='store_true', help='Publish sepa
 p.add_argument('--mono-live', action='store_true', help='Publish live Mono and component topology controls')
 p.add_argument('--topology-diagnostics', action='store_true', help='Publish separate multiple-listener topology diagnostics')
 p.add_argument('--topology-pcm', action='store_true', help='Publish live Echo/Chorus and zone PCM controls')
+p.add_argument('--listener-live', action='store_true', help='Publish measured one-active-listener connection histories')
 p.add_argument('--voice-input', action='store_true', help='Publish source callback width and processing diagnostics')
 p.add_argument('--device-channels', type=int, choices=(2, 4, 6, 8), default=8, help='Private device width for encoding or source-input controls')
 a = p.parse_args()
@@ -50,6 +51,9 @@ if a.topology_diagnostics:
 if a.topology_pcm:
     from common import profile
     selected = list(profile('topology-pcm', a.rate))
+if a.listener_live:
+    from common import profile
+    selected = list(profile('listener-live', a.rate))
 if a.mono_live:
     from common import profile
     selected = list(profile('mono-live', a.rate))
@@ -76,9 +80,10 @@ assert header(a.capture) == header(a.repeat), 'independent capture metadata diff
 for key, record in header(a.capture).items():
     if isinstance(record, dict) and 'file' in record:
         assert samples(a.capture, record).tobytes() == samples(a.repeat, header(a.repeat)[key]).tobytes(), 'independent capture differs: '+key
-if a.topology_pcm:
+parent_name = 'mono-live' if a.topology_pcm else 'topology-diagnostics' if a.listener_live else None
+if parent_name is not None:
     # Store one canonical PCM stream; this profile adds a separately captured case manifest.
-    parent = FIXTURE/'Reference'/('unity-'+a.release)/'mono-live'/('rate-'+str(a.rate))
+    parent = FIXTURE/'Reference'/('unity-'+a.release)/parent_name/('rate-'+str(a.rate))
     original = header(parent)
     for key, record in header(a.capture).items():
         assert original.get(key) == record, 'parent metadata differs: '+key
@@ -100,6 +105,7 @@ if a.schedule: target = target/'schedule'
 if a.mono_live: target = target/'mono-live'
 if a.topology_diagnostics: target = target/'topology-diagnostics'
 if a.topology_pcm: target = target/'topology-pcm'
+if a.listener_live: target = target/'listener-live'
 if a.listener_chain: target = target/'listener-chain'
 if a.listener_diagnostics: target = target/'listener-diagnostics'
 if a.voice_input: target = target/'voice-input' if a.device_channels == 8 else target/'voice-input-devices'/('device-'+str(a.device_channels))
@@ -126,9 +132,9 @@ for f in sorted(a.capture.glob('*.f32')):
             if not packed.exists():
                 packed.symlink_to(Path('../../../voice-input')/('rate-'+str(a.rate))/(f.name+'.gz'))
             continue
-    if a.topology_pcm:
+    if parent_name is not None:
         packed = target/(f.name+'.gz')
-        if not packed.exists(): packed.symlink_to(Path('../../mono-live')/('rate-'+str(a.rate))/(f.name+'.gz'))
+        if not packed.exists(): packed.symlink_to(Path('../..')/parent_name/('rate-'+str(a.rate))/(f.name+'.gz'))
         continue
     if not (target/(f.name+'.gz')).exists():
         with gzip.GzipFile(target/(f.name+'.gz'), 'wb', mtime=0) as out: out.write(f.read_bytes())

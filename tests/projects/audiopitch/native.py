@@ -16,7 +16,7 @@ p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--buffer', type=int, choices=(256, 512, 1024, 2048), default=1024)
 p.add_argument('--cases', help='Comma-separated subset of one set, for diagnostics and part sessions')
 p.add_argument('--reset-cases', action='store_true', help='Reset output before each case, then run its normal preflight')
-p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'voice-input'), default='all',
+p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'listener-live', 'voice-input'), default='all',
                help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
 p.add_argument('--device-channels', type=int, choices=(2, 4, 6, 8), default=8, help='Private device width for encoding and voice-input captures')
 a = p.parse_args()
@@ -28,7 +28,7 @@ if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] !=
     p.error('release does not match fixture')
 a.work.mkdir(parents=True, exist_ok=False)
 project = a.work/'project'
-if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'voice-input'):
+if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'listener-live', 'voice-input'):
     import sys
     sys.path.insert(0, str(fixture.parents[1]))
     from authored_project import assemble
@@ -36,10 +36,10 @@ if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts
     if a.set in ('wide', 'wide-pcm', 'configurations'):
         from wide_boot import prepare
         prepare(project)
-    if a.set in ('listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'voice-input'):
+    if a.set in ('listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'listener-live', 'voice-input'):
         # Only the alias used by this independent private capture project is imported.
         source = (fixture/'Assets/Scripts/EffectProbe.cs').read_text()
-        prefix = {'listener-scripts': 'context_scriptzone_', 'encoding': 'context_encoding_', 'schedule': 'context_schedule_', 'listener-chain': 'context_listenerchain_', 'listener-diagnostics': 'context_listenerdiag_', 'mono-live': 'context_monolive_', 'topology-diagnostics': 'context_topologydiag_', 'topology-pcm': 'context_monolive_', 'voice-input': 'context_voiceinput_'}[a.set]
+        prefix = {'listener-scripts': 'context_scriptzone_', 'encoding': 'context_encoding_', 'schedule': 'context_schedule_', 'listener-chain': 'context_listenerchain_', 'listener-diagnostics': 'context_listenerdiag_', 'mono-live': 'context_monolive_', 'topology-diagnostics': 'context_topologydiag_', 'topology-pcm': 'context_monolive_', 'listener-live': 'context_topologydiag_', 'voice-input': 'context_voiceinput_'}[a.set]
         keep = set(re.findall(r'new\[\] \{ "'+prefix+r'[^"]+", "asset=([^"]+)"', source))
         assert keep, 'prepared controls have no mixer aliases'
         for mixer in (project/'Assets/Resources').glob('*.mixer'):
@@ -216,9 +216,9 @@ if a.set in ('settings', 'prologic', 'encoding', 'voice-input'):
         from prologic_pairs import compare_pairs
         assert compare_pairs(a.work/'capture', a.work/'paired-modes.jsonl.gz', a.release, a.rate) == 0
     raise SystemExit
-if a.set in ('zones', 'mono', 'recovery', 'listener-scripts', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm'):
-    selected = list(__import__('common').profile(a.set, a.rate)) if a.set in ('listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm') else schedule_cases() if a.set == 'schedule' else listener_script_cases() if a.set == 'listener-scripts' else recovery_cases() if a.set == 'recovery' else zone_cases() if a.set == 'zones' else mono_cases()
-    part(a.work, selected, prepared=a.set in ('recovery', 'listener-scripts', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm'))
+if a.set in ('zones', 'mono', 'recovery', 'listener-scripts', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'listener-live'):
+    selected = list(__import__('common').profile(a.set, a.rate)) if a.set in ('listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'listener-live') else schedule_cases() if a.set == 'schedule' else listener_script_cases() if a.set == 'listener-scripts' else recovery_cases() if a.set == 'recovery' else zone_cases() if a.set == 'zones' else mono_cases()
+    part(a.work, selected, prepared=a.set in ('recovery', 'listener-scripts', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'listener-live'))
     assert 'Assertion failed on expression:' not in (a.work/'editor.log').read_text(), 'Editor assertion'
     verify(a.work/'capture', a.release, a.rate, contexts=True, selected=selected, device_channels=a.device_channels)
     raise SystemExit

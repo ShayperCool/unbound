@@ -133,6 +133,17 @@ def topology_pcm_cases():
             if '"initial_chain=echo,chorus"' in match[0] or '"zone_control=' in match[0]]
 
 
+def listener_live_cases():
+    """One active listener; the isolated Mono Echo startup remains diagnostic."""
+    ordinary = ('_neutral_single', '_neutral_source', '_source_script_first_disabled',
+                '_listener_script_first_disabled')
+    disabled = ('_neutral_disabled', '_disabled_steady')
+    return [key for key in all_cases() if key.startswith('context_topologydiag_')
+            and (key.endswith(ordinary)
+                 or (key.startswith(('context_topologydiag_2_', 'context_topologydiag_4_'))
+                     and key.endswith(disabled)))]
+
+
 def profile(name, rate):
     """Maps each selected case to the number of frames compared (None: all)."""
     keys = cases()
@@ -148,6 +159,7 @@ def profile(name, rate):
     if name == 'topology-diagnostics': return dict.fromkeys(key for key in all_cases() if key.startswith('context_topologydiag_'))
     if name == 'mono-live': return dict.fromkeys(key for key in all_cases() if key.startswith('context_monolive_'))
     if name == 'topology-pcm': return dict.fromkeys(topology_pcm_cases())
+    if name == 'listener-live': return dict.fromkeys(listener_live_cases())
     if name in ('listener-chain', 'listener-diagnostics'):
         prefix = 'context_listenerchain_' if name == 'listener-chain' else 'context_listenerdiag_'
         return dict.fromkeys(key for key in all_cases() if key.startswith(prefix))
