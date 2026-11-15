@@ -288,7 +288,7 @@ class JanitorTests(unittest.TestCase):
         changed = False
         def racing_entries(index, directory, info):
             nonlocal changed
-            if directory == self.cache and not changed:
+            if Path(directory) == self.cache and not changed:
                 changed = True
                 (self.cache/'new-output').write_text('concurrent write')
                 raise OSError('run-cache directory changed during indexing: fixture')
@@ -309,7 +309,7 @@ class JanitorTests(unittest.TestCase):
         removed = False
         def disappearing_entries(index, directory, info):
             nonlocal removed
-            if directory == temporary and not removed:
+            if Path(directory) == temporary and not removed:
                 removed = True
                 temporary.rmdir()
                 raise FileNotFoundError(janitor.errno.ENOENT, 'concurrent cleanup', str(temporary))
@@ -353,7 +353,7 @@ class JanitorTests(unittest.TestCase):
         def moving_entries(index, directory, info):
             nonlocal moved
             entries = original(index, directory, info)
-            if directory == source and not moved:
+            if Path(directory) == source and not moved:
                 moved = True
                 source.rename(destination)
             return entries
@@ -414,6 +414,41 @@ class JanitorTests(unittest.TestCase):
             with self.assertRaisesRegex(OSError, 'reference directory moved'):
                 self.j.remove(run, kind='run', hours=72)
         self.assertTrue(run.is_dir())
+
+    def test_events_beyond_the_kernel_queue_are_kept_between_polls(self):
+        # More changes than fs.inotify.max_queued_events arrive while nothing polls (index
+        # pruning, process scans and removals do not poll); none may be lost to an overflow.
+        limit = int(Path('/proc/sys/fs/inotify/max_queued_events').read_text())
+        busy = self.cache/'busy'
+        busy.mkdir()
+        watcher = janitor.ReferenceWatch()
+        self.addCleanup(watcher.close)
+        watcher.add(busy)
+        for index in range(limit+2000):
+            (busy/f'{index}').mkdir()
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        (busy/f'{limit+2000}').symlink_to(run/'output')
+        pending = watcher.poll()
+        self.assertFalse(watcher.broken)
+        self.assertEqual(len(pending), limit+2000)
+        self.assertIn(run/'output', watcher.references)
+
+    def test_unpolled_events_beyond_the_memory_cap_fail_closed(self):
+        busy = self.cache/'busy'
+        busy.mkdir()
+        with patch.object(janitor, 'MAX_BUFFERED_EVENT_BYTES', 4096):
+            watcher = janitor.ReferenceWatch()
+            self.addCleanup(watcher.close)
+            watcher.add(busy)
+            for index in range(2000):
+                (busy/f'{index}').mkdir()
+            deadline = time.monotonic()+10
+            while not watcher.broken and time.monotonic() < deadline:
+                (busy/f'extra-{time.monotonic_ns()}').mkdir()
+                time.sleep(.05)
+            self.assertTrue(watcher.broken)
+            with self.assertRaisesRegex(OSError, 'invalid'):
+                watcher.poll()
 
     def test_reference_watch_overflow_fails_closed(self):
         run = self.directory('unbound-validation/runs/probe-20261101-old')

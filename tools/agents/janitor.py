@@ -5,11 +5,14 @@ Default is dry-run. Use --apply after inspecting it. JSON lines go to stdout and
 agents/janitor/<timestamp>.jsonl. No worktree or live checkout target is removed.
 """
 import argparse
+import contextlib
 import ctypes
 import errno
 import fcntl
 import json
 import os
+import select
+import threading
 from pathlib import Path
 import re
 import shutil
@@ -32,8 +35,14 @@ GIB = 1024**3
 DEFAULT_RUN_DAYS = 3
 DEFAULT_IDLE_HOURS = 24
 DEFAULT_MIN_FREE_GIB = 20
-DEFAULT_SCAN_SECONDS = 1200
-DEFAULT_RUN_SECONDS = 1800
+# A cold walk of the measured 2.3-million-directory cache took 25-30 minutes under load; the
+# discovery budget must hold one complete walk, and the run must end within the service's
+# 45-minute start timeout (install_janitor.py).
+DEFAULT_SCAN_SECONDS = 2100
+DEFAULT_RUN_SECONDS = 2400
+# Change events the reader thread may hold between polls before monitoring counts as broken,
+# as a kernel queue overflow does (the service's memory limit is 4 GiB).
+MAX_BUFFERED_EVENT_BYTES = 256*2**20
 MAX_REDISCOVERIES = 2
 # Keep land's lock independent of a service manager or a historical backlog.
 GATE_HANDOFF_SECONDS = 2
@@ -285,17 +294,52 @@ class ReferenceWatch:
         self.metadata_dirty = False
         self.unresolved, self.file_moves = {}, {}
         self.broken = False
+        # Millions of watched directories on a busy volume fill the kernel's event queue
+        # (fs.inotify.max_queued_events) within seconds. A reader thread moves events into
+        # memory continuously, so phases that do not poll (index pruning, process scans,
+        # removals) do not overflow it; poll() still handles every event in order.
+        self.chunks, self.chunks_lock, self.buffered = [], threading.Lock(), 0
+        self.stopping = threading.Event()
+        self.reader = threading.Thread(target=self.read_events, daemon=True)
+        self.reader.start()
+
+    def read_events(self):
+        waiter = select.poll()
+        waiter.register(self.fd, select.POLLIN)
+        while not self.stopping.is_set():
+            if not waiter.poll(100):
+                continue
+            # Read and store under the lock: poll() must never miss data in flight here.
+            with self.chunks_lock:
+                if self.buffered > MAX_BUFFERED_EVENT_BYTES:
+                    # Stop reading: the next poll() fails closed, as after a kernel overflow.
+                    self.broken = True
+                    return
+                try:
+                    data = os.read(self.fd, 1024*1024)
+                except BlockingIOError:
+                    continue
+                except OSError:
+                    self.broken = True  # events can no longer be read: fail closed
+                    return
+                self.chunks.append(data)
+                self.buffered += len(data)
 
     def close(self):
         if self.fd >= 0:
+            self.stopping.set()
+            self.reader.join()
             os.close(self.fd)
             self.fd = -1
 
     def add(self, directory):
+        # Called for every directory of the walk: string checks, a lazily parsed Path.
+        key = os.fspath(directory)
+        directory = Path(key)
         mask = self.CREATE | self.MOVED_FROM | self.MOVED_TO | self.DELETE_SELF | self.MOVE_SELF | self.ONLYDIR | self.NOFOLLOW
-        if any(inside(directory, root) for root in self.metadata_roots):
+        if any(inside(key, root) for root in self.metadata_roots):
             mask |= 0x2 | 0x4 | 0x8 | 0x200  # content, attributes, close-write, delete
-        descriptor = self.libc.inotify_add_watch(self.fd, os.fsencode(directory), mask)
+        descriptor = self.libc.inotify_add_watch(self.fd, os.fsencode(key), mask)
         if descriptor < 0:
             number = ctypes.get_errno()
             if number == errno.ENOENT:
@@ -328,69 +372,90 @@ class ReferenceWatch:
         if self.broken:
             raise ReferenceChanged('reference monitoring is invalid; remaining work retained')
         pending = set()
-        while True:
-            try:
-                data = os.read(self.fd, 1024*1024)
-            except BlockingIOError:
-                break
-            offset = 0
-            while offset < len(data):
-                descriptor, mask, cookie, length = struct.unpack_from('iIII', data, offset)
-                name = os.fsdecode(data[offset+16:offset+16+length].split(b'\0', 1)[0])
-                offset += 16+length
-                if mask & self.OVERFLOW:
-                    self.broken = True
-                    raise ReferenceChanged('reference change queue overflowed; batch deferred')
-                directory = self.directories.get(descriptor)
-                if directory is None or any(inside(directory, p) for p in self.retired):
-                    continue
-                if any(inside(directory, root) for root in self.metadata_roots):
-                    self.metadata_dirty = True
-                if mask & self.DELETE_SELF:
-                    # Its links are already protected. The watched parent catches
-                    # any replacement directory and its new links.
-                    self.directories.pop(descriptor, None)
-                    old = self.unresolved.pop(descriptor, directory)
-                    self.moves = {cookie: source for cookie, source in self.moves.items() if source != old}
-                    continue
-                if mask & self.MOVE_SELF:
-                    if descriptor in self.handled_moves:
-                        self.handled_moves.remove(descriptor)
+        def events():
+            # Events the reader thread saved first, then whatever the kernel holds now,
+            # with the reader held off so that no read is in flight.
+            with self.chunks_lock:
+                chunks, self.chunks, self.buffered = self.chunks, [], 0
+                yield from chunks
+                while True:
+                    try:
+                        yield os.read(self.fd, 1024*1024)
+                    except BlockingIOError:
+                        return
+        # Closing the stream releases the reader lock even when an event raises.
+        with contextlib.closing(events()) as stream:
+            for data in stream:
+                offset = 0
+                while offset < len(data):
+                    descriptor, mask, cookie, length = struct.unpack_from('iIII', data, offset)
+                    name = os.fsdecode(data[offset+16:offset+16+length].split(b'\0', 1)[0])
+                    offset += 16+length
+                    if mask & self.OVERFLOW:
+                        self.broken = True
+                        raise ReferenceChanged('reference change queue overflowed; batch deferred')
+                    directory = self.directories.get(descriptor)
+                    if directory is None or any(inside(directory, p) for p in self.retired):
                         continue
-                    self.unresolved[descriptor] = directory
-                    continue
-                if mask & self.IGNORED:
-                    self.directories.pop(descriptor, None)
-                    continue
-                path = directory/name
-                if mask & self.MOVED_FROM:
-                    if mask & self.ISDIR:
-                        self.moves[cookie] = path
-                    else:
-                        self.file_moves[cookie] = path
-                    continue
-                # The destination may have moved again or been deleted by now.
-                # Pair recorded directory events before inspecting current paths.
-                if mask & self.MOVED_TO:
-                    self.file_moves.pop(cookie, None)
-                if mask & self.MOVED_TO and mask & self.ISDIR:
-                    source = self.moves.pop(cookie, None)
-                    if source is not None:
-                        self.relocate(source, path)
-                try:
-                    if path.is_symlink():
-                        raw = path.readlink()
-                        target = raw if raw.is_absolute() else path.parent/raw
-                        self.references.update((Path(os.path.abspath(target)), target.resolve()))
-                        if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
-                            pending.add(target.resolve())
-                    elif path.is_dir() and not any(inside(path, p) for p in self.excluded):
-                        self.add(path)
-                        pending.add(path)
-                except OSError as error:
-                    if not gone(error):
-                        raise
+                    if any(inside(directory, root) for root in self.metadata_roots):
+                        self.metadata_dirty = True
+                    if mask & self.DELETE_SELF:
+                        # Its links are already protected. The watched parent catches
+                        # any replacement directory and its new links.
+                        self.directories.pop(descriptor, None)
+                        old = self.unresolved.pop(descriptor, directory)
+                        self.moves = {cookie: source for cookie, source in self.moves.items() if source != old}
+                        continue
+                    if mask & self.MOVE_SELF:
+                        if descriptor in self.handled_moves:
+                            self.handled_moves.remove(descriptor)
+                            continue
+                        self.unresolved[descriptor] = directory
+                        continue
+                    if mask & self.IGNORED:
+                        self.directories.pop(descriptor, None)
+                        continue
+                    path = directory/name
+                    if mask & self.MOVED_FROM:
+                        if mask & self.ISDIR:
+                            self.moves[cookie] = path
+                        else:
+                            self.file_moves[cookie] = path
+                        continue
+                    # The destination may have moved again or been deleted by now.
+                    # Pair recorded directory events before inspecting current paths.
+                    if mask & self.MOVED_TO:
+                        self.file_moves.pop(cookie, None)
+                    if mask & self.MOVED_TO and mask & self.ISDIR:
+                        source = self.moves.pop(cookie, None)
+                        if source is not None:
+                            self.relocate(source, path)
+                    try:
+                        if path.is_symlink():
+                            raw = path.readlink()
+                            target = raw if raw.is_absolute() else path.parent/raw
+                            self.references.update((Path(os.path.abspath(target)), target.resolve()))
+                            if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
+                                pending.add(target.resolve())
+                        elif path.is_dir() and not any(inside(path, p) for p in self.excluded):
+                            self.add(path)
+                            pending.add(path)
+                    except OSError as error:
+                        if not gone(error):
+                            raise
         return pending
+
+
+def link_target(path):
+    """(lexical target, resolved target, whether it is a directory), or the OSError."""
+    try:
+        path = Path(path)
+        target = Path(os.readlink(path))
+        target = target if target.is_absolute() else path.parent/target
+        resolved = target.resolve()
+        return Path(os.path.abspath(target)), resolved, target.is_dir()
+    except OSError as error:
+        return error
 
 
 def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root=None, prune=True):
@@ -399,20 +464,29 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
     A link within a removal candidate conservatively keeps its target too. We
     inspect configured caches and all checkouts; installations and compiler stores
     are excluded. An incomplete index walk permits no deletion.
+
+    The walk visits millions of directories, so its loop keeps paths as strings and
+    builds Path objects only for links.
     """
     found, visited = set(), {}
     excluded = set(p.resolve() for p in excluded)
+    excluded_names = {str(p) for p in excluded}
     roots = list(dict.fromkeys(Path(p).absolute() for p in roots))
     # One shared cache index for every scan root. No index files in checkouts.
     index = DirectoryIndex(index_root or roots[0], seconds=seconds)
+    join = os.path.join
     try:
-        pending = [root for root in roots if root.exists()]
+        pending = [str(root) for root in roots if root.exists()]
         while pending:
             batch = pending[-index.batch_size:]
             del pending[-index.batch_size:]
             if watcher:
+                # Watch before the stat that validates each listing; read the inodes first
+                # in parallel so the serial watch calls do not wait on the disk.
+                index.warm(batch)
                 for directory in batch:
                     watcher.add(directory)
+            listed = []
             for directory, info in zip(batch, index.stat_many(batch)):
                 if isinstance(info, OSError):
                     if gone(info):
@@ -424,7 +498,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                     if previous == directory:
                         continue
                     try:
-                        previous_info = previous.stat()
+                        previous_info = os.stat(previous)
                     except OSError as error:
                         if not gone(error):
                             raise
@@ -441,28 +515,32 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                         continue
                     raise
                 visited[identity] = directory
+                listed.append((directory, entries))
+            # Reading a link waits for its inode; resolve the batch's links in parallel.
+            links = [entry.path for _, entries in listed for entry in entries if entry.kind == 'link']
+            resolved = dict(zip(links, index.map(link_target, links)))
+            for directory, entries in listed:
                 for entry in entries:
-                    path = directory/entry.name
-                    if entry.is_symlink():
+                    if entry.kind == 'link':
+                        result = resolved[entry.path]
+                        if isinstance(result, OSError):
+                            if watcher and gone(result):
+                                continue
+                            raise result
                         # Keep lexical and resolved destinations. Lexical paths
                         # protect intermediate links in a chain too.
-                        try:
-                            target = Path(os.readlink(path))
-                        except OSError as error:
-                            if watcher and gone(error):
-                                continue
-                            raise
-                        target = target if target.is_absolute() else path.parent/target
-                        values = (Path(os.path.abspath(target)), target.resolve())
-                        found.update(values)
+                        lexical, target, is_dir = result
+                        found.update((lexical, target))
                         if watcher:
-                            watcher.references.update(values)
-                        if target.is_dir() and not any(inside(target.resolve(), p) for p in excluded):
-                            pending.append(target.resolve())
-                    elif entry.is_dir() and path not in excluded:
-                        pending.append(path)
+                            watcher.references.update((lexical, target))
+                        if is_dir and not any(inside(target, p) for p in excluded):
+                            pending.append(str(target))
+                    elif entry.kind == 'dir':
+                        path = join(directory, entry.name)
+                        if path not in excluded_names:
+                            pending.append(path)
             if watcher:
-                pending.extend(watcher.poll())
+                pending.extend(map(str, watcher.poll()))
                 if watcher.invalidated:
                     stale = [key for key, path in visited.items()
                              if any(inside(path, root) for root in watcher.invalidated)]
@@ -472,7 +550,11 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
         if watcher:
             found.update(watcher.references)
             if watcher.unresolved or watcher.moves or watcher.file_moves:
-                raise ReferenceChanged('reference directory moved or link names left the discovered view; remaining work retained')
+                # Name a few of the moves, so that churn that keeps runs from deleting can be traced.
+                moved = [str(path) for path in [*watcher.unresolved.values(), *watcher.moves.values(),
+                                                *watcher.file_moves.values()]][:5]
+                raise ReferenceChanged('reference directory moved or link names left the discovered view; '
+                                       'remaining work retained; for example: ' + ', '.join(moved))
         if prune:
             index.finish()
     finally:
