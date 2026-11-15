@@ -2296,7 +2296,7 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
     /// names.
     #[test]
     fn the_main_texture_group_is_for_its_own_sampler() {
-        let compile = |body: &str| {
+        let compile_for = |device, body: &str| {
             let source = format!(
                 "#pragma vertex vert\n#pragma fragment frag\nTexture2D _MainTex;\n\
                  SamplerState sampler_MainTex;\nSamplerState sampler_LinearClamp;\n\
@@ -2304,7 +2304,7 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
                  float4 frag(float4 p : SV_POSITION) : SV_Target {{ return {body}; }}\n"
             );
             let mut compiler = ShaderCompiler::new(Settings {
-                device: unbound_compat::GraphicsDevice::Metal,
+                device,
                 ..Settings::default()
             })
             .unwrap();
@@ -2312,6 +2312,7 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
                 .compile(&program(&source, false), &[], false)
                 .unwrap()
         };
+        let compile = |body: &str| compile_for(unbound_compat::GraphicsDevice::Metal, body);
         let own = compile("_MainTex.Sample(sampler_MainTex, p.xy)");
         assert!(own.main_texture);
         assert!(!own.textures.contains(&"_MainTex".to_string()));
@@ -2323,6 +2324,16 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             assert!(!other.main_texture, "{body}");
             let k = other.textures.iter().position(|t| t == "_MainTex").unwrap();
             assert!(!other.texture_slots[k].sampler, "{body}");
+        }
+        // OpenGL Core samples through the texture's own sampler whatever the program names: the
+        // main group for both samples; a load alone takes no sampler.
+        for (body, group) in [
+            ("_MainTex.Sample(sampler_MainTex, p.xy)", true),
+            ("_MainTex.Sample(sampler_LinearClamp, p.xy)", true),
+            ("_MainTex.Load(int3(p.xy, 0))", false),
+        ] {
+            let gl = compile_for(unbound_compat::GraphicsDevice::OpenGLCore, body);
+            assert_eq!(gl.main_texture, group, "{body}");
         }
     }
 

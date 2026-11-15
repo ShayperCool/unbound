@@ -133,8 +133,8 @@ fn main_texture_bindings(program: &Compiled) -> u32 {
 /// texture (`texture_aliases`), each sampler the program samples through (one per sampler state
 /// it uses, however many textures share it: `TextureSlot::sampler`) and the main texture group
 /// of a program that reads it are bindings of both stages, over the device's sampled textures
-/// or samplers of a stage. The main group's sampler counts whenever the group is read, also
-/// when the program samples the main texture through another sampler only.
+/// or samplers of a stage. A program reads the main group only where it samples the main
+/// texture through its own sampler (else the main texture is a slot of its own).
 fn texture_bindings_refused(program: &Compiled, limits: &wgpu::Limits) -> Option<String> {
     let textures = (program.textures.len() + program.texture_aliases.len()) as u32
         + main_texture_bindings(program);

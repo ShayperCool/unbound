@@ -93,6 +93,10 @@ fn a_layout_without_the_main_group_draws_beside_one_with_it() {
         eprintln!("skipped: no GPU adapter");
         return;
     };
+    if device.limits().max_storage_buffers_per_shader_stage == 0 {
+        eprintln!("skipped: the device binds no storage buffers");
+        return;
+    }
     let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: None,
