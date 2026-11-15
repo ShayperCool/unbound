@@ -229,8 +229,10 @@ namespace Unbound.Runtime
             // Explicit Camera.Render calls remain synchronous at their caller's current point.
             if (Compat.RenderingAfterPublicLoop)
             {
+                FrameTimings.BeginRendering();
                 try { s_FrameRendering?.Invoke(); }
                 catch (Exception e) { Debug.LogException(e); }
+                FrameTimings.EndRendering();
             }
             // In the measured Editor, these coroutine resumes follow every public loop leaf.
             // They still see the previous rendered-frame count (destroyphases, coreapis).
@@ -459,6 +461,7 @@ namespace Unbound.Runtime
         internal static unsafe void Tick(FrameInput* input)
         {
             if (!s_Booted) return;
+            FrameTimings.BeginFrame();
             if ((input->QuitRequested != 0 || System.Threading.Volatile.Read(ref s_SignalQuit) != 0) && Application.Internal_WantsToQuit())
                 s_QuitRequested = true;
             s_Input = input;
@@ -501,6 +504,7 @@ namespace Unbound.Runtime
             bool paced = input->Paced != 0;
             Trace.Memory();
             s_Input = null;
+            FrameTimings.Present();
             if (s_QuitRequested) Quit();
             else if (paced) Pace();
         }
@@ -514,6 +518,7 @@ namespace Unbound.Runtime
             Safety.EndFrame();
             bool paced = input->Paced != 0;
             s_Input = null;
+            FrameTimings.Present();
             if (s_QuitRequested) Quit();
             else if (paced) Pace();
         }
@@ -541,6 +546,7 @@ namespace Unbound.Runtime
             Jobs.JobSystem.Flush();
             Safety.EndFrame();
             s_Input = null;
+            FrameTimings.Present();
             if (s_QuitRequested) Quit();
         }
 

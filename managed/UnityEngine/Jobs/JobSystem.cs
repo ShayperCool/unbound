@@ -583,6 +583,21 @@ namespace Unbound.Runtime.Jobs
             }
         }
 
+        /// <summary>Hands one engine job to the workers now, leaving the caller's batched jobs
+        /// batched: engine work such as an asynchronous file read starts when it is requested.
+        /// A job whose dependencies are pending starts when they finish.</summary>
+        internal static void Start(JobHandle handle)
+        {
+            var record = Find(handle);
+            if (record == null) return;
+            lock (s_Lock)
+            {
+                if (!s_Batch.Remove(record)) return;
+                record.Flushed = true;
+                if (record.PendingDependencies == 0) EnqueueLocked(record);
+            }
+        }
+
         /// <summary>Before the job's first participant runs (its dependencies done): deferred arrays
         /// take their lists' buffers and lengths, and a deferred job its iteration count.</summary>
         static void PrepareToRun(JobRecord record)

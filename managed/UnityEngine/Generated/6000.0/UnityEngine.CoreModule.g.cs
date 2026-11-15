@@ -66,30 +66,6 @@ namespace Unity.IO.Archive
 }
 namespace Unity.IO.LowLevel.Unsafe
 {
-    public enum AssetLoadingSubsystem
-    {
-        Other = 0,
-        Texture = 1,
-        VirtualTexture = 2,
-        Mesh = 3,
-        Audio = 4,
-        Scripts = 5,
-        EntitiesScene = 6,
-        EntitiesStreamBinaryReader = 7,
-        FileInfo = 8,
-        ContentLoading = 9,
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class AsyncReadManager
-    {
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.ReadHandle Read(string filename, global::Unity.IO.LowLevel.Unsafe.ReadCommand* readCmds, uint readCmdCount, string assetName = "", ulong typeID = 0UL, global::Unity.IO.LowLevel.Unsafe.AssetLoadingSubsystem subsystem = (global::Unity.IO.LowLevel.Unsafe.AssetLoadingSubsystem)5) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManager.Read"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.ReadHandle GetFileInfo(string filename, global::Unity.IO.LowLevel.Unsafe.FileInfoResult* result) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManager.GetFileInfo"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.ReadHandle ReadDeferred(in global::Unity.IO.LowLevel.Unsafe.FileHandle fileHandle, global::Unity.IO.LowLevel.Unsafe.ReadCommandArray* readCmdArray, global::Unity.Jobs.JobHandle dependency) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManager.ReadDeferred"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.ReadHandle Read(in global::Unity.IO.LowLevel.Unsafe.FileHandle fileHandle, global::Unity.IO.LowLevel.Unsafe.ReadCommandArray readCmdArray) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManager.Read"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.FileHandle OpenFileAsync(string fileName) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManager.OpenFileAsync"); return default; }
-        [global::Unbound.Stub] internal static global::Unity.Jobs.JobHandle CloseFileAsync(in global::Unity.IO.LowLevel.Unsafe.FileHandle fileHandle, global::Unity.Jobs.JobHandle dependency) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManager.CloseFileAsync"); return default; }
-        [global::Unbound.Stub] public static global::Unity.Jobs.JobHandle CloseCachedFileAsync(string fileName, global::Unity.Jobs.JobHandle dependency = default) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManager.CloseCachedFileAsync"); return default; }
-    }
     [global::Unbound.Stub]
     public unsafe static partial class AsyncReadManagerMetrics
     {
@@ -208,38 +184,10 @@ namespace Unity.IO.LowLevel.Unsafe
         public int NumberOfAsyncReads { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.NumberOfAsyncReads"); return default; } }
         public int NumberOfSyncReads { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.NumberOfSyncReads"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct FileHandle
-    {
-        [global::Unbound.Stub] internal readonly global::System.IntPtr fileCommandPtr;
-        [global::Unbound.Stub] internal readonly int version;
-        [global::Unbound.Stub] public bool IsValid() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.FileHandle.IsValid"); return default; }
-        [global::Unbound.Stub] public global::Unity.Jobs.JobHandle Close(global::Unity.Jobs.JobHandle dependency = default) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.FileHandle.Close"); return default; }
-        public global::Unity.IO.LowLevel.Unsafe.FileStatus Status { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.FileHandle.Status"); return default; } }
-        public global::Unity.Jobs.JobHandle JobHandle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.FileHandle.JobHandle"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct FileInfoResult
-    {
-        [global::Unbound.Stub] public long FileSize;
-        [global::Unbound.Stub] public global::Unity.IO.LowLevel.Unsafe.FileState FileState;
-    }
     public enum FileReadType
     {
         Sync = 0,
         Async = 1,
-    }
-    public enum FileState
-    {
-        Absent = 0,
-        Exists = 1,
-    }
-    public enum FileStatus
-    {
-        Closed = 0,
-        Pending = 1,
-        Open = 2,
-        OpenFailed = 3,
     }
     public enum Priority
     {
@@ -253,42 +201,6 @@ namespace Unity.IO.LowLevel.Unsafe
         Reading = 2,
         Completed = 3,
         Failed = 4,
-        Canceled = 5,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct ReadCommand
-    {
-        [global::Unbound.Stub] public void* Buffer;
-        [global::Unbound.Stub] public long Offset;
-        [global::Unbound.Stub] public long Size;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct ReadCommandArray
-    {
-        [global::Unbound.Stub] public global::Unity.IO.LowLevel.Unsafe.ReadCommand* ReadCommands;
-        [global::Unbound.Stub] public int CommandCount;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct ReadHandle : global::System.IDisposable
-    {
-        [global::Unbound.Stub] internal global::System.IntPtr ptr;
-        [global::Unbound.Stub] internal int version;
-        [global::Unbound.Stub] public bool IsValid() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.ReadHandle.IsValid"); return default; }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.ReadHandle.Dispose"); }
-        [global::Unbound.Stub] public void Cancel() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.ReadHandle.Cancel"); }
-        [global::Unbound.Stub] public long GetBytesRead() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.ReadHandle.GetBytesRead"); return default; }
-        [global::Unbound.Stub] public long GetBytesRead(uint readCommandIndex) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.ReadHandle.GetBytesRead"); return default; }
-        [global::Unbound.Stub] public ulong* GetBytesReadArray() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.ReadHandle.GetBytesReadArray"); return default; }
-        public global::Unity.Jobs.JobHandle JobHandle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.ReadHandle.JobHandle"); return default; } }
-        public global::Unity.IO.LowLevel.Unsafe.ReadStatus Status { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.ReadHandle.Status"); return default; } }
-        public long ReadCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.ReadHandle.ReadCount"); return default; } }
-    }
-    public enum ReadStatus
-    {
-        Complete = 0,
-        InProgress = 1,
-        Failed = 2,
-        Truncated = 4,
         Canceled = 5,
     }
     [global::Unbound.Stub]
@@ -1189,32 +1101,6 @@ namespace UnityEngine
     [global::Unbound.Stub]
     internal unsafe partial class FailedToLoadScriptObject : global::UnityEngine.Object
     {
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct FrameTiming
-    {
-        [global::Unbound.Stub] public double cpuFrameTime;
-        [global::Unbound.Stub] public double cpuMainThreadFrameTime;
-        [global::Unbound.Stub] public double cpuMainThreadPresentWaitTime;
-        [global::Unbound.Stub] public double cpuRenderThreadFrameTime;
-        [global::Unbound.Stub] public double gpuFrameTime;
-        [global::Unbound.Stub] public ulong frameStartTimestamp;
-        [global::Unbound.Stub] public ulong firstSubmitTimestamp;
-        [global::Unbound.Stub] public ulong cpuTimePresentCalled;
-        [global::Unbound.Stub] public ulong cpuTimeFrameComplete;
-        [global::Unbound.Stub] public float heightScale;
-        [global::Unbound.Stub] public float widthScale;
-        [global::Unbound.Stub] public uint syncInterval;
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class FrameTimingManager
-    {
-        [global::Unbound.Stub] public static bool IsFeatureEnabled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrameTimingManager.IsFeatureEnabled"); return default; }
-        [global::Unbound.Stub] public static void CaptureFrameTimings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrameTimingManager.CaptureFrameTimings"); }
-        [global::Unbound.Stub] public static uint GetLatestTimings(uint numFrames, global::UnityEngine.FrameTiming[] timings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrameTimingManager.GetLatestTimings"); return default; }
-        [global::Unbound.Stub] public static float GetVSyncsPerSecond() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrameTimingManager.GetVSyncsPerSecond"); return default; }
-        [global::Unbound.Stub] public static ulong GetGpuTimerFrequency() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrameTimingManager.GetGpuTimerFrequency"); return default; }
-        [global::Unbound.Stub] public static ulong GetCpuTimerFrequency() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.FrameTimingManager.GetCpuTimerFrequency"); return default; }
     }
     unsafe partial class GL
     {
