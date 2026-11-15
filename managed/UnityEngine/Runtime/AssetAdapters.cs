@@ -43,6 +43,7 @@ namespace Unbound.Runtime
             { typeof(TextAsset), new Adapter<TextAsset>((asset, body, resolver) => asset.ReadSerialized(body, resolver), asset => asset.CloneObject()) },
             { typeof(AudioClip), new Adapter<AudioClip>((asset, body, resolver) => asset.ReadSerialized(body, resolver), asset => asset.CloneObject()) },
             { typeof(Font), new Adapter<Font>((asset, body, resolver) => asset.ReadSerialized(body, resolver), asset => asset.CloneObject()) },
+            { typeof(UnityEditor.VFX.VisualEffectResource), new Adapter<UnityEditor.VFX.VisualEffectResource>((asset, body, resolver) => asset.ReadSerialized(body, resolver), asset => asset.CloneObject()) },
         };
 
         static Adapter Find(Type type)

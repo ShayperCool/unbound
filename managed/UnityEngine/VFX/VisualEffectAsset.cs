@@ -157,6 +157,9 @@ namespace Unbound.Runtime
         internal VFXEventDesc[] Events = Array.Empty<VFXEventDesc>();
         internal VFXGPUBufferDesc[] GpuBuffers = Array.Empty<VFXGPUBufferDesc>();
         internal VFXCPUBufferDesc[] CpuBuffers = Array.Empty<VFXCPUBufferDesc>();
+        /// <summary>Per CPU buffer: its initial contents, 32-bit words (the compiler's own copy
+        /// may be released once it handed the graph over).</summary>
+        internal uint[][] CpuInitialWords = Array.Empty<uint[]>();
         internal VFXTemporaryGPUBufferDesc[] TemporaryBuffers = Array.Empty<VFXTemporaryGPUBufferDesc>();
         internal ShadowCastingMode ShadowCastingMode;
         internal MotionVectorGenerationMode MotionVectorGenerationMode;
@@ -166,14 +169,64 @@ namespace Unbound.Runtime
         int[] m_ExposedIds = Array.Empty<int>();
         int[] m_SystemIds = Array.Empty<int>();
 
-        /// <summary>Resolves the names lookups go by; called once the arrays are set.</summary>
+        /// <summary>Per expression (the per-event ones after the others): its value type.</summary>
+        internal VFXValueType[] ExpressionTypes = Array.Empty<VFXValueType>();
+
+        /// <summary>Per expression: where an effect keeps its value (<see cref="VisualEffectValues"/>):
+        /// the first of its 32-bit words, or its object slot for an object type; -1 without a value.</summary>
+        internal int[] ValueOffsets = Array.Empty<int>();
+
+        /// <summary>Per expression: the index of its constant in <see cref="Values"/>, -1 for a computed one.</summary>
+        internal int[] ConstantOf = Array.Empty<int>();
+
+        /// <summary>How many words and object slots the values of all expressions take.</summary>
+        internal int WordCount, ObjectCount;
+
+        /// <summary>The layout of the events' attributes: the first CPU buffer, by attribute name id.</summary>
+        internal int[] EventAttributeIds = Array.Empty<int>();
+
+        /// <summary>Resolves the names lookups go by and lays out the expression values; called
+        /// once the arrays are set.</summary>
         internal void Seal()
         {
             m_ExposedIds = new int[Exposed.Length];
             for (int i = 0; i < Exposed.Length; i++) m_ExposedIds[i] = Shader.PropertyToID(Exposed[i].mapping.name);
             m_SystemIds = new int[Systems.Length];
             for (int i = 0; i < Systems.Length; i++) m_SystemIds[i] = Shader.PropertyToID(Systems[i].name);
+
+            int count = Expressions.Length + ExpressionsPerSpawnEventAttribute.Length;
+            ExpressionTypes = new VFXValueType[count];
+            ValueOffsets = new int[count];
+            ConstantOf = new int[count];
+            WordCount = ObjectCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                var type = ExpressionTypes[i] = ExpressionType(i);
+                ConstantOf[i] = -1;
+                if (type == VFXValueType.None || type > VFXValueType.SkinnedMeshRenderer || type == VFXValueType.Spline) ValueOffsets[i] = -1;
+                else if (IsObjectType(type)) ValueOffsets[i] = ObjectCount++;
+                else
+                {
+                    ValueOffsets[i] = WordCount;
+                    WordCount += VFXExpressionHelper.GetSizeOfType(type);
+                }
+            }
+            for (int i = 0; i < Values.Length; i++)
+                if (Values[i] != null && Values[i].expressionIndex < (uint)count) ConstantOf[Values[i].expressionIndex] = i;
+
+            var layout = CpuBuffers.Length > 0 ? CpuBuffers[0].layout : null;
+            EventAttributeIds = new int[layout?.Length ?? 0];
+            for (int i = 0; i < EventAttributeIds.Length; i++) EventAttributeIds[i] = Shader.PropertyToID(layout[i].name);
         }
+
+        /// <summary>Whether a value of a type is an object (a texture, mesh, renderer, buffer,
+        /// curve or gradient) rather than 32-bit words.</summary>
+        internal static bool IsObjectType(VFXValueType type) =>
+            IsTextureType(type) || type == VFXValueType.Curve || type == VFXValueType.ColorGradient || type == VFXValueType.Mesh
+            || type == VFXValueType.Buffer || type == VFXValueType.SkinnedMeshRenderer;
+
+        /// <summary>The types a texture property can have: the texture dimensions and a camera buffer.</summary>
+        internal static bool IsTextureType(VFXValueType type) => type >= VFXValueType.Texture2D && type <= VFXValueType.CameraBuffer;
 
         /// <summary>The index of the exposed property of a name, -1 without one.</summary>
         internal int ExposedIndex(int nameID) => Array.IndexOf(m_ExposedIds, nameID);
@@ -195,6 +248,12 @@ namespace Unbound.Runtime
 
         internal VFXValueType ExposedType(int exposedIndex) => ExpressionType(Exposed[exposedIndex].mapping.index);
 
+        /// <summary>The index of the exposed property an effect's sheet entry stands for is its
+        /// index here: a sheet lists the exposed properties in this order.</summary>
+        internal int ExposedCount => Exposed.Length;
+
+        internal int ExposedId(int exposedIndex) => m_ExposedIds[exposedIndex];
+
         internal void SystemNames(List<string> names, VFXSystemType? type)
         {
             if (names == null) throw new ArgumentNullException(nameof(names));
@@ -214,11 +273,13 @@ namespace Unbound.Runtime
                 case VFXValueType.Float4: return typeof(Vector4);
                 case VFXValueType.Int32: return typeof(int);
                 case VFXValueType.Uint32: return typeof(uint);
-                case VFXValueType.Texture2D: return typeof(Texture2D);
-                case VFXValueType.Texture2DArray: return typeof(Texture2DArray);
-                case VFXValueType.Texture3D: return typeof(Texture3D);
-                case VFXValueType.TextureCube: return typeof(Cubemap);
-                case VFXValueType.TextureCubeArray: return typeof(CubemapArray);
+                case VFXValueType.Texture2D:
+                case VFXValueType.Texture2DArray:
+                case VFXValueType.Texture3D:
+                case VFXValueType.TextureCube:
+                case VFXValueType.TextureCubeArray:
+                    // Every texture property lists as a Texture; GetTextureDimension tells them apart.
+                    return typeof(Texture);
                 case VFXValueType.Matrix4x4: return typeof(Matrix4x4);
                 case VFXValueType.Curve: return typeof(AnimationCurve);
                 case VFXValueType.ColorGradient: return typeof(Gradient);

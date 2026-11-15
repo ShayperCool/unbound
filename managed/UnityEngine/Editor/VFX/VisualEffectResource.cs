@@ -39,7 +39,7 @@ namespace UnityEditor.VFX
     /// save one are not implemented.
     /// </summary>
     [ClassId(2058629511)]
-    internal partial class VisualEffectResource : Object, ISerializedAsset
+    internal partial class VisualEffectResource : Object
     {
         public const string Extension = ".vfx";
         public const int CurrentVersion = 1;
@@ -72,7 +72,7 @@ namespace UnityEditor.VFX
 
         public VisualEffectResource() { }
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_Graph = resolver.Resolve(body.Ref("m_Graph"), typeof(ScriptableObject)) as ScriptableObject;
             var infos = body.Get("m_Infos");
@@ -222,9 +222,17 @@ namespace UnityEditor.VFX
             m_Data = VisualEffectCompiledData.Empty;
             m_Models = Array.Empty<Object[]>();
             m_ShaderSources = Array.Empty<VFXShaderSourceDesc>();
+            m_RuntimeVersion = uncompiledVersion;
         }
 
-        public void MarkRuntimeVersion() { }
+        /// <summary>The runtime data version this resource's compiled graph is marked with: 0
+        /// until <see cref="MarkRuntimeVersion"/> or a compile marks it current.</summary>
+        internal uint m_RuntimeVersion;
+
+        public void MarkRuntimeVersion() => m_RuntimeVersion = VisualEffectAsset.RuntimeDataVersion;
+
+        /// <summary>A copy with the same graph and settings and no compiled graph.</summary>
+        internal Object CloneObject() => new VisualEffectResource { m_Name = m_Name, m_Graph = m_Graph, m_Settings = m_Settings };
 
         /// <summary>
         /// Takes a compiled graph from the package's compiler. As the Editor, it first drops the
@@ -265,6 +273,7 @@ namespace UnityEditor.VFX
                 Events = eventDesc ?? Array.Empty<VFXEventDesc>(),
                 GpuBuffers = gpuBufferDesc ?? Array.Empty<VFXGPUBufferDesc>(),
                 CpuBuffers = cpuBufferDesc ?? Array.Empty<VFXCPUBufferDesc>(),
+                CpuInitialWords = InitialWords(cpuBufferDesc),
                 TemporaryBuffers = temporaryBufferDesc ?? Array.Empty<VFXTemporaryGPUBufferDesc>(),
                 ShadowCastingMode = shadowCastingMode,
                 MotionVectorGenerationMode = motionVectorGenerationMode,
@@ -281,6 +290,7 @@ namespace UnityEditor.VFX
             m_ShaderSources = shaderSourceDesc ?? Array.Empty<VFXShaderSourceDesc>();
             m_Models = models;
             m_Data = data;
+            MarkRuntimeVersion();
 
             string repeated = null;
             for (int i = 0; i < data.Events.Length && repeated == null; i++)
@@ -295,6 +305,14 @@ namespace UnityEditor.VFX
                 data.Events = Array.Empty<VFXEventDesc>();
                 throw new ArgumentException($"Event named '{repeated}' is referenced twice");
             }
+        }
+
+        static uint[][] InitialWords(VFXCPUBufferDesc[] buffers)
+        {
+            if (buffers == null) return Array.Empty<uint[]>();
+            var words = new uint[buffers.Length][];
+            for (int i = 0; i < buffers.Length; i++) words[i] = buffers[i].initialData?.m_Words.ToArray() ?? Array.Empty<uint>();
+            return words;
         }
 
         /// <summary>The layer of a system that takes no part in the layer order.</summary>

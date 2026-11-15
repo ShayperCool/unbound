@@ -84,7 +84,8 @@ namespace UnityEditor.VFX
 
         public VFXCPUBufferData() { }
 
-        public void Dispose() { }
+        /// <summary>Releases the words pushed (a graph taken from the compiler has its own copy).</summary>
+        public void Dispose() => m_Words.Clear();
 
         public void PushUInt(uint v) => m_Words.Add(v);
 

@@ -468,7 +468,7 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Legacy file ids are <c>classID * 100000</c> (+2 for each further object of the class).</summary>
-        const long LegacyClassStride = 100000;
+        internal const long LegacyClassStride = 100000;
 
         static bool IsScriptObject(Object obj) => obj is MonoBehaviour || obj is ScriptableObject;
 

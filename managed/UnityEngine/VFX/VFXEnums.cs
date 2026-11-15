@@ -186,13 +186,21 @@ namespace UnityEngine.VFX
     internal enum VFXInstancingDisabledReason
     {
         None = 0,
+        [System.ComponentModel.Description("A system is using indirect draw.")]
         IndirectDraw = 1,
+        [System.ComponentModel.Description("The effect is using output events.")]
         OutputEvent = 2,
+        [System.ComponentModel.Description("The effect is using GPU events.")]
         GPUEvent = 4,
+        [System.ComponentModel.Description("An Initialize node has Bounds Mode set to 'Automatic'.")]
         AutomaticBounds = 8,
+        [System.ComponentModel.Description("The effect contains a mesh output.")]
         MeshOutput = 16,
+        [System.ComponentModel.Description("The effect has exposed texture, mesh or graphics buffer properties.")]
         ExposedObject = 32,
+        [System.ComponentModel.Description("The effect uses Shader Keywords in particle output.")]
         ShaderKeyword = 64,
+        [System.ComponentModel.Description("Unknown reason.")]
         Unknown = -1,
     }
 
@@ -200,7 +208,9 @@ namespace UnityEngine.VFX
     internal enum VFXInstancingMode
     {
         Disabled = -1,
+        [InspectorName("Automatic batch capacity")]
         Auto = 0,
+        [InspectorName("Custom batch capacity")]
         Custom = 1,
     }
 

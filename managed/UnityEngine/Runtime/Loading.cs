@@ -13,6 +13,9 @@ namespace Unbound.Runtime
         internal string Path;
         internal string Guid;
         internal readonly Dictionary<long, Object> Objects = new Dictionary<long, Object>();
+        /// <summary>Objects of the source file that are no part of what it imports to (a Visual
+        /// Effect Graph's resource and models): references find them, asset listings do not.</summary>
+        internal HashSet<Object> SourceObjects;
         internal readonly List<GameObject> Roots = new List<GameObject>();
         // Scene hierarchy queries use the serialized root list. Activation retains the
         // construction traversal: Unity does not specify relative callbacks across objects.
@@ -732,7 +735,8 @@ namespace Unbound.Runtime
             var list = new List<Object>();
             if (file.MainObject != null) list.Add(file.MainObject);
             foreach (var o in file.Objects.Values)
-                if (o != file.MainObject && (hierarchy || !(o is Component) && !(o is GameObject))) list.Add(o);
+                if (o != file.MainObject && (hierarchy || !(o is Component) && !(o is GameObject))
+                    && (file.SourceObjects == null || !file.SourceObjects.Contains(o))) list.Add(o);
             return list;
         }
 

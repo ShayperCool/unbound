@@ -126,6 +126,8 @@ namespace Unbound.Runtime
                 if (!ReferenceEquals(o, resource) && !ReferenceEquals(o, main)) contents.Add(o);
             resource.m_Contents = contents.ToArray();
             resource.m_Object = main;
+            // The asset is what the import makes: the file's own objects are its source.
+            file.SourceObjects = new HashSet<Object>(contents, ReferenceEqualityComparer.Instance) { resource };
             if (main is VisualEffectAsset asset) Build(resource, asset, file);
             NotifyImported(info.Path);
             return file;
@@ -244,7 +246,7 @@ namespace Unbound.Runtime
                         continue;
                     }
                     shaders[i].IsPersistentAsset = true;
-                    AddObject(file, sources[i].name, shaders[i]);
+                    AddObject(file, sources[i].compute ? ComputeShaderClassId : ShaderClassId, shaders[i]);
                     imported.Add(shaders[i]);
                 }
 
@@ -259,6 +261,7 @@ namespace Unbound.Runtime
                     Events = compiled.Events,
                     GpuBuffers = compiled.GpuBuffers,
                     CpuBuffers = compiled.CpuBuffers,
+                    CpuInitialWords = compiled.CpuInitialWords,
                     TemporaryBuffers = compiled.TemporaryBuffers,
                     ShadowCastingMode = compiled.ShadowCastingMode,
                     MotionVectorGenerationMode = compiled.MotionVectorGenerationMode,
@@ -304,14 +307,14 @@ namespace Unbound.Runtime
                                         s_WarnedVariantLock = true;
                                         Debug.LogWarning($"Unbound: {file.Path}: the output '{shader.m_Name}' draws with a material variant; the Editor locks GPU instancing in the variant's parent, which Unbound does not do yet (a script changing the variant's enableInstancing takes effect here).");
                                     }
-                                    AddObject(file, parent.m_Name, parent);
+                                    AddObject(file, MaterialClassId, parent);
                                     imported.Add(parent);
                                 }
                                 else
                                 {
                                     material.enableInstancing = instanced;
                                 }
-                                AddObject(file, material.m_Name, material);
+                                AddObject(file, MaterialClassId, material);
                                 imported.Add(material);
                                 try { resource.SetupMaterial(material, tasks[t].model); }
                                 catch (Exception e) { Debug.LogException(e); }
@@ -330,13 +333,20 @@ namespace Unbound.Runtime
             }
         }
 
-        static void AddObject(LoadedFile file, string identifier, Object obj)
+        /// <summary>The file id step between two objects of one class an import makes.</summary>
+        const long ImportedIdStep = 2;
+
+        /// <summary>Gives an object the import made its file id: its class id times
+        /// <see cref="ScriptedImports.LegacyClassStride"/>, then every second id, in the order the
+        /// import makes the objects of that class (7200000, 7200002, ... for compute shaders).</summary>
+        static void AddObject(LoadedFile file, int classId, Object obj)
         {
-            long id = ScriptedImports.FileId(identifier, obj);
-            // Two objects of one class and name: the later keeps the next free id.
-            while (file.Objects.ContainsKey(id)) id++;
+            long id = classId * ScriptedImports.LegacyClassStride;
+            while (file.Objects.ContainsKey(id)) id += ImportedIdStep;
             file.Objects[id] = obj;
         }
+
+        const int MaterialClassId = 21, ShaderClassId = 48, ComputeShaderClassId = 72;
 
         static void RemoveObject(LoadedFile file, Object obj)
         {
