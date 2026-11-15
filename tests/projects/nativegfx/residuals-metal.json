@@ -36,12 +36,6 @@
  "A Blit from a screen camera's target: green 0x36 against the Editor's 0x37. The batch-mode Editor's screen is BGRA8Unorm without sRGB encoding and keeps the camera's linear 0.214 as 0x37; Unbound's stand-in is sRGB-encoded, where that value (encoded 127.5) is stored as 127 on Metal, presumably a tie (as the Editor's Metal device stores it, srgb.drawn.bytes). The windowed Editor's Game view is sRGB (BGRA8Unorm_sRGB) and reads 0x7f here (metal-windowed.jsonl)": [
   "screencamera.drawn.pixels"
  ],
- "ETC2_RGBA1, signed EAC and PVRTC layered textures: the macOS Editor keeps their blocks (8 or 32 bytes for a 4x4 level); Unbound has no decoder or renderer format of them (Texture2D neither) and keeps RGBA32 texels, warned (64 bytes). Queued": [
-  "array.make.EAC_R_SIGNED",
-  "array.make.ETC2_RGBA1",
-  "array.make.PVRTC_RGB2",
-  "array.make.PVRTC_RGBA4"
- ],
  "A dynamically scaled render texture's content after a change of scale: the macOS Editor's still holds the color it was cleared to at the old scale (uniform, so whether it is stretched or kept in place is not measured); Unbound remakes the texture at the new size, cleared. Queued": [
   "dynres.reset.texels"
  ],
@@ -54,5 +48,11 @@
  ],
  "A screen camera's command buffer blitting CameraTarget onto itself through a shader: the batch-mode Editor's shader samples white (half of 1 everywhere), Unbound's samples the camera's image (a copy made before the draw); one measured case, the Editor's mechanism not established. Queued": [
   "screenself.blit.pixels"
+ ],
+ "PVRTC levels decode with texture2ddecoder's PVRTC decoder, not the Editor's: at 4 bits a texel 39 of 64 texels differ, in blue only, by up to 6; at 2 bits 55 of 64 differ, by up to 153 (alpha). The blocks, level sizes and uploads are kept as the Editor keeps them (array.make.PVRTC_*). Warned; queued (an exact decoder)": [
+  "array.decode.PVRTC_RGB2",
+  "array.decode.PVRTC_RGB4",
+  "array.decode.PVRTC_RGBA2",
+  "array.decode.PVRTC_RGBA4"
  ]
 }

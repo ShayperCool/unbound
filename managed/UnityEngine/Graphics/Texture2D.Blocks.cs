@@ -481,6 +481,41 @@ namespace Unbound.Runtime
         };
         internal static bool IsEac(UnityEngine.TextureFormat format) =>
             format is UnityEngine.TextureFormat.EAC_R or UnityEngine.TextureFormat.EAC_RG;
+
+        internal static bool IsSignedEac(UnityEngine.TextureFormat format) =>
+            format is UnityEngine.TextureFormat.EAC_R_SIGNED or UnityEngine.TextureFormat.EAC_RG_SIGNED;
+
+        internal static bool IsPvrtc(UnityEngine.TextureFormat format) =>
+            format is UnityEngine.TextureFormat.PVRTC_RGB2 or UnityEngine.TextureFormat.PVRTC_RGBA2
+                or UnityEngine.TextureFormat.PVRTC_RGB4 or UnityEngine.TextureFormat.PVRTC_RGBA4;
+
+        /// <summary>Bytes of one block of a format a layered texture keeps as blocks: those of
+        /// <see cref="BlockBytes"/>, and ETC2_RGBA1, signed EAC and PVRTC, which only layered
+        /// textures keep (as the macOS Editor's do: tests/projects/nativegfx array.make.*); 0 for
+        /// the others.</summary>
+        internal static int LayeredBlockBytes(UnityEngine.TextureFormat format) => BlockBytes(format) switch
+        {
+            > 0 and var bytes => bytes,
+            _ => format switch
+            {
+                UnityEngine.TextureFormat.ETC2_RGBA1 or UnityEngine.TextureFormat.EAC_R_SIGNED => 8,
+                UnityEngine.TextureFormat.EAC_RG_SIGNED => 16,
+                _ when IsPvrtc(format) => 8,
+                _ => 0,
+            },
+        };
+
+        /// <summary>Bytes a texel of a block format takes on its way to the renderer when its
+        /// blocks are decoded first: EAC's 16-bit channels (one or two, signed for signed EAC),
+        /// RGBA8 for ETC2_RGBA1 and PVRTC; 0 where the blocks themselves go up.</summary>
+        internal static int DecodedUploadBytes(UnityEngine.TextureFormat format) => format switch
+        {
+            UnityEngine.TextureFormat.EAC_R or UnityEngine.TextureFormat.EAC_R_SIGNED => 2,
+            UnityEngine.TextureFormat.EAC_RG or UnityEngine.TextureFormat.EAC_RG_SIGNED => 4,
+            UnityEngine.TextureFormat.ETC2_RGBA1 => 4,
+            _ when IsPvrtc(format) => 4,
+            _ => 0,
+        };
         internal static bool IsAstc(UnityEngine.TextureFormat format) =>
             (int)format >= (int)UnityEngine.TextureFormat.ASTC_4x4 && (int)format <= (int)UnityEngine.TextureFormat.ASTC_12x12
             || IsAstcHdr(format);
@@ -531,7 +566,8 @@ namespace Unbound.Runtime
         /// here).</summary>
         internal static bool NativeDecoded(UnityEngine.TextureFormat format) => format is UnityEngine.TextureFormat.BC6H
             or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB
-            or UnityEngine.TextureFormat.ETC2_RGBA8 || IsAstc(format) || IsEac(format);
+            or UnityEngine.TextureFormat.ETC2_RGBA8 or UnityEngine.TextureFormat.ETC2_RGBA1 || IsAstc(format) || IsEac(format)
+            || IsPvrtc(format);
 
         /// <summary>The renderer's packet code of a block format: BC1, BC3 and BC7 colour (sampled
         /// through an sRGB view in linear projects) or linear data; BC4, BC5 and BC6H, ETC and ASTC.
@@ -548,7 +584,7 @@ namespace Unbound.Runtime
             UnityEngine.TextureFormat.ETC2_RGBA8 => linear ? 68 : 67,
             _ when IsAstcHdr(format) => 59 + (int)format - 66,
             _ when IsAstc(format) => (linear ? 53 : 47) + (int)format - 48,
-            _ when IsEac(format) => -1,
+            _ when IsEac(format) || IsSignedEac(format) || IsPvrtc(format) || format == UnityEngine.TextureFormat.ETC2_RGBA1 => -1,
             _ => throw new ArgumentException($"{format} is not a block format"),
         };
 
@@ -650,6 +686,8 @@ namespace Unbound.Runtime
         /// channels for EAC with `eac16`; rows in the blocks' order.</summary>
         internal static byte[] DecodeRgba(UnityEngine.TextureFormat format, ReadOnlySpan<byte> blocks, int width, int height, bool floats = false, bool eac16 = false)
         {
+            if (IsPvrtc(format))
+                Unbound.Runtime.Stubs.Ignored("PVRTC decoding", "approximates the Editor's: at 4 bits a texel blue may differ by a few steps, at 2 bits most texels differ (tests/projects/nativegfx array.decode.PVRTC_*)");
             var json = Native.Call("texture-decode-blocks", JsonSerializer.Serialize(new
             {
                 format = (int)format,
@@ -672,7 +710,7 @@ namespace Unbound.Runtime
             code = GpuCode(format, linear);
             if (code >= 0) return blocks;
             var texels = new System.IO.MemoryStream();
-            bool floats = IsAstcHdr(format), eac = IsEac(format);
+            bool floats = IsAstcHdr(format), eac = IsEac(format) || IsSignedEac(format);
             int at = 0;
             for (int image = 0; image < images; image++)
                 for (int mip = 0; mip < mips; mip++)
@@ -681,8 +719,13 @@ namespace Unbound.Runtime
                     texels.Write(DecodeRgba(format, new ReadOnlySpan<byte>(blocks, at, size), w, h, floats, eac));
                     at += size;
                 }
-            code = eac ? PixelFormats.GpuNormFormat(format == UnityEngine.TextureFormat.EAC_R
-                ? UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm : UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_UNorm)
+            code = eac ? PixelFormats.GpuNormFormat(format switch
+                {
+                    UnityEngine.TextureFormat.EAC_R => UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm,
+                    UnityEngine.TextureFormat.EAC_RG => UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_UNorm,
+                    UnityEngine.TextureFormat.EAC_R_SIGNED => UnityEngine.Experimental.Rendering.GraphicsFormat.R16_SNorm,
+                    _ => UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_SNorm,
+                })
                 : floats ? PixelFormats.GpuFloatFormat(UnityEngine.TextureFormat.RGBAFloat) : linear ? 1 : 0;
             return texels.ToArray();
         }
@@ -695,9 +738,18 @@ namespace Unbound.Runtime
             return hash;
         }
 
-        /// <summary>Bytes of a `width` x `height` level.</summary>
-        internal static int LevelSize(UnityEngine.TextureFormat format, int width, int height) =>
-            ((width + Footprint(format) - 1) / Footprint(format))
-                * ((height + Footprint(format) - 1) / Footprint(format)) * BlockBytes(format);
+        /// <summary>Bytes of a `width` x `height` level: whole blocks; PVRTC's of at least 8x8
+        /// texels at 4 bits, 16x8 at 2 (a 4x4 level is 32 bytes either way:
+        /// tests/projects/nativegfx array.make.PVRTC_*).</summary>
+        internal static int LevelSize(UnityEngine.TextureFormat format, int width, int height)
+        {
+            if (IsPvrtc(format))
+            {
+                bool two = format is UnityEngine.TextureFormat.PVRTC_RGB2 or UnityEngine.TextureFormat.PVRTC_RGBA2;
+                return Math.Max(width, two ? 16 : 8) * Math.Max(height, 8) * (two ? 2 : 4) / 8;
+            }
+            return ((width + Footprint(format) - 1) / Footprint(format))
+                * ((height + Footprint(format) - 1) / Footprint(format)) * LayeredBlockBytes(format);
+        }
     }
 }
