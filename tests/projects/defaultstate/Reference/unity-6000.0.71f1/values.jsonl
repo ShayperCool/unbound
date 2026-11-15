@@ -13300,4 +13300,5 @@
 {"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/spawnCount","status":"requires-context","value":"a spawner state filled by VisualEffect.GetSpawnSystemInfo: one made with new has no event attributes"}
 {"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/totalTime","status":"value","value":"0"}
 {"key":"UnityEngine.VFX.VFXSpawnerState/Property/UnityEngine.VFX.VFXSpawnerState/vfxEventAttribute","status":"requires-context","value":"a spawner state filled by VisualEffect.GetSpawnSystemInfo: one made with new has no event attributes"}
+{"key":"UnityEngine.UIElements.RuntimePanelUtils/@factory","status":"excluded","value":"static"}
 {"key":"complete","status":"value","value":"1"}

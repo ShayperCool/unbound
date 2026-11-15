@@ -8161,6 +8161,12 @@
       "type": "UnityEngine.UIElements.Rotate"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "static",
+      "type": "UnityEngine.UIElements.RuntimePanelUtils"
+    },
+    {
       "category": "struct",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
