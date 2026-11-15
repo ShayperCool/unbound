@@ -187,8 +187,8 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   (`VFXExpressionEvaluator`), taking the queued events, running the spawn systems
   (`VFXSpawnerSystem`: loop state and blocks, in managed code like the particle system
   module) and then the particle systems (`VFXParticleSystem`), which upload what the generated
-  kernels read (graph values, spawn events and their attributes) and dispatch the initialize
-  and update kernels. An effect is a batch of one instance of its asset. Outputs are not drawn
+  kernels read (graph values, spawn events and their attributes), bind the textures and
+  buffers each kernel's task names and dispatch the initialize and update kernels. An effect is a batch of one instance of its asset. Outputs are not drawn
   yet.
 * **Graphics devices**: like Unity, Unbound has several graphics devices, and the device a game
   sees is the one it gets: OpenGL Core and Vulkan on Linux, Metal on macOS. The run's device is
