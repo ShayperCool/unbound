@@ -62,8 +62,10 @@ namespace Unbound.Runtime
         internal int TextureWrapMirrorOnce { get; init; } = 1;
         /// <summary>The compressed formats the device refuses for a Texture3D, by the name its
         /// error gives the format (Metal: PVRTC, ETC and EAC, tests/projects/nativegfx
-        /// `metal.jsonl` `volume.make.*`, two macOS Editor captures; the names are those of the
-        /// linear formats the TextureFormat constructors make). Null: none refused (unmeasured).</summary>
+        /// `metal.jsonl` `volume.make.*`, two macOS Editor captures on an Apple M2 Pro; the names
+        /// are those of the linear formats the TextureFormat constructors make, a GraphicsFormat
+        /// constructor's sRGB format is unmeasured). Null: none refused (unmeasured on OpenGL Core
+        /// and Vulkan).</summary>
         internal System.Collections.Generic.IReadOnlyDictionary<TextureFormat, string> RefusedVolumeFormats { get; init; }
 
         /// <summary>SystemInfo.maxTiledPixelStorageSize where it is measured (Metal: 64, tests/projects/urp

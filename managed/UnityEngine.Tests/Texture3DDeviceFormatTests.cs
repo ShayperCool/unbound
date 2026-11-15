@@ -13,7 +13,8 @@ namespace Unbound.Tests
 {
     /// <summary>Making a Texture3D of each compressed format, as the macOS Editor's Metal device
     /// answers (tests/projects/nativegfx metal.jsonl volume.make.*: made, or the exception and the
-    /// logged errors), and the other devices refusing only Crunched volumes.</summary>
+    /// logged errors); on the other devices (unmeasured) the profile refuses none, Crunched
+    /// volumes aside.</summary>
     public class Texture3DDeviceFormatTests
     {
         sealed class Capture : ILogHandler
@@ -70,18 +71,13 @@ namespace Unbound.Tests
                 GraphicsDeviceProfile.Select("Metal");
                 foreach (var (format, expected) in recorded)
                     Assert.Equal(expected, Make(format));
-                // A control outside the recorded device: only Crunched volumes are refused.
+                // A control outside the recorded device: a format Metal refuses is made there (the
+                // profile refuses none: unmeasured), Crunched volumes are refused alike.
                 foreach (var device in new[] { "OpenGLCore", "Vulkan" })
                 {
                     GraphicsDeviceProfile.Select(device);
-                    foreach (var (format, _) in recorded)
-                    {
-                        var made = Make(format);
-                        if (UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsCrunchFormat(format))
-                            Assert.Equal(new[] { "ArgumentException: Crunched Texture3D is not supported." }, made);
-                        else
-                            Assert.Equal(new[] { "made" }, made);
-                    }
+                    Assert.Equal(new[] { "made" }, Make(TextureFormat.ETC2_RGB));
+                    Assert.Equal(new[] { "ArgumentException: Crunched Texture3D is not supported." }, Make(TextureFormat.DXT1Crunched));
                 }
             }
             finally
