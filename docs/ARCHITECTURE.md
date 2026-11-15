@@ -188,8 +188,11 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   (`VFXSpawnerSystem`: loop state and blocks, in managed code like the particle system
   module) and then the particle systems (`VFXParticleSystem`), which upload what the generated
   kernels read (graph values, spawn events and their attributes), bind the textures and
-  buffers each kernel's task names and dispatch the initialize and update kernels. An effect is a batch of one instance of its asset. Outputs are not drawn
-  yet.
+  buffers each kernel's task names and dispatch the initialize and update kernels. An effect is a batch of one instance of its asset. Its renderer's
+  draws are its systems' outputs (`VFX/VFXOutput.cs`): each quad output that draws itself is one
+  indexed draw of stand-in vertices with the material of the shader the graph compiled to, whose
+  vertex program finds each particle in the system's buffers by its vertex id; outputs of other
+  kinds say once that they are not drawn.
 * **Graphics devices**: like Unity, Unbound has several graphics devices, and the device a game
   sees is the one it gets: OpenGL Core and Vulkan on Linux, Metal on macOS. The run's device is
   chosen once at startup (`unbound_compat::graphics`), as the Editor of the OS chooses it (Unity
