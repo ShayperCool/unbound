@@ -82,6 +82,19 @@ namespace UnityEngine
         /// read decoded (signed EAC is not read).</summary>
         internal static bool Supported(TextureFormat format) => PixelFormats.Size(format, 1, 1) > 0 || BlockStored(format);
 
+        /// <summary>Whether Unbound keeps a `width` x `height` layered texture of the format
+        /// (<see cref="Supported"/>): PVRTC only where its decoder reads the levels, whose block
+        /// counts (of a level padded to 8x8 texels at 4 bits, 16x8 at 2) are powers of two; the
+        /// Editor's answer for other sizes is unmeasured.</summary>
+        internal static bool Keeps(TextureFormat format, int width, int height)
+        {
+            if (!Supported(format)) return false;
+            if (!BlockFormats.IsPvrtc(format)) return true;
+            bool two = format is TextureFormat.PVRTC_RGB2 or TextureFormat.PVRTC_RGBA2;
+            int across = (Math.Max(width, two ? 16 : 8) + (two ? 7 : 3)) / (two ? 8 : 4), down = (Math.Max(height, 8) + 3) / 4;
+            return System.Numerics.BitOperations.IsPow2(across) && System.Numerics.BitOperations.IsPow2(down);
+        }
+
         static bool BlockStored(TextureFormat format) => format == BlockFormats.Uncrunched(format)
             && BlockFormats.LayeredBlockBytes(format) > 0;
 
@@ -543,7 +556,7 @@ namespace UnityEngine
                 data = Convert.FromHexString(hex.Length % 2 == 0 ? hex : hex.Substring(0, hex.Length - 1));
             else if (body.Get("m_StreamData") is YNode stream && stream.Str("path").Length > 0)
                 Debug.LogWarning($"Unbound: {texture.GetType().Name} '{texture.name}' keeps its pixels in a stream file ({stream.Str("path")}), which is not read yet: it has no pixels.");
-            if (data != null && !LayeredPixels.Supported(format))
+            if (data != null && !LayeredPixels.Keeps(format, body.Int("m_Width"), body.Int("m_Height")))
             {
                 Debug.LogWarning($"Unbound: {texture.GetType().Name} '{texture.name}' is stored as {graphics}, which Unbound does not read yet: it has no pixels.");
                 data = null;
@@ -650,14 +663,11 @@ namespace UnityEngine
         public Texture2DArray(int width, int height, int depth, DefaultFormat format, TextureCreationFlags flags, int mipCount) : this(width, height, depth, SystemInfo.GetGraphicsFormat(format), flags, mipCount) { }
 
         /// <summary>The format a layered texture keeps: its own, else RGBA32 texels (warned for a
-        /// compressed format Unbound keeps no blocks of: crunched ones, and PVRTC of sides that are
-        /// not powers of two, whose levels its PVRTC decoder cannot read; the Editor's answer for
-        /// those sizes is unmeasured).</summary>
+        /// compressed format Unbound keeps no blocks of: crunched ones, and PVRTC of sizes its
+        /// decoder cannot read, <see cref="LayeredPixels.Keeps"/>).</summary>
         internal static TextureFormat PixelStorage(TextureFormat format, int width, int height)
         {
-            if (LayeredPixels.Supported(format)
-                && (!BlockFormats.IsPvrtc(format) || (System.Numerics.BitOperations.IsPow2(width) && System.Numerics.BitOperations.IsPow2(height))))
-                return format;
+            if (LayeredPixels.Keeps(format, width, height)) return format;
             if (GraphicsFormatUtility.IsCompressedFormat(format))
                 Unbound.Runtime.Stubs.Ignored($"layered {format} textures", "keep RGBA32 texels instead of their blocks: SetPixelData takes RGBA32 data and SetPixels writes, unlike the Editor");
             return TextureFormat.RGBA32;

@@ -166,14 +166,75 @@ namespace Unbound.Tests
             finally { Object.DestroyImmediate(volume); }
         }
 
-        /// <summary>PVRTC of sides that are not powers of two (which the decoder cannot read; the
-        /// Editor's answer is unmeasured) keeps RGBA32 texels, warned, as before.</summary>
-        [Fact]
-        public void PvrtcOfOtherSidesKeepsTexels()
+        sealed class Capture : ILogHandler
         {
-            var array = new Texture2DArray(12, 12, 1, TextureFormat.PVRTC_RGBA4, false, true);
-            try { Assert.Equal(12 * 12 * 4, array.GetPixelData<byte>(0, 0).Length); }
-            finally { Object.DestroyImmediate(array); }
+            public readonly List<string> Messages = new List<string>();
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                Messages.Add(logType + ": " + (args == null || args.Length == 0 ? format : string.Format(format, args)));
+            public void LogException(Exception exception, Object context) => Messages.Add("Exception: " + exception.Message);
+        }
+
+        /// <summary>PVRTC of a size whose padded levels have block counts that are not powers of
+        /// two (which the decoder cannot read; the Editor's answer is unmeasured) keeps RGBA32
+        /// texels, warned, as before; small sides pad to a readable level and keep blocks.</summary>
+        [Fact]
+        public void PvrtcOfUnreadableSizesKeepsTexels()
+        {
+            Assert.False(LayeredPixels.Keeps(TextureFormat.PVRTC_RGBA4, 12, 12));
+            Assert.True(LayeredPixels.Keeps(TextureFormat.PVRTC_RGBA4, 6, 6));
+            Assert.False(LayeredPixels.Keeps(TextureFormat.PVRTC_RGB2, 24, 8));
+            Assert.True(LayeredPixels.Keeps(TextureFormat.PVRTC_RGB2, 32, 8));
+            Assert.True(LayeredPixels.Keeps(TextureFormat.ETC2_RGBA1, 12, 12));
+            var capture = new Capture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = capture;
+            Texture2DArray array = null, small = null;
+            try
+            {
+                array = new Texture2DArray(12, 12, 1, TextureFormat.PVRTC_RGBA4, false, true);
+                small = new Texture2DArray(6, 6, 1, TextureFormat.PVRTC_RGBA4, false, true);
+            }
+            finally { Debug.unityLogger.logHandler = previous; }
+            try
+            {
+                Assert.Equal(12 * 12 * 4, array.GetPixelData<byte>(0, 0).Length);
+                Assert.Equal(32, small.GetPixelData<byte>(0, 0).Length);
+                Assert.Contains(capture.Messages, m => m.Contains("layered PVRTC_RGBA4 textures"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(array);
+                Object.DestroyImmediate(small);
+            }
+        }
+
+        /// <summary>A serialized PVRTC array of such a size is read as Unbound reads formats it
+        /// keeps nothing of (warned, no pixels); a readable size keeps its blocks.</summary>
+        [Fact]
+        public void SerializedPvrtcOfUnreadableSizesHasNoPixels()
+        {
+            var host = new Texture2DArray(4, 4, 1, TextureFormat.RGBA32, false) { name = "serialized" };
+            var capture = new Capture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = capture;
+            try
+            {
+                LayeredTextures.Serialized Read(int side) => LayeredTextures.Read(host, YNode.MakeMap(
+                    ("m_Format", YNode.MakeScalar(((int)UnityEngine.Experimental.Rendering.GraphicsFormat.RGBA_PVRTC_4Bpp_UNorm).ToString())),
+                    ("m_Width", YNode.MakeScalar(side.ToString())), ("m_Height", YNode.MakeScalar(side.ToString())),
+                    ("image data", YNode.MakeScalar(new string('7', 2 * BlockFormats.LevelSize(TextureFormat.PVRTC_RGBA4, side, side))))));
+                var unreadable = Read(12);
+                Assert.Null(unreadable.Data);
+                Assert.Contains(capture.Messages, m => m.Contains("'serialized' is stored as RGBA_PVRTC_4Bpp_UNorm, which Unbound does not read yet"));
+                var readable = Read(16);
+                Assert.Equal(TextureFormat.PVRTC_RGBA4, readable.Format);
+                Assert.Equal(128, readable.Data.Length);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                Object.DestroyImmediate(host);
+            }
         }
 
         /// <summary>A PVRTC texel reads through its decoded level (its neighbours' blocks take
