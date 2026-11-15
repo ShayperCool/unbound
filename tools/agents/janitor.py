@@ -309,6 +309,10 @@ class ReferenceWatch:
         # watches of a tree that moved out can be removed without touching a directory created
         # at the same place later.
         self.parent_of, self.children = {}, {}
+        # Link destinations outside excluded trees that did not exist when their link was read:
+        # a directory appearing there later (created, or moved in from outside the view) is in
+        # the protected view through that link and must be walked.
+        self.dangling = set()
         self.broken = False
         # Millions of watched directories on a busy volume fill the kernel's event queue
         # (fs.inotify.max_queued_events) within seconds. A reader thread moves events into
@@ -398,6 +402,16 @@ class ReferenceWatch:
                 self.broken = True
                 raise ReferenceChanged('too many short-lived names to track; remaining work retained')
 
+    def dangle(self, target):
+        if not os.path.lexists(target) and not any(inside(target, p) for p in self.excluded):
+            self.dangling.add(Path(target))
+
+    def revived(self):
+        """Dangling link destinations that exist now; they are walked and no longer tracked."""
+        found = [path for path in self.dangling if os.path.lexists(path)]
+        self.dangling.difference_update(found)
+        return found
+
     def listed(self, directory):
         self.unlisted.discard(os.fspath(directory))
 
@@ -405,13 +419,16 @@ class ReferenceWatch:
         """Forget unpaired moves that cannot hide an unseen link, and return the others.
 
         An unpaired move left the watched view: its destination is excluded or outside the scan
-        roots, where links are not protected anyway. What it moved was either listed by a walk
+        roots, where links are not protected anyway, unless a link in the view names it; such
+        dangling destinations are walked as soon as they exist (revived()). What it moved was either listed by a walk
         (its links are already protected) or appeared later, and then poll() inspected it or
         recorded its name as unverified. A move is unsafe when it moved an unverified name, a
         new directory no walk has listed yet, or a directory holding either. A watched directory
         that moved while its parent was not watched (a scan root, a link target outside the
         roots) is always unsafe. The watches inside a settled directory are removed, so that a
         directory later created at the same place is watched afresh."""
+        if not (self.moves or self.file_moves or self.unresolved):
+            return sorted(self.vanished)
         marked = set(self.unlisted)
         for key, names in self.unverified.items():
             marked.update(os.path.join(key, name) for name in names)
@@ -435,7 +452,8 @@ class ReferenceWatch:
         for descriptor, path in self.unresolved.items():
             selves.setdefault(str(path), []).append(descriptor)
         for cookie, path in list(self.moves.items()):
-            # The moved directory's own MOVE_SELF names the watches that left with it.
+            # The moved directory's own MOVE_SELF names the watches that left with it; the kernel
+            # queues it with the move, and a move without it stays unsafe (conservative).
             if str(path) in holders or str(path) not in selves:
                 unsafe.append(path)
             else:
@@ -571,6 +589,7 @@ class ReferenceWatch:
                                 raw = path.readlink()
                                 target = raw if raw.is_absolute() else path.parent/raw
                                 self.references.update((Path(os.path.abspath(target)), target.resolve()))
+                                self.dangle(target.resolve())
                                 if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
                                     pending.add(target.resolve())
                             elif path.is_dir() and not any(inside(path, p) for p in self.excluded):
@@ -625,7 +644,12 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
         if prefetch:
             index.warm_all()
         pending = [str(root) for root in roots if root.exists()]
-        while pending:
+        while True:
+            if not pending and watcher:
+                # A dangling link destination that appeared meanwhile is in view now: walk it.
+                pending.extend(map(str, watcher.revived()))
+            if not pending:
+                break
             batch = pending[-index.batch_size:]
             del pending[-index.batch_size:]
             if watcher:
@@ -683,6 +707,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                         found.update((lexical, target))
                         if watcher:
                             watcher.references.update((lexical, target))
+                            watcher.dangle(target)
                         if is_dir and not any(inside(target, p) for p in excluded):
                             pending.append(str(target))
                     elif entry.kind == 'dir':
@@ -894,7 +919,7 @@ class Janitor:
     def refresh_links(self):
         if self.watch is None:
             return
-        pending = self.watch.poll()
+        pending = self.watch.poll() | set(self.watch.revived())
         # A pending walk can rediscover moved directories; it settles the moves itself.
         unsafe = [] if pending else self.watch.settle_moves()
         if pending or unsafe:

@@ -622,6 +622,26 @@ class JanitorTests(unittest.TestCase):
                 pass
         self.assertTrue(target.exists())
 
+    def test_a_tree_moved_to_a_dangling_link_destination_is_walked(self):
+        for variant in ('new link', 'existing relative link'):
+            with self.subTest(variant=variant):
+                self.setUp()
+                target = self.directory('q1/target')
+                destination = self.root/'outside'/'D'
+                destination.parent.mkdir(parents=True)
+                (self.cache/'L').symlink_to(destination)  # dangling at discovery
+                moving = self.cache/'work'/'D'
+                moving.mkdir(parents=True)
+                if variant == 'existing relative link':
+                    # Dangling where it is; it names the candidate once moved under outside/.
+                    (moving/'r').symlink_to(Path('..')/'..'/'volume'/'q1'/'target')
+                def act():
+                    moving.rename(destination)
+                    self.j.refresh_links()
+                    if variant == 'new link':
+                        (destination/'link').symlink_to(target/'output')
+                self.assert_target_kept(target, act)
+
     def test_too_many_unverified_names_fail_closed(self):
         watcher = janitor.ReferenceWatch()
         self.addCleanup(watcher.close)
