@@ -272,7 +272,13 @@ ones (`ArgumentException: Crunched Texture3D is not supported.`) and PVRTC, ETC 
 (`Metal does not support <format> texture format for Texture3D` logged, then `UnityException:
 Failed to create texture because of invalid parameters.`).
 
-Unbound matches 218/261 records with 43 declared residuals (`residuals-metal.json`, each with its
+Frame state (`mipbias.*`, `active.*`, `outside.*`): `Texture.mipMapBias` changes nothing (the
+level sampled at one texel per pixel is 0 for biases 0, 1, 2 and -1, point, bilinear and
+trilinear); a render texture made active in one frame's Update is no longer active in the next
+frame's; a command buffer executed outside cameras draws with identity view and projection, also
+right after a camera rendered.
+
+Unbound matches 237/280 records with 43 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a screen
