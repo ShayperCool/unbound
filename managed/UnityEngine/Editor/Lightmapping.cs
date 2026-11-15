@@ -24,6 +24,17 @@ namespace UnityEditor
 
         public static LightingSettings lightingSettingsDefaults => s_Defaults ??= new LightingSettings();
 
+        /// <summary>The Lighting Data asset the active scene's lighting settings name, one object
+        /// per asset (named as its file; the built-in one, which scenes made in Unity 6 name,
+        /// "LightingData"), or null when they name none. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/tiersettings and indirectspec. Assigning one (which in the Editor
+        /// replaces the scene's baked lighting) is not supported.</summary>
+        public static LightingDataAsset lightingDataAsset
+        {
+            get => LightingDataAsset.Of(SceneRegistry.Active?.LightingDataRef ?? default);
+            set => throw new NotSupportedException("Unbound: assigning Lightmapping.lightingDataAsset (replacing a scene's baked lighting) is not supported.");
+        }
+
         public static LightingSettings lightingSettings
         {
             get => Of(SceneRegistry.Active) ?? throw new Exception(k_NoSettings);

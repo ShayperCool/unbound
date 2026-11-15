@@ -4137,11 +4137,6 @@ namespace UnityEngine.Rendering
     {
         [global::Unbound.Stub] public static bool IsValid(global::UnityEngine.Rendering.CameraEvent value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CameraEventUtils.IsValid"); return default; }
     }
-    public enum CameraHDRMode
-    {
-        FP16 = 1,
-        R11G11B10 = 2,
-    }
     [global::Unbound.Stub]
     public unsafe partial struct CameraProperties : global::System.IEquatable<global::UnityEngine.Rendering.CameraProperties>
     {
@@ -4736,13 +4731,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public global::UnityEngine.Rendering.RayTracingSubMeshFlags opaqueMaterials;
         [global::Unbound.Stub] public global::UnityEngine.Rendering.RayTracingSubMeshFlags transparentMaterials;
         [global::Unbound.Stub] public global::UnityEngine.Rendering.RayTracingSubMeshFlags alphaTestedMaterials;
-    }
-    public enum RealtimeGICPUUsage
-    {
-        Low = 25,
-        Medium = 50,
-        High = 75,
-        Unlimited = 100,
     }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)256, AllowMultiple = false)]
     [global::Unbound.Stub]

@@ -733,6 +733,17 @@ namespace Unbound.Runtime
                     Get = o => PlayerSettings.s_ActiveInputHandler, Set = (o, v) => PlayerSettings.s_ActiveInputHandler = (int)v,
                 };
             }
+            else if (target is UnityEditor.LightingDataAsset)
+            {
+                yield return NameField(hidden: false);
+                // The scene it was baked for (Unity 6000.0.71f1 Editor, tests/projects/indirectspec
+                // `lightingData properties`): its SceneAsset is not resolved, it reads null.
+                yield return new NativeField
+                {
+                    Name = "m_Scene", Type = typeof(UnityEditor.SceneAsset), Shape = Shape.UnityObject, TypeName = "PPtr<SceneAsset>",
+                    ReadOnly = true, Get = o => null,
+                };
+            }
             else if (!(target is Component))
             {
                 yield return NameField(hidden: false);

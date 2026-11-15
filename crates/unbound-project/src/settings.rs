@@ -50,6 +50,8 @@ pub struct Settings {
     pub graphics_apis: BTreeMap<String, Vec<i32>>,
     /// `GraphicsSettings.m_TierSettings` the project sets by hand, by (BuildTargetGroup, tier).
     pub tier_settings: BTreeMap<(i64, i64), TierSettings>,
+    /// What the automatic tier settings follow ([`TierSettings::automatic`]).
+    pub tier_defaults: TierDefaults,
     /// `EditorSettings.spritePackerMode` (`SpritePackerMode`; 0, Disabled, when unset).
     pub sprite_packer_mode: i64,
     /// The release in `ProjectVersion.txt` (None without one).
@@ -125,19 +127,69 @@ impl PlayModeAtlases {
     }
 }
 
-/// A graphics tier's settings, which choose the built-in shader defines.
+/// A graphics tier's settings (`EditorGraphicsSettings.GetTierSettings`), which also choose the
+/// built-in shader defines.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TierSettings {
     /// 0 low, 1 medium, 2 high: the Standard shaders' BRDF 3, 2 or 1.
     pub standard_shader_quality: i64,
+    /// `CameraHDRMode`: 1 FP16, 2 R11G11B10.
+    pub hdr_mode: i64,
     pub box_projection: bool,
     pub probe_blending: bool,
+    pub hdr: bool,
     pub detail_normal_map: bool,
     pub cascaded_shadow_maps: bool,
-    pub dither_alpha_shadows: bool,
+    pub prefer_32bit_shadow_maps: bool,
     /// `enableLPPV`: light probe proxy volumes.
     pub light_probe_proxy_volume: bool,
+    /// `semitransparentShadows` (`useDitherMaskForAlphaBlendedShadows`).
+    pub dither_alpha_shadows: bool,
+    /// `RenderingPath`.
+    pub rendering_path: i64,
+    /// `RealtimeGICPUUsage`: 25 low, 50 medium, 75 high, 100 unlimited.
+    pub realtime_gi_cpu_usage: i64,
 }
+
+/// What a project's automatic tier settings follow besides the platform group and tier:
+/// GraphicsSettings' default rendering paths and the Editor's default behaviour mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TierDefaults {
+    /// `m_DefaultRenderingPath` (`RenderingPath`, Forward when unset).
+    pub rendering_path: i64,
+    /// `m_DefaultMobileRenderingPath`.
+    pub mobile_rendering_path: i64,
+    /// `EditorSettings.m_DefaultBehaviorMode` is 2D.
+    pub mode_2d: bool,
+}
+
+impl Default for TierDefaults {
+    fn default() -> Self {
+        Self {
+            rendering_path: RENDERING_PATH_FORWARD,
+            mobile_rendering_path: RENDERING_PATH_FORWARD,
+            mode_2d: false,
+        }
+    }
+}
+
+/// `RenderingPath.Forward`.
+const RENDERING_PATH_FORWARD: i64 = 1;
+/// `BuildTargetGroup` values the tier rule names.
+const GROUP_STANDALONE: i64 = 1;
+const GROUP_IOS: i64 = 4;
+const GROUP_ANDROID: i64 = 7;
+const GROUP_WSA: i64 = 14;
+const GROUP_TVOS: i64 = 25;
+/// The `BuildTargetGroup` values whose tier rule is their own; every other group's automatic
+/// settings are those of [`TierSettings::OTHER_GROUP`].
+pub const TIER_RULE_GROUPS: [i64; 5] = [
+    GROUP_STANDALONE,
+    GROUP_IOS,
+    GROUP_ANDROID,
+    GROUP_WSA,
+    GROUP_TVOS,
+];
 
 impl Settings {
     /// What the Editor of this OS starts its graphics device from: a device the command line
@@ -156,34 +208,107 @@ impl Settings {
 }
 
 impl TierSettings {
-    /// What the Editor uses for a tier left automatic. Android's highest tier is measured; the
-    /// desktop one is the Linux Editor's OpenGLCore set (measured with `HasShaderDefine`).
-    fn automatic(mobile: bool) -> Self {
+    /// A group without a tier rule of its own (`BuildTargetGroup.Unknown`).
+    pub const OTHER_GROUP: i64 = 0;
+
+    /// What the Editor uses for a tier (0 Tier1 .. 2 Tier3) of a platform group left automatic.
+    /// The low-end set (R11G11B10 HDR, every feature off, the mobile rendering path) is iOS's,
+    /// Android's and tvOS's, and Windows Store's lowest tier's; every other one has FP16 HDR,
+    /// every feature on but 32-bit shadow maps (HDR also off in a 2D project) and the default
+    /// rendering path. The Standard shader quality is low for the lowest tier of iOS, Android
+    /// and Windows Store, medium for the other iOS, Android and tvOS tiers, else high; realtime
+    /// GI's CPU usage is medium for Standalone's highest tier, else low. Matches the Unity
+    /// 6000.0.71f1 Editor, tests/projects/tiersettings (2D projects unmeasured); the Linux
+    /// Editor's OpenGLCore defines follow it (`HasShaderDefine`, tests/projects/lightmapencoding).
+    pub fn automatic(group: i64, tier: i64, defaults: &TierDefaults) -> Self {
+        let mobile = matches!(group, GROUP_IOS | GROUP_ANDROID | GROUP_TVOS);
+        let low_end = mobile || (group == GROUP_WSA && tier == 0);
+        let lowest = tier == 0 && matches!(group, GROUP_IOS | GROUP_ANDROID | GROUP_WSA);
         Self {
-            standard_shader_quality: if mobile { 1 } else { 2 },
-            box_projection: !mobile,
-            probe_blending: !mobile,
-            detail_normal_map: !mobile,
-            cascaded_shadow_maps: !mobile,
-            dither_alpha_shadows: !mobile,
-            light_probe_proxy_volume: !mobile,
+            standard_shader_quality: if lowest {
+                0
+            } else if mobile {
+                1
+            } else {
+                2
+            },
+            hdr_mode: if low_end { 2 } else { 1 },
+            box_projection: !low_end,
+            probe_blending: !low_end,
+            hdr: !low_end && !defaults.mode_2d,
+            detail_normal_map: !low_end,
+            cascaded_shadow_maps: !low_end,
+            prefer_32bit_shadow_maps: false,
+            light_probe_proxy_volume: !low_end,
+            dither_alpha_shadows: !low_end,
+            rendering_path: if low_end {
+                defaults.mobile_rendering_path
+            } else {
+                defaults.rendering_path
+            },
+            realtime_gi_cpu_usage: if group == GROUP_STANDALONE && tier == 2 {
+                50
+            } else {
+                25
+            },
         }
     }
 
-    fn read(settings: &Value) -> Self {
-        let flag = |key: &str| settings.get(key).and_then(Value::as_i64).unwrap_or(0) != 0;
+    /// A tier set by hand (`m_TierSettings`' `m_Settings`); a field it lacks keeps
+    /// `automatic`'s value.
+    fn read(settings: &Value, automatic: Self) -> Self {
+        let int =
+            |key: &str, default: i64| settings.get(key).and_then(Value::as_i64).unwrap_or(default);
+        let flag = |key: &str, default: bool| int(key, default as i64) != 0;
         Self {
-            standard_shader_quality: settings
-                .get("standardShaderQuality")
-                .and_then(Value::as_i64)
-                .unwrap_or(2),
-            box_projection: flag("useReflectionProbeBoxProjection"),
-            probe_blending: flag("useReflectionProbeBlending"),
-            detail_normal_map: flag("useDetailNormalMap"),
-            cascaded_shadow_maps: flag("useCascadedShadowMaps"),
-            dither_alpha_shadows: flag("useDitherMaskForAlphaBlendedShadows"),
-            light_probe_proxy_volume: flag("enableLPPV"),
+            standard_shader_quality: int(
+                "standardShaderQuality",
+                automatic.standard_shader_quality,
+            ),
+            hdr_mode: int("hdrMode", automatic.hdr_mode),
+            box_projection: flag("useReflectionProbeBoxProjection", automatic.box_projection),
+            probe_blending: flag("useReflectionProbeBlending", automatic.probe_blending),
+            hdr: flag("useHDR", automatic.hdr),
+            detail_normal_map: flag("useDetailNormalMap", automatic.detail_normal_map),
+            cascaded_shadow_maps: flag("useCascadedShadowMaps", automatic.cascaded_shadow_maps),
+            prefer_32bit_shadow_maps: flag(
+                "prefer32BitShadowMaps",
+                automatic.prefer_32bit_shadow_maps,
+            ),
+            light_probe_proxy_volume: flag("enableLPPV", automatic.light_probe_proxy_volume),
+            dither_alpha_shadows: flag(
+                "useDitherMaskForAlphaBlendedShadows",
+                automatic.dither_alpha_shadows,
+            ),
+            rendering_path: int("renderingPath", automatic.rendering_path),
+            realtime_gi_cpu_usage: int("realtimeGICPUUsage", automatic.realtime_gi_cpu_usage),
         }
+    }
+
+    /// The fields that choose shader defines.
+    fn define_fields(&self) -> (i64, [bool; 6]) {
+        (
+            self.standard_shader_quality,
+            [
+                self.box_projection,
+                self.probe_blending,
+                self.detail_normal_map,
+                self.cascaded_shadow_maps,
+                self.dither_alpha_shadows,
+                self.light_probe_proxy_volume,
+            ],
+        )
+    }
+}
+
+impl Settings {
+    /// `EditorGraphicsSettings.GetTierSettings(group, tier)`: the tier set by hand, else the
+    /// automatic one ([`TierSettings::automatic`]).
+    pub fn tier_settings(&self, group: i64, tier: i64) -> TierSettings {
+        self.tier_settings
+            .get(&(group, tier))
+            .copied()
+            .unwrap_or_else(|| TierSettings::automatic(group, tier, &self.tier_defaults))
     }
 }
 
@@ -368,7 +493,25 @@ impl Settings {
                 }
             }
         }
+        // The Sprite Packer mode (for a warning) and the default behaviour mode (2D or 3D, which
+        // the tiers' automatic HDR follows): an unreadable file leaves them unset instead of
+        // failing the project.
+        match first_document(&dir.join("EditorSettings.asset")) {
+            Ok(editor) => {
+                let int = |key: &str| editor.as_ref().and_then(|e| e.body.get(key)?.as_i64());
+                settings.sprite_packer_mode = int("m_SpritePackerMode").unwrap_or(0);
+                settings.tier_defaults.mode_2d = int("m_DefaultBehaviorMode") == Some(1);
+            }
+            Err(error) => tracing::warn!("{error:#}: the Editor settings are not read"),
+        }
         if let Some(graphics) = first_document(&dir.join("GraphicsSettings.asset"))? {
+            let path = |key: &str| graphics.body.get(key).and_then(Value::as_i64);
+            if let Some(path) = path("m_DefaultRenderingPath") {
+                settings.tier_defaults.rendering_path = path;
+            }
+            if let Some(path) = path("m_DefaultMobileRenderingPath") {
+                settings.tier_defaults.mobile_rendering_path = path;
+            }
             for tier in graphics
                 .body
                 .get("m_TierSettings")
@@ -382,21 +525,12 @@ impl Settings {
                     tier.get("m_Settings"),
                     int("m_Automatic"),
                 ) {
+                    let automatic = TierSettings::automatic(group, index, &settings.tier_defaults);
                     settings
                         .tier_settings
-                        .insert((group, index), TierSettings::read(values));
+                        .insert((group, index), TierSettings::read(values, automatic));
                 }
             }
-        }
-        // Only the Sprite Packer mode is read here, for a warning: an unreadable file leaves it
-        // unset instead of failing the project.
-        match first_document(&dir.join("EditorSettings.asset")) {
-            Ok(editor) => {
-                settings.sprite_packer_mode = editor
-                    .and_then(|editor| editor.body.get("m_SpritePackerMode")?.as_i64())
-                    .unwrap_or(0)
-            }
-            Err(error) => tracing::warn!("{error:#}: the Sprite Packer mode is not read"),
         }
         if let Some(tags) = first_document(&dir.join("TagManager.asset"))? {
             settings.tags = string_list(tags.body.get("tags"));
@@ -462,15 +596,11 @@ impl Settings {
             "WebGL" => (13, false),
             _ => (1, false),
         };
-        let tier = |index| {
-            self.tier_settings
-                .get(&(id, index))
-                .copied()
-                .unwrap_or_else(|| TierSettings::automatic(mobile))
-        };
-        let tiers = [tier(0), tier(1), tier(2)];
+        let tiers = [0, 1, 2].map(|index| self.tier_settings(id, index));
         // Automatic tiers differ from each other.
-        let tiers_differ = tiers.iter().any(|t| *t != tiers[0])
+        let tiers_differ = tiers
+            .iter()
+            .any(|t| t.define_fields() != tiers[0].define_fields())
             || (0..3).any(|i| !self.tier_settings.contains_key(&(id, i)));
         let high = tiers[2];
         let mut defines = if mobile {
@@ -592,7 +722,7 @@ impl Settings {
 
 #[cfg(test)]
 mod tests {
-    use super::{PlayModeAtlases, Settings, TierSettings};
+    use super::{PlayModeAtlases, Settings, TierDefaults, TierSettings};
     use unbound_compat::GraphicsDevice::{Metal, OpenGLCore};
 
     #[test]
@@ -719,6 +849,110 @@ mod tests {
         }
     }
 
+    /// The automatic tiers of tests/projects/tiersettings (desktop path DeferredShading, mobile
+    /// VertexLit) and its hand-set Standalone Tier2.
+    #[test]
+    fn tier_settings_follow_the_platform_group_and_tier() {
+        let defaults = TierDefaults {
+            rendering_path: 3,
+            mobile_rendering_path: 0,
+            mode_2d: false,
+        };
+        let desktop = TierSettings::automatic(1, 0, &defaults);
+        assert_eq!(
+            (
+                desktop.standard_shader_quality,
+                desktop.hdr_mode,
+                desktop.rendering_path
+            ),
+            (2, 1, 3)
+        );
+        assert!(desktop.hdr && desktop.box_projection && !desktop.prefer_32bit_shadow_maps);
+        assert_eq!(desktop.realtime_gi_cpu_usage, 25);
+        assert_eq!(
+            TierSettings::automatic(1, 2, &defaults).realtime_gi_cpu_usage,
+            50
+        );
+        // WebGL and unnamed groups are desktop ones; Standalone alone has medium GI at Tier3.
+        assert_eq!(
+            TierSettings::automatic(13, 2, &defaults).realtime_gi_cpu_usage,
+            25
+        );
+        assert_eq!(
+            TierSettings::automatic(13, 0, &defaults),
+            TierSettings::automatic(TierSettings::OTHER_GROUP, 0, &defaults)
+        );
+        for group in [4, 7] {
+            let lowest = TierSettings::automatic(group, 0, &defaults);
+            assert_eq!(
+                (
+                    lowest.standard_shader_quality,
+                    lowest.hdr_mode,
+                    lowest.rendering_path
+                ),
+                (0, 2, 0)
+            );
+            assert!(!lowest.hdr && !lowest.box_projection && !lowest.dither_alpha_shadows);
+            assert_eq!(
+                TierSettings::automatic(group, 1, &defaults).standard_shader_quality,
+                1
+            );
+        }
+        assert_eq!(
+            TierSettings::automatic(25, 0, &defaults).standard_shader_quality,
+            1
+        );
+        // Windows Store: its lowest tier alone is low-end.
+        let wsa = TierSettings::automatic(14, 0, &defaults);
+        assert_eq!(
+            (
+                wsa.standard_shader_quality,
+                wsa.hdr_mode,
+                wsa.box_projection
+            ),
+            (0, 2, false)
+        );
+        let wsa = TierSettings::automatic(14, 1, &defaults);
+        assert_eq!(
+            (
+                wsa.standard_shader_quality,
+                wsa.hdr_mode,
+                wsa.box_projection
+            ),
+            (2, 1, true)
+        );
+        // A 2D project's automatic tiers have HDR off.
+        let flat = TierDefaults {
+            mode_2d: true,
+            ..defaults
+        };
+        assert!(!TierSettings::automatic(1, 0, &flat).hdr);
+
+        let dir = std::env::temp_dir().join(format!("unbound-tiers-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("ProjectSettings")).unwrap();
+        let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/tiersettings/ProjectSettings/GraphicsSettings.asset");
+        std::fs::copy(source, dir.join("ProjectSettings/GraphicsSettings.asset")).unwrap();
+        let settings = Settings::read(&dir).unwrap();
+        std::fs::remove_dir_all(&dir).ok();
+        assert_eq!(settings.tier_defaults, defaults);
+        let set = settings.tier_settings(1, 1);
+        assert_eq!(
+            (
+                set.standard_shader_quality,
+                set.hdr_mode,
+                set.rendering_path,
+                set.realtime_gi_cpu_usage
+            ),
+            (0, 2, 0, 75)
+        );
+        assert!(set.prefer_32bit_shadow_maps && !set.hdr && !set.cascaded_shadow_maps);
+        assert_eq!(
+            settings.tier_settings(1, 2),
+            TierSettings::automatic(1, 2, &defaults)
+        );
+    }
+
     #[test]
     fn metal_compiles_with_framebuffer_fetch_and_its_fallback_while_its_list_has_metal() {
         let desktop = Settings::default().shader_defines("Standalone", OpenGLCore);
@@ -791,6 +1025,7 @@ mod tests {
             cascaded_shadow_maps: true,
             dither_alpha_shadows: false,
             light_probe_proxy_volume: false,
+            ..TierSettings::automatic(7, 2, &TierDefaults::default())
         };
         let mut settings = Settings::default();
         for tier in 0..3 {

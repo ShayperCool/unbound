@@ -245,6 +245,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         "scriptingDefines": settings.defines_for(&options.target),
         "targetGroup": options.target,
         "shaderDefines": settings.shader_defines(&options.target, crate::graphics_device::get()),
+        "tierSettings": tier_settings(settings),
         "preloadedAssets": settings.preloaded_assets.iter().map(|(guid, file_id)| json!({ "guid": guid.to_string(), "fileId": file_id })).collect::<Vec<_>>(),
         "editorScenes": settings.build_scenes.iter().map(|s| json!({ "path": s.path, "guid": s.guid.to_string(), "enabled": s.enabled })).collect::<Vec<_>>(),
         "configObjects": settings.config_objects.iter().map(|(name, (guid, file_id))| (name.clone(), json!({ "guid": guid.to_string(), "fileId": file_id }))).collect::<serde_json::Map<String, Json>>(),
@@ -290,6 +291,42 @@ fn read_settings(project: &Project, file: &str) -> Option<Value> {
 }
 
 /// `vSyncCount` of the quality level the Editor has selected (`m_CurrentQuality`); 1 without one.
+/// Every graphics tier's settings (EditorGraphicsSettings.GetTierSettings) of the platform groups
+/// with a tier rule of their own, of the groups the project sets by hand, and of
+/// `TierSettings::OTHER_GROUP`, which stands for every other group.
+fn tier_settings(settings: &unbound_project::settings::Settings) -> Vec<Json> {
+    use unbound_project::settings::{TIER_RULE_GROUPS, TierSettings};
+    let mut groups: Vec<i64> = std::iter::once(TierSettings::OTHER_GROUP)
+        .chain(TIER_RULE_GROUPS)
+        .chain(settings.tier_settings.keys().map(|&(group, _)| group))
+        .collect();
+    groups.sort_unstable();
+    groups.dedup();
+    let mut table = Vec::with_capacity(groups.len() * 3);
+    for group in groups {
+        for tier in 0..3 {
+            let t = settings.tier_settings(group, tier);
+            table.push(json!({
+                "group": group,
+                "tier": tier,
+                "standardShaderQuality": t.standard_shader_quality,
+                "hdrMode": t.hdr_mode,
+                "reflectionProbeBoxProjection": t.box_projection,
+                "reflectionProbeBlending": t.probe_blending,
+                "hdr": t.hdr,
+                "detailNormalMap": t.detail_normal_map,
+                "cascadedShadowMaps": t.cascaded_shadow_maps,
+                "prefer32BitShadowMaps": t.prefer_32bit_shadow_maps,
+                "enableLPPV": t.light_probe_proxy_volume,
+                "semitransparentShadows": t.dither_alpha_shadows,
+                "renderingPath": t.rendering_path,
+                "realtimeGICPUUsage": t.realtime_gi_cpu_usage,
+            }));
+        }
+    }
+    table
+}
+
 fn vsync_count(project: &Project) -> i64 {
     let Some(quality) = read_settings(project, "QualitySettings.asset") else {
         return 1;

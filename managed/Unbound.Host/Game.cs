@@ -74,6 +74,9 @@ public sealed class GameConfig
     public string TargetGroup { get; set; } = "";
     /// <summary>The target's and its graphics tier's built-in shader defines.</summary>
     public List<string> ShaderDefines { get; set; } = new();
+    /// <summary>Every graphics tier's settings of the platform groups with a rule of their own
+    /// (group 0 stands for the others).</summary>
+    public List<TierSettingsConfig> TierSettings { get; set; } = new();
     /// <summary>The project view the game runs in (see crates/unbound-runtime/src/view.rs).</summary>
     public string WorkingDirectory { get; set; } = "";
     public List<PackageConfig> Packages { get; set; } = new();
@@ -93,6 +96,42 @@ public sealed class EditorSceneConfig
     public string Path { get; set; } = "";
     public string Guid { get; set; } = "";
     public bool Enabled { get; set; }
+}
+
+/// <summary>A platform group's and graphics tier's settings (crates/unbound-runtime/src/config.rs
+/// tier_settings).</summary>
+public sealed class TierSettingsConfig
+{
+    public int Group { get; set; }
+    public int Tier { get; set; }
+    public int StandardShaderQuality { get; set; }
+    public int HdrMode { get; set; }
+    public bool ReflectionProbeBoxProjection { get; set; }
+    public bool ReflectionProbeBlending { get; set; }
+    public bool Hdr { get; set; }
+    public bool DetailNormalMap { get; set; }
+    public bool CascadedShadowMaps { get; set; }
+    public bool Prefer32BitShadowMaps { get; set; }
+    public bool EnableLPPV { get; set; }
+    public bool SemitransparentShadows { get; set; }
+    public int RenderingPath { get; set; }
+    public int RealtimeGICPUUsage { get; set; }
+
+    internal UnityEditor.Rendering.TierSettings ToTierSettings() => new UnityEditor.Rendering.TierSettings
+    {
+        standardShaderQuality = (UnityEditor.Rendering.ShaderQuality)StandardShaderQuality,
+        hdrMode = (UnityEngine.Rendering.CameraHDRMode)HdrMode,
+        reflectionProbeBoxProjection = ReflectionProbeBoxProjection,
+        reflectionProbeBlending = ReflectionProbeBlending,
+        hdr = Hdr,
+        detailNormalMap = DetailNormalMap,
+        cascadedShadowMaps = CascadedShadowMaps,
+        prefer32BitShadowMaps = Prefer32BitShadowMaps,
+        enableLPPV = EnableLPPV,
+        semitransparentShadows = SemitransparentShadows,
+        renderingPath = (UnityEngine.RenderingPath)RenderingPath,
+        realtimeGICPUUsage = (UnityEngine.Rendering.RealtimeGICPUUsage)RealtimeGICPUUsage,
+    };
 }
 
 public sealed class RenderPipelineConfig
@@ -384,6 +423,7 @@ public static unsafe class Game
         GfxStream.SetColorSpace(QualitySettings.s_ColorSpace);
         QualitySettings.vSyncCount = c.VSyncCount;
         if (c.ShaderDefines.Count > 0) UnityEngine.Rendering.GraphicsSettings.SetPlatformShaderDefines(c.ShaderDefines);
+        UnityEditor.Rendering.EditorGraphicsSettings.SetTierTable(c.TierSettings.Select(t => (t.Group, t.Tier, t.ToTierSettings())));
         if (c.RenderingLayers.Count > 0) RenderingLayerMask.s_Names = c.RenderingLayers.ToArray();
         var rp = c.RenderPipeline;
         static (string, long)? Ref(AssetRefConfig? r) => r == null || string.IsNullOrEmpty(r.Guid) ? null : (r.Guid, r.FileId);

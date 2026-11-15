@@ -1,7 +1,7 @@
 // Generated from the metadata of Unity 6000.0's reference assemblies (the rendering enums the
 // hand-written graphics code uses): names and values must match exactly. Do not edit by hand;
 // regenerate with the enum dumper:
-//   dotnet run --project managed/Unbound.EnumDumper -- <Editor>/Data/Managed/UnityEngine UnityEngine.RenderTextureMemoryless UnityEngine.VRTextureUsage UnityEngine.RenderTextureCreationFlags UnityEngine.Rendering.RenderBufferLoadAction UnityEngine.Rendering.RenderBufferStoreAction UnityEngine.Rendering.RTClearFlags UnityEngine.Rendering.CommandBufferExecutionFlags UnityEngine.Rendering.FormatSwizzle UnityEngine.Rendering.LightEvent UnityEngine.Rendering.SinglePassStereoMode UnityEngine.Rendering.FoveatedRenderingMode UnityEngine.Rendering.ShadowMapPass UnityEngine.Rendering.RenderTargetFlags UnityEngine.Rendering.ComputeQueueType UnityEngine.Rendering.SynchronisationStageFlags UnityEngine.Rendering.GraphicsFenceType UnityEngine.Rendering.DistanceMetric UnityEngine.Rendering.PerObjectData UnityEngine.Rendering.CullingOptions UnityEngine.Rendering.ReflectionProbeSortingCriteria UnityEngine.Rendering.RenderStateMask UnityEngine.Rendering.SubPassFlags UnityEngine.Rendering.GizmoSubset UnityEngine.Rendering.UISubset UnityEngine.ShadowObjectsFilter UnityEngine.Rendering.BatchCullingProjectionType UnityEngine.Rendering.RendererListStatus UnityEngine.Rendering.RenderingThreadingMode UnityEngine.MixedLightingMode UnityEngine.LODFadeMode UnityEngine.LightmapsMode UnityEngine.Rendering.ShaderKeywordType UnityEngine.ColorGamut UnityEngine.Experimental.Rendering.GraphicsFormatUsage UnityEngine.HDRDisplaySupportFlags UnityEngine.Rendering.BuiltinShaderDefine UnityEngine.Rendering.GraphicsTier UnityEngine.Rendering.ReflectionProbeClearFlags UnityEngine.Rendering.ReflectionProbeMode UnityEngine.Rendering.ReflectionProbeRefreshMode UnityEngine.Rendering.ReflectionProbeTimeSlicingMode UnityEngine.Rendering.ReflectionProbeType UnityEngine.Rendering.BatchCullingViewType UnityEngine.Rendering.BatchCullingFlags UnityEngine.Rendering.BatchDrawCommandFlags UnityEngine.Rendering.BatchDrawCommandType
+//   dotnet run --project managed/Unbound.EnumDumper -- <Editor>/Data/Managed/UnityEngine UnityEngine.RenderTextureMemoryless UnityEngine.VRTextureUsage UnityEngine.RenderTextureCreationFlags UnityEngine.Rendering.RenderBufferLoadAction UnityEngine.Rendering.RenderBufferStoreAction UnityEngine.Rendering.RTClearFlags UnityEngine.Rendering.CommandBufferExecutionFlags UnityEngine.Rendering.FormatSwizzle UnityEngine.Rendering.LightEvent UnityEngine.Rendering.SinglePassStereoMode UnityEngine.Rendering.FoveatedRenderingMode UnityEngine.Rendering.ShadowMapPass UnityEngine.Rendering.RenderTargetFlags UnityEngine.Rendering.ComputeQueueType UnityEngine.Rendering.SynchronisationStageFlags UnityEngine.Rendering.GraphicsFenceType UnityEngine.Rendering.DistanceMetric UnityEngine.Rendering.PerObjectData UnityEngine.Rendering.CullingOptions UnityEngine.Rendering.ReflectionProbeSortingCriteria UnityEngine.Rendering.RenderStateMask UnityEngine.Rendering.SubPassFlags UnityEngine.Rendering.GizmoSubset UnityEngine.Rendering.UISubset UnityEngine.ShadowObjectsFilter UnityEngine.Rendering.BatchCullingProjectionType UnityEngine.Rendering.RendererListStatus UnityEngine.Rendering.RenderingThreadingMode UnityEngine.MixedLightingMode UnityEngine.LODFadeMode UnityEngine.LightmapsMode UnityEngine.Rendering.ShaderKeywordType UnityEngine.ColorGamut UnityEngine.Experimental.Rendering.GraphicsFormatUsage UnityEngine.HDRDisplaySupportFlags UnityEngine.Rendering.BuiltinShaderDefine UnityEngine.Rendering.GraphicsTier UnityEngine.Rendering.ReflectionProbeClearFlags UnityEngine.Rendering.ReflectionProbeMode UnityEngine.Rendering.ReflectionProbeRefreshMode UnityEngine.Rendering.ReflectionProbeTimeSlicingMode UnityEngine.Rendering.ReflectionProbeType UnityEngine.Rendering.BatchCullingViewType UnityEngine.Rendering.BatchCullingFlags UnityEngine.Rendering.BatchDrawCommandFlags UnityEngine.Rendering.BatchDrawCommandType UnityEngine.Rendering.CameraHDRMode UnityEngine.Rendering.RealtimeGICPUUsage
 using System;
 
 namespace UnityEngine
@@ -119,6 +119,20 @@ namespace UnityEngine.Experimental.Rendering
 
 namespace UnityEngine.Rendering
 {
+    public enum CameraHDRMode
+    {
+        FP16 = 1,
+        R11G11B10 = 2,
+    }
+
+    public enum RealtimeGICPUUsage
+    {
+        Low = 25,
+        Medium = 50,
+        High = 75,
+        Unlimited = 100,
+    }
+
     [Flags]
     public enum BatchCullingFlags
     {

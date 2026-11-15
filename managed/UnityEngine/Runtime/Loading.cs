@@ -631,6 +631,7 @@ namespace Unbound.Runtime
                 RenderSettings.ReadLightingData(references.Data, resolver as LoadedFile, first, scene?.Handle.Value ?? 0);
                 if (scene != null)
                 {
+                    scene.LightingDataRef = references.Data;
                     var settings = references.Settings;
                     scene.LightingSettings = settings.IsNull || resolver == null ? null : resolver.Resolve(settings, typeof(LightingSettings)) as LightingSettings;
                     if (first) DynamicGI.SceneLoaded(scene.LightingSettings);

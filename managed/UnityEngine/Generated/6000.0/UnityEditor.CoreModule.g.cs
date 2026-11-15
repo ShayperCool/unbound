@@ -14083,8 +14083,7 @@ namespace UnityEditor
         [global::Unbound.Stub] public override void OnInspectorGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LightProbesInspector.OnInspectorGUI"); }
         [global::Unbound.Stub] public LightProbesInspector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LightProbesInspector.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class LightingDataAsset : global::UnityEngine.Object
+    unsafe partial class LightingDataAsset
     {
         [global::Unbound.Stub] public LightingDataAsset(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LightingDataAsset.ctor"); }
         [global::Unbound.Stub] public void SetLights(global::UnityEngine.Light[] lights) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LightingDataAsset.SetLights"); }
@@ -14595,7 +14594,6 @@ namespace UnityEditor
         public static bool isRunning { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.isRunning"); return default; } }
         public static float buildProgress { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.buildProgress"); return default; } }
         public static global::UnityEditor.Lightmapping.BakeOnSceneLoadMode bakeOnSceneLoad { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.bakeOnSceneLoad"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.bakeOnSceneLoad"); } }
-        public static global::UnityEditor.LightingDataAsset lightingDataAsset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.lightingDataAsset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.lightingDataAsset"); } }
         internal static global::UnityEngine.LightingSettings lightingSettingsInternal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.lightingSettingsInternal"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.lightingSettingsInternal"); } }
         [global::System.Obsolete("lightmapSnapshot has been deprecated. Use lightingDataAsset instead (UnityUpgradable) -> lightingDataAsset")] public static global::UnityEditor.LightmapSnapshot lightmapSnapshot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.lightmapSnapshot"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.lightmapSnapshot"); } }
         [global::System.Obsolete("OnStartedFunction.started is obsolete, please use bakeStarted instead. ")] public static event global::UnityEditor.Lightmapping.OnStartedFunction started { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.started"); } [global::Unbound.Stub] remove { } }
@@ -43674,8 +43672,6 @@ namespace UnityEditor.Rendering
     unsafe partial class EditorGraphicsSettings
     {
         [global::Unbound.Stub] internal static void SetTierSettingsImpl(global::UnityEditor.BuildTargetGroup target, global::UnityEngine.Rendering.GraphicsTier tier, global::UnityEditor.Rendering.TierSettings settings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.SetTierSettingsImpl"); }
-        [global::Unbound.Stub] public static global::UnityEditor.Rendering.TierSettings GetTierSettings(global::UnityEditor.BuildTargetGroup target, global::UnityEngine.Rendering.GraphicsTier tier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.GetTierSettings"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Rendering.TierSettings GetTierSettings(global::UnityEditor.Build.NamedBuildTarget target, global::UnityEngine.Rendering.GraphicsTier tier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.GetTierSettings"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.Rendering.TierSettings GetCurrentTierSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.GetCurrentTierSettings"); return default; }
         [global::Unbound.Stub] internal static bool AreTierSettingsAutomatic(global::UnityEditor.BuildTargetGroup target, global::UnityEngine.Rendering.GraphicsTier tier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.AreTierSettingsAutomatic"); return default; }
         [global::Unbound.Stub] internal static void MakeTierSettingsAutomatic(global::UnityEditor.BuildTargetGroup target, global::UnityEngine.Rendering.GraphicsTier tier, bool automatic) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.EditorGraphicsSettings.MakeTierSettingsAutomatic"); }
@@ -43824,12 +43820,6 @@ namespace UnityEditor.Rendering
         public global::UnityEditor.Rendering.ShaderCompilerPlatform shaderCompilerPlatform { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.ShaderCompilerData.shaderCompilerPlatform"); return default; } }
         public global::UnityEditor.BuildTarget buildTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Rendering.ShaderCompilerData.buildTarget"); return default; } }
     }
-    public enum ShaderQuality
-    {
-        Low = 0,
-        Medium = 1,
-        High = 2,
-    }
     [global::System.Flags]
     public enum ShaderRequirements : long
     {
@@ -43875,22 +43865,6 @@ namespace UnityEditor.Rendering
         RayTracing = 6,
         [global::System.Obsolete("Please use ShaderType.RayTracing instead. ShaderType.Surface was added incorrectly, and is not supposed to be part of this enumeration. (UnityUpgradable) -> ShaderType.RayTracing")] Surface = 6,
         Count = 7,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct TierSettings
-    {
-        [global::Unbound.Stub] public global::UnityEditor.Rendering.ShaderQuality standardShaderQuality;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.CameraHDRMode hdrMode;
-        [global::Unbound.Stub] public bool reflectionProbeBoxProjection;
-        [global::Unbound.Stub] public bool reflectionProbeBlending;
-        [global::Unbound.Stub] public bool hdr;
-        [global::Unbound.Stub] public bool detailNormalMap;
-        [global::Unbound.Stub] public bool cascadedShadowMaps;
-        [global::Unbound.Stub] public bool prefer32BitShadowMaps;
-        [global::Unbound.Stub] public bool enableLPPV;
-        [global::Unbound.Stub] public bool semitransparentShadows;
-        [global::Unbound.Stub] public global::UnityEngine.RenderingPath renderingPath;
-        [global::Unbound.Stub] public global::UnityEngine.Rendering.RealtimeGICPUUsage realtimeGICPUUsage;
     }
 }
 namespace UnityEditor.Rendering.Analytics
