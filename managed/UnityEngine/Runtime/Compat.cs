@@ -204,6 +204,11 @@ namespace Unbound.Runtime
         internal static bool FontFeatureLookupIndexQueriesMeasured => Release == (6000, 0, 71, 'f', 1);
         internal static bool FontPairQueriesMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Panel atlas packing, texture ownership and dirty/reset transitions measured
+        /// in tests/projects/uitkvector, Unity 6000.0.71f1. Other releases keep direct sampling,
+        /// whose seams and texture lifetime remain unmeasured.</summary>
+        internal static bool DynamicPanelAtlasMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Vector and rounded stencil shapes stay with an element's retained geometry
         /// until repaint. Measured in tests/projects/uitkvector on Unity 6000.0.71f1.
         /// Other releases retain per-paint mask generation, unmeasured.</summary>

@@ -153,6 +153,7 @@ namespace Unbound.UIElements
                 s_Gpu[panel] = gpu;
                 ReleaseDisposed();
             }
+            s_Painter.Atlas?.Commit();
             UploadMesh(gpu);
             UploadShaderInfo(gpu);
             UploadGradientSettings(gpu);
@@ -176,7 +177,7 @@ namespace Unbound.UIElements
                 {
                     var batch = s_Painter.Batches[i];
                     if (batch.IndexCount == 0) continue;
-                    BatchProperties(batch, gpu.ShaderInfo, gpu.GradientSettings);
+                    BatchProperties(batch, gpu.ShaderInfo, gpu.GradientSettings, s_Painter.Atlas);
                     Rect? scissor = batch.Scissor.HasValue
                         ? new Rect(batch.Scissor.Value.x, batch.Scissor.Value.y, batch.Scissor.Value.width, batch.Scissor.Value.height)
                         : (Rect?)null;
@@ -272,8 +273,7 @@ namespace Unbound.UIElements
         }
 
         /// <summary>Writes the gradient settings rows of this frame's vector images (UIR's
-        /// GradientSettingsAtlas.Write, without the dynamic atlas: each image samples its own atlas
-        /// texture): texel 0 the type, address mode and radial focus, texels 1 and 2 the gradient's
+        /// GradientSettingsAtlas.Write): texel 0 the type, address mode and radial focus, texels 1 and 2 the gradient's
         /// position and size less one in its atlas, as base-255 pairs.</summary>
         static void UploadGradientSettings(PanelGpu gpu)
         {
@@ -301,6 +301,7 @@ namespace Unbound.UIElements
             int row = 0;
             foreach (var image in p.GradientImages)
             {
+                var atlasLocation = p.Atlas?.Location(image.atlas) ?? default;
                 foreach (var setting in image.settings ?? Array.Empty<GradientSettings>())
                 {
                     if (setting.gradientType == GradientType.Radial)
@@ -313,6 +314,7 @@ namespace Unbound.UIElements
                         Set(0, row, new Color32(0, Unit((float)setting.addressMode / 255f), 0, 0));
                     }
                     var location = setting.location;
+                    location.x += atlasLocation.x; location.y += atlasLocation.y;
                     Set(1, row, Pair(location.x, location.y));
                     Set(2, row, Pair(location.width - 1, location.height - 1));
                     row++;
@@ -325,12 +327,13 @@ namespace Unbound.UIElements
 
         static readonly Vector4[] s_TextureInfo = new Vector4[UaPainter.TextureSlots * 2];
 
-        static void BatchProperties(UaPainter.Batch batch, Texture2D shaderInfo, Texture2D gradientSettings)
+        static void BatchProperties(UaPainter.Batch batch, Texture2D shaderInfo, Texture2D gradientSettings, UaDynamicAtlas atlas)
         {
             s_Properties.Clear();
             for (int i = 0; i < UaPainter.TextureSlots; i++)
             {
                 var t = i < batch.TextureCount ? batch.Textures[i] : null;
+                if (atlas != null) t = atlas.Resolve(t);
                 s_Properties[s_TextureIds[i]] = t != null ? t : Texture2D.whiteTexture;
                 if (t != null)
                 {

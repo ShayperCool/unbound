@@ -408,6 +408,7 @@ namespace UnityEngine.UIElements
             UaUnregisterBindings();
             uaTransitions?.CancelAll();
             elementPanel.OnElementLeavingPanel(this);
+            uaGeometry?.ReleaseAtlas();
             if (!m_NeedsAttach)
             {
                 using (var e = DetachFromPanelEvent.GetPooled(elementPanel, destination))

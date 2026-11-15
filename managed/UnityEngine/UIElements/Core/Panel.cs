@@ -51,6 +51,8 @@ namespace UnityEngine.UIElements
         internal readonly UaElementUnderPointer uaUnderPointer = new UaElementUnderPointer();
         readonly StyleResolver m_StyleResolver = new StyleResolver();
         internal uint uaVersion;
+        internal UaDynamicAtlas uaAtlas;
+
         internal readonly List<StyleTransitions> uaTransitionUpdates = new List<StyleTransitions>();
         readonly List<Type> uaTransitionTypes = new List<Type>();
         readonly Dictionary<Type, List<StyleTransitions>> uaTransitionOwners = new Dictionary<Type, List<StyleTransitions>>();
@@ -144,6 +146,7 @@ namespace UnityEngine.UIElements
                 visualTree.uaTransitions?.CancelAll();
                 uaTransitionUpdates.Clear();
                 m_UaDataBinding?.Dispose();
+                uaAtlas?.Dispose();
                 PointerDeviceState.RemovePanelData(this);
             }
             disposed = true;

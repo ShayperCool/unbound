@@ -64,5 +64,71 @@
     "worst": 3,
     "over8": 0,
     "reason": "Measured rounded-mask fringe coverage differences on NVIDIA: mean 0.003125, at most 3 channel steps. The unchanged outer bounds and changing content rectangles are also compared as numeric rows."
+  },
+  "atlas-readd.png": {
+    "mean": 0,
+    "worst": 0,
+    "over8": 0,
+    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+  },
+  "atlas-reuse.png": {
+    "mean": 0,
+    "worst": 0,
+    "over8": 0,
+    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+  },
+  "atlas-absent-dirty.png": {
+    "mean": 0,
+    "worst": 0,
+    "over8": 0,
+    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+  },
+  "atlas-growth.png": {
+    "mean": 0,
+    "worst": 0,
+    "over8": 0,
+    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+  },
+  "atlas-no-user.png": {
+    "mean": 0,
+    "worst": 0,
+    "over8": 0,
+    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+  },
+  "atlas-reset.png": {
+    "mean": 0,
+    "worst": 0,
+    "over8": 0,
+    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+  },
+  "atlas-initial.png": {
+    "mean": 0,
+    "worst": 0,
+    "over8": 0,
+    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+  },
+  "atlas-dirty.png": {
+    "mean": 0,
+    "worst": 0,
+    "over8": 0,
+    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+  },
+  "atlas-filter.png": {
+    "mean": 0,
+    "worst": 0,
+    "over8": 0,
+    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+  },
+  "atlas-one-user.png": {
+    "mean": 0,
+    "worst": 0,
+    "over8": 0,
+    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+  },
+  "atlas-unmarked.png": {
+    "mean": 0,
+    "worst": 0,
+    "over8": 0,
+    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
   }
 }

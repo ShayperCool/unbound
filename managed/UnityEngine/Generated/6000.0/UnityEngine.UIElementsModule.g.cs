@@ -3447,9 +3447,7 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static global::UnityEngine.Vector2 ScreenToPanel(global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.Vector2 screenPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanelUtils.ScreenToPanel"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Vector2 CameraTransformWorldToPanel(global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.Vector3 worldPosition, global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanelUtils.CameraTransformWorldToPanel"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Rect CameraTransformWorldToPanelRect(global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.Vector3 worldPosition, global::UnityEngine.Vector2 worldSize, global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanelUtils.CameraTransformWorldToPanelRect"); return default; }
-        [global::Unbound.Stub] public static void ResetDynamicAtlas(this global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanelUtils.ResetDynamicAtlas"); }
         [global::Unbound.Stub] public static void ResetRenderer(this global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanelUtils.ResetRenderer"); }
-        [global::Unbound.Stub] public static void SetTextureDirty(this global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanelUtils.SetTextureDirty"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class RuntimeUIElementsBridge : global::UnityEngine.UIElements.UIElementsBridge

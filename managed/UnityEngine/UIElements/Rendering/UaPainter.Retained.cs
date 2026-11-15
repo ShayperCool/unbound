@@ -20,6 +20,11 @@ namespace Unbound.UIElements
         internal Rect ContentRect;
         internal bool Valid;
 
+        internal bool HasTextures => Visuals.HasTextures || Content.HasTextures || (Mask?.HasTextures ?? false);
+        internal void ReleaseAtlas()
+        {
+            Visuals.ReleaseAtlas(); Content.ReleaseAtlas(); Mask?.ReleaseAtlas(); Valid = false;
+        }
         internal void Invalidate() => Valid = false;
 
         /// <summary>Whether the textures it samples are the ones it was generated for (a destroyed
@@ -51,6 +56,9 @@ namespace Unbound.UIElements
             public UaTextCoreSettings settings;
             /// <summary>The VectorImage whose gradient settings the segment's vertices index.</summary>
             public VectorImage gradients;
+            internal UaDynamicAtlas Atlas;
+            internal UaDynamicAtlas.Entry AtlasEntry;
+            internal int AtlasGeneration;
             public int vertexStart, vertexEnd, indexStart, indexEnd;
         }
 
@@ -58,8 +66,23 @@ namespace Unbound.UIElements
         internal readonly List<int> Indices = new List<int>();
         internal readonly List<Segment> Segments = new List<Segment>();
 
+        internal bool HasTextures
+        {
+            get { foreach (var segment in Segments) if (segment.hasTexture) return true; return false; }
+        }
+        internal void ReleaseAtlas()
+        {
+            for (int i = 0; i < Segments.Count; i++)
+            {
+                var segment = Segments[i];
+                segment.Atlas?.Return(segment.AtlasEntry);
+                segment.AtlasEntry = null; segment.Atlas = null;
+                Segments[i] = segment;
+            }
+        }
         internal void Clear()
         {
+            ReleaseAtlas();
             Vertices.Clear();
             Indices.Clear();
             Segments.Clear();
@@ -71,6 +94,7 @@ namespace Unbound.UIElements
             {
                 if (!s.hasTexture) continue;
                 if (s.texture == null) return false;
+                if (s.Atlas != null && s.AtlasGeneration != s.Atlas.Generation) return false;
                 if (s.texture.width != s.textureWidth || s.texture.height != s.textureHeight) return false;
             }
             return true;
@@ -117,6 +141,9 @@ namespace Unbound.UIElements
                 hasSettings = settings,
                 settings = settings ? m_PendingSettings : default,
                 gradients = gradients,
+                Atlas = Atlas,
+                AtlasGeneration = Atlas?.Generation ?? 0,
+                AtlasEntry = !settings && sdfScale == 0f ? Atlas?.Acquire(texture as Texture2D, gradients != null) : null,
                 vertexStart = r.Vertices.Count,
                 vertexEnd = r.Vertices.Count,
                 indexStart = r.Indices.Count,
@@ -210,7 +237,8 @@ namespace Unbound.UIElements
             int first = Positions.Count;
             foreach (var s in mesh.Segments)
             {
-                float id = Begin(s.texture, s.sdfScale, s.sharpness);
+                var binding = s.AtlasEntry;
+                float id = Begin(binding != null ? binding.Page.Token : s.texture, s.sdfScale, s.sharpness);
                 int textSettings = 0;
                 if (s.hasSettings)
                 {
@@ -221,7 +249,14 @@ namespace Unbound.UIElements
                 for (int i = s.vertexStart; i < s.vertexEnd; i++)
                 {
                     var v = mesh.Vertices[i];
-                    Vertex(v.position, v.color, v.uv, v.type, id, v.circle, v.arc, v.dilate, textSettings, v.setting);
+                    var uv = v.uv;
+                    byte type = v.type;
+                    if (binding != null && type == VertTexture)
+                    {
+                        uv = new Vector2(binding.Rect.x + uv.x * binding.Rect.width, binding.Rect.y + uv.y * binding.Rect.height);
+                        type = VertDynamicTexture;
+                    }
+                    Vertex(v.position, v.color, uv, type, id, v.circle, v.arc, v.dilate, textSettings, v.setting);
                 }
                 m_SettingOffset = 0;
                 for (int i = s.indexStart; i < s.indexEnd; i++) Indices.Add(first + mesh.Indices[i]);

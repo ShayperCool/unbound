@@ -71,4 +71,8 @@
 {"k":"padding/before","v":{"layout":[0,0,64,64],"content":[10,10,44,44]}}
 {"k":"padding/percent","v":{"layout":[0,0,64,64],"content":[14,14,36,36]}}
 {"k":"padding/after","v":{"layout":[0,0,64,64],"content":[20,20,24,24]}}
+{"k":"atlas/generation-initial","v":1}
+{"k":"atlas/generation-dirty","v":1}
+{"k":"atlas/generation-readd","v":1}
+{"k":"atlas/generation-reset","v":1}
 {"k":"complete","v":true}

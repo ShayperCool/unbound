@@ -61,6 +61,7 @@ public class VectorProbe : MonoBehaviour
         for (int i = 0; i < logs.Count; i++) sb.Append(i == 0 ? "" : ",").Append(Str(logs[i]));
         Value(output, "logs", sb.Append("]").ToString());
         VisualControls(dir, output);
+        AtlasControls(dir, output);
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(dir, "values.jsonl"), output.ToString());
 #if UNITY_EDITOR
@@ -250,6 +251,78 @@ public class VectorProbe : MonoBehaviour
         target.Release();
         UnityEngine.Object.DestroyImmediate(target);
         UnityEngine.Object.DestroyImmediate(vi);
+    }
+
+    static void AtlasControls(string dir, StringBuilder output)
+    {
+        var target = new RenderTexture(320, 192, 24, RenderTextureFormat.ARGB32);
+        target.Create();
+        var settings = ScriptableObject.CreateInstance<PanelSettings>();
+        var atlas = DynamicAtlasSettings.defaults;
+        atlas.maxAtlasSize = 256;
+        atlas.activeFilters &= ~DynamicAtlasFilters.Readability;
+        settings.dynamicAtlasSettings = atlas;
+        settings.targetTexture = target;
+        settings.scaleMode = PanelScaleMode.ConstantPixelSize;
+        settings.clearColor = true;
+        settings.colorClearValue = new Color(0.1f, 0.1f, 0.1f, 1);
+        var go = new GameObject("AtlasControls"); go.SetActive(false);
+        var doc = go.AddComponent<UIDocument>(); doc.panelSettings = settings; go.SetActive(true);
+        var root = doc.rootVisualElement;
+        var textures = new List<Texture2D>();
+        var elements = new List<VisualElement>();
+        Texture2D Make(int w, int h, FilterMode filter, TextureWrapMode wrap, string name)
+        {
+            var t = new Texture2D(w, h, TextureFormat.RGBA32, false) { name = name, filterMode = filter, wrapMode = wrap };
+            var pixels = new Color32[w*h];
+            for (int y=0;y<h;y++) for(int x=0;x<w;x++) pixels[y*w+x]=new Color32((byte)(x*255/Math.Max(1,w-1)),(byte)(y*255/Math.Max(1,h-1)),(byte)(255-x*127/Math.Max(1,w-1)),255);
+            t.SetPixels32(pixels); t.Apply(false,false); textures.Add(t);return t;
+        }
+        VisualElement Add(Texture2D t,int x,int y)
+        {
+            var e=new Image { image=t, scaleMode=ScaleMode.StretchToFill };
+            e.style.position=Position.Absolute;e.style.left=x;e.style.top=y;e.style.width=53.5f;e.style.height=29.5f;
+            root.Add(e);elements.Add(e);return e;
+        }
+        void Shot(string stage)
+        {
+            Update();Update(); Render(target,Path.Combine(dir,"atlas-"+stage+".png"));
+        }
+        var a=Make(5,3,FilterMode.Bilinear,TextureWrapMode.Clamp,"control-a");
+        var b=Make(17,9,FilterMode.Point,TextureWrapMode.Repeat,"control-b");
+        var c=Make(5,3,FilterMode.Bilinear,TextureWrapMode.Repeat,"control-c");
+        var first=Add(a,8,8); var shared=Add(a,70,8);Add(b,132,8);Add(c,194,8);
+        int generations=0;first.generateVisualContent+=ctx=>generations++;
+        Shot("initial");
+        Value(output,"atlas/generation-initial",generations.ToString(Inv));
+        var red=new Color32[a.width*a.height];for(int i=0;i<red.Length;i++)red[i]=new Color32(255,0,0,255);
+        a.SetPixels32(red);a.Apply(false,false);
+        Shot("unmarked");
+        root.panel.SetTextureDirty(a);
+        Shot("dirty");
+        Value(output,"atlas/generation-dirty",generations.ToString(Inv));
+        for(int i=0;i<10;i++)Add(Make(60,31,FilterMode.Bilinear,TextureWrapMode.Clamp,"growth-"+i),8+(i%5)*62,52+(i/5)*36);
+        Shot("growth");
+        first.RemoveFromHierarchy();Shot("one-user");
+        shared.RemoveFromHierarchy();Shot("no-user");
+        var replacement=Add(Make(5,3,FilterMode.Bilinear,TextureWrapMode.Clamp,"replacement"),8,8);
+        Shot("reuse");
+        foreach(var e in elements) if(e!=replacement)e.RemoveFromHierarchy();
+        int beforeReset=generations;
+        root.Add(first);
+        Shot("readd");
+        Value(output,"atlas/generation-readd",(generations-beforeReset).ToString(Inv));
+        int before=generations;
+        root.panel.ResetDynamicAtlas();
+        Shot("reset");
+        Value(output,"atlas/generation-reset",(generations-before).ToString(Inv));
+        settings.dynamicAtlasSettings.customFilter=(Texture2D texture,ref DynamicAtlasFilters filters)=>texture!=a;
+        Shot("filter");
+        root.panel.SetTextureDirty(null);root.panel.SetTextureDirty(b);
+        Shot("absent-dirty");
+        UnityEngine.Object.DestroyImmediate(go);UnityEngine.Object.DestroyImmediate(settings);
+        target.Release();UnityEngine.Object.DestroyImmediate(target);
+        foreach(var t in textures)UnityEngine.Object.DestroyImmediate(t);
     }
 
     static List<Case> Cases(Dictionary<string, VectorImage> vi)

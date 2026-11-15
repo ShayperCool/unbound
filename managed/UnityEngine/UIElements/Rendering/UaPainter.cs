@@ -20,7 +20,7 @@ namespace Unbound.UIElements
         const float UnusedArc = -10000f;
 
         // UIR's vertex types (UnityUIE.cginc k_VertType*).
-        internal const byte VertSolid = 0, VertText = 1, VertTexture = 2, VertSvgGradient = 4;
+        internal const byte VertSolid = 0, VertText = 1, VertTexture = 2, VertDynamicTexture = 3, VertSvgGradient = 4;
 
         internal enum StencilKind : byte { Draw, PushMask, PopMask }
 
@@ -104,6 +104,7 @@ namespace Unbound.UIElements
         RectInt? m_Scissor;
         float m_PixelsPerPoint = 1f;
         float m_ViewportHeight;
+        internal UaDynamicAtlas Atlas;
         static readonly HashSet<string> s_Warned = new HashSet<string>();
 
         internal UaPainter()
@@ -124,6 +125,12 @@ namespace Unbound.UIElements
         internal void Paint(BaseVisualElementPanel panel, float viewportHeight)
         {
             Clear();
+            Atlas = null;
+            if (Unbound.Runtime.Compat.DynamicPanelAtlasMeasured)
+            {
+                Atlas = panel.uaAtlas ??= new UaDynamicAtlas(panel);
+                Atlas.Configure((panel.ownerObject as PanelSettings)?.dynamicAtlasSettings ?? UaDynamicAtlas.DefaultSettings);
+            }
             m_PixelsPerPoint = panel.scaledPixelsPerPoint;
             m_ViewportHeight = viewportHeight;
             Opacities.Add(1f);
@@ -156,7 +163,11 @@ namespace Unbound.UIElements
         void PaintElement(VisualElement ve, float parentOpacity, Rect? parentClip)
         {
             var style = ve.computedValues;
-            if (style.display == DisplayStyle.None || ve.disableRendering) return;
+            if (style.display == DisplayStyle.None || ve.disableRendering)
+            {
+                if (Atlas != null) ReleaseAtlasTree(ve);
+                return;
+            }
             float opacity = parentOpacity * Mathf.Clamp01(style.opacity);
             if (opacity <= 0f) return;
 
@@ -213,6 +224,13 @@ namespace Unbound.UIElements
             }
             m_StencilRef = savedStencil;
             m_Scissor = savedScissor;
+        }
+
+        static void ReleaseAtlasTree(VisualElement element)
+        {
+            element.uaGeometry?.ReleaseAtlas();
+            var children = element.hierarchy.children;
+            for (int i = 0; i < children.Count; i++) ReleaseAtlasTree(children[i]);
         }
 
         void DrawElementMask(VisualElement ve, ComputedValues style, UaRetainedGeometry geometry)
