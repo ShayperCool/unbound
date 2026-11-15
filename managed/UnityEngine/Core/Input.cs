@@ -166,8 +166,7 @@ namespace UnityEngine
         public static int msaaSamples => 1;
         [Unbound.EditorFaithful("a player-window API: the Editor answers zero")]
         public static Vector2Int mainWindowPosition => Vector2Int.zero;
-        /// <summary>The actual host refresh used for frame pacing.</summary>
-        /// <summary>The host's refresh rate for frame pacing, read quietly (as
+        /// <summary>The host's actual refresh rate for frame pacing, read quietly (as
         /// <see cref="CurrentRefreshRateQuietly"/>).</summary>
         internal static double HostRefreshRate => HostDisplay(quiet: true)?.HostRefreshRate ?? 60;
 

@@ -304,6 +304,8 @@ namespace UnityEngine.Tests
             Sweep();
             Assert.NotNull(JobSystem.RecordOf(close));
             first.Complete();
+            Sweep();
+            Assert.NotNull(JobSystem.RecordOf(close));
             second.Complete();
             Sweep();
             Assert.Null(JobSystem.RecordOf(close));
