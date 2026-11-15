@@ -388,6 +388,12 @@ namespace Unbound.Runtime.Jobs
                     if (handle.versionNode != IntPtr.Zero && Safety.IsAlive(handle)) Safety.PatchForJob(ref handle, record, ContainerAccess.ReadWrite, 0);
                 }
             }
+            foreach (int offset in layout.Detached)
+            {
+                ref var handle = ref *(AtomicSafetyHandle*)(record.Data + offset);
+                if (handle.versionNode != IntPtr.Zero && Safety.IsAlive(handle))
+                    Safety.PatchForJob(ref handle, record, ContainerAccess.Read, AtomicSafetyHandle.Dispose | AtomicSafetyHandle.Write);
+            }
             foreach (var (container, offset, handle) in handles)
             {
                 bool writes = (container.Access & ContainerAccess.Write) != 0;

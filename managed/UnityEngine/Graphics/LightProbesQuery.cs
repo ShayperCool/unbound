@@ -15,9 +15,10 @@ namespace UnityEngine
     /// position outside the probes' axis-aligned bounds gets the ambient probe (as at creation), occlusion 1 and
     /// index -1.
     /// </summary>
+    [NativeContainer]
     public partial struct LightProbesQuery : IDisposable
     {
-        internal IntPtr m_LightProbeContextWrapper;
+        [NativeDisableUnsafePtrRestriction] internal IntPtr m_LightProbeContextWrapper;
         internal Allocator m_AllocatorLabel;
         internal AtomicSafetyHandle m_Safety;
 

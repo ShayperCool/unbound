@@ -27,7 +27,6 @@ namespace UnityEngine
             internal IndexFormat IndexFormat = IndexFormat.UInt16;
             internal readonly List<SubMeshDescriptor> SubMeshes = new List<SubMeshDescriptor>();
             internal readonly bool ReadOnly;
-            internal AtomicSafetyHandle Safety = AtomicSafetyHandle.Create();
 
             internal MeshDataStore(bool readOnly) => ReadOnly = readOnly;
 
@@ -103,7 +102,6 @@ namespace UnityEngine
                 if (Indices != null) UnsafeUtility.Free(Indices, Allocator.Persistent);
                 Indices = null;
                 IndexCount = 0;
-                AtomicSafetyHandle.Release(Safety);
             }
 
             /// <summary>A mesh's data in its current layout.</summary>
@@ -200,9 +198,12 @@ namespace UnityEngine
             n4 = ((int)f.x, (int)f.y, (int)f.z, (int)f.w);
         }
 
+        /// <summary>One mesh of a MeshDataArray. It and the arrays it returns share the array's
+        /// safety handle, so a job's access to the array (read-only, or a parallel-for slice)
+        /// governs them (matches the Unity 6000.0.71f1 Editor, tests/projects/meshdatajobs).</summary>
         public unsafe partial struct MeshData
         {
-            internal IntPtr m_Ptr;
+            [NativeDisableUnsafePtrRestriction] internal IntPtr m_Ptr;
             internal AtomicSafetyHandle m_Safety;
 
             internal MeshDataStore Store
@@ -294,7 +295,7 @@ namespace UnityEngine
                 int size = UnsafeUtility.SizeOf<T>();
                 int length = store.StreamBytes[stream] / size;
                 var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(store.Streams[stream], length, Allocator.None);
-                NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, store.Safety);
+                NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, m_Safety);
                 return array;
             }
 
@@ -316,7 +317,7 @@ namespace UnityEngine
                 var store = Store;
                 int bytes = store.IndexCount * (store.IndexFormat == IndexFormat.UInt32 ? 4 : 2);
                 var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(store.Indices, bytes / UnsafeUtility.SizeOf<T>(), Allocator.None);
-                NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, store.Safety);
+                NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, m_Safety);
                 return array;
             }
 
@@ -396,12 +397,18 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>A native container of mesh data: a parallel-for job may only index its own
+        /// element, and the array's safety handle is checked and released with it (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/meshdatajobs).</summary>
+        [NativeContainer]
+        [NativeContainerSupportsMinMaxWriteRestriction]
         public unsafe partial struct MeshDataArray : IDisposable
         {
-            internal IntPtr* m_Ptrs;
+            [NativeDisableUnsafePtrRestriction] internal IntPtr* m_Ptrs;
             internal int m_Length;
             internal int m_MinIndex;
             internal int m_MaxIndex;
+            AtomicSafetyHandle m_Safety;
 
             public int Length => m_Length;
 
@@ -409,10 +416,14 @@ namespace UnityEngine
             {
                 get
                 {
-                    if (m_Ptrs == null) throw new ObjectDisposedException("MeshDataArray", "The MeshDataArray has been disposed.");
-                    if (index < 0 || index >= m_Length) throw new IndexOutOfRangeException($"Index {index} is out of range of '{m_Length}' Length.");
-                    var store = (MeshDataStore)GCHandle.FromIntPtr(m_Ptrs[index]).Target;
-                    return new MeshData { m_Ptr = m_Ptrs[index], m_Safety = store.Safety };
+                    AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
+                    if (index < m_MinIndex || index > m_MaxIndex)
+                    {
+                        if (index >= 0 && index < m_Length)
+                            throw new IndexOutOfRangeException($"Index {index} is out of restricted IJobParallelFor range [{m_MinIndex}...{m_MaxIndex}] in MeshDataArray.");
+                        throw new IndexOutOfRangeException($"Index {index} is out of range of '{m_Length}' Length.");
+                    }
+                    return new MeshData { m_Ptr = m_Ptrs[index], m_Safety = m_Safety };
                 }
             }
 
@@ -422,6 +433,7 @@ namespace UnityEngine
                 m_MinIndex = 0;
                 m_MaxIndex = count - 1;
                 m_Ptrs = (IntPtr*)UnsafeUtility.Malloc(Math.Max(1, count) * (long)sizeof(IntPtr), 16, Allocator.Persistent);
+                m_Safety = AtomicSafetyHandle.Create();
             }
 
             internal MeshDataArray(int meshesCount)
@@ -455,6 +467,8 @@ namespace UnityEngine
             public void Dispose()
             {
                 if (m_Ptrs == null) return;
+                AtomicSafetyHandle.CheckDeallocateAndThrow(m_Safety);
+                AtomicSafetyHandle.Release(m_Safety);
                 for (int i = 0; i < m_Length; i++)
                 {
                     var handle = GCHandle.FromIntPtr(m_Ptrs[i]);

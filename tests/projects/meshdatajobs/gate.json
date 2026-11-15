@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/meshdatajobs/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/MeshData.cs",
+    "managed/UnityEngine/Graphics/LightProbesQuery.cs",
+    "managed/UnityEngine/Jobs/JobLayout.cs",
+    "managed/UnityEngine/Collections/Safety.cs"
+  ]
+}

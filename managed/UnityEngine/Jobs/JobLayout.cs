@@ -50,6 +50,11 @@ namespace Unbound.Runtime.Jobs
         public readonly List<Container> Unchecked = new List<Container>();
         public readonly List<int> ThreadIndexOffsets = new List<int>();
         public readonly List<int> NullOnSchedule = new List<int>();
+        /// <summary>Safety handles in plain struct fields, outside any container (a Mesh.MeshData):
+        /// the job's copy may read but not write through them, and the scheduler registers no
+        /// use of them, so the main thread keeps full access (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/meshdatajobs; measured for MeshData).</summary>
+        public readonly List<int> Detached = new List<int>();
         /// <summary>The first reason the job may not be scheduled, or null.</summary>
         public string Error;
 
@@ -156,7 +161,11 @@ namespace Unbound.Runtime.Jobs
                     Containers.Add(container);
                     continue;
                 }
-                if (fieldType == typeof(AtomicSafetyHandle)) continue;
+                if (fieldType == typeof(AtomicSafetyHandle))
+                {
+                    if ((attributes & Inherited.Safety) == 0) Detached.Add(offset);
+                    continue;
+                }
                 Scan(fieldType, offset, fieldPath, depth + 1, attributes);
             }
         }

@@ -112,9 +112,9 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After asset dispatch |
+| Category | Before Q410 | After job containers |
 | --- | ---: | ---: |
-| Attributes | 938 | 21 |
+| Attributes | 938 | 16 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
@@ -123,7 +123,7 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 0 |
 | Lookup policies | 11 | 10 |
-| Total | 1,332 | 120 |
+| Total | 1,332 | 115 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -406,7 +406,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-built-in-inspector-registration` | 3 | Target-specific single/multiple-object inspector behavior before registry annotations. |
 | `Q410-enumerator-current-state` | 0 | Done by `propertyenumerator`: Current caches each advance, including false, and preserves its state across Reset/Dispose for enumerable, list, indexed and default forms. |
 | `Q410-generic-equality-interfaces` | 0 | Done by `scenevalues`: generic collections use Scene object equality/hash behavior after removal of the extra interface; internal registries already use their own handles and keys. |
-| `Q410-job-container-payloads` | 5 | Mesh/light-query ownership and safety metadata used by the job scheduler. |
+| `Q410-job-container-payloads` | 0 | Done by `meshdatajobs`: mesh data arrays and light probe queries are job containers with the release's safety. |
 | `Q410-linked-pool-counter` | 0 | Done by `linkedpool`: counter, storage, capacity and callbacks share one pool state; null, reentrant release, overflow and independent ObjectPool controls are recorded. |
 | `Q410-measured-lookup-policies` | 10 | Retain the eleven direct/inherited discovery policies and their controls. |
 | `Q410-slide-result-serialization` | 2 | Nondefault collision-hit backing payloads and overwrite controls. |

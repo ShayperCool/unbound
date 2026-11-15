@@ -100,41 +100,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.LightProbesQuery",
-    "Message": "F:m_LightProbeContextWrapper:System.IntPtr attributes is [], Unity's is [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Q410-job-container-payloads: UnityEngine.LightProbesQuery needs its selected handle/buffer ownership and safety metadata integrated with JobLayout and UnsafeUtility, which read these attributes. Add scheduling, access-range, disposal and lifetime controls before advertising native-container or unsafe-pointer restrictions; do not ignore the kinds."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.LightProbesQuery",
-    "Message": "type attributes is [], Unity's is [Unity.Collections.LowLevel.Unsafe.NativeContainerAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Q410-job-container-payloads: UnityEngine.LightProbesQuery needs its selected handle/buffer ownership and safety metadata integrated with JobLayout and UnsafeUtility, which read these attributes. Add scheduling, access-range, disposal and lifetime controls before advertising native-container or unsafe-pointer restrictions; do not ignore the kinds."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Mesh+MeshData",
-    "Message": "F:m_Ptr:System.IntPtr attributes is [], Unity's is [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Q410-job-container-payloads: UnityEngine.Mesh+MeshData needs its selected handle/buffer ownership and safety metadata integrated with JobLayout and UnsafeUtility, which read these attributes. Add scheduling, access-range, disposal and lifetime controls before advertising native-container or unsafe-pointer restrictions; do not ignore the kinds."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Mesh+MeshDataArray",
-    "Message": "F:m_Ptrs:System.IntPtr* attributes is [], Unity's is [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Q410-job-container-payloads: UnityEngine.Mesh+MeshDataArray needs its selected handle/buffer ownership and safety metadata integrated with JobLayout and UnsafeUtility, which read these attributes. Add scheduling, access-range, disposal and lifetime controls before advertising native-container or unsafe-pointer restrictions; do not ignore the kinds."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Mesh+MeshDataArray",
-    "Message": "type attributes is [System.Reflection.DefaultMemberAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Item\"){}], Unity's is [System.Reflection.DefaultMemberAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Item\"){};Unity.Collections.LowLevel.Unsafe.NativeContainerAttribute:M:.ctor`0():System.Void(){};Unity.Collections.LowLevel.Unsafe.NativeContainerSupportsMinMaxWriteRestrictionAttribute:M:.ctor`0():System.Void(){}]",
-    "Reason": "Q410-job-container-payloads: UnityEngine.Mesh+MeshDataArray needs its selected handle/buffer ownership and safety metadata integrated with JobLayout and UnsafeUtility, which read these attributes. Add scheduling, access-range, disposal and lifetime controls before advertising native-container or unsafe-pointer restrictions; do not ignore the kinds."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.RenderingLayerMask",
     "Message": "field m_Bits attributes is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}], Unity's is []",
     "Reason": "Q410-Core-built-in-serialization: nested JSON uses a built-in payload although the selected CLR serialization marker is absent. Current runtime composite handling still needs the harmonic coefficient schema or rendering-layer version/bits schema. Migrate serialization classification, JSON/YAML read/write and cloning with root-versus-nested and round-trip controls before removing this marker; removal alone drops existing nested values."
