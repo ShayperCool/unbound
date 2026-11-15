@@ -65,6 +65,10 @@ namespace UnityEngine.VFX
         bool m_InitialEventNameOverriden;
         uint m_StartSeed;
         bool m_ResetSeedOnPlay = true;
+        /// <summary>Whether the effect may be batched with others of its asset, and the resource
+        /// version its component was saved with: kept as serialized (nothing is simulated yet).</summary>
+        bool m_AllowInstancing = true;
+        uint m_ResourceVersion;
         bool m_Pause;
         float m_PlayRate = 1f;
         List<SerializedOverride> m_Serialized;
@@ -173,6 +177,8 @@ namespace UnityEngine.VFX
             m_InitialEventNameOverriden = body.Bool("m_InitialEventNameOverriden");
             m_StartSeed = (uint)body.Long("m_StartSeed");
             m_ResetSeedOnPlay = body.Bool("m_ResetSeedOnPlay", true);
+            m_AllowInstancing = body.Bool("m_AllowInstancing", true);
+            m_ResourceVersion = (uint)body.Long("m_ResourceVersion");
             m_Serialized = ReadSheet(body.Get("m_PropertySheet"), resolver);
             CreateSheet();
             ApplySerialized();
@@ -186,6 +192,8 @@ namespace UnityEngine.VFX
             m_InitialEventNameOverriden = s.m_InitialEventNameOverriden;
             m_StartSeed = s.m_StartSeed;
             m_ResetSeedOnPlay = s.m_ResetSeedOnPlay;
+            m_AllowInstancing = s.m_AllowInstancing;
+            m_ResourceVersion = s.m_ResourceVersion;
             m_Pause = s.m_Pause;
             m_PlayRate = s.m_PlayRate;
             // The copy has the source's overrides, as a copy of its serialized sheet would.
@@ -205,53 +213,99 @@ namespace UnityEngine.VFX
 
         // ---------------------------------------------------------------- the serialized sheet
 
-        static readonly (string List, SheetKind Kind)[] s_Lists =
-        {
-            ("m_Float", SheetKind.Float), ("m_Vector2f", SheetKind.Vector2), ("m_Vector3f", SheetKind.Vector3), ("m_Vector4f", SheetKind.Vector4),
-            ("m_Uint", SheetKind.Uint), ("m_Int", SheetKind.Int), ("m_Matrix4x4f", SheetKind.Matrix), ("m_AnimationCurve", SheetKind.Curve),
-            ("m_Gradient", SheetKind.Gradient), ("m_NamedObject", SheetKind.NamedObject), ("m_Bool", SheetKind.Bool),
-        };
-
+        /// <summary>The serialized sheet: one typed list of entries (value, name, overridden flag)
+        /// per kind of value.</summary>
         static List<SerializedOverride> ReadSheet(YNode sheet, IReferenceResolver resolver)
         {
             if (sheet == null) return null;
             List<SerializedOverride> entries = null;
-            foreach (var (listName, kind) in s_Lists)
+            foreach (var item in sheet.Get("m_Float")?.Get("m_Array")?.Seq() ?? Array.Empty<YNode>())
             {
-                var array = sheet.Get(listName)?.Get("m_Array");
-                if (array == null) continue;
-                foreach (var item in array.Seq())
-                {
-                    var entry = new SerializedOverride { Kind = kind, NameId = Shader.PropertyToID(item.Str("m_Name")), Overridden = item.Bool("m_Overridden") };
-                    var value = item.Get("m_Value");
-                    switch (kind)
-                    {
-                        case SheetKind.Float: entry.Vector = new Vector4(item.Float("m_Value"), 0f, 0f, 0f); break;
-                        case SheetKind.Vector2:
-                        case SheetKind.Vector3:
-                        case SheetKind.Vector4:
-                            if (value != null) entry.Vector = new Vector4(value.Float("x"), value.Float("y"), value.Float("z"), value.Float("w"));
-                            break;
-                        case SheetKind.Uint: entry.Word = (uint)item.Long("m_Value"); break;
-                        case SheetKind.Int: entry.Word = unchecked((uint)item.Int("m_Value")); break;
-                        case SheetKind.Bool: entry.Word = item.Bool("m_Value") ? 1u : 0u; break;
-                        case SheetKind.Matrix:
-                            if (value != null)
-                                for (int row = 0; row < 4; row++)
-                                    for (int column = 0; column < 4; column++)
-                                        entry.Matrix[row, column] = value.Float("e" + row + column);
-                            break;
-                        case SheetKind.Curve: entry.Object = value != null ? BuiltinReaders.AnimationCurve(value) : null; break;
-                        case SheetKind.Gradient: entry.Object = value != null ? BuiltinReaders.Gradient(value) : null; break;
-                        case SheetKind.NamedObject:
-                            var reference = item.Ref("m_Value");
-                            entry.Object = reference.IsNull ? null : resolver.Resolve(reference, typeof(Object));
-                            break;
-                    }
-                    (entries ??= new List<SerializedOverride>()).Add(entry);
-                }
+                var entry = Entry(item, SheetKind.Float);
+                entry.Vector = new Vector4(item.Float("m_Value"), 0f, 0f, 0f);
+                (entries ??= new List<SerializedOverride>()).Add(entry);
+            }
+            foreach (var item in sheet.Get("m_Vector2f")?.Get("m_Array")?.Seq() ?? Array.Empty<YNode>())
+            {
+                var entry = Entry(item, SheetKind.Vector2);
+                entry.Vector = ReadVector(item.Get("m_Value"));
+                (entries ??= new List<SerializedOverride>()).Add(entry);
+            }
+            foreach (var item in sheet.Get("m_Vector3f")?.Get("m_Array")?.Seq() ?? Array.Empty<YNode>())
+            {
+                var entry = Entry(item, SheetKind.Vector3);
+                entry.Vector = ReadVector(item.Get("m_Value"));
+                (entries ??= new List<SerializedOverride>()).Add(entry);
+            }
+            foreach (var item in sheet.Get("m_Vector4f")?.Get("m_Array")?.Seq() ?? Array.Empty<YNode>())
+            {
+                var entry = Entry(item, SheetKind.Vector4);
+                entry.Vector = ReadVector(item.Get("m_Value"));
+                (entries ??= new List<SerializedOverride>()).Add(entry);
+            }
+            foreach (var item in sheet.Get("m_Uint")?.Get("m_Array")?.Seq() ?? Array.Empty<YNode>())
+            {
+                var entry = Entry(item, SheetKind.Uint);
+                entry.Word = (uint)item.Long("m_Value");
+                (entries ??= new List<SerializedOverride>()).Add(entry);
+            }
+            foreach (var item in sheet.Get("m_Int")?.Get("m_Array")?.Seq() ?? Array.Empty<YNode>())
+            {
+                var entry = Entry(item, SheetKind.Int);
+                entry.Word = unchecked((uint)item.Int("m_Value"));
+                (entries ??= new List<SerializedOverride>()).Add(entry);
+            }
+            foreach (var item in sheet.Get("m_Matrix4x4f")?.Get("m_Array")?.Seq() ?? Array.Empty<YNode>())
+            {
+                var entry = Entry(item, SheetKind.Matrix);
+                entry.Matrix = ReadMatrix(item.Get("m_Value"));
+                (entries ??= new List<SerializedOverride>()).Add(entry);
+            }
+            foreach (var item in sheet.Get("m_AnimationCurve")?.Get("m_Array")?.Seq() ?? Array.Empty<YNode>())
+            {
+                var entry = Entry(item, SheetKind.Curve);
+                var value = item.Get("m_Value");
+                entry.Object = value != null ? BuiltinReaders.AnimationCurve(value) : null;
+                (entries ??= new List<SerializedOverride>()).Add(entry);
+            }
+            foreach (var item in sheet.Get("m_Gradient")?.Get("m_Array")?.Seq() ?? Array.Empty<YNode>())
+            {
+                var entry = Entry(item, SheetKind.Gradient);
+                var value = item.Get("m_Value");
+                entry.Object = value != null ? BuiltinReaders.Gradient(value) : null;
+                (entries ??= new List<SerializedOverride>()).Add(entry);
+            }
+            foreach (var item in sheet.Get("m_NamedObject")?.Get("m_Array")?.Seq() ?? Array.Empty<YNode>())
+            {
+                var entry = Entry(item, SheetKind.NamedObject);
+                var reference = item.Ref("m_Value");
+                entry.Object = reference.IsNull ? null : resolver.Resolve(reference, typeof(Object));
+                (entries ??= new List<SerializedOverride>()).Add(entry);
+            }
+            foreach (var item in sheet.Get("m_Bool")?.Get("m_Array")?.Seq() ?? Array.Empty<YNode>())
+            {
+                var entry = Entry(item, SheetKind.Bool);
+                entry.Word = item.Bool("m_Value") ? 1u : 0u;
+                (entries ??= new List<SerializedOverride>()).Add(entry);
             }
             return entries;
+        }
+
+        static SerializedOverride Entry(YNode item, SheetKind kind) =>
+            new SerializedOverride { Kind = kind, NameId = Shader.PropertyToID(item.Str("m_Name")), Overridden = item.Bool("m_Overridden") };
+
+        static Vector4 ReadVector(YNode value) =>
+            value == null ? default : new Vector4(value.Float("x"), value.Float("y"), value.Float("z"), value.Float("w"));
+
+        static Matrix4x4 ReadMatrix(YNode value)
+        {
+            var m = default(Matrix4x4);
+            if (value == null) return m;
+            m.m00 = value.Float("e00"); m.m01 = value.Float("e01"); m.m02 = value.Float("e02"); m.m03 = value.Float("e03");
+            m.m10 = value.Float("e10"); m.m11 = value.Float("e11"); m.m12 = value.Float("e12"); m.m13 = value.Float("e13");
+            m.m20 = value.Float("e20"); m.m21 = value.Float("e21"); m.m22 = value.Float("e22"); m.m23 = value.Float("e23");
+            m.m30 = value.Float("e30"); m.m31 = value.Float("e31"); m.m32 = value.Float("e32"); m.m33 = value.Float("e33");
+            return m;
         }
 
         /// <summary>The list a property's override is serialized in.</summary>
