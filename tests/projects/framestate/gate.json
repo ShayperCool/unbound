@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/framestate/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION --device opengl",
+    "python3 tests/projects/framestate/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION --device vulkan"
+  ],
+  "summary": "framestate: [0-9]+/[0-9]+ records match, [0-9]+ declared residuals",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/Graphics/Immediate.cs"
+  ]
+}
