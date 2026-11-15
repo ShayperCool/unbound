@@ -1166,8 +1166,7 @@ impl UnityRenderer {
     /// A texture's mip bias (`Texture.mipMapBias`) as the bits of its sampler key: the
     /// sampler's own LOD bias, which keeps implicit and explicit gradients. Each device's
     /// backend has its Editor's anisotropic transition as it is (tests/projects/samplerbias,
-    /// both devices).
-    /// A texture's `mipMapBias` as its samplers take it (none where the device ignores it).
+    /// both devices). None where the device ignores the bias (`DeviceConventions::mip_bias`).
     fn sampler_lod_bias(&self, handle: u64) -> u32 {
         let bias = self.texture_mip_biases.get(&handle).copied().unwrap_or(0.0);
         if bias == 0.0 || !self.conventions.mip_bias {

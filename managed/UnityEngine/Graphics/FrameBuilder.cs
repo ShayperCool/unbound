@@ -413,6 +413,13 @@ namespace Unbound.Runtime
         /// are done: reads of the screen outside it read another framebuffer in the Editor.</summary>
         internal static bool InDrawingFrame;
 
+        /// <summary>Cameras rendering now (built-in cameras, a pipeline's render loop and render
+        /// requests): drawing outside them takes GL's matrices.</summary>
+        static int s_CameraRenderings;
+        internal static bool CameraRendering => s_CameraRenderings > 0;
+        internal static void BeginCameraRendering() => s_CameraRenderings++;
+        internal static void EndCameraRendering() => s_CameraRenderings--;
+
         static void Render()
         {
             InDrawingFrame = true;
@@ -1393,6 +1400,8 @@ namespace Unbound.Runtime
             bool messages = !camera.m_EnvironmentCapture;
             try
             {
+                // From the camera's first callback to its last.
+                BeginCameraRendering();
                 // The camera's own message first, then the static event (measured:
                 // tests/projects/cullinggroup; also before and after rendering).
                 if (messages)
@@ -1779,6 +1788,7 @@ namespace Unbound.Runtime
             }
             finally
             {
+                EndCameraRendering();
                 camera.m_Rendering = false;
                 camera.m_RenderingInto = null;
                 RenderTexture.ScreenStandIn = previousStandIn;

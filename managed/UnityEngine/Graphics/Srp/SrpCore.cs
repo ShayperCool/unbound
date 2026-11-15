@@ -190,7 +190,9 @@ namespace UnityEngine.Rendering
         {
             if (!RenderPipelineManager.TryPrepareRenderPipeline(GraphicsSettings.currentRenderPipeline)) return;
             var context = ScriptableRenderContext.Begin();
-            RenderPipelineManager.currentPipeline.InternalProcessRenderRequests(context, camera, data);
+            FrameBuilder.BeginCameraRendering();
+            try { RenderPipelineManager.currentPipeline.InternalProcessRenderRequests(context, camera, data); }
+            finally { FrameBuilder.EndCameraRendering(); }
         }
 
         internal void Dispose()
@@ -318,8 +320,10 @@ namespace UnityEngine.Rendering
             var context = ScriptableRenderContext.Begin(cameras);
             // The engine's per-renderer lighting (ambient probe) for the pipeline's draws.
             FrameBuilder.EmitLightingGlobals(srp: true);
+            FrameBuilder.BeginCameraRendering();
             try { s_CurrentPipeline.InternalRender(context, cameras); }
             catch (Exception e) { Debug.LogException(e); }
+            finally { FrameBuilder.EndCameraRendering(); }
             return true;
         }
     }

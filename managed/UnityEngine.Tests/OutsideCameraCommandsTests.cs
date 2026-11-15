@@ -7,9 +7,10 @@ using Xunit;
 
 namespace Unbound.Tests
 {
-    /// <summary>A command buffer executed outside a camera's rendering draws with identity view and
-    /// projection, also after a camera set others; the stream's matrices come back after it
-    /// (tests/projects/nativegfx metal.jsonl outside.*).</summary>
+    /// <summary>A command buffer executed outside a camera's rendering starts from GL's matrices
+    /// (identity unless GL loaded others; not a camera's that rendered before, even one left
+    /// current), and the stream's matrices come back after it (tests/projects/nativegfx
+    /// metal.jsonl outside.*).</summary>
     public class OutsideCameraCommandsTests
     {
         static byte[] CameraOf(Matrix4x4 view, Matrix4x4 projection)
@@ -28,28 +29,53 @@ namespace Unbound.Tests
             return n;
         }
 
+        static byte[] Execute()
+        {
+            GfxStream.Flush();
+            using (var cmd = new CommandBuffer())
+                Graphics.ExecuteCommandBuffer(cmd);
+            var recorded = GfxStream.Recorded.ToArray();
+            GfxStream.Flush();
+            return recorded;
+        }
+
         [Fact]
-        public void ExecutedCommandsStartFromIdentityMatrices()
+        public void ExecutedCommandsStartFromGlMatrices()
         {
             var saved = GfxStream.Current;
+            var previous = Camera.current;
             var view = Matrix4x4.TRS(new Vector3(0, 0, -5), Quaternion.identity, Vector3.one);
             var projection = Matrix4x4.Perspective(60f, 1f, 0.3f, 100f);
+            var go = new GameObject("left current");
             try
             {
                 GfxStream.Camera(view, projection);
-                GfxStream.Flush();
-                using (var cmd = new CommandBuffer())
-                    Graphics.ExecuteCommandBuffer(cmd);
-                var recorded = GfxStream.Recorded.ToArray();
-                GfxStream.Flush();
+                // A camera left current (as a pipeline leaves it) is not rendering.
+                Camera.Internal_SetCurrent(go.AddComponent<Camera>());
+                var recorded = Execute();
                 Assert.Equal(1, Occurrences(recorded, CameraOf(Matrix4x4.identity, Matrix4x4.identity)));
                 Assert.Equal(1, Occurrences(recorded, CameraOf(view, projection)));
                 Assert.Equal(view, GfxStream.Current.View);
                 Assert.Equal(projection, GfxStream.Current.Projection);
+                GL.PushMatrix();
+                GL.LoadOrtho();
+                try
+                {
+                    recorded = Execute();
+                    Assert.Equal(1, Occurrences(recorded, CameraOf(Matrix4x4.identity, Immediate.Ortho)));
+                }
+                finally { GL.PopMatrix(); }
+                // Within a camera's rendering the commands keep the camera's matrices.
+                FrameBuilder.BeginCameraRendering();
+                try { recorded = Execute(); }
+                finally { FrameBuilder.EndCameraRendering(); }
+                Assert.Equal(0, Occurrences(recorded, CameraOf(Matrix4x4.identity, Matrix4x4.identity)));
             }
             finally
             {
+                Camera.Internal_SetCurrent(previous);
                 GfxStream.Restore(saved);
+                UnityEngine.Object.DestroyImmediate(go);
             }
         }
     }

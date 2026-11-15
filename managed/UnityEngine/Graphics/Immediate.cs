@@ -452,15 +452,22 @@ namespace UnityEngine
         {
             if (buffer == null) throw new ArgumentNullException(nameof(buffer));
             var active = RenderTexture.ActiveTarget;
-            // Outside a camera's rendering the commands draw with identity view and projection,
-            // also right after a camera rendered (measured on the batch-mode macOS Editor:
-            // tests/projects/nativegfx metal.jsonl outside.*); the stream's matrices come back after.
-            bool outside = Camera.current == null;
+            // Outside a camera's rendering the commands start from GL's matrices, as immediate
+            // drawing does (identity unless GL loaded others; not a camera's that rendered
+            // before), and their own matrices do not last past them (measured on the batch-mode
+            // macOS Editor: tests/projects/nativegfx metal.jsonl outside.*).
+            bool outside = !FrameBuilder.CameraRendering;
             var saved = GfxStream.Current;
-            if (outside) GfxStream.Camera(Matrix4x4.identity, Matrix4x4.identity, saved.Flags);
-            buffer.Execute(null);
-            if (outside) GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
-            RenderTexture.SetActiveQuietly(active);
+            if (outside) GfxStream.Camera(Immediate.ModelView, Immediate.Projection, saved.Flags);
+            try
+            {
+                buffer.Execute(null);
+            }
+            finally
+            {
+                if (outside) GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
+                RenderTexture.SetActiveQuietly(active);
+            }
         }
 
         public static void DrawMeshNow(Mesh mesh, Vector3 position, Quaternion rotation, int materialIndex) =>
