@@ -674,6 +674,14 @@ def recipes(release):
                '--cli', '{cli}', '--managed', '{managed}'),
         py('verify.py', '--device', 'vulkan', '--release', '{release}',
            '--candidate', '{work}/engine-vulkan/capture/values.jsonl', '--output', '{work}/report-vulkan.json')]
+    # Render textures as samplers under each anisotropic policy, on both devices.
+    for device in ('opengl', 'vulkan'):
+        R['samplerbias'] += [
+            driver('run.py', 'engine', '--target-control', '--device', device, '--release', '{release}',
+                   '--output', f'{{work}}/engine-target-{device}', '--cli', '{cli}', '--managed', '{managed}'),
+            py('verify.py', '--target-control', '--device', device, '--release', '{release}',
+               '--candidate', f'{{work}}/engine-target-{device}/capture/values.jsonl',
+               '--output', f'{{work}}/report-target-{device}.json')]
     R['uitransitions'] = [driver('run.py', 'engine', '--release', '{release}', '--output', '{work}/engine',
                                  '--cli', '{cli}', '--managed', '{managed}'),
                           py('compare.py', single_ref(), '{work}/engine/capture/transitions.jsonl')]

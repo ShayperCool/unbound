@@ -21,9 +21,10 @@ public class UitkProbe : MonoBehaviour
         bool bilinearControl = Environment.GetEnvironmentVariable("SAMPLER_BIAS_BILINEAR") == "1";
         bool liveControl = Environment.GetEnvironmentVariable("SAMPLER_BIAS_LIVE") == "1";
         bool cacheControl = Environment.GetEnvironmentVariable("SAMPLER_BIAS_CACHE") == "1";
+        bool targetControl = Environment.GetEnvironmentVariable("SAMPLER_BIAS_TARGET") == "1";
         try
         {
-            foreach (int width in liveControl || cacheControl ? Array.Empty<int>() : new[] { 4, 64 })
+            foreach (int width in liveControl || cacheControl || targetControl ? Array.Empty<int>() : new[] { 4, 64 })
             foreach (TextureFormat format in new[] { TextureFormat.RGBA32, TextureFormat.RGBAHalf, TextureFormat.RFloat })
             foreach (bool readable in new[] { true, false })
             foreach (bool beforeUpload in new[] { true, false })
@@ -76,6 +77,7 @@ public class UitkProbe : MonoBehaviour
             }
             if (liveControl) RecordLiveControls(rows, material, target, readback);
             if (cacheControl) RecordCacheControls(rows, material, target, readback);
+            if (targetControl) RecordTargetControls(rows, target, readback);
             File.WriteAllText(Path.Combine(output, "values.jsonl"), rows.ToString());
             File.WriteAllText(Path.Combine(output, "gpu.txt"), SystemInfo.graphicsDeviceName);
         }
@@ -213,6 +215,97 @@ public class UitkProbe : MonoBehaviour
         {
             commands.Release(); DestroyImmediate(quad); DestroyImmediate(texture);
             QualitySettings.anisotropicFiltering = original;
+        }
+    }
+
+    /// <summary>Render textures as samplers: 16x8 float targets with a constant per mip, with and
+    /// without a depth buffer, 2D and 2D arrays, at several anisotropic levels and filters, sampled
+    /// under each global anisotropic policy (switched after the target is made, and once before).
+    /// The wide footprint is eight texels across for each one down, so levels 1, 2, 4 and 16
+    /// select different mips.</summary>
+    static void RecordTargetControls(StringBuilder rows, RenderTexture target, Texture2D readback)
+    {
+        var original = QualitySettings.anisotropicFiltering;
+        var material = new Material(Shader.Find("Probe/SamplerBiasTarget"));
+        var texel = new Texture2D(16, 8, TextureFormat.RFloat, false, true);
+        Texture.SetGlobalAnisotropicFilteringLimits(4, 16);
+        float[] levels = { -0.5f, 0f, 0.25f, 0.5f, 0.75f, 1f, 1.5f, 2f, 2.5f, 3f };
+        var policies = new[] { AnisotropicFiltering.ForceEnable, AnisotropicFiltering.Enable, AnisotropicFiltering.Disable };
+        void Sample(string prefix, RenderTexture rt, bool array)
+        {
+            material.SetTexture(array ? "_ArrayTex" : "_ModernTex", rt);
+            for (int mode = array ? 6 : 0; mode < (array ? 9 : 6); mode++)
+            foreach (float level in mode == 1 || mode == 4 || mode == 7 ? new[] { 0f } : levels)
+            {
+                material.SetFloat("_Mode", mode);
+                material.SetFloat("_Level", level);
+                Graphics.Blit(array ? (Texture)texel : rt, target, material);
+                var previous = RenderTexture.active; RenderTexture.active = target;
+                readback.ReadPixels(new Rect(0, 0, 1, 1), 0, 0); readback.Apply(); RenderTexture.active = previous;
+                var value = readback.GetPixel(0, 0);
+                rows.Append("{\"k\":\"").Append(prefix).Append('/').Append(mode).Append('/').Append(F(level)).Append("\",\"v\":[")
+                    .Append(F(value.r)).Append(',').Append(F(value.g)).Append(',').Append(F(value.b)).Append(',').Append(F(value.a)).Append("]}\n");
+            }
+        }
+        RenderTexture Make(int depth, bool array, FilterMode filter, int aniso)
+        {
+            var desc = new RenderTextureDescriptor(16, 8, RenderTextureFormat.RFloat, depth)
+            {
+                useMipMap = true, autoGenerateMips = false, sRGB = false,
+                dimension = array ? UnityEngine.Rendering.TextureDimension.Tex2DArray : UnityEngine.Rendering.TextureDimension.Tex2D,
+                volumeDepth = array ? 2 : 1,
+            };
+            var rt = new RenderTexture(desc) { filterMode = filter, wrapMode = TextureWrapMode.Clamp, anisoLevel = aniso };
+            rt.Create();
+            for (int mip = 0; mip < rt.mipmapCount; mip++)
+            for (int slice = 0; slice < (array ? 2 : 1); slice++)
+            {
+                Graphics.SetRenderTarget(rt, mip, CubemapFace.Unknown, slice);
+                GL.Clear(true, true, new Color((mip + 1) * 0.125f, 0, 0, 1));
+            }
+            Graphics.SetRenderTarget(null);
+            return rt;
+        }
+        void State(string prefix, RenderTexture rt) =>
+            rows.Append("{\"k\":\"state/").Append(prefix).Append("\",\"v\":[").Append((int)rt.filterMode).Append(',').Append(rt.anisoLevel).Append(',')
+                .Append((int)rt.depthStencilFormat).Append(',').Append((int)rt.dimension).Append(',').Append(rt.mipmapCount).Append("]}\n");
+        try
+        {
+            foreach (int depth in new[] { 0, 16, 24 })
+            foreach (bool array in new[] { false, true })
+            foreach (FilterMode filter in new[] { FilterMode.Bilinear, FilterMode.Trilinear })
+            foreach (int aniso in new[] { 0, 1, 2, 16 })
+            {
+                QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable;
+                var rt = Make(depth, array, filter, aniso);
+                string prefix = "target/" + depth + "/" + (array ? "Tex2DArray" : "Tex2D") + "/" + filter + "/" + aniso;
+                State(prefix, rt);
+                foreach (var policy in policies)
+                {
+                    QualitySettings.anisotropicFiltering = policy;
+                    Sample(prefix + "/" + policy, rt, array);
+                }
+                rt.Release(); DestroyImmediate(rt);
+            }
+            // Made while forced on, and a level changed on a live target.
+            foreach (int depth in new[] { 0, 16 })
+            {
+                QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
+                var rt = Make(depth, false, FilterMode.Trilinear, 1);
+                string prefix = "targetMadeForced/" + depth;
+                State(prefix, rt);
+                Sample(prefix, rt, false);
+                QualitySettings.anisotropicFiltering = AnisotropicFiltering.Enable;
+                rt.anisoLevel = 16;
+                State(prefix + "/raised", rt);
+                Sample(prefix + "/raised", rt, false);
+                rt.Release(); DestroyImmediate(rt);
+            }
+        }
+        finally
+        {
+            QualitySettings.anisotropicFiltering = original;
+            DestroyImmediate(material); DestroyImmediate(texel);
         }
     }
 

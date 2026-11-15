@@ -19,10 +19,13 @@ p.add_argument('--anisotropy', choices=['Force', 'Enable', 'Disable'], default='
 p.add_argument('--bilinear-control', action='store_true')
 p.add_argument('--live-control', action='store_true')
 p.add_argument('--cache-control', action='store_true')
+p.add_argument('--target-control', action='store_true')
 p.add_argument('--device', choices=['opengl', 'vulkan'], default='opengl')
 a = p.parse_args()
 if a.cache_control and (a.live_control or a.bilinear_control):
     p.error('--cache-control is a separate profile')
+if a.target_control and (a.cache_control or a.live_control or a.bilinear_control or a.anisotropy != 'Force'):
+    p.error('--target-control is a separate profile (it switches the anisotropic policy itself)')
 output = cache_artifact_path(a.output.expanduser().resolve())
 if output.exists(): p.error('output must be fresh')
 output.mkdir(parents=True)
@@ -41,6 +44,10 @@ if a.cache_control:
     env['SAMPLER_BIAS_CACHE'] = '1'
 else:
     env.pop('SAMPLER_BIAS_CACHE', None)
+if a.target_control:
+    env['SAMPLER_BIAS_TARGET'] = '1'
+else:
+    env.pop('SAMPLER_BIAS_TARGET', None)
 if a.live_control:
     env['SAMPLER_BIAS_LIVE'] = '1'
 else:
@@ -69,7 +76,7 @@ sources = {str(x.relative_to(project)): hashlib.sha256(x.read_bytes()).hexdigest
            for x in sorted(project.rglob('*')) if x.is_file()}
 (output/'execution.json').write_text(json.dumps(dict(command=command, sha256=hashes, sources=sources, release=a.release,
     anisotropy=a.anisotropy, bilinear_control=a.bilinear_control, live_control=a.live_control,
-    cache_control=a.cache_control, device=a.device,
+    cache_control=a.cache_control, target_control=a.target_control, device=a.device,
     sampler_environment={k: v for k, v in env.items() if k.startswith('SAMPLER_BIAS_')}), indent=2)+'\n')
 with (output/'process.log').open('w') as log:
     subprocess.run([str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', *command], env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
