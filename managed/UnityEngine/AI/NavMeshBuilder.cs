@@ -292,20 +292,28 @@ namespace Unbound.Runtime
                 }
         }
 
-        static bool s_WarnedHeightMesh;
-
         internal static void Build(NavMeshData data, NavMeshBuildSettings settings, List<NavMeshBuildSource> sources, Bounds localBounds)
         {
-            if (settings.buildHeightMesh && !s_WarnedHeightMesh)
-            {
-                s_WarnedHeightMesh = true;
-                Debug.LogWarning("Unbound: NavMeshBuilder does not build height meshes at run time yet (buildHeightMesh): agents stand on the NavMesh's polygons; baked height meshes are used.");
-            }
             var dataToWorld = Matrix4x4.TRS(data.position, data.rotation, Vector3.one);
             var g = Gather(sources, dataToWorld.inverseDoublePrecision);
+            // Preserving tiles outside the bounds keeps every tile not wholly inside them and
+            // builds only those; such a build makes no height mesh and drops the data's existing
+            // one, as documented. With no tile wholly inside, the data is left as it was
+            // (Unity 6000.0.71f1: tests/projects/navheight `preserve.*`).
+            bool preserve = settings.preserveTilesOutsideBounds;
+            float tileWorld = settings.EffectiveTileSize * settings.EffectiveVoxelSize;
+            // The tiles wholly inside the bounds, which a preserving build replaces.
+            int ix0 = Mathf.CeilToInt(localBounds.min.x / tileWorld), iz0 = Mathf.CeilToInt(localBounds.min.z / tileWorld);
+            int ix1 = Mathf.FloorToInt(localBounds.max.x / tileWorld) - 1, iz1 = Mathf.FloorToInt(localBounds.max.z / tileWorld) - 1;
+            if (preserve && (ix0 > ix1 || iz0 > iz1)) return;
             data.m_Settings = settings;
+            var kept = preserve ? new List<DtMeshData>(data.m_Tiles) : null;
             data.m_Tiles.Clear();
+            data.m_HeightMeshes.Clear();
             data.m_Version++;
+            if (preserve)
+                foreach (var tile in kept)
+                    if (tile.header.x < ix0 || tile.header.x > ix1 || tile.header.y < iz0 || tile.header.y > iz1) data.m_Tiles.Add(tile);
             if (g.Areas.Count == 0)
             {
                 data.m_SourceBounds = localBounds;
@@ -316,7 +324,6 @@ namespace Unbound.Runtime
             float cs = settings.EffectiveVoxelSize;
             float ch = cs * 0.5f;
             int tileSize = settings.EffectiveTileSize;
-            float tileWorld = tileSize * cs;
             int walkableHeight = (int)MathF.Ceiling(settings.agentHeight / ch);
             int walkableClimb = (int)MathF.Floor(settings.agentClimb / ch);
             int walkableRadius = (int)MathF.Ceiling(settings.agentRadius / cs);
@@ -352,6 +359,11 @@ namespace Unbound.Runtime
                 // Either side up: meshes wind their faces either way (built-in planes and cubes differ).
                 if (MathF.Abs(n.Y) <= slopeCos) areas[i] = RcRecast.RC_NULL_AREA;
             }
+            // Build Height Mesh: the walkable source triangles give agents and queries their height
+            // over the NavMesh's polygons (Unity 6000.0.71f1: tests/projects/navheight).
+            if (settings.buildHeightMesh && !preserve
+                && NavMeshHeightMesh.FromTriangles(verts, tris, t => areas[t] != RcRecast.RC_NULL_AREA) is NavMeshHeightMesh height)
+                data.m_HeightMeshes.Add(height);
             // Clip the raster footprint before rounding to voxels. Padding beyond the source
             // geometry can otherwise shift the grid and its contours (Unity 6000.0.71f1,
             // tests/projects/navmesh build.surface and build.bounds controls).
@@ -359,6 +371,14 @@ namespace Unbound.Runtime
             var bmax = Vector3.Min(localBounds.max, g.Max);
             int tx0 = Mathf.FloorToInt(bmin.x / tileWorld), tx1 = Mathf.FloorToInt(bmax.x / tileWorld);
             int tz0 = Mathf.FloorToInt(bmin.z / tileWorld), tz1 = Mathf.FloorToInt(bmax.z / tileWorld);
+            if (preserve)
+            {
+                // Only the tiles wholly inside the bounds.
+                tx0 = Math.Max(tx0, ix0);
+                tz0 = Math.Max(tz0, iz0);
+                tx1 = Math.Min(tx1, ix1);
+                tz1 = Math.Min(tz1, iz1);
+            }
             for (int tz = tz0; tz <= tz1; tz++)
                 for (int tx = tx0; tx <= tx1; tx++)
                 {

@@ -99,6 +99,85 @@ namespace Unbound.Runtime
             return new NavMeshHeightMesh(vertices.ToArray(), indices.ToArray(), nodes.ToArray(), center, extent);
         }
 
+        const int LeafTriangles = 4;
+
+        /// <summary>A height mesh built at run time (NavMeshBuildSettings.buildHeightMesh): the given
+        /// triangles, in the data's frame, with a bounding volume tree over them; null without any.
+        /// <paramref name="keep"/> selects the triangles (by index) that belong to it.</summary>
+        internal static NavMeshHeightMesh FromTriangles(float[] vertices, int[] triangles, Func<int, bool> keep)
+        {
+            var kept = new List<int>();
+            for (int t = 0; t * 3 + 2 < triangles.Length; t++)
+                if (keep(t)) kept.Add(t);
+            if (kept.Count == 0) return null;
+            var order = kept.ToArray();
+            var nodes = new List<Node>();
+            var centers = new float[order.Length * 3];
+            for (int i = 0; i < order.Length; i++)
+                for (int c = 0; c < 3; c++)
+                {
+                    int t = order[i] * 3;
+                    centers[i * 3 + c] = (vertices[triangles[t] * 3 + c] + vertices[triangles[t + 1] * 3 + c] + vertices[triangles[t + 2] * 3 + c]) / 3f;
+                }
+            var slots = new int[order.Length];
+            for (int i = 0; i < slots.Length; i++) slots[i] = i;
+            var leafOrder = new List<int>(order.Length);
+            Subdivide(vertices, triangles, order, centers, slots, 0, slots.Length, nodes, leafOrder);
+            var indices = new int[leafOrder.Count * 3];
+            for (int i = 0; i < leafOrder.Count; i++)
+                for (int k = 0; k < 3; k++) indices[i * 3 + k] = triangles[order[leafOrder[i]] * 3 + k];
+            var root = nodes[0];
+            var min = new Vector3(root.MinX, root.MinY, root.MinZ);
+            var max = new Vector3(root.MaxX, root.MaxY, root.MaxZ);
+            return new NavMeshHeightMesh(vertices, indices, nodes.ToArray(), (min + max) * 0.5f, (max - min) * 0.5f);
+        }
+
+        /// <summary>Node(s) for the triangles in <paramref name="slots"/>[from..to): a leaf of up to
+        /// <see cref="LeafTriangles"/>, else an inner node split at the median of the longest axis of
+        /// their centers, then its two subtrees (the layout <see cref="Highest"/> walks).</summary>
+        static void Subdivide(float[] v, int[] tris, int[] order, float[] centers, int[] slots, int from, int to, List<Node> nodes, List<int> leafOrder)
+        {
+            var node = new Node { MinX = float.MaxValue, MinY = float.MaxValue, MinZ = float.MaxValue, MaxX = float.MinValue, MaxY = float.MinValue, MaxZ = float.MinValue };
+            float cminX = float.MaxValue, cminY = float.MaxValue, cminZ = float.MaxValue, cmaxX = float.MinValue, cmaxY = float.MinValue, cmaxZ = float.MinValue;
+            for (int i = from; i < to; i++)
+            {
+                int t = order[slots[i]] * 3;
+                for (int k = 0; k < 3; k++)
+                {
+                    int p = tris[t + k] * 3;
+                    node.MinX = Math.Min(node.MinX, v[p]); node.MaxX = Math.Max(node.MaxX, v[p]);
+                    node.MinY = Math.Min(node.MinY, v[p + 1]); node.MaxY = Math.Max(node.MaxY, v[p + 1]);
+                    node.MinZ = Math.Min(node.MinZ, v[p + 2]); node.MaxZ = Math.Max(node.MaxZ, v[p + 2]);
+                }
+                int c = slots[i] * 3;
+                cminX = Math.Min(cminX, centers[c]); cmaxX = Math.Max(cmaxX, centers[c]);
+                cminY = Math.Min(cminY, centers[c + 1]); cmaxY = Math.Max(cmaxY, centers[c + 1]);
+                cminZ = Math.Min(cminZ, centers[c + 2]); cmaxZ = Math.Max(cmaxZ, centers[c + 2]);
+            }
+            int index = nodes.Count;
+            if (to - from <= LeafTriangles)
+            {
+                node.First = leafOrder.Count;
+                node.Count = to - from;
+                for (int i = from; i < to; i++) leafOrder.Add(slots[i]);
+                nodes.Add(node);
+                return;
+            }
+            nodes.Add(node);
+            float dx = cmaxX - cminX, dy = cmaxY - cminY, dz = cmaxZ - cminZ;
+            int axis = dx >= dy && dx >= dz ? 0 : dy >= dz ? 1 : 2;
+            Array.Sort(slots, from, to - from, Comparer<int>.Create((a, b) =>
+            {
+                int byCenter = centers[a * 3 + axis].CompareTo(centers[b * 3 + axis]);
+                return byCenter != 0 ? byCenter : a.CompareTo(b);
+            }));
+            int middle = from + (to - from) / 2;
+            Subdivide(v, tris, order, centers, slots, from, middle, nodes, leafOrder);
+            Subdivide(v, tris, order, centers, slots, middle, to, nodes, leafOrder);
+            node.First = -(nodes.Count - index);
+            nodes[index] = node;
+        }
+
         /// <summary>Raises <paramref name="best"/> to the highest part, lower than <paramref name="top"/>,
         /// of the triangles within <paramref name="reach"/> of (x, z) along x and z.</summary>
         internal void Highest(float x, float z, float reach, float top, ref float best)
