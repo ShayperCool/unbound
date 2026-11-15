@@ -10,7 +10,7 @@ The SHA-256 values below identify the published `.crate` archives and are checke
 | wgpu-core | `14c018fce9b6270aa203c2fdd56f3cce996713534bd757e4ea58c8560b121f14` |
 | wgpu-hal | `b6b7fb58561a792bc237628ba0792e332de418fefe145f13b5ed8201e6d52f58` |
 
-`reproduce.py` finishes with `native-vulkan-depth-pass.patch` after applying
+`reproduce.py` finishes with `native-vulkan-depth-pass.patch` and then `gl-present-wait.patch` after applying
 `native-lod-bias.patch`, `gl-device.patch`,
 `native-mirror-clamp.patch`, `native-depth-state.patch`,
 `native-external-texture.patch`, `native-gl-mirror-clamp.patch`,
@@ -222,3 +222,22 @@ captures, Apple M2 Pro) loads zero outside a 2x2 texture, tests/projects/nativeg
 outside a 1x1 texture in tests/projects/rtdepth `fmt.noDepth.depth.load`. The HLSL
 [`Load`](https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-to-load)
 contract is that out-of-range coordinates return zero.
+
+## OpenGL window present waits for its copy (`gl-present-wait.patch`)
+
+`wgpu-hal/src/gles/egl.rs` `Surface::present`: after copying the swap chain's image into the
+window and before swapping and releasing the context, the presenting thread waits for the GPU
+(`glFinish`). The renderer shares one context between Bevy's render thread, which presents,
+and the game thread, which draws Unity's cameras and reads render textures back
+(`Camera.Render`, `Texture2D.ReadPixels`), each making it current in turn.
+
+Measured on the NVIDIA 580 driver only (OpenGL 4.5 through EGL, X11 window): without the wait,
+tests/projects/lod read one to three of its 15,600 9x9 render-texture samples wrong in most
+runs on a loaded machine (a quadrant with a corner at the target's centre held transparent
+zeros or another image; never on the Vulkan device). The wrong samples came at a frame
+boundary, while the render thread presented. In experiment builds, waiting for the game thread's
+own submissions, resetting the context's state before each submission, and delaying object
+deletion did not remove the wrong samples. Keeping the render thread's present apart from the
+game thread's rendering removed them. So did waiting only here. Which driver operation
+overlaps is not known (inferred, not measured). Other drivers are unmeasured.
+

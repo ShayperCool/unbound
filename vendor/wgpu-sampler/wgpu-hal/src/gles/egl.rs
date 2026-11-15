@@ -1236,6 +1236,12 @@ impl Surface {
         }
 
         unsafe { gl.bind_framebuffer(glow::READ_FRAMEBUFFER, None) };
+        // Unbound: the presenting thread lets the window's copy finish before it gives the
+        // context up. Another thread makes the same context current next and draws into render
+        // textures; while the copy was still running, a render texture drawn then could keep a
+        // quadrant of other data (measured on the NVIDIA 580 driver: tests/projects/lod, one to
+        // three of 15,600 reads per run under load, none with this wait).
+        unsafe { gl.finish() };
 
         self.egl
             .instance

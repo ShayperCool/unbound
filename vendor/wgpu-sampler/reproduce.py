@@ -46,5 +46,6 @@ def main():
 
 # Publication commands are applied after the backend allocation patches.
 PATCHES.append('native-vulkan-depth-pass.patch')
+PATCHES.append('gl-present-wait.patch')
 
 if __name__ == '__main__': main()
