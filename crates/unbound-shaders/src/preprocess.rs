@@ -843,15 +843,21 @@ fn logical_lines(source: &str) -> Vec<String> {
             continue;
         }
         if let Some(q) = in_string {
-            current.push(c);
-            if c == '\\' {
-                if let Some(n) = chars.next() {
-                    current.push(n);
-                }
-            } else if c == q || c == '\n' {
+            if c == '\n' {
+                // A literal left open ends with its line (an apostrophe in an `#error` text):
+                // the line ends here like any other.
                 in_string = None;
+            } else {
+                current.push(c);
+                if c == '\\' {
+                    if let Some(n) = chars.next() {
+                        current.push(n);
+                    }
+                } else if c == q {
+                    in_string = None;
+                }
+                continue;
             }
-            continue;
         }
         match c {
             '\\' if chars.peek() == Some(&'\n') => {
@@ -1136,6 +1142,20 @@ fn instance_member_end(offset: u32, ty: &str) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_open_quote_ends_with_its_line() {
+        // An apostrophe in the text of a skipped #error must not take the #endif with it,
+        // nor one in active text the next line's directive.
+        let out = run(
+            "#if 0\n#error this isn't supported\n#endif\nint a;\n#define B 2\nint b = B; // can't\nint c = 'x';\n",
+            &[],
+        )
+        .unwrap();
+        assert_eq!(words(&out.text), "int a; int b = 2; int c = 'x';");
+        let out = run("#warning don't\n#define C 3\nint c = C;\n", &[]).unwrap();
+        assert_eq!(words(&out.text), "int c = 3;");
+    }
 
     #[test]
     fn instancing_buffers_keep_layout_and_unknown_types_separate() {
