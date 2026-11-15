@@ -726,7 +726,15 @@ namespace Unbound.Runtime
                     case Vector4 v: value.Kind = VectorKind; value.Vector = v; break;
                     case Color c: value.Kind = VectorKind; value.Vector = c; break;
                     case Matrix4x4 m: value.Kind = MatrixKind; value.Matrix = m; break;
-                    case Texture t: value.Kind = TextureKind; value.Texture = TextureHandles.Of(t); break;
+                    case Texture t:
+                        value.Kind = TextureKind;
+                        value.Texture = TextureHandles.Of(t);
+                        // The texture's decode values come with it, over the material's (unless
+                        // the block sets them itself; tests/projects/lightmapencoding block/*).
+                        var hdr = HdrDecode.NameOf(name);
+                        if (!properties.ContainsKey(Shader.PropertyToID(hdr)))
+                            s_Properties.Add(new PropertyValue { Name = hdr, Kind = VectorKind, Vector = (Vector4)HdrDecode.Of(t) });
+                        break;
                     case ComputeBuffer or GraphicsBuffer: value.Kind = BufferKind; value.Texture = Material.BufferHandle(p.Value); break;
                     case GraphicsBufferHandle h: value.Kind = BufferKind; value.Texture = h.value; break;
                     case SharedArray shared: value.Kind = SharedArrayKind; value.Shared = shared; break;

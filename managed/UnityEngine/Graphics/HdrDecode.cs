@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace UnityEngine
 {
     /// <summary>
@@ -46,9 +48,21 @@ namespace UnityEngine
         /// <summary>Whether <paramref name="texture"/> stores encoded HDR radiance.</summary>
         internal static bool Encoded(Texture texture) => texture switch
         {
-            Texture2D t => t.m_UsageMode != 0,
-            Cubemap c => c.m_UsageMode != 0,
+            Texture2D t => IsEncoding(t.m_UsageMode),
+            Cubemap c => IsEncoding(c.m_UsageMode),
             _ => false,
         };
+
+        static bool IsEncoding(int usage) => usage is LightmapDoubleLdr or LightmapRgbm or Rgbm or DoubleLdr;
+
+        static readonly Dictionary<string, string> s_Names = new();
+
+        /// <summary><c>&lt;name&gt;_HDR</c>, the decode values Unity gives a texture property
+        /// alongside it (made once per property name).</summary>
+        internal static string NameOf(string texture)
+        {
+            if (!s_Names.TryGetValue(texture, out var name)) s_Names[texture] = name = texture + "_HDR";
+            return name;
+        }
     }
 }

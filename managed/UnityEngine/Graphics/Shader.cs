@@ -496,8 +496,15 @@ namespace UnityEngine
                 case int i: GfxStream.GlobalInt(name, i); break;
                 case Vector4 v: GfxStream.GlobalVector(name, v); break;
                 case Matrix4x4 m: GfxStream.GlobalMatrix(name, m); break;
-                case Texture t: GfxStream.GlobalTexture(name, TextureHandles.Of(t)); break;
-                case null: GfxStream.GlobalTexture(name, 0); break;
+                case Texture t:
+                    GfxStream.GlobalTexture(name, TextureHandles.Of(t));
+                    // Its decode values with it (tests/projects/lightmapencoding global/*).
+                    GfxStream.GlobalVector(HdrDecode.NameOf(name), (Vector4)HdrDecode.Of(t));
+                    break;
+                case null:
+                    GfxStream.GlobalTexture(name, 0);
+                    GfxStream.GlobalVector(HdrDecode.NameOf(name), (Vector4)HdrDecode.Of(null));
+                    break;
             }
         }
 

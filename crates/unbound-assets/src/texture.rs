@@ -1336,12 +1336,7 @@ impl TextureImporter {
             for mip in &mut texture.mips {
                 mip.data = rgbm::encode(&mip.data, !texture.settings.srgb_flag);
             }
-            texture.usage_mode = usage_mode::RGBM;
-            texture.format = TextureFormat::Rgba8;
-            texture.srgb = texture.settings.srgb_flag;
-            texture.has_alpha = true;
-            texture.settings.format_alpha = Some(true);
-            texture.import_settings_hash = texture.settings.hash();
+            stored_as_bytes(texture, usage_mode::RGBM, true);
         }
         match selected {
             fallback @ (Storage::Uncompressed | Storage::UncompressedRgba) => {
@@ -1555,16 +1550,23 @@ fn encode_lighting(texture: &mut ImportedTexture) {
             HdrEncoding::Native => unreachable!(),
         };
     }
-    texture.usage_mode = match (encoding, lightmap) {
+    let usage = match (encoding, lightmap) {
         (HdrEncoding::DoubleLdr, true) => usage_mode::LIGHTMAP_DOUBLE_LDR,
         (HdrEncoding::Rgbm, true) => usage_mode::LIGHTMAP_RGBM,
         (HdrEncoding::Rgbm, false) => usage_mode::RGBM,
         _ => usage_mode::DOUBLE_LDR,
     };
+    stored_as_bytes(texture, usage, encoding == HdrEncoding::Rgbm);
+}
+
+/// Marks float radiance just encoded into the mips' bytes: their usage mode, sRGB data as the
+/// source's colour flag says, with alpha (RGBM's multiplier) or without.
+fn stored_as_bytes(texture: &mut ImportedTexture, usage: i32, alpha: bool) {
+    texture.usage_mode = usage;
     texture.format = TextureFormat::Rgba8;
     texture.srgb = texture.settings.srgb_flag;
-    texture.has_alpha = encoding == HdrEncoding::Rgbm;
-    texture.settings.format_alpha = Some(texture.has_alpha);
+    texture.has_alpha = alpha;
+    texture.settings.format_alpha = Some(alpha);
     texture.import_settings_hash = texture.settings.hash();
 }
 

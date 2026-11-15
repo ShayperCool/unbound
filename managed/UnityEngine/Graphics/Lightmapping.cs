@@ -77,7 +77,7 @@ namespace UnityEngine
 
         /// <summary>unity_Lightmap_HDR, boxed: how the first lightmap's color texture stores its
         /// radiance decides it for every lightmap (<see cref="HdrDecode"/>; matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/lightmapencoding).</summary>
+        /// 6000.0.71f1 Editor, tests/projects/lightmapencoding mixed/lightmapDecode).</summary>
         internal static object DecodeValues
         {
             get => HdrDecode.Of(s_Lightmaps.Length > 0 ? s_Lightmaps[0]?.m_Light : null);

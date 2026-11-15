@@ -1470,7 +1470,7 @@ namespace UnityEngine
                 // the renderer's neutral (1, 1, 0, 0).
                 if (HdrDecode.Encoded(p.Value.Texture))
                 {
-                    int hdr = Shader.PropertyToID(Shader.IdToName(p.Key) + "_HDR");
+                    int hdr = Shader.PropertyToID(HdrDecode.NameOf(Shader.IdToName(p.Key) ?? ""));
                     if (!m_Vectors.ContainsKey(hdr)) Add(hdr, 1, (Vector4)HdrDecode.Of(p.Value.Texture), 0, default);
                 }
             }
