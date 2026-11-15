@@ -64,6 +64,8 @@ namespace UnityEngine.Tests
             Assert.Equal(OpenGLESVersion.None, With("Android", Android("15000000", 0), 1, 0, 0));
             Assert.Equal(OpenGLESVersion.OpenGLES31AEP, With("Android", Android("150000000b000000", 0), 1, 1, 0));
             Assert.Equal(OpenGLESVersion.None, With("Standalone", null, 1, 1, 1));
+            // A malformed manual list counts as one without OpenGL ES 3.
+            Assert.Equal(OpenGLESVersion.None, With("Android", Android("0b0000", 0), 0, 0, 0));
             // Another platform's list does not count for Android's, nor Android's for another's.
             Assert.Equal(OpenGLESVersion.None, With("Standalone", Android("0b000000", 0), 0, 0, 0));
             Assert.Equal(OpenGLESVersion.OpenGLES30, With("Android",

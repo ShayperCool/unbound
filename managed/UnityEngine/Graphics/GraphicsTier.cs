@@ -26,7 +26,8 @@ namespace UnityEngine
         /// OpenGL ES 3 among the target's graphics APIs (an Android target left automatic has it),
         /// 3.2, 3.1 AEP or 3.1 as required, checked in that order, else 3.0; None without it
         /// (matches the Unity 6000.0.71f1 Editor: tests/projects/glesversion for Android,
-        /// tests/projects/srpmembers gles.min for Standalone).
+        /// tests/projects/srpmembers gles.min for Standalone; iOS takes the same rule, unmeasured;
+        /// other targets answer None, unmeasured).
         /// </summary>
         public static OpenGLESVersion minOpenGLESVersion
         {
@@ -37,7 +38,7 @@ namespace UnityEngine
                 {
                     UnityEditor.BuildTargetGroup.Android => "AndroidPlayer",
                     UnityEditor.BuildTargetGroup.iOS => "iOSSupport",
-                    UnityEditor.BuildTargetGroup.Standalone => OperatingSystem.IsMacOS() ? "OSXStandaloneSupport" : "LinuxStandaloneSupport",
+                    UnityEditor.BuildTargetGroup.Standalone => OperatingSystem.IsMacOS() ? "MacStandaloneSupport" : "LinuxStandaloneSupport",
                     _ => null,
                 };
                 if (target == null) return OpenGLESVersion.None;

@@ -82,9 +82,14 @@ namespace UnityEditor
     internal static class ProjectSettingsText
     {
         static Dictionary<string, string> s_Values;
+        static Dictionary<string, int[]> s_GraphicsApis;
 
         /// <summary>The file changed (an applied SerializedObject): read it again when next asked.</summary>
-        internal static void Invalidate() => s_Values = null;
+        internal static void Invalidate()
+        {
+            s_Values = null;
+            s_GraphicsApis = null;
+        }
 
         internal static string Text(string key, string fallback)
         {
@@ -109,32 +114,37 @@ namespace UnityEditor
 
         /// <summary>The graphics APIs (<c>GraphicsDeviceType</c> values) a platform
         /// (<c>AndroidPlayer</c>, ...) lists in <c>m_BuildTargetGraphicsAPIs</c>; null when the
-        /// platform has no entry or is left automatic.</summary>
+        /// platform has no entry or is left automatic. A malformed list counts as none.</summary>
         internal static int[] GraphicsApis(string buildTarget)
         {
-            string text;
-            try
+            if (s_GraphicsApis == null)
             {
-                var file = Path.Combine(ProjectInfo.ProjectPath, "ProjectSettings", "ProjectSettings.asset");
-                if (!File.Exists(file)) return null;
-                text = File.ReadAllText(file);
+                var lists = new Dictionary<string, int[]>(StringComparer.Ordinal);
+                try
+                {
+                    var file = Path.Combine(ProjectInfo.ProjectPath, "ProjectSettings", "ProjectSettings.asset");
+                    if (File.Exists(file)) ReadGraphicsApis(File.ReadAllText(file), lists);
+                }
+                catch (IOException) { }
+                s_GraphicsApis = lists;
             }
-            catch (IOException) { return null; }
+            return s_GraphicsApis.TryGetValue(buildTarget, out var apis) ? apis : null;
+        }
+
+        static void ReadGraphicsApis(string text, Dictionary<string, int[]> into)
+        {
             var section = Regex.Match(text, @"^  m_BuildTargetGraphicsAPIs:\s*\n((?:  - .*\n|    .*\n)*)", RegexOptions.Multiline);
-            if (!section.Success) return null;
+            if (!section.Success) return;
             foreach (Match entry in Regex.Matches(section.Groups[1].Value,
                          @"^  - m_BuildTarget: (\w+)\s*\n    m_APIs: ([0-9a-fA-F]*)\s*\n    m_Automatic: (\d+)", RegexOptions.Multiline))
             {
-                if (entry.Groups[1].Value != buildTarget) continue;
-                if (entry.Groups[3].Value != "0") return null;
+                if (entry.Groups[3].Value != "0") continue;
                 string hex = entry.Groups[2].Value;
-                if (hex.Length % 8 != 0) return null;
-                var apis = new int[hex.Length / 8];
+                var apis = new int[hex.Length % 8 == 0 ? hex.Length / 8 : 0];
                 for (int i = 0; i < apis.Length; i++)
                     apis[i] = System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(Convert.FromHexString(hex.Substring(i * 8, 8)));
-                return apis;
+                into.TryAdd(entry.Groups[1].Value, apis);
             }
-            return null;
         }
     }
 

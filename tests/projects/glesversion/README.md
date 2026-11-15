@@ -19,8 +19,8 @@ exactly.
 Measured: with OpenGL ES 3 among the Android graphics APIs (a list left automatic has it, whatever
 list is stored), the answer is OpenGLES32, OpenGLES31AEP or OpenGLES31 when that requirement is
 set, checked in that order (each alone suffices), else OpenGLES30; a manual list without OpenGL ES 3
-answers None. The Standalone target answers None (tests/projects/srpmembers `gles.min`). Other
-targets and Standalone lists with OpenGL ES 3 follow the same rule, unmeasured. Measured on Linux
+answers None. The Standalone target answers None (tests/projects/srpmembers `gles.min`).
+iOS and Standalone lists with OpenGL ES 3 follow the same rule, other targets answer None (unmeasured). Measured on Linux
 with the NVIDIA driver.
 
 Contract: [Graphics.minOpenGLESVersion](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics-minOpenGLESVersion.html)
