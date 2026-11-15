@@ -789,7 +789,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
     index = DirectoryIndex(index_root or roots[0], seconds=seconds)
     # Time runs out only between batches, so that the walk can be continued where it stopped.
     deadline, index.deadline_in_entries = index.deadline, False
-    index.seen.update(walk.seen)
+    index.seen = walk.seen  # the listings of earlier attempts stay in the index
     join = os.path.join
     if not resuming:
         # Directories that vanished before this walk; ones vanishing during it stay unsafe.
