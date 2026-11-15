@@ -604,12 +604,11 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>GL's matrices in a Repaint: the screen's pixels from its top left (near -1,
-        /// far 100) and identity modelview. They stay after the GUI, for the end-of-frame callbacks
-        /// (Unity 6000.0.71f1 windowed Editor, OpenGL Core and Vulkan: tests/projects/framestate
-        /// matrices.ongui, gl.modelview.ongui, matrices.endofframe.gui). Loaded again before each
-        /// script's Repaint: with several OnGUI scripts that is unmeasured.</summary>
-        internal static void LoadRepaintMatrices() => GL.LoadPixelMatrix(0f, Screen.width, Screen.height, 0f);
+        /// <summary>GL's matrices in a Repaint: the screen's pixels (<see cref="Immediate.LoadScreenPixels"/>).
+        /// They stay after the GUI, for the end-of-frame callbacks (tests/projects/framestate
+        /// gl.modelview.ongui, matrices.endofframe.gui). Loaded again before each script's
+        /// Repaint: with several OnGUI scripts that is unmeasured.</summary>
+        internal static void LoadRepaintMatrices() => Immediate.LoadScreenPixels();
 
         /// <summary>The frame's input events, at PreUpdate.IMGUISendQueuedEvents: after the fixed
         /// steps, before the Input System's update and Update (measured,

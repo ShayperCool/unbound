@@ -23,6 +23,20 @@ namespace Unbound.Runtime
         /// <summary>Blit's projection: the unit square, as GL.LoadOrtho.</summary>
         internal static readonly UnityEngine.Matrix4x4 Ortho = UnityEngine.Matrix4x4.Ortho(0f, 1f, 0f, 1f, -1f, 100f);
 
+        /// <summary>The Game view's GUI drawing as GL's matrices: the screen's pixels from its top
+        /// left (near -1, far 100) and identity modelview (Unity 6000.0.71f1 windowed Editor,
+        /// OpenGL Core and Vulkan: tests/projects/framestate matrices.ongui).
+        /// A screen without pixels (none made yet) leaves identity rather than a matrix of
+        /// infinities.</summary>
+        internal static void LoadScreenPixels()
+        {
+            int width = UnityEngine.Screen.width, height = UnityEngine.Screen.height;
+            Projection = width > 0 && height > 0
+                ? UnityEngine.Matrix4x4.Ortho(0f, width, height, 0f, -1f, 100f)
+                : UnityEngine.Matrix4x4.identity;
+            ModelView = UnityEngine.Matrix4x4.identity;
+        }
+
         static UnityEngine.Mesh s_BlitQuad;
         static UnityEngine.Material s_BlitCopy;
 

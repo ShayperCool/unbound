@@ -49,6 +49,7 @@ namespace Unbound.Tests
         {
             FrameBuilder.EnsureRegistered();
             var previous = RenderTexture.ActiveTarget;
+            var (projection, modelView) = (Immediate.Projection, Immediate.ModelView);
             var texture = new RenderTexture(4, 4, 0);
             try
             {
@@ -59,6 +60,7 @@ namespace Unbound.Tests
             }
             finally
             {
+                (Immediate.Projection, Immediate.ModelView) = (projection, modelView);
                 RenderTexture.SetActiveQuietly(previous);
                 UnityEngine.Object.DestroyImmediate(texture);
             }
@@ -70,7 +72,8 @@ namespace Unbound.Tests
 
         /// <summary>tests/projects/framestate matrices.aftercamera (windowed Editors: Camera.Render
         /// gives the matrices before it back), matrices.endofframe (the frame's last camera's) and
-        /// the batchmode Editors' matrices.early (identity in the next frame).</summary>
+        /// matrices.early (the next frame starts from the windowed Editor's last window drawing:
+        /// the screen's pixel matrix).</summary>
         [Fact]
         public void CameraRenderingAndTheFrameEndSetGlMatrices()
         {
@@ -93,7 +96,7 @@ namespace Unbound.Tests
                 Assert.Equal(camera.projectionMatrix, Immediate.Projection);
                 Assert.Equal(camera.worldToCameraMatrix, Immediate.ModelView);
                 CleanupFrame();
-                Assert.Equal(Matrix4x4.identity, Immediate.Projection);
+                Assert.Equal(Matrix4x4.Ortho(0f, Screen.width, Screen.height, 0f, -1f, 100f), Immediate.Projection);
                 Assert.Equal(Matrix4x4.identity, GL.modelview);
             }
             finally
@@ -153,8 +156,11 @@ namespace Unbound.Tests
             var view = Matrix4x4.TRS(new Vector3(0, 0, -5), Quaternion.identity, Vector3.one);
             var projection = Matrix4x4.Perspective(60f, 1f, 0.3f, 100f);
             var go = new GameObject("left current");
+            var (glProjection, glModelView) = (Immediate.Projection, Immediate.ModelView);
             try
             {
+                // GL's matrices as a batchmode Editor's frame starts.
+                (Immediate.Projection, Immediate.ModelView) = (Matrix4x4.identity, Matrix4x4.identity);
                 GfxStream.Camera(view, projection);
                 // A camera left current (as a pipeline leaves it) is not rendering.
                 Camera.Internal_SetCurrent(go.AddComponent<Camera>());
@@ -179,6 +185,7 @@ namespace Unbound.Tests
             }
             finally
             {
+                (Immediate.Projection, Immediate.ModelView) = (glProjection, glModelView);
                 Camera.Internal_SetCurrent(previous);
                 GfxStream.Restore(saved);
                 UnityEngine.Object.DestroyImmediate(go);

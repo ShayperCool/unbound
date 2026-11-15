@@ -219,15 +219,16 @@ namespace Unbound.Runtime
             // no active render texture, whether Update, LateUpdate or an end-of-frame callback left
             // one and whether a camera rendered, before EarlyUpdate (Unity 6000.0.71f1, windowed and
             // batchmode Editors on OpenGL Core and Vulkan: tests/projects/framestate active.*;
-            // batchmode Metal: tests/projects/nativegfx metal.jsonl active.*), and with identity
-            // as GL's matrices (the batchmode Editors' matrices.early; a windowed Editor's own
-            // window drawing leaves its last view's pixel matrix there instead).
+            // batchmode Metal: tests/projects/nativegfx metal.jsonl active.*). GL's matrices are
+            // then those of the windowed Editor's last window drawing, a pixel matrix (framestate
+            // matrices.early and outside.*; the windowed macOS Editor's nativegfx
+            // metal-windowed.jsonl outside.* agree): the Game view's, Unbound's one window.
+            // Batchmode Editors start from identity instead (matrices.early).
             PlayerLoopDriver.RegisterFrameCleanup(() =>
             {
                 InDrawingFrame = false;
                 if (RenderTexture.active != null) RenderTexture.active = null;
-                Immediate.Projection = Matrix4x4.identity;
-                Immediate.ModelView = Matrix4x4.identity;
+                Immediate.LoadScreenPixels();
             });
             UnityEngine.Rendering.OnDemandRendering.EnsureRegistered();
         }
