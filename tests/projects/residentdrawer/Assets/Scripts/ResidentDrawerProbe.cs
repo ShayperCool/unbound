@@ -64,6 +64,12 @@ public class ResidentDrawerProbe : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("ResidentDrawerProbe").AddComponent<ResidentDrawerProbe>();
 
+    /// <summary>A scene recorded as it is (RESIDENT_DRAWER_SCENE, the lightmaps profile): its own
+    /// renderers, no scripted changes, two capture frames.</summary>
+    static readonly bool s_SceneMode = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RESIDENT_DRAWER_SCENE"));
+    static readonly int[] SceneCaptures = { 8, 14 };
+    const int SceneLastFrame = 16;
+
     void Start()
     {
         s_Out = Environment.GetEnvironmentVariable("RESIDENT_DRAWER_OUT");
@@ -78,6 +84,22 @@ public class ResidentDrawerProbe : MonoBehaviour
         m_Camera.cullingMask &= ~(1 << HiddenLayer);
         m_Readback = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
         m_Light = FindAnyObjectByType<Light>();
+        if (s_SceneMode)
+        {
+            // The scene's renderers by name, with the lightmap each was baked into.
+            Row("device", SystemInfo.graphicsDeviceType.ToString());
+            Row("drawer.enabled.start", DrawerEnabled());
+            var found = FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            Array.Sort(found, (a, b) => string.CompareOrdinal(a.gameObject.name, b.gameObject.name));
+            foreach (var renderer in found)
+            {
+                var name = renderer.gameObject.name;
+                m_Names[renderer.GetInstanceID()] = name;
+                m_Renderers[name] = renderer;
+                Row("scene." + name + ".lightmap", renderer.lightmapIndex + " " + renderer.lightmapScaleOffset.ToString("F4"));
+            }
+            return;
+        }
         m_Light.shadows = LightShadows.Hard;
         Row("device", SystemInfo.graphicsDeviceType.ToString());
 #if UNITY_EDITOR
@@ -343,9 +365,9 @@ public class ResidentDrawerProbe : MonoBehaviour
             DebugShaders();
         }
         m_Frame++;
-        if (Array.IndexOf(Captures, m_Frame - 1) >= 0) Guarded("capture", () => Capture(m_Frame - 1));
-        Guarded("step", () => Step(m_Frame));
-        if (m_Frame == LastFrame) Finish();
+        if (Array.IndexOf(s_SceneMode ? SceneCaptures : Captures, m_Frame - 1) >= 0) Guarded("capture", () => Capture(m_Frame - 1));
+        if (!s_SceneMode) Guarded("step", () => Step(m_Frame));
+        if (m_Frame == (s_SceneMode ? SceneLastFrame : LastFrame)) Finish();
     }
 
     /// <summary>Runs a part of the frame; an exception becomes a row, and the frame's other parts
@@ -478,8 +500,7 @@ public class ResidentDrawerProbe : MonoBehaviour
         names.Sort(StringComparer.Ordinal);
         foreach (var name in names)
             Row(prefix + ".visible." + name, m_Renderers[name].isVisible);
-        var callback = m_Renderers["Callback"].GetComponent<WillRender>();
-        Row(prefix + ".willRenderCalled", callback.calls > 0);
+        if (!s_SceneMode) Row(prefix + ".willRenderCalled", m_Renderers["Callback"].GetComponent<WillRender>().calls > 0);
         RecordDrawer(prefix);
     }
 

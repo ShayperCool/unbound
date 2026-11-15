@@ -8,7 +8,7 @@
     run.py compare REF ACTUAL     compares two capture directories
 
 --profile selects the drawer's settings (controls: direct's, with more refusal controls, see the
-README): direct (the default: occlusion culling off, so the drawer
+README; lightmaps: the URP probe's baked Subtractive scene as it is): direct (the default: occlusion culling off, so the drawer
 draws with direct draw commands) or occlusion (GPU occlusion culling in cameras on, so the main
 camera's commands are indirect ones the drawer's compute shaders fill). Both sides use the Vulkan
 device: the Editor windowed with -force-vulkan on the GPU-backed display :0 (the drawer dispatches
@@ -80,7 +80,8 @@ def stage(label):
     if work.exists():
         sys.exit(f'refusing to overwrite run: {work}')
     project = work/'project'
-    source = ROOT.parent/'shadergraph'
+    # The lightmaps profile records the URP probe's baked Subtractive scene (lightmapped renderers).
+    source = ROOT.parent/('urp' if PROFILE == 'lightmaps' else 'shadergraph')
     for part in ('Packages', 'ProjectSettings'):
         shutil.copytree(source/part, project/part)
     shutil.copytree(source/'Assets', project/'Assets', ignore=lambda d, names: ['Scripts', 'Scripts.meta', 'Editor', 'Editor.meta'] if Path(d) == source/'Assets' else [])
@@ -102,7 +103,7 @@ def stage(label):
         # A second sorting layer for the SortingLayer control.
         edit(project/'ProjectSettings/TagManager.asset', '  - name: Default\n    uniqueID: 0\n    locked: 0\n',
              '  - name: Default\n    uniqueID: 0\n    locked: 0\n  - name: Probe\n    uniqueID: 1876543210\n    locked: 0\n')
-    for part in ('Scripts', 'Editor', 'Shaders'):
+    for part in ('Scripts', 'Editor') if PROFILE == 'lightmaps' else ('Scripts', 'Editor', 'Shaders'):
         shutil.copytree(ROOT/'Assets'/part, project/'Assets'/part)
         shutil.copy2(ROOT/'Assets'/(part+'.meta'), project/'Assets'/(part+'.meta'))
     return work, project
@@ -111,6 +112,8 @@ def stage(label):
 def probe_env(work):
     """The probe's environment: its capture directory, and the controls profile's switch."""
     env = {'RESIDENT_DRAWER_OUT': str(work/CAPTURE)}
+    if PROFILE == 'lightmaps':
+        env['RESIDENT_DRAWER_SCENE'] = 'Subtractive'
     if PROFILE == 'controls':
         env['RESIDENT_DRAWER_CONTROLS'] = '1'
     return env
@@ -136,6 +139,8 @@ def engine(label):
     env = dict(os.environ, **probe_env(work))
     command = [str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '-s', 'KILL', '1500', cli, 'run', '-p', str(project),
                '--no-watch', '--frames', str(FRAMES), '--size', '320x180', '--force-vulkan']
+    if PROFILE == 'lightmaps':
+        command += ['--scene', 'Assets/Scenes/Subtractive.unity']
     with (work/'process.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     values = work/CAPTURE/VALUES
@@ -296,7 +301,7 @@ def main():
     parser.add_argument('mode', choices=['native', 'engine', 'publish', 'check', 'compare'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
-    parser.add_argument('--profile', choices=('direct', 'occlusion', 'controls'), default='direct')
+    parser.add_argument('--profile', choices=('direct', 'occlusion', 'controls', 'lightmaps'), default='direct')
     args = parser.parse_args()
     global PROFILE
     PROFILE = args.profile
