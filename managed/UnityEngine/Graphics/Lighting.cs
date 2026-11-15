@@ -409,11 +409,13 @@ namespace UnityEngine
             // A built scene's ambient probe and skybox reflection (player data: no lighting data asset).
             s_SerializedProbe = null;
             var probe = b.Get("m_AmbientProbe");
-            var names = SphericalHarmonicsL2.SerializedNames;
-            if (probe != null && probe.Get(names[0]) != null)
+            // Literal key patterns (the names SphericalHarmonicsL2.SerializedNames holds): the field
+            // coverage analysis derives a reader's fields only from literal or interpolated keys
+            // (tests/projects/classids).
+            if (probe != null && probe.Get("sh[ 0]") != null)
             {
                 var sh = new SphericalHarmonicsL2();
-                for (int k = 0; k < names.Length; k++) sh.SetCoefficient(k, probe.Float(names[k]));
+                for (int k = 0; k < SphericalHarmonicsL2.CoefficientCount; k++) sh.SetCoefficient(k, probe.Float($"sh[{k,2}]"));
                 s_SerializedProbe = sh;
             }
             var generated = b.Ref("m_GeneratedSkyboxReflection");
