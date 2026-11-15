@@ -1,10 +1,1 @@
-{
- "Texture2D.blackTexture and redTexture have alpha 1 in Unbound and 0 in the Editor, grayTexture is 128/255 with alpha 1 instead of 127/255 in every channel; the engine's lightmap and UI fallbacks use these textures, so changing them needs those paths measured again (follow-up)": [
-  "builtin.blackTexture.a",
-  "builtin.grayTexture.a",
-  "builtin.grayTexture.b",
-  "builtin.grayTexture.g",
-  "builtin.grayTexture.r",
-  "builtin.redTexture.a"
- ]
-}
+{}
