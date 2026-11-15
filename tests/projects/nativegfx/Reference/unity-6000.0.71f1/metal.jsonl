@@ -74,7 +74,11 @@
 {"k":"outside.fresh","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
 {"k":"outside.aftercamera","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
 {"k":"outside.identity","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
+{"k":"outside.corner","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4"]}
+{"k":"outside.ortho","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
+{"k":"outside.after","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4"]}
 {"k":"outside.logs","v":[]}
+{"k":"compressed.formats","v":["10","12","24","25","26","27","28","29","30","31","32","33","34","41","42","43","44","45","46","47","48","49","50","51","52","53","64","65","66","67","68","69","70","71"]}
 {"k":"target.pixels","v":["ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4"]}
 {"k":"camera.pixels","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
 {"k":"second.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}

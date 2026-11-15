@@ -417,6 +417,11 @@ public class NativeGfxMetalProbe : MonoBehaviour
                 Value("active.nextframe", Q(RenderTexture.active == null ? "null" : RenderTexture.active.name));
                 RenderTexture.active = null;
                 OutsideDraws();
+                // GraphicsFormatUtility.IsCompressedFormat over every TextureFormat value.
+                Value("compressed.formats", L(Enum.GetValues(typeof(TextureFormat)).Cast<TextureFormat>().Distinct()
+                    .OrderBy(f => (int)f)
+                    .Where(f => UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsCompressedFormat(f))
+                    .Select(f => ((int)f).ToString())));
                 break;
         }
     }
@@ -665,7 +670,9 @@ public class NativeGfxMetalProbe : MonoBehaviour
 
     /// <summary>A command buffer's <c>DrawMesh</c> outside cameras (a quad over clip space with
     /// the identity matrix, white, no culling, no depth test): at the start of a frame, after a
-    /// camera at (0, 0, -5) rendered, and with the view and projection set to identity.</summary>
+    /// camera at (0, 0, -5) rendered, and with the view and projection set to identity; then a
+    /// quad over clip space's upper right quarter: plain, inside GL.LoadOrtho, and drawn with
+    /// DrawMeshNow after a buffer that set its own matrices.</summary>
     void OutsideDraws()
     {
         screenLogs = new List<string>();
@@ -695,6 +702,45 @@ public class NativeGfxMetalProbe : MonoBehaviour
         Draw("aftercamera", false);
         Draw("identity", true);
         DestroyImmediate(camera.gameObject);
+        // A quad over clip space's upper right quarter (x and y from 0 to 1): which way up.
+        var corner = Keep(new Mesh { name = "corner" });
+        corner.vertices = new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 0, 0) };
+        corner.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        RenderTexture CornerDraw(string key)
+        {
+            var output = Target("outside" + key, 0);
+            using (var cmd = new CommandBuffer { name = "outside " + key })
+            {
+                cmd.SetRenderTarget(output);
+                cmd.ClearRenderTarget(true, true, Color.black);
+                cmd.DrawMesh(corner, Matrix4x4.identity, white, 0, 0);
+                Graphics.ExecuteCommandBuffer(cmd);
+            }
+            return output;
+        }
+        Value("outside.corner", Pixels(CornerDraw("corner"), 8, 8));
+        // Inside GL.LoadOrtho (0..1 over the viewport): does the buffer draw with GL's matrices?
+        GL.PushMatrix();
+        GL.LoadOrtho();
+        var ortho = CornerDraw("ortho");
+        GL.PopMatrix();
+        Value("outside.ortho", Pixels(ortho, 8, 8));
+        // A buffer setting its own matrices (halving clip space), then DrawMeshNow of the corner
+        // quad: do the buffer's matrices last past it?
+        var after = Target("outsideafter", 0);
+        using (var cmd = new CommandBuffer { name = "outside after" })
+        {
+            cmd.SetRenderTarget(after);
+            cmd.ClearRenderTarget(true, true, Color.black);
+            cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.Scale(new Vector3(0.5f, 0.5f, 1f)));
+            Graphics.ExecuteCommandBuffer(cmd);
+        }
+        var previous = RenderTexture.active;
+        RenderTexture.active = after;
+        white.SetPass(0);
+        Graphics.DrawMeshNow(corner, Matrix4x4.identity);
+        RenderTexture.active = previous;
+        Value("outside.after", Pixels(after, 8, 8));
         Value("outside.logs", L(screenLogs));
         screenLogs = null;
     }
