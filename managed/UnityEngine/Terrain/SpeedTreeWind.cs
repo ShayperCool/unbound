@@ -140,7 +140,7 @@ namespace UnityEngine
 
         internal override void OnEngineDisable() => SpeedTreeWindSystem.TreeDisabled(this);
 
-        /// <summary>A tree destroyed while inactive (no disable comes) also leaves its local wind.</summary>
+        /// <summary>A destroyed tree leaves its local wind (an inactive one gets no disable).</summary>
         internal override void OnEngineDestroy()
         {
             base.OnEngineDestroy();
