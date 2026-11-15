@@ -277,7 +277,9 @@ level sampled at one texel per pixel is 0 for biases 0, 1, 2 and -1, point, bili
 trilinear); a render texture made active in one frame's Update is no longer active in the next
 frame's; a command buffer executed outside cameras draws with GL's matrices (identity, also right
 after a camera rendered; GL.LoadOrtho's inside a GL.LoadOrtho), the right way up, and its own
-matrices do not last past it (a DrawMeshNow after it takes GL's). `compressed.formats` lists the
+matrices do not last past it (a DrawMeshNow after it takes GL's). tests/projects/framestate
+measures both rules on the Linux Editors (windowed and batchmode, OpenGL Core and Vulkan).
+`compressed.formats` lists the
 TextureFormat values `GraphicsFormatUtility.IsCompressedFormat` answers true for.
 
 Dynamic resolution (`dynres.*`, frames 13 and 14, `Shaders/DynamicParams.shader`): 16x16 render
