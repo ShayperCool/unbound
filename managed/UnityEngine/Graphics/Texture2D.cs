@@ -934,30 +934,41 @@ namespace Unbound.Runtime
 
     internal static class DefaultTextures
     {
-        static UnityEngine.Texture2D s_White, s_Black, s_Red, s_Gray, s_HalfGray, s_Normal, s_LinearGray;
+        static UnityEngine.Texture2D s_White, s_Black, s_Red, s_Gray, s_LinearGray, s_HalfGray, s_Normal, s_AbsentLightmap;
 
-        static UnityEngine.Texture2D Make(string name, UnityEngine.Color32 color, bool linear = false)
+        /// <summary>A 4x4 RGBA32 texture of one colour (sRGB unless <paramref name="linear"/>; the
+        /// built-in ones (<paramref name="builtin"/>) are all linear in a gamma project), with its
+        /// mips when <paramref name="mips"/>.</summary>
+        static UnityEngine.Texture2D Make(string name, UnityEngine.Color32 color, bool linear = false, bool mips = false, bool builtin = true)
         {
-            var t = new UnityEngine.Texture2D(4, 4, UnityEngine.TextureFormat.RGBA32, false, linear) { name = name };
+            linear |= builtin && UnityEngine.QualitySettings.activeColorSpace == UnityEngine.ColorSpace.Gamma;
+            var t = new UnityEngine.Texture2D(4, 4, UnityEngine.TextureFormat.RGBA32, mips, linear) { name = name };
             var pixels = new UnityEngine.Color32[16];
             for (int i = 0; i < 16; i++) pixels[i] = color;
             t.SetPixels32(pixels);
-            t.Apply(false, false);
+            t.Apply(mips, false);
             return t;
         }
 
+        // The Editor's built-in textures: names, colours, colour spaces and mips (matches the Unity
+        // 6000.0.71f1 Editor, tests/projects/lightmapencoding default/*).
         internal static UnityEngine.Texture2D White => s_White ??= Make("UnityWhite", new UnityEngine.Color32(255, 255, 255, 255));
-        internal static UnityEngine.Texture2D Black => s_Black ??= Make("UnityBlack", new UnityEngine.Color32(0, 0, 0, 255));
-        internal static UnityEngine.Texture2D Red => s_Red ??= Make("UnityRed", new UnityEngine.Color32(255, 0, 0, 255));
-        internal static UnityEngine.Texture2D Gray => s_Gray ??= Make("UnityGrey", new UnityEngine.Color32(128, 128, 128, 255));
+        internal static UnityEngine.Texture2D Black => s_Black ??= Make("UnityBlack", new UnityEngine.Color32(0, 0, 0, 0));
+        internal static UnityEngine.Texture2D Red => s_Red ??= Make("UnityRed", new UnityEngine.Color32(255, 0, 0, 0), mips: true);
+        internal static UnityEngine.Texture2D Gray => s_Gray ??= Make("UnityGrey", new UnityEngine.Color32(127, 127, 127, 127));
+        internal static UnityEngine.Texture2D LinearGray => s_LinearGray ??= Make("UnityLinearGrey", new UnityEngine.Color32(127, 127, 127, 127), linear: true);
         /// <summary>Grey in every channel, alpha too: what a realtime lightmap index with no
         /// realtime lightmap samples (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/terrainlightmaps cases 29 and 30).</summary>
-        internal static UnityEngine.Texture2D HalfGray => s_HalfGray ??= Make("UnityHalfGrey", new UnityEngine.Color32(128, 128, 128, 128));
-        /// <summary>The flat normal and the linear grey hold linear data (R8G8B8A8_UNorm), as in
-        /// the Unity 6000.0.71f1 Editor (tests/projects/defaulttextures).</summary>
-        internal static UnityEngine.Texture2D Normal => s_Normal ??= Make("UnityNormalMap", new UnityEngine.Color32(127, 127, 255, 255), linear: true);
-        internal static UnityEngine.Texture2D LinearGray => s_LinearGray ??= Make("UnityLinearGrey", new UnityEngine.Color32(127, 127, 127, 127), linear: true);
+        /// <summary>What a terrain's lightmap index past the lightmaps samples: grey of 128, opaque
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/terrainlightmaps 06-index20).</summary>
+        internal static UnityEngine.Texture2D AbsentLightmap => s_AbsentLightmap ??= Make("UnityGrey", new UnityEngine.Color32(128, 128, 128, 255), builtin: false);
+        internal static UnityEngine.Texture2D HalfGray => s_HalfGray ??= Make("UnityHalfGrey", new UnityEngine.Color32(128, 128, 128, 128), builtin: false);
+        /// <summary>A flat normal, linear data (R8G8B8A8_UNorm; tests/projects/defaulttextures);
+        /// its alpha is half on Android, the target whose normal maps are
+        /// stored XYZ (UNITY_NO_DXT5nm), and one on Standalone.</summary>
+        internal static UnityEngine.Texture2D Normal => s_Normal ??= Make("UnityNormalMap",
+            new UnityEngine.Color32(127, 127, 255, UnityEngine.Rendering.GraphicsSettings.HasShaderDefine(UnityEngine.Rendering.BuiltinShaderDefine.UNITY_NO_DXT5nm) ? (byte)127 : (byte)255), linear: true);
     }
 
     /// <summary>Raw pixel data of the common texture formats, to and from RGBA32.</summary>

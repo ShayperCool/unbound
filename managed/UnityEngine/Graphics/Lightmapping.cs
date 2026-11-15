@@ -332,7 +332,7 @@ namespace UnityEngine
             if ((map != null && map.m_Light != null) || terrainLightmapped)
             {
                 if (!realtime) properties = DrawPropertyPool.Copy(properties);
-                properties[s_Lightmap] = map?.m_Light ?? (map != null ? DefaultTextures.Black : DefaultTextures.Gray);
+                properties[s_Lightmap] = map?.m_Light ?? (map != null ? DefaultTextures.Black : DefaultTextures.AbsentLightmap);
                 properties[s_LightmapST] = renderer.lightmapScaleOffset;
                 properties[s_LightmapHDR] = LightmapSettings.DecodeValues;
                 keywords.Add("LIGHTMAP_ON");
