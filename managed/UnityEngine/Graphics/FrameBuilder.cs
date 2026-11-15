@@ -1493,6 +1493,8 @@ namespace Unbound.Runtime
                 var buffers = camera.targetTexture == null ? camera.TargetBufferHandles() : null;
                 var cameraTarget = camera.targetTexture ?? camera.BufferTarget;
                 bool screenCamera = cameraTarget == null && buffers == null;
+                if (screenCamera && ScalableBufferManager.Scaling && camera.allowDynamicResolution)
+                    Unbound.Runtime.Stubs.Ignored("Camera.allowDynamicResolution", "a camera drawing to the screen renders at full size while ScalableBufferManager scales (unmeasured)");
                 // Measured in cameramsaa: an explicit target supplies its samples, including HDR
                 // float targets. Quality AA belongs to the screen or to the camera's HDR
                 // intermediate when converting into an LDR target. Buffer bindings bypass that
@@ -1512,7 +1514,7 @@ namespace Unbound.Runtime
                     && effects.Count == 0 && opaqueEffects.Count == 0 && camera.rect == new Rect(0f, 0f, 1f, 1f)
                     && camera.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor)
                 {
-                    screenStandIn = temporaries.Own(RenderTexture.GetTemporary(Math.Max(1, camera.pixelWidth), Math.Max(1, camera.pixelHeight), 24,
+                    screenStandIn = temporaries.Own(RenderTexture.GetTemporary(Math.Max(1, camera.scaledPixelWidth), Math.Max(1, camera.scaledPixelHeight), 24,
                         RenderTextureFormat.Default, RenderTextureReadWrite.Default, 1));
                     cameraTarget = screenStandIn;
                     RenderTexture.ScreenStandIn = screenStandIn;
@@ -1529,7 +1531,7 @@ namespace Unbound.Runtime
                     var readWrite = hdrIntermediate ? RenderTextureReadWrite.Linear
                         : cameraTarget != null ? (cameraTarget.sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear)
                         : RenderTextureReadWrite.Default;
-                    sceneTarget = temporaries.Own(RenderTexture.GetTemporary(Math.Max(1, camera.pixelWidth), Math.Max(1, camera.pixelHeight), 24,
+                    sceneTarget = temporaries.Own(RenderTexture.GetTemporary(Math.Max(1, camera.scaledPixelWidth), Math.Max(1, camera.scaledPixelHeight), 24,
                         format, readWrite, cameraSamples));
                     viewport = new Rect(0, 0, sceneTarget.width, sceneTarget.height);
                 }
@@ -1586,8 +1588,8 @@ namespace Unbound.Runtime
                     // A partial screen camera's light buffer has its pixel size, as a forward
                     // intermediate has (measured: tests/projects/camerastack *.part.*.def.persp).
                     bool pixelSize = onScreen && !fullScreen;
-                    int w = pixelSize ? Math.Max(1, camera.pixelWidth) : sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
-                    int h = pixelSize ? Math.Max(1, camera.pixelHeight) : sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
+                    int w = pixelSize ? Math.Max(1, camera.scaledPixelWidth) : sceneTarget != null ? sceneTarget.ScaledWidth : Math.Max(1, Screen.width);
+                    int h = pixelSize ? Math.Max(1, camera.scaledPixelHeight) : sceneTarget != null ? sceneTarget.ScaledHeight : Math.Max(1, Screen.height);
                     msaaTarget = temporaries.Own(RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear));
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
@@ -1603,8 +1605,8 @@ namespace Unbound.Runtime
                     // blending would clamp each HDR layer before it reaches the next layer.
                     // A partial screen camera's samples too (its edges are antialiased in the Editor).
                     bool pixelSize = needs.Hdr || (onScreen && !fullScreen);
-                    int w = pixelSize ? Math.Max(1, camera.pixelWidth) : sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
-                    int h = pixelSize ? Math.Max(1, camera.pixelHeight) : sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
+                    int w = pixelSize ? Math.Max(1, camera.scaledPixelWidth) : sceneTarget != null ? sceneTarget.ScaledWidth : Math.Max(1, Screen.width);
+                    int h = pixelSize ? Math.Max(1, camera.scaledPixelHeight) : sceneTarget != null ? sceneTarget.ScaledHeight : Math.Max(1, Screen.height);
                     // The HDR intermediate can also reduce explicit target samples to one when
                     // quality AA or allowMSAA is off. Resolve before LDR quantization, including
                     // alpha; quantizing each sample first loses a byte at partial coverage.

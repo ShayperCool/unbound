@@ -210,19 +210,16 @@ namespace UnityEngine
         public int targetDisplay { get => m_TargetDisplay; set => m_TargetDisplay = value; }
         public bool allowHDR { get => m_AllowHDR; set => m_AllowHDR = value; }
         public bool allowMSAA { get => m_AllowMSAA; set => m_AllowMSAA = value; }
-        /// <summary>Stored, but Unbound's renderer has no dynamic resolution: false, as the Linux
-        /// Editor's devices answer (measured: tests/projects/builtinfx, a camera saved with it on
-        /// reports false). The macOS Editor's Metal device keeps the value: warned there when it
-        /// is true.</summary>
-        [Unbound.EditorFaithful("the Linux Editor's devices do not support dynamic resolution: the camera reports false (warned on Metal)")]
+        /// <summary>The value set on a device whose Editor scales buffers (the macOS Editor's Metal
+        /// device); false on the Linux Editor's devices (measured: tests/projects/builtinfx, a
+        /// camera saved with it on reports false). A render texture target marked
+        /// <c>useDynamicScale</c> scales whatever it says (tests/projects/nativegfx
+        /// <c>dynres.*.plain</c>); a camera drawing to the screen renders at full size (warned
+        /// while scaling: unmeasured).</summary>
+        [Unbound.EditorFaithful("the Linux Editor's devices do not support dynamic resolution: the camera reports false")]
         public bool allowDynamicResolution
         {
-            get
-            {
-                if (m_AllowDynamicResolution && Unbound.Runtime.GraphicsDeviceProfile.Current.EditorDynamicResolution)
-                    Unbound.Runtime.Stubs.Ignored("Camera.allowDynamicResolution", "answers false: Unbound's renderer does not scale buffers (the Editor's Metal device keeps the value)");
-                return false;
-            }
+            get => m_AllowDynamicResolution && Unbound.Runtime.GraphicsDeviceProfile.Current.EditorDynamicResolution;
             set => m_AllowDynamicResolution = value;
         }
         bool m_AllowDynamicResolution;
@@ -309,13 +306,37 @@ namespace UnityEngine
             }
         }
 
-        float TargetWidth => m_TargetTexture != null ? m_TargetTexture.width : BufferTarget is RenderTexture b ? b.width : Screen.width;
-        float TargetHeight => m_TargetTexture != null ? m_TargetTexture.height : BufferTarget is RenderTexture b ? b.height : Screen.height;
+        /// <summary>The target's size as drawn: a dynamically scaled render texture's scaled size
+        /// (the camera's pixelRect is scaled: tests/projects/nativegfx <c>dynres.*.camera</c>).</summary>
+        float TargetWidth => m_TargetTexture != null ? m_TargetTexture.ScaledWidth : BufferTarget is RenderTexture b ? b.ScaledWidth : Screen.width;
+        float TargetHeight => m_TargetTexture != null ? m_TargetTexture.ScaledHeight : BufferTarget is RenderTexture b ? b.ScaledHeight : Screen.height;
 
-        public int pixelWidth => (int)pixelRect.width;
-        public int pixelHeight => (int)pixelRect.height;
-        public int scaledPixelWidth => pixelWidth;
-        public int scaledPixelHeight => pixelHeight;
+        /// <summary>The viewport's size in the target's own size, before dynamic scaling.</summary>
+        public int pixelWidth
+        {
+            get
+            {
+                var target = m_TargetTexture != null ? m_TargetTexture : BufferTarget as RenderTexture;
+                if (target == null || !target.DynamicallyScaled) return (int)pixelRect.width;
+                var r = m_NormalizedViewPortRect;
+                return (int)(Math.Max(0f, Mathf.Clamp01(r.xMax) - Mathf.Clamp01(r.x)) * target.width);
+            }
+        }
+
+        public int pixelHeight
+        {
+            get
+            {
+                var target = m_TargetTexture != null ? m_TargetTexture : BufferTarget as RenderTexture;
+                if (target == null || !target.DynamicallyScaled) return (int)pixelRect.height;
+                var r = m_NormalizedViewPortRect;
+                return (int)(Math.Max(0f, Mathf.Clamp01(r.yMax) - Mathf.Clamp01(r.y)) * target.height);
+            }
+        }
+
+        /// <summary>The viewport's size as drawn (pixelRect's), dynamic scaling included.</summary>
+        public int scaledPixelWidth => (int)pixelRect.width;
+        public int scaledPixelHeight => (int)pixelRect.height;
 
         public float aspect
         {

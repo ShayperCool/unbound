@@ -431,6 +431,19 @@ namespace UnityEngine
             var bound = GfxStream.Current;
             bool level = active != null && bound.Color == activeHandle && (bound.Mip > 0 || bound.Slice > 0);
             int mip = level ? bound.Mip : 0, layer = level ? Math.Max(0, bound.Slice) : 0;
+            // A dynamically scaled render texture while it is scaled: a rect past its scaled images
+            // is refused with this error, one inside them reads zeros (the macOS Editor's Metal
+            // device, tests/projects/nativegfx dynres.*.texels and scaledtexels).
+            if (active != null && !level && active.DynamicallyScaled)
+            {
+                if (source.x < 0 || source.y < 0 || source.xMax > active.ScaledWidth || source.yMax > active.ScaledHeight)
+                {
+                    Debug.LogError("Reading pixels out of bounds of the current active render texture");
+                    return;
+                }
+                ReadZeros(source, destX, destY, recalculateMipMaps);
+                return;
+            }
             int sourceWidth = active != null ? Math.Max(1, active.width >> mip) : Screen.width;
             int sourceHeight = active != null ? Math.Max(1, active.height >> mip) : Screen.height;
             int x0 = Math.Max(0, (int)source.x), y0 = Math.Max(0, (int)source.y);
@@ -513,6 +526,23 @@ namespace UnityEngine
         }
 
         public void ReadPixels(Rect source, int destX, int destY) => ReadPixels(source, destX, destY, true);
+
+        /// <summary>Zeros written where a read of <paramref name="source"/> at (destX, destY)
+        /// lands in the texture.</summary>
+        void ReadZeros(Rect source, int destX, int destY, bool recalculateMipMaps)
+        {
+            int w = Math.Min((int)source.width, m_Width - destX), h = Math.Min((int)source.height, m_Height - destY);
+            if (w <= 0 || h <= 0 || destX < 0 || destY < 0)
+            {
+                Debug.LogError("Trying to read pixel out of bounds");
+                return;
+            }
+            for (int row = 0; row < h; row++)
+                for (int col = 0; col < w; col++)
+                    Write((destY + row) * m_Width + destX + col, Color.clear);
+            if (recalculateMipMaps) GenerateMipChain();
+            CpuTexelsChanged();
+        }
 
         /// <summary>Whether ReadPixels from a target of <paramref name="source"/> reads 8-bit
         /// channels (b × (1 / 255) in a float texture): every target that is neither a float format

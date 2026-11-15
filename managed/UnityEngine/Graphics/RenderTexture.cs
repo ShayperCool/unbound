@@ -19,6 +19,8 @@ namespace UnityEngine
         internal bool m_PooledFree;
         internal long m_PoolLease;
         internal int m_LastUsedFrame;
+        /// <summary>The <see cref="ScalableBufferManager.Version"/> the texture was made at.</summary>
+        int m_ScaleVersion;
 
         static RenderTexture s_Active;
         /// <summary>Whether a script made the texture (<see cref="descriptor"/>).</summary>
@@ -331,6 +333,8 @@ namespace UnityEngine
         internal override IntPtr NativePointer()
         {
             if (!m_Created) return IntPtr.Zero;
+            // Its images at the current scale (tests/projects/nativegfx dynres.*).
+            EnsureCreated();
             return NativePlugins.TexturePointer(m_NativeHandle, false);
         }
 
@@ -473,10 +477,23 @@ namespace UnityEngine
         // Texture packet flag: process automatic mip updates at attachment transitions.
         const int DeferredMipUpdates = 8, RetainedMsaaResolve = 16, BindMultisampled = 32, CompareDepth = 64, DepthSamplerState = 128;
 
+        /// <summary>The size of the texture's images: a dynamically scaled one's is scaled
+        /// (<see cref="ScalableBufferManager"/>), its width and height staying as they were.</summary>
+        internal int ScaledWidth => m_Descriptor.useDynamicScale ? ScalableBufferManager.ScaledWidth(m_Descriptor.width) : m_Descriptor.width;
+
+        internal int ScaledHeight => m_Descriptor.useDynamicScale ? ScalableBufferManager.ScaledHeight(m_Descriptor.height) : m_Descriptor.height;
+
+        /// <summary>A dynamically scaled texture whose images are smaller than its size.</summary>
+        internal bool DynamicallyScaled => m_Descriptor.useDynamicScale && ScalableBufferManager.Scaling;
+
         internal unsafe ulong EnsureCreated()
         {
             m_LastUsedFrame = Time.frameCount;
-            if (m_Created) return m_NativeHandle;
+            // Created, unless it scales and the factors changed since: then it is remade at its
+            // new size, as the Editor's Metal device resizes existing textures (the content of
+            // the remade one is not kept).
+            if (m_Created && (!m_Descriptor.useDynamicScale || m_ScaleVersion == ScalableBufferManager.Version))
+                return m_NativeHandle;
             if (m_Descriptor.dimension == TextureDimension.Tex3D && depth > 0)
             {
                 Debug.LogError("RenderTexture.Create failed: 3D textures with depth are not supported.");
@@ -490,10 +507,13 @@ namespace UnityEngine
             int mipCount = !m_Descriptor.useMipMap ? 1 : MipLevels(m_Descriptor);
             if (Compat.RenderingMeasured && dimension != TextureDimension.Tex3D && m_Descriptor.msaaSamples > 1)
                 mipCount = 1;
+            bool scaled = DynamicallyScaled;
             var packet = new TexturePacket
             {
-                Width = Math.Max(1, m_Descriptor.width),
-                Height = Math.Max(1, m_Descriptor.height),
+                Width = Math.Max(1, ScaledWidth),
+                Height = Math.Max(1, ScaledHeight),
+                LogicalWidth = scaled ? Math.Max(1, m_Descriptor.width) : 0,
+                LogicalHeight = scaled ? Math.Max(1, m_Descriptor.height) : 0,
                 Format = PacketFormat(),
                 MipCount = mipCount,
                 FilterMode = (int)filterMode,
@@ -510,6 +530,7 @@ namespace UnityEngine
             UploadTexture(&packet);
             m_AllocatedMipCount = Compat.RenderingMeasured ? mipCount : null;
             m_Created = true;
+            m_ScaleVersion = ScalableBufferManager.Version;
             return m_NativeHandle;
         }
 
@@ -554,7 +575,8 @@ namespace UnityEngine
             && a.dimension == b.dimension && a.volumeDepth == b.volumeDepth && a.useMipMap == b.useMipMap
             && (!a.useMipMap || (MipLevels(a) == MipLevels(b) && a.autoGenerateMips == b.autoGenerateMips))
             && a.enableRandomWrite == b.enableRandomWrite && a.memoryless == b.memoryless
-            && a.shadowSamplingMode == b.shadowSamplingMode && a.bindMS == b.bindMS;
+            && a.shadowSamplingMode == b.shadowSamplingMode && a.bindMS == b.bindMS
+            && a.useDynamicScale == b.useDynamicScale;
 
         /// <summary>The mip levels a descriptor with mips gets (its mip count, the full chain when
         /// that is 0 or less or more than the chain).</summary>

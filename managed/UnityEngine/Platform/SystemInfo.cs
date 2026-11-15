@@ -396,16 +396,14 @@ namespace UnityEngine
                 return false;
             }
         }
-        /// <summary>False, what Unbound's renderer does: the Metal Editor answers true and scales
-        /// its buffers (ScalableBufferManager here keeps 1); unmeasured on the other devices.</summary>
+        /// <summary>True on the Metal device, whose Editor answers true and scales buffers
+        /// (ScalableBufferManager); unmeasured on the other devices (false).</summary>
         public static bool supportsDynamicResolution
         {
             get
             {
-                if (Device.EditorDynamicResolution)
-                    Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsDynamicResolution", "answers false, what Unbound's renderer does (the Editor's Metal device answers true and scales its buffers): games take their fallback path");
-                else
-                    Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfo.supportsDynamicResolution");
+                if (Device.EditorDynamicResolution) return true;
+                Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfo.supportsDynamicResolution");
                 return false;
             }
         }

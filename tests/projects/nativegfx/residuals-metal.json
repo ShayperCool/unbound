@@ -44,5 +44,8 @@
   "array.make.ETC2_RGBA1",
   "array.make.PVRTC_RGB2",
   "array.make.PVRTC_RGBA4"
+ ],
+ "A dynamically scaled render texture's content after a change of scale: the macOS Editor's still holds the color it was cleared to at the old scale (uniform, so whether it is stretched or kept in place is not measured); Unbound remakes the texture at the new size, cleared. Queued": [
+  "dynres.reset.texels"
  ]
 }
