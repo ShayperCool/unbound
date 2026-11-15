@@ -706,6 +706,76 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>An indirect command's splitVisibilityMask applies to a light's split lists as a
+        /// direct command's (the Scripting API's bit per split); a camera list ignores it.</summary>
+        [Fact]
+        public void IndirectShadowCommandsTakeTheirSplitMask()
+        {
+            var lightObject = new GameObject("brg indirect caster sun");
+            m_Objects.Add(lightObject);
+            var light = lightObject.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.shadows = LightShadows.Hard;
+            var visible = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 4, 4);
+            var args = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, 5, 4);
+            ushort mask = 0x1;
+            var group = Group((g, c, o, u) =>
+            {
+                var d = (BatchCullingOutputDrawCommands*)o.drawCommands.GetUnsafePtr();
+                int alignment = UnsafeUtility.AlignOf<long>();
+                d->indirectDrawCommands = (BatchDrawCommandIndirect*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommandIndirect>(), alignment, Allocator.TempJob);
+                d->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>(), alignment, Allocator.TempJob);
+                d->indirectDrawCommands[0] = new BatchDrawCommandIndirect
+                {
+                    batchID = new BatchID { value = 1 }, meshID = new BatchMeshID { value = 1 }, materialID = new BatchMaterialID { value = 1 },
+                    topology = MeshTopology.Triangles, visibleInstancesBufferHandle = visible.bufferHandle,
+                    indirectArgsBufferHandle = args.bufferHandle, splitVisibilityMask = mask,
+                };
+                d->indirectDrawCommandCount = 1;
+                d->drawRangeCount = 1;
+                d->drawRanges[0] = new BatchDrawRange
+                {
+                    drawCommandsType = BatchDrawCommandType.Indirect, drawCommandsBegin = 0, drawCommandsCount = 1,
+                    filterSettings = new BatchFilterSettings { renderingLayerMask = uint.MaxValue, shadowCastingMode = ShadowCastingMode.On },
+                };
+                return default;
+            });
+            group.RegisterMesh(m_Mesh);
+            group.RegisterMaterial(m_Material);
+            AddBatch(group);
+            Assert.True(m_Camera.TryGetCullingParameters(out var parameters));
+            var splits = new NativeArray<ShadowSplitData>(2, Allocator.Temp);
+            try
+            {
+                var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
+                foreach (var (m, split0, split1) in new[] { ((ushort)0x1, 1, 0), ((ushort)0x2, 0, 1), ((ushort)0x0, 0, 0) })
+                {
+                    mask = m;
+                    var results = new CullingResults { ptr = Culling.Cull(ref parameters) };
+                    var data = results.Data;
+                    int sun = Array.FindIndex(data.Lights.ToArray(), l => l.light == light);
+                    var infos = new NativeArray<LightShadowCasterCullingInfo>(data.Lights.Length, Allocator.Temp);
+                    infos[sun] = new LightShadowCasterCullingInfo { splitRange = new RangeInt(0, 2) };
+                    new ScriptableRenderContext().CullShadowCasters(results, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
+                    infos.Dispose();
+                    var items = new List<FrameBuilder.DrawItem>();
+                    long sequence = 0;
+                    BatchCulling.CollectShadows(data, all, sun, 0, items, ref sequence);
+                    Assert.Equal(split0, items.Count);
+                    items.Clear();
+                    BatchCulling.CollectShadows(data, all, sun, 1, items, ref sequence);
+                    Assert.Equal(split1, items.Count);
+                    Assert.True(Assert.Single(Collect(data, all)).Dots.Value.Indirect);
+                }
+            }
+            finally
+            {
+                splits.Dispose();
+                visible.Dispose();
+                args.Dispose();
+            }
+        }
+
         /// <summary>New ShadowDrawingSettings name no split (the release's -1); such a light's
         /// lists take its splits in the order they are made in the culling, as URP makes one
         /// per cascade (tests/projects/brg split_masks, split_masks_second); an explicit split
@@ -724,6 +794,7 @@ namespace UnityEngine.Tests
             Assert.Equal(0, RendererLists.SplitOf(context.CreateShadowRendererList(ref other)));
             var explicitSplit = new ShadowDrawingSettings(results, 0) { splitIndex = 3 };
             Assert.Equal(3, RendererLists.SplitOf(context.CreateShadowRendererList(ref explicitSplit)));
+            // Unbound's choice (unmeasured): a list with an explicit split leaves the count as it was.
             Assert.Equal(2, RendererLists.SplitOf(context.CreateShadowRendererList(ref settings)));
             // Another culling counts afresh.
             var again = new ShadowDrawingSettings(new CullingResults { ptr = Culling.Cull(ref parameters) }, 0);
