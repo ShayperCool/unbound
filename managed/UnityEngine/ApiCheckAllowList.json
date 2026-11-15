@@ -976,14 +976,14 @@
     "Release": "6000.0.71f1",
     "Category": "lookup",
     "Type": "UnityEditor.CanEditMultipleObjects",
-    "Message": "UnityEngine/Editor/Editors.cs Editors: type.IsDefined(typeof(CanEditMultipleObjects), false): inherit is False, reference AttributeUsage is True",
+    "Message": "UnityEngine/Editor/CustomEditorAttributes.cs Initialize: type.IsDefined(typeof(CanEditMultipleObjects), false): inherit is False, reference AttributeUsage is True",
     "Reason": "Q410-measured-lookup-policies: Multi-object editor registration requires the marker on the selected editor class. Native inherited-multi is false even though CLR inherited reflection is true, tests/projects/attributeinheritance."
   },
   {
     "Release": "6000.0.71f1",
     "Category": "lookup",
     "Type": "UnityEditor.CustomEditor",
-    "Message": "UnityEngine/Editor/Editors.cs Editors: type.GetCustomAttributes<CustomEditor>(false): inherit is False, reference AttributeUsage is True",
+    "Message": "UnityEngine/Editor/CustomEditorAttributes.cs Initialize: type.GetCustomAttribute<CustomEditor>(false): inherit is False, reference AttributeUsage is True",
     "Reason": "Q410-measured-lookup-policies: CustomEditor registration uses the editor class declaration; editorForChildClasses separately controls target inheritance. Native base, no-children and children controls and the unmarked editor subclass are recorded in tests/projects/attributeinheritance."
   },
   {
@@ -1076,5 +1076,12 @@
     "Type": "UnityEngine.RenderingLayerMask",
     "Message": "type readonly/ref-like/serializable is False/False/True, Unity's is False/False/False",
     "Reason": "Q410-Core-built-in-serialization: nested JSON uses a built-in payload although the selected CLR serialization marker is absent. Current runtime composite handling still needs the harmonic coefficient schema or rendering-layer version/bits schema. Migrate serialization classification, JSON/YAML read/write and cloning with root-versus-nested and round-trip controls before removing this marker; removal alone drops existing nested values."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "lookup",
+    "Type": "UnityEngine.Rendering.SupportedOnRenderPipelineAttribute",
+    "Message": "UnityEngine/Editor/CustomEditorAttributes.cs Initialize: type.GetCustomAttribute<SupportedOnRenderPipelineAttribute>(false): inherit is False, reference AttributeUsage is True",
+    "Reason": "Custom-editor registration reads pipeline restrictions declared on the selected inspector class. tests/projects/editorapi registry.pipelineAttributeNotInherited contrasts a restricted base inspector with its independently registered derived inspector under the built-in pipeline."
   }
 ]

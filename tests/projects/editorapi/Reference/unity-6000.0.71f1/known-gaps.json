@@ -1,17 +1,5 @@
 [
   {
-    "key": "customEditors.clientShape",
-    "reference": "True",
-    "actual": "False",
-    "reason": "Coherent Inspector custom-editor cache and Editor toolbar UI lifecycle are not implemented; the captured client reflection contract remains a follow-up."
-  },
-  {
-    "key": "customEditors.registry.members",
-    "reference": "k_Instance,m_Cache,m_GetEditorWhenBuiltinEnabled,m_GetEditorWhenSRPEnabled",
-    "actual": "",
-    "reason": "Coherent Inspector custom-editor cache and Editor toolbar UI lifecycle are not implemented; the captured client reflection contract remains a follow-up."
-  },
-  {
     "key": "event.undo.published",
     "reference": "1",
     "actual": "0",

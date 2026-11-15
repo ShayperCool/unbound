@@ -69,7 +69,7 @@ public class EditorApiProbe : MonoBehaviour
         int code = 0;
         for (int i = 0; i < 30; i++) yield return null;
         Debug.unityLogger.logHandler = new Capture(Debug.unityLogger.logHandler);
-        try { Queries(); ThreadQueries(); Check("connection.setup", () => { ConnectionControls(); ConnectionThreadControls(); return "ok"; }); ExtraQueries(); SubscribeEvents(); SetChecked("Edit/Play", false); }
+        try { Queries(); ThreadQueries(); Check("connection.setup", () => { ConnectionControls(); ConnectionThreadControls(); return "ok"; }); ExtraQueries(); RegistryControls.Run(Check); SubscribeEvents(); SetChecked("Edit/Play", false); }
         catch (Exception e) { Value("fatal", e.GetType().Name + ":" + e.Message); code = 1; }
         for (int i = 0; i < 30; i++) yield return null;
         foreach (var pair in hits) Value("event.idle." + pair.Key, pair.Value);

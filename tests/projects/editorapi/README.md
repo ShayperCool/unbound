@@ -1,14 +1,14 @@
 # Editor APIs in Play mode
 
-The Unity 6000.0.71f1 reference contains 145 exact rows from two independent windowed
+The Unity 6000.0.71f1 reference contains 162 exact rows from two independent windowed
 GPU Editor captures. Both exited normally on the NVIDIA GeForce RTX 4060. The probe
 records all requested event subscriptions, 30 idle frames, queries, constructors,
 disconnected messaging, thread checks, reflected client requirements and an active Undo
 control. No crash is requested. Messaging controls stop if a peer is connected.
 
-The comparison retains every missing, extra and differing row. Five exact differences
-are named in `Reference/unity-6000.0.71f1/known-gaps.json`: four rows describe the missing
-Inspector registry and toolbar UI, and one records missing Undo change-stream publication.
+The comparison retains every missing, extra and differing row. Three exact differences
+are named in `Reference/unity-6000.0.71f1/known-gaps.json`: two rows describe the missing
+toolbar UI, and one records missing Undo change-stream publication.
 A changed actual value, changed reference value, missing row, extra row or improved queued
 row fails until its gap is reviewed. `report.json` keeps the full raw comparison alongside
 queued, unexpected and stale entries. Nothing is removed from the reference comparison.
@@ -70,8 +70,18 @@ and subscription, and does not request a snapshot.
 The client controls confirm that the Editor has `CustomEditorAttributes.instance`, `Rebuild`,
 `m_Cache`, its typed nested cache/storage entries and `CustomEditor.m_EditorForChildClasses`.
 The toolbar has an `m_Root` VisualElement with `ToolbarZoneLeftAlign` and
-`ToolbarZoneRightAlign`. Providing these requires integration with the actual inspector
-selection/cache and Editor UI lifecycle. Stand-in reflection fields are not supplied.
+`ToolbarZoneRightAlign`. The registry owns inspector selection, accepts reflected insertions and resets them on rebuild.
+Seventeen added controls cover direct and inherited editors, regular editors before fallbacks,
+multi-object editing, constructed generic targets, null/unregistered targets, dynamic
+registration that changes `Editor.CreateEditor`, and rebuild removing that registration.
+Additional controls exercise a fallback without a regular match, its exclusion from multi-object editing,
+unsupported render-pipeline inspectors under the built-in pipeline, non-inherited pipeline restrictions,
+and competing script inspectors.
+
+Toolbar UI lifecycle remains a follow-up. The existing game-window view has no Editor
+panel drawing or IMGUI container callback dispatch. A root with zone names alone would
+accept registrations without running their callbacks. Panel ownership, attach/detach,
+layout and IMGUI drawing must be integrated together.
 
 From the repository root:
 
@@ -87,3 +97,10 @@ and independent repeat equality before publishing, and captures the engine with 
 runtime snapshot. Exception records normalize Mono/CoreCLR parameter-name suffix formatting
 and null-reference wording; exception types, argument messages and parameter names remain
 visible. Other releases need their own controls and exact class tables.
+
+The [CustomEditor contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CustomEditor.html)
+selects the inspected type and tries regular editors before fallback editors. The inherited
+regular versus exact fallback control makes that guarantee affect the result.
+[Editor.CreateEditor](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Editor.CreateEditor.html)
+uses the matching registration when no explicit editor type is supplied. The dynamic
+registration control starts from an unregistered target and verifies the resulting editor.

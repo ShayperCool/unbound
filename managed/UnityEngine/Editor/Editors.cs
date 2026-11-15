@@ -124,8 +124,6 @@ namespace UnityEditor
     /// editorForChildClasses), fallbacks last; else the Editor's built-in inspector of the type.</summary>
     internal static class CustomEditors
     {
-        static List<(Type Inspected, Type Editor, bool Children, bool Fallback, bool Multi)> s_Editors;
-
         static readonly Dictionary<Type, string> s_BuiltIn = new Dictionary<Type, string>
         {
             [typeof(Transform)] = "UnityEditor.TransformInspector",
@@ -133,34 +131,10 @@ namespace UnityEditor
             [typeof(Material)] = "UnityEditor.MaterialEditor",
         };
 
-        static List<(Type, Type, bool, bool, bool)> Editors
-        {
-            get
-            {
-                if (s_Editors != null) return s_Editors;
-                var list = new List<(Type, Type, bool, bool, bool)>();
-                foreach (var type in TypeCache.GetTypesWithAttribute<CustomEditor>())
-                {
-                    if (type.IsAbstract || !typeof(Editor).IsAssignableFrom(type)) continue;
-                    bool multi = type.IsDefined(typeof(CanEditMultipleObjects), false);
-                    foreach (var attribute in type.GetCustomAttributes<CustomEditor>(false))
-                        if (attribute.m_InspectedType != null)
-                            list.Add((attribute.m_InspectedType, type, attribute.m_EditorForChildClasses, attribute.isFallback, multi));
-                }
-                return s_Editors = list;
-            }
-        }
-
         internal static Type Find(Type target, bool multiEdit)
         {
-            foreach (bool fallback in new[] { false, true })
-            {
-                for (var t = target; t != null; t = t.BaseType)
-                {
-                    foreach (var (inspected, editor, children, isFallback, multi) in Editors)
-                        if (inspected == t && isFallback == fallback && (t == target || children) && (!multiEdit || multi)) return editor;
-                }
-            }
+            var custom = CustomEditorAttributes.FindCustomEditorTypeByType(target, multiEdit);
+            if (custom != null) return custom;
             for (var t = target; t != null; t = t.BaseType)
                 if (s_BuiltIn.TryGetValue(t, out var name)) return typeof(Editor).Assembly.GetType(name);
             return typeof(Editor).Assembly.GetType("UnityEditor.GenericInspector");

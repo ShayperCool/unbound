@@ -6957,22 +6957,6 @@ namespace UnityEditor
         [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CustomDataModuleUI.Init"); }
         [global::Unbound.Stub] public override void OnInspectorGUI(global::UnityEditor.InitialModuleUI initial) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CustomDataModuleUI.OnInspectorGUI"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class CustomEditorAttributes
-    {
-        [global::Unbound.Stub] internal static global::System.Type FindCustomEditorType(object obj, bool multiEdit) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CustomEditorAttributes.FindCustomEditorType"); return default; }
-        [global::Unbound.Stub] internal static global::System.Type FindCustomEditorTypeByType(global::System.Type type, bool multiEdit) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CustomEditorAttributes.FindCustomEditorTypeByType"); return default; }
-        [global::Unbound.Stub] internal static void Rebuild() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CustomEditorAttributes.Rebuild"); }
-        [global::Unbound.Stub]
-        internal unsafe readonly partial struct MonoEditorType
-        {
-            [global::Unbound.Stub] public readonly global::System.Type inspectorType;
-            [global::Unbound.Stub] public readonly global::System.Type[] supportedRenderPipelineTypes;
-            [global::Unbound.Stub] public readonly bool editorForChildClasses;
-            [global::Unbound.Stub] public readonly bool isFallback;
-            [global::Unbound.Stub] public MonoEditorType(global::System.Type inspectorType, global::System.Type[] supportedRenderPipelineTypes, bool editorForChildClasses, bool isFallback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CustomEditorAttributes.MonoEditorType.ctor"); }
-        }
-    }
     [global::System.Obsolete("CustomEditorForRenderPipelineAttribute is deprecated. Use CustomEditor with SupportedOnCurrentPipeline instead. #from(2023.1)")]
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
     [global::Unbound.Stub]

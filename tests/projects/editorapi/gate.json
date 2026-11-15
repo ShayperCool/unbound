@@ -5,6 +5,8 @@
   ],
   "summary": "\\d+/\\d+ exact API rows; \\d+ queued differences; \\d+ unexpected; \\d+ stale",
   "engine_paths": [
+    "managed/UnityEngine/Editor/CustomEditorAttributes.cs",
+    "managed/UnityEngine/Editor/Editors.cs",
     "managed/UnityEngine/Editor/EditorPlayMode.cs",
     "managed/UnityEngine/Editor/AssetEditability.cs",
     "managed/UnityEngine/Editor/EditorTypeLookup.cs",
