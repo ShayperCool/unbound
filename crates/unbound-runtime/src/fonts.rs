@@ -132,9 +132,16 @@ pub fn kerning(handle: u64, firsts: Option<&[u16]>, seconds: Option<&[u16]>) -> 
     ))
 }
 
-pub fn pair_adjustments(handle: u64, glyphs: Option<&[u32]>, lookup: Option<i32>) -> Result<Json> {
+pub fn pair_adjustments(
+    handle: u64,
+    glyphs: Option<&[u32]>,
+    lookup: Option<i32>,
+    second: Option<u32>,
+) -> Result<Json> {
     let face = face(handle).context("no such face")?;
-    Ok(serde_json::to_value(face.pair_adjustments(glyphs, lookup))?)
+    Ok(serde_json::to_value(
+        face.pair_adjustments_to(glyphs, lookup, second),
+    )?)
 }
 
 pub fn legacy_kerning(handle: u64, pixels: i32, unscaled: bool) -> Result<Json> {

@@ -2,6 +2,7 @@
 //! subtable and coverage order; filtered queries visit the caller's glyphs in their given order.
 use crate::font::FontFace;
 use serde::Serialize;
+use std::collections::BTreeMap;
 use ttf_parser::{
     GlyphId, Tag,
     gpos::{PairAdjustment, PositioningSubtable, SingleAdjustment, ValueRecord},
@@ -54,7 +55,7 @@ fn values(value: ValueRecord<'_>) -> [i16; 4] {
 pub(crate) struct FontFeatures {
     ligatures: Vec<(u16, u16, LigatureRecord)>,
     singles: Vec<(u16, u16, AdjustmentRecord)>,
-    pairs: std::sync::OnceLock<Vec<(u16, u16, PairRecord)>>,
+    pairs: std::sync::OnceLock<Vec<PairTable>>,
     mark_to_base: Vec<(u16, u16, MarkRecord)>,
     mark_to_mark: Vec<(u16, u16, MarkRecord)>,
 }
@@ -110,74 +111,182 @@ fn second_classes(
     groups
 }
 
-fn read_pairs(
-    data: &[u8],
+struct PairTable {
     lookup: u16,
     subtable: u16,
-    pair: PairAdjustment<'_>,
-    into: &mut Vec<(u16, u16, PairRecord)>,
-) {
-    let mut add = |first: GlyphId, second: GlyphId, a, b| {
-        into.push((
-            lookup,
-            subtable,
-            PairRecord {
-                first: u32::from(first.0),
-                second: u32::from(second.0),
-                first_values: values(a),
-                second_values: values(b),
-            },
-        ))
-    };
-    match pair {
+    data: PairData,
+}
+
+enum PairData {
+    Records(Vec<(u16, u16, PairRecord)>),
+    Classes {
+        firsts: Vec<(u32, u16)>,
+        first_index: BTreeMap<u32, (u16, usize)>,
+        seconds: BTreeMap<u16, Vec<GlyphId>>,
+    },
+}
+
+fn read_pairs(data: &[u8], lookup: u16, subtable: u16, pair: PairAdjustment<'_>) -> PairTable {
+    let data = match pair {
         PairAdjustment::Format1 {
             coverage: firsts,
             sets,
         } => {
-            let Some(table) = positioning_subtable(data, lookup, subtable) else {
-                return;
-            };
-            let (Some(a), Some(b)) = (word(table, 4), word(table, 6)) else {
-                return;
-            };
-            let stride = 2 + 2 * ((a & 255).count_ones() + (b & 255).count_ones()) as usize;
-            coverage(firsts, |i, first| {
-                let Some(set) = sets.get(i) else { return };
-                // The public reader provides values by second glyph. This bounded metadata
-                // walk obtains those keys without scanning every glyph in the face.
-                let Some(keys) = offset16(table, 10 + usize::from(i) * 2) else {
-                    return;
-                };
-                let Some(count) = word(keys, 0) else { return };
-                for j in 0..usize::from(count) {
-                    let Some(second) = word(keys, 2 + j * stride) else {
-                        break;
-                    };
-                    if let Some((a, b)) = set.get(GlyphId(second)) {
-                        add(first, GlyphId(second), a, b);
-                    }
-                }
-            });
-        }
-        PairAdjustment::Format2 {
-            coverage: firsts,
-            classes,
-            matrix,
-        } => {
-            let seconds = second_classes(classes.1);
-            for (&second_class, glyphs) in &seconds {
-                coverage(firsts, |_, first| {
-                    let class = classes.0.get(first);
-                    let Some((a, b)) = matrix.get((class, second_class)) else {
+            let mut records = Vec::new();
+            if let Some(table) = positioning_subtable(data, lookup, subtable)
+                && let (Some(a), Some(b)) = (word(table, 4), word(table, 6))
+            {
+                let stride = 2 + 2 * ((a & 255).count_ones() + (b & 255).count_ones()) as usize;
+                coverage(firsts, |i, first| {
+                    let Some(set) = sets.get(i) else { return };
+                    // Read the stored keys, then obtain values through the public table reader.
+                    let Some(keys) = offset16(table, 10 + usize::from(i) * 2) else {
                         return;
                     };
-                    if values(a) == [0; 4] && values(b) == [0; 4] {
-                        return;
-                    }
-                    for &second in glyphs {
-                        add(first, second, a, b);
+                    let Some(count) = word(keys, 0) else { return };
+                    for j in 0..usize::from(count) {
+                        let Some(second) = word(keys, 2 + j * stride) else {
+                            break;
+                        };
+                        if let Some((a, b)) = set.get(GlyphId(second)) {
+                            records.push((
+                                lookup,
+                                subtable,
+                                PairRecord {
+                                    first: u32::from(first.0),
+                                    second: u32::from(second),
+                                    first_values: values(a),
+                                    second_values: values(b),
+                                },
+                            ));
+                        }
                     }
                 });
+            }
+            PairData::Records(records)
+        }
+        PairAdjustment::Format2 {
+            coverage: covered,
+            classes,
+            ..
+        } => {
+            let mut firsts = Vec::new();
+            let mut first_index = BTreeMap::new();
+            coverage(covered, |_, first| {
+                let class = classes.0.get(first);
+                let glyph = u32::from(first.0);
+                firsts.push((glyph, class));
+                first_index.entry(glyph).or_insert((class, 0usize)).1 += 1;
+            });
+            PairData::Classes {
+                firsts,
+                first_index,
+                seconds: second_classes(classes.1),
+            }
+        }
+    };
+    PairTable {
+        lookup,
+        subtable,
+        data,
+    }
+}
+
+impl PairTable {
+    fn query(
+        &self,
+        face: &ttf_parser::Face<'_>,
+        glyphs: Option<&[u32]>,
+        second: Option<u32>,
+        into: &mut Vec<PairRecord>,
+    ) {
+        let PairData::Classes {
+            firsts,
+            first_index,
+            seconds,
+        } = &self.data
+        else {
+            if let PairData::Records(records) = &self.data {
+                into.extend(select(
+                    records,
+                    glyphs,
+                    None,
+                    true,
+                    |r| r.first,
+                    |r| second.is_none_or(|s| r.second == s),
+                ));
+            }
+            return;
+        };
+        let Some(table) = face.tables().gpos else {
+            return;
+        };
+        let Some(lookup) = table.lookups.get(self.lookup) else {
+            return;
+        };
+        let Some(PositioningSubtable::Pair(PairAdjustment::Format2 {
+            matrix, classes, ..
+        })) = lookup.subtables.get(self.subtable)
+        else {
+            return;
+        };
+        // Cache only coverage and class members. Matrix values remain in the font bytes;
+        // a filtered request never builds the unrequested Cartesian product.
+        let selected_second = if let Some(second) = second {
+            let Ok(glyph) = u16::try_from(second) else {
+                return;
+            };
+            let class = classes.1.get(GlyphId(glyph));
+            let Some(members) = seconds.get(&class) else {
+                return;
+            };
+            let lo = members.partition_point(|g| g.0 < glyph);
+            let hi = members.partition_point(|g| g.0 <= glyph);
+            Some((class, &members[lo..hi]))
+        } else {
+            None
+        };
+        let mut emit = |first, first_class, repeat, second_class, members: &[GlyphId]| {
+            let Some((a, b)) = matrix.get((first_class, second_class)) else {
+                return;
+            };
+            let (a, b) = (values(a), values(b));
+            if a == [0; 4] && b == [0; 4] {
+                return;
+            }
+            for _ in 0..repeat {
+                for member in members {
+                    into.push(PairRecord {
+                        first,
+                        second: u32::from(member.0),
+                        first_values: a,
+                        second_values: b,
+                    });
+                }
+            }
+        };
+        if let Some(glyphs) = glyphs {
+            for &glyph in glyphs.iter().take_while(|&&g| g != 0) {
+                let Some(&(class, repeat)) = first_index.get(&glyph) else {
+                    continue;
+                };
+                if let Some((second_class, members)) = selected_second {
+                    emit(glyph, class, repeat, second_class, members);
+                } else {
+                    for (&second_class, members) in seconds {
+                        emit(glyph, class, repeat, second_class, members);
+                    }
+                }
+            }
+        } else if let Some((second_class, members)) = selected_second {
+            for &(first, class) in firsts {
+                emit(first, class, 1, second_class, members);
+            }
+        } else {
+            for (&second_class, members) in seconds {
+                for &(first, class) in firsts {
+                    emit(first, class, 1, second_class, members);
+                }
             }
         }
     }
@@ -317,11 +426,21 @@ impl FontFeatures {
 impl FontFace {
     /// Ordered GPOS pair records in font units. Zero terminates a filtered glyph list.
     pub fn pair_adjustments(&self, glyphs: Option<&[u32]>, lookup: Option<i32>) -> Vec<PairRecord> {
+        self.pair_adjustments_to(glyphs, lookup, None)
+    }
+
+    /// Pair records with an optional exact second glyph, without expanding other class members.
+    pub fn pair_adjustments_to(
+        &self,
+        glyphs: Option<&[u32]>,
+        lookup: Option<i32>,
+        second: Option<u32>,
+    ) -> Vec<PairRecord> {
+        let face = self.face();
         let features = self
             .features
             .get_or_init(|| FontFeatures::read(&self.face()));
         let pairs = features.pairs.get_or_init(|| {
-            let face = self.face();
             let mut records = Vec::new();
             if let Some(table) = face.tables().gpos {
                 let data = face
@@ -336,14 +455,20 @@ impl FontFace {
                         if let Some(PositioningSubtable::Pair(pair)) =
                             lookup.subtables.get(subtable_index)
                         {
-                            read_pairs(data, lookup_index, subtable_index, pair, &mut records);
+                            records.push(read_pairs(data, lookup_index, subtable_index, pair));
                         }
                     }
                 }
             }
             records
         });
-        select(pairs, glyphs, lookup, true, |r| r.first, |_| true)
+        let mut result = Vec::new();
+        for table in pairs {
+            if lookup.is_none_or(|index| index == i32::from(table.lookup)) {
+                table.query(&face, glyphs, second, &mut result);
+            }
+        }
+        result
     }
     /// All GSUB ligature records, or records starting with the requested glyphs. A zero glyph
     /// terminates a filtered input, as in TextCore's glyph list queries. No size scaling applies.
@@ -606,6 +731,76 @@ mod tests {
         .unwrap();
         assert!(neither.legacy_kerning(13).is_empty());
         assert!(neither.pair_adjustments(None, None).is_empty());
+    }
+
+    #[test]
+    fn class_pair_cache_and_scalar_queries_do_not_expand_the_cartesian_product() {
+        let face = FontFace::from_bytes(
+            include_bytes!("../../../tests/projects/fontpairs/Fixtures/LargeClasses.ttf").to_vec(),
+            0,
+        )
+        .unwrap();
+        let count = u32::from(face.face().number_of_glyphs());
+        let first = count - 20000;
+        let second = count - 10000;
+        assert!(face.pair_adjustments(Some(&[first]), Some(1)).is_empty());
+        assert!(
+            face.pair_adjustments(Some(&[first - 1]), Some(0))
+                .is_empty()
+        );
+        assert!(
+            face.pair_adjustments_to(Some(&[first]), Some(0), Some(first))
+                .is_empty()
+        );
+        let scalar = face.pair_adjustments_to(Some(&[first]), Some(0), Some(second));
+        assert_eq!(scalar.len(), 1);
+        assert_eq!(
+            (scalar[0].first, scalar[0].second, scalar[0].first_values[2]),
+            (first, second, -7)
+        );
+        let selected = face.pair_adjustments(Some(&[first]), Some(0));
+        assert_eq!(selected.len(), 10000);
+        assert_eq!(selected.first().unwrap().second, second);
+        assert_eq!(selected.last().unwrap().second, count - 1);
+        let cached = face.features.get().unwrap().pairs.get().unwrap();
+        assert_eq!(cached.len(), 1);
+        let PairData::Classes {
+            firsts,
+            first_index,
+            seconds,
+        } = &cached[0].data
+        else {
+            panic!("expected compact class metadata")
+        };
+        assert_eq!(firsts.len(), 10000);
+        assert_eq!(first_index.len(), 10000);
+        assert_eq!(seconds.values().map(Vec::len).sum::<usize>(), 10000);
+    }
+
+    #[test]
+    fn class_kern_controls_have_real_values_but_are_not_used_by_textcore() {
+        for bytes in [
+            include_bytes!("../../../tests/projects/fontpairs/Assets/Fonts/KernClass2.ttf")
+                .as_slice(),
+            include_bytes!("../../../tests/projects/fontpairs/Assets/Fonts/KernClass3.ttf")
+                .as_slice(),
+        ] {
+            let face = FontFace::from_bytes(bytes.to_vec(), 0).unwrap();
+            let (a, v) = (face.glyph_index('A'), face.glyph_index('V'));
+            let parsed = face.face();
+            let table = parsed.tables().kern.unwrap();
+            assert_eq!(
+                table
+                    .subtables
+                    .into_iter()
+                    .next()
+                    .unwrap()
+                    .glyphs_kerning(GlyphId(a), GlyphId(v)),
+                Some(-177)
+            );
+            assert!(face.legacy_kerning(13).is_empty());
+            assert!(face.legacy_kerning_units(37).is_empty());
+        }
     }
 
     fn font() -> FontFace {

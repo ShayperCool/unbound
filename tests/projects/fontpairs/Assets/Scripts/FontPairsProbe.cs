@@ -83,6 +83,26 @@ public sealed class FontPairsProbe : MonoBehaviour
         }
     }
 
+    void LegacyFormats()
+    {
+        foreach (string font in new[]{"KernClass2", "KernClass3"})
+        foreach (int size in new[]{13,37})
+        {
+            string prefix="formats/"+font+"/"+size;
+            Write(prefix+"/load",FontEngine.LoadFontFace(Path.Combine(Application.dataPath,"Fonts",font+".ttf"),size).ToString());
+            FontEngine.TryGetGlyphIndex('A',out uint a);FontEngine.TryGetGlyphIndex('V',out uint v);
+            gposProjection=false;
+            Capture(prefix+"/scalar",Call("GetGlyphPairAdjustmentRecord",new[]{typeof(uint),typeof(uint)},a,v));
+            Capture(prefix+"/table",Call("GetGlyphPairAdjustmentTable",new[]{typeof(uint[])},new[]{a,v}));
+            var args=new object[]{a,0};
+            Capture(prefix+"/one",Call("GetGlyphPairAdjustmentRecords",new[]{typeof(uint),typeof(int).MakeByRefType()},args));
+            Write(prefix+"/one/out",args[1].ToString());
+            gposProjection=true;
+            Capture(prefix+"/fallback",Call("GetPairAdjustmentRecords",new[]{typeof(List<uint>)},new List<uint>{a,v}));
+            FontEngine.UnloadFontFace();
+        }
+    }
+
     void Start()
     {
         try
@@ -136,6 +156,7 @@ public sealed class FontPairsProbe : MonoBehaviour
             }
             Gpos();
             FontAssets();
+            LegacyFormats();
             Write("complete","1");
         }
         catch (Exception e) { Write("error",e.ToString());Debug.LogException(e); }

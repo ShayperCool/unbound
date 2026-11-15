@@ -71,3 +71,39 @@ addOpenTypeFeaturesFromString(font, 'languagesystem DFLT dflt; feature kern { po
 for n in font['name'].names:
     if n.nameID in (1,3,4,6,16):n.string='UnboundLayoutKernWithSingle'.encode(n.getEncoding())
 font.save(root/'KernWithSingle.ttf')
+
+# Formats 2 and 3 carry the same nonzero class adjustment as the format-0 control.
+import struct
+from fontTools.ttLib.tables._k_e_r_n import KernTable_format_unkown
+for name, fmt in [('KernClass2', 2), ('KernClass3', 3)]:
+    font = TTFont(root/'Neither.ttf')
+    n = len(font.getGlyphOrder())
+    a, v = font.getGlyphID('A'), font.getGlyphID('V')
+    font['kern'] = newTable('kern')
+    table = KernTable_format_unkown(fmt)
+    if fmt == 2:
+        left_offset = 14
+        right_offset = left_offset + 4 + 2*n
+        array_offset = right_offset + 4 + 2*n
+        left = [array_offset]*n
+        left[a] += 4
+        right = [0]*n
+        right[v] = 2
+        data = struct.pack('>4H', 4, left_offset, right_offset, array_offset)
+        data += struct.pack('>2H', 0, n) + struct.pack('>'+str(n)+'H', *left)
+        data += struct.pack('>2H', 0, n) + struct.pack('>'+str(n)+'H', *right)
+        data += struct.pack('>4h', 0, 0, 0, -177)
+        table.data = struct.pack('>3H', 0, 6+len(data), 0x0201) + data
+        font['kern'].version = 0
+    else:
+        left, right = bytearray(n), bytearray(n)
+        left[a], right[v] = 1, 1
+        data = struct.pack('>H4B2h', n, 2, 2, 2, 0, 0, -177)
+        data += left + right + bytes([0, 0, 0, 1])
+        table.data = struct.pack('>LBBH', 8+len(data), 0, 3, 0) + data
+        font['kern'].version = 1.0
+    font['kern'].kernTables = [table]
+    for record in font['name'].names:
+        if record.nameID in (1,3,4,6,16):
+            record.string = ('UnboundLayout'+name).encode(record.getEncoding())
+    font.save(root/(name+'.ttf'))

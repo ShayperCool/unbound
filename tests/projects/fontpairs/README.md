@@ -49,8 +49,18 @@ probe, and missing, extra or differing stable values fail the comparator.
 
 The implementation is selected by `Compat.FontPairQueriesMeasured`. Other releases retain the
 previous unmeasured pair transport; their indexed overloads continue to report unsupported use.
-Only format-0 legacy KERN subtables are supported by the selected kerning path. Persistent
-importer/cache output does not change; the parsed tables are per-face memory caches.
+`KernClass2` and `KernClass3` contain nonzero class adjustments in KERN formats 2 and 3.
+The Editor returns an empty scalar record, null arrays and zero counts for them at both sizes,
+including the unindexed GPOS fallback. The selected path therefore reads format-0 KERN only.
+Persistent importer/cache output does not change; parsed tables are per-face memory caches.
+
+Class-pair caches retain coverage and class membership, with matrix values in the font bytes.
+Lookup and glyph selection happen before expansion. `make_large_font.py` generates the licensed
+`Fixtures/LargeClasses.ttf` control with 10,000 members on each side and 100 million nonzero
+logical pairs. Rust controls verify a wrong lookup and absent first glyph return no records,
+an exact pair returns one, a first-glyph query returns 10,000, and the cache holds only the
+20,000 class members plus its first-glyph index. This fixture stays outside Assets so the Editor
+never imports it as part of the reference capture.
 
 ```bash
 UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/fontpairs/run.py native --label first

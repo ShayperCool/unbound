@@ -996,10 +996,11 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 handle: u64,
                 glyphs: Option<Vec<u32>>,
                 lookup: Option<i32>,
+                second: Option<u32>,
             }
             let r: Request = serde_json::from_str(request)?;
             Ok(
-                crate::fonts::pair_adjustments(r.handle, r.glyphs.as_deref(), r.lookup)?
+                crate::fonts::pair_adjustments(r.handle, r.glyphs.as_deref(), r.lookup, r.second)?
                     .to_string(),
             )
         }

@@ -21,11 +21,11 @@ namespace UnityEngine.TextCore.LowLevel
         static GlyphPairAdjustmentRecord PairAdjustment(PairJson pair) => new GlyphPairAdjustmentRecord(
             PairAdjustment(pair.First, pair.FirstValues), PairAdjustment(pair.Second, pair.SecondValues));
 
-        static GlyphPairAdjustmentRecord[] PairRecords(IEnumerable<uint> glyphs, int? lookup, bool exact)
+        static GlyphPairAdjustmentRecord[] PairRecords(IEnumerable<uint> glyphs, int? lookup, bool exact, uint? second = null)
         {
             if (s_Face == null) return exact ? Array.Empty<GlyphPairAdjustmentRecord>() : null;
             return FeatureRecords<PairJson, GlyphPairAdjustmentRecord>("font-pair-adjustments",
-                new { handle = s_Face.Handle, glyphs, lookup }, exact, ref s_PairAdjustmentRecords, PairAdjustment);
+                new { handle = s_Face.Handle, glyphs, lookup, second }, exact, ref s_PairAdjustmentRecords, PairAdjustment);
         }
 
         static GlyphPairAdjustmentRecord[] UnindexedPairRecords(List<uint> glyphs)
@@ -66,7 +66,7 @@ namespace UnityEngine.TextCore.LowLevel
 
         static GlyphPairAdjustmentRecord ScaledPairRecord(uint first, uint second)
         {
-            foreach (var record in PairRecords(new[] { first }, null, true))
+            foreach (var record in PairRecords(new[] { first }, null, true, second))
             {
                 if (record.secondAdjustmentRecord.glyphIndex != second) continue;
                 var adjustment = record.firstAdjustmentRecord;
