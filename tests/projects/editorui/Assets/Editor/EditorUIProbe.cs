@@ -537,6 +537,71 @@ public static class EditorUIProbe
                     return result;
                 });
             }
+            // A rotation keyed by x alone from 0 (x, y, z, w all 0 at 0), sampled at 0 and 0.5.
+            Call("SetCurveKeys." + tag + ".zeroRotation", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                c.SetCurve("", typeof(Transform), "localRotation.x", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                var go = new GameObject("ZeroRotation");
+                go.transform.localRotation = Quaternion.Euler(10f, 20f, 30f);
+                var steps = new List<object>();
+                foreach (float t in new[] { 0f, 0.5f, 0f })
+                {
+                    c.SampleAnimation(go, t);
+                    var q = go.transform.localRotation;
+                    steps.Add(new object[] { Finite(q.x), Finite(q.y), Finite(q.z), Finite(q.w) });
+                }
+                UnityEngine.Object.DestroyImmediate(go);
+                UnityEngine.Object.DestroyImmediate(c);
+                return steps;
+            });
+            // EnsureQuaternionContinuity: four keys whose second and fourth lie in the other
+            // hemisphere, with unequal finite tangents and a stepped one; then components whose key
+            // times differ (set one by one through SetEditorCurve).
+            Call("EnsureQuaternionContinuity." + tag, () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                var q = new[]
+                {
+                    new Vector4(0f, 0f, 0f, 1f), new Vector4(0f, -0.7071068f, 0f, -0.7071068f),
+                    new Vector4(0f, 0.9659258f, 0f, 0.258819f), new Vector4(0f, -0.9659258f, 0f, 0.258819f),
+                };
+                for (int k = 0; k < 4; k++)
+                {
+                    var keys = new Keyframe[4];
+                    for (int i = 0; i < 4; i++)
+                        keys[i] = new Keyframe(i * 0.5f, q[i][k], 0.25f * (k + 1), i == 2 ? float.PositiveInfinity : -0.5f * (k + 1));
+                    c.SetCurve("", typeof(Transform), "localRotation." + "xyzw"[k], new AnimationCurve(keys));
+                }
+                c.EnsureQuaternionContinuity();
+                var result = new List<object> { new[] { Keys(c, "m_LocalRotation.x"), Keys(c, "m_LocalRotation.y"), Keys(c, "m_LocalRotation.z"), Keys(c, "m_LocalRotation.w") } };
+                var d = new AnimationClip { legacy = legacy };
+                AnimationUtility.SetEditorCurve(d, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalRotation.x"), new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 0f)));
+                AnimationUtility.SetEditorCurve(d, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalRotation.y"),
+                    new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.5f, -0.7071068f), new Keyframe(1f, 0.9659258f)));
+                AnimationUtility.SetEditorCurve(d, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalRotation.z"), new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 0f)));
+                AnimationUtility.SetEditorCurve(d, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalRotation.w"),
+                    new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.5f, -0.7071068f), new Keyframe(1f, 0.258819f)));
+                d.EnsureQuaternionContinuity();
+                result.Add(new[] { Keys(d, "m_LocalRotation.x"), Keys(d, "m_LocalRotation.y"), Keys(d, "m_LocalRotation.z"), Keys(d, "m_LocalRotation.w") });
+                // Control: a rotation already continuous (0, 45 and 150 degrees about y), with its own
+                // tangents, and an Euler curve beside it.
+                var e = new AnimationClip { legacy = legacy };
+                var r = new[] { new Vector4(0f, 0f, 0f, 1f), new Vector4(0f, 0.3826834f, 0f, 0.9238795f), new Vector4(0f, 0.9659258f, 0f, 0.258819f) };
+                for (int k = 0; k < 4; k++)
+                {
+                    var keys = new Keyframe[3];
+                    for (int i = 0; i < 3; i++) keys[i] = new Keyframe(i * 0.5f, r[i][k], 0.2f * (k + 1), -0.4f * (k + 1));
+                    e.SetCurve("", typeof(Transform), "localRotation." + "xyzw"[k], new AnimationCurve(keys));
+                }
+                e.SetCurve("", typeof(Transform), "localEulerAngles.z", new AnimationCurve(new Keyframe(0f, 10f, 1f, 2f), new Keyframe(1f, -350f, 3f, 4f)));
+                e.EnsureQuaternionContinuity();
+                result.Add(new[] { Keys(e, "m_LocalRotation.x"), Keys(e, "m_LocalRotation.y"), Keys(e, "m_LocalRotation.z"), Keys(e, "m_LocalRotation.w"), Keys(e, "localEulerAnglesRaw.z") });
+                UnityEngine.Object.DestroyImmediate(c);
+                UnityEngine.Object.DestroyImmediate(d);
+                UnityEngine.Object.DestroyImmediate(e);
+                return result;
+            });
             Call("SetCurveKeys." + tag + ".eulerRemovalThenLight", () =>
             {
                 var c = new AnimationClip { legacy = legacy };
@@ -558,8 +623,9 @@ public static class EditorUIProbe
         return e == null ? null : e.keys.Select(k => new object[] { k.time, k.value, Finite(k.inTangent), Finite(k.outTangent), (int)k.weightedMode }).ToArray();
     }
 
-    /// <summary>A float, or "+inf"/"-inf" for an infinite one (the comparison takes numbers within a tolerance).</summary>
-    static object Finite(float f) => float.IsPositiveInfinity(f) ? "+inf" : float.IsNegativeInfinity(f) ? "-inf" : (object)f;
+    /// <summary>A float, or "+inf"/"-inf" for an infinite one and "nan" for one that is not a number
+    /// (the comparison takes numbers within a tolerance).</summary>
+    static object Finite(float f) => float.IsPositiveInfinity(f) ? "+inf" : float.IsNegativeInfinity(f) ? "-inf" : float.IsNaN(f) ? "nan" : (object)f;
 
     /// <summary>The keys AnimationClip.SetCurve adds to a Transform vector's components when one
     /// component's key times differ from the others': inside and outside each curve's range, on a

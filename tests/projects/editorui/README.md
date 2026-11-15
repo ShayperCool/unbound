@@ -50,7 +50,12 @@ and a later SetCurve. The scale and rotation cases among them (`emptyScale`, `al
 `emptyScaleAfter` and the same for Rotation: a component without keys set before and after a keyed
 one, and a keyed component alone, sampled) were added from two identical captures of the macOS
 Editor, whose other records equal the reference's but for one log of
-`EditorUtility.DisplayDialogComplex` that the macOS Editor writes.
+`EditorUtility.DisplayDialogComplex` that the macOS Editor writes. After them, also from the macOS
+Editor: `SetCurveKeys.*.zeroRotation` (a rotation keyed by x alone from 0, sampled at 0, 0.5 and
+0 again) and `EnsureQuaternionContinuity.*` (keys in the other hemisphere with their own tangents
+and a stepped one, components keyed at different times, and a continuous rotation beside an Euler
+curve as the control). On the macOS Editor `EditorGUIUtility.systemCopyBuffer` reads the system
+clipboard, so captures there differ in it.
 Infinite tangents are recorded as "+inf"/"-inf".
 
 Every call matches but one expected difference: Unity's reorderable list keeps its elements'
