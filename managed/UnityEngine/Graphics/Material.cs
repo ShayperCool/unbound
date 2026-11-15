@@ -1173,7 +1173,7 @@ namespace UnityEngine
             if (mat == this) return;
             var shaderBefore = m_Shader;
             m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Textures.Clear(); m_Keywords.Clear(); m_KeywordExtras.Clear();
-            m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear();
+            m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear(); m_VectorsAfterTexture.Clear();
             m_Buffers.Clear(); m_Arrays.Clear();
             CopyFrom(mat);
             m_Shader = shaderBefore;
