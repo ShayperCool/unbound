@@ -909,7 +909,8 @@ namespace UnityEngine
                 // A state's first update, which samples its start without advancing, is spent even
                 // while culled (measured: the time of an Animation culled from its start catches up
                 // from its second update on). Unbound's choice (unmeasured): a culled update that
-                // starts any state adds nothing, and its start sample and events are not replayed.
+                // starts any state adds nothing, and its start sample is not replayed (its events at
+                // its start fire when its time first moves).
                 bool started = false, playing = false;
                 foreach (var state in States)
                 {
@@ -985,7 +986,7 @@ namespace UnityEngine
         {
             internal AnimationState State;
             internal double From, To;
-            internal bool Fresh, Stopped;
+            internal bool Stopped;
             internal float SampleTime, Weight;
         }
 
@@ -1026,7 +1027,7 @@ namespace UnityEngine
                 if (advance) stopped = s.UpdateFade(s.m_Fresh ? 0f : deltaTime);
                 m_Playing.Add(new Playing
                 {
-                    State = s, From = from, To = to, Fresh = s.m_Fresh, Stopped = stopped,
+                    State = s, From = from, To = to, Stopped = stopped,
                     SampleTime = sampleTime, Weight = stopped ? StoppedSampleWeight : s.m_Weight,
                 });
             }
@@ -1069,19 +1070,24 @@ namespace UnityEngine
                 var s = p.State;
                 if (advance) s.m_Fresh = false;
                 // Every state enabled at the update fires the events its time passed, whatever its
-                // weight, also when its fade stops it in this update (matches the Unity 6000.0.71f1
-                // Editor, tests/projects/animpartial legacy.events.zero: weight 0;
-                // legacy.events.fade: the stopping update's events).
-                if (advance)
+                // weight, also when its fade stops it in this update; an update that does not move
+                // its time (a state's first, which samples its start) fires none, and the first that
+                // does fires those at its start time too (matches the Unity 6000.0.71f1 Editor,
+                // tests/projects/animpartial legacy.events.zero: weight 0; legacy.events.fade: the
+                // stopping update's events; legacy.events.start.*: an event at 0 fires in the update
+                // after Play, CrossFade or Blend, whatever the weight).
+                if (advance && p.To != p.From)
                 {
+                    bool fromStart = s.m_EventsFromStart;
+                    s.m_EventsFromStart = false;
                     float length = s.length;
-                    if (length > 0f || p.Fresh)
+                    if (s.m_Clip.m_Events.Count > 0 && (length > 0f || fromStart))
                     {
                         var wrap = s.EffectiveWrap;
                         bool loop = wrap == WrapMode.Loop || wrap == WrapMode.PingPong;
                         double n0 = length > 0f ? p.From / length : 0.0, n1 = length > 0f ? p.To / length : 0.0;
                         var source = s;
-                        AnimationEvents.FireCrossed(s.m_Clip, n0, n1, loop, p.Fresh, e =>
+                        AnimationEvents.FireCrossed(s.m_Clip, n0, n1, loop, fromStart, e =>
                         {
                             var fired = e.Copy();
                             fired.m_Source = AnimationEventSource.Legacy;
@@ -1182,8 +1188,12 @@ namespace UnityEngine
         internal int m_Layer;
         internal AnimationBlendMode m_BlendMode;
         internal bool m_Removed;
-        /// <summary>Started since the last update: events at its start time fire.</summary>
+        /// <summary>Started since the last update: sampled where it starts, neither its time nor its
+        /// fade moves.</summary>
         internal bool m_Fresh;
+        /// <summary>Started and its time not advanced since: the update that first advances it
+        /// fires the events at its start time too.</summary>
+        internal bool m_EventsFromStart;
         /// <summary>Started and not stopped (enabled may pause it).</summary>
         internal bool m_Playing;
 
@@ -1386,6 +1396,7 @@ namespace UnityEngine
         {
             m_Playing = true;
             m_Fresh = true;
+            m_EventsFromStart = true;
         }
 
         /// <summary>Sets the weight at once and ends any fade, the fade out before a once clip's

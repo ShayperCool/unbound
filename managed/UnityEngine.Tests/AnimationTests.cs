@@ -613,8 +613,10 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A legacy state fires the events its time passes in an update whatever its
-        /// weight: at weight 0, and in the update its fade passes 0 and stops it (the Unity
-        /// 6000.0.71f1 Editor, tests/projects/animpartial legacy.events.zero, legacy.events.fade).</summary>
+        /// weight: at weight 0, and in the update its fade passes 0 and stops it; one at its start
+        /// fires in the first update that moves its time (the Unity 6000.0.71f1 Editor,
+        /// tests/projects/animpartial legacy.events.zero, legacy.events.fade,
+        /// legacy.events.start.*).</summary>
         [Fact]
         public void LegacyStatesFireEventsAtWeightZeroAndInTheUpdateTheirFadeStopsThem()
         {
@@ -652,6 +654,28 @@ namespace UnityEngine.Tests
             animation.Step(0.25f);
             animation.Step(0.25f); // 0.5
             Assert.Equal(new[] { "OnHit(0.3125)", "OnHit(0.4375)" }, receiver.Calls);
+
+            // An event at the start fires in the update after the start, which first moves the
+            // time, not in the start's own update (legacy.events.start.*), cross-faded in too.
+            var z = new AnimationClip { legacy = true, wrapMode = WrapMode.Loop, name = "z" };
+            z.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+            z.AddEvent(new AnimationEvent { time = 0f, functionName = "OnHit", floatParameter = 7f });
+            animation.AddClip(z, "z");
+            foreach (bool fade in new[] { false, true })
+            {
+                receiver.Calls.Clear();
+                animation.Play("q");
+                animation.Step(0.125f);
+                if (fade) animation.CrossFade("z", 0.25f);
+                else animation.Play("z");
+                animation.Step(0.125f); // the start: time 0, no event
+                Assert.Empty(receiver.Calls);
+                animation.Step(0.125f);
+                Assert.Equal(new[] { "OnHit(7)" }, receiver.Calls);
+                animation.Step(0.125f);
+                Assert.Single(receiver.Calls);
+                animation.Stop();
+            }
             Object.DestroyImmediate(go);
         }
 
