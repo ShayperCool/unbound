@@ -210,15 +210,30 @@ namespace UnityEngine.Rendering
 
         // ------------------------------------------------------------ targets
 
+        /// <summary>Makes every SetRenderTarget overload but (rt, mipLevel) throw while set; the
+        /// render graph sets it around native render passes. The release's declaration and checks;
+        /// tests/projects/srpmembers guard.*.</summary>
+        public static bool ThrowOnSetRenderTarget;
+
+        static void CheckThrowOnSetRenderTarget()
+        {
+            if (ThrowOnSetRenderTarget) throw new Exception("Setrendertarget is not allowed in this context");
+        }
+
         // A target set by its identifier alone draws into the identifier's mip, face and slice
         // (measured, tests/projects/droppedparams slice.cmd.clear.identifier.*).
-        public void SetRenderTarget(RenderTargetIdentifier rt) => SetRenderTarget(rt, rt.MipLevel, rt.CubeFace, rt.DepthSlice);
+        public void SetRenderTarget(RenderTargetIdentifier rt)
+        {
+            CheckThrowOnSetRenderTarget();
+            SetTarget(rt, rt.MipLevel, rt.CubeFace, rt.DepthSlice);
+        }
 
         // The Editor refuses the Clear load action when the command is recorded (measured,
         // tests/projects/droppedparams load.*); Load, DontCare and the store actions change nothing
         // a later read sees on its GL device.
         public void SetRenderTarget(RenderTargetIdentifier rt, RenderBufferLoadAction loadAction, RenderBufferStoreAction storeAction)
         {
+            CheckThrowOnSetRenderTarget();
             RefuseClearLoad(loadAction);
             SetRenderTarget(rt);
         }
@@ -226,6 +241,7 @@ namespace UnityEngine.Rendering
         public void SetRenderTarget(RenderTargetIdentifier rt, RenderBufferLoadAction colorLoadAction, RenderBufferStoreAction colorStoreAction,
             RenderBufferLoadAction depthLoadAction, RenderBufferStoreAction depthStoreAction)
         {
+            CheckThrowOnSetRenderTarget();
             RefuseClearLoad(colorLoadAction);
             RefuseClearLoad(depthLoadAction);
             SetRenderTarget(rt);
@@ -235,10 +251,17 @@ namespace UnityEngine.Rendering
         {
             if (action == RenderBufferLoadAction.Clear) throw new ArgumentException("RenderBufferLoadAction.Clear is not supported");
         }
-        public void SetRenderTarget(RenderTargetIdentifier rt, int mipLevel) => SetRenderTarget(rt, mipLevel, CubemapFace.Unknown, 0);
+        /// <summary>The one overload the release does not guard with <see cref="ThrowOnSetRenderTarget"/>.</summary>
+        public void SetRenderTarget(RenderTargetIdentifier rt, int mipLevel) => SetTarget(rt, mipLevel, CubemapFace.Unknown, 0);
         public void SetRenderTarget(RenderTargetIdentifier rt, int mipLevel, CubemapFace cubemapFace) => SetRenderTarget(rt, mipLevel, cubemapFace, 0);
 
-        public void SetRenderTarget(RenderTargetIdentifier rt, int mipLevel, CubemapFace cubemapFace, int depthSlice) => Add(c =>
+        public void SetRenderTarget(RenderTargetIdentifier rt, int mipLevel, CubemapFace cubemapFace, int depthSlice)
+        {
+            CheckThrowOnSetRenderTarget();
+            SetTarget(rt, mipLevel, cubemapFace, depthSlice);
+        }
+
+        void SetTarget(RenderTargetIdentifier rt, int mipLevel, CubemapFace cubemapFace, int depthSlice) => Add(c =>
         {
             var color = Resolve(rt, c);
             ulong handle = TextureHandles.Of(color);
@@ -246,12 +269,21 @@ namespace UnityEngine.Rendering
             GfxStream.SetTarget(handle, 0, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice, GfxStream.LayersOf(color));
         });
 
-        public void SetRenderTarget(RenderTargetIdentifier color, RenderTargetIdentifier depth) =>
+        public void SetRenderTarget(RenderTargetIdentifier color, RenderTargetIdentifier depth)
+        {
+            CheckThrowOnSetRenderTarget();
             SetRenderTarget(color, depth, color.MipLevel, color.CubeFace, color.DepthSlice);
+        }
         public void SetRenderTarget(RenderTargetIdentifier color, RenderTargetIdentifier depth, int mipLevel) => SetRenderTarget(color, depth, mipLevel, CubemapFace.Unknown, 0);
         public void SetRenderTarget(RenderTargetIdentifier color, RenderTargetIdentifier depth, int mipLevel, CubemapFace cubemapFace) => SetRenderTarget(color, depth, mipLevel, cubemapFace, 0);
 
-        public void SetRenderTarget(RenderTargetIdentifier color, RenderTargetIdentifier depth, int mipLevel, CubemapFace cubemapFace, int depthSlice) => Add(c =>
+        public void SetRenderTarget(RenderTargetIdentifier color, RenderTargetIdentifier depth, int mipLevel, CubemapFace cubemapFace, int depthSlice)
+        {
+            CheckThrowOnSetRenderTarget();
+            SetTargets(color, depth, mipLevel, cubemapFace, depthSlice);
+        }
+
+        void SetTargets(RenderTargetIdentifier color, RenderTargetIdentifier depth, int mipLevel, CubemapFace cubemapFace, int depthSlice) => Add(c =>
         {
             var colorTexture = Resolve(color, c);
             ulong colorHandle = TextureHandles.Of(colorTexture);
@@ -263,17 +295,22 @@ namespace UnityEngine.Rendering
         public void SetRenderTarget(RenderTargetIdentifier color, RenderBufferLoadAction colorLoadAction, RenderBufferStoreAction colorStoreAction,
             RenderTargetIdentifier depth, RenderBufferLoadAction depthLoadAction, RenderBufferStoreAction depthStoreAction)
         {
+            CheckThrowOnSetRenderTarget();
             RefuseClearLoad(colorLoadAction);
             RefuseClearLoad(depthLoadAction);
             SetRenderTarget(color, depth);
         }
 
-        public void SetRenderTarget(RenderTargetIdentifier[] colors, RenderTargetIdentifier depth) =>
+        public void SetRenderTarget(RenderTargetIdentifier[] colors, RenderTargetIdentifier depth)
+        {
+            CheckThrowOnSetRenderTarget();
             SetRenderTarget(colors, depth, 0, CubemapFace.Unknown, 0);
+        }
 
         /// <summary>Several colors at once (the fragment program's outputs in order) and a depth buffer.</summary>
         public void SetRenderTarget(RenderTargetIdentifier[] colors, RenderTargetIdentifier depth, int mipLevel, CubemapFace cubemapFace, int depthSlice)
         {
+            CheckThrowOnSetRenderTarget();
             if (colors == null || colors.Length == 0) throw new ArgumentException("colors must not be empty");
             var copy = (RenderTargetIdentifier[])colors.Clone();
             Add(c =>

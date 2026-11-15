@@ -61,6 +61,13 @@ namespace Unbound.Runtime
         /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>
         internal int TextureWrapMirrorOnce { get; init; } = 1;
 
+        /// <summary>SystemInfo.maxTiledPixelStorageSize where it is measured (Metal: 64, tests/projects/urp
+        /// `device-metal.jsonl`; OpenGL Core: int.MaxValue, tests/projects/srpmembers tiled.max);
+        /// null on Vulkan, where it stays a stub. On OpenGL Core GetTiledRenderTargetStorageSize is
+        /// measured too (<see cref="TiledStorageMeasured"/>).</summary>
+        internal int? MaxTiledPixelStorage { get; init; }
+        internal bool TiledStorageMeasured { get; init; }
+
         /// <summary>SystemInfo answers measured on the device's Editor alone; null where they are
         /// not measured (the members stay stubs there).</summary>
         internal MeasuredLimits Limits { get; init; }
@@ -70,7 +77,6 @@ namespace Unbound.Runtime
             /// <summary>maxComputeBufferInputs of the vertex, fragment, hull, domain and compute
             /// stages, and of the geometry stage.</summary>
             internal int ComputeBufferInputs, GeometryComputeBufferInputs;
-            internal int TiledPixelStorageSize;
             internal bool MipStreaming, ParallelPSOCreation;
         }
 
@@ -122,7 +128,11 @@ namespace Unbound.Runtime
             GraphicsDeviceType.OpenGLCore, uvStartsAtTop: false, reversedZ: false, loadStore: false,
             resolveStencil: false, autoResolve: false, cbufferAlignment: 256,
             RenderingThreadingMode.Direct, GraphicsFormat.D24_UNorm_S8_UInt,
-            BatchBufferTarget.ConstantBuffer, GraphicsCapsTable.OpenGLCore, MachineIdentity.ReadOpenGl, framebufferReadback: true);
+            BatchBufferTarget.ConstantBuffer, GraphicsCapsTable.OpenGLCore, MachineIdentity.ReadOpenGl, framebufferReadback: true)
+        {
+            MaxTiledPixelStorage = int.MaxValue,
+            TiledStorageMeasured = true,
+        };
 
         internal static readonly GraphicsDeviceProfile Vulkan = new GraphicsDeviceProfile(
             GraphicsDeviceType.Vulkan, uvStartsAtTop: true, reversedZ: true, loadStore: true,
@@ -148,13 +158,13 @@ namespace Unbound.Runtime
             HiddenSurfaceRemovalOnGPU = true,
             TextureWrapMirrorOnce = 0,
             EditorDynamicResolution = true,
+            MaxTiledPixelStorage = 64,
             // tests/projects/urp CapsProbe `device-metal.jsonl`. (The renderer's Metal device
             // binds 29 storage buffers a stage: 2 of Metal's 31 buffer slots are its own.)
             Limits = new MeasuredLimits
             {
                 ComputeBufferInputs = 31,
                 GeometryComputeBufferInputs = 0,
-                TiledPixelStorageSize = 64,
                 MipStreaming = true,
                 ParallelPSOCreation = true,
             },

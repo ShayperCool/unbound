@@ -572,8 +572,7 @@ namespace UnityEngine
         public static bool ClearCache(int expiration) => BundleCaches.ClearEach(store => store.ClearOlderThan(expiration));
 
         /// <summary>Unity's ArgumentNullException(paramName), with the message its runtime gives it.</summary>
-        static ArgumentNullException NullArgument(string paramName) =>
-            new ArgumentNullException(null, "Value cannot be null.\nParameter name: " + paramName);
+        static ArgumentNullException NullArgument(string paramName) => Unbound.Runtime.MonoExceptions.Null(paramName);
 
         static void CheckName(string name)
         {

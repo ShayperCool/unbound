@@ -38,7 +38,6 @@ public static class StubDefaults
         // The Editor shows no splash screen.
         ["UnityEngine.Rendering.SplashScreen.isFinished"] = "true",
         ["UnityEngine.QualitySettings.maxQueuedFrames"] = new("2", "value"),
-        ["UnityEngine.Graphics.activeTier"] = new("global::UnityEngine.Rendering.GraphicsTier.Tier3", "value"),
         ["UnityEngine.Accessibility.AccessibilitySettings.fontScale"] = "1f",
         ["UnityEngine.AvatarMask.humanoidBodyPartCount"] = "13",
         // Obsolete members whose message states the answer.

@@ -727,6 +727,7 @@ namespace Unbound.Runtime
                     case Color c: value.Kind = VectorKind; value.Vector = c; break;
                     case Matrix4x4 m: value.Kind = MatrixKind; value.Matrix = m; break;
                     case Texture t: value.Kind = TextureKind; value.Texture = TextureHandles.Of(t); break;
+                    case TextureElement e: value.Kind = TextureKind; value.Texture = TextureElements.MaterialHandle(e.Texture, e.Element); break;
                     case ComputeBuffer or GraphicsBuffer: value.Kind = BufferKind; value.Texture = Material.BufferHandle(p.Value); break;
                     case GraphicsBufferHandle h: value.Kind = BufferKind; value.Texture = h.value; break;
                     case SharedArray shared: value.Kind = SharedArrayKind; value.Shared = shared; break;

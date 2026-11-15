@@ -13,6 +13,19 @@ namespace Unbound.Runtime
     /// depth-only target's Color, Depth without a depth buffer, unsupported Stencil) binds nothing:
     /// a material then shows the global value, a global binding is the gray default texture.
     /// </summary>
+    /// <summary>A render texture bound with a sub-element in a property block.</summary>
+    internal readonly struct TextureElement
+    {
+        internal readonly UnityEngine.RenderTexture Texture;
+        internal readonly RenderTextureSubElement Element;
+
+        internal TextureElement(UnityEngine.RenderTexture texture, RenderTextureSubElement element)
+        {
+            Texture = texture;
+            Element = element;
+        }
+    }
+
     internal static class TextureElements
     {
         internal enum Binding

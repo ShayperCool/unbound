@@ -92,14 +92,21 @@ namespace UnityEngine
             return new Bounds(center, extents * 2f);
         }
 
-        static void CheckInstanced(Mesh mesh, int submeshIndex, Material material, int count)
+        /// <summary>The release's checks, in its order, with its runtime's messages: the count must
+        /// lie within the matrices given (tests/projects/srpmembers instanced.*).</summary>
+        static void CheckInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices, int count,
+            LightProbeUsage lightProbeUsage, LightProbeProxyVolume lightProbeProxyVolume)
         {
             if (!SystemInfo.supportsInstancing) throw new InvalidOperationException("Instancing is not supported.");
-            if (mesh == null) throw new ArgumentNullException(nameof(mesh));
-            if (submeshIndex < 0 || submeshIndex >= mesh.subMeshCount) throw new ArgumentOutOfRangeException(nameof(submeshIndex), "submeshIndex out of range.");
-            if (material == null) throw new ArgumentNullException(nameof(material));
+            if (mesh == null) throw MonoExceptions.Null(nameof(mesh));
+            if (submeshIndex < 0 || submeshIndex >= mesh.subMeshCount) throw MonoExceptions.OutOfRange(nameof(submeshIndex), "submeshIndex out of range.");
+            if (material == null) throw MonoExceptions.Null(nameof(material));
             if (!material.enableInstancing) throw new InvalidOperationException("Material needs to enable instancing for use with DrawMeshInstanced.");
-            if (count < 0 || count > kMaxDrawMeshInstanceCount) throw new ArgumentOutOfRangeException(nameof(count), $"Count must be in the range of 0 to {kMaxDrawMeshInstanceCount}.");
+            if (matrices == null) throw MonoExceptions.Null(nameof(matrices));
+            int most = Math.Min(kMaxDrawMeshInstanceCount, matrices.Length);
+            if (count < 0 || count > most) throw MonoExceptions.OutOfRange(nameof(count), $"Count must be in the range of 0 to {most}.");
+            if (lightProbeUsage == LightProbeUsage.UseProxyVolume && lightProbeProxyVolume == null)
+                throw MonoExceptions.Argument("Argument lightProbeProxyVolume must not be null if lightProbeUsage is set to UseProxyVolume.", nameof(lightProbeProxyVolume));
         }
 
         /// <summary>The instances culled and sorted as a group ("Unity culls and sorts instanced
@@ -112,11 +119,10 @@ namespace UnityEngine
         /// not further cull individual instances ... does not sort individual instances"). Each
         /// instance is still lit, probed and shadowed as before.</summary>
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices, int count, MaterialPropertyBlock properties,
-            ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera, LightProbeUsage lightProbeUsage)
+            ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera, LightProbeUsage lightProbeUsage, LightProbeProxyVolume lightProbeProxyVolume)
         {
-            if (matrices == null) throw new ArgumentNullException(nameof(matrices));
-            count = Math.Min(count, matrices.Length);
-            CheckInstanced(mesh, submeshIndex, material, count);
+            CheckInstanced(mesh, submeshIndex, material, matrices, count, lightProbeUsage, lightProbeProxyVolume);
+            if (count == 0) return;
             var lighting = ImmediateLighting.Of(castShadows, receiveShadows, lightProbeUsage);
             // The box around every drawn instance's mesh bounds (the union of each instance's
             // bounds through its matrix: Unbound's choice of how the box is built, unmeasured).
@@ -143,6 +149,9 @@ namespace UnityEngine
         }
 
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices, int count, MaterialPropertyBlock properties,
+            ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera, LightProbeUsage lightProbeUsage) =>
+            DrawMeshInstanced(mesh, submeshIndex, material, matrices, count, properties, castShadows, receiveShadows, layer, camera, lightProbeUsage, null);
+        public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices, int count, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera) =>
             DrawMeshInstanced(mesh, submeshIndex, material, matrices, count, properties, castShadows, receiveShadows, layer, camera, LightProbeUsage.BlendProbes);
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices, int count, MaterialPropertyBlock properties,
@@ -157,15 +166,21 @@ namespace UnityEngine
             DrawMeshInstanced(mesh, submeshIndex, material, matrices, count, properties, ShadowCastingMode.On);
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices, int count) =>
             DrawMeshInstanced(mesh, submeshIndex, material, matrices, count, null);
+        /// <summary>Reads matrices.Length first, as the release does: null is Mono's NullReferenceException.</summary>
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices) =>
-            DrawMeshInstanced(mesh, submeshIndex, material, matrices, matrices?.Length ?? 0);
+            DrawMeshInstanced(mesh, submeshIndex, material, matrices,
+                matrices?.Length ?? throw new NullReferenceException("Object reference not set to an instance of an object"));
 
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, List<Matrix4x4> matrices, MaterialPropertyBlock properties,
-            ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera, LightProbeUsage lightProbeUsage)
+            ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera, LightProbeUsage lightProbeUsage, LightProbeProxyVolume lightProbeProxyVolume)
         {
-            if (matrices == null) throw new ArgumentNullException(nameof(matrices));
-            DrawMeshInstanced(mesh, submeshIndex, material, matrices.ToArray(), matrices.Count, properties, castShadows, receiveShadows, layer, camera, lightProbeUsage);
+            if (matrices == null) throw MonoExceptions.Null(nameof(matrices));
+            DrawMeshInstanced(mesh, submeshIndex, material, matrices.ToArray(), matrices.Count, properties, castShadows, receiveShadows, layer, camera, lightProbeUsage, lightProbeProxyVolume);
         }
+
+        public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, List<Matrix4x4> matrices, MaterialPropertyBlock properties,
+            ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera, LightProbeUsage lightProbeUsage) =>
+            DrawMeshInstanced(mesh, submeshIndex, material, matrices, properties, castShadows, receiveShadows, layer, camera, lightProbeUsage, null);
 
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, List<Matrix4x4> matrices, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera) =>

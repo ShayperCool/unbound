@@ -136,6 +136,9 @@ namespace Unbound.Runtime
             Write(offset, bytes);
         }
 
+        /// <summary>A GraphicsBuffer.LockBufferForWrite is open on the buffer.</summary>
+        internal bool Locked;
+
         internal void Write(long offset, ReadOnlySpan<byte> bytes)
         {
             if (Released) return;
@@ -161,6 +164,9 @@ namespace Unbound.Runtime
             // A destroyed mesh leaves its view metadata valid, but there is no GPU buffer to
             // read. The measured GetData leaves the destination untouched (renderapi).
             if (m_DestroyedOwner) return;
+            // A buffer locked for writing cannot be read on OpenGL Core: the destination is left
+            // untouched (srpmembers lock.getDataWhileLocked). Other devices are not measured.
+            if (Locked && UnityEngine.SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.OpenGLCore) return;
             var bytes = Native.ReadBuffer(Handle, offset, length);
             if (bytes == null)
             {
@@ -220,10 +226,30 @@ namespace UnityEngine
             m_Ptr = (IntPtr)(long)storage.Handle;
         }
 
-        public GraphicsBuffer(Target target, int count, int stride) : this(target, UsageFlags.None, count, stride) { }
+        /// <summary>A buffer that is only a vertex and/or index buffer can be locked for writing
+        /// (the release's constructor; tests/projects/srpmembers usage.*).</summary>
+        public GraphicsBuffer(Target target, int count, int stride)
+            : this(target, (target & (Target.Vertex | Target.Index)) == target ? UsageFlags.LockBufferForWrite : UsageFlags.None, count, stride) { }
 
+        /// <summary>The release's checks and messages (tests/projects/srpmembers create.*, usage.*). The
+        /// size limit is checked where SystemInfo.maxGraphicsBufferSize is measured (Metal).</summary>
         public GraphicsBuffer(Target target, UsageFlags usageFlags, int count, int stride)
         {
+            const Target ComputeTargets = Target.Structured | Target.Raw | Target.Append | Target.Counter | Target.IndirectArguments;
+            const Target VertexIndexOrCopy = Target.Vertex | Target.Index | Target.CopySource | Target.CopyDestination;
+            if ((target & ComputeTargets) != 0 && !SystemInfo.supportsComputeShaders)
+                throw new ArgumentException("Attempting to create a graphics buffer that requires compute shader support, but compute shaders are not supported on this platform. Target: " + target);
+            if (count <= 0) throw MonoExceptions.Argument("Attempting to create a zero length graphics buffer", nameof(count));
+            if (stride <= 0) throw MonoExceptions.Argument("Attempting to create a graphics buffer with a negative or null stride", nameof(stride));
+            if ((target & Target.Index) != 0 && stride != 2 && stride != 4)
+                throw MonoExceptions.Argument("Attempting to create an index buffer with an invalid stride: " + stride, nameof(stride));
+            if ((target & VertexIndexOrCopy) != target && stride % 4 != 0)
+                throw MonoExceptions.Argument("Stride must be a multiple of 4 unless the buffer is only used as a vertex buffer and/or index buffer ", nameof(stride));
+            long size = (long)count * stride, most = SystemInfo.MeasuredMaxGraphicsBufferSize;
+            if (most > 0 && size > most)
+                throw new ArgumentException($"The total size of the graphics buffer ({size} bytes) exceeds the maximum buffer size. Maximum supported buffer size: {most} bytes.");
+            if ((usageFlags & UsageFlags.LockBufferForWrite) != 0 && (target & Target.CopyDestination) != 0)
+                throw new ArgumentException("Attempting to create a LockBufferForWrite capable buffer that can be copied into. LockBufferForWrite buffers are read-only on the GPU.");
             m_Target = target;
             m_UsageFlags = usageFlags;
             m_Storage = new GpuBufferStorage(count, stride, (uint)target);
@@ -243,6 +269,7 @@ namespace UnityEngine
         public void Dispose()
         {
             if (m_Ptr == IntPtr.Zero) return;
+            DropLock();
             if (m_Storage.MeshOwned) m_Storage.ReleaseView();
             else m_Storage.Release();
             m_Ptr = IntPtr.Zero;

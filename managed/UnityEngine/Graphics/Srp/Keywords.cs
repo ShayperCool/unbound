@@ -238,12 +238,17 @@ namespace UnityEngine.Rendering
         /// <summary>Several color targets (only the first is drawn into yet) and a depth target.</summary>
         public void SetRenderTarget(RenderTargetBinding binding, int mipLevel, CubemapFace cubemapFace, int depthSlice)
         {
+            CheckThrowOnSetRenderTarget();
             var colors = binding.colorRenderTargets;
             if (colors == null || colors.Length == 0) SetRenderTarget(binding.depthRenderTarget, mipLevel, cubemapFace, depthSlice);
             else SetRenderTarget(colors[0], binding.depthRenderTarget, mipLevel, cubemapFace, depthSlice);
         }
 
-        public void SetRenderTarget(RenderTargetBinding binding) => SetRenderTarget(binding, 0, CubemapFace.Unknown, 0);
+        public void SetRenderTarget(RenderTargetBinding binding)
+        {
+            CheckThrowOnSetRenderTarget();
+            SetRenderTarget(binding, 0, CubemapFace.Unknown, 0);
+        }
 
         // ------------------------------------------------------------ render passes
 

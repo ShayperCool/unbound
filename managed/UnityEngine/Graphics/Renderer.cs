@@ -408,6 +408,7 @@ namespace UnityEngine
                     case Color c: drawn.SetVector(p.Key, c); drawn.m_RawBindings.Add(p.Key); break;
                     case Matrix4x4 m: drawn.SetMatrix(p.Key, m); break;
                     case Texture t: drawn.SetTexture(p.Key, t); break;
+                    case TextureElement e: drawn.SetTexture(p.Key, e.Texture, e.Element); break;
                     case ComputeBuffer c: drawn.SetBuffer(p.Key, c); break;
                     case GraphicsBuffer g: drawn.SetBuffer(p.Key, g); break;
                     case float[] fs: drawn.SetFloatArray(p.Key, fs); break;
@@ -1352,6 +1353,18 @@ namespace UnityEngine
             m_Values[nameID] = value;
             m_Values[HdrDecode.IdOf(nameID)] = HdrDecode.Of(value);
         }
+
+        public void SetTexture(string name, RenderTexture value, RenderTextureSubElement element) => SetTexture(Shader.PropertyToID(name), value, element);
+
+        /// <summary>A render texture and the element of it the shader samples, as a material's
+        /// (Unbound.Runtime.TextureElements); an element the texture lacks binds nothing and reads
+        /// back as no texture (tests/projects/srpmembers element.*).</summary>
+        public void SetTexture(int nameID, RenderTexture value, RenderTextureSubElement element)
+        {
+            if ((object)value == null) throw MonoExceptions.Null("value");
+            m_Values[nameID] = new TextureElement(value, element);
+            m_Values[HdrDecode.IdOf(nameID)] = HdrDecode.Of(value);
+        }
         public void SetFloatArray(string name, float[] values) => SetFloatArray(Shader.PropertyToID(name), values);
         public void SetFloatArray(int nameID, float[] values) => PropertyArrays.Set(m_Values, nameID, values);
         public void SetFloatArray(string name, List<float> values) => SetFloatArray(Shader.PropertyToID(name), values);
@@ -1410,7 +1423,9 @@ namespace UnityEngine
         public Matrix4x4 GetMatrix(string name) => GetMatrix(Shader.PropertyToID(name));
         public Matrix4x4 GetMatrix(int nameID) => m_Values.TryGetValue(nameID, out var v) && v is Matrix4x4 m ? m : Matrix4x4.identity;
         public Texture GetTexture(string name) => GetTexture(Shader.PropertyToID(name));
-        public Texture GetTexture(int nameID) => m_Values.TryGetValue(nameID, out var v) ? v as Texture : null;
+        public Texture GetTexture(int nameID) => m_Values.TryGetValue(nameID, out var v)
+            ? v is TextureElement element ? (TextureElements.Of(element.Texture, element.Element) == TextureElements.Binding.Nothing ? null : element.Texture) : v as Texture
+            : null;
 
         static readonly int[] s_ShArrayIds =
         {

@@ -249,7 +249,7 @@ namespace Unbound.Tests
                 {
                     GraphicsDeviceProfile.Select(device);
                     Assert.Equal(0, SystemInfo.maxComputeBufferInputsVertex);
-                    Assert.Equal(0, SystemInfo.maxTiledPixelStorageSize);
+                    Assert.Equal(device == "OpenGLCore" ? int.MaxValue : 0, SystemInfo.maxTiledPixelStorageSize);
                     Assert.False(SystemInfo.supportsMipStreaming);
                     Assert.False(SystemInfo.supportsDynamicResolution);
                     Assert.Equal(0L, SystemInfo.maxGraphicsBufferSize);

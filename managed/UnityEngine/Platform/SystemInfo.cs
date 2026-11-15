@@ -364,7 +364,25 @@ namespace UnityEngine
         [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
         public static int maxComputeBufferInputsCompute => Measured(static l => l.ComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsCompute");
         [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
-        public static int maxTiledPixelStorageSize => Measured(static l => l.TiledPixelStorageSize, "UnityEngine.SystemInfo.maxTiledPixelStorageSize");
+        public static int maxTiledPixelStorageSize
+        {
+            get
+            {
+                if (Device.MaxTiledPixelStorage is int size) return size;
+                Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfo.maxTiledPixelStorageSize");
+                return 0;
+            }
+        }
+
+        /// <summary>A render target's bytes per pixel of tile storage: the format's block size
+        /// times the samples (OpenGL Core, tests/projects/srpmembers tiled.*); a stub on the other
+        /// devices.</summary>
+        public static int GetTiledRenderTargetStorageSize(GraphicsFormat format, int sampleCount)
+        {
+            if (Device.TiledStorageMeasured) return (int)GraphicsFormatUtility.GetBlockSize(format) * sampleCount;
+            Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfo.GetTiledRenderTargetStorageSize");
+            return 0;
+        }
         /// <summary>False, what Unbound's renderer does: the Metal Editor answers true and scales
         /// its buffers (ScalableBufferManager here keeps 1); unmeasured on the other devices.</summary>
         public static bool supportsDynamicResolution
@@ -384,6 +402,9 @@ namespace UnityEngine
         [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
         public static bool supportsParallelPSOCreation => Measured(static l => l.ParallelPSOCreation, "UnityEngine.SystemInfo.supportsParallelPSOCreation");
 
+        /// <summary>maxGraphicsBufferSize where it is measured (Metal), else 0, without a warning.</summary>
+        internal static long MeasuredMaxGraphicsBufferSize => Device.Type == GraphicsDeviceType.Metal ? Gpu?.MaxBufferBytes ?? 0 : 0;
+
         /// <summary>The Metal device's maxBufferLength, as the macOS Editor answers (two captures
         /// on an Apple M2 Pro with 16 GB: 9534832640, its maxBufferLength); a stub on the other
         /// devices.</summary>
@@ -391,7 +412,7 @@ namespace UnityEngine
         {
             get
             {
-                long size = Device.Type == GraphicsDeviceType.Metal ? Gpu?.MaxBufferBytes ?? 0 : 0;
+                long size = MeasuredMaxGraphicsBufferSize;
                 if (size > 0) return size;
                 Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfo.maxGraphicsBufferSize");
                 return 0;

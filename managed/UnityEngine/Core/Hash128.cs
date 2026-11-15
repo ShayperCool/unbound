@@ -125,9 +125,8 @@ namespace UnityEngine
         static void CheckRange(int start, int count, int length)
         {
             if (start < 0 || count < 0 || start + count > length)
-                // Unity passes the text as the parameter name; Mono writes it after the message.
-                throw new ArgumentOutOfRangeException(null,
-                    $"Specified argument was out of the range of valid values.\nParameter name: Bad start/count arguments (start:{start} count:{count})");
+                // Unity passes the text as the parameter name.
+                throw Unbound.Runtime.MonoExceptions.OutOfRange($"Bad start/count arguments (start:{start} count:{count})");
         }
 
         internal void AppendBytes(ReadOnlySpan<byte> data) => SpookyHash.Hash(data, ref u64_0, ref u64_1);

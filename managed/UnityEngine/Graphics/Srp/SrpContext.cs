@@ -1029,6 +1029,10 @@ namespace UnityEngine.Rendering
         public void EndSubPass() { }
         public void EndRenderPass() => RenderPasses.End();
 
+        /// <summary>The context's identity (the release returns its pointer); the GPU Resident
+        /// Drawer pairs a context's begin and end rendering by it.</summary>
+        internal IntPtr Internal_GetPtr() => m_Ptr;
+
         public bool Equals(ScriptableRenderContext other) => m_Ptr == other.m_Ptr;
         public override bool Equals(object obj) => obj is ScriptableRenderContext other && Equals(other);
         public override int GetHashCode() => m_Ptr.GetHashCode();

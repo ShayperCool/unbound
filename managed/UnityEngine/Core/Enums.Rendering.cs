@@ -269,6 +269,16 @@ namespace UnityEngine.Rendering
         CPUSynchronisation = 1,
     }
 
+    public enum OpenGLESVersion
+    {
+        None = 0,
+        [System.Obsolete("OpenGL ES 2.0 is no longer supported in Unity 2023.1")] OpenGLES20 = 1,
+        OpenGLES30 = 2,
+        OpenGLES31 = 3,
+        OpenGLES31AEP = 4,
+        OpenGLES32 = 5,
+    }
+
     public enum GraphicsTier
     {
         Tier1 = 0,
