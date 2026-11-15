@@ -1,6 +1,6 @@
 {
   "commands": ["python3 tests/projects/lightmapencoding/run.py check"],
-  "summary": "lightmapencoding: .*",
+  "summary": "lightmapencoding: [0-9]+/[0-9]+ records, .*",
   "engine_paths": ["crates/unbound-compat/src/lighting.rs", "crates/unbound-assets/src/texture/rgbm.rs",
     "managed/UnityEngine/Graphics/HdrDecode.cs", "managed/UnityEngine/Graphics/Srp/DeviceSettings.cs"]
 }
