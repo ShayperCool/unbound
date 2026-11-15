@@ -1,0 +1,8 @@
+{
+ "Framebuffer fetch reads copies of the color targets made before each draw: triangles of one draw that overlap read the color from before the draw (the macOS Editor's Metal device reads what the earlier triangles wrote: two fetches here); Unbound warns when it compiles such a program. Queued": [
+  "fetch.Overlap"
+ ],
+ "Framebuffer fetch on a multisampled target reads the resolved color (warned when drawn); the macOS Editor's Metal device reads each fragment's own sample, so a non-linear function of the samples resolves to another color (0.5 here, 0.25 in Unbound). Queued": [
+  "fetch.Msaa.squared"
+ ]
+}

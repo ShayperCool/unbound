@@ -88,7 +88,13 @@ the fetch defines. `Reference/unity-6000.0.71f1/metal.jsonl` is two identical ma
 captures (Apple M2 Pro, macOS 26): every program compiles with `UNITY_FRAMEBUFFER_FETCH_AVAILABLE`,
 `UNITY_FRAMEBUFFER_FETCH_ENABLED` and `UNITY_COMPILER_HLSLCC`; both fetch shaders take the fetch
 path, which reads the color the draw before left (`fetch.*.2`). The other devices record none of
-these rows. Unbound matches all 144 Metal records (`run.py check --device metal`, macOS only).
+these rows. Further controls, appended by two more identical captures: one draw of a quad drawn
+twice over the texel (`fetch.Overlap`: the second triangle reads what the first wrote, as two
+draws), a fetch of color target 1 (`fetch.Second.*`), and a 4x multisampled texel half covered,
+then squared by a fetch (`fetch.Msaa.*`: each sample is squared, so the resolve stays 0.5). Unbound
+matches 147 of the 149 Metal records (`run.py check --device metal`, macOS only); the other two,
+overlapping triangles and multisampled targets (Unbound reads copies made before the draw, the
+multisampled one resolved), are declared in `residuals-metal.json`.
 
 ## Generated pass indices
 
