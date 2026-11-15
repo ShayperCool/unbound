@@ -13,6 +13,7 @@ public partial class EffectProbe
         readonly string operation;
         AudioDistortionFilter identity;
         ProbeListenerAffine script;
+        Component neutral;
         GameObject alternateObject;
         AudioListener alternate;
 
@@ -38,15 +39,20 @@ public partial class EffectProbe
                 if (other) {
                     var echo = (AudioEchoFilter)AddConfiguredFilter(alternateObject, "echo");
                     echo.delay = 17; echo.decayRatio = 0.2f; echo.dryMix = 0.1f; echo.wetMix = 1;
-                    if (operation == "members_other") target = alternateObject;
+                    if (operation == "members_other" || operation == "neutral_other") target = alternateObject;
                 }
             }
+            if (Option(key, "primary_disabled=", "0") == "1") primary.enabled = false;
         }
 
         public bool Change(string key, int block, List<string> records)
         {
             if (operation == "steady" || operation == "identity" || (block != 8 && block != 16 && block != 24)) return false;
             switch (operation) {
+                case "neutral": case "neutral_other":
+                    if (block == 16) { UnityEngine.Object.DestroyImmediate(neutral); neutral = null; }
+                    else neutral = target.AddComponent<ProbeNeutralTopology>();
+                    break;
                 case "members": case "members_other": case "members_disabled":
                     if (block == 16) { UnityEngine.Object.DestroyImmediate(identity); identity = null; }
                     else {
@@ -62,6 +68,12 @@ public partial class EffectProbe
                 case "script_enabled":
                     script.enabled = block == 16;
                     records.Add("\"" + key + ".script_enabled_" + block + "\":" + (script.enabled ? "true" : "false"));
+                    break;
+                case "script_first_disabled":
+                    if (block == 8) { script = target.AddComponent<ProbeListenerAffine>(); script.Gain = 1; script.Offset = 0; }
+                    script.enabled = block == 16;
+                    records.Add("\"" + key + ".script_enabled_" + block + "\":" + (script.enabled ? "true" : "false"));
+                    records.Add("\"" + key + ".script_channels_" + block + "\":" + script.Channels);
                     break;
                 case "enabled":
                     ((Behaviour)units[0]).enabled = block == 16;
@@ -91,6 +103,7 @@ public partial class EffectProbe
         {
             primary.enabled = true;
             if (alternateObject) UnityEngine.Object.DestroyImmediate(alternateObject);
+            if (neutral) UnityEngine.Object.DestroyImmediate(neutral);
             if (script) UnityEngine.Object.DestroyImmediate(script);
             if (identity) UnityEngine.Object.DestroyImmediate(identity);
             for (int i = units.Count - 1; i >= 0; i--) UnityEngine.Object.DestroyImmediate(units[i]);
@@ -138,3 +151,6 @@ public partial class EffectProbe
     }
 
 }
+
+/// <summary>A component without an audio callback distinguishes component and DSP membership.</summary>
+public sealed class ProbeNeutralTopology : MonoBehaviour { }
