@@ -305,7 +305,29 @@ class PostlandTests(unittest.TestCase):
         report = self.reports()[-1]
         self.assertEqual(report['kind'], 'undecided')
         self.assertEqual(report['result'], 'probe missing')
-        self.assertIn(report['at'], (removal, self.rows[2]['new'], self.rows[2]['old']))
+        self.assertEqual([call[2] for call in checker.calls], ['main', 'alone'])
+
+    def test_a_removal_as_the_last_landing_is_not_reverted(self):
+        check = ['probe', 'probe-check', 'engine paths', 'r']
+        self.land_branch('first', {'a.txt': '1'}, [check])
+        self.git('rm', '-q', '-r', 'tests/projects/probe')
+        self.land_branch('removal', {'b.txt': '1'}, [])
+        missing = lambda commit, check, label: subprocess.run(
+            ['git', 'cat-file', '-e', f'{commit}:tests/projects/probe'], cwd=self.repo).returncode != 0
+        checker = self.checker(missing)
+        self.assertTrue(checker.round())
+        self.assertEqual(self.reports()[-1]['result'], 'probe missing')
+
+    def test_a_probe_added_then_removed_in_the_range_is_not_blamed_on_a_later_landing(self):
+        check = ['newprobe', 'newprobe-check', 'changed files', 'r']
+        (self.repo/'tests/projects/newprobe').mkdir()
+        self.land_branch('adder', {'tests/projects/newprobe/gate.json': '{}'}, [check])
+        self.git('rm', '-q', '-r', 'tests/projects/newprobe')
+        self.land_branch('removal', {'b.txt': '1'}, [])
+        self.land_branch('innocent', {'c.txt': '1'}, [])
+        checker = self.checker(lambda commit, check, label: True)
+        self.assertTrue(checker.round())
+        self.assertEqual(self.reports()[-1]['result'], 'probe missing')
 
     def test_unexpected_errors_are_written_for_the_orchestrator(self):
         self.land_branch('first', {'a.txt': '1'}, [['probe', 'probe-check', 'fast check', 'r']])

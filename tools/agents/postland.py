@@ -240,14 +240,18 @@ class Checker:
         base = rows[0]['old']
         common = {'range': [base, target], 'landings': [
             {key: row.get(key) for key in ('branch', 'old', 'new', 'request_id', 'log')} for row in rows]}
-        # A probe the range adds cannot pass or fail before it exists; one that exists at the
-        # base and is missing later was removed or renamed, which decides nothing.
-        added = not self.exists(base, check)
+        # A probe the range adds cannot pass or fail before it exists. A probe missing at main, or
+        # missing after it existed (removed or renamed in the range), decides nothing.
+        present = [self.exists(commit, check) for commit in [base, *(row['new'] for row in rows)]]
+        if not present[-1] or any(earlier and not later for earlier, later in zip(present, present[1:])):
+            return self.report(check, 'undecided', at=target, result='probe missing', logs=logs, **common)
+        added = not present[0]
 
         def result_at(commit, label):
+            # Only commits before the probe's first appearance lack it here.
             if self.exists(commit, check):
                 return self.decide(commit, check, label, logs)
-            return 'pass' if added else 'probe missing'
+            return 'pass'
         if not added:
             result = self.decide(base, check, 'base', logs)
             if result == 'fail':
@@ -271,7 +275,7 @@ class Checker:
             # Another landing sits between them on main; no single landing is the clear cause.
             return self.report(check, 'no single landing', culprit=culprit, logs=logs, **common)
         # Confirm before touching main: twice failing at the tip, twice passing at the parent.
-        tip = self.decide(culprit['new'], check, 'confirm', logs)
+        tip = result_at(culprit['new'], 'confirm')
         parent = result_at(culprit['old'], 'confirm')
         if (tip, parent) != ('fail', 'pass'):
             return self.report(check, 'undecided', at=culprit['new'], result=f'tip {tip}, parent {parent}',
