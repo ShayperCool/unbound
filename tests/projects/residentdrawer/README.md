@@ -47,9 +47,22 @@ the sphere with a light probe proxy volume; its commands carry each renderer's l
 the legacy lightmaps keyword flag, and the lightmapped renderers are drawn with their lightmaps
 (with their directions and shadow mask in `shadowmask`).
 
-    python3 tests/projects/residentdrawer/run.py native --label L [--profile occlusion|controls|lightmaps|shadowmask]   # two Editor captures
-    python3 tests/projects/residentdrawer/run.py publish L-1 L-2 [--profile occlusion|controls|lightmaps|shadowmask]
-    python3 tests/projects/residentdrawer/run.py check [--profile occlusion|controls|lightmaps|shadowmask]              # the land gate
+`speedtree` stages `tests/projects/speedtree9wind`'s trees (and the Wind module) and records with
+`Assets/Scripts/DrawerWindProbe.cs` instead: the SpeedTree 9 wind parameters the drawer gives tree
+instances. Each tree is a copy of an asset's first level (its Tree keeps the asset's wind asset)
+drawing a quad with `Assets/Shaders/DrawerWindDump.shader`, which writes the instance's
+`DOTS_ST_WindParam0` to `10` and `DOTS_ST_WindHistoryParam0` to `10` into the tree's row of a 22x8
+float target (-1 without DOTS instancing); one orthographic camera renders all trees once a frame.
+Game time stands still until shaders have compiled, so the wind does not depend on the warm-up.
+Over 380 frames at a captured 30 frames per second a directional zone comes (frame 10), strengthens
+(50) and turns around (75); a tree leaves the camera's view (90) and comes back (95); two trees
+appear (100), with camera and per-object motion vectors; the zone goes (130) and the wind settles;
+a zone without wind comes (320), then a wind again (330). The drawer holds every tree; floats are
+recorded as the hex of their bits (values compare exactly).
+
+    python3 tests/projects/residentdrawer/run.py native --label L [--profile occlusion|controls|lightmaps|shadowmask|speedtree]   # two Editor captures
+    python3 tests/projects/residentdrawer/run.py publish L-1 L-2 [--profile occlusion|controls|lightmaps|shadowmask|speedtree]
+    python3 tests/projects/residentdrawer/run.py check [--profile occlusion|controls|lightmaps|shadowmask|speedtree]              # the land gate
 
 Recording: a windowed Editor with `-force-vulkan` on the GPU-backed display :0 (the drawer
 dispatches its changes from the player loop, which a batch-mode Editor does not run between
@@ -75,3 +88,4 @@ Unbound: every value on both profiles; images within the comparator's bounds (me
 3 of 57600 pixels over 8, at shadow edges). The transparent sphere is placed where it overlaps
 little; it matches since the references are recorded after the Editor's start-up work (before,
 the Editor's sphere was brighter, with a highlight, because of the material validation above).
+On `speedtree` Unbound matches every value (3677 of 3677).

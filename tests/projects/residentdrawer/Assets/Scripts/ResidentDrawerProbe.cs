@@ -62,7 +62,12 @@ public class ResidentDrawerProbe : MonoBehaviour
     static readonly Type s_DispatcherType = Type.GetType("UnityEngine.ObjectDispatcher, UnityEngine.CoreModule");
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Run() => new GameObject("ResidentDrawerProbe").AddComponent<ResidentDrawerProbe>();
+    static void Run()
+    {
+        // The speedtree profile records with DrawerWindProbe instead.
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RESIDENT_DRAWER_SPEEDTREE")))
+            new GameObject("ResidentDrawerProbe").AddComponent<ResidentDrawerProbe>();
+    }
 
     /// <summary>A scene recorded as it is (RESIDENT_DRAWER_SCENE, the lightmaps and shadowmask profiles): its own
     /// renderers, no scripted changes, two capture frames.</summary>

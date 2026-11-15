@@ -8,7 +8,9 @@
     run.py compare REF ACTUAL     compares two capture directories
 
 --profile selects the drawer's settings (controls: direct's, with more refusal controls, see the
-README; lightmaps and shadowmask: the URP probe's baked Subtractive and Shadowmask scenes as they are): direct (the default: occlusion culling off, so the drawer
+README; lightmaps and shadowmask: the URP probe's baked Subtractive and Shadowmask scenes as they are;
+speedtree: the SpeedTree 9 wind parameters the drawer writes for trees, with tests/projects/speedtree9wind's
+trees): direct (the default: occlusion culling off, so the drawer
 draws with direct draw commands) or occlusion (GPU occlusion culling in cameras on, so the main
 camera's commands are indirect ones the drawer's compute shaders fill). Both sides use the Vulkan
 device: the Editor windowed with -force-vulkan on the GPU-backed display :0 (the drawer dispatches
@@ -55,6 +57,8 @@ CAPTURE = 'capture'
 VALUES = 'values.jsonl'
 PROFILE = 'direct'
 FRAMES = 600
+# The speedtree profile ends itself after its warm-up and 380 frames.
+SPEEDTREE_FRAMES = 5000
 MEAN_BOUND = 0.5
 OVER_SHARE = 0.005
 # The profiles that record a baked scene of the URP probe (tests/projects/urp) as it is: Subtractive
@@ -91,10 +95,13 @@ def stage(label):
     (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+unity_version()+'\n')
     # The Animation module (the probe's Animator and Animation controls).
     manifest = json.loads((project/'Packages/manifest.json').read_text())
-    manifest['dependencies']['com.unity.modules.animation'] = '1.0.0'
-    (project/'Packages/manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
+    # The Wind module too for the speedtree profile's wind zones.
+    modules = ['animation', 'wind'] if PROFILE == 'speedtree' else ['animation']
     lock = json.loads((project/'Packages/packages-lock.json').read_text())
-    lock['dependencies']['com.unity.modules.animation'] = {'version': '1.0.0', 'depth': 0, 'source': 'builtin', 'dependencies': {}}
+    for module in modules:
+        manifest['dependencies']['com.unity.modules.'+module] = '1.0.0'
+        lock['dependencies']['com.unity.modules.'+module] = {'version': '1.0.0', 'depth': 0, 'source': 'builtin', 'dependencies': {}}
+    (project/'Packages/manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
     (project/'Packages/packages-lock.json').write_text(json.dumps(lock, indent=2)+'\n')
     edit(project/'ProjectSettings/GraphicsSettings.asset', 'm_BrgStripping: 0', 'm_BrgStripping: 2')
     edit(project/'Assets/Settings/ProbeRenderer.asset', 'm_RenderingMode: 0', 'm_RenderingMode: 2')
@@ -109,6 +116,11 @@ def stage(label):
     for part in ('Scripts', 'Editor') if PROFILE in SCENES else ('Scripts', 'Editor', 'Shaders'):
         shutil.copytree(ROOT/'Assets'/part, project/'Assets'/part)
         shutil.copy2(ROOT/'Assets'/(part+'.meta'), project/'Assets'/(part+'.meta'))
+    if PROFILE == 'speedtree':
+        # The SpeedTree 9 wind probe's trees, with their import settings.
+        trees = ROOT.parent/'speedtree9wind/Assets/Trees'
+        shutil.copytree(trees, project/'Assets/Trees')
+        shutil.copy2(trees.with_name('Trees.meta'), project/'Assets/Trees.meta')
     return work, project
 
 
@@ -119,6 +131,8 @@ def probe_env(work):
         env['RESIDENT_DRAWER_SCENE'] = SCENES[PROFILE]
     if PROFILE == 'controls':
         env['RESIDENT_DRAWER_CONTROLS'] = '1'
+    if PROFILE == 'speedtree':
+        env['RESIDENT_DRAWER_SPEEDTREE'] = '1'
     return env
 
 
@@ -141,7 +155,7 @@ def engine(label):
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = dict(os.environ, **probe_env(work))
     command = [str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '-s', 'KILL', '1500', cli, 'run', '-p', str(project),
-               '--no-watch', '--frames', str(FRAMES), '--size', '320x180', '--force-vulkan']
+               '--no-watch', '--frames', str(SPEEDTREE_FRAMES if PROFILE == 'speedtree' else FRAMES), '--size', '320x180', '--force-vulkan']
     if PROFILE in SCENES:
         command += ['--scene', f'Assets/Scenes/{SCENES[PROFILE]}.unity']
     with (work/'process.log').open('w') as log:
@@ -304,7 +318,7 @@ def main():
     parser.add_argument('mode', choices=['native', 'engine', 'publish', 'check', 'compare'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
-    parser.add_argument('--profile', choices=('direct', 'occlusion', 'controls', *SCENES), default='direct')
+    parser.add_argument('--profile', choices=('direct', 'occlusion', 'controls', 'speedtree', *SCENES), default='direct')
     args = parser.parse_args()
     global PROFILE
     PROFILE = args.profile
