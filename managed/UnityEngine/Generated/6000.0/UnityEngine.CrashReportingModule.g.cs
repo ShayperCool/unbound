@@ -7,13 +7,8 @@
 
 namespace UnityEngine.CrashReportHandler
 {
-    [global::Unbound.Stub]
-    public unsafe partial class CrashReportHandler
+    unsafe partial class CrashReportHandler
     {
-        [global::Unbound.Stub] public static string GetUserMetadata(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CrashReportHandler.CrashReportHandler.GetUserMetadata"); return default; }
-        [global::Unbound.Stub] public static void SetUserMetadata(string key, string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CrashReportHandler.CrashReportHandler.SetUserMetadata"); }
-        public static bool enableCaptureExceptions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CrashReportHandler.CrashReportHandler.enableCaptureExceptions"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CrashReportHandler.CrashReportHandler.enableCaptureExceptions"); } }
-        public static uint logBufferSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CrashReportHandler.CrashReportHandler.logBufferSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CrashReportHandler.CrashReportHandler.logBufferSize"); } }
         internal static string installationIdentifier { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CrashReportHandler.CrashReportHandler.installationIdentifier"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CrashReportHandler.CrashReportHandler.installationIdentifier"); } }
     }
 }

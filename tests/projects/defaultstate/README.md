@@ -1,5 +1,9 @@
 # Default state of implemented API types
 
+The Editor service slice adds seven rows for five newly implemented types. Two independent GPU captures agree on the added rows; all earlier canonical rows remain byte-identical.
+The consent struct has two zero-valued intents, and the four service classes are excluded
+as static or nonconstructible.
+
 This probe records Unity 6000.0.71f1 Editor Play mode on NVIDIA GeForce RTX 4060,
 then runs the same recorder in Unbound. It measures creation-time observations;
 it does not establish release-independent or device-independent default contracts.

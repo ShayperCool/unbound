@@ -15,10 +15,31 @@ namespace UnityEngine
         public delegate void MemoryUsageChangedCallback(in ApplicationMemoryUsageChange usage);
         public delegate void AdvertisingIdentifierCallback(string advertisingId, bool trackingEnabled, string errorMsg);
 
+        static LogCallback s_DeprecatedLogCallback;
         static LogCallback s_LogCallbackHandler;
         static LogCallback s_LogCallbackHandlerThreaded;
         static readonly Dictionary<LogType, StackTraceLogType> s_StackTraceLogTypes = new Dictionary<LogType, StackTraceLogType>();
         static CancellationTokenSource s_ExitCancellation = new CancellationTokenSource();
+
+        [Obsolete("Application.RegisterLogCallback is deprecated. Use Application.logMessageReceived instead.")]
+        public static void RegisterLogCallback(LogCallback handler) => SetDeprecatedLogCallback(handler, false);
+
+        [Obsolete("Application.RegisterLogCallbackThreaded is deprecated. Use Application.logMessageReceivedThreaded instead.")]
+        public static void RegisterLogCallbackThreaded(LogCallback handler) => SetDeprecatedLogCallback(handler, true);
+
+        static void SetDeprecatedLogCallback(LogCallback handler, bool threaded)
+        {
+            logMessageReceived -= s_DeprecatedLogCallback;
+            logMessageReceivedThreaded -= s_DeprecatedLogCallback;
+            s_DeprecatedLogCallback = handler;
+            if (threaded) logMessageReceivedThreaded += handler;
+            else logMessageReceived += handler;
+        }
+
+        internal static bool isHumanControllingUs
+        {
+            get { MainThreadCheck.Check("get_isHumanControllingUs"); return UnityEditorInternal.InternalEditorUtility.isHumanControllingUs; }
+        }
 
         public static event LogCallback logMessageReceived
         {
@@ -49,8 +70,8 @@ namespace UnityEngine
             t_InLogCallback = true;
             try
             {
-                s_LogCallbackHandlerThreaded?.Invoke(message, stackTrace, type);
                 if (PlayerLoopDriver.IsMainThread) s_LogCallbackHandler?.Invoke(message, stackTrace, type);
+                s_LogCallbackHandlerThreaded?.Invoke(message, stackTrace, type);
             }
             catch (Exception e)
             {

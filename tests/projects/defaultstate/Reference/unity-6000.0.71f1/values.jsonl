@@ -1155,6 +1155,13 @@
 {"key":"UnityEngine.AndroidJavaException/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.AndroidJavaObject/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.AndroidJavaProxy/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEngine.Analytics.Analytics/@factory","status":"excluded","value":"static"}
+{"key":"UnityEngine.CrashReportHandler.CrashReportHandler/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEngine.Identifiers.Identifiers/@factory","status":"excluded","value":"static"}
+{"key":"UnityEngine.UnityConsent.ConsentState/@factory","status":"value","value":"struct"}
+{"key":"UnityEngine.UnityConsent.ConsentState/Field/UnityEngine.UnityConsent.ConsentState/AdsIntent","status":"value","value":"enum:0"}
+{"key":"UnityEngine.UnityConsent.ConsentState/Field/UnityEngine.UnityConsent.ConsentState/AnalyticsIntent","status":"value","value":"enum:0"}
+{"key":"UnityEngine.UnityConsent.EndUserConsent/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.Animation/@factory","status":"value","value":"component"}
 {"key":"UnityEngine.Animation/Property/UnityEngine.Animation/Item(System.String)","status":"not-readable","value":"indexer-requires-arguments"}
 {"key":"UnityEngine.Animation/Property/UnityEngine.Animation/animateOnlyIfVisible","status":"value","value":"false"}

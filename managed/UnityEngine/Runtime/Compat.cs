@@ -9,6 +9,10 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Service-owned preference retention measured by editorservices on 6000.0.71f1.
+        /// Other releases keep their previous complete DeleteAll behavior, unmeasured.</summary>
+        internal static bool ServicePreferencesPreserved => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Material scalar validation measured by assetadapters on 6000.0.71f1.
         /// Other releases retain the previous, unmeasured value storage.</summary>
         internal static bool PhysicsMaterialValuesMeasured => Release == (6000, 0, 71, 'f', 1);

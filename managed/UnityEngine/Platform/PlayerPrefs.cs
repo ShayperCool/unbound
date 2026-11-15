@@ -106,7 +106,12 @@ namespace UnityEngine
         public static void DeleteAll()
         {
             MainThreadCheck.Check("DeleteAll");
+            // Service-owned preferences survive DeleteAll in the 6000.0.71f1 Editor.
+            var consent = Compat.ServicePreferencesPreserved ? GetString(UnityConsent.EndUserConsent.PreferenceKey, null) : null;
+            var installation = Compat.ServicePreferencesPreserved ? GetString(Identifiers.Identifiers.PreferenceKey, null) : null;
             Values.Clear();
+            if (consent != null) Values[UnityConsent.EndUserConsent.PreferenceKey] = consent;
+            if (installation != null) Values[Identifiers.Identifiers.PreferenceKey] = installation;
             s_Dirty = true;
         }
 

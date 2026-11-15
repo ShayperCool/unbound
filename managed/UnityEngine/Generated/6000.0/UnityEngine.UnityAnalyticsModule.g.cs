@@ -7,11 +7,9 @@
 
 namespace UnityEngine.Analytics
 {
-    [global::Unbound.Stub]
-    public unsafe static partial class Analytics
+    unsafe static partial class Analytics
     {
         [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult ResumeInitialization() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.ResumeInitialization"); return default; }
-        [global::Unbound.Stub] internal static bool IsInitialized() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.IsInitialized"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Analytics.AnalyticsResult IsCustomEventWithLimitEnabled(string customEventName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.IsCustomEventWithLimitEnabled"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Analytics.AnalyticsResult EnableCustomEventWithLimit(string customEventName, bool enable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.EnableCustomEventWithLimit"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Analytics.AnalyticsResult IsEventWithLimitEnabled(string eventName, int ver, string prefix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.IsEventWithLimitEnabled"); return default; }
@@ -26,12 +24,6 @@ namespace UnityEngine.Analytics
         [global::System.Obsolete("SetUserId is no longer supported")] [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult SetUserId(string userId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.SetUserId"); return default; }
         [global::System.Obsolete("SetUserGender is no longer supported")] [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult SetUserGender(global::UnityEngine.Analytics.Gender gender) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.SetUserGender"); return default; }
         [global::System.Obsolete("SetUserBirthYear is no longer supported")] [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult SetUserBirthYear(int birthYear) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.SetUserBirthYear"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult Transaction(string productId, decimal amount, string currency) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.Transaction"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult Transaction(string productId, decimal amount, string currency, string receiptPurchaseData, string signature) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.Transaction"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult Transaction(string productId, decimal amount, string currency, string receiptPurchaseData, string signature, bool usingIAPService) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.Transaction"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult CustomEvent(string customEventName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.CustomEvent"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult CustomEvent(string customEventName, global::UnityEngine.Vector3 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.CustomEvent"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult CustomEvent(string customEventName, global::System.Collections.Generic.IDictionary<string, object> eventData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.CustomEvent"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult EnableCustomEvent(string customEventName, bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.EnableCustomEvent"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult IsCustomEventEnabled(string customEventName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.IsCustomEventEnabled"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult RegisterEvent(string eventName, int maxEventPerHour, int maxItems, string vendorKey = "", string prefix = "") { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.RegisterEvent"); return default; }
@@ -48,7 +40,6 @@ namespace UnityEngine.Analytics
         public static string configUrl { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.configUrl"); return default; } }
         public static bool limitUserTracking { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.limitUserTracking"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.limitUserTracking"); } }
         public static bool deviceStatsEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.deviceStatsEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.deviceStatsEnabled"); } }
-        public static bool enabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.enabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.Analytics.enabled"); } }
     }
     [global::System.Flags]
     public enum AnalyticsEventPriority

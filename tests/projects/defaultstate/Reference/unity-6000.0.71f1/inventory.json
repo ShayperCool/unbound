@@ -1915,6 +1915,12 @@
       "type": "UnityEngine.Analytics.AnalyticInfoAttribute"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.UnityAnalyticsModule",
+      "status": "static",
+      "type": "UnityEngine.Analytics.Analytics"
+    },
+    {
       "category": "component",
       "module": "UnityEngine.Physics2DModule",
       "status": "candidate",
@@ -2912,6 +2918,12 @@
     },
     {
       "category": "class",
+      "module": "UnityEngine.CrashReportingModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.CrashReportHandler.CrashReportHandler"
+    },
+    {
+      "category": "class",
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.CreateAssetMenuAttribute"
@@ -3575,6 +3587,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEngine.IconAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.IdentifiersModule",
+      "status": "static",
+      "type": "UnityEngine.Identifiers.Identifiers"
     },
     {
       "category": "class",
@@ -8579,6 +8597,18 @@
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.UnassignedReferenceException"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.UnityConsentModule",
+      "status": "candidate",
+      "type": "UnityEngine.UnityConsent.ConsentState"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UnityConsentModule",
+      "status": "static",
+      "type": "UnityEngine.UnityConsent.EndUserConsent"
     },
     {
       "category": "class",
