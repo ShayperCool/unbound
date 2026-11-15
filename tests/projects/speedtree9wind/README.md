@@ -43,7 +43,13 @@ which starts from its asset's wind at its first draw while the zones reach it an
 the directional wind plus the spherical zones' wind at the tree; out of reach its noise returns
 to its asset's wind's and it takes its asset's wind again. The draw takes the zones active when it
 draws, as long as a spherical zone was active at the frame's wind update (`GustyB` gets its local
-wind in the frame its zone is made). The earlier rows of the reference are unchanged.
+wind in the frame its zone is made). Controls: a whole tree (`GroupLevel1`, its LOD group held at
+its second level) under a zone from frame 440 (the draw starts the local wind on the group's first
+level, and the drawn level joins it at its next draw), the zone out of reach (470), back in reach
+while the trees return to the asset's wind (474) and out again (480); a tree that first draws
+(650) while no zone is active but trees still hold winds of their own (it gets its constants: those
+winds count as wind in the world); a spherical zone reaching `LateSettled` while its asset's wind
+is at rest (700: its local wind starts from rest). The earlier rows of the reference are unchanged.
 
     python3 tests/projects/speedtree9wind/make_trees.py              # rewrite the trees
     python3 tests/projects/speedtree9wind/run.py record --label A     # Editor capture (GPU)

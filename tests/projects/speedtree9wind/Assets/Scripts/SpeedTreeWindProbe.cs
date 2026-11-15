@@ -37,8 +37,9 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         106, 107, 115, 121, 125, 131, 132, 140, 160, 200, 201, 250, 300, 301, 330, 336, 340,
         341, 345, 351, 353, 355, 361, 362, 370, 400, 401, 402, 410, 420,
         // Spherical zones reaching trees.
-        425, 426, 427, 428, 429, 430, 432, 435, 440, 450, 460, 480, 490, 491, 492, 493, 495, 500, 501, 502, 503, 505,
-        510, 520, 530, 540, 541, 542, 545, 550, 560, 570, 580, 581, 582, 585, 590, 600, 620, 640, 660, 700, 740, 780,
+        425, 426, 427, 428, 429, 430, 432, 435, 440, 441, 442, 443, 445, 450, 460, 470, 471, 472, 474, 475, 476, 478,
+        480, 481, 482, 485, 490, 491, 492, 493, 495, 500, 501, 502, 503, 505, 510, 520, 530, 540, 541, 542, 545, 550,
+        560, 570, 580, 581, 582, 585, 590, 600, 620, 640, 650, 651, 652, 660, 700, 701, 702, 703, 705, 710, 720, 740, 780,
     };
     const int LastFrame = 780;
 
@@ -54,7 +55,7 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
     Texture2D m_Read;
     GameObject m_Gusty, m_Calm;
     Material m_Dump;
-    WindZone m_A, m_B, m_Sphere, m_Still, m_Again, m_NearA, m_NearB;
+    WindZone m_A, m_B, m_Sphere, m_Still, m_Again, m_NearA, m_NearB, m_NearGroup, m_Rest;
     int m_Frame;
     bool m_Failed;
 
@@ -117,16 +118,24 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         copy.name = name;
         copy.layer = layer;
         copy.transform.localScale = scale;
-        var quad = new Mesh
-        {
-            vertices = new[] { new Vector3(-1f, -1f, 0f), new Vector3(1f, -1f, 0f), new Vector3(1f, 1f, 0f), new Vector3(-1f, 1f, 0f) },
-            uv = new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f) },
-            triangles = new[] { 0, 2, 1, 0, 3, 2 },
-        };
-        copy.GetComponent<MeshFilter>().sharedMesh = quad;
+        copy.GetComponent<MeshFilter>().sharedMesh = Quad();
         var renderer = copy.GetComponent<MeshRenderer>();
         renderer.sharedMaterials = new[] { material };
         renderer.motionVectorGenerationMode = motion;
+        m_Trees.Add((name, MakeCamera(name, at, layer), recorded, twin));
+    }
+
+    static Mesh Quad() => new Mesh
+    {
+        vertices = new[] { new Vector3(-1f, -1f, 0f), new Vector3(1f, -1f, 0f), new Vector3(1f, 1f, 0f), new Vector3(-1f, 1f, 0f) },
+        uv = new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f) },
+        triangles = new[] { 0, 2, 1, 0, 3, 2 },
+    };
+
+    /// <summary>An orthographic camera that sees only <paramref name="layer"/> around
+    /// <paramref name="at"/> and renders into the dump target when asked.</summary>
+    Camera MakeCamera(string name, Vector3 at, int layer)
+    {
         var camera = new GameObject(name + "Camera").AddComponent<Camera>();
         camera.transform.SetPositionAndRotation(at + new Vector3(0f, 0f, -5f), Quaternion.identity);
         camera.orthographic = true;
@@ -136,7 +145,7 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         camera.backgroundColor = Color.clear;
         camera.targetTexture = m_Target;
         camera.enabled = false;
-        m_Trees.Add((name, camera, recorded, twin));
+        return camera;
     }
 
     void Update()
@@ -191,7 +200,18 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         // A spherical zone reaching GustyA (a local wind of its own), then moved out of reach
         // (the local wind returns to the asset's wind); another reaching GustyB (per-object motion
         // vectors), then the directional wind goes (spherical wind only), then both zones go.
-        if (m_Frame == 425) m_NearA = Zone("NearA", null, WindZoneMode.Spherical, 1.2f, Quaternion.identity, new Vector3(98f, 0.5f, 1f), 4f);
+        if (m_Frame == 425)
+        {
+            m_NearA = Zone("NearA", null, WindZoneMode.Spherical, 1.2f, Quaternion.identity, new Vector3(98f, 0.5f, 1f), 4f);
+            // A whole tree (its LOD group) drawing its second level.
+            Group("GroupLevel1", m_Gusty, 24, new Vector3(700f, 0f, 0f), 1);
+        }
+        // A zone reaching the group, out of reach, back in reach while its trees return to the
+        // asset's wind, and out again.
+        if (m_Frame == 440) m_NearGroup = Zone("NearGroup", null, WindZoneMode.Spherical, 1f, Quaternion.identity, new Vector3(701f, 0.5f, -1f), 4f);
+        if (m_Frame == 470) m_NearGroup.transform.position = new Vector3(700f, 0f, -60f);
+        if (m_Frame == 474) m_NearGroup.transform.position = new Vector3(701f, 0.5f, -1f);
+        if (m_Frame == 480) m_NearGroup.transform.position = new Vector3(700f, 0f, -60f);
         if (m_Frame == 490) m_NearA.transform.position = new Vector3(100f, 0f, -60f);
         if (m_Frame == 500) m_NearB = Zone("NearB", null, WindZoneMode.Spherical, 0.8f, Quaternion.identity, new Vector3(201.5f, -0.5f, -2f), 5f);
         if (m_Frame == 540) m_Again.gameObject.SetActive(false);
@@ -199,7 +219,33 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         {
             m_NearA.gameObject.SetActive(false);
             m_NearB.gameObject.SetActive(false);
+            m_NearGroup.gameObject.SetActive(false);
         }
+        // A tree that first draws while the only winds are the trees' own (no zone is active).
+        if (m_Frame == 650)
+            Tree("LateHeld", "Calm", m_Calm, m_Dump, 23, new Vector3(800f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object, 5, 6);
+        // A spherical zone reaching a tree whose asset's wind is at rest.
+        if (m_Frame == 700) m_Rest = Zone("Rest", null, WindZoneMode.Spherical, 1f, Quaternion.identity, new Vector3(401f, 0.5f, -1f), 4f);
+    }
+
+    /// <summary>An instance of a whole tree (its LOD group) whose levels draw quads with the dump
+    /// material on a layer of its own, the group held at one level, and an orthographic camera
+    /// that sees it.</summary>
+    void Group(string name, GameObject prefab, int layer, Vector3 at, int level)
+    {
+        var copy = Instantiate(prefab, at, Quaternion.identity);
+        copy.name = name;
+        foreach (var renderer in copy.GetComponentsInChildren<MeshRenderer>(true))
+        {
+            renderer.gameObject.layer = layer;
+            renderer.GetComponent<MeshFilter>().sharedMesh = Quad();
+            renderer.sharedMaterials = new[] { m_Dump };
+            renderer.motionVectorGenerationMode = MotionVectorGenerationMode.Object;
+        }
+        copy.GetComponent<LODGroup>().ForceLOD(level);
+        var recorded = new bool[k_Names.Length];
+        for (int i = 0; i < recorded.Length; i++) recorded[i] = true;
+        m_Trees.Add((name, MakeCamera(name, at, layer), recorded, null));
     }
 
     static WindZone Zone(string name, Transform parent, WindZoneMode mode, float main, Quaternion rotation, Vector3 position, float radius = 10f)
