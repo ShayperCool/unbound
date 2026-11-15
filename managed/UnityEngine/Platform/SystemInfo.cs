@@ -249,7 +249,10 @@ namespace UnityEngine
             int i = (int)format;
             var usages = Device.Caps.Usages;
             if (i <= 0 || i >= usages.Length) return false;
-            return (usages[i] & (long)usage) == (long)usage;
+            long supported = usages[i];
+            if (Compat.DeviceTextureReadback && Device.Alpha8Readback == Alpha8ReadbackMode.Red && format == GraphicsFormatUtility.Texture2DAlpha8)
+                supported |= (long)GraphicsFormatUsage.ReadPixels;
+            return (supported & (long)usage) == (long)usage;
         }
 
         [global::System.@ObsoleteAttribute("Use overload with a GraphicsFormatUsage parameter instead", false)]

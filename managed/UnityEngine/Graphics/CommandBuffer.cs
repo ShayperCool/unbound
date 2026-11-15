@@ -845,16 +845,18 @@ namespace UnityEngine.Rendering
         void RequestAsyncReadback(GpuBufferStorage src, int size, int offset, Action<AsyncGPUReadbackRequest> callback) =>
             Add(c => AsyncReadbacks.Start(AsyncReadbacks.Buffer(src, size, offset, callback)));
 
-        public void RequestAsyncReadback(Texture src, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncGPUReadback.Request(src, 0, callback));
-        public void RequestAsyncReadback(Texture src, int mipIndex, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncGPUReadback.Request(src, mipIndex, callback));
-        public void RequestAsyncReadback(Texture src, int mipIndex, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncGPUReadback.Request(src, mipIndex, dstFormat, callback));
-        public void RequestAsyncReadback(Texture src, int mipIndex, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncGPUReadback.Request(src, mipIndex, dstFormat, callback));
+        // Command requests share conversion and completion, without direct-request source validation
+        // (6000.0.71f1, tests/projects/nativegfx readbackValidation.command.*).
+        public void RequestAsyncReadback(Texture src, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncReadbacks.Start(AsyncReadbacks.Texture(src, 0, AsyncReadbacks.Own(src), callback, validateSource: false)));
+        public void RequestAsyncReadback(Texture src, int mipIndex, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, AsyncReadbacks.Own(src), callback, validateSource: false)));
+        public void RequestAsyncReadback(Texture src, int mipIndex, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true, validateSource: false)));
+        public void RequestAsyncReadback(Texture src, int mipIndex, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true, validateSource: false)));
         public void RequestAsyncReadback(Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, Action<AsyncGPUReadbackRequest> callback) =>
-            Add(c => AsyncGPUReadback.Request(src, mipIndex, x, width, y, height, z, depth, callback));
+            Add(c => AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, AsyncReadbacks.Own(src), callback, validateSource: false)));
         public void RequestAsyncReadback(Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) =>
-            Add(c => AsyncGPUReadback.Request(src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+            Add(c => AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true, validateSource: false)));
         public void RequestAsyncReadback(Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) =>
-            Add(c => AsyncGPUReadback.Request(src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+            Add(c => AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true, validateSource: false)));
 
         /// <summary>The native array a command fills: its memory, captured when recorded (Unity
         /// takes the array by reference; the command writes into it when its request completes).</summary>
@@ -876,19 +878,19 @@ namespace UnityEngine.Rendering
         public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, GraphicsBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
             RequestBufferIntoNativeArray(ref output, src?.Storage, size, offset, callback);
         public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, 0, callback));
+            Into(ref output, a => AsyncReadbacks.Into(ref a, AsyncReadbacks.Texture(src, 0, AsyncReadbacks.Own(src), callback, validateSource: false)));
         public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, callback));
+            Into(ref output, a => AsyncReadbacks.Into(ref a, AsyncReadbacks.Texture(src, mipIndex, AsyncReadbacks.Own(src), callback, validateSource: false)));
         public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, dstFormat, callback));
+            Into(ref output, a => AsyncReadbacks.Into(ref a, AsyncReadbacks.Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true, validateSource: false)));
         public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, dstFormat, callback));
+            Into(ref output, a => AsyncReadbacks.Into(ref a, AsyncReadbacks.Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true, validateSource: false)));
         public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, x, width, y, height, z, depth, src?.graphicsFormat ?? GraphicsFormat.R8G8B8A8_SRGB, callback));
+            Into(ref output, a => AsyncReadbacks.Into(ref a, AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, AsyncReadbacks.Own(src), callback, reportUnsupported: true, validateSource: false)));
         public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+            Into(ref output, a => AsyncReadbacks.Into(ref a, AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true, validateSource: false)));
         public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+            Into(ref output, a => AsyncReadbacks.Into(ref a, AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true, validateSource: false)));
 
         /// <summary>The native slice a command fills, captured when recorded as an array's is.</summary>
         void IntoSlice<T>(ref NativeSlice<T> output, Func<NativeSlice<T>, AsyncGPUReadbackRequest> request) where T : struct
@@ -909,19 +911,19 @@ namespace UnityEngine.Rendering
         public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, GraphicsBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
             RequestBufferIntoNativeSlice(ref output, src?.Storage, size, offset, callback);
         public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, 0, callback));
+            IntoSlice(ref output, s => AsyncReadbacks.Into(ref s, AsyncReadbacks.Texture(src, 0, AsyncReadbacks.Own(src), callback, validateSource: false)));
         public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, mipIndex, callback));
+            IntoSlice(ref output, s => AsyncReadbacks.Into(ref s, AsyncReadbacks.Texture(src, mipIndex, AsyncReadbacks.Own(src), callback, validateSource: false)));
         public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, mipIndex, dstFormat, callback));
+            IntoSlice(ref output, s => AsyncReadbacks.Into(ref s, AsyncReadbacks.Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true, validateSource: false)));
         public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, mipIndex, dstFormat, callback));
+            IntoSlice(ref output, s => AsyncReadbacks.Into(ref s, AsyncReadbacks.Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true, validateSource: false)));
         public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, mipIndex, x, width, y, height, z, depth, src?.graphicsFormat ?? GraphicsFormat.R8G8B8A8_SRGB, callback));
+            IntoSlice(ref output, s => AsyncReadbacks.Into(ref s, AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, AsyncReadbacks.Own(src), callback, reportUnsupported: true, validateSource: false)));
         public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+            IntoSlice(ref output, s => AsyncReadbacks.Into(ref s, AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true, validateSource: false)));
         public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
-            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+            IntoSlice(ref output, s => AsyncReadbacks.Into(ref s, AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true, validateSource: false)));
 
         // ------------------------------------------------------------ global state
 

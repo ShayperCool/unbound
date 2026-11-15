@@ -261,11 +261,40 @@ namespace Unbound.Runtime
             || (Compat.RenderingMeasured && GraphicsFormatUtility.GetComponentCount(format) > 0
                 && !GraphicsFormatUtility.IsDepthStencilFormat(format));
 
+        internal static ReadbackFormat Own(Texture src) => src == null ? null : ReadbackFormat.Of(src.graphicsFormat);
+
+        internal static Result Texture(Texture src, int mipIndex, ReadbackFormat format, Action<UnityEngine.Rendering.AsyncGPUReadbackRequest> callback, bool reportUnsupported = false, bool validateSource = true)
+        {
+            if (src == null) throw new ArgumentNullException("src");
+            // A dynamically scaled render texture's whole images (their scaled size).
+            var rt = src as RenderTexture;
+            int fullWidth = rt != null ? rt.ScaledWidth : src.width, fullHeight = rt != null ? rt.ScaledHeight : src.height;
+            int w = Math.Max(1, fullWidth >> Math.Max(0, mipIndex)), h = Math.Max(1, fullHeight >> Math.Max(0, mipIndex));
+            return Texture(src, mipIndex, 0, w, 0, h, 0, LayerCount(src, mipIndex), format, callback, reportUnsupported, validateSource);
+        }
+
+        static void UnsupportedReadPixels(GraphicsFormat format) =>
+            Debug.LogError($"'{format}' doesn't support ReadPixels usage on this platform. Async GPU readback failed.");
+
         internal static Result Texture(Texture src, int mip, int x, int width, int y, int height, int z, int depth, ReadbackFormat format,
-            Action<UnityEngine.Rendering.AsyncGPUReadbackRequest> callback, bool reportUnsupported = false)
+            Action<UnityEngine.Rendering.AsyncGPUReadbackRequest> callback, bool reportUnsupported = false, bool validateSource = true)
         {
             if (src == null) throw new ArgumentNullException("src");
             var result = new Result { Callback = callback };
+            // Direct explicit-format requests validate the source before the request's own checks.
+            // Command-buffer requests omit this entry-point diagnostic.
+            // This diagnostic alone does not prevent converted texture data from being returned
+            // (6000.0.71f1, tests/projects/nativegfx readbackValidation.*).
+            bool reportedSource = Compat.RenderingMeasured && validateSource && reportUnsupported
+                && GraphicsDeviceProfile.Current.ReadPixelsSupportIsMeasured(src.graphicsFormat)
+                && !SystemInfo.IsFormatSupported(src.graphicsFormat, GraphicsFormatUsage.ReadPixels);
+            if (reportedSource) UnsupportedReadPixels(src.graphicsFormat);
+            if (Compat.RenderingMeasured && src.graphicsFormat == GraphicsFormat.None)
+            {
+                Debug.LogError("AsyncGPUReadback - None (0) graphics format is not supported as source for async read back");
+                result.HasError = true;
+                return result;
+            }
             if (mip < 0 || mip >= Math.Max(1, src.mipmapCount))
             {
                 Debug.LogError($"AsyncGPUReadback - Invalid mipIndex: {mip}");
@@ -300,8 +329,9 @@ namespace Unbound.Runtime
                 result.Width = width;
                 result.Height = height;
                 result.Depth = depth;
-                if (reportUnsupported)
-                    Debug.LogError($"'{GraphicsFormatUtility.Texture2DAlpha8}' doesn't support ReadPixels usage on this platform. Async GPU readback failed.");
+                if (reportUnsupported && !reportedSource && (!Compat.RenderingMeasured
+                    || !GraphicsDeviceProfile.Current.ReadPixelsSupportIsMeasured(GraphicsFormatUtility.Texture2DAlpha8)))
+                    UnsupportedReadPixels(GraphicsFormatUtility.Texture2DAlpha8);
                 result.HasError = true;
                 return result;
             }
@@ -310,7 +340,7 @@ namespace Unbound.Runtime
             if (src is RenderTexture && src.graphicsFormat != GraphicsFormat.None
                 && !SystemInfo.IsFormatSupported(src.graphicsFormat, GraphicsFormatUsage.ReadPixels))
             {
-                Debug.LogError($"'{src.graphicsFormat}' doesn't support ReadPixels usage on this platform. Async GPU readback failed.");
+                if (!reportedSource) UnsupportedReadPixels(src.graphicsFormat);
                 result.HasError = true;
                 return result;
             }
@@ -321,7 +351,6 @@ namespace Unbound.Runtime
                 return result;
             }
             ulong handle = TextureHandles.Of(src);
-            bool floats = !EightBit(src.graphicsFormat);
             bool alpha = src switch
             {
                 Texture2D t => t.format == TextureFormat.Alpha8,
@@ -331,7 +360,11 @@ namespace Unbound.Runtime
                 CubemapArray t => t.format == TextureFormat.Alpha8,
                 _ => false,
             };
-            int channels = MissingChannelsReadAsOne(src.graphicsFormat) ? (int)GraphicsFormatUtility.GetComponentCount(src.graphicsFormat) : 4;
+            bool alphaAsRed = alpha && Compat.DeviceTextureReadback && GraphicsDeviceProfile.Current.Alpha8Readback == Alpha8ReadbackMode.Red;
+            bool floats = !EightBit(src.graphicsFormat) && !alphaAsRed;
+            int channels = alphaAsRed ? 1
+                : MissingChannelsReadAsOne(src.graphicsFormat) ? (int)GraphicsFormatUtility.GetComponentCount(src.graphicsFormat) : 4;
+            alpha &= !alphaAsRed;
             result.Layers = new byte[depth][];
             for (int layer = 0; layer < depth; layer++)
             {
@@ -339,7 +372,9 @@ namespace Unbound.Runtime
                 if (texels == null) return Unavailable(result);
                 result.Layers[layer] = format.Encode(texels, width * height, floats, alpha, channels,
                     Compat.DeviceTextureReadback && GraphicsDeviceProfile.Current.FramebufferReadback
-                        && src.graphicsFormat == GraphicsFormat.R16G16B16_SNorm);
+                        && src.graphicsFormat == GraphicsFormat.R16G16B16_SNorm,
+                    // Our Alpha8 upload keeps its value in RGBA's alpha component.
+                    redSourceChannel: alphaAsRed ? 3 : 0);
             }
             result.Width = width;
             result.Height = height;
@@ -421,7 +456,7 @@ namespace Unbound.Runtime
         /// <summary><paramref name="texels"/> as the renderer reads them: 4 bytes per texel of an
         /// 8-bit RGBA texture (1 of a one-channel one), 4 floats when <paramref name="floats"/>, of
         /// which those from <paramref name="sourceChannels"/> on read as 1.</summary>
-        internal byte[] Encode(byte[] texels, int count, bool floats, bool alpha = false, int sourceChannels = 4, bool clampNegative = false)
+        internal byte[] Encode(byte[] texels, int count, bool floats, bool alpha = false, int sourceChannels = 4, bool clampNegative = false, int redSourceChannel = 0)
         {
             int inChannels = floats ? 4 : Math.Max(1, texels.Length / Math.Max(1, count));
             var output = new byte[count * m_Channels.Length * m_Size];
@@ -430,11 +465,12 @@ namespace Unbound.Runtime
             {
                 foreach (int c in m_Channels)
                 {
+                    int storedChannel = inChannels == 4 && c == 0 ? redSourceChannel : c;
                     float f;
                     byte b;
                     if (floats)
                     {
-                        f = c < sourceChannels ? BitConverter.ToSingle(texels, (i * 4 + c) * 4) : 1f;
+                        f = c < sourceChannels ? BitConverter.ToSingle(texels, (i * 4 + storedChannel) * 4) : 1f;
                         if (clampNegative) f = Math.Max(0f, f);
                         b = (byte)Math.Round(Math.Clamp(f, 0f, 1f) * 255f, MidpointRounding.AwayFromZero);
                     }
@@ -442,7 +478,7 @@ namespace Unbound.Runtime
                     {
                         // Explicit conversion fills missing color channels; Alpha8 keeps alpha.
                         b = !alpha && c >= sourceChannels ? (byte)255
-                            : inChannels == 4 ? texels[i * 4 + c]
+                            : inChannels == 4 ? texels[i * 4 + storedChannel]
                             : alpha ? (c == 3 ? texels[i * inChannels] : (byte)0)
                             : c < inChannels ? texels[i * inChannels + c] : c == 3 ? (byte)255 : (byte)0;
                         f = b * (1f / 255f);
@@ -527,26 +563,14 @@ namespace UnityEngine.Rendering
         public static AsyncGPUReadbackRequest Request(GraphicsBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback = null) =>
             AsyncReadbacks.Start(Buffer(src?.Storage, size, offset, callback));
 
-        static AsyncReadbacks.Result Texture(Texture src, int mipIndex, ReadbackFormat format, Action<AsyncGPUReadbackRequest> callback, bool reportUnsupported = false)
-        {
-            if (src == null) throw new ArgumentNullException("src");
-            // A dynamically scaled render texture's whole images (their scaled size).
-            var rt = src as RenderTexture;
-            int fullWidth = rt != null ? rt.ScaledWidth : src.width, fullHeight = rt != null ? rt.ScaledHeight : src.height;
-            int w = Math.Max(1, fullWidth >> Math.Max(0, mipIndex)), h = Math.Max(1, fullHeight >> Math.Max(0, mipIndex));
-            return AsyncReadbacks.Texture(src, mipIndex, 0, w, 0, h, 0, AsyncReadbacks.LayerCount(src, mipIndex), format, callback, reportUnsupported);
-        }
-
-        static ReadbackFormat Own(Texture src) => src == null ? null : ReadbackFormat.Of(src.graphicsFormat);
-
         public static AsyncGPUReadbackRequest Request(Texture src, int mipIndex = 0, Action<AsyncGPUReadbackRequest> callback = null) =>
-            AsyncReadbacks.Start(Texture(src, mipIndex, Own(src), callback));
+            AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, AsyncReadbacks.Own(src), callback));
         public static AsyncGPUReadbackRequest Request(Texture src, int mipIndex, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) =>
-            AsyncReadbacks.Start(Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
+            AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
         public static AsyncGPUReadbackRequest Request(Texture src, int mipIndex, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) =>
-            AsyncReadbacks.Start(Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
+            AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
         public static AsyncGPUReadbackRequest Request(Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, Action<AsyncGPUReadbackRequest> callback = null) =>
-            AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, Own(src), callback));
+            AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, AsyncReadbacks.Own(src), callback));
         public static AsyncGPUReadbackRequest Request(Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) =>
             AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
         public static AsyncGPUReadbackRequest Request(Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) =>
@@ -561,11 +585,11 @@ namespace UnityEngine.Rendering
         public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, GraphicsBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
             AsyncReadbacks.Into(ref output, Buffer(src?.Storage, size, offset, callback));
         public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex = 0, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
-            AsyncReadbacks.Into(ref output, Texture(src, mipIndex, Own(src), callback));
+            AsyncReadbacks.Into(ref output, AsyncReadbacks.Texture(src, mipIndex, AsyncReadbacks.Own(src), callback));
         public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
-            AsyncReadbacks.Into(ref output, Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
+            AsyncReadbacks.Into(ref output, AsyncReadbacks.Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
         public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
-            AsyncReadbacks.Into(ref output, Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
+            AsyncReadbacks.Into(ref output, AsyncReadbacks.Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
         public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
             AsyncReadbacks.Into(ref output, AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
         public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
@@ -580,11 +604,11 @@ namespace UnityEngine.Rendering
         public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, GraphicsBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
             AsyncReadbacks.Into(ref output, Buffer(src?.Storage, size, offset, callback));
         public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex = 0, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
-            AsyncReadbacks.Into(ref output, Texture(src, mipIndex, Own(src), callback));
+            AsyncReadbacks.Into(ref output, AsyncReadbacks.Texture(src, mipIndex, AsyncReadbacks.Own(src), callback));
         public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
-            AsyncReadbacks.Into(ref output, Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
+            AsyncReadbacks.Into(ref output, AsyncReadbacks.Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
         public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
-            AsyncReadbacks.Into(ref output, Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
+            AsyncReadbacks.Into(ref output, AsyncReadbacks.Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
         public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
             AsyncReadbacks.Into(ref output, AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
         public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>

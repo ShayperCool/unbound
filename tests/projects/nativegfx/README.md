@@ -8,13 +8,14 @@ uses the low-level native plugin interface and records what it gets; the scripts
     python3 tests/projects/nativegfx/run.py check      # engine run compared with Reference/
 
 Current NVIDIA primary results against Unity 6000.0.71f1 are OpenGL Core 554/613 with
-59 declared residuals and Vulkan 1040/1062 with 22. The OpenGL stencil profile is
-582/654 with 72; the Vulkan stencil profile is 1274/1296 with 22 declared
+59 declared residuals and Vulkan 1217/1236 with 19. The OpenGL stencil profile is
+582/654 with 72; the Vulkan stencil profile is 1451/1470 with 19 declared
 residuals. Vulkan attachment capabilities and multisample color
 usage close 63 of its 64 earlier differences. All 518 earlier Vulkan reference
 rows are byte-identical; 49 allocation controls and 298 resolve-access and
 setter controls are appended. The foreign-format extension adds 70 rows to both Vulkan profiles; the stencil
-profile also includes its 25 publication rows and 209 publication controls.
+profile also includes its 25 publication rows and 209 publication controls. Both Vulkan
+profiles append 174 readback controls; the three earlier source-diagnostic differences close.
 The depth-shape extension adds 49 OpenGL rows and 73 Vulkan rows to both profiles.
 It exposes 11 OpenGL and 16 Vulkan depth-storage or diagnostic differences; these are
 recorded separately from the earlier residuals. All prior 564, 935, 605 and 960 rows
@@ -401,8 +402,40 @@ automatically converts to the requested destination format and advises checking 
 support. In both NVIDIA Editor repeats these three requests return valid data with hasError
 false but also emit unsupported-source-format errors. Each new `readback.logs` row retains
 all those diagnostics independently; the earlier aggregate log row remains unchanged.
-Unbound returns the same data without those errors, leaving three explicit diagnostic
-residuals. This observation does not establish other unsupported-source requests as safe.
+Unbound now reports the same source-format errors and returns the matching data.
+`readbackValidation.*` adds 174 controls per Vulkan profile. Owned 3x2 RGBA32 and
+BGRA32 textures distinguish implicit and explicit destination formats, whole and
+regional requests, and native-array/slice destinations. Supported RGBA requests
+are quiet. Direct explicit BGRA requests log the unsupported source and still return
+data; implicit requests omit that warning. A bad mip reports the source warning first
+only for direct explicit-format requests. A depth-only source instead fails its
+source-format check before mip validation, with the extra ReadPixels warning only
+on the direct explicit request.
+
+Command-buffer requests omit that entry-point diagnostic, including native-array
+and slice destinations. Recording is quiet; a bad mip reports its error when the
+buffer executes. The selected release's [direct bindings](https://github.com/Unity-Technologies/UnityCsReference/blob/6000.0/Runtime/Export/Graphics/AsyncGPUReadback.bindings.cs)
+and [command-buffer bindings](https://github.com/Unity-Technologies/UnityCsReference/blob/6000.0/Runtime/Export/Graphics/RenderingCommandBuffer.bindings.cs)
+use those different request paths. The shared conversion and completion code retains
+that distinction.
+
+Vulkan Alpha8 readback reports ReadPixels support for its unnamed graphics-format
+value and reads its stored value as red, filling the other channels with one. An
+Alpha8 destination therefore reads the filled alpha; an RGBA destination shows the
+varying red values. RGBA source controls use alpha 32 with different RGB bytes:
+conversion to Alpha8 returns 32. Unbound maps its own RGBA alpha storage into that
+measured red representation before conversion. OpenGL's unsupported Alpha8 destination
+keeps its immediate failure, dimensions and single source diagnostic, as recorded
+by `tests/projects/gpubuffers --controls`.
+
+Two independent NVIDIA Editor captures agree on every added row and preserve all
+earlier rows. Compat.RenderingMeasured selects source validation and
+Compat.DeviceTextureReadback selects the measured Alpha8 device rule. New source
+diagnostics require measured usage information: named graphics formats and Alpha8
+on the measured Linux profiles. Unnamed ARGB32 capability values and Metal Alpha8
+remain unmeasured and retain their earlier source-diagnostic policy. Other releases
+retain the earlier unmeasured validation and Alpha8 policies. These observations
+do not establish other unsupported-source requests as safe.
 The [Texture2D factory contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.CreateExternalTexture.html)
 requires metadata matching the underlying 2D image. These controls use matching metadata;
 wrapper destruction is tested after writes and rewrapping reads the surviving owner's

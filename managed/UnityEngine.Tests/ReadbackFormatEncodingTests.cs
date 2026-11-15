@@ -25,6 +25,16 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void RedReadbackCanUseStoredAlphaAndFillMissingComponents()
+        {
+            var stored = new byte[] { 10, 20, 30, 41 };
+            Assert.Equal(new byte[] { 41, 255, 255, 255 }, ReadbackFormat.Of(TextureFormat.RGBA32)
+                .Encode(stored, 1, false, sourceChannels: 1, redSourceChannel: 3));
+            Assert.Equal(new byte[] { 255 }, ReadbackFormat.Of(TextureFormat.Alpha8)
+                .Encode(stored, 1, false, sourceChannels: 1, redSourceChannel: 3));
+        }
+
+        [Fact]
         public void UnsupportedAlphaReadbackRetainsDimensionsAndCompletesWithNoData()
         {
             var source = new Texture2D(16, 1, TextureFormat.Alpha8, false);

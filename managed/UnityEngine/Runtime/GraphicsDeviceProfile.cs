@@ -4,6 +4,8 @@ using UnityEngine.Rendering;
 
 namespace Unbound.Runtime
 {
+    internal enum Alpha8ReadbackMode { Unmeasured, Unsupported, Red }
+
     /// <summary>
     /// The run's graphics device and what the Editor answers on it, as the native side chose it
     /// once at startup (unbound_compat::graphics: `--force-vulkan`/`--force-glcore`, the project's
@@ -27,6 +29,16 @@ namespace Unbound.Runtime
         internal readonly bool ReversedZ;
         internal readonly bool UsesLoadStoreActions;
         internal readonly bool FramebufferReadback;
+        /// <summary>Alpha8 readback uses readable red storage on Vulkan
+        /// (6000.0.71f1 NVIDIA, tests/projects/nativegfx readbackValidation.alpha.*).</summary>
+        internal readonly Alpha8ReadbackMode Alpha8Readback;
+        static readonly System.Collections.Generic.HashSet<GraphicsFormat> s_NamedFormats =
+            new System.Collections.Generic.HashSet<GraphicsFormat>(System.Enum.GetValues<GraphicsFormat>());
+
+        // Named formats have captured capability rows. Additional values reported by texture
+        // metadata need their own controls before they can introduce source diagnostics.
+        internal bool ReadPixelsSupportIsMeasured(GraphicsFormat format) => s_NamedFormats.Contains(format)
+            || (format == GraphicsFormatUtility.Texture2DAlpha8 && Alpha8Readback != Alpha8ReadbackMode.Unmeasured);
         internal readonly bool SupportsMultisampleResolveStencil;
         internal readonly bool SupportsMultisampleAutoResolve;
         internal readonly int ConstantBufferOffsetAlignment;
@@ -118,10 +130,11 @@ namespace Unbound.Runtime
         GraphicsDeviceProfile(GraphicsDeviceType type, bool uvStartsAtTop, bool reversedZ, bool loadStore,
             bool resolveStencil, bool autoResolve, int cbufferAlignment, RenderingThreadingMode threading,
             GraphicsFormat depthStencil, BatchBufferTarget batchTarget, GraphicsCapsTable.Device caps,
-            System.Func<MachineIdentity.Gpu> identity, bool framebufferReadback)
+            System.Func<MachineIdentity.Gpu> identity, bool framebufferReadback, Alpha8ReadbackMode alpha8Readback = Alpha8ReadbackMode.Unmeasured)
         {
             Type = type;
             FramebufferReadback = framebufferReadback;
+            Alpha8Readback = alpha8Readback;
             UVStartsAtTop = uvStartsAtTop;
             ReversedZ = reversedZ;
             UsesLoadStoreActions = loadStore;
@@ -139,7 +152,7 @@ namespace Unbound.Runtime
             GraphicsDeviceType.OpenGLCore, uvStartsAtTop: false, reversedZ: false, loadStore: false,
             resolveStencil: false, autoResolve: false, cbufferAlignment: 256,
             RenderingThreadingMode.Direct, GraphicsFormat.D24_UNorm_S8_UInt,
-            BatchBufferTarget.ConstantBuffer, GraphicsCapsTable.OpenGLCore, MachineIdentity.ReadOpenGl, framebufferReadback: true)
+            BatchBufferTarget.ConstantBuffer, GraphicsCapsTable.OpenGLCore, MachineIdentity.ReadOpenGl, framebufferReadback: true, alpha8Readback: Alpha8ReadbackMode.Unsupported)
         {
             MaxTiledPixelStorage = int.MaxValue,
             TiledStorageMeasured = true,
@@ -149,7 +162,7 @@ namespace Unbound.Runtime
             GraphicsDeviceType.Vulkan, uvStartsAtTop: true, reversedZ: true, loadStore: true,
             resolveStencil: true, autoResolve: true, cbufferAlignment: 64,
             RenderingThreadingMode.SingleThreaded, GraphicsFormat.D32_SFloat_S8_UInt,
-            BatchBufferTarget.RawBuffer, GraphicsCapsTable.Vulkan, VulkanIdentity.Read, framebufferReadback: false);
+            BatchBufferTarget.RawBuffer, GraphicsCapsTable.Vulkan, VulkanIdentity.Read, framebufferReadback: false, alpha8Readback: Alpha8ReadbackMode.Red);
 
         /// <summary>The macOS Editor's device (tests/projects/urp CapsProbe
         /// `unity-6000.0.71f1/caps-metal.jsonl`, arm64, Apple M2 Pro).</summary>
