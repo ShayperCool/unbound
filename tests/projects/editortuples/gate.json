@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/editortuples/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION"
+  ],
+  "summary": "\\d+/\\d+ exact API rows; \\d+ differences",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/Tuples.cs"
+  ]
+}

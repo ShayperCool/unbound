@@ -26358,16 +26358,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public override void OnSceneViewGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TriggerModuleUI.OnSceneViewGUI"); }
         [global::Unbound.Stub] public override void UpdateCullingSupportedString(ref string text) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TriggerModuleUI.UpdateCullingSupportedString"); }
     }
-    unsafe static partial class Tuple
-    {
-        [global::Unbound.Stub] public static global::UnityEditor.Tuple<T1, T2, T3, T4, T5, T6, T7, global::UnityEditor.Tuple<T8>> Create<T1, T2, T3, T4, T5, T6, T7, T8>(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.Create"); return default; }
-        [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2, int h3) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
-        [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2, int h3, int h4) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
-        [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2, int h3, int h4, int h5) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
-        [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2, int h3, int h4, int h5, int h6) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
-        [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2, int h3, int h4, int h5, int h6, int h7) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
-        [global::Unbound.Stub] internal static int CombineHashCodes(int h1, int h2, int h3, int h4, int h5, int h6, int h7, int h8) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Tuple.CombineHashCodes"); return default; }
-    }
     [global::System.Serializable]
     [global::Unbound.Stub]
     internal unsafe partial struct TypeInformationManaged

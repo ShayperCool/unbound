@@ -608,6 +608,23 @@ VisualEffect:
         }
 
         [Fact]
+        public void EditorTupleHashesUseBalancedGroupsAndTheLastEightItems()
+        {
+            Assert.Equal(1152, UnityEditor.Tuple.Create(1, 2, 3).GetHashCode());
+            Assert.Equal(1252, UnityEditor.Tuple.Create(1, 2, 3, 4).GetHashCode());
+            var tail = UnityEditor.Tuple.Create(8, 9, 10, 11, 12, 13, 14, 15);
+            var a = new UnityEditor.Tuple<int, int, int, int, int, int, int, UnityEditor.Tuple<int, int, int, int, int, int, int, UnityEditor.Tuple<int>>>(1, 2, 3, 4, 5, 6, 7, tail);
+            var b = new UnityEditor.Tuple<int, int, int, int, int, int, int, UnityEditor.Tuple<int, int, int, int, int, int, int, UnityEditor.Tuple<int>>>(-1, -2, -3, -4, -5, -6, -7, tail);
+            Assert.NotEqual(a, b);
+            Assert.Equal(tail.GetHashCode(), a.GetHashCode());
+            Assert.Equal(a.GetHashCode(), b.GetHashCode());
+            Assert.Equal(15, ((UnityEditor.ITuple)a).Length);
+            Assert.Equal(15, ((UnityEditor.ITuple)a)[14]);
+            Assert.Throws<IndexOutOfRangeException>(() => ((UnityEditor.ITuple)a)[-1]);
+            Assert.Throws<IndexOutOfRangeException>(() => ((UnityEditor.ITuple)a)[15]);
+        }
+
+        [Fact]
         public void MemorySerializerRestoresInPlaceAndCopiesWithReferencesFollowing()
         {
             var first = ScriptableObject.CreateInstance<Link>();

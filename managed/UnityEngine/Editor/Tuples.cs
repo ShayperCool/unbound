@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using Unbound.Runtime;
 
 // The Editor's own tuple classes (UnityEditor.Tuple): editor code compiled inside the UnityEditor
 // namespace binds to these instead of System.Tuple. They behave as System.Tuple does: structural
@@ -41,8 +42,32 @@ namespace UnityEditor
         public static Tuple<T1, T2, T3, T4, T5, T6> Create<T1, T2, T3, T4, T5, T6>(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6) => new Tuple<T1, T2, T3, T4, T5, T6>(item1, item2, item3, item4, item5, item6);
         public static Tuple<T1, T2, T3, T4, T5, T6, T7> Create<T1, T2, T3, T4, T5, T6, T7>(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7) => new Tuple<T1, T2, T3, T4, T5, T6, T7>(item1, item2, item3, item4, item5, item6, item7);
 
-        /// <summary>Folds item hashes left to right, each step <c>((h &lt;&lt; 5) + h) ^ next</c>.</summary>
-        internal static int CombineHashCodes(int h1, int h2) => ((h1 << 5) + h1) ^ h2;
+        public static Tuple<T1, T2, T3, T4, T5, T6, T7, Tuple<T8>> Create<T1, T2, T3, T4, T5, T6, T7, T8>(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8)
+            => new Tuple<T1, T2, T3, T4, T5, T6, T7, Tuple<T8>>(item1, item2, item3, item4, item5, item6, item7, new Tuple<T8>(item8));
+
+        // Balanced tuple hash fold, confirmed by editortuples integer and comparer controls.
+        internal static int CombineHashCodes(int h1, int h2) => unchecked(((h1 << 5) + h1) ^ h2);
+        internal static int CombineHashCodes(int h1, int h2, int h3)
+            => Combine(stackalloc int[] { h1, h2, h3 });
+        internal static int CombineHashCodes(int h1, int h2, int h3, int h4)
+            => Combine(stackalloc int[] { h1, h2, h3, h4 });
+        internal static int CombineHashCodes(int h1, int h2, int h3, int h4, int h5)
+            => Combine(stackalloc int[] { h1, h2, h3, h4, h5 });
+        internal static int CombineHashCodes(int h1, int h2, int h3, int h4, int h5, int h6)
+            => Combine(stackalloc int[] { h1, h2, h3, h4, h5, h6 });
+        internal static int CombineHashCodes(int h1, int h2, int h3, int h4, int h5, int h6, int h7)
+            => Combine(stackalloc int[] { h1, h2, h3, h4, h5, h6, h7 });
+        internal static int CombineHashCodes(int h1, int h2, int h3, int h4, int h5, int h6, int h7, int h8)
+            => Combine(stackalloc int[] { h1, h2, h3, h4, h5, h6, h7, h8 });
+
+        internal static int Combine(ReadOnlySpan<int> hashes)
+        {
+            if (hashes.Length == 1) return hashes[0];
+            int split = 1;
+            while (split * 2 < hashes.Length) split *= 2;
+            return CombineHashCodes(Combine(hashes[..split]), Combine(hashes[split..]));
+        }
+
     }
 
     [Serializable]
@@ -70,7 +95,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1> tuple)) throw new ArgumentException("Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             return comparer.Compare(m_Item1, tuple.m_Item1);
         }
@@ -78,10 +103,7 @@ namespace UnityEditor
         public override int GetHashCode() => ((IStructuralEquatable)this).GetHashCode(EqualityComparer<object>.Default);
 
         int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
-        {
-            int hash = comparer.GetHashCode(m_Item1);
-            return hash;
-        }
+            => Tuple.Combine(stackalloc int[] { comparer.GetHashCode(m_Item1) });
 
         int ITupleInternal.GetHashCode(IEqualityComparer comparer) => ((IStructuralEquatable)this).GetHashCode(comparer);
 
@@ -143,7 +165,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2> tuple)) throw new ArgumentException("Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             return comparer.Compare(m_Item2, tuple.m_Item2);
@@ -152,11 +174,7 @@ namespace UnityEditor
         public override int GetHashCode() => ((IStructuralEquatable)this).GetHashCode(EqualityComparer<object>.Default);
 
         int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
-        {
-            int hash = comparer.GetHashCode(m_Item1);
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item2));
-            return hash;
-        }
+            => Tuple.Combine(stackalloc int[] { comparer.GetHashCode(m_Item1), comparer.GetHashCode(m_Item2) });
 
         int ITupleInternal.GetHashCode(IEqualityComparer comparer) => ((IStructuralEquatable)this).GetHashCode(comparer);
 
@@ -225,7 +243,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2, T3> tuple)) throw new ArgumentException("Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2, T3> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             if ((c = comparer.Compare(m_Item2, tuple.m_Item2)) != 0) return c;
@@ -235,12 +253,7 @@ namespace UnityEditor
         public override int GetHashCode() => ((IStructuralEquatable)this).GetHashCode(EqualityComparer<object>.Default);
 
         int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
-        {
-            int hash = comparer.GetHashCode(m_Item1);
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item2));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item3));
-            return hash;
-        }
+            => Tuple.Combine(stackalloc int[] { comparer.GetHashCode(m_Item1), comparer.GetHashCode(m_Item2), comparer.GetHashCode(m_Item3) });
 
         int ITupleInternal.GetHashCode(IEqualityComparer comparer) => ((IStructuralEquatable)this).GetHashCode(comparer);
 
@@ -316,7 +329,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2, T3, T4> tuple)) throw new ArgumentException("Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2, T3, T4> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             if ((c = comparer.Compare(m_Item2, tuple.m_Item2)) != 0) return c;
@@ -327,13 +340,7 @@ namespace UnityEditor
         public override int GetHashCode() => ((IStructuralEquatable)this).GetHashCode(EqualityComparer<object>.Default);
 
         int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
-        {
-            int hash = comparer.GetHashCode(m_Item1);
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item2));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item3));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item4));
-            return hash;
-        }
+            => Tuple.Combine(stackalloc int[] { comparer.GetHashCode(m_Item1), comparer.GetHashCode(m_Item2), comparer.GetHashCode(m_Item3), comparer.GetHashCode(m_Item4) });
 
         int ITupleInternal.GetHashCode(IEqualityComparer comparer) => ((IStructuralEquatable)this).GetHashCode(comparer);
 
@@ -416,7 +423,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2, T3, T4, T5> tuple)) throw new ArgumentException("Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2, T3, T4, T5> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             if ((c = comparer.Compare(m_Item2, tuple.m_Item2)) != 0) return c;
@@ -428,14 +435,7 @@ namespace UnityEditor
         public override int GetHashCode() => ((IStructuralEquatable)this).GetHashCode(EqualityComparer<object>.Default);
 
         int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
-        {
-            int hash = comparer.GetHashCode(m_Item1);
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item2));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item3));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item4));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item5));
-            return hash;
-        }
+            => Tuple.Combine(stackalloc int[] { comparer.GetHashCode(m_Item1), comparer.GetHashCode(m_Item2), comparer.GetHashCode(m_Item3), comparer.GetHashCode(m_Item4), comparer.GetHashCode(m_Item5) });
 
         int ITupleInternal.GetHashCode(IEqualityComparer comparer) => ((IStructuralEquatable)this).GetHashCode(comparer);
 
@@ -525,7 +525,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2, T3, T4, T5, T6> tuple)) throw new ArgumentException("Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2, T3, T4, T5, T6> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             if ((c = comparer.Compare(m_Item2, tuple.m_Item2)) != 0) return c;
@@ -538,15 +538,7 @@ namespace UnityEditor
         public override int GetHashCode() => ((IStructuralEquatable)this).GetHashCode(EqualityComparer<object>.Default);
 
         int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
-        {
-            int hash = comparer.GetHashCode(m_Item1);
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item2));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item3));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item4));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item5));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item6));
-            return hash;
-        }
+            => Tuple.Combine(stackalloc int[] { comparer.GetHashCode(m_Item1), comparer.GetHashCode(m_Item2), comparer.GetHashCode(m_Item3), comparer.GetHashCode(m_Item4), comparer.GetHashCode(m_Item5), comparer.GetHashCode(m_Item6) });
 
         int ITupleInternal.GetHashCode(IEqualityComparer comparer) => ((IStructuralEquatable)this).GetHashCode(comparer);
 
@@ -643,7 +635,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2, T3, T4, T5, T6, T7> tuple)) throw new ArgumentException("Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2, T3, T4, T5, T6, T7> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             if ((c = comparer.Compare(m_Item2, tuple.m_Item2)) != 0) return c;
@@ -657,16 +649,7 @@ namespace UnityEditor
         public override int GetHashCode() => ((IStructuralEquatable)this).GetHashCode(EqualityComparer<object>.Default);
 
         int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
-        {
-            int hash = comparer.GetHashCode(m_Item1);
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item2));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item3));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item4));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item5));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item6));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item7));
-            return hash;
-        }
+            => Tuple.Combine(stackalloc int[] { comparer.GetHashCode(m_Item1), comparer.GetHashCode(m_Item2), comparer.GetHashCode(m_Item3), comparer.GetHashCode(m_Item4), comparer.GetHashCode(m_Item5), comparer.GetHashCode(m_Item6), comparer.GetHashCode(m_Item7) });
 
         int ITupleInternal.GetHashCode(IEqualityComparer comparer) => ((IStructuralEquatable)this).GetHashCode(comparer);
 
@@ -731,7 +714,7 @@ namespace UnityEditor
 
         public Tuple(T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, TRest rest)
         {
-            if (!(rest is ITupleInternal)) throw new ArgumentException("The last element of an eight element tuple must be a Tuple.");
+            if (!(rest is ITupleInternal)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleLastArgumentNotATuple" : "The last element of an eight element tuple must be a Tuple.");
             m_Item1 = item1;
             m_Item2 = item2;
             m_Item3 = item3;
@@ -771,7 +754,7 @@ namespace UnityEditor
         int IStructuralComparable.CompareTo(object other, IComparer comparer)
         {
             if (other == null) return 1;
-            if (!(other is Tuple<T1, T2, T3, T4, T5, T6, T7, TRest> tuple)) throw new ArgumentException("Argument must be of type " + GetType() + ".", nameof(other));
+            if (!(other is Tuple<T1, T2, T3, T4, T5, T6, T7, TRest> tuple)) throw new ArgumentException(Compat.EditorTupleResourceErrors ? "ArgumentException_TupleIncorrectType" : "Argument must be of type " + GetType() + ".", nameof(other));
             int c;
             if ((c = comparer.Compare(m_Item1, tuple.m_Item1)) != 0) return c;
             if ((c = comparer.Compare(m_Item2, tuple.m_Item2)) != 0) return c;
@@ -787,15 +770,17 @@ namespace UnityEditor
 
         int IStructuralEquatable.GetHashCode(IEqualityComparer comparer)
         {
-            // The rest tuple stands for the items beyond the seventh: its hash joins the others.
-            int hash = comparer.GetHashCode(m_Item1);
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item2));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item3));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item4));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item5));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item6));
-            hash = Tuple.CombineHashCodes(hash, comparer.GetHashCode(m_Item7));
-            return Tuple.CombineHashCodes(hash, ((ITupleInternal)m_Rest).GetHashCode(comparer));
+            var tail = (ITupleInternal)m_Rest;
+            int length = tail.Length;
+            if (length >= 8) return tail.GetHashCode(comparer);
+            // Only the last eight items contribute, with the rest kept as one hash node.
+            int prefixCount = 8 - length;
+            Span<int> hashes = stackalloc int[prefixCount + 1];
+            var tuple = (ITuple)this;
+            for (int i = 0; i < prefixCount; i++)
+                hashes[i] = comparer.GetHashCode(tuple[7 - prefixCount + i]);
+            hashes[prefixCount] = tail.GetHashCode(comparer);
+            return Tuple.Combine(hashes);
         }
 
         int ITupleInternal.GetHashCode(IEqualityComparer comparer) => ((IStructuralEquatable)this).GetHashCode(comparer);

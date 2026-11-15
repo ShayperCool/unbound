@@ -9,6 +9,10 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Tuple argument messages measured by editortuples on 6000.0.71f1.
+        /// Other releases retain their previous unmeasured descriptive messages.</summary>
+        internal static bool EditorTupleResourceErrors => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Service-owned preference retention measured by editorservices on 6000.0.71f1.
         /// Other releases keep their previous complete DeleteAll behavior, unmeasured.</summary>
         internal static bool ServicePreferencesPreserved => Release == (6000, 0, 71, 'f', 1);

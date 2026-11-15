@@ -1,0 +1,72 @@
+{"key":"tuple.1.hash","value":"1"}
+{"key":"tuple.1.customEquality","value":"True"}
+{"key":"tuple.1.customHash","value":"7"}
+{"key":"tuple.1.customCompare","value":"0"}
+{"key":"tuple.1.length","value":"1"}
+{"key":"tuple.1.wrongType","value":"ArgumentException:ArgumentException_TupleIncorrectType:other"}
+{"key":"tuple.1.values","value":"(1):True:False:True:-1"}
+{"key":"tuple.2.hash","value":"35"}
+{"key":"tuple.2.customEquality","value":"True"}
+{"key":"tuple.2.customHash","value":"224"}
+{"key":"tuple.2.customCompare","value":"0"}
+{"key":"tuple.2.length","value":"2"}
+{"key":"tuple.2.wrongType","value":"ArgumentException:ArgumentException_TupleIncorrectType:other"}
+{"key":"tuple.2.values","value":"(1, 2):True:False:True:-1"}
+{"key":"tuple.3.hash","value":"1152"}
+{"key":"tuple.3.customEquality","value":"True"}
+{"key":"tuple.3.customHash","value":"7399"}
+{"key":"tuple.3.customCompare","value":"0"}
+{"key":"tuple.3.length","value":"3"}
+{"key":"tuple.3.wrongType","value":"ArgumentException:ArgumentException_TupleIncorrectType:other"}
+{"key":"tuple.3.values","value":"(1, 2, 3):True:False:True:-1"}
+{"key":"tuple.4.hash","value":"1252"}
+{"key":"tuple.4.customEquality","value":"True"}
+{"key":"tuple.4.customHash","value":"7168"}
+{"key":"tuple.4.customCompare","value":"0"}
+{"key":"tuple.4.length","value":"4"}
+{"key":"tuple.4.wrongType","value":"ArgumentException:ArgumentException_TupleIncorrectType:other"}
+{"key":"tuple.4.values","value":"(1, 2, 3, 4):True:False:True:-1"}
+{"key":"tuple.5.hash","value":"41313"}
+{"key":"tuple.5.customEquality","value":"True"}
+{"key":"tuple.5.customHash","value":"236551"}
+{"key":"tuple.5.customCompare","value":"0"}
+{"key":"tuple.5.length","value":"5"}
+{"key":"tuple.5.wrongType","value":"ArgumentException:ArgumentException_TupleIncorrectType:other"}
+{"key":"tuple.5.values","value":"(1, 2, 3, 4, 5):True:False:True:-1"}
+{"key":"tuple.6.hash","value":"41415"}
+{"key":"tuple.6.customEquality","value":"True"}
+{"key":"tuple.6.customHash","value":"236768"}
+{"key":"tuple.6.customCompare","value":"0"}
+{"key":"tuple.6.length","value":"6"}
+{"key":"tuple.6.wrongType","value":"ArgumentException:ArgumentException_TupleIncorrectType:other"}
+{"key":"tuple.6.values","value":"(1, 2, 3, 4, 5, 6):True:False:True:-1"}
+{"key":"tuple.7.hash","value":"46176"}
+{"key":"tuple.7.customEquality","value":"True"}
+{"key":"tuple.7.customHash","value":"229607"}
+{"key":"tuple.7.customCompare","value":"0"}
+{"key":"tuple.7.length","value":"7"}
+{"key":"tuple.7.wrongType","value":"ArgumentException:ArgumentException_TupleIncorrectType:other"}
+{"key":"tuple.7.values","value":"(1, 2, 3, 4, 5, 6, 7):True:False:True:-1"}
+{"key":"tuple.8.hash","value":"46216"}
+{"key":"tuple.8.customEquality","value":"True"}
+{"key":"tuple.8.customHash","value":"229376"}
+{"key":"tuple.8.customCompare","value":"0"}
+{"key":"tuple.8.length","value":"8"}
+{"key":"tuple.8.wrongType","value":"ArgumentException:ArgumentException_TupleIncorrectType:other"}
+{"key":"tuple.8.values","value":"(1, 2, 3, 4, 5, 6, 7, 8):True:False:True:-1"}
+{"key":"tuple.rest.2","value":"(1, 2, 3, 4, 5, 6, 7, 8, 9):81152:9:9"}
+{"key":"tuple.rest.3","value":"(1, 2, 3, 4, 5, 6, 7, 8, 9, 10):125864:10:10"}
+{"key":"tuple.rest.8","value":"(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15):269312:15:15"}
+{"key":"tuple.rest.invalid","value":"ArgumentException:ArgumentException_TupleLastArgumentNotATuple"}
+{"key":"tuple.boundary.nullItem","value":"(, -42)"}
+{"key":"tuple.boundary.nullCompare","value":"1"}
+{"key":"tuple.boundary.wrongEquality","value":"False"}
+{"key":"tuple.boundary.nullEquality","value":"False"}
+{"key":"tuple.boundary.index.-1","value":"IndexOutOfRangeException:Index was outside the bounds of the array."}
+{"key":"tuple.boundary.index.0","value":"<null>"}
+{"key":"tuple.boundary.index.1","value":"-42"}
+{"key":"tuple.boundary.index.2","value":"IndexOutOfRangeException:Index was outside the bounds of the array."}
+{"key":"tuple.rest.null","value":"ArgumentException:ArgumentException_TupleLastArgumentNotATuple"}
+{"key":"tuple.rest.deep","value":"(1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7, , -42):30:-42"}
+{"key":"tuple.rest.deepHash","value":"-80937"}
+{"key":"complete","value":"True"}
