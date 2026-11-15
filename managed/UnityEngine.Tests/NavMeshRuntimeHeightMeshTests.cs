@@ -138,6 +138,10 @@ namespace UnityEngine.Tests
             try
             {
                 Assert.Equal(2, NavWorld.Links.Count(l => l.Data != 0 || l.Id == own.id));
+                // No tile wholly inside: the update leaves the data, links included, as it was.
+                Assert.True(NavMeshBuilder.UpdateNavMeshData(data, Tiled(true), Floor(), new Bounds(new Vector3(70f, 0f, 70f), new Vector3(2f, 6f, 2f))));
+                Assert.Single(data.m_Links);
+                Assert.Contains(NavWorld.Links, l => l.Data != 0);
                 var changed = Tiled(true);
                 changed.agentRadius = 0.9f;
                 changed.tileSize = 64;

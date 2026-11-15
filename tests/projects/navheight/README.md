@@ -1,7 +1,7 @@
 # NavMesh height meshes built at run time
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 254 rows. Heights come from the build's geometry and
+byte-identical and the canonical reference has 270 rows. Heights come from the build's geometry and
 agent movement, not from the OS or the graphics device. The comparator compares text exactly and
 numbers within 1e-5 m: heights interpolated over a sloped triangle differ in their last bits between
 the Editor and Unbound, while a height mesh changes heights by centimetres (a 0.1 m bump against a
@@ -30,7 +30,8 @@ once from cube meshes and once from box sources, with `buildHeightMesh` set.
 - Documented, not recorded here: a preserving update also removes the links the data's bake
   generated. The runtime builder does not generate links (a source asking for them gets a warning),
   so the probe cannot make such data; a managed test covers the removal on data carrying baked
-  links.
+  links. An update that rebuilds no tile leaves them too (unmeasured; taken from "left exactly as it
+  was"). Bounds within a thousandth of a voxel of a tile edge count as on it (unmeasured).
 
 | Unity 6000.0 documentation | Discriminating control |
 | --- | --- |
@@ -51,9 +52,9 @@ so), nor is link generation (a warning). Other releases are unmeasured.
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
-python3 tests/projects/navheight/run.py native --label reference-g
-python3 tests/projects/navheight/run.py native --label reference-h
-python3 tests/projects/navheight/run.py publish reference-g reference-h
+python3 tests/projects/navheight/run.py native --label reference-i
+python3 tests/projects/navheight/run.py native --label reference-j
+python3 tests/projects/navheight/run.py publish reference-i reference-j
 python3 tests/projects/navheight/run.py check
 ```
 

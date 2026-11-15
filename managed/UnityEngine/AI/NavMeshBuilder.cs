@@ -149,15 +149,17 @@ namespace UnityEngine.AI
         {
             if (data == null) throw new ArgumentNullException(nameof(data));
             if (sources == null) throw new ArgumentNullException(nameof(sources));
-            var report = buildSettings.ValidationReport(localBounds);
+            // A preserving update builds with the data's settings (see NavMeshRecast.Preserving).
+            var effective = buildSettings.preserveTilesOutsideBounds ? NavMeshRecast.Preserving(data.m_Settings, buildSettings) : buildSettings;
+            var report = effective.ValidationReport(localBounds);
             if (report.Length > 0)
             {
                 foreach (var line in report) Debug.LogError("NavMesh build: " + line);
                 return false;
             }
-            NavMeshRecast.Build(data, buildSettings, sources, localBounds);
+            bool rebuilt = NavMeshRecast.Build(data, buildSettings, sources, localBounds);
             NavWorld.DataChanged(data);
-            if (buildSettings.preserveTilesOutsideBounds) NavWorld.GeneratedLinksRemoved(data);
+            if (rebuilt && buildSettings.preserveTilesOutsideBounds) NavWorld.GeneratedLinksRemoved(data);
             return true;
         }
 
@@ -297,7 +299,8 @@ namespace Unbound.Runtime
 
         static bool s_WarnedLinks;
 
-        internal static void Build(NavMeshData data, NavMeshBuildSettings settings, List<NavMeshBuildSource> sources, Bounds localBounds)
+        /// <summary>Builds the data; false when a preserving update leaves it as it was.</summary>
+        internal static bool Build(NavMeshData data, NavMeshBuildSettings settings, List<NavMeshBuildSource> sources, Bounds localBounds)
         {
             if (!s_WarnedLinks && sources.Exists(s => s.generateLinks))
             {
@@ -321,7 +324,7 @@ namespace Unbound.Runtime
             // so bounds on a tile edge give that tile).
             int ix0 = CeilDiv(VoxelCeil(localBounds.min.x, cs), tileSize), iz0 = CeilDiv(VoxelCeil(localBounds.min.z, cs), tileSize);
             int ix1 = FloorDiv(VoxelFloor(localBounds.max.x, cs), tileSize) - 1, iz1 = FloorDiv(VoxelFloor(localBounds.max.z, cs), tileSize) - 1;
-            if (preserve && (ix0 > ix1 || iz0 > iz1)) return;
+            if (preserve && (ix0 > ix1 || iz0 > iz1)) return false;
             data.m_Settings = settings;
             var kept = preserve ? new List<DtMeshData>(data.m_Tiles) : null;
             data.m_Tiles.Clear();
@@ -333,7 +336,7 @@ namespace Unbound.Runtime
             // The data covers the bounds it was built for (measured); a preserving update keeps the
             // bounds it had (tests/projects/navheight `preserve.*.update`).
             if (!preserve || kept.Count == 0) data.m_SourceBounds = localBounds;
-            if (g.Areas.Count == 0) return;
+            if (g.Areas.Count == 0) return true;
             float ch = cs * 0.5f;
             int walkableHeight = (int)MathF.Ceiling(settings.agentHeight / ch);
             int walkableClimb = (int)MathF.Floor(settings.agentClimb / ch);
@@ -396,6 +399,7 @@ namespace Unbound.Runtime
                     var tile = BuildTile(ctx, settings, verts, tris, areas, g, tx, tz, tileWorld, tileSize, cs, ch, border, walkableHeight, walkableClimb, walkableRadius, bmin, bmax);
                     if (tile != null) data.m_Tiles.Add(tile);
                 }
+            return true;
         }
 
         /// <summary>Whether triangle t encloses any area (one with coincident or collinear corners,
@@ -410,7 +414,7 @@ namespace Unbound.Runtime
             return area > 0f && !float.IsNaN(area) && !float.IsInfinity(area);
         }
 
-        static NavMeshBuildSettings Preserving(NavMeshBuildSettings data, NavMeshBuildSettings given)
+        internal static NavMeshBuildSettings Preserving(NavMeshBuildSettings data, NavMeshBuildSettings given)
         {
             data.minRegionArea = given.minRegionArea;
             data.maxJobWorkers = given.maxJobWorkers;
@@ -420,10 +424,13 @@ namespace Unbound.Runtime
             return data;
         }
 
-        // Voxel coordinates rounded to whole voxels within a thousandth of one (float division of a
-        // coordinate built from voxels lands just beside the whole number).
-        static int VoxelCeil(float v, float cs) => (int)MathF.Ceiling(v / cs - 1e-3f);
-        static int VoxelFloor(float v, float cs) => (int)MathF.Floor(v / cs + 1e-3f);
+        /// <summary>How far, in voxels, a bound may lie from a whole voxel and still count as on it
+        /// (float division of a coordinate built from voxels lands just beside the whole number;
+        /// bounds within this of a tile edge are taken as on it, unmeasured).</summary>
+        const float VoxelRounding = 1e-3f;
+
+        static int VoxelCeil(float v, float cs) => (int)MathF.Ceiling(v / cs - VoxelRounding);
+        static int VoxelFloor(float v, float cs) => (int)MathF.Floor(v / cs + VoxelRounding);
         static int FloorDiv(int a, int b) => a >= 0 ? a / b : -((-a + b - 1) / b);
         static int CeilDiv(int a, int b) => -FloorDiv(-a, b);
 
