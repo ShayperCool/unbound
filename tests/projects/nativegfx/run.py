@@ -63,6 +63,7 @@ VULKAN_LIBRARY = 'libNativeGfxVulkan.so'
 METAL_LIBRARY = 'libNativeGfxMetal.dylib'
 DEVICE = 'opengl'
 STENCIL = False
+WINDOWED = False
 
 
 LINUX = sys.platform == 'linux' and platform.machine() in ('x86_64', 'AMD64')
@@ -179,16 +180,34 @@ def reference():
         return ROOT/'Reference'/f'unity-{unity_version()}'/('vulkan-stencil.jsonl' if DEVICE == 'vulkan' else 'stencil.jsonl')
     if DEVICE == 'opengl':
         return reference_file(ROOT, 'jsonl')
+    if WINDOWED:
+        return ROOT/'Reference'/f'unity-{unity_version()}'/f'{DEVICE}-windowed.jsonl'
     return ROOT/'Reference'/f'unity-{unity_version()}'/f'{DEVICE}.jsonl'
 
 
+# A windowed capture's rows without the plugin's records (the windowed Editor runs callbacks on
+# its render thread, whose order varies between runs).
+WINDOWED_OUT = 'values.windowed.jsonl'
+
+
+def windowed_rows(directory):
+    lines = (directory/OUT).read_text().splitlines(keepends=True)
+    (directory/WINDOWED_OUT).write_text(''.join(line for line in lines if not json.loads(line)['k'].startswith('plugin.')))
+
+
 def native_macos(label):
-    """The Metal captures: the macOS Editor in batchmode on its Metal device, one after the other."""
+    """The Metal captures: the macOS Editor on its Metal device (in batchmode; --windowed: with
+    its windows, Play mode in its Game view), one after the other."""
     ok = True
     for repeat in (f'{label}-1', f'{label}-2'):
         out = WORK/repeat
         copy_project(out/'project')
-        code = macos_editor.capture(out/'project', out, ['-executeMethod', 'ProbeRunner.Record'], environment(out))
+        if WINDOWED:
+            # Play mode keeps running while the Editor's window is not in front.
+            settings = out/'project'/'ProjectSettings'/'ProjectSettings.asset'
+            settings.write_text(settings.read_text().replace('runInBackground: 0', 'runInBackground: 1'))
+        code = macos_editor.capture(out/'project', out, ['-executeMethod', 'ProbeRunner.Record'], environment(out),
+                                    windowed=WINDOWED)
         print(repeat, 'exit', code)
         ok = ok and code == 0 and finish(out)
     return 0 if ok else 1
@@ -243,7 +262,11 @@ def publish(labels):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(first/OUT, path)
     fresh.unlink(missing_ok=True)
-    if DEVICE == 'metal':
+    if DEVICE == 'metal' and WINDOWED:
+        for label in labels:
+            windowed_rows(WORK/label)
+        code = macos_editor.publish([WORK/label for label in labels], fresh, WINDOWED_OUT)
+    elif DEVICE == 'metal':
         code = macos_editor.publish([WORK/label for label in labels], fresh, OUT)
     else:
         code = editor_runner.publish([WORK/label for label in labels], fresh, lambda d: [OUT], write,
@@ -271,8 +294,10 @@ def main():
     parser.add_argument('--candidate', type=Path)
     parser.add_argument('--device', choices=('opengl', 'vulkan', 'metal'), default='opengl')
     parser.add_argument('--stencil', action='store_true', help='resolved-stencil controls for the selected graphics device')
+    parser.add_argument('--windowed', action='store_true', help='native --device metal: the Editor with its windows (Play mode in its Game view)')
     args = parser.parse_args()
-    global DEVICE, STENCIL
+    global DEVICE, STENCIL, WINDOWED
+    WINDOWED = args.windowed
     DEVICE = args.device
     STENCIL = args.stencil
     if STENCIL and (not LINUX or DEVICE not in ('opengl', 'vulkan')):

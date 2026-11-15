@@ -631,6 +631,20 @@ namespace UnityEngine.Rendering
         {
             var sourceTexture = Resolve(src, c);
             var destinationTexture = Resolve(dst, c);
+            // The screen is no texture to copy: CameraTarget of a camera drawing to the screen (and
+            // outside cameras) names none, nor does the texture standing for it (measured on the
+            // macOS Editor's Metal device: tests/projects/nativegfx metal.jsonl screencopy.*,
+            // screencamera.*; the copy is skipped with these errors).
+            if (sourceTexture == null || sourceTexture == RenderTexture.ScreenStandIn)
+            {
+                Debug.LogError("Graphics.CopyTexture called with null source texture");
+                return;
+            }
+            if (destinationTexture == null || destinationTexture == RenderTexture.ScreenStandIn)
+            {
+                Debug.LogError("Graphics.CopyTexture called with null destination texture");
+                return;
+            }
             if (sourceTexture is Texture2D source2D && destinationTexture is Texture2D destination2D)
             {
                 if (!Texture2D.ValidateBlockCopy(source2D, srcMip, srcX, srcY, srcWidth, srcHeight, destination2D, dstMip, dstX, dstY)) return;

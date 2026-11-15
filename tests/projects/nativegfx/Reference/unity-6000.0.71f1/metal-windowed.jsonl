@@ -1,0 +1,94 @@
+{"k":"device","v":"Metal"}
+{"k":"device.name","v":true}
+{"k":"screencopy.texture.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
+{"k":"screencopy.logs","v":["Error: Graphics.CopyTexture called with null source texture","Error: Graphics.CopyTexture called with null destination texture"]}
+{"k":"screencamera.copy.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
+{"k":"screencamera.drawn.pixels","v":["ff7f40bf*8","ff7f40bf*8","ff7f40bf*8","ff7f40bf*8","ff7f40bf*8","ff7f40bf*8","ff7f40bf*8","ff7f40bf*8"]}
+{"k":"screencamera.logs","v":["Error: Graphics.CopyTexture called with null source texture","Error: Graphics.CopyTexture called with null destination texture"]}
+{"k":"srgb.cleared.bytes","v":["bc89e1ff*8","bc89e1ff*8","bc89e1ff*8","bc89e1ff*8","bc89e1ff*8","bc89e1ff*8","bc89e1ff*8","bc89e1ff*8"]}
+{"k":"srgb.cleared.decoded","v":["3f00b80c","3e800801","3f40bc0c","3f800000"]}
+{"k":"srgb.drawn.bytes","v":["7f40bfff*8","7f40bfff*8","7f40bfff*8","7f40bfff*8","7f40bfff*8","7f40bfff*8","7f40bfff*8","7f40bfff*8"]}
+{"k":"srgb.drawn.decoded","v":["3e594d95","3d520d21","3f055856","3f800000"]}
+{"k":"srgb.logs","v":[]}
+{"k":"loadoutside.pixels","v":["ff0000ff*1 00ff00ff*1 00000000*6","0000ffff*1 ffffffff*1 00000000*6","00000000*8","00000000*8","00000000*8","00000000*8","00000000*8","00000000*8"]}
+{"k":"loadoutside.logs","v":[]}
+{"k":"volume.compressed3d","v":true}
+{"k":"volume.bc1.supported","v":true}
+{"k":"volume.bc1.slice0","v":["ff0000ff*4","ff0000ff*4","ff0000ff*4","ff0000ff*4"]}
+{"k":"volume.bc1.slice1","v":["0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
+{"k":"volume.bc1.cpu","v":["ff0000ff*4","ff0000ff*4","ff0000ff*4","ff0000ff*4","0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
+{"k":"volume.etc2.supported","v":true}
+{"k":"volume.etc2.exception","v":"UnityException: Failed to create texture because of invalid parameters."}
+{"k":"volume.astc.supported","v":true}
+{"k":"volume.astc.slice0","v":["ff0000ff*4","ff0000ff*4","ff0000ff*4","ff0000ff*4"]}
+{"k":"volume.astc.slice1","v":["0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
+{"k":"volume.astc.cpu","v":["ff0000ff*4","ff0000ff*4","ff0000ff*4","ff0000ff*4","0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
+{"k":"volume.logs","v":["Error: Metal does not support RGB Compressed ETC2 UNorm texture format for Texture3D"]}
+{"k":"volume.make.DXT1","v":["made"]}
+{"k":"volume.make.DXT5","v":["made"]}
+{"k":"volume.make.BC6H","v":["made"]}
+{"k":"volume.make.BC7","v":["made"]}
+{"k":"volume.make.BC4","v":["made"]}
+{"k":"volume.make.BC5","v":["made"]}
+{"k":"volume.make.DXT1Crunched","v":["ArgumentException: Crunched Texture3D is not supported."]}
+{"k":"volume.make.DXT5Crunched","v":["ArgumentException: Crunched Texture3D is not supported."]}
+{"k":"volume.make.PVRTC_RGB2","v":["UnityException: Failed to create texture because of invalid parameters.","Error: Metal does not support RGB Compressed PVRTC 2BPP UNorm texture format for Texture3D"]}
+{"k":"volume.make.PVRTC_RGBA2","v":["UnityException: Failed to create texture because of invalid parameters.","Error: Metal does not support RGBA Compressed PVRTC 2BPP UNorm texture format for Texture3D"]}
+{"k":"volume.make.PVRTC_RGB4","v":["UnityException: Failed to create texture because of invalid parameters.","Error: Metal does not support RGB Compressed PVRTC 4BPP UNorm texture format for Texture3D"]}
+{"k":"volume.make.PVRTC_RGBA4","v":["UnityException: Failed to create texture because of invalid parameters.","Error: Metal does not support RGBA Compressed PVRTC 4BPP UNorm texture format for Texture3D"]}
+{"k":"volume.make.ETC_RGB4","v":["UnityException: Failed to create texture because of invalid parameters.","Error: Metal does not support RGB Compressed ETC UNorm texture format for Texture3D"]}
+{"k":"volume.make.EAC_R","v":["UnityException: Failed to create texture because of invalid parameters.","Error: Metal does not support R Compressed EAC UNorm texture format for Texture3D"]}
+{"k":"volume.make.EAC_R_SIGNED","v":["UnityException: Failed to create texture because of invalid parameters.","Error: Metal does not support R Compressed EAC SNorm texture format for Texture3D"]}
+{"k":"volume.make.EAC_RG","v":["UnityException: Failed to create texture because of invalid parameters.","Error: Metal does not support RG Compressed EAC UNorm texture format for Texture3D"]}
+{"k":"volume.make.EAC_RG_SIGNED","v":["UnityException: Failed to create texture because of invalid parameters.","Error: Metal does not support RG Compressed EAC SNorm texture format for Texture3D"]}
+{"k":"volume.make.ETC2_RGB","v":["UnityException: Failed to create texture because of invalid parameters.","Error: Metal does not support RGB Compressed ETC2 UNorm texture format for Texture3D"]}
+{"k":"volume.make.ETC2_RGBA1","v":["UnityException: Failed to create texture because of invalid parameters.","Error: Metal does not support RGBA Compressed ETC2 punchthrough UNorm texture format for Texture3D"]}
+{"k":"volume.make.ETC2_RGBA8","v":["UnityException: Failed to create texture because of invalid parameters.","Error: Metal does not support RGBA Compressed ETC2 UNorm texture format for Texture3D"]}
+{"k":"volume.make.ASTC_4x4","v":["made"]}
+{"k":"volume.make.ASTC_5x5","v":["made"]}
+{"k":"volume.make.ASTC_6x6","v":["made"]}
+{"k":"volume.make.ASTC_8x8","v":["made"]}
+{"k":"volume.make.ASTC_10x10","v":["made"]}
+{"k":"volume.make.ASTC_12x12","v":["made"]}
+{"k":"volume.make.ETC_RGB4Crunched","v":["ArgumentException: Crunched Texture3D is not supported."]}
+{"k":"volume.make.ETC2_RGBA8Crunched","v":["ArgumentException: Crunched Texture3D is not supported."]}
+{"k":"volume.make.ASTC_HDR_4x4","v":["made"]}
+{"k":"volume.make.ASTC_HDR_5x5","v":["made"]}
+{"k":"volume.make.ASTC_HDR_6x6","v":["made"]}
+{"k":"volume.make.ASTC_HDR_8x8","v":["made"]}
+{"k":"volume.make.ASTC_HDR_10x10","v":["made"]}
+{"k":"volume.make.ASTC_HDR_12x12","v":["made"]}
+{"k":"mipbias.Point.0","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Point.1","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Point.2","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Point.-1","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Bilinear.0","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Bilinear.1","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Bilinear.2","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Bilinear.-1","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Trilinear.0","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Trilinear.1","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Trilinear.2","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.Trilinear.-1","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
+{"k":"mipbias.logs","v":[]}
+{"k":"active.sameframe","v":"activeleft"}
+{"k":"active.nextframe","v":"null"}
+{"k":"outside.fresh","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
+{"k":"outside.aftercamera","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
+{"k":"outside.identity","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
+{"k":"outside.corner","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
+{"k":"outside.ortho","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
+{"k":"outside.after","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
+{"k":"outside.logs","v":[]}
+{"k":"compressed.formats","v":["10","12","24","25","26","27","28","29","30","31","32","33","34","41","42","43","44","45","46","47","48","49","50","51","52","53","64","65","66","67","68","69","70","71"]}
+{"k":"target.pixels","v":["ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4"]}
+{"k":"camera.pixels","v":["0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8","0000ffff*8"]}
+{"k":"second.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
+{"k":"executed.pixels","v":["ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8"]}
+{"k":"executedmsaa.pixels","v":["ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8"]}
+{"k":"executedcopy.pixels","v":["ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8","ff00ffff*8"]}
+{"k":"mutated.pixels","v":["00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8"]}
+{"k":"again.pixels","v":["00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8","00ff00ff*8"]}
+{"k":"external.pixels","v":["0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
+{"k":"external.pointer","v":true}
+{"k":"complete","v":true}
