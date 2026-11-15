@@ -131,13 +131,11 @@ namespace UnityEngine
         // native/degenerate), less the extent.
         internal float SqrDistanceUnchecked(Vector3 point)
         {
-            float dx = Larger(MathF.Abs(point.x - m_Center.x), m_Extents.x) - m_Extents.x;
-            float dy = Larger(MathF.Abs(point.y - m_Center.y), m_Extents.y) - m_Extents.y;
-            float dz = Larger(MathF.Abs(point.z - m_Center.z), m_Extents.z) - m_Extents.z;
+            float dx = Mathf.Max(MathF.Abs(point.x - m_Center.x), m_Extents.x) - m_Extents.x;
+            float dy = Mathf.Max(MathF.Abs(point.y - m_Center.y), m_Extents.y) - m_Extents.y;
+            float dz = Mathf.Max(MathF.Abs(point.z - m_Center.z), m_Extents.z) - m_Extents.z;
             return dx * dx + dy * dy + dz * dz;
         }
-
-        static float Larger(float a, float b) => a > b ? a : b;
 
         /// <summary>The closest point on or in the box; a point inside is returned unchanged.</summary>
         public Vector3 ClosestPoint(Vector3 point)

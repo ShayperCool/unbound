@@ -187,7 +187,7 @@ def main():
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--profile', choices=PROFILES, required=True)
     parser.add_argument('--label', default=None)
-    parser.add_argument('--host', choices=('linux', 'macos'), default=None, help='publish: the host that recorded the captures (linux)')
+    parser.add_argument('--host', choices=(NATIVE_HOST,), default=None, help='publish: the host that recorded the captures')
     args = parser.parse_args()
     label = args.label or time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     if args.mode == 'record':
