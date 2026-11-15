@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/defaulttextures/run.py gate"
+  ],
+  "summary": "defaulttextures: .*",
+  "engine_paths": [
+    "crates/unbound-app/src/render/resources.rs"
+  ]
+}
