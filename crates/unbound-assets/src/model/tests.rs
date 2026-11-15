@@ -1470,8 +1470,9 @@ fn clip_events_lie_on_the_range_span_and_end_the_clip_past_its_last_key() {
     let times: Vec<f32> = generic.events.iter().map(|e| e.time).collect();
     assert_eq!(times, [0.5, 1.0]);
     assert_eq!(generic.parameters[0].keys[1].time, 1.0);
-    // An event past the last key: normalized 1.5 of the span ends the clip at 1.5 (a control
-    // of the end rule; the probe's events lie inside the clip).
+    // An event past the last key: normalized 1.5 of the span ends the clip at 1.5 (Unbound's
+    // rule, measured for Humanoid clips only, unmeasured for Generic ones; the probe's Generic
+    // events lie inside the clip).
     let later = text.replacen("- time: 1\n", "- time: 1.5\n", 1);
     assert_ne!(later, text);
     let generic = clip(&later.replace("animationType: 3", "animationType: 2"));
