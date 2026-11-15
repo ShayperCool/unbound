@@ -1075,23 +1075,31 @@ fn decode_blocks(t: &owned::Texture) -> owned::Texture {
     let (width, height) = (t.width.max(1) as u32, t.height.max(1) as u32);
     let mut data = Vec::new();
     let mut offset = 0;
-    // A cubemap's faces one after another, each its chain of levels.
+    // A cubemap's faces one after another, each its chain of levels; a volume's levels each
+    // with its depth slices.
     'faces: for _ in 0..packet_images(t) {
         for level in 0..t.mip_count.max(1) as u32 {
             let (w, h) = ((width >> level).max(1), (height >> level).max(1));
-            let len = format.level_size(w, h);
-            let Some(blocks) = t.data.get(offset..offset + len) else {
-                break 'faces;
-            };
-            offset += len;
-            if format.is_astc_hdr() {
-                data.extend(
-                    unbound_assets::texture::decode_blocks_f32(blocks, w, h, format)
-                        .into_iter()
-                        .flat_map(f32::to_le_bytes),
-                );
+            let depth = if t.dimension == 3 {
+                (t.layers.max(1) as u32 >> level).max(1)
             } else {
-                data.extend(decode_level_as_gpu(format, blocks, w, h));
+                1
+            };
+            let len = format.level_size(w, h);
+            for _ in 0..depth {
+                let Some(blocks) = t.data.get(offset..offset + len) else {
+                    break 'faces;
+                };
+                offset += len;
+                if format.is_astc_hdr() {
+                    data.extend(
+                        unbound_assets::texture::decode_blocks_f32(blocks, w, h, format)
+                            .into_iter()
+                            .flat_map(f32::to_le_bytes),
+                    );
+                } else {
+                    data.extend(decode_level_as_gpu(format, blocks, w, h));
+                }
             }
         }
     }
@@ -1161,6 +1169,34 @@ pub fn can_upload_blocks(code: i32, width: i32, height: i32, features: wgpu::Fea
     })
 }
 
+/// Whether the device keeps a volume of the block format: BC and ASTC blocks need their
+/// sliced-3D features; ETC2 and EAC have no 3D form (a volume of them is decoded).
+fn volume_blocks(code: i32, features: wgpu::Features) -> bool {
+    block_format(code).is_some_and(|format| {
+        use wgpu::TextureFormat as F;
+        match format {
+            F::Bc1RgbaUnorm
+            | F::Bc1RgbaUnormSrgb
+            | F::Bc2RgbaUnorm
+            | F::Bc2RgbaUnormSrgb
+            | F::Bc3RgbaUnorm
+            | F::Bc3RgbaUnormSrgb
+            | F::Bc4RUnorm
+            | F::Bc4RSnorm
+            | F::Bc5RgUnorm
+            | F::Bc5RgSnorm
+            | F::Bc6hRgbUfloat
+            | F::Bc6hRgbFloat
+            | F::Bc7RgbaUnorm
+            | F::Bc7RgbaUnormSrgb => {
+                features.contains(wgpu::Features::TEXTURE_COMPRESSION_BC_SLICED_3D)
+            }
+            F::Astc { .. } => features.contains(wgpu::Features::TEXTURE_COMPRESSION_ASTC_SLICED_3D),
+            _ => false,
+        }
+    })
+}
+
 /// The images of a compressed packet: a cubemap's six faces (and a cube array's), else one.
 fn packet_images(t: &owned::Texture) -> u32 {
     if t.dimension == 3 {
@@ -1173,6 +1209,10 @@ fn packet_images(t: &owned::Texture) -> u32 {
 /// Selects compressed storage only after the render device exists. Imported ETC packets
 /// retain the prior BC7 fallback; runtime ETC packets use their decoded RGBA pixels instead.
 fn resolve_block_packet(t: &owned::Texture, features: wgpu::Features) -> Option<owned::Texture> {
+    let upload = |code: i32| {
+        can_upload_blocks(code, t.width, t.height, features)
+            && (t.dimension != 3 || volume_blocks(code, features))
+    };
     if texture_format::etc_bc7_fallback(t.format) {
         use unbound_assets::texture::BlockFormat;
         let format =
@@ -1189,7 +1229,7 @@ fn resolve_block_packet(t: &owned::Texture, features: wgpu::Features) -> Option<
                     .sum::<usize>()
         };
         let native_size = size(format);
-        if can_upload_blocks(t.format, t.width, t.height, features) {
+        if upload(t.format) {
             let mut packet = t.clone();
             packet.format -= texture_format::ETC_BC7_OFFSET;
             packet.data.truncate(native_size);
@@ -1202,7 +1242,7 @@ fn resolve_block_packet(t: &owned::Texture, features: wgpu::Features) -> Option<
         };
         if let Some(fallback) = t.data.get(native_size..)
             && fallback.len() == size(BlockFormat::Bc7)
-            && can_upload_blocks(bc7, t.width, t.height, features)
+            && upload(bc7)
         {
             return Some(owned::Texture {
                 format: bc7,
@@ -1210,7 +1250,7 @@ fn resolve_block_packet(t: &owned::Texture, features: wgpu::Features) -> Option<
                 ..t.clone()
             });
         }
-    } else if can_upload_blocks(t.format, t.width, t.height, features) {
+    } else if upload(t.format) {
         return None;
     }
     Some(decode_blocks(t))
@@ -1801,7 +1841,8 @@ pub fn upload_texture_with(
 
     if let (false, Some(block)) = (t.data.is_empty(), compressed) {
         // Whole format-specific blocks, including padded small mip levels; a cubemap's faces
-        // one after another, each its chain of levels.
+        // (an array's slices) one after another, each its chain of levels; a volume's levels
+        // each with its depth slices.
         let (block_width, block_height) = block.block_dimensions();
         let block_bytes = block.block_copy_size(None).unwrap_or(16);
         let mut offset = 0usize;
@@ -1810,7 +1851,8 @@ pub fn upload_texture_with(
             for level in 0..mip_count {
                 let bw = (width >> level).max(1).div_ceil(block_width);
                 let bh = (height >> level).max(1).div_ceil(block_height);
-                let len = (bw * bh * block_bytes) as usize;
+                let depth = if volume { (layers >> level).max(1) } else { 1 };
+                let len = (bw * bh * block_bytes * depth) as usize;
                 if offset + len > t.data.len() {
                     tracing::warn!(
                         "compressed texture data is shorter than its {mip_count} mip levels"
@@ -1837,7 +1879,7 @@ pub fn upload_texture_with(
                     wgpu::Extent3d {
                         width: bw * block_width,
                         height: bh * block_height,
-                        depth_or_array_layers: 1,
+                        depth_or_array_layers: depth,
                     },
                 );
                 offset += len;
@@ -2582,6 +2624,49 @@ mod tests {
             assert_eq!(texel, expected, "face {face}");
         }
         assert_eq!(packet_images(&owned::Texture { dimension: 3, ..t }), 1);
+    }
+
+    /// A compressed volume's levels each decode all their depth slices (two 4x4 slices then one
+    /// 2x2 slice here), and its blocks stay compressed only where the device has their 3D form.
+    #[test]
+    fn compressed_volumes_decode_every_depth_slice() {
+        let white = [0xff, 0xff, 0, 0, 0, 0, 0, 0];
+        let black = [0xff, 0xff, 0, 0, 0x55, 0x55, 0x55, 0x55];
+        let data: Vec<u8> = [white, black, white].concat();
+        let t = owned::Texture {
+            width: 4,
+            height: 4,
+            format: texture_format::BC1_COLOR,
+            mip_count: 2,
+            layers: 2,
+            dimension: 3,
+            data,
+            ..owned::Texture::default()
+        };
+        let decoded = decode_blocks(&t);
+        assert_eq!(decoded.data.len(), (16 + 16 + 4) * 4);
+        assert_eq!(&decoded.data[0..4], [255, 255, 255, 255]);
+        assert_eq!(&decoded.data[64..68], [0, 0, 0, 255]);
+        assert_eq!(&decoded.data[128..132], [255, 255, 255, 255]);
+        use wgpu::Features as F;
+        let bc = F::TEXTURE_COMPRESSION_BC;
+        assert!(resolve_block_packet(&t, bc | F::TEXTURE_COMPRESSION_BC_SLICED_3D).is_none());
+        let fallback = resolve_block_packet(&t, bc).unwrap();
+        assert_eq!(fallback.format, texture_format::SRGB_RGBA8);
+        // A 2D texture needs no 3D form; an array neither.
+        for dimension in [2, 5] {
+            assert!(
+                resolve_block_packet(
+                    &owned::Texture {
+                        dimension,
+                        ..t.clone()
+                    },
+                    bc
+                )
+                .is_none()
+            );
+        }
+        assert!(!volume_blocks(texture_format::ETC_RGB_DATA, F::all()));
     }
 
     /// One- and two-channel 8-bit uploads keep their channels.
