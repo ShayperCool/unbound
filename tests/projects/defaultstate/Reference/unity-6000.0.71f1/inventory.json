@@ -403,6 +403,42 @@
       "type": "Unity.Collections.WriteOnlyAttribute"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "Unity.IO.LowLevel.Unsafe.AsyncReadManager"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "Unity.IO.LowLevel.Unsafe.FileHandle"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "Unity.IO.LowLevel.Unsafe.FileInfoResult"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "Unity.IO.LowLevel.Unsafe.ReadCommand"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "Unity.IO.LowLevel.Unsafe.ReadCommandArray"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "Unity.IO.LowLevel.Unsafe.ReadHandle"
+    },
+    {
       "category": "struct",
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
@@ -3263,6 +3299,18 @@
       "module": "UnityEngine.CoreModule",
       "status": "static",
       "type": "UnityEngine.FrameDebugger"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.FrameTiming"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "UnityEngine.FrameTimingManager"
     },
     {
       "category": "component",

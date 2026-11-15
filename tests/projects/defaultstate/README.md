@@ -565,3 +565,11 @@ asset and starts with `OnPlay`; a `VisualEffectAsset` made with `new` is an uncr
 `VisualEffect.initialEventID` is queued with a pattern: it is the session's number for the name
 `OnPlay` (282 in both captures), which each runtime assigns in the order names are first used;
 `tests/projects/vfx` checks that it equals `Shader.PropertyToID(initialEventName)`.
+
+The asynchronous file read and frame timing slice (Q479) adds eight types to the handwritten
+inventory: `AsyncReadManager`, `FileHandle`, `FileInfoResult`, `ReadCommand`,
+`ReadCommandArray`, `ReadHandle`, `FrameTiming` and `FrameTimingManager`. Two independent
+6000.0.71f1 GPU Editor captures agree on all 32 of their rows, appended before the completion
+row; every earlier row and inventory entry is byte-identical. A default
+`ReadHandle` or `FileHandle` throws from its status and job handle getters, as the release's
+checks do for a disposed or closed handle.
