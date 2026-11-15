@@ -466,12 +466,14 @@ raise SystemExit(int(code))
         self.gate.run_probes()
         # Train failure isolation runs the same request again in a later gate.
         retry = land.Gate(self.root, 'HEAD', [command], False, self.root/'retry.log', priority=True)
-        retry.run_probes()
+        with contextlib.redirect_stdout(io.StringIO()) as shown:
+            retry.run_probes()
         labels = sorted(path.parent.name for path in (self.root/'agents/suite').glob('*/summary.json'))
         self.assertEqual(len(labels), 2)
         self.assertEqual(labels[0], 'requested')
         self.assertRegex(labels[1], r'^requested-retry-\d+$')
         self.assertIn(f'this run uses label {labels[1]}', (self.root/'retry.log').read_text())
+        self.assertIn(f'this run uses label {labels[1]}', shown.getvalue())
         self.assertIn(f'--label {labels[1]}', (self.root/'retry.log').read_text())
         self.assertNotIn('this run uses label', (self.root/'gate.log').read_text())
 
@@ -480,6 +482,7 @@ raise SystemExit(int(code))
         (self.root/'cache/validation/suite/work-only').mkdir(parents=True)
         for command in ['python3 tools/agents/suite.py --only a --label "x-$(date +%s%N)"',
                         'python3 tools/agents/suite.py --only a --label used # keep',
+                        'python3 tools/agents/suite.py --only a --label used\necho done',
                         'cd tests && python3 ../tools/agents/suite.py --only a --label used',
                         'python3 tests/projects/a/run.py --label used',
                         'python3 tools/agents/suite.py --only a --label fresh',

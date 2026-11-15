@@ -307,9 +307,10 @@ def fresh_suite_label(command):
     Train failure isolation and repeated landings run the same explicit command again, and
     suite.py refuses a label it has used. The earlier output stays; this run appends a later
     --label, which the suite's parser takes. Labels made by shell expansion, and commands with
-    a trailing comment that would swallow the appended option, are left unchanged."""
+    a trailing comment or a further line that would swallow the appended option, are left
+    unchanged."""
     argv = suite_arguments(command)
-    if argv is None:
+    if argv is None or '\n' in command or '\r' in command:
         return command, None
     label = suite_label(argv)
     if label is None or re.search(r'[$`*?\[\]{}~\\]', label):
@@ -567,8 +568,10 @@ class Gate:
             exclusive = self.probe_exclusive(probe, specs)
             command, fresh = fresh_suite_label(probe)
             if fresh:
-                self.note(f'probe {index}: its suite label has output from an earlier run; '
-                          f'this run uses label {fresh}')
+                message = (f'probe {index}: its suite label has output from an earlier run; '
+                           f'this run uses label {fresh}')
+                print('land: '+message, flush=True)
+                self.note(message)
             owners = self.probe_owners[index-1] if self.probe_owners else []
             name = f'probe {index} ({release})' + (f' [{", ".join(owners)}]' if owners else '')
             log = logs/f'{index:03d}.log'
