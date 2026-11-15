@@ -293,10 +293,9 @@ Unbound matches 253/289 records with 36 declared residuals (`residuals-metal.jso
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a screen
-camera with command buffers drawing into Unbound's texture standing for the screen, and the screen
-copies, which Unbound makes (copying the screen worked before it was BGRA8; the windowed Editor's
-Game view is unmeasured), with the Blit after them (the copied texels, and green 1/255 apart
-elsewhere: the batch-mode screen is not sRGB-encoded). The screen is shared:
+camera with command buffers drawing into Unbound's texture standing for the screen, a Blit from
+it green 1/255 apart (the batch-mode screen is not sRGB-encoded), and ETC2_RGBA1, signed EAC and
+PVRTC arrays kept as texels. The screen is shared:
 outside render texture targets the current encoder is over the screen's color texture and depth
 buffer (loaded), in callbacks and from scripts, and its descriptor is there before the plugin asks
 for the encoder (`plugin.peek.screen`, `plugin.peek.outside`); store actions are unknown until the
