@@ -309,7 +309,9 @@ reads zeros. Factors outside (0, 1] are asserted against (`Invalid widthScale: 2
 printed `nan`) and kept within [0.05, 1] (0 keeps 0.0500000119, NaN 1); 16 x 0.3 and 16 x 0.7
 give 5x12, 10 x 0.3 gives 3 (the product in single precision). A texture marked
 `useDynamicScaleExplicit` too stays 16x16 until `ApplyDynamicScale`, then takes the factors of
-the time (`dynres.explicit.*`); the call changes nothing for a plain dynamic one.
+the time (`dynres.explicit.*`); the call changes nothing for a plain dynamic one. Content across scales (`dynres.content.*`, a left
+red, right green pattern): blitted at 0.5 it reads uniform red at 1; blitted at 1 it reads
+garbled when sampled at 0.5 and whole again back at 1.
 
 Windowed (`run.py native --device metal --windowed`, the Editor with its windows, Play mode in
 its Game view, Run In Background set in the copy): `Reference/unity-6000.0.71f1/metal-windowed.jsonl`
@@ -323,7 +325,7 @@ drawing left). Plugin events run later there, on the Editor's render thread: `ca
 `executed.pixels` show colors the scripts set after the events. The engine run is compared with
 the batch-mode reference only.
 
-Unbound matches 342/382 records with 40 declared residuals before Q515 (328/371 with 43 expected
+Unbound matches 343/386 records with 43 declared residuals before Q515 (328/371 with 43 expected
 after it, the four `outside.*` rows; not rerun on macOS for that change) (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the

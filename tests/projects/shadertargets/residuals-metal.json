@@ -1,5 +1,5 @@
 {
- "Framebuffer fetch reads copies of the color targets made before each draw: triangles of one draw that overlap read the color from before the draw (the macOS Editor's Metal device reads what the earlier triangles wrote: two fetches here); this covers programmable blending of batched quads, particles for example; Unbound warns when it compiles such a program. Queued": [
+ "Framebuffer fetch reads copies of the color targets made before each draw: triangles of one draw that overlap read the color from before the draw (the macOS Editor's Metal device reads what the earlier triangles wrote: two fetches here); this covers programmable blending of batched quads, particles for example; Unbound warns when it compiles such a program. Reading the target itself (Metal framebuffer fetch, ordered per primitive) needs fragment inputs [[color(n)]], which naga 30.0.1's MSL output lacks (it writes color(n) for outputs only); hand-made MSL through wgpu's passthrough shaders would need its own bindings beside the WGSL pipeline: not a contained change, recorded": [
   "fetch.Overlap"
  ]
 }
