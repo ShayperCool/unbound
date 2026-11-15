@@ -139,7 +139,7 @@ namespace Unbound.Runtime
             VisualEffectObject main;
             if (path.EndsWith(VisualEffectSubgraphOperator.Extension, StringComparison.OrdinalIgnoreCase)) main = new VisualEffectSubgraphOperator();
             else if (path.EndsWith(VisualEffectSubgraphBlock.Extension, StringComparison.OrdinalIgnoreCase)) main = new VisualEffectSubgraphBlock();
-            else main = new VisualEffectAsset();
+            else main = VisualEffectAsset.Create();
             main.m_Name = Path.GetFileNameWithoutExtension(path);
             main.IsPersistentAsset = true;
             return main;

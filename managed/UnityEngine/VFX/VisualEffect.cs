@@ -111,6 +111,17 @@ namespace UnityEngine.VFX
             }
         }
 
+        /// <summary>Whether no camera sees the effect. Nothing draws an effect yet, so none does
+        /// (said once): the value a new effect has in the Editor before its first frame.</summary>
+        public bool culled
+        {
+            get
+            {
+                Stubs.Ignored("VisualEffect.culled", "is always true: effects are not drawn yet, so no camera sees one");
+                return true;
+            }
+        }
+
         public bool pause
         {
             get => m_Pause;

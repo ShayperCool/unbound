@@ -47,7 +47,15 @@ namespace UnityEngine.VFX
         /// materials): the next import replaces them.</summary>
         internal Object[] m_Imported = Array.Empty<Object>();
 
-        public VisualEffectAsset() { }
+        /// <summary>An asset is made by an import; one made with <c>new</c> has no engine
+        /// object behind it, as in the Editor.</summary>
+        public VisualEffectAsset()
+        {
+            if (Compat.UncreatedObjectWrappersMeasured && !ObjectConstruction.TakeBacking(this)) MarkUncreated();
+        }
+
+        /// <summary>A new, empty asset object (what an import fills).</summary>
+        internal static VisualEffectAsset Create() => (VisualEffectAsset)ObjectConstruction.CreateWithBacking(typeof(VisualEffectAsset));
 
         internal static uint currentRuntimeDataVersion => RuntimeDataVersion;
 

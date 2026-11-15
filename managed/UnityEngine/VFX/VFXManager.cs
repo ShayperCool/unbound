@@ -10,8 +10,17 @@ namespace UnityEngine.VFX
     [RejectDragAndDropMaterial]
     public sealed partial class VFXRenderer : Renderer
     {
+        /// <summary>An effect's renderer starts without material slots, casting and receiving
+        /// no shadows and using no probes (Unity 6000.0.71f1, tests/projects/defaultstate).</summary>
         [UnityEngine.Scripting.RequiredMember]
-        public VFXRenderer() { }
+        public VFXRenderer()
+        {
+            m_Materials = System.Array.Empty<Material>();
+            shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            receiveShadows = false;
+            lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+            reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+        }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver) => ReadRendererData(body, resolver);
     }

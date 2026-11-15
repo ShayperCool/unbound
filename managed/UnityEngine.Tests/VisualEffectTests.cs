@@ -54,7 +54,9 @@ namespace UnityEngine.Tests
                 VFXInstancingDisabledReason.None, 7);
             var data = resource.m_Data;
             data.Seal();
-            return new VisualEffectAsset { m_Data = data };
+            var asset = VisualEffectAsset.Create();
+            asset.m_Data = data;
+            return asset;
         }
 
         /// <summary>Float "Rate" 4, int "Count" -7, 2D texture "Image", 3D texture "Volume",

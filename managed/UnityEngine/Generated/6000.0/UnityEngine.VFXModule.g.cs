@@ -188,7 +188,6 @@ namespace UnityEngine.VFX
         [global::Unbound.Stub] internal global::UnityEngine.Bounds GetComputedBounds(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetComputedBounds"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Vector3 GetCurrentBoundsPadding(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetCurrentBoundsPadding"); return default; }
         [global::Unbound.Stub] public void Simulate(float stepDeltaTime, uint stepCount = 1U) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.Simulate"); }
-        public bool culled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.culled"); return default; } }
         public int aliveParticleCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.aliveParticleCount"); return default; } }
         internal float time { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.time"); return default; } }
         internal enum VFXCPUEffectMarkers
