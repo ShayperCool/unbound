@@ -859,7 +859,21 @@ impl Echo {
         self.history = history;
         self.read = 0;
         self.write = frames;
-        Ok(if delay == 0 { 0 } else { frames - delay })
+        // The headroom keeps the read position behind the write position.
+        debug_assert!(delay > 0 && delay < frames);
+        Ok(frames - delay)
+    }
+    /// Empties the history as a new unit at `delay` has it: a delay still waiting, or a ring
+    /// grown for a longer delay, is replaced. If that allocation fails the ring is only emptied.
+    fn renew(&mut self, delay: f32) {
+        let fresh = Self::frames(delay, self.rate)
+            .is_ok_and(|frames| self.history.len() == Self::capacity(frames, self.rate));
+        if self.history.is_empty()
+            || (delay == self.delay && fresh)
+            || self.allocate(delay, self.rate).is_err()
+        {
+            self.reset();
+        }
     }
     /// Empties the history; the delay and its ring stay.
     fn reset(&mut self) {
@@ -1199,6 +1213,18 @@ impl Effect {
         self.channel_offset = offset;
     }
 
+    /// A new empty unit for another channel pair of the same chain: it follows the delay this
+    /// one applies, so a delay still waiting here reaches both on the same submission.
+    pub(crate) fn mirror(&self, rate: u32, buffer: u32) -> anyhow::Result<Self> {
+        let mut spec = self.spec.clone();
+        if self.kind == Some(EffectKind::Echo) && !self.echo.history.is_empty() {
+            spec.delay = self.echo.delay;
+        }
+        let mut effect = Self::new(spec, rate, buffer)?;
+        effect.spec.delay = self.spec.delay;
+        Ok(effect)
+    }
+
     /// A reconnected source component restarts empty like [`Effect::reset`], except that the
     /// Chorus sweep span continues and the resonant lowpass keeps its state: that unit has no
     /// restart of its own. Unity 6000.0.71f1, tests/projects/audiodistortion live bypass
@@ -1208,8 +1234,7 @@ impl Effect {
     }
 
     /// Forgets the histories and the parameter ramp, leaving the effect as [`Effect::new`] makes
-    /// it at the current rate, except that the Echo keeps its ring and the delay it last
-    /// applied (zeroed, as the measured reset does).
+    /// it at the current rate; the Echo takes the submitted delay even if it was still waiting.
     pub fn reset(&mut self) {
         self.clear_state(false);
     }
@@ -1219,7 +1244,12 @@ impl Effect {
         if !restart {
             self.lowpass = Default::default();
         }
-        self.echo.reset();
+        if restart {
+            // A reconnected unit keeps its ring and the delay it applied, as the measured reset.
+            self.echo.reset();
+        } else {
+            self.echo.renew(self.spec.delay);
+        }
         if let Some(reverb) = &mut self.reverb {
             reverb.clear();
         }
@@ -1884,25 +1914,38 @@ fn sync_effects(
 mod tests {
     use super::*;
 
+    /// A committed reference capture's raw f32 samples, by path under tests/projects.
+    fn reference_f32(path: &str) -> Vec<f32> {
+        use std::io::Read;
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects")
+            .join(path);
+        let mut bytes = Vec::new();
+        flate2::read::GzDecoder::new(std::fs::File::open(path).unwrap())
+            .read_to_end(&mut bytes)
+            .unwrap();
+        bytes
+            .chunks_exact(4)
+            .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
+            .collect()
+    }
+
+    /// The audiodistortion live probe's noise: one value per interleaved sample.
+    fn live_noise_values() -> impl Iterator<Item = f32> {
+        let mut seed = 12345_u32;
+        std::iter::repeat_with(move || {
+            seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+            ((seed >> 18) as i32 - 8192) as f32 / 32768.0
+        })
+    }
+
     #[test]
     fn mono_chorus_matches_the_recorded_first_tap_across_partial_blocks() {
-        use std::io::Read;
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/projects/audiopitch/Reference/unity-6000.0.71f1/mono");
         for rate in [48000, 44100] {
             let read = |name: &str| -> Vec<f32> {
-                let file = std::fs::File::open(
-                    root.join(format!("rate-{rate}/context_monofx_1_{name}.master.f32.gz")),
-                )
-                .unwrap();
-                let mut bytes = Vec::new();
-                flate2::read::GzDecoder::new(file)
-                    .read_to_end(&mut bytes)
-                    .unwrap();
-                bytes
-                    .chunks_exact(4)
-                    .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
-                    .collect()
+                reference_f32(&format!(
+                    "audiopitch/Reference/unity-6000.0.71f1/mono/rate-{rate}/context_monofx_1_{name}.master.f32.gz"
+                ))
             };
             let input = read("dry_mono_clip");
             let reference = read("chorus_full");
@@ -2158,29 +2201,11 @@ mod tests {
 
     #[test]
     fn a_newly_enabled_lowpass_matches_the_recorded_first_audible_buffer() {
-        use std::io::Read;
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/projects/audiodistortion/Reference/unity-6000.0.71f1");
-        let mut seed = 12345_u32;
-        let signal: Vec<f32> = (0..7 * 1024 * 2)
-            .map(|_| {
-                seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
-                ((seed >> 18) as i32 - 8192) as f32 / 32768.0
-            })
-            .collect();
+        let signal: Vec<f32> = live_noise_values().take(7 * 1024 * 2).collect();
         for rate in [48000, 44100] {
-            let file = std::fs::File::open(
-                root.join(format!("live-rate-{rate}/life_swap_source.master.f32.gz")),
-            )
-            .unwrap();
-            let mut bytes = Vec::new();
-            flate2::read::GzDecoder::new(file)
-                .read_to_end(&mut bytes)
-                .unwrap();
-            let reference: Vec<_> = bytes
-                .chunks_exact(4)
-                .map(|v| f32::from_le_bytes(v.try_into().unwrap()))
-                .collect();
+            let reference = reference_f32(&format!(
+                "audiodistortion/Reference/unity-6000.0.71f1/live-rate-{rate}/life_swap_source.master.f32.gz"
+            ));
             let spec: EffectSpec = serde_json::from_str(
                 r#"{
                 "id":"lowpass", "kind":"Lowpass", "cutoff":1700.0, "resonance":1.0,
@@ -2662,33 +2687,19 @@ mod tests {
         .unwrap()
     }
 
-    /// The live probe's input: one silent buffer, then deterministic noise per channel.
+    /// The live probe's input: one silent buffer, then the noise, per channel.
     fn live_noise(channels: usize, blocks: usize) -> Vec<f32> {
-        let mut seed = 12345u32;
-        let mut out = Vec::with_capacity(blocks * 1024 * channels);
-        for frame in 0..blocks * 1024 {
-            for _ in 0..channels {
-                seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
-                let value = ((seed >> 18) as i32 - 8192) as f32 / 32768.0;
-                out.push(if frame < 1024 { 0.0 } else { value });
-            }
-        }
-        out
+        live_noise_values()
+            .take(blocks * 1024 * channels)
+            .enumerate()
+            .map(|(i, value)| if i < 1024 * channels { 0.0 } else { value })
+            .collect()
     }
 
     fn live_master(case: &str, rate: u32) -> Vec<f32> {
-        use std::io::Read;
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
-            "../../tests/projects/audiodistortion/Reference/unity-6000.0.71f1/live-rate-{rate}/{case}.master.f32.gz"
-        ));
-        let mut bytes = Vec::new();
-        flate2::read::GzDecoder::new(std::fs::File::open(path).unwrap())
-            .read_to_end(&mut bytes)
-            .unwrap();
-        bytes
-            .chunks_exact(4)
-            .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
-            .collect()
+        reference_f32(&format!(
+            "audiodistortion/Reference/unity-6000.0.71f1/live-rate-{rate}/{case}.master.f32.gz"
+        ))
     }
 
     #[test]
@@ -2811,6 +2822,55 @@ mod tests {
         spec.wet_mix = 0.5;
         effect.update(spec.clone(), 48000, 1024).unwrap();
         assert_eq!((effect.echo.delay, effect.echo.frames), (300.0, 14400));
+    }
+
+    #[test]
+    fn fresh_units_take_the_submitted_delay_and_lanes_follow_the_applied_one() {
+        let mut spec = echo_spec(37.0, 0.4, 0.7, 0.6, true);
+        let mut effect = Effect::new(spec.clone(), 48000, 1024).unwrap();
+        spec.delay = 800.0;
+        effect.update(spec.clone(), 48000, 1024).unwrap();
+        spec.delay = 11.0;
+        effect.update(spec.clone(), 48000, 1024).unwrap();
+        assert_eq!(
+            (effect.echo.delay, effect.echo.history.len()),
+            (800.0, 48000)
+        );
+        // A lane made now applies the same delay and takes the waiting one with the front.
+        let mut lane = effect.mirror(48000, 1024).unwrap();
+        assert_eq!((lane.echo.delay, lane.spec.delay), (800.0, 11.0));
+        effect.process(&mut [0.0; 2 * 2048], false);
+        lane.process(&mut [0.0; 2 * 2048], false);
+        spec.wet_mix = 0.5;
+        for unit in [&mut effect, &mut lane] {
+            unit.update(spec.clone(), 48000, 1024).unwrap();
+            assert_eq!(unit.echo.delay, 11.0);
+        }
+        // Reconnection keeps the ring; a fresh unit has the ring Effect::new makes.
+        effect.restart();
+        assert_eq!(effect.echo.history.len(), 48000);
+        effect.reset();
+        let new = Effect::new(spec.clone(), 48000, 1024).unwrap();
+        assert_eq!(
+            (
+                effect.echo.delay,
+                effect.echo.frames,
+                effect.echo.history.len()
+            ),
+            (new.echo.delay, new.echo.frames, new.echo.history.len())
+        );
+        assert_eq!(
+            (effect.echo.read, effect.echo.write),
+            (new.echo.read, new.echo.write)
+        );
+        // A delay still waiting at a reset is the one the fresh unit uses.
+        spec.delay = 37.0;
+        effect.update(spec.clone(), 48000, 1024).unwrap();
+        spec.delay = 300.0;
+        effect.update(spec.clone(), 48000, 1024).unwrap();
+        assert_eq!(effect.echo.delay, 37.0);
+        effect.reset();
+        assert_eq!((effect.echo.delay, effect.echo.crossfade), (300.0, 0));
     }
 
     #[test]

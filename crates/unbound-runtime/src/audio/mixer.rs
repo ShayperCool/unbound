@@ -515,7 +515,7 @@ impl FilterChain {
                     id: f.id,
                     kind: f.kind,
                     stage: f.stage,
-                    effect: Effect::new(f.effect.spec.clone(), rate, buffer)?,
+                    effect: f.effect.mirror(rate, buffer)?,
                 })
             })
             .collect::<anyhow::Result<_>>()?;
