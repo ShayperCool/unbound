@@ -16,11 +16,13 @@
 {"k":"volume.bc1.supported","v":true}
 {"k":"volume.bc1.slice0","v":["ff0000ff*4","ff0000ff*4","ff0000ff*4","ff0000ff*4"]}
 {"k":"volume.bc1.slice1","v":["0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
+{"k":"volume.bc1.cpu","v":["ff0000ff*4","ff0000ff*4","ff0000ff*4","ff0000ff*4","0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
 {"k":"volume.etc2.supported","v":true}
 {"k":"volume.etc2.exception","v":"UnityException: Failed to create texture because of invalid parameters."}
 {"k":"volume.astc.supported","v":true}
 {"k":"volume.astc.slice0","v":["ff0000ff*4","ff0000ff*4","ff0000ff*4","ff0000ff*4"]}
 {"k":"volume.astc.slice1","v":["0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
+{"k":"volume.astc.cpu","v":["ff0000ff*4","ff0000ff*4","ff0000ff*4","ff0000ff*4","0000ffff*4","0000ffff*4","0000ffff*4","0000ffff*4"]}
 {"k":"volume.logs","v":["Error: Metal does not support RGB Compressed ETC2 UNorm texture format for Texture3D"]}
 {"k":"volume.make.DXT1","v":["made"]}
 {"k":"volume.make.DXT5","v":["made"]}

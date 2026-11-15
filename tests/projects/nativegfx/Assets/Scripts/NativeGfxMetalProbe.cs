@@ -601,6 +601,8 @@ public class NativeGfxMetalProbe : MonoBehaviour
                     RenderTexture.active = active;
                     Value(key + ".slice" + slice, Pixels(output, 4, 4));
                 }
+                // The texels as GetPixels32 decodes them (both slices, rows of 4).
+                Value(key + ".cpu", Rows(volume.GetPixels32(0), 4, 8));
             }
             catch (Exception e)
             {
