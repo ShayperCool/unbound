@@ -92,8 +92,8 @@ public sealed class VfxProbe : MonoBehaviour
         }
     }
 
-    /// <summary>Where in a frame a property set from script is read back (a value set in the
-    /// first frame is not the one read in the second).</summary>
+    /// <summary>Where in a frame a property set from script is read back: one effect given a
+    /// value in the first frame, one in the second.</summary>
     VisualEffect m_Timed, m_TimedLater;
 
     void ReadTimed(string where)
@@ -132,8 +132,31 @@ public sealed class VfxProbe : MonoBehaviour
         Finish();
     }
 
+    static string RendererState(VisualEffect effect)
+    {
+        var renderer = effect.GetComponent<Renderer>();
+        return renderer == null ? "none" : "enabled=" + (renderer.enabled ? 1 : 0) + " visible=" + (renderer.isVisible ? 1 : 0);
+    }
+
+    /// <summary>The graphs imported while the probe plays. None must be: an import in the
+    /// middle of the first frames makes every effect anew from what was saved (the packages
+    /// import a new project's graphs again in the Editor's first update, which is why the
+    /// capture lets the Editor settle before it plays: Assets/Editor/ProbeRunner.cs).</summary>
+    sealed class ImportsWhilePlaying : AssetPostprocessor
+    {
+        public static readonly List<string> Graphs = new List<string>();
+
+        static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
+        {
+            if (!EditorApplication.isPlaying) return;
+            foreach (var path in imported)
+                if (path.EndsWith(".vfx", StringComparison.Ordinal)) Graphs.Add(path);
+        }
+    }
+
     void Finish()
     {
+        Rec("capture/graphs imported while playing", string.Join(", ", ImportsWhilePlaying.Graphs.OrderBy(p => p, StringComparer.Ordinal)));
         m_Out.Append("{\"k\": \"complete\", \"v\": true}\n");
         var dir = Environment.GetEnvironmentVariable("VFX_PROBE_OUT");
         if (!string.IsNullOrEmpty(dir)) File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
@@ -278,11 +301,23 @@ public sealed class VfxProbe : MonoBehaviour
         {
             if (frame == 6) effect.enabled = false;
             if (frame == 10) effect.enabled = true;
+            // The effect's renderer, while the effect is off and once it is on again.
+            if (frame == 8 || frame == 12) Rec("sim/toggle/renderer/f" + frame.ToString("000"), RendererState(effect));
         });
         Run("toggle object", "SimRate", 16, act: (frame, effect) =>
         {
             if (frame == 6) effect.gameObject.SetActive(false);
             if (frame == 10) effect.gameObject.SetActive(true);
+            if (frame == 8 || frame == 12) Rec("sim/toggle object/renderer/f" + frame.ToString("000"), RendererState(effect));
+        });
+        // Disabled and enabled in one frame: the way scripts start an effect over.
+        Run("toggle at once", "SimRate", 12, act: (frame, effect) =>
+        {
+            if (frame == 6) { effect.enabled = false; effect.enabled = true; }
+        });
+        Run("toggle object at once", "SimRate", 12, act: (frame, effect) =>
+        {
+            if (frame == 6) { effect.gameObject.SetActive(false); effect.gameObject.SetActive(true); }
         });
         // The effects the manager lists: not a disabled one, nor one on an inactive object.
         var disabled = Run("disabled", "SimRate", 3);
@@ -446,18 +481,36 @@ public sealed class VfxProbe : MonoBehaviour
     /// <summary>The scripting API's inverse of an affine matrix, with the matrix the expression
     /// controls invert (a graph's inverse of a transform gives the same numbers) and with one
     /// that has no inverse.</summary>
+    static Matrix4x4 Thin(float x, float z)
+    {
+        var matrix = Matrix4x4.identity;
+        matrix.m00 = x;
+        matrix.m22 = z;
+        matrix.m03 = 10f;
+        matrix.m13 = 20f;
+        matrix.m23 = 30f;
+        return matrix;
+    }
+
     void AffineInverse()
     {
         foreach (var (name, matrix) in new[]
         {
             ("frame", Matrix4x4.TRS(new Vector3(10f, 20f, 30f), Quaternion.Euler(30f, 45f, 60f), new Vector3(2f, 3f, 4f))),
             ("flat", Matrix4x4.TRS(new Vector3(10f, 20f, 30f), Quaternion.Euler(0f, 90f, 0f), new Vector3(1f, 1f, 0f))),
+            // Determinants on either side of where a matrix stops having an inverse, of each
+            // sign, a scale small in every direction, and a cell that is not a number.
+            ("thin", Thin(1f, 3.2e-13f)), ("thinner", Thin(1f, 3.1e-13f)), ("thin mirrored", Thin(-1f, 3.2e-13f)), ("thinner mirrored", Thin(-1f, 3.1e-13f)),
+            ("small", Matrix4x4.TRS(new Vector3(10f, 20f, 30f), Quaternion.identity, new Vector3(1e-4f, 1e-4f, 1e-4f))),
+            ("smaller", Matrix4x4.TRS(new Vector3(10f, 20f, 30f), Quaternion.identity, new Vector3(5e-5f, 5e-5f, 5e-5f))),
+            ("not a number", Thin(float.NaN, 1f)),
         })
         {
             var result = Matrix4x4.identity;
             bool inverted = Matrix4x4.Inverse3DAffine(matrix, ref result);
             var cells = new string[16];
-            for (int i = 0; i < 16; i++) cells[i] = F(result[i]);
+            // Which not-a-number a cell holds is not compared.
+            for (int i = 0; i < 16; i++) cells[i] = float.IsNaN(result[i]) ? "nan" : F(result[i]);
             Rec("math/inverse affine/" + name, (inverted ? "1 " : "0 ") + string.Join(",", cells));
         }
     }

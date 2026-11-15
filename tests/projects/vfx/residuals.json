@@ -1,0 +1,5 @@
+{
+ "A coroutine waiting for the end of the frame resumes in the first Play frame in this capture (URP, the Editor settled before play); Unbound resumes it from the second frame, as tests/projects/eofstartup measured with the built-in render pipeline (follow-up: measure the first frame's end of frame with a scriptable pipeline)": [
+  "sim/override timing/f001 3 end of frame"
+ ]
+}

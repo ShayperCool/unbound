@@ -522,12 +522,17 @@ public static class GraphAuthoring
         graph.AddChild(state);
         Bools(state.outputSlots.First(s => s.name == "NewLoop"));
         Uints(state.outputSlots.First(s => s.name == "LoopState"));
-        // The manager's update count: the last unsigned input (the probe records how it grows).
+        // The manager's update count, in the input u19 (the probe records how it grows).
         var frameIndex = Make<VFXDynamicBuiltInParameter>();
         graph.AddChild(frameIndex);
         frameIndex.SetSettingValue("m_BuiltInParameters", VFXDynamicBuiltInParameter.BuiltInFlag.VfxFrameIndex);
         Link(frameIndex.outputSlots[0], Input(block, "u19"));
         Ints(state.outputSlots.First(s => s.name == "LoopIndex"), state.outputSlots.First(s => s.name == "LoopCount"));
+        // The conversions not met above: to a bool from an unsigned number and from a float,
+        // from a bool to whole numbers.
+        Bools(U, A);
+        Ints(P);
+        Link(P, Input(block, "u20"));
         Floats(state.outputSlots.First(s => s.name == "SpawnCount"), state.outputSlots.First(s => s.name == "SpawnDeltaTime"), state.outputSlots.First(s => s.name == "SpawnTotalTime"),
             state.outputSlots.First(s => s.name == "LoopDuration"), state.outputSlots.First(s => s.name == "DelayBeforeLoop"), state.outputSlots.First(s => s.name == "DelayAfterLoop"));
 

@@ -141,8 +141,10 @@ the alive count is the particles spawned so far, exactly, each frame:
   signs, a frame of no depth), set in the frame the effect is made and again at frame 4.
   `expressions scene`, `expressions copy`: the scene's effect of that graph (saved with one
   override) and a copy of it made in the first frame, each given another value at once.
-  `expressions late`: one made at frame 20 and given a value at once. `override timing/*`:
-  where in the first frames a value set from script reads back.
+  `expressions late`: one made at frame 20 and given a value at once. `override timing/*`,
+  `override first frame`, `override second frame`: values set from script in the first and in
+  the second frame, read back in `Update`, in `LateUpdate` and at the end of each frame, and
+  what the effects then spawn with (the values stay).
 - `late fresh`, `late second`: effects of a graph no other effect uses, made at frames 20 and
   24 and given a rate at once.
 - `chain`: a spawn context whose burst starts another, and one whose burst stops it.
@@ -151,23 +153,37 @@ the alive count is the particles spawned so far, exactly, each frame:
   image; a green one set in the first frame; a green one set at frame 4 of an effect started
   over at frame 5.
 - `toggle`, `toggle object`: an effect disabled at frame 6 and enabled at frame 10, by its
-  component and by its object. `disabled`, `inactive`, `manager/components`: which effects
-  `VFXManager.GetComponents` lists, and what their getters answer.
+  component and by its object, with its renderer's `enabled` and `isVisible` while it is off
+  and once it is on again (`renderer/f008`, `f012`); frames 7 to 9 show that it keeps its
+  systems as they were. `toggle at once`, `toggle object at once`: disabled and enabled within
+  frame 6. `disabled`, `inactive`, `manager/components`: which effects
+  `VFXManager.GetComponents` lists (the getters of an effect that is off from its first frame
+  answer a new effect's values, whether or not it has systems: these rows do not tell).
 - `math/inverse affine/*`: `Matrix4x4.Inverse3DAffine` of the expressions' frame (the numbers a
-  graph's inverse gives) and of a matrix without an inverse.
+  graph's inverse gives), of a matrix without an inverse, of matrices whose determinant is on
+  either side of where the inverse stops (3.2e-13 and 3.1e-13, of each sign; a scale of 1e-4
+  and of 5e-5 in every direction) and of one with a cell that is not a number (which
+  not-a-number comes back is not compared).
+- `capture/graphs imported while playing`: none. The packages import a new project's graphs
+  again in the Editor's first update (their versions in the project settings, the render
+  pipeline's material upgrade), and an import between two frames makes every effect anew from
+  what was saved: the capture lets the Editor settle before it plays
+  (`Assets/Editor/ProbeRunner.cs`), and this row shows that it did.
 
-Observed and kept: effects made in the first frame run their first step one frame later than
-one made in frame 20 (no camera has culled before the first frame's update: effects update only
-after a camera culled, or when one simulates while culled); an effect counts as culled until
-its first update, and is not culled in that update; `aliveParticleCount` is -1 for a system
-whose particles die until its first count arrives. A value a script gives a property in the
-first frame of play reads back in that frame and is the saved one from the second frame on,
-for effects of the scene, copies and effects made by script alike; values set in later frames
-stay, also on an effect made in that frame. An effect enabled again starts over, and its first
-update after that takes its initial event without simulating (no camera drew it while it was
-off). A value no expression evaluated yet has every bit set. The smallest int divided by -1 in
+Observed and kept: an effect counts as culled until its first update, and is not culled in
+that update, whenever it is made (the first frame or frame 20); `aliveParticleCount` is -1 for a
+system whose particles die until its first count arrives. A value a script gives a property
+stays, in the first frame as in any other. An effect's renderer is disabled while the effect
+is disabled or its object inactive; an effect enabled again starts over, and its first update
+after frames it was off in takes its initial event without simulating (no camera took its
+renderer in the frame before), while one disabled and enabled within a frame simulates at
+once. A value no expression evaluated yet has every bit set. The smallest int divided by -1 in
 a graph stops the Editor, as reading the spawn count of a `VFXSpawnerState` made with `new`
 does: neither is among the controls.
+
+Known residual (`residuals.json`): the coroutine of `override timing` that waits for the end of
+the frame resumes in the first frame in this capture and from the second frame in Unbound,
+which follows what `tests/projects/eofstartup` measured with the built-in render pipeline.
 
 ## Not covered yet
 
@@ -178,8 +194,7 @@ the ones the runtime does not do yet (matrices built from or split into rows, co
 angles and scales taken from a matrix, colour spaces, curves and gradients, meshes, the main
 camera, noise, texture and buffer sizes). The update modes that ignore the time scale are not
 compared: the Editor's unscaled delta time under a capture frame rate is the wall clock's.
-Whether the first frame's loss of script-set values also follows a scene loaded later is not
-measured. One attribute name with different
+One attribute name with different
 types in two graphs (a custom attribute) is not measured for `CopyValuesFrom`.
 Everything was measured in the Linux Editor on the OpenGL Core device (NVIDIA driver); the
 frames at which a count read back from the GPU arrives depend on the device (the rows avoid them).
