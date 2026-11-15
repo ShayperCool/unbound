@@ -301,10 +301,15 @@ namespace UnityEngine.Tests
                     SpeedTreeWindSystem.Update();
                 }
                 Assert.NotEqual(before, (Vector4)shared.Wind.Values[3]);
+                // Destroying the group with its inactive owner ends the local wind; the next
+                // wind update runs without it.
+                Object.DestroyImmediate(root);
+                Assert.Empty(shared.Trees);
+                SpeedTreeWindSystem.Update();
             }
             finally
             {
-                Object.DestroyImmediate(root);
+                if (root) Object.DestroyImmediate(root);
                 Object.DestroyImmediate(zone.gameObject);
                 Object.DestroyImmediate(asset);
                 SpeedTreeWindSystem.Update();

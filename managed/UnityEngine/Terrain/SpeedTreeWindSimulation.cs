@@ -574,6 +574,14 @@ namespace UnityEngine
                     s_Locals.RemoveAt(i--);
                     continue;
                 }
+                // A destroyed tree leaves (its destruction detaches it; this keeps a wind whose
+                // trees are all gone from being updated).
+                if (local.Trees[0] == null)
+                {
+                    Detach(local.Trees[0]);
+                    if (local.Trees.Count == 0) i--;
+                    continue;
+                }
                 var spherical = SphericalWind(TreeBounds(local.Trees[0]));
                 if (!local.Wind.UpdateLocal(time, s_Directional, spherical, asset.Wind, ref asset.Config)) continue;
                 var first = local.Trees[0];
