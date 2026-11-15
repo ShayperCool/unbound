@@ -297,7 +297,7 @@ namespace UnityEngine
                 return info.Tags.TryGetValue(tagName.name, out var tag) ? new ShaderTagId(tag) : ShaderTagId.none;
             }
             if (subshaderIndex < 0 || subshaderIndex >= d.SubShaders.Count)
-                throw new ArgumentOutOfRangeException($"Invalid subshaderIndex {subshaderIndex}. Value must be in the range [0, {d.SubShaders.Count})");
+                throw Unbound.Runtime.MonoExceptions.OutOfRange($"Invalid subshaderIndex {subshaderIndex}. Value must be in the range [0, {d.SubShaders.Count})");
             var value = Unbound.Runtime.ShaderDeclarations.Tag(d.SubShaders[subshaderIndex].Tags, tagName.name);
             return value != null ? new ShaderTagId(value) : ShaderTagId.none;
         }
