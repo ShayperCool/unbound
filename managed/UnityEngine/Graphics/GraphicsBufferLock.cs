@@ -55,8 +55,8 @@ namespace UnityEngine
         }
 
         /// <summary>Opens a lock on a byte range. A lock still open ends first and is written, its
-        /// array released (Unbound's choice: the Editor leaves an earlier array's contents
-        /// unmeasured, and the Scripting API calls them undefined).</summary>
+        /// array released (Unbound's choice: unmeasured in the Editor; the Scripting API calls an
+        /// earlier array's contents undefined).</summary>
         unsafe void* BeginBufferWrite(long offset, long size)
         {
             EndBufferWrite();

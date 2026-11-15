@@ -69,7 +69,9 @@ namespace UnityEngine.Rendering
     /// A keyword set made with <c>new</c> has no keyword state: every operation logs the Editor's
     /// two errors and changes nothing, and no keyword reads as enabled (the Unity 6000.0.71f1
     /// Editor at runtime, tests/projects/srpmembers keyword.set, keyword.setBuiltin,
-    /// log.keywords). Sets with state come from shader build callbacks, which Unbound does not run.
+    /// log.keywords, measured through the ShaderKeyword overloads; the GlobalKeyword and
+    /// LocalKeyword IsEnabled overloads follow the same rule, unmeasured). Sets with state come
+    /// from shader build callbacks, which Unbound does not run.
     /// </summary>
     public partial struct ShaderKeywordSet
     {

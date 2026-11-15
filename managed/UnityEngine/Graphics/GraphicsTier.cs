@@ -14,7 +14,7 @@ namespace UnityEngine
             get
             {
                 if (Unbound.Runtime.GraphicsDeviceProfile.Current.Type != GraphicsDeviceType.OpenGLCore)
-                    Unbound.Runtime.Stubs.Ignored("UnityEngine.Graphics.activeTier", "is measured on OpenGL Core only: this device answers as it does");
+                    Unbound.Runtime.Stubs.Ignored("UnityEngine.Graphics.activeTier", "is measured on OpenGL Core only: Tier3 is answered as measured there");
                 return s_ActiveTier;
             }
             set => s_ActiveTier = value;
