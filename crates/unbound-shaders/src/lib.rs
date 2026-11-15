@@ -36,7 +36,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 53;
+pub const FORMAT_VERSION: u32 = 54;
 
 /// The identity of this build's compiler (`src/identity.rs`, made by the build script): the
 /// hash of the sources that decide its output. Cache entries are keyed by it beside
@@ -4593,6 +4593,93 @@ void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_M
             let cube = c.textures.iter().position(|t| t == "_Cube").unwrap();
             assert_eq!(c.texture_dims[cube], TextureDim::Cube);
         }
+    }
+
+    /// A constant that is not a number (WGSL has none) is made when the program runs: a vertex
+    /// program that puts one in the position of what it does not draw (the Visual Effect
+    /// Graph's `asfloat(~0u)`) validates, and still casts the same bits.
+    #[test]
+    fn constants_that_are_not_numbers_are_cast_at_run_time() {
+        let source = "float helper(float x) { return x > 0 ? x : asfloat(~0u); }\n\
+            float4 main(float4 p : POSITION, uint id : SV_VertexID) : SV_Position \
+            { if (id > 3u) { p.x = asfloat(~0u); return p; } p.y = helper(p.y) + min(p.z, asfloat(0x7fc00001u)); return p; }";
+        let compiler = shaderc::Compiler::new().unwrap();
+        let mut o = shaderc::CompileOptions::new().unwrap();
+        o.set_source_language(shaderc::SourceLanguage::HLSL);
+        o.set_auto_bind_uniforms(true);
+        o.set_auto_map_locations(true);
+        o.set_target_env(
+            shaderc::TargetEnv::Vulkan,
+            shaderc::EnvVersion::Vulkan1_1 as u32,
+        );
+        let spv = compiler
+            .compile_into_spirv(source, shaderc::ShaderKind::Vertex, "t", "main", Some(&o))
+            .unwrap();
+        let folded = spv
+            .as_binary()
+            .iter()
+            .filter(|w| f32::from_bits(**w).is_nan() && **w != u32::MAX)
+            .count();
+        let module = fit::parse(spv.as_binary(), fit::ClipSpace::OpenGl).unwrap();
+        let functions = module
+            .functions
+            .iter()
+            .map(|(_, f)| f)
+            .chain(module.entry_points.iter().map(|e| &e.function));
+        let (mut literals, mut casts, mut bits) = (0, 0, Vec::new());
+        for f in functions {
+            for (_, e) in f.expressions.iter() {
+                match e {
+                    naga::Expression::Literal(naga::Literal::F32(v)) if v.is_nan() => literals += 1,
+                    naga::Expression::As {
+                        convert: None,
+                        kind: naga::ScalarKind::Float,
+                        ..
+                    } => casts += 1,
+                    naga::Expression::Literal(naga::Literal::U32(v))
+                        if f32::from_bits(*v).is_nan() =>
+                    {
+                        bits.push(*v)
+                    }
+                    _ => {}
+                }
+            }
+        }
+        assert!(module.global_expressions.iter().all(
+            |(_, e)| !matches!(e, naga::Expression::Literal(naga::Literal::F32(v)) if v.is_nan())
+        ));
+        assert_eq!(literals, 0, "{folded} folded");
+        assert!(casts >= 2, "{casts} casts, {folded} folded");
+        // The bits are kept as they were written, where the variables take them from.
+        bits.extend(
+            module
+                .global_expressions
+                .iter()
+                .filter_map(|(_, e)| match e {
+                    naga::Expression::Literal(naga::Literal::U32(v))
+                        if f32::from_bits(*v).is_nan() =>
+                    {
+                        Some(*v)
+                    }
+                    _ => None,
+                }),
+        );
+        assert!(
+            bits.contains(&u32::MAX) && bits.contains(&0x7fc00001),
+            "{bits:x?}"
+        );
+        let info = naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        )
+        .validate(&module)
+        .unwrap();
+        // The program as the renderer gets it reads back, the casts still made of variables.
+        let wgsl =
+            naga::back::wgsl::write_string(&module, &info, naga::back::wgsl::WriterFlags::empty())
+                .unwrap();
+        assert!(wgsl.contains("bitcast<f32>"), "{wgsl}");
+        naga::front::wgsl::parse_str(&wgsl).unwrap();
     }
 
     /// Infinite constants (WGSL has none) read as the largest finite floats: a kernel testing

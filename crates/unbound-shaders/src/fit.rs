@@ -1001,8 +1001,198 @@ impl ClipSpace {
     }
 }
 
+/// Float constants that are not a number (`asfloat(~0u)`: the Visual Effect Graph's vertex
+/// programs put one in the clip position of a particle they do not draw), which glslang folds
+/// into constants and WGSL cannot hold, are made where they are used instead: each function
+/// that uses one keeps its bits in a variable and casts what it loads from it. The uses known
+/// to take a value are replaced (stores, constructions, selections, arithmetic, calls,
+/// returns) and a constant left without a use is dropped; one used any other way stays, and
+/// the validator reports it.
+fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
+    const OP_TYPE_INT: u32 = 21;
+    const OP_TYPE_FLOAT: u32 = 22;
+    const OP_TYPE_POINTER: u32 = 32;
+    const OP_CONSTANT: u32 = 43;
+    const OP_FUNCTION: u32 = 54;
+    const OP_FUNCTION_END: u32 = 56;
+    const OP_VARIABLE: u32 = 59;
+    const OP_LOAD: u32 = 61;
+    const OP_BITCAST: u32 = 124;
+    const OP_LABEL: u32 = 248;
+    const STORAGE_FUNCTION: u32 = 7;
+    let list = instructions(words)?;
+    let op = |at: usize| words[at] & 0xffff;
+    let mut floats = HashSet::new();
+    let (mut uint, mut pointer) = (None, None);
+    // The constants: id → (its float type, its bits).
+    let mut nans: HashMap<u32, (u32, u32)> = HashMap::new();
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        match op(at) {
+            OP_TYPE_FLOAT if inst[2] == 32 => {
+                floats.insert(inst[1]);
+            }
+            OP_TYPE_INT if inst[2] == 32 && inst[3] == 0 => uint = Some(inst[1]),
+            OP_TYPE_POINTER if inst[2] == STORAGE_FUNCTION && Some(inst[3]) == uint => {
+                pointer = Some(inst[1])
+            }
+            OP_CONSTANT if count == 4 && floats.contains(&inst[1]) => {
+                if f32::from_bits(inst[3]).is_nan() {
+                    nans.insert(inst[2], (inst[1], inst[3]));
+                }
+            }
+            _ => {}
+        }
+    }
+    if nans.is_empty() {
+        return Ok(words.to_vec());
+    }
+    // The operands of an instruction that are values (never literals), by its opcode.
+    let values = |code: u32, count: usize| -> std::ops::Range<usize> {
+        match code {
+            // OpStore's object, OpReturnValue's value, OpCompositeInsert's object.
+            62 => 2..3,
+            254 => 1..2,
+            82 => 3..4,
+            // OpCompositeConstruct's constituents, OpFunctionCall's arguments, OpExtInst's.
+            80 => 3..count,
+            57 => 4..count,
+            12 => 5..count,
+            // OpSelect's two objects; negation, arithmetic and comparisons of floats.
+            169 => 4..6,
+            126 | 127 => 3..4,
+            129 | 131 | 133 | 136 | 141 | 142 | 143 | 180..=191 => 3..5,
+            _ => 0..0,
+        }
+    };
+    let mut bound = words[3];
+    let mut fresh = || {
+        bound += 1;
+        bound - 1
+    };
+    let mut out = words[..5].to_vec();
+    let mut declared: HashMap<u32, u32> = HashMap::new();
+    let mut k = 0;
+    while k < list.len() {
+        let (at, count) = list[k];
+        if op(at) != OP_FUNCTION {
+            out.extend_from_slice(&words[at..at + count]);
+            k += 1;
+            continue;
+        }
+        let end = (k..list.len())
+            .find(|&e| op(list[e].0) == OP_FUNCTION_END)
+            .context("a function without its end")?;
+        // The constants the function's body uses as values, in the order first used.
+        let mut used = Vec::new();
+        for &(at, count) in &list[k..end] {
+            for operand in values(op(at), count) {
+                let id = words[at + operand];
+                if nans.contains_key(&id) && !used.contains(&id) {
+                    used.push(id);
+                }
+            }
+        }
+        if used.is_empty() {
+            for &(at, count) in &list[k..=end] {
+                out.extend_from_slice(&words[at..at + count]);
+            }
+            k = end + 1;
+            continue;
+        }
+        // Before the first function that needs them: the types and the constants' bits.
+        let uint_type = *uint.get_or_insert_with(|| {
+            let id = fresh();
+            out.extend_from_slice(&[(4 << 16) | OP_TYPE_INT, id, 32, 0]);
+            id
+        });
+        let pointer_type = *pointer.get_or_insert_with(|| {
+            let id = fresh();
+            out.extend_from_slice(&[(4 << 16) | OP_TYPE_POINTER, id, STORAGE_FUNCTION, uint_type]);
+            id
+        });
+        for &id in &used {
+            declared.entry(id).or_insert_with(|| {
+                let bits = fresh();
+                out.extend_from_slice(&[(4 << 16) | OP_CONSTANT, uint_type, bits, nans[&id].1]);
+                bits
+            });
+        }
+        let label = (k..end)
+            .find(|&e| op(list[e].0) == OP_LABEL)
+            .context("a function without a block")?;
+        // A block's variables come first: ours after the label, the casts after the last one.
+        let body = (label + 1..end)
+            .find(|&e| op(list[e].0) != OP_VARIABLE)
+            .unwrap_or(end);
+        let variables: Vec<u32> = used.iter().map(|_| fresh()).collect();
+        let mut made: HashMap<u32, u32> = HashMap::new();
+        for (e, &(at, count)) in list.iter().enumerate().take(end + 1).skip(k) {
+            if e == body {
+                for (&id, &variable) in used.iter().zip(&variables) {
+                    let (loaded, value) = (fresh(), fresh());
+                    out.extend_from_slice(&[(4 << 16) | OP_LOAD, uint_type, loaded, variable]);
+                    out.extend_from_slice(&[(4 << 16) | OP_BITCAST, nans[&id].0, value, loaded]);
+                    made.insert(id, value);
+                }
+            }
+            let start = out.len();
+            out.extend_from_slice(&words[at..at + count]);
+            for operand in values(op(at), count) {
+                if let Some(&value) = made.get(&out[start + operand]) {
+                    out[start + operand] = value;
+                }
+            }
+            if e == label {
+                for (&id, &variable) in used.iter().zip(&variables) {
+                    out.extend_from_slice(&[
+                        (5 << 16) | OP_VARIABLE,
+                        pointer_type,
+                        variable,
+                        STORAGE_FUNCTION,
+                        declared[&id],
+                    ]);
+                }
+            }
+        }
+        k = end + 1;
+    }
+    out[3] = bound;
+    // A constant nothing names any more goes (declared, it would still be a literal of the
+    // module). One whose id is still a word of another instruction stays: that may be a use.
+    const OP_NAME: u32 = 5;
+    const OP_DECORATE: u32 = 71;
+    let own = |inst: &[u32], id: u32| match inst[0] & 0xffff {
+        OP_CONSTANT => inst[2] == id,
+        OP_NAME | OP_DECORATE => inst[1] == id,
+        _ => false,
+    };
+    let rewritten = instructions(&out)?;
+    let unused: HashSet<u32> = nans
+        .keys()
+        .copied()
+        .filter(|&id| {
+            rewritten.iter().all(|&(at, count)| {
+                let inst = &out[at..at + count];
+                own(inst, id) || !inst[1..].contains(&id)
+            })
+        })
+        .collect();
+    if unused.is_empty() {
+        return Ok(out);
+    }
+    let mut kept = out[..5].to_vec();
+    for &(at, count) in &rewritten {
+        let inst = &out[at..at + count];
+        if !unused.iter().any(|&id| own(inst, id)) {
+            kept.extend_from_slice(inst);
+        }
+    }
+    Ok(kept)
+}
+
 pub(crate) fn parse(words: &[u32], clip: ClipSpace) -> Result<Module> {
-    let words = image_coordinate_vectors(&pack_storage_vectors(words)?)?;
+    let words = runtime_nans(&image_coordinate_vectors(&pack_storage_vectors(words)?)?)?;
     let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
     let options = naga::front::spv::Options {
         adjust_coordinate_space: clip == ClipSpace::OpenGl,
@@ -1019,7 +1209,8 @@ pub(crate) fn parse(words: &[u32], clip: ClipSpace) -> Result<Module> {
 /// `saturate(x * INF)`), which glslang folds into literals and WGSL cannot hold, become the
 /// largest finite float of their sign: the same in comparisons with finite values and in
 /// saturated products (`0 * INF` is NaN, which saturates to 0, as `0 * FLT_MAX` is); `isinf` of
-/// them differs. NaN literals stay (the validator reports them).
+/// them differs. NaN literals are made at run time before this ([`runtime_nans`]); one that is
+/// left stays (the validator reports it).
 fn finite_float_literals(module: &mut Module) {
     fn finite(e: &mut Expression) {
         match e {
