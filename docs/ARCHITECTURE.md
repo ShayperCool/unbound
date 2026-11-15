@@ -181,7 +181,15 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   package's postprocessors of the import (it has no post-import pass otherwise). An effect keeps
   one value per expression of its asset (`VisualEffectValues`) and a property sheet over the
   exposed ones; overrides are kept by name and type across asset changes
-  (tests/projects/vfx). Systems are not simulated or drawn yet.
+  (tests/projects/vfx). Enabled effects update at PostLateUpdate.VFXUpdate, in frames after a
+  camera culled (`VFX/VFXManager.Update.cs`): each runs the steps its asset's update mode asks
+  for (`VFX/VisualEffect.Runtime.cs`), a step evaluating the graph's CPU expressions
+  (`VFXExpressionEvaluator`), taking the queued events, running the spawn systems
+  (`VFXSpawnerSystem`: loop state and blocks, in managed code like the particle system
+  module) and then the particle systems (`VFXParticleSystem`), which upload what the generated
+  kernels read (graph values, spawn events and their attributes) and dispatch the initialize
+  and update kernels. An effect is a batch of one instance of its asset. Outputs are not drawn
+  yet.
 * **Graphics devices**: like Unity, Unbound has several graphics devices, and the device a game
   sees is the one it gets: OpenGL Core and Vulkan on Linux, Metal on macOS. The run's device is
   chosen once at startup (`unbound_compat::graphics`), as the Editor of the OS chooses it (Unity
