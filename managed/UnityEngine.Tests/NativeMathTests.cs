@@ -188,15 +188,12 @@ namespace Unbound.Tests
         }
 
         [Fact]
-        public void SqrDistanceOfANaNCoordinateFollowsTheHostEditor()
+        public void SqrDistanceOfANaNCoordinateIsTheLinuxEditors()
         {
-            // The arm64 Editor's larger-of-two gives NaN for a NaN distance, the x86_64 Editor's the extent.
+            // The Linux x86_64 Editor's larger-of-two gives the extent for a NaN distance, on every
+            // host (the macOS arm64 Editor's NaN is a toolchain artefact, not reproduced).
             var box = new Bounds(Vector3.zero, new Vector3(2f, 2f, 2f));
-            float squared = box.SqrDistance(new Vector3(float.NaN, 3f, 0f));
-            if (System.Runtime.Intrinsics.Arm.AdvSimd.IsSupported)
-                Assert.True(float.IsNaN(squared));
-            else
-                Assert.Equal(4f, squared);
+            Assert.Equal(4f, box.SqrDistance(new Vector3(float.NaN, 3f, 0f)));
         }
 
         [Fact]

@@ -141,16 +141,13 @@ namespace UnityEngine
             set => this = FromEulerRad(value * Mathf.Deg2Rad);
         }
 
-        // Rotation about Z, then X, then Y: q = qY * qX * qZ. Each half angle's sine and cosine come
-        // from one sincos, which matches the macOS arm64 6000.0.71f1 Editor where it differs from
-        // separate sin and cos in the last bit (tests/projects/solverpairorder --transform-inputs);
-        // glibc's sincosf equals its sinf and cosf for every float, so Linux results do not change.
+        // Rotation about Z, then X, then Y: q = qY * qX * qZ, from each half angle's sine and cosine.
         internal static Quaternion FromEulerRad(Vector3 euler)
         {
             float hx = euler.x * 0.5f, hy = euler.y * 0.5f, hz = euler.z * 0.5f;
-            var (sx, cx) = MathF.SinCos(hx);
-            var (sy, cy) = MathF.SinCos(hy);
-            var (sz, cz) = MathF.SinCos(hz);
+            float cx = MathF.Cos(hx), sx = MathF.Sin(hx);
+            float cy = MathF.Cos(hy), sy = MathF.Sin(hy);
+            float cz = MathF.Cos(hz), sz = MathF.Sin(hz);
             return new Quaternion(
                 cy * sx * cz + sy * cx * sz,
                 sy * cx * cz - cy * sx * sz,

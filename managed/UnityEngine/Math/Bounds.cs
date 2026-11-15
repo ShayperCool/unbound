@@ -126,13 +126,18 @@ namespace UnityEngine
 
         private const string InvalidBoxAssertion = "Invalid AABB rkBox";
 
+        // Each axis's distance past the box: the larger of the offset and the extent (the extent when
+        // either is NaN, as the Linux Editor computes it: tests/projects/floatrounding
+        // native/degenerate), less the extent.
         internal float SqrDistanceUnchecked(Vector3 point)
         {
-            float dx = Unbound.Runtime.Compat.NativeMax(MathF.Abs(point.x - m_Center.x), m_Extents.x) - m_Extents.x;
-            float dy = Unbound.Runtime.Compat.NativeMax(MathF.Abs(point.y - m_Center.y), m_Extents.y) - m_Extents.y;
-            float dz = Unbound.Runtime.Compat.NativeMax(MathF.Abs(point.z - m_Center.z), m_Extents.z) - m_Extents.z;
+            float dx = Larger(MathF.Abs(point.x - m_Center.x), m_Extents.x) - m_Extents.x;
+            float dy = Larger(MathF.Abs(point.y - m_Center.y), m_Extents.y) - m_Extents.y;
+            float dz = Larger(MathF.Abs(point.z - m_Center.z), m_Extents.z) - m_Extents.z;
             return dx * dx + dy * dy + dz * dz;
         }
+
+        static float Larger(float a, float b) => a > b ? a : b;
 
         /// <summary>The closest point on or in the box; a point inside is returned unchanged.</summary>
         public Vector3 ClosestPoint(Vector3 point)

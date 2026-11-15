@@ -13,18 +13,17 @@ namespace UnityEngine.Tests
         {
             // tests/projects/solverpairorder --transform-inputs raw/6 and circle-scale/18/rotated: the
             // Linux x86_64 Editor's normalization, on every host (the macOS arm64 Editor's last bits
-            // differ and are not reproduced). Euler angles take the platform library's sincos.
+            // differ and are not reproduced). Euler angles take the platform library's sine and cosine.
             if (!MacArm64 && !LinuxX64) return;
             var o = new GameObject("rotation");
             try
             {
                 o.transform.localRotation = new Quaternion(.23f, -.17f, .31f, .9f);
                 Assert.Equal(new Quaternion(.231404275f, -.171037927f, .311892718f, .905494869f), o.transform.localRotation, Exact);
-                // Euler's half-angle sines and cosines from one sincos: on macOS separate sin and cos
-                // give the Linux values here (y, z, w one bit off the macOS Editor's).
+                // Euler's half-angle sines and cosines, separate: on macOS they give the Linux values
+                // here (y, z, w one bit off the macOS Editor's, not reproduced).
                 o.transform.localRotation = Quaternion.Euler(30f, 16f, 38f);
-                Assert.Equal(MacArm64 ? new Quaternion(.28610307f, .0436637141f, .277356058f, .916139841f)
-                    : new Quaternion(.28610307f, .0436637066f, .2773561f, .9161398f), o.transform.localRotation, Exact);
+                Assert.Equal(new Quaternion(.28610307f, .0436637066f, .2773561f, .9161398f), o.transform.localRotation, Exact);
             }
             finally { Object.DestroyImmediate(o); }
         }
