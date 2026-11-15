@@ -224,7 +224,8 @@ The authoring step builds an AssetBundle with the asset of a graph of its own
 probe's images, since an output left at its default would have the package's texture built in)
 into `Assets/StreamingAssets/VfxProbe/vfxgraphs`: the compiled graph, without the graph file.
 The probe's own script is compiled for the Editor only, since the build compiles the project's
-scripts for a player. The probe loads it (`bundle/*`): the bundle and the asset's name in it,
+scripts for a player. The build also rewrites the prefiltering fields of the project's pipeline
+asset (`Assets/Settings/ProbeURP.asset`), which is why the authored set holds a copy of it. The probe loads it (`bundle/*`): the bundle and the asset's name in it,
 the asset (an object of its own, not the project's), its events and exposed properties, and an
 effect that uses it (its systems, and at frames 3 and 20 whether it is culled and awake).
 
