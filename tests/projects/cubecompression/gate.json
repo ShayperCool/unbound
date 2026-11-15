@@ -8,6 +8,9 @@
     "crates/unbound-assets/src/texture/bcn.rs",
     "crates/unbound-assets/src/texture/cubemap.rs",
     "crates/unbound-runtime/src/state.rs",
-    "crates/unbound-app/src/render/resources.rs"
+    "crates/unbound-app/src/render/resources.rs",
+    "managed/UnityEngine/Graphics/Cubemap.cs",
+    "managed/UnityEngine/Graphics/Immediate.cs",
+    "managed/UnityEngine/Graphics/ReflectionProbe.Convolution.cs"
   ]
 }

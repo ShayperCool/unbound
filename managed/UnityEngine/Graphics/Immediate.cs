@@ -640,8 +640,14 @@ namespace UnityEngine
                 var faceFormat = compressed != null ? compressed.PixelGraphicsFormat : src.graphicsFormat;
                 faceCopy = RenderTexture.GetTemporary(new RenderTextureDescriptor(src.width, src.height, faceFormat, 0));
                 faceCopy.filterMode = src.filterMode;
-                if (compressed != null) ReflectionProbe.DrawCubeFace(compressed, 0, faceCopy);
-                else GfxStream.CopyTexture(TextureHandles.Of(src), 0, 0, new RectInt(0, 0, -1, -1), faceCopy.EnsureCreated(), 0, 0, 0, 0);
+                if (compressed == null)
+                    GfxStream.CopyTexture(TextureHandles.Of(src), 0, 0, new RectInt(0, 0, -1, -1), faceCopy.EnsureCreated(), 0, 0, 0, 0);
+                else if (!ReflectionProbe.DrawCubeFace(compressed, 0, faceCopy))
+                {
+                    RenderTexture.ReleaseTemporary(faceCopy);
+                    Debug.LogError($"Unbound: Graphics.ConvertTexture cannot read the compressed cubemap '{src.name}' (Hidden/CubeCopy is missing).");
+                    return false;
+                }
             }
             var temporary = RenderTexture.GetTemporary(new RenderTextureDescriptor(dst.width, dst.height, format, 0));
             Immediate.Blit(faceCopy != null ? faceCopy : src, temporary, null, -1, Vector2.one, Vector2.zero);
