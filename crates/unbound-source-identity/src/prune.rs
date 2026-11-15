@@ -132,8 +132,9 @@ fn prune_entry(
         return Ok(false);
     }
     // A running process holding it keeps it. A process claiming it meanwhile (its claim waits
-    // for the lock) holds the lock of a directory set aside: its entries are written to a new
-    // directory, made again, and compile what they miss.
+    // for the lock, as long as the removal takes) holds the lock of a directory set aside, or
+    // fails to mark one renamed under it: either way its entries are written to a new
+    // directory, made again and kept by its time, and compile what they miss.
     let lock = lock_file(&path)?;
     if lock.try_lock().is_err() {
         return Ok(false);
@@ -292,6 +293,25 @@ mod tests {
             [aside.clone()]
         );
         assert!(!aside.exists());
+    }
+
+    /// An entry that cannot be pruned (unreadable) is passed over: its stale siblings go.
+    #[test]
+    #[cfg(unix)]
+    fn an_entry_that_cannot_be_pruned_is_passed_over() {
+        use std::os::unix::fs::PermissionsExt;
+        let scratch = Scratch::new("unreadable");
+        let parent = &scratch.0;
+        let locked = keyed(parent, "locked", 30);
+        let stale = keyed(parent, "stale", 30);
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o000)).unwrap();
+        // Root reads anything: nothing to pass over.
+        let readable = std::fs::read_dir(&locked).is_ok();
+        let removed = prune(parent, &parent.join("mine"), RETENTION, SystemTime::now());
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let removed = removed.unwrap();
+        assert!(removed.contains(&stale) && !stale.exists());
+        assert_eq!(locked.exists(), !readable);
     }
 
     /// A claim makes the directory, marks it used and holds it: a pruner (another process, or a
