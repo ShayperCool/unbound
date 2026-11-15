@@ -33,9 +33,13 @@ Editor (both in batch mode without a graphics device) each recorded two captures
 of a host byte-identical. All rows but the `native/` ones are the same on both hosts and form one
 reference per mode (`Reference/unity-<release>/<mode>.jsonl`). The `native/` rows differ between
 the hosts where a result passes through the platform's sine, cosine, arcsine, arccosine or
-arctangent (in the recorded rows: Slerp, AngleAxis, eulerAngles, Vector3 Slerp and Perspective on
-some operands; the other arithmetic gave the same values on both), so each host keeps its own (`<mode>.linux.jsonl`, `<mode>.macos.jsonl`, the same in both modes). `publish --host linux`
-publishes captures copied from the Linux machine.
+arctangent (in the recorded rows: Slerp, AngleAxis, Euler, eulerAngles, Vector3 Slerp and
+Perspective on some operands), and in Bounds.SqrDistance of a NaN operand (NaN on the arm64
+Editor, the extent on x86_64). By user decision (Q456, Q488) these toolchain differences are not
+reproduced: the reference is the Linux x86_64 Editor's (`<mode>.linux.jsonl`, the same in both
+modes) on every host, and the five `native/` rows that differ on macOS arm64 per mode are
+`macos:` residuals in `residuals.json`. `publish --host linux` publishes captures copied from the
+Linux machine; macOS captures are not published.
 
 ## Measured rule
 

@@ -3,9 +3,9 @@
 
     run.py record --profile P --label L     one capture with this host's Editor (Linux x86_64 or
                                             macOS arm64; batch mode, no graphics device)
-    run.py publish A B --profile P [--host H]
-                                            two byte-identical captures of host H (default: this one)
-                                            -> Reference/unity-<release>/P.jsonl and P.H.jsonl
+    run.py publish A B --profile P [--host linux]
+                                            two byte-identical Linux captures
+                                            -> Reference/unity-<release>/P.jsonl and P.linux.jsonl
     run.py gate --profile P [--label L]     the engine on a fresh copy with code optimization P and the
                                             Mono float opt-in (UNBOUND_MONO_FLOATS=1),
                                             compared with Reference/
@@ -13,10 +13,11 @@
 P is `release` or `debug`, the Editor's Code Optimization mode (`-releaseCodeOptimization`,
 `-debugCodeOptimization`; `UNBOUND_CODE_OPTIMIZATION` for the engine). The Linux x86_64 and macOS
 arm64 Editors record the same values for script code, so both hosts compare with one reference per
-mode; the `native/` rows (Unity's native math) can differ between the hosts and come from P.H.jsonl,
-H being `linux` or `macos`. Every
-missing, extra and differing key is printed; values compare exactly. residuals.json lists known
-residuals under their cause as "<profile>/<key>", or "<host>:<profile>/<key>" for one host only.
+mode; the `native/` rows (Unity's native math) are the Linux x86_64 Editor's (P.linux.jsonl) on
+both hosts: where the macOS libraries' arithmetic differs, the macOS differences are recorded as
+residuals, not reproduced (user decision, Q456). Every missing, extra and differing key is printed;
+values compare exactly. residuals.json lists known residuals under their cause as
+"<profile>/<key>", or "<host>:<profile>/<key>" for one host only.
 """
 import argparse
 import json
@@ -45,6 +46,8 @@ def host():
 
 
 NATIVE = 'native/'
+# The Editor whose native rows are the reference on every host.
+NATIVE_HOST = 'linux'
 
 
 def reference(profile):
@@ -56,9 +59,9 @@ def host_reference(profile, name):
 
 
 def references(profile):
-    """The values this host's Editor records: the shared rows and this host's native rows."""
+    """The values to compare with: the shared rows and the Linux Editor's native rows."""
     shared = value_probe.read_values(reference(profile))
-    native = value_probe.read_values(host_reference(profile, host()))
+    native = value_probe.read_values(host_reference(profile, NATIVE_HOST))
     if any(key.startswith(NATIVE) for key in shared) or any(not key.startswith(NATIVE) for key in native):
         raise SystemExit(f'floatrounding: {profile} references mix shared and {NATIVE} rows')
     return {**shared, **native}
@@ -112,6 +115,8 @@ def record(profile, label):
 def publish(profile, labels, name):
     if len(labels) != 2:
         raise SystemExit('publish takes the labels of two captures')
+    if name != NATIVE_HOST:
+        raise SystemExit(f'the {NATIVE} rows are the {NATIVE_HOST} Editor\'s on every host: publish {NATIVE_HOST} captures')
     first, second = (run_root(PROBE, profile+'-'+label)/'capture'/value_probe.VALUES for label in labels)
     value_probe.read_values(first)
     if first.read_bytes() != second.read_bytes():
@@ -182,7 +187,7 @@ def main():
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--profile', choices=PROFILES, required=True)
     parser.add_argument('--label', default=None)
-    parser.add_argument('--host', choices=('linux', 'macos'), default=None, help='publish: the host that recorded the captures')
+    parser.add_argument('--host', choices=('linux', 'macos'), default=None, help='publish: the host that recorded the captures (linux)')
     args = parser.parse_args()
     label = args.label or time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     if args.mode == 'record':

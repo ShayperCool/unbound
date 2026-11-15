@@ -89,5 +89,17 @@
   "release/il/Vector3Dot",
   "release/il/Vector3Magnitude",
   "release/il/Vector3SqrMagnitude"
+ ],
+ "macOS arm64 only: these native/ rows pass through the platform's sine, cosine and inverse trigonometric functions (Perspective, AngleAxis, Euler, Slerp, Vector3 Slerp and RotateTowards on some operands), which .NET takes from Apple's libm there and from glibc on Linux; by user decision (Q456) macOS compares against the Linux x86_64 Editor's rows and these last-bit differences are recorded, not reproduced (the macOS arm64 Editor's own rows matched them)": [
+  "macos:debug/native/matrixEdge",
+  "macos:debug/native/quaternionEdge",
+  "macos:debug/native/quaternionEuler",
+  "macos:debug/native/quaternionSlerpNear",
+  "macos:debug/native/vector3Edge",
+  "macos:release/native/matrixEdge",
+  "macos:release/native/quaternionEdge",
+  "macos:release/native/quaternionEuler",
+  "macos:release/native/quaternionSlerpNear",
+  "macos:release/native/vector3Edge"
  ]
 }
