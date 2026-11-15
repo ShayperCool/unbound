@@ -522,6 +522,44 @@ VisualEffect:
         }
 
         [Fact]
+        public void AnAssetReadFromADocumentIsALiveObject()
+        {
+            // A built asset (an AssetBundle's, a player's) comes as a document of its class: the
+            // object made for it is the engine's own, not a wrapper a script made with `new`
+            // (which has no engine object behind it and equals null, as in the Editor).
+            const string yaml = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!2058629509 &2100000\nVisualEffectAsset:\n  m_Name: Built\n";
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            VisualEffectAsset asset = null;
+            try
+            {
+                // In this release a wrapper a script makes is no object: the control.
+                Assert.True(new VisualEffectAsset() == null);
+                var file = ObjectGraphBuilder.Build(Unbound.Tests.UnityYaml.Parse(yaml), "built.asset", null, ObjectGraphBuilder.Kind.Asset, null);
+                asset = Assert.IsType<VisualEffectAsset>(file.Objects[2100000]);
+                Assert.True(asset != null);
+                Assert.Equal("Built", asset.name);
+                // It answers as an asset without a graph, and an effect takes it.
+                var names = new List<string>();
+                asset.GetEvents(names);
+                Assert.Empty(names);
+                var effect = new GameObject("built").AddComponent<VisualEffect>();
+                try
+                {
+                    effect.visualEffectAsset = asset;
+                    Assert.Same(asset, effect.visualEffectAsset);
+                    Assert.Equal(0, effect.aliveParticleCount);
+                }
+                finally { Object.DestroyImmediate(effect.gameObject); }
+            }
+            finally
+            {
+                if (asset != null) Object.DestroyImmediate(asset, true);
+                ProjectInfo.UnityVersion = version;
+            }
+        }
+
+        [Fact]
         public void TheDoctorListsEffectsWithAnAssetAsNotDrawn()
         {
             const string scene = "--- !u!2083052967 &11\nVisualEffect:\n  m_Enabled: 1\n  m_Asset: {fileID: 8926484042661614526, guid: 0123456789abcdef0123456789abcdef, type: 3}\n"
