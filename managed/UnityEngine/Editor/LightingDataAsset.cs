@@ -29,9 +29,10 @@ namespace UnityEditor
             if (reference.IsNull || string.IsNullOrEmpty(reference.Guid)) return null;
             var key = (reference.Guid, reference.FileId);
             if (s_Assets.TryGetValue(key, out var asset) && asset != null) return asset;
-            string name = reference.Guid == BuiltinExtraGuid
-                ? BuiltinName
-                : System.IO.Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(reference.Guid));
+            string path = reference.Guid == BuiltinExtraGuid ? null : AssetDatabase.GUIDToAssetPath(reference.Guid);
+            // An asset the project does not have is a missing reference.
+            if (path != null && path.Length == 0) return null;
+            string name = path == null ? BuiltinName : System.IO.Path.GetFileNameWithoutExtension(path);
             using (ObjectRegistry.AsAssets())
                 asset = new LightingDataAsset(name);
             s_Assets[key] = asset;

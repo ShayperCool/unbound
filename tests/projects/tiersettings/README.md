@@ -6,7 +6,8 @@ GPU (Linux, OpenGL Core, NVIDIA driver). `Assets/Scripts/TierSettingsProbe.cs` r
 Standalone (1), iOS (4), Android (7), WebGL (13), Windows Store (14) and tvOS (25), keyed by the
 group's number, and through `NamedBuildTarget` for Standalone Tier3 and Android Tier1; then
 `Lightmapping.lightingDataAsset` of `Probe.unity`, which names the built-in lighting data as
-scenes made in Unity 6 do, and of `NoData.unity`, which names none.
+scenes made in Unity 6 do, of `NoData.unity` (loaded in its place), which names none, then with
+`Probe.unity` loaded beside it and made the active scene.
 
 The project's GraphicsSettings have the default rendering path DeferredShading and the mobile
 one VertexLit, so the automatic tiers show which they take. `create.py` ran `ProbeRunner.Create`
@@ -23,12 +24,15 @@ and the GraphicsSettings it saved are committed.
   the other iOS and Android tiers and every tvOS tier, else High.
 * Realtime GI CPU usage is Medium for Standalone Tier3, else Low.
 * A tier set by hand gives its own values.
-* `lightingDataAsset` is the built-in `LightingData` for a scene naming it, null for a scene
-  naming none.
+* `lightingDataAsset` is the active scene's: the built-in `LightingData` for a scene naming it,
+  null for a scene naming none, also while a scene naming one is loaded beside it, until that
+  scene is made the active one.
 
-Not measured: a project in 2D mode (whose automatic HDR is taken as off), other platform groups
+Not measured: the shader defines a project compiles with while iOS is the active target (Unbound
+keeps the desktop set, though GetTierSettings answers iOS's own tiers), a project in 2D mode (whose automatic HDR is taken as off), other platform groups
 (taken as Standalone's but for its Tier3 GI usage), SetTierSettings at run time, a project
-Lighting Data asset (tests/projects/indirectspec names its own, `LightingData`).
+Lighting Data asset (tests/projects/indirectspec names its own, `LightingData`), a scene the
+Editor bakes when it opens it (Unbound answers null), the asset's `m_Scene` (Unbound reads null).
 
 ```sh
 python3 tests/projects/tiersettings/create.py --label <L>       # once: the hand-set tier

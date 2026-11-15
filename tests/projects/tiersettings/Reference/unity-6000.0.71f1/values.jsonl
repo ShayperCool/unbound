@@ -20,4 +20,6 @@
 {"k":"named Android Tier1","v":"quality Low hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 False lppv False semitransparent False path VertexLit gi Low"}
 {"k":"lightingDataAsset","v":"LightingData"}
 {"k":"NoData lightingDataAsset","v":"null"}
+{"k":"additive Probe lightingDataAsset","v":"null"}
+{"k":"active Probe lightingDataAsset","v":"LightingData"}
 {"k":"complete","v":true}

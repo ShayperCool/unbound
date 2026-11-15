@@ -290,7 +290,6 @@ fn read_settings(project: &Project, file: &str) -> Option<Value> {
     docs.into_iter().next().map(|d| d.body)
 }
 
-/// `vSyncCount` of the quality level the Editor has selected (`m_CurrentQuality`); 1 without one.
 /// Every graphics tier's settings (EditorGraphicsSettings.GetTierSettings) of the platform groups
 /// with a tier rule of their own, of the groups the project sets by hand, and of
 /// `TierSettings::OTHER_GROUP`, which stands for every other group.
@@ -327,6 +326,7 @@ fn tier_settings(settings: &unbound_project::settings::Settings) -> Vec<Json> {
     table
 }
 
+/// `vSyncCount` of the quality level the Editor has selected (`m_CurrentQuality`); 1 without one.
 fn vsync_count(project: &Project) -> i64 {
     let Some(quality) = read_settings(project, "QualitySettings.asset") else {
         return 1;

@@ -61,6 +61,23 @@ public sealed class TierSettingsProbe : MonoBehaviour
 #if UNITY_EDITOR
             Rec("NoData lightingDataAsset", LightingData());
 #endif
+            // Probe loaded beside it: the active scene's (NoData's) asset still; then Probe's once
+            // Probe is the active scene.
+            UnityEngine.SceneManagement.SceneManager.LoadScene("Probe", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            code = 1;
+        }
+        yield return null;
+        try
+        {
+#if UNITY_EDITOR
+            Rec("additive Probe lightingDataAsset", LightingData());
+            UnityEngine.SceneManagement.SceneManager.SetActiveScene(UnityEngine.SceneManagement.SceneManager.GetSceneByName("Probe"));
+            Rec("active Probe lightingDataAsset", LightingData());
+#endif
             m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
             if (!string.IsNullOrEmpty(dir))
             {

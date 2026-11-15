@@ -596,7 +596,20 @@ impl Settings {
             "WebGL" => (13, false),
             _ => (1, false),
         };
-        let tiers = [0, 1, 2].map(|index| self.tier_settings(id, index));
+        // iOS compiles with the desktop set: its defines are unmeasured, so a tier it leaves
+        // automatic stays a desktop tier here, though GetTierSettings answers its own (mobile)
+        // values (tests/projects/tiersettings).
+        let rule_group = if id == GROUP_IOS {
+            TierSettings::OTHER_GROUP
+        } else {
+            id
+        };
+        let tiers = [0, 1, 2].map(|index| {
+            self.tier_settings
+                .get(&(id, index))
+                .copied()
+                .unwrap_or_else(|| TierSettings::automatic(rule_group, index, &self.tier_defaults))
+        });
         // Automatic tiers differ from each other.
         let tiers_differ = tiers
             .iter()
@@ -847,6 +860,18 @@ mod tests {
                 ]
             );
         }
+    }
+
+    /// iOS's defines are unmeasured and stay the desktop set they were before its tiers had a
+    /// rule of their own.
+    #[test]
+    fn ios_keeps_the_desktop_defines() {
+        let settings = Settings::default();
+        assert_eq!(
+            settings.shader_defines("iOS", OpenGLCore),
+            settings.shader_defines("Standalone", OpenGLCore)
+        );
+        assert_eq!(settings.tier_settings(4, 2).standard_shader_quality, 1);
     }
 
     /// The automatic tiers of tests/projects/tiersettings (desktop path DeferredShading, mobile
