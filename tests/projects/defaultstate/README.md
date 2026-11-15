@@ -586,3 +586,7 @@ inventory: `AsyncReadManager`, `FileHandle`, `FileInfoResult`, `ReadCommand`,
 row; every earlier row and inventory entry is byte-identical. A default
 `ReadHandle` or `FileHandle` throws from its status and job handle getters, as the release's
 checks do for a disposed or closed handle.
+
+The render API members slice (Q479) adds `ShaderKeywordSet` to the handwritten inventory. Two
+independent 6000.0.71f1 GPU Editor captures agree on its one row (a struct), appended before the
+completion row; every earlier row and inventory entry is byte-identical.

@@ -13266,4 +13266,5 @@
 {"key":"UnityEngine.FrameTiming/Field/UnityEngine.FrameTiming/syncInterval","status":"value","value":"0"}
 {"key":"UnityEngine.FrameTiming/Field/UnityEngine.FrameTiming/widthScale","status":"value","value":"0"}
 {"key":"UnityEngine.FrameTimingManager/@factory","status":"excluded","value":"static"}
+{"key":"UnityEngine.Rendering.ShaderKeywordSet/@factory","status":"value","value":"struct"}
 {"key":"complete","status":"value","value":"1"}

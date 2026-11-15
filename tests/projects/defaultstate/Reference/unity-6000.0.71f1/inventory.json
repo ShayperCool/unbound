@@ -6196,6 +6196,12 @@
       "category": "struct",
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
+      "type": "UnityEngine.Rendering.ShaderKeywordSet"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
       "type": "UnityEngine.Rendering.ShaderTagId"
     },
     {
