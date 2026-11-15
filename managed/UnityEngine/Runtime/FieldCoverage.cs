@@ -49,6 +49,9 @@ namespace Unbound.Runtime
         internal static readonly int[] FixedDocumentIds =
             { EngineTypes.PrefabInstanceId, 1660057539, 142, 115, 150, EngineTypes.GameObjectId, 104, 157, 196, 124 };
 
+        /// <summary>The project settings with readers (cases of <see cref="Declarations"/>).</summary>
+        internal static readonly int[] ProjectSettingsIds = { 55, 19, 126 };
+
         static bool IsFixed(int classId) => Array.IndexOf(FixedDocumentIds, classId) >= 0;
 
         /// <summary>The reader declarations whose generated field tables a document of this kind
@@ -151,8 +154,12 @@ namespace Unbound.Runtime
                         scriptType = ObjectGraphBuilder.ScriptOf(body.Ref("m_Script"), doc.FileGuid, scripts);
                     var type = doc.Context != null ? null : doc.ClassId == EngineTypes.MonoBehaviourId ? scriptType
                         : EngineTypes.ForClassId(doc.ClassId, doc.TypeName, warn: false);
-                    (ObjectRef Data, ObjectRef Settings) lighting = default;
-                    if (doc.Context == null && doc.ClassId == 157) lighting = SceneSettings.LightingReferences(body);
+                    if (doc.Context == null && doc.ClassId == 157)
+                    {
+                        var lighting = SceneSettings.LightingReferences(body);
+                        result.Lighting = new LightingInput { DataGuid = lighting.Data.Guid, DataId = lighting.Data.FileId,
+                            SettingsGuid = lighting.Settings.Guid, SettingsId = lighting.Settings.FileId };
+                    }
                     foreach (var (owner, method, parameters, node) in Declarations(doc.Context, doc.ClassId, type))
                         Schema(owner, method, parameters, node);
                     if (doc.Context == null) switch (doc.ClassId)
@@ -160,10 +167,6 @@ namespace Unbound.Runtime
                         case EngineTypes.MonoBehaviourId:
                             if (scriptType == null) throw new NotSupportedException("script type is missing or its assembly failed to compile");
                             new YamlReader(new References()).ScanScriptObject(scriptType, body);
-                            break;
-                        case 157:
-                            result.Lighting = new LightingInput { DataGuid = lighting.Data.Guid, DataId = lighting.Data.FileId,
-                                SettingsGuid = lighting.Settings.Guid, SettingsId = lighting.Settings.FileId };
                             break;
                         case 124:
                             var owner = body.Ref("m_GameObject").FileId;

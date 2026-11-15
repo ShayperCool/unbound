@@ -18,7 +18,7 @@ namespace UnityEngine.Tests
         /// scene documents, scripts of each kind and every registered engine type.</summary>
         static IEnumerable<(Type Owner, string Method, int Parameters, int Node)> Consumed()
         {
-            foreach (int id in new[] { 55, 19, 126 })
+            foreach (int id in FieldCoverage.ProjectSettingsIds)
                 foreach (var d in FieldCoverage.Declarations("projectSettings", id, null)) yield return d;
             foreach (var script in new[] { typeof(Script), typeof(Settings) })
                 foreach (var d in FieldCoverage.Declarations(null, EngineTypes.MonoBehaviourId, script)) yield return d;
