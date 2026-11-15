@@ -11,6 +11,10 @@
 //! manifest always count. What the reading cannot follow (a name it cannot resolve, `#[path]`,
 //! a glob) counts the whole crate: an unsure reading hashes more, never less.
 //!
+//! A module, library or build script at a file outside its crate is not supported (the reading
+//! fails). What a build script reads outside its crate (native sources it compiles) is not
+//! hashed: a producer whose output depends on such files is not supported either.
+//!
 //! The identities are made by the build script, one per cache producer, from the workspace the
 //! crate is built in: [`SHADER_COMPILER`] (`unbound-shaders`, the program and kernel cache) and
 //! [`BUILTIN_SHADERS`] (`unbound-assets`' built-in shader generator, its generated sources and

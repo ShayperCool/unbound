@@ -58,16 +58,22 @@ fn rust_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(out)
 }
 
-/// Every file below `dir`, sorted.
+/// Every file below `dir`, sorted (hidden ones left out).
 fn all_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     let mut pending = vec![dir.to_path_buf()];
     while let Some(dir) = pending.pop() {
         for entry in std::fs::read_dir(&dir)? {
-            let path = entry?.path();
-            if path.is_dir() {
+            let entry = entry?;
+            // A hidden file (a folder's metadata, an editor's swap file) is no source; a
+            // linked directory is not followed.
+            if entry.file_name().to_string_lossy().starts_with('.') {
+                continue;
+            }
+            let path = entry.path();
+            if entry.file_type()?.is_dir() {
                 pending.push(path);
-            } else {
+            } else if path.is_file() {
                 out.push(path);
             }
         }
@@ -178,7 +184,14 @@ fn code(text: &str) -> Code {
             i += 1;
         }
     }
-    let text = tight_paths(&without_tests(&out));
+    let (text, removed) = without_tests(&out);
+    // What test code names is not in the output's build.
+    includes.retain(|(_, _, at)| !removed.iter().any(|r| r.contains(at)));
+    let includes = includes
+        .into_iter()
+        .map(|(path, kind, _)| (path, kind))
+        .collect();
+    let text = tight_paths(&text);
     // An include whose path is not a literal (`concat!`, `env!`) is not followed.
     let computed_include = ["include_str!(", "include_bytes!(", "include!("]
         .iter()
@@ -314,7 +327,8 @@ fn raw_string_start(rest: &[char]) -> Option<usize> {
 }
 
 /// Records a string literal that is the path of an include macro the code before it opens.
-fn note_include(before: &str, literal: &str, includes: &mut Vec<(String, Include)>) {
+fn note_include(before: &str, literal: &str, includes: &mut Vec<(String, Include, usize)>) {
+    let at = before.len();
     let before = before.trim_end();
     // A module's file (`#[path = "x.rs"]`, also under `cfg_attr`): `path =` inside an open
     // attribute.
@@ -325,11 +339,13 @@ fn note_include(before: &str, literal: &str, includes: &mut Vec<(String, Include
             .starts_with('[')
             && !before[at..].contains(']')
     });
+    let key = before.strip_suffix('=').map(str::trim_end);
     if in_attribute
-        && before.ends_with('=')
-        && before[..before.len() - 1].trim_end().ends_with("path")
+        && key.is_some_and(|k| {
+            k.ends_with("path") && !k[..k.len() - 4].ends_with(|c: char| is_ident(c) || c == ':')
+        })
     {
-        includes.push((literal.to_string(), Include::ModuleFile));
+        includes.push((literal.to_string(), Include::ModuleFile, at));
     }
     for (name, kind) in [
         ("include_str!(", Include::Data),
@@ -337,7 +353,7 @@ fn note_include(before: &str, literal: &str, includes: &mut Vec<(String, Include
         ("include!(", Include::Code),
     ] {
         if before.ends_with(name) && !before[..before.len() - name.len()].ends_with(is_ident) {
-            includes.push((literal.to_string(), kind));
+            includes.push((literal.to_string(), kind, at));
         }
     }
 }
@@ -353,15 +369,17 @@ enum Include {
     ModuleFile,
 }
 
-/// A text without its items under `#[cfg(test)]` (test code is not in the output's build). An
-/// item whose end it cannot find is kept.
-fn without_tests(text: &str) -> String {
+/// A text without its items under `#[cfg(test)]` (test code is not in the output's build), and
+/// where the removed items stood in it. An item whose end it cannot find is kept.
+fn without_tests(text: &str) -> (String, Vec<std::ops::Range<usize>>) {
     const MARK: &str = "#[cfg(test)]";
     let mut out = String::with_capacity(text.len());
-    let mut rest = text;
-    while let Some(at) = rest.find(MARK) {
-        out.push_str(&rest[..at]);
-        let item = &rest[at + MARK.len()..];
+    let mut removed = Vec::new();
+    let mut from = 0;
+    while let Some(found) = text[from..].find(MARK) {
+        let at = from + found;
+        out.push_str(&text[from..at]);
+        let item = &text[at + MARK.len()..];
         // The item ends at its first `;` outside braces, or where its first brace closes.
         let mut depth = 0i32;
         let mut end = None;
@@ -383,15 +401,19 @@ fn without_tests(text: &str) -> String {
             }
         }
         match end {
-            Some(end) => rest = &item[end..],
+            Some(end) => {
+                let stop = at + MARK.len() + end;
+                removed.push(at..stop);
+                from = stop;
+            }
             None => {
-                out.push_str(&rest[at..]);
-                rest = "";
+                out.push_str(&text[at..]);
+                from = text.len();
             }
         }
     }
-    out.push_str(rest);
-    out
+    out.push_str(&text[from..]);
+    (out, removed)
 }
 
 fn is_ident(c: char) -> bool {
@@ -896,22 +918,38 @@ pub fn producing_sources(
             // A root with code of its own (items, impls, the `use` lines they rely on), or with
             // what the reading cannot follow (`#[path]`, an alias, a computed include), is not
             // read apart: a crate only partly reached counts whole.
-            // The files its manifest points at (`[lib] path`, a binary's): hashed.
+            // The files its manifest points its targets or build script at (`[lib] path`,
+            // `build = ..`) are hashed with its directory; one outside it is not supported.
             let manifest = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap_or_default();
-            for (at, _) in manifest.match_indices("path") {
-                let value = manifest[at + 4..].trim_start();
-                if let Some(value) = value.strip_prefix('=')
-                    && let Some(quoted) = value.trim_start().strip_prefix(['"', '\''])
-                    && let Some(target) = quoted.split(['"', '\'']).next()
-                {
-                    let file = lexical(&dir.join(target));
-                    if file.is_file() {
-                        files.insert(file);
+            for key in ["path", "build"] {
+                for at in word_starts(&manifest, key) {
+                    let value = manifest[at + key.len()..].trim_start();
+                    if let Some(value) = value.strip_prefix('=')
+                        && let Some(quoted) = value.trim_start().strip_prefix(['"', '\''])
+                        && let Some(target) = quoted.split(['"', '\'']).next()
+                    {
+                        let file = lexical(&dir.join(target));
+                        if file.is_file() && !file.starts_with(&dir) {
+                            return Err(io::Error::other(format!(
+                                "{}: {key} {target} is outside the crate",
+                                dir.join("Cargo.toml").display()
+                            )));
+                        }
                     }
                 }
             }
-            // A build script may set what the crate's code compiles to.
-            if !r.whole && dir.join("build.rs").is_file() {
+            // A build script (its default file, or one the manifest names) may set what the
+            // crate's code compiles to.
+            let build_key = manifest.lines().any(|l| {
+                let key = l
+                    .split('=')
+                    .next()
+                    .unwrap_or("")
+                    .trim()
+                    .trim_matches(['"', '\'']);
+                key == "build" || key == "package.build"
+            });
+            if !r.whole && (dir.join("build.rs").is_file() || build_key) {
                 changes.push((name.clone(), Change::Whole));
             }
             if !r.whole {
@@ -936,8 +974,14 @@ pub fn producing_sources(
             if r.whole {
                 // Every file of its directory (build script, other sources, data); its Rust
                 // files are read.
+                // Its library's code is read for names: not its examples, tests or benches.
+                let library = |path: &Path| {
+                    !["examples", "tests", "benches"]
+                        .iter()
+                        .any(|d| path.starts_with(dir.join(d)))
+                };
                 for path in all_files(&dir)? {
-                    if path.extension().is_some_and(|e| e == "rs") {
+                    if path.extension().is_some_and(|e| e == "rs") && library(&path) {
                         texts.push((path.clone(), code(&std::fs::read_to_string(&path)?)));
                     } else {
                         files.insert(path);
@@ -971,10 +1015,13 @@ pub fn producing_sources(
                         .map(|c| lexical(c))
                         .filter(|c| c.is_file())
                         .collect();
-                    if found.is_empty() && *kind == Include::ModuleFile && include.contains("..") {
-                        // A module from outside the crate that this reading cannot find.
+                    // A module at a file outside the crate (or one this reading cannot find
+                    // there) is not read: not supported.
+                    let outside = found.iter().any(|f| !f.starts_with(&dir))
+                        || (found.is_empty() && include.contains(".."));
+                    if *kind == Include::ModuleFile && outside {
                         return Err(io::Error::other(format!(
-                            "{}: cannot find the module file {include} it names",
+                            "{}: the module file {include} is outside the crate",
                             path.display()
                         )));
                     }

@@ -671,8 +671,9 @@ fn a_library_without_its_root_file_counts_every_crate() {
     assert!(sources.contains(&"crates/unbound-other/src/other.rs".to_string()));
 }
 
-/// A crate counted whole hashes every file of its directory and the files its manifest and
-/// path attributes point at outside it; a crate directory named with underscores is found.
+/// A crate counted whole hashes every file of its directory (hidden ones left out); a module,
+/// library or build script outside its crate fails the reading; a crate directory named with
+/// underscores is found.
 #[test]
 fn whole_crates_hash_their_files_wherever_they_are() {
     let identity_of = |ws: &Workspace| ws.identity("unbound_compiler", &[]);
@@ -691,7 +692,11 @@ fn whole_crates_hash_their_files_wherever_they_are() {
     let before = identity_of(&ws);
     ws.write("crates/unbound-other/lib.rs", "pub struct Other(u8);\n");
     assert_ne!(identity_of(&ws), before);
-    // A module at a file outside the crate.
+    // A hidden file beside the sources changes nothing.
+    let before = identity_of(&ws);
+    ws.write("crates/unbound-other/.DS_Store", "x");
+    assert_eq!(identity_of(&ws), before);
+    // A module, a library or a build script outside the crate is not supported.
     let ws = compiler_and_rules("outside-module");
     std::fs::create_dir_all(ws.0.join("extra")).unwrap();
     ws.write("extra/x.rs", "pub struct X;\n");
@@ -699,9 +704,15 @@ fn whole_crates_hash_their_files_wherever_they_are() {
         "crates/unbound-rules/src/device.rs",
         "#[path = \"../../../extra/x.rs\"]\nmod x;\npub enum Device { A }\npub fn select() {}\n",
     );
-    let before = identity_of(&ws);
-    ws.write("extra/x.rs", "pub struct X(u8);\n");
-    assert_ne!(identity_of(&ws), before);
+    assert!(producing_sources(&ws.0, "unbound_compiler", &[]).is_err());
+    let ws = compiler_and_rules("outside-build");
+    std::fs::create_dir_all(ws.0.join("common")).unwrap();
+    ws.write("common/build.rs", "fn main() {}\n");
+    ws.write(
+        "crates/unbound-rules/Cargo.toml",
+        "[package]\nbuild = \"../../common/build.rs\"\n",
+    );
+    assert!(producing_sources(&ws.0, "unbound_compiler", &[]).is_err());
     // A crate directory with underscores.
     let ws = compiler_and_rules("underscores");
     std::fs::create_dir_all(ws.0.join("crates/unbound_x/src")).unwrap();
@@ -716,4 +727,38 @@ fn whole_crates_hash_their_files_wherever_they_are() {
         ws.sources("unbound_compiler", &[])
             .contains(&"crates/unbound_x/src/x.rs".to_string())
     );
+}
+
+/// A build script the manifest names counts a partly reached crate whole; a test-only module at
+/// another file does not; a whole crate's examples are hashed but not followed.
+#[test]
+fn build_keys_test_modules_and_examples() {
+    let audio = "crates/unbound-rules/src/audio.rs".to_string();
+    let ws = compiler_and_rules("build-key");
+    std::fs::create_dir_all(ws.0.join("crates/unbound-rules/gen")).unwrap();
+    ws.write("crates/unbound-rules/gen/main.rs", "fn main() {}\n");
+    ws.write(
+        "crates/unbound-rules/Cargo.toml",
+        "[package]\nbuild = \"gen/main.rs\"\n",
+    );
+    assert!(ws.sources("unbound_compiler", &[]).contains(&audio));
+    let ws = compiler_and_rules("test-path");
+    ws.write(
+        "crates/unbound-rules/src/device.rs",
+        "pub enum Device { A }\npub fn select() {}\n#[cfg(test)]\n#[path = \"device_tests.rs\"]\nmod tests;\n",
+    );
+    ws.write(
+        "crates/unbound-rules/src/device_tests.rs",
+        "use crate::audio::Audio;\n",
+    );
+    assert!(!ws.sources("unbound_compiler", &[]).contains(&audio));
+    let ws = compiler_and_rules("examples");
+    std::fs::create_dir_all(ws.0.join("crates/unbound-compiler/examples")).unwrap();
+    ws.write(
+        "crates/unbound-compiler/examples/demo.rs",
+        "use unbound_rules::Audio;\nfn main() {}\n",
+    );
+    let sources = ws.sources("unbound_compiler", &[]);
+    assert!(sources.contains(&"crates/unbound-compiler/examples/demo.rs".to_string()));
+    assert!(!sources.contains(&audio));
 }
