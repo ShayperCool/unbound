@@ -1,0 +1,12 @@
+[package]
+name = "unbound-source-identity"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "The identity of the code that produces a cache's entries"
+
+[dependencies]
+blake3.workspace = true
+
+[build-dependencies]
+blake3.workspace = true

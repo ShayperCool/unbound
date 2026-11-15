@@ -6559,6 +6559,7 @@ dependencies = [
  "ufbx",
  "unbound-compat",
  "unbound-project",
+ "unbound-source-identity",
  "unbound-yaml",
  "walkdir",
  "weezl",
@@ -6686,6 +6687,14 @@ dependencies = [
  "shaderc",
  "tracing",
  "unbound-compat",
+ "unbound-source-identity",
+]
+
+[[package]]
+name = "unbound-source-identity"
+version = "0.1.0"
+dependencies = [
+ "blake3",
 ]
 
 [[package]]

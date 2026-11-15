@@ -1,0 +1,239 @@
+use super::*;
+
+/// A workspace of crates below a temporary root: (path below the root, text).
+struct Workspace(PathBuf);
+
+impl Workspace {
+    fn new(name: &str, files: &[(&str, &str)]) -> Workspace {
+        let root = std::env::temp_dir().join(format!(
+            "unbound-source-identity-{name}-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        for (path, text) in files {
+            let path = root.join(path);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, text).unwrap();
+        }
+        std::fs::write(root.join("Cargo.lock"), "version = 4\n").unwrap();
+        Workspace(root)
+    }
+
+    fn write(&self, path: &str, text: &str) {
+        std::fs::write(self.0.join(path), text).unwrap();
+    }
+
+    /// The files reached, below the root, as `/`-separated strings.
+    fn sources(&self, start: &str, modules: &[&str]) -> Vec<String> {
+        let (files, _) = producing_sources(&self.0, start, modules).unwrap();
+        files
+            .iter()
+            .map(|p| {
+                p.strip_prefix(&self.0)
+                    .unwrap()
+                    .to_string_lossy()
+                    .replace('\\', "/")
+            })
+            .collect()
+    }
+
+    fn identity(&self, start: &str, modules: &[&str]) -> String {
+        let (files, _) = producing_sources(&self.0, start, modules).unwrap();
+        identity(&self.0, &files, &[]).unwrap()
+    }
+}
+
+impl Drop for Workspace {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+const RULES_ROOT: &str = "//! Rules.\nmod device;\nmod audio;\nmod version;\n\
+    pub use device::{Device, select as select_device};\npub use audio::Audio;\n\
+    pub use version::Version;\n";
+
+/// A compiler crate naming one module of a rules crate through its root's re-exports.
+fn compiler_and_rules(name: &str) -> Workspace {
+    Workspace::new(
+        name,
+        &[
+            ("crates/unbound-compiler/Cargo.toml", "[package]"),
+            (
+                "crates/unbound-compiler/src/lib.rs",
+                "mod fit;\npub fn compile(d: unbound_rules::Device) {}\n",
+            ),
+            (
+                "crates/unbound-compiler/src/fit.rs",
+                "use unbound_rules::{Device, select_device};\n",
+            ),
+            ("crates/unbound-rules/Cargo.toml", "[package]"),
+            ("crates/unbound-rules/src/lib.rs", RULES_ROOT),
+            (
+                "crates/unbound-rules/src/device.rs",
+                "use crate::version::Version;\npub enum Device { A }\npub fn select() {}\n",
+            ),
+            (
+                "crates/unbound-rules/src/version.rs",
+                "pub struct Version;\n",
+            ),
+            ("crates/unbound-rules/src/audio.rs", "pub struct Audio;\n"),
+        ],
+    )
+}
+
+/// What the compiler names of the rules crate is reached, through re-exports (also renamed
+/// ones) and `crate::` paths; a module it does not reach is not, and leaves the identity alone.
+#[test]
+fn only_the_modules_named_count() {
+    let ws = compiler_and_rules("named");
+    assert_eq!(
+        ws.sources("unbound_compiler", &[]),
+        [
+            "crates/unbound-compiler/Cargo.toml",
+            "crates/unbound-compiler/src/fit.rs",
+            "crates/unbound-compiler/src/lib.rs",
+            "crates/unbound-rules/Cargo.toml",
+            "crates/unbound-rules/src/device.rs",
+            "crates/unbound-rules/src/lib.rs",
+            "crates/unbound-rules/src/version.rs",
+        ]
+    );
+    let before = ws.identity("unbound_compiler", &[]);
+    ws.write(
+        "crates/unbound-rules/src/audio.rs",
+        "pub struct Audio { loud: bool }\n",
+    );
+    assert_eq!(ws.identity("unbound_compiler", &[]), before);
+    ws.write(
+        "crates/unbound-rules/src/version.rs",
+        "pub struct Version(u32);\n",
+    );
+    assert_ne!(ws.identity("unbound_compiler", &[]), before);
+}
+
+/// A module that implements a type reached is reached too.
+#[test]
+fn modules_implementing_a_reached_type_count() {
+    let ws = compiler_and_rules("impl");
+    ws.write(
+        "crates/unbound-rules/src/audio.rs",
+        "pub struct Audio;\nimpl crate::Device { pub fn audio(&self) {} }\n",
+    );
+    assert!(
+        ws.sources("unbound_compiler", &[])
+            .contains(&"crates/unbound-rules/src/audio.rs".to_string())
+    );
+}
+
+/// What the reading cannot follow counts the whole crate: a glob, a name nowhere defined, a
+/// `#[path]` module.
+#[test]
+fn an_unsure_reading_counts_the_whole_crate() {
+    let audio = "crates/unbound-rules/src/audio.rs".to_string();
+    for (case, fit) in [
+        ("glob", "use unbound_rules::*;\n"),
+        ("unknown", "use unbound_rules::Missing;\n"),
+    ] {
+        let ws = compiler_and_rules(case);
+        ws.write("crates/unbound-compiler/src/fit.rs", fit);
+        assert!(
+            ws.sources("unbound_compiler", &[]).contains(&audio),
+            "{case}"
+        );
+    }
+    let ws = compiler_and_rules("path");
+    ws.write(
+        "crates/unbound-rules/src/device.rs",
+        "#[path = \"elsewhere.rs\"]\nmod inner;\npub enum Device { A }\npub fn select() {}\n",
+    );
+    assert!(ws.sources("unbound_compiler", &[]).contains(&audio));
+}
+
+/// Starting from modules of a crate, its other modules count only when named; its root's items
+/// with code count when named; files it includes count.
+#[test]
+fn modules_of_a_crate_and_what_they_include() {
+    let ws = Workspace::new(
+        "modules",
+        &[
+            ("crates/unbound-assets/Cargo.toml", "[package]"),
+            (
+                "crates/unbound-assets/src/lib.rs",
+                "mod gen;\nmod parse;\nmod other;\npub const VERSION: u32 = 1;\n",
+            ),
+            (
+                "crates/unbound-assets/src/gen.rs",
+                "use crate::parse::File;\nconst T: &str = include_str!(\"../data/t.txt\");\n\
+                 fn v() -> u32 { crate::VERSION }\n",
+            ),
+            ("crates/unbound-assets/src/parse.rs", "pub struct File;\n"),
+            ("crates/unbound-assets/src/other.rs", "pub struct Other;\n"),
+            ("crates/unbound-assets/data/t.txt", "template"),
+        ],
+    );
+    assert_eq!(
+        ws.sources("unbound_assets", &["gen"]),
+        [
+            "crates/unbound-assets/Cargo.toml",
+            "crates/unbound-assets/data/t.txt",
+            "crates/unbound-assets/src/gen.rs",
+            "crates/unbound-assets/src/lib.rs",
+            "crates/unbound-assets/src/parse.rs",
+        ]
+    );
+    let before = ws.identity("unbound_assets", &["gen"]);
+    ws.write("crates/unbound-assets/data/t.txt", "another template");
+    assert_ne!(ws.identity("unbound_assets", &["gen"]), before);
+}
+
+/// The shader compiler of this workspace reaches the device rules of `unbound-compat`, not its
+/// audio, texture or profile rules.
+#[test]
+fn the_shader_compiler_reaches_the_rules_it_compiles_by() {
+    let root = lexical(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."));
+    let (files, _) = producing_sources(&root, "unbound_shaders", &[]).unwrap();
+    let compat = root.join("crates/unbound-compat/src");
+    assert!(files.contains(&compat.join("graphics.rs")));
+    for other in ["audio.rs", "texture.rs", "profile.rs"] {
+        assert!(!files.contains(&compat.join(other)), "{other}");
+    }
+}
+
+/// `super::` from a module's directory names the module unless it climbs past it; test code
+/// names nothing (it is not in the output's build).
+#[test]
+fn super_paths_and_test_code() {
+    let ws = Workspace::new(
+        "super",
+        &[
+            ("crates/unbound-gen/Cargo.toml", "[package]"),
+            (
+                "crates/unbound-gen/src/lib.rs",
+                "mod gen;\nmod far;\nmod near;\nmod tested;\n",
+            ),
+            (
+                "crates/unbound-gen/src/gen.rs",
+                "mod part;\npub struct Shape;\n#[cfg(test)]\nmod tests {\n    use super::*;\n    \
+                 use crate::tested::Helper;\n}\n",
+            ),
+            (
+                "crates/unbound-gen/src/gen/part.rs",
+                "use super::Shape;\nuse super::super::near::Near;\n",
+            ),
+            ("crates/unbound-gen/src/near.rs", "pub struct Near;\n"),
+            ("crates/unbound-gen/src/far.rs", "pub struct Far;\n"),
+            ("crates/unbound-gen/src/tested.rs", "pub struct Helper;\n"),
+        ],
+    );
+    assert_eq!(
+        ws.sources("unbound_gen", &["gen"]),
+        [
+            "crates/unbound-gen/Cargo.toml",
+            "crates/unbound-gen/src/gen/part.rs",
+            "crates/unbound-gen/src/gen.rs",
+            "crates/unbound-gen/src/lib.rs",
+            "crates/unbound-gen/src/near.rs",
+        ]
+    );
+}
