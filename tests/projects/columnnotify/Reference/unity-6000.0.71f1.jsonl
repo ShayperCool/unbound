@@ -1,0 +1,60 @@
+{"key":"column.notifies","value":"True"}
+{"key":"columns.notifies","value":"True"}
+{"key":"sort.notifies","value":"True"}
+{"key":"add.first","value":""}
+{"key":"add.second","value":""}
+{"key":"add.third","value":""}
+{"key":"second.name","value":"second:name columns:columns[1].name"}
+{"key":"second.name.same","value":""}
+{"key":"second.title","value":"second:title columns:columns[1].title"}
+{"key":"second.title.same","value":""}
+{"key":"second.icon","value":"second:icon columns:columns[1].icon"}
+{"key":"second.icon.same","value":""}
+{"key":"second.visible","value":"second:visible columns:columns[1].visible"}
+{"key":"second.visible.same","value":""}
+{"key":"second.width","value":"second:width columns:columns[1].width"}
+{"key":"second.width.same","value":""}
+{"key":"second.width.percent","value":"second:width columns:columns[1].width"}
+{"key":"second.minWidth","value":"second:minWidth columns:columns[1].minWidth"}
+{"key":"second.maxWidth","value":"second:maxWidth columns:columns[1].maxWidth"}
+{"key":"second.sortable","value":"second:sortable columns:columns[1].sortable"}
+{"key":"second.stretchable","value":"second:stretchable columns:columns[1].stretchable"}
+{"key":"second.optional","value":"second:optional columns:columns[1].optional"}
+{"key":"second.resizable","value":"second:resizable columns:columns[1].resizable"}
+{"key":"second.headerTemplate","value":"second:headerTemplate columns:columns[1].headerTemplate"}
+{"key":"second.cellTemplate","value":"second:cellTemplate columns:columns[1].cellTemplate"}
+{"key":"second.cellTemplate.same","value":""}
+{"key":"second.makeCell","value":""}
+{"key":"second.bindCell","value":""}
+{"key":"second.makeHeader","value":""}
+{"key":"second.comparison","value":""}
+{"key":"second.bindingPath","value":""}
+{"key":"first.title","value":"first:title"}
+{"key":"third.title","value":"third:title columns:columns[2].title"}
+{"key":"columns.insertAtZero","value":""}
+{"key":"first.title.atOne","value":"first:title columns:columns[1].title"}
+{"key":"columns.removeThird","value":""}
+{"key":"third.title.removed","value":"third:title"}
+{"key":"columns.reinsertThird","value":""}
+{"key":"third.title.reinserted","value":"third:title columns:columns[1].title"}
+{"key":"columns.primaryColumnName","value":"columns:primaryColumnName"}
+{"key":"columns.primaryColumnName.same","value":""}
+{"key":"columns.reorderable","value":"columns:reorderable"}
+{"key":"columns.resizable","value":"columns:resizable"}
+{"key":"columns.resizePreview","value":"columns:resizePreview"}
+{"key":"columns.stretchMode","value":"columns:stretchMode"}
+{"key":"columns.stretchMode.same","value":""}
+{"key":"others.addSecond","value":""}
+{"key":"others.moveThird","value":""}
+{"key":"third.title.moved","value":"third:title others:columns[1].title"}
+{"key":"sort.columnName","value":"sort:columnName"}
+{"key":"sort.columnName.same","value":""}
+{"key":"sort.columnIndex","value":"sort:columnIndex"}
+{"key":"sort.columnIndex.same","value":""}
+{"key":"sort.direction","value":"sort:direction"}
+{"key":"sort.direction.same","value":""}
+{"key":"sort.addToDescriptions","value":""}
+{"key":"sort.direction.inDescriptions","value":"sort:direction"}
+{"key":"constructed.columnIndex","value":"constructed:columnIndex"}
+{"key":"constructed.state","value":"4/Descending/<null>"}
+{"key":"complete","value":"1"}

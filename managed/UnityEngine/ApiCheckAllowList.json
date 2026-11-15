@@ -443,13 +443,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEngine.UIElements.Column",
-    "Message": "type interfaces is , Unity's is UnityEngine.UIElements.INotifyBindablePropertyChanged",
-    "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.Column needs bindable property-change subscriptions after divergent property updates. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.UIElements.ColumnLayout",
     "Message": "type interfaces is System.IDisposable, Unity's is ",
     "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.ColumnLayout needs the engine calls IDisposable for layout cleanup; move that internal cleanup dispatch before removing the extra interface. Remove the extra interface only after migrating its internal callers and proving existing cleanup or equality behavior with independent controls."
@@ -457,23 +450,9 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEngine.UIElements.Columns",
-    "Message": "type interfaces is System.Collections.Generic.ICollection`1<UnityEngine.UIElements.Column>,System.Collections.Generic.IEnumerable`1<UnityEngine.UIElements.Column>,System.Collections.IEnumerable, Unity's is System.Collections.Generic.ICollection`1<UnityEngine.UIElements.Column>,System.Collections.Generic.IEnumerable`1<UnityEngine.UIElements.Column>,System.Collections.IEnumerable,UnityEngine.UIElements.INotifyBindablePropertyChanged",
-    "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.Columns needs collection change subscriptions and column-owner notification. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.UIElements.PointerCaptureEventBase`1",
     "Message": "type interfaces is UnityEngine.UIElements.IPointerCaptureEvent, Unity's is UnityEngine.UIElements.IPointerCaptureEvent,UnityEngine.UIElements.IPointerCaptureEventInternal",
     "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.PointerCaptureEventBase`1 needs internal capture and release target bookkeeping. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
-    "Type": "UnityEngine.UIElements.SortColumnDescription",
-    "Message": "type interfaces is , Unity's is UnityEngine.UIElements.INotifyBindablePropertyChanged",
-    "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.SortColumnDescription needs bindable direction and column-selection notifications. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."
   },
   {
     "Release": "6000.0.71f1",

@@ -63,7 +63,7 @@ namespace UnityEngine.UIElements
 
     /// <summary>A column of a multi-column view: header (title, icon or template), cells
     /// (template or callbacks), width limits and flags.</summary>
-    [global::UnityEngine.UIElements.@UxmlObjectAttribute] public partial class Column
+    [global::UnityEngine.UIElements.@UxmlObjectAttribute] public partial class Column : INotifyBindablePropertyChanged
     {
         internal const string k_HeaderTemplateAttributeName = "header-template";
         internal const string k_CellTemplateAttributeName = "cell-template";
@@ -95,13 +95,13 @@ namespace UnityEngine.UIElements
         Action<VisualElement, int> m_UnbindCell;
 
         [CreateProperty]
-        public string name { get => m_Name; set { if (m_Name == value) return; m_Name = value; NotifyChange(ColumnDataType.Name); } }
+        public string name { get => m_Name; set { if (m_Name == value) return; m_Name = value; NotifyChange(ColumnDataType.Name); NotifyPropertyChanged(s_NameProperty); } }
 
         [CreateProperty]
-        public string title { get => m_Title; set { if (m_Title == value) return; m_Title = value; NotifyChange(ColumnDataType.Title); } }
+        public string title { get => m_Title; set { if (m_Title == value) return; m_Title = value; NotifyChange(ColumnDataType.Title); NotifyPropertyChanged(s_TitleProperty); } }
 
         [CreateProperty]
-        public Background icon { get => m_Icon; set { if (m_Icon == value) return; m_Icon = value; NotifyChange(ColumnDataType.Icon); } }
+        public Background icon { get => m_Icon; set { if (m_Icon == value) return; m_Icon = value; NotifyChange(ColumnDataType.Icon); NotifyPropertyChanged(s_IconProperty); } }
 
         public Comparison<int> comparison { get; set; }
 
@@ -112,7 +112,7 @@ namespace UnityEngine.UIElements
         internal int visibleIndex => collection != null ? collection.visibleColumns.IndexOf(this) : -1;
 
         [CreateProperty]
-        public bool visible { get => m_Visible; set { if (m_Visible == value) return; m_Visible = value; NotifyChange(ColumnDataType.Visibility); } }
+        public bool visible { get => m_Visible; set { if (m_Visible == value) return; m_Visible = value; NotifyChange(ColumnDataType.Visibility); NotifyPropertyChanged(s_VisibleProperty); } }
 
         /// <summary>The width (points or a percentage of the header width); setting it forgets the
         /// laid-out width.</summary>
@@ -126,14 +126,15 @@ namespace UnityEngine.UIElements
                 m_Width = value;
                 desiredWidth = float.NaN;
                 NotifyChange(ColumnDataType.Width);
+                NotifyPropertyChanged(s_WidthProperty);
             }
         }
 
         [CreateProperty]
-        public Length minWidth { get => m_MinWidth; set { if (m_MinWidth == value) return; m_MinWidth = value; NotifyChange(ColumnDataType.MinWidth); } }
+        public Length minWidth { get => m_MinWidth; set { if (m_MinWidth == value) return; m_MinWidth = value; NotifyChange(ColumnDataType.MinWidth); NotifyPropertyChanged(s_MinWidthProperty); } }
 
         [CreateProperty]
-        public Length maxWidth { get => m_MaxWidth; set { if (m_MaxWidth == value) return; m_MaxWidth = value; NotifyChange(ColumnDataType.MaxWidth); } }
+        public Length maxWidth { get => m_MaxWidth; set { if (m_MaxWidth == value) return; m_MaxWidth = value; NotifyChange(ColumnDataType.MaxWidth); NotifyPropertyChanged(s_MaxWidthProperty); } }
 
         /// <summary>The laid-out width (NaN until laid out).</summary>
         internal float desiredWidth
@@ -148,24 +149,24 @@ namespace UnityEngine.UIElements
         }
 
         [CreateProperty]
-        public bool sortable { get => m_Sortable; set { if (m_Sortable == value) return; m_Sortable = value; NotifyChange(ColumnDataType.Sortable); } }
+        public bool sortable { get => m_Sortable; set { if (m_Sortable == value) return; m_Sortable = value; NotifyChange(ColumnDataType.Sortable); NotifyPropertyChanged(s_SortableProperty); } }
 
         [CreateProperty]
-        public bool stretchable { get => m_Stretchable; set { if (m_Stretchable == value) return; m_Stretchable = value; NotifyChange(ColumnDataType.Stretchable); } }
+        public bool stretchable { get => m_Stretchable; set { if (m_Stretchable == value) return; m_Stretchable = value; NotifyChange(ColumnDataType.Stretchable); NotifyPropertyChanged(s_StretchableProperty); } }
 
         [CreateProperty]
-        public bool optional { get => m_Optional; set { if (m_Optional == value) return; m_Optional = value; NotifyChange(ColumnDataType.Optional); } }
+        public bool optional { get => m_Optional; set { if (m_Optional == value) return; m_Optional = value; NotifyChange(ColumnDataType.Optional); NotifyPropertyChanged(s_OptionalProperty); } }
 
         [CreateProperty]
-        public bool resizable { get => m_Resizable; set { if (m_Resizable == value) return; m_Resizable = value; NotifyChange(ColumnDataType.Resizable); } }
+        public bool resizable { get => m_Resizable; set { if (m_Resizable == value) return; m_Resizable = value; NotifyChange(ColumnDataType.Resizable); NotifyPropertyChanged(s_ResizableProperty); } }
 
         public string bindingPath { get; set; }
 
         [CreateProperty]
-        public VisualTreeAsset headerTemplate { get => m_HeaderTemplate; set { if (m_HeaderTemplate == value) return; m_HeaderTemplate = value; NotifyChange(ColumnDataType.HeaderTemplate); } }
+        public VisualTreeAsset headerTemplate { get => m_HeaderTemplate; set { if (m_HeaderTemplate == value) return; m_HeaderTemplate = value; NotifyChange(ColumnDataType.HeaderTemplate); NotifyPropertyChanged(s_HeaderTemplateProperty); } }
 
         [CreateProperty]
-        public VisualTreeAsset cellTemplate { get => m_CellTemplate; set { if (m_CellTemplate == value) return; m_CellTemplate = value; NotifyChange(ColumnDataType.CellTemplate); } }
+        public VisualTreeAsset cellTemplate { get => m_CellTemplate; set { if (m_CellTemplate == value) return; m_CellTemplate = value; NotifyChange(ColumnDataType.CellTemplate); NotifyPropertyChanged(s_CellTemplateProperty); } }
 
         public Func<VisualElement> makeHeader { get => m_MakeHeader; set { if (m_MakeHeader == value) return; m_MakeHeader = value; NotifyChange(ColumnDataType.HeaderTemplate); } }
 
@@ -191,6 +192,26 @@ namespace UnityEngine.UIElements
 
         void NotifyChange(ColumnDataType type) => changed?.Invoke(this, type);
 
+        static readonly BindingId s_NameProperty = "name";
+        static readonly BindingId s_TitleProperty = "title";
+        static readonly BindingId s_IconProperty = "icon";
+        static readonly BindingId s_VisibleProperty = "visible";
+        static readonly BindingId s_WidthProperty = "width";
+        static readonly BindingId s_MinWidthProperty = "minWidth";
+        static readonly BindingId s_MaxWidthProperty = "maxWidth";
+        static readonly BindingId s_SortableProperty = "sortable";
+        static readonly BindingId s_StretchableProperty = "stretchable";
+        static readonly BindingId s_OptionalProperty = "optional";
+        static readonly BindingId s_ResizableProperty = "resizable";
+        static readonly BindingId s_HeaderTemplateProperty = "headerTemplate";
+        static readonly BindingId s_CellTemplateProperty = "cellTemplate";
+
+        /// <summary>A bindable property's change, after the internal change notice (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/columnnotify).</summary>
+        public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
+
+        void NotifyPropertyChanged(in BindingId property) => propertyChanged?.Invoke(this, new BindablePropertyChangedEventArgs(property));
+
         internal float GetWidth(float layoutWidth) => width.unit == LengthUnit.Pixel ? width.value : width.value * layoutWidth / 100f;
 
         internal float GetMaxWidth(float layoutWidth) => maxWidth.unit == LengthUnit.Pixel ? maxWidth.value : maxWidth.value * layoutWidth / 100f;
@@ -200,7 +221,7 @@ namespace UnityEngine.UIElements
 
     /// <summary>The columns of a multi-column view, in source order, with a display order (header
     /// reordering) and the visible ones in display order.</summary>
-    [global::UnityEngine.UIElements.@UxmlObjectAttribute] public partial class Columns : ICollection<Column>
+    [global::UnityEngine.UIElements.@UxmlObjectAttribute] public partial class Columns : ICollection<Column>, INotifyBindablePropertyChanged
     {
         public enum StretchMode
         {
@@ -221,16 +242,16 @@ namespace UnityEngine.UIElements
         internal IList<Column> columns => m_Columns;
 
         [CreateProperty]
-        public string primaryColumnName { get => m_PrimaryColumnName; set { if (m_PrimaryColumnName == value) return; m_PrimaryColumnName = value; NotifyChange(ColumnsDataType.PrimaryColumn); } }
+        public string primaryColumnName { get => m_PrimaryColumnName; set { if (m_PrimaryColumnName == value) return; m_PrimaryColumnName = value; NotifyChange(ColumnsDataType.PrimaryColumn); NotifyPropertyChanged(s_PrimaryColumnNameProperty); } }
 
         [CreateProperty]
-        public bool reorderable { get => m_Reorderable; set { if (m_Reorderable == value) return; m_Reorderable = value; NotifyChange(ColumnsDataType.Reorderable); } }
+        public bool reorderable { get => m_Reorderable; set { if (m_Reorderable == value) return; m_Reorderable = value; NotifyChange(ColumnsDataType.Reorderable); NotifyPropertyChanged(s_ReorderableProperty); } }
 
         [CreateProperty]
-        public bool resizable { get => m_Resizable; set { if (m_Resizable == value) return; m_Resizable = value; NotifyChange(ColumnsDataType.Resizable); } }
+        public bool resizable { get => m_Resizable; set { if (m_Resizable == value) return; m_Resizable = value; NotifyChange(ColumnsDataType.Resizable); NotifyPropertyChanged(s_ResizableProperty); } }
 
         [CreateProperty]
-        public bool resizePreview { get => m_ResizePreview; set { if (m_ResizePreview == value) return; m_ResizePreview = value; NotifyChange(ColumnsDataType.ResizePreview); } }
+        public bool resizePreview { get => m_ResizePreview; set { if (m_ResizePreview == value) return; m_ResizePreview = value; NotifyChange(ColumnsDataType.ResizePreview); NotifyPropertyChanged(s_ResizePreviewProperty); } }
 
         internal IEnumerable<Column> displayList => displayColumns;
 
@@ -261,7 +282,7 @@ namespace UnityEngine.UIElements
         }
 
         [CreateProperty]
-        public StretchMode stretchMode { get => m_StretchMode; set { if (m_StretchMode == value) return; m_StretchMode = value; NotifyChange(ColumnsDataType.StretchMode); } }
+        public StretchMode stretchMode { get => m_StretchMode; set { if (m_StretchMode == value) return; m_StretchMode = value; NotifyChange(ColumnsDataType.StretchMode); NotifyPropertyChanged(s_StretchModeProperty); } }
 
         public int Count => m_Columns.Count;
 
@@ -318,6 +339,7 @@ namespace UnityEngine.UIElements
             column.collection = null;
             column.changed -= OnColumnChanged;
             column.resized -= OnColumnResized;
+            column.propertyChanged -= OnColumnPropertyChanged;
             columnRemoved?.Invoke(column);
             return true;
         }
@@ -343,6 +365,7 @@ namespace UnityEngine.UIElements
             column.collection = this;
             column.changed += OnColumnChanged;
             column.resized += OnColumnResized;
+            column.propertyChanged += OnColumnPropertyChanged;
             columnAdded?.Invoke(column, index);
         }
 
@@ -361,28 +384,55 @@ namespace UnityEngine.UIElements
         void DirtyVisibleColumns() => m_VisibleColumnsDirty = true;
 
         void NotifyChange(ColumnsDataType type) => changed?.Invoke(type);
+
+        static readonly BindingId s_PrimaryColumnNameProperty = "primaryColumnName";
+        static readonly BindingId s_ReorderableProperty = "reorderable";
+        static readonly BindingId s_ResizableProperty = "resizable";
+        static readonly BindingId s_ResizePreviewProperty = "resizePreview";
+        static readonly BindingId s_StretchModeProperty = "stretchMode";
+
+        /// <summary>A bindable property's change, and a column's as <c>columns[index].property</c>
+        /// (not for the first column: the Unity 6000.0.71f1 Editor forwards indices above zero only,
+        /// tests/projects/columnnotify).</summary>
+        public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
+
+        void NotifyPropertyChanged(in BindingId property) => propertyChanged?.Invoke(this, new BindablePropertyChangedEventArgs(property));
+
+        void OnColumnPropertyChanged(object sender, BindablePropertyChangedEventArgs args)
+        {
+            int index = m_Columns.IndexOf((Column)sender);
+            if (index > 0) NotifyPropertyChanged(string.Format("columns[{0}].{1}", index, args.propertyName));
+        }
     }
 
     /// <summary>A column to sort by (by index or name) and its direction.</summary>
     [global::UnityEngine.UIElements.@UxmlObjectAttribute] [global::System.Serializable]
-    public partial class SortColumnDescription
+    public partial class SortColumnDescription : INotifyBindablePropertyChanged
     {
         [global::UnityEngine.@SerializeField] int m_ColumnIndex = -1;
         [global::UnityEngine.@SerializeField] string m_ColumnName;
         [global::UnityEngine.@SerializeField] SortDirection m_SortDirection;
 
         [CreateProperty]
-        public string columnName { get => m_ColumnName; set { if (m_ColumnName == value) return; m_ColumnName = value; changed?.Invoke(this); } }
+        public string columnName { get => m_ColumnName; set { if (m_ColumnName == value) return; m_ColumnName = value; changed?.Invoke(this); NotifyPropertyChanged(s_ColumnNameProperty); } }
 
         [CreateProperty]
-        public int columnIndex { get => m_ColumnIndex; set { if (m_ColumnIndex == value) return; m_ColumnIndex = value; changed?.Invoke(this); } }
+        public int columnIndex { get => m_ColumnIndex; set { if (m_ColumnIndex == value) return; m_ColumnIndex = value; changed?.Invoke(this); NotifyPropertyChanged(s_ColumnIndexProperty); } }
 
         public Column column { get; internal set; }
 
         [CreateProperty]
-        public SortDirection direction { get => m_SortDirection; set { if (m_SortDirection == value) return; m_SortDirection = value; changed?.Invoke(this); } }
+        public SortDirection direction { get => m_SortDirection; set { if (m_SortDirection == value) return; m_SortDirection = value; changed?.Invoke(this); NotifyPropertyChanged(s_DirectionProperty); } }
 
         internal event Action<SortColumnDescription> changed;
+
+        static readonly BindingId s_ColumnNameProperty = "columnName";
+        static readonly BindingId s_ColumnIndexProperty = "columnIndex";
+        static readonly BindingId s_DirectionProperty = "direction";
+
+        public event EventHandler<BindablePropertyChangedEventArgs> propertyChanged;
+
+        void NotifyPropertyChanged(in BindingId property) => propertyChanged?.Invoke(this, new BindablePropertyChangedEventArgs(property));
 
         public SortColumnDescription() { }
 

@@ -700,9 +700,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.ColorPage Init(global::UnityEngine.UIElements.UIR.RenderChain renderChain, global::UnityEngine.UIElements.UIR.BMPAlloc alloc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ColorPage.Init"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.UIElements.MeshBuilderNative.NativeColorPage ToNativeColorPage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ColorPage.ToNativeColorPage"); return default; }
     }
-    unsafe partial class Column : global::UnityEngine.UIElements.INotifyBindablePropertyChanged
+    unsafe partial class Column
     {
-        public event global::System.EventHandler<global::UnityEngine.UIElements.BindablePropertyChangedEventArgs> propertyChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Column.propertyChanged"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.UxmlSerializedData
@@ -732,9 +731,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlObjectTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Column.UxmlObjectTraits<T>.ctor"); }
         }
     }
-    unsafe partial class Columns : global::UnityEngine.UIElements.INotifyBindablePropertyChanged
+    unsafe partial class Columns
     {
-        public event global::System.EventHandler<global::UnityEngine.UIElements.BindablePropertyChangedEventArgs> propertyChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.propertyChanged"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.UxmlSerializedData
@@ -3643,9 +3641,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.UxmlTraits.ctor"); }
         }
     }
-    unsafe partial class SortColumnDescription : global::UnityEngine.UIElements.INotifyBindablePropertyChanged
+    unsafe partial class SortColumnDescription
     {
-        public event global::System.EventHandler<global::UnityEngine.UIElements.BindablePropertyChangedEventArgs> propertyChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SortColumnDescription.propertyChanged"); } [global::Unbound.Stub] remove { } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.UxmlSerializedData

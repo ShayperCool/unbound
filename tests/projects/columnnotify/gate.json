@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/columnnotify/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Controls/MultiColumn.cs",
+    "managed/UnityEngine/UIElements/Binding/BindingTypes.cs"
+  ]
+}
