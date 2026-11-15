@@ -401,6 +401,9 @@ public class NativeGfxMetalProbe : MonoBehaviour
             case 8:
                 LoadsOutside();
                 break;
+            case 9:
+                CompressedVolumes();
+                break;
         }
     }
 
@@ -535,6 +538,88 @@ public class NativeGfxMetalProbe : MonoBehaviour
         screenLogs = null;
     }
 
+    /// <summary>Block-compressed volumes: <c>SystemInfo.supportsCompressed3DTextures</c>, and a
+    /// 4x4x2 Texture3D per format (BC1, ETC2 RGB, ASTC 4x4) whose two slices are one block each,
+    /// red and blue, made from its blocks (<c>SetPixelData</c>), its format support, and each
+    /// slice sampled; then whether a volume of each compressed format can be made.</summary>
+    void CompressedVolumes()
+    {
+        screenLogs = new List<string>();
+        Value("volume.compressed3d", B(SystemInfo.supportsCompressed3DTextures));
+        // One block per slice: red, then blue.
+        var formats = new (string, TextureFormat, byte[], byte[])[]
+        {
+            // BC1: both endpoints the color (RGB565), every index 0.
+            ("bc1", TextureFormat.DXT1, new byte[] { 0x00, 0xF8, 0x00, 0xF8, 0, 0, 0, 0 },
+                new byte[] { 0x1F, 0x00, 0x1F, 0x00, 0, 0, 0, 0 }),
+            // ETC2 RGB, differential mode: base color 5 bits per channel, no offsets, codeword
+            // table 0, every pixel index 0.
+            ("etc2", TextureFormat.ETC2_RGB, new byte[] { 0xF8, 0x00, 0x00, 0x02, 0, 0, 0, 0 },
+                new byte[] { 0x00, 0x00, 0xF8, 0x02, 0, 0, 0, 0 }),
+            // ASTC 4x4: a constant-color (void-extent) block, 16-bit channels.
+            ("astc", TextureFormat.ASTC_4x4, new byte[] { 0xFC, 0xFD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0, 0xFF, 0xFF },
+                new byte[] { 0xFC, 0xFD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF }),
+        };
+        var material = Keep(new Material(Shader.Find("Probe/NativeGfx/VolumeSlice")));
+        foreach (var (name, format, first, second) in formats)
+        {
+            string key = "volume." + name;
+            Value(key + ".supported", B(SystemInfo.SupportsTextureFormat(format)));
+            Texture3D volume = null;
+            try
+            {
+                volume = Keep(new Texture3D(4, 4, 2, format, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp });
+                volume.SetPixelData(first.Concat(second).ToArray(), 0);
+                volume.Apply(false);
+                material.SetTexture("_Volume", volume);
+                foreach (var (slice, w) in new[] { (0, 0.25f), (1, 0.75f) })
+                {
+                    material.SetFloat("_W", w);
+                    var output = Target(key + slice, 0);
+                    Clear(output, Color.gray);
+                    var active = RenderTexture.active;
+                    Graphics.Blit(Texture2D.blackTexture, output, material);
+                    RenderTexture.active = active;
+                    Value(key + ".slice" + slice, Pixels(output, 4, 4));
+                }
+            }
+            catch (Exception e)
+            {
+                Value(key + ".exception", Q(e.GetType().Name + ": " + e.Message));
+            }
+        }
+        Value("volume.logs", L(screenLogs));
+        // Every compressed format (in TextureFormat's order): whether a 4x4x2 volume of it can be
+        // made, and what is logged.
+        var compressed = new[]
+        {
+            TextureFormat.DXT1, TextureFormat.DXT5, TextureFormat.BC6H, TextureFormat.BC7, TextureFormat.BC4, TextureFormat.BC5,
+            TextureFormat.DXT1Crunched, TextureFormat.DXT5Crunched, TextureFormat.PVRTC_RGB2, TextureFormat.PVRTC_RGBA2,
+            TextureFormat.PVRTC_RGB4, TextureFormat.PVRTC_RGBA4, TextureFormat.ETC_RGB4, TextureFormat.EAC_R, TextureFormat.EAC_R_SIGNED,
+            TextureFormat.EAC_RG, TextureFormat.EAC_RG_SIGNED, TextureFormat.ETC2_RGB, TextureFormat.ETC2_RGBA1, TextureFormat.ETC2_RGBA8,
+            TextureFormat.ASTC_4x4, TextureFormat.ASTC_5x5, TextureFormat.ASTC_6x6, TextureFormat.ASTC_8x8, TextureFormat.ASTC_10x10,
+            TextureFormat.ASTC_12x12, TextureFormat.ETC_RGB4Crunched, TextureFormat.ETC2_RGBA8Crunched, TextureFormat.ASTC_HDR_4x4,
+            TextureFormat.ASTC_HDR_5x5, TextureFormat.ASTC_HDR_6x6, TextureFormat.ASTC_HDR_8x8, TextureFormat.ASTC_HDR_10x10,
+            TextureFormat.ASTC_HDR_12x12,
+        };
+        foreach (var format in compressed)
+        {
+            screenLogs = new List<string>();
+            string result;
+            try
+            {
+                DestroyImmediate(new Texture3D(4, 4, 2, format, false));
+                result = "made";
+            }
+            catch (Exception e)
+            {
+                result = e.GetType().Name + ": " + e.Message;
+            }
+            Value("volume.make." + format, L(new[] { result }.Concat(screenLogs)));
+        }
+        screenLogs = null;
+    }
+
     void Finish()
     {
         Value("target.pixels", Pixels(target, 8, 8));
@@ -579,7 +664,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
         int code = 0;
         try { Setup(); }
         catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
-        for (int frame = 1; frame <= 8 && code == 0; frame++)
+        for (int frame = 1; frame <= 9 && code == 0; frame++)
         {
             try { Frame(frame); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
