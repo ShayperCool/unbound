@@ -194,8 +194,11 @@ public sealed class DrawerWindProbe : MonoBehaviour
             Finish(1);
             return;
         }
-        if (!m_Started) return;
+        // The camera also renders during the warm-up, so its shader variant has compiled by the
+        // first recorded frame (the Editor compiles variants asynchronously and skips a draw
+        // whose variant is not ready).
         m_Camera.Render();
+        if (!m_Started) return;
         if (Array.IndexOf(k_Recorded, m_Frame) >= 0)
         {
             string frame = "f" + m_Frame.ToString("000");
