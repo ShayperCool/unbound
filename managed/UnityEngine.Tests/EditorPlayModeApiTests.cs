@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -98,6 +100,91 @@ namespace UnityEngine.Tests
             {
                 Lightmapping.bakeCompleted -= callback;
                 Assert.Equal(original, ((Delegate)field.GetValue(null))?.GetInvocationList().Length ?? 0);
+            }
+        }
+
+        sealed class DiagnosticCapture : ILogHandler
+        {
+            readonly ILogHandler m_Next;
+            internal readonly List<string> Warnings = new List<string>();
+            internal DiagnosticCapture(ILogHandler next) { m_Next = next; }
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning) Warnings.Add(string.Format(format, args));
+                m_Next.LogFormat(type, context, format, args);
+            }
+            public void LogException(Exception error, Object context) => m_Next.LogException(error, context);
+        }
+
+        [Fact]
+        public void UndoReportsUnavailablePayloadsOnlyWhenSubscribed()
+        {
+            using var engine = MainThreadCheck.Engine();
+            const string diagnostic = "ObjectChangeEvents undo payload streams";
+            const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
+            var hits = (ConcurrentDictionary<string, int>)typeof(Stubs).GetField("Hits", flags).GetValue(null);
+            bool hadHit = hits.TryGetValue(diagnostic, out int previousHits);
+            var undo = (IList)typeof(Undo).GetField("s_Undo", flags).GetValue(null);
+            var redo = (IList)typeof(Undo).GetField("s_Redo", flags).GetValue(null);
+            var savedUndo = undo.Cast<object>().ToArray();
+            var savedRedo = redo.Cast<object>().ToArray();
+            var current = typeof(Undo).GetField("s_Current", flags);
+            int savedCurrent = (int)current.GetValue(null);
+            var previousUndoCallback = Undo.undoRedoPerformed;
+            var previousUndoEvent = Undo.undoRedoEvent;
+            var previousFlush = Undo.willFlushUndoRecord;
+            var logger = Debug.unityLogger;
+            var previousHandler = logger.logHandler;
+            bool previousEnabled = logger.logEnabled;
+            var previousFilter = logger.filterLogType;
+            var capture = new DiagnosticCapture(previousHandler);
+            ObjectChangeEvents.ObjectChangeEventsHandler listener = (ref ObjectChangeEventStream stream) => { };
+            GameObject owner = null;
+            void ResetDiagnostic()
+            {
+                hits.TryRemove(diagnostic, out _);
+                capture.Warnings.Clear();
+            }
+            void AssertDiagnostic() => Assert.Contains(capture.Warnings, message => message.Contains(diagnostic));
+            try
+            {
+                Undo.ClearAll();
+                Undo.undoRedoPerformed = null; Undo.undoRedoEvent = null; Undo.willFlushUndoRecord = null;
+                owner = new GameObject("Undo diagnostic control");
+                logger.logHandler = capture; logger.logEnabled = true; logger.filterLogType = LogType.Log;
+                ResetDiagnostic();
+                Undo.RecordObject(owner.transform, "unsubscribed control");
+                owner.transform.localPosition = new Vector3(1, 2, 3);
+                Undo.FlushUndoRecordObjects();
+                Undo.PerformUndo();
+                Assert.Equal(Vector3.zero, owner.transform.localPosition);
+                Assert.DoesNotContain(capture.Warnings, message => message.Contains(diagnostic));
+                Assert.False(hits.ContainsKey(diagnostic));
+
+                ObjectChangeEvents.changesPublished += listener;
+                ResetDiagnostic();
+                Undo.RecordObject(owner.transform, "subscribed control");
+                AssertDiagnostic();
+                owner.transform.localPosition = new Vector3(4, 5, 6);
+                ResetDiagnostic(); Undo.FlushUndoRecordObjects(); AssertDiagnostic();
+                ResetDiagnostic(); Undo.PerformUndo(); AssertDiagnostic();
+                Assert.Equal(Vector3.zero, owner.transform.localPosition);
+                ResetDiagnostic(); Undo.PerformRedo(); AssertDiagnostic();
+                Assert.Equal(new Vector3(4, 5, 6), owner.transform.localPosition);
+            }
+            finally
+            {
+                ObjectChangeEvents.changesPublished -= listener;
+                logger.logHandler = previousHandler; logger.logEnabled = previousEnabled; logger.filterLogType = previousFilter;
+                if (owner != null) Object.DestroyImmediate(owner);
+                Undo.ClearAll();
+                foreach (var entry in savedUndo) undo.Add(entry);
+                foreach (var entry in savedRedo) redo.Add(entry);
+                current.SetValue(null, savedCurrent);
+                Undo.undoRedoPerformed = previousUndoCallback; Undo.undoRedoEvent = previousUndoEvent;
+                Undo.willFlushUndoRecord = previousFlush;
+                hits.TryRemove(diagnostic, out _);
+                if (hadHit) hits[diagnostic] = previousHits;
             }
         }
     }
