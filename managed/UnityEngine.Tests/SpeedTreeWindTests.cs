@@ -204,6 +204,98 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>The GPU Resident Drawer's buffer (tests/projects/residentdrawer speedtree):
+        /// zeros while the world has no wind or outside Play mode; then each tree's wind constants
+        /// (the previous frame's for history, zeros there for camera motion vectors); a renderer
+        /// that is not a tree with wind is left as it is.</summary>
+        const int Stride = 80;
+
+        /// <summary>Parameter p's uint offset in an instance: the first eight uints are not wind.</summary>
+        static int Offset(int p) => 4 * (p + 2);
+
+        static unsafe Vector4 Param(uint* buffer, int instance, int p) => *(Vector4*)(buffer + Stride * instance + Offset(p));
+
+        [Fact]
+        public unsafe void TheDrawerBufferGetsEachTreesWind()
+        {
+            const int Instances = 3;
+            var objects = new[] { new GameObject("ObjectMotion"), new GameObject("CameraMotion"), new GameObject("Plain") };
+            var asset = new SpeedTreeWindAsset(1, Config());
+            WindZone zone = null;
+            bool playing = Unbound.Runtime.EditorSession.IsPlaying;
+            var data = new uint[Stride * Instances];
+            fixed (uint* buffer = data)
+            {
+                var iterator = new UnityEngine.Rendering.SpeedTreeWindParamsBufferIterator
+                {
+                    bufferPtr = (System.IntPtr)buffer, uintStride = Stride, elementsCount = Instances,
+                };
+                for (int p = 0; p < 16; p++) iterator.uintParamOffsets[p] = Offset(p);
+                var ids = new int[Instances];
+                void Fill(uint value)
+                {
+                    for (int i = 0; i < data.Length; i++) data[i] = value;
+                }
+                try
+                {
+                    for (int i = 0; i < Instances; i++)
+                    {
+                        var renderer = objects[i].AddComponent<MeshRenderer>();
+                        renderer.motionVectorGenerationMode = i == 0 ? MotionVectorGenerationMode.Object : MotionVectorGenerationMode.Camera;
+                        if (i < 2) objects[i].AddComponent<Tree>().windAsset = asset;
+                        ids[i] = renderer.GetInstanceID();
+                    }
+                    Assert.True(SpeedTreeWindSystem.HasTree(objects[0].GetComponent<MeshRenderer>()));
+                    Assert.False(SpeedTreeWindSystem.HasTree(objects[2].GetComponent<MeshRenderer>()));
+
+                    // No wind: every listed instance's 16 parameters are zeroed, nothing else.
+                    SpeedTreeWindSystem.Update();
+                    Fill(7);
+                    SpeedTreeWindSystem.WriteBuffer(ids, in iterator, false);
+                    for (int i = 0; i < Instances; i++)
+                    {
+                        Assert.Equal(7u, data[Stride * i]);
+                        for (int p = 0; p < 16; p++) Assert.Equal(Vector4.zero, Param(buffer, i, p));
+                    }
+
+                    zone = new GameObject("Wind").AddComponent<WindZone>();
+                    zone.windMain = 0.5f;
+                    SpeedTreeWindSystem.Update();
+                    Fill(7);
+                    SpeedTreeWindSystem.WriteBuffer(ids, in iterator, false);
+                    for (int i = 0; i < 2; i++)
+                    {
+                        Assert.Equal(new Vector4(2f, 4f, 3f, 0.25f), Param(buffer, i, 1));
+                        for (int p = 0; p < SpeedTreeWindState.HistoryOffset; p++) Assert.Equal((Vector4)asset.Wind.Values[p], Param(buffer, i, p));
+                        // The SpeedTree 9 layout's 11 parameters only.
+                        Assert.Equal(7u, *(uint*)(buffer + Stride * i + Offset(11)));
+                    }
+                    Assert.Equal(7u, *(uint*)(buffer + Stride * 2 + Offset(0)));
+
+                    Fill(7);
+                    SpeedTreeWindSystem.WriteBuffer(ids, in iterator, true);
+                    for (int p = 0; p < SpeedTreeWindState.HistoryOffset; p++)
+                        Assert.Equal((Vector4)asset.Wind.Values[SpeedTreeWindState.HistoryOffset + p], Param(buffer, 0, p));
+                    for (int p = 0; p < 16; p++) Assert.Equal(Vector4.zero, Param(buffer, 1, p));
+                    Assert.Equal(7u, *(uint*)(buffer + Stride * 2 + Offset(0)));
+
+                    // Outside Play mode: zeros.
+                    Unbound.Runtime.EditorSession.IsPlaying = false;
+                    Fill(7);
+                    SpeedTreeWindSystem.WriteBuffer(ids, in iterator, false);
+                    Assert.Equal(Vector4.zero, Param(buffer, 0, 1));
+                }
+                finally
+                {
+                    Unbound.Runtime.EditorSession.IsPlaying = playing;
+                    foreach (var o in objects) Object.DestroyImmediate(o);
+                    if (zone != null) Object.DestroyImmediate(zone.gameObject);
+                    Object.DestroyImmediate(asset);
+                    SpeedTreeWindSystem.Update();
+                }
+            }
+        }
+
         [Fact]
         public void AZoneUnderAMirroredParentBlowsMirrored()
         {

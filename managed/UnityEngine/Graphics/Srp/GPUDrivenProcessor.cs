@@ -456,7 +456,8 @@ namespace UnityEngine.Rendering
                 var model = renderer.transform.localToWorldMatrix;
                 bool moved = renderer.motionVectorGenerationMode == MotionVectorGenerationMode.Object && renderer.m_HasPreviousModel && renderer.m_PreviousModel != model;
                 data.packedRendererData[i] = new GPUDrivenPackedRendererData(renderer.receiveShadows, renderer.staticShadowCaster, LodMask(renderer), renderer.shadowCastingMode,
-                    renderer.lightProbeUsage, renderer.motionVectorGenerationMode, renderer.isPartOfStaticBatch, moved, false, renderer.smallMeshCulling, false);
+                    renderer.lightProbeUsage, renderer.motionVectorGenerationMode, renderer.isPartOfStaticBatch, moved, SpeedTreeWindSystem.HasTree(renderer),
+                    renderer.smallMeshCulling, false);
                 if (!materialUpdateOnly)
                 {
                     data.localBounds[i] = renderer.localBounds;

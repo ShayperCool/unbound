@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unbound.Runtime;
+using UnityEngine.Rendering;
 
 namespace UnityEngine
 {
@@ -242,6 +243,8 @@ namespace UnityEngine
     /// direction, no strength, its noise where it stopped). Before that it draws with zeros (the
     /// Editor's draw reads whatever an earlier draw left). A spherical zone's own wind on the trees inside its
     /// radius is not simulated: such a tree is warned about and keeps the directional wind.
+    /// The GPU Resident Drawer's trees (<see cref="WriteBuffer"/>) take the same constants from
+    /// their instance data instead, which the drawer writes each frame they are visible.
     /// </summary>
     internal static class SpeedTreeWindSystem
     {
@@ -319,6 +322,65 @@ namespace UnityEngine
                 blowing |= asset.Wind.Blowing;
             }
             s_AnyWind = wind.x != 0f || wind.y != 0f || wind.z != 0f || s_Spherical.Count > 0 || blowing;
+        }
+
+        /// <summary>The number of float4 wind parameters per drawer tree instance (the SpeedTree 8
+        /// layout's 15 and one spare; SpeedTree 9 uses the first 11).</summary>
+        const int BufferParams = 16;
+
+        /// <summary>Whether the GPU Resident Drawer treats a renderer as a SpeedTree tree (its
+        /// instances get wind parameters): its object has a Tree with a wind asset (Unity
+        /// 6000.0.71f1, tests/projects/residentdrawer speedtree).</summary>
+        internal static bool HasTree(MeshRenderer renderer)
+        {
+            var tree = renderer.m_GameObject.GetComponent<Tree>();
+            return tree is not null && tree.windAsset is not null;
+        }
+
+        /// <summary>
+        /// SpeedTreeWindManager.UpdateWindAndWriteBufferWindParams: the wind parameters of the
+        /// drawer's visible trees (by renderer ID) for its upload buffer (Unity 6000.0.71f1,
+        /// tests/projects/residentdrawer speedtree). Outside Play mode, or while the world has no
+        /// wind (see <see cref="Update"/>), every listed instance gets zeros. Otherwise a tree with
+        /// a wind asset gets its wind's 11 constants, the previous frame's with
+        /// <paramref name="history"/> (the drawer asks for those first for a tree that has just
+        /// become visible, then copies them into its history parameters); a renderer without
+        /// per-object motion vectors gets zeros for the history. A renderer that is not a tree with
+        /// a wind asset is left as it is.
+        /// </summary>
+        internal static unsafe void WriteBuffer(ReadOnlySpan<int> renderersID, in SpeedTreeWindParamsBufferIterator buffer, bool history)
+        {
+            uint* data = (uint*)buffer.bufferPtr;
+            bool wind = Application.isPlaying && s_AnyWind;
+            for (int i = 0; i < renderersID.Length; i++)
+            {
+                int at = buffer.uintStride * i;
+                if (!wind)
+                {
+                    ClearParams(data, buffer, at);
+                    continue;
+                }
+                if (s_Trees.Count == 0 || !(ObjectRegistry.FindById(renderersID[i]) is MeshRenderer renderer) ||
+                    !s_Trees.TryGetValue(renderer.m_GameObject, out var tree))
+                    continue;
+                var asset = tree.windAsset;
+                if (asset == null) continue;
+                if (s_Spherical.Count > 0 && !s_WarnedSpherical) WarnIfInSphericalZone(renderer);
+                if (history && renderer.m_MotionVectorGenerationMode != MotionVectorGenerationMode.Object)
+                {
+                    ClearParams(data, buffer, at);
+                    continue;
+                }
+                var values = asset.Wind.Values;
+                int from = history ? SpeedTreeWindState.HistoryOffset : 0;
+                for (int p = 0; p < SpeedTreeWindState.HistoryOffset; p++)
+                    *(Vector4*)(data + buffer.uintParamOffsets[p] + at) = Unsafe.Unbox<Vector4>(values[from + p]);
+            }
+        }
+
+        static unsafe void ClearParams(uint* data, in SpeedTreeWindParamsBufferIterator buffer, int at)
+        {
+            for (int p = 0; p < BufferParams; p++) *(Vector4*)(data + buffer.uintParamOffsets[p] + at) = Vector4.zero;
         }
 
         /// <summary>Lets the spherical zone warning be given again (tests).</summary>

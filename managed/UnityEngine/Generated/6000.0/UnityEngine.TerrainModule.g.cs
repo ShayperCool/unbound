@@ -46,11 +46,6 @@ namespace UnityEngine
 }
 namespace UnityEngine.Rendering
 {
-    [global::Unbound.Stub]
-    internal unsafe static partial class SpeedTreeWindManager
-    {
-        [global::Unbound.Stub] public static void UpdateWindAndWriteBufferWindParams(global::System.ReadOnlySpan<int> renderersID, global::UnityEngine.Rendering.SpeedTreeWindParamsBufferIterator windParams, bool history) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.SpeedTreeWindManager.UpdateWindAndWriteBufferWindParams"); }
-    }
     internal enum SpeedTreeWindParamIndex
     {
         WindVector = 0,
@@ -81,15 +76,6 @@ namespace UnityEngine.Rendering
         WindParamsCount_v8 = 15,
         WindParamsCount_v9 = 11,
         MaxWindParamsCount = 16,
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct SpeedTreeWindParamsBufferIterator
-    {
-        [global::Unbound.Stub] public global::System.IntPtr bufferPtr;
-        [global::Unbound.Stub] public fixed int uintParamOffsets[16];
-        [global::Unbound.Stub] public int uintStride;
-        [global::Unbound.Stub] public int elementOffset;
-        [global::Unbound.Stub] public int elementsCount;
     }
 }
 namespace UnityEngine.TerrainTools
