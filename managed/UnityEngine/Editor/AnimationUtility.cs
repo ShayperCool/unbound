@@ -240,8 +240,8 @@ namespace UnityEditor
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             return new AnimationClipSettings
             {
-                startTime = clip.StartTime,
-                stopTime = clip.m_HasRange ? clip.m_StopTime : clip.length,
+                startTime = clip.SettingsStartTime,
+                stopTime = clip.SettingsStopTime,
                 loopTime = clip.m_LoopTime,
                 hasAdditiveReferencePose = clip.m_HasAdditiveReferencePose,
                 additiveReferencePoseClip = clip.m_AdditiveReferencePoseClip,

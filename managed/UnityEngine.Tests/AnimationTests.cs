@@ -281,6 +281,74 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(weighted);
         }
 
+        /// <summary>Where the keys SetCurve unites go past a component's own keys, its end tangents
+        /// on that side become flat and the added keys hold its end values; inside, they follow its
+        /// Hermite segment; a time within 2e-6 s of a key is that key (tests/projects/editorui
+        /// SetCurveKeys.*).</summary>
+        [Fact]
+        public void VectorKeysAddedBySetCurveFlattenTheEndsTheyGoPast()
+        {
+            var clip = new AnimationClip();
+            clip.SetCurve("", typeof(Transform), "localPosition.y", new AnimationCurve(
+                new Keyframe(0.25f, 1f, 2f, 2f), new Keyframe(1f, 3f, -1f, 4f), new Keyframe(1.5f, 0f, 0.5f, -3f)));
+            clip.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0f, 0f, 1f, 1f), new Keyframe(2f, 5f, 3f, 3f)));
+            Keyframe[] Keys(string axis) => UnityEditor.AnimationUtility.GetEditorCurve(clip,
+                UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition." + axis)).keys;
+            var y = Keys("y");
+            Assert.Equal(new[] { 0f, 0.25f, 1f, 1.5f, 2f }, y.Select(k => k.time).ToArray());
+            Assert.Equal(new[] { 1f, 1f, 3f, 0f, 0f }, y.Select(k => k.value).ToArray());
+            Assert.Equal(new[] { 0f, 0f, -1f, 0.5f, 0f }, y.Select(k => k.inTangent).ToArray());
+            Assert.Equal(new[] { 0f, 2f, 4f, 0f, 0f }, y.Select(k => k.outTangent).ToArray());
+            var x = Keys("x");
+            Near.Equal(0.32421875f, x[1].value, 1e-6f);
+            Near.Equal(1.578125f, x[1].inTangent, 1e-5f);
+            Near.Equal(1.578125f, x[1].outTangent, 1e-5f);
+            Assert.All(Keys("z"), k => Assert.Equal((0f, 0f, 0f), (k.value, k.inTangent, k.outTangent)));
+
+            var close = new AnimationClip();
+            close.SetCurve("", typeof(Transform), "localScale.y", AnimationCurve.Linear(0f, 1f, 2f, 3f));
+            close.SetCurve("", typeof(Transform), "localScale.x", new AnimationCurve(new Keyframe(0.5f, 3f), new Keyframe(1.5f, 3f), new Keyframe(1.5000005f, 3f)));
+            Assert.Equal(new[] { 0f, 0.5f, 1.5f, 2f }, UnityEditor.AnimationUtility.GetEditorCurve(close,
+                UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalScale.x")).keys.Select(k => k.time).ToArray());
+            // Alone, a curve keeps keys however close.
+            var alone = new AnimationClip();
+            alone.SetCurve("", typeof(Transform), "localScale.x", new AnimationCurve(new Keyframe(0.5f, 3f), new Keyframe(1.5f, 3f), new Keyframe(1.5000005f, 3f)));
+            Assert.Equal(3, UnityEditor.AnimationUtility.GetEditorCurve(alone,
+                UnityEditor.EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalScale.x")).length);
+            Object.DestroyImmediate(clip);
+            Object.DestroyImmediate(close);
+            Object.DestroyImmediate(alone);
+        }
+
+        /// <summary>Removing the Euler angles by m_LocalEuler leaves the clip settings' range until
+        /// the clip changes again (tests/projects/editorui ClipLength.*.serializedRemoval).</summary>
+        [Fact]
+        public void EulerRemovalKeepsTheSettingsRangeUntilTheNextChange()
+        {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try { EulerRemovalKeepsTheSettingsRange(); }
+            finally { ProjectInfo.UnityVersion = version; }
+        }
+
+        static void EulerRemovalKeepsTheSettingsRange()
+        {
+            var clip = new AnimationClip();
+            clip.SetCurve("", typeof(Transform), "localEulerAngles.x", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+            clip.SetCurve("", typeof(Transform), "m_LocalEuler", null);
+            Assert.Equal(1f, clip.length);
+            Assert.Equal(2f, UnityEditor.AnimationUtility.GetAnimationClipSettings(clip).stopTime);
+            clip.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(0f, 0f, 0.5f, 1f));
+            Assert.Equal(0.5f, UnityEditor.AnimationUtility.GetAnimationClipSettings(clip).stopTime);
+            // Removing a position by m_LocalPosition updates it.
+            var position = new AnimationClip();
+            position.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+            position.SetCurve("", typeof(Transform), "m_LocalPosition", null);
+            Assert.Equal(1f, UnityEditor.AnimationUtility.GetAnimationClipSettings(position).stopTime);
+            Object.DestroyImmediate(clip);
+            Object.DestroyImmediate(position);
+        }
+
         [Fact]
         public void LegacyClipSamplesTransformCurves()
         {

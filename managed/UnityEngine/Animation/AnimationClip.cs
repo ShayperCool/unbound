@@ -427,9 +427,20 @@ namespace UnityEngine
                 return;
             }
             RestoreImportedCurves();
+            bool eulerRemoval = false;
+            float keptStart = 0f, keptStop = 0f;
             if (curve == null && transform)
             {
                 string whole = attribute == VectorCurveName(EulerScriptName) ? EulerScriptName : attribute;
+                if (whole == EulerScriptName)
+                {
+                    // Removing the Euler angles leaves the clip settings' range as it was (its length
+                    // follows the curves left): matches the Unity 6000.0.71f1 Editor,
+                    // tests/projects/editorui ClipLength.*.SetCurve.localEulerAngles.serializedRemoval.
+                    eulerRemoval = true;
+                    keptStart = SettingsStartTime;
+                    keptStop = SettingsStopTime;
+                }
                 if (TransformVectorAxes(whole + ".x", out _) != null)
                     m_Curves.RemoveAll(c => c.Binding.Path == relativePath && c.Binding.Attribute.StartsWith(whole + ".", StringComparison.Ordinal) && c.Binding.Matches(type));
             }
@@ -438,10 +449,21 @@ namespace UnityEngine
             {
                 var copy = new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
                 m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(relativePath, attribute, type), Curve = copy });
-                if (axes != null) KeyVectorTogether(relativePath, head, axes, type);
+                if (axes != null) KeyVectorTogether(relativePath, head, attribute, axes, type);
             }
             m_Version++;
+            if (eulerRemoval) m_KeptSettingsRange = (m_Version, keptStart, keptStop);
         }
+
+        /// <summary>A range the clip settings keep after a change that does not update them (the
+        /// clip's version then, its start and stop); any later change of the clip ends it.</summary>
+        (int Version, float Start, float Stop)? m_KeptSettingsRange;
+
+        /// <summary>The clip settings' start time (AnimationUtility.GetAnimationClipSettings).</summary>
+        internal float SettingsStartTime => m_KeptSettingsRange is { } k && k.Version == m_Version ? k.Start : StartTime;
+
+        /// <summary>The clip settings' stop time: the imported range's stop, else the curves' length.</summary>
+        internal float SettingsStopTime => m_KeptSettingsRange is { } k && k.Version == m_Version ? k.Stop : m_HasRange ? m_StopTime : length;
 
         /// <summary>The Euler angles' curve name (localEulerAngles in scripts).</summary>
         const string EulerScriptName = "localEulerAnglesRaw";
@@ -461,17 +483,22 @@ namespace UnityEngine
         /// <summary>
         /// AnimationClip.SetCurve on a component of a Transform vector property (position,
         /// rotation, Euler angles, scale) keys every component of that vector at the union of their
-        /// key times, legacy and non-legacy clips alike: a missing component starts at its default
-        /// value (1 for scale and rotation w, else 0), and each component gets a key at every time
-        /// it lacks, on its own curve there (value and slope). Matches the Unity 6000.0.71f1 Editor
-        /// for the key times and the clip's length, tests/projects/editorui `ClipLength.*`
-        /// (keys at 0 and 2 then 0.5 and 1 give 0, 0.5, 1, 2 on x and y; recorded with the macOS
-        /// Editor); the inserted keys' values and slopes are unmeasured.
+        /// key times, legacy and non-legacy clips alike: the times the vector had, then the new
+        /// component's times not within <see cref="KeyTimeTolerance"/> of one of them. A missing
+        /// component is its default value (1 for scale and rotation w, else 0) at every time. Where
+        /// the union starts before a component's first key, that key's in-tangent becomes 0, and
+        /// where it ends after its last key, that key's out-tangent; at a time a component lacks it
+        /// gets a key on its own curve there (value and slope; on a stepped segment the value it
+        /// holds and that infinite slope), or outside its keys their end value with flat slopes; a
+        /// key within the tolerance of a time stands for it. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/editorui `ClipLength.*` (key times, lengths; the macOS Editor) and
+        /// `SetCurveKeys.*` (every key's value and tangents, a stepped segment, a rotation).
         /// </summary>
-        void KeyVectorTogether(string path, string head, string[] axes, Type type)
+        void KeyVectorTogether(string path, string head, string setAttribute, string[] axes, Type type)
         {
             var components = new ClipCurve[axes.Length];
-            var times = new SortedSet<float>();
+            var times = new List<float>();
+            ClipCurve set = null;
             for (int a = 0; a < axes.Length; a++)
             {
                 var name = head + "." + axes[a];
@@ -483,8 +510,16 @@ namespace UnityEngine
                     Debug.LogWarning($"Unbound: AnimationClip.SetCurve on '{this.name}': the other components of {path}/{head} are compiled player curves and keep their keys.", this);
                     return;
                 }
-                foreach (var k in components[a].Curve.keys) times.Add(k.time);
+                if (name == setAttribute) { set = components[a]; continue; }
+                foreach (var k in components[a].Curve.keys) AddKeyTime(times, k.time, tolerant: false);
             }
+            // A vector without other keys is the new component's curve as it is.
+            bool alone = times.Count == 0;
+            if (set != null)
+                foreach (var k in set.Curve.keys) AddKeyTime(times, k.time, tolerant: !alone);
+            times.Sort();
+            if (times.Count == 0) return;
+            float first = times[0], last = times[times.Count - 1];
             for (int a = 0; a < axes.Length; a++)
             {
                 var c = components[a];
@@ -492,35 +527,47 @@ namespace UnityEngine
                 {
                     float value = head == "m_LocalScale" || (head == "m_LocalRotation" && axes[a] == "w") ? 1f : 0f;
                     var keys = new Keyframe[times.Count];
-                    int i = 0;
-                    foreach (var t in times) keys[i++] = new Keyframe(t, value);
+                    for (int i = 0; i < keys.Length; i++) keys[i] = new Keyframe(times[i], value);
                     m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForType(path, head + "." + axes[a], type), Curve = new AnimationCurve(keys) });
                     continue;
                 }
+                if (alone && c == set) continue;
                 var curve = c.Curve;
-                var have = new HashSet<float>(curve.keys.Select(k => k.time));
-                if (have.Count == times.Count) continue;
+                var own = curve.keys;
+                if (own.Length == 0) continue;
+                // Every time has its key already: the curve stays as it is.
+                if (times.TrueForAll(t => Array.Exists(own, k => Math.Abs(k.time - t) <= KeyTimeTolerance)) && own.Length == times.Count) continue;
                 // A weighted segment would change shape when split (unmeasured): such a curve keeps
                 // its keys.
-                if (curve.keys.Any(k => k.weightedMode != WeightedMode.None))
+                if (own.Any(k => k.weightedMode != WeightedMode.None))
                 {
                     Debug.LogWarning($"Unbound: AnimationClip.SetCurve on '{this.name}': {path}/{c.Binding.Attribute} has weighted keys and keeps its key times; the Editor keys it at the other components' times too.", this);
                     continue;
                 }
-                var merged = new List<Keyframe>(curve.keys);
-                foreach (var t in times)
-                    if (!have.Contains(t))
+                // Flat outside its own keys where the vector goes on.
+                if (first < own[0].time) own[0].inTangent = 0f;
+                if (last > own[own.Length - 1].time) own[own.Length - 1].outTangent = 0f;
+                var shape = new AnimationCurve(own) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
+                var merged = new Keyframe[times.Count];
+                for (int i = 0; i < times.Count; i++)
+                {
+                    float t = times[i];
+                    int match = Array.FindIndex(own, k => Math.Abs(k.time - t) <= KeyTimeTolerance);
+                    if (match >= 0)
                     {
-                        float slope = SlopeAt(curve, t);
-                        merged.Add(new Keyframe(t, curve.Evaluate(t), slope, slope));
+                        merged[i] = own[match];
+                        merged[i].time = t;
+                        continue;
                     }
-                merged.Sort((x, y) => x.time.CompareTo(y.time));
+                    float slope = SlopeAt(shape, t);
+                    merged[i] = new Keyframe(t, shape.Evaluate(t), slope, slope);
+                }
                 // Replaced, not edited: copies of the clip (Animation.AddClip under another name)
                 // share the curves they were made with.
                 components[a] = new ClipCurve
                 {
                     Binding = c.Binding, QuaternionStart = c.QuaternionStart, EulerStart = c.EulerStart,
-                    Curve = new AnimationCurve(merged.ToArray()) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode },
+                    Curve = new AnimationCurve(merged) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode },
                 };
                 m_Curves[m_Curves.IndexOf(c)] = components[a];
             }
@@ -539,6 +586,18 @@ namespace UnityEngine
                 at = i;
             }
             m_Curves.InsertRange(Math.Min(at, m_Curves.Count), ordered.Where(c => c != null));
+        }
+
+        /// <summary>Key times within this many seconds of one another count as one when a vector's
+        /// components are keyed together (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/editorui SetCurveKeys.*.stepped: a key 5e-7 s after another is dropped).</summary>
+        const float KeyTimeTolerance = 2e-6f;
+
+        static void AddKeyTime(List<float> times, float time, bool tolerant)
+        {
+            foreach (var t in times)
+                if (tolerant ? Math.Abs(t - time) <= KeyTimeTolerance : t == time) return;
+            times.Add(time);
         }
 
         /// <summary>A curve's slope at a time between its keys (the Hermite segment's derivative, so

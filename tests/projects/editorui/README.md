@@ -39,8 +39,14 @@ AnimationClip.SetCurve and AnimationUtility.SetEditorCurve set, shorten and remo
 and other curves on legacy and non-legacy clips, the key times SetCurve leaves on a vector's
 components, and how a clip of one position component plays.
 
-Every call matches but three expected differences: Unity's reorderable list keeps its elements'
+`SetCurveKeys.*` (after them, recorded with the Linux Editor, two identical captures whose other
+rows equal the reference's) records every key (time, value, tangents, weighted mode) of a
+Transform vector's components after AnimationClip.SetCurve keys one component at times the others
+lack: inside and outside each curve's keys, on a Hermite segment with unequal tangents, on stepped
+segments (with a key 5e-7 s after another), and on a rotation, for legacy and non-legacy clips.
+Infinite tangents are recorded as "+inf"/"-inf".
+
+Every call matches but one expected difference: Unity's reorderable list keeps its elements'
 heights from its first layout, so an element expanded after the list was measured once does not
-count yet; and after SetCurve removes a clip's Euler angles by m_LocalEuler, the Editor's clip
-settings keep the removed curves' stop time (2, with a length of 1) where Unbound reports 1
-(`ClipLength.*.SetCurve.localEulerAngles.serializedRemoval`, open).
+count yet. After SetCurve removes a clip's Euler angles by m_LocalEuler, the clip settings keep
+the removed curves' range (stop time 2, with a length of 1); Unbound matches it.
