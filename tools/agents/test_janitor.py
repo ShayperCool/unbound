@@ -642,6 +642,41 @@ class JanitorTests(unittest.TestCase):
                         (destination/'link').symlink_to(target/'output')
                 self.assert_target_kept(target, act)
 
+    def test_a_dangling_link_created_after_discovery_protects_a_tree_moved_there(self):
+        target = self.directory('q1/target')
+        destination = self.root/'outside'/'D'
+        destination.parent.mkdir(parents=True)
+        moving = self.cache/'work'/'D'
+        moving.mkdir(parents=True)
+        def act():
+            (self.cache/'L').symlink_to(destination)  # read by poll(), dangling
+            self.j.refresh_links()
+            moving.rename(destination)
+            self.j.refresh_links()
+            (destination/'link').symlink_to(target/'output')
+        self.assert_target_kept(target, act)
+
+    def test_a_file_appearing_at_a_dangling_destination_is_ignored(self):
+        old = self.directory('q1/old')
+        destination = self.root/'outside'/'log.txt'
+        destination.parent.mkdir(parents=True)
+        (self.cache/'latest.log').symlink_to(destination)
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            destination.write_text('written after discovery')
+            self.j.apply = True
+            self.assertTrue(self.j.remove(old, kind='task'))
+
+    def test_a_link_chain_appearing_at_a_dangling_destination_keeps_its_target(self):
+        target = self.directory('q1/target')
+        destination = self.root/'outside'/'D'
+        destination.parent.mkdir(parents=True)
+        (self.cache/'L').symlink_to(destination)
+        def act():
+            destination.symlink_to(target)
+        self.assert_target_kept(target, act)
+
     def test_too_many_unverified_names_fail_closed(self):
         watcher = janitor.ReferenceWatch()
         self.addCleanup(watcher.close)

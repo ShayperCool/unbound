@@ -403,14 +403,37 @@ class ReferenceWatch:
                 raise ReferenceChanged('too many short-lived names to track; remaining work retained')
 
     def dangle(self, target):
-        if not os.path.lexists(target) and not any(inside(target, p) for p in self.excluded):
+        """Track a missing link destination, unless a watched directory would report it."""
+        if os.path.lexists(target) or any(inside(target, p) for p in self.excluded):
+            return
+        ancestor = os.path.dirname(os.fspath(target))
+        while not os.path.lexists(ancestor) and os.path.dirname(ancestor) != ancestor:
+            ancestor = os.path.dirname(ancestor)
+        if ancestor not in self.watched:
             self.dangling.add(Path(target))
 
     def revived(self):
-        """Dangling link destinations that exist now; they are walked and no longer tracked."""
-        found = [path for path in self.dangling if os.path.lexists(path)]
-        self.dangling.difference_update(found)
-        return found
+        """Directories to walk where a tracked dangling destination exists now. A link appearing
+        there adds its destinations to the references (and is tracked again if it dangles); a
+        file there holds no links."""
+        walk = []
+        for path in [path for path in self.dangling if os.path.lexists(path)]:
+            self.dangling.discard(path)
+            try:
+                if path.is_symlink():
+                    raw = path.readlink()
+                    target = raw if raw.is_absolute() else path.parent/raw
+                    self.references.update((Path(os.path.abspath(target)), target.resolve()))
+                    self.dangle(target.resolve())
+                    if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
+                        walk.append(target.resolve())
+                elif path.is_dir():
+                    walk.append(path)
+            except OSError as error:
+                if not gone(error):
+                    raise
+                self.dangling.add(path)  # changed again meanwhile: look at it next time
+        return walk
 
     def listed(self, directory):
         self.unlisted.discard(os.fspath(directory))
