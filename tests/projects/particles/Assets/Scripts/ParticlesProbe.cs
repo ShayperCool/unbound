@@ -90,6 +90,46 @@ public class ParticlesProbe : MonoBehaviour
         s_Out.Append("]}\n");
     }
 
+    /// <summary>A system whose custom data holds its normalized age twice: a one-component vector
+    /// (a linear curve) and a white-to-black color.</summary>
+    static ParticleSystem MakeCustomDataRuns(string name, float rate, ParticleSystem.Burst? burst)
+    {
+        return Make(name, s =>
+        {
+            var emission = s.emission;
+            emission.rateOverTime = rate;
+            if (burst.HasValue) emission.SetBursts(new[] { burst.Value });
+            var cd = s.customData; cd.enabled = true;
+            cd.SetMode(ParticleSystemCustomData.Custom1, ParticleSystemCustomDataMode.Vector);
+            cd.SetVectorComponentCount(ParticleSystemCustomData.Custom1, 1);
+            cd.SetVector(ParticleSystemCustomData.Custom1, 0, new ParticleSystem.MinMaxCurve(1f, Linear(0f, 1f)));
+            cd.SetMode(ParticleSystemCustomData.Custom2, ParticleSystemCustomDataMode.Color);
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.black, 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
+            cd.SetColor(ParticleSystemCustomData.Custom2, g);
+        });
+    }
+
+    /// <summary>Each particle's remaining lifetime, custom vector x and custom color r.</summary>
+    static void RecordCustomDataRuns(string scenario, string step, ParticleSystem ps)
+    {
+        int count = ps.particleCount;
+        if (s_Buffer.Length < count) s_Buffer = new ParticleSystem.Particle[count * 2];
+        int n = ps.GetParticles(s_Buffer);
+        var data1 = new List<Vector4>();
+        var data2 = new List<Vector4>();
+        ps.GetCustomParticleData(data1, ParticleSystemCustomData.Custom1);
+        ps.GetCustomParticleData(data2, ParticleSystemCustomData.Custom2);
+        var sb = new StringBuilder("[");
+        for (int k = 0; k < n; k++)
+        {
+            if (k > 0) sb.Append(',');
+            sb.Append('[').Append(F(s_Buffer[k].remainingLifetime)).Append(',').Append(F(data1[k].x)).Append(',').Append(F(data2[k].x)).Append(']');
+        }
+        RecordValue(scenario, step, sb.Append(']').ToString());
+    }
+
     static void RecordValue(string scenario, string step, string json)
     {
         s_Out.Append("{\"scenario\":").Append(Q(scenario)).Append(",\"step\":").Append(Q(step)).Append(",\"value\":").Append(json).Append("}\n");
@@ -836,6 +876,23 @@ public class ParticlesProbe : MonoBehaviour
             }
             RecordValue("custom_data", i.ToString(CultureInfo.InvariantCulture), sb.Append(']').ToString());
         }
+        Done(ps);
+
+        // When the custom data module evaluates its streams: steps with births in the middle
+        // (rate 7), steps without births (rate 7 and the burst), Emit, and births within a
+        // single-substep Simulate (rate 70, 0.02 s).
+        ps = MakeCustomDataRuns("custom_data_runs/rate7", 7f, null);
+        for (int i = 0; i < 8; i++) { ps.Simulate(0.1f, true, i == 0, false); RecordCustomDataRuns("custom_data_runs/rate7", i.ToString(CultureInfo.InvariantCulture), ps); }
+        Done(ps);
+        ps = MakeCustomDataRuns("custom_data_runs/burst", 0f, new ParticleSystem.Burst(0f, 3));
+        for (int i = 0; i < 4; i++) { ps.Simulate(0.1f, true, i == 0, false); RecordCustomDataRuns("custom_data_runs/burst", i.ToString(CultureInfo.InvariantCulture), ps); }
+        ps.Emit(1);
+        RecordCustomDataRuns("custom_data_runs/burst", "emit", ps);
+        ps.Simulate(0.05f, true, false, false);
+        RecordCustomDataRuns("custom_data_runs/burst", "after", ps);
+        Done(ps);
+        ps = MakeCustomDataRuns("custom_data_runs/single", 70f, null);
+        for (int i = 0; i < 4; i++) { ps.Simulate(0.02f, true, i == 0, false); RecordCustomDataRuns("custom_data_runs/single", i.ToString(CultureInfo.InvariantCulture), ps); }
         Done(ps);
 
         {
