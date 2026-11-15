@@ -1,7 +1,7 @@
 # SetPixelData element transfer
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 217 rows. Every value is a CPU copy read back with
+byte-identical and the canonical reference has 235 rows. Every value is a CPU copy read back with
 `GetPixelData<byte>`, so the rows do not depend on the OS or the graphics device. The gate compares
 every missing, extra or unequal row exactly.
 
@@ -21,6 +21,11 @@ it produced and the level's stored bytes.
   element type's own size.
 - Element types: strings, `object`, plain classes and `DateTime` cannot be marshaled and throw; a
   null first reference or empty first Nullable throws a null-reference error.
+- Structs holding references are copied from the array's memory as the reference lays it out:
+  fields in declaration order, each at a multiple of its alignment, references eight bytes. A
+  `{int; string}` element puts the integer first, a `{byte; string; short; string; int}` element
+  takes 40 bytes, and a nested struct keeps its place. The reference slots hold object addresses
+  and are cleared before the bytes are compared.
 - The size check: `(length − start) × element size` must cover the level.
 
 Exceptions the runtime's marshaling raises are recorded by type only; Unity's own messages are
@@ -33,11 +38,9 @@ recorded in full.
 
 Not compared: a start index beyond the array length and a marshaled size larger than the array's
 stride make the reference read memory after the array, whose contents are undefined; Unbound throws
-instead. Element types that hold object references and still have a marshaled size (a struct with
-a string field, boxed values in an `object[]`) are accepted by the reference, which copies the
-array's memory with the object addresses and its runtime's field order (declaration order, measured
-outside this reference); Unbound's runtime orders a struct's references first, so it throws
-instead. Cubemap.SetPixelData is not supported yet. Other releases are unmeasured.
+instead. Explicit layouts holding references are not supported. Marshaled sizes the two runtimes
+disagree on (an `object` field has one in the reference) are not compared. Cubemap.SetPixelData is
+not supported yet. Other releases are unmeasured.
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1

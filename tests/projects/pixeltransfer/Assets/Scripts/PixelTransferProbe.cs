@@ -16,6 +16,10 @@ public class PixelTransferProbe : MonoBehaviour
     public struct BoolPair { public bool flag; public byte value; }
     public class Boxed { public int value; }
     public struct Pair<T> { public T first; public T second; }
+    public struct NamedValue { public string name; public int value; }
+    public struct ValueFirst { public int value; public string name; }
+    public struct Mixed { public byte a; public string name; public short b; public string other; public int c; }
+    public struct Nested { public int x; public NamedValue inner; public int y; }
 
     StreamWriter output;
     readonly List<string> logs = new List<string>();
@@ -98,6 +102,29 @@ public class PixelTransferProbe : MonoBehaviour
         for (int i = 0; i < pairs.Length; i++) pairs[i] = new BoolPair { flag = i % 2 == 1, value = (byte)(i + 100) };
         Call("r8.boolpair.start0", () => r8.SetPixelData(pairs, 0), r8Bytes);
         Call("r8.boolpair.start1", () => r8.SetPixelData(pairs, 0, 1), r8Bytes);
+        // Structs holding references: the reference slots hold addresses and are cleared before
+        // the bytes are compared.
+        Func<byte[]> Masked(params int[] pointerSlots) => () =>
+        {
+            var bytes = r8.GetPixelData<byte>(0).ToArray();
+            foreach (int slot in pointerSlots) Array.Clear(bytes, slot, 8);
+            return bytes;
+        };
+        var named = new NamedValue[8];
+        for (int i = 0; i < named.Length; i++) named[i] = new NamedValue { name = "n" + i, value = 0x01020304 * (i + 1) };
+        Call("r8.named", () => r8.SetPixelData(named, 0), Masked(0, 16, 32, 48));
+        var valueFirst = new ValueFirst[8];
+        for (int i = 0; i < valueFirst.Length; i++) valueFirst[i] = new ValueFirst { name = "v", value = 0x11223344 + i };
+        Call("r8.valueFirst", () => r8.SetPixelData(valueFirst, 0), Masked(8, 24, 40, 56));
+        Call("r8.valueFirst.start1", () => r8.SetPixelData(valueFirst, 0, 1), Masked(8, 24, 40, 56));
+        var mixed = new Mixed[4];
+        for (int i = 0; i < mixed.Length; i++) mixed[i] = new Mixed { a = (byte)(0xA0 + i), name = "m", b = (short)(0x0B00 + i), other = "o", c = 0x0C0C0C00 + i };
+        Call("r8.mixed", () => r8.SetPixelData(mixed, 0), Masked(8, 24, 48));
+        Call("r8.mixed.start1", () => r8.SetPixelData(mixed, 0, 1), Masked(8, 24, 48));
+        var nested = new Nested[4];
+        for (int i = 0; i < nested.Length; i++) nested[i] = new Nested { x = 0x0A0A0A00 + i, inner = new NamedValue { name = "i", value = 0x0C0C0C00 + i }, y = 0x0B0B0B00 + i };
+        Call("r8.nested", () => r8.SetPixelData(nested, 0), Masked(8, 40));
+        r8.SetPixelData(Pattern(64, 5), 0);
         var generic = new Pair<byte>[40];
         for (int i = 0; i < generic.Length; i++) generic[i] = new Pair<byte> { first = (byte)i, second = (byte)(i + 50) };
         Call("r8.generic.start3", () => r8.SetPixelData(generic, 0, 3), r8Bytes);

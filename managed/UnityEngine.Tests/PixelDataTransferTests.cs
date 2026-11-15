@@ -11,6 +11,11 @@ namespace UnityEngine.Tests
     {
         struct BoolPair { public bool flag; public byte value; }
         struct NamedValue { public string name; public int value; }
+        struct ValueFirst { public int value; public string name; }
+        struct Mixed { public byte a; public string name; public short b; public string other; public int c; }
+        struct Nested { public int x; public NamedValue inner; public int y; }
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
+        struct Overlaid { [System.Runtime.InteropServices.FieldOffset(0)] public string name; [System.Runtime.InteropServices.FieldOffset(8)] public int value; }
         struct Pair<T> { public T first; public T second; }
 
         static Texture2D R8(string name)
@@ -53,14 +58,45 @@ namespace UnityEngine.Tests
             // Eight marshaled bytes per pair over a two-byte stride: the level starts at the fifth pair.
             Assert.Equal(new byte[] { 0, 104, 1, 105 }, bytes[..4]);
 
-            // Elements holding references would copy object addresses: unsupported, loudly, after
-            // the marshaled size (which a string field has) and before any texel changes.
-            var before = texture.GetPixelData<byte>(0).ToArray();
+            // Structs holding references are copied in declaration order with their own alignment
+            // (references eight bytes), whatever this runtime's field order; reference slots hold
+            // addresses, so only the other bytes are compared.
+            static byte[] Without(byte[] bytes, params int[] pointerSlots)
+            {
+                var copy = (byte[])bytes.Clone();
+                foreach (int slot in pointerSlots) Array.Clear(copy, slot, 8);
+                return copy;
+            }
             var named = new NamedValue[8];
-            for (int i = 0; i < named.Length; i++) named[i] = new NamedValue { name = "n" + i, value = 0x01020304 * (i + 1) };
-            Assert.StartsWith("Unbound: SetPixelData of NamedValue elements, which hold object references, is not supported",
-                Assert.IsType<UnityException>(Thrown(() => Fill(texture, named, 0))).Message);
-            Assert.StartsWith("Unbound:", Assert.IsType<UnityException>(Thrown(() => Fill(texture, new object[] { 1, 2 }, 0))).Message);
+            for (int i = 0; i < named.Length; i++) named[i] = new NamedValue { name = "n", value = 0x01020304 * (i + 1) };
+            Fill(texture, named, 0);
+            Assert.Equal(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 4, 3, 2, 1, 0, 0, 0, 0 }, Without(texture.GetPixelData<byte>(0).ToArray(), 0)[..16]);
+            var valueFirst = new ValueFirst[8];
+            for (int i = 0; i < valueFirst.Length; i++) valueFirst[i] = new ValueFirst { name = "n", value = 0x11223344 + i };
+            Fill(texture, valueFirst, 0);
+            Assert.Equal(new byte[] { 0x44, 0x33, 0x22, 0x11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x45, 0x33, 0x22, 0x11 },
+                Without(texture.GetPixelData<byte>(0).ToArray(), 8)[..20]);
+            var mixed = new Mixed[4];
+            for (int i = 0; i < mixed.Length; i++) mixed[i] = new Mixed { a = 0xAA, name = "n", b = 0x0BBB, other = "o", c = 0x0CCCCCCC };
+            // Byte, address, short, address, int: 40 bytes in declaration order, 24 in this runtime.
+            Fill(texture, mixed, 0);
+            var expected = new byte[64];
+            expected[0] = 0xAA; expected[16] = 0xBB; expected[17] = 0x0B;
+            expected[32] = 0xCC; expected[33] = 0xCC; expected[34] = 0xCC; expected[35] = 0x0C;
+            expected[40] = 0xAA; expected[56] = 0xBB; expected[57] = 0x0B;
+            Assert.Equal(expected, Without(texture.GetPixelData<byte>(0).ToArray(), 8, 24, 48));
+            var nested = new Nested[2];
+            for (int i = 0; i < nested.Length; i++) nested[i] = new Nested { x = 0x0A0A0A0A, inner = new NamedValue { name = "n", value = 0x0C0C0C0C }, y = 0x0B0B0B0B };
+            Fill(texture, nested, 0);
+            Assert.Equal(new byte[] { 10, 10, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 12, 12, 12, 0, 0, 0, 0, 11, 11, 11, 11, 0, 0, 0, 0 },
+                Without(texture.GetPixelData<byte>(0).ToArray(), 8)[..32]);
+            // Boxed values in an object[] are the array's own memory, addresses.
+            Fill(texture, new object[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }, 0);
+            // An explicit layout holding references is unsupported, after the size checks.
+            var before = texture.GetPixelData<byte>(0).ToArray();
+            Assert.IsType<ArgumentException>(Thrown(() => Fill(texture, new Overlaid[3], 0)));
+            Assert.StartsWith("Unbound: Texture2D.SetPixelData of Overlaid elements is not supported: Overlaid has an explicit layout",
+                Assert.IsType<UnityException>(Thrown(() => Fill(texture, new Overlaid[8], 0))).Message);
             Assert.Equal(before, texture.GetPixelData<byte>(0).ToArray());
 
             // Generic structs and Nullable elements are sized by the first element's runtime type.
