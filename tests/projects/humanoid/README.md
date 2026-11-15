@@ -4,7 +4,9 @@ What humanoid avatars give a game on Unity 6000.0.71f1, for two rigs Blender exp
 (`make_models.py`): HumanA maps every body bone Unity knows (upper chest, neck, shoulders, toes,
 eyes, jaw) and three fingers per hand, rests in an A pose and has rolled bones; HumanB maps only
 the required bones, with non-human nodes in between (a root, a spine helper, twist leaves), other
-proportions and rolls; HumanT is HumanA with bone translations. The Editor configured them as Humanoid with an avatar created from the
+proportions and rolls; HumanT is HumanA with bone translations. tests/projects/animpartial plays HumanA
+(model and `.meta`) in its `human.*` cases: a change of HumanA or its import settings needs that
+probe's reference recorded again. The Editor configured them as Humanoid with an avatar created from the
 model (`ProbeRunner.Create`): it mapped the bones and wrote the human description (bone mapping,
 T-pose skeleton, parameters) into the `.meta` files, which are committed. Their clips loop and are
 imported without keyframe reduction.
