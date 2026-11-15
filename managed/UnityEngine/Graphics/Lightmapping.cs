@@ -326,7 +326,8 @@ namespace UnityEngine
             var map = lightmaps ? LightmapSettings.Of(renderer.lightmapIndex) : null;
             // Terrain selects the lightmapped variant from its index, even for a missing
             // texture or an index beyond the current array. Native binds black for an empty
-            // slot and the default grey texture for an absent slot (terrainlightmaps oracle).
+            // slot and an opaque 128 grey for an absent slot, not grayTexture (terrainlightmaps
+            // oracle).
             bool terrainLightmapped = lightmaps && renderer is TerrainRenderer
                 && renderer.lightmapIndex >= 0 && renderer.lightmapIndex < 0xFFFE;
             if ((map != null && map.m_Light != null) || terrainLightmapped)

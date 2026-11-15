@@ -961,7 +961,8 @@ namespace Unbound.Runtime
         /// realtime lightmap samples (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/terrainlightmaps cases 29 and 30).</summary>
         /// <summary>What a terrain's lightmap index past the lightmaps samples: grey of 128, opaque
-        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/terrainlightmaps 06-index20).</summary>
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/terrainlightmaps 06-index20; its
+        /// name there is unmeasured).</summary>
         internal static UnityEngine.Texture2D AbsentLightmap => s_AbsentLightmap ??= Make("UnityGrey", new UnityEngine.Color32(128, 128, 128, 255), builtin: false);
         internal static UnityEngine.Texture2D HalfGray => s_HalfGray ??= Make("UnityHalfGrey", new UnityEngine.Color32(128, 128, 128, 128), builtin: false);
         /// <summary>A flat normal, linear data (R8G8B8A8_UNorm; tests/projects/defaulttextures);
