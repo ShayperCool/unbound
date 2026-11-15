@@ -488,24 +488,6 @@ namespace Unbound.Runtime
         internal static bool IsAstcHdr(UnityEngine.TextureFormat format) =>
             (int)format >= (int)UnityEngine.TextureFormat.ASTC_HDR_4x4 && (int)format <= (int)UnityEngine.TextureFormat.ASTC_HDR_12x12;
 
-        /// <summary>A `width` x `height` level of `format` blocks decoded to RGBA8 (or, with
-        /// `floats`, float RGBA), as GetPixels reads them.</summary>
-        internal static byte[] DecodeRgba(UnityEngine.TextureFormat format, ReadOnlySpan<byte> blocks, int width, int height,
-            bool floats = false, bool eac16 = false)
-        {
-            var json = Native.Call("texture-decode-blocks", JsonSerializer.Serialize(new
-            {
-                format = (int)format,
-                width,
-                height,
-                data = Convert.ToBase64String(blocks),
-                floats,
-                eac16,
-            }));
-            using var doc = JsonDocument.Parse(json);
-            return Convert.FromBase64String(doc.RootElement.GetProperty("rgba").GetString());
-        }
-
         internal static int Footprint(UnityEngine.TextureFormat format) => format switch
         {
             UnityEngine.TextureFormat.ASTC_5x5 or UnityEngine.TextureFormat.ASTC_HDR_5x5 => 5,
