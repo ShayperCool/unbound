@@ -451,6 +451,43 @@ public sealed class ReaderFieldsGenerator : IIncrementalGenerator
             return local.Returns;
         }
 
+        /// <summary>An interpolation's values as the string it formats: integer format strings
+        /// (<c>{k:D2}</c>) and alignment (<c>{k,2}</c> pads on the left, <c>{k,-2}</c> on the
+        /// right). A pattern value cannot be padded or formatted and is reported unknown.</summary>
+        HashSet<string> Formatted(InterpolationSyntax item, HashSet<string> values)
+        {
+            if (item.AlignmentClause == null && item.FormatClause == null) return values;
+            int width = 0;
+            if (item.AlignmentClause != null)
+            {
+                var alignment = Model(item.AlignmentClause.Value).GetConstantValue(item.AlignmentClause.Value);
+                if (!alignment.HasValue || alignment.Value == null) return Set("!unknown interpolation alignment");
+                width = Convert.ToInt32(alignment.Value, CultureInfo.InvariantCulture);
+            }
+            string format = item.FormatClause?.FormatStringToken.ValueText;
+            var result = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var value in values)
+            {
+                if (value.Contains('*') || value.Contains('¤') || value.StartsWith("!unknown", StringComparison.Ordinal))
+                {
+                    result.Add("!unknown formatted interpolation");
+                    continue;
+                }
+                string text = value;
+                if (format != null)
+                {
+                    if (!long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long number))
+                    {
+                        result.Add("!unknown formatted interpolation");
+                        continue;
+                    }
+                    text = number.ToString(format, CultureInfo.InvariantCulture);
+                }
+                result.Add(width >= 0 ? text.PadLeft(width) : text.PadRight(-width));
+            }
+            return result;
+        }
+
         HashSet<string> Text(ExpressionSyntax expression, State state)
         {
             if (expression == null) return Empty();
@@ -467,7 +504,7 @@ public sealed class ReaderFieldsGenerator : IIncrementalGenerator
                     foreach (var content in interpolation.Contents)
                     {
                         var next = content is InterpolatedStringTextSyntax literal ? Set(literal.TextToken.ValueText)
-                            : content is InterpolationSyntax item ? Text(item.Expression, state) : Empty();
+                            : content is InterpolationSyntax item ? Formatted(item, Text(item.Expression, state)) : Empty();
                         if (next.Count == 0) next.Add("!unknown interpolated field name");
                         parts = new(parts.SelectMany(p => next.Select(n => p + n)), StringComparer.Ordinal);
                     }
