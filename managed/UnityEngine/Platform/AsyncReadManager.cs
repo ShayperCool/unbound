@@ -503,7 +503,18 @@ namespace Unbound.Runtime
         {
             if (callers == null) return true;
             foreach (var caller in callers)
-                if (JobSystem.RecordOf(caller) != null) return false;
+                if (!Synced(JobSystem.RecordOf(caller))) return false;
+            return true;
+        }
+
+        /// <summary>A caller's job is synced once completed; a combination of its jobs once the
+        /// jobs it combines are (a caller need not complete the combined handle itself).</summary>
+        static bool Synced(Jobs.JobRecord record)
+        {
+            if (record == null || record.Synced) return true;
+            if (record.Reflection != null || !record.Done) return false;
+            foreach (var dependency in record.Dependencies)
+                if (!Synced(dependency)) return false;
             return true;
         }
 

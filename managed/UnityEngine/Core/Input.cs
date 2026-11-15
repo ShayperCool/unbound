@@ -167,7 +167,9 @@ namespace UnityEngine
         [Unbound.EditorFaithful("a player-window API: the Editor answers zero")]
         public static Vector2Int mainWindowPosition => Vector2Int.zero;
         /// <summary>The actual host refresh used for frame pacing.</summary>
-        internal static double HostRefreshRate => HostDisplay()?.HostRefreshRate ?? 60;
+        /// <summary>The host's refresh rate for frame pacing, read quietly (as
+        /// <see cref="CurrentRefreshRateQuietly"/>).</summary>
+        internal static double HostRefreshRate => HostDisplay(quiet: true)?.HostRefreshRate ?? 60;
 
         /// <summary><c>currentResolution</c>'s refresh rate for the engine's own per-frame use:
         /// a fallback warning is held back until game code reads <c>Screen</c> itself.</summary>
@@ -236,50 +238,50 @@ namespace UnityEngine
             if (call == null && !Native.IsReady) return null;
             int frame = s_DisplayFrameForTests ?? s_DisplayFrame;
             string warning = null;
-            string deferred = null;
             DisplayAnswer answer;
             lock (s_DisplayLock)
             {
-                // A warning an engine-side read held back goes to the game's first own read.
-                if (!quiet)
+                if (!s_DisplayUnanswered && (s_DisplayFrameForTests == null ? s_DisplayVersion != s_HostDisplayVersion : frame != s_DisplayAskedFrame))
                 {
-                    deferred = s_DeferredDisplayWarning;
-                    s_DeferredDisplayWarning = null;
-                }
-                if (s_DisplayUnanswered || (s_DisplayFrameForTests == null ? s_DisplayVersion == s_HostDisplayVersion : frame == s_DisplayAskedFrame))
-                {
-                    answer = s_Display;
-                    goto Answered;
-                }
-                s_DisplayAskedFrame = frame;
-                try
-                {
-                    string request = s_DisplayVersion is ulong since ? "{\"since\":" + since + "}" : "{}";
-                    string json = call != null ? call("display-info", request) : Native.Call("display-info", request);
-                    try { warning = Read(json); }
+                    s_DisplayAskedFrame = frame;
+                    ulong? before = s_DisplayVersion;
+                    try
+                    {
+                        string request = s_DisplayVersion is ulong since ? "{\"since\":" + since + "}" : "{}";
+                        string json = call != null ? call("display-info", request) : Native.Call("display-info", request);
+                        try { warning = Read(json); }
+                        catch (Exception e)
+                        {
+                            s_Display = null;
+                            s_DisplayVersion = null;
+                            warning = "the host's answer could not be read (" + e.Message + "): " + Kept;
+                        }
+                    }
                     catch (Exception e)
                     {
+                        s_DisplayUnanswered = true;
                         s_Display = null;
-                        s_DisplayVersion = null;
-                        warning = "the host's answer could not be read (" + e.Message + "): " + Kept;
+                        warning = "the host does not answer (" + e.Message + "): " + Kept;
                     }
-                }
-                catch (Exception e)
-                {
-                    s_DisplayUnanswered = true;
-                    s_Display = null;
-                    warning = "the host does not answer (" + e.Message + "): " + Kept;
+                    // A newer answer replaces the one a held-back warning was about.
+                    if (s_DisplayVersion != before || s_DisplayUnanswered) s_DeferredDisplayWarning = null;
                 }
                 answer = s_Display;
-                if (warning != null && !s_DisplayWarned.Add(warning)) warning = null;
-                if (quiet && warning != null)
+                if (warning != null && s_DisplayWarned.Contains(warning)) warning = null;
+                if (quiet)
                 {
-                    s_DeferredDisplayWarning = warning;
+                    // The engine's own reads hold the warning back for the game's first read of
+                    // the same answer.
+                    if (warning != null) s_DeferredDisplayWarning = warning;
                     warning = null;
                 }
+                else
+                {
+                    warning ??= s_DeferredDisplayWarning;
+                    s_DeferredDisplayWarning = null;
+                    if (warning != null && !s_DisplayWarned.Add(warning)) warning = null;
+                }
             }
-        Answered:
-            if (deferred != null) WarnDisplay(deferred);
             if (warning != null) WarnDisplay(warning);
             return answer;
         }

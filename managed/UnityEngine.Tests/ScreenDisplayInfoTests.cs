@@ -302,6 +302,27 @@ namespace UnityEngine.Tests
             Assert.Single(m_Warnings);
         }
 
+        /// <summary>Red: a warning held back by the engine's quiet reads went to the game's first
+        /// read even after a display appeared and the game read its real values.</summary>
+        [Fact]
+        public void AHeldBackWarningIsDroppedWhenADisplayAppears()
+        {
+            m_Answer = _ => Unavailable(1, "no monitor yet");
+            FrameTimings.Present();
+            Assert.Equal(60.0, Screen.HostRefreshRate);
+            NextFrame();
+            m_Answer = _ => Known(2);
+            FrameTimings.Present();
+            NextFrame();
+            Assert.Equal(2560, Screen.currentResolution.width);
+            Assert.Empty(m_Warnings);
+            // The same reason, when it comes back, still warns once.
+            m_Answer = _ => Unavailable(3, "no monitor yet");
+            NextFrame();
+            Assert.Equal(96f, Screen.dpi);
+            Assert.Contains("no monitor yet", Assert.Single(m_Warnings));
+        }
+
         /// <summary>Red: without remembering that the host does not answer, it is asked every
         /// frame (3 calls); the 747e3f23 members never warn.</summary>
         [Fact]

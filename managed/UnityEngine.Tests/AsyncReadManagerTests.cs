@@ -254,8 +254,18 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>Makes a request that is disposed at once: each request releases the jobs that
+        /// may be released.</summary>
+        void Sweep()
+        {
+            FileInfoResult result;
+            var info = AsyncReadManager.GetFileInfo(m_Path, &result);
+            info.JobHandle.Complete();
+            info.Dispose();
+        }
+
         /// <summary>Red: requests whose handles were never completed kept their job records for
-        /// the rest of the session.</summary>
+        /// the rest of the session, also those that wait for a job of the caller's.</summary>
         [Fact]
         public void FinishedRequestsAreReleasedAndCallersJobsStayTheCallers()
         {
@@ -275,12 +285,28 @@ namespace UnityEngine.Tests
             var deferredJob = deferred.JobHandle;
             Assert.True(JobSystem.RecordOf(deferredJob).Finished.Wait(10_000));
             deferred.Dispose();
+            Sweep();
             // Syncing the read would sync the caller's job: it waits for the caller.
             Assert.NotNull(JobSystem.RecordOf(deferredJob));
             Assert.NotNull(JobSystem.RecordOf(user));
             user.Complete();
-            file.Close().Complete();
+            Sweep();
             Assert.Null(JobSystem.RecordOf(deferredJob));
+
+            // A close that waits for a caller's job, never completed by the caller, through a
+            // combined handle whose parts the caller completes one by one.
+            var first = new MarkJob().Schedule();
+            var second = new MarkJob().Schedule();
+            var both = JobHandle.CombineDependencies(first, second);
+            JobHandle.ScheduleBatchedJobs();
+            var close = file.Close(both);
+            Assert.True(JobSystem.RecordOf(close).Finished.Wait(10_000));
+            Sweep();
+            Assert.NotNull(JobSystem.RecordOf(close));
+            first.Complete();
+            second.Complete();
+            Sweep();
+            Assert.Null(JobSystem.RecordOf(close));
         }
 
         [Fact]
