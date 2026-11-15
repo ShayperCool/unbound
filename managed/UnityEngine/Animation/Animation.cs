@@ -758,13 +758,13 @@ namespace UnityEngine
 
         public void Rewind()
         {
-            foreach (var s in States) s.m_Time = 0.0;
+            foreach (var s in States) s.SetTimeForEvents(0.0);
         }
 
         public void Rewind(string name)
         {
             var s = GetState(name);
-            if (s != null) s.m_Time = 0.0;
+            if (s != null) s.SetTimeForEvents(0.0);
         }
 
         /// <summary>Samples the playing states at their current time, without advancing it.</summary>
@@ -1198,9 +1198,20 @@ namespace UnityEngine
         /// <summary>Started since the last update: sampled where it starts, neither its time nor its
         /// fade moves.</summary>
         internal bool m_Fresh;
-        /// <summary>Started and its time not advanced since: the update that first advances it
-        /// fires the events at its start time too.</summary>
+        /// <summary>Started, or its time set, and its time not advanced since: the update that first
+        /// advances it fires the events at the time it starts from too.</summary>
         internal bool m_EventsFromStart;
+
+        /// <summary>A time set by script (time, normalizedTime, Rewind): the next update that moves
+        /// the time fires the events from it on, one at that very time too (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/animpartial legacy.events.timeset: a playing state set
+        /// back to its event's time fires it in the next update; legacy.events.start.timeset,
+        /// .speed0.timeset: before its first move).</summary>
+        internal void SetTimeForEvents(double time)
+        {
+            m_Time = time;
+            m_EventsFromStart = true;
+        }
         /// <summary>Started and not stopped (enabled may pause it).</summary>
         internal bool m_Playing;
 
@@ -1265,7 +1276,7 @@ namespace UnityEngine
         public float time
         {
             get { RequireState(); return (float)m_Time; }
-            set { RequireState(); m_Time = value; }
+            set { RequireState(); SetTimeForEvents(value); }
         }
 
         public float normalizedTime
@@ -1276,7 +1287,7 @@ namespace UnityEngine
                 float l = length;
                 return (float)(m_Time / l);
             }
-            set { RequireState(); m_Time = value * length; }
+            set { RequireState(); SetTimeForEvents(value * length); }
         }
 
         public float speed

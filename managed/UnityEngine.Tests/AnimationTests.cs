@@ -652,10 +652,10 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A legacy state fires the events its time passes in an update whatever its
-        /// weight: at weight 0, and in the update its fade passes 0 and stops it; one at its start
-        /// fires in the first update that moves its time (the Unity 6000.0.71f1 Editor,
-        /// tests/projects/animpartial legacy.events.zero, legacy.events.fade,
-        /// legacy.events.start.*).</summary>
+        /// weight: at weight 0, and in the update its fade passes 0 and stops it; one at its start,
+        /// or at a time set by script, fires in the first update that moves its time (the Unity
+        /// 6000.0.71f1 Editor, tests/projects/animpartial legacy.events.zero, legacy.events.fade,
+        /// legacy.events.start.*, legacy.events.timeset).</summary>
         [Fact]
         public void LegacyStatesFireEventsAtWeightZeroAndInTheUpdateTheirFadeStopsThem()
         {
@@ -725,6 +725,16 @@ namespace UnityEngine.Tests
             animation["z"].speed = 1f;
             animation.Step(0.125f);
             Assert.Equal(new[] { "OnHit(7)" }, receiver.Calls);
+            // A time set on the playing state, back to the event's time: the next update fires it
+            // (legacy.events.timeset); a time set past it does not.
+            animation.Step(0.25f);
+            receiver.Calls.Clear();
+            animation["z"].time = 0f;
+            animation.Step(0.125f);
+            Assert.Equal(new[] { "OnHit(7)" }, receiver.Calls);
+            animation["z"].time = 0.0625f;
+            animation.Step(0.125f);
+            Assert.Single(receiver.Calls);
             Object.DestroyImmediate(go);
         }
 
