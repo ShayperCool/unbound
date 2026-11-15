@@ -133,10 +133,12 @@ class PublicationTests(unittest.TestCase):
             ref.publish('test', 'test', self.receipt, extension=name)
             self.assertEqual({k: ref.layout.tree(self.target)[k] for k in before}, before)
             self.receipt.unlink()
-        self.assertEqual(len(ref.load(self.target, shadows=True)), len(self.rows))
-        self.assertEqual(set(ref.load(self.target)), {k for k in self.rows if not k.startswith("shadow.")})
+        captured = {json.loads(row)['k'] for row in self.rows}
+        self.assertEqual(set(ref.load(self.target, shadows=True)), captured)
+        self.assertEqual(set(ref.load(self.target)), {k for k in captured if not k.startswith("shadow.")})
         self.assertTrue((self.target/ref.SHADOW_FILE).exists())
-        for image in ref.SHADOW_IMAGES:
+        self.assertTrue((self.target/ref.SHADOW_FRAME_FILE).exists())
+        for image in (*ref.SHADOW_IMAGES, *ref.SHADOW_FRAME_IMAGES):
             self.assertEqual(gzip.decompress((self.target/(image+'.gz')).read_bytes()), image.encode())
 
 if __name__ == '__main__':
