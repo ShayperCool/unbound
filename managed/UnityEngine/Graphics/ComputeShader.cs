@@ -68,16 +68,34 @@ namespace UnityEngine
         public void SetVector(string name, Vector4 val) => SetVector(Shader.PropertyToID(name), val);
         public void SetMatrix(int nameID, Matrix4x4 val) => m_Values[nameID] = val;
         public void SetMatrix(string name, Matrix4x4 val) => SetMatrix(Shader.PropertyToID(name), val);
-        public void SetVectorArray(int nameID, Vector4[] values) => m_Values[nameID] = values;
+        public void SetVectorArray(int nameID, Vector4[] values) => SetArray(nameID, values);
         public void SetVectorArray(string name, Vector4[] values) => SetVectorArray(Shader.PropertyToID(name), values);
-        public void SetMatrixArray(int nameID, Matrix4x4[] values) => m_Values[nameID] = values;
+        public void SetMatrixArray(int nameID, Matrix4x4[] values) => SetArray(nameID, values);
         public void SetMatrixArray(string name, Matrix4x4[] values) => SetMatrixArray(Shader.PropertyToID(name), values);
         /// <summary>Consecutive floats from the variable's offset (an HLSL float array's elements are
         /// 16 bytes apart: pass 4 floats per element).</summary>
-        public void SetFloats(int nameID, params float[] values) => m_Values[nameID] = values;
+        public void SetFloats(int nameID, params float[] values) => SetArray(nameID, values);
         public void SetFloats(string name, params float[] values) => SetFloats(Shader.PropertyToID(name), values);
-        public void SetInts(int nameID, params int[] values) => m_Values[nameID] = values;
+        public void SetInts(int nameID, params int[] values) => SetArray(nameID, values);
         public void SetInts(string name, params int[] values) => SetInts(Shader.PropertyToID(name), values);
+
+        /// <summary>Keeps a copy of an array value: the shader takes the elements the array has at
+        /// the call, so a caller may reuse its array for the next variable (the GPU Resident
+        /// Drawer sets its wind parameter and history addresses from one scratch array). The copy
+        /// of the variable's previous value is reused when it has the same length (a dispatch
+        /// takes the values it needs when it is made).</summary>
+        void SetArray<T>(int nameID, T[] values)
+        {
+            if (values is null)
+            {
+                m_Values[nameID] = null;
+                return;
+            }
+            if (!(m_Values.TryGetValue(nameID, out var held) && held is T[] copy && copy.Length == values.Length))
+                copy = new T[values.Length];
+            Array.Copy(values, copy, values.Length);
+            m_Values[nameID] = copy;
+        }
 
         // ------------------------------------------------------------ resources
 
