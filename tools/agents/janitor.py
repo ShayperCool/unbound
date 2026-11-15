@@ -305,6 +305,10 @@ class ReferenceWatch:
         # Watched path -> descriptor, and watched directories deleted while their parent was
         # not watched: a replacement there is invisible until a complete walk.
         self.watched, self.vanished = {}, set()
+        # The watch tree: parent watch of each watch, and the children of each, so that the
+        # watches of a tree that moved out can be removed without touching a directory created
+        # at the same place later.
+        self.parent_of, self.children = {}, {}
         self.broken = False
         # Millions of watched directories on a busy volume fill the kernel's event queue
         # (fs.inotify.max_queued_events) within seconds. A reader thread moves events into
@@ -366,6 +370,24 @@ class ReferenceWatch:
             self.moves = {cookie: source for cookie, source in self.moves.items() if source != old}
         self.directories[descriptor] = directory
         self.watched[key] = descriptor
+        self.link(descriptor, self.watched.get(str(directory.parent)))
+
+    def link(self, descriptor, parent):
+        old = self.parent_of.pop(descriptor, None)
+        if old is not None:
+            self.children.get(old, set()).discard(descriptor)
+        if parent is not None and parent != descriptor:
+            self.parent_of[descriptor] = parent
+            self.children.setdefault(parent, set()).add(descriptor)
+
+    def drop_watch(self, descriptor):
+        """Forget a watch the kernel has dropped or that this object removed."""
+        directory = self.directories.pop(descriptor, None)
+        if directory is not None and self.watched.get(str(directory)) == descriptor:
+            del self.watched[str(directory)]
+        self.link(descriptor, None)
+        for child in self.children.pop(descriptor, set()):
+            self.parent_of.pop(child, None)
 
     def unverify(self, directory, name):
         names = self.unverified.setdefault(str(directory), set())
@@ -409,8 +431,12 @@ class ReferenceWatch:
                 unsafe.append(path)
             else:
                 del self.file_moves[cookie]
+        selves = {}
+        for descriptor, path in self.unresolved.items():
+            selves.setdefault(str(path), []).append(descriptor)
         for cookie, path in list(self.moves.items()):
-            if str(path) in holders:
+            # The moved directory's own MOVE_SELF names the watches that left with it.
+            if str(path) in holders or str(path) not in selves:
                 unsafe.append(path)
             else:
                 del self.moves[cookie]
@@ -418,25 +444,23 @@ class ReferenceWatch:
         for descriptor, path in list(self.unresolved.items()):
             if str(path) in settled:
                 del self.unresolved[descriptor]
+                self.forget(descriptor)
             elif not any(path == other for other in self.moves.values()):
                 unsafe.append(path)
         unsafe.extend(sorted(self.vanished))
-        if settled:
-            self.forget(settled)
         return unsafe
 
-    def forget(self, prefixes):
-        """Stop watching every directory inside these paths, which left the view."""
-        def under(path):
-            return any(path == prefix or path.startswith(prefix+os.sep) for prefix in prefixes)
-        for descriptor, directory in list(self.directories.items()):
-            if under(str(directory)):
+    def forget(self, root):
+        """Stop watching a tree that moved out: the watch that moved and every watch below it.
+        A directory created at the old place later has watches of its own, which stay. Settling
+        required that no unverified name or unlisted directory lies under the old place."""
+        pending = [root]
+        while pending:
+            descriptor = pending.pop()
+            pending.extend(self.children.get(descriptor, ()))
+            if self.directories.get(descriptor) is not None:
                 self.libc.inotify_rm_watch(self.fd, descriptor)
-                del self.directories[descriptor]
-                self.watched.pop(str(directory), None)
-        for key in [key for key in self.unverified if under(key)]:
-            self.unverified_count -= len(self.unverified.pop(key))
-        self.unlisted = {path for path in self.unlisted if not under(path)}
+            self.drop_watch(descriptor)
 
     def relocate(self, source, destination, *, handled=True):
         # A parent rename changes the location of every descendant watch. Rescan
@@ -455,12 +479,15 @@ class ReferenceWatch:
             self.unverified.setdefault(moved(key), set()).update(self.unverified.pop(key))
         if source.name in self.unverified.get(str(source.parent), ()):
             self.unverified.setdefault(str(destination.parent), set()).add(destination.name)
+        self.unverified_count = sum(len(names) for names in self.unverified.values())
         self.unlisted = {moved(path) for path in self.unlisted}
         for descriptor, previous in updates:
             self.directories[descriptor] = destination/previous.relative_to(source)
             if self.watched.get(str(previous)) == descriptor:
                 del self.watched[str(previous)]
             self.watched[str(self.directories[descriptor])] = descriptor
+            if previous == source:
+                self.link(descriptor, self.watched.get(str(destination.parent)))
             if previous == source and handled:
                 self.handled_moves.add(descriptor)
         self.invalidated.update((source, destination))
@@ -504,10 +531,9 @@ class ReferenceWatch:
                         if mask & self.DELETE_SELF:
                             # Its links are already protected. The watched parent catches
                             # any replacement directory and its new links; without a watched
-                            # parent (a link target outside the roots) only a complete walk can.
-                            self.directories.pop(descriptor, None)
-                            if self.watched.get(str(directory)) == descriptor:
-                                del self.watched[str(directory)]
+                            # parent (a link target outside the roots) deletion waits for a walk of
+                            # every scan root that starts after this.
+                            self.drop_watch(descriptor)
                             if str(directory.parent) not in self.watched:
                                 self.vanished.add(directory)
                             old = self.unresolved.pop(descriptor, directory)
@@ -520,9 +546,7 @@ class ReferenceWatch:
                             self.unresolved[descriptor] = directory
                             continue
                         if mask & self.IGNORED:
-                            self.directories.pop(descriptor, None)
-                            if self.watched.get(str(directory)) == descriptor:
-                                del self.watched[str(directory)]
+                            self.drop_watch(descriptor)
                             continue
                         path = directory/name
                         if mask & self.MOVED_FROM:

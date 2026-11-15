@@ -551,6 +551,77 @@ class JanitorTests(unittest.TestCase):
             (self.cache/'n').write_text('regular file under the same name')
         self.assert_target_kept(target, act)
 
+    def moved_out_and_replaced(self, replace, refreshes=1):
+        target = self.directory('q1/target')
+        work = self.cache/'work'
+        (work/'x').mkdir(parents=True)
+        (work/'y').mkdir(parents=True)
+        def act():
+            (work/'x').rename(self.root/'outside-x')
+            linked = replace(work)
+            for _ in range(refreshes):
+                self.j.refresh_links()
+            (linked/'link').symlink_to(target/'output')
+        self.assert_target_kept(target, act)
+
+    def test_a_directory_recreated_before_the_poll_stays_watched(self):
+        def replace(work):
+            (work/'x').mkdir()
+            return work/'x'
+        self.moved_out_and_replaced(replace)
+
+    def test_a_subdirectory_of_a_recreated_directory_stays_watched(self):
+        def replace(work):
+            (work/'x'/'sub').mkdir(parents=True)
+            return work/'x'/'sub'
+        self.moved_out_and_replaced(replace)
+
+    def test_a_sibling_renamed_into_place_stays_watched(self):
+        def replace(work):
+            (work/'y').rename(work/'x')
+            return work/'x'
+        self.moved_out_and_replaced(replace)
+
+    def test_a_directory_moved_back_before_the_poll_stays_watched(self):
+        def replace(work):
+            (self.root/'outside-x').rename(work/'x')
+            return work/'x'
+        self.moved_out_and_replaced(replace)
+
+    def test_a_recreated_directory_stays_watched_across_refreshes(self):
+        def replace(work):
+            (work/'x').mkdir()
+            return work/'x'
+        self.moved_out_and_replaced(replace, refreshes=2)
+
+    def test_a_directory_replaced_during_discovery_stays_watched(self):
+        target = self.directory('q1/target')
+        work = self.cache/'work'
+        (work/'x').mkdir(parents=True)
+        original = janitor.ReferenceWatch.poll
+        state = {'done': False}
+        def poll(watch):
+            if not state['done'] and (work/'x') in watch.directories.values():
+                state['done'] = True
+                (work/'x').rename(self.root/'outside-x')
+                (work/'x').mkdir()
+            return original(watch)
+        with self.guards(), patch.object(janitor.ReferenceWatch, 'poll', poll):
+            try:
+                self.j.discover()
+            except janitor.ReferenceChanged:
+                pass
+            self.addCleanup(lambda: self.j.watch and self.j.watch.close())
+        self.assertTrue(state['done'])
+        (work/'x'/'link').symlink_to(target/'output')
+        with self.guards():
+            self.j.apply = True
+            try:
+                self.assertFalse(self.j.remove(target, kind='task'))
+            except janitor.ReferenceChanged:
+                pass
+        self.assertTrue(target.exists())
+
     def test_too_many_unverified_names_fail_closed(self):
         watcher = janitor.ReferenceWatch()
         self.addCleanup(watcher.close)
