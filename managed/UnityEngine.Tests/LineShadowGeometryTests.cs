@@ -1,4 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Text.Json;
+using Unity.Collections;
+using UnityEditor;
+using UnityEngine.Rendering;
 using Unbound.Runtime;
 using Xunit;
 
@@ -112,39 +118,154 @@ namespace UnityEngine.Tests
             }
         }
 
+        sealed class ShadowLogs : ILogHandler
+        {
+            readonly ILogHandler m_Inner;
+            internal readonly List<(Exception Error, Object Context)> Errors = new();
+            internal ShadowLogs(ILogHandler inner) { m_Inner = inner; }
+            public void LogFormat(LogType type, Object context, string format, params object[] args) =>
+                m_Inner.LogFormat(type, context, format, args);
+            public void LogException(Exception exception, Object context)
+            {
+                Errors.Add((exception, context));
+                m_Inner.LogException(exception, context);
+            }
+        }
+
+        sealed class ShadowScopeObserver : FrameBuilder.IDrawSource
+        {
+            internal FrameBuilder.CameraContext Context;
+            internal bool ShadowPass, Srp;
+            internal int Draws;
+            public void CollectCameraDraws(FrameBuilder.CameraContext context, List<FrameBuilder.DrawItem> into)
+            {
+                Context = context;
+                ShadowPass = context.StripShadowPass;
+                Srp = context.StripShadowSrp;
+                Draws = into.Count;
+            }
+            public void CollectOverlayDraws(List<FrameBuilder.DrawItem> into) { }
+        }
+
         [Theory]
-        [InlineData(LightType.Point, false)]
-        [InlineData(LightType.Spot, false)]
-        [InlineData(LightType.Directional, true)]
-        [InlineData(LightType.Point, true)]
-        [InlineData(LightType.Spot, true)]
-        public void UnmeasuredShadowContextsFailWithAClearDiagnostic(LightType type, bool srp)
+        [InlineData(LightType.Point, false, false)]
+        [InlineData(LightType.Spot, false, false)]
+        [InlineData(LightType.Directional, true, false)]
+        [InlineData(LightType.Point, true, false)]
+        [InlineData(LightType.Spot, true, false)]
+        [InlineData(LightType.Point, false, true)]
+        [InlineData(LightType.Spot, false, true)]
+        [InlineData(LightType.Directional, true, true)]
+        [InlineData(LightType.Point, true, true)]
+        [InlineData(LightType.Spot, true, true)]
+        public void CollectorsLogUnsupportedStripsWithoutDrawingAndRestoreTheirScope(LightType type, bool srp, bool trail)
         {
             string version = ProjectInfo.UnityVersion;
+            var logger = Debug.unityLogger;
+            var previousHandler = logger.logHandler;
+            bool previousEnabled = logger.logEnabled;
+            var previousFilter = logger.filterLogType;
+            var logs = new ShadowLogs(previousHandler);
+            var previousShaderCall = ShaderPassInfo.s_CallForTests;
+            var sources = FrameBuilder.Sources.ToArray();
+            var observer = new ShadowScopeObserver();
+            ProjectInfo.UnityVersion = "6000.0.71f1";
             var camera = new GameObject("camera").AddComponent<Camera>();
+            camera.transform.position = new Vector3(0, 0, -4);
+            camera.cullingMask = 1 << 30;
             var light = new GameObject("light").AddComponent<Light>();
-            var line = new GameObject("line").AddComponent<LineRenderer>();
+            light.type = type;
+            light.cullingMask = camera.cullingMask;
+            var go = new GameObject("strip") { layer = 30 };
+            Renderer strip;
+            var points = new[] { new Vector3(-1, 0, 0), new Vector3(1, 0.2f, 0.3f) };
+            if (trail)
+            {
+                var renderer = go.AddComponent<TrailRenderer>();
+                renderer.emitting = true;
+                renderer.time = 100;
+                renderer.AddPositions(points);
+                renderer.emitting = false;
+                strip = renderer;
+            }
+            else
+            {
+                var renderer = go.AddComponent<LineRenderer>();
+                renderer.SetPositions(points);
+                strip = renderer;
+            }
+            Shader shader = null;
+            Material material = null;
+            var data = new CullingData { Camera = camera };
             try
             {
-                ProjectInfo.UnityVersion = "6000.0.71f1";
-                light.type = type;
-                var context = new FrameBuilder.CameraContext { Camera = camera, View = camera.worldToCameraMatrix };
-                using (new FrameBuilder.StripShadowScope(context, true, light, srp))
+                ShaderPassInfo.ResetForTests();
+                ShaderPassInfo.s_CallForTests = name => JsonSerializer.Serialize(new
                 {
-                    var draws = new System.Collections.Generic.List<FrameBuilder.DrawItem>();
-                    var error = Assert.Throws<NotSupportedException>(() => line.CollectDraws(context, draws));
-                    Assert.Contains("supported only for built-in directional lights", error.Message);
-                    Assert.Empty(draws);
+                    shader = name, found = true, tags = new Dictionary<string, string>(),
+                    passes = new[] { new { name = "ShadowCaster", tags = new Dictionary<string, string> { ["LightMode"] = "ShadowCaster" } } },
+                });
+                shader = ShaderUtil.CreateShaderAsset("Shader \"Tests/StripShadowBoundary\" { SubShader { Pass { Tags { \"LightMode\"=\"ShadowCaster\" } } } }");
+                material = new Material(shader) { renderQueue = 2000 };
+                strip.sharedMaterial = material;
+                var context = FrameBuilder.ContextOf(camera);
+                var ordinary = new List<FrameBuilder.DrawItem>();
+                strip.CollectDraws(context, ordinary);
+                Assert.Single(ordinary);
+
+                logger.logHandler = logs;
+                logger.logEnabled = true;
+                logger.filterLogType = LogType.Log;
+                FrameBuilder.Sources.Clear();
+                FrameBuilder.Sources.Add(observer);
+                int before = FrameBuilder.s_DrawCount;
+                if (srp)
+                {
+                    data.Renderers.Add(strip);
+                    data.Lights = new NativeArray<VisibleLight>(1, Allocator.Temp);
+                    data.Lights[0] = new VisibleLight(light, default, false, false, false);
+                    var tags = new List<ShaderTagId> { new ShaderTagId("ShadowCaster") };
+                    var drawing = new DrawingSettings(tags[0], new SortingSettings(camera));
+                    FrameBuilder.DrawRendererList(data, drawing, new FilteringSettings(RenderQueueRange.all),
+                        tags, shadows: ShadowObjectsFilter.AllObjects, shadowLight: 0);
+                    Assert.True(observer.ShadowPass);
+                    Assert.True(observer.Srp);
+                    Assert.Equal(0, observer.Draws);
+                    context = observer.Context;
                 }
+                else
+                {
+                    typeof(FrameBuilder).GetMethod("CollectCasters", BindingFlags.Static | BindingFlags.NonPublic)
+                        .Invoke(null, new object[] { light, context });
+                    var casters = (List<FrameBuilder.DrawItem>)typeof(FrameBuilder)
+                        .GetField("s_Casters", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+                    Assert.DoesNotContain(casters, item => ReferenceEquals(item.Renderer, strip));
+                }
+                var error = Assert.Single(logs.Errors.FindAll(entry => ReferenceEquals(entry.Context, strip))).Error;
+                Assert.IsType<NotSupportedException>(error);
+                Assert.Contains("supported only for built-in directional lights", error.Message);
+                Assert.Equal(before, FrameBuilder.s_DrawCount);
                 Assert.False(context.StripShadowPass);
                 Assert.False(context.StripShadowSrp);
+                Assert.Null(context.StripShadowLight);
+                Assert.Equal(camera.worldToCameraMatrix, context.View);
             }
             finally
             {
-                ProjectInfo.UnityVersion = version;
-                Object.DestroyImmediate(line.gameObject);
+                data.Dispose();
+                FrameBuilder.Sources.Clear();
+                FrameBuilder.Sources.AddRange(sources);
+                logger.logHandler = previousHandler;
+                logger.logEnabled = previousEnabled;
+                logger.filterLogType = previousFilter;
+                ShaderPassInfo.ResetForTests();
+                ShaderPassInfo.s_CallForTests = previousShaderCall;
+                Object.DestroyImmediate(go);
                 Object.DestroyImmediate(light.gameObject);
                 Object.DestroyImmediate(camera.gameObject);
+                if (material != null) Object.DestroyImmediate(material);
+                if (shader != null) Object.DestroyImmediate(shader);
+                ProjectInfo.UnityVersion = version;
             }
         }
 
