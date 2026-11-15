@@ -602,6 +602,17 @@ fn libraries_under_other_names_count_every_crate() {
         ),
         ("package-name", "[package]\nname = \"rules\"\n", ""),
         (
+            "inline-lib",
+            "[package]\nname = \"unbound-rules\"\nlib = { name = \"rules\" }\n",
+            "",
+        ),
+        (
+            "header-comment",
+            "[package]\nname = \"unbound-rules\"\n[lib] # the library\nname = \"rules\"\n",
+            "",
+        ),
+        ("project", "[project]\nname = \"rules\"\n", ""),
+        (
             "root-backslash",
             "[package]\nname = \"unbound-rules\"\n",
             "[workspace.dependencies]\nrules = { package = \"unbound\\u002Drules\" }\n",
@@ -623,14 +634,30 @@ fn libraries_under_other_names_count_every_crate() {
             "{case}"
         );
     }
-    // A manifest naming its own directory's package changes nothing.
+    // A manifest naming its own directory's package (and a binary) changes nothing.
     let ws = compiler_and_rules("own-name");
     ws.write(
         "crates/unbound-rules/Cargo.toml",
-        "[package]\nname = \"unbound-rules\"\n",
+        "[package]\nname = \"unbound-rules\"\n[[bin]]\nname = \"rules-tool\"\n",
     );
     assert!(
         !ws.sources("unbound_compiler", &[])
+            .contains(&"crates/unbound-rules/src/audio.rs".to_string())
+    );
+}
+
+/// A library at another file without a `src/lib.rs` (`[lib] path`) is a renamed library too.
+#[test]
+fn a_library_without_its_root_file_counts_every_crate() {
+    let ws = compiler_and_rules("lib-path");
+    std::fs::create_dir_all(ws.0.join("crates/unbound-other/src")).unwrap();
+    ws.write(
+        "crates/unbound-other/Cargo.toml",
+        "[package]\nname = \"unbound-other\"\n[lib]\nname = \"other\"\npath = \"src/other.rs\"\n",
+    );
+    ws.write("crates/unbound-other/src/other.rs", "pub struct Other;\n");
+    assert!(
+        ws.sources("unbound_compiler", &[])
             .contains(&"crates/unbound-rules/src/audio.rs".to_string())
     );
 }

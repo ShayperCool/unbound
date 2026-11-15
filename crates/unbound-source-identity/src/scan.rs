@@ -628,43 +628,59 @@ fn reexported_from(root: &str, ident: &str) -> Option<String> {
     None
 }
 
-/// Whether a workspace crate's library goes by another name than its directory's (`[lib]
-/// name = ..`, a `[package] name` that is not the directory's, or one this reading cannot
-/// tell): paths to it are then not followed.
-fn renamed_library(manifest: &str, dir_name: &str) -> bool {
-    let mut section = String::new();
+/// Whether a workspace crate's manifest plainly names its library after its directory: no
+/// escape or multi-line string, no `lib` or `project` table or key (by which a library takes
+/// another name or file), and every `name` key is `name = "<dir>"` under a bare `[package]`
+/// (or names a binary, example, test or bench target).
+/// Anything else may name the library otherwise, and paths to it would not be followed.
+fn plain_manifest(manifest: &str, dir_name: &str) -> bool {
+    if manifest.contains('\\') || manifest.contains("\"\"\"") || manifest.contains("'''") {
+        return false;
+    }
+    let mut section = "";
     for line in manifest.lines() {
         let line = line.trim();
-        if let Some(header) = line.strip_prefix('[') {
-            section = header.trim_end_matches(']').trim().to_string();
-            continue;
+        if line.starts_with('[') {
+            section = line;
         }
-        let Some((key, value)) = line.split_once('=') else {
-            continue;
-        };
-        let key = key.trim().trim_matches(['"', '\'']);
-        let (table, key) = match key.rsplit_once('.') {
-            Some((table, key)) => (
-                table.trim().trim_matches(['"', '\'']).to_string(),
-                key.trim(),
-            ),
-            None => (section.clone(), key),
-        };
-        if key.trim_matches(['"', '\'']) != "name" {
-            continue;
-        }
-        match table.as_str() {
-            "lib" => return true,
-            "package" => {
-                let value = value.trim().trim_matches(['"', '\'']);
-                if value != dir_name {
-                    return true;
-                }
+        let bare = line.trim_start_matches('[').trim_start_matches(['"', '\'']);
+        for word in ["lib", "project"] {
+            if bare.starts_with(word)
+                && !bare[word.len()..].starts_with(|c: char| is_ident(c) || c == '-')
+            {
+                return false;
             }
-            _ => {}
+        }
+        let key = line.split('=').next().unwrap_or("");
+        // A binary's, example's, test's or bench's name names no library.
+        let target = ["[[bin]]", "[[example]]", "[[test]]", "[[bench]]"].contains(&section);
+        if word_starts(key, "name").next().is_some() && !line.starts_with('[') && !target {
+            let plain = format!("name = \"{dir_name}\"");
+            if section != "[package]" || line != plain {
+                return false;
+            }
         }
     }
-    false
+    true
+}
+
+/// Whether some workspace crate's library may go by another name than its directory's
+/// ([`plain_manifest`]): every crate below `crates/` with a manifest is read.
+fn libraries_renamed(root: &Path) -> io::Result<bool> {
+    for entry in std::fs::read_dir(root.join("crates"))? {
+        let dir = entry?.path();
+        let Ok(manifest) = std::fs::read_to_string(dir.join("Cargo.toml")) else {
+            continue;
+        };
+        let name = dir
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        if !plain_manifest(&manifest, &name) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 /// The workspace crates of `crates/` (by Rust name): those with a `src/lib.rs`.
@@ -751,6 +767,13 @@ pub fn producing_sources(
     first.modules.extend(modules.iter().map(|m| m.to_string()));
     // No modules: the whole crate makes the output.
     first.whole = modules.is_empty();
+    // A workspace library that may go by another name is named by paths the reading does not
+    // follow: every workspace crate counts whole.
+    if libraries_renamed(root)? {
+        for name in workspace_crates(root)? {
+            reach.entry(name).or_default().whole = true;
+        }
+    }
     loop {
         let mut files = BTreeSet::new();
         let mut changes: Vec<(String, Change)> = Vec::new();
@@ -763,19 +786,6 @@ pub fn producing_sources(
             // A workspace crate depended on under another name (`foo = { package =
             // "unbound-x", .. }`, here or in the workspace's dependencies) is named by paths
             // the reading does not follow: all of it.
-            // A workspace crate whose library goes by another name is named by paths the
-            // reading does not follow: every workspace crate counts whole.
-            for other in workspace_crates(root)? {
-                let other_dir = root.join("crates").join(crate_dir(&other));
-                let manifest =
-                    std::fs::read_to_string(other_dir.join("Cargo.toml")).unwrap_or_default();
-                if renamed_library(&manifest, &crate_dir(&other)) {
-                    for every in workspace_crates(root)? {
-                        changes.push((every, Change::Whole));
-                    }
-                    break;
-                }
-            }
             for manifest in [dir.join("Cargo.toml"), root.join("Cargo.toml")] {
                 let text = std::fs::read_to_string(&manifest).unwrap_or_default();
                 let Some(renamed) = renamed_packages(&text) else {
