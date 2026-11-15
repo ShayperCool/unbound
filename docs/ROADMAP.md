@@ -185,7 +185,7 @@ In dependency order; each item ends with an Editor-reference probe.
       compute and output shaders go to `Library/Unbound/GeneratedShaders` like Shader Graph's; the
       asset and `VisualEffect` answer the API that needs no simulation (exposed properties and
       overrides, events and event attributes, system names, settings) as the Unity 6000.0.71f1
-      Editor does (`tests/projects/vfx`, 1847 values). Not yet: simulation and drawing (spawners,
+      Editor does (`tests/projects/vfx`, 1878 values). Not yet: simulation and drawing (spawners,
       init/update/output passes, events sent, bounds and culling, strips, GPU events); an effect
       shows nothing, says so once at load and is listed by `unbound doctor`.
 - [x] Baked lighting: a scene's LightingData (read through its type tree): lightmaps and each

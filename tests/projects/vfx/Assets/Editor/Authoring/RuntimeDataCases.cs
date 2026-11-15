@@ -8,7 +8,8 @@ using UnityEngine.VFX;
 /// <summary>
 /// Compiled graphs handed to a resource by hand, as the graph compiler hands its own: which the
 /// engine takes, which it refuses and how. The probe runs each case by name (it lives in the
-/// runtime assembly and cannot name these types) and records what was logged and thrown.
+/// runtime assembly and cannot name these types) and records what was logged and thrown, and
+/// how many of the one shader source each case hands over the resource holds afterwards.
 /// </summary>
 public static class RuntimeDataCases
 {
@@ -67,17 +68,22 @@ public static class RuntimeDataCases
 
     public static string[] Names() => new List<string>(s_Cases.Keys).ToArray();
 
+    static VisualEffectResource s_Last;
+
+    public static int ShaderSourcesKept() => s_Last.GetShaderSourceCount();
+
     public static void Run(string name)
     {
         var (expressions, perEvent, systems, events) = s_Cases[name];
-        var resource = new VisualEffectResource();
+        var resource = s_Last = new VisualEffectResource();
+        var sources = new[] { new VFXShaderSourceDesc { compute = false, name = "Probe", source = "Shader \"Hidden/VfxProbe/Unused\" { SubShader { Pass { } } }" } };
         var sheet = new VFXExpressionSheet
         {
             expressions = expressions, expressionsPerSpawnEventAttribute = perEvent ?? new VFXExpressionDesc[0],
             values = new VFXExpressionValueContainerDesc[0], exposed = new VFXExposedMapping[0],
         };
         resource.SetRuntimeData(sheet, systems ?? new VFXEditorSystemDesc[0], events ?? new VFXEventDesc[0], new VFXGPUBufferDesc[0],
-            new VFXCPUBufferDesc[0], new VFXTemporaryGPUBufferDesc[0], new VFXShaderSourceDesc[0], ShadowCastingMode.Off,
+            new VFXCPUBufferDesc[0], new VFXTemporaryGPUBufferDesc[0], sources, ShadowCastingMode.Off,
             MotionVectorGenerationMode.Camera, VFXInstancingDisabledReason.None, 7);
     }
 }

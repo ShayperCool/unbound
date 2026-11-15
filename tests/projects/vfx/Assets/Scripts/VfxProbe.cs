@@ -56,7 +56,8 @@ public sealed class VfxProbe : MonoBehaviour
         Application.logMessageReceived += handler;
         string thrown = "";
         try { action(); }
-        // The runtime words an argument exception's message its own way: its parameter is the fact.
+        // The runtime words a null argument's message its own way: its parameter is the fact.
+        // Another argument exception: the first line of its message, then its parameter.
         catch (ArgumentNullException e) { thrown = e.GetType().Name + " " + e.ParamName; }
         catch (ArgumentException e) { thrown = e.GetType().Name + ": " + e.Message.Split('\n')[0] + (e.ParamName == null ? "" : " [" + e.ParamName + "]"); }
         catch (Exception e) { thrown = e.GetType().Name + ": " + e.Message; }
@@ -75,6 +76,8 @@ public sealed class VfxProbe : MonoBehaviour
             Scripted();
             Attributes();
             RuntimeData();
+            foreach (var filter in new[] { "t:VisualEffectAsset", "t:VisualEffectObject", "t:VisualEffectSubgraphOperator", "t:Shader", "t:ComputeShader", "t:Material" })
+                Rec("find/" + filter, string.Join(", ", AssetDatabase.FindAssets(filter, new[] { "Assets" }).Select(AssetDatabase.GUIDToAssetPath).OrderBy(p => p, StringComparer.Ordinal)));
             Rec("manager/fixedTimeStep", F(VFXManager.fixedTimeStep));
             Rec("manager/maxDeltaTime", F(VFXManager.maxDeltaTime));
         }
@@ -348,9 +351,12 @@ public sealed class VfxProbe : MonoBehaviour
         e.visualEffectAsset = Graph("Exposed");
         Rec("scripted/swap/after null/Rate", F(e.GetFloat("Rate")));
         Rec("scripted/swap/after null/Count", e.GetInt("Count"));
-        // An object override through an asset that has no such property.
-        e.SetTexture("Image", image);
-        e.SetMesh("Shape", mesh);
+        // Object overrides set after the clone saved others, through an asset that has no such
+        // property: the current ones do not come back, the saved ones do.
+        e.SetTexture("Image", AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Objects/ImageB.png"));
+        e.SetMesh("Shape", AssetDatabase.LoadAssetAtPath<Mesh>("Assets/Objects/ShapeB.asset"));
+        Rec("scripted/swap/objects/Image/set", Name(e.GetTexture("Image")));
+        Rec("scripted/swap/objects/Shape/set", Name(e.GetMesh("Shape")));
         e.visualEffectAsset = Graph("Exposed2");
         e.visualEffectAsset = Graph("Exposed");
         Rec("scripted/swap/objects/Image", Name(e.GetTexture("Image")));
@@ -505,6 +511,7 @@ public sealed class VfxProbe : MonoBehaviour
     {
         var cases = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("RuntimeDataCases")).First(t => t != null);
         var run = cases.GetMethod("Run", Any);
+        var kept = cases.GetMethod("ShaderSourcesKept", Any);
         foreach (var name in (string[])cases.GetMethod("Names", Any).Invoke(null, null))
         {
             Logged("runtime data/" + name, () =>
@@ -512,6 +519,8 @@ public sealed class VfxProbe : MonoBehaviour
                 try { run.Invoke(null, new object[] { name }); }
                 catch (TargetInvocationException e) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e.InnerException).Throw(); }
             });
+            // Each case hands one shader source over: whether the resource holds it afterwards.
+            Rec("runtime data/" + name + "/shader sources kept", (int)kept.Invoke(null, null));
         }
     }
 }

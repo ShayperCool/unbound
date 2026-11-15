@@ -70,7 +70,10 @@ the hex of their bits) into `VFX_PROBE_OUT`:
   `Dispose`; `attributes/layouts/*`: the two graphs with several typed attributes, written and
   read by type, and `CopyValuesFrom` in both directions between their layouts (shared names
   take the other set's values, the rest keep theirs).
-- `runtime data/*`: what each hand-made compiled graph logs and throws when a resource takes it.
+- `runtime data/*`: what each hand-made compiled graph logs and throws when a resource takes
+  it, and whether the resource holds the shader source handed over with it afterwards.
+- `find/*`: which of the project's assets `AssetDatabase.FindAssets` lists for the graph types
+  and for the types of the objects a compiled graph has (a shader, compute shaders, a material).
 - `manager/*`: the fixed time step and the maximum delta time of the project's settings.
 
 Values compare exactly (tolerance 0).
