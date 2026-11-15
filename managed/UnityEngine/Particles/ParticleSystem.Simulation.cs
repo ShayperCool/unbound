@@ -35,6 +35,30 @@ namespace UnityEngine
         bool m_HasContext;
         /// <summary>The length of the last step.</summary>
         internal float m_LastStepDt;
+        /// <summary>How long ago the custom data module last ran over the live particles, and the
+        /// serial of that run. Each run evaluates the color streams of every live particle, the
+        /// vectors only of the particles it is for. It runs before a step ages its particles, and
+        /// again for the particles a step's emission or Emit starts, after that aging: the
+        /// existing particles' colors then take their current age and the started particles'
+        /// colors their age at birth (6000.0.71f1, tests/projects/particles custom_data).</summary>
+        internal float m_CustomColorLagDt;
+        internal uint m_CustomRun;
+        /// <summary>Whether a step's emission is running, and whether it has started particles:
+        /// a step starts all its births in one run, whichever way they are emitted; each Emit call
+        /// and each sub-emitter birth outside the system's own step is a run of its own.</summary>
+        bool m_InStepEmission, m_StepStartRunBegun;
+
+        /// <summary>A custom data module run for the particles being started.</summary>
+        void BeginCustomStartRun()
+        {
+            if (m_InStepEmission)
+            {
+                if (m_StepStartRunBegun) return;
+                m_StepStartRunBegun = true;
+            }
+            m_CustomColorLagDt = 0f;
+            m_CustomRun++;
+        }
 
         // Birth newborns finish their own remaining Simulate call time when emitted,
         // after the child's existing particles have advanced.
@@ -264,6 +288,8 @@ namespace UnityEngine
         {
             if (m_Trails.enabled || HasAliveTrails) m_TrailTime += dt;
             m_LastStepDt = dt;
+            m_CustomColorLagDt = dt;
+            m_CustomRun++;
             // Newborns sample the current scroll but only existing particles advance it.
             if (m_Noise.enabled && m_Count > 0)
                 m_NoiseScroll += m_Noise.scrollSpeed.Evaluate(StepEndNt(dt), 1f) * dt;
@@ -280,7 +306,12 @@ namespace UnityEngine
                 // where a stopped system still updates for its trails or particles a script set,
                 // the clock runs too (Unbound's choice, unmeasured).
                 if ((m_IsPlaying || m_StopEmitting) && !m_BirthDelayClock)
-                    AdvanceEmission(dt, distance);
+                {
+                    m_InStepEmission = true;
+                    m_StepStartRunBegun = false;
+                    try { AdvanceEmission(dt, distance); }
+                    finally { m_InStepEmission = false; }
+                }
                 if (m_TrailList.Count > 0) UpdateTrails();
             }
             finally { m_HasContext = false; }
@@ -734,6 +765,7 @@ namespace UnityEngine
             int capacity = ringMode == ParticleSystemRingBufferMode.Disabled ? m_Main.maxParticles : RingCapacity;
             int count = Math.Min(requested, Math.Max(0, capacity - start));
             if (count <= 0) return;
+            BeginCustomStartRun();
             int aligned = checked((start + 3) & ~3);
             int lanes = checked((count + 3) & ~3);
             Reserve(checked(aligned + lanes));
@@ -818,6 +850,7 @@ namespace UnityEngine
             for (int i = start; i < m_Count; i++)
             {
                 int origin = i < aligned ? count - prefix + i - start : i - aligned;
+                m_Particles[i].m_CustomRun = m_CustomRun;
                 StartTrail(ref m_Particles[i], simulate ? m_SlotPoints[aligned + origin] : null);
             }
             // Particles a step's births replace fire their Death sub-emitters; those an Emit call
@@ -1134,6 +1167,7 @@ namespace UnityEngine
             {
                 int index = ring != ParticleSystemRingBufferMode.Disabled ? AppendRingSlot() : Allocate();
                 if (index < 0) break;
+                if (k == 0) BeginCustomStartRun();
                 int si = spreadIndex >= 0 ? spreadIndex : k;
                 int sn = spreadIndex >= 0 ? spreadCount : count;
                 if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null, si, sn))
@@ -1157,6 +1191,7 @@ namespace UnityEngine
                     else RemoveNewborn(index, ref firstDiscarded);
                     continue;
                 }
+                m_Particles[index].m_CustomRun = m_CustomRun;
                 var trailBirthPosition = m_Particles[index].m_Position;
                 if (simulate) BeginModuleSample(si, m_Particles[index].m_RandomSeed);
                 m_RingSlot = index;

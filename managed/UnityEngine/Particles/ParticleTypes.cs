@@ -34,6 +34,9 @@ namespace UnityEngine
             internal uint m_Flags;
             /// <summary>The particle's trail (1-based id, 0: none).</summary>
             internal int m_TrailId;
+            /// <summary>The custom data module run that started this particle
+            /// (<see cref="ParticleSystem.m_CustomRun"/>; 0: none).</summary>
+            internal uint m_CustomRun;
 
             internal const uint FlagMeshIndexSet = 1, FlagFlipRotation = 2, FlagBirthBurstsDone = 4, FlagInsideTrigger = 8, FlagAgeInitialized = 16, FlagOrphanTrail = 32;
             /// <summary>A dead particle kept in the buffer, at zero remaining lifetime and not drawn,

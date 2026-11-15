@@ -36,9 +36,20 @@ What still differs, and why:
   so that Unity's clock ends one float step lower, and the particle due exactly at the end is one
   step later.
 - `collision_world`: a particle bouncing off a box collider lands about 0.005 apart.
-- `custom_data`: one record's color stream is read at a different age.
 - `lights` (image): the particle lights are created, but the built-in pipeline does not draw
   additional lights yet.
+
+## Custom data streams
+
+`custom_data` and the `custom_data_runs/*` controls (rate 7 in 0.1 s calls, a burst followed
+by `Emit`, rate 70 in single 0.02 s steps) record when the custom data module writes its
+streams. Each run of the module writes the colors of every live particle but the vectors only
+of the particles the run is for. It runs before a step ages the particles, and again for the
+particles the step starts, after that aging. A step that starts particles therefore leaves the
+existing particles' colors at their current age and the started particles' colors at their
+birth; a step that starts none leaves every color one step behind, like the vectors. `Emit`
+is a run of its own. Measured on Unity 6000.0.71f1; the added rows come from two GPU Editor
+recordings that agree in every compared value, and every earlier row is unchanged.
 
 ## Known numerical residuals, 2026-11-02
 

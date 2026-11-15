@@ -980,6 +980,9 @@ namespace UnityEngine
             uint seed = p.m_RandomSeed;
             if (mode == ParticleSystemCustomDataMode.Color)
             {
+                // The module's last run wrote every color (see m_CustomColorLagDt).
+                if (p.m_CustomRun != 0 && p.m_CustomRun == m_CustomRun) age = 0f;
+                else if (p.m_StartLifetime > 0f) age = Mathf.Max(0f, age - m_CustomColorLagDt / p.m_StartLifetime);
                 Color c = m_CustomData.colors[stream].Evaluate(age, ModuleValue(seed, 1940387770u - (uint)stream));
                 return new Vector4(c.r, c.g, c.b, c.a);
             }
