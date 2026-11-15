@@ -1,0 +1,23 @@
+{"k":"group 1 Tier1","v":"quality High hdrMode FP16 box True blending True hdr True detailNormal True cascades True shadow32 False lppv True semitransparent True path DeferredShading gi Low"}
+{"k":"group 1 Tier2","v":"quality Low hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 True lppv False semitransparent False path VertexLit gi High"}
+{"k":"group 1 Tier3","v":"quality High hdrMode FP16 box True blending True hdr True detailNormal True cascades True shadow32 False lppv True semitransparent True path DeferredShading gi Medium"}
+{"k":"group 4 Tier1","v":"quality Low hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 False lppv False semitransparent False path VertexLit gi Low"}
+{"k":"group 4 Tier2","v":"quality Medium hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 False lppv False semitransparent False path VertexLit gi Low"}
+{"k":"group 4 Tier3","v":"quality Medium hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 False lppv False semitransparent False path VertexLit gi Low"}
+{"k":"group 7 Tier1","v":"quality Low hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 False lppv False semitransparent False path VertexLit gi Low"}
+{"k":"group 7 Tier2","v":"quality Medium hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 False lppv False semitransparent False path VertexLit gi Low"}
+{"k":"group 7 Tier3","v":"quality Medium hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 False lppv False semitransparent False path VertexLit gi Low"}
+{"k":"group 13 Tier1","v":"quality High hdrMode FP16 box True blending True hdr True detailNormal True cascades True shadow32 False lppv True semitransparent True path DeferredShading gi Low"}
+{"k":"group 13 Tier2","v":"quality High hdrMode FP16 box True blending True hdr True detailNormal True cascades True shadow32 False lppv True semitransparent True path DeferredShading gi Low"}
+{"k":"group 13 Tier3","v":"quality High hdrMode FP16 box True blending True hdr True detailNormal True cascades True shadow32 False lppv True semitransparent True path DeferredShading gi Low"}
+{"k":"group 14 Tier1","v":"quality Low hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 False lppv False semitransparent False path VertexLit gi Low"}
+{"k":"group 14 Tier2","v":"quality High hdrMode FP16 box True blending True hdr True detailNormal True cascades True shadow32 False lppv True semitransparent True path DeferredShading gi Low"}
+{"k":"group 14 Tier3","v":"quality High hdrMode FP16 box True blending True hdr True detailNormal True cascades True shadow32 False lppv True semitransparent True path DeferredShading gi Low"}
+{"k":"group 25 Tier1","v":"quality Medium hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 False lppv False semitransparent False path VertexLit gi Low"}
+{"k":"group 25 Tier2","v":"quality Medium hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 False lppv False semitransparent False path VertexLit gi Low"}
+{"k":"group 25 Tier3","v":"quality Medium hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 False lppv False semitransparent False path VertexLit gi Low"}
+{"k":"named Standalone Tier3","v":"quality High hdrMode FP16 box True blending True hdr True detailNormal True cascades True shadow32 False lppv True semitransparent True path DeferredShading gi Medium"}
+{"k":"named Android Tier1","v":"quality Low hdrMode R11G11B10 box False blending False hdr False detailNormal False cascades False shadow32 False lppv False semitransparent False path VertexLit gi Low"}
+{"k":"lightingDataAsset","v":"LightingData"}
+{"k":"NoData lightingDataAsset","v":"null"}
+{"k":"complete","v":true}

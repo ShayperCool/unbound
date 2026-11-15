@@ -1,0 +1,15 @@
+{
+  "commands": [
+    "python3 tests/projects/tiersettings/run.py gate"
+  ],
+  "summary": "tiersettings: .*",
+  "engine_paths": [
+    "crates/unbound-project/src/settings.rs",
+    "crates/unbound-runtime/src/config.rs",
+    "managed/Unbound.Host/Game.cs",
+    "managed/UnityEngine/Editor/EditorGraphicsSettings.Tiers.cs",
+    "managed/UnityEngine/Editor/Lightmapping.cs",
+    "managed/UnityEngine/Editor/LightingDataAsset.cs",
+    "managed/UnityEngine/Runtime/Loading.cs"
+  ]
+}
