@@ -1927,6 +1927,10 @@ impl UnityRenderer {
                 binding: 2 * k as u32,
                 resource: wgpu::BindingResource::TextureView(view),
             });
+            // Only the samplers the program samples through are bindings of its layout.
+            if !slots[k].3.sampler {
+                continue;
+            }
             entries.push(wgpu::BindGroupEntry {
                 binding: 2 * k as u32 + 1,
                 resource: wgpu::BindingResource::Sampler(sampler),

@@ -33,7 +33,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 48;
+pub const FORMAT_VERSION: u32 = 49;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -213,6 +213,13 @@ pub struct TextureSlot {
     pub multisampled: bool,
     pub comparison: bool,
     pub inline: Option<InlineSampler>,
+    /// The program samples through the slot's sampler (either stage uses a sampler variable of
+    /// the slot): only then does the slot bind one. Where a program samples through the sampler
+    /// it names, textures share samplers (the Unity 6000.0 Manual, Using sampler states: "sample
+    /// a second texture with the sampler from a texture"), and a device may bind fewer samplers
+    /// than textures in a stage (16 on wgpu's Metal device).
+    #[serde(default)]
+    pub sampler: bool,
 }
 
 /// The texel type a texture slot declares: floats (`Texture2D`, `sampler2D`; the default), signed
@@ -2061,6 +2068,76 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             .unwrap();
         assert!(compiled.texture_aliases.is_empty());
         assert_eq!(compiled.textures, ["_A", "_B"]);
+    }
+
+    /// A slot binds a sampler only where the program samples through it: where a program
+    /// samples through the sampler it names, textures share one (`_B` through `sampler_A`), a
+    /// declared sampler nothing samples through and a texture only loaded bind none, and an
+    /// inline state binds its own. Where every texture samples through its own state (OpenGL
+    /// Core), each sampled texture binds its own sampler.
+    #[test]
+    fn a_slot_binds_a_sampler_only_when_the_program_samples_through_it() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+Texture2D _A;
+Texture2D _B;
+Texture2D _C;
+Texture2D _D;
+SamplerState sampler_A;
+SamplerState sampler_C;
+SamplerState sampler_LinearClamp;
+float4 vert(float4 position : POSITION) : SV_POSITION { return position; }
+float4 frag(float4 position : SV_POSITION) : SV_Target {
+    return _A.Sample(sampler_A, position.xy) + _B.Sample(sampler_A, position.xy)
+        + _C.Sample(sampler_LinearClamp, position.xy) + _D.Load(int3(position.xy, 0));
+}
+"#;
+        let sampled = |device| {
+            let mut compiler = ShaderCompiler::new(Settings {
+                device,
+                ..Settings::default()
+            })
+            .unwrap();
+            let compiled = compiler
+                .compile(&program(source, false), &[], false)
+                .unwrap();
+            let mut out: Vec<(String, bool)> = compiled
+                .textures
+                .iter()
+                .zip(&compiled.texture_slots)
+                .map(|(name, slot)| (name.clone(), slot.sampler))
+                .collect();
+            out.sort();
+            out
+        };
+        let named = |pairs: &[(&str, bool)]| -> Vec<(String, bool)> {
+            pairs.iter().map(|(n, s)| (n.to_string(), *s)).collect()
+        };
+        // The inline state's slot is named by its state (`_LinearClamp`).
+        for device in [
+            unbound_compat::GraphicsDevice::Vulkan,
+            unbound_compat::GraphicsDevice::Metal,
+        ] {
+            assert_eq!(
+                sampled(device),
+                named(&[
+                    ("_A", true),
+                    ("_B", false),
+                    ("_C", false),
+                    ("_D", false),
+                    ("_LinearClamp", true)
+                ]),
+                "{device:?}"
+            );
+        }
+        assert_eq!(
+            sampled(unbound_compat::GraphicsDevice::OpenGLCore)
+                .into_iter()
+                .filter(|(n, _)| n != "_LinearClamp")
+                .collect::<Vec<_>>(),
+            named(&[("_A", true), ("_B", true), ("_C", true), ("_D", false)])
+        );
     }
 
     /// The render pipelines' instancing library under the replay: read without instancing, so

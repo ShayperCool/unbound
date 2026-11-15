@@ -1151,7 +1151,8 @@ pub(crate) fn fit(
     // The further variables of textures sampled through several samplers: name and slot.
     let mut further: BTreeMap<String, SlotKey> = BTreeMap::new();
     for module in [&vertex, &fragment] {
-        for (_, g) in module.global_variables.iter() {
+        let used = referenced(module);
+        for (h, g) in module.global_variables.iter() {
             if g.space != AddressSpace::Handle {
                 continue;
             }
@@ -1211,6 +1212,8 @@ pub(crate) fn fit(
                     }
                 }
                 TypeInner::Sampler { .. } => {
+                    // A sampler the program declares and never samples through binds nothing.
+                    slot.sampler |= used.contains(&h);
                     if key.0 == name {
                         slot.inline = InlineSampler::from_name(name);
                     } else if !textures_named(module, &key.0) {

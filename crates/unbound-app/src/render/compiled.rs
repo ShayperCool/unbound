@@ -120,13 +120,15 @@ fn uniform_bindings_refused(program: &Compiled, limits: &wgpu::Limits) -> Option
 /// pipeline layout carries beside its own (`main_texture_layout`: one of each, both stages).
 const MAIN_TEXTURE_BINDINGS: u32 = 1;
 
-/// Why a device cannot bind a program's textures: each texture variable and its own sampler, each
-/// further variable of a texture (`texture_aliases`) and the main texture group are bindings of
-/// both stages, over the device's sampled textures or samplers of a stage.
+/// Why a device cannot bind a program's textures: each texture slot, each further variable of a
+/// texture (`texture_aliases`), each sampler the program samples through (one per sampler state
+/// it uses, however many textures share it: `TextureSlot::sampler`) and the main texture group
+/// are bindings of both stages, over the device's sampled textures or samplers of a stage.
 fn texture_bindings_refused(program: &Compiled, limits: &wgpu::Limits) -> Option<String> {
     let textures =
         (program.textures.len() + program.texture_aliases.len()) as u32 + MAIN_TEXTURE_BINDINGS;
-    let samplers = program.textures.len() as u32 + MAIN_TEXTURE_BINDINGS;
+    let samplers =
+        program.texture_slots.iter().filter(|s| s.sampler).count() as u32 + MAIN_TEXTURE_BINDINGS;
     if textures > limits.max_sampled_textures_per_shader_stage {
         return Some(format!(
             "it binds {textures} textures, over the {} the device binds in a stage",
@@ -388,6 +390,8 @@ impl CompiledPrograms {
             entries: &uniform_entries,
         });
         let mut texture_entries = Vec::new();
+        // Each slot's texture entry (a further variable of the texture shows it too).
+        let mut slot_textures = Vec::with_capacity(program.textures.len());
         for k in 0..program.textures.len() as u32 {
             let dim = program
                 .texture_dims
@@ -399,7 +403,7 @@ impl CompiledPrograms {
                 .get(k as usize)
                 .copied()
                 .unwrap_or_default();
-            texture_entries.push(layout_entry(
+            let texture = layout_entry(
                 2 * k,
                 wgpu::BindingType::Texture {
                     sample_type: if slot.multisampled
@@ -412,7 +416,14 @@ impl CompiledPrograms {
                     view_dimension: view_dimension(dim),
                     multisampled: slot.multisampled,
                 },
-            ));
+            );
+            texture_entries.push(texture);
+            slot_textures.push(texture);
+            // A sampler the program never samples through is no binding: it would count against
+            // the device's samplers of a stage ([`texture_bindings_refused`]).
+            if !slot.sampler {
+                continue;
+            }
             // Integer textures are read unfiltered: their slot's sampler filters nothing.
             texture_entries.push(layout_entry(
                 2 * k + 1,
@@ -431,7 +442,7 @@ impl CompiledPrograms {
         for (j, &slot) in program.texture_aliases.iter().enumerate() {
             texture_entries.push(wgpu::BindGroupLayoutEntry {
                 binding: 2 * slots + j as u32,
-                ..texture_entries[2 * slot as usize]
+                ..slot_textures[slot as usize]
             });
         }
         let texture_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -1681,7 +1692,12 @@ mod tests {
 
         // Textures: each with its sampler, aliases as further textures, and the main texture
         // group's one (WebGPU's defaults bind 16 of each).
+        let sampled = unbound_shaders::TextureSlot {
+            sampler: true,
+            ..Default::default()
+        };
         program.textures = (0..20).map(|k| format!("_T{k}")).collect();
+        program.texture_slots = vec![sampled; 20];
         program.texture_aliases = vec![0];
         let gl = wgpu::Limits {
             max_sampled_textures_per_shader_stage: 32,
@@ -1698,14 +1714,32 @@ mod tests {
         };
         let why = texture_bindings_refused(&program, &few_samplers).unwrap();
         assert!(why.contains("21 samplers, over the 16"), "{why}");
+        // Samplers are those the program samples through, however many textures share one:
+        // 20 textures through 3 samplers bind 4 with the main one.
+        let shared = unbound_shaders::TextureSlot::default();
+        program.texture_slots = vec![shared; 20];
+        for k in [0, 7, 19] {
+            program.texture_slots[k] = sampled;
+        }
+        assert_eq!(texture_bindings_refused(&program, &few_samplers), None);
+        // 15 samplers and the main one bind; one more does not.
+        program.texture_slots = (0..20)
+            .map(|k| if k < 15 { sampled } else { shared })
+            .collect();
+        assert_eq!(texture_bindings_refused(&program, &few_samplers), None);
+        program.texture_slots[15] = sampled;
+        let why = texture_bindings_refused(&program, &few_samplers).unwrap();
+        assert!(why.contains("17 samplers, over the 16"), "{why}");
         // At the limit: 15 textures and the main one bind; one more does not.
         program.textures = (0..15).map(|k| format!("_T{k}")).collect();
+        program.texture_slots = vec![sampled; 15];
         program.texture_aliases.clear();
         assert_eq!(texture_bindings_refused(&program, &webgpu), None);
         program.texture_aliases = vec![3];
         assert!(texture_bindings_refused(&program, &webgpu).is_some());
         program.texture_aliases.clear();
         program.textures.push("_T15".into());
+        program.texture_slots.push(shared);
         assert!(texture_bindings_refused(&program, &webgpu).is_some());
     }
 
