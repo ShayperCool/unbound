@@ -2074,7 +2074,8 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
     /// samples through the sampler it names, textures share one (`_B` through `sampler_A`), a
     /// declared sampler nothing samples through and a texture only loaded bind none, and an
     /// inline state binds its own. Where every texture samples through its own state (OpenGL
-    /// Core), each sampled texture binds its own sampler.
+    /// Core), each sampled texture binds its own sampler and the inline one, which nothing
+    /// samples through any more, none.
     #[test]
     fn a_slot_binds_a_sampler_only_when_the_program_samples_through_it() {
         let source = r#"
@@ -2131,12 +2132,17 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
                 "{device:?}"
             );
         }
+        // OpenGL Core's samples go through the textures' own samplers: the inline one, still
+        // declared, binds none.
         assert_eq!(
-            sampled(unbound_compat::GraphicsDevice::OpenGLCore)
-                .into_iter()
-                .filter(|(n, _)| n != "_LinearClamp")
-                .collect::<Vec<_>>(),
-            named(&[("_A", true), ("_B", true), ("_C", true), ("_D", false)])
+            sampled(unbound_compat::GraphicsDevice::OpenGLCore),
+            named(&[
+                ("_A", true),
+                ("_B", true),
+                ("_C", true),
+                ("_D", false),
+                ("_LinearClamp", false)
+            ])
         );
     }
 

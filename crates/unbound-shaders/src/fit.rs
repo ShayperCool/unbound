@@ -1151,8 +1151,8 @@ pub(crate) fn fit(
     // The further variables of textures sampled through several samplers: name and slot.
     let mut further: BTreeMap<String, SlotKey> = BTreeMap::new();
     for module in [&vertex, &fragment] {
-        let used = referenced(module);
-        for (h, g) in module.global_variables.iter() {
+        let used = sampled_through(module);
+        for (_, g) in module.global_variables.iter() {
             if g.space != AddressSpace::Handle {
                 continue;
             }
@@ -1213,7 +1213,7 @@ pub(crate) fn fit(
                 }
                 TypeInner::Sampler { .. } => {
                     // A sampler the program declares and never samples through binds nothing.
-                    slot.sampler |= used.contains(&h);
+                    slot.sampler |= used.contains(&variable);
                     if key.0 == name {
                         slot.inline = InlineSampler::from_name(name);
                     } else if !textures_named(module, &key.0) {
@@ -1429,6 +1429,20 @@ pub(crate) fn wgsl_entry(source: &str, stage: naga::ShaderStage) -> Result<Strin
         .find(|e| e.stage == stage)
         .map(|e| e.name.clone())
         .ok_or_else(|| anyhow!("emitted WGSL has no {stage:?} entry point"))
+}
+
+/// The samplers a module samples through: the sampler variables its entry points reach. The
+/// SPIR-V reader gives every function an expression of every global, and a sample redirected to
+/// another sampler ([`crate::samplers::own_samplers`]) leaves its old sampler's load behind, so
+/// what the functions merely mention is more: the module's compacted copy keeps what they use.
+fn sampled_through(module: &Module) -> HashSet<String> {
+    let mut used = module.clone();
+    naga::compact::compact(&mut used, naga::compact::KeepUnused::No);
+    used.global_variables
+        .iter()
+        .filter(|(_, g)| matches!(used.types[g.ty].inner, TypeInner::Sampler { .. }))
+        .filter_map(|(_, g)| g.name.clone())
+        .collect()
 }
 
 /// The global variables a module's functions read.
