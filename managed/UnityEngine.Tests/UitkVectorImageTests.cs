@@ -147,6 +147,74 @@ namespace UnityEngine.Tests
             finally { ProjectInfo.UnityVersion = release; }
         }
 
+        [Theory]
+        [InlineData(OverflowClipBox.ContentBox, 9.5f, 30.5f)]
+        [InlineData(OverflowClipBox.PaddingBox, -0.5f, 40.5f)]
+        public void RoundedMaskTracksPaddingWithoutAnOuterSizeChange(OverflowClipBox clip, float left, float right)
+        {
+            var release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try
+            {
+                using var panel = new Panel(null, ContextType.Player, EventDispatcher.CreateDefault(), null);
+                panel.visualTree.style.width = 100;
+                panel.visualTree.style.height = 100;
+                var element = Element(40, 40, s => {
+                    s.overflow = Overflow.Hidden; s.unityOverflowClipBox = clip;
+                    s.borderTopLeftRadius = 8; s.borderTopRightRadius = 8;
+                    s.borderBottomLeftRadius = 8; s.borderBottomRightRadius = 8;
+                });
+                element.style.position = Position.Absolute;
+                panel.visualTree.Add(element);
+                panel.ApplyStyles(); panel.ValidateLayout();
+                var painter = new UaPainter();
+                painter.Paint(panel, 100);
+                Assert.Equal((-0.5f, 40.5f), MaskX(painter));
+                var outer = element.layout;
+                element.style.paddingLeft = 10; element.style.paddingRight = 10;
+                panel.ApplyStyles(); panel.ValidateLayout();
+                Assert.Equal(outer, element.layout);
+                painter.Paint(panel, 100);
+                Assert.Equal((left, right), MaskX(painter));
+            }
+            finally { ProjectInfo.UnityVersion = release; }
+        }
+
+        [Fact]
+        public void RoundedContentMaskTracksResolvedPercentPaddingWhenItsAncestorResizes()
+        {
+            var release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try
+            {
+                using var panel = new Panel(null, ContextType.Player, EventDispatcher.CreateDefault(), null);
+                panel.visualTree.style.width = 100;
+                panel.visualTree.style.height = 100;
+                var element = Element(40, 40, s => {
+                    s.overflow = Overflow.Hidden; s.unityOverflowClipBox = OverflowClipBox.ContentBox;
+                    s.borderTopLeftRadius = 8; s.borderTopRightRadius = 8;
+                    s.borderBottomLeftRadius = 8; s.borderBottomRightRadius = 8;
+                    s.paddingLeft = Length.Percent(10); s.paddingRight = Length.Percent(10);
+                });
+                element.style.position = Position.Absolute;
+                panel.visualTree.Add(element);
+                panel.ApplyStyles(); panel.ValidateLayout();
+                var painter = new UaPainter();
+                painter.Paint(panel, 100);
+                var initialContent = element.contentRect;
+                var initialMask = MaskX(painter);
+                var outer = element.layout;
+                panel.visualTree.style.width = 140;
+                panel.ApplyStyles(); panel.ValidateLayout();
+                Assert.Equal(outer, element.layout);
+                Assert.NotEqual(initialContent, element.contentRect);
+                painter.Paint(panel, 100);
+                Assert.NotEqual(initialMask, MaskX(painter));
+                Assert.Equal((element.contentRect.xMin - 0.5f, element.contentRect.xMax + 0.5f), MaskX(painter));
+            }
+            finally { ProjectInfo.UnityVersion = release; }
+        }
+
         [Fact]
         public void HiddenParentStillMasksItsVisibleChild()
         {

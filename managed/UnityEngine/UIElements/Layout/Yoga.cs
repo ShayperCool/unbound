@@ -257,6 +257,7 @@ namespace Unbound.UIElements.Layout
 
         public uint GenerationCount;
         public YogaDirection LastOwnerDirection;
+        public float LastOwnerWidth;
 
         public uint NextCachedMeasurementsIndex;
         public readonly YogaCachedMeasurement[] CachedMeasurements = new YogaCachedMeasurement[MaxCachedResultCount];
@@ -288,6 +289,7 @@ namespace Unbound.UIElements.Layout
             HadOverflow = false;
             GenerationCount = 0;
             LastOwnerDirection = (YogaDirection)(-1);
+            LastOwnerWidth = Yoga.Undefined;
             NextCachedMeasurementsIndex = 0;
             foreach (var entry in CachedMeasurements)
                 entry.Reset();
@@ -312,6 +314,7 @@ namespace Unbound.UIElements.Layout
             HadOverflow = false;
             GenerationCount = 0;
             LastOwnerDirection = 0;
+            LastOwnerWidth = 0;
             NextCachedMeasurementsIndex = 0;
             foreach (var entry in CachedMeasurements)
                 entry.Zero();
@@ -2939,6 +2942,22 @@ namespace Unbound.UIElements.Layout
             return widthIsCompatible && heightIsCompatible;
         }
 
+        static bool ResolvedEdgesChanged(YogaNode node, float ownerWidth)
+        {
+            var row = ResolveFlexDirection(YogaFlexDirection.Row, node.layout.Direction);
+            var column = ResolveFlexDirection(YogaFlexDirection.Column, node.layout.Direction);
+            var padding = node.layout.Padding;
+            var margin = node.layout.Margin;
+            return !padding[(int)YogaEdge.Start].Equals(Unwrap(node.GetLeadingPadding(row, ownerWidth)))
+                || !padding[(int)YogaEdge.End].Equals(Unwrap(node.GetTrailingPadding(row, ownerWidth)))
+                || !padding[(int)YogaEdge.Top].Equals(Unwrap(node.GetLeadingPadding(column, ownerWidth)))
+                || !padding[(int)YogaEdge.Bottom].Equals(Unwrap(node.GetTrailingPadding(column, ownerWidth)))
+                || !margin[(int)YogaEdge.Start].Equals(Unwrap(node.GetLeadingMargin(row, ownerWidth)))
+                || !margin[(int)YogaEdge.End].Equals(Unwrap(node.GetTrailingMargin(row, ownerWidth)))
+                || !margin[(int)YogaEdge.Top].Equals(Unwrap(node.GetLeadingMargin(column, ownerWidth)))
+                || !margin[(int)YogaEdge.Bottom].Equals(Unwrap(node.GetTrailingMargin(column, ownerWidth)));
+        }
+
         // Lays out or measures a node unless a cached result for the same constraints can be used.
         // Returns true if the layout was performed.
         static bool LayoutNodeInternal(YogaNode node, float availableWidth, float availableHeight,
@@ -2948,7 +2967,11 @@ namespace Unbound.UIElements.Layout
             var layout = node.layout;
 
             bool needToVisitNode = (node.IsDirty && layout.GenerationCount != currentGenerationCount)
-                || layout.LastOwnerDirection != ownerDirection;
+                || layout.LastOwnerDirection != ownerDirection
+                // Containers must resolve percentage inputs again when their owner resizes.
+                // Measured leaves can still reuse compatible constraints if their edges agree.
+                || (!layout.LastOwnerWidth.Equals(ownerWidth)
+                    && (node.Measure == null || ResolvedEdgesChanged(node, ownerWidth)));
 
             if (needToVisitNode)
             {
@@ -3033,6 +3056,7 @@ namespace Unbound.UIElements.Layout
                     heightMeasureMode, ownerWidth, ownerHeight, performLayout, config);
 
                 layout.LastOwnerDirection = ownerDirection;
+                layout.LastOwnerWidth = ownerWidth;
 
                 if (cachedResults == null)
                 {

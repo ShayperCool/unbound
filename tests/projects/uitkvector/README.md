@@ -35,7 +35,7 @@ The appended controls load solid vector images through UXML inline `--unity-imag
 (absolute and relative) and `Button.iconImage`. A separate panel then overwrites the vector
 image used by a clipping background with `Painter2D.SaveToVectorImage`. Its old background and
 mask remain until `MarkDirtyRepaint`; changing overflow also refreshes the geometry. A hidden
-parent still masks a visible child. The six `vector-control-*.png` images record these transitions.
+parent still masks a visible child. Six control images record these transitions. Three further images below cover padding changes.
 All previous 69 value rows and both previous panel images stay byte-identical.
 
 Documented (Unity 6000.0 Scripting API: [VectorImage](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.VectorImage.html),
@@ -78,3 +78,10 @@ releases retain their previous per-paint mask generation, which remains unmeasur
 The new mask images retain small Painter2D fringe coverage residuals, with at most eight channel
 steps on NVIDIA and no pixel above that. Their separate image limits bound the measured fringe
 differences and reject the changed mask coverage seen before this fix. The original gradient image limits and numeric tolerance are unchanged.
+
+Rounded ContentBox and PaddingBox controls keep a 64 by 64 outer rectangle while padding changes.
+The ContentBox clip shrinks when its ancestor widens and percentage padding resolves from 10 to
+14, then when padding is set to 20. The PaddingBox clip stays outside the padding. The reference
+records both layout and content rectangles plus each image. Retained geometry checks the resolved
+content rectangle, so changes from ancestor layout also refresh masks without explicit repaint.
+See [OverflowClipBox](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.OverflowClipBox.html).

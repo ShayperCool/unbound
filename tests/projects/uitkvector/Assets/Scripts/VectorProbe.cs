@@ -202,6 +202,49 @@ public class VectorProbe : MonoBehaviour
         child.style.visibility = Visibility.Visible;
         Update();
         Render(target, Path.Combine(dir, "vector-control-hidden-parent.png"));
+        mask.style.display = DisplayStyle.None;
+        tree.style.display = DisplayStyle.None;
+        var holder = new VisualElement();
+        holder.style.position = Position.Absolute;
+        holder.style.width = 100; holder.style.height = 80;
+        root.Add(holder);
+        var rounded = new VisualElement[2];
+        for (int i = 0; i < rounded.Length; i++)
+        {
+            var e = new VisualElement();
+            e.style.position = Position.Absolute;
+            e.style.left = i * 80; e.style.top = 0;
+            e.style.width = 64; e.style.height = 64;
+            e.style.backgroundColor = Color.red;
+            e.style.overflow = Overflow.Hidden;
+            e.style.unityOverflowClipBox = i == 0 ? OverflowClipBox.ContentBox : OverflowClipBox.PaddingBox;
+            e.style.borderTopLeftRadius = 12; e.style.borderTopRightRadius = 12;
+            e.style.borderBottomLeftRadius = 12; e.style.borderBottomRightRadius = 12;
+            e.style.paddingLeft = Length.Percent(10); e.style.paddingRight = Length.Percent(10);
+            e.style.paddingTop = Length.Percent(10); e.style.paddingBottom = Length.Percent(10);
+            var fill = new VisualElement();
+            fill.style.position = Position.Absolute;
+            fill.style.left = -100; fill.style.top = -100;
+            fill.style.width = 300; fill.style.height = 300;
+            fill.style.backgroundColor = Color.green;
+            e.Add(fill); holder.Add(e); rounded[i] = e;
+        }
+        void PaddingSnapshot(string stage)
+        {
+            Update(); Update();
+            var e = rounded[0];
+            Value(output, "padding/" + stage, "{\"layout\":" + Rect(e.layout) + ",\"content\":" + Rect(e.contentRect) + "}");
+            Render(target, Path.Combine(dir, "vector-control-padding-" + stage + ".png"));
+        }
+        PaddingSnapshot("before");
+        holder.style.width = 140;
+        PaddingSnapshot("percent");
+        foreach (var e in rounded)
+        {
+            e.style.paddingLeft = 20; e.style.paddingRight = 20;
+            e.style.paddingTop = 20; e.style.paddingBottom = 20;
+        }
+        PaddingSnapshot("after");
         UnityEngine.Object.DestroyImmediate(go);
         UnityEngine.Object.DestroyImmediate(settings);
         target.Release();

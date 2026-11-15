@@ -68,4 +68,7 @@
 {"k":"layout/draw-vector-image","v":[400,368,90.3999939,60]}
 {"k":"logs","v":["Warning: No Theme Style Sheet set to PanelSettings , UI will not render properly"]}
 {"k":"uxml/vector-references","v":[true,true,true]}
+{"k":"padding/before","v":{"layout":[0,0,64,64],"content":[10,10,44,44]}}
+{"k":"padding/percent","v":{"layout":[0,0,64,64],"content":[14,14,36,36]}}
+{"k":"padding/after","v":{"layout":[0,0,64,64],"content":[20,20,24,24]}}
 {"k":"complete","v":true}

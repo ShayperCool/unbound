@@ -17,6 +17,7 @@ namespace Unbound.UIElements
         internal readonly UaRetainedMesh Visuals = new UaRetainedMesh();
         internal readonly UaRetainedMesh Content = new UaRetainedMesh();
         internal UaRetainedMesh Mask;
+        internal Rect ContentRect;
         internal bool Valid;
 
         internal void Invalidate() => Valid = false;
@@ -148,7 +149,9 @@ namespace Unbound.UIElements
         UaRetainedGeometry Geometry(VisualElement ve, ComputedValues style)
         {
             var g = ve.uaGeometry;
-            if (g != null && g.Valid && g.TexturesValid()) return g;
+            bool retainedMasks = Unbound.Runtime.Compat.RetainedStencilShapesMeasured;
+            var contentRect = retainedMasks ? ve.contentRect : default;
+            if (g != null && g.Valid && g.TexturesValid() && (!retainedMasks || g.ContentRect.Equals(contentRect))) return g;
             g ??= new UaRetainedGeometry();
             g.Visuals.Clear();
             g.Content.Clear();
@@ -192,6 +195,9 @@ namespace Unbound.UIElements
                     m_Recording = null;
                 }
             }
+            // ContentBox masks and element content depend on resolved padding, including
+            // percentages changed by an ancestor's size while this element's size stays fixed.
+            g.ContentRect = contentRect;
             g.Valid = true;
             ve.uaGeometry = g;
             return g;
