@@ -287,6 +287,22 @@ namespace UnityEngine.Tests
             Assert.Equal(27, child.particleCount);
         }
 
+        /// <summary>A prewarm without sub-emitters takes the long steps too: a World-space rate under
+        /// gravity over a 12 s span keeps 11 particles, 12 with equal steps
+        /// (prewarm/plain_gravity12).</summary>
+        [Fact]
+        public void ALongPrewarmWithoutSubEmittersTakesLongSteps()
+        {
+            var ps = Parent(p =>
+            {
+                var m = p.main; m.startLifetime = 12f; m.startSpeed = 2f; m.gravityModifier = 0.3f;
+                m.simulationSpace = ParticleSystemSimulationSpace.World;
+                var e = p.emission; e.rateOverTime = 1f; e.SetBursts(new ParticleSystem.Burst[0]);
+            });
+            ps.Play();
+            Assert.Equal(11, ps.particleCount);
+        }
+
         [Fact]
         public void APrewarmChainAddsEachLifetimeAndStartsTheChain()
         {
