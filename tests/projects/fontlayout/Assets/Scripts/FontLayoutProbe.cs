@@ -31,7 +31,7 @@ public sealed class FontLayoutProbe : MonoBehaviour
     }
     void Write(string key,object value) { output.WriteLine(JsonUtility.ToJson(new Row { key=key,value=Value(value) })); output.Flush(); }
     void Fields(string key,object value,params string[] fields) { foreach(var field in fields)Write(key+"/"+field,Get(value,field)); }
-    static FontAsset Asset(string font,int sampling=24) => FontAsset.CreateFontAsset(Path.Combine(Application.dataPath,"Fonts",font+".ttf"),0,sampling,4,GlyphRenderMode.SDFAA,1024,1024);
+    static FontAsset Asset(string font,int sampling=24,int atlas=1024) => FontAsset.CreateFontAsset(Path.Combine(Application.dataPath,"Fonts",font+".ttf"),0,sampling,4,GlyphRenderMode.SDFAA,atlas,atlas);
     void Tables(string key,FontAsset asset) {
         var table=Get(asset,"fontFeatureTable");
         var ligatures=(IList)Get(table,"ligatureRecords");Write(key+"/ligatures/count",ligatures.Count);
@@ -47,10 +47,11 @@ public sealed class FontLayoutProbe : MonoBehaviour
             }
         }
     }
-    void Case(string key,object generator,object info,TextSettings settings,FontAsset font,string text,int size,bool wrap) {
+    void Case(string key,object generator,object info,TextSettings settings,FontAsset font,string text,int size,bool wrap,string style=null) {
         var type=typeof(FontAsset).Assembly.GetType("UnityEngine.TextCore.Text.TextGenerationSettings");
         var s=Activator.CreateInstance(type,true);Set(s,"text",text);Set(s,"fontAsset",font);Set(s,"textSettings",settings);Set(s,"fontSize",(float)size);Set(s,"screenRect",new Rect(0,0,wrap?20:120,150));Set(s,"richText",true);Set(s,"color",Color.white);
         var field=type.GetField("textWrappingMode",Any);Set(s,"textWrappingMode",Enum.Parse(field.FieldType,wrap?"Normal":"NoWrap"));
+        if(style!=null)Set(s,"fontStyle",Enum.Parse(type.GetField("fontStyle",Any).FieldType,style));
         Write(key+"/text",text);Write(key+"/cold-preferred",Call(generator,"GetPreferredValues",s,info));Call(typeof(FontAsset),"UpdateFontAssetsInUpdateQueue");Write(key+"/preferred",Call(generator,"GetPreferredValues",s,info));Call(generator,"GenerateText",s,info);
         Fields(key,info,"characterCount","lineCount","materialCount");
         var chars=(Array)Get(info,"textElementInfo");int count=(int)Get(info,"characterCount");
@@ -80,6 +81,22 @@ public sealed class FontLayoutProbe : MonoBehaviour
                     Case(font+"/mode/"+mode+"/wrap",generator,info,settings,asset,"A\u0301\u0300 A\u0301\u0300 A\u0301\u0300",18,true);
                     Case(font+"/mode/"+mode+"/chain",generator,info,settings,asset,"A"+new string('\u0327',32)+"\u0301",18,false);mode++;
                 }
+            }
+            generator=Activator.CreateInstance(assembly.GetType("UnityEngine.TextCore.Text.TextGenerator"),true);info=Activator.CreateInstance(assembly.GetType("UnityEngine.TextCore.Text.TextInfo"),true);
+            foreach(string font in new[]{"Controlled","DejaVu"}) {
+                var small=Asset(font,24,64);small.TryAddCharacters("fi",true);small.TryAddCharacters(" AafilstAVTo\u0300\u0301\u0302\u0308\u0323\u0327",true);
+                features.Clear();features.Add(Enum.Parse(featureType,"liga"));
+                Write(font+"/small/f-atlas",small.characterLookupTable['f'].glyph.atlasIndex);Write(font+"/small/atlas-count",small.atlasTextureCount);
+                Case(font+"/small/fi",generator,info,settings,small,"fi",18,false);
+                var chars=(Array)Get(info,"textElementInfo");object first=chars.GetValue(0),alt=Get(first,"alternativeGlyph");
+                Write(font+"/small/alternative-atlas",alt==null?-1:(int)Get(alt,"atlasIndex"));Write(font+"/small/alternative-id",alt==null?0:(uint)Get(alt,"index"));
+                Write(font+"/small/material-texture",((Material)Get(first,"material")).mainTexture.name);Write(font+"/small/atlas0",small.atlasTextures[0].name);
+                var normal=Asset(font);normal.TryAddCharacters(" AafilstAVTo\u0300\u0301\u0302\u0308\u0323\u0327\ufb01",true);
+                Case(font+"/lowercase",generator,info,settings,normal,"FI",18,false,"LowerCase");
+                features.Add(Enum.Parse(featureType,"kern"));
+                foreach(string text in new[]{"fiV","Tfi","fiA","fi\u0301","\ufb01V"})Case(font+"/kern/"+text,generator,info,settings,normal,text,18,false);
+                features.Add(Enum.Parse(featureType,"mark"));features.Add(Enum.Parse(featureType,"mkmk"));
+                Case(font+"/ligature-mark",generator,info,settings,normal,"fi\u0301\u0300",18,false);
             }
             Write("complete","1");
         } catch(Exception e) {if(output!=null)Write("error",e.ToString());Debug.LogException(e);}finally {if(output!=null)output.Dispose();}
