@@ -368,6 +368,29 @@ public class EmissionProbe : MonoBehaviour
         ps.Simulate(resume, false, false, false); ParticleState(key + "/again", ps);
         UnityEngine.Object.DestroyImmediate(go);
     }
+    // A resumed system whose start delay is left: calls shorter than the delay, then longer ones.
+    static void StoppedHeld(float maximum, float delay)
+    {
+        float saved = Time.maximumParticleDeltaTime;
+        Time.maximumParticleDeltaTime = maximum;
+        string key = "stoppedHeld/" + F(maximum) + "/" + F(delay);
+        var go = new GameObject("emission-held"); go.SetActive(false);
+        var ps = go.AddComponent<ParticleSystem>();
+        var main = ps.main; main.playOnAwake = false; main.duration = 1; main.loop = true;
+        main.startDelay = delay; main.startLifetime = 5; main.startSpeed = 0;
+        var shape = ps.shape; shape.enabled = false;
+        var emission = ps.emission; emission.rateOverTime = 10;
+        ps.useAutoRandomSeed = false; ps.randomSeed = 12345;
+        go.SetActive(true);
+        ps.Play(false); ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+        ps.Simulate(.3f, false, false, false); ParticleState(key + "/stopped", ps);
+        ps.Play(false);
+        for (int i = 0; i < 6; i++) { ps.Simulate(.05f, false, false, false); ParticleState(key + "/held" + i, ps); }
+        ps.Simulate(.3f, false, false, false); ParticleState(key + "/release", ps);
+        ps.Simulate(.3f, false, false, false); ParticleState(key + "/after", ps);
+        UnityEngine.Object.DestroyImmediate(go);
+        Time.maximumParticleDeltaTime = saved;
+    }
     // A stopped step longer than the start delay left; a burst passed while the module is off.
     static void StoppedLongSteps(float maximum, float delay)
     {
@@ -487,6 +510,9 @@ public class EmissionProbe : MonoBehaviour
         foreach (bool withChildren in new[] { false, true })
         foreach (bool stopClear in new[] { false, true })
             StoppedChild(withChildren, stopClear);
+        foreach (float maximum in new[] { .03f, .5f })
+        foreach (float delay in new[] { .25f, .4f })
+            StoppedHeld(maximum, delay);
     }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
