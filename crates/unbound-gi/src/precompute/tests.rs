@@ -506,13 +506,29 @@ fn a_mesh_without_normals_faces_its_winding() {
 fn a_dense_tilted_mesh_gathers_into_parts() {
     // A grid of 160 000 triangles turned 30 degrees, of slightly different normals, in a few
     // voxels: each voxel's piece of it is one part, its clusters cover all of it.
+    let (full, c) = clustering_cpu_time(&tilted_grid(200));
+    assert!(c.input.clusters() >= 2);
+    // In linear time: four times the triangles in the same voxels take about four times as long
+    // (3.4 to 4.9 measured; the gathering of curved parts in quadratic time took 10.5 to 13.2
+    // times as long, in debug and release builds alike). Measured as the CPU time on one thread,
+    // which a loaded machine does not stretch as it does the wall clock, and as a ratio, which
+    // does not depend on the machine or the build profile.
+    let (quarter, _) = clustering_cpu_time(&tilted_grid(100));
+    let ratio = full.as_secs_f64() / quarter.as_secs_f64();
+    assert!(
+        ratio < 8.0,
+        "{full:?} for 4 times the triangles of {quarter:?}"
+    );
+}
+
+/// A square grid of `n` x `n` quads 1.5 units wide turned 30 degrees about z, with a gentle bump
+/// so that no two normals are alike.
+fn tilted_grid(n: u32) -> Mesh {
     let mut m = Mesh::default();
-    let n = 200u32;
     let (c, s) = (30f32.to_radians().cos(), 30f32.to_radians().sin());
     for z in 0..=n {
         for x in 0..=n {
             let (u, v) = (1.5 * x as f32 / n as f32, 1.5 * z as f32 / n as f32);
-            // A gentle bump: no two normals alike.
             let h = 0.01 * (u * 7.0).sin() * (v * 5.0).cos();
             m.positions.push([u * c, u * s + h, v]);
             m.normals.push(super::math::normalized([-s, c, 0.0]));
@@ -526,14 +542,40 @@ fn a_dense_tilted_mesh_gathers_into_parts() {
             m.triangles.push([a, a + n + 2, a + 1]);
         }
     }
-    let start = std::time::Instant::now();
-    let c = cluster(&[m.instance(1.0)], 32, 32).unwrap();
-    assert!(
-        start.elapsed().as_secs_f32() < 10.0,
-        "{:?}",
-        start.elapsed()
-    );
-    assert!(c.input.clusters() >= 2);
+    m
+}
+
+/// The least CPU time of three clusterings of `m` (a 32 x 32 lightmap) on one thread, and the
+/// clustering.
+fn clustering_cpu_time(m: &Mesh) -> (std::time::Duration, super::clusters::Clustering) {
+    let one_thread = rayon::ThreadPoolBuilder::new()
+        .num_threads(1)
+        .build()
+        .unwrap();
+    let mut least = None;
+    for _ in 0..3 {
+        let (cpu, c) = one_thread.install(|| {
+            let start = thread_cpu_time();
+            let c = cluster(&[m.instance(1.0)], 32, 32).unwrap();
+            (thread_cpu_time() - start, c)
+        });
+        if least.as_ref().is_none_or(|(least, _)| cpu < *least) {
+            least = Some((cpu, c));
+        }
+    }
+    least.unwrap()
+}
+
+/// The CPU time the calling thread has used so far.
+fn thread_cpu_time() -> std::time::Duration {
+    let mut t = libc::timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
+    // SAFETY: `t` is a valid timespec for the call to write.
+    let status = unsafe { libc::clock_gettime(libc::CLOCK_THREAD_CPUTIME_ID, &mut t) };
+    assert_eq!(status, 0, "{}", std::io::Error::last_os_error());
+    std::time::Duration::new(t.tv_sec as u64, t.tv_nsec as u32)
 }
 
 /// The transport of `meshes` (cluster size 1) into an output of `size` x `size` texels whose
