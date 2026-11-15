@@ -1,0 +1,32 @@
+{
+  "aep-only": {
+    "minOpenGLESVersion": "OpenGLES31AEP"
+  },
+  "automatic": {
+    "minOpenGLESVersion": "OpenGLES30"
+  },
+  "es31": {
+    "minOpenGLESVersion": "OpenGLES31"
+  },
+  "es31aep": {
+    "minOpenGLESVersion": "OpenGLES31AEP"
+  },
+  "es32": {
+    "minOpenGLESVersion": "OpenGLES32"
+  },
+  "es32-only": {
+    "minOpenGLESVersion": "OpenGLES32"
+  },
+  "gles-only": {
+    "minOpenGLESVersion": "OpenGLES32"
+  },
+  "vulkan-gles": {
+    "minOpenGLESVersion": "OpenGLES31AEP"
+  },
+  "vulkan-only": {
+    "minOpenGLESVersion": "None"
+  },
+  "vulkan-only-automatic": {
+    "minOpenGLESVersion": "OpenGLES31"
+  }
+}

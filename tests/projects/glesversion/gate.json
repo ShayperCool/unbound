@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/glesversion/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION"
+  ],
+  "summary": "glesversion: [0-9]+/[0-9]+ variants match",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/GraphicsTier.cs",
+    "managed/UnityEngine/Editor/EditorMisc.cs"
+  ]
+}
