@@ -351,6 +351,10 @@ namespace UnityEngine.Tests
             clip.SetCurve("", typeof(Transform), "m_LocalEuler", null);
             Assert.Equal(1f, clip.length);
             Assert.Equal(2f, UnityEditor.AnimationUtility.GetAnimationClipSettings(clip).stopTime);
+            // A copy keeps it too (Unbound's choice, unmeasured).
+            var copy = Object.Instantiate(clip);
+            Assert.Equal(2f, UnityEditor.AnimationUtility.GetAnimationClipSettings(copy).stopTime);
+            Object.DestroyImmediate(copy);
             clip.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(0f, 0f, 0.5f, 1f));
             Assert.Equal(0.5f, UnityEditor.AnimationUtility.GetAnimationClipSettings(clip).stopTime);
             // Removing a position by m_LocalPosition updates it.

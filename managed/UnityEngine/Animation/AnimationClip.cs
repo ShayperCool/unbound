@@ -483,8 +483,9 @@ namespace UnityEngine
         /// <summary>
         /// AnimationClip.SetCurve on a component of a Transform vector property (position,
         /// rotation, Euler angles, scale) keys every component of that vector at the union of their
-        /// key times, legacy and non-legacy clips alike: the times the vector had, then the new
-        /// component's times not within <see cref="KeyTimeTolerance"/> of one of them. A missing
+        /// key times, legacy and non-legacy clips alike: the times the vector had, then each of the
+        /// new component's times not within <see cref="KeyTimeTolerance"/> of a time already
+        /// there (the vector's or the component's own earlier one). A missing
         /// component is its default value (1 for scale and rotation w, else 0) at every time. Where
         /// the union starts before a component's first key, that key's in-tangent becomes 0, and
         /// where it ends after its last key, that key's out-tangent; at a time a component lacks it
@@ -534,7 +535,8 @@ namespace UnityEngine
                 Keyframe[] merged;
                 if (own.Length == 0)
                 {
-                    // A curve without keys is 0 at every time.
+                    // A curve without keys is 0 at every time (measured for a position; for scale
+                    // and rotation, whose missing components are 1, unmeasured).
                     merged = new Keyframe[times.Count];
                     for (int i = 0; i < merged.Length; i++) merged[i] = new Keyframe(times[i], 0f);
                 }
@@ -623,9 +625,7 @@ namespace UnityEngine
                     if (own[j].time < t - KeyTimeTolerance) { all.Add(own[j++]); continue; }
                     break;
                 }
-                bool near = (j < own.Length && Math.Abs(own[j].time - t) <= KeyTimeTolerance)
-                    || (j > 0 && Math.Abs(own[j - 1].time - t) <= KeyTimeTolerance);
-                if (near) continue;
+                if (j < own.Length && Math.Abs(own[j].time - t) <= KeyTimeTolerance) continue;
                 if (t < first.time || t > last.time)
                     all.Add(new Keyframe(t, t < first.time ? first.value : last.value, 0f, 0f));
                 else
@@ -636,6 +636,9 @@ namespace UnityEngine
             }
             while (j < own.Length) all.Add(own[j++]);
             all.Sort((a, b) => a.time.CompareTo(b.time));
+            // Fewer keys than times only where the vector's own times lie within the tolerance of
+            // one another (components keyed apart): the last ones then hold the end value
+            // (unmeasured).
             var result = new Keyframe[times.Count];
             for (int i = 0; i < result.Length; i++)
             {
