@@ -40,6 +40,7 @@ namespace UnityEngine.Rendering
             BuiltinShaderDefine.UNITY_ENABLE_DETAIL_NORMALMAP,
             BuiltinShaderDefine.UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS,
             BuiltinShaderDefine.UNITY_LIGHT_PROBE_PROXY_VOLUME,
+            BuiltinShaderDefine.UNITY_LIGHTMAP_FULL_HDR,
         };
 
         internal static void SetPlatformShaderDefines(IEnumerable<string> names)
@@ -50,12 +51,15 @@ namespace UnityEngine.Rendering
         }
 
         /// <summary>The built-in shader defines (measured; the color space one follows the project,
-        /// the platform's ones the target's tier settings).</summary>
+        /// the platform's ones the target, its tier settings and its lightmap encoding). The
+        /// graphics tier defines are never answered, though programs compile with the highest
+        /// tier's (matches the Unity 6000.0.71f1 Editor, tests/projects/lightmapencoding and
+        /// tests/projects/urp CapsProbe).</summary>
         public static bool HasShaderDefine(BuiltinShaderDefine defineHash) => defineHash switch
         {
             BuiltinShaderDefine.UNITY_ENABLE_REFLECTION_BUFFERS => true,
             BuiltinShaderDefine.UNITY_COLORSPACE_GAMMA => QualitySettings.activeColorSpace == ColorSpace.Gamma,
-            BuiltinShaderDefine.UNITY_LIGHTMAP_FULL_HDR => true,
+            BuiltinShaderDefine.UNITY_HARDWARE_TIER1 or BuiltinShaderDefine.UNITY_HARDWARE_TIER2 or BuiltinShaderDefine.UNITY_HARDWARE_TIER3 => false,
             // Depth reads in a render pass, except where Metal's framebuffer fetch fallback is
             // compiled (the macOS Editor; tests/projects/urp CapsProbe).
             BuiltinShaderDefine.UNITY_PLATFORM_SUPPORTS_DEPTH_FETCH => !s_PlatformDefines.Contains(BuiltinShaderDefine.UNITY_NEEDS_RENDERPASS_FBFETCH_FALLBACK),

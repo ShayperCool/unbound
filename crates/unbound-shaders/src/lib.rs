@@ -674,6 +674,10 @@ pub struct ShaderCompiler {
 /// `_UnityFBInput<i>`, the textures the render pipelines' inputs are bound to.)
 const FRAMEBUFFER_FETCH_AVAILABLE: &str = "UNITY_FRAMEBUFFER_FETCH_AVAILABLE";
 const FRAMEBUFFER_FETCH_ENABLED: &str = "UNITY_FRAMEBUFFER_FETCH_ENABLED";
+/// Light probe proxy volumes are not supported: without one a program's proxy volume branch is
+/// off, so programs compile without `UNITY_LIGHT_PROBE_PROXY_VOLUME`, though
+/// `GraphicsSettings.HasShaderDefine` answers it as the Editor does.
+const NOT_COMPILED: [&str; 1] = ["UNITY_LIGHT_PROBE_PROXY_VOLUME"];
 
 /// The warning for a requirement name Unity does not know ([`targets::Requirements::unknown`]),
 /// naming the shader file it was read from.
@@ -954,7 +958,6 @@ impl ShaderCompiler {
             ("UNITY_COMPILER_HLSL", "1"),
             ("UNITY_COMPILER_HLSLCC", "1"),
             ("UNITY_ENABLE_REFLECTION_BUFFERS", "1"),
-            ("UNITY_LIGHTMAP_FULL_HDR", "1"),
         ]
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
@@ -963,6 +966,7 @@ impl ShaderCompiler {
             self.settings
                 .platform_defines
                 .iter()
+                .filter(|k| !NOT_COMPILED.contains(&k.as_str()))
                 .map(|k| (k.clone(), "1".to_string())),
         );
         if self
@@ -1913,6 +1917,7 @@ mod tests {
         "UNITY_ENABLE_DETAIL_NORMALMAP",
         "UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS",
         "UNITY_HARDWARE_TIER3",
+        "UNITY_LIGHTMAP_FULL_HDR",
     ];
 
     #[test]

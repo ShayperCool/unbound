@@ -372,7 +372,7 @@ namespace Unbound.Tests
             }
             finally
             {
-                GraphicsSettings.SetPlatformShaderDefines(desktop.Append("UNITY_LIGHT_PROBE_PROXY_VOLUME").Where(d => d != "UNITY_HARDWARE_TIER3"));
+                GraphicsSettings.SetPlatformShaderDefines(desktop.Append("UNITY_LIGHT_PROBE_PROXY_VOLUME").Append("UNITY_LIGHTMAP_FULL_HDR").Where(d => d != "UNITY_HARDWARE_TIER3"));
             }
         }
 

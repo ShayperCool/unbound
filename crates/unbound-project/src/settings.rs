@@ -52,6 +52,14 @@ pub struct Settings {
     pub tier_settings: BTreeMap<(i64, i64), TierSettings>,
     /// `EditorSettings.spritePackerMode` (`SpritePackerMode`; 0, Disabled, when unset).
     pub sprite_packer_mode: i64,
+    /// The release in `ProjectVersion.txt` (None without one).
+    pub unity_version: Option<unbound_compat::UnityVersion>,
+    /// `m_BuildTargetGroupLightmapEncodingQuality`: the lightmap encoding quality a build target
+    /// group (`Standalone`, `Android`, ...) sets (0 Low, 1 Normal, 2 High); others use their
+    /// default.
+    pub lightmap_encoding_quality: BTreeMap<String, i64>,
+    /// `m_BuildTargetGroupHDRCubemapEncodingQuality`, alike for HDR cubemaps.
+    pub hdr_cubemap_encoding_quality: BTreeMap<String, i64>,
 }
 
 /// `SpritePackerMode.AlwaysOnAtlas` ("Sprite Atlas V1 - Always Enabled").
@@ -127,6 +135,8 @@ pub struct TierSettings {
     pub detail_normal_map: bool,
     pub cascaded_shadow_maps: bool,
     pub dither_alpha_shadows: bool,
+    /// `enableLPPV`: light probe proxy volumes.
+    pub light_probe_proxy_volume: bool,
 }
 
 impl Settings {
@@ -156,6 +166,7 @@ impl TierSettings {
             detail_normal_map: !mobile,
             cascaded_shadow_maps: !mobile,
             dither_alpha_shadows: !mobile,
+            light_probe_proxy_volume: !mobile,
         }
     }
 
@@ -171,6 +182,7 @@ impl TierSettings {
             detail_normal_map: flag("useDetailNormalMap"),
             cascaded_shadow_maps: flag("useCascadedShadowMaps"),
             dither_alpha_shadows: flag("useDitherMaskForAlphaBlendedShadows"),
+            light_probe_proxy_volume: flag("enableLPPV"),
         }
     }
 }
@@ -301,7 +313,28 @@ impl Settings {
                 .get("allowUnsafeCode")
                 .and_then(Value::as_bool)
                 .unwrap_or(false);
+            for (key, map) in [
+                (
+                    "m_BuildTargetGroupLightmapEncodingQuality",
+                    &mut settings.lightmap_encoding_quality,
+                ),
+                (
+                    "m_BuildTargetGroupHDRCubemapEncodingQuality",
+                    &mut settings.hdr_cubemap_encoding_quality,
+                ),
+            ] {
+                for entry in body.get(key).and_then(Value::as_seq).unwrap_or_default() {
+                    let group = entry.get("m_BuildTarget").and_then(Value::as_str);
+                    let quality = entry.get("m_EncodingQuality").and_then(Value::as_i64);
+                    if let (Some(group), Some(quality)) = (group, quality) {
+                        map.entry(group.to_string()).or_insert(quality);
+                    }
+                }
+            }
         }
+        settings.unity_version = std::fs::read_to_string(dir.join("ProjectVersion.txt"))
+            .ok()
+            .and_then(|text| unbound_compat::UnityVersion::from_project_version_txt(&text).ok());
         if let Some(build) = first_document(&dir.join("EditorBuildSettings.asset"))? {
             for scene in build
                 .body
@@ -404,10 +437,13 @@ impl Settings {
 
     /// The built-in shader defines a build target group's shaders compile with in the Editor
     /// (measured on 6000.0 with Android active): Android's are mobile ones (`SHADER_API_MOBILE`,
-    /// normal maps unpacked from RGB), then come those of the highest graphics
-    /// tier the Editor runs, which `UNITY_HARDWARE_TIER3` names only when the tiers differ.
-    /// `UNITY_LIGHT_PROBE_PROXY_VOLUME` is left out: proxy volumes are not supported, and
-    /// without one its branch is off. The Metal device adds framebuffer fetch, and its fallback
+    /// normal maps unpacked from RGB, no RGBM and no cubemap arrays), then come those of the
+    /// highest graphics tier the Editor runs, which `UNITY_HARDWARE_TIER3` names only when the
+    /// tiers differ, and the define of the lightmap encoding ([`Self::lighting_encodings`]).
+    /// `GraphicsSettings.HasShaderDefine` answers the same set without the tier's name
+    /// (tests/projects/lightmapencoding, Standalone and Android); programs compile without
+    /// `UNITY_LIGHT_PROBE_PROXY_VOLUME`: proxy volumes are not supported, and without one its
+    /// branch is off (unbound_shaders' NOT_COMPILED). The Metal device adds framebuffer fetch, and its fallback
     /// for GPUs without it while the standalone target is active and the macOS standalone
     /// platform's graphics API list has Metal (an automatic list has): measured on the macOS
     /// Editor (tests/projects/urp CapsProbe `HasShaderDefine.*`: `caps-metal.jsonl`; without the
@@ -438,7 +474,12 @@ impl Settings {
             || (0..3).any(|i| !self.tier_settings.contains_key(&(id, i)));
         let high = tiers[2];
         let mut defines = if mobile {
-            vec!["SHADER_API_MOBILE", "UNITY_NO_DXT5nm"]
+            vec![
+                "SHADER_API_MOBILE",
+                "UNITY_NO_DXT5nm",
+                "UNITY_NO_RGBM",
+                "UNITY_NO_CUBEMAP_ARRAY",
+            ]
         } else {
             vec!["SHADER_API_DESKTOP"]
         };
@@ -456,12 +497,17 @@ impl Settings {
                 high.dither_alpha_shadows,
                 "UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS",
             ),
+            (
+                high.light_probe_proxy_volume,
+                "UNITY_LIGHT_PROBE_PROXY_VOLUME",
+            ),
             (tiers_differ, "UNITY_HARDWARE_TIER3"),
         ] {
             if on {
                 defines.push(define);
             }
         }
+        defines.push(self.lighting_encodings(group).lightmap_define());
         if device == unbound_compat::GraphicsDevice::Metal {
             defines.push("UNITY_FRAMEBUFFER_FETCH_AVAILABLE");
             let metal = unbound_compat::GraphicsDevice::Metal.device_type();
@@ -475,6 +521,23 @@ impl Settings {
             }
         }
         defines
+    }
+
+    /// How a build target group stores baked lightmaps and HDR cubemaps: its Player Settings
+    /// encoding qualities for the project's release ([`unbound_compat::LightingEncodings`]);
+    /// PlayerSettings stores iOS as `iPhone`.
+    pub fn lighting_encodings(&self, group: &str) -> unbound_compat::LightingEncodings {
+        let key = if group == "iOS" { "iPhone" } else { group };
+        self.unity_version
+            .map(|version| {
+                unbound_compat::LightingEncodings::resolve(
+                    version,
+                    group,
+                    self.lightmap_encoding_quality.get(key).copied(),
+                    self.hdr_cubemap_encoding_quality.get(key).copied(),
+                )
+            })
+            .unwrap_or_default()
     }
 
     /// The defines of a build target group; PlayerSettings stores iOS as `iPhone`.
@@ -700,7 +763,9 @@ mod tests {
                 "UNITY_SPECCUBE_BLENDING",
                 "UNITY_ENABLE_DETAIL_NORMALMAP",
                 "UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS",
+                "UNITY_LIGHT_PROBE_PROXY_VOLUME",
                 "UNITY_HARDWARE_TIER3",
+                "UNITY_LIGHTMAP_FULL_HDR",
             ]
         );
         // Measured: Android's automatic tiers.
@@ -709,9 +774,12 @@ mod tests {
             [
                 "SHADER_API_MOBILE",
                 "UNITY_NO_DXT5nm",
+                "UNITY_NO_RGBM",
+                "UNITY_NO_CUBEMAP_ARRAY",
                 "UNITY_PBS_USE_BRDF2",
                 "UNITY_NO_SCREENSPACE_SHADOWS",
                 "UNITY_HARDWARE_TIER3",
+                "UNITY_LIGHTMAP_FULL_HDR",
             ]
         );
         // Measured: every Android tier set alike, low quality, cascades on.
@@ -722,6 +790,7 @@ mod tests {
             detail_normal_map: false,
             cascaded_shadow_maps: true,
             dither_alpha_shadows: false,
+            light_probe_proxy_volume: false,
         };
         let mut settings = Settings::default();
         for tier in 0..3 {
@@ -732,7 +801,10 @@ mod tests {
             [
                 "SHADER_API_MOBILE",
                 "UNITY_NO_DXT5nm",
-                "UNITY_PBS_USE_BRDF3"
+                "UNITY_NO_RGBM",
+                "UNITY_NO_CUBEMAP_ARRAY",
+                "UNITY_PBS_USE_BRDF3",
+                "UNITY_LIGHTMAP_FULL_HDR"
             ]
         );
         // A lower tier set otherwise: the highest tier's, named.
@@ -748,9 +820,48 @@ mod tests {
             [
                 "SHADER_API_MOBILE",
                 "UNITY_NO_DXT5nm",
+                "UNITY_NO_RGBM",
+                "UNITY_NO_CUBEMAP_ARRAY",
                 "UNITY_PBS_USE_BRDF3",
-                "UNITY_HARDWARE_TIER3"
+                "UNITY_HARDWARE_TIER3",
+                "UNITY_LIGHTMAP_FULL_HDR"
             ]
+        );
+    }
+
+    #[test]
+    fn lightmap_encoding_follows_the_targets_player_settings() {
+        let dir = std::env::temp_dir().join(format!("unbound-encodings-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("ProjectSettings")).unwrap();
+        std::fs::write(
+            dir.join("ProjectSettings/ProjectVersion.txt"),
+            "m_EditorVersion: 6000.0.71f1\n",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("ProjectSettings/ProjectSettings.asset"),
+            "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!129 &1\nPlayerSettings:\n  \
+             productName: P\n  m_BuildTargetGroupLightmapEncodingQuality:\n  - serializedVersion: 2\n    \
+             m_BuildTarget: Standalone\n    m_EncodingQuality: 1\n  \
+             m_BuildTargetGroupHDRCubemapEncodingQuality:\n  - serializedVersion: 2\n    \
+             m_BuildTarget: Android\n    m_EncodingQuality: 2\n",
+        )
+        .unwrap();
+        let settings = Settings::read(&dir).unwrap();
+        std::fs::remove_dir_all(&dir).ok();
+        use unbound_compat::HdrEncoding::*;
+        let android = settings.lighting_encodings("Android");
+        // Android's lightmaps keep their default (Low); its cubemaps are set High.
+        assert_eq!((android.lightmap, android.cubemap), (DoubleLdr, Native));
+        let standalone = settings.lighting_encodings("Standalone");
+        assert_eq!((standalone.lightmap, standalone.cubemap), (Rgbm, Native));
+        assert_eq!(
+            settings.shader_defines("Android", OpenGLCore).last(),
+            Some(&"UNITY_LIGHTMAP_DLDR_ENCODING")
+        );
+        assert_eq!(
+            settings.shader_defines("Standalone", OpenGLCore).last(),
+            Some(&"UNITY_LIGHTMAP_RGBM_ENCODING")
         );
     }
 }

@@ -1,6 +1,7 @@
 //! Unity releases and the compatibility profiles that select per-release behaviour.
 mod audio;
 mod graphics;
+mod lighting;
 mod mtl;
 mod profile;
 mod shader_keywords;
@@ -13,6 +14,7 @@ pub use graphics::{
     Conventions, DeviceRequest, GraphicsDevice, HostOs, candidates, forced_by_option,
     parse_api_list, select as select_device,
 };
+pub use lighting::{HdrEncoding, LightingEncodings};
 pub use mtl::{MtlColor, MtlRules, MtlTransparency};
 pub use profile::{CompileMode, Feature, InputHandling, Profile, ProfileData};
 pub use shader_keywords::ShaderKeywordRules;
