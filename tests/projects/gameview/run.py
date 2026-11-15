@@ -134,7 +134,7 @@ def unbound(work, gate=False):
         if result and gate:
             failures = differences(base.reference(),target)[1]
             if precision_only(failures):
-                print('gate: only the recorded one-step pointer precision residual remains')
+                print('gate: only the recorded pointer precision residual remains')
                 return 0
         return result
     finally:

@@ -25,7 +25,7 @@ Two engine resize controls retain the previous image without a camera render: a 
 stays centered; an ordinary view fills the resized window. The latter preserves Unbound's
 previous behavior and is not an additional Editor capture claim.
 Every reference row is compared exactly, including missing/extra keys. One raw pointer row
-remains one float step apart: `1.pointer2` is `(480, -124.444443)` in the Editor and
+remains two float32 steps apart: `1.pointer2` is `(480, -124.444443)` in the Editor and
 `(480, -124.444458)` in the engine. The vertical conversion's subtraction and scale round
 differently. It is recorded without changing the comparator or reference. `unbound` returns
 failure for that row; `gate` accepts only that exact expected/actual pair and prints the raw
