@@ -52,6 +52,24 @@ namespace Unbound.Tests
             return new[] { result }.Concat(capture.Logs).ToList();
         }
 
+        /// <summary>The compressed TextureFormats are those the Editor's IsCompressedFormat
+        /// listed (the reference's volume.make.* keys, in TextureFormat's order).</summary>
+        [Fact]
+        public void CompressedTextureFormatsAreTheEditors()
+        {
+            var recorded = File.ReadLines(Reference())
+                .Select(line => JsonDocument.Parse(line).RootElement.GetProperty("k").GetString())
+                .Where(k => k.StartsWith("volume.make.", StringComparison.Ordinal))
+                .Select(k => Enum.Parse<TextureFormat>(k.Substring("volume.make.".Length)))
+                .ToList();
+            var compressed = Enum.GetValues<TextureFormat>().Distinct()
+                .Where(f => (int)f >= 0 && UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsCompressedFormat(f))
+                .OrderBy(f => (int)f)
+                .ToList();
+            Assert.Equal(recorded, compressed);
+            Assert.False(UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsCompressedFormat(TextureFormat.RGBA32));
+        }
+
         [Fact]
         public void VolumesOfCompressedFormatsAsTheDeviceMakesThem()
         {

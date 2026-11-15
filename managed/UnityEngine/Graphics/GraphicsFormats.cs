@@ -190,6 +190,18 @@ namespace UnityEngine.Experimental.Rendering
         public static bool IsSIntFormat(GraphicsFormat format) => Of(format).Integer && Of(format).Signed;
         public static bool IsXRFormat(GraphicsFormat format) => Of(format).Name?.Contains("_XR") == true;
         public static bool IsCompressedFormat(GraphicsFormat format) => Of(format).Compressed;
+        /// <summary>Whether a TextureFormat is block-compressed: DXT and BC, Crunched, PVRTC, ETC,
+        /// EAC and ASTC formats, as the Unity 6000.0.71f1 Editor answers for every TextureFormat of
+        /// a non-negative value (the macOS Editor's list: tests/projects/nativegfx metal.jsonl
+        /// volume.make.*; the obsolete negative values are unmeasured and answer false).</summary>
+        public static bool IsCompressedFormat(TextureFormat format) => (int)format switch
+        {
+            10 or 12 => true,          // DXT1, DXT5
+            >= 24 and <= 34 => true,   // BC6H, BC7, BC4, BC5, DXT1/DXT5 Crunched, PVRTC, ETC_RGB4
+            >= 41 and <= 53 => true,   // EAC, ETC2, ASTC 4x4..12x12
+            >= 64 and <= 71 => true,   // ETC Crunched, ASTC HDR
+            _ => false,
+        };
         public static bool IsPackedFormat(GraphicsFormat format) => Of(format).Packed;
         public static bool Is16BitPackedFormat(GraphicsFormat format) => Of(format).Name?.Contains("Pack16") == true;
         public static bool IsDXTCFormat(GraphicsFormat format) => Of(format).Name?.Contains("DXT") == true;
