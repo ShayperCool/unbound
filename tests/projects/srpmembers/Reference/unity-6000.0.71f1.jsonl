@@ -1,0 +1,98 @@
+{"k":"guard.default","v":"False"}
+{"k":"guard.on.rt","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.rtLoadStore","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.rtColorDepthLoadStore","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.rtMip","v":"ok"}
+{"k":"guard.on.rtMipFace","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.rtMipFaceSlice","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.colorDepth","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.colorDepthMip","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.colorDepthMipFace","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.colorDepthMipFaceSlice","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.colorDepthLoadStore","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.colorsDepth","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.colorsDepthMipFaceSlice","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.binding","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.bindingMipFaceSlice","v":"throws Exception: Setrendertarget is not allowed in this context"}
+{"k":"guard.on.blit","v":"ok"}
+{"k":"guard.on.clear","v":"ok"}
+{"k":"guard.on.graphicsSetRenderTarget","v":"ok"}
+{"k":"guard.off.rt","v":"ok"}
+{"k":"usage.vertex","v":"LockBufferForWrite"}
+{"k":"usage.index","v":"LockBufferForWrite"}
+{"k":"usage.vertexIndex","v":"LockBufferForWrite"}
+{"k":"usage.structured","v":"None"}
+{"k":"usage.raw","v":"None"}
+{"k":"usage.vertexStructured","v":"None"}
+{"k":"usage.vertexCopyDestination","v":"None"}
+{"k":"create.zeroCount","v":"throws ArgumentException: Attempting to create a zero length graphics buffer\u000aParameter name: count"}
+{"k":"create.negativeCount","v":"throws ArgumentException: Attempting to create a zero length graphics buffer\u000aParameter name: count"}
+{"k":"create.zeroStride","v":"throws ArgumentException: Attempting to create a graphics buffer with a negative or null stride\u000aParameter name: stride"}
+{"k":"create.indexStride3","v":"throws ArgumentException: Attempting to create an index buffer with an invalid stride: 3\u000aParameter name: stride"}
+{"k":"create.indexStride8","v":"throws ArgumentException: Attempting to create an index buffer with an invalid stride: 8\u000aParameter name: stride"}
+{"k":"create.structuredStride6","v":"throws ArgumentException: Stride must be a multiple of 4 unless the buffer is only used as a vertex buffer and/or index buffer \u000aParameter name: stride"}
+{"k":"create.vertexStride6","v":"ok"}
+{"k":"create.vertexCopySourceStride6","v":"ok"}
+{"k":"create.rawStride6","v":"throws ArgumentException: Stride must be a multiple of 4 unless the buffer is only used as a vertex buffer and/or index buffer \u000aParameter name: stride"}
+{"k":"usage.lockCopyDestination","v":"throws ArgumentException: Attempting to create a LockBufferForWrite capable buffer that can be copied into. LockBufferForWrite buffers are read-only on the GPU."}
+{"k":"lock.withoutUsage","v":"throws InvalidOperationException: GraphicsBuffer must be created with usage mode UsageFlage.LockBufferForWrite to use LockBufferForWrite"}
+{"k":"lock.released","v":"throws InvalidOperationException: LockBufferForWrite requires a valid GraphicsBuffer"}
+{"k":"lock.initial","v":"100,101,102,103,104,105,106,107"}
+{"k":"lock.negativeStart","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\u000aParameter name: Bad indices/count arguments (bufferStartIndex:-1 count:1 elementSize:4, this.count:8, this.stride4)"}
+{"k":"lock.negativeCount","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\u000aParameter name: Bad indices/count arguments (bufferStartIndex:0 count:-1 elementSize:4, this.count:8, this.stride4)"}
+{"k":"lock.pastEnd","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\u000aParameter name: Bad indices/count arguments (bufferStartIndex:6 count:3 elementSize:4, this.count:8, this.stride4)"}
+{"k":"lock.largerElement","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\u000aParameter name: Bad indices/count arguments (bufferStartIndex:0 count:5 elementSize:8, this.count:8, this.stride4)"}
+{"k":"lock.unlockWithoutLock","v":"throws InvalidOperationException: GraphicsBuffer.UnlockBufferAfterWrite was called without matching GraphicsBuffer.LockBufferForWrite (inner NullReferenceException)"}
+{"k":"lock.write","v":"3 100,101,7,8,9,105,106,107"}
+{"k":"lock.writePartial","v":"1,2,3,8,9,105,106,107"}
+{"k":"lock.arrayAfterUnlock","v":"throws ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"k":"lock.negativeCountWritten","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\u000aParameter name: Bad indices/count arguments (countWritten:-1)"}
+{"k":"lock.afterNegativeCountWritten","v":"-1,-1,-1,-1,-1,-1,-1,-1"}
+{"k":"lock.zero","v":"0 50,2,3,8,9,105,106,107"}
+{"k":"lock.getDataWhileLocked","v":"-2,-2,-2,-2,-2,-2,-2,-2 then 60,2,3,8,9,105,106,107"}
+{"k":"lock.setDataWhileUnlocked","v":"60,2,3,8,9,105,5,6"}
+{"k":"element.colorDepth.block.Default","v":"0.251,0.498,0.749,1.000 get:rt"}
+{"k":"element.colorDepth.material.Default","v":"0.251,0.498,0.749,1.000"}
+{"k":"element.colorDepth.block.Color","v":"0.251,0.498,0.749,1.000 get:rt"}
+{"k":"element.colorDepth.material.Color","v":"0.251,0.498,0.749,1.000"}
+{"k":"element.colorDepth.block.Depth","v":"0.300,0.000,0.000,1.000 get:rt"}
+{"k":"element.colorDepth.material.Depth","v":"0.300,0.000,0.000,1.000"}
+{"k":"element.colorDepth.blockPlain","v":"0.251,0.498,0.749,1.000"}
+{"k":"element.colorDepth.blockReplaced","v":"0.251,0.498,0.749,1.000"}
+{"k":"element.depthOnly.block.Default","v":"0.300,0.000,0.000,1.000 get:rt"}
+{"k":"element.depthOnly.material.Default","v":"0.300,0.000,0.000,1.000"}
+{"k":"element.depthOnly.block.Color","v":"0.000,0.000,0.000,0.000 get:null"}
+{"k":"element.depthOnly.material.Color","v":"0.000,0.000,0.000,0.000"}
+{"k":"element.depthOnly.block.Depth","v":"0.300,0.000,0.000,1.000 get:rt"}
+{"k":"element.depthOnly.material.Depth","v":"0.300,0.000,0.000,1.000"}
+{"k":"element.depthOnly.blockPlain","v":"0.300,0.000,0.000,1.000"}
+{"k":"element.depthOnly.blockReplaced","v":"0.300,0.000,0.000,1.000"}
+{"k":"element.blockNull","v":"throws ArgumentNullException: Value cannot be null.\u000aParameter name: value"}
+{"k":"element.blockByName","v":"0.300,0.000,0.000,1.000"}
+{"k":"keyword.global","v":"SRPM_GLOBAL"}
+{"k":"keyword.default","v":"null"}
+{"k":"keyword.empty","v":""}
+{"k":"keyword.shaderLocal","v":"INSTANCING_ON True"}
+{"k":"keyword.valid","v":"True True False"}
+{"k":"keyword.setBuiltin","v":"False False 0"}
+{"k":"keyword.set","v":"False False False"}
+{"k":"tier.active","v":"Tier3"}
+{"k":"tier.set","v":"Tier1 Tier3"}
+{"k":"tier.outOfRange","v":"7"}
+{"k":"gles.min","v":"None"}
+{"k":"tiled.max","v":"2147483647"}
+{"k":"tiled.R8G8B8A8_UNorm.1","v":"4"}
+{"k":"tiled.R16G16B16A16_SFloat.4","v":"32"}
+{"k":"tiled.D24_UNorm_S8_UInt.1","v":"4"}
+{"k":"tiled.None.1","v":"0"}
+{"k":"instanced.eleven","v":"48"}
+{"k":"instanced.twelve","v":"48"}
+{"k":"instanced.twelveTwo","v":"32"}
+{"k":"instanced.countPastMatrices","v":"throws ArgumentOutOfRangeException: Count must be in the range of 0 to 3.\u000aParameter name: count"}
+{"k":"instanced.negativeCount","v":"throws ArgumentOutOfRangeException: Count must be in the range of 0 to 3.\u000aParameter name: count"}
+{"k":"instanced.proxyNull","v":"throws ArgumentException: Argument lightProbeProxyVolume must not be null if lightProbeUsage is set to UseProxyVolume.\u000aParameter name: lightProbeProxyVolume"}
+{"k":"instanced.listProxyNull","v":"throws ArgumentException: Argument lightProbeProxyVolume must not be null if lightProbeUsage is set to UseProxyVolume.\u000aParameter name: lightProbeProxyVolume"}
+{"k":"instanced.nullMatrices","v":"throws ArgumentNullException: Value cannot be null.\u000aParameter name: matrices"}
+{"k":"instanced.zeroCount","v":"0"}
+{"k":"instanced.afterErrors","v":"0"}
+{"k":"complete","v":true}
