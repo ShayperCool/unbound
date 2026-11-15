@@ -1,33 +1,25 @@
 {
  "opengl": {
-  "Between frames a windowed Editor's own window drawing leaves its last view's pixel matrix as GL's matrices (1280x217 in these captures, not the 64x32 Game view), and Camera.Render gives it back; Unbound draws no Editor windows and starts each frame from identity, as the batchmode OpenGL Core Editor does (opengl-batch.jsonl matrices.early; on Vulkan in the converted form the batchmode Vulkan Editor gives back after a buffer, vulkan-batch.jsonl matrices.fresh)": [
+  "Between frames a windowed Editor's GL matrices are the pixel matrix of its last window drawing (1280x217 with its own depth range in these captures, an Editor view of the window's layout, not the 64x32 Game view); Unbound, whose one window is the Game view, loads the Game view's pixel matrix (Ortho(0, 64, 32, 0, -1, 100)) and gives it back after Camera.Render; the clip-space draws come out the same (outside.*: nothing drawn)": [
    "matrices.early",
    "matrices.fresh",
    "matrices.aftercamera",
    "matrices.corner",
    "matrices.after",
-   "matrices.late",
-   "outside.fresh",
-   "outside.aftercamera",
-   "outside.corner",
-   "outside.after"
+   "matrices.late"
   ],
   "Inside OnGUI's Repaint, DrawMeshNow in the windowed Editor keeps the frame's last camera's view under the GUI's pixel projection while GL.modelview and executed buffers have identity; Unbound draws it with GL's modelview (identity)": [
    "matrices.ongui.now"
   ]
  },
  "vulkan": {
-  "Between frames a windowed Editor's own window drawing leaves its last view's pixel matrix as GL's matrices (1280x217 in these captures, not the 64x32 Game view), and Camera.Render gives it back; Unbound draws no Editor windows and starts each frame from identity, as the batchmode OpenGL Core Editor does (opengl-batch.jsonl matrices.early; on Vulkan in the converted form the batchmode Vulkan Editor gives back after a buffer, vulkan-batch.jsonl matrices.fresh)": [
+  "Between frames a windowed Editor's GL matrices are the pixel matrix of its last window drawing (1280x217 with its own depth range in these captures, an Editor view of the window's layout, not the 64x32 Game view); Unbound, whose one window is the Game view, loads the Game view's pixel matrix (Ortho(0, 64, 32, 0, -1, 100)) and gives it back after Camera.Render; the clip-space draws come out the same (outside.*: nothing drawn)": [
    "matrices.early",
    "matrices.fresh",
    "matrices.aftercamera",
    "matrices.corner",
    "matrices.after",
-   "matrices.late",
-   "outside.fresh",
-   "outside.aftercamera",
-   "outside.corner",
-   "outside.after"
+   "matrices.late"
   ],
   "Inside OnGUI's Repaint, DrawMeshNow in the windowed Editor keeps the frame's last camera's view under the GUI's pixel projection while GL.modelview and executed buffers have identity; Unbound draws it with GL's modelview (identity)": [
    "matrices.ongui.now"

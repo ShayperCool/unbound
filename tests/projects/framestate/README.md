@@ -65,13 +65,18 @@ differs in, per device, with the reason, and every report lists them.
     drawn with them are black; `GL.modelview` reads all zeros already in an earlier frame's
     Update, before that frame executed any buffer. What sets the zeros is not established.
 
-Unbound starts each frame from identity (in the device's converted form on Vulkan), leaves the
-frame's last camera's matrices for the end-of-frame callbacks, gives them back after
-`Camera.Render` and loads the screen's pixel matrix for each OnGUI Repaint, leaving it after the
-GUI. Declared residuals per device: the windowed Editors' pixel matrix between frames (10) and
-`DrawMeshNow`'s view inside OnGUI (1). Unmeasured: a last camera with image effects, a scriptable pipeline's
-frame, overlay canvases, several OnGUI scripts (Unbound loads the pixel matrix before each),
-`DrawMeshNow` after a script's own `GL.LoadPixelMatrix`, and the windowed macOS Editor. The Scripting API pages for
+Unbound follows the windowed Editor: its one window is the Game view, so a frame ends with the
+Game view's pixel matrix (`Ortho(0, width, height, 0, -1, 100)`, the matrix of its OnGUI
+Repaint) as GL's matrices, and clip-space draws outside cameras draw nothing, as in the windowed
+Editors (`outside.*`; the windowed macOS Editor agrees, tests/projects/nativegfx
+`metal-windowed.jsonl`). It leaves the frame's last camera's matrices for the end-of-frame
+callbacks, gives GL's matrices back after `Camera.Render` and loads the screen's pixel matrix for
+each OnGUI Repaint, leaving it after the GUI. Declared residuals per device: the Editor view's
+pixel matrix between frames, whose size and depth range follow the Editor's layout (6), and
+`DrawMeshNow`'s view inside OnGUI (1). Unmeasured: a last camera with image effects, a scriptable
+pipeline's frame, overlay canvases, several OnGUI scripts (Unbound loads the pixel matrix before
+each), `DrawMeshNow` after a script's own `GL.LoadPixelMatrix`, and GL's matrices before the first
+frame ends (Unbound: identity). The Scripting API pages for
 [Graphics.ExecuteCommandBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.ExecuteCommandBuffer.html)
 and [RenderTexture.active](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture-active.html)
 state neither rule; both are observed in these captures. The OnGUI pixel matrix gives
