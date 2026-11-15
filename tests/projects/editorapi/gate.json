@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/editorapi/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION",
+    "python3 -m unittest discover -s tests/projects/editorapi -p test_compare.py"
+  ],
+  "summary": "\\d+/\\d+ exact API rows; \\d+ queued differences; \\d+ unexpected; \\d+ stale",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/EditorPlayMode.cs",
+    "managed/UnityEngine/Editor/AssetEditability.cs",
+    "managed/UnityEngine/Editor/EditorTypeLookup.cs",
+    "managed/UnityEngine/Editor/Menu.cs",
+    "managed/UnityEngine/Editor/Undo.cs",
+    "managed/UnityEngine/Platform/PlayerConnection.cs",
+    "managed/UnityEngine/Core/Events.cs"
+  ]
+}

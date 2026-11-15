@@ -583,6 +583,18 @@
       "type": "Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility+TimestampConversionRatio"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "Unity.Profiling.Memory.MemoryProfiler"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "Unity.Profiling.Memory.MemorySnapshotMetadata"
+    },
+    {
       "category": "struct",
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
@@ -1053,6 +1065,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.ClipboardUtility"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.CloudProjectSettings"
     },
@@ -1223,6 +1241,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.EditorStyles"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.EditorTools.ToolManager"
     },
     {
       "category": "class",
@@ -1399,6 +1423,12 @@
       "type": "UnityEditor.InitializeOnLoadMethodAttribute"
     },
     {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.InspectorWindow"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "static",
@@ -1431,6 +1461,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Menu"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.MenuItem"
     },
@@ -1453,6 +1489,18 @@
       "type": "UnityEditor.Networking.PlayerConnection.EditorConnection"
     },
     {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ObjectChangeEventStream"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.ObjectChangeEvents"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
@@ -1473,6 +1521,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.PackageManager.Events"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.PackageManager.PackageCollection"
     },
@@ -1481,6 +1535,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.PackageManager.PackageInfo"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.PackageManager.PackageRegistrationEventArgs"
     },
     {
       "category": "class",
@@ -1565,6 +1625,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "abstract",
       "type": "UnityEditor.PropertyDrawer"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.PropertyEditor"
     },
     {
       "category": "class",
@@ -1675,6 +1741,12 @@
       "type": "UnityEditor.ShaderGUI"
     },
     {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ShaderImporter"
+    },
+    {
       "category": "struct",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
@@ -1709,6 +1781,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.SpeedTree.Importer.SpeedTreeImporterOutputData"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SpriteUtilityWindow"
     },
     {
       "category": "class",
@@ -4157,6 +4235,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.Networking.PlayerConnection.MessageEventArgs"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.Networking.PlayerConnection.PlayerConnection"
     },
     {
       "category": "class",

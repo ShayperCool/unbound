@@ -1,5 +1,18 @@
 # Default state of implemented API types
 
+The Editor Play-mode API additions retain 108 rows for 14 types from two independent
+Unity 6000.0.71f1 GPU Editor captures, both normal NVIDIA RTX 4060 exits. The repeated
+new rows agree exactly; all 13,161 earlier reference rows remain byte-identical and in
+their original relative order. Existing variable rows and queued differences keep their
+original policies and raw values. The added controls include memory metadata, window
+bases, package-event arguments, shader importers and disconnected player-connection state. The shared property-editor
+base now supplies the measured 275-pixel minimum width. Sixteen additional UI lifecycle
+rows remain exact queued differences for controllers, roots, tracking and title/icon
+initialization. Two existing allocation-identity rows retain their original Native values;
+the prior and current implementation identities are both recorded in their reasons after
+the extra construction controls shift allocation order. No variable policy or tolerance
+was added.
+
 The Editor service slice adds seven rows for five newly implemented types. Two independent GPU captures agree on the added rows; all earlier canonical rows remain byte-identical.
 The consent struct has two zero-valued intents, and the four service classes are excluded
 as static or nonconstructible.

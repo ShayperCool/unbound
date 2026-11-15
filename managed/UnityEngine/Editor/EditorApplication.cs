@@ -153,7 +153,7 @@ namespace UnityEditor
                 if (!method.IsStatic || method.GetParameters().Length != 0) continue;
                 foreach (MenuItem item in method.GetCustomAttributes(typeof(MenuItem), false))
                 {
-                    if (item.menuItem != menuItemPath) continue;
+                    if (Menu.NormalizeItemPath(item.menuItem) != menuItemPath) continue;
                     if (item.validate) check ??= method;
                     else run ??= method;
                 }

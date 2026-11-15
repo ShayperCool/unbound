@@ -213,7 +213,7 @@ namespace UnityEngine.Events
 
         internal void RemoveCall(Delegate call)
         {
-            m_RuntimeCalls.RemoveAll(d => d.Target == call.Target && d.Method == call.Method);
+            RemoveListener(call.Target, call.Method);
         }
 
         static Type ActionTypeFor(MethodInfo method)

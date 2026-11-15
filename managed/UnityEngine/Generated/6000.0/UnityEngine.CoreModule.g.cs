@@ -221,8 +221,7 @@ namespace Unity.Profiling.Memory
         NativeAllocationSites = 8U,
         NativeStackTraces = 16U,
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class MemoryProfiler
+    unsafe static partial class MemoryProfiler
     {
         [global::Unbound.Stub] internal static void StartedCompilationCallback(object msg) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.Memory.MemoryProfiler.StartedCompilationCallback"); }
         [global::Unbound.Stub] internal static void FinishedCompilationCallback(object msg) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.Memory.MemoryProfiler.FinishedCompilationCallback"); }
@@ -231,13 +230,9 @@ namespace Unity.Profiling.Memory
         [global::Unbound.Stub] public static void TakeTempSnapshot(global::System.Action<string, bool> finishCallback, global::Unity.Profiling.Memory.CaptureFlags captureFlags = (global::Unity.Profiling.Memory.CaptureFlags)3U) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.Memory.MemoryProfiler.TakeTempSnapshot"); }
         [global::Unbound.Stub] internal static int WriteIntToByteArray(byte[] array, int offset, int value) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.Memory.MemoryProfiler.WriteIntToByteArray"); return default; }
         [global::Unbound.Stub] internal static int WriteStringToByteArray(byte[] array, int offset, string value) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.Memory.MemoryProfiler.WriteStringToByteArray"); return default; }
-        public static event global::System.Action<global::Unity.Profiling.Memory.MemorySnapshotMetadata> CreatingMetadata { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.Memory.MemoryProfiler.CreatingMetadata"); } [global::Unbound.Stub] remove { } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class MemorySnapshotMetadata
+    unsafe partial class MemorySnapshotMetadata
     {
-        [global::Unbound.Stub] public MemorySnapshotMetadata() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.Memory.MemorySnapshotMetadata.ctor"); }
-        public string Description { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.Memory.MemorySnapshotMetadata.Description"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.Memory.MemorySnapshotMetadata.Description"); } }
         internal byte[] Data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.Memory.MemorySnapshotMetadata.Data"); return global::System.Array.Empty<byte>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("Unity.Profiling.Memory.MemorySnapshotMetadata.Data"); } }
     }
 }
@@ -3866,37 +3861,22 @@ namespace UnityEngine.Networking.PlayerConnection
         global::UnityEngine.Networking.PlayerConnection.ConnectionTarget connectedToTarget { get; }
         string connectionName { get; }
     }
-    public unsafe partial interface IEditorPlayerConnection
+    unsafe partial interface IEditorPlayerConnection
     {
-        void Register(global::System.Guid messageId, global::UnityEngine.Events.UnityAction<global::UnityEngine.Networking.PlayerConnection.MessageEventArgs> callback);
-        void Unregister(global::System.Guid messageId, global::UnityEngine.Events.UnityAction<global::UnityEngine.Networking.PlayerConnection.MessageEventArgs> callback);
-        void DisconnectAll();
-        void RegisterConnection(global::UnityEngine.Events.UnityAction<int> callback);
-        void RegisterDisconnection(global::UnityEngine.Events.UnityAction<int> callback);
-        void UnregisterConnection(global::UnityEngine.Events.UnityAction<int> callback);
-        void UnregisterDisconnection(global::UnityEngine.Events.UnityAction<int> callback);
-        void Send(global::System.Guid messageId, byte[] data);
-        bool TrySend(global::System.Guid messageId, byte[] data);
+        [global::Unbound.Stub] void Register(global::System.Guid messageId, global::UnityEngine.Events.UnityAction<global::UnityEngine.Networking.PlayerConnection.MessageEventArgs> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection.Register"); }
+        [global::Unbound.Stub] void Unregister(global::System.Guid messageId, global::UnityEngine.Events.UnityAction<global::UnityEngine.Networking.PlayerConnection.MessageEventArgs> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection.Unregister"); }
+        [global::Unbound.Stub] void DisconnectAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection.DisconnectAll"); }
+        [global::Unbound.Stub] void RegisterConnection(global::UnityEngine.Events.UnityAction<int> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection.RegisterConnection"); }
+        [global::Unbound.Stub] void RegisterDisconnection(global::UnityEngine.Events.UnityAction<int> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection.RegisterDisconnection"); }
+        [global::Unbound.Stub] void UnregisterConnection(global::UnityEngine.Events.UnityAction<int> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection.UnregisterConnection"); }
+        [global::Unbound.Stub] void UnregisterDisconnection(global::UnityEngine.Events.UnityAction<int> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection.UnregisterDisconnection"); }
+        [global::Unbound.Stub] void Send(global::System.Guid messageId, byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection.Send"); }
+        [global::Unbound.Stub] bool TrySend(global::System.Guid messageId, byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection.TrySend"); return default; }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class PlayerConnection : global::UnityEngine.ScriptableObject, global::UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection
+    unsafe partial class PlayerConnection
     {
         [global::Unbound.Stub] internal static global::UnityEngine.IPlayerEditorConnectionNative connectionNative;
-        [global::Unbound.Stub] public void OnEnable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.OnEnable"); }
-        [global::Unbound.Stub] public void Register(global::System.Guid messageId, global::UnityEngine.Events.UnityAction<global::UnityEngine.Networking.PlayerConnection.MessageEventArgs> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.Register"); }
-        [global::Unbound.Stub] public void Unregister(global::System.Guid messageId, global::UnityEngine.Events.UnityAction<global::UnityEngine.Networking.PlayerConnection.MessageEventArgs> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.Unregister"); }
-        [global::Unbound.Stub] public void RegisterConnection(global::UnityEngine.Events.UnityAction<int> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.RegisterConnection"); }
-        [global::Unbound.Stub] public void RegisterDisconnection(global::UnityEngine.Events.UnityAction<int> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.RegisterDisconnection"); }
-        [global::Unbound.Stub] public void UnregisterConnection(global::UnityEngine.Events.UnityAction<int> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.UnregisterConnection"); }
-        [global::Unbound.Stub] public void UnregisterDisconnection(global::UnityEngine.Events.UnityAction<int> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.UnregisterDisconnection"); }
-        [global::Unbound.Stub] public void Send(global::System.Guid messageId, byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.Send"); }
-        [global::Unbound.Stub] public bool TrySend(global::System.Guid messageId, byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.TrySend"); return default; }
         [global::Unbound.Stub] public bool BlockUntilRecvMsg(global::System.Guid messageId, int timeout) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.BlockUntilRecvMsg"); return default; }
-        [global::Unbound.Stub] public void DisconnectAll() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.DisconnectAll"); }
-        [global::Unbound.Stub] public PlayerConnection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.ctor"); }
-        public static global::UnityEngine.Networking.PlayerConnection.PlayerConnection instance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.instance"); return default; } }
-        public bool isConnected { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Networking.PlayerConnection.PlayerConnection.isConnected"); return default; } }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]

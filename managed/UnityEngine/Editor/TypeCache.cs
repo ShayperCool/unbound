@@ -15,6 +15,8 @@ namespace UnityEditor
         static readonly Dictionary<(string, Type, string), Array> s_Cache = new Dictionary<(string, Type, string), Array>();
         /// <summary>The assembly list the cache was built from (a hot reload replaces it).</summary>
         static IReadOnlyList<Assembly> s_CachedFor;
+        static int s_CachedGeneration = -1;
+        static int s_CachedAssemblyCount;
 
         internal static ulong GetCurrentAge() => 0;
 
@@ -40,10 +42,14 @@ namespace UnityEditor
         {
             lock (s_Cache)
             {
-                if (!ReferenceEquals(s_CachedFor, GameDomain.Assemblies()))
+                if (!ReferenceEquals(s_CachedFor, GameDomain.Assemblies())
+                    || s_CachedGeneration != GameDomain.Generation
+                    || s_CachedAssemblyCount != GameDomain.Assemblies().Count)
                 {
                     s_Cache.Clear();
                     s_CachedFor = GameDomain.Assemblies();
+                    s_CachedGeneration = GameDomain.Generation;
+                    s_CachedAssemblyCount = s_CachedFor.Count;
                 }
                 if (s_Cache.TryGetValue((kind, key, assemblyName), out var cached)) return (T[])cached;
                 var list = new List<T>();

@@ -62,6 +62,7 @@ namespace UnityEditor
         static void Add(Operation operation)
         {
             if (s_Processing) return;
+            ObjectChangeEvents.NoteUndoChange();
             s_Redo.Clear();
             Current(true).Operations.Add(operation);
         }
@@ -169,7 +170,11 @@ namespace UnityEditor
             });
         }
 
-        public static void FlushUndoRecordObjects() => willFlushUndoRecord?.Invoke();
+        public static void FlushUndoRecordObjects()
+        {
+            ObjectChangeEvents.NoteUndoChange();
+            willFlushUndoRecord?.Invoke();
+        }
 
         // ------------------------------------------------------------------ undo, redo
 
@@ -197,6 +202,7 @@ namespace UnityEditor
 
         static void Apply(Group group, bool redo)
         {
+            ObjectChangeEvents.NoteUndoChange();
             s_Processing = true;
             try
             {

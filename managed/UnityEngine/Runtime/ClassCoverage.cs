@@ -317,7 +317,7 @@ namespace Unbound.Runtime
 
         /// <summary>The release's class table (tests/projects/classids/Reference), the exact release's
         /// or else the latest one of its family; null when there is none.</summary>
-        internal static SortedDictionary<int, UnityClass> UnityTable(string release)
+        internal static SortedDictionary<int, UnityClass> UnityTable(string release, bool exact = false)
         {
             var assembly = typeof(ClassCoverage).Assembly;
             const string prefix = "Unbound.class-ids-unity-";
@@ -328,7 +328,7 @@ namespace Unbound.Runtime
                 if (!name.StartsWith(prefix, StringComparison.Ordinal)) continue;
                 var version = name.Substring(prefix.Length, name.Length - prefix.Length - ".jsonl".Length);
                 if (version == release) { best = name; break; }
-                if (family != null && version.StartsWith(family, StringComparison.Ordinal) && (best == null || CompareVersions(version, best.Substring(prefix.Length)) > 0)) best = name;
+                if (!exact && family != null && version.StartsWith(family, StringComparison.Ordinal) && (best == null || CompareVersions(version, best.Substring(prefix.Length)) > 0)) best = name;
             }
             if (best == null) return null;
             var table = new SortedDictionary<int, UnityClass>();

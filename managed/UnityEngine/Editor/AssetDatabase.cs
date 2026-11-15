@@ -353,11 +353,6 @@ namespace UnityEditor
         [Unbound.EditorFaithful("Unbound keeps no asset files open")]
         public static void ReleaseCachedFileHandles() { }
 
-        [Unbound.EditorFaithful("no version control provider: every file is open for edit, as in the Editor without one")]
-        public static bool IsOpenForEdit(Object assetObject) => true;
-
-        [Unbound.EditorFaithful("no version control provider: every file is open for edit, as in the Editor without one")]
-        public static bool IsOpenForEdit(string assetOrMetaFilePath) => true;
     }
 
     /// <summary>A script asset: its source text and the class it declares.</summary>

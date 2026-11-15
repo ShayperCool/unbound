@@ -9,6 +9,19 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        // Property-editor window default measured by the defaultstate 6000.0.71f1 controls.
+        internal const float PropertyEditorMinimumWidth = 275f;
+
+        // Opaque stream ABI recorded by editorapi on 6000.0.71f1: 96 bytes, eight-byte alignment.
+        // Payload production/access and other releases remain unsupported or unmeasured.
+        internal const int ObjectChangeStreamStorageWords = 12;
+
+        /// <summary>Editor name lookup uses only an exact measured class table. The doctor's
+        /// family fallback describes coverage and must not supply another release's API answers.</summary>
+        internal static System.Collections.Generic.SortedDictionary<int, ClassCoverage.UnityClass> EditorClassTable(string release)
+            => ClassCoverage.UnityTable(release, exact: true)
+                ?? throw new NotSupportedException("UnityType metadata has not been measured for Unity " + release + ".");
+
         /// <summary>Tuple argument messages measured by editortuples on 6000.0.71f1.
         /// Other releases retain their previous unmeasured descriptive messages.</summary>
         internal static bool EditorTupleResourceErrors => Release == (6000, 0, 71, 'f', 1);
