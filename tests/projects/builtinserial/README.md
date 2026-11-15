@@ -32,7 +32,8 @@ ScriptableObject, in a nested serializable class, in an array and in a list.
 
 Not compared: the exact text Unbound writes, which a managed test pins to the Editor's text.
 `AssetDatabase.CreateAsset` (not supported by Unbound). The tree of the array containers
-themselves, whose depths differ for every managed array, not only these types. Other releases are
+themselves, whose depths differ for every managed array, not only these types (an open row in
+`docs/COMPATIBILITY_GAPS.md`). Other releases are
 unmeasured.
 
 ```sh
