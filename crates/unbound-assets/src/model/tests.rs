@@ -1442,12 +1442,14 @@ fn a_clip_is_reduced_on_its_takes_frames_and_then_moved_to_its_start() {
 }
 
 /// A Humanoid clip's transform keys take the frame times of every other rig type: the frame
-/// count times one frame's length in single precision, positions ending at the take's end. The
-/// Editor shows these keys only through the converted curves (tests/projects/humanoid,
-/// humanfirstpose) and through the clip's length, which is its last key's time
-/// (tests/projects/modelclips HumanLong: 31 frames at 30 a second are 1.03333342 s, one step
-/// past the take's 1.0333333; HumanB's 20 frames are the control where both agree). Frames 3, 6
-/// and 7 are among those where the plain difference of the times rounds to another value.
+/// count times one frame's length in single precision, positions ending at the take's end and
+/// rotations and scales on its last frame's time. The Editor shows these keys through the
+/// converted curves (tests/projects/humanoid, humanfirstpose), through the clip's length, which
+/// is its last key's time (tests/projects/modelclips HumanLong: 31 frames at 30 a second are
+/// 1.03333342 s, one step past the take's 1.0333333; HumanB's 20 frames are the control where
+/// both agree), and through the transform curves a mask keeps (ends.HumanTwistLate: positions
+/// end at 0.99999994, rotations and scales at 1.00000012). Frames 3, 6 and 7 are among those
+/// where the plain difference of the times rounds to another value.
 #[test]
 fn a_humanoid_clips_transform_keys_take_the_shared_frame_times() {
     let import = |path: &str| {
@@ -1470,13 +1472,15 @@ fn a_humanoid_clips_transform_keys_take_the_shared_frame_times() {
         let end = (count as f64 / 30.0) as f32;
         assert!(!clip.curves.is_empty());
         for node in &clip.curves {
-            let rotations: Vec<f32> = node.rotations.iter().map(|k| k.time).collect();
-            assert_eq!(rotations, frames, "{}", node.path);
-            for keys in [&node.positions, &node.scales] {
-                let times: Vec<f32> = keys.iter().map(|k| k.time).collect();
-                assert_eq!(times[..count], frames[..count], "{}", node.path);
-                assert_eq!(times[count], end, "{}", node.path);
+            for keys in [
+                &node.rotations.iter().map(|k| k.time).collect::<Vec<f32>>(),
+                &node.scales.iter().map(|k| k.time).collect(),
+            ] {
+                assert_eq!(*keys, frames, "{}", node.path);
             }
+            let positions: Vec<f32> = node.positions.iter().map(|k| k.time).collect();
+            assert_eq!(positions[..count], frames[..count], "{}", node.path);
+            assert_eq!(positions[count], end, "{}", node.path);
         }
         assert_eq!(clip.length, frames[count], "{path}");
         // The longer clip is the one whose last key lies past the take's end.
@@ -1500,8 +1504,8 @@ fn a_humanoid_clips_transform_keys_take_the_shared_frame_times() {
 /// lies in the hemisphere of the one before it.
 #[test]
 fn rotations_take_the_sign_of_their_matrix() {
-    // The rule itself: w positive above a half turn's cosine, else the largest diagonal
-    // element's component; a zero rotation and one that is not a number stay.
+    // The rule itself: w positive from a third of a turn's cosine (|w| at least 1/2), else the
+    // largest diagonal element's component; a zero rotation and one that is not a number stay.
     let h = std::f32::consts::FRAC_1_SQRT_2;
     assert_eq!(importer_sign([0.0, 0.0, -h, -h]), [0.0, 0.0, h, h]);
     assert_eq!(importer_sign([0.0, 0.0, h, h]), [0.0, 0.0, h, h]);
@@ -1524,6 +1528,22 @@ fn rotations_take_the_sign_of_their_matrix() {
     assert_eq!(importer_sign([-a, b, -b, a]), [a, -b, b, -a]);
     assert_eq!(importer_sign([a, -b, b, -a]), [a, -b, b, -a]);
     assert_eq!(importer_sign([-a, -0.69, 0.68, a])[1], 0.69);
+    // A tie of x with y or z goes to x, and a trace of exactly zero (a third of a turn about a
+    // diagonal of all three axes) to w (tests/projects/modelclips nodes.AxisTies/*: U0nF2pC1n,
+    // U1nF0pC2p, U0nF1pC2p, U2nF0pC1p); the controls without the tie go to the larger element.
+    assert_eq!(importer_sign([-h, h, 0.0, 0.0]), [h, -h, 0.0, 0.0]);
+    assert_eq!(importer_sign([-h, 0.0, h, 0.0]), [h, 0.0, -h, 0.0]);
+    assert_eq!(importer_sign([-0.69, 0.72, 0.0, 0.0])[1], 0.72);
+    assert_eq!(importer_sign([-0.72, 0.0, 0.69, 0.0])[0], 0.72);
+    assert_eq!(
+        importer_sign([0.5, -0.5, 0.5, -0.5]),
+        [-0.5, 0.5, -0.5, 0.5]
+    );
+    assert_eq!(
+        importer_sign([0.5, 0.5, 0.5, -0.5]),
+        [-0.5, -0.5, -0.5, 0.5]
+    );
+    assert_eq!(importer_sign([0.5, 0.5, 0.52, -0.48])[2], 0.52);
 
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/projects/modelclips/Assets/Resources/HumanTwistGeneric.fbx");

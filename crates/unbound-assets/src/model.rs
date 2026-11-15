@@ -852,7 +852,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 56;
+    const VERSION: u32 = 57;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1709,24 +1709,23 @@ impl<'a> Builder<'a> {
                     // rule for every rig type. A Humanoid clip's transform keys feed the
                     // muscle conversion, whose own sample times follow the same single-precision
                     // frame arithmetic (tests/projects/humanfirstpose, modelclips HumanReduced).
-                    let rotation_time = take_key_time(time, fps);
-                    // Positions and scales end exactly at the range's end (measured for
-                    // positions, tests/projects/modelaxis Reduced: Drift; scales unmeasured).
-                    let time = if time == end {
-                        end as f32
-                    } else {
-                        rotation_time
-                    };
+                    let frame_time = take_key_time(time, fps);
+                    // Positions end exactly at the range's end, rotations and scales on its
+                    // last frame's time (tests/projects/modelaxis Reduced: Drift, positions;
+                    // tests/projects/modelclips ends.HumanTwistLate: frames 1 to 31 of a take
+                    // at 30 a second, whose kept positions end at 0.99999994 and rotations and
+                    // scales at 1.00000012).
+                    let position_time = if time == end { end as f32 } else { frame_time };
                     positions.push(Key {
-                        time,
+                        time: position_time,
                         value: self.position(self.placed(index, &t)),
                     });
                     rotations.push(Key {
-                        time: rotation_time,
+                        time: frame_time,
                         value: unity_rotation(t.rotation),
                     });
                     scales.push(Key {
-                        time,
+                        time: frame_time,
                         value: [t.scale.x as f32, t.scale.y as f32, t.scale.z as f32],
                     });
                 }
@@ -1819,9 +1818,9 @@ impl<'a> Builder<'a> {
             // frame: 31 frames at 30 a second are 1.0333334 s, one step past the range's 1.0333333
             // (tests/projects/modelclips HumanLong), and frames 1 to 31 of a take are 1.00000012 s
             // (`ShapesOff`); a Legacy clip at its range's end (tests/projects/modelaxis Reduced:
-            // Drift, 3 s). Open: a Humanoid clip on frames 1 to 31 of its take (`HumanLate`) is
-            // 0.99999994 s long in the Editor, its last muscle key, where this gives 1.00000012.
-            // A clip without keys has the range (0, 1) of an empty AnimationClip.
+            // Drift, 3 s). A Humanoid clip ends at its last key after its conversion into
+            // muscle curves (managed `HumanClip`: `HumanLate` is 0.99999994 s long, its last
+            // muscle key). A clip without keys has the range (0, 1) of an empty AnimationClip.
             let length = if empty {
                 1.0
             } else if self.settings.animation_type == 1 {
@@ -3680,7 +3679,7 @@ impl TakeSigns {
 
 /// A rotation (`x, y, z, w`) with the sign the Editor's model importer gives a node's final
 /// rotation and its rotation at the start of a take: the sign a rotation matrix gives its quaternion, w
-/// positive while the matrix's trace is positive (|w| above 1/2), else the component of the
+/// positive while the matrix's trace is not negative (|w| at least 1/2), else the component of the
 /// largest diagonal element positive. Matches the Unity 6000.0.71f1 Editor,
 /// tests/projects/modelclips `nodes.HumanTwistGeneric` and the rotation curves of
 /// `clip.HumanTwistGeneric.Scene` (a Generic import: 20 node rotations and 19 curves, four of
@@ -3688,11 +3687,12 @@ impl TakeSigns {
 /// samples (managed `HumanClipImport.ImporterSign`). Legacy imports take it too
 /// (`nodes.HumanTwistLegacy`, `clip.HumanTwistLegacy.Scene`), and so do the nodes of a static
 /// model whose axes are converted, after the conversion (`nodes.AxisSigned/*`, modelaxis' Signed
-/// set). A diagonal element decides only when it is larger than the later ones: on a tie the
-/// later axis decides (the root of `AxisSigned/U2S1B0H0`, whose y and z elements are equal,
-/// takes z positive; a tie with x is unmeasured, as is a trace of exactly zero, which goes to
-/// the axes). The MotionQ curves of a root node keep the sign of their product (unmeasured). A
-/// rotation that is zero or not a number stays as it is.
+/// set). On a tie x decides against y or z and z against y (the root of `AxisSigned/U2S1B0H0`,
+/// whose y and z elements are equal, takes z positive); a trace of exactly zero takes w positive
+/// (`nodes.AxisTies/*`: the axis conversions of all 48 axis systems an FBX file can name, among
+/// them half turns about the diagonals of two axes and turns of a third about the diagonals of
+/// all three; recorded with the macOS Editor). The MotionQ curves of a root node keep the sign
+/// of their product (unmeasured). A rotation that is zero or not a number stays as it is.
 fn importer_sign(q: [f32; 4]) -> [f32; 4] {
     let [x, y, z, w] = q;
     let (xx, yy, zz) = (x * x, y * y, z * z);
@@ -3703,9 +3703,9 @@ fn importer_sign(q: [f32; 4]) -> [f32; 4] {
         n - 2.0 * (xx + zz),
         n - 2.0 * (xx + yy),
     );
-    let deciding = if m00 + m11 + m22 > 0.0 {
+    let deciding = if m00 + m11 + m22 >= 0.0 {
         w
-    } else if m00 > m11 && m00 > m22 {
+    } else if m00 >= m11 && m00 >= m22 {
         x
     } else if m11 > m22 {
         y
