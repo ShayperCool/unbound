@@ -453,6 +453,63 @@ public static class EditorUIProbe
 
         // Last (recorded with the macOS Editor): clip lengths while curves come and go.
         ClipLengths();
+        // After them (recorded with the Linux Editor): the keys SetCurve adds to a vector's components.
+        InsertedKeys();
+    }
+
+    /// <summary>Every key of a clip's curve for a binding: time, value, both tangents, weighted mode.</summary>
+    static object Keys(AnimationClip c, string property)
+    {
+        var e = AnimationUtility.GetEditorCurve(c, EditorCurveBinding.FloatCurve("", typeof(Transform), property));
+        return e == null ? null : e.keys.Select(k => new object[] { k.time, k.value, Finite(k.inTangent), Finite(k.outTangent), (int)k.weightedMode }).ToArray();
+    }
+
+    /// <summary>A float, or "+inf"/"-inf" for an infinite one (the comparison takes numbers within a tolerance).</summary>
+    static object Finite(float f) => float.IsPositiveInfinity(f) ? "+inf" : float.IsNegativeInfinity(f) ? "-inf" : (object)f;
+
+    /// <summary>The keys AnimationClip.SetCurve adds to a Transform vector's components when one
+    /// component's key times differ from the others': inside and outside each curve's range, on a
+    /// Hermite segment with unequal tangents, on a stepped segment, and on a rotation; legacy and
+    /// non-legacy clips.</summary>
+    static void InsertedKeys()
+    {
+        foreach (var legacy in new[] { true, false })
+        {
+            string tag = legacy ? "legacy" : "generic";
+            Call("SetCurveKeys." + tag + ".position", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                c.SetCurve("", typeof(Transform), "localPosition.y", new AnimationCurve(
+                    new Keyframe(0.25f, 1f, 2f, 2f), new Keyframe(1f, 3f, -1f, 4f), new Keyframe(1.5f, 0f, 0.5f, -3f)));
+                c.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0f, 0f, 1f, 1f), new Keyframe(2f, 5f, 3f, 3f)));
+                var steps = new List<object> { new[] { Keys(c, "m_LocalPosition.x"), Keys(c, "m_LocalPosition.y"), Keys(c, "m_LocalPosition.z") } };
+                // A component inside the others' range.
+                c.SetCurve("", typeof(Transform), "localPosition.z", new AnimationCurve(new Keyframe(0.6f, 2f, -2f, 1f), new Keyframe(0.8f, -1f, 0f, 5f)));
+                steps.Add(new[] { Keys(c, "m_LocalPosition.x"), Keys(c, "m_LocalPosition.y"), Keys(c, "m_LocalPosition.z") });
+                UnityEngine.Object.DestroyImmediate(c);
+                return steps;
+            });
+            Call("SetCurveKeys." + tag + ".stepped", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                c.SetCurve("", typeof(Transform), "localScale.y", new AnimationCurve(
+                    new Keyframe(0f, 1f, 0f, float.PositiveInfinity), new Keyframe(1f, 2f, 0f, float.NegativeInfinity), new Keyframe(2f, 4f, 0f, 0f)));
+                c.SetCurve("", typeof(Transform), "localScale.x", new AnimationCurve(new Keyframe(0.5f, 3f), new Keyframe(1.5f, 3f), new Keyframe(1.5000005f, 3f)));
+                var result = new[] { Keys(c, "m_LocalScale.x"), Keys(c, "m_LocalScale.y"), Keys(c, "m_LocalScale.z") };
+                UnityEngine.Object.DestroyImmediate(c);
+                return result;
+            });
+            Call("SetCurveKeys." + tag + ".rotation", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                c.SetCurve("", typeof(Transform), "localRotation.y", new AnimationCurve(new Keyframe(0f, 0f, 0.5f, 0.5f), new Keyframe(1f, 0.7071068f, 0f, 0f)));
+                c.SetCurve("", typeof(Transform), "localRotation.w", new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0.7071068f)));
+                c.SetCurve("", typeof(Transform), "localRotation.x", new AnimationCurve(new Keyframe(0.5f, 0.1f, 1f, 1f), new Keyframe(1.5f, 0.2f)));
+                var result = new[] { Keys(c, "m_LocalRotation.x"), Keys(c, "m_LocalRotation.y"), Keys(c, "m_LocalRotation.z"), Keys(c, "m_LocalRotation.w") };
+                UnityEngine.Object.DestroyImmediate(c);
+                return result;
+            });
+        }
     }
 
     /// <summary>A clip's length, its settings' stop time and its number of curve bindings.</summary>
