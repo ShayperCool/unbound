@@ -1343,8 +1343,15 @@ namespace UnityEngine
             QualitySettings.activeColorSpace == ColorSpace.Linear ? value.linear : value;
         public void SetMatrix(string name, Matrix4x4 value) => m_Values[Shader.PropertyToID(name)] = value;
         public void SetMatrix(int nameID, Matrix4x4 value) => m_Values[nameID] = value;
-        public void SetTexture(string name, Texture value) => m_Values[Shader.PropertyToID(name)] = value;
-        public void SetTexture(int nameID, Texture value) => m_Values[nameID] = value;
+        public void SetTexture(string name, Texture value) => SetTexture(Shader.PropertyToID(name), value);
+        /// <summary>The texture with its decode values under `&lt;name&gt;_HDR`, which a vector of
+        /// that name set later replaces (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/lightmapencoding block/* and precedence/block*).</summary>
+        public void SetTexture(int nameID, Texture value)
+        {
+            m_Values[nameID] = value;
+            m_Values[HdrDecode.IdOf(nameID)] = HdrDecode.Of(value);
+        }
         public void SetFloatArray(string name, float[] values) => SetFloatArray(Shader.PropertyToID(name), values);
         public void SetFloatArray(int nameID, float[] values) => PropertyArrays.Set(m_Values, nameID, values);
         public void SetFloatArray(string name, List<float> values) => SetFloatArray(Shader.PropertyToID(name), values);

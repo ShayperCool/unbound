@@ -56,9 +56,28 @@ namespace UnityEngine
         static bool IsEncoding(int usage) => usage is LightmapDoubleLdr or LightmapRgbm or Rgbm or DoubleLdr;
 
         static readonly Dictionary<string, string> s_Names = new();
+        static readonly Dictionary<int, int> s_Ids = new();
+        static readonly Dictionary<int, int> s_Owners = new();
+
+        /// <summary>The property ID of a texture property's <c>&lt;name&gt;_HDR</c> (made once per
+        /// property), remembered with its texture property (<see cref="TextureOf"/>).</summary>
+        internal static int IdOf(int texture)
+        {
+            if (!s_Ids.TryGetValue(texture, out int id))
+            {
+                s_Ids[texture] = id = Shader.PropertyToID(NameOf(Shader.IdToName(texture) ?? ""));
+                s_Owners[id] = texture;
+            }
+            return id;
+        }
+
+        /// <summary>The texture property whose <c>&lt;name&gt;_HDR</c> <paramref name="id"/> is,
+        /// among those <see cref="IdOf"/> has named.</summary>
+        internal static bool TextureOf(int id, out int texture) => s_Owners.TryGetValue(id, out texture);
 
         /// <summary><c>&lt;name&gt;_HDR</c>, the decode values Unity gives a texture property
-        /// alongside it (made once per property name).</summary>
+        /// alongside it (made once per property name; material sync and draw streams use it on
+        /// the main thread alone).</summary>
         internal static string NameOf(string texture)
         {
             if (!s_Names.TryGetValue(texture, out var name)) s_Names[texture] = name = texture + "_HDR";

@@ -33,6 +33,9 @@ namespace UnityEngine
             internal readonly Dictionary<int, int> m_Ints = new Dictionary<int, int>();
             internal readonly Dictionary<int, Vector4> m_Vectors = new Dictionary<int, Vector4>();
             internal readonly HashSet<int> m_RawBindings = new HashSet<int>();
+            /// <summary>Vectors set after a texture of the same name's `_HDR` (they win over the
+            /// texture's decode values until the texture is set again).</summary>
+            internal readonly HashSet<int> m_VectorsAfterTexture = new HashSet<int>();
             internal readonly Dictionary<int, Matrix4x4> m_Matrices = new Dictionary<int, Matrix4x4>();
             internal readonly Dictionary<int, TextureSlot> m_Textures = new Dictionary<int, TextureSlot>();
             internal readonly Dictionary<int, object> m_Buffers = new Dictionary<int, object>();
@@ -71,6 +74,7 @@ namespace UnityEngine
         internal Dictionary<int, Vector4> m_Vectors { get => m_State.m_Vectors; }
         // Synthetic renderer copies contain property-block GPU values, already in working space.
         internal HashSet<int> m_RawBindings { get => m_State.m_RawBindings; }
+        HashSet<int> m_VectorsAfterTexture { get => m_State.m_VectorsAfterTexture; }
         internal Dictionary<int, Matrix4x4> m_Matrices { get => m_State.m_Matrices; }
         internal Dictionary<int, TextureSlot> m_Textures { get => m_State.m_Textures; }
         /// <summary>Buffers by property (ComputeBuffer or GraphicsBuffer): structured buffers, and
@@ -181,6 +185,7 @@ namespace UnityEngine
             foreach (var p in source.m_Floats) m_Floats[p.Key] = p.Value;
             foreach (var p in source.m_Ints) m_Ints[p.Key] = p.Value;
             foreach (var p in source.m_Vectors) m_Vectors[p.Key] = p.Value;
+            m_VectorsAfterTexture.UnionWith(source.m_VectorsAfterTexture);
             foreach (var p in source.m_Matrices) m_Matrices[p.Key] = p.Value;
             foreach (var p in source.m_Textures)
                 m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Element = p.Value.Element, ElementBinding = p.Value.ElementBinding, Scale = p.Value.Scale, Offset = p.Value.Offset };
@@ -925,6 +930,7 @@ namespace UnityEngine
             }
             m_RawBindings.Remove(nameID);
             m_Vectors[nameID] = value;
+            m_VectorsAfterTexture.Add(nameID);
             ScriptSet(nameID);
             MarkDirty();
         }
@@ -979,6 +985,7 @@ namespace UnityEngine
             slot.Texture = value;
             slot.Element = element;
             slot.ElementBinding = elementBinding;
+            m_VectorsAfterTexture.Remove(HdrDecode.IdOf(nameID));
             ScriptSet(nameID);
             MarkDirty();
         }
@@ -1431,6 +1438,11 @@ namespace UnityEngine
         int m_LodEpoch { get => m_State.m_LodEpoch; set => m_State.m_LodEpoch = value; }
         string m_SentShader { get => m_State.m_SentShader; set => m_State.m_SentShader = value; }
 
+        /// <summary>Whether <paramref name="hdr"/> is a texture's `_HDR` whose texture was set after
+        /// any vector of that name.</summary>
+        bool TextureDecodeWins(int hdr) =>
+            HdrDecode.TextureOf(hdr, out int texture) && m_Textures.ContainsKey(texture) && !m_VectorsAfterTexture.Contains(hdr);
+
         internal unsafe ulong Sync()
         {
             if (m_Handle == 0) m_Handle = RenderHandles.Next();
@@ -1459,20 +1471,20 @@ namespace UnityEngine
             foreach (var p in m_Floats)
                 Add(p.Key, 0, new Vector4(ConvertsProperty(p.Key) ? Mathf.GammaToLinearSpace(p.Value) : p.Value, 0, 0, 0), 0, default);
             foreach (var p in m_Ints) Add(p.Key, 3, new Vector4(p.Value, 0, 0, 0), 0, default);
+            // `<name>_HDR` of every texture property: the texture's decode values, which Unity sets
+            // with the texture, unless a vector of that name was set after it (matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/lightmapencoding material/* and precedence/*).
+            foreach (var p in m_Textures) HdrDecode.IdOf(p.Key);
             foreach (var p in m_Vectors)
+            {
+                if (TextureDecodeWins(p.Key)) continue;
                 Add(p.Key, 1, ConvertsProperty(p.Key) ? (Vector4)((Color)p.Value).linear : p.Value, 0, default);
+            }
             foreach (var p in m_Textures)
             {
                 Add(p.Key, 2, default, TextureElements.MaterialHandle(p.Value.Texture, p.Value.Element), new Vector4(p.Value.Scale.x, p.Value.Scale.y, p.Value.Offset.x, p.Value.Offset.y));
-                // `<name>_HDR`: how the shader decodes the texture's HDR radiance, which Unity sets
-                // for every texture property (Manual: Accessing shader properties in Cg/HLSL;
-                // tests/projects/lightmapencoding material/*). Textures that store it as is take
-                // the renderer's neutral (1, 1, 0, 0).
-                if (HdrDecode.Encoded(p.Value.Texture))
-                {
-                    int hdr = Shader.PropertyToID(HdrDecode.NameOf(Shader.IdToName(p.Key) ?? ""));
-                    if (!m_Vectors.ContainsKey(hdr)) Add(hdr, 1, (Vector4)HdrDecode.Of(p.Value.Texture), 0, default);
-                }
+                int hdr = HdrDecode.IdOf(p.Key);
+                if (TextureDecodeWins(hdr) || !m_Vectors.ContainsKey(hdr)) Add(hdr, 1, (Vector4)HdrDecode.Of(p.Value.Texture), 0, default);
             }
             foreach (var p in m_Buffers) Add(p.Key, 5, default, BufferHandle(p.Value), default);
             foreach (var p in m_Matrices)
