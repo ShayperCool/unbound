@@ -69,17 +69,19 @@ def wait_file(path, job, timeout=120):
         time.sleep(.02)
 
 
-def unbound(work, gate=False):
+def unbound(work, gate=False, enabled_resize=False):
     from PIL import ImageGrab
     import json
     cli = os.environ.get('UNBOUND_CLI', str(base.REPO/'target/release/unbound'))
     name, server = display(work/'xserver.log')
     combined = []
     try:
-        for c, (ww,wh) in enumerate(((640,360),(360,640),(640,360),(640,360),(641,361),(360,640),(640,360),(640,360))):
+        cases = [(c, size) for c, size in enumerate(((640,360),(360,640),(640,360),(640,360),(641,361),(360,640),(640,360),(640,360)))]
+        if enabled_resize: cases = [(8, (640,360))]
+        for c, (ww,wh) in cases:
             project = base.copy_project(work/'projects'/str(c))
             out = base.fresh_output(work/str(c))
-            env = dict(os.environ, DISPLAY=name, SCREENREAD_PROBE_OUT=str(out), GAMEVIEW_CASE=str(c))
+            env = dict(os.environ, DISPLAY=name, SCREENREAD_PROBE_OUT=str(out), GAMEVIEW_CASE=str(c), GAMEVIEW_RESIZE_PROBE="1" if enabled_resize else "")
             env.pop('XAUTHORITY',None)
             env.pop('WAYLAND_DISPLAY',None)
             env.pop('WAYLAND_SOCKET',None)
@@ -135,13 +137,14 @@ def unbound(work, gate=False):
             adapter = next((line for line in (out/'unbound.log').read_text().splitlines() if 'AdapterInfo' in line), '')
             if 'NVIDIA' not in adapter: raise RuntimeError('NVIDIA engine renderer was not verified')
             case_lines=(out/'values.jsonl').read_text().splitlines()
-            if c!=7: combined.extend(case_lines)
+            if c!=7: combined.extend(line for line in case_lines if json.loads(line)["k"] != "complete")
             # The host image must contain the native rectangle as a solid red region with black borders.
             rows = {r['k']:r['v'] for r in map(json.loads,combined)}
             if c>=6:
                 control={r['k']:r['v'] for r in map(json.loads,case_lines)}
-                if control['retained.after.draws'] != [0]: raise RuntimeError('retained control rendered a new camera frame')
-                x,y,w,h=control['retained.after.target']
+                prefix = 'enabled' if enabled_resize else 'retained'
+                if control[prefix+'.after.draws'] != [0]: raise RuntimeError('skipped-frame control rendered a new camera frame')
+                x,y,w,h=control[prefix+'.after.target']
                 if c==7 and (x,y,w,h)!=(0,0,800,600): raise RuntimeError('unfixed retained view did not follow the window')
             else:
                 x,y,w,h = rows[f'{c}.target']
@@ -155,8 +158,9 @@ def unbound(work, gate=False):
         combined.append('{"k":"complete","v":true}')
         target=work/'values.jsonl'
         target.write_text('\n'.join(combined)+'\n')
-        result = compare(base.reference(),target)
-        if result and gate:
+        reference = enabled_reference() if enabled_resize else base.reference()
+        result = compare(reference,target)
+        if result and gate and not enabled_resize:
             failures = differences(base.reference(),target)[1]
             if precision_only(failures):
                 print('gate: only the recorded pointer precision residual remains')
@@ -239,6 +243,75 @@ def publish(work, extend=False):
     return 0
 
 
+def enabled_reference():
+    reference = base.reference()
+    return reference.with_name(reference.stem+'-enabled-resize.jsonl')
+
+
+def enabled_editor(work):
+    import editor_runner
+    for repeat in ('native1', 'native2'):
+        project = base.copy_project(work/'projects'/repeat)
+        out = base.fresh_output(work/repeat)
+        job = editor_runner.EditorJob(project, out/'editor.log', out,
+            env={'SCREENREAD_PROBE_OUT': str(out), 'GAMEVIEW_RESIZE_PROBE': '1'},
+            timeout=900, progress_files=[out/'values.jsonl'], progress_timeout=480,
+            label='enabled-resize-'+repeat, launch_inputs={'release': os.environ['UNBOUND_PROBE_UNITY_VERSION'],
+                'paths': {key: str(project/part) for key,part in
+                          {'assets':'Assets','packages':'Packages','settings':'ProjectSettings'}.items()}})
+        print(editor_runner.summary(editor_runner.run(job)), flush=True)
+        reason = editor_runner.result_problem(out, gpu=True)
+        if reason: raise RuntimeError(f'{repeat}: {reason}')
+    return 0
+
+
+def publish_enabled(work):
+    import base64
+    import math
+    import hashlib
+    import json
+    import editor_runner
+    expected = {key+'/'+str(p.relative_to(PROBE/part)): hashlib.sha256(p.read_bytes()).hexdigest()
+                for key, part in {'assets':'Assets','packages':'Packages','settings':'ProjectSettings'}.items()
+                for p in (PROBE/part).rglob('*') if p.is_file()}
+    # The runner writes the selected release into the project copy before launching.
+    expected['settings/ProjectVersion.txt'] = hashlib.sha256(
+        ('m_EditorVersion: '+os.environ['UNBOUND_PROBE_UNITY_VERSION']+'\n').encode()).hexdigest()
+    captures=[]
+    keys=['enabled.before.screen','enabled.noResize.draws','enabled.noResize.renderLatches',
+          'enabled.noResize.willRender','enabled.after.draws','enabled.after.renderLatches',
+          'enabled.after.willRender','enabled.after.screen','enabled.after.camera','enabled.after.target',
+          'enabled.after.cameraEnabled','enabled.resumed.didRender','enabled.resumed.willRender','complete']
+    for repeat in ('native1','native2'):
+        directory=work/repeat
+        result=editor_runner.load_result(directory) or {}
+        reason=editor_runner.result_problem(directory,gpu=True)
+        if reason or result.get('forced_exit'):
+            raise RuntimeError(f'{repeat}: {reason or "forced exit"}')
+        receipt=json.loads((directory/'prelaunch-inputs.json').read_text())
+        actual={key: item['sha256'] for key,item in receipt['files'].items()}
+        if any(hashlib.sha256(base64.b64decode(item['bytes_base64'])).hexdigest() != item['sha256']
+               for item in receipt['files'].values()):
+            raise RuntimeError(f'{repeat}: invalid pre-launch source receipt')
+        if actual != expected or receipt['selected_release'] != os.environ['UNBOUND_PROBE_UNITY_VERSION']:
+            raise RuntimeError(f'{repeat}: pre-launch probe inputs differ from this checkout')
+        data=(directory/'values.jsonl').read_bytes()
+        rows=[json.loads(line) for line in data.splitlines()]
+        if [row['k'] for row in rows] != keys or rows[-1]['v'] is not True:
+            raise RuntimeError(f'{repeat}: incomplete enabled-camera control')
+        if any(not isinstance(row['v'], list) or
+               any(type(value) not in (int, float) or not math.isfinite(value) for value in row['v'])
+               for row in rows[:-1]):
+            raise RuntimeError(f'{repeat}: invalid enabled-camera value')
+        captures.append(data)
+    if captures[0] != captures[1]: raise RuntimeError('enabled-camera repeats differ')
+    target=enabled_reference()
+    target.parent.mkdir(parents=True,exist_ok=True)
+    with target.open('xb') as stream: stream.write(captures[0])
+    print('published',target)
+    return 0
+
+
 base.publish = publish
 base.unbound = unbound
 def main():
@@ -247,11 +320,17 @@ def main():
     parser.add_argument('--release',required=True)
     parser.add_argument('--label',required=True)
     parser.add_argument('--extend',action='store_true')
+    parser.add_argument('--enabled-resize',action='store_true')
     args=parser.parse_args()
     if not args.label or Path(args.label).name!=args.label or args.label in ('.','..'):
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION']=args.release
     work=base.run_root(PROBE,args.label)
+    if args.enabled_resize:
+        return {'editor':enabled_editor,'publish':publish_enabled,
+                'check':lambda work: compare(enabled_reference(),work/'native1/values.jsonl'),
+                'unbound':lambda work: unbound(work,enabled_resize=True),
+                'gate':lambda work: unbound(work,enabled_resize=True)}[args.mode](work)
     return {'editor':base.editor,'publish':lambda work: publish(work,extend=args.extend),'check':check,'unbound':unbound,
             'gate':lambda work: unbound(work,gate=True)}[args.mode](work)
 

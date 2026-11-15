@@ -18,6 +18,11 @@ public class GameViewProbe : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
     {
+        if (Environment.GetEnvironmentVariable("GAMEVIEW_RESIZE_PROBE") == "1")
+        {
+            new GameObject("EnabledResizeProbe").AddComponent<EnabledResizeProbe>();
+            return;
+        }
         if (Environment.GetEnvironmentVariable("SCREENREAD_PROBE_OUT") != null)
             new GameObject("GameViewProbe").AddComponent<GameViewProbe>();
     }

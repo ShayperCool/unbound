@@ -57,3 +57,28 @@ Unmeasured: Editor zoom/panning selected by the user, high-DPI backing scales, I
 warp delivery, multiple Game views, other releases and other GPU drivers. Unbound has no Editor
 zoom/pan control and uses the measured default at physical window pixel dimensions. The host
 blit's texture filtering is unchanged and is not measured by the solid-red screenshots.
+
+The separate enabled-camera resize control records 14 additional keys in
+`unity-6000.0.71f1-enabled-resize.jsonl`, preserving the original 50-key reference. Two
+unforced NVIDIA Editor repeats agree byte-for-byte, with pre-launch inputs bound to the
+authored probe. Pass `--enabled-resize` to `editor`, `publish`, `check`, `unbound` or `gate`
+using a fresh label. Publication requires a selected-release source match, complete identical
+records, a verified GPU renderer and an unforced successful exit for both repeats.
+
+After the initial red image, the camera remains enabled and changes its background to blue.
+The control sets renderFrameInterval to 100000, waits for the frame latch to settle, and
+observes 15 repaint ticks without resizing and 15 after resizing from 640x360 to 800x600.
+Both windows record zero camera callbacks and a false rendering latch. The 320x320 camera
+rectangle remains fixed; presentation moves to (240,140,320,320). The engine also checks the
+retained red host image and black borders before resuming rendering. Changing the interval
+back to 1 then records a new camera callback and a true latch, proving the observer is active.
+The full enabled-camera replay matches 14/14; no production scheduling change is needed.
+These are measured settled-latch observations, not a universal Editor repaint count/order.
+
+The [6000.0 renderFrameInterval contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.OnDemandRendering-renderFrameInterval.html)
+sets how often frames render; one renders every frame.
+[willCurrentFrameRender](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.OnDemandRendering-willCurrentFrameRender.html)
+reports the current frame's rendering decision. The resumed-render control changes the
+result after a skipped interval. Resize-only redraw timing is not promised by these APIs.
+The original pointer precision residual remains 49/50 with the same exact expected/actual
+pair and strict report, and all eight original host-image controls still apply.

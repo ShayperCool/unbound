@@ -1,0 +1,14 @@
+{"k":"enabled.before.screen","v":[320,320]}
+{"k":"enabled.noResize.draws","v":[0]}
+{"k":"enabled.noResize.renderLatches","v":[]}
+{"k":"enabled.noResize.willRender","v":[0]}
+{"k":"enabled.after.draws","v":[0]}
+{"k":"enabled.after.renderLatches","v":[]}
+{"k":"enabled.after.willRender","v":[0]}
+{"k":"enabled.after.screen","v":[320,320]}
+{"k":"enabled.after.camera","v":[0,0,320,320]}
+{"k":"enabled.after.target","v":[240,140,320,320]}
+{"k":"enabled.after.cameraEnabled","v":[1]}
+{"k":"enabled.resumed.didRender","v":[1]}
+{"k":"enabled.resumed.willRender","v":[1]}
+{"k":"complete","v":true}
