@@ -30,9 +30,9 @@ def main():
     # StateMachineBehaviour.OnStateIK is sent since the animation update runs IK passes
     # (tests/projects/animcallbacks), so UnsentIK and InheritedIK are now controls that doctor
     # must not report.
+    # The child-dimension declaration is a supported-message control (rectmessages).
     expected = {
         ('DoctorCoverageControls.UnsentComponent', 'OnParticleUpdateJobScheduled'),
-        ('DoctorCoverageControls.UnsentComponent', 'OnChildRectTransformDimensionsChange'),
         ('DoctorCoverageControls.InheritedUnsentComponent', 'OnParticleUpdateJobScheduled'),
     }
     # A message below a user-defined MonoBehaviour base must be found, and inherited uses
