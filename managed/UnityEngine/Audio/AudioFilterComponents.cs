@@ -481,6 +481,27 @@ namespace Unbound.Runtime
 
         static bool IsFilterComponent(Component c) => c != null && IsFilterType(c.GetType());
 
+        internal static void ComponentAdded(GameObject owner, Component component)
+        {
+            var source = owner.FindComponent(typeof(AudioSource)) as AudioSource;
+            var listener = owner.FindComponent(typeof(AudioListener)) as AudioListener;
+            if (source == null && listener == null) return;
+            // Remember a script's node when it is attached to an active GameObject. Disabling it
+            // immediately afterwards bypasses that existing node rather than undoing creation.
+            // Attachment to an inactive GameObject is unmeasured and keeps the first-activation path.
+            if (AudioFilters.IsFilterScript(component) && owner.activeInHierarchy)
+            {
+                int id = component.GetInstanceID();
+                if (source != null)
+                {
+                    (source.m_FilterScripts ??= new HashSet<int>()).Add(id);
+                    if (source.m_HasAudioFrame) source.m_ResetComponents = true;
+                }
+                if (listener != null) (listener.m_FilterMembers ??= new HashSet<int>()).Add(id);
+            }
+            if (listener != null) AudioSystem.ListenerComponentAdded(listener);
+        }
+
         static bool TrackMember(HashSet<int> previous, ref HashSet<int> next, Component component)
         {
             int id = component.GetInstanceID();
@@ -699,13 +720,14 @@ namespace Unbound.Runtime
             if (Compat.AudioComponentActivationMeasured && listener.m_HasFilterFrame)
             {
                 int command = listener.m_FilterLifetimeChanged ? AudioFilterStage.Recreated
-                    : addedMember ? AudioFilterStage.Reconnected : 0;
+                    : addedMember || listener.m_FilterConnectionChanged ? AudioFilterStage.Reconnected : 0;
                 for (int i = 0; i < count; i++) table[i].Stage |= command;
             }
             listener.m_FilterMembers = nextMembers;
             listener.m_NextFilterMembers = previousMembers;
             listener.m_HasFilterFrame = true;
             listener.m_FilterLifetimeChanged = false;
+            listener.m_FilterConnectionChanged = false;
             if (table != null) Array.Clear(table, count, table.Length - count);
             if (error != null && s_ReportedListeners.Add(listener.GetInstanceID()))
                 Debug.LogError("Unbound: " + error, listener);

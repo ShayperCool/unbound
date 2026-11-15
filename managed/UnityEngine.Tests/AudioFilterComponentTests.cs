@@ -1006,11 +1006,18 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnInitiallyInactiveScriptJoinsTheChainOnItsFirstActivation()
         {
+            FilterScript LoadedDisabled(GameObject owner)
+            {
+                var loaded = (FilterScript)ComponentFactory.Create(typeof(FilterScript), owner);
+                loaded.m_Enabled = false;
+                owner.m_Components.Add(loaded);
+                return loaded;
+            }
             var source = Source("inactive script source");
             source.gameObject.AddComponent<AudioEchoFilter>();
             Collected(source);
             source.m_HasAudioFrame = true;
-            var script = source.gameObject.AddComponent<FilterScript>(); script.enabled = false;
+            var script = LoadedDisabled(source.gameObject);
             Collected(source);
             Assert.False(source.m_ResetComponents);
             script.enabled = true;
@@ -1026,7 +1033,7 @@ namespace UnityEngine.Tests
             owner.AddComponent<AudioEchoFilter>();
             AudioFilterDescriptor[] table = null;
             AudioFilterChain.CollectListener(listener, false, ref table);
-            script = owner.AddComponent<FilterScript>(); script.enabled = false;
+            script = LoadedDisabled(owner);
             AudioFilterChain.CollectListener(listener, false, ref table);
             Assert.Equal(0, table[0].Stage);
             script.enabled = true;
@@ -1035,6 +1042,90 @@ namespace UnityEngine.Tests
             script.enabled = false;
             AudioFilterChain.CollectListener(listener, false, ref table);
             Assert.Equal(0, table[0].Stage);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ANewScriptDisabledAfterAdditionKeepsItsCreatedNode(bool onListener)
+        {
+            var owner = new GameObject("script added before disabling"); m_Objects.Add(owner);
+            var source = onListener ? null : owner.AddComponent<AudioSource>();
+            var listener = onListener ? owner.AddComponent<AudioListener>() : null;
+            owner.AddComponent<AudioEchoFilter>();
+            AudioFilterDescriptor[] table = null;
+            void Collect()
+            {
+                if (onListener) AudioFilterChain.CollectListener(listener, owner.GetComponent<FilterScript>()?.enabled == true, ref table);
+                else AudioFilterChain.Collect(source, false, ref table);
+            }
+            Collect();
+            if (source != null) source.m_HasAudioFrame = true;
+            var script = owner.AddComponent<FilterScript>(); script.enabled = false;
+            Collect();
+            if (onListener) Assert.Equal(AudioFilterStage.Reconnected, table[0].Stage);
+            else { Assert.True(source.m_ResetComponents); source.m_ResetComponents = false; }
+            foreach (bool enabled in new[] { false, true, false })
+            {
+                script.enabled = enabled;
+                Collect();
+                if (onListener) Assert.Equal(0, table[0].Stage);
+                else Assert.False(source.m_ResetComponents);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AScriptAddedToAnInactiveOwnerIsNotCreatedAtAttachment(bool onListener)
+        {
+            var owner = new GameObject("inactive script owner"); m_Objects.Add(owner);
+            var source = onListener ? null : owner.AddComponent<AudioSource>();
+            var listener = onListener ? owner.AddComponent<AudioListener>() : null;
+            owner.AddComponent<AudioEchoFilter>();
+            owner.SetActive(false);
+            var script = owner.AddComponent<FilterScript>();
+            var members = onListener ? listener.m_FilterMembers : source.m_FilterScripts;
+            Assert.False(members != null && members.Contains(script.GetInstanceID()));
+            if (source != null) Assert.False(source.m_ResetComponents);
+        }
+
+        [Fact]
+        public void ASourceRetainsScriptCreationWhenItIsRemovedBeforeTheNextFrame()
+        {
+            var source = Source("short script lifetime");
+            source.gameObject.AddComponent<AudioEchoFilter>();
+            Collected(source);
+            source.m_HasAudioFrame = true;
+            var script = source.gameObject.AddComponent<FilterScript>();
+            Object.DestroyImmediate(script);
+            Collected(source);
+            Assert.True(source.m_ResetComponents);
+            int resets = m_Backend.ComponentResets;
+            UpdateWithoutAdvancing();
+            Assert.False(source.m_ResetComponents);
+            Assert.Equal(resets + 1, m_Backend.ComponentResets);
+            Collected(source);
+            Assert.False(source.m_ResetComponents);
+            UpdateWithoutAdvancing();
+            Assert.Equal(resets + 1, m_Backend.ComponentResets);
+        }
+
+        [Fact]
+        public void StableListenerConnectionFramesAllocateNothing()
+        {
+            var owner = new GameObject("stable hearing listener"); m_Objects.Add(owner);
+            owner.AddComponent<AudioListener>();
+            owner.AddComponent<AudioEchoFilter>();
+            var inactive = new GameObject("stable inactive connection"); m_Objects.Add(inactive);
+            var listener = inactive.AddComponent<AudioListener>();
+            listener.enabled = false;
+            inactive.AddComponent<AudioEchoFilter>();
+            for (int i = 0; i < 8; i++) UpdateWithoutAdvancing();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 32; i++) UpdateWithoutAdvancing();
+            Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
+            Assert.Equal(2, m_Backend.LastFrame.FilterCount);
         }
 
         [Fact]
@@ -1105,6 +1196,90 @@ namespace UnityEngine.Tests
             Assert.Single(source.m_FilterScripts);
             Assert.Equal(2, listener.m_FilterMembers.Count);
             Assert.Empty(m_Errors);
+        }
+
+        [Fact]
+        public void AListenerReconnectsAfterAddingAComponentWithoutAnAudioCallback()
+        {
+            var owner = new GameObject("listener component addition"); m_Objects.Add(owner);
+            var listener = owner.AddComponent<AudioListener>();
+            var echo = owner.AddComponent<AudioEchoFilter>();
+            AudioFilterDescriptor[] table = null;
+            Assert.Equal(1, AudioFilterChain.CollectListener(listener, false, ref table));
+            Assert.Equal(0, table[0].Stage);
+
+            var neutral = owner.AddComponent<NeutralListenerComponent>();
+            Assert.Equal(1, AudioFilterChain.CollectListener(listener, false, ref table));
+            Assert.Equal(AudioFilterStage.Reconnected, table[0].Stage);
+            AudioFilterChain.CollectListener(listener, false, ref table);
+            Assert.Equal(0, table[0].Stage);
+            neutral.enabled = false;
+            echo.delay = 19;
+            AudioFilterChain.CollectListener(listener, false, ref table);
+            Assert.Equal(0, table[0].Stage);
+            Object.DestroyImmediate(neutral);
+            AudioFilterChain.CollectListener(listener, false, ref table);
+            Assert.Equal(0, table[0].Stage);
+
+            var source = Source("source component addition control");
+            source.gameObject.AddComponent<AudioEchoFilter>();
+            Collected(source);
+            source.m_HasAudioFrame = true;
+            source.gameObject.AddComponent<NeutralListenerComponent>();
+            Collected(source);
+            Assert.False(source.m_ResetComponents);
+        }
+
+        sealed class NeutralListenerComponent : MonoBehaviour { }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ListenerConnectionsCanRejoinWithoutChangingTheHearingPose(bool thirdListener)
+        {
+            var primary = new GameObject("reconnected listener"); m_Objects.Add(primary);
+            var listener = primary.AddComponent<AudioListener>();
+            primary.AddComponent<AudioEchoFilter>();
+            var first = primary.AddComponent<AffineListenerScript>(); first.Gain = 2;
+            var alternate = new GameObject("hearing listener"); m_Objects.Add(alternate);
+            alternate.transform.position = new Vector3(100, 0, 0);
+            alternate.AddComponent<AudioListener>();
+            alternate.AddComponent<AudioEchoFilter>();
+            var second = alternate.AddComponent<AffineListenerScript>(); second.Offset = 0.125f;
+            if (thirdListener)
+            {
+                var last = new GameObject("third hearing listener"); m_Objects.Add(last);
+                last.transform.position = new Vector3(200, 0, 0);
+                last.AddComponent<AudioListener>();
+                last.AddComponent<AudioEchoFilter>();
+                var third = last.AddComponent<AffineListenerScript>(); third.Gain = -1;
+            }
+            float Process()
+            {
+                var data = new[] { 0.25f, 0.25f };
+                fixed (float* pointer = data)
+                    AudioFilters.Dispatch(AudioCallbackKind.ListenerFilter, m_Backend.LastFrame.ListenerPlan, pointer, 1, 2, 0);
+                return data[0];
+            }
+            UpdateWithoutAdvancing();
+            Assert.Equal(thirdListener ? -0.625f : 0.625f, Process());
+            listener.enabled = false;
+            UpdateWithoutAdvancing();
+            Assert.Equal(thirdListener ? -0.375f : 0.375f, Process());
+            Assert.Equal(thirdListener ? 2 : 1, m_Backend.LastFrame.FilterCount);
+            var neutral = primary.AddComponent<NeutralListenerComponent>();
+            UpdateWithoutAdvancing();
+            Assert.False(listener.enabled);
+            Assert.Equal(thirdListener ? -0.75f : 0.75f, Process());
+            Assert.Equal(thirdListener ? 3 : 2, m_Backend.LastFrame.FilterCount);
+            Assert.Equal(thirdListener ? 200 : 100, m_Backend.LastFrame.ListenerPosition.x);
+            Object.DestroyImmediate(neutral);
+            UpdateWithoutAdvancing();
+            Assert.Equal(thirdListener ? -0.75f : 0.75f, Process());
+            Object.DestroyImmediate(primary);
+            UpdateWithoutAdvancing();
+            Assert.Equal(thirdListener ? -0.375f : 0.375f, Process());
+            Assert.Equal(thirdListener ? 2 : 1, m_Backend.LastFrame.FilterCount);
         }
 
         [Fact]

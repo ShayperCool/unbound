@@ -22,7 +22,8 @@ namespace UnityEngine
         internal Dictionary<ulong, AudioFilterDescriptor> m_FilterDescriptors;
         internal AudioFilterDescriptor[] m_FilterTable;
         internal HashSet<int> m_FilterMembers, m_NextFilterMembers;
-        internal bool m_HasFilterFrame, m_FilterLifetimeChanged;
+        internal bool m_HasFilterFrame, m_FilterLifetimeChanged, m_FilterConnectionChanged;
+        internal LinkedListNode<AudioListener> m_FilterConnection;
         // The loop the last position was sampled in (false: the frame loop).
         internal bool m_MotionInFixedStep;
 

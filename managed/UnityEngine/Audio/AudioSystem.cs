@@ -86,6 +86,9 @@ namespace Unbound.Runtime
         internal static AudioListenerPose s_HearingPose = AudioListenerPose.Identity;
         static readonly List<AudioSource> s_Sources = new List<AudioSource>();
         static readonly List<AudioListener> s_Listeners = new List<AudioListener>();
+        static readonly List<AudioListener> s_ListenerEffects = new List<AudioListener>();
+        static readonly LinkedList<AudioListener> s_ListenerConnections = new LinkedList<AudioListener>();
+        static bool s_ListenerConnectionsChanged;
         static readonly List<AudioMixer> s_Mixers = new List<AudioMixer>();
         static readonly List<AudioMixerGroup> s_Groups = new List<AudioMixerGroup>();
         static readonly List<AudioClip> s_Loading = new List<AudioClip>();
@@ -139,6 +142,7 @@ namespace Unbound.Runtime
         {
             s_Listeners.Remove(listener);
             s_Listeners.Add(listener);
+            ListenerComponentAdded(listener);
             s_HearingPose = AudioListenerPose.Of(listener);
             if (Compat.AudioSpatialStereoMeasured) s_HearingPosition = s_HearingPose.Position;
             s_HearingVelocity = listener.m_Velocity;
@@ -148,12 +152,39 @@ namespace Unbound.Runtime
         {
             bool wasHearing = s_Listeners.Count > 0 && ReferenceEquals(s_Listeners[s_Listeners.Count - 1], listener);
             s_Listeners.Remove(listener);
+            if (listener.m_FilterConnection?.List != null)
+            {
+                s_ListenerConnections.Remove(listener.m_FilterConnection);
+                s_ListenerConnectionsChanged = true;
+            }
             if (!wasHearing) return;
             s_Listeners.RemoveAll(l => l == null);
             var hearing = s_Listeners.Count > 0 ? s_Listeners[s_Listeners.Count - 1] : null;
             s_HearingPose = hearing != null ? AudioListenerPose.Of(hearing) : AudioListenerPose.Identity;
             if (Compat.AudioSpatialStereoMeasured) s_HearingPosition = s_HearingPose.Position;
             s_HearingVelocity = hearing != null ? hearing.m_Velocity : Vector3.zero;
+        }
+
+        // Component attachment reconnects this owner's listener units, including while
+        // the listener is disabled. Pose selection still uses the enabled-listener list.
+        internal static void ListenerComponentAdded(AudioListener listener)
+        {
+            if (!Compat.AudioComponentActivationMeasured) return;
+            listener.m_FilterConnectionChanged = true;
+            var connection = listener.m_FilterConnection ??= new LinkedListNode<AudioListener>(listener);
+            if (connection.List != null) s_ListenerConnections.Remove(connection);
+            s_ListenerConnections.AddLast(connection);
+            if (s_ListenerEffects.Capacity < s_ListenerConnections.Count)
+                s_ListenerEffects.Capacity = Math.Max(s_ListenerConnections.Count, Math.Max(4, s_ListenerEffects.Capacity * 2));
+            s_ListenerConnectionsChanged = true;
+        }
+
+        static void PrepareListenerConnections()
+        {
+            if (!s_ListenerConnectionsChanged) return;
+            s_ListenerEffects.Clear();
+            foreach (var listener in s_ListenerConnections) s_ListenerEffects.Add(listener);
+            s_ListenerConnectionsChanged = false;
         }
 
         internal static void Add(AudioReverbZone zone)
@@ -522,12 +553,11 @@ namespace Unbound.Runtime
             SubmitFrame(realDelta, playing, motionDelta, fixedStep: false);
         }
 
-        // Listener pose selection and DSP membership are separate: every active listener
-        // contributes its components and scripts. Registration order is kept without sorting.
+        // Listener units retain their connection order independently of hearing poses.
         static int CollectListenerFilters()
         {
             int count = 0, scriptOffset = 0;
-            foreach (var listener in s_Listeners)
+            foreach (var listener in s_ListenerEffects)
             {
                 int scripts = AudioFilters.ScriptCount(listener.m_GameObject);
                 int local = AudioFilterChain.CollectListener(listener, scripts != 0, ref listener.m_FilterTable, scriptOffset);
@@ -555,6 +585,7 @@ namespace Unbound.Runtime
                     | (Compat.AudioSurroundEffectsMeasured ? AudioFrameFlags.SurroundEffects : 0),
             };
             s_Listeners.RemoveAll(l => l == null);
+            if (Compat.AudioListenerChainMeasured) PrepareListenerConnections();
             int listeners = s_Listeners.Count;
             if (listeners > 0)
             {
@@ -571,7 +602,7 @@ namespace Unbound.Runtime
                 if (Compat.AudioListenerChainMeasured) frame.Flags |= AudioFrameFlags.ListenerChain;
                 frame.Flags |= AudioFrameFlags.HasListener;
                 bool scripts = Compat.AudioListenerChainMeasured
-                    ? AudioFilters.UpdateListeners(s_Listeners)
+                    ? AudioFilters.UpdateListeners(s_ListenerEffects)
                     : AudioFilters.Update(AudioFilters.ListenerKey, listener.m_GameObject);
                 if (scripts) frame.Flags |= AudioFrameFlags.ListenerFilter;
                 if (Compat.AudioListenerChainMeasured) frame.ListenerPlan = AudioFilters.ListenerPlan;
@@ -625,6 +656,9 @@ namespace Unbound.Runtime
             s_HearingPose = AudioListenerPose.Identity;
             s_Sources.Clear();
             s_Listeners.Clear();
+            s_ListenerEffects.Clear();
+            s_ListenerConnections.Clear();
+            s_ListenerConnectionsChanged = false;
             s_Zones.Clear();
             ResetZoneInitialization();
             s_HearingPosition = Vector3.zero;

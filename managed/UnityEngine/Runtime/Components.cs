@@ -107,6 +107,11 @@ namespace Unbound.Runtime
                 companion = Create(companionType, go);
                 go.m_Components.Add(companion);
             }
+            if (Compat.AudioComponentActivationMeasured)
+            {
+                AudioFilterChain.ComponentAdded(go, c);
+                if (companion != null) AudioFilterChain.ComponentAdded(go, companion);
+            }
             Lifecycle.OnComponentAdded(c);
             if (companion != null) Lifecycle.OnComponentAdded(companion);
             if (!c.m_Destroyed) c.OnAddedByScript();
