@@ -317,12 +317,15 @@ namespace UnityEngine
         }
 
         /// <summary>A pass's four layers: the control (splat) map, each layer's textures, tiling
-        /// (the terrain's size over the tile size, the offset over it) and surface values.</summary>
+        /// (the terrain's size over the tile size, the offset over it) and surface values; which
+        /// layers have a mask map (_LayerHasMask0-3, and the _MASKMAP keyword when any does), and
+        /// the terrain's layer count (_NumLayersCount). Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/urpterrain (masks).</summary>
         internal static void SetLayers(Material material, TerrainData data, TerrainLayer[] layers, int first, Texture2D control)
         {
             var size = data.size;
             material.SetTexture("_Control", control);
-            bool normals = false;
+            bool normals = false, masks = false;
             if (layers.Length == 0 && first == 0)
             {
                 // No layers: the built-in grey checker (two by two squares) in 2 m tiles, as the
@@ -349,30 +352,40 @@ namespace UnityEngine
                 if (layer == null)
                 {
                     material.SetTexture("_Splat" + n, null);
+                    material.SetFloat("_LayerHasMask" + n, 0f);
                     continue;
                 }
                 var tile = new Vector2(Mathf.Max(layer.tileSize.x, 1e-4f), Mathf.Max(layer.tileSize.y, 1e-4f));
                 material.SetTexture("_Splat" + n, layer.diffuseTexture);
                 material.SetTextureScale("_Splat" + n, new Vector2(size.x / tile.x, size.z / tile.y));
                 material.SetTextureOffset("_Splat" + n, new Vector2(layer.tileOffset.x / tile.x, layer.tileOffset.y / tile.y));
-                if (layer.normalMapTexture != null)
-                {
-                    normals = true;
-                    material.SetTexture("_Normal" + n, layer.normalMapTexture);
-                }
+                // A layer without a normal map gets the flat normal texture, one without a mask
+                // the black texture, whatever the shader's defaults.
+                normals |= layer.normalMapTexture != null;
+                material.SetTexture("_Normal" + n, layer.normalMapTexture != null ? layer.normalMapTexture : Texture2D.normalTexture);
                 material.SetFloat("_NormalScale" + n, layer.normalScale);
-                material.SetTexture("_Mask" + n, layer.maskMapTexture);
+                bool hasMask = layer.maskMapTexture != null;
+                material.SetTexture("_Mask" + n, hasMask ? layer.maskMapTexture : Texture2D.blackTexture);
+                masks |= hasMask;
+                material.SetFloat("_LayerHasMask" + n, hasMask ? 1f : 0f);
+                material.SetFloat("_DiffuseHasAlpha" + n, DiffuseHasAlpha(layer) ? 1f : 0f);
                 // Made linear here, and once more by the material where the shader flags it
                 // [Gamma] (URP's terrain shaders flag _Metallic0-3), as in the Unity 6000.0.71f1
                 // Editor (tests/projects/urpterrain).
                 material.SetFloat("_Metallic" + n, LayerMetallic(layer));
                 material.SetFloat("_Smoothness" + n, LayerSmoothness(layer));
+                material.SetVector("_DiffuseRemapOffset" + n, layer.diffuseRemapMin);
                 material.SetVector("_DiffuseRemapScale" + n, layer.diffuseRemapMax - layer.diffuseRemapMin);
                 material.SetVector("_MaskMapRemapOffset" + n, layer.maskMapRemapMin);
                 material.SetVector("_MaskMapRemapScale" + n, layer.maskMapRemapMax - layer.maskMapRemapMin);
             }
+            // All layers count: URP's shaders turn opacity-as-density and height blending off past
+            // four, whichever pass draws.
+            material.SetFloat("_NumLayersCount", layers.Length);
             if (normals) material.EnableKeyword("_NORMALMAP");
             else material.DisableKeyword("_NORMALMAP");
+            if (masks) material.EnableKeyword("_MASKMAP");
+            else material.DisableKeyword("_MASKMAP");
         }
 
         /// <summary>A layer's metallic value as its splat material gets it: the slider read as a
@@ -387,12 +400,13 @@ namespace UnityEngine
         /// diffuse format with alpha (<see cref="GraphicsFormatUtility.HasAlphaChannel(TextureFormat)"/>) it
         /// is at least 1 (the alpha alone), else the layer's smoothness; as in the Unity
         /// 6000.0.71f1 Editor (tests/projects/defaultreflection, terrain, terrainlod layers5*).</summary>
-        internal static float LayerSmoothness(TerrainLayer layer)
-        {
-            bool fromAlpha = layer.smoothnessSource == TerrainLayerSmoothnessSource.DiffuseAlphaChannel
-                && layer.diffuseTexture is Texture2D diffuse && GraphicsFormatUtility.HasAlphaChannel(diffuse.format);
-            return Mathf.Max(layer.smoothness, fromAlpha ? 1f : 0f);
-        }
+        internal static float LayerSmoothness(TerrainLayer layer) => Mathf.Max(layer.smoothness, DiffuseHasAlpha(layer) ? 1f : 0f);
+
+        /// <summary>Whether the layer's smoothness comes from its diffuse texture's alpha: the
+        /// source says so and the texture's format has alpha.</summary>
+        static bool DiffuseHasAlpha(TerrainLayer layer) =>
+            layer.smoothnessSource == TerrainLayerSmoothnessSource.DiffuseAlphaChannel
+            && layer.diffuseTexture is Texture2D diffuse && GraphicsFormatUtility.HasAlphaChannel(diffuse.format);
 
         /// <summary>The holes map the shaders clip with: red 0 over a hole, one texel per cell.</summary>
         Texture2D HolesTexture(TerrainData data)
