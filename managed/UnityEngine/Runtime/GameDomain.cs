@@ -595,7 +595,7 @@ namespace Unbound.Runtime
             [12106] = "TreeEditor.TreeData",
         };
 
-        const string DefaultResourcesGuid = "0000000000000000e000000000000000";
+        const string DefaultResourcesGuid = BuiltinShaders.DefaultGuid;
 
         /// <summary>The Editor class a default-resources script names that Unbound does not load,
         /// or null.</summary>
