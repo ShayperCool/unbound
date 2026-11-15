@@ -932,12 +932,22 @@ unsafe extern "C" fn access_texture_by_id(
 fn render_buffer_image(scope: &Scope, pointer: *mut c_void, resolve: bool) -> Option<ImageEntry> {
     let (handle, depth) = super::plugins::render_buffer(pointer as u64);
     let images = scope.by_handle.get(&handle)?;
-    match (depth, resolve) {
-        (true, false) => images.depth,
-        (true, true) => None,
-        (false, false) => Some(images.msaa.unwrap_or(images.texture)),
-        (false, true) if !images.bind_ms => images.msaa.map(|_| images.texture),
-        (false, true) => None,
+    images.render_buffer(depth, resolve)
+}
+
+impl TextureImages {
+    fn render_buffer(self, depth: bool, resolve: bool) -> Option<ImageEntry> {
+        match (depth, resolve) {
+            (true, false) => self.depth,
+            (true, true) => None,
+            (false, false) => Some(self.msaa.unwrap_or(self.texture)),
+            // A bindTextureMS target exposes the samples through both accessors.
+            // Without it, resolve access names the separate single-sample image.
+            (false, true) => {
+                self.msaa
+                    .map(|samples| if self.bind_ms { samples } else { self.texture })
+            }
+        }
     }
 }
 
@@ -2313,6 +2323,61 @@ mod tests {
             offset_of!(IUnityGraphicsVulkanV2, add_intercept_initialization),
             14 * size_of::<usize>()
         );
+    }
+
+    #[test]
+    fn render_buffer_resolve_access_tracks_storage_and_bind_mode() {
+        use ash::vk::Handle;
+        let image = |id| ImageEntry {
+            image: vk::Image::from_raw(id),
+            resting: vk::ImageLayout::GENERAL,
+            aspect: vk::ImageAspectFlags::COLOR,
+            usage: vk::ImageUsageFlags::SAMPLED,
+            format: vk::Format::R8G8B8A8_UNORM,
+            extent: vk::Extent3D {
+                width: 7,
+                height: 3,
+                depth: 1,
+            },
+            image_type: vk::ImageType::TYPE_2D,
+            samples: vk::SampleCountFlags::TYPE_1,
+            layers: 1,
+            mips: 1,
+            texture: 0,
+        };
+        for bind_ms in [false, true] {
+            for multisampled in [false, true] {
+                let images = TextureImages {
+                    texture: image(1),
+                    msaa: multisampled.then(|| image(2)),
+                    depth: Some(image(3)),
+                    bind_ms,
+                };
+                let selected = |depth, resolve| {
+                    images
+                        .render_buffer(depth, resolve)
+                        .map(|entry| entry.image.as_raw())
+                };
+                assert_eq!(
+                    selected(false, false),
+                    Some(if multisampled { 2 } else { 1 })
+                );
+                assert_eq!(
+                    selected(false, true),
+                    multisampled.then_some(if bind_ms { 2 } else { 1 })
+                );
+                assert_eq!(selected(true, false), Some(3));
+                assert_eq!(selected(true, true), None);
+                assert!(
+                    (TextureImages {
+                        depth: None,
+                        ..images
+                    })
+                    .render_buffer(true, false)
+                    .is_none()
+                );
+            }
+        }
     }
 
     /// Outside a callback a plugin gets no command buffer, and no image or buffer.

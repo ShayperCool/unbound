@@ -161,7 +161,7 @@ def assemble(out):
 
 def environment(out):
     if DEVICE == 'vulkan':
-        return {'NATIVEGFX_VULKAN_OUT': str(out/OUT)}
+        return {'NATIVEGFX_VULKAN_OUT': str(out/OUT), 'NATIVEGFX_STENCIL': '1' if STENCIL else '0'}
     if DEVICE == 'metal':
         return {'NATIVEGFX_METAL_OUT': str(out/OUT)}
     return {'NATIVEGFX_PROBE_OUT': str(out/SCRIPTS_OUT), 'NATIVEGFX_PLUGIN_LOG': str(out/PLUGIN_LOG),
@@ -176,7 +176,7 @@ def finish(out):
 
 def reference():
     if STENCIL:
-        return ROOT/'Reference'/f'unity-{unity_version()}'/'stencil.jsonl'
+        return ROOT/'Reference'/f'unity-{unity_version()}'/('vulkan-stencil.jsonl' if DEVICE == 'vulkan' else 'stencil.jsonl')
     if DEVICE == 'opengl':
         return reference_file(ROOT, 'jsonl')
     return ROOT/'Reference'/f'unity-{unity_version()}'/f'{DEVICE}.jsonl'
@@ -270,13 +270,13 @@ def main():
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
     parser.add_argument('--device', choices=('opengl', 'vulkan', 'metal'), default='opengl')
-    parser.add_argument('--stencil', action='store_true', help='OpenGL retained-stencil controls')
+    parser.add_argument('--stencil', action='store_true', help='resolved-stencil controls for the selected graphics device')
     args = parser.parse_args()
     global DEVICE, STENCIL
     DEVICE = args.device
     STENCIL = args.stencil
-    if STENCIL and (DEVICE != 'opengl' or not LINUX):
-        parser.error('--stencil is measured on Linux OpenGL only')
+    if STENCIL and (not LINUX or DEVICE not in ('opengl', 'vulkan')):
+        parser.error('--stencil is measured on Linux OpenGL and Vulkan only')
     if args.mode in ('native', 'engine') and (not args.label or Path(args.label).name != args.label):
         parser.error('--label must be a single directory name')
     if args.mode == 'native':

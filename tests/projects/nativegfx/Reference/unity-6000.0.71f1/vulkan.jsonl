@@ -400,6 +400,152 @@
 {"k":"allocation.8.True.ARGB32.created","v":true}
 {"k":"allocation.8.True.ARGBHalf.created","v":true}
 {"k":"allocation.logs","v":[]}
+{"k":"setter.1.False.False.False.created","v":true}
+{"k":"setter.1.False.False.False.before","v":false}
+{"k":"setter.1.False.False.False.set.logs","v":["Error: Setting bind as Texture2DMS of already created render texture is not supported!"]}
+{"k":"setter.1.False.False.False.after","v":false}
+{"k":"setter.1.False.False.False.afterCreated","v":true}
+{"k":"setter.1.False.False.False.released","v":false}
+{"k":"setter.1.False.False.False.releasedFlag","v":true}
+{"k":"setter.1.False.False.False.recreated","v":false}
+{"k":"setter.1.False.False.True.created","v":true}
+{"k":"setter.1.False.False.True.before","v":false}
+{"k":"setter.1.False.False.True.set.logs","v":["Error: Setting bind as Texture2DMS of already created render texture is not supported!"]}
+{"k":"setter.1.False.False.True.after","v":false}
+{"k":"setter.1.False.False.True.afterCreated","v":true}
+{"k":"setter.1.False.False.True.samePointer","v":true}
+{"k":"setter.1.False.False.True.released","v":false}
+{"k":"setter.1.False.False.True.releasedFlag","v":true}
+{"k":"setter.1.False.False.True.recreated","v":false}
+{"k":"setter.1.False.True.False.created","v":true}
+{"k":"setter.1.False.True.False.before","v":false}
+{"k":"setter.1.False.True.False.set.logs","v":[]}
+{"k":"setter.1.False.True.False.after","v":false}
+{"k":"setter.1.False.True.False.afterCreated","v":true}
+{"k":"setter.1.False.True.False.released","v":false}
+{"k":"setter.1.False.True.False.releasedFlag","v":true}
+{"k":"setter.1.False.True.False.recreated","v":false}
+{"k":"setter.1.False.True.True.created","v":true}
+{"k":"setter.1.False.True.True.before","v":false}
+{"k":"setter.1.False.True.True.set.logs","v":[]}
+{"k":"setter.1.False.True.True.after","v":false}
+{"k":"setter.1.False.True.True.afterCreated","v":true}
+{"k":"setter.1.False.True.True.samePointer","v":true}
+{"k":"setter.1.False.True.True.released","v":false}
+{"k":"setter.1.False.True.True.releasedFlag","v":true}
+{"k":"setter.1.False.True.True.recreated","v":false}
+{"k":"setter.1.True.False.False.created","v":false}
+{"k":"setter.1.True.False.False.before","v":true}
+{"k":"setter.1.True.False.False.set.logs","v":[]}
+{"k":"setter.1.True.False.False.after","v":false}
+{"k":"setter.1.True.False.False.afterCreated","v":false}
+{"k":"setter.1.True.False.False.released","v":false}
+{"k":"setter.1.True.False.False.releasedFlag","v":false}
+{"k":"setter.1.True.False.False.recreated","v":true}
+{"k":"setter.1.True.False.True.created","v":false}
+{"k":"setter.1.True.False.True.before","v":true}
+{"k":"setter.1.True.False.True.set.logs","v":[]}
+{"k":"setter.1.True.False.True.after","v":false}
+{"k":"setter.1.True.False.True.afterCreated","v":false}
+{"k":"setter.1.True.False.True.samePointer","v":true}
+{"k":"setter.1.True.False.True.released","v":false}
+{"k":"setter.1.True.False.True.releasedFlag","v":false}
+{"k":"setter.1.True.False.True.recreated","v":true}
+{"k":"setter.1.True.True.False.created","v":false}
+{"k":"setter.1.True.True.False.before","v":true}
+{"k":"setter.1.True.True.False.set.logs","v":[]}
+{"k":"setter.1.True.True.False.after","v":true}
+{"k":"setter.1.True.True.False.afterCreated","v":false}
+{"k":"setter.1.True.True.False.released","v":false}
+{"k":"setter.1.True.True.False.releasedFlag","v":false}
+{"k":"setter.1.True.True.False.recreated","v":true}
+{"k":"setter.1.True.True.True.created","v":false}
+{"k":"setter.1.True.True.True.before","v":true}
+{"k":"setter.1.True.True.True.set.logs","v":[]}
+{"k":"setter.1.True.True.True.after","v":true}
+{"k":"setter.1.True.True.True.afterCreated","v":false}
+{"k":"setter.1.True.True.True.samePointer","v":true}
+{"k":"setter.1.True.True.True.released","v":false}
+{"k":"setter.1.True.True.True.releasedFlag","v":false}
+{"k":"setter.1.True.True.True.recreated","v":true}
+{"k":"setter.4.False.False.False.created","v":true}
+{"k":"setter.4.False.False.False.before","v":false}
+{"k":"setter.4.False.False.False.set.logs","v":["Error: Setting bind as Texture2DMS of already created render texture is not supported!"]}
+{"k":"setter.4.False.False.False.after","v":false}
+{"k":"setter.4.False.False.False.afterCreated","v":true}
+{"k":"setter.4.False.False.False.released","v":false}
+{"k":"setter.4.False.False.False.releasedFlag","v":true}
+{"k":"setter.4.False.False.False.recreated","v":true}
+{"k":"setter.4.False.False.True.created","v":true}
+{"k":"setter.4.False.False.True.before","v":false}
+{"k":"setter.4.False.False.True.set.logs","v":["Error: Setting bind as Texture2DMS of already created render texture is not supported!"]}
+{"k":"setter.4.False.False.True.after","v":false}
+{"k":"setter.4.False.False.True.afterCreated","v":true}
+{"k":"setter.4.False.False.True.samePointer","v":true}
+{"k":"setter.4.False.False.True.released","v":false}
+{"k":"setter.4.False.False.True.releasedFlag","v":true}
+{"k":"setter.4.False.False.True.recreated","v":true}
+{"k":"setter.4.False.True.False.created","v":true}
+{"k":"setter.4.False.True.False.before","v":false}
+{"k":"setter.4.False.True.False.set.logs","v":[]}
+{"k":"setter.4.False.True.False.after","v":false}
+{"k":"setter.4.False.True.False.afterCreated","v":true}
+{"k":"setter.4.False.True.False.released","v":false}
+{"k":"setter.4.False.True.False.releasedFlag","v":true}
+{"k":"setter.4.False.True.False.recreated","v":true}
+{"k":"setter.4.False.True.True.created","v":true}
+{"k":"setter.4.False.True.True.before","v":false}
+{"k":"setter.4.False.True.True.set.logs","v":[]}
+{"k":"setter.4.False.True.True.after","v":false}
+{"k":"setter.4.False.True.True.afterCreated","v":true}
+{"k":"setter.4.False.True.True.samePointer","v":true}
+{"k":"setter.4.False.True.True.released","v":false}
+{"k":"setter.4.False.True.True.releasedFlag","v":true}
+{"k":"setter.4.False.True.True.recreated","v":true}
+{"k":"setter.4.True.False.False.created","v":true}
+{"k":"setter.4.True.False.False.before","v":true}
+{"k":"setter.4.True.False.False.set.logs","v":["Error: Setting bind as Texture2DMS of already created render texture is not supported!"]}
+{"k":"setter.4.True.False.False.after","v":true}
+{"k":"setter.4.True.False.False.afterCreated","v":true}
+{"k":"setter.4.True.False.False.released","v":false}
+{"k":"setter.4.True.False.False.releasedFlag","v":false}
+{"k":"setter.4.True.False.False.recreated","v":true}
+{"k":"setter.4.True.False.True.created","v":true}
+{"k":"setter.4.True.False.True.before","v":true}
+{"k":"setter.4.True.False.True.set.logs","v":["Error: Setting bind as Texture2DMS of already created render texture is not supported!"]}
+{"k":"setter.4.True.False.True.after","v":true}
+{"k":"setter.4.True.False.True.afterCreated","v":true}
+{"k":"setter.4.True.False.True.samePointer","v":true}
+{"k":"setter.4.True.False.True.released","v":false}
+{"k":"setter.4.True.False.True.releasedFlag","v":false}
+{"k":"setter.4.True.False.True.recreated","v":true}
+{"k":"setter.4.True.True.False.created","v":true}
+{"k":"setter.4.True.True.False.before","v":true}
+{"k":"setter.4.True.True.False.set.logs","v":[]}
+{"k":"setter.4.True.True.False.after","v":true}
+{"k":"setter.4.True.True.False.afterCreated","v":true}
+{"k":"setter.4.True.True.False.released","v":false}
+{"k":"setter.4.True.True.False.releasedFlag","v":false}
+{"k":"setter.4.True.True.False.recreated","v":true}
+{"k":"setter.4.True.True.True.created","v":true}
+{"k":"setter.4.True.True.True.before","v":true}
+{"k":"setter.4.True.True.True.set.logs","v":[]}
+{"k":"setter.4.True.True.True.after","v":true}
+{"k":"setter.4.True.True.True.afterCreated","v":true}
+{"k":"setter.4.True.True.True.samePointer","v":true}
+{"k":"setter.4.True.True.True.released","v":false}
+{"k":"setter.4.True.True.True.releasedFlag","v":false}
+{"k":"setter.4.True.True.True.recreated","v":true}
+{"k":"setter.dimension.Tex2DArray.flag","v":true}
+{"k":"setter.dimension.Tex2DArray.created","v":false}
+{"k":"setter.dimension.Tex2DArray.logs","v":[]}
+{"k":"setter.dimension.Cube.flag","v":false}
+{"k":"setter.dimension.Cube.created","v":false}
+{"k":"setter.dimension.Cube.logs","v":["Error: Invalid operation for this texture type"]}
+{"k":"setter.dimension.Tex3D.flag","v":false}
+{"k":"setter.dimension.Tex3D.created","v":false}
+{"k":"setter.dimension.Tex3D.logs","v":["Error: Invalid operation for this texture type"]}
+{"k":"setter.logs","v":["Error: Setting bind as Texture2DMS of already created render texture is not supported!","Error: Setting bind as Texture2DMS of already created render texture is not supported!","Error: Setting bind as Texture2DMS of already created render texture is not supported!","Error: Setting bind as Texture2DMS of already created render texture is not supported!","Error: Setting bind as Texture2DMS of already created render texture is not supported!","Error: Setting bind as Texture2DMS of already created render texture is not supported!","Error: Invalid operation for this texture type","Error: Invalid operation for this texture type"]}
 {"k":"plugin.load","v":"load renderer=21 vulkan=1 vulkanV2=1"}
 {"k":"plugin.interfaces","v":"interfaces profilerCallbacks=1 profilerCallbacksV2=1 eventQueue=1"}
 {"k":"plugin.intercept.late","v":"intercept.late=0"}
@@ -528,40 +674,192 @@
 {"k":"plugin.device.depthFormat.D32_SFloat_S8_UInt.4.True.color","v":"device.depthFormat.D32_SFloat_S8_UInt.4.True.color ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
 {"k":"plugin.device.depthFormat.D32_SFloat_S8_UInt.4.True.depth","v":"device.depthFormat.D32_SFloat_S8_UInt.4.True.depth ok=1 image=1 pointer.image=1 layout=0 aspect=6 usage=167 format=130 extent=8x4x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
 {"k":"plugin.allocation.2.False.ARGB32.fresh","v":"allocation.2.False.ARGB32.fresh ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=37 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.False.ARGB32.fresh.resolve","v":"allocation.2.False.ARGB32.fresh.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.2.False.ARGB32.fresh.resolve.same","v":"allocation.2.False.ARGB32.fresh.resolve.same=0"}
 {"k":"plugin.allocation.2.False.ARGB32.cleared","v":"allocation.2.False.ARGB32.cleared ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=37 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.False.ARGB32.cleared.resolve","v":"allocation.2.False.ARGB32.cleared.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.2.False.ARGB32.cleared.resolve.same","v":"allocation.2.False.ARGB32.cleared.resolve.same=0"}
 {"k":"plugin.allocation.2.False.ARGB32.pointer","v":"allocation.2.False.ARGB32.pointer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=37 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.False.ARGB32.pointer.resolve","v":"allocation.2.False.ARGB32.pointer.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.2.False.ARGB32.pointer.resolve.same","v":"allocation.2.False.ARGB32.pointer.resolve.same=0"}
 {"k":"plugin.allocation.2.False.ARGBHalf.fresh","v":"allocation.2.False.ARGBHalf.fresh ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=97 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.False.ARGBHalf.fresh.resolve","v":"allocation.2.False.ARGBHalf.fresh.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.2.False.ARGBHalf.fresh.resolve.same","v":"allocation.2.False.ARGBHalf.fresh.resolve.same=0"}
 {"k":"plugin.allocation.2.False.ARGBHalf.cleared","v":"allocation.2.False.ARGBHalf.cleared ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=97 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.False.ARGBHalf.cleared.resolve","v":"allocation.2.False.ARGBHalf.cleared.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.2.False.ARGBHalf.cleared.resolve.same","v":"allocation.2.False.ARGBHalf.cleared.resolve.same=0"}
 {"k":"plugin.allocation.2.False.ARGBHalf.pointer","v":"allocation.2.False.ARGBHalf.pointer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=97 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.False.ARGBHalf.pointer.resolve","v":"allocation.2.False.ARGBHalf.pointer.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.2.False.ARGBHalf.pointer.resolve.same","v":"allocation.2.False.ARGBHalf.pointer.resolve.same=0"}
 {"k":"plugin.allocation.2.True.ARGB32.fresh","v":"allocation.2.True.ARGB32.fresh ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.True.ARGB32.fresh.resolve","v":"allocation.2.True.ARGB32.fresh.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.True.ARGB32.fresh.resolve.same","v":"allocation.2.True.ARGB32.fresh.resolve.same=1"}
 {"k":"plugin.allocation.2.True.ARGB32.cleared","v":"allocation.2.True.ARGB32.cleared ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.True.ARGB32.cleared.resolve","v":"allocation.2.True.ARGB32.cleared.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.True.ARGB32.cleared.resolve.same","v":"allocation.2.True.ARGB32.cleared.resolve.same=1"}
 {"k":"plugin.allocation.2.True.ARGB32.pointer","v":"allocation.2.True.ARGB32.pointer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.True.ARGB32.pointer.resolve","v":"allocation.2.True.ARGB32.pointer.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.True.ARGB32.pointer.resolve.same","v":"allocation.2.True.ARGB32.pointer.resolve.same=1"}
 {"k":"plugin.allocation.2.True.ARGBHalf.fresh","v":"allocation.2.True.ARGBHalf.fresh ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.True.ARGBHalf.fresh.resolve","v":"allocation.2.True.ARGBHalf.fresh.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.True.ARGBHalf.fresh.resolve.same","v":"allocation.2.True.ARGBHalf.fresh.resolve.same=1"}
 {"k":"plugin.allocation.2.True.ARGBHalf.cleared","v":"allocation.2.True.ARGBHalf.cleared ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.True.ARGBHalf.cleared.resolve","v":"allocation.2.True.ARGBHalf.cleared.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.True.ARGBHalf.cleared.resolve.same","v":"allocation.2.True.ARGBHalf.cleared.resolve.same=1"}
 {"k":"plugin.allocation.2.True.ARGBHalf.pointer","v":"allocation.2.True.ARGBHalf.pointer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.True.ARGBHalf.pointer.resolve","v":"allocation.2.True.ARGBHalf.pointer.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=2 layers=1 mips=1"}
+{"k":"plugin.allocation.2.True.ARGBHalf.pointer.resolve.same","v":"allocation.2.True.ARGBHalf.pointer.resolve.same=1"}
 {"k":"plugin.allocation.4.False.ARGB32.fresh","v":"allocation.4.False.ARGB32.fresh ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=37 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.False.ARGB32.fresh.resolve","v":"allocation.4.False.ARGB32.fresh.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.4.False.ARGB32.fresh.resolve.same","v":"allocation.4.False.ARGB32.fresh.resolve.same=0"}
 {"k":"plugin.allocation.4.False.ARGB32.cleared","v":"allocation.4.False.ARGB32.cleared ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=37 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.False.ARGB32.cleared.resolve","v":"allocation.4.False.ARGB32.cleared.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.4.False.ARGB32.cleared.resolve.same","v":"allocation.4.False.ARGB32.cleared.resolve.same=0"}
 {"k":"plugin.allocation.4.False.ARGB32.pointer","v":"allocation.4.False.ARGB32.pointer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=37 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.False.ARGB32.pointer.resolve","v":"allocation.4.False.ARGB32.pointer.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.4.False.ARGB32.pointer.resolve.same","v":"allocation.4.False.ARGB32.pointer.resolve.same=0"}
 {"k":"plugin.allocation.4.False.ARGBHalf.fresh","v":"allocation.4.False.ARGBHalf.fresh ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=97 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.False.ARGBHalf.fresh.resolve","v":"allocation.4.False.ARGBHalf.fresh.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.4.False.ARGBHalf.fresh.resolve.same","v":"allocation.4.False.ARGBHalf.fresh.resolve.same=0"}
 {"k":"plugin.allocation.4.False.ARGBHalf.cleared","v":"allocation.4.False.ARGBHalf.cleared ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=97 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.False.ARGBHalf.cleared.resolve","v":"allocation.4.False.ARGBHalf.cleared.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.4.False.ARGBHalf.cleared.resolve.same","v":"allocation.4.False.ARGBHalf.cleared.resolve.same=0"}
 {"k":"plugin.allocation.4.False.ARGBHalf.pointer","v":"allocation.4.False.ARGBHalf.pointer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=97 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.False.ARGBHalf.pointer.resolve","v":"allocation.4.False.ARGBHalf.pointer.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.4.False.ARGBHalf.pointer.resolve.same","v":"allocation.4.False.ARGBHalf.pointer.resolve.same=0"}
 {"k":"plugin.allocation.4.True.ARGB32.fresh","v":"allocation.4.True.ARGB32.fresh ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.True.ARGB32.fresh.resolve","v":"allocation.4.True.ARGB32.fresh.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.True.ARGB32.fresh.resolve.same","v":"allocation.4.True.ARGB32.fresh.resolve.same=1"}
 {"k":"plugin.allocation.4.True.ARGB32.cleared","v":"allocation.4.True.ARGB32.cleared ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.True.ARGB32.cleared.resolve","v":"allocation.4.True.ARGB32.cleared.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.True.ARGB32.cleared.resolve.same","v":"allocation.4.True.ARGB32.cleared.resolve.same=1"}
 {"k":"plugin.allocation.4.True.ARGB32.pointer","v":"allocation.4.True.ARGB32.pointer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.True.ARGB32.pointer.resolve","v":"allocation.4.True.ARGB32.pointer.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.True.ARGB32.pointer.resolve.same","v":"allocation.4.True.ARGB32.pointer.resolve.same=1"}
 {"k":"plugin.allocation.4.True.ARGBHalf.fresh","v":"allocation.4.True.ARGBHalf.fresh ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.True.ARGBHalf.fresh.resolve","v":"allocation.4.True.ARGBHalf.fresh.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.True.ARGBHalf.fresh.resolve.same","v":"allocation.4.True.ARGBHalf.fresh.resolve.same=1"}
 {"k":"plugin.allocation.4.True.ARGBHalf.cleared","v":"allocation.4.True.ARGBHalf.cleared ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.True.ARGBHalf.cleared.resolve","v":"allocation.4.True.ARGBHalf.cleared.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.True.ARGBHalf.cleared.resolve.same","v":"allocation.4.True.ARGBHalf.cleared.resolve.same=1"}
 {"k":"plugin.allocation.4.True.ARGBHalf.pointer","v":"allocation.4.True.ARGBHalf.pointer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.True.ARGBHalf.pointer.resolve","v":"allocation.4.True.ARGBHalf.pointer.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.allocation.4.True.ARGBHalf.pointer.resolve.same","v":"allocation.4.True.ARGBHalf.pointer.resolve.same=1"}
 {"k":"plugin.allocation.8.False.ARGB32.fresh","v":"allocation.8.False.ARGB32.fresh ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=37 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.False.ARGB32.fresh.resolve","v":"allocation.8.False.ARGB32.fresh.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.8.False.ARGB32.fresh.resolve.same","v":"allocation.8.False.ARGB32.fresh.resolve.same=0"}
 {"k":"plugin.allocation.8.False.ARGB32.cleared","v":"allocation.8.False.ARGB32.cleared ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=37 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.False.ARGB32.cleared.resolve","v":"allocation.8.False.ARGB32.cleared.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.8.False.ARGB32.cleared.resolve.same","v":"allocation.8.False.ARGB32.cleared.resolve.same=0"}
 {"k":"plugin.allocation.8.False.ARGB32.pointer","v":"allocation.8.False.ARGB32.pointer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=37 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.False.ARGB32.pointer.resolve","v":"allocation.8.False.ARGB32.pointer.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.8.False.ARGB32.pointer.resolve.same","v":"allocation.8.False.ARGB32.pointer.resolve.same=0"}
 {"k":"plugin.allocation.8.False.ARGBHalf.fresh","v":"allocation.8.False.ARGBHalf.fresh ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=97 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.False.ARGBHalf.fresh.resolve","v":"allocation.8.False.ARGBHalf.fresh.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.8.False.ARGBHalf.fresh.resolve.same","v":"allocation.8.False.ARGBHalf.fresh.resolve.same=0"}
 {"k":"plugin.allocation.8.False.ARGBHalf.cleared","v":"allocation.8.False.ARGBHalf.cleared ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=97 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.False.ARGBHalf.cleared.resolve","v":"allocation.8.False.ARGBHalf.cleared.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.8.False.ARGBHalf.cleared.resolve.same","v":"allocation.8.False.ARGBHalf.cleared.resolve.same=0"}
 {"k":"plugin.allocation.8.False.ARGBHalf.pointer","v":"allocation.8.False.ARGBHalf.pointer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=147 format=97 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.False.ARGBHalf.pointer.resolve","v":"allocation.8.False.ARGBHalf.pointer.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.allocation.8.False.ARGBHalf.pointer.resolve.same","v":"allocation.8.False.ARGBHalf.pointer.resolve.same=0"}
 {"k":"plugin.allocation.8.True.ARGB32.fresh","v":"allocation.8.True.ARGB32.fresh ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.True.ARGB32.fresh.resolve","v":"allocation.8.True.ARGB32.fresh.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.True.ARGB32.fresh.resolve.same","v":"allocation.8.True.ARGB32.fresh.resolve.same=1"}
 {"k":"plugin.allocation.8.True.ARGB32.cleared","v":"allocation.8.True.ARGB32.cleared ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.True.ARGB32.cleared.resolve","v":"allocation.8.True.ARGB32.cleared.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.True.ARGB32.cleared.resolve.same","v":"allocation.8.True.ARGB32.cleared.resolve.same=1"}
 {"k":"plugin.allocation.8.True.ARGB32.pointer","v":"allocation.8.True.ARGB32.pointer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.True.ARGB32.pointer.resolve","v":"allocation.8.True.ARGB32.pointer.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=37 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.True.ARGB32.pointer.resolve.same","v":"allocation.8.True.ARGB32.pointer.resolve.same=1"}
 {"k":"plugin.allocation.8.True.ARGBHalf.fresh","v":"allocation.8.True.ARGBHalf.fresh ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.True.ARGBHalf.fresh.resolve","v":"allocation.8.True.ARGBHalf.fresh.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.True.ARGBHalf.fresh.resolve.same","v":"allocation.8.True.ARGBHalf.fresh.resolve.same=1"}
 {"k":"plugin.allocation.8.True.ARGBHalf.cleared","v":"allocation.8.True.ARGBHalf.cleared ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.True.ARGBHalf.cleared.resolve","v":"allocation.8.True.ARGBHalf.cleared.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.True.ARGBHalf.cleared.resolve.same","v":"allocation.8.True.ARGBHalf.cleared.resolve.same=1"}
 {"k":"plugin.allocation.8.True.ARGBHalf.pointer","v":"allocation.8.True.ARGBHalf.pointer ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.True.ARGBHalf.pointer.resolve","v":"allocation.8.True.ARGBHalf.pointer.resolve ok=1 image=1 pointer.image=0 layout=0 aspect=1 usage=151 format=97 extent=7x3x1 tiling=0 type=1 samples=8 layers=1 mips=1"}
+{"k":"plugin.allocation.8.True.ARGBHalf.pointer.resolve.same","v":"allocation.8.True.ARGBHalf.pointer.resolve.same=1"}
+{"k":"plugin.setter.1.False.False.False.after.color","v":"setter.1.False.False.False.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.1.False.False.False.after.depth","v":"setter.1.False.False.False.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.False.False.recreated.color","v":"setter.1.False.False.False.recreated.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.False.False.recreated.depth","v":"setter.1.False.False.False.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.False.True.pointerBefore.color","v":"setter.1.False.False.True.pointerBefore.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.1.False.False.True.pointerBefore.depth","v":"setter.1.False.False.True.pointerBefore.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.False.True.after.color","v":"setter.1.False.False.True.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.1.False.False.True.after.depth","v":"setter.1.False.False.True.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.False.True.recreated.color","v":"setter.1.False.False.True.recreated.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.False.True.recreated.depth","v":"setter.1.False.False.True.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.True.False.after.color","v":"setter.1.False.True.False.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.1.False.True.False.after.depth","v":"setter.1.False.True.False.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.True.False.recreated.color","v":"setter.1.False.True.False.recreated.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.True.False.recreated.depth","v":"setter.1.False.True.False.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.True.True.pointerBefore.color","v":"setter.1.False.True.True.pointerBefore.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.1.False.True.True.pointerBefore.depth","v":"setter.1.False.True.True.pointerBefore.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.True.True.after.color","v":"setter.1.False.True.True.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.1.False.True.True.after.depth","v":"setter.1.False.True.True.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.True.True.recreated.color","v":"setter.1.False.True.True.recreated.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.False.True.True.recreated.depth","v":"setter.1.False.True.True.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.False.False.after.color","v":"setter.1.True.False.False.after.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.False.False.after.depth","v":"setter.1.True.False.False.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.False.False.recreated.color","v":"setter.1.True.False.False.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.1.True.False.False.recreated.depth","v":"setter.1.True.False.False.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.False.True.pointerBefore.color","v":"setter.1.True.False.True.pointerBefore.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.False.True.pointerBefore.depth","v":"setter.1.True.False.True.pointerBefore.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.False.True.after.color","v":"setter.1.True.False.True.after.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.False.True.after.depth","v":"setter.1.True.False.True.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.False.True.recreated.color","v":"setter.1.True.False.True.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.1.True.False.True.recreated.depth","v":"setter.1.True.False.True.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.True.False.after.color","v":"setter.1.True.True.False.after.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.True.False.after.depth","v":"setter.1.True.True.False.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.True.False.recreated.color","v":"setter.1.True.True.False.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.1.True.True.False.recreated.depth","v":"setter.1.True.True.False.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.True.True.pointerBefore.color","v":"setter.1.True.True.True.pointerBefore.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.True.True.pointerBefore.depth","v":"setter.1.True.True.True.pointerBefore.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.True.True.after.color","v":"setter.1.True.True.True.after.color ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.True.True.after.depth","v":"setter.1.True.True.True.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.1.True.True.True.recreated.color","v":"setter.1.True.True.True.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.1.True.True.True.recreated.depth","v":"setter.1.True.True.True.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.False.False.False.after.color","v":"setter.4.False.False.False.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.4.False.False.False.after.depth","v":"setter.4.False.False.False.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.False.False.False.recreated.color","v":"setter.4.False.False.False.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.setter.4.False.False.False.recreated.depth","v":"setter.4.False.False.False.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.False.False.True.pointerBefore.color","v":"setter.4.False.False.True.pointerBefore.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.4.False.False.True.pointerBefore.depth","v":"setter.4.False.False.True.pointerBefore.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.False.False.True.after.color","v":"setter.4.False.False.True.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.4.False.False.True.after.depth","v":"setter.4.False.False.True.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.False.False.True.recreated.color","v":"setter.4.False.False.True.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.setter.4.False.False.True.recreated.depth","v":"setter.4.False.False.True.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.False.True.False.after.color","v":"setter.4.False.True.False.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.4.False.True.False.after.depth","v":"setter.4.False.True.False.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.False.True.False.recreated.color","v":"setter.4.False.True.False.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.setter.4.False.True.False.recreated.depth","v":"setter.4.False.True.False.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.False.True.True.pointerBefore.color","v":"setter.4.False.True.True.pointerBefore.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.4.False.True.True.pointerBefore.depth","v":"setter.4.False.True.True.pointerBefore.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.False.True.True.after.color","v":"setter.4.False.True.True.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.4.False.True.True.after.depth","v":"setter.4.False.True.True.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.False.True.True.recreated.color","v":"setter.4.False.True.True.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.setter.4.False.True.True.recreated.depth","v":"setter.4.False.True.True.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.True.False.False.after.color","v":"setter.4.True.False.False.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.setter.4.True.False.False.after.depth","v":"setter.4.True.False.False.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.True.False.False.recreated.color","v":"setter.4.True.False.False.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.4.True.False.False.recreated.depth","v":"setter.4.True.False.False.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.True.False.True.pointerBefore.color","v":"setter.4.True.False.True.pointerBefore.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.setter.4.True.False.True.pointerBefore.depth","v":"setter.4.True.False.True.pointerBefore.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.True.False.True.after.color","v":"setter.4.True.False.True.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.setter.4.True.False.True.after.depth","v":"setter.4.True.False.True.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.True.False.True.recreated.color","v":"setter.4.True.False.True.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.4.True.False.True.recreated.depth","v":"setter.4.True.False.True.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.True.True.False.after.color","v":"setter.4.True.True.False.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.setter.4.True.True.False.after.depth","v":"setter.4.True.True.False.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.True.True.False.recreated.color","v":"setter.4.True.True.False.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.4.True.True.False.recreated.depth","v":"setter.4.True.True.False.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.True.True.True.pointerBefore.color","v":"setter.4.True.True.True.pointerBefore.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.setter.4.True.True.True.pointerBefore.depth","v":"setter.4.True.True.True.pointerBefore.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.True.True.True.after.color","v":"setter.4.True.True.True.after.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=4 layers=1 mips=1"}
+{"k":"plugin.setter.4.True.True.True.after.depth","v":"setter.4.True.True.True.after.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
+{"k":"plugin.setter.4.True.True.True.recreated.color","v":"setter.4.True.True.True.recreated.color ok=1 image=1 pointer.image=1 layout=0 aspect=1 usage=151 format=37 extent=5x2x1 tiling=0 type=1 samples=1 layers=1 mips=1"}
+{"k":"plugin.setter.4.True.True.True.recreated.depth","v":"setter.4.True.True.True.recreated.depth ok=0 image=0 pointer.image=0 layout=0 aspect=0 usage=0 format=0 extent=0x0x0 tiling=0 type=0 samples=0 layers=0 mips=0"}
 {"k":"logs","v":["Warning: Releasing render texture that is set to be RenderTexture.active!","Warning: Releasing render texture that is set to be RenderTexture.active!","Warning: Releasing render texture that is set to be RenderTexture.active!","Warning: Releasing render texture that is set to be RenderTexture.active!","Warning: Releasing render texture that is set to be RenderTexture.active!"]}
 {"k":"complete","v":true}

@@ -289,6 +289,8 @@ public partial class NativeGfxVulkanProbe : MonoBehaviour
             finally { Application.logMessageReceived += OnLog; }
         });
         AllocationControls();
+        BindMsSetterControls();
+        if (Environment.GetEnvironmentVariable("NATIVEGFX_STENCIL") == "1") VulkanStencilControls();
         PluginRecord();
         if (logs.Count > 0) Value("logs", L(logs));
         Value("complete", B(code == 0));

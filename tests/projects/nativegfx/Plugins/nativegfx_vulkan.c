@@ -634,5 +634,90 @@ static void on_allocation_event(int event_id)
         VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_ACCESS_MEMORY_READ_BIT,
         ObserveOnly, &image);
     record_image(s_step, ok, &image, NULL);
+    VkImage physical = image.image;
+    memset(&image, 0, sizeof image);
+    ok = s_device_buffer && s_vulkan->AccessRenderBufferResolveTexture(s_device_buffer, NULL,
+        VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_ACCESS_MEMORY_READ_BIT,
+        ObserveOnly, &image);
+    char key[160]; snprintf(key, sizeof key, "%s.resolve", s_step);
+    record_image(key, ok, &image, NULL);
+    record("%s.resolve.same=%d", s_step, ok && image.image == physical);
 }
 EXPORT void* NativeGfxVk_AllocationEvent(void) { return (void*)on_allocation_event; }
+enum { STENCIL_SENTINEL = 113, STENCIL_READBACK_BYTES = 32 };
+static void* s_stencil_pointer;
+static int s_stencil_initialize, s_stencil_status;
+static VkBuffer s_stencil_buffer;
+static VkDeviceMemory s_stencil_memory;
+static void* s_stencil_mapping;
+#define DEVICE_PROC(type, name) type name = (type)vk.GetDeviceProcAddr(s_instance.device, #name)
+static int stencil_buffer(void)
+{
+    if (s_stencil_mapping) return 1;
+    if (s_stencil_buffer || s_stencil_memory) return 0;
+    DEVICE_PROC(PFN_vkCreateBuffer, vkCreateBuffer);
+    DEVICE_PROC(PFN_vkGetBufferMemoryRequirements, vkGetBufferMemoryRequirements);
+    DEVICE_PROC(PFN_vkAllocateMemory, vkAllocateMemory);
+    DEVICE_PROC(PFN_vkBindBufferMemory, vkBindBufferMemory);
+    DEVICE_PROC(PFN_vkMapMemory, vkMapMemory);
+    PFN_vkGetPhysicalDeviceMemoryProperties memory_properties = (PFN_vkGetPhysicalDeviceMemoryProperties)
+        s_instance.getInstanceProcAddr(s_instance.instance, "vkGetPhysicalDeviceMemoryProperties");
+    if (!vkCreateBuffer || !vkGetBufferMemoryRequirements || !vkAllocateMemory || !vkBindBufferMemory || !vkMapMemory || !memory_properties) return 0;
+    VkBufferCreateInfo buffer = {.sType=VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, .size=STENCIL_READBACK_BYTES,
+        .usage=VK_BUFFER_USAGE_TRANSFER_DST_BIT, .sharingMode=VK_SHARING_MODE_EXCLUSIVE};
+    if (vkCreateBuffer(s_instance.device,&buffer,NULL,&s_stencil_buffer)!=VK_SUCCESS) return 0;
+    VkMemoryRequirements requirements; vkGetBufferMemoryRequirements(s_instance.device,s_stencil_buffer,&requirements);
+    VkPhysicalDeviceMemoryProperties properties; memory_properties(s_instance.physicalDevice,&properties);
+    uint32_t type=0; const VkMemoryPropertyFlags flags=VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    while (type<properties.memoryTypeCount && (!(requirements.memoryTypeBits&(1u<<type)) || (properties.memoryTypes[type].propertyFlags&flags)!=flags)) type++;
+    if (type==properties.memoryTypeCount) return 0;
+    VkMemoryAllocateInfo allocation={.sType=VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,.allocationSize=requirements.size,.memoryTypeIndex=type};
+    if (vkAllocateMemory(s_instance.device,&allocation,NULL,&s_stencil_memory)!=VK_SUCCESS ||
+        vkBindBufferMemory(s_instance.device,s_stencil_buffer,s_stencil_memory,0)!=VK_SUCCESS ||
+        vkMapMemory(s_instance.device,s_stencil_memory,0,VK_WHOLE_SIZE,0,&s_stencil_mapping)!=VK_SUCCESS) return 0;
+    return 1;
+}
+static void on_stencil_event(int event_id)
+{
+    (void)event_id; s_stencil_status=-1;
+    UnityVulkanImage image; memset(&image,0,sizeof image);
+    VkImageLayout layout=s_stencil_initialize ? VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    VkAccessFlags access=s_stencil_initialize ? VK_ACCESS_TRANSFER_WRITE_BIT : VK_ACCESS_TRANSFER_READ_BIT;
+    if (!s_stencil_pointer || !s_vulkan->AccessTexture(s_stencil_pointer,NULL,layout,VK_PIPELINE_STAGE_TRANSFER_BIT,access,PipelineBarrier,&image)) return;
+    if (image.samples!=VK_SAMPLE_COUNT_1_BIT || !(image.aspect&VK_IMAGE_ASPECT_STENCIL_BIT)) {s_stencil_status=-2;return;}
+    UnityVulkanRecordingState state; memset(&state,0,sizeof state);
+    if (!s_vulkan->CommandRecordingState(&state,0) || !state.commandBuffer) return;
+    if (s_stencil_initialize) {
+        DEVICE_PROC(PFN_vkCmdClearDepthStencilImage, vkCmdClearDepthStencilImage);
+        if (!vkCmdClearDepthStencilImage) return;
+        VkClearDepthStencilValue value={.depth=0,.stencil=STENCIL_SENTINEL};
+        VkImageSubresourceRange range={VK_IMAGE_ASPECT_STENCIL_BIT,0,1,0,1};
+        vkCmdClearDepthStencilImage(state.commandBuffer,image.image,layout,&value,1,&range);
+    } else {
+        DEVICE_PROC(PFN_vkCmdCopyImageToBuffer, vkCmdCopyImageToBuffer);
+        DEVICE_PROC(PFN_vkCmdPipelineBarrier, vkCmdPipelineBarrier);
+        if (!vkCmdCopyImageToBuffer || !vkCmdPipelineBarrier || !stencil_buffer()) return;
+        VkBufferImageCopy copy={.imageSubresource={VK_IMAGE_ASPECT_STENCIL_BIT,0,0,1},.imageExtent={1,1,1}};
+        vkCmdCopyImageToBuffer(state.commandBuffer,image.image,layout,s_stencil_buffer,1,&copy);
+        VkBufferMemoryBarrier barrier={.sType=VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+            .srcAccessMask=VK_ACCESS_TRANSFER_WRITE_BIT,.dstAccessMask=VK_ACCESS_HOST_READ_BIT,
+            .srcQueueFamilyIndex=VK_QUEUE_FAMILY_IGNORED,.dstQueueFamilyIndex=VK_QUEUE_FAMILY_IGNORED,
+            .buffer=s_stencil_buffer,.offset=0,.size=VK_WHOLE_SIZE};
+        vkCmdPipelineBarrier(state.commandBuffer,VK_PIPELINE_STAGE_TRANSFER_BIT,VK_PIPELINE_STAGE_HOST_BIT,0,0,NULL,1,&barrier,0,NULL);
+    }
+    s_stencil_status=0;
+}
+EXPORT void NativeGfxVk_StencilPrepare(void* pointer,int initialize) {s_stencil_pointer=pointer;s_stencil_initialize=initialize;}
+EXPORT void* NativeGfxVk_StencilEvent(void) {return (void*)on_stencil_event;}
+EXPORT int NativeGfxVk_StencilValue(void) {return s_stencil_status ? s_stencil_status : s_stencil_mapping ? *(unsigned char*)s_stencil_mapping : -3;}
+EXPORT void NativeGfxVk_StencilDestroy(void)
+{
+    DEVICE_PROC(PFN_vkUnmapMemory, vkUnmapMemory);
+    DEVICE_PROC(PFN_vkDestroyBuffer, vkDestroyBuffer);
+    DEVICE_PROC(PFN_vkFreeMemory, vkFreeMemory);
+    if(s_stencil_mapping)vkUnmapMemory(s_instance.device,s_stencil_memory);
+    if(s_stencil_buffer)vkDestroyBuffer(s_instance.device,s_stencil_buffer,NULL);
+    if(s_stencil_memory)vkFreeMemory(s_instance.device,s_stencil_memory,NULL);
+    s_stencil_mapping=NULL;s_stencil_buffer=VK_NULL_HANDLE;s_stencil_memory=VK_NULL_HANDLE;
+}
+#undef DEVICE_PROC

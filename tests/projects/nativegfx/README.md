@@ -8,11 +8,12 @@ uses the low-level native plugin interface and records what it gets; the scripts
     python3 tests/projects/nativegfx/run.py check      # engine run compared with Reference/
 
 Current NVIDIA results against Unity 6000.0.71f1 are OpenGL Core 516/564 with
-48 declared residuals, Vulkan 566/567 with one, and the separate OpenGL stencil
-profile 544/605 with 61. Vulkan attachment capabilities and multisample color
+48 declared residuals, Vulkan 864/865 with one, the OpenGL stencil profile
+544/605 with 61, and Vulkan stencil 874/890 with 16. Vulkan attachment capabilities and multisample color
 usage close 63 of its 64 earlier differences. All 518 earlier Vulkan reference
-rows are byte-identical; 49 allocation controls are appended. Comparator
-tolerances are unchanged.
+rows are byte-identical; 49 allocation controls and 298 resolve-access and
+setter controls are appended. The Vulkan stencil profile adds 25 rows.
+Comparator tolerances are unchanged.
 
 Recorded:
 
@@ -79,13 +80,17 @@ Recorded:
   depth and stencil element selection remain reported as unsupported.
   The Vulkan `device.kernelElements.*` controls give one property opposing element bindings
   in two kernels and replace each binding independently before dispatch.
-* **Retained stencil** (`--stencil`, OpenGL only): the plugin initializes the native depth
+* **Retained stencil** (`--stencil`, OpenGL Core): the plugin initializes the native depth
   image's stencil to 113 before a clear, stencil writes of 37 and 91, and self-resolves.
   A single-sample image follows the writes; a multisample target's retained stencil keeps
   113 while its depth is published. Depth-only publication preserves the destination's
   stencil. The separate canonical profile includes every primary row and the raw callback
   error logs. Run it with `python3 tests/projects/nativegfx/run.py check --stencil`.
-  Vulkan stencil publication and other drivers remain unmeasured.
+  The Vulkan profile uses `--device vulkan --stencil`. At 1, 2, 4 and 8 samples,
+  the Editor publishes the initialized stencil, clear, two divergent stencil writes
+  and explicit self-resolves. Unbound matches the single-sample controls but retains
+  the initialized value in 15 multisample content rows. These remain explicit
+  residuals in the separate canonical profile. Other drivers remain unmeasured.
 * **External textures** (`external.*`): `Texture2D.CreateExternalTexture` and
   `UpdateExternalTexture` with textures the plugin made, and with another texture's pointer
   (the same texture), also a render texture with depth and mips, which works on after the
@@ -332,6 +337,22 @@ samples, before a clear, after a clear and after native pointer access. All 36
 physical-image observations match. A GPU unit control independently checks the
 actual sampled and attachment usage flags for both formats and bind modes.
 
+`allocation.*.resolve` also records resolve-image access for every 7x3 target.
+Without bindTextureMS, the accessor returns the separate single-sample image.
+With bindTextureMS, both render-buffer accessors expose the same multisampled
+image. Single-sample targets have no resolve image. This does not establish a
+supported accessor for a hidden retained single-sample image in bound mode.
+
+`setter.*` records setter state, diagnostics and native metadata before
+and after pointer access, including failed creation, release and recreation.
+Changing the flag on created storage is refused; assigning the same value is
+quiet. Released or failed storage permits changes. Enabling the flag before
+creation is accepted for 2D and 2D-array shapes and refused for cubes and volumes.
+These are measured Unity 6000.0.71f1 state rules selected by
+Compat.RenderingMeasured. The public contract does not specify setter refusal
+or diagnostic text. Other releases retain the earlier unverified setter policy.
+Every native-image query checks successful creation first.
+
 The remaining Vulkan row retains its raw difference: plugin.dontcare.update
 has a command buffer in Unbound and none in this Editor history. The SDK header
 IUnityGraphicsVulkan.h leaves DontCare unconstrained; no recording-state policy
@@ -343,5 +364,10 @@ rows retain earlier graphics resources in the Editor. This task does not
 synthesize those diagnostic histories or replace real GPU resources with
 metadata. Retained-color publication for bindTextureMS, multisampled arrays,
 other foreign Vulkan formats/layout handoffs and other drivers remain queued.
-The separate stencil profile's content controls match; its additional callback
-error rows remain visible.
+The OpenGL stencil profile's content controls match; its additional callback
+error rows remain visible. Vulkan multisample stencil publication requires a
+depth-and-stencil resolve mechanism; the current depth publication preserves
+stencil and leaves all 15 content differences visible. Broader depth-image
+shapes and mip allocation also remain queued. Separate 2D, array and cube
+controls distinguish public mip counts from actual depth storage; implementing
+those allocation rules requires corresponding attachment and shader-load controls.

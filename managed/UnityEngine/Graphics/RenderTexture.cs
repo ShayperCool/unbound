@@ -188,7 +188,29 @@ namespace UnityEngine
         public bool useMipMap { get => m_Descriptor.useMipMap; set { Change(); m_Descriptor.useMipMap = value; if (!m_Created) m_AllocatedMipCount = null; } }
         public bool autoGenerateMips { get => m_Descriptor.autoGenerateMips; set { Change(); m_Descriptor.autoGenerateMips = value; } }
         public int antiAliasing { get => m_Descriptor.msaaSamples; set { Change(); m_Descriptor.msaaSamples = value; } }
-        public bool bindTextureMS { get => m_Descriptor.bindMS; set { Change(); m_Descriptor.bindMS = value; } }
+        public bool bindTextureMS
+        {
+            get => m_Descriptor.bindMS;
+            set
+            {
+                if (Compat.RenderingMeasured)
+                {
+                    if (value && dimension != TextureDimension.Tex2D && dimension != TextureDimension.Tex2DArray)
+                    {
+                        Debug.LogError("Invalid operation for this texture type");
+                        return;
+                    }
+                    if (value == m_Descriptor.bindMS) return;
+                    if (m_Created)
+                    {
+                        Debug.LogError("Setting bind as Texture2DMS of already created render texture is not supported!");
+                        return;
+                    }
+                }
+                Change();
+                m_Descriptor.bindMS = value;
+            }
+        }
         public bool enableRandomWrite { get => m_Descriptor.enableRandomWrite; set { Change(); m_Descriptor.enableRandomWrite = value; } }
         public bool useDynamicScale { get => m_Descriptor.useDynamicScale; set { Change(); m_Descriptor.useDynamicScale = value; } }
         public bool useDynamicScaleExplicit { get => m_Descriptor.useDynamicScaleExplicit; set { Change(); m_Descriptor.useDynamicScaleExplicit = value; } }
