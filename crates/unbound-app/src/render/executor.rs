@@ -4518,10 +4518,7 @@ impl UnityRenderer {
             width as f32,
             height as f32,
         ];
-        let texel_size = |n: &str| {
-            n.strip_prefix(name)
-                .is_some_and(|rest| rest == "_TexelSize")
-        };
+        let texel_size = |n: &str| n.strip_prefix(name) == Some("_TexelSize");
         let globals = Arc::make_mut(&mut self.globals);
         match globals.iter_mut().find(|(n, _)| texel_size(n)) {
             Some(slot) => slot.1 = owned::PropertyValue::Vector(texel),
