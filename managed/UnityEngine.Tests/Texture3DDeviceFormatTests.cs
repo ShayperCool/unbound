@@ -82,6 +82,7 @@ namespace Unbound.Tests
             // ASTC 6x6 over 7x5 texels: 2x1 blocks of 16 bytes per slice (its decoding is native:
             // tests/projects/nativegfx volume.*.cpu).
             var astc = new Texture3D(7, 5, 1, TextureFormat.ASTC_6x6, false);
+            var eac = new Texture2DArray(4, 4, 2, TextureFormat.EAC_R, false, true);
             try
             {
                 var blocks = red.Concat(blue).ToArray();
@@ -104,12 +105,16 @@ namespace Unbound.Tests
                 Assert.Equal(slice, array.GetPixelData<byte>(0, 1).ToArray());
                 array.Apply(false);
                 Assert.Equal(32, astc.GetPixelData<byte>(0).Length);
+                // EAC R arrays keep their 8-byte blocks too.
+                eac.SetPixelData(new byte[] { 200, 0, 0, 0, 0, 0, 0, 0 }, 0, 1);
+                Assert.Equal(new byte[] { 200, 0, 0, 0, 0, 0, 0, 0 }, eac.GetPixelData<byte>(0, 1).ToArray());
             }
             finally
             {
                 Object.DestroyImmediate(volume);
                 Object.DestroyImmediate(array);
                 Object.DestroyImmediate(astc);
+                Object.DestroyImmediate(eac);
             }
         }
 

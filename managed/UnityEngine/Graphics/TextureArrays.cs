@@ -73,12 +73,12 @@ namespace UnityEngine
         }
 
         /// <summary>Whether Unbound keeps a layered texture of the format: its texels (which it
-        /// reads and writes), or the blocks of a block format the renderer samples (DXT, BC, ETC
-        /// and ETC2 color, ASTC), which only GetPixelData and SetPixelData reach.</summary>
+        /// reads and writes), or the blocks of a block format it decodes (DXT, BC, ETC and ETC2
+        /// color, EAC R and RG, ASTC), set through SetPixelData and read decoded.</summary>
         internal static bool Supported(TextureFormat format) => PixelFormats.Size(format, 1, 1) > 0 || BlockStored(format);
 
         static bool BlockStored(TextureFormat format) => format == BlockFormats.Uncrunched(format)
-            && BlockFormats.BlockBytes(format) > 0 && !BlockFormats.IsEac(format);
+            && BlockFormats.BlockBytes(format) > 0;
 
         /// <summary>The storage holds blocks (<see cref="Supported"/>).</summary>
         internal bool Blocks => BlockStored(Format);
@@ -395,8 +395,28 @@ namespace UnityEngine
         /// <summary>The blocks as stored: each image's levels in turn, a volume level's depth
         /// slices one after another.</summary>
         void UploadBlocks(ulong handle, bool linear, FilterMode filter, TextureWrapMode wrapU, TextureWrapMode wrapV,
-            TextureWrapMode wrapW, int aniso, TextureDimension? dimension) =>
-            Send(handle, BlockFormats.GpuCode(Format, linear), Data, m_Offsets[^1], filter, wrapU, wrapV, wrapW, aniso, dimension);
+            TextureWrapMode wrapW, int aniso, TextureDimension? dimension)
+        {
+            int code = BlockFormats.GpuCode(Format, linear);
+            if (code >= 0)
+            {
+                Send(handle, code, Data, m_Offsets[^1], filter, wrapU, wrapV, wrapW, aniso, dimension);
+                return;
+            }
+            // Blocks the renderer takes no blocks of (EAC): the channels they decode to, as
+            // Texture2D uploads them, slice by slice.
+            var texels = new System.IO.MemoryStream();
+            for (int image = 0; image < Images; image++)
+                for (int mip = 0; mip < Mips; mip++)
+                {
+                    int slice = LevelBytes(mip) / D(mip);
+                    for (int z = 0; z < D(mip); z++)
+                        texels.Write(BlockFormats.GpuData(Format, linear, new ReadOnlySpan<byte>(Data, Offset(image, mip) + z * slice, slice).ToArray(),
+                            1, 1, W(mip), H(mip), out code));
+                }
+            var data = texels.ToArray();
+            Send(handle, code, data, data.Length, filter, wrapU, wrapV, wrapW, aniso, dimension);
+        }
 
         unsafe void Send(ulong handle, int code, byte[] data, int length, FilterMode filter, TextureWrapMode wrapU,
             TextureWrapMode wrapV, TextureWrapMode wrapW, int aniso, TextureDimension? dimension)
@@ -601,7 +621,8 @@ namespace UnityEngine
 
         /// <summary>Formats Unbound cannot store run as RGBA32 (their pixels are kept as colours).</summary>
         /// <summary>The format a layered texture keeps: its own, else RGBA32 texels (warned for a
-        /// compressed format: EAC, ETC2_RGBA1 and PVRTC blocks are not kept).</summary>
+        /// compressed format: signed EAC, ETC2_RGBA1 and PVRTC blocks are not kept, Unbound having
+        /// no decoder for them).</summary>
         internal static TextureFormat PixelStorage(TextureFormat format)
         {
             if (LayeredPixels.Supported(format)) return format;
