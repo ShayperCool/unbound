@@ -2312,7 +2312,7 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
                 .compile(&program(&source, false), &[], false)
                 .unwrap()
         };
-        let compile = |body: &str| compile_for(unbound_compat::GraphicsDevice::Metal, body);
+        let compile = |body: &str| compile_for(unbound_graphics::GraphicsDevice::Metal, body);
         let own = compile("_MainTex.Sample(sampler_MainTex, p.xy)");
         assert!(own.main_texture);
         assert!(!own.textures.contains(&"_MainTex".to_string()));
@@ -2332,7 +2332,7 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             ("_MainTex.Sample(sampler_LinearClamp, p.xy)", true),
             ("_MainTex.Load(int3(p.xy, 0))", false),
         ] {
-            let gl = compile_for(unbound_compat::GraphicsDevice::OpenGLCore, body);
+            let gl = compile_for(unbound_graphics::GraphicsDevice::OpenGLCore, body);
             assert_eq!(gl.main_texture, group, "{body}");
         }
     }
