@@ -19,7 +19,6 @@ namespace UnityEngine.Tests
     {
         readonly List<GameObject> objects = new List<GameObject>();
 
-
         public Physics2DSlideAndLayersTests()
         {
             Unbound.Runtime.Physics2DWorld.Reset();
@@ -483,7 +482,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void FixedUpdateModeDoesNotSubStep()
         {
-            // Other releases; 6000.0.71f1: Physics2DMeasuredSimulationTests.ExplicitSimulationRejectsAutomaticModes.
+            // Other releases: 6000.0.71f1 refuses Simulate in an automatic mode
+            // (Physics2DMeasuredSimulationTests.ExplicitSimulationRejectsAutomaticModes).
             using var release = TestRelease.Pin(TestRelease.Unmeasured);
             Physics2D.useSubStepping = true;
             Physics2D.maxSubStepCount = 4;
