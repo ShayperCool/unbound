@@ -35,12 +35,13 @@ GIB = 1024**3
 DEFAULT_RUN_DAYS = 3
 DEFAULT_IDLE_HOURS = 24
 DEFAULT_MIN_FREE_GIB = 20
-# Walks of the measured 2.3-million-directory cache took 18 minutes with warm caches and 26-37
-# minutes cold on the loaded machine, so a cold walk can still overrun this budget. The run
-# budget keeps about 10 minutes for an admitted batch and kache gc inside the service's
-# 45-minute start timeout (install_janitor.py).
-DEFAULT_SCAN_SECONDS = 1800
-DEFAULT_RUN_SECONDS = 2100
+# Walks of the measured 2.3-million-directory cache took 8-18 minutes with warm caches and 26-37
+# minutes cold on the loaded machine. A discovery attempt that runs out of time is continued by
+# the next attempt of the same run (the watches stay), so the run budget bounds the whole walk;
+# it keeps about 10 minutes for an admitted batch and kache gc inside the service's 60-minute
+# start timeout (install_janitor.py).
+DEFAULT_SCAN_SECONDS = 2700
+DEFAULT_RUN_SECONDS = 3000
 # Change events the reader thread may hold between polls before monitoring counts as broken,
 # as a kernel queue overflow does (the service's memory limit is 4 GiB).
 MAX_BUFFERED_EVENT_BYTES = 256*2**20
@@ -748,8 +749,15 @@ def link_target(path):
         return error
 
 
+class Walk:
+    """Where an unfinished reference walk stands, so that a later call continues it. Valid only
+    with the same watcher: its watches cover every directory already walked."""
+    def __init__(self):
+        self.pending, self.visited, self.found, self.vanished_before = None, {}, set(), set()
+
+
 def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root=None, prune=True, prefetch=False,
-                    complete=False):
+                    complete=False, walk=None):
     """Resolve links at any depth, including directory aliases and link chains.
 
     A link within a removal candidate conservatively keeps its target too. We
@@ -759,20 +767,32 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
     The walk visits millions of directories, so its loop keeps paths as strings and
     builds Path objects only for links.
     """
-    found, visited = set(), {}
+    walk = walk if walk is not None and watcher is not None else Walk()
+    resuming = walk.pending is not None
+    found, visited = walk.found, walk.visited
     excluded = set(p.resolve() for p in excluded)
     excluded_names = {str(p) for p in excluded}
     roots = list(dict.fromkeys(Path(p).absolute() for p in roots))
     # One shared cache index for every scan root. No index files in checkouts.
     index = DirectoryIndex(index_root or roots[0], seconds=seconds)
+    # Time runs out only between batches, so that the walk can be continued where it stopped.
+    deadline, index.deadline = index.deadline, None
     join = os.path.join
-    # Directories that vanished before this walk; ones vanishing during it stay unsafe.
-    vanished_before = set(watcher.vanished) if watcher else set()
+    if not resuming:
+        # Directories that vanished before this walk; ones vanishing during it stay unsafe.
+        walk.vanished_before = set(watcher.vanished) if watcher else set()
+    vanished_before = walk.vanished_before
     try:
-        if prefetch:
+        if prefetch and not resuming:
+            index.deadline = deadline
             index.warm_all()
-        pending = [str(root) for root in roots]
+            index.deadline = None
+        pending = walk.pending if resuming else [str(root) for root in roots]
+        walk.pending = None
         while True:
+            if deadline is not None and time.monotonic() > deadline:
+                walk.pending = pending
+                raise TimeoutError(f'run-cache index exceeded {seconds}s; the walk continues in the next attempt')
             if not pending and watcher and watcher.arrived:
                 arrivals = set()
                 watcher.take_arrivals(arrivals)
@@ -926,6 +946,8 @@ class Janitor:
         self.partial = self.stopped = False
         self.needs_discovery = True
         self.discovery_attempts = self.batch_number = 0
+        # A discovery walk that ran out of time, continued by the next attempt.
+        self.walk = None
 
     def emit(self, action, **fields):
         line = json.dumps({'time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -955,8 +977,12 @@ class Janitor:
             self.watch = ReferenceWatch(self.excluded, self.suite_roots)
         else:
             self.watch.metadata_roots.update(self.suite_roots)
+        # An attempt that ran out of time left its walk; this attempt continues it.
+        self.walk = self.walk or Walk()
         links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_budget(),
-                                     watcher=self.watch, index_root=self.cache, prefetch=True, complete=True)
+                                     watcher=self.watch, index_root=self.cache, prefetch=True, complete=True,
+                                     walk=self.walk)
+        self.walk = None
         self.links = getattr(self, 'links', set()) | links
         self.refresh_baseline(force=True)
         self.emit('references_ready', watched_directories=len(self.watch.directories), references=len(self.links))
@@ -1213,6 +1239,7 @@ class Janitor:
             try:
                 self.discover()
             except ReferenceChanged as error:
+                self.walk = None
                 self.emit('discovery_deferred', attempt=self.discovery_attempts, error=str(error))
                 return self.stop_batches('reference trees could not be recovered; remaining work retained')
             except TimeoutError as error:

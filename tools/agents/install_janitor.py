@@ -28,7 +28,7 @@ Nice=15
 IOSchedulingClass=idle
 MemoryMax=4G
 OOMScoreAdjust=500
-TimeoutStartSec=45min
+TimeoutStartSec=60min
 '''
     timer = '''[Unit]
 Description=Hourly Unbound disk hygiene

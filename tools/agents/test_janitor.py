@@ -932,6 +932,50 @@ class JanitorTests(unittest.TestCase):
                 self.j.remove(run, kind='run', hours=72)
         self.assertTrue(run.is_dir())
 
+    def test_a_walk_out_of_time_is_continued_by_the_next_call(self):
+        target = self.directory('q1/target')
+        for index in range(6):
+            (self.cache/f'd{index}'/'deeper').mkdir(parents=True)
+        (self.cache/'d5'/'deeper'/'link').symlink_to(target/'output')
+        watcher = janitor.ReferenceWatch()
+        self.addCleanup(watcher.close)
+        walk = janitor.Walk()
+        clock = iter([0.0, 0.0] + [1e9]*1000)  # the deadline passes after the first batch
+        with patch.object(janitor.DirectoryIndex, 'batch_size', 1), \
+             patch('run_cache_index.time.monotonic', lambda: 0.0), \
+             patch.object(janitor.time, 'monotonic', lambda: next(clock)):
+            with self.assertRaisesRegex(TimeoutError, 'continues in the next attempt'):
+                janitor.reference_paths([self.cache], seconds=1, watcher=watcher, index_root=self.cache, walk=walk)
+        self.assertIsNotNone(walk.pending)
+        self.assertTrue(walk.pending)
+        # A link created meanwhile, in a directory walked before the pause or not, is seen.
+        (self.cache/'late-link').symlink_to(target/'late')
+        found = janitor.reference_paths([self.cache], seconds=None, watcher=watcher, index_root=self.cache, walk=walk)
+        self.assertIsNone(walk.pending)
+        self.assertIn(target/'output', found)
+        self.assertIn(target/'late', found)
+        self.assertTrue(all((self.cache/f'd{index}'/'deeper') in watcher.directories.values() for index in range(6)))
+
+    def test_discovery_attempts_continue_one_walk(self):
+        target = self.directory('q1/target')
+        (self.cache/'deep'/'er').mkdir(parents=True)
+        (self.cache/'deep'/'er'/'link').symlink_to(target/'output')
+        calls = []
+        original = janitor.reference_paths
+        def reference_paths(roots, **options):
+            calls.append(options.get('walk'))
+            if len(calls) == 1:
+                options['walk'].pending = [str(root) for root in roots]  # stopped before the first batch
+                raise TimeoutError('run-cache index exceeded 1s; the walk continues in the next attempt')
+            return original(roots, **options)
+        with self.guards(), patch.object(janitor, 'reference_paths', reference_paths):
+            self.assertTrue(self.j.ensure_discovery())
+            self.addCleanup(self.j.watch.close)
+        self.assertEqual(len(calls), 2)
+        self.assertIs(calls[0], calls[1])
+        self.assertIsNone(self.j.walk)
+        self.assertIn(target/'output', self.j.links)
+
     def test_too_many_unverified_names_fail_closed(self):
         watcher = janitor.ReferenceWatch()
         self.addCleanup(watcher.close)
