@@ -114,7 +114,8 @@ namespace UnityEditor
 
         /// <summary>The graphics APIs (<c>GraphicsDeviceType</c> values) a platform
         /// (<c>AndroidPlayer</c>, ...) lists in <c>m_BuildTargetGraphicsAPIs</c>; null when the
-        /// platform has no entry or is left automatic. A malformed list counts as none.</summary>
+        /// platform has no entry or is left automatic. A hex list whose length is not whole 32-bit ids counts
+        /// as an empty one.</summary>
         internal static int[] GraphicsApis(string buildTarget)
         {
             if (s_GraphicsApis == null)
