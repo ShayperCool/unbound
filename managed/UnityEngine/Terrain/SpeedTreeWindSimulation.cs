@@ -330,7 +330,8 @@ namespace UnityEngine
 
         /// <summary>Whether the GPU Resident Drawer treats a renderer as a SpeedTree tree (its
         /// instances get wind parameters): its object has a Tree with a wind asset (Unity
-        /// 6000.0.71f1, tests/projects/residentdrawer speedtree).</summary>
+        /// 6000.0.71f1, tests/projects/residentdrawer speedtree, whose trees all have one; a Tree
+        /// without a wind asset is unmeasured).</summary>
         internal static bool HasTree(MeshRenderer renderer)
         {
             var tree = renderer.m_GameObject.GetComponent<Tree>();
@@ -340,13 +341,17 @@ namespace UnityEngine
         /// <summary>
         /// SpeedTreeWindManager.UpdateWindAndWriteBufferWindParams: the wind parameters of the
         /// drawer's visible trees (by renderer ID) for its upload buffer (Unity 6000.0.71f1,
-        /// tests/projects/residentdrawer speedtree). Outside Play mode, or while the world has no
-        /// wind (see <see cref="Update"/>), every listed instance gets zeros. Otherwise a tree with
-        /// a wind asset gets its wind's 11 constants, the previous frame's with
-        /// <paramref name="history"/> (the drawer asks for those first for a tree that has just
-        /// become visible, then copies them into its history parameters); a renderer without
-        /// per-object motion vectors gets zeros for the history. A renderer that is not a tree with
-        /// a wind asset is left as it is.
+        /// tests/projects/residentdrawer speedtree). While the world has no wind (see
+        /// <see cref="Update"/>) every listed instance gets zeros; so does it outside Play mode
+        /// (unmeasured: the probe records Play mode only). Otherwise a tree with a wind asset gets
+        /// its wind's 11 constants, the previous frame's with <paramref name="history"/> (the
+        /// drawer asks for those first for a tree that has just become visible, then copies them
+        /// into its history parameters); a renderer without per-object motion vectors gets zeros
+        /// for the history. The parameters the SpeedTree 9 layout does not use, and those of an
+        /// instance that is no longer a tree with a live wind asset (its Tree or asset was
+        /// removed after the drawer took it), get zeros: the drawer uploads every parameter of
+        /// every listed instance from a buffer it does not clear, and the Editor leaves them as
+        /// that buffer held them.
         /// </summary>
         internal static unsafe void WriteBuffer(ReadOnlySpan<int> renderersID, in SpeedTreeWindParamsBufferIterator buffer, bool history)
         {
@@ -361,26 +366,29 @@ namespace UnityEngine
                     continue;
                 }
                 if (s_Trees.Count == 0 || !(ObjectRegistry.FindById(renderersID[i]) is MeshRenderer renderer) ||
-                    !s_Trees.TryGetValue(renderer.m_GameObject, out var tree))
+                    !s_Trees.TryGetValue(renderer.m_GameObject, out var tree) || tree.windAsset == null)
+                {
+                    ClearParams(data, buffer, at);
                     continue;
-                var asset = tree.windAsset;
-                if (asset == null) continue;
+                }
                 if (s_Spherical.Count > 0 && !s_WarnedSpherical) WarnIfInSphericalZone(renderer);
                 if (history && renderer.m_MotionVectorGenerationMode != MotionVectorGenerationMode.Object)
                 {
                     ClearParams(data, buffer, at);
                     continue;
                 }
-                var values = asset.Wind.Values;
+                var values = tree.windAsset.Wind.Values;
                 int from = history ? SpeedTreeWindState.HistoryOffset : 0;
                 for (int p = 0; p < SpeedTreeWindState.HistoryOffset; p++)
                     *(Vector4*)(data + buffer.uintParamOffsets[p] + at) = Unsafe.Unbox<Vector4>(values[from + p]);
+                ClearParams(data, buffer, at, SpeedTreeWindState.HistoryOffset);
             }
         }
 
-        static unsafe void ClearParams(uint* data, in SpeedTreeWindParamsBufferIterator buffer, int at)
+        /// <summary>Zeros an instance's parameters from <paramref name="first"/> on.</summary>
+        static unsafe void ClearParams(uint* data, in SpeedTreeWindParamsBufferIterator buffer, int at, int first = 0)
         {
-            for (int p = 0; p < BufferParams; p++) *(Vector4*)(data + buffer.uintParamOffsets[p] + at) = Vector4.zero;
+            for (int p = first; p < BufferParams; p++) *(Vector4*)(data + buffer.uintParamOffsets[p] + at) = Vector4.zero;
         }
 
         /// <summary>Lets the spherical zone warning be given again (tests).</summary>

@@ -206,8 +206,9 @@ namespace UnityEngine.Tests
 
         /// <summary>The GPU Resident Drawer's buffer (tests/projects/residentdrawer speedtree):
         /// zeros while the world has no wind or outside Play mode; then each tree's wind constants
-        /// (the previous frame's for history, zeros there for camera motion vectors); a renderer
-        /// that is not a tree with wind is left as it is.</summary>
+        /// (the previous frame's for history, zeros there for camera motion vectors) and zeros for
+        /// the parameters the SpeedTree 9 layout does not use; zeros for an instance that is not
+        /// (or no longer) a tree with wind. Nothing outside the wind parameters is written.</summary>
         const int Stride = 80;
 
         /// <summary>Parameter p's uint offset in an instance: the first eight uints are not wind.</summary>
@@ -267,17 +268,26 @@ namespace UnityEngine.Tests
                     {
                         Assert.Equal(new Vector4(2f, 4f, 3f, 0.25f), Param(buffer, i, 1));
                         for (int p = 0; p < SpeedTreeWindState.HistoryOffset; p++) Assert.Equal((Vector4)asset.Wind.Values[p], Param(buffer, i, p));
-                        // The SpeedTree 9 layout's 11 parameters only.
-                        Assert.Equal(7u, *(uint*)(buffer + Stride * i + Offset(11)));
+                        // The SpeedTree 9 layout's 11 parameters, zeros after them.
+                        for (int p = SpeedTreeWindState.HistoryOffset; p < 16; p++) Assert.Equal(Vector4.zero, Param(buffer, i, p));
+                        Assert.Equal(7u, data[Stride * i]);
                     }
-                    Assert.Equal(7u, *(uint*)(buffer + Stride * 2 + Offset(0)));
+                    for (int p = 0; p < 16; p++) Assert.Equal(Vector4.zero, Param(buffer, 2, p));
+
+                    // A tree whose wind asset is removed after the drawer took it: zeros.
+                    objects[1].GetComponent<Tree>().windAsset = null;
+                    Fill(7);
+                    SpeedTreeWindSystem.WriteBuffer(ids, in iterator, false);
+                    Assert.Equal(Vector4.zero, Param(buffer, 1, 1));
+                    Assert.Equal(new Vector4(2f, 4f, 3f, 0.25f), Param(buffer, 0, 1));
+                    objects[1].GetComponent<Tree>().windAsset = asset;
 
                     Fill(7);
                     SpeedTreeWindSystem.WriteBuffer(ids, in iterator, true);
                     for (int p = 0; p < SpeedTreeWindState.HistoryOffset; p++)
                         Assert.Equal((Vector4)asset.Wind.Values[SpeedTreeWindState.HistoryOffset + p], Param(buffer, 0, p));
                     for (int p = 0; p < 16; p++) Assert.Equal(Vector4.zero, Param(buffer, 1, p));
-                    Assert.Equal(7u, *(uint*)(buffer + Stride * 2 + Offset(0)));
+                    Assert.Equal(Vector4.zero, Param(buffer, 2, 0));
 
                     // Outside Play mode: zeros.
                     Unbound.Runtime.EditorSession.IsPlaying = false;
