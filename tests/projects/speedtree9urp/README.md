@@ -22,9 +22,8 @@ match in Unbound before and after the render. A batch-mode Editor differs (until
 renders it has not created the pipeline, so its imports ran with the shader's fallback sub-shader
 active and turned the MotionVectors pass off); the probe records the windowed Editor, as a game's
 project is opened. On OpenGL Core the Editor drops the GBuffer pass whose program excludes
-glcore (9 passes), as Unbound does. `residuals.json` lists, by cause, what does not match: the
-Editor imports the tree's extra map without sRGB (its post-processing of a tree's textures, not
-reproduced by decision).
+glcore (9 passes), as Unbound does. The Editor imports the tree's extra map without sRGB, though
+its committed .meta has the defaults (its post-processing of a tree's textures), as Unbound does.
 
     python3 tests/projects/speedtree9urp/run.py record --label A     # windowed Editor capture (GPU)
     python3 tests/projects/speedtree9urp/run.py publish A B          # two identical captures
