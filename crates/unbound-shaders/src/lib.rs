@@ -38,16 +38,22 @@ use std::{
 /// never used).
 pub const FORMAT_VERSION: u32 = 52;
 
-/// The identity of this build's compiler (`src/identity.rs`, made by the build script): the hash of the sources that decide its
-/// output. Cache entries are keyed by it beside [`FORMAT_VERSION`], so a build never reads
-/// another compiler's entries, whatever format number each declares.
+/// The identity of this build's compiler (`src/identity.rs`, made by the build script): the
+/// hash of the sources that decide its output. Cache entries are keyed by it beside
+/// [`FORMAT_VERSION`], so a build never reads another compiler's entries, whatever format
+/// number each declares.
 pub const COMPILER: &str = env!("UNBOUND_SHADERS_COMPILER");
 
 /// Starts a cache key with what every entry is keyed by: the format and the compiler.
 pub(crate) fn cache_key_hasher() -> blake3::Hasher {
+    keyed_by(FORMAT_VERSION, COMPILER)
+}
+
+/// A cache key started with a format number and a compiler identity.
+fn keyed_by(format: u32, compiler: &str) -> blake3::Hasher {
     let mut h = blake3::Hasher::new();
-    h.update(&FORMAT_VERSION.to_le_bytes());
-    h.update(COMPILER.as_bytes());
+    h.update(&format.to_le_bytes());
+    h.update(compiler.as_bytes());
     h
 }
 
@@ -2180,6 +2186,25 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
         );
         value.as_object_mut().unwrap().remove("sampler");
         assert!(serde_json::from_value::<TextureSlot>(value).is_err());
+    }
+
+    /// Every cache key starts with this build's format and compiler: another compiler's keys
+    /// differ under the same format number.
+    #[test]
+    fn cache_keys_follow_the_format_and_the_compiler() {
+        let key = |h: blake3::Hasher| h.finalize();
+        assert_eq!(
+            key(cache_key_hasher()),
+            key(keyed_by(FORMAT_VERSION, COMPILER))
+        );
+        assert_ne!(
+            key(keyed_by(FORMAT_VERSION, COMPILER)),
+            key(keyed_by(FORMAT_VERSION, "another compiler"))
+        );
+        assert_ne!(
+            key(keyed_by(FORMAT_VERSION, COMPILER)),
+            key(keyed_by(FORMAT_VERSION + 1, COMPILER))
+        );
     }
 
     /// The render pipelines' instancing library under the replay: read without instancing, so
