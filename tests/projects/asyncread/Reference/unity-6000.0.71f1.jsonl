@@ -1,0 +1,339 @@
+{"k":"default.read.valid","v":false}
+{"k":"default.read.status","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"default.read.readCount","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"default.read.jobHandle","v":"throws InvalidOperationException: ReadHandle.JobHandle cannot be called after the ReadHandle has been disposed"}
+{"k":"default.read.cancel","v":"throws InvalidOperationException: ReadHandle.Cancel cannot be called on a disposed ReadHandle"}
+{"k":"default.read.dispose","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"default.read.bytesRead","v":"throws InvalidOperationException: ReadHandle.GetBytesRead cannot be called after the ReadHandle has been disposed"}
+{"k":"default.read.bytesReadCommand","v":"throws InvalidOperationException: ReadHandle.GetBytesRead cannot be called after the ReadHandle has been disposed"}
+{"k":"default.read.bytesReadArray","v":"throws InvalidOperationException: ReadHandle.GetBytesReadArray cannot be called after the ReadHandle has been disposed"}
+{"k":"default.file.valid","v":false}
+{"k":"default.file.status","v":"throws InvalidOperationException: FileHandle.Status cannot be called on a closed FileHandle"}
+{"k":"default.file.jobHandle","v":"throws InvalidOperationException: FileHandle.JobHandle cannot be called on a closed FileHandle"}
+{"k":"default.file.close","v":"throws InvalidOperationException: FileHandle.Close cannot be called twice on the same FileHandle"}
+{"k":"default.file.read","v":"throws InvalidOperationException: FileHandle is invalid and may not be read from."}
+{"k":"default.file.readDeferred","v":"throws InvalidOperationException: FileHandle is invalid and may not be read from."}
+{"k":"default.command","v":"0/0/True"}
+{"k":"default.commandArray","v":"0/True"}
+{"k":"default.fileInfo","v":"0/Absent"}
+{"k":"log.defaults","v":""}
+{"k":"info.nullResult","v":"throws NullReferenceException: GetFileInfo must have a valid FileInfoResult to write into."}
+{"k":"info.absolute.valid","v":true}
+{"k":"info.absolute.status","v":"Complete"}
+{"k":"info.absolute.readCount","v":0}
+{"k":"info.absolute.bytesRead","v":0}
+{"k":"info.absolute.size","v":4096}
+{"k":"info.absolute.state","v":"Exists"}
+{"k":"info.relative.valid","v":true}
+{"k":"info.relative.status","v":"Complete"}
+{"k":"info.relative.readCount","v":0}
+{"k":"info.relative.bytesRead","v":0}
+{"k":"info.relative.size","v":4096}
+{"k":"info.relative.state","v":"Exists"}
+{"k":"info.missing.valid","v":true}
+{"k":"info.missing.status","v":"Complete"}
+{"k":"info.missing.readCount","v":0}
+{"k":"info.missing.bytesRead","v":0}
+{"k":"info.missing.size","v":0}
+{"k":"info.missing.state","v":"Absent"}
+{"k":"info.directory.valid","v":true}
+{"k":"info.directory.status","v":"Complete"}
+{"k":"info.directory.readCount","v":0}
+{"k":"info.directory.bytesRead","v":0}
+{"k":"info.directory.size","v":0}
+{"k":"info.directory.state","v":"Absent"}
+{"k":"info.empty.valid","v":true}
+{"k":"info.empty.status","v":"Complete"}
+{"k":"info.empty.readCount","v":0}
+{"k":"info.empty.bytesRead","v":0}
+{"k":"info.empty.size","v":0}
+{"k":"info.empty.state","v":"Absent"}
+{"k":"info.null.valid","v":true}
+{"k":"info.null.status","v":"Complete"}
+{"k":"info.null.readCount","v":0}
+{"k":"info.null.bytesRead","v":0}
+{"k":"info.null.size","v":0}
+{"k":"info.null.state","v":"Absent"}
+{"k":"log.info","v":""}
+{"k":"name.two.valid","v":true}
+{"k":"name.two.status","v":"Complete"}
+{"k":"name.two.readCount","v":2}
+{"k":"name.two.bytesRead","v":24}
+{"k":"name.two.bytesReadPerCommand","v":"16/16,8/8"}
+{"k":"name.two.cancelAfterCompletion","v":"Complete"}
+{"k":"name.two.dispose","v":"ok"}
+{"k":"name.two.validAfterDispose","v":false}
+{"k":"name.two.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.two.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.two.data","v":"030a11181f262d343b424950575e656cbfc6cdd4dbe2e9f0"}
+{"k":"name.relative.valid","v":true}
+{"k":"name.relative.status","v":"Complete"}
+{"k":"name.relative.readCount","v":1}
+{"k":"name.relative.bytesRead","v":8}
+{"k":"name.relative.bytesReadPerCommand","v":"8/8"}
+{"k":"name.relative.cancelAfterCompletion","v":"Complete"}
+{"k":"name.relative.dispose","v":"ok"}
+{"k":"name.relative.validAfterDispose","v":false}
+{"k":"name.relative.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.relative.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.relative.data","v":"e3eaf1f8ff060d14"}
+{"k":"name.pastEnd.valid","v":true}
+{"k":"name.pastEnd.status","v":"Truncated"}
+{"k":"name.pastEnd.readCount","v":1}
+{"k":"name.pastEnd.bytesRead","v":6}
+{"k":"name.pastEnd.bytesReadPerCommand","v":"6/6"}
+{"k":"name.pastEnd.cancelAfterCompletion","v":"Truncated"}
+{"k":"name.pastEnd.dispose","v":"ok"}
+{"k":"name.pastEnd.validAfterDispose","v":false}
+{"k":"name.pastEnd.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.pastEnd.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.pastEnd.data","v":"d9e0e7eef5fceeeeeeeeeeeeeeeeeeee"}
+{"k":"name.beyondEnd.valid","v":true}
+{"k":"name.beyondEnd.status","v":"Failed"}
+{"k":"name.beyondEnd.readCount","v":1}
+{"k":"name.beyondEnd.bytesRead","v":0}
+{"k":"name.beyondEnd.bytesReadPerCommand","v":"0/0"}
+{"k":"name.beyondEnd.cancelAfterCompletion","v":"Failed"}
+{"k":"name.beyondEnd.dispose","v":"ok"}
+{"k":"name.beyondEnd.validAfterDispose","v":false}
+{"k":"name.beyondEnd.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.beyondEnd.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.beyondEnd.data","v":"eeeeeeeeeeeeeeee"}
+{"k":"name.endExactly.valid","v":true}
+{"k":"name.endExactly.status","v":"Failed"}
+{"k":"name.endExactly.readCount","v":1}
+{"k":"name.endExactly.bytesRead","v":0}
+{"k":"name.endExactly.bytesReadPerCommand","v":"0/0"}
+{"k":"name.endExactly.cancelAfterCompletion","v":"Failed"}
+{"k":"name.endExactly.dispose","v":"ok"}
+{"k":"name.endExactly.validAfterDispose","v":false}
+{"k":"name.endExactly.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.endExactly.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.endExactly.data","v":"eeeeeeee"}
+{"k":"name.mixed.valid","v":true}
+{"k":"name.mixed.status","v":"Truncated"}
+{"k":"name.mixed.readCount","v":3}
+{"k":"name.mixed.bytesRead","v":10}
+{"k":"name.mixed.bytesReadPerCommand","v":"4/4,2/2,4/4"}
+{"k":"name.mixed.cancelAfterCompletion","v":"Truncated"}
+{"k":"name.mixed.dispose","v":"ok"}
+{"k":"name.mixed.validAfterDispose","v":false}
+{"k":"name.mixed.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.mixed.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.mixed.data","v":"3b424950f5fceeee737a8188"}
+{"k":"name.zeroSize.valid","v":true}
+{"k":"name.zeroSize.status","v":"Complete"}
+{"k":"name.zeroSize.readCount","v":2}
+{"k":"name.zeroSize.bytesRead","v":2}
+{"k":"name.zeroSize.bytesReadPerCommand","v":"0/0,2/2"}
+{"k":"name.zeroSize.cancelAfterCompletion","v":"Complete"}
+{"k":"name.zeroSize.dispose","v":"ok"}
+{"k":"name.zeroSize.validAfterDispose","v":false}
+{"k":"name.zeroSize.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.zeroSize.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.zeroSize.data","v":"575e"}
+{"k":"name.missing.valid","v":true}
+{"k":"name.missing.status","v":"Failed"}
+{"k":"name.missing.readCount","v":1}
+{"k":"name.missing.bytesRead","v":0}
+{"k":"name.missing.bytesReadPerCommand","v":"0/0"}
+{"k":"name.missing.cancelAfterCompletion","v":"Failed"}
+{"k":"name.missing.dispose","v":"ok"}
+{"k":"name.missing.validAfterDispose","v":false}
+{"k":"name.missing.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.missing.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.missing.data","v":"eeeeeeeeeeeeeeee"}
+{"k":"name.missingTwo.valid","v":true}
+{"k":"name.missingTwo.status","v":"Failed"}
+{"k":"name.missingTwo.readCount","v":2}
+{"k":"name.missingTwo.bytesRead","v":0}
+{"k":"name.missingTwo.bytesReadPerCommand","v":"0/0,0/0"}
+{"k":"name.missingTwo.cancelAfterCompletion","v":"Failed"}
+{"k":"name.missingTwo.dispose","v":"ok"}
+{"k":"name.missingTwo.validAfterDispose","v":false}
+{"k":"name.missingTwo.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.missingTwo.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.missingTwo.data","v":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
+{"k":"name.truncatedThenFailed.valid","v":true}
+{"k":"name.truncatedThenFailed.status","v":"Failed"}
+{"k":"name.truncatedThenFailed.readCount","v":2}
+{"k":"name.truncatedThenFailed.bytesRead","v":2}
+{"k":"name.truncatedThenFailed.bytesReadPerCommand","v":"2/2,0/0"}
+{"k":"name.truncatedThenFailed.cancelAfterCompletion","v":"Failed"}
+{"k":"name.truncatedThenFailed.dispose","v":"ok"}
+{"k":"name.truncatedThenFailed.validAfterDispose","v":false}
+{"k":"name.truncatedThenFailed.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.truncatedThenFailed.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.truncatedThenFailed.data","v":"f5fceeeeeeeeeeee"}
+{"k":"name.failedThenTruncated.valid","v":true}
+{"k":"name.failedThenTruncated.status","v":"Failed"}
+{"k":"name.failedThenTruncated.readCount","v":2}
+{"k":"name.failedThenTruncated.bytesRead","v":2}
+{"k":"name.failedThenTruncated.bytesReadPerCommand","v":"0/0,2/2"}
+{"k":"name.failedThenTruncated.cancelAfterCompletion","v":"Failed"}
+{"k":"name.failedThenTruncated.dispose","v":"ok"}
+{"k":"name.failedThenTruncated.validAfterDispose","v":false}
+{"k":"name.failedThenTruncated.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.failedThenTruncated.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.failedThenTruncated.data","v":"eeeeeeeef5fceeee"}
+{"k":"name.directory.valid","v":true}
+{"k":"name.directory.status","v":"Failed"}
+{"k":"name.directory.readCount","v":1}
+{"k":"name.directory.bytesRead","v":0}
+{"k":"name.directory.bytesReadPerCommand","v":"0/0"}
+{"k":"name.directory.cancelAfterCompletion","v":"Failed"}
+{"k":"name.directory.dispose","v":"ok"}
+{"k":"name.directory.validAfterDispose","v":false}
+{"k":"name.directory.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.directory.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.directory.data","v":"eeeeeeeeeeeeeeee"}
+{"k":"name.noCommands.valid","v":true}
+{"k":"name.noCommands.status","v":"Complete"}
+{"k":"name.noCommands.readCount","v":0}
+{"k":"name.noCommands.bytesRead","v":0}
+{"k":"name.noCommands.bytesReadPerCommand","v":""}
+{"k":"name.noCommands.cancelAfterCompletion","v":"Complete"}
+{"k":"name.noCommands.dispose","v":"ok"}
+{"k":"name.noCommands.validAfterDispose","v":false}
+{"k":"name.noCommands.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.noCommands.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.noCommands.data","v":""}
+{"k":"name.empty.valid","v":true}
+{"k":"name.empty.status","v":"Failed"}
+{"k":"name.empty.readCount","v":1}
+{"k":"name.empty.bytesRead","v":0}
+{"k":"name.empty.bytesReadPerCommand","v":"0/0"}
+{"k":"name.empty.cancelAfterCompletion","v":"Failed"}
+{"k":"name.empty.dispose","v":"ok"}
+{"k":"name.empty.validAfterDispose","v":false}
+{"k":"name.empty.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.empty.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.empty.data","v":"eeeeeeeeeeeeeeee"}
+{"k":"name.null.valid","v":true}
+{"k":"name.null.status","v":"Failed"}
+{"k":"name.null.readCount","v":1}
+{"k":"name.null.bytesRead","v":0}
+{"k":"name.null.bytesReadPerCommand","v":"0/0"}
+{"k":"name.null.cancelAfterCompletion","v":"Failed"}
+{"k":"name.null.dispose","v":"ok"}
+{"k":"name.null.validAfterDispose","v":false}
+{"k":"name.null.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"name.null.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"name.null.data","v":"eeeeeeeeeeeeeeee"}
+{"k":"name.copied.status","v":"Complete"}
+{"k":"name.copied.data","v":"7b828990979ea5ac"}
+{"k":"log.name","v":""}
+{"k":"open.emptyName","v":"throws InvalidOperationException: FileName is empty"}
+{"k":"open.nullName","v":"throws NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"open.valid","v":true}
+{"k":"open.status","v":"Open"}
+{"k":"open.jobCompleted","v":true}
+{"k":"open.read.valid","v":true}
+{"k":"open.read.status","v":"Truncated"}
+{"k":"open.read.readCount","v":2}
+{"k":"open.read.bytesRead","v":6}
+{"k":"open.read.bytesReadPerCommand","v":"4/4,2/2"}
+{"k":"open.read.cancelAfterCompletion","v":"Truncated"}
+{"k":"open.read.dispose","v":"ok"}
+{"k":"open.read.validAfterDispose","v":false}
+{"k":"open.read.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"open.read.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"open.read.data","v":"030a1118f5fceeee"}
+{"k":"open.readAgain.valid","v":true}
+{"k":"open.readAgain.status","v":"Complete"}
+{"k":"open.readAgain.readCount","v":1}
+{"k":"open.readAgain.bytesRead","v":8}
+{"k":"open.readAgain.bytesReadPerCommand","v":"8/8"}
+{"k":"open.readAgain.cancelAfterCompletion","v":"Complete"}
+{"k":"open.readAgain.dispose","v":"ok"}
+{"k":"open.readAgain.validAfterDispose","v":false}
+{"k":"open.readAgain.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"open.readAgain.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"open.readAgain.data","v":"030a11181f262d34"}
+{"k":"open.validAfterClose","v":false}
+{"k":"open.validAfterCloseComplete","v":false}
+{"k":"open.statusAfterClose","v":"throws InvalidOperationException: FileHandle.Status cannot be called on a closed FileHandle"}
+{"k":"open.jobHandleAfterClose","v":"throws InvalidOperationException: FileHandle.JobHandle cannot be called on a closed FileHandle"}
+{"k":"open.closeTwice","v":"throws InvalidOperationException: FileHandle.Close cannot be called twice on the same FileHandle"}
+{"k":"open.readAfterClose","v":"throws InvalidOperationException: FileHandle is invalid and may not be read from."}
+{"k":"open.early.status","v":"Complete"}
+{"k":"open.early.data","v":"030a11181f262d34"}
+{"k":"open.early.validAfterClose","v":false}
+{"k":"open.missing.valid","v":true}
+{"k":"open.missing.status","v":"OpenFailed"}
+{"k":"open.missing.read.valid","v":true}
+{"k":"open.missing.read.status","v":"Failed"}
+{"k":"open.missing.read.readCount","v":1}
+{"k":"open.missing.read.bytesRead","v":0}
+{"k":"open.missing.read.bytesReadPerCommand","v":"0/0"}
+{"k":"open.missing.read.cancelAfterCompletion","v":"Failed"}
+{"k":"open.missing.read.dispose","v":"ok"}
+{"k":"open.missing.read.validAfterDispose","v":false}
+{"k":"open.missing.read.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"open.missing.read.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"open.missing.read.data","v":"eeeeeeee"}
+{"k":"open.missing.close","v":"ok"}
+{"k":"open.missing.validAfterClose","v":false}
+{"k":"open.directory.valid","v":true}
+{"k":"open.directory.status","v":"Open"}
+{"k":"open.directory.read.valid","v":true}
+{"k":"open.directory.read.status","v":"Failed"}
+{"k":"open.directory.read.readCount","v":1}
+{"k":"open.directory.read.bytesRead","v":0}
+{"k":"open.directory.read.bytesReadPerCommand","v":"0/0"}
+{"k":"open.directory.read.cancelAfterCompletion","v":"Failed"}
+{"k":"open.directory.read.dispose","v":"ok"}
+{"k":"open.directory.read.validAfterDispose","v":false}
+{"k":"open.directory.read.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"open.directory.read.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"open.directory.read.data","v":"eeeeeeee"}
+{"k":"open.directory.close","v":"ok"}
+{"k":"open.closeCached","v":"ok"}
+{"k":"open.closeCachedUnknown","v":"ok"}
+{"k":"log.open","v":""}
+{"k":"deferred.validBeforeDependency","v":true}
+{"k":"deferred.statusBeforeDependency","v":"InProgress"}
+{"k":"deferred.valid","v":true}
+{"k":"deferred.status","v":"Complete"}
+{"k":"deferred.readCount","v":2}
+{"k":"deferred.bytesRead","v":12}
+{"k":"deferred.bytesReadPerCommand","v":"8/8,4/4"}
+{"k":"deferred.cancelAfterCompletion","v":"Complete"}
+{"k":"deferred.dispose","v":"ok"}
+{"k":"deferred.validAfterDispose","v":false}
+{"k":"deferred.statusAfterDispose","v":"throws InvalidOperationException: Cannot use a ReadHandle that has been disposed"}
+{"k":"deferred.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
+{"k":"deferred.data","v":"c3cad1d8dfe6edf4636a7178"}
+{"k":"log.deferred","v":""}
+{"k":"cancel.cancelTwice","v":"ok"}
+{"k":"cancel.status","v":"Canceled"}
+{"k":"cancel.bytesRead","v":"0"}
+{"k":"cancel.readCount","v":"0"}
+{"k":"cancel.data","v":"eeeeeeeeeeeeeeee"}
+{"k":"cancel.dispose","v":"ok"}
+{"k":"log.cancel","v":""}
+{"k":"timing.enabled","v":true}
+{"k":"timing.cpuFrequency","v":1000000000}
+{"k":"timing.gpuFrequency","v":1000000000}
+{"k":"timing.beforeCaptureAtMostRequested","v":true}
+{"k":"timing.vSyncCount","v":1}
+{"k":"timing.zeroFrames","v":"0"}
+{"k":"timing.default","v":"cpu0 main0 wait0 render0 gpu0 start0 submit0 present0 complete0 ordered:True scale:0x0 sync:0"}
+{"k":"log.timing","v":""}
+{"k":"timing.captureNoEffect","v":true}
+{"k":"timing.growsByOnePerFrame","v":true}
+{"k":"timing.countAfter12","v":8}
+{"k":"timing.countOf2","v":2}
+{"k":"timing.latest","v":"cpu+ main+ wait0 render+ gpu0 start+ submit+ present+ complete+ ordered:True scale:1x1 sync:refresh"}
+{"k":"timing.syncIsRefreshRate","v":true}
+{"k":"timing.newestFirst","v":true}
+{"k":"timing.latestSpanUnderOneSecond","v":true}
+{"k":"timing.vSync0.syncZero","v":false}
+{"k":"timing.vSync0.syncIsRefreshRate","v":true}
+{"k":"timing.vSync0.latest","v":"cpu+ main+ wait0 render+ gpu0 start+ submit+ present+ complete+ ordered:True scale:1x1 sync:refresh"}
+{"k":"timing.vSync2.syncZero","v":false}
+{"k":"timing.vSync2.syncIsRefreshRate","v":true}
+{"k":"timing.vSync2.latest","v":"cpu+ main+ wait0 render+ gpu0 start+ submit+ present+ complete+ ordered:True scale:1x1 sync:refresh"}
+{"k":"timing.capacity","v":32}
+{"k":"log.frames","v":""}
+{"k":"complete","v":true}

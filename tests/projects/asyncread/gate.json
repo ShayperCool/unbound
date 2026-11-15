@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/asyncread/run.py unbound --release $UNBOUND_PROBE_UNITY_VERSION"
+  ],
+  "summary": "asyncread: [0-9]+/[0-9]+ records, [0-9]+/[0-9]+ values match",
+  "engine_paths": [
+    "managed/UnityEngine/Platform/AsyncReadManager.cs",
+    "managed/UnityEngine/Profiling/FrameTimingManager.cs"
+  ]
+}
