@@ -647,7 +647,7 @@ namespace Unbound.Runtime
             foreach (var member in SerializationRules.Members(type, guiStatePayload))
             {
                 var value = member.Field.GetValue(source);
-                var current = member.Field.FieldType.IsValueType ? member.Field.GetValue(target) : null;
+                var current = member.Field.FieldType.IsValueType && SerializationRules.IsComposite(member.Shape) ? member.Field.GetValue(target) : null;
                 member.Field.SetValue(target, Copy(value, member.Field.FieldType, member.Shape, member.ElementType, member.ElementShape, depth, current));
             }
         }
