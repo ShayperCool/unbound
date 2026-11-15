@@ -454,6 +454,9 @@ public class NativeGfxMetalProbe : MonoBehaviour
             case 15:
                 ScreenCameraSelf();
                 break;
+            case 16:
+                DecodedArrays();
+                break;
         }
     }
 
@@ -495,6 +498,38 @@ public class NativeGfxMetalProbe : MonoBehaviour
         screenLogs = null;
         cmd.Release();
         DestroyImmediate(camera.gameObject);
+    }
+
+    /// <summary>8x8 arrays of ETC2_RGBA1, signed EAC and PVRTC made from the same bytes (byte i
+    /// is (i * 37 + 11) mod 256), read back: GetPixels32 rows, and for signed EAC the float bits
+    /// of GetPixels' first row.</summary>
+    void DecodedArrays()
+    {
+        screenLogs = new List<string>();
+        foreach (var format in new[] { TextureFormat.ETC2_RGBA1, TextureFormat.EAC_R_SIGNED, TextureFormat.EAC_RG_SIGNED,
+            TextureFormat.PVRTC_RGB2, TextureFormat.PVRTC_RGBA2, TextureFormat.PVRTC_RGB4, TextureFormat.PVRTC_RGBA4 })
+        {
+            try
+            {
+                var array = new Texture2DArray(8, 8, 1, format, false, true);
+                int size = array.GetPixelData<byte>(0, 0).Length;
+                var bytes = new byte[size];
+                for (int i = 0; i < size; i++) bytes[i] = (byte)((i * 37 + 11) % 256);
+                array.SetPixelData(bytes, 0, 0);
+                array.Apply(false);
+                Value("array.decode." + format, Rows(array.GetPixels32(0), 8, 8));
+                if (format is TextureFormat.EAC_R_SIGNED or TextureFormat.EAC_RG_SIGNED)
+                    Value("array.decode." + format + ".floats", L(array.GetPixels(0).Take(8)
+                        .Select(c => $"{BitConverter.SingleToInt32Bits(c.r):x8} {BitConverter.SingleToInt32Bits(c.g):x8} {BitConverter.SingleToInt32Bits(c.b):x8} {BitConverter.SingleToInt32Bits(c.a):x8}")));
+                DestroyImmediate(array);
+            }
+            catch (Exception e)
+            {
+                Value("array.decode." + format, Q(e.GetType().Name + ": " + e.Message));
+            }
+        }
+        Value("array.decode.logs", L(screenLogs));
+        screenLogs = null;
     }
 
     RenderTexture dynamicTarget, fixedTarget, oddBefore;
@@ -1030,7 +1065,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
         int code = 0;
         try { Setup(); }
         catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
-        for (int frame = 1; frame <= 15 && code == 0; frame++)
+        for (int frame = 1; frame <= 16 && code == 0; frame++)
         {
             try { Frame(frame); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
