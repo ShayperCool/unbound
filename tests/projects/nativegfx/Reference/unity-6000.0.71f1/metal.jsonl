@@ -141,6 +141,9 @@
 {"k":"dynres.reset.texels","v":["00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16"]}
 {"k":"dynres.factors.nan","v":"1 0.5"}
 {"k":"dynres.explicit.logs","v":["Assert: Invalid widthScale: nan"]}
+{"k":"screenself.blit.pixels","v":["80808080*8","80808080*8","80808080*8","80808080*8","80808080*8","80808080*8","80808080*8","80808080*8"]}
+{"k":"screenself.read.pixels","v":["ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8"]}
+{"k":"screenself.logs","v":[]}
 {"k":"target.pixels","v":["ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4"]}
 {"k":"camera.pixels","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
 {"k":"second.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}

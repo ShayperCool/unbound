@@ -451,7 +451,50 @@ public class NativeGfxMetalProbe : MonoBehaviour
                 Value("dynres.reset.texels", Read(dynamicTarget, 16, 16));
                 DynamicScaleExplicit();
                 break;
+            case 15:
+                ScreenCameraSelf();
+                break;
         }
+    }
+
+    /// <summary>A camera drawing to the screen (as in <see cref="ScreenCameraCopies"/>) whose
+    /// command buffer blits its target onto itself through a halving shader, then into a render
+    /// texture; and the screen read with ReadPixels in the camera's onPostRender.</summary>
+    void ScreenCameraSelf()
+    {
+        screenLogs = new List<string>();
+        var back = Target("screenselfback", 0);
+        Clear(back, Color.black);
+        var camera = new GameObject("screen self camera").AddComponent<Camera>();
+        camera.enabled = false;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(1f, 0.5f, 0.25f, 0.75f);
+        camera.cullingMask = 0;
+        camera.allowHDR = false;
+        camera.allowMSAA = false;
+        var half = Keep(new Material(Shader.Find("Probe/NativeGfx/Half")));
+        var cmd = new CommandBuffer { name = "screen self" };
+        cmd.Blit(BuiltinRenderTextureType.CameraTarget, BuiltinRenderTextureType.CameraTarget, half);
+        cmd.Blit(BuiltinRenderTextureType.CameraTarget, back);
+        camera.AddCommandBuffer(CameraEvent.AfterEverything, cmd);
+        string read = null;
+        void PostRender(Camera rendered)
+        {
+            if (rendered != camera) return;
+            var cpu = new Texture2D(8, 8, TextureFormat.RGBA32, false, true);
+            cpu.ReadPixels(new Rect(0, 0, 8, 8), 0, 0);
+            read = Rows(cpu.GetPixels32(), 8, 8);
+            DestroyImmediate(cpu);
+        }
+        Camera.onPostRender += PostRender;
+        camera.Render();
+        Camera.onPostRender -= PostRender;
+        Value("screenself.blit.pixels", Pixels(back, 8, 8));
+        Value("screenself.read.pixels", read ?? "null");
+        Value("screenself.logs", L(screenLogs));
+        screenLogs = null;
+        cmd.Release();
+        DestroyImmediate(camera.gameObject);
     }
 
     RenderTexture dynamicTarget, fixedTarget, oddBefore;
@@ -987,7 +1030,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
         int code = 0;
         try { Setup(); }
         catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
-        for (int frame = 1; frame <= 14 && code == 0; frame++)
+        for (int frame = 1; frame <= 15 && code == 0; frame++)
         {
             try { Frame(frame); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
