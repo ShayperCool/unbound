@@ -267,7 +267,7 @@ drawn into with a color whose encoded red would be 127.5 stores 127 (presumably 
 32-bit floats (191 to 0.52088),
 and texel loads (`Texture2D.Load`) outside a texture read zero. Volumes (`volume.*`):
 `SystemInfo.supportsCompressed3DTextures` is true; BC1 and ASTC 4x4 volumes made from their
-blocks are sampled per slice; a volume of every compressed TextureFormat is made, except Crunched
+blocks are sampled per slice and read by GetPixels32 (`*.cpu`); a volume of every compressed TextureFormat is made, except Crunched
 ones (`ArgumentException: Crunched Texture3D is not supported.`) and PVRTC, ETC and EAC ones
 (`Metal does not support <format> texture format for Texture3D` logged, then `UnityException:
 Failed to create texture because of invalid parameters.`).
@@ -280,7 +280,7 @@ after a camera rendered; GL.LoadOrtho's inside a GL.LoadOrtho), the right way up
 matrices do not last past it (a DrawMeshNow after it takes GL's). `compressed.formats` lists the
 TextureFormat values `GraphicsFormatUtility.IsCompressedFormat` answers true for.
 
-Unbound matches 246/282 records with 36 declared residuals (`residuals-metal.json`, each with its
+Unbound matches 248/284 records with 36 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a screen
