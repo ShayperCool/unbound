@@ -1858,22 +1858,34 @@ impl<'a> Builder<'a> {
             if let Some(node) = motion_node.filter(|_| !no_frames) {
                 floats.extend(self.motion_curves(node, &stack.anim, start, end, fps));
             }
-            // Event and parameter curve times are normalized: a Humanoid clip's to the range's
-            // span, its end less its start (frames 1 to 31 at 30 a second: 1, where the last
-            // transform key is at 1.00000012 and the last muscle key at 0.99999994; the clip
-            // then ends at its last key or event, managed `HumanClip`; tests/projects/modelclips
-            // events.HumanLateEvents, ends.HumanLateCurve), other clips' to their length, which
-            // they keep (unmeasured where the two differ: an end event past a shorter length
-            // would not fire). A range of no frames takes its length of 1.
-            let span = if empty || !human {
+            // Event and parameter curve times are normalized to the range's span, its end less
+            // its start (frames 1 to 31 at 30 a second: 1, where the last rotation key is at
+            // 1.00000012 and a Humanoid clip's last muscle key at 0.99999994;
+            // tests/projects/modelclips events.HumanLateEvents, ends.HumanLateCurve,
+            // events.GenericLateCurve), and a Generic or Humanoid clip ends at its last key or
+            // event, whichever is later (a Humanoid clip's keys are its converted curves': managed
+            // `HumanClip`). A Legacy clip keeps them on its range's length (unmeasured), and a
+            // range of no frames on its length of 1.
+            let legacy = self.settings.animation_type == 1;
+            let span = if empty || legacy {
                 length
             } else {
                 (end - start) as f32
             };
+            let length = if empty || legacy {
+                length
+            } else {
+                let events = range.events.iter().map(|e| e.time * span);
+                let keys = range
+                    .parameters
+                    .iter()
+                    .filter_map(|c| c.keys.last().map(|k| k.time * span));
+                events.chain(keys).fold(length, f32::max)
+            };
             clips.push(ModelClip {
                 file_id: file_id.into(),
                 name: range.name,
-                legacy: self.settings.animation_type == 1,
+                legacy,
                 sample_rate: fps as f32,
                 take_start: start as f32,
                 length,

@@ -1441,13 +1441,14 @@ fn a_clip_is_reduced_on_its_takes_frames_and_then_moved_to_its_start() {
     assert_eq!(beyond.length, 0.333_333_37);
 }
 
-/// A Humanoid clip's normalized event and parameter curve times lie on its range's span, its
-/// end less its start: frames 1 to 31 at 30 a second put events at normalized 0.5 and 1 at 0.5
-/// and 1 (tests/projects/modelclips events.HumanLateEvents, ends.HumanLateCurve), where the last
-/// transform key is at 1.00000012. The same file imported as Generic keeps them on its length,
-/// so an event at normalized 1 stays at the clip's end (unmeasured where the two differ).
+/// Normalized event and parameter curve times lie on the range's span, its end less its start:
+/// frames 1 to 31 at 30 a second put events at normalized 0.5 and 1 at 0.5 and 1, where the last
+/// rotation key is at 1.00000012, Humanoid and Generic alike (tests/projects/modelclips
+/// events.HumanLateEvents, ends.HumanLateCurve, events.GenericLateCurve; the Generic clip stays
+/// 1.00000012 long, its last key). A clip whose last event lies past its last key ends at the
+/// event (a range one step shorter than its span; Humanoid measured, Generic by the same rule).
 #[test]
-fn a_humanoid_clips_events_lie_on_its_span_and_other_clips_on_their_length() {
+fn clip_events_lie_on_the_range_span_and_end_the_clip_past_its_last_key() {
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/projects/modelclips/Assets/Resources/HumanLateCurve.fbx");
     let text = std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap();
@@ -1467,8 +1468,18 @@ fn a_humanoid_clips_events_lie_on_its_span_and_other_clips_on_their_length() {
     let generic = clip(&text.replace("animationType: 3", "animationType: 2"));
     assert_eq!(generic.length, 1.000_000_1);
     let times: Vec<f32> = generic.events.iter().map(|e| e.time).collect();
-    assert_eq!(times, [0.5 * generic.length, generic.length]);
-    assert_eq!(generic.parameters[0].keys[1].time, generic.length);
+    assert_eq!(times, [0.5, 1.0]);
+    assert_eq!(generic.parameters[0].keys[1].time, 1.0);
+    // An event past the last key: normalized 1.5 of the span ends the clip at 1.5 (a control
+    // of the end rule; the probe's events lie inside the clip).
+    let later = text.replacen("- time: 1\n", "- time: 1.5\n", 1);
+    assert_ne!(later, text);
+    let generic = clip(&later.replace("animationType: 3", "animationType: 2"));
+    assert_eq!(generic.length, 1.5);
+    // A Legacy clip keeps them on its range's length.
+    let legacy = clip(&text.replace("animationType: 3", "animationType: 1"));
+    let times: Vec<f32> = legacy.events.iter().map(|e| e.time).collect();
+    assert_eq!(times, [0.5 * legacy.length, legacy.length]);
 }
 
 /// A Humanoid clip's transform keys take the frame times of every other rig type: the frame
