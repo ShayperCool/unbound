@@ -536,6 +536,13 @@ namespace Unbound.Runtime
             {
                 if (!s_Reported.Add(key)) return;
             }
+            var editorClass = EngineScripts.EditorOnlyClass(script.Guid, script.FileId);
+            if (editorClass != null)
+            {
+                Debug.LogWarning($"Unbound does not load the Editor's {editorClass} ({doc.TypeName} {doc.FileId}{AssetDatabaseRuntime.DescribeGuid(script.Guid)}): " +
+                                 "its data is not read.");
+                return;
+            }
             Debug.LogWarning($"The referenced script (guid {script.Guid}, fileID {script.FileId}) on this Behaviour is missing! " +
                              $"({doc.TypeName} {doc.FileId}{AssetDatabaseRuntime.DescribeGuid(script.Guid)})");
         }

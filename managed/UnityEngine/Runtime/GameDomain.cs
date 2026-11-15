@@ -587,9 +587,24 @@ namespace Unbound.Runtime
             [12405] = "UnityEditor.SpeedTree.Importer.SpeedTree9Importer",
         };
 
+        /// <summary>MonoScripts of `unity default resources` that name Editor classes Unbound does
+        /// not load, by the class they name.</summary>
+        static readonly Dictionary<long, string> s_EditorOnly = new Dictionary<long, string>
+        {
+            // The Tree Creator's tree data, a sub-asset of every Tree Creator prefab.
+            [12106] = "TreeEditor.TreeData",
+        };
+
+        const string DefaultResourcesGuid = "0000000000000000e000000000000000";
+
+        /// <summary>The Editor class a default-resources script names that Unbound does not load,
+        /// or null.</summary>
+        internal static string EditorOnlyClass(string guid, long fileId) =>
+            string.Equals(guid, DefaultResourcesGuid, StringComparison.OrdinalIgnoreCase) && s_EditorOnly.TryGetValue(fileId, out var name) ? name : null;
+
         internal static Type Resolve(string guid, long fileId)
         {
-            if (!string.Equals(guid, "0000000000000000e000000000000000", StringComparison.OrdinalIgnoreCase)) return null;
+            if (!string.Equals(guid, DefaultResourcesGuid, StringComparison.OrdinalIgnoreCase)) return null;
             if (!s_DefaultResources.TryGetValue(fileId, out var name)) return null;
             return typeof(EngineScripts).Assembly.GetType(name);
         }
