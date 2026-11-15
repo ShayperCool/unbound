@@ -521,6 +521,20 @@ fn cubemap_faces_are_compressed_top_down() {
     );
     assert!(near(&decoded[..4], bottom));
 
+    // Crunch-compressed cubemaps are unmeasured: their pixels stay uncompressed, with a warning.
+    let crunched = unbound_yaml::parse_value("TextureImporter:\n  textureShape: 2\n  generateCubemap: 6\n  mipmaps:\n    enableMipMap: 0\n    sRGBTexture: 0\n  textureCompression: 1\n  crunchedCompression: 1\n").unwrap();
+    let tex = importer
+        .import(Path::new("Crunched.png"), &bytes, &crunched)
+        .unwrap();
+    assert!(tex.blocks.is_none() && tex.crunched.is_none());
+    assert!(
+        tex.approximation
+            .as_deref()
+            .unwrap()
+            .contains("Crunch-compressed cubemaps")
+    );
+    assert!(near(&tex.mips[0].data[..4], bottom));
+
     // Floats: BC6H, the pixels kept as they were.
     let data: Vec<f32> = (0..48 * 8)
         .flat_map(|i| [(i % 7) as f32 * 0.75, 1.5, 0.25, 1.0])

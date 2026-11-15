@@ -732,8 +732,9 @@ impl ProjectCompression {
 /// uncompressed unless both sides are powers of two (20x12 without mips: RGB24 in Gamma,
 /// ETC2_RGB in Linear). Other targets and default formats, automatic ETC_RGB4 at sizes that are
 /// not powers of two, Split Alpha Channel, automatic 2D HDR without Crunch on Android, EAC
-/// imports, arrays, volumes and the other texture types are unmeasured. A cubemap's faces are
-/// stored as 2D textures of the face size (a float cubemap on Android as a float lightmap). The 6000.0.71f1 profile
+/// imports, arrays, volumes, Crunch-compressed cubemaps and the other texture types are
+/// unmeasured. A cubemap's faces are stored as 2D textures of the face size (a float cubemap on
+/// Android as a float lightmap). The 6000.0.71f1 profile
 /// supports all six square LDR/HDR ASTC footprints and importer quality settings. Android
 /// ASTC defaults use 4x4 at High, 8x8 at Low and 6x6 at Normal, including Single Channel
 /// textures. ASTC sub-block mips clamp their edges; other releases keep uncompressed storage.
@@ -898,6 +899,9 @@ pub fn storage(
                 format,
                 BlockFormat::Bc1 | BlockFormat::Bc3 | BlockFormat::Etc1 | BlockFormat::Etc2Rgba8
             ));
+    if faces && wants_crunch {
+        return unsupported("Crunch-compressed cubemaps");
+    }
     let rgbm_encoding = hdr && s.rgbm_encoding && format == BlockFormat::Etc2Rgba8;
     if (format == BlockFormat::Bc6h) != hdr && !rgbm_encoding {
         return unsupported(&format!("{format:?} from {:?} data", texture.format));

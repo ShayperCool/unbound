@@ -39,4 +39,5 @@ python3 tests/projects/cubecompression/run.py publish <L1> <L2>    # two identic
 python3 tests/projects/cubecompression/run.py gate                 # engine vs Reference
 ```
 
-The gate compares every value exactly.
+The gate compares every value within 1e-6: the uncompressed controls read back the Editor's
+values, whose text differs from the engine's by at most 1e-8 (float formatting).

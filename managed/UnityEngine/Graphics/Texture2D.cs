@@ -975,14 +975,14 @@ namespace Unbound.Runtime
     /// <summary>Raw pixel data of the common texture formats, to and from RGBA32.</summary>
     internal static class PixelFormats
     {
-        /// <summary>The format an imported texture reports: the one the import names (Alpha8, R8,
-        /// RGB24: what the Editor reports for automatic uncompressed formats), else its data's
-        /// (the target override may keep HDR working pixels as float32 instead of half).</summary>
         /// <summary>The block format a block-compressed import is stored in (its pixels are what
         /// the blocks decode to), else null.</summary>
         internal static UnityEngine.TextureFormat? ImportedBlockFormat(in ImportedTextureInfo info) =>
             BlockFormats.BlockBytes((UnityEngine.TextureFormat)info.TextureFormat) > 0 ? (UnityEngine.TextureFormat)info.TextureFormat : null;
 
+        /// <summary>The format an imported texture reports: the one the import names (Alpha8, R8,
+        /// RGB24: what the Editor reports for automatic uncompressed formats), else its data's
+        /// (the target override may keep HDR working pixels as float32 instead of half).</summary>
         internal static UnityEngine.TextureFormat ImportedFormat(in ImportedTextureInfo info) => info.TextureFormat switch
         {
             (int)UnityEngine.TextureFormat.Alpha8 => UnityEngine.TextureFormat.Alpha8,

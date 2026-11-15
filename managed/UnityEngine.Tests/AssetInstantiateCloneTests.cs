@@ -430,6 +430,24 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(copy);
         }
 
+        /// <summary>A block-compressed imported cubemap's clone reports the block format too, and
+        /// holds the same decoded pixels.</summary>
+        [Fact]
+        public void CompressedCubemapCloneReportsTheBlockFormat()
+        {
+            var source = FilledCubemap();
+            source.Apply(false);
+            source.m_SourceFormat = TextureFormat.DXT1;
+            Assert.Equal(TextureFormat.DXT1, source.format);
+
+            var copy = Object.Instantiate(source);
+            Assert.Equal(TextureFormat.DXT1, copy.format);
+            Assert.Equal(source.graphicsFormat, copy.graphicsFormat);
+            Assert.Equal(source.GetPixels(CubemapFace.PositiveX, 1), copy.GetPixels(CubemapFace.PositiveX, 1));
+            Object.DestroyImmediate(source);
+            Object.DestroyImmediate(copy);
+        }
+
         [Fact]
         public void NonReadableCubemapCloneKeepsReadabilityAndOwnRetainedFaces()
         {

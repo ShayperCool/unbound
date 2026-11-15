@@ -29,6 +29,8 @@ namespace UnityEngine
                 m_Width = m_Width,
                 m_Height = m_Height,
                 m_Format = m_Format,
+                // A compressed import's clone reports its block format too; it holds the decoded pixels.
+                m_SourceFormat = m_SourceFormat,
                 m_MipCount = m_MipCount,
                 m_Readable = m_Readable,
                 m_Linear = m_Linear,

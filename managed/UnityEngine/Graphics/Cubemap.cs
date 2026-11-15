@@ -87,7 +87,7 @@ namespace UnityEngine
 
         /// <summary>The block format a compressed import is stored in, which it reports; its pixels
         /// (<see cref="m_Format"/>) are what the blocks decode to.</summary>
-        TextureFormat? m_SourceFormat;
+        internal TextureFormat? m_SourceFormat;
 
         public TextureFormat format => m_SourceFormat ?? m_Format;
         public override bool isReadable => m_Readable;
