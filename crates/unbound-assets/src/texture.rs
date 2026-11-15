@@ -1263,6 +1263,9 @@ pub struct TextureImporter {
     pub project: ProjectCompression,
     /// How the build target stores lightmaps and HDR cubemaps.
     pub lighting: unbound_compat::LightingEncodings,
+    /// The textures the project's SpeedTree 9 trees use, which import with the settings the
+    /// trees give them.
+    pub tree_textures: std::sync::Arc<crate::speedtree9_textures::TreeTextures>,
 }
 
 impl Default for TextureImporter {
@@ -1274,6 +1277,7 @@ impl Default for TextureImporter {
             normal_maps_xyz: false,
             project: ProjectCompression::default(),
             lighting: unbound_compat::LightingEncodings::default(),
+            tree_textures: Default::default(),
         }
     }
 }
@@ -1487,13 +1491,21 @@ impl Importer for TextureImporter {
     //     8-bit lightmap mips are filtered as stored.
     // 45: cubemaps are block-compressed as the build target stores them, faces top-down.
     // 46: BC6H imports' pixels are what their blocks decode to (floats).
-    const VERSION: u32 = 46;
+    // 47: the maps of SpeedTree 9 trees import with the settings the trees give them.
+    const VERSION: u32 = 47;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
+        let tree_meta = self.tree_textures.apply(source, meta);
+        let meta = tree_meta.as_ref().unwrap_or(meta);
         let settings = self.settings(meta);
         let mut texture = import_texture(source, bytes, meta, settings)?;
         self.store(&mut texture)?;
         Ok(texture)
+    }
+
+    /// The trees that use the texture: their maps decide some of its settings.
+    fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
+        Ok(self.tree_textures.trees(source).to_vec())
     }
 
     fn options_key(&self) -> String {

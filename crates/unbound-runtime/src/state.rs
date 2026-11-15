@@ -101,6 +101,13 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             .filter(|asset| !asset.is_folder)
             .map(|asset| asset.path.as_str()),
     );
+    // The textures SpeedTree 9 trees use import with the settings the trees give them.
+    let tree_textures =
+        std::sync::Arc::new(unbound_assets::speedtree9_textures::TreeTextures::read(
+            db.iter()
+                .filter(|asset| !asset.is_folder)
+                .map(|asset| (asset.path.as_str(), asset.file.as_path())),
+        ));
     let state = RuntimeState {
         project_root: project.root.clone(),
         unity_data: project.install.data.clone(),
@@ -133,6 +140,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         texture_importer: RwLock::new(TextureImporter {
             gamma: project_in_gamma_space(project),
             project: unbound_assets::texture::ProjectCompression::read(&project.root),
+            tree_textures,
             ..TextureImporter::default()
         }),
         model_importer: unbound_assets::ModelImporter::for_release(&project.version),

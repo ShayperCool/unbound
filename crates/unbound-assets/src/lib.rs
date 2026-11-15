@@ -36,6 +36,7 @@ pub mod model;
 pub mod serialized;
 pub mod serialized_mesh;
 pub mod serialized_texture;
+pub mod speedtree9_textures;
 pub mod sprite;
 pub mod sprite_atlas;
 pub mod sprite_mesh;
