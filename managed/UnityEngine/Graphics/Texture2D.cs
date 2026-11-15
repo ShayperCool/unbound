@@ -206,7 +206,7 @@ namespace UnityEngine
         public static Texture2D blackTexture => DefaultTextures.Black;
         public static Texture2D redTexture => DefaultTextures.Red;
         public static Texture2D grayTexture => DefaultTextures.Gray;
-        public static Texture2D linearGrayTexture => DefaultTextures.Gray;
+        public static Texture2D linearGrayTexture => DefaultTextures.LinearGray;
         public static Texture2D normalTexture => DefaultTextures.Normal;
 
         /// <summary>The cells for an engine path that reads or writes <see cref="m_Pixels"/> itself:
@@ -934,11 +934,11 @@ namespace Unbound.Runtime
 
     internal static class DefaultTextures
     {
-        static UnityEngine.Texture2D s_White, s_Black, s_Red, s_Gray, s_HalfGray, s_Normal;
+        static UnityEngine.Texture2D s_White, s_Black, s_Red, s_Gray, s_HalfGray, s_Normal, s_LinearGray;
 
-        static UnityEngine.Texture2D Make(string name, UnityEngine.Color32 color)
+        static UnityEngine.Texture2D Make(string name, UnityEngine.Color32 color, bool linear = false)
         {
-            var t = new UnityEngine.Texture2D(4, 4, UnityEngine.TextureFormat.RGBA32, false) { name = name };
+            var t = new UnityEngine.Texture2D(4, 4, UnityEngine.TextureFormat.RGBA32, false, linear) { name = name };
             var pixels = new UnityEngine.Color32[16];
             for (int i = 0; i < 16; i++) pixels[i] = color;
             t.SetPixels32(pixels);
@@ -954,7 +954,10 @@ namespace Unbound.Runtime
         /// realtime lightmap samples (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/terrainlightmaps cases 29 and 30).</summary>
         internal static UnityEngine.Texture2D HalfGray => s_HalfGray ??= Make("UnityHalfGrey", new UnityEngine.Color32(128, 128, 128, 128));
-        internal static UnityEngine.Texture2D Normal => s_Normal ??= Make("UnityNormalMap", new UnityEngine.Color32(128, 128, 255, 255));
+        /// <summary>The flat normal and the linear grey hold linear data (R8G8B8A8_UNorm), as in
+        /// the Unity 6000.0.71f1 Editor (tests/projects/defaulttextures).</summary>
+        internal static UnityEngine.Texture2D Normal => s_Normal ??= Make("UnityNormalMap", new UnityEngine.Color32(127, 127, 255, 255), linear: true);
+        internal static UnityEngine.Texture2D LinearGray => s_LinearGray ??= Make("UnityLinearGrey", new UnityEngine.Color32(127, 127, 127, 127), linear: true);
     }
 
     /// <summary>Raw pixel data of the common texture formats, to and from RGBA32.</summary>

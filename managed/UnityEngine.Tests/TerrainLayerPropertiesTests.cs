@@ -42,6 +42,71 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void EachPassFlagsTheLayersWithAMaskMap()
+        {
+            var shader = Shader.Create("Universal Render Pipeline/Terrain/Lit", 2000);
+            var rgba = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+            var mask = new Texture2D(4, 4, TextureFormat.RGBA32, false, true);
+            var data = new TerrainData();
+            var first = new Material(shader);
+            var second = new Material(shader);
+            try
+            {
+                // Five layers in two passes: masks on the first and third, none in the second pass.
+                var layers = new TerrainLayer[5];
+                for (int i = 0; i < layers.Length; i++)
+                    layers[i] = new TerrainLayer { diffuseTexture = rgba, maskMapTexture = i == 0 || i == 2 ? mask : null };
+                layers[1].smoothnessSource = TerrainLayerSmoothnessSource.Constant;
+                layers[3].diffuseRemapMin = new Vector4(0.1f, 0.2f, 0.3f, 1f);
+                TerrainRenderer.SetLayers(first, data, layers, 0, null);
+                TerrainRenderer.SetLayers(second, data, layers, 4, null);
+
+                Assert.True(first.IsKeywordEnabled("_MASKMAP"));
+                // Layers without a map get the flat normal and black textures.
+                Assert.Same(mask, first.GetTexture("_Mask0"));
+                Assert.Same(Texture2D.blackTexture, first.GetTexture("_Mask1"));
+                Assert.Same(Texture2D.normalTexture, first.GetTexture("_Normal0"));
+                Assert.Equal(new[] { 1f, 0f, 1f, 0f }, new[] { first.GetFloat("_LayerHasMask0"), first.GetFloat("_LayerHasMask1"), first.GetFloat("_LayerHasMask2"), first.GetFloat("_LayerHasMask3") });
+                // The smoothness from the diffuse alpha, unless the layer's source is a constant.
+                Assert.Equal(new[] { 1f, 0f, 1f, 1f }, new[] { first.GetFloat("_DiffuseHasAlpha0"), first.GetFloat("_DiffuseHasAlpha1"), first.GetFloat("_DiffuseHasAlpha2"), first.GetFloat("_DiffuseHasAlpha3") });
+                Assert.Equal(new Vector4(0.1f, 0.2f, 0.3f, 1f), first.GetVector("_DiffuseRemapOffset3"));
+                Assert.Equal(new Vector4(0.9f, 0.8f, 0.7f, 0f), first.GetVector("_DiffuseRemapScale3"));
+                // The second pass has no mask; its unused slots count as layers without one.
+                Assert.False(second.IsKeywordEnabled("_MASKMAP"));
+                Assert.Equal(new[] { 0f, 0f, 0f, 0f }, new[] { second.GetFloat("_LayerHasMask0"), second.GetFloat("_LayerHasMask1"), second.GetFloat("_LayerHasMask2"), second.GetFloat("_LayerHasMask3") });
+                // Both passes know the terrain's layer count.
+                Assert.Equal(5f, first.GetFloat("_NumLayersCount"));
+                Assert.Equal(5f, second.GetFloat("_NumLayersCount"));
+
+                // A pass whose masks are all gone turns the keyword off again.
+                layers[0].maskMapTexture = null;
+                layers[2].maskMapTexture = null;
+                TerrainRenderer.SetLayers(first, data, layers, 0, null);
+                Assert.False(first.IsKeywordEnabled("_MASKMAP"));
+                Assert.Equal(0f, first.GetFloat("_LayerHasMask0"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(first);
+                Object.DestroyImmediate(second);
+                Object.DestroyImmediate(data);
+                Object.DestroyImmediate(rgba);
+                Object.DestroyImmediate(mask);
+            }
+        }
+
+        [Fact]
+        public void TheFlatNormalAndLinearGreyHoldLinearData()
+        {
+            // As the Editor reports them (tests/projects/defaulttextures).
+            Assert.Equal(UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm, Texture2D.normalTexture.graphicsFormat);
+            Assert.Equal(UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm, Texture2D.linearGrayTexture.graphicsFormat);
+            Assert.NotSame(Texture2D.grayTexture, Texture2D.linearGrayTexture);
+            Assert.Equal(new Color32(127, 127, 255, 255), Texture2D.normalTexture.GetPixels32()[0]);
+            Assert.Equal(new Color32(127, 127, 127, 127), Texture2D.linearGrayTexture.GetPixels32()[0]);
+        }
+
+        [Fact]
         public void TheMetallicSliderIsAGammaValue()
         {
             var colorSpace = QualitySettings.s_ColorSpace;

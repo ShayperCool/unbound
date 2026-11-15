@@ -1910,15 +1910,17 @@ pub fn upload_texture_with(
     gpu
 }
 
-/// Unity's default textures by name (`white`, `black`, ...), as 1x1 color textures.
+/// Unity's default textures by name (`white`, `black`, ...), as 1x1 textures: colors, sampled
+/// through an sRGB view in linear projects, except `bump` and `linearGray`, which hold linear data
+/// (tests/projects/defaulttextures).
 pub fn default_textures(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
 ) -> HashMap<&'static str, GpuTexture> {
-    let pixel = |rgba: [u8; 4]| owned::Texture {
+    let pixel = |rgba: [u8; 4], format: i32| owned::Texture {
         width: 1,
         height: 1,
-        format: 0,
+        format,
         mip_count: 1,
         data: rgba.to_vec(),
         filter_mode: 1,
@@ -1938,19 +1940,24 @@ pub fn default_textures(
         layers: 1,
         dimension: 2,
     };
+    use texture_format::{LINEAR_RGBA8, SRGB_RGBA8};
     let mut map = HashMap::new();
-    for (name, rgba) in [
-        ("white", [255, 255, 255, 255]),
-        ("black", [0, 0, 0, 0]),
-        ("unbound-unassigned", [128, 128, 128, 128]),
-        // Measured: tests/projects/resources defaults.texels (gamma color space).
-        ("gray", [127, 127, 127, 127]),
-        ("grey", [127, 127, 127, 127]),
-        ("linearGray", [127, 127, 127, 127]),
-        ("bump", [127, 127, 255, 255]),
-        ("red", [255, 0, 0, 0]),
+    for (name, rgba, format) in [
+        ("white", [255, 255, 255, 255], SRGB_RGBA8),
+        ("black", [0, 0, 0, 0], SRGB_RGBA8),
+        ("unbound-unassigned", [128, 128, 128, 128], SRGB_RGBA8),
+        // Measured: tests/projects/resources defaults.texels (gamma color space) and
+        // tests/projects/defaulttextures (linear).
+        ("gray", [127, 127, 127, 127], SRGB_RGBA8),
+        ("grey", [127, 127, 127, 127], SRGB_RGBA8),
+        ("linearGray", [127, 127, 127, 127], LINEAR_RGBA8),
+        ("bump", [127, 127, 255, 255], LINEAR_RGBA8),
+        ("red", [255, 0, 0, 0], SRGB_RGBA8),
     ] {
-        map.insert(name, upload_texture(device, queue, None, &pixel(rgba), 0));
+        map.insert(
+            name,
+            upload_texture(device, queue, None, &pixel(rgba, format), 0),
+        );
     }
     map
 }
