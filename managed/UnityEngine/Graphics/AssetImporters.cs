@@ -424,9 +424,14 @@ namespace Unbound.Runtime
                         if (obj != null) break;
                         // Read before the material exists: one that cannot be read is not made.
                         if (!TryStoredRenderQueue(guid, fileId, name, out var rawQueue)) return null;
-                        var shader = BuiltinSpriteData.MaterialShader(guid, fileId, name);
+                        var shader = BuiltinSpriteData.MaterialShader(guid, fileId, name, out var fields);
                         if (shader == null) return null;
-                        var material = new Material(shader) { name = name };
+                        // Made from its record as a project material is from its file: its
+                        // keywords, saved properties and flags, not its shader's defaults
+                        // (Default-Skybox stores the simple sun disk, its shader's default is the
+                        // high-quality one: tests/projects/lightingdatanan sun.png, builtinresources).
+                        var material = new Material { name = name };
+                        material.ReadBuiltinRecord(fields, shader);
                         material.m_CustomRenderQueue = rawQueue;
                         obj = material;
                         break;

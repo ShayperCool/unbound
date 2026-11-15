@@ -313,6 +313,32 @@ namespace UnityEngine.Tests
             Assert.Equal(3000, particles.renderQueue);
         }
 
+        /// <summary>A built-in Material takes its record's keywords and saved properties, as a
+        /// project material does, not its shader's defaults: the record's form is the host's
+        /// (binary type trees: saved properties as first/second pairs, scalars as text). The
+        /// stored queue still comes from the queue call. Mechanism stand-in (the install's
+        /// Default-Skybox stores the simple sun disk: tests/projects/lightingdatanan sun.png).</summary>
+        [Fact]
+        public void TheRecordsKeywordsAndSavedPropertiesAreTheMaterials()
+        {
+            Builtin(Extra, 10304, "Default-Skybox", "Skybox/Procedural", 106, -1);
+            s_Records[(Extra, 10304)] = "{\"classId\":21,\"fields\":{\"m_Name\":\"Default-Skybox\",\"m_Shader\":{\"fileID\":106,\"guid\":\"" + Extra + "\"},"
+                + "\"m_ValidKeywords\":[\"_SUNDISK_SIMPLE\"],\"m_InvalidKeywords\":[],\"m_CustomRenderQueue\":\"2500\",\"m_LightmapFlags\":\"4\","
+                + "\"m_SavedProperties\":{\"m_TexEnvs\":[],\"m_Ints\":[],"
+                + "\"m_Floats\":[{\"first\":{\"name\":\"_SunDisk\"},\"second\":\"1\"},{\"first\":{\"name\":\"_Exposure\"},\"second\":\"1.3\"}],"
+                + "\"m_Colors\":[{\"first\":{\"name\":\"_SkyTint\"},\"second\":{\"r\":\"0.5\",\"g\":\"0.25\",\"b\":\"0.5\",\"a\":\"1\"}}]}}}";
+            var material = (Material)BuiltinObjects.Get(Extra, 10304, "Default-Skybox");
+            Assert.Equal("Default-Skybox", material.name);
+            Assert.Equal("Skybox/Procedural", material.shader.name);
+            Assert.Equal(new[] { "_SUNDISK_SIMPLE" }, material.shaderKeywords);
+            Assert.Equal(1f, material.m_Floats[Shader.PropertyToID("_SunDisk")]);
+            Assert.Equal(1.3f, material.m_Floats[Shader.PropertyToID("_Exposure")]);
+            Assert.Equal(new Vector4(0.5f, 0.25f, 0.5f, 1f), material.m_Vectors[Shader.PropertyToID("_SkyTint")]);
+            Assert.Equal(MaterialGlobalIlluminationFlags.EmissiveIsBlack, material.globalIlluminationFlags);
+            // The queue call's answer, not the record's field.
+            Assert.Equal(-1, material.rawRenderQueue);
+        }
+
         /// <summary>Red on 1f41393e (assertion): the host is never asked (Asked 0) and the raw
         /// queue is -1. During the load only the stored queue is read: no shader declarations or
         /// passes are asked for (no first use of Shader.renderQueue), and the queue call comes

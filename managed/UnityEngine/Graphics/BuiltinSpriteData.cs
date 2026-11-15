@@ -123,10 +123,12 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The shader the installed Material `fileId` names (its record's `m_Shader`, a
-        /// built-in shader). Null, with an error naming the material, when the record cannot be
-        /// read or names no built-in shader.</summary>
-        internal static Shader MaterialShader(string guid, long fileId, string name)
+        /// built-in shader), and the record's fields in <paramref name="fields"/> (its keywords,
+        /// saved properties and flags). Null, with an error naming the material, when the record
+        /// cannot be read or names no built-in shader.</summary>
+        internal static Shader MaterialShader(string guid, long fileId, string name, out JsonElement fields)
         {
+            fields = default;
             var identity = Identity("Material", guid, fileId, name);
             if (!Native.IsReady)
             {
@@ -135,7 +137,7 @@ namespace Unbound.Runtime
             }
             try
             {
-                var fields = RecordFields(guid, fileId, MaterialClassId, "Material");
+                fields = RecordFields(guid, fileId, MaterialClassId, "Material");
                 var recordName = Str(fields, "m_Name");
                 if (recordName != name) throw new FormatException($"the install's object {fileId} is the material '{recordName}'");
                 if (!Reference(Field(fields, "m_Shader"), out var shaderGuid, out var shaderFileId))

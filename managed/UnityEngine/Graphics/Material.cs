@@ -1398,6 +1398,29 @@ namespace UnityEngine
                 ModelMaterialImport.Apply(this, import, resolver);
         }
 
+        /// <summary>A built-in Material's stored state from its record (the install's object as
+        /// the host reads it: references as {fileID, guid} into the built-in files), read as a
+        /// project material's; the shader stays the one its record named.</summary>
+        internal void ReadBuiltinRecord(System.Text.Json.JsonElement fields, Shader shader)
+        {
+            var name = m_Name;
+            if (fields.ValueKind == System.Text.Json.JsonValueKind.Object)
+                ((ISerializedAsset)this).ReadSerialized(YNode.FromJson(fields), BuiltinReferences.Instance);
+            m_Shader = shader;
+            m_Name = name;
+            AddTextureNames();
+            MarkDirty();
+        }
+
+        /// <summary>References of the install's built-in resource files, resolved to their objects.</summary>
+        sealed class BuiltinReferences : IReferenceResolver
+        {
+            internal static readonly BuiltinReferences Instance = new BuiltinReferences();
+
+            public Object Resolve(ObjectRef reference, Type expected) =>
+                reference.Guid == null || reference.FileId == 0 ? null : BuiltinShaders.Resolve(reference.Guid, reference.FileId);
+        }
+
         /// <summary>Saved properties are lists of one-key maps (`- _Color: {...}`), or maps in old files.</summary>
         static IEnumerable<(string, YNode)> Entries(YNode list)
         {
