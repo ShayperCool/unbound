@@ -50,7 +50,8 @@ def prepare(project, release):
         shutil.copytree(base / part, project / part)
     shutil.copytree(PROBE / 'Assets', project / 'Assets')
     (project / 'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: ' + release + '\n')
-    (project / 'Packages/manifest.json').write_text(json.dumps({'dependencies': {}}))
+    # OnGUI needs the IMGUI module.
+    (project / 'Packages/manifest.json').write_text(json.dumps({'dependencies': {'com.unity.modules.imgui': '1.0.0'}}))
 
 
 def capture_problem(directory):

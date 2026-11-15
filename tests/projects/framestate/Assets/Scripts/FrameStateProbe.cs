@@ -107,6 +107,7 @@ public class FrameStateProbe : MonoBehaviour
                 RenderTexture.active = previous;
                 Value("matrices.endofframe.now", Read(dump));
             }
+            if (Step == 9) Value("matrices.endofframe.gui", DumpNow("endofframe gui"));
             if (Step == 6)
             {
                 // Left active by the end-of-frame coroutine; read in the next frame.
@@ -168,6 +169,10 @@ public class FrameStateProbe : MonoBehaviour
                     last.clearFlags = CameraClearFlags.Nothing;
                     break;
                 case 9:
+                    // An OnGUI script this frame, the two screen cameras still rendering.
+                    gameObject.AddComponent<FrameStateGui>().Probe = this;
+                    break;
+                case 10:
                     if (last != null) DestroyImmediate(last.gameObject);
                     Finish();
                     break;
@@ -178,6 +183,21 @@ public class FrameStateProbe : MonoBehaviour
             Value("error", Q(e.ToString()));
             Finish();
         }
+    }
+
+    /// <summary>In OnGUI's Repaint: an executed buffer's, DrawMeshNow's and GL.modelview's
+    /// matrices.</summary>
+    internal void RecordGui()
+    {
+        Value("matrices.ongui", DumpNow("ongui"));
+        Value("gl.modelview.ongui", M(GL.modelview));
+        var previous = RenderTexture.active;
+        var dump = Dump();
+        RenderTexture.active = dump;
+        matrices.SetPass(0);
+        Graphics.DrawMeshNow(quad, Matrix4x4.identity);
+        RenderTexture.active = previous;
+        Value("matrices.ongui.now", Read(dump));
     }
 
     void LateUpdate()

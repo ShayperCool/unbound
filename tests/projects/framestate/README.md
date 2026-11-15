@@ -2,7 +2,8 @@
 
 Unity 6000.0.71f1, built-in render pipeline, Linux Editors on the NVIDIA GPU (RTX 4060) only:
 windowed and batchmode, OpenGL Core and Vulkan. `Assets/Scripts/FrameStateProbe.cs` runs in Play
-mode with one screen camera (culling nothing) and records:
+mode with one screen camera (culling nothing; a second one, depth 1, joins it for the last frames)
+and records:
 
 * **Active render texture** (`active.*`): a render texture made active in Update (also read in
   LateUpdate), in LateUpdate, in Update of a frame no camera renders, and in an end-of-frame
@@ -17,8 +18,10 @@ mode with one screen camera (culling nothing) and records:
   `Assets/Resources/FrameStateMatrices.shader` into a 16x4 float target, which writes
   `UNITY_MATRIX_VP`, `UNITY_MATRIX_V`, `UNITY_MATRIX_P` and `unity_ObjectToWorld` as the draw sees
   them (`vp`, `v`, `p`, `m`, rows first); extra dumps in EarlyUpdate (`early`), LateUpdate
-  (`late`) and an end-of-frame coroutine (`endofframe`). `gl.modelview.*` reads `GL.modelview`,
-  `screen` the Game view's size.
+  (`late`) and an end-of-frame coroutine (`endofframe`); in a later frame an OnGUI script
+  records them in its first Repaint (`matrices.ongui`, `matrices.ongui.now` through `DrawMeshNow`,
+  `gl.modelview.ongui`) and the end-of-frame coroutine after it (`matrices.endofframe.gui`).
+  `gl.modelview.*` reads `GL.modelview`, `screen` the Game view's size.
 
 ```bash
 python3 tests/projects/framestate/run.py editor  --release 6000.0.71f1 --context opengl-window --label L
@@ -46,6 +49,10 @@ differs in, per device, with the reason, and every report lists them.
   projection of the frame's last rendered camera (of two screen cameras, the one with the higher
   depth), for an executed buffer, `DrawMeshNow` and `GL.modelview` alike (`matrices.endofframe*`,
   `gl.modelview.endofframe`).
+* In OnGUI's Repaint (windowed Editors; batchmode Editors call no OnGUI) GL's matrices are the
+  Game view's pixels from its top left (`Ortho(0, width, height, 0, -1, 100)`) with identity
+  modelview, and they stay for the end-of-frame callbacks after it. `DrawMeshNow` there keeps
+  the last camera's view under that projection.
 * Between frames, per record:
   * windowed Editors: every dump from EarlyUpdate to LateUpdate shows the pixel matrix their own
     window drawing left (1280x217 in these captures, not the 64x32 Game view), which depends on
@@ -53,18 +60,19 @@ differs in, per device, with the reason, and every report lists them.
   * batchmode Vulkan: `matrices.early` is identity with a texture target's y flip and an
     unconverted depth row; after the first executed buffer every dump is identity in the device's
     converted form;
-  * batchmode OpenGL Core: `matrices.early` is identity; after the first executed buffer every
-    dump has a zero projection (`fresh`, `aftercamera`, `corner`, `after`, `late`, and the pixels
-    drawn with them are black); `GL.modelview` reads all zeros.
+  * batchmode OpenGL Core: `matrices.early` (EarlyUpdate) is identity; every later dump of that
+    frame (`fresh`, `aftercamera`, `corner`, `after`, `late`) has a zero projection and the pixels
+    drawn with them are black; `GL.modelview` reads all zeros already in an earlier frame's
+    Update, before that frame executed any buffer. What sets the zeros is not established.
 
 Unbound starts each frame from identity (in the device's converted form on Vulkan), leaves the
-frame's last camera's matrices for the end-of-frame callbacks and gives them back after
-`Camera.Render`. The windowed Editors' pixel matrix between frames is not emulated (10 declared
-residuals per device). Unmeasured: a last camera with image effects, a scriptable pipeline's
+frame's last camera's matrices for the end-of-frame callbacks, gives them back after
+`Camera.Render` and loads the screen's pixel matrix for each OnGUI Repaint, leaving it after the
+GUI. Declared residuals per device: the windowed Editors' pixel matrix between frames (10) and
+`DrawMeshNow`'s view inside OnGUI (1). Unmeasured: a last camera with image effects, a scriptable pipeline's
 frame, overlay canvases and the windowed macOS Editor. The Scripting API pages for
 [Graphics.ExecuteCommandBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.ExecuteCommandBuffer.html)
 and [RenderTexture.active](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture-active.html)
-state neither rule; both are observed in these captures. The documented screen coordinates of
+state neither rule; both are observed in these captures. The OnGUI pixel matrix gives
 [Graphics.DrawTexture](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.DrawTexture.html)
-inside OnGUI are not given to scripts' GL drawing there (it draws with GL's current matrices):
-recorded in docs/COMPATIBILITY_GAPS.md.
+the screen coordinates it documents there.
