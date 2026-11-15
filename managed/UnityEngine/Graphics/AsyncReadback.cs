@@ -531,7 +531,8 @@ namespace UnityEngine.Rendering
         {
             if (src == null) throw new ArgumentNullException("src");
             // A dynamically scaled render texture's whole images (their scaled size).
-            int fullWidth = src is RenderTexture rt ? rt.ScaledWidth : src.width, fullHeight = src is RenderTexture rh ? rh.ScaledHeight : src.height;
+            var rt = src as RenderTexture;
+            int fullWidth = rt != null ? rt.ScaledWidth : src.width, fullHeight = rt != null ? rt.ScaledHeight : src.height;
             int w = Math.Max(1, fullWidth >> Math.Max(0, mipIndex)), h = Math.Max(1, fullHeight >> Math.Max(0, mipIndex));
             return AsyncReadbacks.Texture(src, mipIndex, 0, w, 0, h, 0, AsyncReadbacks.LayerCount(src, mipIndex), format, callback, reportUnsupported);
         }

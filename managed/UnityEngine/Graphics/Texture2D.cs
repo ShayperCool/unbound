@@ -433,8 +433,8 @@ namespace UnityEngine
             int mip = level ? bound.Mip : 0, layer = level ? Math.Max(0, bound.Slice) : 0;
             // A dynamically scaled render texture while it is scaled: a rect past its scaled images
             // is refused with this error, one inside them reads zeros (the macOS Editor's Metal
-            // device, tests/projects/nativegfx dynres.*.texels and scaledtexels; level 0, other
-            // levels and slices taken alike).
+            // device, tests/projects/nativegfx dynres.*.texels and scaledtexels, level 0; a bound
+            // level or slice is unmeasured and taken alike, its images' size shifted by its mip).
             if (active != null && active.DynamicallyScaled)
             {
                 if (source.x < 0 || source.y < 0 || source.xMax > Math.Max(1, active.ScaledWidth >> mip)

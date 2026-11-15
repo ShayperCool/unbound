@@ -575,6 +575,9 @@ namespace UnityEngine
             {
                 if (t.m_PooledFree && SameShape(t.m_Descriptor, desc))
                 {
+                    // Taken again it starts unscaled, as a new explicitly scaled one does
+                    // (dynres.explicit.created; a reused one is unmeasured).
+                    (t.m_ExplicitWidthScale, t.m_ExplicitHeightScale) = (1f, 1f);
                     t.m_PooledFree = false;
                     t.m_PoolLease = ++s_NextPoolLease;
                     t.m_LastUsedFrame = Time.frameCount;
@@ -597,7 +600,7 @@ namespace UnityEngine
             && (!a.useMipMap || (MipLevels(a) == MipLevels(b) && a.autoGenerateMips == b.autoGenerateMips))
             && a.enableRandomWrite == b.enableRandomWrite && a.memoryless == b.memoryless
             && a.shadowSamplingMode == b.shadowSamplingMode && a.bindMS == b.bindMS
-            && a.useDynamicScale == b.useDynamicScale;
+            && a.useDynamicScale == b.useDynamicScale && a.useDynamicScaleExplicit == b.useDynamicScaleExplicit;
 
         /// <summary>The mip levels a descriptor with mips gets (its mip count, the full chain when
         /// that is 0 or less or more than the chain).</summary>

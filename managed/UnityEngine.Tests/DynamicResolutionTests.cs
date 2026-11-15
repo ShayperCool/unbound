@@ -170,6 +170,27 @@ namespace Unbound.Tests
             Assert.Equal((16, 16, 0, 0), Last(dynamic));
             explicitTarget.ApplyDynamicScale();
             Assert.Equal((16, 16, 0, 0), Last(explicitTarget));
+            // The temporary pool keeps the two apart, and an explicit one taken again starts
+            // unscaled.
+            ScalableBufferManager.ResizeBuffers(0.5f, 0.25f);
+            var plainDesc = new RenderTextureDescriptor(16, 16, RenderTextureFormat.ARGB32, 0) { sRGB = false, useDynamicScale = true };
+            var explicitDesc = plainDesc;
+            explicitDesc.useDynamicScaleExplicit = true;
+            var plainTemporary = RenderTexture.GetTemporary(plainDesc);
+            RenderTexture.ReleaseTemporary(plainTemporary);
+            var explicitTemporary = RenderTexture.GetTemporary(explicitDesc);
+            Assert.NotSame(plainTemporary, explicitTemporary);
+            Assert.True(explicitTemporary.useDynamicScaleExplicit);
+            explicitTemporary.ApplyDynamicScale();
+            Assert.Equal((8, 4, 16, 16), Last(explicitTemporary));
+            RenderTexture.ReleaseTemporary(explicitTemporary);
+            Assert.Same(plainTemporary, RenderTexture.GetTemporary(plainDesc));
+            var again = RenderTexture.GetTemporary(explicitDesc);
+            Assert.Same(explicitTemporary, again);
+            Assert.Equal((16, 16, 0, 0), Last(again));
+            RenderTexture.ReleaseTemporary(plainTemporary);
+            RenderTexture.ReleaseTemporary(again);
+            ScalableBufferManager.ResizeBuffers(1f, 1f);
             // Explicit alone, without useDynamicScale, does not scale (unmeasured; as documented).
             var alone = Keep(new RenderTexture(16, 16, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) { useDynamicScaleExplicit = true });
             alone.Create();
