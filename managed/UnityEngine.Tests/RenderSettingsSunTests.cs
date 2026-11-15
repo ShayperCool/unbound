@@ -71,7 +71,7 @@ namespace Unbound.Tests
             red.intensity = 1.9f;
             var green = Make("green", 1f, Color.green);
             Assert.Same(green, RenderSettings.sun);
-            // The colour as set, beyond 1 too; not the colour temperature's.
+            // The colour as set, beyond 1 too (the colour temperature is not measured).
             var bright = Make("bright", 1f, new Color(2f, 2f, 2f));
             bright.useColorTemperature = true;
             bright.colorTemperature = 1500f;
@@ -172,11 +172,13 @@ namespace Unbound.Tests
         }
 
         [Fact]
-        public void TheRankIsTheEditorsSum()
+        public void TheRankIsTheBrightnessWithTheShadowWeight()
         {
             var light = Make("rank", 1.5f, new Color(0.2f, 0.7f, 0.4f), LightShadows.Soft);
-            float expected = (0.2f * 0.3f + 0.7f * 0.59f + 0.4f * 0.11f) * 1.5f * 16f;
-            Assert.Equal(expected, LightImportance.SunRank(light));
+            Assert.Equal(LightImportance.Brightness(light) * 16f, LightImportance.SunRank(light));
+            Assert.Equal(LightImportance.SunRank(light), LightImportance.Of(light, LightType.Directional, Vector3.zero, 0f, Vector3.zero));
+            light.shadows = LightShadows.None;
+            Assert.Equal(LightImportance.Brightness(light), LightImportance.SunRank(light));
         }
     }
 }

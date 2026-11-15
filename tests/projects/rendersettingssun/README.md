@@ -18,11 +18,12 @@ directional light is used." It defines neither "brightest" nor what the forward 
 ## What the Editor does (two identical captures)
 
 * Without a named sun the getter returns the brightest enabled directional light that is not
-  Not Important (`ForceVertex`), ranked by ((0.3 r + 0.59 g) + 0.11 b) of its colour as set
-  (beyond 1 too, not the colour temperature's) times its intensity, sixteen times when it casts
-  shadows (hard or soft). An Important (`ForcePixel`) light gets no bonus. Baked, culled
-  (culling mask 0), cookie and zero-intensity lights count. Of equal lights the first enabled
-  wins; disabling and enabling one, or deactivating and activating its object, puts it behind.
+  Not Important (`ForceVertex`), ranked by 0.3 r + 0.59 g + 0.11 b of its colour (beyond 1
+  too) times its intensity, sixteen times when it casts shadows (hard or soft). An Important
+  (`ForcePixel`) light gets no bonus. Culled (culling mask 0), cookie and zero-intensity lights
+  count, and so does a light set to Baked without a bake (it stays realtime). Of equal lights
+  the first enabled wins; disabling and enabling one, or deactivating and activating its object,
+  puts it behind.
 * A named light is returned whatever its state: disabled, inactive, a point or a spot light. A
   destroyed one, or `sun = null`, leaves the brightest.
 * The getter follows intensity, shadow and type changes at once.
@@ -34,7 +35,10 @@ directional light is used." It defines neither "brightest" nor what the forward 
   Editor's choice varies between runs, so the tie cases record no forward readback.
 
 Not measured: a scriptable render pipeline (URP reads `RenderSettings.sun` in its own code),
-lights in another scene than the active one, a named light of an unloaded scene, area lights.
+lights in another scene than the active one, a named light of an unloaded scene, area lights, a
+fully baked light (one a bake marks baked) beside realtime ones, a Not Important directional
+light with no other directional light, and the colour temperature (this project's lights do not
+apply it: the `color temperature` case cannot tell the colour as set from the final colour).
 
 ```sh
 python3 tests/projects/rendersettingssun/run.py record --label <L>   # Editor capture

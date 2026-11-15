@@ -464,7 +464,7 @@ namespace Unbound.Tests
             string release = ProjectInfo.UnityVersion;
             var sky = new Material(Shader.Create("Skybox/Procedural", 1000));
             var owner = new GameObject("environment sun test");
-            var oldSun = RenderSettings.sun;
+            var oldSun = RenderSettings.NamedSun;
             var active = RenderTexture.ActiveTarget;
             var saved = GfxStream.Current;
             try

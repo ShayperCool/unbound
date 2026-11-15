@@ -7,6 +7,8 @@
     "managed/UnityEngine/Graphics/Lighting.cs",
     "managed/UnityEngine/Graphics/LightImportance.cs",
     "managed/UnityEngine/Graphics/ForwardLights.cs",
-    "managed/UnityEngine/Graphics/FrameBuilder.cs"
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.Shadows.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.Deferred.cs"
   ]
 }

@@ -48,30 +48,25 @@ namespace Unbound.Runtime
         }
 
         /// <summary>How a directional light ranks as the scene's sun and a camera's main light:
-        /// ((0.3 r + 0.59 g) + 0.11 b) of its colour as set, times its intensity, sixteen times
-        /// when it casts shadows; its render mode adds nothing. Matches the Unity 6000.0.71f1
-        /// Editor, tests/projects/rendersettingssun.</summary>
+        /// its <see cref="Brightness"/>, sixteen times when it casts shadows; its render mode adds
+        /// nothing. Matches the Unity 6000.0.71f1 Editor, tests/projects/rendersettingssun.</summary>
         internal static float SunRank(Light light)
         {
-            var c = light.color;
-            float rank = (c.r * RedWeight + c.g * GreenWeight + c.b * BlueWeight) * light.intensity;
-            return light.shadows != LightShadows.None ? rank * ShadowedDirectionalWeight : rank;
+            float brightness = Brightness(light);
+            return light.shadows != LightShadows.None ? brightness * ShadowedDirectionalWeight : brightness;
         }
 
         /// <summary>A light's importance for an object whose bounds are centred at <paramref name="center"/>.</summary>
         internal static float Of(Light light, LightType type, Vector3 position, float range, Vector3 center)
         {
-            float importance = Brightness(light);
-            if (type == LightType.Directional)
-            {
-                if (light.shadows != LightShadows.None) importance *= ShadowedDirectionalWeight;
-            }
+            float importance;
+            if (type == LightType.Directional) importance = SunRank(light);
             else
             {
                 float d2 = (center - position).sqrMagnitude;
                 // A range of 0 reaches only bounds holding the light: keep the falloff finite.
                 range = Mathf.Max(range, MinimumRange);
-                importance *= 1f / (FalloffScale / (range * range) * d2 + 1f);
+                importance = Brightness(light) * (1f / (FalloffScale / (range * range) * d2 + 1f));
             }
             return importance + light.renderMode switch
             {

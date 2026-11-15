@@ -17,7 +17,7 @@ namespace Unbound.Tests
             ProjectInfo.UnityVersion = "6000.0.71f1";
             var owner = new GameObject("environment test camera");
             var sunOwner = new GameObject("environment test sun");
-            var oldSun = RenderSettings.sun;
+            var oldSun = RenderSettings.NamedSun;
             var sky = new Material(Shader.Create("Skybox/Procedural", 1000));
             var other = new Material(Shader.Create("Skybox/Cubemap", 1000));
             try
@@ -75,7 +75,7 @@ namespace Unbound.Tests
             var owner = new GameObject("sky sun test camera");
             var bakedOwner = new GameObject("sky sun test baked");
             var realtimeOwner = new GameObject("sky sun test realtime");
-            var oldSun = RenderSettings.sun;
+            var oldSun = RenderSettings.NamedSun;
             var sky = new Material(Shader.Create("Skybox/Procedural", 1000));
             try
             {
