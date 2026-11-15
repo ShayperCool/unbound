@@ -160,6 +160,80 @@ public class UitkProbe : MonoBehaviour
         RenderTexture.active = active;
         Row(rows, "fetch.Flags", readback.GetPixel(0, 0));
         DestroyImmediate(flags);
+        FetchLimits(rows, target, readback);
+    }
+
+    static void ReadInto(StringBuilder rows, string key, RenderTexture source, Texture2D readback)
+    {
+        var previous = RenderTexture.active;
+        RenderTexture.active = source;
+        readback.ReadPixels(new Rect(0, 0, 1, 1), 0, 0);
+        readback.Apply();
+        RenderTexture.active = previous;
+        Row(rows, key, readback.GetPixel(0, 0));
+    }
+
+    static void ClearTo(RenderTexture texture, Color color)
+    {
+        var previous = RenderTexture.active;
+        RenderTexture.active = texture;
+        GL.Clear(true, true, color);
+        RenderTexture.active = previous;
+    }
+
+    /// <summary>Framebuffer fetch past one draw of one triangle per texel: <c>fetch.Overlap</c>, one
+    /// draw whose two copies of a quad each cover the texel (Probe/Fetch/Plain over (0.5, 0.25,
+    /// 0.75, 1)); <c>fetch.Second.*</c>, a fetch of color target 1 (Probe/Fetch/Second, the targets
+    /// cleared to (0.5, 0.25, 0.75, 1) and (0.25, 0.75, 0.5, 1)); <c>fetch.Msaa.*</c>, a 4x
+    /// multisampled texel half covered by a white triangle over black, resolved, then squared by
+    /// Probe/Fetch/Square and resolved (each sample's square, or the square of their average).</summary>
+    static void FetchLimits(StringBuilder rows, RenderTexture target, Texture2D readback)
+    {
+        var quad = new Mesh { vertices = new[] { new Vector3(-1, -1, 0), new Vector3(1, -1, 0), new Vector3(1, 1, 0), new Vector3(-1, 1, 0) } };
+        quad.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        var twice = new Mesh { vertices = quad.vertices, triangles = new[] { 0, 1, 2, 0, 2, 3, 0, 1, 2, 0, 2, 3 } };
+        var half = new Mesh { vertices = quad.vertices, triangles = new[] { 0, 1, 2 } };
+        void Draw(UnityEngine.Rendering.RenderTargetIdentifier[] colors, UnityEngine.Rendering.RenderTargetIdentifier depth, Mesh mesh, Material material)
+        {
+            var command = new UnityEngine.Rendering.CommandBuffer();
+            command.SetRenderTarget(colors, depth);
+            command.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+            command.DrawMesh(mesh, Matrix4x4.identity, material, 0, 0);
+            Graphics.ExecuteCommandBuffer(command);
+            command.Release();
+        }
+        var plain = new Material(Shader.Find("Probe/Fetch/Plain"));
+        ClearTo(target, new Color(0.5f, 0.25f, 0.75f, 1f));
+        Draw(new UnityEngine.Rendering.RenderTargetIdentifier[] { target }, target, twice, plain);
+        ReadInto(rows, "fetch.Overlap", target, readback);
+
+        var second = new Material(Shader.Find("Probe/Fetch/Second"));
+        var first = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat);
+        var other = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat);
+        first.Create();
+        other.Create();
+        ClearTo(first, new Color(0.5f, 0.25f, 0.75f, 1f));
+        ClearTo(other, new Color(0.25f, 0.75f, 0.5f, 1f));
+        Draw(new UnityEngine.Rendering.RenderTargetIdentifier[] { first, other }, first, quad, second);
+        ReadInto(rows, "fetch.Second.0", first, readback);
+        ReadInto(rows, "fetch.Second.1", other, readback);
+
+        var square = new Material(Shader.Find("Probe/Fetch/Square"));
+        var white = new Material(Shader.Find("Hidden/Internal-Colored")) { color = Color.white };
+        white.SetInt("_Cull", 0);
+        white.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
+        var msaa = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat) { antiAliasing = 4 };
+        msaa.Create();
+        ClearTo(msaa, Color.black);
+        Draw(new UnityEngine.Rendering.RenderTargetIdentifier[] { msaa }, msaa, half, white);
+        Graphics.Blit(msaa, target);
+        ReadInto(rows, "fetch.Msaa.covered", target, readback);
+        Draw(new UnityEngine.Rendering.RenderTargetIdentifier[] { msaa }, msaa, quad, square);
+        Graphics.Blit(msaa, target);
+        ReadInto(rows, "fetch.Msaa.squared", target, readback);
+
+        foreach (var o in new UnityEngine.Object[] { quad, twice, half, plain, second, first, other, square, white, msaa })
+            DestroyImmediate(o);
     }
 
     static void SurfaceIndices(StringBuilder rows, RenderTexture target, Texture2D readback)
