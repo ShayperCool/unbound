@@ -522,6 +522,47 @@ namespace UnityEngine.Tests
             }
         }
 
+        sealed class Errors : ILogHandler, IDisposable
+        {
+            readonly ILogHandler m_Previous = Debug.unityLogger.logHandler;
+            public readonly List<string> Logged = new List<string>();
+            public Errors() { Debug.unityLogger.logHandler = this; }
+            public void Dispose() { Debug.unityLogger.logHandler = m_Previous; }
+            public void LogException(Exception exception, Object context) => Logged.Add(exception.Message);
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Error || type == LogType.Exception) Logged.Add(string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args));
+            }
+        }
+
+        [Fact]
+        public void WithoutARendererASystemWithKernelsCountsOnAndSaysNothing()
+        {
+            bool warned = VisualEffect.s_WarnedNotDrawn;
+            VisualEffect.s_WarnedNotDrawn = true;
+            var asset = Counting(30f);
+            // An initialize kernel for the particles: here (a test has no renderer, as a
+            // headless run has none) nothing can tell whether it compiles, and nothing runs it.
+            asset.m_Data.Systems[1].tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.Initialize } };
+            asset.m_Data.Processors = new[]
+            {
+                Array.Empty<Object>(),
+                new Object[] { ComputeShader.FromFile("Tests/VfxInitialize.compute", "VfxInitialize", "#pragma kernel CSMain\n") },
+            };
+            var effect = Running(asset);
+            try
+            {
+                using var errors = new Errors();
+                Assert.Equal(new[] { 1, 2, 3 }, Counts(effect, 3));
+                Assert.Empty(errors.Logged);
+            }
+            finally
+            {
+                VisualEffect.s_WarnedNotDrawn = warned;
+                Object.DestroyImmediate(effect.gameObject);
+            }
+        }
+
         [Fact]
         public void EventsPauseRateStepsAndReinitMoveTheEffectAsAsked()
         {
@@ -560,7 +601,15 @@ namespace UnityEngine.Tests
                 effect.enabled = false;
                 Assert.Equal(3, effect.aliveParticleCount);
                 Assert.Equal(VFXSpawnerLoopState.Looping, effect.GetSpawnSystemInfo("Spawn").loopState);
+                // Its renderer is off with it (no camera takes it), and on again with it.
+                Assert.True(effect.TryGetComponent<VFXRenderer>(out var renderer));
+                Assert.False(renderer.enabled);
                 effect.enabled = true;
+                Assert.True(renderer.enabled);
+                effect.gameObject.SetActive(false);
+                Assert.False(renderer.enabled);
+                effect.gameObject.SetActive(true);
+                Assert.True(renderer.enabled);
                 Assert.Equal(0, effect.aliveParticleCount);
                 Assert.Equal(VFXSpawnerLoopState.Finished, effect.GetSpawnSystemInfo("Spawn").loopState);
                 Assert.Equal(new[] { 1, 2 }, Counts(effect, 2));
@@ -597,8 +646,6 @@ namespace UnityEngine.Tests
                 Assert.True(culledByDefault.culled);
                 Assert.Equal(new[] { 1, 2, 3 }, Counts(never, 3));
                 Assert.True(never.culled);
-                Assert.True(never.SimulatesWhenCulled);
-                Assert.False(culledByDefault.SimulatesWhenCulled);
                 // A culled effect that does not simulate keeps its events for when it does.
                 culledByDefault.Stop();
                 Assert.Equal(new[] { 1 }, Counts(culledByDefault, 1));

@@ -124,6 +124,14 @@ namespace UnityEngine
         public void SetTextureFromGlobal(int kernelIndex, string name, string globalTextureName) =>
             SetTextureFromGlobal(kernelIndex, Shader.PropertyToID(name), Shader.PropertyToID(globalTextureName));
 
+        /// <summary>Takes back what was bound to a kernel under a name: the kernel reads what
+        /// it reads when nothing was ever bound.</summary>
+        internal void Unbind(int kernelIndex, int nameID)
+        {
+            Kernel(kernelIndex);
+            m_Bound.Remove((kernelIndex, nameID));
+        }
+
         public void SetBuffer(int kernelIndex, int nameID, ComputeBuffer buffer)
         {
             Kernel(kernelIndex);

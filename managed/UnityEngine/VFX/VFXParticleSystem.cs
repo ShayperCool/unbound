@@ -440,11 +440,14 @@ namespace Unbound.Runtime
             }
 
             /// <summary>Whether the kernel compiles here; said once when it does not (a system
-            /// whose kernel cannot run stops, rather than count particles nothing spawns).</summary>
+            /// whose kernel cannot run stops, rather than count particles nothing spawns).
+            /// Without a renderer (a headless run, a test) no kernel runs and nothing is said:
+            /// the system goes on with what it counts itself.</summary>
             internal bool Usable()
             {
                 if (m_Checked) return !m_Failed;
                 m_Checked = true;
+                if (!GraphicsFences.RendererPresent) return true;
                 try
                 {
                     m_Shader.GetKernelThreadGroupSizes(m_Kernel, out _, out _, out _);
@@ -468,11 +471,14 @@ namespace Unbound.Runtime
                 for (int i = 0; i < m_Objects.Length; i++)
                 {
                     var value = values.GetObject(m_Objects[i].Expression);
+                    // A destroyed texture is no object.
+                    if (value is UnityEngine.Object engineObject && !engineObject) value = null;
                     if (ReferenceEquals(value, m_BoundObjects[i])) continue;
                     m_BoundObjects[i] = value;
-                    // A property without an object leaves the kernel's default.
-                    if (value is Texture texture && texture) m_Shader.SetTexture(m_Kernel, m_Objects[i].Name, texture);
+                    if (value is Texture texture) m_Shader.SetTexture(m_Kernel, m_Objects[i].Name, texture);
                     else if (value is GraphicsBuffer graphicsBuffer) m_Shader.SetBuffer(m_Kernel, m_Objects[i].Name, graphicsBuffer);
+                    // A property without an object leaves the kernel what it has without one.
+                    else m_Shader.Unbind(m_Kernel, m_Objects[i].Name);
                 }
                 for (int i = 0; i < m_BufferNames.Length; i++)
                 {

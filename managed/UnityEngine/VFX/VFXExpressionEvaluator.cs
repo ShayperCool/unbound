@@ -23,10 +23,10 @@ namespace Unbound.Runtime
     /// <summary>
     /// Evaluates a compiled graph's CPU expressions into an effect's values: each expression of a
     /// range in order, from its parents' values (constants keep theirs). What the probe's graphs
-    /// evaluate matches the Unity 6000.0.71f1 Editor (tests/projects/vfx: constants, the step's
-    /// time, values drawn per spawn, the effect's matrices); the other operations are covered by
-    /// unit tests until a control per operation is recorded. The operations not written yet are
-    /// listed by <see cref="Supported"/> and stop an effect that uses them from running.
+    /// evaluate matches the Unity 6000.0.71f1 Editor (tests/projects/vfx, `sim/expressions*`:
+    /// a spawn block's inputs fed by operators over exposed properties). The operations
+    /// without a control, or not written yet, are listed by <see cref="Supported"/> and stop an
+    /// effect that uses them from running.
     /// </summary>
     internal static class VFXExpressionEvaluator
     {

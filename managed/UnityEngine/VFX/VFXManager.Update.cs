@@ -81,27 +81,10 @@ namespace UnityEngine.VFX
             return time;
         }
 
-        /// <summary>The frame count of a session's first frame.</summary>
-        const int FirstFrame = 1;
-
-        /// <summary>A camera culled its renderers: effects update in the next frame's update.</summary>
-        internal static void CameraCulled() => s_UpdateRequested = true;
-
-        /// <summary>Whether the next update runs: a camera culled since the last one, or the
-        /// last one had an effect that simulates when no camera sees it. Without either the
-        /// effects wait (in a frame nothing rendered since, there is nobody to see them).</summary>
-        static bool s_UpdateRequested;
-
         static void Update()
         {
             int count = s_Effects.Count;
-            // In the Editor a value a script gives a property in the first frame of play is gone
-            // in the second: every effect is back at its saved values (tests/projects/vfx,
-            // `sim/override timing`, `sim/expressions others|scene|copy`; later frames keep theirs).
-            if (Time.frameCount == FirstFrame)
-                for (int i = 0; i < count; i++) s_Effects[i].RevertToSavedOverrides();
-            if (count == 0 || !s_UpdateRequested) return;
-            s_UpdateRequested = false;
+            if (count == 0) return;
             s_Frame++;
             var time = CurrentFrameTime();
             // A snapshot: an effect's callbacks (custom spawners, output events) may enable or
@@ -116,7 +99,6 @@ namespace UnityEngine.VFX
                 // One effect's failure (a script's spawner block throwing) is its own.
                 try { effect.UpdateEffect(time); }
                 catch (Exception e) { Debug.LogException(e, effect); }
-                s_UpdateRequested |= effect.SimulatesWhenCulled;
             }
         }
 

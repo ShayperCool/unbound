@@ -17,6 +17,25 @@ namespace Unbound.Runtime
             internal ulong Sequence;
         }
 
+        static bool s_RendererPresent;
+
+        /// <summary>Whether a renderer executes what is submitted (a headless run and a test
+        /// have none): asked until one answers.</summary>
+        internal static bool RendererPresent
+        {
+            get
+            {
+                if (s_RendererPresent) return true;
+                try
+                {
+                    Native.Call("graphics-fence", "poll");
+                    s_RendererPresent = true;
+                }
+                catch (Exception) { }
+                return s_RendererPresent;
+            }
+        }
+
         internal static GraphicsFence Create(GraphicsFenceType type) =>
             new GraphicsFence { m_State = new State(), m_FenceType = type };
 

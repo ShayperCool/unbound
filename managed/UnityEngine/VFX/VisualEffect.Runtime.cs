@@ -85,7 +85,7 @@ namespace UnityEngine.VFX
         {
             VFXManager.Add(this);
             m_Registered = true;
-            m_EnabledFrame = Time.frameCount;
+            EnableRenderer(true);
             if (m_Systems.Length == 0) CreateSystems(true);
             else if (m_Start == StartState.Started) Initialize(true);
         }
@@ -96,6 +96,15 @@ namespace UnityEngine.VFX
         {
             VFXManager.Remove(this);
             m_Registered = false;
+            EnableRenderer(false);
+        }
+
+        /// <summary>The effect's renderer is enabled with the effect and disabled with it, also
+        /// when it is the object that goes inactive (`sim/toggle*/renderer`): no camera takes
+        /// the renderer of an effect that is off.</summary>
+        void EnableRenderer(bool enabled)
+        {
+            if (m_Renderer || TryGetComponent(out m_Renderer)) m_Renderer.enabled = enabled;
         }
 
         internal override void OnEngineDestroy()
@@ -378,21 +387,18 @@ namespace UnityEngine.VFX
             }
         }
 
-        /// <summary>Whether no camera sees the effect: none took its renderer in the last frame.
-        /// A renderer no camera ever took counts as seen until the effect first simulated, so
-        /// a new effect's first frame runs whole (measured for new effects, tests/projects/vfx
-        /// `sim/behind*`; an effect started over out of view is not measured).</summary>
+        /// <summary>Whether no camera sees the effect: none took its renderer in the last frame
+        /// (so an effect that was off in that frame is not seen in the update after it is
+        /// enabled, and one disabled and enabled within a frame is: `sim/toggle`, `sim/toggle
+        /// at once`). A renderer no camera ever took counts as seen until the effect first
+        /// simulated, so a new effect's first frame runs whole (measured for new effects,
+        /// tests/projects/vfx `sim/behind*`; an effect started over out of view is not measured).</summary>
         bool ComputeCulled()
         {
             if (!m_Renderer && !TryGetComponent(out m_Renderer)) return true;
             if (m_Renderer.m_RenderedFrame < 0) return m_EverSimulated;
-            // A disabled effect is not drawn: what a camera took of its renderer before the
-            // effect was last enabled does not count (`sim/toggle`).
-            return m_Renderer.m_RenderedFrame < Math.Max(Time.frameCount - 1, m_EnabledFrame);
+            return m_Renderer.m_RenderedFrame < Time.frameCount - 1;
         }
-
-        /// <summary>The frame the effect was last enabled in.</summary>
-        int m_EnabledFrame;
 
         VFXRenderer m_Renderer;
 
@@ -401,9 +407,6 @@ namespace UnityEngine.VFX
         public bool culled => m_Culled;
 
         bool m_Culled = true;
-
-        /// <summary>Whether the effect's asset keeps it simulating while no camera sees it.</summary>
-        internal bool SimulatesWhenCulled => m_Asset != null && m_Systems.Length != 0 && (m_Asset.m_Settings.CullingFlags & VFXCullingFlags.CullSimulation) == 0;
 
         /// <summary>The frame's steps of the effect.</summary>
         internal void UpdateEffect(in VFXManager.FrameTime time)

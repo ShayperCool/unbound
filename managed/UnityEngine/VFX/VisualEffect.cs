@@ -204,15 +204,6 @@ namespace UnityEngine.VFX
             Apply(m_Serialized);
         }
 
-        /// <summary>Back to the saved overrides: what scripts set since is dropped.</summary>
-        internal void RevertToSavedOverrides()
-        {
-            if (!m_SheetChanged) return;
-            m_SheetChanged = false;
-            CreateSheet();
-            Apply(m_Serialized);
-        }
-
         /// <summary>A new sheet for the current asset: every property at the asset's value.</summary>
         void CreateSheet()
         {

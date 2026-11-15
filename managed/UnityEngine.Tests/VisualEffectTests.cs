@@ -370,45 +370,6 @@ VisualEffect:
         }
 
         [Fact]
-        public void ScriptValuesDroppedGoBackToTheSavedOnes()
-        {
-            var first = First();
-            var effect = new GameObject("reverted").AddComponent<VisualEffect>();
-            try
-            {
-                effect.visualEffectAsset = first;
-                ObjectGraphBuilder.ReadComponent(effect, TestYaml.DocumentBody(@"
-VisualEffect:
-  m_Enabled: 1
-  m_PropertySheet:
-    m_Float:
-      m_Array:
-      - m_Value: 12
-        m_Name: Rate
-        m_Overridden: 1
-"), null);
-                effect.visualEffectAsset = first;
-                // Nothing set by script: nothing to drop.
-                effect.RevertToSavedOverrides();
-                Assert.Equal((12f, -7), (effect.GetFloat("Rate"), effect.GetInt("Count")));
-                // What the play session's first frame does to values scripts set in it
-                // (tests/projects/vfx, `sim/override timing`): the saved value is back where
-                // there is one, the asset's where there is none.
-                effect.SetFloat("Rate", 50f);
-                effect.SetInt("Count", 3);
-                effect.SetVector3("Where", new Vector3(4f, 5f, 6f));
-                Assert.Equal((50f, 3), (effect.GetFloat("Rate"), effect.GetInt("Count")));
-                effect.RevertToSavedOverrides();
-                Assert.Equal((12f, -7), (effect.GetFloat("Rate"), effect.GetInt("Count")));
-                Assert.Equal(new Vector3(1f, 2f, 3f), effect.GetVector3("Where"));
-                // A value set afterwards stays.
-                effect.SetInt("Count", 5);
-                Assert.Equal(5, effect.GetInt("Count"));
-            }
-            finally { Object.DestroyImmediate(effect.gameObject); }
-        }
-
-        [Fact]
         public void InitialEventComesFromTheEffectThenTheAssetThenPlay()
         {
             var asset = First();
