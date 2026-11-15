@@ -123,7 +123,12 @@ namespace UnityEngine
         public SpeedTreeWindAsset windAsset
         {
             get => m_WindAsset;
-            set => m_WindAsset = value;
+            set
+            {
+                // A local wind belongs to the asset it started from.
+                if (!ReferenceEquals(value, m_WindAsset)) SpeedTreeWindSystem.Detach(this);
+                m_WindAsset = value;
+            }
         }
 
         /// <summary>Whether the tree refers to a wind asset (Unity 6000.0.71f1,

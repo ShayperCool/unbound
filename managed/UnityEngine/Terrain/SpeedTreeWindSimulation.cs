@@ -446,7 +446,7 @@ namespace UnityEngine
     /// directional wind plus the spherical wind at the tree (<see cref="SpeedTreeWindState.UpdateLocal"/>);
     /// out of every zone's reach it returns to the asset's wind and is given up once it is that
     /// wind again. The trees of one LOD group with the same asset share the local wind of the
-    /// group's first such renderer (unmeasured: the probes' trees are single levels).
+    /// group's first such renderer (tests/projects/speedtree9wind GroupLevel1).
     /// </para>
     /// The GPU Resident Drawer's trees (<see cref="WriteBuffer"/>) take the same constants from
     /// their instance data instead, which the drawer writes each frame they are visible.
@@ -519,7 +519,7 @@ namespace UnityEngine
         }
 
         /// <summary>Takes a tree off its local wind, which ends with its last tree.</summary>
-        static void Detach(Tree tree)
+        internal static void Detach(Tree tree)
         {
             var local = tree.m_LocalWind;
             if (local == null) return;
@@ -593,12 +593,15 @@ namespace UnityEngine
                 if (zone.mode != WindZoneMode.Spherical) continue;
                 var position = zone.transform.position;
                 float radius = zone.radius;
-                if (1f - bounds.SqrDistanceUnchecked(position) / (radius * radius) <= 0f) continue;
+                // A zone without radius reaches nothing (unmeasured).
+                if (!(radius > 0f) || 1f - bounds.SqrDistanceUnchecked(position) / (radius * radius) <= 0f) continue;
                 Vector3 center = bounds.center, extents = bounds.extents;
                 float x = center.x - position.x;
                 float y = ((center.y + extents.y) - (center.y - extents.y)) * 0.25f + center.y - position.y;
                 float z = center.z - position.z;
                 float length = MathF.Sqrt((x * x + y * y) + z * z);
+                // A zone exactly at the point blows nowhere (unmeasured).
+                if (length == 0f) continue;
                 float main = zone.windMain;
                 sum = new Vector3(sum.x + x / length * main, sum.y + y / length * main, sum.z + z / length * main);
             }
@@ -641,8 +644,9 @@ namespace UnityEngine
                 foreach (var member in lod.renderers)
                 {
                     if (member == null) continue;
-                    var other = member.m_GameObject.GetComponent<Tree>();
-                    if (other is not null && ReferenceEquals(other.windAsset, asset)) return other;
+                    // An inactive level's tree takes no part.
+                    if (!s_Trees.TryGetValue(member.m_GameObject, out var other)) continue;
+                    if (ReferenceEquals(other.windAsset, asset)) return other;
                 }
             }
             return tree;
