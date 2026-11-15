@@ -110,15 +110,28 @@ class PostlandTests(unittest.TestCase):
         self.assertTrue(checker.round())
         self.assertEqual(checker.calls[0][1], ['b'])
 
-    def test_a_failure_that_passes_alone_is_reported_and_blames_nobody(self):
+    def test_a_failure_that_passes_alone_is_summarised_and_blames_nobody(self):
         check = ['flaky', 'flaky-check', 'fast check', 'r']
         self.land_branch('first', {'a.txt': '1'}, [check])
         checker = self.checker(lambda commit, check, label: label == 'main')
         self.assertTrue(checker.round())
         self.assertEqual([call[2] for call in checker.calls], ['main', 'alone'])
-        reports = self.reports()
-        self.assertEqual([report['kind'] for report in reports], ['passed alone after failing beside others'])
-        self.assertEqual(reports[0]['probe'], 'flaky')
+        # A load effect needs nobody's attention: a summary line, no finding.
+        self.assertEqual(self.reports(), [])
+        lines = (self.state/'postland/passed-alone.jsonl').read_text().splitlines()
+        self.assertEqual([json.loads(line)['probe'] for line in lines], ['flaky'])
+        self.assertEqual(json.loads(lines[0])['release'], 'r')
+        self.assertEqual(json.loads(lines[0])['logs'], [f'/logs/main-{checker.calls[0][0][:7]}-flaky.log'])
+        self.assertEqual(checker.state()['checked'], self.git('rev-parse', 'main'))
+
+    def test_background_checks_follow_the_free_capacity(self):
+        cases = [(16, 58.0, 1), (16, 0.5, 3), (16, 9.0, 3), (16, 11.5, 2), (2, 0.0, 1), (64, 0.0, 3)]
+        for threads, load, expected in cases:
+            with self.subTest(threads=threads, load=load), \
+                 mock.patch.object(os, 'cpu_count', return_value=threads), \
+                 mock.patch.object(os, 'getloadavg', return_value=(load, load, load)), \
+                 mock.patch.object(land, 'retry_workers', return_value=3):
+                self.assertEqual(postland.background_workers(), expected)
 
     def test_a_failure_before_the_range_is_reported_without_a_revert(self):
         check = ['old', 'old-check', 'fast check', 'r']
@@ -127,6 +140,30 @@ class PostlandTests(unittest.TestCase):
         self.assertTrue(checker.round())
         self.assertEqual([report['kind'] for report in self.reports()], ['fails before the range'])
         self.assertEqual(self.git('rev-parse', 'main'), self.rows[-1]['new'])
+
+    def test_findings_are_not_written_again_when_a_revert_reruns_the_range(self):
+        old = ['old', 'old-check', 'fast check', 'r']
+        probe = ['probe', 'probe-check', 'engine paths', 'r']
+        self.land_branch('first', {'value.txt': 'broken\n'}, [old, probe])
+        broken = lambda commit, check, label: (check[0] == 'old'
+                                               or self.git('show', f'{commit}:value.txt') == 'broken')
+        checker = self.checker(broken)
+
+        def land_revert():
+            head = REAL_RUN(['git', 'rev-parse', 'HEAD'], cwd=checker.worktree, capture_output=True,
+                            text=True).stdout.strip()
+            self.git('merge', '--ff-only', '-q', head)
+            return subprocess.CompletedProcess([], 0, 'landed', '')
+        checker.land_revert = land_revert
+        self.assertFalse(checker.round())
+        self.assertTrue(checker.round())
+        kinds = sorted(report['kind'] for report in self.reports())
+        self.assertEqual(kinds, ['fails before the range', 'reverted'])
+        # Control: a later range reports the same failure again.
+        self.land_branch('second', {'b.txt': '1'}, [old])
+        self.assertTrue(checker.round())
+        kinds = sorted(report['kind'] for report in self.reports())
+        self.assertEqual(kinds, ['fails before the range', 'fails before the range', 'reverted'])
 
     def test_bisection_reverts_the_landing_that_turned_the_check(self):
         check = ['probe', 'probe-check', 'engine paths', 'r']
@@ -363,8 +400,10 @@ class PostlandTests(unittest.TestCase):
         captured = {}
 
         def check_only(gate):
-            captured.update(automatic=gate.automatic, env=gate.env, worktree=gate.worktree)
+            captured.update(automatic=gate.automatic, env=gate.env, worktree=gate.worktree,
+                            workers=gate.automatic_workers, budget=gate.automatic_budget)
         with mock.patch.object(land.Gate, 'check_only', check_only), \
+             mock.patch.object(postland, 'background_workers', return_value=1), \
              mock.patch.dict(os.environ, {'UNBOUND_LAND_GATE': '1', 'CARGO_TARGET_DIR': '/elsewhere'}):
             failures = checker.run(self.git('rev-parse', 'main'),
                                    [['probe', 'python3 tools/agents/suite.py --only probe --label x', 'engine paths', 'r']],
@@ -374,6 +413,8 @@ class PostlandTests(unittest.TestCase):
         self.assertNotIn('UNBOUND_LAND_GATE', captured['env'])
         self.assertNotIn('CARGO_TARGET_DIR', captured['env'])
         self.assertIn('--against', captured['automatic'][0][1])
+        # No land lock held: the machine's free capacity sets the drivers, and no shared budget.
+        self.assertEqual((captured['workers'], captured['budget']), (1, False))
         locked = self.git('worktree', 'list', '--porcelain')
         self.assertIn('locked post-land checker', locked)
 

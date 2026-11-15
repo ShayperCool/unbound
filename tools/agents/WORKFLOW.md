@@ -10,7 +10,7 @@ Machine-local state lives in `~/.cache/unbound/agents/` (not in Git):
 |---|---|
 | `QUEUE.md` | the orchestrator's task queue |
 | `landed.jsonl` | one line per landed branch, including its train ID, gate log and automatic checks |
-| `postland/` | the post-land checker's state, lock and one JSON file per failure it found |
+| `postland/` | the post-land checker's state, lock, one JSON file per finding and `passed-alone.jsonl` |
 | `land-queue.json` | queued callers, requested probes, and recoverable results |
 | `land-publications.json` | durable publication receipts, retained until the push is queued |
 | `logs/` | gate logs, with start and finish times of every gate step |
@@ -345,16 +345,19 @@ main checkout in the background (`systemd-run`, Nice=15; its jobs never carry th
 One checker runs at a time and checks every landing between the last checked main and the
 current main, so landings that arrive while it runs are checked in its next round. It builds main
 in its own locked worktree beside the land trains and runs the union of those checks with the
-gate's rules: the sheriff baseline frozen for suite checks (`--against`), the 600 s budget, the
-300 s limit per check with one rerun of time-limited checks, and unchanged comparators.
+gate's rules: the sheriff baseline frozen for suite checks (`--against`), the 300 s limit per
+check with one rerun of time-limited checks, and unchanged comparators. It holds no lock, so it
+has no shared 600 s budget, and it runs only as many checks at once as the machine's free
+hardware threads allow (two per check, at least one, at most the engine pool's slots).
 
-A failing check runs once more alone at the same commit; passing then is reported as a flake
-or load timeout and blames no landing. A check that still fails runs at the range's base; when
+A failing check runs once more alone at the same commit; passing then is a flake or load
+timeout, blames no landing and is only appended to `postland/passed-alone.jsonl`. A check that still fails runs at the range's base; when
 it fails there too the failure predates the range. Otherwise the checker bisects the range's
 landings. When one landing turns the check from passing to failing, it reverts that landing's
 commits on a `postland/revert-*` branch and lands the revert through `land.py` with the reason,
 if the revert applies cleanly and the landing was not reverted before; the range is then checked
-again. Every finding, reverted or not, is written to
+again, and findings already written for the range are not written twice. Every finding,
+reverted or not, is written to
 `~/.cache/unbound/agents/postland/<time>-<probe>.json` with the probe, the commits and the logs,
 and a checker that cannot build writes `<time>-checker.json`; the orchestrator turns them into
 queue rows. Suite output uses fresh labels; sheriff suites and the baseline are only read.

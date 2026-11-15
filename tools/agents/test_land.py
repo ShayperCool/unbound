@@ -1535,7 +1535,7 @@ class AutomaticProbeTests(unittest.TestCase):
         self.assertIn('auto b (fast check, ', errors.getvalue())
         self.assertIn('longer checks can be supplied with --probe', errors.getvalue())
         text = self.gate.log.read_text()
-        self.assertIn('1 automatic checks reached a time limit beside 1 other checks', text)
+        self.assertIn('1 automatic checks reached a time limit with up to 2 checks running at once', text)
         self.assertRegex(text, r'land: auto b \(fast check, \S+\) \(retry\): exit 124')
 
     def test_time_limited_checks_pass_when_run_again_and_get_fresh_suite_labels(self):
@@ -1588,6 +1588,35 @@ class AutomaticProbeTests(unittest.TestCase):
              mock.patch.object(self.gate, 'step', side_effect=step), contextlib.redirect_stdout(io.StringIO()):
             self.gate.run_automatic_probes()
         self.assertEqual(peak, 2)
+
+    def test_time_limited_checks_never_run_again_wider_than_the_batch(self):
+        # The post-land checker's load-aware driver count also bounds the retries.
+        self.gate.automatic = [(name, name, 'fast check') for name in 'abcd']
+        self.gate.automatic_workers = 1
+        active, peak, lock = 0, 0, threading.Lock()
+        def step(name, command, **kwargs):
+            nonlocal active, peak
+            with lock:
+                active += 1
+                peak = max(peak, active)
+            time.sleep(.05)
+            with lock:
+                active -= 1
+            return 0 if name.endswith('(retry)') else land.TIME_LIMIT_EXIT
+        with mock.patch.object(land, 'retry_workers', return_value=4), \
+             mock.patch.object(self.gate, 'step', side_effect=step), contextlib.redirect_stdout(io.StringIO()):
+            self.gate.run_automatic_probes()
+        self.assertEqual(peak, 1)
+        self.assertIn('with up to 1 checks running at once; running each once more, at most 1 at a time',
+                      self.gate.log.read_text())
+
+    def test_retry_workers_follow_the_engine_pool(self):
+        for text, expected in [('{"engine_slots": 3}', 3), ('{"engine_slots": 12}', 12), ('{"engine_slots": 0}', 2),
+                               ('{"engine_slots": true}', 2), ('{}', 2), ('not json', 2)]:
+            with self.subTest(text=text), tempfile.TemporaryDirectory() as temporary:
+                (Path(temporary)/'job-limits.json').write_text(text)
+                with mock.patch.object(land, 'LAUNCHER', Path(temporary)/'with-heavy-job'):
+                    self.assertEqual(land.retry_workers(), expected)
 
     def test_automatic_drivers_overlap_with_separate_logs_and_releases(self):
         checks = []

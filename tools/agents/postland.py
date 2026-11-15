@@ -13,11 +13,12 @@ runs at a time; it covers every landing between the last checked main and the cu
 so landings that arrive while it runs are checked in its next round. It checks out main in its
 own locked worktree beside the land trains, builds it, freezes the runtime and runs the union
 of the landings' checks with the gate's rules: the same selection, the sheriff baseline frozen
-for suite checks (--against), the same 600 s budget and 300 s limit per check with one rerun
-of time-limited checks, and the same strict comparisons.
+for suite checks (--against), the same 300 s limit per check with one rerun of time-limited
+checks, and the same strict comparisons. Holding no lock, it has no shared budget and runs as
+many checks at once as the machine's free capacity allows (background_workers).
 
 A failing check is run once more alone at the same commit, so that a load timeout or a flake
-is not blamed on a landing. A check that still fails is run at the range's base (unless the range
+is not blamed on a landing; one that passes then is a line in postland/passed-alone.jsonl. A check that still fails is run at the range's base (unless the range
 adds its probe): when it fails there too, the failure predates the range. Otherwise the landings
 of the range are bisected; a non-passing result counts only when a second run agrees, and a time
 limit, a flake or a commit that cannot be built ends the search with a report. When one landing
@@ -32,6 +33,7 @@ import argparse
 import contextlib
 import datetime
 import fcntl
+import itertools
 import json
 import os
 from pathlib import Path
@@ -50,6 +52,16 @@ BACKGROUND_NICE = 15
 WORKTREE = 'postland-checker'
 BUILD_ENVIRONMENT = ('CARGO_TARGET_DIR', 'CARGO_BUILD_BUILD_DIR', 'UNBOUND_MANAGED_DIR',
                      'UNBOUND_RUNTIME', 'UNBOUND', 'UNBOUND_CLI', 'UNBOUND_LAND_GATE')
+# Hardware threads one automatic check keeps busy (an engine run plus its driver); the checker
+# runs as many checks at once as the free threads allow, at least one, at most the engine pool.
+THREADS_PER_CHECK = 2
+
+
+def background_workers():
+    """Checks to run at once: the machine's free capacity, not the gate's driver count. Under
+    load, parallel checks time each other out and then need reruns alone."""
+    free = (os.cpu_count() or 1)-os.getloadavg()[0]
+    return max(1, min(land.retry_workers(), int(free // THREADS_PER_CHECK)))
 
 
 def root():
@@ -133,6 +145,8 @@ class Checker:
         frozen = land.freeze_automatic_baseline([tuple(check) for check in checks])
         gate = land.Gate(self.worktree, commit, [], False, log, environment=self.environment(),
                          automatic=frozen)
+        # No land lock is held: no shared wall-clock budget, the 300 s limit per check stays.
+        gate.automatic_workers, gate.automatic_budget = background_workers(), False
         print(f'postland: {len(checks)} checks at {commit[:10]}; log {log}', flush=True)
         try:
             gate.check_only()
@@ -182,13 +196,35 @@ class Checker:
 
     # --- outcomes --------------------------------------------------------------------------
     def report(self, check, kind, **fields):
+        """Write a finding once per checked range (and culprit); returns its kind."""
+        # A round that ends in a revert leaves its range unchecked; the next round checks the same
+        # range again with the revert and must not write what it already wrote a second time.
+        key = json.dumps([(fields.get('range') or [None])[0], *check[:4], kind,
+                          (fields.get('culprit') or {}).get('new')])
+        reported = self.state().get('reported', {})
+        if key in reported:
+            print(f'postland: {kind}: {check[0]}; already reported in {reported[key]}', flush=True)
+            return kind
         name = re.sub(r'[^A-Za-z0-9._-]+', '-', str(check[0]))
         path = self.root/f'{stamp()}-{name}.json'
+        for number in itertools.count(2):
+            if not path.exists():
+                break
+            path = self.root/f'{stamp()}-{name}-{number}.json'
         value = {'time': f'{datetime.datetime.now():%F %T}', 'probe': check[0], 'command': check[1],
                  'reason': check[2], 'release': check[3] if len(check) > 3 else None, 'kind': kind, **fields}
         land.atomic_json(path, value)
+        self.save(reported=dict(reported, **{key: str(path)}))
         print(f'postland: {kind}: {check[0]}; {path}', flush=True)
-        return path
+        return kind
+
+    def note_flake(self, check, logs, span):
+        entry = {'time': f'{datetime.datetime.now():%F %T}', 'probe': check[0], 'command': check[1],
+                 'release': check[3] if len(check) > 3 else None, 'logs': logs, 'range': span,
+                 'load': round(os.getloadavg()[0], 1)}
+        with (self.root/'passed-alone.jsonl').open('a') as stream:
+            stream.write(json.dumps(entry)+'\n')
+        print(f'postland: passed alone after failing beside others: {check[0]}', flush=True)
 
     def land_revert(self):
         """land.py for the revert branch, at normal priority: it may lead other workers' train."""
@@ -223,16 +259,16 @@ class Checker:
         self.git('commit', '--quiet', '-m', message, cwd=self.worktree)
         landing = self.land_revert()
         if landing.returncode:
-            path = self.report(check, 'revert did not land', land_exit=landing.returncode,
+            kind = self.report(check, 'revert did not land', land_exit=landing.returncode,
                                land_output=(landing.stdout+landing.stderr)[-4000:], culprit=culprit,
                                logs=logs, **common)
         else:
             self.save(reverted=[*reverted, culprit['new']])
-            path = self.report(check, 'reverted', revert=self.git('rev-parse', 'HEAD', cwd=self.worktree),
+            kind = self.report(check, 'reverted', revert=self.git('rev-parse', 'HEAD', cwd=self.worktree),
                                culprit=culprit, logs=logs, **common)
         self.git('switch', '--quiet', '--detach', self.git('rev-parse', 'main'), cwd=self.worktree)
         self.git('branch', '-D', branch, cwd=self.worktree, check=False)
-        return path
+        return kind
 
     def isolate(self, rows, check, logs, target):
         """Report a confirmed failure, and revert its landing when one landing is the clear cause.
@@ -289,7 +325,7 @@ class Checker:
         rows = self.pending(checked, target)
         checks = land.automatic_union([[tuple(row) for row in item['automatic']] for item in rows])
         if not checks:
-            self.save(checked=target)
+            self.save(checked=target, reported={})
             return True
         span = [rows[0]['old'], target]
         for check, log, code in self.run(target, checks, 'main'):
@@ -297,13 +333,14 @@ class Checker:
             again, alone = self.outcome(target, check, 'alone')
             logs = [log, *([alone] if alone else [])]
             if again == 'pass':
-                self.report(check, 'passed alone after failing beside others', logs=logs, range=span)
+                # A load effect, not a finding: one line in a summary file.
+                self.note_flake(check, logs, span)
             elif again != 'fail':
                 self.report(check, 'undecided', at=target, result=f'{again} alone', logs=logs, range=span)
-            elif json.loads(Path(self.isolate(rows, check, logs, target)).read_text())['kind'] == 'reverted':
+            elif self.isolate(rows, check, logs, target) == 'reverted':
                 # Main moved; the other failures are checked again with the revert.
                 return False
-        self.save(checked=target)
+        self.save(checked=target, reported={})
         return self.git('rev-parse', 'main') == target
 
 

@@ -76,6 +76,8 @@ GATE_VERSION = '7'
 EXPLICIT_PROBE_WORKERS = 16
 AUTO_PROBE_BUDGET_SECONDS = 600
 AUTO_PROBE_TIMEOUT_SECONDS = 300
+# The job runner's engine pool when job-limits.json does not say (its own default).
+DEFAULT_ENGINE_SLOTS = 2
 AUTO_SELECTION_TIMEOUT_SECONDS = 10
 # Exit code of an automatic check stopped by its time limit or by the exhausted shared budget.
 TIME_LIMIT_EXIT = 124
@@ -349,8 +351,8 @@ def retry_workers():
     try:
         slots = json.loads((LAUNCHER.parent/'job-limits.json').read_text())['engine_slots']
     except (OSError, ValueError, KeyError, TypeError):
-        return 2
-    return slots if isinstance(slots, int) and 1 <= slots <= 8 else 2
+        return DEFAULT_ENGINE_SLOTS
+    return slots if isinstance(slots, int) and not isinstance(slots, bool) and slots >= 1 else DEFAULT_ENGINE_SLOTS
 
 
 def without_suite_label(argv):
@@ -434,6 +436,9 @@ class Gate:
         self.cancelled = False
         self.durations = {}
         self.failures = []
+        # Driver count for automatic checks (None: EXPLICIT_PROBE_WORKERS) and whether they share
+        # the gate's wall-clock budget; the post-land checker sets fewer drivers and no budget.
+        self.automatic_workers, self.automatic_budget = None, True
 
     def note(self, text):
         """A timestamped line in the gate log for phases that are not commands."""
@@ -618,23 +623,26 @@ class Gate:
             commands.append((name, command, release, log, exclusive))
         self.execute_probe_commands(commands)
 
-    def execute_probe_commands(self, commands, *, deadline=None, retry_time_limits=False):
+    def execute_probe_commands(self, commands, *, deadline=None, retry_time_limits=False, workers=None, limit=None):
         """Shared bounded drivers; engine jobs keep their existing pool admission.
 
         With retry_time_limits, checks stopped only by a time limit while sharing the machine
-        with the batch run once more, at most retry_workers() at a time and nothing else of this
-        gate beside them, each with the same per-check limit. Any other failure fails at once."""
+        with the batch run once more, at most retry_workers() (and at most `workers`) at a time and
+        nothing else of this gate beside them, each with the same per-check limit; the retries add
+        at most ceil(retried/that count)*AUTO_PROBE_TIMEOUT_SECONDS. Any other failure fails at
+        once."""
         if not commands:
             return
         require_process_watch()
         self.announce(commands)
-        results = self.drive(commands, deadline=deadline)
+        results = self.drive(commands, deadline=deadline, limit=limit, workers=workers)
         self.report(results)
         limited = [row for row, code in results if code == TIME_LIMIT_EXIT]
         if retry_time_limits and limited and all(code in (0, TIME_LIMIT_EXIT) for _, code in results):
-            workers = retry_workers()
-            message = (f'{len(limited)} automatic checks reached a time limit beside {len(commands)-1} other '
-                       f'checks; running each once more, at most {workers} at a time, '
+            batch = min(workers or EXPLICIT_PROBE_WORKERS, len(commands))
+            workers = min(retry_workers(), workers or retry_workers())
+            message = (f'{len(limited)} automatic checks reached a time limit with up to {batch} checks '
+                       f'running at once; running each once more, at most {workers} at a time, '
                        f'{AUTO_PROBE_TIMEOUT_SECONDS}s each')
             print('land: '+message, flush=True)
             self.note(message)
@@ -713,7 +721,7 @@ class Gate:
         print(f'land: automatic probes: {len(self.automatic)} checks, '
               f'budget {AUTO_PROBE_BUDGET_SECONDS}s total, '
               f'{AUTO_PROBE_TIMEOUT_SECONDS}s per check; explicit --probe commands are separate', flush=True)
-        deadline = time.monotonic()+AUTO_PROBE_BUDGET_SECONDS
+        deadline = time.monotonic()+AUTO_PROBE_BUDGET_SECONDS if self.automatic_budget else None
         self.note('automatic probes started')
         specs = self.probe_specs()
         logs = self.log.with_suffix('.automatic')
@@ -729,7 +737,8 @@ class Gate:
                                       '--label', f'land-{os.getpid()}-{time.time_ns()}-{name}'])
             commands.append((f'auto {name} ({reason}, {release})', command, release,
                              logs/f'{index:03d}.log', exclusive))
-        self.execute_probe_commands(commands, deadline=deadline, retry_time_limits=True)
+        self.execute_probe_commands(commands, deadline=deadline, retry_time_limits=True,
+                                    workers=self.automatic_workers, limit=AUTO_PROBE_TIMEOUT_SECONDS)
 
     def stubs(self, cli):
         """gen-stubs with the gate's build: the hand-written code must build without stubs and the
