@@ -187,6 +187,13 @@ impl super::Device {
                 } else {
                     naga::proc::BoundsCheckPolicy::Unchecked
                 };
+                // Texel loads outside the image (or its levels) read zero, as HLSL's Load does
+                // and as Unity's devices read them; clamping would repeat the edge texels.
+                let image_load_policy = if stage.module.runtime_checks.bounds_checks {
+                    naga::proc::BoundsCheckPolicy::ReadZeroSkipWrite
+                } else {
+                    naga::proc::BoundsCheckPolicy::Unchecked
+                };
 
                 let options = naga::back::msl::Options {
                     lang_version: match self.shared.private_caps.msl_version {
@@ -216,7 +223,7 @@ impl super::Device {
                     bounds_check_policies: naga::proc::BoundsCheckPolicies {
                         index: bounds_check_policy,
                         buffer: bounds_check_policy,
-                        image_load: bounds_check_policy,
+                        image_load: image_load_policy,
                         // TODO: support bounds checks on binding arrays
                         binding_array: naga::proc::BoundsCheckPolicy::Unchecked,
                     },

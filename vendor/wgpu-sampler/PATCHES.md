@@ -12,8 +12,8 @@ The SHA-256 values below identify the published `.crate` archives and are checke
 
 `reproduce.py` applies `native-lod-bias.patch`, `gl-device.patch`,
 `native-mirror-clamp.patch`, `native-depth-state.patch`,
-`native-external-texture.patch`, `native-gl-mirror-clamp.patch` and
-`native-vulkan-attachment-usage.patch` in that order. Together they contain every
+`native-external-texture.patch`, `native-gl-mirror-clamp.patch`,
+`native-vulkan-attachment-usage.patch` and `native-metal-image-load.patch` in that order. Together they contain every
 source change relative to those archives. `reproduce.py --output <fresh-cache-directory>`
 recreates the three patched source trees.
 An optional `--archive-dir` supplies previously downloaded archives. The script does not
@@ -183,3 +183,17 @@ Reference: Unity 6000.0.71f1 NVIDIA Vulkan, tests/projects/nativegfx
 require the usage combination and image dimensions/sample count to be supported.
 These are backend allocation capabilities, not a promise of identical flags on
 other drivers or releases.
+
+## Metal texel loads outside the image (`native-metal-image-load.patch`)
+
+With bounds checks on, the Metal backend now translates texel loads (`textureLoad`, HLSL
+`Load`) with naga's `ReadZeroSkipWrite` policy instead of `Restrict`: a load outside the image
+or its levels reads zero instead of the nearest edge texel. Buffer and index accesses keep
+`Restrict`; unchecked modules stay unchecked.
+
+Measured: Unity 6000.0.71f1 on the macOS Editor's Metal device (two identical batch-mode
+captures, Apple M2 Pro) loads zero outside a 2x2 texture, tests/projects/nativegfx
+`metal.jsonl` `loadoutside.pixels`; the OpenGL Core and Vulkan Editors (NVIDIA) load zero
+outside a 1x1 texture in tests/projects/rtdepth `fmt.noDepth.depth.load`. The HLSL
+[`Load`](https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-to-load)
+contract is that out-of-range coordinates return zero.
