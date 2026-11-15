@@ -150,8 +150,8 @@ fn an_unsure_reading_counts_the_whole_crate() {
     assert!(ws.sources("unbound_compiler", &[]).contains(&audio));
 }
 
-/// Starting from modules of a crate, its other modules count only when named; its root's items
-/// with code count when named; files it includes count.
+/// Starting from modules of a crate, its other modules count only when named; a root with code
+/// of its own counts the whole crate; files it includes count.
 #[test]
 fn modules_of_a_crate_and_what_they_include() {
     let ws = Workspace::new(
@@ -369,4 +369,63 @@ fn root_code_raw_strings_and_more_aliases_reach_what_they_name() {
         "use super::*;\nmod inner { }\npub enum Device { A }\npub fn select() {}\n",
     );
     assert!(ws.sources("unbound_compiler", &[]).contains(&audio));
+}
+
+/// Aliases after a nested group, `super::` paths inside function bodies beside an inline
+/// module, a root's `#[path]` (also under `cfg_attr`) and `extern crate` alias, and C raw
+/// strings: each reaches the rules crate's `audio` module.
+#[test]
+fn aliases_super_paths_and_root_attributes_reach_what_they_name() {
+    let audio = "crates/unbound-rules/src/audio.rs".to_string();
+    for (case, fit) in [
+        (
+            "late-self-as",
+            "use unbound_rules::{device::{Device}, self as r};\nfn f() { r::Audio; }\n",
+        ),
+        (
+            "c-raw",
+            "const C: &str = cr#\"a\"b\"#;\nuse unbound_rules::Audio;\n",
+        ),
+    ] {
+        let ws = compiler_and_rules(case);
+        ws.write("crates/unbound-compiler/src/fit.rs", fit);
+        assert!(
+            ws.sources("unbound_compiler", &[]).contains(&audio),
+            "{case}"
+        );
+    }
+    for (case, device) in [
+        (
+            "glob-in-fn",
+            "mod inner {}\npub enum Device { A }\npub fn select() { use super::*; let _ = Audio; }\n",
+        ),
+        (
+            "own-name-in-fn",
+            "mod inner {}\nfn audio() {}\npub enum Device { A }\npub fn select() { super::audio::Audio; }\n",
+        ),
+    ] {
+        let ws = compiler_and_rules(case);
+        ws.write("crates/unbound-rules/src/device.rs", device);
+        assert!(
+            ws.sources("unbound_compiler", &[]).contains(&audio),
+            "{case}"
+        );
+    }
+    for (case, root) in [
+        (
+            "cfg-attr-path",
+            format!("#[cfg_attr(target_os = \"macos\", path = \"dev_mac.rs\")]\n{RULES_ROOT}"),
+        ),
+        (
+            "extern-alias",
+            format!("extern crate std as standard;\n{RULES_ROOT}"),
+        ),
+    ] {
+        let ws = compiler_and_rules(case);
+        ws.write("crates/unbound-rules/src/lib.rs", &root);
+        assert!(
+            ws.sources("unbound_compiler", &[]).contains(&audio),
+            "{case}"
+        );
+    }
 }

@@ -159,8 +159,7 @@ fn code(text: &str) -> Code {
         });
     let unsure = computed_include
         || use_renames_self(&text)
-        || text.contains("#[path")
-        || text.contains("#![path")
+        || module_paths(&text)
         || text.contains("macro_rules!")
         || text.contains("#[macro_use]")
         || word_starts(&text, "extern").any(|at| text[at + 6..].trim_start().starts_with("crate"))
@@ -181,6 +180,18 @@ fn raw_prefix_ok(before: &str) -> bool {
         Some('b' | 'c') => !back.next().is_some_and(is_ident),
         Some(c) => !is_ident(c),
     }
+}
+
+/// Whether an attribute sets a module's file (`#[path = ...]`, also under `cfg_attr`).
+fn module_paths(text: &str) -> bool {
+    text.match_indices("#").any(|(at, _)| {
+        let rest = text[at + 1..].trim_start_matches('!').trim_start();
+        let Some(body) = rest.strip_prefix('[') else {
+            return false;
+        };
+        let body = &body[..body.find(']').unwrap_or(body.len())];
+        word_starts(body, "path").any(|p| body[p + 4..].trim_start().starts_with('='))
+    })
 }
 
 /// Whether a `use` names a module under another name (`use crate::{self as c}`), which the
@@ -320,9 +331,9 @@ fn named_after(text: &str, prefix: &str) -> Vec<String> {
     out
 }
 
-/// The paths a text names through `super::`: where each stands, how many `super::` it chains,
-/// and the first identifier after them (`*` for a glob or anything else).
-fn super_paths(text: &str) -> Vec<(usize, usize, String)> {
+/// The paths a text names through `super::`: how many `super::` each chains, and the first
+/// identifier after them (`*` for a glob or anything else).
+fn super_paths(text: &str) -> Vec<(usize, String)> {
     const SUPER: &str = "super::";
     let mut out = Vec::new();
     for start in word_starts(text, SUPER) {
@@ -340,7 +351,7 @@ fn super_paths(text: &str) -> Vec<(usize, usize, String)> {
         let head = &rest[..rest.find(';').unwrap_or(rest.len())];
         let named = named_after(&format!("{SUPER}{head}"), SUPER);
         for ident in named.into_iter().take(first_group(rest)) {
-            out.push((start, supers, ident));
+            out.push((supers, ident));
         }
     }
     out
@@ -365,10 +376,11 @@ fn named_crates(text: &str) -> BTreeMap<String, Vec<String>> {
             continue;
         }
         let prefix = format!("{name}::");
-        // `unbound_x::{self as y}`: under another name too.
-        let group_end = after.find(['}', ';']).unwrap_or(after.len());
-        if word_starts(&after[..group_end], "self")
-            .any(|at| after[at + 4..group_end].trim_start().starts_with("as "))
+        // `unbound_x::{.., self as y}`: under another name too (anywhere up to the
+        // statement's end).
+        let statement_end = after.find(';').unwrap_or(after.len());
+        if word_starts(&after[..statement_end], "self")
+            .any(|at| after[at + 4..statement_end].trim_start().starts_with("as "))
         {
             out.entry(name.clone()).or_default().push("*".into());
         }
@@ -405,40 +417,6 @@ fn first_group(rest: &str) -> usize {
         }
     }
     items.max(1)
-}
-
-/// Whether `text` defines an item named `ident` (`fn`, `struct`, ... or an inline `mod`).
-fn defines(text: &str, ident: &str) -> bool {
-    const KEYWORDS: [&str; 10] = [
-        "fn",
-        "struct",
-        "enum",
-        "trait",
-        "type",
-        "const",
-        "static",
-        "union",
-        "mod",
-        "macro_rules!",
-    ];
-    KEYWORDS.iter().any(|kw| {
-        word_starts(text, kw).any(|at| {
-            let rest = &text[at + kw.len()..];
-            rest.starts_with(char::is_whitespace) && {
-                let rest = rest.trim_start();
-                rest.starts_with(ident) && !rest[ident.len()..].starts_with(is_ident)
-            }
-        })
-    })
-}
-
-/// Whether a text holds an inline module (`mod tests { ... }`).
-fn has_inline_module(text: &str) -> bool {
-    word_starts(text, "mod").any(|at| {
-        let rest = text[at + 3..].trim_start();
-        let name_end = rest.find(|c: char| !is_ident(c)).unwrap_or(rest.len());
-        name_end > 0 && rest[name_end..].trim_start().starts_with('{')
-    })
 }
 
 /// The brace depth at each byte of a text.
@@ -628,11 +606,7 @@ fn resolve(src: &Path, ident: &str) -> io::Result<Change> {
             false => Change::Whole,
         });
     }
-    // An item of the root's own code: the crate counts whole (its root's code is not read
-    // apart).
-    if defines(&root_code(&lib), ident) {
-        return Ok(Change::Whole);
-    }
+    // Anything else (an item of the root's own code, a name it cannot find): the whole crate.
     Ok(Change::Whole)
 }
 
@@ -684,16 +658,17 @@ pub fn producing_sources(
                 }
                 Ok(out)
             };
-            // A crate that defines macros: what their uses expand to is not read, so a crate
-            // only partly reached counts whole.
-            // A root with code of its own (items, impls, the `use` lines they rely on) is not
+            // A root with code of its own (items, impls, the `use` lines they rely on), or with
+            // what the reading cannot follow (`#[path]`, an alias, a computed include), is not
             // read apart: a crate only partly reached counts whole.
             if !r.whole {
-                let root_text = code(&std::fs::read_to_string(&lib_path)?).text;
-                if !root_code(&root_text).trim().is_empty() {
+                let root = code(&std::fs::read_to_string(&lib_path)?);
+                if root.unsure || !root_code(&root.text).trim().is_empty() {
                     changes.push((name.clone(), Change::Whole));
                 }
             }
+            // A crate that defines macros: what their uses expand to is not read, so a crate
+            // only partly reached counts whole.
             if !r.whole {
                 for path in rust_files(&src)? {
                     let text = code(&std::fs::read_to_string(&path)?).text;
@@ -703,7 +678,7 @@ pub fn producing_sources(
                     }
                 }
             }
-            // The texts read: the reached modules' files (and the root's items with code).
+            // The texts read: the reached modules' files.
             let mut texts: Vec<(PathBuf, Code)> = Vec::new();
             if r.whole {
                 for path in rust_files(&src)? {
@@ -762,14 +737,11 @@ pub fn producing_sources(
                     true => dirs.saturating_sub(1),
                     false => dirs,
                 };
-                let brace_depth = depths(text);
-                for (at, supers, ident) in super_paths(text) {
-                    // From inside an inline module (`mod tests { use super::*; }`), the file
-                    // itself.
-                    let in_file = brace_depth[at] > 0
-                        && has_inline_module(text)
-                        && (ident == "*" || defines(text, &ident));
-                    if supers > depth && !in_file {
+                // A path climbing past the module's directory names the crate's modules (from
+                // an inline module of the file, maybe the file's own items: resolved at the
+                // crate, an unknown name counts the whole crate). Test modules are not read.
+                for (supers, ident) in super_paths(text) {
+                    if supers > depth {
                         named.push(ident);
                     }
                 }
