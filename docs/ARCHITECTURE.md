@@ -170,6 +170,18 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   rendering commands. `AsyncGPUReadback` reads the source when requested and completes the
   request at the next frame's `UpdateAsyncReadbackManager`, as the Editor does at the earliest
   (tests/projects/gpubuffers).
+* **Visual Effect Graph**: a graph file (`.vfx`, and the subgraphs `.vfxoperator`/`.vfxblock`)
+  is imported by the graph package's own compiler, unmodified, as the Editor's importer drives it
+  (`Editor/VFX/VisualEffectImporter.cs`): the file's resource and graph models load, the package
+  compiles the graph into the resource (expressions and their constants, exposed properties,
+  systems with their tasks, events, buffer layouts, generated shader sources), each source becomes
+  a `Shader` or `ComputeShader` compiled from `Library/Unbound/GeneratedShaders`, and the asset
+  takes the systems with a material per output shader. A graph loaded from disk compiles on a
+  second, forced import the package asks for after sanitizing it; for that Unbound tells the
+  package's postprocessors of the import (it has no post-import pass otherwise). An effect keeps
+  one value per expression of its asset (`VisualEffectValues`) and a property sheet over the
+  exposed ones; overrides are kept by name and type across asset changes
+  (tests/projects/vfx). Systems are not simulated or drawn yet.
 * **Graphics devices**: like Unity, Unbound has several graphics devices, and the device a game
   sees is the one it gets: OpenGL Core and Vulkan on Linux, Metal on macOS. The run's device is
   chosen once at startup (`unbound_compat::graphics`), as the Editor of the OS chooses it (Unity

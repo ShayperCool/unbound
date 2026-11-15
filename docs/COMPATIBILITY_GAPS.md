@@ -494,9 +494,10 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       runtime classes without a reader. Ignored on purpose, with the reason:
       EditorExtensionImpl, and OcclusionCullingSettings while it references no baked data
       (NavMeshSettings loads the scene's baked NavMesh: `navbaked`). Found in real content
-      without a reader (follow-ups): VFX Graph (`VisualEffect` 2083052967, `VFXRenderer`
-      73398921, `VisualEffectResource` 2058629511), `Preset` (181963792; editor scripts can apply
-      one, explicitly unsupported). Legacy `GUILayer` (92) is discarded on load in the measured
+      without a reader (follow-ups): `Preset` (181963792; editor scripts can apply
+      one, explicitly unsupported). VFX Graph's classes (`VisualEffect` 2083052967, `VFXRenderer`
+      73398921, `VisualEffectResource` 2058629511) are read since the `vfx` probe; the doctor lists
+      a `VisualEffect` with an asset as not simulated. Legacy `GUILayer` (92) is discarded on load in the measured
       6000.0.71f1 release, so its doctor entry is ignored (`classids` legacy control). AudioListener
       and FlareLayer have only the enabled flag read by the shared Behaviour reader and are not
       listed as missing readers. FlareLayer adds a required Camera, repairs a missing Camera on
@@ -793,6 +794,8 @@ in ROADMAP; NavMesh queries/builds/agents/avoidance; terrain heights, collider, 
 
 | Gap | Where | | Impact |
 |---|---|---|---|
+| Visual Effect Graph: import and the API that needs no simulation | `Editor/VFX/*`, `VFX/*` | W | done for Unity 6000.0.71f1 with URP 17 (tests/projects/vfx, 1489 Editor values: the compiler's expression tables, exposed properties and their order, types, spaces and texture dimensions, events, the imported objects and their file ids, typed `Has`/`Get`/`Set` with the Editor's errors, texture dimension checks, `ResetOverride`, overrides kept by name and type across asset changes, clones, serialized overrides, event attributes, the manager's time steps). The package's compiler runs unmodified; only its own postprocessors are told of an import (Unbound has no post-import pass otherwise). Measured with the package's quad output only; a Shader Graph output's material variant is built without the parent's GPU instancing lock (warned). Under the built-in pipeline the package compiles nothing, as in the Editor (not probed). |
+| Visual Effect Graph: simulation and drawing | `VFX/VisualEffect.cs`, renderer | W | open: spawners, initialize/update/output passes, `SendEvent`/`Play`/`Stop`/`Reinit`/`Simulate`, `aliveParticleCount`, system and spawner info, output events, bounds, culling, sorting, strips, GPU events, `VFXManager` camera hooks. The members log "not implemented" when called; an effect with systems warns once at load and `unbound doctor` lists it. |
 | `RaycastHit.textureCoord/textureCoord2/lightmapCoord` | `Physics/PhysicsTypes.cs`, `PhysicsQueries.cs`, native query shim | W | done (3203 Editor records: ray/sweep barycentrics, cooked face remapping, submesh base vertices, live UV/mesh reads, UV2 fallback diagnostics and renderer lightmap transforms; tests/projects/rayhits) |
 | Joint2D family (Hinge, Distance, Spring, Wheel, Slider, Fixed, Friction, Relative, Target) | `Physics2D/*Joints2D.cs`, Box2D solvers | W | done for all nine components (1401 Editor records, including serialization/cloning, limits/motors, reflected parents, body lifecycle, break actions and Target diagnostics; 19 separately reported solver-rounding records) |
 | Effector2D family (Platform, Area, Buoyancy, Point, Surface); `usedByEffector` | `Physics2D/*Effectors*.cs`, Box2D contacts and post-step volume forces | W/S | done for all five components (2559 Editor records, 28 measured native contact-order records; defaults, limits, serialization/cloning, masks/lifecycle, private RNG, force selection/falloff, submerged geometry and drag) |
@@ -1047,7 +1050,7 @@ ScriptedImporters, UnityWebRequest core (multipart, certificates, timeouts, file
 7. **Assets and networking**: FBX materials, LOD names, lightmap UVs, AssetBundle downloads and
    caching, audio downloads, ~~`InstantiateAsync`~~ (done: tests/projects/instantiateasync).
 
-Deferred by decision (see ROADMAP): VFX Graph, XR, LOD cross-fades, Terrain leftovers, console
+Deferred by decision (see ROADMAP): XR, LOD cross-fades, Terrain leftovers, console
 codecs.
 
 Q64/Q221/Q287: instance multipliers on CPU-expanded mesh instances: done for Unity 6000.0.71f1 on OpenGL Core (tests/projects/cmdbuffers `device.multiplier.mesh.*`, `placed.*`, `camera.*`; NVIDIA only). The Editor multiplies a mesh-instancing call's GPU instance count (the Scripting API: "multiply the instance count of every draw call"), through command buffers and a camera's queued `Graphics.RenderMeshInstanced` and `DrawMeshInstanced`; the added IDs n to n·m − 1 have `unity_InstanceID` equal to the raw ID and read the instance data past the call's elements. Unbound adds them after the call's last instance with zero matrices and instanced properties, which is what the Editor reads where no earlier draw wrote there, and with the last instance's winding (Unbound's choice). Measured, not reproduced: where earlier instanced draws wrote more elements, the Editor's added instances read those (data left in its instance buffer, `device.multiplier.stale.colors.2`, kept as a visible difference); Unbound warns once. Unmeasured: other per-instance built-ins of the added instances (LOD fade, probes, lightmap scale/offset keep the draw's values), standalone instancing whose multiplied IDs pass a native batch (warned, not added), stereo instancing keywords (XR deferred).

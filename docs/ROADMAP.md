@@ -180,9 +180,14 @@ In dependency order; each item ends with an Editor-reference probe.
 - [x] Shader Graph assets: their ScriptedImporter runs unmodified and the ShaderLab it generates
       (`Library/Unbound/GeneratedShaders`) is compiled like any shader; `tests/projects/shadergraph`
       matches the Editor's image (mean difference 0.02/255).
-- [ ] ~~VFX Graph~~: not planned for now (the user's call, 2026-10-27): its runtime is the engine's
-      native VFXModule, a large piece; projects that use it need only the Particle System to work.
-      VisualEffect objects are skipped with a warning.
+- [ ] VFX Graph (back in scope since 2026-11-12), in slices. Done: graph files (`.vfx`,
+      `.vfxoperator`, `.vfxblock`) import by running the package's own compiler, whose generated
+      compute and output shaders go to `Library/Unbound/GeneratedShaders` like Shader Graph's; the
+      asset and `VisualEffect` answer the API that needs no simulation (exposed properties and
+      overrides, events and event attributes, system names, settings) as the Unity 6000.0.71f1
+      Editor does (`tests/projects/vfx`, 1489 values). Not yet: simulation and drawing (spawners,
+      init/update/output passes, events sent, bounds and culling, strips, GPU events); an effect
+      shows nothing, says so once at load and is listed by `unbound doctor`.
 - [x] Baked lighting: a scene's LightingData (read through its type tree): lightmaps and each
       renderer's lightmap placement, light probes (tetrahedral interpolation), baked lights out of
       the realtime ones, the skybox reflection; cubemap textures from images (strips, crosses,
