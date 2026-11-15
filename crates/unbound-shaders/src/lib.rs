@@ -3530,6 +3530,27 @@ float4 frag(v2f i) : SV_Target
             .unwrap();
         assert_eq!(compiled.framebuffer_fetch, 1);
         assert!(compiled.textures.iter().any(|t| *t == fetch::texture(0)));
+        // Its variant for a multisampled target reads the fragment's own sample of a
+        // multisampled copy.
+        let samples = compiler
+            .compile(
+                &program(&fetching, false),
+                &[FETCH_MULTISAMPLED.into()],
+                false,
+            )
+            .unwrap();
+        assert_eq!(samples.framebuffer_fetch, 1);
+        assert!(
+            samples.fragment.contains("texture_multisampled_2d"),
+            "{}",
+            samples.fragment
+        );
+        assert!(
+            samples.fragment.contains("sample_index"),
+            "{}",
+            samples.fragment
+        );
+        assert!(!compiled.fragment.contains("texture_multisampled_2d"));
         // Without framebuffer fetch (another device) an inout color target is not read.
         let mut other = ShaderCompiler::new(Settings {
             unity_version: 6000071,

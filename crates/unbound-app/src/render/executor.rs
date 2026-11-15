@@ -332,26 +332,28 @@ fn same_storage(a: wgpu::TextureFormat, b: wgpu::TextureFormat) -> bool {
     a.remove_srgb_suffix() == b.remove_srgb_suffix()
 }
 
-/// The handles of `GrabPass` textures: one per name and 8-bit channel order, so a name grabbed
-/// from the blue-first screen and from RGBA8 targets keeps a texture for each (copies between
-/// the two storages are invalid) instead of remaking one at every switch. Handles count down
-/// from `handle::PLAIN_MAX`.
+/// The handles of `GrabPass` and framebuffer fetch textures: one per name, 8-bit channel order
+/// and whether the source is multisampled, so a name grabbed from the blue-first screen and from
+/// RGBA8 targets, or fetched from multisampled and single-sampled targets, keeps a texture for
+/// each (copies between the two storages or sample counts are invalid) instead of remaking one
+/// at every switch. Handles count down from `handle::PLAIN_MAX`.
 #[derive(Default)]
 struct GrabSlots {
-    by_name: HashMap<String, [Option<u64>; 2]>,
+    by_name: HashMap<String, [Option<u64>; 4]>,
     count: u64,
 }
 
 impl GrabSlots {
-    /// The handle of `name`'s texture for a source stored in `format`.
-    fn handle(&mut self, name: &str, format: wgpu::TextureFormat) -> u64 {
+    /// The handle of `name`'s texture for a source stored in `format` with `samples` samples.
+    fn handle(&mut self, name: &str, format: wgpu::TextureFormat, samples: u32) -> u64 {
         let order = (format.remove_srgb_suffix() == wgpu::TextureFormat::Bgra8Unorm) as usize;
-        if let Some(handle) = self.by_name.get(name).and_then(|slots| slots[order]) {
+        let slot = order + 2 * (samples > 1) as usize;
+        if let Some(handle) = self.by_name.get(name).and_then(|slots| slots[slot]) {
             return handle;
         }
         let handle = handle::PLAIN_MAX - self.count;
         self.count += 1;
-        self.by_name.entry(name.to_string()).or_default()[order] = Some(handle);
+        self.by_name.entry(name.to_string()).or_default()[slot] = Some(handle);
         handle
     }
 
@@ -4576,7 +4578,7 @@ impl UnityRenderer {
             wgpu::TextureFormat::Rg8Unorm => texture_format::RG8_UNORM,
             f => resources::integer_code(f).unwrap_or(0),
         };
-        let handle = self.grabs.handle(name, source.format());
+        let handle = self.grabs.handle(name, source.format(), samples);
         let fits = self.textures.get(&handle).is_some_and(|t| {
             t.width == width
                 && t.height == height
@@ -5905,23 +5907,26 @@ mod tests {
 
     /// A grab of the blue-first screen and one of an RGBA8 target of the same size do not share
     /// a texture (copies between the two storages are invalid); alternating between them keeps
-    /// both.
+    /// both. A multisampled target's fetch copy has its own as well.
     #[test]
     fn grabs_keep_their_source_storage() {
         use wgpu::TextureFormat as F;
         let mut slots = GrabSlots::default();
         assert!(!slots.contains(handle::PLAIN_MAX));
-        let rgba = slots.handle("_GrabTexture", F::Rgba8Unorm);
-        let bgra = slots.handle("_GrabTexture", F::Bgra8Unorm);
-        assert_ne!(rgba, bgra);
+        let rgba = slots.handle("_GrabTexture", F::Rgba8Unorm, 1);
+        let bgra = slots.handle("_GrabTexture", F::Bgra8Unorm, 1);
+        let samples = slots.handle("_GrabTexture", F::Rgba8Unorm, 4);
+        assert!(rgba != bgra && samples != rgba && samples != bgra);
         for _ in 0..3 {
-            assert_eq!(slots.handle("_GrabTexture", F::Rgba8UnormSrgb), rgba);
-            assert_eq!(slots.handle("_GrabTexture", F::Bgra8UnormSrgb), bgra);
+            assert_eq!(slots.handle("_GrabTexture", F::Rgba8UnormSrgb, 1), rgba);
+            assert_eq!(slots.handle("_GrabTexture", F::Bgra8UnormSrgb, 1), bgra);
+            assert_eq!(slots.handle("_GrabTexture", F::Rgba8UnormSrgb, 4), samples);
         }
         // Other storages share the red-first slot (`grab` remakes its texture: `same_storage`).
-        assert_eq!(slots.handle("_GrabTexture", F::Rgba16Float), rgba);
-        let named = slots.handle("_Named", F::Rgba8Unorm);
-        assert!(![rgba, bgra].contains(&named));
+        assert_eq!(slots.handle("_GrabTexture", F::Rgba16Float, 1), rgba);
+        assert_eq!(slots.handle("_GrabTexture", F::Rgba16Float, 2), samples);
+        let named = slots.handle("_Named", F::Rgba8Unorm, 1);
+        assert!(![rgba, bgra, samples].contains(&named));
         assert!(slots.contains(rgba) && slots.contains(bgra) && slots.contains(named));
         assert!(!slots.contains(named - 1) && !slots.contains(0));
         assert!(same_storage(F::Bgra8Unorm, F::Bgra8UnormSrgb));

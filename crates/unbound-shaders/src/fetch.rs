@@ -97,7 +97,7 @@ pub fn rewrite(source: &str, entry: &str, multisampled: bool) -> Result<(String,
             }
         }
         if position.is_none() {
-            position = struct_position(&text, &params);
+            position = struct_input(&text, &params, is_position);
         }
         if !fetched.is_empty() {
             let mut list: Vec<String> = params
@@ -115,16 +115,18 @@ pub fn rewrite(source: &str, entry: &str, multisampled: bool) -> Result<(String,
                 }
             };
             // A multisampled target: each sample's fragment reads its own sample (the macOS
-            // Editor's Metal device, shadertargets `fetch.Msaa.squared`).
+            // Editor's Metal device, shadertargets `fetch.Msaa.squared`), the entry's own
+            // sample index (a parameter or a member of an input structure) when it has one.
             let sample = if multisampled {
-                let own = params.iter().find_map(|p| {
-                    let (declaration, semantic) = p.rsplit_once(':')?;
-                    semantic
-                        .trim()
-                        .eq_ignore_ascii_case("SV_SampleIndex")
-                        .then(|| declaration.split_whitespace().last().map(str::to_string))
-                        .flatten()
-                });
+                let own = params
+                    .iter()
+                    .find_map(|p| {
+                        let (declaration, semantic) = p.rsplit_once(':')?;
+                        is_sample_index(semantic.trim())
+                            .then(|| declaration.split_whitespace().last().map(str::to_string))
+                            .flatten()
+                    })
+                    .or_else(|| struct_input(&text, &params, is_sample_index));
                 Some(own.unwrap_or_else(|| {
                     list.push("uint _unbound_SampleIndex : SV_SampleIndex".into());
                     "_unbound_SampleIndex".into()
@@ -186,6 +188,11 @@ fn is_position(semantic: &str) -> bool {
     ["SV_POSITION", "VPOS", "POSITION", "POSITION0"]
         .iter()
         .any(|s| semantic.eq_ignore_ascii_case(s))
+}
+
+/// Whether a fragment input semantic is the index of the sample the fragment runs for.
+fn is_sample_index(semantic: &str) -> bool {
+    semantic.eq_ignore_ascii_case("SV_SampleIndex")
 }
 
 /// The color target a semantic names (`CoLoR<n>`, or `SV_Target<n>` in any case), by its digits.
@@ -286,9 +293,9 @@ fn split_params(list: &str) -> Vec<String> {
     params
 }
 
-/// The fragment position held by a member of a structure parameter (`i.pos` for
-/// `v2f i` whose `pos` is `SV_POSITION`).
-fn struct_position(text: &str, params: &[String]) -> Option<String> {
+/// The input held by a member of a structure parameter whose semantic `wanted` accepts (the
+/// fragment position `i.pos` for `v2f i` whose `pos` is `SV_POSITION`).
+fn struct_input(text: &str, params: &[String], wanted: fn(&str) -> bool) -> Option<String> {
     for param in params {
         let declaration = param.split(':').next()?.trim();
         let words: Vec<&str> = declaration
@@ -301,7 +308,7 @@ fn struct_position(text: &str, params: &[String]) -> Option<String> {
         let Some(members) = struct_members(text, ty) else {
             continue;
         };
-        if let Some((member, _)) = members.iter().find(|(_, s)| is_position(s)) {
+        if let Some((member, _)) = members.iter().find(|(_, s)| wanted(s)) {
             return Some(format!("{name}.{member}"));
         }
     }
@@ -479,6 +486,11 @@ mod tests {
         let own = "void frag(float4 p : SV_POSITION, uint s : SV_SampleIndex, inout half4 c : CoLoR) { }\n";
         let (text, _) = rewrite(own, "frag", true).unwrap();
         assert!(text.contains("Load(int2((p).xy), s);"), "{text}");
+        assert!(!text.contains("_unbound_SampleIndex"));
+        let member = "struct v2f { float4 pos : SV_POSITION; uint s : SV_SampleIndex; };\n\
+            void frag(v2f i, inout half4 c : CoLoR) { }\n";
+        let (text, _) = rewrite(member, "frag", true).unwrap();
+        assert!(text.contains("Load(int2((i.pos).xy), i.s);"), "{text}");
         assert!(!text.contains("_unbound_SampleIndex"));
     }
 
