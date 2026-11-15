@@ -52,6 +52,42 @@ public class RuntimeProbe : MonoBehaviour
         if (e is ICommandEvent c) Put(key+".command", c.commandName);
         if (e is WheelEvent w) Put(key+".wheel", V(w.delta));
     }
+    static void Watch<T>(VisualElement element, List<string> events) where T : EventBase<T>, new()
+        => element.RegisterCallback<T>(e => events.Add(typeof(T).Name));
+    void Hover(object panel)
+    {
+        var root = ((IPanel)panel).visualTree;
+        root.style.position = Position.Absolute; root.style.left = 0; root.style.top = 0;
+        root.style.width = 200; root.style.height = 100;
+        var hot = new VisualElement { name = "hot" };
+        hot.style.position = Position.Absolute; hot.style.left = 10; hot.style.top = 10; hot.style.width = 60; hot.style.height = 40;
+        root.Add(hot); Call(U("BaseVisualElementPanel"), "ValidateLayout", panel);
+        var events = new List<string>();
+        Watch<PointerOverEvent>(hot, events); Watch<PointerOutEvent>(hot, events); Watch<PointerEnterEvent>(hot, events); Watch<PointerLeaveEvent>(hot, events);
+        Watch<MouseOverEvent>(hot, events); Watch<MouseOutEvent>(hot, events); Watch<MouseEnterEvent>(hot, events); Watch<MouseLeaveEvent>(hot, events);
+        Watch<DragEnterEvent>(hot, events); Watch<DragLeaveEvent>(hot, events);
+        var ancestorDrag = new List<string>();
+        root.RegisterCallback<DragEnterEvent>(e => { if (ReferenceEquals(e.target, hot)) ancestorDrag.Add("enter"); }, TrickleDown.TrickleDown);
+        root.RegisterCallback<DragLeaveEvent>(e => { if (ReferenceEquals(e.target, hot)) ancestorDrag.Add("leave"); }, TrickleDown.TrickleDown);
+        var create = U("UIElementsRuntimeUtility").GetMethod("CreateEvent", All);
+        var send = U("BaseVisualElementPanel").GetMethod("SendEvent", All, null, new[] { typeof(EventBase), U("DispatchMode") }, null);
+        var immediate = Enum.Parse(U("DispatchMode"), "Immediate");
+        int step = 0;
+        foreach (var type in new[] { EventType.MouseEnterWindow, EventType.MouseLeaveWindow, EventType.MouseEnterWindow,
+                                    EventType.MouseMove, EventType.MouseLeaveWindow, EventType.DragUpdated, EventType.DragUpdated, EventType.DragExited })
+        {
+            events.Clear(); ancestorDrag.Clear();
+            var position = step == 6 ? new Vector2(150, 80) : new Vector2(20, 20);
+            using (var e = (EventBase)create.Invoke(null, new object[] { new Event { type = type, mousePosition = position, button = 0 } }))
+                send.Invoke(panel, new[] { e, immediate });
+            Put("hover."+step+".events", string.Join(",", events));
+            Put("hover."+step+".ancestor-drag", string.Join(",", ancestorDrag));
+            Put("hover."+step+".contains", hot.GetType().GetProperty("containedPointerIds", All).GetValue(hot));
+            Put("hover."+step+".picked", ReferenceEquals(hot, Call(U("BaseVisualElementPanel"), "GetTopElementUnderPointer", panel, 0)));
+            step++;
+        }
+        root.Remove(hot);
+    }
     void Record()
     {
         var utility = U("UIElementsRuntimeUtility");
@@ -134,6 +170,7 @@ public class RuntimeProbe : MonoBehaviour
         Call(utility, "DisposeRuntimePanel", null, owner2); Call(utility, "GetSortedPlayerPanels", null); Put("panel.max-empty", max.GetValue(null));
         created.RemoveEventHandler(null, handler);
         panel = Call(utility, "FindOrCreateRuntimePanel", null, owner, factory); Put("panel.removed-handler", notifications);
+        Hover(panel);
         Call(utility, "DisposeRuntimePanel", null, owner);
         DestroyImmediate(go); DestroyImmediate(alternate); DestroyImmediate(owner); DestroyImmediate(owner2);
     }

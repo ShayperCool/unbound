@@ -34,3 +34,13 @@ Existing reference rows remain byte-identical. New creation timestamps retain
 their raw values and use the existing numeric timestamp migration policy.
 Absolute event-registration numbers are context observations; the defaultstate
 relational control checks that one type keeps its ID and different types differ.
+
+Window-entry and window-exit controls dispatch onto a laid-out runtime panel and
+record pointer/mouse transitions, containment bits and the cached hit. Drag
+controls move across an element boundary and record drag transitions too.
+The 6000.0 [DragEnterEvent](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.DragEnterEvent.html)
+and [DragLeaveEvent](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.DragLeaveEvent.html)
+descriptions say they do not trickle. The recorded `ancestor-drag` callbacks show
+that this release sends them to ancestor trickle callbacks. Compat selects that
+observed behavior for 6000.0.71f1; other releases use the documented target-only
+behavior and remain unmeasured.

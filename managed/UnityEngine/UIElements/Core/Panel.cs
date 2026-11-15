@@ -1007,6 +1007,19 @@ namespace Unbound.UIElements
                             }
                         }
                     }
+                    else if (type == MouseEnterWindowEvent.TypeId() || type == MouseLeaveWindowEvent.TypeId() ||
+                             type == DragUpdatedEvent.TypeId() || type == DragExitedEvent.TypeId())
+                    {
+                        using (new UaEventDispatcherGate(dispatcher))
+                        {
+                            SendOverOut(previous, current, null, position, i);
+                            SendEnterLeave<PointerLeaveEvent, PointerEnterEvent>(previous, current, null, position, i);
+                            SendMouseOverOut(previous, current, (IMouseEvent)trigger, position);
+                            SendMouseEnterLeave(previous, current, (IMouseEvent)trigger, position);
+                            if (type == DragUpdatedEvent.TypeId() || type == DragExitedEvent.TypeId())
+                                SendMouseEnterLeave<DragLeaveEvent, DragEnterEvent>(previous, current, (IMouseEvent)trigger, position);
+                        }
+                    }
                     else if (type == WheelEvent.TypeId())
                     {
                         using (new UaEventDispatcherGate(dispatcher))
@@ -1040,7 +1053,7 @@ namespace Unbound.UIElements
                 depthPrevious--;
                 a = a.hierarchy.parent;
             }
-            var entered = new List<VisualElement>();
+            using var enteredLease = UnityEngine.Pool.ListPool<VisualElement>.Get(out var entered);
             while (depthCurrent > depthPrevious)
             {
                 entered.Add(b);
@@ -1088,7 +1101,11 @@ namespace Unbound.UIElements
             }
         }
 
-        static void SendMouseEnterLeave(VisualElement previous, VisualElement current, IMouseEvent trigger, Vector2 position)
+        static void SendMouseEnterLeave(VisualElement previous, VisualElement current, IMouseEvent trigger, Vector2 position) =>
+            SendMouseEnterLeave<MouseLeaveEvent, MouseEnterEvent>(previous, current, trigger, position);
+
+        static void SendMouseEnterLeave<TLeave, TEnter>(VisualElement previous, VisualElement current, IMouseEvent trigger, Vector2 position)
+            where TLeave : MouseEventBase<TLeave>, new() where TEnter : MouseEventBase<TEnter>, new()
         {
             if (previous != null && previous.panel == null) previous = null;
             int depthPrevious = 0;
@@ -1099,7 +1116,7 @@ namespace Unbound.UIElements
             var b = current;
             while (depthPrevious > depthCurrent)
             {
-                using (var leave = MouseEventBase<MouseLeaveEvent>.GetPooled(trigger, position))
+                using (var leave = MouseEventBase<TLeave>.GetPooled(trigger, position))
                 {
                     leave.elementTarget = a;
                     a.SendEvent(leave);
@@ -1107,7 +1124,7 @@ namespace Unbound.UIElements
                 depthPrevious--;
                 a = a.hierarchy.parent;
             }
-            var entered = new List<VisualElement>();
+            using var enteredLease = UnityEngine.Pool.ListPool<VisualElement>.Get(out var entered);
             while (depthCurrent > depthPrevious)
             {
                 entered.Add(b);
@@ -1116,7 +1133,7 @@ namespace Unbound.UIElements
             }
             while (a != b)
             {
-                using (var leave = MouseEventBase<MouseLeaveEvent>.GetPooled(trigger, position))
+                using (var leave = MouseEventBase<TLeave>.GetPooled(trigger, position))
                 {
                     leave.elementTarget = a;
                     a.SendEvent(leave);
@@ -1127,7 +1144,7 @@ namespace Unbound.UIElements
             }
             for (int i = entered.Count - 1; i >= 0; i--)
             {
-                using (var enter = MouseEventBase<MouseEnterEvent>.GetPooled(trigger, position))
+                using (var enter = MouseEventBase<TEnter>.GetPooled(trigger, position))
                 {
                     enter.elementTarget = entered[i];
                     entered[i].SendEvent(enter);

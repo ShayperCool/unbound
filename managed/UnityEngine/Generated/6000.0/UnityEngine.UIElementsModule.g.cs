@@ -1228,21 +1228,9 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] internal static void RegisterMakeClientFunc(global::System.Func<global::UnityEngine.UIElements.IDragAndDrop> makeClient) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropUtility.RegisterMakeClientFunc"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class DragEnterEvent : global::UnityEngine.UIElements.DragAndDropEventBase<global::UnityEngine.UIElements.DragEnterEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEnterEvent.Init"); }
-        [global::Unbound.Stub] public DragEnterEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEnterEvent.ctor"); }
-    }
     unsafe partial class DragEventsProcessor
     {
         internal virtual bool isEditorContext { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEventsProcessor.isEditorContext"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class DragLeaveEvent : global::UnityEngine.UIElements.DragAndDropEventBase<global::UnityEngine.UIElements.DragLeaveEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragLeaveEvent.Init"); }
-        [global::Unbound.Stub] public DragLeaveEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragLeaveEvent.ctor"); }
     }
     unsafe partial class DropdownField
     {

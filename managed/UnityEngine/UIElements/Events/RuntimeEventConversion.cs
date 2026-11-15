@@ -109,9 +109,22 @@ namespace UnityEngine.UIElements
     [EventCategory(EventCategory.DragAndDrop)]
     public abstract partial class DragAndDropEventBase<T> : MouseEventBase<T>, IDragAndDropEvent where T : DragAndDropEventBase<T>, new()
     {
+        private protected static EventPropagation UaBoundaryPropagation => Unbound.Runtime.Compat.DragBoundaryEventsTrickle
+            ? EventPropagation.TricklesDown | EventPropagation.SkipDisabledElements : EventPropagation.SkipDisabledElements;
         protected override void Init() { base.Init(); LocalInit(); }
         void LocalInit() => propagation = EventPropagation.BubblesOrTricklesDown | EventPropagation.SkipDisabledElements;
         protected DragAndDropEventBase() { LocalInit(); }
+    }
+
+    public partial class DragEnterEvent : DragAndDropEventBase<DragEnterEvent>
+    {
+        protected override void Init() { base.Init(); propagation = UaBoundaryPropagation; }
+        public DragEnterEvent() { propagation = UaBoundaryPropagation; }
+    }
+    public partial class DragLeaveEvent : DragAndDropEventBase<DragLeaveEvent>
+    {
+        protected override void Init() { base.Init(); propagation = UaBoundaryPropagation; }
+        public DragLeaveEvent() { propagation = UaBoundaryPropagation; }
     }
 
     public partial class DragPerformEvent : DragAndDropEventBase<DragPerformEvent> { }

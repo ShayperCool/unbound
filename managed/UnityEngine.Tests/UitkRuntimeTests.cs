@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine.UIElements;
 using Xunit;
 
@@ -68,6 +69,62 @@ namespace UnityEngine.Tests
                 Assert.IsType<PointerUpEvent>(up);
             }
             finally { PointerDeviceState.ReleaseAllButtons(PointerId.mousePointerId); }
+        }
+
+        [Fact]
+        public void WindowAndDragTransitionsUpdatePointerContainmentAndSendHoverEvents()
+        {
+            string release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            using var panel = new Panel(null, ContextType.Player, EventDispatcher.CreateDefault(), null);
+            panel.visualTree.style.width = 200;
+            panel.visualTree.style.height = 100;
+            var hot = new VisualElement();
+            hot.style.width = 60;
+            hot.style.height = 40;
+            panel.visualTree.Add(hot);
+            panel.ValidateLayout();
+            var events = new List<string>();
+            hot.RegisterCallback<PointerEnterEvent>(_ => events.Add("pointer-enter"));
+            hot.RegisterCallback<PointerLeaveEvent>(_ => events.Add("pointer-leave"));
+            hot.RegisterCallback<MouseEnterEvent>(_ => events.Add("mouse-enter"));
+            hot.RegisterCallback<MouseLeaveEvent>(_ => events.Add("mouse-leave"));
+            hot.RegisterCallback<DragEnterEvent>(_ => events.Add("drag-enter"));
+            hot.RegisterCallback<DragLeaveEvent>(_ => events.Add("drag-leave"));
+            int ancestorDrag = 0;
+            panel.visualTree.RegisterCallback<DragEnterEvent>(e => { if (ReferenceEquals(e.target, hot)) ancestorDrag++; }, TrickleDown.TrickleDown);
+            panel.visualTree.RegisterCallback<DragLeaveEvent>(e => { if (ReferenceEquals(e.target, hot)) ancestorDrag++; }, TrickleDown.TrickleDown);
+            void Send(EventType type, Vector2 position)
+            {
+                using var e = UIElementsRuntimeUtility.CreateEvent(new Event { type = type, mousePosition = position });
+                panel.SendEvent(e, DispatchMode.Immediate);
+            }
+            PointerDeviceState.ReleaseAllButtons(PointerId.mousePointerId);
+            try
+            {
+                Send(EventType.MouseEnterWindow, new Vector2(5, 5));
+                Assert.Equal(1, hot.containedPointerIds);
+                Assert.Equal(new[] { "pointer-enter", "mouse-enter" }, events);
+                events.Clear();
+                Send(EventType.MouseLeaveWindow, new Vector2(5, 5));
+                Assert.Equal(0, hot.containedPointerIds);
+                Assert.Equal(new[] { "pointer-leave", "mouse-leave" }, events);
+                events.Clear();
+                Send(EventType.DragUpdated, new Vector2(5, 5));
+                Assert.Equal(1, hot.containedPointerIds);
+                Assert.Equal(new[] { "pointer-enter", "mouse-enter", "drag-enter" }, events);
+                Assert.Equal(1, ancestorDrag);
+                events.Clear();
+                Send(EventType.DragUpdated, new Vector2(150, 80));
+                Assert.Equal(0, hot.containedPointerIds);
+                Assert.Equal(new[] { "pointer-leave", "mouse-leave", "drag-leave" }, events);
+                Assert.Equal(2, ancestorDrag);
+            }
+            finally
+            {
+                PointerDeviceState.ReleaseAllButtons(PointerId.mousePointerId);
+                ProjectInfo.UnityVersion = release;
+            }
         }
 
         [Fact]
