@@ -174,9 +174,10 @@ namespace Unbound.Tests
             public void LogException(Exception exception, Object context) => Messages.Add("Exception: " + exception.Message);
         }
 
-        /// <summary>PVRTC of a size whose padded levels have block counts that are not powers of
-        /// two (which the decoder cannot read; the Editor's answer is unmeasured) keeps RGBA32
-        /// texels, warned, as before; small sides pad to a readable level and keep blocks.</summary>
+        /// <summary>PVRTC of a size whose sides, padded to their least (8 texels, 16 across at 2
+        /// bits), are not powers of two (which the decoder cannot read; the Editor's answer is
+        /// unmeasured) keeps RGBA32 texels, warned, as before; small sides pad to a readable level
+        /// and keep blocks.</summary>
         [Fact]
         public void PvrtcOfUnreadableSizesKeepsTexels()
         {
