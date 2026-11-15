@@ -1008,9 +1008,11 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             struct Request {
                 handle: u64,
                 pixels: i32,
+                #[serde(default)]
+                unscaled: bool,
             }
             let r: Request = serde_json::from_str(request)?;
-            Ok(crate::fonts::legacy_kerning(r.handle, r.pixels)?.to_string())
+            Ok(crate::fonts::legacy_kerning(r.handle, r.pixels, r.unscaled)?.to_string())
         }
         "font-kerning" => {
             #[derive(Deserialize)]

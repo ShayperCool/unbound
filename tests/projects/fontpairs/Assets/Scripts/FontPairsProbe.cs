@@ -29,7 +29,7 @@ public sealed class FontPairsProbe : MonoBehaviour
     void Gpos()
     {
         gposProjection=true;
-            foreach (string font in new[] { "PairOnly", "KernOnly", "Both", "Neither", "ClassZero", "ClassRange" })
+            foreach (string font in new[] { "PairOnly", "KernOnly", "Both", "Neither", "ClassZero", "ClassRange", "Fallback", "KernWithSingle", "Reverse" })
             foreach (int size in new[] { 13,37 })
             {
                 string prefix="gpos/"+font+"/"+size;
@@ -44,14 +44,14 @@ public sealed class FontPairsProbe : MonoBehaviour
                         if (method=="GetPairAdjustmentRecords") Capture(prefix+"/"+method+"/one/"+glyph,Call(method,new[]{typeof(uint)},glyph));
                         else { var args=new object[]{glyph,0}; Capture(prefix+"/"+method+"/one/"+glyph,Call(method,new[]{typeof(uint),typeof(int).MakeByRefType()},args)); Write(prefix+"/"+method+"/one/"+glyph+"/out",args[1].ToString()); }
                     }
-                    var lists=new[] { glyphs,new List<uint>{glyphs[3],glyphs[0],glyphs[0]},new List<uint>{0,glyphs[0]},new List<uint>(),new List<uint>{65536,glyphs[0]} };
+                    var lists=new[] { glyphs,new List<uint>{glyphs[3],glyphs[0],glyphs[0]},new List<uint>{0,glyphs[0]},new List<uint>(),new List<uint>{65536,glyphs[0]},new List<uint>{glyphs[1]},new List<uint>{glyphs[1],glyphs[0]} };
                     for (int i=0;i<lists.Length;i++)
                     {
                         if (method=="GetPairAdjustmentRecords") Capture(prefix+"/"+method+"/list/"+i,Call(method,new[]{typeof(List<uint>)},lists[i]));
                         else { var args=new object[]{lists[i],0};Capture(prefix+"/"+method+"/list/"+i,Call(method,new[]{typeof(List<uint>),typeof(int).MakeByRefType()},args));Write(prefix+"/"+method+"/list/"+i+"/out",args[1].ToString()); }
                     }
                 }
-                for (int lookup=0;lookup<(font=="KernOnly"||font=="Neither"?0:4);lookup++)
+                for (int lookup=0;lookup<(font=="KernOnly"||font=="Neither"||font=="Reverse"?0:font=="KernWithSingle"?1:4);lookup++)
                 {
                     Capture(prefix+"/indexed/"+lookup+"/one",Call("GetPairAdjustmentRecords",new[]{typeof(int),typeof(uint)},lookup,glyphs[0]));
                     Capture(prefix+"/indexed/"+lookup+"/list",Call("GetPairAdjustmentRecords",new[]{typeof(int),typeof(List<uint>)},lookup,new List<uint>{glyphs[3],glyphs[0],glyphs[0]}));
@@ -60,6 +60,29 @@ public sealed class FontPairsProbe : MonoBehaviour
                 FontEngine.UnloadFontFace();
             }
     }
+    void FontAssets()
+    {
+        gposProjection=true;
+        foreach (string font in new[]{"PairOnly","KernOnly","Both","Neither"})
+        foreach (int size in new[]{13,37})
+        {
+            var source=UnityEditor.AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/"+font+".ttf");
+            var asset=UnityEngine.TextCore.Text.FontAsset.CreateFontAsset(source,size,0,GlyphRenderMode.SMOOTH,64,64,UnityEngine.TextCore.Text.AtlasPopulationMode.Dynamic,false);
+            typeof(UnityEngine.TextCore.Text.FontAsset).GetMethod("ImportFontFeatures",BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public).Invoke(asset,null);
+            object table=asset.fontFeatureTable;
+            var flags=BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public;
+            var property=table.GetType().GetProperty("glyphPairAdjustmentRecords",flags);
+            var pairs=property!=null?property.GetValue(table):table.GetType().GetField("glyphPairAdjustmentRecords",flags).GetValue(table);
+            var records=new List<GlyphPairAdjustmentRecord>();
+            foreach(var record in (System.Collections.IEnumerable)pairs)records.Add((GlyphPairAdjustmentRecord)record);
+            Capture("asset/"+font+"/"+size+"/pairs",records.ToArray());
+            FontEngine.TryGetGlyphIndex('A',out uint a);FontEngine.TryGetGlyphIndex('V',out uint v);
+            Capture("asset/"+font+"/"+size+"/legacy",Call("GetGlyphPairAdjustmentRecord",new[]{typeof(uint),typeof(uint)},a,v));
+            UnityEngine.Object.DestroyImmediate(asset);
+            FontEngine.UnloadFontFace();
+        }
+    }
+
     void Start()
     {
         try
@@ -112,6 +135,7 @@ public sealed class FontPairsProbe : MonoBehaviour
                 try { Capture("null/"+kind,Call(method,types,args)); } catch(TargetInvocationException e) { Write("null/"+kind,e.InnerException.GetType().Name); }
             }
             Gpos();
+            FontAssets();
             Write("complete","1");
         }
         catch (Exception e) { Write("error",e.ToString());Debug.LogException(e); }

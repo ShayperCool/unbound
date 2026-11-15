@@ -730,10 +730,10 @@ namespace UnityEngine.TextCore.LowLevel
 
         internal static GlyphPairAdjustmentRecord[] GetAllPairAdjustmentRecords() => Compat.FontPairQueriesMeasured ? PairRecords(null, null, true) : Records(Kerning(null, null), 1f);
 
-        /// <summary>Every pair whose first glyph is one of <paramref name="glyphIndexes"/>, in font
-        /// units: as glyphs are added, the pairs with any glyph added later are already known.</summary>
+        /// <summary>GPOS records starting at the requested glyphs, or on an empty selection the
+        /// incoming and outgoing KERN records, in font units (tests/projects/fontpairs).</summary>
         internal static GlyphPairAdjustmentRecord[] GetPairAdjustmentRecords(List<uint> glyphIndexes) =>
-            Compat.FontPairQueriesMeasured ? PairRecords(FeatureGlyphList(glyphIndexes), null, false) : glyphIndexes == null || glyphIndexes.Count == 0 ? Array.Empty<GlyphPairAdjustmentRecord>() : Records(Kerning(glyphIndexes, null), 1f);
+            Compat.FontPairQueriesMeasured ? UnindexedPairRecords(glyphIndexes) : glyphIndexes == null || glyphIndexes.Count == 0 ? Array.Empty<GlyphPairAdjustmentRecord>() : Records(Kerning(glyphIndexes, null), 1f);
     }
 
     /// <summary>MaxRects bin packing (Jylänki) on lists of free and used rects, y up.</summary>

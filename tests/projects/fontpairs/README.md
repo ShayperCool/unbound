@@ -20,14 +20,21 @@ defines the pair-set, class-matrix, value-record and extension encodings.
 - Filtered GPOS arrays preserve lookup/subtable/input order and duplicate inputs. Zero terminates
   a list; a wider glyph ID does not alias its low sixteen bits. An all-record or unindexed
   scalar-glyph query returns an exact-sized array. List and indexed queries use the shared
-  power-of-two buffer, with an empty terminator and null for no results.
+  power-of-two buffer, with an empty terminator and null for no results. An empty unindexed
+  list selection falls back to KERN in font units, including when another GPOS pair exists.
+  Partners are visited in glyph order, then requested inputs in their order, incoming before
+  outgoing. Duplicates and both copies of a self pair remain. `Fallback` and `KernWithSingle`
+  distinguish this from a global GPOS-presence check.
 - Legacy queries use KERN independently of GPOS. Values are unfitted 26.6 pixel coordinates
   converted to floats, as described by [FreeType](https://freetype.org/freetype2/docs/reference/ft2-glyph_retrieval.html#ft_kerning_mode).
-  A scalar-glyph query includes incoming and outgoing pairs. A list/table query selects both
+  A scalar-glyph query visits partner glyphs in order, outgoing before incoming, with both copies
+  of a self pair. A list/table query selects both
   endpoints and preserves duplicate combinations. New/all queries visit each new glyph against
   the all-glyph list, outgoing before incoming, and retain each pair once. `Reverse` adds a
   reverse pair and a self pair. Sizes 13 and 37, unloaded faces, zero/wide IDs, null inputs and
-  buffer history are controlled.
+  buffer history are controlled. Explicit `FontAsset.ImportFontFeatures` controls show that
+  full imports use GPOS, scale only the first x advance and preserve the other seven fields;
+  subsequent legacy KERN queries still use their independent pixel values.
 - A GPOS scalar pair with only a first-glyph x advance scales that advance by the face size.
   Full multi-field scalar pair results vary across Editor repeats, including glyph IDs.
   Those cases remain unresolved; Unbound rejects that scalar context with a clear message.

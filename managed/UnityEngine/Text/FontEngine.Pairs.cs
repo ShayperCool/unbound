@@ -28,6 +28,28 @@ namespace UnityEngine.TextCore.LowLevel
                 new { handle = s_Face.Handle, glyphs, lookup }, exact, ref s_PairAdjustmentRecords, PairAdjustment);
         }
 
+        static GlyphPairAdjustmentRecord[] UnindexedPairRecords(List<uint> glyphs)
+        {
+            FeatureGlyphList(glyphs);
+            if (glyphs.Count == 0 || glyphs[0] == 0) return null;
+            var records = PairRecords(glyphs, null, false);
+            if (records != null) return records;
+            s_LegacyPairQuery.Clear();
+            PairRanks(glyphs);
+            if (s_PairRanks.Count == 0 || !LoadLegacyPairs()) return null;
+            // An empty GPOS selection visits KERN partners in glyph order, then the requested
+            // list in its order. Incoming precedes outgoing; self pairs and repeats stay.
+            foreach (uint partner in s_LegacyUnitPartners)
+            {
+                s_PairMatches.Clear();
+                MatchPairEndpoints(s_LegacyUnitOutgoing, partner, false);
+                MatchPairEndpoints(s_LegacyUnitIncoming, partner, true);
+                SortPairMatches();
+                foreach (var match in s_PairMatches) s_LegacyPairQuery.Add(match.Record);
+            }
+            return LegacyPairBuffer();
+        }
+
         internal static GlyphPairAdjustmentRecord[] GetPairAdjustmentRecords(int lookupIndex, uint glyphIndex) =>
             IndexedPairRecords(lookupIndex, new[] { glyphIndex });
         internal static GlyphPairAdjustmentRecord[] GetPairAdjustmentRecords(int lookupIndex, List<uint> glyphIndexes) =>
@@ -65,9 +87,11 @@ namespace UnityEngine.TextCore.LowLevel
         // table is loaded once per handle/size; scalar lookups then need no transport or allocation.
         static ulong s_LegacyPairHandle;
         static int s_LegacyPairSize = int.MinValue;
-        static readonly List<GlyphPairAdjustmentRecord> s_LegacyPairs = new();
         static readonly Dictionary<(uint, uint), GlyphPairAdjustmentRecord> s_LegacyPairLookup = new();
         static readonly Dictionary<uint, List<GlyphPairAdjustmentRecord>> s_LegacyOutgoing = new(), s_LegacyIncoming = new();
+        static readonly Dictionary<uint, List<GlyphPairAdjustmentRecord>> s_LegacyUnitOutgoing = new(), s_LegacyUnitIncoming = new();
+        static readonly List<uint> s_LegacyUnitPartners = new();
+        static readonly HashSet<uint> s_LegacyUnitPartnerSet = new();
         static readonly List<GlyphPairAdjustmentRecord> s_LegacyPairQuery = new();
         static readonly List<(uint Glyph, int Position)> s_PairRanks = new();
         static readonly List<(int Position, int Priority, GlyphPairAdjustmentRecord Record)> s_PairMatches = new();
@@ -83,23 +107,38 @@ namespace UnityEngine.TextCore.LowLevel
         {
             if (s_Face == null) return false;
             if (s_LegacyPairHandle == s_Face.Handle && s_LegacyPairSize == FaceSize) return true;
-            var source = JsonSerializer.Deserialize<float[][]>(Native.Call("font-legacy-kerning",
-                JsonSerializer.Serialize(new { handle = s_Face.Handle, pixels = FaceSize })));
-            s_LegacyPairs.Clear(); s_LegacyPairLookup.Clear(); s_LegacyOutgoing.Clear(); s_LegacyIncoming.Clear();
-            foreach (var pair in source)
+            s_LegacyPairLookup.Clear(); s_LegacyOutgoing.Clear(); s_LegacyIncoming.Clear();
+            foreach (var record in ReadLegacyPairs(false))
             {
-                uint first = (uint)pair[0], second = (uint)pair[1];
-                var record = new GlyphPairAdjustmentRecord(
-                    new GlyphAdjustmentRecord(first, new GlyphValueRecord(0, 0, pair[2], 0)),
-                    new GlyphAdjustmentRecord(second, default));
-                s_LegacyPairs.Add(record);
+                uint first = record.firstAdjustmentRecord.glyphIndex, second = record.secondAdjustmentRecord.glyphIndex;
                 s_LegacyPairLookup[(first, second)] = record;
                 AddPairEndpoint(s_LegacyOutgoing, first, record);
                 AddPairEndpoint(s_LegacyIncoming, second, record);
             }
+            s_LegacyUnitOutgoing.Clear(); s_LegacyUnitIncoming.Clear();
+            s_LegacyUnitPartners.Clear(); s_LegacyUnitPartnerSet.Clear();
+            foreach (var record in ReadLegacyPairs(true))
+            {
+                uint first = record.firstAdjustmentRecord.glyphIndex, second = record.secondAdjustmentRecord.glyphIndex;
+                if (s_LegacyUnitPartnerSet.Add(first)) s_LegacyUnitPartners.Add(first);
+                if (s_LegacyUnitPartnerSet.Add(second)) s_LegacyUnitPartners.Add(second);
+                AddPairEndpoint(s_LegacyUnitOutgoing, first, record);
+                AddPairEndpoint(s_LegacyUnitIncoming, second, record);
+            }
+            s_LegacyUnitPartners.Sort();
             s_LegacyPairHandle = s_Face.Handle;
             s_LegacyPairSize = FaceSize;
             return true;
+        }
+
+        static IEnumerable<GlyphPairAdjustmentRecord> ReadLegacyPairs(bool unscaled)
+        {
+            var source = JsonSerializer.Deserialize<float[][]>(Native.Call("font-legacy-kerning",
+                JsonSerializer.Serialize(new { handle = s_Face.Handle, pixels = FaceSize, unscaled })));
+            foreach (var pair in source)
+                yield return new GlyphPairAdjustmentRecord(
+                    new GlyphAdjustmentRecord((uint)pair[0], new GlyphValueRecord(0, 0, pair[2], 0)),
+                    new GlyphAdjustmentRecord((uint)pair[1], default));
         }
 
         static GlyphPairAdjustmentRecord LegacyPairRecord(uint first, uint second) =>
@@ -144,9 +183,13 @@ namespace UnityEngine.TextCore.LowLevel
         {
             s_LegacyPairQuery.Clear();
             if (glyph == 0 || glyph > ushort.MaxValue || !LoadLegacyPairs()) return null;
-            foreach (var pair in s_LegacyPairs)
-                if (pair.firstAdjustmentRecord.glyphIndex == glyph || pair.secondAdjustmentRecord.glyphIndex == glyph)
-                    s_LegacyPairQuery.Add(pair);
+            s_PairMatches.Clear();
+            if (s_LegacyOutgoing.TryGetValue(glyph, out var outgoing))
+                foreach (var pair in outgoing) s_PairMatches.Add(((int)pair.secondAdjustmentRecord.glyphIndex, 0, pair));
+            if (s_LegacyIncoming.TryGetValue(glyph, out var incoming))
+                foreach (var pair in incoming) s_PairMatches.Add(((int)pair.firstAdjustmentRecord.glyphIndex, 1, pair));
+            SortPairMatches();
+            foreach (var match in s_PairMatches) s_LegacyPairQuery.Add(match.Record);
             return LegacyPairBuffer();
         }
 

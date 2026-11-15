@@ -586,6 +586,10 @@ mod tests {
         let t = face.glyph_index('T');
         assert_eq!(face.legacy_kerning(13), [(a, v, -1.125), (t, v, 1.796875)]);
         assert_eq!(
+            face.legacy_kerning_units(13),
+            [(a, v, -177.0), (t, v, 283.0)]
+        );
+        assert_eq!(
             face.legacy_kerning(37),
             [(a, v, -3.203125), (t, v, 5.109375)]
         );

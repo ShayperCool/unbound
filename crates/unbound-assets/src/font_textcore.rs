@@ -94,6 +94,7 @@ impl FreeTypeFace {
         &mut self,
         pixels: i32,
         pairs: &[(u16, u16)],
+        unscaled: bool,
     ) -> Vec<(u16, u16, f32)> {
         if !self.set_pixel_size(pixels) {
             return Vec::new();
@@ -108,12 +109,20 @@ impl FreeTypeFace {
                     self.face,
                     u32::from(first),
                     u32::from(second),
-                    ft::FT_KERNING_UNFITTED,
+                    if unscaled {
+                        ft::FT_KERNING_UNSCALED
+                    } else {
+                        ft::FT_KERNING_UNFITTED
+                    },
                     &mut value,
                 )
             };
             if error == 0 && value.x != 0 {
-                result.push((first, second, value.x as f32 / SUBPIXELS_PER_PIXEL));
+                result.push((
+                    first,
+                    second,
+                    value.x as f32 / if unscaled { 1.0 } else { SUBPIXELS_PER_PIXEL },
+                ));
             }
         }
         result

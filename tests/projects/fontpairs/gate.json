@@ -1,4 +1,16 @@
 {
-  "commands": ["python3 tests/projects/fontpairs/run.py check"],
-  "engine_paths": ["managed/UnityEngine/Text/FontEngine", "crates/unbound-assets/src/font_features.rs", "crates/unbound-assets/src/font_textcore.rs"]
+  "commands": [
+    "python3 tests/projects/fontpairs/run.py check"
+  ],
+  "engine_paths": [
+    "managed/UnityEngine/Text/FontEngine*.cs",
+    "managed/UnityEngine/Text/TextCoreText/FontAsset.cs",
+    "managed/UnityEngine/Text/TextCoreText/FontAsset.Features.cs",
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "crates/unbound-assets/src/font.rs",
+    "crates/unbound-assets/src/font_features.rs",
+    "crates/unbound-assets/src/font_textcore.rs",
+    "crates/unbound-runtime/src/fonts.rs",
+    "crates/unbound-runtime/src/state.rs"
+  ]
 }

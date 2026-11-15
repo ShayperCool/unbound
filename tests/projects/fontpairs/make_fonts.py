@@ -61,3 +61,13 @@ for name in ['ClassZero','ClassRange']:
     for n in font['name'].names:
         if n.nameID in (1,3,4,6,16):n.string=('UnboundLayout'+name).encode(n.getEncoding())
     font.save(root/(name+'.ttf'))
+font=TTFont(root/'Both.ttf')
+font['kern'].kernTables[0].kernTable[('V','T')]=155
+for n in font['name'].names:
+    if n.nameID in (1,3,4,6,16):n.string='UnboundLayoutFallback'.encode(n.getEncoding())
+font.save(root/'Fallback.ttf')
+font=TTFont(root/'KernOnly.ttf')
+addOpenTypeFeaturesFromString(font, 'languagesystem DFLT dflt; feature kern { pos f <1 2 3 4>; } kern;')
+for n in font['name'].names:
+    if n.nameID in (1,3,4,6,16):n.string='UnboundLayoutKernWithSingle'.encode(n.getEncoding())
+font.save(root/'KernWithSingle.ttf')

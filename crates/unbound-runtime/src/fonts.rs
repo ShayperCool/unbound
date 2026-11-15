@@ -137,9 +137,13 @@ pub fn pair_adjustments(handle: u64, glyphs: Option<&[u32]>, lookup: Option<i32>
     Ok(serde_json::to_value(face.pair_adjustments(glyphs, lookup))?)
 }
 
-pub fn legacy_kerning(handle: u64, pixels: i32) -> Result<Json> {
+pub fn legacy_kerning(handle: u64, pixels: i32, unscaled: bool) -> Result<Json> {
     let face = face(handle).context("no such face")?;
-    Ok(json!(face.legacy_kerning(pixels)))
+    Ok(json!(if unscaled {
+        face.legacy_kerning_units(pixels)
+    } else {
+        face.legacy_kerning(pixels)
+    }))
 }
 
 /// A legacy dynamic-font glyph of a face at `size` pixels per em. `style` holds Unity's

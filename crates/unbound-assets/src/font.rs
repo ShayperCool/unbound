@@ -170,6 +170,15 @@ impl FontFace {
 
     /// Legacy KERN adjustments in pixels, independently of a face's GPOS table.
     pub fn legacy_kerning(&self, pixels: i32) -> Vec<(u16, u16, f32)> {
+        self.legacy_kerning_data(pixels, false)
+    }
+
+    /// KERN adjustments in font units for the unindexed list-query fallback.
+    pub fn legacy_kerning_units(&self, pixels: i32) -> Vec<(u16, u16, f32)> {
+        self.legacy_kerning_data(pixels, true)
+    }
+
+    fn legacy_kerning_data(&self, pixels: i32, unscaled: bool) -> Vec<(u16, u16, f32)> {
         let pairs = self.legacy_kern_pairs.get_or_init(|| {
             let mut pairs = Vec::new();
             if let Some(table) = self.face().tables().kern {
@@ -186,7 +195,7 @@ impl FontFace {
             pairs.dedup();
             pairs
         });
-        self.with_freetype(|face| face.legacy_kerning(pixels, pairs))
+        self.with_freetype(|face| face.legacy_kerning(pixels, pairs, unscaled))
             .unwrap_or_default()
     }
 
