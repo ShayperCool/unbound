@@ -438,6 +438,9 @@ public class PartialProbe : MonoBehaviour
         // The same through Rewind (back to 0, its first event's time) and normalizedTime (0.3125 of 1 s).
         Legacy("legacy.events.rewind", At((0, c => c.Animation.Play("LZ")), (4, c => c.Animation.Rewind("LZ"))), lz, "LZ");
         Legacy("legacy.events.normalizedtimeset", At((0, c => c.Animation.Play("LZ")), (4, c => c.Animation["LZ"].normalizedTime = 0.3125f)), lz, "LZ");
+        // Rewind of every state; and normalizedTime on R, 2 s long (0.5 of it is 1 s).
+        Legacy("legacy.events.rewindall", At((0, c => c.Animation.Play("LZ")), (4, c => c.Animation.Rewind())), lz, "LZ");
+        Legacy("legacy.normalizedtime.scaled", At((0, c => c.Animation.Play("LR")), (4, c => c.Animation["LR"].normalizedTime = 0.5f)));
         // Played at speed 0 for three updates (its start and two more), then at speed 1.
         Legacy("legacy.events.start.speed0", At((0, c => c.Animation.Play("LP")), (2, c =>
         {
