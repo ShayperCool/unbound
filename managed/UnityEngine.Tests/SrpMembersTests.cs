@@ -96,6 +96,9 @@ namespace Unbound.Tests
             var buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, GraphicsBuffer.UsageFlags.LockBufferForWrite, 8, 4);
             Assert.Equal("Specified argument was out of the range of valid values.\nParameter name: Bad indices/count arguments (bufferStartIndex:0 count:5 elementSize:8, this.count:8, this.stride4)",
                 Assert.Throws<ArgumentOutOfRangeException>(() => buffer.LockBufferForWrite<long>(0, 5)).Message);
+            // A count whose bytes wrap 32 bits (0x20000000 * 8 = 2^32) is refused too.
+            Assert.Throws<ArgumentOutOfRangeException>(() => buffer.LockBufferForWrite<long>(0, 0x20000000));
+            Assert.Throws<ArgumentOutOfRangeException>(() => buffer.LockBufferForWrite<int>(int.MaxValue, 1));
             var unmatched = Assert.Throws<InvalidOperationException>(() => buffer.UnlockBufferAfterWrite<int>(1));
             Assert.Equal("GraphicsBuffer.UnlockBufferAfterWrite was called without matching GraphicsBuffer.LockBufferForWrite", unmatched.Message);
             Assert.NotNull(unmatched.InnerException);
@@ -132,6 +135,7 @@ namespace Unbound.Tests
             var second = buffer.LockBufferForWrite<int>(0, 2);
             Assert.Throws<ObjectDisposedException>(() => first[1] = 2);
             // The lock reads the buffer's contents: an element it does not write keeps its value.
+            // (The earlier open lock's writes are kept: Unbound's choice, unmeasured.)
             Assert.Equal(1, second[0]);
             Assert.Equal(11, second[1]);
             second[1] = 21;
@@ -207,10 +211,24 @@ namespace Unbound.Tests
             Assert.Equal(made.m_Index, new ShaderKeyword(made.name).m_Index);
             Assert.Null(default(ShaderKeyword).name);
             Assert.False(default(ShaderKeyword).IsValid());
-            var set = new ShaderKeywordSet();
-            set.Enable(made);
-            Assert.False(set.IsEnabled(made));
-            Assert.Empty(set.GetShaderKeywords());
+            var errors = new System.Collections.Generic.List<string>();
+            Application.LogCallback capture = (message, stack, type) => { if (type == LogType.Error) errors.Add(message); };
+            Application.logMessageReceived += capture;
+            try
+            {
+                var set = new ShaderKeywordSet();
+                set.Enable(made);
+                Assert.False(set.IsEnabled(made));
+                Assert.Empty(set.GetShaderKeywords());
+            }
+            finally
+            {
+                Application.logMessageReceived -= capture;
+            }
+            // Every operation logs the Editor's two errors.
+            Assert.Equal(6, errors.Count);
+            Assert.Equal("ShaderKeywordSet cannot be used outside of IPreprocessShaders or IPreprocessComputeShaders.", errors[0]);
+            Assert.Equal("ShaderKeywordSet has been created manually. This is not supported. Operations on this object will have no effect.", errors[1]);
         }
 
         [Fact]

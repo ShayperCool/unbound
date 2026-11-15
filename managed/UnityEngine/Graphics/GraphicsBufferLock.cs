@@ -25,7 +25,9 @@ namespace UnityEngine
             if ((usageFlags & UsageFlags.LockBufferForWrite) == 0)
                 throw new InvalidOperationException("GraphicsBuffer must be created with usage mode UsageFlage.LockBufferForWrite to use LockBufferForWrite");
             int size = UnsafeUtility.SizeOf<T>();
-            if (bufferStartIndex < 0 || count < 0 || (bufferStartIndex + count) * size > this.count * stride)
+            // In 64 bits: a count whose bytes overflow 32 bits is refused rather than handed out
+            // over the buffer's end.
+            if (bufferStartIndex < 0 || count < 0 || ((long)bufferStartIndex + count) * size > (long)this.count * stride)
                 throw MonoExceptions.OutOfRange($"Bad indices/count arguments (bufferStartIndex:{bufferStartIndex} count:{count} elementSize:{size}, this.count:{this.count}, this.stride{stride})");
             void* pointer = BeginBufferWrite((long)bufferStartIndex * size, (long)count * size);
             var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(pointer, count, Allocator.Invalid);
@@ -52,7 +54,9 @@ namespace UnityEngine
             EndBufferWrite();
         }
 
-        /// <summary>Opens a lock on a byte range; a lock still open ends first, its array released.</summary>
+        /// <summary>Opens a lock on a byte range. A lock still open ends first and is written, its
+        /// array released (Unbound's choice: the Editor leaves an earlier array's contents
+        /// unmeasured, and the Scripting API calls them undefined).</summary>
         unsafe void* BeginBufferWrite(long offset, long size)
         {
             EndBufferWrite();

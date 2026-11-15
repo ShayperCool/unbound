@@ -66,10 +66,10 @@ namespace UnityEngine.Rendering
     }
 
     /// <summary>
-    /// A keyword set made with <c>new</c> has no keyword state: enabling changes nothing and no
-    /// keyword reads as enabled (the Unity 6000.0.71f1 Editor at runtime, tests/projects/srpmembers
-    /// keyword.set, keyword.setBuiltin). Sets with state come from shader build callbacks, which
-    /// Unbound does not run.
+    /// A keyword set made with <c>new</c> has no keyword state: every operation logs the Editor's
+    /// two errors and changes nothing, and no keyword reads as enabled (the Unity 6000.0.71f1
+    /// Editor at runtime, tests/projects/srpmembers keyword.set, keyword.setBuiltin,
+    /// log.keywords). Sets with state come from shader build callbacks, which Unbound does not run.
     /// </summary>
     public partial struct ShaderKeywordSet
     {
@@ -81,26 +81,38 @@ namespace UnityEngine.Rendering
         ulong m_StateIndex;
 #pragma warning restore CS0169
 
-        [Unbound.EditorFaithful("a set made with new has no keyword state")]
-        public bool IsEnabled(ShaderKeyword keyword) => false;
-
-        [Unbound.EditorFaithful("a set made with new has no keyword state")]
-        public bool IsEnabled(GlobalKeyword keyword) => false;
-
-        [Unbound.EditorFaithful("a set made with new has no keyword state")]
-        public bool IsEnabled(LocalKeyword keyword) => false;
-
-        [Unbound.EditorFaithful("a set made with new has no keyword state")]
-        public void Enable(ShaderKeyword keyword)
+        static void Unsupported()
         {
+            UnityEngine.Debug.LogError("ShaderKeywordSet cannot be used outside of IPreprocessShaders or IPreprocessComputeShaders.");
+            UnityEngine.Debug.LogError("ShaderKeywordSet has been created manually. This is not supported. Operations on this object will have no effect.");
         }
 
-        [Unbound.EditorFaithful("a set made with new has no keyword state")]
-        public void Disable(ShaderKeyword keyword)
+        public bool IsEnabled(ShaderKeyword keyword)
         {
+            Unsupported();
+            return false;
         }
 
-        [Unbound.EditorFaithful("a set made with new has no keyword state")]
-        public ShaderKeyword[] GetShaderKeywords() => Array.Empty<ShaderKeyword>();
+        public bool IsEnabled(GlobalKeyword keyword)
+        {
+            Unsupported();
+            return false;
+        }
+
+        public bool IsEnabled(LocalKeyword keyword)
+        {
+            Unsupported();
+            return false;
+        }
+
+        public void Enable(ShaderKeyword keyword) => Unsupported();
+
+        public void Disable(ShaderKeyword keyword) => Unsupported();
+
+        public ShaderKeyword[] GetShaderKeywords()
+        {
+            Unsupported();
+            return Array.Empty<ShaderKeyword>();
+        }
     }
 }
