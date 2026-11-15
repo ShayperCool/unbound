@@ -61,7 +61,9 @@ keeps the prior first-activation path. Two engine unit tests go beyond these
 controls and are unmeasured: an OnAudioFilterRead script on a disabled listener
 runs again after that listener reconnects (the disabled-listener controls carry
 Echo/Chorus only), and a source script added and destroyed before the next audio
-update still restarts the source's units once.
+update still restarts the source's units once. Deactivating the GameObject of a
+disabled listener that an addition reconnected is also unmeasured; the engine
+keeps its units connected until the listener is enabled again or destroyed.
 The recorded immediate add/disable sequence retains this node. Enabling it later
 does not reconnect the other units. The engine preserves its prior first-activation path for a script loaded
 disabled. Serialized and clone publication still need Editor controls.

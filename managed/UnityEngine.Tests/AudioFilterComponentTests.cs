@@ -1254,7 +1254,7 @@ namespace UnityEngine.Tests
                 last.transform.position = new Vector3(200, 0, 0);
                 last.AddComponent<AudioListener>();
                 last.AddComponent<AudioEchoFilter>();
-                var third = last.AddComponent<AffineListenerScript>(); third.Gain = -1;
+                var third = last.AddComponent<AffineListenerScript>(); third.Gain = -1; third.Offset = 0.0625f;
             }
             float Process()
             {
@@ -1263,24 +1263,27 @@ namespace UnityEngine.Tests
                     AudioFilters.Dispatch(AudioCallbackKind.ListenerFilter, m_Backend.LastFrame.ListenerPlan, pointer, 1, 2, 0);
                 return data[0];
             }
+            // With three listeners the scripts' order is the engine's own deterministic choice
+            // (Unity documents one listener and measures no such order); the offsets make
+            // every order give a distinct result.
             UpdateWithoutAdvancing();
-            Assert.Equal(thirdListener ? -0.625f : 0.625f, Process());
+            Assert.Equal(thirdListener ? -0.5625f : 0.625f, Process());
             listener.enabled = false;
             UpdateWithoutAdvancing();
-            Assert.Equal(thirdListener ? -0.375f : 0.375f, Process());
+            Assert.Equal(thirdListener ? -0.3125f : 0.375f, Process());
             Assert.Equal(thirdListener ? 2 : 1, m_Backend.LastFrame.FilterCount);
             var neutral = primary.AddComponent<NeutralListenerComponent>();
             UpdateWithoutAdvancing();
             Assert.False(listener.enabled);
-            Assert.Equal(thirdListener ? -0.75f : 0.75f, Process());
+            Assert.Equal(thirdListener ? -0.625f : 0.75f, Process());
             Assert.Equal(thirdListener ? 3 : 2, m_Backend.LastFrame.FilterCount);
             Assert.Equal(thirdListener ? 200 : 100, m_Backend.LastFrame.ListenerPosition.x);
             Object.DestroyImmediate(neutral);
             UpdateWithoutAdvancing();
-            Assert.Equal(thirdListener ? -0.75f : 0.75f, Process());
+            Assert.Equal(thirdListener ? -0.625f : 0.75f, Process());
             Object.DestroyImmediate(primary);
             UpdateWithoutAdvancing();
-            Assert.Equal(thirdListener ? -0.375f : 0.375f, Process());
+            Assert.Equal(thirdListener ? -0.3125f : 0.375f, Process());
             Assert.Equal(thirdListener ? 2 : 1, m_Backend.LastFrame.FilterCount);
         }
 
