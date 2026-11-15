@@ -527,6 +527,26 @@ fn spaced_paths_and_renamed_dependencies_reach_what_they_name() {
             "",
         ),
         (
+            "triple-quotes",
+            "[package]\n[dependencies]\nrules = { package = \"\"\"unbound-rules\"\"\", path = \"../unbound-rules\" }\n",
+            "",
+        ),
+        (
+            "escaped-value",
+            "[package]\n[dependencies]\nrules = { package = \"unbound\\u002Drules\", path = \"../unbound-rules\" }\n",
+            "",
+        ),
+        (
+            "escaped-key",
+            "[package]\n[dependencies]\nrules = { \"p\\u0061ckage\" = \"unbound-rules\", path = \"../unbound-rules\" }\n",
+            "",
+        ),
+        (
+            "unquoted",
+            "[package]\n[dependencies]\nrules = { package = unbound-rules }\n",
+            "",
+        ),
+        (
             "workspace",
             "[package]\n[dependencies]\nrules.workspace = true\n",
             "[workspace.dependencies]\nrules = { package = \"unbound-rules\", path = \"crates/unbound-rules\" }\n",
@@ -544,4 +564,26 @@ fn spaced_paths_and_renamed_dependencies_reach_what_they_name() {
             "{case}"
         );
     }
+}
+
+/// A rename to a package that is no workspace crate of `crates/` adds nothing (and no error).
+#[test]
+fn a_rename_to_another_package_adds_nothing() {
+    let ws = compiler_and_rules("outside");
+    ws.write(
+        "crates/unbound-compiler/Cargo.toml",
+        "[package]\n[dependencies]\ncache = { package = \"unbound-cache\", path = \"../unbound-cache\" }\n",
+    );
+    assert_eq!(
+        ws.sources("unbound_compiler", &[]),
+        [
+            "crates/unbound-compiler/Cargo.toml",
+            "crates/unbound-compiler/src/fit.rs",
+            "crates/unbound-compiler/src/lib.rs",
+            "crates/unbound-rules/Cargo.toml",
+            "crates/unbound-rules/src/device.rs",
+            "crates/unbound-rules/src/lib.rs",
+            "crates/unbound-rules/src/version.rs",
+        ]
+    );
 }

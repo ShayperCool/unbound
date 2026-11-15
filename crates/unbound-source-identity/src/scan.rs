@@ -225,11 +225,15 @@ fn odd_paths(text: &str) -> bool {
 }
 
 /// The packages a manifest depends on under another name (`package = "x"`, `'x'`, a quoted
-/// `"package"` key, a dotted `foo.package`), and whether it holds a `package` key whose value
-/// it cannot read. The `[package]` table's header is no such key.
-fn renamed_packages(manifest: &str) -> (Vec<String>, bool) {
+/// `"package"` key, a dotted `foo.package`); None when it holds what this reading cannot be
+/// sure of (an escape or a multi-line string, a `package` value that is not a plain quoted
+/// package name). The `[package]` table's header is no such key.
+fn renamed_packages(manifest: &str) -> Option<Vec<String>> {
+    // An escape can spell a key or a name the reading would not see (`"p\u0061ckage"`).
+    if manifest.contains('\\') || manifest.contains("\"\"\"") || manifest.contains("'''") {
+        return None;
+    }
     let mut out = Vec::new();
-    let mut unsure = false;
     for (at, _) in manifest.match_indices("package") {
         let before = manifest[..at].chars().next_back();
         let after = &manifest[at + "package".len()..];
@@ -245,15 +249,14 @@ fn renamed_packages(manifest: &str) -> (Vec<String>, bool) {
             continue;
         };
         let value = value.trim_start();
-        match value.chars().next() {
-            Some(quote @ ('"' | '\'')) => match value[1..].split(quote).next() {
-                Some(name) => out.push(name.to_string()),
-                None => unsure = true,
-            },
-            _ => unsure = true,
+        let quote = value.chars().next().filter(|q| matches!(q, '"' | '\''))?;
+        let (name, _) = value[1..].split_once(quote)?;
+        if name.is_empty() || !name.chars().all(|c| is_ident(c) || c == '-') {
+            return None;
         }
+        out.push(name.to_string());
     }
-    (out, unsure)
+    Some(out)
 }
 
 /// Whether a text starts with the keyword `as`.
@@ -625,6 +628,20 @@ fn reexported_from(root: &str, ident: &str) -> Option<String> {
     None
 }
 
+/// The workspace crates of `crates/` (by Rust name): those with a `src/lib.rs`.
+fn workspace_crates(root: &Path) -> io::Result<Vec<String>> {
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(root.join("crates"))? {
+        let path = entry?.path();
+        if path.join("src/lib.rs").is_file()
+            && let Some(dir) = path.file_name()
+        {
+            out.push(dir.to_string_lossy().replace('-', "_"));
+        }
+    }
+    Ok(out)
+}
+
 /// The modules of a crate's `src`: its files and directories other than the root.
 fn crate_modules(src: &Path) -> io::Result<BTreeSet<String>> {
     let mut out = BTreeSet::new();
@@ -709,10 +726,13 @@ pub fn producing_sources(
             // the reading does not follow: all of it.
             for manifest in [dir.join("Cargo.toml"), root.join("Cargo.toml")] {
                 let text = std::fs::read_to_string(&manifest).unwrap_or_default();
-                let (renamed, unsure) = renamed_packages(&text);
-                if unsure {
-                    changes.push((name.clone(), Change::Whole));
-                }
+                let Some(renamed) = renamed_packages(&text) else {
+                    // What it renames cannot be told: every workspace crate counts whole.
+                    for other in workspace_crates(root)? {
+                        changes.push((other, Change::Whole));
+                    }
+                    continue;
+                };
                 for package in renamed {
                     let other = package.replace('-', "_");
                     let other_dir = root.join("crates").join(crate_dir(&other));
@@ -857,9 +877,11 @@ pub fn producing_sources(
             };
         }
         if !changed {
+            // The workspace's manifest is read for renames too.
             let watched = reach
                 .keys()
                 .map(|name| root.join("crates").join(crate_dir(name)))
+                .chain([root.join("Cargo.toml")])
                 .collect();
             return Ok((files, watched));
         }
