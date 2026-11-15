@@ -29,8 +29,9 @@ what the scale-offset of such a renderer is: those below are observations of thi
 * The baked sun lights no object at run time, yet the procedural sky is drawn with it (its
   scattering and its disk).
 
-Unbound: every value matches; `image_limits.json` records the image residuals (the procedural
-sun disk is drawn wider, with a realtime sun too). Before the fix Unbound dropped the whole lighting
+Unbound: every value matches; `image_limits.json` records the image residuals (the edge pixels
+of the default sky's simple sun disk; the disk was drawn as the high-quality one's wide glow until
+built-in Materials took their stored keywords, `tests/projects/builtinresources` `state/*`). Before the fix Unbound dropped the whole lighting
 data of such a bake (the reply wrote the non-finite floats as JSON null): no reflection probe
 cubemaps, a black default reflection, no lightmap placement.
 
