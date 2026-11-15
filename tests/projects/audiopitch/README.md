@@ -165,10 +165,18 @@ configuration.
 
 
 [Live Mono and topology](MONO_LIVE.md) adds a 135-control diagnostic and a
-separate six-control simultaneous-listener diagnostic at both rates. Its
+separate simultaneous-listener diagnostic at both rates. Its original six controls
+are retained in Q457's expanded 30-control reference. Its
 independently captured 74-control `topology-pcm` recipe qualifies Echo/Chorus
 history changes and live zones in Mono, Stereo and Quad. The full diagnostic
 commands retain the startup, composition, callback and simultaneous-listener
 differences outside that PCM scope.
+
+[Live listener connections](LIVE_LISTENERS.md) separates hearing poses from
+connected effects and records immediate script addition/disabling. The
+`listener-live` gate adds 16 one-active-listener controls in Mono/Stereo/Quad,
+with 2,621,632 strict passing values per rate. A separate pose diagnostic records
+two-listener transitions without prescribing a universal simultaneous-listener
+order. The complete topology comparison retains its remaining Mono startup values.
 
 The [six-input voice profile](VOICE_INPUT.md) adds source callback streams, static/live pan and volume, source/group Distortion, pitch and one-shot controls in Stereo/Prologic. Separate encoding gates compare private 2-, 4-, 6- and 8-channel device references. Both profiles compare every value with the existing bounds; other six-input contexts remain explicitly queued.

@@ -2,9 +2,9 @@
 
 Unity 6000.0.71f1, Linux, 48000/44100 Hz, 1024-frame DSP buffers, and a private
 eight-channel device. Two independent GPU Editor captures agree exactly on
-19,399,899 metadata and sample values per rate in `mono-live`, and 917,566 per
-rate in the separate `topology-diagnostics` profile. Earlier references are
-unchanged. These diagnostics retain their complete PCM and metadata comparisons;
+19,399,899 metadata and sample values per rate in `mono-live`. The original six
+`topology-diagnostics` controls have 917,566 values per rate; Q457 extends that
+profile to 30 controls and 4,587,849 exactly repeated values per rate. Every earlier reference value and PCM byte is unchanged. These diagnostics retain their complete PCM and metadata comparisons;
 they do not establish universal graph-edit or multilistener ordering guarantees.
 
 ## Contracts and controls
@@ -14,7 +14,7 @@ they do not establish universal graph-edit or multilistener ordering guarantees.
 | [Use audio filters](https://docs.unity.com/en-us/engine/6000.0/manual/audio/reference/filters/class-audio-effect), Unity 6000.0, specifies Inspector order and whether an enabled filter applies. | Echo/Chorus, Lowpass/Chorus and Reverb/Echo on sources and listeners. Existing histories are excited before toggling the first unit at blocks 8, 16 and 24. Separate steady and single-unit cases identify composition and startup differences. |
 | [AudioReverbZone](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioReverbZone.html) specifies full application at the inner radius, no application at the outer radius, and combined zones. | Mono listener/zone movement, radii, scalar and preset edits, and overlapping zones. Stereo and Quad overlap controls exercise the same mechanism outside Mono. Dry controls and positions before and after crossing a boundary distinguish the documented states. |
 | [AudioSpeakerMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSpeakerMode.html) allows the output device to override the requested mode. | Every case checks the actual renderer width after preflight. The topology matrix uses Mono, Stereo and Quad output, including mono clips and a one-shot-only source. |
-| [AudioListener](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioListener.html) calls for one active listener. | Owner-disable controls swap to a plain listener, and owner-pulse controls disable and re-enable the same listener before the next audio update. The separate six-case profile deliberately uses two listeners to investigate retained histories; its observed ordering is not a public guarantee. |
+| [AudioListener](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioListener.html) calls for one active listener. | Owner-disable controls swap to a plain listener, and owner-pulse controls disable and re-enable the same listener before the next audio update. The original six-case profile deliberately uses two listeners to investigate retained histories; its observed ordering is not a public guarantee. |
 | Component membership and duplicate rejection are release measurements. | Add/remove/re-add a zero-distortion unit, an initially disabled unit, or an identity script after playback starts. Separate script activation controls retain the same output as the steady chain across disabling and re-enabling. Six steady zero-distortion controls are bit-identical to the matching Echo/Chorus controls. Each of the six filter types rejects a second instance, retains the first even when disabled, and permits a replacement after destruction. |
 
 `mono-live` contains 135 controls. All prior 129 controls retain every metadata
@@ -98,11 +98,14 @@ see [the Q449 correction](#q449-duplicate-diagnostics) below.
   Reverb/Echo controls retain sparse Master and device differences. They are
   outside this new PCM qualification; their complete samples and original float
   bounds remain in `mono-live`.
-- **Q416-R4d, live changes with simultaneous listeners.** The six-case diagnostic
-  remains open. Editing either owner's chain has different retained-history
-  interactions. Static multiple-listener controls remain the earlier measured
-  scope; Unity documents one active listener and gives no global ordering
-  guarantee for these invalid simultaneous-listener setups.
+- **Q416-R4d, live listener connections.** Q457 closes the measured component
+  attachment and script creation slice in [LIVE_LISTENERS.md](LIVE_LISTENERS.md).
+  The original six controls now retain 610/864 gate failures, all initial Mono
+  Echo values. The complete 30-control diagnostic retains 2418/3398 gate
+  failures, also confined to Mono Echo startup. A separate 16-control gate
+  qualifies one-active-listener histories with 2,621,632 strict passing values
+  per rate. Other publication histories and warning cadence remain unqualified;
+  Unity gives no global order guarantee for simultaneous listeners.
 
 The earlier Q416 135-control comparison retained 29650/31060 gate failures at
 48000/44100 Hz, including 10604/11040 Master floats, 19034/20008 device samples

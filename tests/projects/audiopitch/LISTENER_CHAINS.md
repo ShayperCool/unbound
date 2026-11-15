@@ -22,11 +22,12 @@ comparator bounds remain unchanged.
 Each active listener contributes its scripts and components to the final mix.
 The simultaneous diagnostic runs both listeners' scripts, even though only one
 listener pose is selected. This observation does not select a universal order
-between GameObjects. The engine keeps its existing registration order without
-adding a global sort; normal content should follow Unity's one-listener contract.
+between GameObjects. Q457 records live connection insertion and retains it
+separately from hearing-pose registration, without a global sort. Normal content
+should follow Unity's one-listener contract; see [LIVE_LISTENERS.md](LIVE_LISTENERS.md).
 Listener filters sharing a GameObject with an AudioSource remain unsupported.
-Live membership histories, other output settings and other releases require
-separate measurements.
+Live membership histories beyond those controls, other output settings and
+other releases require separate measurements.
 
 Record two fresh projects for each profile and rate with:
 
