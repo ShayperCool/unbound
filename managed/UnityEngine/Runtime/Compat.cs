@@ -207,6 +207,11 @@ namespace Unbound.Runtime
         /// tests/projects/fontfeatures, Unity 6000.0.71f1.</summary>
         internal static bool FontFeatureLookupIndexQueriesMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Legacy generator pivot translation uses updated bounds, and primes the base
+        /// space separately. Measured in tests/projects/textcolor on Unity 6000.0.71f1.
+        /// Other releases retain generation-extents translation and batched glyph requests, unmeasured.</summary>
+        internal static bool LegacyGeneratorBoundsMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Legacy dynamic fonts: per-character OS fallback through the font names and the fallback families, and the built-in font without font data and Font.HasCharacter of dynamic fonts, measured in tests/projects/glyphraster.</summary>
         internal static bool LegacyGlyphRasterMeasured => Release == (6000, 0, 71, 'f', 1);
         /// <summary>Constructor, animation-job API contexts and component initialization defaults measured in tests/projects/threadapis.</summary>

@@ -79,6 +79,77 @@ namespace Unbound.Tests
             pivot = new Vector2(0.5f, 0.5f),
         };
 
+        [Theory]
+        [InlineData(0f, 20f)]
+        [InlineData(0.5f, 10f)]
+        [InlineData(1f, 0f)]
+        public void UpdatedOverflowBoundsTranslateThePivot(float pivot, float top)
+        {
+            var previous = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try
+            {
+                var font = BoxFont();
+                var settings = Settings(font, new Vector2(100, 90));
+                settings.horizontalOverflow = HorizontalWrapMode.Overflow;
+                settings.pivot = new Vector2(pivot, pivot);
+                var gen = new TextGenerator();
+                gen.Populate("AB\nI", settings);
+                Assert.Equal((1f - pivot) * 90f, gen.lines[0].topY);
+                settings.updateBounds = true;
+                gen.Populate("AB\nI", settings);
+                Assert.Equal(new Rect(0, 0, 10, 20), gen.rectExtents);
+                Assert.Equal(top, gen.lines[0].topY);
+                Assert.Equal(-pivot * 10f, gen.characters[0].cursorPos.x);
+                // Changing the requested height no longer moves text when bounds supply that axis.
+                settings.generationExtents = new Vector2(177, 153);
+                gen.Populate("AB\nI", settings);
+                Assert.Equal(top, gen.lines[0].topY);
+            }
+            finally { ProjectInfo.UnityVersion = previous; }
+        }
+
+        [Fact]
+        public void BoundedGeneratorMarginDecidesTheMiddleAnchorHalfPixel()
+        {
+            var previous = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try
+            {
+                var font = BoxFont();
+                font.m_LineSpacing = 11f;
+                var settings = Settings(font, new Vector2(100, 100), TextAnchor.MiddleCenter);
+                settings.pivot = Vector2.zero;
+                var gen = new TextGenerator();
+                gen.Populate("AB\nI", settings);
+                Assert.Equal(61f, gen.lines[0].topY);
+                settings.pivot = new Vector2(0.5f, 0.5f);
+                gen.Populate("AB\nI", settings);
+                Assert.Equal(10f, gen.lines[0].topY);
+            }
+            finally { ProjectInfo.UnityVersion = previous; }
+        }
+
+        [Fact]
+        public void GeneratorCachesTheBaseSpaceBeforeTextWithOnlyTaggedGlyphs()
+        {
+            var previous = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try
+            {
+                var font = BoxFont();
+                var gen = new TextGenerator();
+                gen.Populate("<size=24>Hi</size>", Settings(font, new Vector2(100, 90)));
+                Assert.True(font.GetCharacterInfo(' ', out _, 10));
+                Assert.False(font.GetCharacterInfo(' ', out _, 24));
+                Assert.True(font.GetCharacterInfo('H', out _, 24));
+                var infos = font.characterInfo;
+                Assert.Equal(' ', infos[0].index);
+                Assert.Equal(10, infos[0].size);
+            }
+            finally { ProjectInfo.UnityVersion = previous; }
+        }
+
         [Fact]
         public void FontMetricsScaleTheFaceAtItsSize()
         {

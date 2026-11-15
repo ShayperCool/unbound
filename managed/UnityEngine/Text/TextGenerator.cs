@@ -361,6 +361,8 @@ namespace Unbound.Runtime
         }
 
         const float Epsilon = 0.001f;
+        // The stored fitting bounds include this margin, measured by textcolor generator controls.
+        const float BoundsPadding = 0.0001f;
 
         static float Round(float v) => (float)Math.Floor(v + 0.5f);
 
@@ -421,6 +423,17 @@ namespace Unbound.Runtime
             bestFitSize = pixelSize;
             Measure(items, font, pixelSize, scale);
             // Put the glyphs in the font texture; this may rebuild it (and raise textureRebuilt).
+            if (Compat.LegacyGeneratorBoundsMeasured && font.m_Source != null)
+            {
+                // The base space is cached before the text, including text without whitespace.
+                var space = Scratch.RentKeys();
+                try
+                {
+                    space.Add(new GlyphKey(' ', pixelSize, r.Style));
+                    font.Atlas.Request(space);
+                }
+                finally { Scratch.Return(space); }
+            }
             RequestGlyphs(items, font);
             BreakLines(items, font, r, ext.x, pixelSize, layout);
 
@@ -455,6 +468,14 @@ namespace Unbound.Runtime
             float align = Horizontal(r.Anchor);
             float vertical = Vertical(r.Anchor);
             float top0 = Floor(yMax - (yMax - yMin - blockHeight) * vertical);
+            if (Compat.LegacyGeneratorBoundsMeasured)
+            {
+                // The fitting rectangle keeps its margin unless updated overflow bounds replace
+                // that axis. Apply the pivot and alignment together before rounding the Y offset.
+                float boundsHeight = r.UpdateBounds && r.VerticalOverflow == VerticalWrapMode.Overflow
+                    ? blockHeight : ext.y + BoundsPadding;
+                top0 = -Round(vertical * (boundsHeight - blockHeight) - (1f - r.Pivot.y) * boundsHeight);
+            }
 
             float lastTop = top0, lastX = Floor(xMin + (xMax - xMin) * align);
             int advanceSum = 0;
@@ -466,7 +487,9 @@ namespace Unbound.Runtime
                 float baseline = top - line.Ascent;
                 float width = r.AlignByGeometry && line.HasGeometry ? line.GeometryMax - line.GeometryMin : line.Width;
                 float start = r.AlignByGeometry && line.HasGeometry ? line.GeometryMin : 0f;
-                float x0 = Floor(xMin + (xMax - xMin - width) * align) - start;
+                float x0 = Compat.LegacyGeneratorBoundsMeasured && r.UpdateBounds && r.HorizontalOverflow == HorizontalWrapMode.Overflow
+                    ? -Round(width * align) + Round((align - r.Pivot.x) * maxWidth) - start
+                    : Floor(xMin + (xMax - xMin - width) * align) - start;
                 lines.Add(new UILineInfo
                 {
                     startCharIdx = line.Start,
@@ -489,10 +512,11 @@ namespace Unbound.Runtime
 
             // Measured: the bounds start at the origin; along an axis the text overflows they are
             // the text's size, otherwise the generation extents.
+            float boundsPadding = Compat.LegacyGeneratorBoundsMeasured ? BoundsPadding : 0f;
             extents = r.UpdateBounds
-                ? new Rect(0f, 0f, r.HorizontalOverflow == HorizontalWrapMode.Overflow ? maxWidth : ext.x,
-                    r.VerticalOverflow == VerticalWrapMode.Overflow ? blockHeight : ext.y)
-                : new Rect(0f, 0f, ext.x, ext.y);
+                ? new Rect(0f, 0f, r.HorizontalOverflow == HorizontalWrapMode.Overflow ? maxWidth : ext.x + boundsPadding,
+                    r.VerticalOverflow == VerticalWrapMode.Overflow ? blockHeight : ext.y + boundsPadding)
+                : new Rect(0f, 0f, ext.x + boundsPadding, ext.y + boundsPadding);
         }
 
         /// <summary>

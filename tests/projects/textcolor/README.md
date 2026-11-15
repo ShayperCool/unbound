@@ -21,19 +21,34 @@ records:
   errors logged;
 - a UI Toolkit panel (`emoji-panel.png`) drawing the three emoji with a COLOR font asset, an SDFAA
   one and the Font itself (atlases large enough for all three, so no OS fallback font is used);
-- the logs of the run.
+- the logs of the run;
+- 72 independent generator controls with fresh fonts: updated and unchanged bounds, overflowing
+  and bounded layout, upper-left/centre/lower-right anchors, pivots 0/0.5/1, two requested heights,
+  two lines with different widths; ten texture-history controls cover text without whitespace,
+  reversed glyph order, a size tag, and empty text.
 
-Documented (Unity 6000.0 Scripting API: [FontEngine](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextCore.LowLevel.FontEngine.html),
+Unity 6000.0 Scripting API sources: [FontEngine](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextCore.LowLevel.FontEngine.html),
 [GlyphRenderMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextCore.LowLevel.GlyphRenderMode.html),
 [Font.RequestCharactersInTexture](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Font.RequestCharactersInTexture.html),
-[Font.textureRebuilt](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Font-textureRebuilt.html)):
-the API. Observed in this capture only: a bitmap-only face takes its strike's size whatever is
+[Font.textureRebuilt](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Font-textureRebuilt.html),
+[TextGenerationSettings.updateBounds](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextGenerationSettings-updateBounds.html),
+[TextGenerationSettings.generationExtents](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TextGenerationSettings-generationExtents.html) describe the API.
+The latter fields request updated text bounds and a fitting rectangle; the placement and texture
+history details below are observations from this 6000.0.71f1 capture.
+A bitmap-only face takes its strike's size whatever is
 asked (face info and font assets report 109 points); colour atlases hold the colour bitmaps with
 their colours premultiplied by alpha; UI Toolkit draws text of a non-Alpha8 atlas as a textured
 mesh; a legacy font's glyph on a bitmap-only face has no pixels and its unscaled advance; the
 importer's character spacing widens the texture packing, not the advances; a canvas requests its
 text at the font size times the scale factor only; a full 4096 x 4096 legacy texture is neither
-grown nor reset (no rebuild event), and each request that does not fit logs an error.
+grown nor reset (no rebuild event), and each request that does not fit logs an error. A generator
+uses updated bounds on overflowing axes when translating its pivot and aligning its lines.
+Consequently the original one-line case, with height 100 and pivot 0, has a top of 36 instead
+of 100. With unchanged bounds the requested extents remain in effect. Bounded stored extents
+include a 0.0001 fitting margin, which can decide a half-pixel rounding tie. A generator also
+caches the base-size space before requesting the text, including empty text and text containing
+only differently sized glyphs. This determines later atlas packing. These mechanisms are enabled
+through Compat only for the measured release; other releases retain the prior unmeasured path.
 
 ```sh
 python3 tests/projects/textcolor/run.py record --label native-a
@@ -42,6 +57,6 @@ python3 tests/projects/textcolor/run.py publish native-a native-b
 python3 tests/projects/textcolor/run.py gate
 ```
 
-Numbers compare within 1e-4. `residuals.json` lists the open differences outside these cases
-(a TextGenerator called directly, the packing order after it, and an OS fallback face the engine
-cannot reload by name), each printed on every run. Measured on the NVIDIA driver only.
+Numbers compare within 1e-4. The appended generator controls preserve all 19 earlier reference
+rows byte for byte. The direct-generator placement and subsequent packing residuals are resolved;
+the earlier OS fallback reload warning also no longer occurs. Measured on the NVIDIA driver only.

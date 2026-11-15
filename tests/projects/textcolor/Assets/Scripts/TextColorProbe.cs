@@ -60,6 +60,7 @@ public class TextColorProbe : MonoBehaviour
         var sb = new StringBuilder("[");
         for (int i = 0; i < logs.Count; i++) sb.Append(i == 0 ? "" : ",").Append(Str(logs[i]));
         Value("logs", sb.Append("]").ToString());
+        Step("generator-controls", () => GeneratorControls(spacing0));
         m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
@@ -67,6 +68,62 @@ public class TextColorProbe : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    void GeneratorControls(Font source)
+    {
+        // Fresh font instances isolate texture history from the earlier observations.
+        foreach (var update in new[] { false, true })
+        foreach (var overflow in new[] { false, true })
+        foreach (var anchor in new[] { TextAnchor.UpperLeft, TextAnchor.MiddleCenter, TextAnchor.LowerRight })
+        foreach (var pivot in new[] { Vector2.zero, new Vector2(0.5f, 0.5f), Vector2.one })
+        {
+            var font = Instantiate(source);
+            foreach (var height in new[] { 100f, 173f })
+            {
+                var settings = new TextGenerationSettings {
+                    font = font, fontSize = 32, color = Color.white, lineSpacing = 1, scaleFactor = 1,
+                    textAnchor = anchor, updateBounds = update,
+                    horizontalOverflow = overflow ? HorizontalWrapMode.Overflow : HorizontalWrapMode.Wrap,
+                    verticalOverflow = overflow ? VerticalWrapMode.Overflow : VerticalWrapMode.Truncate,
+                    generationExtents = new Vector2(400, height), pivot = pivot,
+                    generateOutOfBounds = true,
+                };
+                var gen = new TextGenerator();
+                gen.Populate("AVWa fig\nHi", settings);
+                var sb = new StringBuilder("{\"rect\":[").Append(F(gen.rectExtents.x)).Append(',').Append(F(gen.rectExtents.y))
+                    .Append(',').Append(F(gen.rectExtents.width)).Append(',').Append(F(gen.rectExtents.height)).Append("],\"lines\":[");
+                for (int i = 0; i < gen.lines.Count; i++) {
+                    var l = gen.lines[i];
+                    sb.Append(i == 0 ? "" : ",").Append('[').Append(l.startCharIdx).Append(',').Append(l.height).Append(',').Append(F(l.topY)).Append(',').Append(F(l.leading)).Append(']');
+                }
+                sb.Append("],\"positions\":[");
+                for (int i = 0; i < gen.verts.Count; i++)
+                    sb.Append(i == 0 ? "" : ",").Append('[').Append(F(gen.verts[i].position.x)).Append(',').Append(F(gen.verts[i].position.y)).Append(']');
+                Value("generator/" + update + "/" + overflow + "/" + anchor + "/" + F(pivot.x) + "/" + F(height), sb.Append("]}").ToString());
+            }
+            DestroyImmediate(font);
+        }
+        // A generator caches its space before the requested text, including when it has no space.
+        foreach (var text in new[] { "Hi", "iH", "AVWa fig", "<size=24>Hi</size>", "" })
+        {
+            var font = Instantiate(source);
+            var gen = new TextGenerator();
+            gen.Populate(text, new TextGenerationSettings {
+                font = font, fontSize = 32, color = Color.white, lineSpacing = 1, scaleFactor = 1, richText = true,
+                updateBounds = true, verticalOverflow = VerticalWrapMode.Overflow, horizontalOverflow = HorizontalWrapMode.Overflow,
+                generationExtents = new Vector2(400, 100), pivot = Vector2.zero,
+            });
+            foreach (var size in new[] { 24, 32 }) {
+                var sb = new StringBuilder("[");
+                foreach (var c in " HiAVWafg") {
+                    if (sb.Length > 1) sb.Append(',');
+                    sb.Append(font.GetCharacterInfo(c, out var info, size) ? Info(info) : "null");
+                }
+                Value("generator/packing/" + text + "/" + size, sb.Append(']').ToString());
+            }
+            DestroyImmediate(font);
+        }
     }
 
     // The bitmap-only face at several sizes: the load's result, the face info, and the smiling
