@@ -193,7 +193,7 @@ namespace UnityEngine
             var level = CheckedLevel(face, mip);
             // A compressed cube keeps its texels and logs its format's linear graphics format,
             // whatever the colour space (the Unity 6000.0.71f1 Editor, tests/projects/
-            // cubecompression write.*.setpixel: DXT1 97, ETC2_RGB 120 for sRGB data too).
+            // cubeblocks write.*.setpixel: DXT1 97, ETC2_RGB 120 for sRGB data too).
             if (m_SourceFormat is TextureFormat blocks)
             {
                 Debug.LogError($"Unsupported GraphicsFormat({(int)GraphicsFormatUtility.GetGraphicsFormat(blocks, false)}) for SetPixel operations.");
@@ -261,7 +261,7 @@ namespace UnityEngine
         Span<byte> StoreTexel(int face, int mip, int i) => new Span<byte>(m_Store, m_StoreOffsets[face * m_MipCount + mip] + i * TexelBytes, TexelBytes);
 
         /// <summary>The stored bytes of a face's mip level (no copy, as in Unity); a compressed
-        /// import's are its blocks, top row first (tests/projects/cubecompression bytes.*,
+        /// import's are its blocks, top row first (tests/projects/cubeblocks bytes.*,
         /// write.*.view*).</summary>
         public unsafe NativeArray<T> GetPixelData<T>(int mipLevel, CubemapFace face) where T : struct
         {
@@ -327,7 +327,7 @@ namespace UnityEngine
 
         /// <summary>Whether a compressed cube's texels are read from its held blocks (views of them
         /// were handed out, or a clone copied them), as written through the views before or after
-        /// Apply (the Unity 6000.0.71f1 Editor, tests/projects/cubecompression write.*.view*).</summary>
+        /// Apply (the Unity 6000.0.71f1 Editor, tests/projects/cubeblocks write.*.view*).</summary>
         bool ReadsBlocks(out TextureFormat blocks)
         {
             blocks = m_SourceFormat ?? default;
@@ -394,7 +394,7 @@ namespace UnityEngine
             {
                 // A compressed cube's texels change through views of its blocks alone (SetPixel
                 // and SetPixels refuse it), and its mips are not rebuilt (tests/projects/
-                // cubecompression write.*.apply*, write.*.view*).
+                // cubeblocks write.*.apply*, write.*.view*).
                 if (updateMipmaps) Debug.LogError("Rebuilding mipmaps of compressed textures is not supported");
                 if (m_SourceRaw != null) UploadBlocks(blocks);
             }

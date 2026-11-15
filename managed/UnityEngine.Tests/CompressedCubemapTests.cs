@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace Unbound.Tests
 {
-    /// <summary>A block-compressed imported cube (tests/projects/cubecompression): it reports its
+    /// <summary>A block-compressed imported cube (tests/projects/cubeblocks): it reports its
     /// blocks' format, and its texels and mips cannot be written.</summary>
     public class CompressedCubemapTests
     {
