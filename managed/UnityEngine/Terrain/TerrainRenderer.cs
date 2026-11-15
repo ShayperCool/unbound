@@ -361,9 +361,10 @@ namespace UnityEngine
                 material.SetTexture("_Splat" + n, layer.diffuseTexture);
                 material.SetTextureScale("_Splat" + n, new Vector2(size.x / tile.x, size.z / tile.y));
                 material.SetTextureOffset("_Splat" + n, new Vector2(layer.tileOffset.x / tile.x, layer.tileOffset.y / tile.y));
-                // A layer without a normal map gets the flat normal texture whatever the shader's
-                // default (tests/projects/urpterrain masks); one without a mask the black texture
-                // (unmeasured: URP's shaders ignore a layer's mask unless _LayerHasMask flags it).
+                // A layer without a normal map gets the flat normal texture, linear data
+                // (tests/projects/urpterrain masks; unmeasured for shaders whose _NormalN default
+                // is not "bump"); one without a mask the black texture (unmeasured: URP's shaders
+                // ignore a layer's mask unless _LayerHasMask flags it).
                 normals |= layer.normalMapTexture != null;
                 material.SetTexture("_Normal" + n, layer.normalMapTexture != null ? layer.normalMapTexture : Texture2D.normalTexture);
                 material.SetFloat("_NormalScale" + n, layer.normalScale);
