@@ -677,6 +677,52 @@ class JanitorTests(unittest.TestCase):
             destination.symlink_to(target)
         self.assert_target_kept(target, act)
 
+    def test_a_tree_moved_under_a_recreated_removed_candidate_is_walked(self):
+        target = self.directory('q1/target')
+        old = self.directory('q1/old')
+        incoming = self.root/'incoming'
+        incoming.mkdir()
+        (incoming/'link').symlink_to(target/'output')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            self.j.apply = True
+            self.assertTrue(self.j.remove(old, kind='task'))
+            old.mkdir()
+            self.j.refresh_links()
+            (self.cache/'L').symlink_to(old/'sub')
+            self.j.refresh_links()
+            incoming.rename(old/'sub')
+            try:
+                self.assertFalse(self.j.remove(target, kind='task'))
+            except janitor.ReferenceChanged:
+                pass
+        self.assertTrue(target.exists())
+
+    def test_a_tree_arriving_while_its_link_is_read_is_walked(self):
+        target = self.directory('q1/target')
+        destination = self.root/'outside'/'D'
+        destination.parent.mkdir(parents=True)
+        incoming = self.root/'incoming'
+        incoming.mkdir()
+        (incoming/'link').symlink_to(target/'output')
+        (self.cache/'L').symlink_to(destination)
+        original = janitor.link_target
+        def link_target(path):
+            result = original(path)
+            if str(path).endswith('/L') and not destination.exists():
+                incoming.rename(destination)  # arrives after the destination was read missing
+            return result
+        with self.guards(), patch.object(janitor, 'link_target', link_target):
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            self.j.apply = True
+            try:
+                self.assertFalse(self.j.remove(target, kind='task'))
+            except janitor.ReferenceChanged:
+                pass
+        self.assertTrue(target.exists())
+
     def test_too_many_unverified_names_fail_closed(self):
         watcher = janitor.ReferenceWatch()
         self.addCleanup(watcher.close)

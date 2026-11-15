@@ -402,15 +402,13 @@ class ReferenceWatch:
                 self.broken = True
                 raise ReferenceChanged('too many short-lived names to track; remaining work retained')
 
-    def dangle(self, target):
-        """Track a missing link destination, unless a watched directory would report it."""
-        if os.path.lexists(target) or any(inside(target, p) for p in self.excluded):
+    def dangle(self, target, *, missing=False):
+        """Track a link destination seen missing (missing=True: by the caller, which may be a
+        while ago); revived() looks at it again, so something that appeared meanwhile is
+        walked. Destinations in excluded trees are not protected."""
+        if (not missing and os.path.lexists(target)) or any(inside(target, p) for p in self.excluded):
             return
-        ancestor = os.path.dirname(os.fspath(target))
-        while not os.path.lexists(ancestor) and os.path.dirname(ancestor) != ancestor:
-            ancestor = os.path.dirname(ancestor)
-        if ancestor not in self.watched:
-            self.dangling.add(Path(target))
+        self.dangling.add(Path(target))
 
     def revived(self):
         """Directories to walk where a tracked dangling destination exists now. A link appearing
@@ -732,7 +730,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                         if watcher:
                             watcher.references.update((lexical, target))
                             if not exists:
-                                watcher.dangle(target)
+                                watcher.dangle(target, missing=True)
                         if is_dir and not any(inside(target, p) for p in excluded):
                             pending.append(str(target))
                     elif entry.kind == 'dir':
