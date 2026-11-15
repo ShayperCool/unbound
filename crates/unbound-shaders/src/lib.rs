@@ -36,7 +36,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 52;
+pub const FORMAT_VERSION: u32 = 53;
 
 /// The identity of this build's compiler (`src/identity.rs`, made by the build script): the
 /// hash of the sources that decide its output. Cache entries are keyed by it beside
@@ -165,8 +165,9 @@ pub struct Compiled {
     /// How each texture slot samples (by `textures` index).
     #[serde(default)]
     pub texture_slots: Vec<TextureSlot>,
-    /// The texture variables a program has beyond its slots, each for a sampler another than
-    /// its texture's own (OpenGL's combined texture-and-sampler units): the `textures` index of
+    /// The texture variables a program drawn as OpenGL shading language has beyond its slots,
+    /// each for a sampler another than its texture's own (OpenGL's combined texture-and-sampler
+    /// units; none on the other backends): the `textures` index of
     /// the slot whose texture the `j`th one shows, bound in the texture group at binding
     /// `2 * textures.len() + j`.
     #[serde(default)]
@@ -1969,9 +1970,10 @@ float4 array() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
         assert_eq!(module.entry_points[0].name, compiled.fragment_entry);
     }
 
-    /// A texture a graphics program samples through several samplers has a variable for each,
-    /// the same in both stages, bound after the slots: each texture variable of the emitted
-    /// WGSL is sampled through one sampler (OpenGL's combined texture-and-sampler units).
+    /// Drawn as OpenGL shading language, a texture a graphics program samples through several
+    /// samplers has a variable for each, the same in both stages, bound after the slots: each
+    /// texture variable of the emitted WGSL is sampled through one sampler (OpenGL's combined
+    /// texture-and-sampler units). Other backends bind the texture once.
     #[test]
     fn a_texture_sampled_through_several_samplers_has_a_binding_for_each() {
         let source = r#"
@@ -1997,9 +1999,11 @@ float4 frag(V i) : SV_Target {
         + _MainTex.Sample(sampler_MainTex, i.position.xy) + _MainTex.Sample(sampler_A, i.position.xy);
 }
 "#;
-        // A device that keeps the sampler a program names (Vulkan).
+        // A device that keeps the sampler a program names (Vulkan), drawn as OpenGL shading
+        // language.
         let mut compiler = ShaderCompiler::new(Settings {
             device: unbound_compat::GraphicsDevice::Vulkan,
+            opengl_shading_language: true,
             ..Settings::default()
         })
         .unwrap();
@@ -2056,6 +2060,38 @@ float4 frag(V i) : SV_Target {
                 slot(further_main, 1)
             ]
         );
+        // Vulkan and Metal bind textures and samplers apart: the texture is one binding, sampled
+        // through each sampler the program names.
+        for device in [
+            unbound_compat::GraphicsDevice::Vulkan,
+            unbound_compat::GraphicsDevice::Metal,
+        ] {
+            let mut apart = ShaderCompiler::new(Settings {
+                device,
+                ..Settings::default()
+            })
+            .unwrap();
+            let named = apart.compile(&program(source, false), &[], false).unwrap();
+            assert!(named.texture_aliases.is_empty(), "{device:?}");
+            assert_eq!(named.textures, ["_A", "_B"], "{device:?}");
+            assert!(named.main_texture, "{device:?}");
+            assert_eq!(
+                samples(&named.vertex).into_iter().collect::<Vec<_>>(),
+                [slot(0, 3)],
+                "{device:?}"
+            );
+            assert_eq!(
+                samples(&named.fragment).into_iter().collect::<Vec<_>>(),
+                [
+                    slot(0, 1),
+                    slot(0, 3),
+                    slot(2, 3),
+                    ((2, 0), (1, 1)),
+                    ((2, 0), (2, 1))
+                ],
+                "{device:?}"
+            );
+        }
         // OpenGL Core samples every texture through its own state: no further variables, and
         // each sample through its texture's own sampler.
         let mut opengl = ShaderCompiler::new(Settings {

@@ -1115,16 +1115,23 @@ pub(crate) fn fit(
     texture_state: bool,
     opengl_shading_language: bool,
 ) -> Result<Compiled> {
-    // A texture the program still samples through several samplers has a variable for each,
-    // the same in both stages.
     let own = |stage: &[u32]| match texture_state {
         true => crate::samplers::own_samplers(stage),
         false => Ok(stage.to_vec()),
     };
     let (vertex, fragment) = (own(vertex)?, own(fragment)?);
-    let mut pairs = crate::samplers::sampled_pairs(&vertex)?;
-    pairs.extend(crate::samplers::sampled_pairs(&fragment)?);
-    let primary = crate::samplers::primary_samplers(&pairs);
+    // Drawn as OpenGL shading language, a texture the program still samples through several
+    // samplers has a variable for each, the same in both stages (OpenGL's combined units).
+    // Other backends bind textures and samplers apart: a texture is one binding whatever
+    // samplers it is sampled through.
+    let primary = match opengl_shading_language {
+        true => {
+            let mut pairs = crate::samplers::sampled_pairs(&vertex)?;
+            pairs.extend(crate::samplers::sampled_pairs(&fragment)?);
+            crate::samplers::primary_samplers(&pairs)
+        }
+        false => HashMap::new(),
+    };
     let per_sampler = |stage: &[u32]| crate::samplers::one_sampler_per_texture(stage, &primary);
     let vertex = unify_int_signedness(&pad_array_elements(&align_uniform_members(
         &strip_relaxed_precision(&per_sampler(&vertex)?),
