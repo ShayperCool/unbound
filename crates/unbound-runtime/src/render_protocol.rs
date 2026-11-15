@@ -343,6 +343,9 @@ pub struct TexturePacket {
     pub wrap_u: i32,
     pub wrap_v: i32,
     pub aniso_level: i32,
+    /// Flags: 1 drawn into, 2 kernels write it, 4 automatic mips, 8 deferred mip updates,
+    /// 16 retained MSAA resolve, 32 multisampled images bound, 64/128 depth comparison, bits
+    /// 8..15 the MSAA sample count, 1 << 16 stored in the screen's channel order (NativeApi 82).
     pub render_target: i32,
     pub depth_bits: i32,
     /// Images (6 for a cubemap); the data holds each image's mip chain in turn.
@@ -545,6 +548,9 @@ pub mod owned {
         /// A dynamically scaled render texture's size before scaling (its `_TexelSize`); none:
         /// the texture's own.
         pub logical: Option<(u32, u32)>,
+        /// An 8-bit color stored in the screen's channel order (blue first where the device's
+        /// screen is): the texture a screen camera draws into in its place.
+        pub screen_order: bool,
     }
 
     impl Texture {
@@ -574,6 +580,7 @@ pub mod owned {
                 depth_bits: p.depth_bits,
                 layers: p.layers.max(1),
                 dimension: if p.dimension == 0 { 2 } else { p.dimension },
+                screen_order: p.render_target & (1 << 16) != 0,
                 logical: (p.logical_width > 0 && p.logical_height > 0)
                     .then_some((p.logical_width as u32, p.logical_height as u32)),
             }
@@ -987,6 +994,31 @@ mod tests {
         assert_eq!(offset_of!(TexturePacket, logical_width), 68);
         assert_eq!(offset_of!(TexturePacket, logical_height), 72);
         assert_eq!(size_of::<TexturePacket>(), 80);
+        // Flag 1 << 16 (screen channel order) sits above the sample count's bits 8..15.
+        let packet = |render_target| TexturePacket {
+            width: 4,
+            height: 4,
+            format: 0,
+            mip_count: 1,
+            data: std::ptr::null(),
+            data_length: 0,
+            filter_mode: 1,
+            wrap_u: 1,
+            wrap_v: 1,
+            aniso_level: 1,
+            render_target,
+            depth_bits: 24,
+            layers: 1,
+            dimension: 0,
+            wrap_w: 1,
+            logical_width: 0,
+            logical_height: 0,
+        };
+        let stand_in = unsafe { owned::Texture::from_packet(&packet(1 | (8 << 8) | (1 << 16))) };
+        assert!(stand_in.screen_order && stand_in.render_target);
+        assert_eq!(stand_in.samples, 8);
+        let plain = unsafe { owned::Texture::from_packet(&packet(1 | (8 << 8))) };
+        assert!(!plain.screen_order);
     }
 }
 

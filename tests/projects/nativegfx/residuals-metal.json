@@ -33,9 +33,6 @@
   "plugin.state.stencil.actions.camera",
   "plugin.state.stencil.actions.camera2"
  ],
- "A screen camera with command buffers draws into a texture standing for the screen (Unbound's, an sRGB RGBA8 render texture, format 71: a Blit from its CameraTarget reads the camera's image, tests/projects/rtdepth); the macOS Editor's callback in that camera's command buffer finds the screen's own BGRA8Unorm color texture (80). Its size, depth and actions match": [
-  "plugin.state.color0.screencamera"
- ],
  "A Blit from a screen camera's target: green 0x36 against the Editor's 0x37. The batch-mode Editor's screen is BGRA8Unorm without sRGB encoding and keeps the camera's linear 0.214 as 0x37; Unbound's stand-in is sRGB-encoded, where that value (encoded 127.5) is stored as 127 on Metal, presumably a tie (as the Editor's Metal device stores it, srgb.drawn.bytes). The windowed Editor's Game view is sRGB (BGRA8Unorm_sRGB) and reads 0x7f here (metal-windowed.jsonl)": [
   "screencamera.drawn.pixels"
  ],

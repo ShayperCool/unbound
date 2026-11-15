@@ -1520,8 +1520,10 @@ namespace Unbound.Runtime
                     && effects.Count == 0 && opaqueEffects.Count == 0 && camera.rect == new Rect(0f, 0f, 1f, 1f)
                     && camera.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor)
                 {
-                    screenStandIn = temporaries.Own(RenderTexture.GetTemporary(Math.Max(1, camera.scaledPixelWidth), Math.Max(1, camera.scaledPixelHeight), 24,
-                        RenderTextureFormat.Default, RenderTextureReadWrite.Default, 1));
+                    // Stored as the screen is, as native plugins drawing in its command buffers
+                    // see it (tests/projects/nativegfx plugin.state.color0.screencamera).
+                    screenStandIn = temporaries.Own(RenderTexture.GetTemporary(RenderTexture.TemporaryDescriptor(Math.Max(1, camera.scaledPixelWidth),
+                        Math.Max(1, camera.scaledPixelHeight), 24, RenderTextureFormat.Default, RenderTextureReadWrite.Default, 1), screenOrder: true));
                     cameraTarget = screenStandIn;
                     RenderTexture.ScreenStandIn = screenStandIn;
                 }

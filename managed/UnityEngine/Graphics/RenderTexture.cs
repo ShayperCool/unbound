@@ -487,7 +487,12 @@ namespace UnityEngine
         };
 
         // Texture packet flag: process automatic mip updates at attachment transitions.
-        const int DeferredMipUpdates = 8, RetainedMsaaResolve = 16, BindMultisampled = 32, CompareDepth = 64, DepthSamplerState = 128;
+        const int DeferredMipUpdates = 8, RetainedMsaaResolve = 16, BindMultisampled = 32, CompareDepth = 64, DepthSamplerState = 128,
+            ScreenOrder = 1 << 16;
+
+        /// <summary>Stored as the screen is (a screen camera's stand-in): the renderer keeps it in
+        /// the screen's channel order and shows it to native plugins as the screen.</summary>
+        internal bool m_ScreenOrder;
 
         /// <summary>The size of the texture's images: a dynamically scaled one's is scaled
         /// (<see cref="ScalableBufferManager"/>), its width and height staying as they were.</summary>
@@ -543,7 +548,7 @@ namespace UnityEngine
                 WrapW = (int)wrapModeW,
                 AnisoLevel = SamplerAnisoLevel,
                 // 1: drawn into; 2: written by kernels (a storage binding).
-                RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates | RetainedMsaaResolve | DepthSamplerState | (m_Descriptor.bindMS ? BindMultisampled : 0) | (m_Descriptor.shadowSamplingMode == ShadowSamplingMode.CompareDepths ? CompareDepth : 0) : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
+                RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates | RetainedMsaaResolve | DepthSamplerState | (m_Descriptor.bindMS ? BindMultisampled : 0) | (m_Descriptor.shadowSamplingMode == ShadowSamplingMode.CompareDepths ? CompareDepth : 0) : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8) | (m_ScreenOrder ? ScreenOrder : 0),
                 DepthBits = depthBits,
                 Layers = layers,
                 Dimension = dimension != TextureDimension.Tex2D || layers > 1 ? (int)dimension : 0,
@@ -567,13 +572,17 @@ namespace UnityEngine
         /// <summary>Frames a released temporary stays pooled before it is destroyed.</summary>
         const int TemporaryLifetime = 15;
 
-        public static RenderTexture GetTemporary(RenderTextureDescriptor desc)
+        public static RenderTexture GetTemporary(RenderTextureDescriptor desc) => GetTemporary(desc, false);
+
+        /// <summary>A temporary, stored as the screen is when <paramref name="screenOrder"/> (kept
+        /// apart from the others in the pool).</summary>
+        internal static RenderTexture GetTemporary(RenderTextureDescriptor desc, bool screenOrder)
         {
             // As the texture keeps it, so that a pooled one matches again.
             desc.depthStencilFormat = RenderableDepthFormat(desc.depthStencilFormat);
             foreach (var t in s_Temporaries)
             {
-                if (t.m_PooledFree && SameShape(t.m_Descriptor, desc))
+                if (t.m_PooledFree && t.m_ScreenOrder == screenOrder && SameShape(t.m_Descriptor, desc))
                 {
                     // Taken again it starts unscaled, as a new explicitly scaled one does
                     // (dynres.explicit.created; a reused one is unmeasured).
@@ -586,7 +595,7 @@ namespace UnityEngine
             }
             RenderTexture created;
             using (ObjectRegistry.AsAssets())
-                created = new RenderTexture(desc) { name = "TempBuffer " + s_Temporaries.Count, hideFlags = HideFlags.HideAndDontSave };
+                created = new RenderTexture(desc) { name = "TempBuffer " + s_Temporaries.Count, hideFlags = HideFlags.HideAndDontSave, m_ScreenOrder = screenOrder };
             created.m_LastUsedFrame = Time.frameCount;
             created.m_PoolLease = ++s_NextPoolLease;
             s_Temporaries.Add(created);
@@ -610,7 +619,7 @@ namespace UnityEngine
             return d.mipCount > 0 ? Math.Min(d.mipCount, full) : full;
         }
 
-        static RenderTextureDescriptor TemporaryDescriptor(int width, int height, int depthBuffer, RenderTextureFormat format,
+        internal static RenderTextureDescriptor TemporaryDescriptor(int width, int height, int depthBuffer, RenderTextureFormat format,
             RenderTextureReadWrite readWrite, int antiAliasing, RenderTextureMemoryless memorylessMode = RenderTextureMemoryless.None,
             VRTextureUsage vrUsage = VRTextureUsage.None, bool useDynamicScale = false)
         {

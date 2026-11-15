@@ -89,7 +89,8 @@ use std::ffi::c_void;
 /// 79: imported textures report the usage mode of HDR radiance stored as bytes.
 /// 80: texture packets distinguish 24-bit depth without stencil from depth with stencil.
 /// 81: a dynamically scaled render texture's size before scaling at the end of `TexturePacket`.
-pub const NATIVE_API_VERSION: u32 = 81;
+/// 82: texture packet flag 1 << 16 stores a texture in the screen's channel order.
+pub const NATIVE_API_VERSION: u32 = 82;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

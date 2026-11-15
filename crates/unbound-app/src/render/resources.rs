@@ -510,6 +510,8 @@ pub struct GpuTexture {
     pub height: u32,
     /// A dynamically scaled render texture's size before scaling, which its `_TexelSize` gives.
     pub logical: Option<(u32, u32)>,
+    /// Stored in the screen's channel order (a screen camera's stand-in).
+    pub screen_order: bool,
     pub format: i32,
     pub mip_count: u32,
     pub render_target: bool,
@@ -1448,6 +1450,16 @@ fn multisample_color_usage(device: &wgpu::Device, bind_ms: bool) -> wgpu::Textur
         | wgpu::TextureUsages::COPY_DST
 }
 
+/// A texture's storage in the screen's channel order when it is stored as the screen is (a
+/// screen camera's stand-in; the executor keeps the flag only where the screen is blue first):
+/// 8-bit colors blue first, other storages as they are.
+fn screen_ordered(format: wgpu::TextureFormat, screen_order: bool) -> wgpu::TextureFormat {
+    match format {
+        wgpu::TextureFormat::Rgba8Unorm if screen_order => wgpu::TextureFormat::Bgra8Unorm,
+        _ => format,
+    }
+}
+
 /// Creates (or rewrites in place, when the shape is unchanged) a texture from a packet.
 pub fn upload_texture(
     device: &wgpu::Device,
@@ -1535,10 +1547,14 @@ pub fn upload_texture_with(
     if let Some(fallback) = &storage.fallback {
         report_fallback(t.format, fallback);
     }
-    let (format, bytes_per_pixel) = (storage.format, storage.bytes_per_pixel);
+    let (format, bytes_per_pixel) = (
+        screen_ordered(storage.format, t.screen_order),
+        storage.bytes_per_pixel,
+    );
     let color = t.format == 0 || texture_format::block_color(t.format);
     let srgb_format = match compressed {
         Some(format) => format.add_srgb_suffix(),
+        None if format == wgpu::TextureFormat::Bgra8Unorm => wgpu::TextureFormat::Bgra8UnormSrgb,
         None => wgpu::TextureFormat::Rgba8UnormSrgb,
     };
     let sampler_key = SamplerKey {
@@ -1563,6 +1579,7 @@ pub fn upload_texture_with(
             && e.bind_ms == t.bind_ms
             && e.render_target == render_target
             && e.random_write == t.random_write
+            && e.screen_order == t.screen_order
             && e.depth_format() == (t.depth_bits != 0).then(|| depth_format(device, t.depth_bits))
     });
     let mut gpu = match reuse {
@@ -1831,6 +1848,7 @@ pub fn upload_texture_with(
                 width,
                 height,
                 logical: t.logical,
+                screen_order: t.screen_order,
                 format: t.format,
                 mip_count,
                 render_target,
@@ -2033,6 +2051,7 @@ pub fn default_textures(
         layers: 1,
         dimension: 2,
         logical: None,
+        screen_order: false,
     };
     use texture_format::{LINEAR_RGBA8, SRGB_RGBA8};
     let mut map = HashMap::new();
@@ -2268,6 +2287,23 @@ mod tests {
             rgba16snorm: full(),
             packed_integer_storage: true,
         }
+    }
+
+    /// A screen camera's stand-in is stored blue first as the screen is; other storages, and
+    /// textures not so marked, keep theirs.
+    #[test]
+    fn screen_ordered_textures_are_stored_blue_first() {
+        use wgpu::TextureFormat as F;
+        assert_eq!(screen_ordered(F::Rgba8Unorm, true), F::Bgra8Unorm);
+        assert_eq!(screen_ordered(F::Rgba8Unorm, false), F::Rgba8Unorm);
+        assert_eq!(screen_ordered(F::Rgba16Float, true), F::Rgba16Float);
+        let mut stand_in = packet(0, true, false);
+        stand_in.screen_order = true;
+        let storage = texture_storage(&stand_in, 1, &norm_format_caps());
+        assert_eq!(
+            screen_ordered(storage.format, stand_in.screen_order),
+            F::Bgra8Unorm
+        );
     }
 
     fn packet(format: i32, render_target: bool, random_write: bool) -> owned::Texture {

@@ -787,7 +787,9 @@ fn srgb_form(format: MTLPixelFormat) -> Option<MTLPixelFormat> {
 /// Whether a texture's native pointer is sRGB: a color texture a Linear project samples as
 /// sRGB (nativegfx `plugin.native.t14.srgb`, `t8.srgbtarget`: RGBA8Unorm_sRGB).
 fn wants_srgb(gpu: &GpuTexture, color_space: i32) -> bool {
-    gpu.srgb_view.is_some() && color_space == 1
+    // A screen camera's stand-in shows as the screen does: its storage, unencoded (nativegfx
+    // `plugin.state.color0.screencamera`: the batch-mode Editor's screen, BGRA8Unorm).
+    gpu.srgb_view.is_some() && color_space == 1 && !gpu.screen_order
 }
 
 /// A texture held by the native pointer cache, by its pointer.

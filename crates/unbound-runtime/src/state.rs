@@ -1866,6 +1866,7 @@ fn upload_imported(
             layers: texture.layers as i32,
             dimension,
             logical: None,
+            screen_order: false,
         },
     );
     set_texture_mip_bias(handle, texture.mip_bias);

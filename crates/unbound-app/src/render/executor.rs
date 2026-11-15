@@ -1074,7 +1074,9 @@ impl UnityRenderer {
                     self.mesh_buffers.remove(&(handle, slot));
                 }
             }
-            Upload::UploadTexture(handle, texture) => {
+            Upload::UploadTexture(handle, mut texture) => {
+                // Stored in the screen's channel order only where the screen is blue first.
+                texture.screen_order &= self.conventions.screen_bgra;
                 self.generation += 1;
                 let old = self.textures.remove(&handle);
                 let previous = old
@@ -4612,6 +4614,7 @@ impl UnityRenderer {
                 layers: 1,
                 dimension: 2,
                 logical: None,
+                screen_order: false,
             };
             // A blue-first source (the screen on such a device) is grabbed into the same storage,
             // so the copy stays a copy of its texels. The texture is rewritten in place only in
@@ -4731,7 +4734,12 @@ impl UnityRenderer {
             });
             return None;
         }
-        let screen_end = |handle: u64| handle == 0 || self.grabs.contains(handle);
+        // The screen, a grab of it and its stand-in are stored in the screen's channel order.
+        let screen_end = |handle: u64| {
+            handle == 0
+                || self.grabs.contains(handle)
+                || self.textures.get(&handle).is_some_and(|t| t.screen_order)
+        };
         let screen_order =
             self.conventions.screen_bgra && (screen_end(source) || screen_end(destination));
         let channel_kind =
