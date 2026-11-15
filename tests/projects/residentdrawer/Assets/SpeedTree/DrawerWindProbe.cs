@@ -21,11 +21,13 @@ public sealed class DrawerWindProbe : MonoBehaviour
     const int Params = 22, Rows = 8;
     /// <summary>The seconds without a compiling shader the warm-up waits for (the Editor only).</summary>
     const float QuietSeconds = 3f;
-    const int LastFrame = 380;
+    const int LastFrame = 470;
     static readonly int[] k_Recorded =
     {
         1, 2, 10, 11, 12, 13, 15, 20, 30, 50, 51, 52, 60, 75, 76, 77, 80, 90, 91, 95, 96, 97, 100, 101, 102, 110,
         130, 131, 140, 160, 200, 250, 290, 300, 310, 320, 321, 330, 331, 332, 340, 360, 380,
+        // A spherical zone reaching every tree but Calm, then out of reach.
+        385, 386, 387, 388, 390, 395, 400, 410, 420, 421, 422, 425, 430, 440, 450, 470,
     };
 
     readonly StringBuilder m_Out = new StringBuilder();
@@ -38,7 +40,7 @@ public sealed class DrawerWindProbe : MonoBehaviour
     Texture2D m_Read;
     GameObject m_Gusty, m_Calm;
     Material m_Dump;
-    WindZone m_A, m_Still, m_Again;
+    WindZone m_A, m_Still, m_Again, m_Near;
     int m_Frame, m_Quiet;
     float m_QuietSince = -1;
     bool m_Started, m_Failed;
@@ -175,6 +177,15 @@ public sealed class DrawerWindProbe : MonoBehaviour
             m_Still.gameObject.SetActive(false);
             m_Again = Zone("Again", WindZoneMode.Directional, 0.5f, Quaternion.Euler(0f, -45f, 0f));
         }
+        // A spherical zone reaching every tree but Calm (each gets a local wind of its own), then moved out
+        // of reach (their local winds return to the asset's wind).
+        if (m_Frame == 385)
+        {
+            m_Near = Zone("Near", WindZoneMode.Spherical, 1.2f, Quaternion.identity);
+            m_Near.transform.position = new Vector3(98f, 2.5f, 1f);
+            m_Near.radius = 9f;
+        }
+        if (m_Frame == 420) m_Near.transform.position = new Vector3(98f, 2.5f, -80f);
     }
 
     static WindZone Zone(string name, WindZoneMode mode, float main, Quaternion rotation)

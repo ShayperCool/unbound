@@ -236,6 +236,58 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>The levels of one LOD group with the same asset share a local wind: the draw
+        /// of a later level starts it on the group's first level, and the later level joins it at
+        /// its next draw; a zone that reaches only the second level's own bounds still reaches the
+        /// group (the levels' bounds together).</summary>
+        [Fact]
+        public void TheLevelsOfALodGroupShareTheirLocalWind()
+        {
+            var root = new GameObject("TreeGroup");
+            var zone = new GameObject("Sphere").AddComponent<WindZone>();
+            var asset = new SpeedTreeWindAsset(1, Config());
+            try
+            {
+                var levels = new MeshRenderer[2];
+                var trees = new Tree[2];
+                for (int i = 0; i < 2; i++)
+                {
+                    var level = new GameObject("LOD" + i);
+                    level.transform.SetParent(root.transform, false);
+                    level.transform.localPosition = new Vector3(10f * i, 0f, 0f);
+                    level.AddComponent<MeshFilter>().sharedMesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
+                    levels[i] = level.AddComponent<MeshRenderer>();
+                    trees[i] = level.AddComponent<Tree>();
+                    trees[i].windAsset = asset;
+                }
+                root.AddComponent<LODGroup>().SetLODs(new[] { new LOD(0.5f, new Renderer[] { levels[0] }), new LOD(0.1f, new Renderer[] { levels[1] }) });
+                zone.mode = WindZoneMode.Spherical;
+                zone.radius = 2f;
+                zone.transform.position = new Vector3(11f, 0f, 0f);
+                SpeedTreeWindSystem.Update();
+                using (Unbound.Runtime.DrawPropertyPool.Begin())
+                {
+                    SpeedTreeWindSystem.Apply(levels[1], null);
+                    Assert.NotNull(trees[0].m_LocalWind);
+                    Assert.Null(trees[1].m_LocalWind);
+                    SpeedTreeWindSystem.Apply(levels[1], null);
+                }
+                Assert.Same(trees[0].m_LocalWind, trees[1].m_LocalWind);
+                Assert.Equal(2, trees[0].m_LocalWind.Trees.Count);
+                // Disabling a level takes it off the shared wind, which the other keeps.
+                levels[1].gameObject.SetActive(false);
+                Assert.Null(trees[1].m_LocalWind);
+                Assert.Single(trees[0].m_LocalWind.Trees);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(zone.gameObject);
+                Object.DestroyImmediate(asset);
+                SpeedTreeWindSystem.Update();
+            }
+        }
+
         /// <summary>The spherical wind at bounds: zones out of reach take no part; one in reach
         /// blows from its position toward the center raised by a quarter of the height.</summary>
         [Fact]
