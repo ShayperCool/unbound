@@ -5,7 +5,7 @@
 //! platform (`SHADER_API_GLCORE`: the renderer's matrices and texture rows are OpenGL's), glslang
 //! (through shaderc) from HLSL to SPIR-V, naga from SPIR-V to its IR, where the program is fitted
 //! to the renderer (see [`fit`]), and WGSL out. Results are cached on disk by a hash of the
-//! preprocessed sources and [`FORMAT_VERSION`]. Surface shaders compile as the forward base pass
+//! preprocessed sources, [`FORMAT_VERSION`] and the compiler's identity ([`COMPILER`]). Surface shaders compile as the forward base pass
 //! Unity generates for them (see [`surface`]); fixed-function passes as the program their
 //! commands stand for (see [`fixed`]).
 pub mod compute;
@@ -18,6 +18,7 @@ mod buffer_parameters;
 mod exponents;
 pub mod fetch;
 mod fit;
+mod identity;
 mod matrix_swizzles;
 mod samplers;
 mod scopes;
@@ -35,6 +36,19 @@ use std::{
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
 pub const FORMAT_VERSION: u32 = 52;
+
+/// The identity of this build's compiler ([`identity`]): the hash of the sources that decide its
+/// output. Cache entries are keyed by it beside [`FORMAT_VERSION`], so a build never reads
+/// another compiler's entries, whatever format number each declares.
+pub const COMPILER: &str = env!("UNBOUND_SHADERS_COMPILER");
+
+/// Starts a cache key with what every entry is keyed by: the format and the compiler.
+pub(crate) fn cache_key_hasher() -> blake3::Hasher {
+    let mut h = blake3::Hasher::new();
+    h.update(&FORMAT_VERSION.to_le_bytes());
+    h.update(COMPILER.as_bytes());
+    h
+}
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -880,8 +894,7 @@ impl ShaderCompiler {
         }
 
         let hash = {
-            let mut h = blake3::Hasher::new();
-            h.update(&FORMAT_VERSION.to_le_bytes());
+            let mut h = cache_key_hasher();
             h.update(b"native-sampler-lod-bias-v1");
             // The device's clip space is fitted after compiling.
             h.update(self.settings.device.name().as_bytes());

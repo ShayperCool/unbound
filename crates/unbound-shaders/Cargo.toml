@@ -14,3 +14,6 @@ tracing.workspace = true
 unbound-compat.workspace = true
 naga = { version = "30", features = ["spv-in", "wgsl-out", "wgsl-in"] }
 shaderc = "0.10"
+
+[build-dependencies]
+blake3.workspace = true

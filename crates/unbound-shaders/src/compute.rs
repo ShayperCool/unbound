@@ -4,7 +4,7 @@
 //! dispatch's buffers, textures and uniforms by name, as `ComputeShader.SetBuffer` names them.
 use crate::targets::Variant;
 use crate::{
-    FORMAT_VERSION, Program, ShaderCompiler, TextureDim, Uniform,
+    Program, ShaderCompiler, TextureDim, Uniform,
     fit::{
         Stage, align_uniform_members, pad_array_elements, parse, scan, strip_relaxed_precision,
         texture_dim, uniform, unify_int_signedness,
@@ -558,9 +558,8 @@ fn kernel_cache_key(
         h.update(&(bytes.len() as u64).to_le_bytes());
         h.update(bytes);
     }
-    let mut h = blake3::Hasher::new();
+    let mut h = crate::cache_key_hasher();
     h.update(b"kernel-v2");
-    h.update(&FORMAT_VERSION.to_le_bytes());
     h.update(&[opengl_shading_language as u8]);
     field(&mut h, source.as_bytes());
     field(&mut h, kernel.as_bytes());
