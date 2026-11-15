@@ -521,55 +521,6 @@ VisualEffect:
             }
         }
 
-        sealed class Warnings : ILogHandler, IDisposable
-        {
-            readonly ILogHandler m_Previous = Debug.unityLogger.logHandler;
-            public readonly List<string> Messages = new List<string>();
-            public Warnings() { Debug.unityLogger.logHandler = this; }
-            public void Dispose() { Debug.unityLogger.logHandler = m_Previous; }
-            public void LogException(Exception exception, Object context) { }
-            public void LogFormat(LogType type, Object context, string format, params object[] args)
-            {
-                if (type == LogType.Warning) Messages.Add(string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args));
-            }
-        }
-
-        [Fact]
-        public void TheFirstEffectWithSystemsSaysEffectsAreNotDrawn()
-        {
-            bool warned = VisualEffect.s_WarnedNotDrawn;
-            VisualEffect.s_WarnedNotDrawn = false;
-            var withSystems = First();
-            withSystems.m_Name = "Smoke";
-            var empty = VisualEffectAsset.Create();
-            var objects = new List<GameObject>();
-            try
-            {
-                using var warnings = new Warnings();
-                // No asset, and an asset without systems: nothing runs, so nothing would be drawn.
-                objects.Add(new GameObject("bare").AddComponent<VisualEffect>().gameObject);
-                var none = new GameObject("empty").AddComponent<VisualEffect>();
-                objects.Add(none.gameObject);
-                none.visualEffectAsset = empty;
-                Assert.DoesNotContain(warnings.Messages, m => m.Contains("not drawn"));
-                var effect = new GameObject("chimney").AddComponent<VisualEffect>();
-                objects.Add(effect.gameObject);
-                effect.visualEffectAsset = withSystems;
-                var said = Assert.Single(warnings.Messages, m => m.Contains("not drawn"));
-                Assert.Equal("Unbound: VisualEffect 'chimney' (Smoke): " + VisualEffect.NotDrawn + ". `unbound doctor` lists the project's effects.", said);
-                // Once: a second effect does not repeat it.
-                var again = new GameObject("second").AddComponent<VisualEffect>();
-                objects.Add(again.gameObject);
-                again.visualEffectAsset = withSystems;
-                Assert.Single(warnings.Messages, m => m.Contains("not drawn"));
-            }
-            finally
-            {
-                VisualEffect.s_WarnedNotDrawn = warned;
-                foreach (var o in objects) Object.DestroyImmediate(o);
-            }
-        }
-
         [Fact]
         public void TheDoctorListsEffectsWithAnAssetAsNotDrawn()
         {

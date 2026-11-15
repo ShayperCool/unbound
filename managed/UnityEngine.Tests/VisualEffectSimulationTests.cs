@@ -523,8 +523,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void AConstantRateSpawnsItsWholeParticlesCarriesTheRestAndStopsAtTheCapacity()
         {
-            bool warned = VisualEffect.s_WarnedNotDrawn;
-            VisualEffect.s_WarnedNotDrawn = true;
             var effect = Running(Counting(7.3f));
             try
             {
@@ -544,7 +542,6 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                VisualEffect.s_WarnedNotDrawn = warned;
                 Object.DestroyImmediate(effect.gameObject);
             }
         }
@@ -565,8 +562,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void WithoutARendererASystemWithKernelsCountsOnAndSaysNothing()
         {
-            bool warned = VisualEffect.s_WarnedNotDrawn;
-            VisualEffect.s_WarnedNotDrawn = true;
             var asset = Counting(30f);
             // An initialize kernel for the particles: here (a test has no renderer, as a
             // headless run has none) nothing can tell whether it compiles, and nothing runs it.
@@ -585,16 +580,153 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                VisualEffect.s_WarnedNotDrawn = warned;
                 Object.DestroyImmediate(effect.gameObject);
+            }
+        }
+
+        /// <summary>The counting effect with an output task for its particles.</summary>
+        static VisualEffectAsset WithOutput(VFXTaskType type, Object processor, params VFXMapping[] parameters)
+        {
+            var asset = Counting(30f);
+            asset.m_Data.Systems[1].tasks = new[] { new VFXEditorTaskDesc { type = type, parameters = parameters } };
+            asset.m_Data.Processors = new[] { Array.Empty<Object>(), new[] { processor } };
+            return asset;
+        }
+
+        sealed class Warnings : ILogHandler, IDisposable
+        {
+            readonly ILogHandler m_Previous = Debug.unityLogger.logHandler;
+            public readonly List<string> Messages = new List<string>();
+            public Warnings() { Debug.unityLogger.logHandler = this; }
+            public void Dispose() { Debug.unityLogger.logHandler = m_Previous; }
+            public void LogException(Exception exception, Object context) { }
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning) Messages.Add(string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args));
+            }
+        }
+
+        [Fact]
+        public void AQuadOutputDrawsTheParticlesSpawnedSoFarInOneDraw()
+        {
+            var shader = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/VfxQuads\" { SubShader { Pass { Tags { \"LightMode\"=\"UniversalForwardOnly\" } } } }");
+            var material = new Material(shader) { renderQueue = 2450 };
+            var effect = Running(WithOutput(VFXTaskType.ParticleQuadOutput, material));
+            var eye = new GameObject("eye").AddComponent<Camera>();
+            try
+            {
+                using var warnings = new Warnings();
+                Assert.True(effect.TryGetComponent<VFXRenderer>(out var renderer));
+                var camera = new FrameBuilder.CameraContext { Camera = eye, Position = new Vector3(0f, 0f, -10f), Forward = Vector3.forward };
+                var draws = new List<FrameBuilder.DrawItem>();
+                // Nothing before the first step: the programs' buffers hold nothing yet.
+                renderer.CollectDraws(camera, draws);
+                Assert.Empty(draws);
+                Counts(effect, 3);
+                renderer.CollectDraws(camera, draws);
+                var draw = Assert.Single(draws);
+                Assert.Same(material, draw.Material);
+                Assert.Same(renderer, draw.Renderer);
+                Assert.Equal(2450, draw.Queue);
+                // Three particles: six indices each, one instance.
+                Assert.True(draw.Setup.HasValue);
+                Assert.Equal((18u, 1u, (byte)2), (draw.Setup.Value.IndexCount, draw.Setup.Value.Instances, draw.Setup.Value.IndexSize));
+                // The batch of one instance, as the programs read it.
+                Assert.Equal(new Vector4(BitConverter.Int32BitsToSingle(1), BitConverter.Int32BitsToSingle(1), BitConverter.Int32BitsToSingle(1), 0f),
+                    (Vector4)draw.Properties[Shader.PropertyToID("instancingConstants")]);
+                // A disabled effect draws nothing, and nothing was said of an output that is drawn.
+                effect.enabled = false;
+                draws.Clear();
+                renderer.CollectDraws(camera, draws);
+                Assert.Empty(draws);
+                Assert.DoesNotContain(warnings.Messages, m => m.Contains("not drawn"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(effect.gameObject);
+                Object.DestroyImmediate(eye.gameObject);
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(shader);
+            }
+        }
+
+        [Fact]
+        public void MoreQuadsThanIndicesReachAreDrawnAsInstances()
+        {
+            var indices = new GraphicsBuffer(GraphicsBuffer.Target.Index, VFXOutput.MaxQuadsPerDraw * 6, 2);
+            try
+            {
+                (uint, uint) Draw(uint quads)
+                {
+                    var setup = VFXOutput.QuadDraw(indices, quads);
+                    return (setup.IndexCount, setup.Instances);
+                }
+                Assert.Equal((6u, 1u), Draw(1));
+                Assert.Equal((98304u, 1u), Draw(16384));
+                // One more: instances of 2048 quads, the last one partly past the particles.
+                Assert.Equal((12288u, 9u), Draw(16385));
+                Assert.Equal((12288u, 10u), Draw(20000));
+                Assert.Equal((12288u, 10u), Draw(20480));
+                Assert.Equal((12288u, 11u), Draw(20481));
+            }
+            finally { indices.Release(); }
+        }
+
+        [Fact]
+        public void AnOutputThatIsNotDrawnSaysSoOnceForItsAssetAndItsSystemStillRuns()
+        {
+            var shader = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/VfxRefused\" { SubShader { Pass { } } }");
+            var material = new Material(shader);
+            var system = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle };
+            var quads = new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput };
+            // What is drawn, and each thing that is not.
+            Assert.Null(VFXOutput.Refusal(system, quads, material));
+            Assert.Equal("its shader was not imported", VFXOutput.Refusal(system, quads, null));
+            Assert.Equal("ParticleMeshOutput is not drawn yet (quads are)", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleMeshOutput }, material));
+            var indirect = new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, parameters = new[] { new VFXMapping("sortPriority", 0), new VFXMapping("indirectDraw", 1) } };
+            Assert.StartsWith("it draws through an indirect buffer", VFXOutput.Refusal(system, indirect, material));
+            Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, parameters = new[] { new VFXMapping("indirectDraw", 0) } }, material));
+            Assert.Equal("strips are not drawn yet", VFXOutput.Refusal(new VFXEditorSystemDesc { flags = VFXSystemFlag.SystemHasStrips }, quads, material));
+            Assert.Equal("outputs of a Shader Graph are not drawn yet", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, usesMaterialVariant = true }, material));
+
+            var asset = WithOutput(VFXTaskType.ParticleQuadOutput, material, new VFXMapping("indirectDraw", 1));
+            asset.m_Name = "Smoke";
+            asset.m_Settings.Renderer.shadowCastingMode = ShadowCastingMode.On;
+            VisualEffect first = null, second = null;
+            var eye = new GameObject("eye").AddComponent<Camera>();
+            try
+            {
+                using var warnings = new Warnings();
+                first = Running(asset);
+                first.name = "chimney";
+                // Said when the effect's systems are made, once for the asset.
+                first.Reinit();
+                second = Running(asset);
+                var said = Assert.Single(warnings.Messages, m => m.Contains("not drawn"));
+                Assert.StartsWith("Unbound: VisualEffect '", said);
+                Assert.Contains("(Smoke): an output of 'Particles' is not drawn: it draws through an indirect buffer", said);
+                // So are the shadows an asset asks its renderer to cast.
+                Assert.Single(warnings.Messages, m => m.Contains("(Smoke): its outputs cast shadows"));
+                // The system runs all the same, and its renderer has no draw.
+                Assert.Equal(new[] { 1, 2, 3 }, Counts(first, 3));
+                var draws = new List<FrameBuilder.DrawItem>();
+                Assert.True(first.TryGetComponent<VFXRenderer>(out var renderer));
+                renderer.CollectDraws(new FrameBuilder.CameraContext { Camera = eye, Position = new Vector3(0f, 0f, -10f), Forward = Vector3.forward }, draws);
+                Assert.Empty(draws);
+            }
+            finally
+            {
+                if (first) Object.DestroyImmediate(first.gameObject);
+                if (second) Object.DestroyImmediate(second.gameObject);
+                Object.DestroyImmediate(eye.gameObject);
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(shader);
             }
         }
 
         [Fact]
         public void EventsPauseRateStepsAndReinitMoveTheEffectAsAsked()
         {
-            bool warned = VisualEffect.s_WarnedNotDrawn;
-            VisualEffect.s_WarnedNotDrawn = true;
             var effect = Running(Counting(30f));
             try
             {
@@ -651,7 +783,6 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                VisualEffect.s_WarnedNotDrawn = warned;
                 Object.DestroyImmediate(effect.gameObject);
             }
         }
@@ -659,8 +790,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnEffectNoCameraSeesRunsItsStartThenWaitsUnlessItsAssetSaysOtherwise()
         {
-            bool warned = VisualEffect.s_WarnedNotDrawn;
-            VisualEffect.s_WarnedNotDrawn = true;
             var culledByDefault = Running(Counting(30f, VFXCullingFlags.CullDefault));
             var never = Running(Counting(30f, VFXCullingFlags.CullNone));
             try
@@ -680,7 +809,6 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                VisualEffect.s_WarnedNotDrawn = warned;
                 Object.DestroyImmediate(culledByDefault.gameObject);
                 Object.DestroyImmediate(never.gameObject);
             }
@@ -689,8 +817,6 @@ namespace UnityEngine.Tests
         [Fact]
         public void SystemGettersAnswerNothingForUnknownNamesAndThrowForAParticleSystemOfTheWrongKind()
         {
-            bool warned = VisualEffect.s_WarnedNotDrawn;
-            VisualEffect.s_WarnedNotDrawn = true;
             var effect = Running(Counting(30f));
             try
             {
@@ -706,7 +832,6 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                VisualEffect.s_WarnedNotDrawn = warned;
                 Object.DestroyImmediate(effect.gameObject);
             }
         }

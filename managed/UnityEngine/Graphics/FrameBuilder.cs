@@ -275,6 +275,30 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>A renderer's draw without a mesh of its own: the stand-in vertices a vertex
+        /// program tells apart by their id, counted and indexed by <paramref name="setup"/>,
+        /// with one material and the draw's own values (an effect's output).</summary>
+        internal static void AddProceduralDraw(Renderer renderer, Material material, Matrix4x4 model, DrawSetup setup, Dictionary<int, object> properties,
+            CameraContext camera, List<DrawItem> into)
+        {
+            into.Add(new DrawItem
+            {
+                Mesh = IndexedDraws.StandIn(MeshTopology.Triangles).Sync(),
+                Material = material,
+                Model = model,
+                Color = Color.white,
+                Queue = material.renderQueue,
+                SortingLayer = SortingLayer.GetLayerValueFromID(renderer.m_SortingLayerID),
+                SortingOrder = renderer.m_SortingOrder,
+                Distance = Distance(camera, renderer.bounds.center),
+                Sequence = s_Sequence++,
+                Groups = GroupsOf(renderer, camera),
+                Renderer = renderer,
+                Properties = properties,
+                Setup = setup,
+            });
+        }
+
         /// <summary>Whether world bounds are at least partly inside the frustum of a view-projection
         /// matrix (OpenGL clip space). Bounds of no size count as inside: renderers that do not
         /// know their bounds are not culled.</summary>

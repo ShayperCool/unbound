@@ -146,7 +146,7 @@ namespace UnityEngine.VFX
                     Debug.LogWarning($"Unbound: VisualEffect '{name}' ({m_Asset.name}) is not simulated: it uses {m_Unsupported}, which Unbound does not run yet. `unbound doctor` lists the project's effects.", this);
                 return;
             }
-            WarnNotDrawn();
+            if (m_Asset.m_Settings.Renderer.shadowCastingMode != UnityEngine.Rendering.ShadowCastingMode.Off) WarnShadowsNotCast();
             m_GpuBuffers = new GraphicsBuffer[m_Data.GpuBuffers.Length];
             var systems = new List<VFXSystem>(m_Data.Systems.Length);
             var particles = new List<VFXParticleSystem>();
@@ -385,6 +385,13 @@ namespace UnityEngine.VFX
                 steps = fixedSteps;
                 deltaTime = VFXManager.fixedTimeStep;
             }
+        }
+
+        /// <summary>The draws of the effect's outputs for a camera that sees its renderer.</summary>
+        internal void CollectDraws(Renderer renderer, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
+        {
+            if (!isActiveAndEnabled) return;
+            foreach (var system in m_ParticleSystems) system.CollectDraws(renderer, camera, into);
         }
 
         /// <summary>Whether no camera sees the effect: none took its renderer in the last frame

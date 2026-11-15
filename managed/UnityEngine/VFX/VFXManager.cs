@@ -24,6 +24,12 @@ namespace UnityEngine.VFX
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver) => ReadRendererData(body, resolver);
 
+        /// <summary>The draws of the effect's outputs, system by system.</summary>
+        internal override void CollectDraws(FrameBuilder.CameraContext camera, System.Collections.Generic.List<FrameBuilder.DrawItem> into)
+        {
+            if (TryGetComponent<VisualEffect>(out var effect)) effect.CollectDraws(this, camera, into);
+        }
+
         /// <summary>The renderer's bounds are its effect's: the union of the systems' bounds.</summary>
         internal override Bounds GetLocalBounds() =>
             TryGetComponent<VisualEffect>(out var effect) && effect.RendererBounds(out var bounds) ? bounds : new Bounds(Vector3.zero, Vector3.zero);

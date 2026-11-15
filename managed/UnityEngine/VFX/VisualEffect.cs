@@ -88,18 +88,26 @@ namespace UnityEngine.VFX
 
         public VisualEffect() { }
 
-        /// <summary>What Unbound does not do with an effect yet (the load warning and
-        /// <c>unbound doctor</c> say it).</summary>
-        internal const string NotDrawn = "Visual Effect Graph outputs are not drawn yet: the effect is simulated and shows nothing";
+        /// <summary>What Unbound draws of an effect (<c>unbound doctor</c> says it of every
+        /// effect with an asset; an effect that runs says which of its outputs it leaves out).</summary>
+        internal const string NotDrawn = "Visual Effect Graph outputs are drawn when they are quads the output draws itself: sorted or indirect outputs, strips, meshes and other primitives show nothing yet";
 
-        internal static bool s_WarnedNotDrawn;
+        /// <summary>The outputs said not to be drawn: once per asset, system and reason.</summary>
+        static readonly HashSet<(int Asset, string System, string Reason)> s_WarnedOutputs = new HashSet<(int, string, string)>();
 
-        /// <summary>Says once, for the first effect that runs, that effects are not drawn.</summary>
-        void WarnNotDrawn()
+        /// <summary>Says, once for the asset, that its outputs' shadows are left out: the asset
+        /// asks its renderer to cast shadows (an output of its graph does).</summary>
+        void WarnShadowsNotCast()
         {
-            if (s_WarnedNotDrawn) return;
-            s_WarnedNotDrawn = true;
-            Debug.LogWarning($"Unbound: VisualEffect '{name}' ({m_Asset.name}): {NotDrawn}. `unbound doctor` lists the project's effects.", this);
+            if (!s_WarnedOutputs.Add((m_Asset.GetInstanceID(), "", "shadows"))) return;
+            Debug.LogWarning($"Unbound: VisualEffect '{name}' ({m_Asset.name}): its outputs cast shadows, which Unbound does not draw yet: they are drawn without. `unbound doctor` lists the project's effects.", this);
+        }
+
+        /// <summary>Says, once for the asset, that an output of a system is not drawn and why.</summary>
+        internal void WarnOutputNotDrawn(string system, string reason)
+        {
+            if (!s_WarnedOutputs.Add((m_Asset.GetInstanceID(), system, reason))) return;
+            Debug.LogWarning($"Unbound: VisualEffect '{name}' ({m_Asset.name}): an output of '{system}' is not drawn: {reason}. The system is simulated. `unbound doctor` lists the project's effects.", this);
         }
 
         /// <summary>AddComponent&lt;VisualEffect&gt;() adds the effect's renderer with it.</summary>

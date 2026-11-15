@@ -43,6 +43,9 @@ namespace Unbound.Runtime
         readonly VFXSpawnerSystem[] m_Spawners;
         readonly Kernel m_Initialize;
         readonly Kernel[] m_Updates;
+        readonly VFXOutput[] m_Outputs;
+        /// <summary>Whether a step uploaded what the outputs' programs read.</summary>
+        bool m_Stepped;
         /// <summary>Per source attribute: where an event has it (a word of the event attributes)
         /// and where the kernels read it (a word of an event's structure in the source buffer).</summary>
         readonly (int From, int To, int Structure, int Words)[] m_SourceLayout;
@@ -104,16 +107,25 @@ namespace Unbound.Runtime
             m_SourceLayout = SourceLayout(data, m_SourceBuffer);
 
             var updates = new List<Kernel>();
+            var outputs = new List<VFXOutput>();
             var processors = index < data.Processors.Length ? data.Processors[index] : Array.Empty<UnityEngine.Object>();
             for (int i = 0; i < (Desc.tasks?.Length ?? 0); i++)
             {
                 var task = Desc.tasks[i];
-                var shader = i < processors.Length ? processors[i] as ComputeShader : null;
-                if (shader == null) continue;
+                var processor = i < processors.Length ? processors[i] : null;
+                if (VFXOutput.IsOutput(task.type))
+                {
+                    string refusal = VFXOutput.Refusal(Desc, task, processor);
+                    if (refusal == null) outputs.Add(new VFXOutput(this, task, (Material)processor));
+                    else effect.WarnOutputNotDrawn(Desc.name, refusal);
+                    continue;
+                }
+                if (!(processor is ComputeShader shader)) continue;
                 if (task.type == VFXTaskType.Initialize) m_Initialize = new Kernel(this, task, shader);
                 else if (task.type == VFXTaskType.Update) updates.Add(new Kernel(this, task, shader));
             }
             m_Updates = updates.ToArray();
+            m_Outputs = outputs.ToArray();
         }
 
         /// <summary>How an event's attributes map into the source buffer: by name, from the
@@ -313,6 +325,7 @@ namespace Unbound.Runtime
             uint maxParticles = !HasKill && !ReceivesGpuEvents && !HasStrips ? m_Total : Capacity;
             PackGraphValues(maxParticles, state.Seed, spawnIndex);
             if (m_GraphValuesBuffer >= 0) Effect.GpuBuffer(m_GraphValuesBuffer, m_GraphWords.Length).SetData(m_GraphWords, 0, 0, m_GraphWords.Length);
+            m_Stepped = true;
 
             // The update kernels of a system without a fixed size per instance find their
             // instance in the second prefix sum; the initialize kernel reads the first.
@@ -344,6 +357,18 @@ namespace Unbound.Runtime
             bool fixedSize = HasKill || HasStrips;
             uint updated = fixedSize ? Math.Max(AlignThreadGroups(Capacity), ThreadsPerGroup) : maxParticles;
             foreach (var update in m_Updates) update.Dispatch(updated, fixedSize ? 0 : 1);
+        }
+
+        /// <summary>The particles an output draws: the ones spawned so far of a system that
+        /// neither kills nor takes GPU events, else every particle it has room for (the vertex
+        /// programs leave out the dead ones). None before the system's first step, nor while
+        /// it sleeps (all its particles are dead).</summary>
+        internal uint DrawnParticles => !m_Stepped || m_Sleeping ? 0 : !HasKill && !ReceivesGpuEvents ? Math.Min(m_Total, Capacity) : Capacity;
+
+        /// <summary>Adds the draws of the system's outputs, in the graph's order.</summary>
+        internal void CollectDraws(Renderer renderer, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
+        {
+            foreach (var output in m_Outputs) output.Collect(renderer, camera, into);
         }
 
         /// <summary>The words of the source buffer the step's events reach.</summary>
@@ -421,8 +446,7 @@ namespace Unbound.Runtime
             readonly GraphicsBuffer[] m_Bound;
             /// <summary>The textures and graphics buffers the kernel reads: values of the
             /// effect, bound by name (again only once the value is another object).</summary>
-            readonly (int Name, int Expression)[] m_Objects;
-            readonly object[] m_BoundObjects;
+            readonly VFXTaskObjects m_Objects;
             int m_DispatchWidth = -1, m_PrefixOffset = -1;
             bool m_Checked, m_Failed;
 
@@ -437,8 +461,7 @@ namespace Unbound.Runtime
                 m_BufferNames = new int[count];
                 m_Bound = new GraphicsBuffer[count];
                 for (int i = 0; i < count; i++) m_BufferNames[i] = Shader.PropertyToID(task.buffers[i].name);
-                m_Objects = ObjectValues(system.Effect.Data, task);
-                m_BoundObjects = new object[m_Objects.Length];
+                m_Objects = new VFXTaskObjects(system.Effect.Data, task);
                 // One instance, active, in a batch of one, at offset zero: the counts as the
                 // kernels read them, the bits of unsigned integers.
                 float one = BitConverter.Int32BitsToSingle(1);
@@ -471,17 +494,14 @@ namespace Unbound.Runtime
                 if (count == 0 || m_Failed) return;
                 var effect = m_System.Effect;
                 var values = effect.Values;
-                for (int i = 0; i < m_Objects.Length; i++)
+                for (int i = 0; i < m_Objects.Slots.Length; i++)
                 {
-                    var value = values.GetObject(m_Objects[i].Expression);
-                    // A destroyed texture is no object.
-                    if (value is UnityEngine.Object engineObject && !engineObject) value = null;
-                    if (ReferenceEquals(value, m_BoundObjects[i])) continue;
-                    m_BoundObjects[i] = value;
-                    if (value is Texture texture) m_Shader.SetTexture(m_Kernel, m_Objects[i].Name, texture);
-                    else if (value is GraphicsBuffer graphicsBuffer) m_Shader.SetBuffer(m_Kernel, m_Objects[i].Name, graphicsBuffer);
+                    if (!m_Objects.Changed(values, i, out object value)) continue;
+                    int name = m_Objects.Slots[i].Name;
+                    if (value is Texture texture) m_Shader.SetTexture(m_Kernel, name, texture);
+                    else if (value is GraphicsBuffer graphicsBuffer) m_Shader.SetBuffer(m_Kernel, name, graphicsBuffer);
                     // A property without an object leaves the kernel what it has without one.
-                    else m_Shader.Unbind(m_Kernel, m_Objects[i].Name);
+                    else m_Shader.Unbind(m_Kernel, name);
                 }
                 for (int i = 0; i < m_BufferNames.Length; i++)
                 {
