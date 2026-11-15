@@ -85,7 +85,7 @@ STUB_INPUTS = re.compile(r'^(managed/|crates/unbound-compat/|crates/unbound-proj
 STUB_PROJECT = 'tests/projects/packages'
 HERE = Path(__file__).resolve().parent
 CATALOG_SOURCE = (HERE/'probe_catalog.py').read_text()
-from probe_runtime import (RELEASE_VARIABLE, default_release, probe_release, NO_EDITOR,
+from probe_runtime import (RELEASE_VARIABLE, default_release, probe_release, NO_EDITOR, probe_path,
                            EDITOR_WATCH, EDITOR_MARK, EDITOR_EXIT, PROBE_DIR, require_process_watch, stop_tree)
 from probe_schedule import parallel_groups
 from runtime_snapshot import snapshot_runtime, pin_main, atomic_json
@@ -480,7 +480,8 @@ class Gate:
         if self.env.get('LD_LIBRARY_PATH'):
             libraries += os.pathsep+self.env['LD_LIBRARY_PATH']
         self.env.update(UNBOUND=str(runtime/'unbound'), UNBOUND_CLI=str(runtime/'unbound'), UNBOUND_RUNTIME=str(runtime),
-                        UNBOUND_MANAGED_DIR=str(runtime/'managed'), LD_LIBRARY_PATH=libraries)
+                        UNBOUND_MANAGED_DIR=str(runtime/'managed'), LD_LIBRARY_PATH=libraries,
+                        PATH=probe_path(self.env, STATE/'python'))
 
     def probe_specs(self):
         from suite import gate_spec, NoRecipe

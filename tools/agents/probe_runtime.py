@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Shared release selection and process guard for engine-only probe runs."""
+import hashlib
 import os
 from pathlib import Path
 import re
 import select
 import shlex
+import shutil
 import signal
 import subprocess
 import sys
@@ -14,6 +16,53 @@ import time
 NO_EDITOR = 'UNBOUND_SUITE_NO_EDITOR'
 EDITOR_EXIT = 126
 EDITOR_POLL = 1.0
+
+
+IMAGE_MODULES = 'import PIL, numpy'
+_IMAGE_READY = {}
+
+
+def has_image_modules(interpreter):
+    """Whether interpreter can import PIL and numpy, which image comparators need."""
+    if interpreter not in _IMAGE_READY:
+        try:
+            _IMAGE_READY[interpreter] = subprocess.run(
+                [interpreter, '-c', IMAGE_MODULES], capture_output=True, timeout=60).returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            _IMAGE_READY[interpreter] = False
+    return _IMAGE_READY[interpreter]
+
+
+def python_with_pil():
+    """An interpreter that can import PIL and numpy (image comparators need them), else this one."""
+    for candidate in (sys.executable, '/usr/bin/python3', shutil.which('python3')):
+        if candidate and has_image_modules(candidate):
+            return candidate
+    return sys.executable
+
+
+def probe_path(environment, shims):
+    """PATH for probe shell commands, whose `python3` can import PIL and numpy.
+
+    Probe commands name `python3`, and image comparators need PIL and numpy. When the first
+    python3 on PATH lacks them but python_with_pil() finds an interpreter that has them, a
+    private directory under `shims` whose python3 links to that interpreter goes first.
+    Otherwise PATH is unchanged and a missing module fails in the comparator itself."""
+    path = environment.get('PATH', os.defpath)
+    current = shutil.which('python3', path=path)
+    if current and has_image_modules(current):
+        return path
+    chosen = python_with_pil()
+    if not has_image_modules(chosen):
+        return path
+    directory = Path(shims)/hashlib.sha256(os.fsencode(chosen)).hexdigest()[:16]
+    link = directory/'python3'
+    if not (link.is_symlink() and os.readlink(link) == chosen):
+        directory.mkdir(parents=True, exist_ok=True)
+        staged = directory/f'.python3-{os.getpid()}-{time.time_ns()}'
+        os.symlink(chosen, staged)
+        os.replace(staged, link)
+    return str(directory)+os.pathsep+path
 
 
 def require_process_watch():

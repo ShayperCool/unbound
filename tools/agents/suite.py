@@ -105,7 +105,8 @@ ENGINE_TIMEOUT = 1200
 DRIVER_TIMEOUT = 5400
 TOOL_TIMEOUT = 1800
 from probe_runtime import (NO_EDITOR, EDITOR_EXIT, EDITOR_MARK, EDITOR_WATCH, Tree,
-                           stop_tree, require_process_watch, default_release, probe_release)
+                           stop_tree, require_process_watch, default_release, probe_release,
+                           python_with_pil, probe_path)
 from runtime_snapshot import (snapshot_runtime, managed_for as snapshot_managed_for,
                               retain, release_reference, cleanup, task_owner)
 
@@ -1227,14 +1228,6 @@ def promote(summary):
     print(f'suite: baseline is now {summary}')
 
 
-def python_with_pil():
-    """An interpreter that can import PIL and numpy (image comparators need them), else this one."""
-    for candidate in (sys.executable, '/usr/bin/python3', shutil.which('python3')):
-        if candidate and subprocess.run([candidate, '-c', 'import PIL, numpy'], capture_output=True).returncode == 0:
-            return candidate
-    return sys.executable
-
-
 def default_jobs():
     try:
         return json.loads(LIMITS.read_text()).get('engine_slots', 2) + 2
@@ -1435,6 +1428,7 @@ def main():
     env = dict(os.environ, UNBOUND=str(cli), UNBOUND_CLI=str(cli), UNBOUND_MANAGED_DIR=str(managed),
                UNBOUND_RUNTIME=str(runtime), LD_LIBRARY_PATH=libraries, PYTHONDONTWRITEBYTECODE='1',
                **{NO_EDITOR: '1'})
+    env['PATH'] = probe_path(env, AGENTS/'python')
     env.setdefault('DISPLAY', ':0')
     context = {'work_root': work_root, 'env': env,
                'values': {'cli': str(cli), 'managed': str(managed), 'runtime': str(runtime), 'repo': str(REPO),

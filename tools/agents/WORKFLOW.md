@@ -191,7 +191,9 @@ not wrap a whole driver in another heavy-job lease. No worker command changes ar
 
 Each explicit command gets a separate `<gate-log>.probes/NNN.log`; automatic commands use `<gate-log>.automatic/NNN.log`. Suite defaults include the process
 ID and current nanosecond timestamp, so concurrent suites cannot share their default output
-paths. Explicit labels keep their requested paths and must be unique. The gate log lists the full command,
+paths. Explicit labels keep their requested paths and must be unique. Probe commands name `python3`; when the first `python3` on PATH cannot
+import PIL and numpy, which image comparators need, `land.py` and `suite.py` put a private
+link to an interpreter that can (the suite's own choice for its recipes) first on PATH. The gate log lists the full command,
 release, requesting branches and log path, then its exit code and the tail of any failed command.
 All explicit commands finish even after a command exits unsuccessfully. An interruption or
 driver-launch exception stops the other running process trees. Failures are reported in request order and

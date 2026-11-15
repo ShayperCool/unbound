@@ -7,6 +7,7 @@ import io
 import json
 import signal
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -18,6 +19,7 @@ import os
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import land
+import probe_runtime
 
 
 class TouchedCratesTests(unittest.TestCase):
@@ -213,6 +215,61 @@ class GateTimingTests(unittest.TestCase):
             with land.land_lock('slot/first'):
                 pass
             self.assertFalse((Path(temporary)/'land.holder').exists())
+
+
+class ProbePythonTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.chosen = probe_runtime.python_with_pil()
+        if not probe_runtime.has_image_modules(self.chosen):
+            self.skipTest('no interpreter here imports PIL and numpy')
+
+    def interpreter_dir(self, name, target=None):
+        directory = self.root/name
+        directory.mkdir()
+        if target:
+            (directory/'python3').symlink_to(target)
+        else:
+            (directory/'python3').write_text('#!/bin/sh\nexit 1\n')
+            (directory/'python3').chmod(0o755)
+        return directory
+
+    def test_a_first_python3_without_image_modules_is_shadowed_by_a_shim(self):
+        bad = self.interpreter_dir('bad')
+        path = os.pathsep.join([str(bad), '/usr/bin', '/bin'])
+        shims = self.root/'shims'
+        result = probe_runtime.probe_path({'PATH': path}, shims)
+        first, rest = result.split(os.pathsep, 1)
+        self.assertEqual(rest, path)
+        self.assertEqual(Path(first).parent, shims)
+        self.assertEqual(os.readlink(Path(first)/'python3'), self.chosen)
+        resolved = shutil.which('python3', path=result)
+        self.assertEqual(Path(resolved).parent, Path(first))
+        self.assertEqual(subprocess.run([resolved, '-c', probe_runtime.IMAGE_MODULES]).returncode, 0)
+        # Repeated gates reuse the same link.
+        self.assertEqual(probe_runtime.probe_path({'PATH': path}, shims), result)
+        self.assertEqual(sorted(child.name for child in Path(first).iterdir()), ['python3'])
+
+    def test_a_capable_first_python3_and_a_machine_without_one_keep_path(self):
+        good = self.interpreter_dir('good', self.chosen)
+        path = os.pathsep.join([str(good), str(self.interpreter_dir('bad'))])
+        self.assertEqual(probe_runtime.probe_path({'PATH': path}, self.root/'shims'), path)
+        bad_only = str(self.root/'bad')
+        with mock.patch.object(probe_runtime, 'has_image_modules', return_value=False):
+            self.assertEqual(probe_runtime.probe_path({'PATH': bad_only}, self.root/'shims'), bad_only)
+        self.assertFalse((self.root/'shims').exists())
+
+    def test_gate_probe_environment_uses_the_probe_path(self):
+        bad = self.interpreter_dir('bad')
+        gate = land.Gate(self.root, 'HEAD', [], False, self.root/'gate.log',
+                         environment={'PATH': str(bad)})
+        with mock.patch.object(land, 'snapshot_runtime', return_value=self.root/'runtime'), \
+             mock.patch.object(land, 'STATE', self.root/'state'):
+            gate.env['UNBOUND'] = str(self.root/'unbound')
+            gate.prepare_probe_runtime(self.root/'target')
+        self.assertEqual(Path(gate.env['PATH'].split(os.pathsep)[0]).parent, self.root/'state/python')
 
 
 class ParallelProbeTests(unittest.TestCase):
