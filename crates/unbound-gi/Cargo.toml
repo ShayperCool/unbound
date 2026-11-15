@@ -11,6 +11,3 @@ unbound-assets.workspace = true
 unbound-compat.workspace = true
 unbound-yaml.workspace = true
 rayon.workspace = true
-
-[dev-dependencies]
-libc = "0.2"
