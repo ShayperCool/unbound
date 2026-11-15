@@ -21,7 +21,8 @@ row exactly.
 | [Object.Instantiate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Object.Instantiate.html) | Each `*.changedCopy` against `*.original`. |
 
 Not compared: Object.Instantiate of the types Unbound only reads, the mixer group and snapshot
-included (unsupported, it fails loudly, while the reference allows it), and other releases.
+included (unsupported here, it fails loudly; Unity documents Object.Instantiate for any Object, but
+this probe does not measure them), and other releases.
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
