@@ -92,7 +92,7 @@ public class ParticlesProbe : MonoBehaviour
 
     /// <summary>A system whose custom data holds its normalized age twice: a one-component vector
     /// (a linear curve) and a white-to-black color.</summary>
-    static ParticleSystem MakeCustomDataRuns(string name, float rate, ParticleSystem.Burst? burst)
+    static ParticleSystem MakeCustomDataRuns(string name, float rate, ParticleSystem.Burst? burst, Transform parent = null)
     {
         return Make(name, s =>
         {
@@ -108,7 +108,7 @@ public class ParticlesProbe : MonoBehaviour
             g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.black, 1f) },
                 new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
             cd.SetColor(ParticleSystemCustomData.Custom2, g);
-        });
+        }, default, parent);
     }
 
     /// <summary>Each particle's remaining lifetime, custom vector x and custom color r.</summary>
@@ -894,6 +894,24 @@ public class ParticlesProbe : MonoBehaviour
         ps = MakeCustomDataRuns("custom_data_runs/single", 70f, null);
         for (int i = 0; i < 4; i++) { ps.Simulate(0.02f, true, i == 0, false); RecordCustomDataRuns("custom_data_runs/single", i.ToString(CultureInfo.InvariantCulture), ps); }
         Done(ps);
+        // Sub-emitter children: Birth children during the parent's Simulate (each caught up in
+        // fixed steps), and Death children of a burst.
+        foreach (var type in new[] { ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterType.Death })
+        {
+            bool birth = type == ParticleSystemSubEmitterType.Birth;
+            string name = birth ? "custom_data_runs/birthsub" : "custom_data_runs/deathsub";
+            ps = Make(name, s =>
+            {
+                var m = s.main; m.startLifetime = birth ? 0.5f : 0.13f;
+                var e = s.emission; e.rateOverTime = birth ? 5f : 0f;
+                if (!birth) e.SetBursts(new[] { new ParticleSystem.Burst(0f, 2) });
+            });
+            var child = MakeCustomDataRuns(name + "/child", birth ? 20f : 0f, birth ? (ParticleSystem.Burst?)null : new ParticleSystem.Burst(0f, 2), ps.transform);
+            var subs = ps.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, type, ParticleSystemSubEmitterProperties.InheritNothing);
+            for (int i = 0; i < 6; i++) { ps.Simulate(0.1f, true, i == 0, false); RecordCustomDataRuns(name, i.ToString(CultureInfo.InvariantCulture), child); }
+            Done(ps);
+        }
 
         {
             ParticleSystem child = null;
