@@ -354,9 +354,9 @@ public class ClipProbe : MonoBehaviour
             Ends("HumanTwistLate");
             Ends("HumanLate");
             // Then HumanLate with events at normalized 0.5 and 1, without and with an Animator
-            // parameter curve from normalized 0 to 1: the clip's end, its curves' ends and the
-            // events' times.
-            foreach (var model in new[] { "HumanLateEvents", "HumanLateCurve" })
+            // parameter curve from normalized 0 to 1, and the latter imported as Generic: the
+            // clip's end, its curves' ends and the events' times.
+            foreach (var model in new[] { "HumanLateEvents", "HumanLateCurve", "GenericLateCurve" })
             {
                 Ends(model);
                 foreach (var clip in Clips(model)) Record("events." + model + "." + clip.name, Events(clip.events));

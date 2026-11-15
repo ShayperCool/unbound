@@ -258,17 +258,19 @@ public static class ProbeRunner
 
     /// <summary>HumanLateEvents and HumanLateCurve (copies of HumanLate.fbx): HumanLate's import
     /// settings with events at normalized times 0.5 and 1 (Hit, float 1 and 2), and the same with an
-    /// Animator parameter curve Speed from 0 at 0 to 1 at 1 (HumanLateCurve). Changes only their
-    /// importers (run once in a copy of the project; the .meta files are committed).</summary>
+    /// Animator parameter curve Speed from 0 at 0 to 1 at 1 (HumanLateCurve), and that imported as
+    /// Generic (GenericLateCurve). Changes only their importers (run once in a copy of the project;
+    /// the .meta files are committed).</summary>
     public static void CreateHumanLateEvents()
     {
         try
         {
             var source = (ModelImporter)AssetImporter.GetAtPath(Dir + "HumanLate.fbx");
-            foreach (var (name, curve) in new[] { ("HumanLateEvents", false), ("HumanLateCurve", true) })
+            foreach (var (name, curve) in new[] { ("HumanLateEvents", false), ("HumanLateCurve", true), ("GenericLateCurve", true) })
             {
                 var importer = (ModelImporter)AssetImporter.GetAtPath(Dir + name + ".fbx");
                 EditorUtility.CopySerialized(source, importer);
+                if (name.StartsWith("Generic")) importer.animationType = ModelImporterAnimationType.Generic;
                 var clips = importer.clipAnimations;
                 foreach (var clip in clips)
                 {

@@ -261,12 +261,14 @@ length and the first and last key time of every curve, `HumanLate`'s too.
 
 `HumanLateEvents` and `HumanLateCurve` are copies of `HumanLate.fbx` under its settings with events
 at normalized 0.5 and 1 (`ProbeRunner.CreateHumanLateEvents`), the second with an Animator
-parameter curve `Speed` from 0 at 0 to 1 at 1; `events.<model>.<clip>` records the events.
+parameter curve `Speed` from 0 at 0 to 1 at 1, and `GenericLateCurve` is `HumanLateCurve` imported
+as Generic; `events.<model>.<clip>` records the events.
 
-- The events lie at 0.5 and 1 and the parameter curve's keys at 0 and 1: normalized times are
-  placed on the range's span, its end less its start (1), not on the last key's time (measured on
-  Humanoid clips; Generic and Legacy clips keep theirs on their length, unmeasured where the two
-  differ).
+- The events lie at 0.5 and 1 and the parameter curve's keys at 0 and 1, Humanoid and Generic
+  alike: normalized times are placed on the range's span, its end less its start (1), not on the
+  last key's time (Legacy clips unmeasured; Unbound keeps them on their range's length).
+- The Generic clip stays 1.00000012 long, its last rotation key (its positions end at
+  0.99999994).
 - Both clips are 1 long, their last event's (and parameter key's) time, past the muscle keys'
   0.99999994: a clip ends at its last key or event.
 
