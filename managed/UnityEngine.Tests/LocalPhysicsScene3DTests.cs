@@ -116,6 +116,8 @@ namespace UnityEngine.Tests
             var physics = local.GetPhysicsScene();
             In(local, () => Ball("Unloaded", Vector3.zero));
             SceneManager.UnloadSceneAsync(local);
+            // The unload is queued to the scripting point that completes it (Compat.DestroyPhasesMeasured).
+            SceneManagerInternal.ProcessPending();
 
             // Documented: the physics scene of a destroyed scene is no longer valid; the default
             // one always is. What its other methods do then is not documented and not asserted.

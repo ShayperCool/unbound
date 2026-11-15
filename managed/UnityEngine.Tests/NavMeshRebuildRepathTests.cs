@@ -244,6 +244,9 @@ namespace UnityEngine.Tests
         [Fact]
         public void APendingPathStaysPendingAndIsComputed()
         {
+            // A link deactivated by script rebuilds the mesh on releases without a measurement;
+            // 6000.0.71f1 keeps it (Compat.NavMeshLinkActivationMeasured, NavMeshAgentPathStaleTests).
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             // Guard: a request made before the rebuild is still computed by the agent update.
             var agent = Agent(new Vector3(-7f, 0f, 1f));
             Assert.True(agent.isOnNavMesh);

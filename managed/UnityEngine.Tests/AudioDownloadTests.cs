@@ -169,9 +169,14 @@ namespace UnityEngine.Tests
         [Fact]
         public void AFailedDownloadHasNoClipAndNoData()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             using var request = Send(UnityWebRequestMultimedia.GetAudioClip("file://" + Path.Combine(directory, "missing.wav"), AudioType.WAV));
             var handler = (DownloadHandlerAudioClip)request.downloadHandler;
-            Assert.Equal(UnityWebRequest.Result.ConnectionError, request.result);
+            // A missing file:// answers as a server's 404 (tests/projects/networkcaching
+            // audio.missing.result).
+            Assert.Equal(UnityWebRequest.Result.ProtocolError, request.result);
+            Assert.Equal(404, request.responseCode);
+            Assert.Equal("HTTP/1.1 404 Not Found", request.error);
             Assert.False(handler.isDone);
             Assert.Null(handler.data);
             Assert.Equal("Cannot access the .audioClip property of an aborted DownloadHandlerAudioClip",

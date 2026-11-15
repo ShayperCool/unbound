@@ -27,6 +27,21 @@ namespace UnityEngine.Tests
 
         readonly List<Object> m_Objects = new List<Object>();
 
+        /// <summary>An Animator's update in the player loop: its tick, then the movement and pose
+        /// writes 6000.0.71f1 defers to the update's later passes (Compat.AnimationUpdateSplitMeasured;
+        /// nothing is deferred on other releases).</summary>
+        static void Tick(Animator animator, float dt)
+        {
+            animator.Tick(dt);
+            Phases();
+        }
+
+        static void Phases()
+        {
+            AnimationPhases.DeliverMovement();
+            AnimationPhases.WritePoses();
+        }
+
         public void Dispose()
         {
             foreach (var o in m_Objects) Object.DestroyImmediate(o);
@@ -91,8 +106,8 @@ namespace UnityEngine.Tests
         {
             var (animator, text, renderer) = Rig(AnimatorCullingMode.CullCompletely);
             Assert.False(renderer.isVisible); // no camera took it
-            animator.Tick(0f);
-            animator.Tick(0.25f);
+            Tick(animator, 0f);
+            Tick(animator, 0.25f);
             // No state advance, no transform write.
             Near.Equal(0f, animator.GetCurrentAnimatorStateInfo(0).normalizedTime);
             Near.Equal(Vector3.one, text.localScale);
@@ -113,8 +128,8 @@ namespace UnityEngine.Tests
             var skinned = body.AddComponent<SkinnedMeshRenderer>();
             skinned.updateWhenOffscreen = updateWhenOffscreen;
             Assert.False(skinned.isVisible);
-            animator.Tick(0f);
-            animator.Tick(0.15f);
+            Tick(animator, 0f);
+            Tick(animator, 0.15f);
             Near.Equal(0f, animator.GetCurrentAnimatorStateInfo(0).normalizedTime);
         }
 
@@ -123,16 +138,16 @@ namespace UnityEngine.Tests
         {
             var camera = MakeCamera();
             var control = Rig(AnimatorCullingMode.AlwaysAnimate, withRenderer: false);
-            control.Animator.Tick(0f);
-            control.Animator.Tick(0.25f);
+            Tick(control.Animator, 0f);
+            Tick(control.Animator, 0.25f);
 
             var (animator, text, renderer) = Rig(AnimatorCullingMode.CullCompletely);
-            animator.Tick(0f);
-            animator.Tick(0.25f);
-            animator.Tick(0.25f);
+            Tick(animator, 0f);
+            Tick(animator, 0.25f);
+            Tick(animator, 0.25f);
             MakeVisible(camera, renderer);
-            animator.Tick(0f);
-            animator.Tick(0.25f);
+            Tick(animator, 0f);
+            Tick(animator, 0.25f);
 
             // The culled updates left nothing behind: the animator is where the control is after
             // the same two visible updates (Unbound's reading of "completely disabled": no catch-up).
@@ -147,9 +162,9 @@ namespace UnityEngine.Tests
         {
             var (animator, text, renderer) = Rig(AnimatorCullingMode.AlwaysAnimate);
             Assert.False(renderer.isVisible);
-            animator.Tick(0f);
+            Tick(animator, 0f);
             Near.Equal(-69.3f, text.anchoredPosition.y, 1e-3f);
-            animator.Tick(0.25f);
+            Tick(animator, 0.25f);
             Near.Equal(0.25f / 0.3f, animator.GetCurrentAnimatorStateInfo(0).normalizedTime, 1e-4f);
             Near.Equal(30f, text.anchoredPosition.y, 1e-3f);
             Near.Equal(new Vector3(1.0884f, 1.0884f, 1.0884f), text.localScale, 1e-4f);
@@ -164,8 +179,8 @@ namespace UnityEngine.Tests
             var camera = MakeCamera();
             var (animator, text, renderer) = Rig(AnimatorCullingMode.CullUpdateTransforms);
             Assert.False(renderer.isVisible);
-            animator.Tick(0f);
-            animator.Tick(0.25f);
+            Tick(animator, 0f);
+            Tick(animator, 0.25f);
             Near.Equal(0.25f / 0.3f, animator.GetCurrentAnimatorStateInfo(0).normalizedTime, 1e-4f);
             Near.Equal(Vector3.one, text.localScale);
             Near.Equal(0f, text.anchoredPosition.y);
@@ -198,8 +213,8 @@ namespace UnityEngine.Tests
             animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
             Assert.False(renderer.isVisible);
             Near.Equal(0.5f, animator.GetFloat("Speed"));
-            animator.Tick(0f);
-            animator.Tick(0.1f);
+            Tick(animator, 0f);
+            Tick(animator, 0.1f);
             Near.Equal(0.8f, animator.GetFloat("Speed"));
         }
 
@@ -217,8 +232,8 @@ namespace UnityEngine.Tests
             {
                 var camera = MakeCamera();
                 var (animator, text, renderer) = Rig(AnimatorCullingMode.CullUpdateTransforms);
-                animator.Tick(0f);
-                animator.Tick(0.25f);
+                Tick(animator, 0f);
+                Tick(animator, 0.25f);
                 var extra = new AnimationClip { legacy = true, name = "extra" };
                 extra.SetCurve("Body", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 1f, 1f, 2f));
                 animator.m_Player.Bindings.Bind(extra);
@@ -302,7 +317,7 @@ namespace UnityEngine.Tests
             data.PreparePass(dt, evaluate: false);
             data.FrameId++;
             foreach (var output in data.Outputs.ToArray()) OutputSystems.Process(output, dt, false);
-            animator.Tick(dt);
+            Tick(animator, dt);
             AnimationOutputs.RunPending(animator);
         }
 
@@ -485,7 +500,7 @@ namespace UnityEngine.Tests
                 var animator = root.AddComponent<Animator>();
                 animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
                 animator.runtimeAnimatorController = controller;
-                animator.Tick(0f);
+                Tick(animator, 0f);
                 return (animator, held);
             }
             var control = Actor("ControllerOnly");
@@ -503,7 +518,7 @@ namespace UnityEngine.Tests
                         // A no-defaults state retains the controller's value despite game writes.
                         control.Held.localPosition = output.Held.localPosition = new Vector3(0f, 9f, 0f);
                     }
-                    control.Animator.Tick(0.1f);
+                    Tick(control.Animator, 0.1f);
                     PlayableStep(graph, output.Animator, 0.1f);
                     Near.Equal(2f, control.Held.localPosition.y);
                     Near.Equal(control.Held.localPosition.y, output.Held.localPosition.y);
@@ -643,7 +658,7 @@ namespace UnityEngine.Tests
                 for (int i = 0; i < 2; i++)
                 {
                     renderer.SetVisible(false);
-                    animator.Tick(0.1f);
+                    Tick(animator, 0.1f);
                     graph.Evaluate(0.1f);
                     text.localPosition = Vector3.zero;
                     MakeVisible(camera, renderer);
@@ -667,7 +682,7 @@ namespace UnityEngine.Tests
                 graph.Evaluate(0.2f);
                 Near.Equal(0.2f, animator.transform.localPosition.y);
                 renderer.SetVisible(false);
-                animator.Tick(0.1f);
+                Tick(animator, 0.1f);
                 Near.Equal(0f, animator.transform.localPosition.y);
                 text.localPosition = Vector3.zero;
                 MakeVisible(camera, renderer);

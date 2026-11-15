@@ -254,7 +254,9 @@ namespace UnityEngine.Tests
                 crossed = agent.isOnOffMeshLink;
             }
             Assert.True(crossed, "never reached the link");
-            for (int i = 0; i < 300 && agent.hasPath; i++) Frame();
+            // Until it arrives (hasPath is false for the update it leaves a link in 6000.0.71f1).
+            var goal = new Vector3(6f, 0f, 7.2f);
+            for (int i = 0; i < 300 && new Vector2(agent.nextPosition.x - goal.x, agent.nextPosition.z - goal.z).magnitude >= 0.05f; i++) Frame();
             Assert.True((agent.nextPosition - new Vector3(6f, agent.nextPosition.y, 7.2f)).magnitude < 0.05f, $"at {agent.nextPosition}");
         }
 

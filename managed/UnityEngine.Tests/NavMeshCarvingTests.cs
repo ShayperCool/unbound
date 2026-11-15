@@ -691,6 +691,9 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnAgentStoppedWithinItsStoppingDistanceStaysStopped()
         {
+            // The immediate stop of releases without a measurement; 6000.0.71f1 brakes and keeps
+            // its path (Compat.NavMeshStoppingDistanceMeasured, NavMeshAgentLoopTests).
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var agent = Walker(new Vector3(-8f, 0f, 0f), new Vector3(4f, 0f, 0f), 3f);
             for (int i = 0; i < 400; i++) Frame();
             var stopped = agent.nextPosition;

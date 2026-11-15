@@ -1120,6 +1120,9 @@ namespace UnityEngine.Tests
             animator.SetBool("Fly", true);
             animator.Play("Swim");
             animator.Play("Walk", 0, 0.2f);
+            // The update a request enters a state in keeps its time in 6000.0.71f1
+            // (Compat.AnimatorStartupMeasured); the next one passes the event at 0.25.
+            animator.Update(0.1f);
             animator.Update(0.1f);
             var animation = root.AddComponent<Animation>();
             Assert.False(animation.Play("nothing"));

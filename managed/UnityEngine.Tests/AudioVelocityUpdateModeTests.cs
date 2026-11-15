@@ -39,6 +39,10 @@ namespace UnityEngine.Tests
         {
             AudioSystem.ResetForTests();
             AudioBackend.Use(new VirtualAudioBackend());
+            // The game's frame step of the 0.5 s frames the cases advance (6000.0.71f1 takes the
+            // motion over it, other releases over the real time:
+            // MeasuredMotionUsesTheGameFrameStepWhenWallTimeDiffers).
+            Time.s_DeltaTime = 0.5f;
         }
 
         public void Dispose()
@@ -269,6 +273,10 @@ namespace UnityEngine.Tests
         [InlineData(true, true)]
         public void AutoWithARigidbodyFollowsTheFixedLoop(bool onParent, bool listener)
         {
+            // A source on its own body takes the body's velocity in 6000.0.71f1
+            // (MeasuredSourcesUseBodyVelocityAndListenersUseTransformMotion); this checks the loop
+            // with the transform motion other releases sample.
+            using var release = TestRelease.Pin(!onParent && !listener ? TestRelease.Unmeasured : ProjectInfo.UnityVersion);
             Ear ear;
             if (onParent)
             {

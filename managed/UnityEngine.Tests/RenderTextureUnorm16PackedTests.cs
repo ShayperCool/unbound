@@ -71,8 +71,16 @@ namespace Unbound.Tests
         [InlineData(GraphicsFormat.A2R10G10B10_UNormPack32)]
         public void OnlyTheNormalizedFormatsGetTheNewCodes(GraphicsFormat format)
         {
-            // Integer, signed and other packed formats are not part of this change.
-            Assert.DoesNotContain(PacketFormatOf(new RenderTextureDescriptor(8, 4, format, GraphicsFormat.None)), new[] { 13, 14, 15, 16 });
+            // Integer, signed and other packed formats are not part of this change. One the device
+            // cannot render to is refused by the constructor in 6000.0.71f1
+            // (Compat.RenderingMeasured; A2R10G10B10 on the default OpenGLCore profile).
+            var descriptor = new RenderTextureDescriptor(8, 4, format, GraphicsFormat.None);
+            if (Compat.RenderingMeasured && !SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.Render))
+            {
+                Assert.Throws<System.ArgumentException>(() => new RenderTexture(descriptor));
+                return;
+            }
+            Assert.DoesNotContain(PacketFormatOf(descriptor), new[] { 13, 14, 15, 16 });
         }
 
         [Theory]

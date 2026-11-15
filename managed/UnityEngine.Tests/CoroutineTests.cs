@@ -131,7 +131,7 @@ namespace UnityEngine.Tests
             var runner = new GameObject("Runner").AddComponent<CoroutineRunner>();
             try
             {
-                var operation = new AsyncOperation();
+                var operation = AsyncOperation.Bind(new AsyncOperation()); // an engine-made operation (a bare one is uncreated)
                 operation.completed += _ => runner.Log.Add("handler before");
                 runner.StartCoroutine(runner.Waits(operation, "first"));
                 operation.completed += _ => runner.Log.Add("handler after");
@@ -161,7 +161,7 @@ namespace UnityEngine.Tests
             var runner = new GameObject("Runner").AddComponent<CoroutineRunner>();
             try
             {
-                var operation = new AsyncOperation();
+                var operation = AsyncOperation.Bind(new AsyncOperation()); // an engine-made operation (a bare one is uncreated)
                 var stopped = runner.StartCoroutine(runner.Waits(operation, "stopped"));
                 runner.StopCoroutine(stopped);
                 operation.Complete();
@@ -187,7 +187,7 @@ namespace UnityEngine.Tests
             var runner = new GameObject("Runner").AddComponent<CoroutineRunner>();
             try
             {
-                var operation = new AsyncOperation();
+                var operation = AsyncOperation.Bind(new AsyncOperation()); // an engine-made operation (a bare one is uncreated)
                 runner.StopCoroutine(runner.StartCoroutine(runner.Waits(operation, "stopped")));
                 runner.StartCoroutine(runner.Waits(operation, "next"));
                 operation.Complete();
@@ -209,7 +209,7 @@ namespace UnityEngine.Tests
             var runner = new GameObject("Runner").AddComponent<CoroutineRunner>();
             try
             {
-                var operation = new AsyncOperation();
+                var operation = AsyncOperation.Bind(new AsyncOperation()); // an engine-made operation (a bare one is uncreated)
                 runner.StartCoroutine(runner.WaitsUntil(new WaitUntil(() =>
                 {
                     if (Time.s_FrameCount > frames + 1) operation.Complete();

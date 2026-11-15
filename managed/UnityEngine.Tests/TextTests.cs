@@ -163,7 +163,8 @@ namespace Unbound.Tests
             Assert.Same(font.material.mainTexture, font.material.mainTexture);
             Assert.Equal(TextureFormat.Alpha8, ((Texture2D)font.material.mainTexture).format);
             Assert.True(font.HasCharacter('A'));
-            Assert.False(font.HasCharacter('☃'));
+            // What a dynamic font answers for a character it lacks depends on the release:
+            // FontHasCharacterReleaseTests.
         }
 
         [Fact]
@@ -353,7 +354,8 @@ namespace Unbound.Tests
             s.generationExtents = new Vector2(100, 30);
             gen.Populate("AAAA AAAA AAAA AAAA", s);
             Assert.True(gen.fontSizeUsedForBestFit <= 15);
-            Assert.True(gen.rectExtents.height <= 30);
+            // The bounds' padding of 1e-4 (6000.0.71f1, tests/projects/textcolor) aside.
+            Assert.True(gen.rectExtents.height <= 30f + 1e-4f, $"height {gen.rectExtents.height}");
         }
 
         [Fact]

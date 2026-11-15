@@ -648,12 +648,15 @@ namespace UnityEngine.Tests
 
         // Unbound's choice (unmeasured), asserted: the obsolete signatures put their layer mask
         // into QueryParameters and keep every other QueryParameters constructor default; the
-        // obsolete per-command maxHits is kept but ScheduleBatch uses its own maxHits argument.
+        // obsolete per-command maxHits reads 1 and ignores writes in 6000.0.71f1
+        // (tests/projects/defaultstate CoreControl/Physics/maxHitsConstructed; other releases keep
+        // it) and ScheduleBatch uses its own maxHits argument.
         // Red on 29030429 and 24802055: the stub constructors assign nothing and the stub
         // layerMask getter returns 0, so the first Assert.Equal fails.
         [Fact]
         public void ObsoleteSignaturesKeepTheirLayerMask()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
 #pragma warning disable CS0618
             var at = Origin + new Vector3(0f, 0f, 130f);
             var ray = new RaycastCommand(Before(at), Vector3.forward, Reach, 1 << 8, 4);
@@ -662,7 +665,7 @@ namespace UnityEngine.Tests
             Assert.Equal(QueryTriggerInteraction.UseGlobal, ray.queryParameters.hitTriggers);
             Assert.False(ray.queryParameters.hitBackfaces);
             Assert.False(ray.queryParameters.hitMultipleFaces);
-            Assert.Equal(4, ray.maxHits);
+            Assert.Equal(1, ray.maxHits);
             Assert.Equal(Reach, ray.distance);
             Assert.Equal(Physics.defaultPhysicsScene, ray.physicsScene);
             ray.layerMask = 1 << 3;

@@ -45,6 +45,9 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
 - Every behaviour that differs between Unity releases goes through the compatibility profile
   (`compat` crate / `Unbound.Compat` on the managed side). Never hard-code a single release's behaviour
   where releases differ.
+  Managed tests run under the measured release (6000.0.71f1, `UnityEngine.Tests/TestRelease.cs`) like
+  the engine; a test of another release's path pins it (`TestRelease.Pin`), and
+  `UNBOUND_TEST_UNITY_RELEASE=6000.0.0f1` runs the whole suite under a release without measured answers.
 - The cache is ours: it does not need to be Unity-compatible, but every entry is keyed by a content
   hash of its inputs plus a format version, so a stale entry can never be used.
 - Unsupported content fails loudly with a clear message (and is listed by `unbound doctor`) instead

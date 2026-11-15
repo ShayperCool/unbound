@@ -64,6 +64,8 @@ namespace UnityEngine.Tests
             m_Scenes.Add(local);
             var physics = local.GetPhysicsScene();
             SceneManager.UnloadSceneAsync(local);
+            // The unload is queued to the scripting point that completes it (Compat.DestroyPhasesMeasured).
+            SceneManagerInternal.ProcessPending();
             Assert.False(physics.IsValid());
 
             var empty = Assert.Throws<InvalidOperationException>(() => physics.IsEmpty());

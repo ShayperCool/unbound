@@ -7,7 +7,8 @@ namespace UnityEngine.Tests
 {
     /// <summary>
     /// Rigidbody2D.Slide, Physics2D.simulationLayers and 2D sub-stepping, from the Scripting API
-    /// 6000.0 pages (no Unity reference capture exists for them). Assertions on documented
+    /// 6000.0 pages, on the path releases without a measurement keep (TestRelease.Unmeasured; the
+    /// measured 6000.0.71f1 path: Physics2DMeasuredSimulationTests). Assertions on documented
     /// behaviour say so; those on Unbound's choices (iteration details, tolerances, constructor
     /// defaults the pages leave open) check Unbound's implementation, not a Unity guarantee.
     /// Only members that exist before this change are used, so every case compiles against the
@@ -17,8 +18,12 @@ namespace UnityEngine.Tests
     {
         readonly List<GameObject> objects = new List<GameObject>();
 
+        readonly IDisposable release;
+
         public Physics2DSlideAndLayersTests()
         {
+            Unbound.Runtime.Physics2DWorld.Reset();
+            release = TestRelease.Pin(TestRelease.Unmeasured);
             Physics2D.simulationMode = SimulationMode2D.Script;
             Physics2D.autoSyncTransforms = false;
             Physics2D.gravity = Vector2.zero;
@@ -36,6 +41,8 @@ namespace UnityEngine.Tests
             Physics2D.IgnoreLayerCollision(0, 8, false);
             Physics2D.gravity = new Vector2(0, -9.81f);
             Physics2D.Simulate(.02f);
+            Unbound.Runtime.Physics2DWorld.Reset();
+            release.Dispose();
         }
 
         GameObject Box(string name, Vector2 position, Vector2 size, int layer = 0)

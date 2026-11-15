@@ -14,13 +14,18 @@ namespace UnityEngine.Tests
 {
     // Unity 6000.0 EdgeCollider2D is "an arbitrary set of connected edges"; useAdjacentStartPoint
     // and useAdjacentEndPoint form the collision normal at the chain's start and end points from
-    // the adjacent points, and without them that normal follows the direction of motion.
+    // the adjacent points, and without them that normal follows the direction of motion. These
+    // cases check the separate two-sided edges releases without a measurement build
+    // (TestRelease.Unmeasured); 6000.0.71f1 builds one chain (Physics2DEdgeChainTests).
     public class EdgeCollider2DAdjacencyTests : IDisposable
     {
         readonly List<GameObject> objects = new List<GameObject>();
+        readonly IDisposable release;
 
         public EdgeCollider2DAdjacencyTests()
         {
+            Unbound.Runtime.Physics2DWorld.Reset();
+            release = TestRelease.Pin(TestRelease.Unmeasured);
             Physics2D.simulationMode = SimulationMode2D.Script;
             Physics2D.autoSyncTransforms = false;
             Physics2D.gravity = Vector2.zero;
@@ -31,6 +36,8 @@ namespace UnityEngine.Tests
             foreach (var o in objects) if (o) Object.DestroyImmediate(o);
             Physics2D.gravity = new Vector2(0, -9.81f);
             Physics2D.Simulate(.02f);
+            Unbound.Runtime.Physics2DWorld.Reset();
+            release.Dispose();
         }
 
         EdgeCollider2D Edge(string name, params Vector2[] points)

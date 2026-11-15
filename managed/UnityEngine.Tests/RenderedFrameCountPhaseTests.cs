@@ -99,10 +99,13 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>The w4 window's interval 3: one advance per frame, whether the frame draws the
-        /// screen or not. Only the counter's action is invoked.</summary>
+        /// screen or not. Only the counter's action is invoked, which advances the count itself on
+        /// releases without a measurement (6000.0.71f1 advances it after the public loop:
+        /// ManualDestroyTests.Phases).</summary>
         [Fact]
         public void TheCountAdvancesOncePerRenderedOrSkippedFrame()
         {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             using var scope = new Scope();
             var advance = Engine[typeof(PL.PostLateUpdate.GUIClearEvents)].Find(IsAdvance);
             Assert.NotNull(advance);

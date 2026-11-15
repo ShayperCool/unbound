@@ -266,8 +266,10 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>Texture2D.Compress's format: DXT/BC on Standalone; with the Android target
-        /// active ETC2_RGBA8 for formats with alpha and ETC2_RGB otherwise
-        /// (tests/projects/texturecompression AndroidGamma compress.*).</summary>
+        /// active ETC2_RGBA8 for formats with alpha, EAC_R and EAC_RG for R8 and RG16 and ETC2_RGB
+        /// otherwise (tests/projects/texturecompression AndroidGamma compress.seed.*,
+        /// compress.partial.mips.*: textures made R8 and RG16; compress.r8 and compress.rg16 copy
+        /// imports that are RGB24 on that target).</summary>
         [Theory]
         [InlineData(TextureFormat.RGBA32, false, TextureFormat.DXT5)]
         [InlineData(TextureFormat.RGB24, false, TextureFormat.DXT1)]
@@ -276,10 +278,11 @@ namespace UnityEngine.Tests
         [InlineData(TextureFormat.RGBA32, true, TextureFormat.ETC2_RGBA8)]
         [InlineData(TextureFormat.ARGB4444, true, TextureFormat.ETC2_RGBA8)]
         [InlineData(TextureFormat.RGB24, true, TextureFormat.ETC2_RGB)]
-        [InlineData(TextureFormat.R8, true, TextureFormat.ETC2_RGB)]
-        [InlineData(TextureFormat.RG16, true, TextureFormat.ETC2_RGB)]
+        [InlineData(TextureFormat.R8, true, TextureFormat.EAC_R)]
+        [InlineData(TextureFormat.RG16, true, TextureFormat.EAC_RG)]
         public void CompressTargetsFollowTheBuildTarget(TextureFormat format, bool android, TextureFormat want)
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             Assert.Equal(want, BlockFormats.CompressTarget(format, android));
             Assert.Null(BlockFormats.CompressTarget(TextureFormat.RHalf, android));
         }

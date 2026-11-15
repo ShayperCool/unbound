@@ -234,6 +234,8 @@ namespace UnityEngine.Tests
         {
             var box = Box("ScaleControl",Origin+Vector3.forward*45);
             box.transform.localScale=new Vector3(2,3,4);
+            // A batch reads the last synced transforms (Compat.PhysicsBatchRetainsSyncedTransforms).
+            Physics.SyncTransforms();
             var at=box.transform.position;
             var point=at+Vector3.right*5;
             var commands=Native(

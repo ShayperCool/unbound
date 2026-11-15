@@ -490,6 +490,9 @@ namespace UnityEngine.Tests
         [InlineData(true)]
         public void WaitingAfterALinkChangeFollowsTheRebuiltRoute(bool disableConnection)
         {
+            // Deactivating the link rebuilds the mesh on releases without a measurement; 6000.0.71f1
+            // keeps it (Compat.NavMeshLinkActivationMeasured, NavMeshAgentPathStaleTests).
+            using var release = TestRelease.Pin(disableConnection ? TestRelease.Unmeasured : ProjectInfo.UnityVersion);
             var crossing = Agent(autoTraverse: true);
             crossing.speed = 0.5f;
             StepOntoLink(crossing);

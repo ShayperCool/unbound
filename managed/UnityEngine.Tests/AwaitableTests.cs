@@ -112,7 +112,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void AsyncOperationsCanBeAwaited()
         {
-            var op = new AsyncOperation();
+            var op = AsyncOperation.Bind(new AsyncOperation()); // an engine-made operation (a bare one is uncreated)
             var awaiter = op.GetAwaiter();
             Assert.False(awaiter.IsCompleted);
             op.Complete();

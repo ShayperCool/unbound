@@ -119,7 +119,7 @@ namespace UnityEngine.Tests
 
             internal Scope(bool measured = false)
             {
-                if (measured) ProjectInfo.UnityVersion = "6000.0.71f1";
+                ProjectInfo.UnityVersion = measured ? TestRelease.Measured : TestRelease.Unmeasured;
                 _ = Engine; // Complete the driver's registrations before isolating its queues.
                 m_OldSequence = m_Sequence.GetValue(null);
                 m_OldLoop = m_Loop.GetValue(null);

@@ -232,8 +232,12 @@ namespace UnityEngine.Tests
         [Fact]
         public void ANetworkFailureOpensNothing()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             using var request = Send(UnityWebRequestAssetBundle.GetAssetBundle("file://" + Path.Combine(directory, "missing.bundle"), new Hash128(1, 0, 0, 0)));
-            Assert.Equal(UnityWebRequest.Result.ConnectionError, request.result);
+            // A missing file:// answers as a server's 404 (tests/projects/networkcaching missing.result).
+            Assert.Equal(UnityWebRequest.Result.ProtocolError, request.result);
+            Assert.Equal(404, request.responseCode);
+            Assert.Equal("HTTP/1.1 404 Not Found", request.error);
             Assert.True(((DownloadHandlerAssetBundle)request.downloadHandler).isDownloadComplete);
             Assert.Empty(Calls("bundle-open"));
             Assert.Equal(0, Caching.currentCacheForWriting.spaceOccupied);
