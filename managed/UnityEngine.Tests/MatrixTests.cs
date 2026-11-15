@@ -67,8 +67,20 @@ namespace Unbound.Tests
             Assert.True(Matrix4x4.Inverse3DAffine(m, ref result));
             Near.Equal(m.inverse, result, 1e-5f);
             Matrix4x4 singular = Matrix4x4.Scale(Vector3.zero);
+            // A matrix without an inverse gives a matrix of zeros (Unity 6000.0.71f1,
+            // tests/projects/vfx `math/inverse affine/flat`).
             Assert.False(Matrix4x4.Inverse3DAffine(singular, ref result));
-            Assert.Equal(singular, result);
+            Assert.Equal(Matrix4x4.zero, result);
+
+            // In single precision, bit for bit as the Editor's (`math/inverse affine/frame`).
+            var frame = Matrix4x4.TRS(new Vector3(10f, 20f, 30f), Quaternion.Euler(30f, 45f, 60f), new Vector3(2f, 3f, 4f));
+            Assert.True(Matrix4x4.Inverse3DAffine(frame, ref result));
+            uint[] expected =
+            {
+                0x3ea8e4b3, 0xbe14aeef, 0x3e1cc472, 0x00000000, 0x3ec00000, 0x3e13cd3c, 0xbe000000, 0x00000000,
+                0xbcc20422, 0x3e86ae74, 0x3e1cc471, 0x00000000, 0xc121693a, 0xc115385a, 0xc067eb1b, 0x3f800000,
+            };
+            for (int i = 0; i < 16; i++) Assert.Equal(expected[i], System.BitConverter.SingleToUInt32Bits(result[i]));
         }
 
         [Fact]

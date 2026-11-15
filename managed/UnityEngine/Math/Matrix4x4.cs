@@ -498,37 +498,52 @@ namespace UnityEngine
 
         /// <summary>
         /// Inverts a matrix assumed to be affine (bottom row 0, 0, 0, 1). On failure (singular 3x3
-        /// part) returns false and sets <paramref name="result"/> to a copy of the input.
+        /// part) returns false and sets <paramref name="result"/> to a matrix of zeros (Unity
+        /// 6000.0.71f1, tests/projects/vfx `math/inverse affine/*`).
         /// </summary>
-        public static bool Inverse3DAffine(Matrix4x4 input, ref Matrix4x4 result)
-        {
-            double a = input.m00, b = input.m01, c = input.m02;
-            double d = input.m10, e = input.m11, f = input.m12;
-            double g = input.m20, h = input.m21, i = input.m22;
-            double A = e * i - f * h;
-            double B = -(d * i - f * g);
-            double C = d * h - e * g;
-            double det = a * A + b * B + c * C;
-            if (det == 0.0 || double.IsNaN(det) || double.IsInfinity(det))
-            {
-                result = input;
-                return false;
-            }
-            double inv = 1.0 / det;
-            double r00 = A * inv, r01 = -(b * i - c * h) * inv, r02 = (b * f - c * e) * inv;
-            double r10 = B * inv, r11 = (a * i - c * g) * inv, r12 = -(a * f - c * d) * inv;
-            double r20 = C * inv, r21 = -(a * h - b * g) * inv, r22 = (a * e - b * d) * inv;
-            double tx = input.m03, ty = input.m13, tz = input.m23;
+        public static bool Inverse3DAffine(Matrix4x4 input, ref Matrix4x4 result) => InverseAffine(input, out result);
 
-            Matrix4x4 res;
-            res.m00 = (float)r00; res.m01 = (float)r01; res.m02 = (float)r02;
-            res.m10 = (float)r10; res.m11 = (float)r11; res.m12 = (float)r12;
-            res.m20 = (float)r20; res.m21 = (float)r21; res.m22 = (float)r22;
-            res.m03 = (float)-(r00 * tx + r01 * ty + r02 * tz);
-            res.m13 = (float)-(r10 * tx + r11 * ty + r12 * tz);
-            res.m23 = (float)-(r20 * tx + r21 * ty + r22 * tz);
-            res.m30 = 0F; res.m31 = 0F; res.m32 = 0F; res.m33 = 1F;
-            result = res;
+        /// <summary>The determinant of a 3x3 part whose square is under this is singular.</summary>
+        const float SingularDeterminantSquared = 1e-25f;
+
+        /// <summary>
+        /// The inverse of an affine matrix (bottom row 0, 0, 0, 1) in single precision: the 3x3
+        /// part by its cofactors over its determinant (summed as its positive and its negative
+        /// products), the translation through the inverted part. A singular 3x3 part gives false
+        /// and a zero matrix. Matches the Unity 6000.0.71f1 Editor bit for bit where a Visual
+        /// Effect Graph inverts a transform (tests/projects/vfx, `sim/expressions/inputs/*/m01`).
+        /// </summary>
+        internal static bool InverseAffine(in Matrix4x4 m, out Matrix4x4 inverse)
+        {
+            inverse = default;
+            float positive = 0f, negative = 0f;
+            void Sum(float product, ref float positive, ref float negative)
+            {
+                if (product >= 0f) positive += product;
+                else negative += product;
+            }
+            Sum(m.m00 * m.m11 * m.m22, ref positive, ref negative);
+            Sum(m.m10 * m.m21 * m.m02, ref positive, ref negative);
+            Sum(m.m20 * m.m01 * m.m12, ref positive, ref negative);
+            Sum(-m.m20 * m.m11 * m.m02, ref positive, ref negative);
+            Sum(-m.m10 * m.m01 * m.m22, ref positive, ref negative);
+            Sum(-m.m00 * m.m21 * m.m12, ref positive, ref negative);
+            float determinant = positive + negative;
+            if (determinant * determinant < SingularDeterminantSquared) return false;
+            float scale = 1f / determinant;
+            inverse.m00 = (m.m11 * m.m22 - m.m21 * m.m12) * scale;
+            inverse.m01 = -(m.m01 * m.m22 - m.m21 * m.m02) * scale;
+            inverse.m02 = (m.m01 * m.m12 - m.m11 * m.m02) * scale;
+            inverse.m10 = -(m.m10 * m.m22 - m.m20 * m.m12) * scale;
+            inverse.m11 = (m.m00 * m.m22 - m.m20 * m.m02) * scale;
+            inverse.m12 = -(m.m00 * m.m12 - m.m10 * m.m02) * scale;
+            inverse.m20 = (m.m10 * m.m21 - m.m20 * m.m11) * scale;
+            inverse.m21 = -(m.m00 * m.m21 - m.m20 * m.m01) * scale;
+            inverse.m22 = (m.m00 * m.m11 - m.m10 * m.m01) * scale;
+            inverse.m03 = -(m.m03 * inverse.m00 + m.m13 * inverse.m01 + m.m23 * inverse.m02);
+            inverse.m13 = -(m.m03 * inverse.m10 + m.m13 * inverse.m11 + m.m23 * inverse.m12);
+            inverse.m23 = -(m.m03 * inverse.m20 + m.m13 * inverse.m21 + m.m23 * inverse.m22);
+            inverse.m33 = 1f;
             return true;
         }
 
