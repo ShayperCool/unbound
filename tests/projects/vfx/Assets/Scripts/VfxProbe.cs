@@ -77,20 +77,236 @@ public sealed class VfxProbe : MonoBehaviour
             Attributes();
             RuntimeData();
             foreach (var filter in new[] { "t:VisualEffectAsset", "t:VisualEffectObject", "t:VisualEffectSubgraphOperator", "t:Shader", "t:ComputeShader", "t:Material" })
-                Rec("find/" + filter, string.Join(", ", AssetDatabase.FindAssets(filter, new[] { "Assets" }).Select(AssetDatabase.GUIDToAssetPath).OrderBy(p => p, StringComparer.Ordinal)));
+                Rec("find/" + filter, string.Join(", ", AssetDatabase.FindAssets(filter, new[] { "Assets/Editor", "Assets/Graphs", "Assets/Objects", "Assets/Scenes", "Assets/Scripts" }).Select(AssetDatabase.GUIDToAssetPath).OrderBy(p => p, StringComparer.Ordinal)));
             Rec("manager/fixedTimeStep", F(VFXManager.fixedTimeStep));
             Rec("manager/maxDeltaTime", F(VFXManager.maxDeltaTime));
+            BeginSimulation();
+            SpawnerStates(m_Running[0].Effect);
+        }
+        catch (Exception e)
+        {
+            Rec("failed", e.ToString());
+            Debug.LogError("vfx probe failed: " + e);
+            Finish();
+        }
+    }
+
+    void Update()
+    {
+        if (m_Running.Count == 0) return;
+        try
+        {
+            m_Frame++;
+            Simulate();
+            if (m_Frame < k_LastFrame) return;
         }
         catch (Exception e)
         {
             Rec("failed", e.ToString());
             Debug.LogError("vfx probe failed: " + e);
         }
+        m_Running.Clear();
+        Finish();
+    }
+
+    void Finish()
+    {
         m_Out.Append("{\"k\": \"complete\", \"v\": true}\n");
         var dir = Environment.GetEnvironmentVariable("VFX_PROBE_OUT");
         if (!string.IsNullOrEmpty(dir)) File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
         EditorApplication.ExitPlaymode();
-        if (Application.isBatchMode) EditorApplication.Exit(0);
+        EditorApplication.Exit(0);
+    }
+
+    // ------------------------------------------------------------------------ simulation
+
+    /// <summary>An effect the simulation controls run: made by the probe in front of the camera
+    /// (or behind it), with a fixed seed, recorded each frame until its last.</summary>
+    sealed class Running
+    {
+        public string Key;
+        public VisualEffect Effect;
+        public int Last;
+        /// <summary>What the frame does to the effect before it is recorded.</summary>
+        public Action<int, VisualEffect> Act;
+        /// <summary>Whether the alive count is recorded each frame (a system whose particles
+        /// die reads its count back from the GPU some frames late: recorded where it is settled).</summary>
+        public bool Alive = true;
+    }
+
+    const int k_LastFrame = 170;
+    readonly List<Running> m_Running = new List<Running>();
+    readonly List<string> m_Names = new List<string>();
+    int m_Frame;
+
+    Running Run(string key, string graph, int last, uint seed = 7, bool behind = false, Action<int, VisualEffect> act = null)
+    {
+        var go = new GameObject("sim " + key);
+        // In front of the scene's camera (at z = -10, looking along +z), or behind it.
+        go.transform.position = new Vector3(0f, 0f, behind ? -30f : 0f);
+        var effect = go.AddComponent<VisualEffect>();
+        effect.resetSeedOnPlay = false;
+        effect.startSeed = seed;
+        effect.visualEffectAsset = AssetDatabase.LoadAssetAtPath<VisualEffectAsset>((graph.StartsWith("Sim") ? "Assets/SimGraphs/" : "Assets/Graphs/") + graph + ".vfx");
+        var running = new Running { Key = "sim/" + key, Effect = effect, Last = last, Act = act };
+        m_Running.Add(running);
+        return running;
+    }
+
+    void BeginSimulation()
+    {
+        Run("rate", "SimRate", 44);
+        Run("rate delta", "SimRateDelta", 44);
+        Run("rate exact", "SimRateExact", 44);
+        Run("rate prewarm", "SimRatePrewarm", 6);
+        Run("burst", "SimBurst", 36);
+        Run("random", "SimRandom", 44);
+        Run("random other seed", "SimRandom", 44, seed: 8);
+        Run("loop", "SimLoop", 40);
+        Run("loop random", "SimLoopRandom", 44);
+        Run("behind", "SimRate", 12, behind: true);
+        Run("behind no cull", "SimRateNoCull", 12, behind: true);
+        Run("behind bounds only", "SimRateBoundsOnly", 12, behind: true);
+        // Stopped, played, paused, advanced a frame, at another play rate, stepped by hand and
+        // started over.
+        Run("control", "SimRate", 40, act: (frame, effect) =>
+        {
+            switch (frame)
+            {
+                case 6: effect.Stop(); break;
+                case 10: effect.Play(); break;
+                case 14: effect.pause = true; break;
+                case 17: effect.AdvanceOneFrame(); break;
+                case 20: effect.pause = false; break;
+                case 22: effect.playRate = 2f; break;
+                case 25: effect.playRate = 1f; break;
+                case 26: effect.Simulate(0.1f, 3); break;
+                case 29: effect.Simulate(0.05f, 0); break;
+                case 30: effect.Reinit(); break;
+                case 34: effect.Simulate(0.05f, 2); effect.Stop(); break;
+                case 37: effect.playRate = 0f; break;
+            }
+        });
+        // Custom events start and stop the first spawner; an event the graph does not have.
+        var events = Run("events", "Events", 16, act: (frame, effect) =>
+        {
+            switch (frame)
+            {
+                case 3: effect.SendEvent("Fire"); break;
+                case 6: effect.SendEvent("Cease"); break;
+                case 9: effect.SendEvent("Fire"); effect.SendEvent("Cease"); break;
+                case 12: effect.SendEvent("Cease"); effect.SendEvent("Fire"); effect.SendEvent("Nothing"); break;
+            }
+        });
+        events.Alive = false;
+        // The scene's own effects, as loaded (their particles die: no counts).
+        foreach (var name in new[] { "Plain", "Events", "Overridden" })
+            m_Running.Add(new Running { Key = "sim/scene " + name, Effect = GameObject.Find(name).GetComponent<VisualEffect>(), Last = 8, Alive = false });
+        // Particles that die: counted where the count is settled.
+        Run("kill", "SimKill", k_LastFrame).Alive = false;
+        Run("keep", "SimKeep", k_LastFrame).Alive = false;
+
+        var effect = m_Running[0].Effect;
+        Logged("sim/errors/particle info of a spawner", () => effect.GetParticleSystemInfo("System"));
+        Logged("sim/errors/particle info of nothing", () => effect.GetParticleSystemInfo("Nothing"));
+        Logged("sim/errors/spawn info of a particle system", () => effect.GetSpawnSystemInfo("System (1)"));
+        Logged("sim/errors/spawn info of nothing", () => effect.GetSpawnSystemInfo("Nothing"));
+        Logged("sim/errors/spawn info into null", () => effect.GetSpawnSystemInfo(Shader.PropertyToID("System"), null));
+    }
+
+    /// <summary>A spawner state's values; the spawn count only of a system's state (a state
+    /// made with <c>new</c> has no event attributes to hold one).</summary>
+    static string State(VFXSpawnerState s, bool count = true) =>
+        s.loopState + " playing=" + (s.playing ? 1 : 0) + " new=" + (s.newLoop ? 1 : 0) + (count ? " count=" + F(s.spawnCount) : "") + " dt=" + F(s.deltaTime) + " t=" + F(s.totalTime)
+        + " before=" + F(s.delayBeforeLoop) + " loop=" + F(s.loopDuration) + " after=" + F(s.delayAfterLoop) + " index=" + s.loopIndex + " of=" + s.loopCount;
+
+    void Record(Running running, string key)
+    {
+        var effect = running.Effect;
+        var row = new StringBuilder();
+        if (running.Alive) row.Append("alive=").Append(effect.aliveParticleCount).Append(' ');
+        row.Append("culled=").Append(effect.culled ? 1 : 0);
+        m_Names.Clear();
+        effect.GetSpawnSystemNames(m_Names);
+        foreach (var name in m_Names) row.Append(" | ").Append(name).Append(": ").Append(State(effect.GetSpawnSystemInfo(name)));
+        Rec(key, row.ToString());
+    }
+
+    void Simulate()
+    {
+        // A longer frame than effects step by, then a slower clock.
+        if (m_Frame == 37) Time.captureFramerate = 10;
+        if (m_Frame == 40) Time.captureFramerate = 30;
+        if (m_Frame == 41) Time.timeScale = 0.5f;
+        if (m_Frame == 45) Time.timeScale = 1f;
+        // An effect made while the others run.
+        if (m_Frame == 20) Run("late", "SimRate", 30);
+        Rec("sim/time/f" + m_Frame.ToString("000"), F(Time.deltaTime));
+        for (int i = 0; i < m_Running.Count; i++)
+        {
+            var running = m_Running[i];
+            if (m_Frame > running.Last) continue;
+            running.Act?.Invoke(m_Frame, running.Effect);
+            if (running.Alive) Record(running, running.Key + "/f" + m_Frame.ToString("000"));
+            else if (running.Last < k_LastFrame || m_Frame <= 1) Record(running, running.Key + "/f" + m_Frame.ToString("000"));
+        }
+        if (m_Frame == 1 || m_Frame == 100 || m_Frame == k_LastFrame)
+        {
+            foreach (var key in new[] { "sim/kill", "sim/keep" })
+            {
+                var effect = m_Running.First(r => r.Key == key).Effect;
+                var info = effect.GetParticleSystemInfo("System (1)");
+                Rec(key + "/settled/f" + m_Frame.ToString("000"), "alive=" + effect.aliveParticleCount + " info=" + info.aliveCount + "/" + info.capacity
+                    + " sleeping=" + (info.sleeping ? 1 : 0) + " awake=" + (effect.HasAnySystemAwake() ? 1 : 0));
+            }
+            var rate = m_Running[0].Effect;
+            var rateInfo = rate.GetParticleSystemInfo("System (1)");
+            Rec("sim/rate/info/f" + m_Frame.ToString("000"), rateInfo.aliveCount + "/" + rateInfo.capacity + " sleeping=" + (rateInfo.sleeping ? 1 : 0) + " awake=" + (rate.HasAnySystemAwake() ? 1 : 0));
+        }
+    }
+
+    /// <summary>A spawner state of its own (no system behind it), and a copy of a system's:
+    /// what their setters do.</summary>
+    void SpawnerStates(VisualEffect effect)
+    {
+        var state = new VFXSpawnerState();
+        Rec("spawner state/new", State(state, false));
+        state.loopDuration = 1f;
+        state.playing = true;
+        Rec("spawner state/playing set", State(state, false));
+        state.totalTime = 0.5f;
+        state.loopState = VFXSpawnerLoopState.DelayingAfterLoop;
+        Rec("spawner state/after loop of no delay", State(state, false));
+        state.delayBeforeLoop = 0.25f;
+        state.loopCount = 3;
+        state.loopState = VFXSpawnerLoopState.DelayingBeforeLoop;
+        state.totalTime = 0.125f;
+        Rec("spawner state/before loop", State(state, false));
+        state.loopState = VFXSpawnerLoopState.DelayingBeforeLoop;
+        Rec("spawner state/same state set", State(state, false));
+        state.delayAfterLoop = 0.5f;
+        state.loopState = VFXSpawnerLoopState.DelayingAfterLoop;
+        Rec("spawner state/after loop", State(state, false));
+        state.deltaTime = 0.75f;
+        state.loopIndex = 9;
+        Rec("spawner state/values set", State(state, false));
+        state.playing = false;
+        Rec("spawner state/playing cleared", State(state, false));
+        state.Dispose();
+
+        var copy = effect.GetSpawnSystemInfo("System");
+        Rec("spawner state/copy", State(copy));
+        Rec("spawner state/copy/attribute", copy.vfxEventAttribute == null ? "null" : "spawnCount " + (copy.vfxEventAttribute.HasFloat("spawnCount") ? F(copy.vfxEventAttribute.GetFloat("spawnCount")) : "none"));
+        copy.spawnCount = 2.5f;
+        copy.playing = true;
+        Rec("spawner state/copy/set", State(copy) + " attribute " + F(copy.vfxEventAttribute.GetFloat("spawnCount")));
+        // The copy is the reader's own: the system keeps its state.
+        Rec("spawner state/copy/system", State(effect.GetSpawnSystemInfo("System")));
+        var into = new VFXSpawnerState();
+        effect.GetSpawnSystemInfo(Shader.PropertyToID("System"), into);
+        Rec("spawner state/filled", State(into));
+        copy.Dispose();
+        into.Dispose();
     }
 
     /// <summary>The graph compiler's tables: the type every expression operation produces (for

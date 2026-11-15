@@ -16,12 +16,15 @@ using UnityEngine.VFX;
 public static class GraphAuthoring
 {
     const string Folder = "Assets/Graphs";
+    /// <summary>The simulation controls' graphs, apart from the graphs the import rows list.</summary>
+    const string SimulationFolder = "Assets/SimGraphs";
     const string ObjectFolder = "Assets/Objects";
     public const string Scene = "Assets/Scenes/Probe.unity";
 
     public static void Author()
     {
         Directory.CreateDirectory(Folder);
+        Directory.CreateDirectory(SimulationFolder);
         Directory.CreateDirectory(ObjectFolder);
         AssetDatabase.Refresh();
         Objects();
@@ -32,6 +35,7 @@ public static class GraphAuthoring
         Events();
         Attributes();
         Attributes2();
+        Simulated();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -74,9 +78,9 @@ public static class GraphAuthoring
 
     static T Make<T>() where T : VFXModel => ScriptableObject.CreateInstance<T>();
 
-    static VFXGraph NewGraph(string name)
+    static VFXGraph NewGraph(string name, string folder = Folder)
     {
-        var asset = VisualEffectAssetEditorUtility.CreateNewAsset(Folder + "/" + name + ".vfx");
+        var asset = VisualEffectAssetEditorUtility.CreateNewAsset(folder + "/" + name + ".vfx");
         return asset.GetResource().GetOrCreateGraph();
     }
 
@@ -257,6 +261,119 @@ public static class GraphAuthoring
         rate.inputSlots[0].value = 2f;
         foreach (var attribute in new[] { "color", "size", "lifetime" }) Inherit(init, attribute);
         Save(graph);
+    }
+
+    static VFXSlot Input(VFXModel model, string name) => ((IVFXSlotContainer)model).inputSlots.First(s => s.name == name);
+
+    /// <summary>A system whose particles never die (no lifetime): its alive count is the
+    /// particles spawned so far, up to its capacity.</summary>
+    static (VFXGraph Graph, VFXBasicSpawner Spawn, VFXBasicInitialize Init) Counting(string name, uint capacity)
+    {
+        var graph = NewGraph(name, SimulationFolder);
+        var (spawn, init, _, _) = System(graph, capacity);
+        return (graph, spawn, init);
+    }
+
+    static void ConstantRate(VFXBasicSpawner spawn, float rate)
+    {
+        var block = Make<VFXSpawnerConstantRate>();
+        spawn.AddChild(block);
+        block.inputSlots[0].value = rate;
+    }
+
+    static void Burst(VFXBasicSpawner spawn, bool periodic, object count, object delay)
+    {
+        var block = Make<VFXSpawnerBurst>();
+        spawn.AddChild(block);
+        block.SetSettingValue("repeat", periodic ? VFXSpawnerBurst.RepeatMode.Periodic : VFXSpawnerBurst.RepeatMode.Single);
+        block.SetSettingValue("spawnMode", count is Vector2 ? VFXSpawnerBurst.RandomMode.Random : VFXSpawnerBurst.RandomMode.Constant);
+        block.SetSettingValue("delayMode", delay is Vector2 ? VFXSpawnerBurst.RandomMode.Random : VFXSpawnerBurst.RandomMode.Constant);
+        Input(block, "Count").value = count;
+        Input(block, "Delay").value = delay;
+    }
+
+    /// <summary>The graphs the simulation controls run (README.md, "Simulation").</summary>
+    static void Simulated()
+    {
+        // A constant rate that is no whole number per step, into a capacity it fills; the same
+        // with each update mode, with the simulation not culled, and with a prewarm.
+        foreach (var (name, mode, culling, prewarm) in new[]
+        {
+            ("SimRate", VFXUpdateMode.FixedDeltaTime, VFXCullingFlags.CullDefault, 0u),
+            ("SimRateDelta", VFXUpdateMode.DeltaTime, VFXCullingFlags.CullDefault, 0u),
+            ("SimRateExact", VFXUpdateMode.ExactFixedTimeStep, VFXCullingFlags.CullDefault, 0u),
+            ("SimRateNoCull", VFXUpdateMode.FixedDeltaTime, VFXCullingFlags.CullNone, 0u),
+            ("SimRateBoundsOnly", VFXUpdateMode.FixedDeltaTime, VFXCullingFlags.CullBoundsUpdate, 0u),
+            ("SimRatePrewarm", VFXUpdateMode.FixedDeltaTime, VFXCullingFlags.CullDefault, 5u),
+        })
+        {
+            var (graph, spawn, _) = Counting(name, 20);
+            ConstantRate(spawn, 7.3f);
+            var resource = graph.GetResource();
+            resource.updateMode = mode;
+            resource.cullingFlags = culling;
+            resource.preWarmStepCount = prewarm;
+            resource.preWarmDeltaTime = 0.1f;
+            Save(graph);
+        }
+
+        // One burst after a delay and a periodic one, of fixed counts.
+        {
+            var (graph, spawn, _) = Counting("SimBurst", 64);
+            Burst(spawn, false, 3f, 0.1f);
+            Burst(spawn, true, 2f, 0.25f);
+            Save(graph);
+        }
+
+        // Counts, delays, periods and rates drawn from ranges: the effect's random sequence.
+        {
+            var (graph, spawn, _) = Counting("SimRandom", 256);
+            Burst(spawn, false, new Vector2(2f, 6f), new Vector2(0.05f, 0.3f));
+            Burst(spawn, true, new Vector2(1f, 3f), new Vector2(0.1f, 0.2f));
+            var variable = Make<VFXSpawnerVariableRate>();
+            spawn.AddChild(variable);
+            Input(variable, "Rate").value = new Vector2(5f, 15f);
+            Input(variable, "Period").value = new Vector2(0.2f, 0.4f);
+            Save(graph);
+        }
+
+        // A loop of a set duration run twice, with a delay before and after it.
+        {
+            var (graph, spawn, _) = Counting("SimLoop", 128);
+            spawn.SetSettingValue("loopDuration", VFXBasicSpawner.LoopMode.Constant);
+            spawn.SetSettingValue("loopCount", VFXBasicSpawner.LoopMode.Constant);
+            spawn.SetSettingValue("delayBeforeLoop", VFXBasicSpawner.DelayMode.Constant);
+            spawn.SetSettingValue("delayAfterLoop", VFXBasicSpawner.DelayMode.Constant);
+            Input(spawn, "LoopDuration").value = 0.2f;
+            Input(spawn, "LoopCount").value = 2;
+            Input(spawn, "DelayBeforeLoop").value = 0.1f;
+            Input(spawn, "DelayAfterLoop").value = 0.15f;
+            ConstantRate(spawn, 30f);
+            Burst(spawn, false, 5f, 0.05f);
+            Save(graph);
+        }
+
+        // Loops of drawn durations and delays, without end.
+        {
+            var (graph, spawn, _) = Counting("SimLoopRandom", 256);
+            spawn.SetSettingValue("loopDuration", VFXBasicSpawner.LoopMode.Random);
+            spawn.SetSettingValue("delayBeforeLoop", VFXBasicSpawner.DelayMode.Random);
+            spawn.SetSettingValue("delayAfterLoop", VFXBasicSpawner.DelayMode.Random);
+            Input(spawn, "LoopDuration").value = new Vector2(0.1f, 0.3f);
+            Input(spawn, "DelayBeforeLoop").value = new Vector2(0.05f, 0.1f);
+            Input(spawn, "DelayAfterLoop").value = new Vector2(0.05f, 0.15f);
+            ConstantRate(spawn, 20f);
+            Save(graph);
+        }
+
+        // Particles that die: ten at once, living a short time or a long one.
+        foreach (var (name, lifetime) in new[] { ("SimKill", 0.6f), ("SimKeep", 100f) })
+        {
+            var (graph, spawn, init) = Counting(name, 16);
+            Burst(spawn, false, 10f, 0f);
+            Set(init, "lifetime", lifetime);
+            Save(graph);
+        }
     }
 
     /// <summary>The probe scene: effects saved with their serialized state, one with overrides.</summary>

@@ -3,9 +3,13 @@
 Visual Effect Graph (com.unity.visualeffectgraph 17.0.4, the Editor's built-in package, unmodified)
 under URP 17: what the Visual Effect module answers about the probe's own small graphs, recorded by
 the same script in the Unity Editor and in Unbound. Unbound imports a graph by running the
-package's compiler (`managed/UnityEngine/Editor/VFX`); this probe covers the import and the API
-that needs no simulation. Simulation and drawing are not implemented yet: Unbound warns once at
-load and `unbound doctor` lists the effects.
+package's compiler (`managed/UnityEngine/Editor/VFX`) and runs its systems
+(`managed/UnityEngine/VFX`); this probe covers the import, the API that needs no simulation and
+the simulation as scripts can observe it. Outputs are not drawn yet: Unbound warns once at load
+and `unbound doctor` lists the effects.
+
+The Editor records in a window (not in batch mode): in batch mode no camera ever sees an effect,
+so effects that cull their simulation (the default) never run.
 
 ## Graphs and scene
 
@@ -25,6 +29,11 @@ own models; its assembly carries the name of one of the package's friend assembl
 - `Attributes`: a system whose particles take `lifetime`, `velocity`, `color`, `alive` and `seed`
   from the spawn event, so the graph's event attributes have floats, vectors, a bool and an
   unsigned integer. `Attributes2`: `color`, `size` and `lifetime`, in another order.
+
+- `SimRate`, `SimRateDelta`, `SimRateExact`, `SimRateNoCull`, `SimRateBoundsOnly`,
+  `SimRatePrewarm`, `SimBurst`, `SimRandom`, `SimLoop`, `SimLoopRandom`, `SimKill`, `SimKeep`:
+  the simulation controls' graphs (below), kept in `Assets/SimGraphs` apart from the graphs the
+  import rows list.
 
 `Exposed`'s texture and mesh properties default to `Assets/Objects/ImageA.png` and
 `ShapeA.asset`, which the authoring script also makes (with `ImageB` and `ShapeB`).
@@ -75,18 +84,64 @@ the hex of their bits) into `VFX_PROBE_OUT`:
 - `find/*`: which of the project's assets `AssetDatabase.FindAssets` lists for the graph types
   and for the types of the objects a compiled graph has (a shader, compute shaders, a material).
 - `manager/*`: the fixed time step and the maximum delta time of the project's settings.
+- `spawner state/*`: a `VFXSpawnerState` made with `new` (it loops without end; its setters,
+  and how setting a stage passes the stages of no duration), and a copy of a system's state
+  (its own event attributes; changing it leaves the system's alone).
+- `sim/*`: the simulation, see below.
 
 Values compare exactly (tolerance 0).
 
+## Simulation
+
+The probe makes its own effects at the first frame (`sim/<control>/f<frame>`), in front of the
+scene's camera unless said otherwise, with a start seed and without a new seed on play, at
+`Time.captureFramerate = 30`. Each frame it records, before that frame's effect update, the
+effect's `aliveParticleCount`, `culled` and every spawn system's state through
+`GetSpawnSystemInfo` (stage, `playing`, `newLoop`, spawn count, delta and total time, the loop's
+durations, index and count). The graphs of these controls spawn particles that never die, so
+the alive count is the particles spawned so far, exactly, each frame:
+
+- `rate`, `rate delta`, `rate exact`: 7.3 particles a second into a capacity of 20, with each
+  update mode (one step of the frame's fixed steps, the frame's delta time, each fixed step on
+  its own). From frame 37 the frames are a tenth of a second (longer than the longest step),
+  from 41 the time scale is one half.
+- `rate prewarm`: five prewarm steps of a tenth of a second.
+- `burst`: one burst after a delay, and a periodic one.
+- `random`, `random other seed`: counts, delays, periods and a variable rate drawn from ranges
+  (the effect's random sequence, per seed).
+- `loop`, `loop random`: a spawn context that loops twice with a delay before and after, and
+  one whose durations are drawn.
+- `behind`, `behind no cull`, `behind bounds only`: effects behind the camera, with each
+  culling flag.
+- `control`: one effect stopped, played, paused, advanced a frame, played at another rate,
+  stepped by hand (`Simulate`, with zero steps too), started over (`Reinit`), slowed to rate 0.
+- `events`: custom events starting and stopping one spawner, several in one frame, and an
+  event the graph does not have.
+- `late`: an effect made at frame 20.
+- `scene <name>`: the scene's own effects in their first frames.
+- `kill`, `keep` (`settled/*`): ten particles that die after 0.6 s, or after 100 s, counted
+  at frames 1, 100 and 170 (a system whose particles die reads its count back from the GPU, some
+  frames late and once in 60 frames: the rows are taken where the count is settled), with the
+  system's info and `HasAnySystemAwake`.
+- `errors/*`: the system getters with names of the other kind, unknown names and a null state.
+
+Observed and kept: effects made in the first frame run their first step one frame later than
+one made in frame 20 (no camera has culled before the first frame's update: effects update only
+after a camera culled, or when one simulates while culled); an effect counts as culled until
+its first update, and is not culled in that update; `aliveParticleCount` is -1 for a system
+whose particles die until its first count arrives.
+
 ## Not covered yet
 
-Simulation and drawing (spawners, particle counts, system info, events sent, output events,
-culling, images): the members that need them are not implemented and say so when called.
-One attribute name with different types in two graphs (a custom attribute) is not measured for
-`CopyValuesFrom`. Whether a compiled graph a resource accepted would also evaluate (a word
-beyond an operation's counted parents) is a matter of the simulation slices.
-Everything was measured in the Linux Editor on the OpenGL Core device (NVIDIA driver); nothing
-here depends on the device.
+Drawing (images), output events, GPU events, strips, bounds computed on the GPU and the `VFXManager`
+camera hooks. The expression evaluator is exercised through what the controls' graphs
+evaluate (constants, the step's time, values drawn per spawn, the effect's matrices); a control
+per operation (a custom spawner block reading its inputs) is to come, as are the update modes
+that ignore the time scale: the Editor's unscaled delta time under a capture frame rate is the
+wall clock's, so they cannot be compared frame by frame here. One attribute name with different
+types in two graphs (a custom attribute) is not measured for `CopyValuesFrom`.
+Everything was measured in the Linux Editor on the OpenGL Core device (NVIDIA driver); the
+frames at which a count read back from the GPU arrives depend on the device (the rows avoid them).
 
 ## Running
 
