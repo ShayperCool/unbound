@@ -311,6 +311,25 @@ fn channel_copy_kind(
     }
 }
 
+/// Vulkan BGRA imports currently support identical physical storage. Cross-order and
+/// cross-encoding copies need a conversion path; the other backends keep their existing
+/// compatible-format rule.
+fn raw_copy_compatible(
+    source: wgpu::TextureFormat,
+    destination: wgpu::TextureFormat,
+    exact_bgra: bool,
+) -> bool {
+    use wgpu::TextureFormat as F;
+    if exact_bgra
+        && (matches!(source, F::Bgra8Unorm | F::Bgra8UnormSrgb)
+            || matches!(destination, F::Bgra8Unorm | F::Bgra8UnormSrgb))
+    {
+        source == destination
+    } else {
+        source.remove_srgb_suffix() == destination.remove_srgb_suffix()
+    }
+}
+
 /// The work of a submission, in order.
 enum Op {
     Pass(Pass),
@@ -1835,7 +1854,7 @@ impl UnityRenderer {
                             return Some(view);
                         }
                         let srgb = space == 1 && t.srgb_view.is_some();
-                        let format = srgb.then_some(wgpu::TextureFormat::Rgba8UnormSrgb);
+                        let format = srgb.then_some(t.texture.format().add_srgb_suffix());
                         Some(t.texture.create_view(&wgpu::TextureViewDescriptor {
                             format,
                             dimension: Some(wgpu::TextureViewDimension::D2Array),
@@ -4427,9 +4446,11 @@ impl UnityRenderer {
             src.dimension() == wgpu::TextureDimension::D2
                 && dst.dimension() == wgpu::TextureDimension::D2
         });
-        if src.format().remove_srgb_suffix() != dst.format().remove_srgb_suffix()
-            && channel_kind.is_none()
-        {
+        #[cfg(target_os = "linux")]
+        let exact_bgra = self.vulkan_plugins.is_some();
+        #[cfg(not(target_os = "linux"))]
+        let exact_bgra = false;
+        if !raw_copy_compatible(src.format(), dst.format(), exact_bgra) && channel_kind.is_none() {
             self.warn_once(format!("copyfmt{source}-{destination}"), || {
                 format!(
                     "CopyTexture from {:?} to {:?}: the formats differ (Unity needs them compatible): skipped",
@@ -5095,6 +5116,33 @@ impl UnityRenderer {
                     let r = if top_down { h as usize - 1 - r } else { r };
                     let line = &data[r * row as usize..r * row as usize + (w * texel) as usize];
                     match format {
+                        wgpu::TextureFormat::Rgba8Unorm
+                        | wgpu::TextureFormat::Rgba8UnormSrgb
+                        | wgpu::TextureFormat::Bgra8Unorm
+                        | wgpu::TextureFormat::Bgra8UnormSrgb => {
+                            for pixel in line.chunks_exact(4) {
+                                for b in resources::rgba8_texel_to_rgba(format, pixel)? {
+                                    if float {
+                                        out.extend_from_slice(&(b as f32 / 255.0).to_le_bytes());
+                                    } else {
+                                        out.push(b);
+                                    }
+                                }
+                            }
+                        }
+                        wgpu::TextureFormat::Rgb9e5Ufloat => {
+                            for pixel in line.as_chunks::<4>().0 {
+                                let rgb =
+                                    unbound_gi::solver::decode_rgb9e5(u32::from_le_bytes(*pixel));
+                                for v in [rgb[0], rgb[1], rgb[2], 1.0] {
+                                    if float {
+                                        out.extend_from_slice(&v.to_le_bytes());
+                                    } else {
+                                        out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
+                                    }
+                                }
+                            }
+                        }
                         wgpu::TextureFormat::R32Float
                         | wgpu::TextureFormat::Rg32Float
                         | wgpu::TextureFormat::Rgba32Float
@@ -5479,6 +5527,27 @@ fn external_index_refusal(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn raw_copies_keep_borrowed_storage_boundaries() {
+        use wgpu::TextureFormat as F;
+        assert!(raw_copy_compatible(F::Bgra8Unorm, F::Bgra8Unorm, true));
+        assert!(raw_copy_compatible(
+            F::Bgra8UnormSrgb,
+            F::Bgra8UnormSrgb,
+            true
+        ));
+        assert!(raw_copy_compatible(F::Rgb9e5Ufloat, F::Rgb9e5Ufloat, true));
+        assert!(!raw_copy_compatible(F::Bgra8Unorm, F::Rgba8Unorm, true));
+        assert!(!raw_copy_compatible(F::Rgba8Unorm, F::Bgra8Unorm, true));
+        assert!(!raw_copy_compatible(F::Bgra8Unorm, F::Bgra8UnormSrgb, true));
+        assert!(!raw_copy_compatible(F::Bgra8UnormSrgb, F::Bgra8Unorm, true));
+        assert!(!raw_copy_compatible(F::Rgb9e5Ufloat, F::Rgba32Float, true));
+        assert!(raw_copy_compatible(F::Rgba8Unorm, F::Rgba8UnormSrgb, true));
+        assert!(raw_copy_compatible(F::Rg16Unorm, F::Rg16Unorm, true));
+        assert!(raw_copy_compatible(F::Bgra8Unorm, F::Bgra8UnormSrgb, false));
+        assert!(raw_copy_compatible(F::Bgra8UnormSrgb, F::Bgra8Unorm, false));
+    }
 
     /// A read of a screen no pass has started is transparent black over the part of the rect
     /// inside the screen, four bytes or floats per pixel.

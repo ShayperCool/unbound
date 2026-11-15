@@ -537,7 +537,7 @@ EXPORT void* NativeGfxVk_DeviceEvent(void) { return (void*)on_msaa_device_event;
 EXPORT void NativeGfxVk_SetDevice(int index, void* pointer) { if (index >= 0 && index < 2) s_device[index] = pointer; }
 
 // Plugin-owned images, kept alive independently of Unity's texture wrappers.
-enum { EXTERNAL_IMAGE_COUNT = 28, FIRST_SIGNED_KIND = 16, FIRST_BLOCK_KIND = 22, BLOCK_MIPS = 3 };
+enum { EXTERNAL_IMAGE_COUNT = 34, FIRST_SIGNED_KIND = 16, FIRST_BLOCK_KIND = 22, FIRST_BGRA_KIND = 28, SHARED_EXPONENT_SOURCE = 32, SHARED_EXPONENT_DEST = 33, BLOCK_MIPS = 3 };
 static VkImage s_external_images[EXTERNAL_IMAGE_COUNT];
 static VkDeviceMemory s_external_memory[EXTERNAL_IMAGE_COUNT];
 static int s_external_result[EXTERNAL_IMAGE_COUNT];
@@ -639,7 +639,9 @@ static void on_external_image_event(int event_id)
         VK_FORMAT_R8_SNORM, VK_FORMAT_R8G8_SNORM, VK_FORMAT_R8G8B8A8_SNORM,
         VK_FORMAT_R16_SNORM, VK_FORMAT_R16G16_SNORM, VK_FORMAT_R16G16B16A16_SNORM,
         VK_FORMAT_BC1_RGBA_UNORM_BLOCK, VK_FORMAT_BC1_RGBA_SRGB_BLOCK,
-        VK_FORMAT_BC3_UNORM_BLOCK, VK_FORMAT_BC3_SRGB_BLOCK, VK_FORMAT_BC4_UNORM_BLOCK, VK_FORMAT_BC5_UNORM_BLOCK };
+        VK_FORMAT_BC3_UNORM_BLOCK, VK_FORMAT_BC3_SRGB_BLOCK, VK_FORMAT_BC4_UNORM_BLOCK, VK_FORMAT_BC5_UNORM_BLOCK,
+        VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SRGB,
+        VK_FORMAT_E5B9G9R9_UFLOAT_PACK32, VK_FORMAT_E5B9G9R9_UFLOAT_PACK32 };
     VkImageCreateInfo desc = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .flags = (kind < 3 ? VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT : 0) | (kind == 1 ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0),
         .imageType = kind == 2 ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D,
@@ -667,14 +669,15 @@ static void on_external_image_event(int event_id)
         .image = s_external_images[kind], .subresourceRange = range };
     vkCmdPipelineBarrier(state.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
     VkClearColorValue color = {{0.25f, 0.5f, 0.75f, 1.0f}};
-    if (kind >= FIRST_BLOCK_KIND) {
+    if (kind >= FIRST_BLOCK_KIND && kind < FIRST_BGRA_KIND) {
         if (!upload_external_blocks(kind, &desc, state.commandBuffer)) return;
     } else {
         for (uint32_t mip = 0; mip < desc.mipLevels; ++mip) {
             VkImageSubresourceRange level = {VK_IMAGE_ASPECT_COLOR_BIT, mip, 1, 0, desc.arrayLayers};
             color.float32[0] = 0.25f + 0.125f * mip;
             if (kind >= 8) color.float32[1] = 1.5f;
-            if (kind >= FIRST_SIGNED_KIND) color.float32[0] = -.5f + .125f * mip;
+            if (kind >= FIRST_SIGNED_KIND && kind < FIRST_BLOCK_KIND) color.float32[0] = -.5f + .125f * mip;
+            if (kind == FIRST_BGRA_KIND + 2 || kind == FIRST_BGRA_KIND + 3 || kind == SHARED_EXPONENT_DEST) color.float32[0] = .75f + .125f * mip;
             vk.CmdClearColorImage(state.commandBuffer, s_external_images[kind], VK_IMAGE_LAYOUT_GENERAL, &color, 1, &level);
         }
     }

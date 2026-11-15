@@ -294,6 +294,7 @@ public partial class NativeGfxVulkanProbe : MonoBehaviour
         DepthShapeControls();
         PluginRecord();
         if (logs.Count > 0) Value("logs", L(logs));
+        ForeignStorageControls();
         Value("complete", B(code == 0));
         File.WriteAllText(output, records.ToString());
         Application.logMessageReceived -= OnLog;

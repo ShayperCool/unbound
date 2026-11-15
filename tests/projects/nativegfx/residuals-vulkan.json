@@ -40,5 +40,10 @@
   "plugin.depthShape.Cube.Shadowmap.True.before.depth",
   "plugin.depthShape.Cube.Shadowmap.True.after.color",
   "plugin.depthShape.Cube.Shadowmap.True.after.depth"
+ ],
+ "Converted foreign Texture2D readbacks return matching data with hasError false, but the Unity 6000.0.71f1 NVIDIA Editor also emits unsupported-source-format ReadPixels errors; Unbound returns the data without those diagnostics (other unsupported-source requests are unmeasured)": [
+  "externalVkBgraCopy.linear.readback.logs",
+  "externalVkBgraCopy.srgb.readback.logs",
+  "externalVkPackedCopy.RGB9e5Float.readback.logs"
  ]
 }

@@ -7,9 +7,10 @@ uses the low-level native plugin interface and records what it gets; the scripts
 
     python3 tests/projects/nativegfx/run.py check      # engine run compared with Reference/
 
-Current NVIDIA results against Unity 6000.0.71f1 are OpenGL Core 554/613 with
-59 declared residuals, Vulkan 989/1008 with 19, the OpenGL stencil profile
-582/654 with 72, and Vulkan stencil 999/1033 with 34. Vulkan attachment capabilities and multisample color
+Current NVIDIA primary results against Unity 6000.0.71f1 are OpenGL Core 554/613 with
+59 declared residuals and Vulkan 1040/1062 with 22. The OpenGL stencil profile is
+582/654 with 72; the Vulkan stencil reference contains 1087 rows with 37 declared
+residual keys. Vulkan attachment capabilities and multisample color
 usage close 63 of its 64 earlier differences. All 518 earlier Vulkan reference
 rows are byte-identical; 49 allocation controls and 298 resolve-access and
 setter controls are appended. The foreign-format extension adds 70 rows to both Vulkan profiles; the stencil
@@ -288,8 +289,8 @@ format. RG32, RGBA64 and signed-normalized R/RG/RGBA 8- and 16-bit storage also 
 their exact physical formats. DXT1 and DXT5 support linear and sRGB storage; BC4
 and BC5 retain their component counts. Borrowed block images need the device
 compression feature and block-aligned base dimensions. Devices that would expand
-or decode storage are refused before import. BGRA, packed and other compressed
-foreign Vulkan storage remain unsupported. Other import
+or decode storage are refused before import. BGRA32 linear/sRGB and RGB9e5Float also retain their physical storage. Other packed
+formats (including RGB565 and RGBA4444) and unmeasured compressed formats remain unsupported. Other import
 layouts and drivers remain outside the measured contract. The public creation API carries
 neither a layout nor a synchronization handoff; a raw VkImage does not expose either.
 `externalVkFormats.*` clears each of three mip levels independently on the GPU, samples
@@ -305,6 +306,31 @@ between that image and R8 leave both divergent destinations unchanged, with diag
 The [CopyTexture contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.CopyTexture.html)
 requires compatible formats; physical sRGB storage is never repacked through an invalid
 linear view.
+
+`externalVkBgraCopy.*` and `externalVkPackedCopy.RGB9e5Float.*` extend the two Vulkan
+profiles by 54 rows each, preserving every earlier row byte-for-byte. BGRA imports use
+B8G8R8A8 linear or sRGB storage and RGB9e5 imports use shared-exponent storage, with
+no alternate-format views. Capability checks reject unsupported sampled/transfer storage
+before borrowing. Each source has three independently written mip levels; copies overwrite
+a different destination at level zero, leave its other mip and the source unchanged, and
+keep the same native image alive after wrapper destruction and rewrapping. The RGB9e5
+controls retain a green value of 1.5. Vulkan BGRA copies currently require identical physical
+formats; cross-order and cross-encoding copies fail explicitly and remain queued. Other
+backends retain their existing copy rules.
+
+Direct converted readbacks request RGBA bytes with matching encoding for BGRA, and RGBAFloat
+for RGB9e5. Their returned values are strict controls for channel order, sRGB bytes and HDR
+precision. The [Unity 6000.0 readback contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.AsyncGPUReadback.Request.html)
+automatically converts to the requested destination format and advises checking ReadPixels
+support. In both NVIDIA Editor repeats these three requests return valid data with hasError
+false but also emit unsupported-source-format errors. Each new `readback.logs` row retains
+all those diagnostics independently; the earlier aggregate log row remains unchanged.
+Unbound returns the same data without those errors, leaving three explicit diagnostic
+residuals. This observation does not establish other unsupported-source requests as safe.
+The [Texture2D factory contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture2D.CreateExternalTexture.html)
+requires metadata matching the underlying 2D image. These controls use matching metadata;
+wrapper destruction is tested after writes and rewrapping reads the surviving owner's
+mip contents. Other drivers, formats, layouts and synchronization handoffs are unmeasured.
 
 OpenGL's whole-image copies from external 2D and cube wrappers write one texel; untouched
 pixels in these controls retain a defined sentinel color. Volume copies cover the slices.

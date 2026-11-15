@@ -546,7 +546,7 @@ impl GpuTexture {
     /// The format a camera renders into this texture with.
     pub fn target_format(&self, color_space: i32) -> wgpu::TextureFormat {
         match (self.srgb_view.is_some(), color_space) {
-            (true, 1) => wgpu::TextureFormat::Rgba8UnormSrgb,
+            (true, 1) => self.texture.format().add_srgb_suffix(),
             _ => self.texture.format(),
         }
     }
@@ -1342,6 +1342,18 @@ pub fn norm_texels(format: wgpu::TextureFormat, data: &[u8]) -> Vec<u8> {
     out
 }
 
+/// Raw 8-bit four-channel readback in logical RGBA order, preserving encoded sRGB bytes.
+pub fn rgba8_texel_to_rgba(format: wgpu::TextureFormat, texel: &[u8]) -> Option<[u8; 4]> {
+    let pixel: [u8; 4] = texel.get(..4)?.try_into().ok()?;
+    match format {
+        wgpu::TextureFormat::Rgba8Unorm | wgpu::TextureFormat::Rgba8UnormSrgb => Some(pixel),
+        wgpu::TextureFormat::Bgra8Unorm | wgpu::TextureFormat::Bgra8UnormSrgb => {
+            Some([pixel[2], pixel[1], pixel[0], pixel[3]])
+        }
+        _ => None,
+    }
+}
+
 /// A texel of a normalized 16-bit, 10-10-10-2 or signed normalized 8-bit format as RGBA floats
 /// (a one- or two-channel one reads (r, 0, 0, 1) or (r, g, 0, 1), as the float formats do); none
 /// for other formats or a short texel.
@@ -1544,6 +1556,8 @@ pub fn upload_texture_with(
                 usage,
                 view_formats,
             });
+            // A borrowed allocation can have a different physical channel order.
+            let srgb_format = texture.format().add_srgb_suffix();
             let view_dimension = if cube {
                 Some(wgpu::TextureViewDimension::Cube)
             } else if cube_array {
@@ -2854,6 +2868,25 @@ mod tests {
             norm_texels(F::Rgba8Unorm, &data),
             [0, 128, 255, 255, 0, 255, 0, 64]
         );
+    }
+
+    #[test]
+    fn raw_color_readback_preserves_alpha_and_channel_order() {
+        use wgpu::TextureFormat as F;
+        for format in [F::Rgba8Unorm, F::Rgba8UnormSrgb] {
+            assert_eq!(
+                rgba8_texel_to_rgba(format, &[7, 31, 199, 223]),
+                Some([7, 31, 199, 223])
+            );
+        }
+        for format in [F::Bgra8Unorm, F::Bgra8UnormSrgb] {
+            assert_eq!(
+                rgba8_texel_to_rgba(format, &[7, 31, 199, 223]),
+                Some([199, 31, 7, 223])
+            );
+            assert_eq!(rgba8_texel_to_rgba(format, &[1, 2, 3]), None);
+        }
+        assert_eq!(rgba8_texel_to_rgba(F::R8Unorm, &[1, 2, 3, 4]), None);
     }
 
     #[test]
