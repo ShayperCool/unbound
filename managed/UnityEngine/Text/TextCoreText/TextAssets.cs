@@ -168,37 +168,66 @@ namespace UnityEngine.TextCore.Text
         }
     }
 
-    /// <summary>A font asset's OpenType features. Kerning (pair adjustments) is what the generator
-    /// applies (TextGenerationSettings.fontFeatures); the substitution and mark tables are kept
-    /// in the serialized lists the font engine fills.</summary>
+    /// <summary>The ordered substitutions and positioning records of a font asset.</summary>
     [Serializable]
     public partial class FontFeatureTable
     {
         [SerializeField] List<GlyphPairAdjustmentRecord> m_GlyphPairAdjustmentRecords;
-        /// <summary>Pairs by <c>second glyph &lt;&lt; 16 | first glyph</c>.</summary>
+        [SerializeField] internal List<LigatureSubstitutionRecord> m_LigatureSubstitutionRecords;
+        [SerializeField] internal List<MarkToBaseAdjustmentRecord> m_MarkToBaseAdjustmentRecords;
+        [SerializeField] internal List<MarkToMarkAdjustmentRecord> m_MarkToMarkAdjustmentRecords;
         internal Dictionary<uint, GlyphPairAdjustmentRecord> m_GlyphPairAdjustmentRecordLookup;
+        internal Dictionary<uint, List<LigatureSubstitutionRecord>> m_LigatureSubstitutionRecordLookup;
+        internal Dictionary<uint, MarkToBaseAdjustmentRecord> m_MarkToBaseAdjustmentRecordLookup;
+        internal Dictionary<uint, MarkToMarkAdjustmentRecord> m_MarkToMarkAdjustmentRecordLookup;
+        // Candidate base marks for each combining glyph, built when the feature table changes.
+        internal readonly Dictionary<uint, List<MarkToMarkAdjustmentRecord>> markCandidates = new();
 
         internal FontFeatureTable()
         {
-            m_GlyphPairAdjustmentRecords = new List<GlyphPairAdjustmentRecord>();
-            m_GlyphPairAdjustmentRecordLookup = new Dictionary<uint, GlyphPairAdjustmentRecord>();
+            m_GlyphPairAdjustmentRecords = new();
+            m_LigatureSubstitutionRecords = new();
+            m_MarkToBaseAdjustmentRecords = new();
+            m_MarkToMarkAdjustmentRecords = new();
+            m_GlyphPairAdjustmentRecordLookup = new();
+            m_LigatureSubstitutionRecordLookup = new();
+            m_MarkToBaseAdjustmentRecordLookup = new();
+            m_MarkToMarkAdjustmentRecordLookup = new();
         }
 
-        internal List<GlyphPairAdjustmentRecord> glyphPairAdjustmentRecords => m_GlyphPairAdjustmentRecords ??= new List<GlyphPairAdjustmentRecord>();
+        internal List<GlyphPairAdjustmentRecord> glyphPairAdjustmentRecords => m_GlyphPairAdjustmentRecords ??= new();
+        internal List<LigatureSubstitutionRecord> ligatureRecords { get => m_LigatureSubstitutionRecords; set => m_LigatureSubstitutionRecords = value; }
+        internal List<MarkToBaseAdjustmentRecord> MarkToBaseAdjustmentRecords { get => m_MarkToBaseAdjustmentRecords; set => m_MarkToBaseAdjustmentRecords = value; }
+        internal List<MarkToMarkAdjustmentRecord> MarkToMarkAdjustmentRecords { get => m_MarkToMarkAdjustmentRecords; set => m_MarkToMarkAdjustmentRecords = value; }
 
-        /// <summary>Orders the pairs by first glyph, then second.</summary>
-        public void SortGlyphPairAdjustmentRecords()
+        public void SortGlyphPairAdjustmentRecords() => m_GlyphPairAdjustmentRecords = StableSort(m_GlyphPairAdjustmentRecords,
+            (a, b) => CompareIDs(a.firstAdjustmentRecord.glyphIndex, a.secondAdjustmentRecord.glyphIndex, b.firstAdjustmentRecord.glyphIndex, b.secondAdjustmentRecord.glyphIndex));
+        public void SortMarkToBaseAdjustmentRecords() => m_MarkToBaseAdjustmentRecords = StableSort(m_MarkToBaseAdjustmentRecords,
+            (a, b) => CompareIDs(a.baseGlyphID, a.markGlyphID, b.baseGlyphID, b.markGlyphID));
+        public void SortMarkToMarkAdjustmentRecords() => m_MarkToMarkAdjustmentRecords = StableSort(m_MarkToMarkAdjustmentRecords,
+            (a, b) => CompareIDs(a.baseMarkGlyphID, a.combiningMarkGlyphID, b.baseMarkGlyphID, b.combiningMarkGlyphID));
+
+        static int CompareIDs(uint first, uint second, uint otherFirst, uint otherSecond)
         {
-            if (m_GlyphPairAdjustmentRecords == null || m_GlyphPairAdjustmentRecords.Count == 0) return;
-            var sorted = new List<GlyphPairAdjustmentRecord>(m_GlyphPairAdjustmentRecords);
-            sorted.Sort((a, b) =>
-            {
-                int first = a.firstAdjustmentRecord.glyphIndex.CompareTo(b.firstAdjustmentRecord.glyphIndex);
-                return first != 0 ? first : a.secondAdjustmentRecord.glyphIndex.CompareTo(b.secondAdjustmentRecord.glyphIndex);
-            });
-            m_GlyphPairAdjustmentRecords = sorted;
+            int order = first.CompareTo(otherFirst);
+            return order != 0 ? order : second.CompareTo(otherSecond);
         }
-
+        static List<T> StableSort<T>(List<T> records, Comparison<T> compare)
+        {
+            if (records == null || records.Count < 2) return records;
+            var entries = new (T value, int order)[records.Count];
+            for (int i = 0; i < entries.Length; i++) entries[i] = (records[i], i);
+            Array.Sort(entries, (a, b) => { int order = compare(a.value, b.value); return order != 0 ? order : a.order.CompareTo(b.order); });
+            var sorted = new List<T>(entries.Length);
+            foreach (var entry in entries) sorted.Add(entry.value);
+            return sorted;
+        }
+        internal void AddMarkCandidate(MarkToMarkAdjustmentRecord record)
+        {
+            if (!markCandidates.TryGetValue(record.combiningMarkGlyphID, out var records))
+                markCandidates.Add(record.combiningMarkGlyphID, records = new());
+            records.Add(record);
+        }
         internal static uint PairKey(uint first, uint second) => (second << 16) | first;
     }
 

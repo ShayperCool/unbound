@@ -75,6 +75,7 @@ namespace UnityEngine.TextCore.Text
         internal List<uint> s_MissingCharacterList = new List<uint>();
         internal HashSet<uint> m_MissingUnicodesFromFontFile = new HashSet<uint>();
         internal Dictionary<(uint, uint), uint> m_VariantGlyphIndexes = new Dictionary<(uint, uint), uint>();
+        readonly Dictionary<uint, uint> m_SourceGlyphIndexes = new();
         internal bool m_IsClone;
 
         internal static Action<Texture, FontAsset> OnFontAssetTextureChanged;
@@ -111,6 +112,7 @@ namespace UnityEngine.TextCore.Text
             }
             set
             {
+                m_SourceGlyphIndexes.Clear();
                 m_SourceFontFile_EditorRef = value;
                 m_SourceFontFileGUID = SetSourceFontGUID?.Invoke(value);
                 m_SourceFontFile = m_AtlasPopulationMode == AtlasPopulationMode.Dynamic ? value : null;
@@ -126,7 +128,7 @@ namespace UnityEngine.TextCore.Text
         public Font sourceFontFile
         {
             get => m_SourceFontFile;
-            internal set => m_SourceFontFile = value;
+            internal set { m_SourceGlyphIndexes.Clear(); m_SourceFontFile = value; }
         }
 
         public AtlasPopulationMode atlasPopulationMode
@@ -143,7 +145,7 @@ namespace UnityEngine.TextCore.Text
         public FaceInfo faceInfo
         {
             get => m_FaceInfo;
-            set => m_FaceInfo = value;
+            set { m_SourceGlyphIndexes.Clear(); m_FaceInfo = value; }
         }
 
         internal int familyNameHashCode
@@ -532,6 +534,9 @@ namespace UnityEngine.TextCore.Text
             if ((m_AtlasPopulationMode == AtlasPopulationMode.Dynamic || m_AtlasPopulationMode == AtlasPopulationMode.DynamicOS) && m_ShouldReimportFontFeatures)
                 ImportFontFeatures();
             InitializeGlyphPairAdjustmentRecordsLookupDictionary();
+            InitializeLigatureSubstitutionLookupDictionary();
+            InitializeMarkToBaseAdjustmentRecordsLookupDictionary();
+            InitializeMarkToMarkAdjustmentRecordsLookupDictionary();
         }
 
         internal void InitializeGlyphLookupDictionary()
@@ -546,6 +551,7 @@ namespace UnityEngine.TextCore.Text
 
         internal void InitializeCharacterLookupDictionary()
         {
+            m_SourceGlyphIndexes.Clear();
             m_CharacterTable ??= new List<Character>();
             m_CharacterLookupDictionary = new Dictionary<uint, Character>(m_CharacterTable.Count);
             foreach (var character in m_CharacterTable)
@@ -805,12 +811,16 @@ namespace UnityEngine.TextCore.Text
         {
             success = true;
             if (characterLookupTable.TryGetValue(unicode, out var character)) return character.glyphIndex;
+            if (m_SourceGlyphIndexes.TryGetValue(unicode, out uint index)) return index;
             if (TextGenerator.IsExecutingJob)
             {
                 success = false;
                 return 0;
             }
-            return LoadFontFace() == FontEngineError.Success ? FontEngine.GetGlyphIndex(unicode) : 0;
+            if (LoadFontFace() != FontEngineError.Success) return 0;
+            index = FontEngine.GetGlyphIndex(unicode);
+            m_SourceGlyphIndexes[unicode] = index;
+            return index;
         }
 
         internal uint GetGlyphVariantIndex(uint unicode, uint variantSelectorUnicode) =>
@@ -860,7 +870,14 @@ namespace UnityEngine.TextCore.Text
             }
         }
 
-        void ClearFontFeaturesTables() => m_FontFeatureTable?.glyphPairAdjustmentRecords.Clear();
+        void ClearFontFeaturesTables()
+        {
+            if (m_FontFeatureTable == null) return;
+            m_FontFeatureTable.glyphPairAdjustmentRecords.Clear();
+            m_FontFeatureTable.ligatureRecords?.Clear();
+            m_FontFeatureTable.MarkToBaseAdjustmentRecords?.Clear();
+            m_FontFeatureTable.MarkToMarkAdjustmentRecords?.Clear();
+        }
 
         internal void ClearAtlasTextures(bool setAtlasSizeToZero = false)
         {
@@ -1163,8 +1180,11 @@ namespace UnityEngine.TextCore.Text
             m_GlyphIndexListNewlyAdded.Add(glyphIndex);
             if (m_GetFontFeatures)
             {
-                // Ligatures are not read (no GSUB yet); kerning is read with the next update.
-                if (populateLigatures) RegisterFontAssetForFontFeatureUpdate(this);
+                if (populateLigatures)
+                {
+                    UpdateGSUBFontFeaturesForNewGlyphIndex(glyphIndex);
+                    RegisterFontAssetForFontFeatureUpdate(this);
+                }
                 else RegisterFontAssetForKerningUpdate(this);
             }
             RegisterAtlasTextureForApply(texture);
@@ -1207,7 +1227,9 @@ namespace UnityEngine.TextCore.Text
 
         void UpdateFontFeaturesForNewlyAddedGlyphs()
         {
+            UpdateLigatureSubstitutionRecords();
             UpdateGlyphAdjustmentRecords();
+            UpdateDiacriticalMarkAdjustmentRecords();
             m_GlyphIndexListNewlyAdded.Clear();
         }
 
@@ -1220,6 +1242,7 @@ namespace UnityEngine.TextCore.Text
         void UpdateGPOSFontFeaturesForNewlyAddedGlyphs()
         {
             UpdateGlyphAdjustmentRecords();
+            UpdateDiacriticalMarkAdjustmentRecords();
             m_GlyphIndexListNewlyAdded.Clear();
         }
 
@@ -1228,6 +1251,9 @@ namespace UnityEngine.TextCore.Text
             if (LoadFontFace() != FontEngineError.Success) return;
             var pairs = FontEngine.GetAllPairAdjustmentRecords();
             if (pairs != null) AddPairAdjustmentRecords(pairs);
+            AddMarkToBaseAdjustmentRecords(FontEngine.GetAllMarkToBaseAdjustmentRecords());
+            AddMarkToMarkAdjustmentRecords(FontEngine.GetAllMarkToMarkAdjustmentRecords());
+            AddLigatureSubstitutionRecords(FontEngine.GetAllLigatureSubstitutionRecords());
             m_ShouldReimportFontFeatures = false;
             RegisterResourceForUpdate?.Invoke(this);
         }

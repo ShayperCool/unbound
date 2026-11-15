@@ -1,0 +1,1 @@
+{"commands":["python3 tests/projects/fontlayout/run.py gate"],"engine_paths":["managed/UnityEngine/Text/TextCoreText/","managed/UnityEngine/Text/FontEngine.Marks.cs","tests/projects/fontfeatures/Assets/Fonts/","tests/projects/fontmarks/Assets/Fonts/"],"fast_commands":["python3 tests/projects/fontlayout/test_gate.py"]}

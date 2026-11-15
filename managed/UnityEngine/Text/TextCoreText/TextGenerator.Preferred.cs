@@ -33,10 +33,14 @@ namespace UnityEngine.TextCore.Text
             float elementScale = baseScale;
             float emScale = fontSize * 0.01f;
             BeginLayout(generationSettings);
+            PrepareMarkOccurrences(textInfo);
             m_CurrentFontSize = fontSize;
             m_SizeStack.SetDefault(m_CurrentFontSize);
             float lineGap = (float)((double)m_CurrentFontAsset.faceInfo.lineHeight - ((double)m_CurrentFontAsset.faceInfo.ascentLine - m_CurrentFontAsset.faceInfo.descentLine));
             bool kerning = TextGenerationSettings.fontFeatures.Contains(OTL_FeatureTag.kern);
+            bool mark = TextGenerationSettings.fontFeatures.Contains(OTL_FeatureTag.mark);
+            bool markToMark = TextGenerationSettings.fontFeatures.Contains(OTL_FeatureTag.mkmk);
+            if (Unbound.Runtime.Compat.FontPreferredMarksMeasured) mark = markToMark = true;
             var textSettings = generationSettings.textSettings;
             float areaWidth = marginSize.x;
             m_MarginLeft = 0f;
@@ -194,7 +198,8 @@ namespace UnityEngine.TextCore.Text
                     info.adjustedHorizontalAdvance = adjustment.xAdvance;
                 }
                 bool isBaseGlyph = TextGeneratorUtilities.IsBaseGlyph(charCode);
-                if (isBaseGlyph) m_LastBaseGlyphIndex = m_CharacterCount;
+                PositionMark(textInfo, measured, isBaseGlyph, elementScale,
+                    (float)((double)baselineShift - m_LineOffset + m_BaselineOffset), mark, markToMark, true, ref adjustment, ref characterSpacing);
                 elementAscender += adjustment.yPlacement;
                 elementDescender += adjustment.yPlacement;
                 float monoAdvance = 0f;

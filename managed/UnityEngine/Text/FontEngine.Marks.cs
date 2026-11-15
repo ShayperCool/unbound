@@ -79,8 +79,8 @@ namespace UnityEngine.TextCore.LowLevel
         internal static MarkToMarkAdjustmentRecord[] GetMarkToMarkAdjustmentRecords(uint baseMarkGlyphIndex) => Marks(new[] { baseMarkGlyphIndex }, null, true, false, true, ref s_MarkToMarkRecords, MarkRecord);
         internal static MarkToMarkAdjustmentRecord[] GetMarkToMarkAdjustmentRecords(List<uint> glyphIndexes) => Marks(FeatureGlyphList(glyphIndexes), null, true, true, false, ref s_MarkToMarkRecords, MarkRecord);
         internal static MarkToMarkAdjustmentRecord[] GetMarkToMarkAdjustmentRecords(int lookupIndex, List<uint> glyphIndexes) => Marks(FeatureGlyphList(glyphIndexes), lookupIndex, true, true, false, ref s_MarkToMarkRecords, MarkRecord);
-        static GlyphAnchorPoint Scale(GlyphAnchorPoint a, float scale) => new GlyphAnchorPoint { xCoordinate = a.xCoordinate * scale, yCoordinate = a.yCoordinate * scale };
-        static MarkPositionAdjustment Scale(MarkPositionAdjustment a, float scale) => new MarkPositionAdjustment(a.xPositionAdjustment * scale, a.yPositionAdjustment * scale);
+        internal static GlyphAnchorPoint Scale(GlyphAnchorPoint a, float scale) => new GlyphAnchorPoint { xCoordinate = a.xCoordinate * scale, yCoordinate = a.yCoordinate * scale };
+        internal static MarkPositionAdjustment Scale(MarkPositionAdjustment a, float scale) => new MarkPositionAdjustment(a.xPositionAdjustment * scale, a.yPositionAdjustment * scale);
         internal static MarkToBaseAdjustmentRecord GetMarkToBaseAdjustmentRecord(uint baseGlyphIndex, uint markGlyphIndex)
         {
             foreach (var r in GetMarkToBaseAdjustmentRecords(baseGlyphIndex)) if (r.markGlyphID == markGlyphIndex)

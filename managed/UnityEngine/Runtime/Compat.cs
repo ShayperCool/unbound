@@ -174,6 +174,18 @@ namespace Unbound.Runtime
         /// single-precision arithmetic.</summary>
         internal static bool QuaternionApiPrecisionMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Font asset ligature imports stop the batch at a duplicate in
+        /// tests/projects/fontlayout, Unity 6000.0.71f1. Other releases skip duplicates.</summary>
+        internal static bool FontLigatureDuplicateBatchMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Ligature character information uses the last consumed source element in
+        /// tests/projects/fontlayout, Unity 6000.0.71f1. Other releases retain the starting span.</summary>
+        internal static bool FontLigatureSourceSpanMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Preferred text size applies mark tables independently of feature switches
+        /// in tests/projects/fontlayout, Unity 6000.0.71f1. Other releases honor the switches.</summary>
+        internal static bool FontPreferredMarksMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Null mark matrix anchors retain header coordinates in the measured queries.
         /// tests/projects/fontmarks, Unity 6000.0.71f1.</summary>
         internal static bool FontMarkNullAnchorMeasured => Release == (6000, 0, 71, 'f', 1);

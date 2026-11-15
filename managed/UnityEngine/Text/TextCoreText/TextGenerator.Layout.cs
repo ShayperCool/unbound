@@ -58,6 +58,7 @@ namespace UnityEngine.TextCore.Text
             float emScale = m_FontSize * 0.01f;
             charCode = 0;
             BeginLayout(generationSettings);
+            PrepareMarkOccurrences(textInfo);
             float padding = 0f;
             m_FontColor32 = generationSettings.color;
             m_HtmlColor = m_FontColor32;
@@ -80,6 +81,8 @@ namespace UnityEngine.TextCore.Text
             bool isFirstVisibleOfLinePending = true;
             m_FirstOverflowCharacterIndex = -1;
             bool kerning = TextGenerationSettings.fontFeatures.Contains(OTL_FeatureTag.kern);
+            bool mark = TextGenerationSettings.fontFeatures.Contains(OTL_FeatureTag.mark);
+            bool markToMark = TextGenerationSettings.fontFeatures.Contains(OTL_FeatureTag.mkmk);
             float areaWidth = m_MarginWidth > 0f ? m_MarginWidth : 0f;
             float areaHeight = m_MarginHeight > 0f ? m_MarginHeight : 0f;
             m_MarginLeft = 0f;
@@ -269,9 +272,9 @@ namespace UnityEngine.TextCore.Text
                     }
                     info.adjustedHorizontalAdvance = adjustment.xAdvance;
                 }
-                // Mark positioning needs GPOS mark records, which the font engine does not read yet.
                 bool isBaseGlyph = TextGeneratorUtilities.IsBaseGlyph(charCode);
-                if (isBaseGlyph) m_LastBaseGlyphIndex = m_CharacterCount;
+                PositionMark(textInfo, textInfo.textElementInfo, isBaseGlyph, elementScale,
+                    (float)((double)baselineShift - m_LineOffset + m_BaselineOffset), mark, markToMark, false, ref adjustment, ref characterSpacing);
                 elementAscender += adjustment.yPlacement;
                 elementDescender += adjustment.yPlacement;
 

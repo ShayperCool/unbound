@@ -252,11 +252,6 @@ namespace UnityEngine.TextCore.Text
     unsafe partial class FontAsset
     {
         [global::Unbound.Stub] internal static uint[] k_GlyphIndexArray;
-        [global::Unbound.Stub] internal void InitializeLigatureSubstitutionLookupDictionary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.InitializeLigatureSubstitutionLookupDictionary"); }
-        [global::Unbound.Stub] internal void InitializeMarkToBaseAdjustmentRecordsLookupDictionary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.InitializeMarkToBaseAdjustmentRecordsLookupDictionary"); }
-        [global::Unbound.Stub] internal void InitializeMarkToMarkAdjustmentRecordsLookupDictionary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.InitializeMarkToMarkAdjustmentRecordsLookupDictionary"); }
-        [global::Unbound.Stub] internal void UpdateLigatureSubstitutionRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateLigatureSubstitutionRecords"); }
-        [global::Unbound.Stub] internal void UpdateDiacriticalMarkAdjustmentRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateDiacriticalMarkAdjustmentRecords"); }
         [global::Unbound.Stub] internal void UpdateFontEditorRef() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateFontEditorRef"); }
         [global::Unbound.Stub] internal void UpdateFallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateFallbacks"); }
         [global::Unbound.Stub] internal void UpdateWeightFallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontAsset.UpdateWeightFallbacks"); }
@@ -280,18 +275,7 @@ namespace UnityEngine.TextCore.Text
     unsafe partial class FontFeatureTable
     {
         [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MultipleSubstitutionRecord> m_MultipleSubstitutionRecords;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.LigatureSubstitutionRecord> m_LigatureSubstitutionRecords;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord> m_MarkToBaseAdjustmentRecords;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord> m_MarkToMarkAdjustmentRecords;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<uint, global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.LigatureSubstitutionRecord>> m_LigatureSubstitutionRecordLookup;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<uint, global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord> m_MarkToBaseAdjustmentRecordLookup;
-        [global::Unbound.Stub] internal global::System.Collections.Generic.Dictionary<uint, global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord> m_MarkToMarkAdjustmentRecordLookup;
-        [global::Unbound.Stub] public void SortMarkToBaseAdjustmentRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.SortMarkToBaseAdjustmentRecords"); }
-        [global::Unbound.Stub] public void SortMarkToMarkAdjustmentRecords() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.SortMarkToMarkAdjustmentRecords"); }
         internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MultipleSubstitutionRecord> multipleSubstitutionRecords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.multipleSubstitutionRecords"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MultipleSubstitutionRecord>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.multipleSubstitutionRecords"); } }
-        internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.LigatureSubstitutionRecord> ligatureRecords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.ligatureRecords"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.LigatureSubstitutionRecord>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.ligatureRecords"); } }
-        internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord> MarkToBaseAdjustmentRecords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.MarkToBaseAdjustmentRecords"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MarkToBaseAdjustmentRecord>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.MarkToBaseAdjustmentRecords"); } }
-        internal global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord> MarkToMarkAdjustmentRecords { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.MarkToMarkAdjustmentRecords"); return new global::System.Collections.Generic.List<global::UnityEngine.TextCore.LowLevel.MarkToMarkAdjustmentRecord>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextCore.Text.FontFeatureTable.MarkToMarkAdjustmentRecords"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct MarkupAttribute

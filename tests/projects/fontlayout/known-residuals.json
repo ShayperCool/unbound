@@ -1,0 +1,66 @@
+{
+  "DejaVu/mode/4/11/char/2/bottomLeft": {
+    "expected": "BF4EB333,43088193,00000000",
+    "actual": "BF4EB32F,43088193,00000000"
+  },
+  "DejaVu/mode/4/11/mesh/0/8/position": {
+    "expected": "BF4EB333,4157E6D0,00000000",
+    "actual": "BF4EB32F,4157E6D0,00000000"
+  },
+  "DejaVu/mode/4/11/mesh/0/9/position": {
+    "expected": "BF4EB333,BFF05680,00000000",
+    "actual": "BF4EB32F,BFF05680,00000000"
+  },
+  "DejaVu/mode/4/17/char/2/bottomLeft": {
+    "expected": "BF162AA5,430C3260,00000000",
+    "actual": "BF162AAA,430C3260,00000000"
+  },
+  "DejaVu/mode/4/17/mesh/0/8/position": {
+    "expected": "BF162AA5,411CDA00,00000000",
+    "actual": "BF162AAA,411CDA00,00000000"
+  },
+  "DejaVu/mode/4/17/mesh/0/9/position": {
+    "expected": "BF162AA5,BFAE9A80,00000000",
+    "actual": "BF162AAA,BFAE9A80,00000000"
+  },
+  "DejaVu/mode/4/23/char/2/bottomLeft": {
+    "expected": "BF433782,4309417D,00000000",
+    "actual": "BF43377B,4309417D,00000000"
+  },
+  "DejaVu/mode/4/23/mesh/0/8/position": {
+    "expected": "BF433782,414BE830,00000000",
+    "actual": "BF43377B,414BE830,00000000"
+  },
+  "DejaVu/mode/4/23/mesh/0/9/position": {
+    "expected": "BF433782,BFE2FC00,00000000",
+    "actual": "BF43377B,BFE2FC00,00000000"
+  },
+  "Marks/mode/4/17/char/2/origin": {
+    "expected": "4024AFFE",
+    "actual": "4024B001"
+  },
+  "Marks/mode/4/17/char/2/bottomLeft": {
+    "expected": "C0A80D56,430FEB15,00000000",
+    "actual": "C0A80D54,430FEB15,00000000"
+  },
+  "Marks/mode/4/17/char/2/topRight": {
+    "expected": "409437FF,43195095,00000000",
+    "actual": "40943801,43195095,00000000"
+  },
+  "Marks/mode/4/17/mesh/0/8/position": {
+    "expected": "C0A80D56,40C29D60,00000000",
+    "actual": "C0A80D54,40C29D60,00000000"
+  },
+  "Marks/mode/4/17/mesh/0/9/position": {
+    "expected": "C0A80D56,C0542540,00000000",
+    "actual": "C0A80D54,C0542540,00000000"
+  },
+  "Marks/mode/4/17/mesh/0/10/position": {
+    "expected": "409437FF,C0542540,00000000",
+    "actual": "40943801,C0542540,00000000"
+  },
+  "Marks/mode/4/17/mesh/0/11/position": {
+    "expected": "409437FF,40C29D60,00000000",
+    "actual": "40943801,40C29D60,00000000"
+  }
+}

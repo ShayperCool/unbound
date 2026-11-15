@@ -586,6 +586,8 @@ namespace UnityEngine.TextCore.Text
             {
                 if (textInfo.textElementInfo == null || m_TotalCharacterCount >= textInfo.textElementInfo.Length)
                     TextInfo.Resize(ref textInfo.textElementInfo, m_TotalCharacterCount + 1, true);
+                int sourceIndex = i;
+                bool substitutedLigature = false;
                 uint unicode = elements[i].unicode;
                 if (generationSettings.richText && unicode == k_LessThan && ValidateHtmlTag(elements, i + 1, out int endIndex, generationSettings, textInfo, out _))
                 {
@@ -620,13 +622,24 @@ namespace UnityEngine.TextCore.Text
                         elements[i + 1].unicode = k_Consumed;
                         i++;
                     }
+                    if (populateLigatures)
+                    {
+                        int count = MatchLigature(elements, i, element.glyphIndex, true, out var ligature, out _);
+                        if (count > 0)
+                        {
+                            info.alternativeGlyph = ligature;
+                            ConsumeLigature(elements, ref i, count);
+                            substitutedLigature = true;
+                        }
+                    }
                 }
                 info.elementType = TextElementType.Character;
                 info.textElement = element;
                 info.isUsingAlternateTypeface = alternative;
                 info.character = (ushort)unicode;
-                info.index = elements[i].stringIndex;
-                info.stringLength = elements[i].length;
+                int spanIndex = substitutedLigature && !Unbound.Runtime.Compat.FontLigatureSourceSpanMeasured ? sourceIndex : i;
+                info.index = elements[spanIndex].stringIndex;
+                info.stringLength = elements[spanIndex].length;
                 info.fontAsset = m_CurrentFontAsset;
                 if (switchedFont && m_CurrentFontAsset.instanceID != generationSettings.fontAsset.instanceID)
                 {
@@ -830,6 +843,12 @@ namespace UnityEngine.TextCore.Text
                         if (variant != 0) m_CurrentFontAsset.TryAddGlyphInternal(variant, out _);
                         elements[i + 1].unicode = k_Consumed;
                         i++;
+                    }
+                    if (populateLigatures)
+                    {
+                        int count = MatchLigature(elements, i, element.glyphIndex, onMainThread, out _, out bool success);
+                        if (!success) return false;
+                        if (count > 0) ConsumeLigature(elements, ref i, count);
                     }
                 }
                 if (switchedFont && m_CurrentFontAsset.instanceID != generationSettings.fontAsset.instanceID)
