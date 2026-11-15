@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(REPO/'tests'))
 import editor_runner
-from probe_paths import reference_file, run_root
+from probe_paths import reference_file, run_root, shared_runtime
 
 WORK = run_root(ROOT, 'runs')
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
@@ -44,7 +44,13 @@ def native(label):
 def engine(label):
     out = WORK/label
     project = project_at(out)
-    cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
+    cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND')
+    if not cli:
+        sys.path.insert(0, str(REPO/'tools'))
+        from build import build_root, default_target
+        cli = default_target(REPO, build_root())/'release/unbound'
+    runtime = shared_runtime(cli, out/'runtime')
+    cli = runtime/'unbound'
     env = dict(os.environ, FONT_FEATURES_OUT=str(out/OUT))
     command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
                '--scene', 'Assets/Scenes/Probe.unity', '--no-watch', '--frames', '200', '--size', '96x64']
