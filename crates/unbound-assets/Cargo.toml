@@ -54,6 +54,10 @@ intel_tex_2 = "0.5"
 [build-dependencies]
 cc = { version = "1", features = ["parallel"] }
 
+[features]
+# Helpers for the tests of this crate and of crates that depend on it.
+test-util = []
+
 [dev-dependencies]
 unbound-project.workspace = true
 serde_json.workspace = true

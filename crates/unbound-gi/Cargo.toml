@@ -11,3 +11,6 @@ unbound-assets.workspace = true
 unbound-compat.workspace = true
 unbound-yaml.workspace = true
 rayon.workspace = true
+
+[dev-dependencies]
+unbound-assets = { workspace = true, features = ["test-util"] }

@@ -20,6 +20,7 @@ pub mod bundle;
 pub mod bundle_cache;
 pub mod cache;
 pub mod color;
+#[cfg(any(test, feature = "test-util"))]
 pub mod cpu_time;
 pub mod dilate;
 pub mod font;
