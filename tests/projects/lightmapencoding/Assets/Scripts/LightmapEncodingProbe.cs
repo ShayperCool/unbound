@@ -17,7 +17,8 @@ using UnityEngine.Rendering;
 /// formats of a compressed HDR lightmap and cubemap; a material's <c>_Cube_HDR</c> and
 /// <c>_Flat_HDR</c> and its cube decoded with them; level 1 of mipmapped float and 8-bit
 /// lightmaps; a float 2D texture's material decode values; the cube's through a property block
-/// and as a global texture; unity_Lightmap_HDR with a plain first lightmap. Writes <c>lightmapencoding.jsonl</c> into
+/// and as a global texture; unity_Lightmap_HDR with a plain first lightmap; which of a texture's
+/// and an explicit <c>_HDR</c> value wins through materials, blocks and globals. Writes <c>lightmapencoding.jsonl</c> into
 /// <c>LIGHTMAP_ENCODING_PROBE_OUT</c>, then quits.
 /// </summary>
 public class LightmapEncodingProbe : MonoBehaviour
@@ -150,6 +151,57 @@ public class LightmapEncodingProbe : MonoBehaviour
         LightmapSettings.lightmaps = new[] { new LightmapData { lightmapColor = Texture2D.whiteTexture }, new LightmapData { lightmapColor = lightmap } };
         renderer.lightmapIndex = 1;
         Capture(camera, target, "mixed/lightmapDecode");
+
+        // Which values win: a plain cube (a cube render texture) through a block over the
+        // material's encoded one; explicit _Cube_HDR values set before or after the texture on a
+        // material, a block and as globals; an encoded global cube over a material's plain one.
+        var plainCube = new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32) { dimension = TextureDimension.Cube };
+        plainCube.Create();
+        var explicitValues = new Vector4(7f, 8f, 9f, 10f);
+        diagnostic.SetFloat("_Mode", 6);
+        block.Clear();
+        block.SetTexture("_Cube", plainCube);
+        renderer.SetPropertyBlock(block);
+        Capture(camera, target, "precedence/blockPlainOverMaterial");
+        block.Clear();
+        block.SetTexture("_Cube", cube);
+        block.SetVector("_Cube_HDR", explicitValues);
+        renderer.SetPropertyBlock(block);
+        renderer.sharedMaterial = bare;
+        bare.SetFloat("_Mode", 6);
+        Capture(camera, target, "precedence/blockVectorAfterTexture");
+        block.Clear();
+        block.SetVector("_Cube_HDR", explicitValues);
+        block.SetTexture("_Cube", cube);
+        renderer.SetPropertyBlock(block);
+        Capture(camera, target, "precedence/blockTextureAfterVector");
+        renderer.SetPropertyBlock(null);
+        var vectorAfter = new Material(diagnostic.shader);
+        vectorAfter.SetFloat("_Mode", 6);
+        vectorAfter.SetTexture("_Cube", cube);
+        vectorAfter.SetVector("_Cube_HDR", explicitValues);
+        renderer.sharedMaterial = vectorAfter;
+        Capture(camera, target, "precedence/materialVectorAfterTexture");
+        var textureAfter = new Material(diagnostic.shader);
+        textureAfter.SetFloat("_Mode", 6);
+        textureAfter.SetVector("_Cube_HDR", explicitValues);
+        textureAfter.SetTexture("_Cube", cube);
+        renderer.sharedMaterial = textureAfter;
+        Capture(camera, target, "precedence/materialTextureAfterVector");
+        renderer.sharedMaterial = bare;
+        bare.SetFloat("_Mode", 10);
+        Shader.SetGlobalTexture("_GlobalCube", cube);
+        Shader.SetGlobalVector("_GlobalCube_HDR", explicitValues);
+        Capture(camera, target, "precedence/globalVectorAfterTexture");
+        Shader.SetGlobalVector("_GlobalCube_HDR", explicitValues);
+        Shader.SetGlobalTexture("_GlobalCube", cube);
+        Capture(camera, target, "precedence/globalTextureAfterVector");
+        var plainMaterial = new Material(diagnostic.shader);
+        plainMaterial.SetFloat("_Mode", 6);
+        plainMaterial.SetTexture("_Cube", plainCube);
+        Shader.SetGlobalTexture("_Cube", cube);
+        renderer.sharedMaterial = plainMaterial;
+        Capture(camera, target, "precedence/globalOverMaterialPlain");
 
         File.WriteAllText(Path.Combine(dir, "lightmapencoding.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
