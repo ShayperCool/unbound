@@ -43,7 +43,7 @@ pub struct UnityRenderPlugin {
 /// A capture of the window's image ([`WindowCaptures`]).
 struct WindowCapture {
     /// The frame captured: the latest complete one when it was asked for (none before the
-    /// first: the first one presented).
+    /// first: the window then shows black).
     frame: Option<Presented>,
     /// The PNG file written.
     path: PathBuf,
@@ -326,8 +326,8 @@ fn draw_present(
 
 /// Draws the window captures asked for since the last render ([`WindowCaptures`]): each one's
 /// frame, as on the window, into a texture of the window's size and image format, read back and
-/// written as PNG off the render thread. Before the window's format is known, or before the
-/// first frame, they wait.
+/// written as PNG off the render thread. One asked for before any frame was complete is the
+/// window's image then: black. Before the window's image format is known they wait.
 fn capture_window(presenter: Option<ResMut<Presenter>>, captures: Res<WindowCaptures>) {
     let Some(mut presenter) = presenter else {
         return;
@@ -335,26 +335,18 @@ fn capture_window(presenter: Option<ResMut<Presenter>>, captures: Res<WindowCapt
     let Some((size, format)) = presenter.output else {
         return;
     };
-    let latest = presenter.latest.lock().unwrap().clone();
-    let pending: Vec<WindowCapture> = {
-        let mut pending = captures.pending.lock().unwrap();
-        if pending.is_empty() || (latest.is_none() && pending.iter().any(|c| c.frame.is_none())) {
-            return;
-        }
-        std::mem::take(&mut *pending)
-    };
+    let pending = std::mem::take(&mut *captures.pending.lock().unwrap());
     for capture in pending {
-        let frame = capture.frame.clone().or_else(|| latest.clone());
-        if let Some(frame) = frame {
-            capture_frame(&mut presenter, &frame, size, format, capture);
-        }
+        let frame = capture.frame.clone();
+        capture_frame(&mut presenter, frame.as_ref(), size, format, capture);
     }
 }
 
-/// Draws one capture of `frame` as the window shows it on an output of `size` and `format`.
+/// Draws one capture of `frame` as the window shows it on an output of `size` and `format`
+/// (black without a frame).
 fn capture_frame(
     presenter: &mut Presenter,
-    frame: &Presented,
+    frame: Option<&Presented>,
     size: (u32, u32),
     format: wgpu::TextureFormat,
     capture: WindowCapture,
@@ -384,14 +376,20 @@ fn capture_frame(
         mapped_at_creation: false,
     });
     // Parameters of its own: the window's present this render keeps its own.
-    let params = present_params(&device);
-    presenter.queue.write_buffer(
-        &params,
-        0,
-        bytemuck::cast_slice(&present_mode(frame, format.is_srgb())),
-    );
-    let pipeline = presenter.pipelines.blit(&device, format);
-    let bind_group = present_bind_group(presenter, frame, &params);
+    let blit = frame.map(|frame| {
+        let params = present_params(&device);
+        presenter.queue.write_buffer(
+            &params,
+            0,
+            bytemuck::cast_slice(&present_mode(frame, format.is_srgb())),
+        );
+        let pipeline = presenter.pipelines.blit(&device, format);
+        (
+            pipeline,
+            present_bind_group(presenter, frame, &params),
+            frame,
+        )
+    });
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("unbound window capture"),
     });
@@ -413,13 +411,15 @@ fn capture_frame(
             occlusion_query_set: None,
             multiview_mask: None,
         });
-        draw_present(
-            &mut pass,
-            (&pipeline, &bind_group),
-            (width, height),
-            frame.size,
-            frame.fixed_game_view,
-        );
+        if let Some((pipeline, bind_group, frame)) = &blit {
+            draw_present(
+                &mut pass,
+                (pipeline, bind_group),
+                (width, height),
+                frame.size,
+                frame.fixed_game_view,
+            );
+        }
     }
     encoder.copy_texture_to_buffer(
         texture.as_image_copy(),
