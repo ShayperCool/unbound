@@ -1887,6 +1887,14 @@
 {"k":"sim/errors/spawn info of nothing/thrown","v":""}
 {"k":"sim/errors/spawn info into null/logs","v":""}
 {"k":"sim/errors/spawn info into null/thrown","v":"NullReferenceException: GetSpawnSystemInfo expects a non null VFXSpawnerState."}
+{"k":"bundle/loaded","v":"true"}
+{"k":"bundle/names","v":"assets/bundlegraphs/bundled.vfx"}
+{"k":"bundle/asset","v":"VisualEffectAsset Bundled"}
+{"k":"bundle/asset/is the project's","v":"false"}
+{"k":"bundle/asset/events","v":"OnPlay, OnStop"}
+{"k":"bundle/asset/exposed","v":"Single Rate"}
+{"k":"bundle/effect/asset","v":"true"}
+{"k":"bundle/effect/systems","v":"System, System (1)"}
 {"k":"spawner state/new","v":"Finished playing=0 new=0 dt=00000000 t=00000000 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"spawner state/playing set","v":"Looping playing=1 new=0 dt=00000000 t=00000000 before=00000000 loop=3f800000 after=00000000 index=0 of=-1"}
 {"k":"spawner state/after loop of no delay","v":"Looping playing=1 new=1 dt=00000000 t=00000000 before=00000000 loop=3f800000 after=00000000 index=1 of=-1"}
@@ -2022,6 +2030,7 @@
 {"k":"sim/override second frame/f003","v":"alive=1 culled=0 | System: Looping playing=1 new=1 count=3f800000 dt=3d088889 t=3d088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/override timing/f003 2 late update","v":"40e00000 41100000"}
 {"k":"sim/override timing/f003 3 end of frame","v":"40e00000 41100000"}
+{"k":"bundle/effect/f003","v":"culled=0 awake=0 renderer enabled=1 visible=1"}
 {"k":"draw/opaque/f003","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"sim/override timing/f004 1 update","v":"40e00000 41100000"}
 {"k":"sim/time/f004","v":"3d088889"}
@@ -7065,6 +7074,7 @@
 {"k":"sim/late/f020","v":"alive=0 culled=1 | System: Finished playing=0 new=0 count=00000000 dt=00000000 t=00000000 before=00000000 loop=00000000 after=00000000 index=0 of=0"}
 {"k":"sim/expressions late/f020","v":"alive=0 culled=1 | System: Finished playing=0 new=0 count=00000000 dt=00000000 t=00000000 before=00000000 loop=00000000 after=00000000 index=0 of=0 | A=3fe00000"}
 {"k":"sim/late fresh/f020","v":"culled=1 | System: Finished playing=0 new=0 count=00000000 dt=00000000 t=00000000 before=00000000 loop=00000000 after=00000000 index=0 of=0 | Rate=41f00000"}
+{"k":"bundle/effect/f020","v":"culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"sim/time/f021","v":"3d088889"}
 {"k":"sim/rate/f021","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f2aaaad before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f021","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f2aaaad before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
