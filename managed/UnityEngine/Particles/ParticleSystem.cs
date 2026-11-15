@@ -1262,7 +1262,7 @@ namespace UnityEngine
             m_Prewarming = true;
             m_SimulatingBirths = Compat.ParticleBirthStepsMeasured;
             m_BirthCallRemaining = span;
-            try { Advance(span, 0f, false); }
+            try { Advance(span, 0f, false, longSteps: true); }
             finally
             {
                 m_Prewarming = false;

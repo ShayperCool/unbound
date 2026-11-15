@@ -255,6 +255,26 @@ namespace UnityEngine.Tests
             Assert.All(Ages(child), a => Assert.InRange(a, Dt, Dt + Time.maximumParticleDeltaTime));
         }
 
+        /// <summary>A prewarm longer than 5 s takes longer steps while much of it is left: 0.2 s with
+        /// more than 5 s left (children 6 and 8 s: their spans of 6.7 and 8.7 s), 1 s with more than
+        /// 10 s left, kept until 5 s are left (12 s: a parent born and dead within a 1 s step emits
+        /// no children). The Editor keeps 33, 43 and 24 children, the children of 0.2 s steps 0 or
+        /// 0.1 s old (tests/projects/particlerender prewarm/birth_child6, 8, 12).</summary>
+        [Theory]
+        [InlineData(6f, 33, 3)]
+        [InlineData(8f, 43, 9)]
+        [InlineData(12f, 24, 0)]
+        public void ALongPrewarmTakesLongerStepsWhileMoreThanFiveSecondsAreLeft(float childLifetime, int expected, int tenthOld)
+        {
+            var parent = Parent();
+            var child = Child(parent, c => { var m = c.main; m.startLifetime = childLifetime; });
+            parent.Play();
+            Assert.Equal(expected, child.particleCount);
+            var ages = Ages(child);
+            Assert.Equal(tenthOld, ages.Count(a => Mathf.Abs(a - 0.1f) < 1e-4f));
+            Assert.All(ages, a => Assert.True(a <= Time.maximumParticleDeltaTime || Mathf.Abs(a - 0.1f) < 1e-4f, $"age {a}"));
+        }
+
         [Fact]
         public void APrewarmChainAddsEachLifetimeAndStartsTheChain()
         {

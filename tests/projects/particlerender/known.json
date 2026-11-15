@@ -107,20 +107,6 @@
    "prewarm/birth_rate/child/start"
   ]
  },
- "prewarm-long-child-catchup": {
-  "reason": "Prewarmed parents whose Birth child lives 6, 8 or 12 s (prewarm/birth_child6, birth_child8, birth_child12): the Editor keeps fewer of the children emitted long before the prewarm's end (33, 43 and 24 children against Unbound's 36, 48 and 72, which keeps every child born within its lifetime of the end); with child lifetimes up to 4 s every child matches. Open, prewarm only: the catch-up of children in long Simulate calls (catchup/*, 4.5 to 13 s) matches.",
-  "keys": [
-   "prewarm/birth_child12/child/0",
-   "prewarm/birth_child12/child/1",
-   "prewarm/birth_child12/child/start",
-   "prewarm/birth_child6/child/0",
-   "prewarm/birth_child6/child/1",
-   "prewarm/birth_child6/child/start",
-   "prewarm/birth_child8/child/0",
-   "prewarm/birth_child8/child/1",
-   "prewarm/birth_child8/child/start"
-  ]
- },
  "collision-cache-small-budget": {
   "reason": "World collisions at Medium and Low quality with QualitySettings.particleRaycastBudget at 2, shared by both systems (collide/cache/budget2_*): which particle queries in a given frame is unresolved, so the cached plane a particle meets comes from another particle than in the Editor. Medium bounces in the same frames, its positions within 1e-3; Low misses or takes some bounces in other frames. With the default budget (collide/world/slope_medium, slope_low) and in a system advanced only by Simulate (collide/cache/simulate_medium) every value matches.",
   "keys": [

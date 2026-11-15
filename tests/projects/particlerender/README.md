@@ -141,9 +141,6 @@ Everything below is measured in this release, not documented.
   [-1, 1] (every freenorm/transform/* bake).
 - `stretched-normals`: side-view normals differ by up to 1e-3, the normal of a collapsed particle in
   a sorted system, and BakeRotationAndScale with a rotated non-uniformly scaled emitter.
-- `prewarm-long-child-catchup`: children of 6, 8 and 12 s born long before the prewarm's end: the
-  Editor keeps fewer of them, prewarm only (long Simulate calls catch children up as Unity does,
-  `catchup/*`). Open.
 - `prewarm-end-tie`, `prewarm-equal-age-order`: float ties at the prewarm's loop end and in the
   age order of equal-age children.
 - `collision-cache-small-budget`: with a ray budget of 2 shared by a Medium and a Low system, which

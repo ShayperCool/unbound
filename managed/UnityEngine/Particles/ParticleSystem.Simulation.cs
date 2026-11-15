@@ -100,7 +100,9 @@ namespace UnityEngine
             m_CollectTriggers = true;
             try
             {
-                Advance(catchUp + dt, m_FrameDistance, true);
+                // A frame's advance takes the long steps a Play-mode update takes (more than 5 s
+                // left: a culled system catching up; unmeasured there, the rule measured on prewarm).
+                Advance(catchUp + dt, m_FrameDistance, true, longSteps: true);
             }
             finally { m_CollectTriggers = false; }
             return true;
@@ -233,7 +235,8 @@ namespace UnityEngine
         /// <param name="carry">Whether the time earlier calls left unstepped (<see cref="m_StepRemainder"/>)
         /// joins this advance, and its own residual is kept for the next: not inside a fixed-step
         /// Simulate, which keeps that remainder itself.</param>
-        internal void Advance(float dt, float distance, bool stopWhenPaused, float from = 0f, float to = 1f, bool carry = true)
+        internal void Advance(float dt, float distance, bool stopWhenPaused, float from = 0f, float to = 1f, bool carry = true,
+            bool longSteps = false)
         {
             float max = Time.maximumParticleDeltaTime;
             int steps = max > 0f ? (int)Math.Ceiling(dt / max) : 1;
@@ -242,17 +245,30 @@ namespace UnityEngine
             float share = distance / steps;
             float remaining = carry ? dt + m_StepRemainder : dt;
             m_CallStartTime = m_Time;
+            float previous = step, elapsed = 0f;
             try
             {
                 for (int i = 0; remaining > 1e-6f && i < 100000; i++)
                 {
-                    m_StepFrom = from + (to - from) * Mathf.Min((float)i / steps, 1f);
-                    m_StepTo = from + (to - from) * Mathf.Min((float)(i + 1) / steps, 1f);
                     // The Native acceleration controls match subtraction of the remaining
                     // call time, with residuals at or below one microsecond left unstepped.
                     float used = Mathf.Min(step, remaining);
+                    if (longSteps) used = LongStep(remaining, used, previous);
+                    previous = used;
+                    if (longSteps)
+                    {
+                        m_StepFrom = from + (to - from) * Mathf.Min(elapsed / dt, 1f);
+                        m_StepTo = from + (to - from) * Mathf.Min((elapsed + used) / dt, 1f);
+                        share = distance * (used / dt);
+                    }
+                    else
+                    {
+                        m_StepFrom = from + (to - from) * Mathf.Min((float)i / steps, 1f);
+                        m_StepTo = from + (to - from) * Mathf.Min((float)(i + 1) / steps, 1f);
+                    }
+                    elapsed += used;
                     m_StepDt = used;
-                    Step(used, i < steps ? share : 0f);
+                    Step(used, longSteps || i < steps ? share : 0f);
                     if (m_SimulatingBirths || m_Prewarming) m_BirthCallRemaining -= used;
                     remaining -= used;
                     if (stopWhenPaused && (m_IsPaused || !m_Registered)) break;
@@ -267,6 +283,20 @@ namespace UnityEngine
                 m_StepTo = 1f;
                 m_StepDt = 0f;
             }
+        }
+
+        /// <summary>A step of a long advance in Play mode (a prewarm or a frame, not Simulate, which
+        /// keeps its equal steps):
+        /// while more than 10 s of the call are left the step is the previous one if longer than 1 s,
+        /// else the duration up to 1 s; while more than 5 s are left, the previous one if longer than
+        /// 0.2 s, else the duration up to 0.2 s; then the equal step (matches the Unity 6000.0.71f1
+        /// Editor's prewarm, tests/projects/particlerender prewarm/birth_child6, birth_child8,
+        /// birth_child12: spans of 6.7, 8.7 and 12.7 s).</summary>
+        float LongStep(float remaining, float equal, float previous)
+        {
+            if (remaining > 10f) return previous > 1f ? previous : Mathf.Min(Mathf.Max(m_Main.duration, 0.0001f), 1f);
+            if (remaining > 5f) return previous > 0.2f ? previous : Mathf.Min(Mathf.Max(m_Main.duration, 0.0001f), 0.2f);
+            return equal;
         }
 
         /// <summary>The playback time where the current advance started: only an advance that starts
