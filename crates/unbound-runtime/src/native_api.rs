@@ -432,7 +432,22 @@ extern "C" fn decode_block_texel(
         return 0;
     }
     let Some(format) = unbound_assets::texture::BlockFormat::from_unity_format(format) else {
-        return 0;
+        // ETC2 RGBA1, kept as blocks by layered textures only.
+        let Some(size) = unbound_assets::texture::layered::texel_block_bytes(format) else {
+            return 0;
+        };
+        let decoded = std::panic::catch_unwind(|| {
+            // The caller supplies exactly one block and four exclusive output components.
+            let block = unsafe { std::slice::from_raw_parts(block, size) };
+            unbound_assets::texture::layered::decode_texel(format, block, index as usize)
+        });
+        return match decoded {
+            Ok(Some(pixel)) => {
+                unsafe { std::slice::from_raw_parts_mut(output, 4) }.copy_from_slice(&pixel);
+                1
+            }
+            _ => 0,
+        };
     };
     std::panic::catch_unwind(|| {
         // The caller supplies exactly one block and four exclusive output components.

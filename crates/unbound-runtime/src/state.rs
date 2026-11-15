@@ -698,6 +698,18 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 eac16: bool,
             }
             let r: Request = serde_json::from_str(request)?;
+            // ETC2 RGBA1, signed EAC and PVRTC, which only layered textures keep as blocks:
+            // RGBA8, or signed EAC's snorm channels (with `eac16`) for the renderer.
+            if unbound_assets::texture::layered::is_layered_block_format(r.format) {
+                use unbound_assets::texture::layered;
+                let blocks = crate::fonts::decode_base64(&r.data).context("data is not base64")?;
+                let rgba = if r.eac16 {
+                    layered::decode_signed_eac_gpu(r.format, &blocks, r.width, r.height)?
+                } else {
+                    layered::decode_rgba(r.format, &blocks, r.width, r.height)?
+                };
+                return Ok(json!({ "rgba": crate::models::base64(&rgba) }).to_string());
+            }
             let format = unbound_assets::texture::BlockFormat::from_unity_format(r.format)
                 .with_context(|| format!("texture format {} is not a block format", r.format))?;
             let blocks = crate::fonts::decode_base64(&r.data).context("data is not base64")?;

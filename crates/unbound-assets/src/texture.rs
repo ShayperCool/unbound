@@ -2874,6 +2874,7 @@ mod astc;
 mod bcn;
 pub mod crunch;
 pub mod etc;
+pub mod layered;
 /// One compressed texel, with caller-owned input and no per-read allocation.
 pub fn decode_block_texel(format: BlockFormat, block: &[u8], index: usize) -> Option<[f32; 4]> {
     if block.len() < format.block_bytes()

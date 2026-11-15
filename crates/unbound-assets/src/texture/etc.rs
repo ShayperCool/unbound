@@ -30,7 +30,7 @@ const EAC_TABLES: [[i32; 4]; 16] = [
 ];
 
 /// The eight modifiers of an EAC table in index order: the negative ones, then the positive.
-fn eac_modifiers(table: usize) -> [i32; 8] {
+pub(super) fn eac_modifiers(table: usize) -> [i32; 8] {
     let n = EAC_TABLES[table];
     [
         n[0],
