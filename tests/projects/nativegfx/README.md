@@ -265,16 +265,21 @@ Device conversions (`srgb.*`, `loadoutside.*`, appended the same way): an sRGB r
 drawn into with a color whose encoded red would be 127.5 stores 127 (presumably a tie; a
 `GL.Clear` color is taken as linear and stored sRGB-encoded: 0.5 stores 188), its texels decode to
 32-bit floats (191 to 0.52088),
-and texel loads (`Texture2D.Load`) outside a texture read zero.
+and texel loads (`Texture2D.Load`) outside a texture read zero. Volumes (`volume.*`):
+`SystemInfo.supportsCompressed3DTextures` is true; BC1 and ASTC 4x4 volumes made from their
+blocks are sampled per slice; a volume of every compressed TextureFormat is made, except Crunched
+ones (`ArgumentException: Crunched Texture3D is not supported.`) and PVRTC, ETC and EAC ones
+(`Metal does not support <format> texture format for Texture3D` logged, then `UnityException:
+Failed to create texture because of invalid parameters.`).
 
-Unbound matches 179/215 records with 36 declared residuals (`residuals-metal.json`, each with its
+Unbound matches 218/261 records with 43 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a screen
 camera with command buffers drawing into Unbound's texture standing for the screen, and the screen
 copies, which Unbound makes (copying the screen worked before it was BGRA8; the windowed Editor's
 Game view is unmeasured), with the Blit after them (the copied texels, and green 1/255 apart
-elsewhere, unresolved). The screen is shared:
+elsewhere: the batch-mode screen is not sRGB-encoded), and block-compressed volumes, whose blocks Unbound does not keep. The screen is shared:
 outside render texture targets the current encoder is over the screen's color texture and depth
 buffer (loaded), in callbacks and from scripts, and its descriptor is there before the plugin asks
 for the encoder (`plugin.peek.screen`, `plugin.peek.outside`); store actions are unknown until the

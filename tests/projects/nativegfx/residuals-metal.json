@@ -42,5 +42,14 @@
   "screencamera.logs",
   "screencopy.logs",
   "screencopy.texture.pixels"
+ ],
+ "Block-compressed volumes: Unbound keeps a Texture3D (and Texture2DArray) of a block format as RGBA32 texels, so its blocks cannot be set (SetPixelData of the blocks fails) and none is sampled; SystemInfo.supportsCompressed3DTextures stays a stub answering false until they are kept (the macOS Editor's Metal device answers true, makes and samples BC1 and ASTC volumes). Queued": [
+  "volume.astc.exception",
+  "volume.astc.slice0",
+  "volume.astc.slice1",
+  "volume.bc1.exception",
+  "volume.bc1.slice0",
+  "volume.bc1.slice1",
+  "volume.compressed3d"
  ]
 }
