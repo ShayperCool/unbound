@@ -1751,16 +1751,13 @@ fn upload_imported(
     };
     let mip_count = texture.mip_count();
     let dimension = texture.dimension();
-    if dimension == 4 {
+    if dimension == 4 && texture.blocks.is_none() {
         // The import cache keeps bottom-up rows for CPU reads. Cube sampling addresses
-        // each GPU face top-down, so reverse each face's mip rows only for this upload.
+        // each GPU face top-down, so reverse each face's mip rows only for this upload
+        // (a compressed cubemap's blocks are top-down already).
         for mip in &mut texture.mips {
-            let rows = mip.height as usize;
-            let stride = mip.data.len() / rows;
-            for y in 0..rows / 2 {
-                let (top, bottom) = mip.data.split_at_mut((rows - 1 - y) * stride);
-                top[y * stride..(y + 1) * stride].swap_with_slice(&mut bottom[..stride]);
-            }
+            let row = mip.data.len() / mip.height.max(1) as usize;
+            unbound_assets::texture::flip_rows(&mut mip.data, row);
         }
     }
     // The import's blocks, else BC7 blocks made for the GPU when it samples them, else the

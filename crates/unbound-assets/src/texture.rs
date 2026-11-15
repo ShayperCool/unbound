@@ -731,8 +731,9 @@ impl ProjectCompression {
 /// the `.meta`'s sRGB flag is on (normal maps too, whose flag stays on); an explicit one stays
 /// uncompressed unless both sides are powers of two (20x12 without mips: RGB24 in Gamma,
 /// ETC2_RGB in Linear). Other targets and default formats, automatic ETC_RGB4 at sizes that are
-/// not powers of two, Split Alpha Channel, automatic HDR without Crunch on Android, EAC imports, cubemaps,
-/// arrays, volumes and the other texture types are unmeasured. The 6000.0.71f1 profile
+/// not powers of two, Split Alpha Channel, automatic 2D HDR without Crunch on Android, EAC
+/// imports, arrays, volumes and the other texture types are unmeasured. A cubemap's faces are
+/// stored as 2D textures of the face size (a float cubemap on Android as a float lightmap). The 6000.0.71f1 profile
 /// supports all six square LDR/HDR ASTC footprints and importer quality settings. Android
 /// ASTC defaults use 4x4 at High, 8x8 at Low and 6x6 at Normal, including Single Channel
 /// textures. ASTC sub-block mips clamp their edges; other releases keep uncompressed storage.
@@ -791,14 +792,20 @@ pub fn storage(
         Some(_) if s.uncompressed => return Storage::Uncompressed,
         Some(f) => return unsupported(&format!("TextureImporterFormat {f}")),
         None if android && hdr && s.rgbm_encoding => BlockFormat::Etc2Rgba8,
-        // A float lightmap (High quality encoding) is ASTC HDR whatever the default format:
-        // measured at 6x6 for Normal compression (tests/projects/lightmapencoding); the other
-        // qualities take the block sizes of automatic LDR ASTC (unmeasured).
-        None if android && hdr && s.texture_type == TextureType::Lightmap => match s.compression {
-            2 => BlockFormat::AstcHdr4x4,
-            3 => BlockFormat::AstcHdr8x8,
-            _ => BlockFormat::AstcHdr6x6,
-        },
+        // A float lightmap or cubemap (High quality encoding) is ASTC HDR whatever the default
+        // format: measured at 6x6 for Normal compression (tests/projects/lightmapencoding,
+        // Lightmap- and ReflectionCompressed); the other qualities take the block sizes of
+        // automatic LDR ASTC (unmeasured).
+        None if android
+            && hdr
+            && (s.texture_type == TextureType::Lightmap || s.shape == TextureShape::Cube) =>
+        {
+            match s.compression {
+                2 => BlockFormat::AstcHdr4x4,
+                3 => BlockFormat::AstcHdr8x8,
+                _ => BlockFormat::AstcHdr6x6,
+            }
+        }
         None if android && hdr => return unsupported("HDR textures of the Android target"),
         None if hdr => BlockFormat::Bc6h,
         None => match s.texture_type {
@@ -861,7 +868,11 @@ pub fn storage(
     if !measured {
         return unsupported(&format!("{format:?} textures of the {build_target} target"));
     }
-    if s.shape != TextureShape::Texture2D || texture.layers != 1 {
+    // A cubemap's faces are compressed as 2D textures of the face size are (Unity 6000.0.71f1,
+    // tests/projects/cubecompression and lightmapencoding ReflectionCompressed); arrays and
+    // volumes are unmeasured.
+    let faces = s.shape == TextureShape::Cube && texture.layers == 6;
+    if !faces && (s.shape != TextureShape::Texture2D || texture.layers != 1) {
         return unsupported(&format!("compressed {:?} textures", s.shape));
     }
     if format.is_astc() {
@@ -958,16 +969,30 @@ fn compress_blocks(
         };
         astc::Encoder::new(format, texture.settings.compression_quality, channel)
     });
+    // A cubemap's faces are stored, compressed and uploaded with their rows top-down, as the GPU
+    // addresses a face (the import keeps them bottom-up: they are turned for the blocks and
+    // back for the decoded pixels).
+    let cube = texture.settings.shape == TextureShape::Cube;
+    let row_bytes = |m: &MipLevel| m.data.len() / m.height.max(1) as usize;
     let mips: Vec<serde_bytes::ByteBuf> = texture
         .mips
         .iter()
         .map(|m| {
+            let turned;
+            let data: &[u8] = if cube {
+                let mut rows = m.data.clone();
+                flip_rows(&mut rows, row_bytes(m));
+                turned = rows;
+                &turned
+            } else {
+                &m.data
+            };
             serde_bytes::ByteBuf::from(if let Some(encoder) = &astc {
-                encoder.compress(&m.data, m.width, m.height)
+                encoder.compress(data, m.width, m.height)
             } else if project.encoders.measured_import_encoders {
                 bcn::compress_import_level(
                     format,
-                    &m.data,
+                    data,
                     m.width,
                     m.height,
                     texture.settings.compression_quality,
@@ -975,9 +1000,9 @@ fn compress_blocks(
                     project.bc7_compressor,
                 )
             } else if format == BlockFormat::Bc6h {
-                bcn::compress_level_f32(&m.data, m.width, m.height)
+                bcn::compress_level_f32(data, m.width, m.height)
             } else {
-                bcn::compress_level(format, &m.data, m.width, m.height)
+                bcn::compress_level(format, data, m.width, m.height)
             })
         })
         .collect();
@@ -997,6 +1022,10 @@ fn compress_blocks(
             } else {
                 bcn::decode_level(format, blocks, mip.width, mip.height)
             };
+            if cube {
+                let row = row_bytes(mip);
+                flip_rows(&mut mip.data, row);
+            }
         }
     }
     if format.approximates_editor() {
@@ -1441,7 +1470,8 @@ impl Importer for TextureImporter {
     // 43: TIFF tags stored once per sample (SampleFormat) are read (such files failed to import).
     // 44: float lightmaps and HDR cubemaps take the build target's double LDR or RGBM encoding;
     //     8-bit lightmap mips are filtered as stored.
-    const VERSION: u32 = 44;
+    // 45: cubemaps are block-compressed as the build target stores them, faces top-down.
+    const VERSION: u32 = 45;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let settings = self.settings(meta);
@@ -2777,12 +2807,23 @@ impl Image {
 
     /// Top-down to Unity's bottom-up row order.
     fn flip_rows(&mut self) {
-        let row = self.width as usize * self.format.bytes_per_pixel();
-        let rows = self.height as usize;
-        for y in 0..rows / 2 {
-            let (top, bottom) = self.data.split_at_mut((rows - 1 - y) * row);
-            top[y * row..(y + 1) * row].swap_with_slice(&mut bottom[..row]);
-        }
+        flip_rows(
+            &mut self.data,
+            self.width as usize * self.format.bytes_per_pixel(),
+        );
+    }
+}
+
+/// Reverses the order of the rows (each `row_bytes` long) of an image in place: bottom-up to
+/// top-down and back.
+pub fn flip_rows(data: &mut [u8], row_bytes: usize) {
+    if row_bytes == 0 {
+        return;
+    }
+    let rows = data.len() / row_bytes;
+    for y in 0..rows / 2 {
+        let (top, bottom) = data.split_at_mut((rows - 1 - y) * row_bytes);
+        top[y * row_bytes..(y + 1) * row_bytes].swap_with_slice(&mut bottom[..row_bytes]);
     }
 }
 

@@ -461,6 +461,86 @@ fn a_gamma_projects_hdr_cube_is_encoded_whatever_its_size() {
     }
 }
 
+/// A cubemap's faces are stored as the target stores a 2D texture of the face size (Standalone:
+/// DXT1 for opaque bytes, BC6H for floats), each face's blocks compressed with its rows
+/// top-down, as the GPU addresses a face, its decoded pixels bottom-up again
+/// (tests/projects/cubecompression).
+#[test]
+fn cubemap_faces_are_compressed_top_down() {
+    let measured = unbound_compat::TextureCompressionRules::for_version(
+        unbound_compat::UnityVersion::new(6000, 0, 71),
+    );
+    let importer = TextureImporter {
+        compress: false,
+        project: ProjectCompression {
+            encoders: measured,
+            ..ProjectCompression::default()
+        },
+        ..TextureImporter::default()
+    };
+    // Faces 8 texels square, the top half (first rows of the file) red, the bottom half blue.
+    let (top, bottom) = ([250u8, 0, 0, 255], [0u8, 0, 250, 255]);
+    let bytes = png(48, 8, |_, y| if y < 4 { top } else { bottom });
+    let meta = unbound_yaml::parse_value("TextureImporter:\n  textureShape: 2\n  generateCubemap: 6\n  mipmaps:\n    enableMipMap: 0\n    sRGBTexture: 0\n  textureCompression: 1\n").unwrap();
+    let tex = importer
+        .import(Path::new("Cube.png"), &bytes, &meta)
+        .unwrap();
+    assert_eq!(tex.reported_format(), Some(BlockFormat::Bc1.unity_format()));
+    let blocks = tex.blocks.as_ref().unwrap();
+    assert_eq!(blocks.mips.len(), 6);
+    let near = |texel: &[u8], expected: [u8; 4]| {
+        texel.iter().zip(expected).all(|(&a, b)| a.abs_diff(b) <= 8)
+    };
+    for face in 0..6 {
+        let decoded = bcn::decode_level(BlockFormat::Bc1, &blocks.mips[face], 8, 8);
+        // The blocks' first row is the face's top; the pixels' first row its bottom.
+        assert!(
+            near(&decoded[..4], top),
+            "face {face} blocks: {:?}",
+            &decoded[..4]
+        );
+        assert!(
+            near(&tex.mips[face].data[..4], bottom),
+            "face {face} pixels"
+        );
+        assert!(
+            near(&tex.mips[face].data[7 * 8 * 4..7 * 8 * 4 + 4], top),
+            "face {face} pixels"
+        );
+    }
+    // A 2D texture of the same strip keeps its rows bottom-up in its blocks.
+    let flat = unbound_yaml::parse_value("TextureImporter:\n  mipmaps:\n    enableMipMap: 0\n    sRGBTexture: 0\n  textureCompression: 1\n  nPOTScale: 0\n").unwrap();
+    let tex = importer
+        .import(Path::new("Strip.png"), &bytes, &flat)
+        .unwrap();
+    let decoded = bcn::decode_level(
+        BlockFormat::Bc1,
+        &tex.blocks.as_ref().unwrap().mips[0],
+        48,
+        8,
+    );
+    assert!(near(&decoded[..4], bottom));
+
+    // Floats: BC6H, the pixels kept as they were.
+    let data: Vec<f32> = (0..48 * 8)
+        .flat_map(|i| [(i % 7) as f32 * 0.75, 1.5, 0.25, 1.0])
+        .collect();
+    let mut exr = Vec::new();
+    image::DynamicImage::ImageRgba32F(image::Rgba32FImage::from_raw(48, 8, data).unwrap())
+        .write_to(
+            &mut std::io::Cursor::new(&mut exr),
+            image::ImageFormat::OpenExr,
+        )
+        .unwrap();
+    let meta = unbound_yaml::parse_value("TextureImporter:\n  textureShape: 2\n  generateCubemap: 6\n  mipmaps:\n    enableMipMap: 1\n  textureCompression: 1\n").unwrap();
+    let tex = importer.import(Path::new("Cube.exr"), &exr, &meta).unwrap();
+    assert_eq!(
+        tex.reported_format(),
+        Some(BlockFormat::Bc6h.unity_format())
+    );
+    assert_eq!(tex.blocks.as_ref().unwrap().mips.len(), 6 * 4);
+}
+
 /// The baked reflection of tests/projects/baked (a 384x64 EXR, glossy convolution) imports as a
 /// 64 cubemap of floats, every mip finite. BakedSetup sets the probe resolution to 64.
 #[test]

@@ -792,9 +792,9 @@ namespace UnityEngine
             m_UsageMode = info.UsageMode;
             // A block-compressed import reports its format and keeps its blocks; its pixels are
             // what the blocks decode to.
-            if (BlockFormats.BlockBytes((TextureFormat)info.TextureFormat) > 0)
+            if (PixelFormats.ImportedBlockFormat(info) is { } blocks)
             {
-                m_SourceFormat = (TextureFormat)info.TextureFormat;
+                m_SourceFormat = blocks;
                 m_SourceMips = info.MipCount;
             }
             m_WrapModeW = (TextureWrapMode)info.WrapW;
@@ -978,6 +978,11 @@ namespace Unbound.Runtime
         /// <summary>The format an imported texture reports: the one the import names (Alpha8, R8,
         /// RGB24: what the Editor reports for automatic uncompressed formats), else its data's
         /// (the target override may keep HDR working pixels as float32 instead of half).</summary>
+        /// <summary>The block format a block-compressed import is stored in (its pixels are what
+        /// the blocks decode to), else null.</summary>
+        internal static UnityEngine.TextureFormat? ImportedBlockFormat(in ImportedTextureInfo info) =>
+            BlockFormats.BlockBytes((UnityEngine.TextureFormat)info.TextureFormat) > 0 ? (UnityEngine.TextureFormat)info.TextureFormat : null;
+
         internal static UnityEngine.TextureFormat ImportedFormat(in ImportedTextureInfo info) => info.TextureFormat switch
         {
             (int)UnityEngine.TextureFormat.Alpha8 => UnityEngine.TextureFormat.Alpha8,

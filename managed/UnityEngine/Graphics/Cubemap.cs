@@ -85,11 +85,15 @@ namespace UnityEngine
             }
         }
 
-        public TextureFormat format => m_Format;
+        /// <summary>The block format a compressed import is stored in, which it reports; its pixels
+        /// (<see cref="m_Format"/>) are what the blocks decode to.</summary>
+        TextureFormat? m_SourceFormat;
+
+        public TextureFormat format => m_SourceFormat ?? m_Format;
         public override bool isReadable => m_Readable;
         internal override int MipmapCount() => m_MipCount;
         public override TextureDimension dimension { get => TextureDimension.Cube; set => throw new NotImplementedException(); }
-        internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(m_Format, !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear);
+        internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(format, !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear);
         internal bool isPreProcessed => false;
         public bool streamingMipmaps { get { Stubs.Ignored("Cubemap.streamingMipmaps", "is not read from the import settings: texture streaming is not simulated"); return false; } }
         public int streamingMipmapsPriority { get { Stubs.Ignored("Cubemap.streamingMipmapsPriority", "is not read from the import settings: texture streaming is not simulated"); return 0; } }
@@ -478,6 +482,7 @@ namespace UnityEngine
             cube.m_MipCount = Math.Max(1, info.MipCount);
             cube.m_Linear = info.Srgb == 0 || info.Format == 2;
             cube.m_Format = PixelFormats.ImportedFormat(info);
+            cube.m_SourceFormat = PixelFormats.ImportedBlockFormat(info);
             cube.m_UsageMode = info.UsageMode;
             cube.m_UsageSrgb = !cube.m_Linear;
             cube.m_WrapModeW = (TextureWrapMode)info.WrapW;
