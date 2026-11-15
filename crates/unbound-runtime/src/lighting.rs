@@ -136,7 +136,7 @@ pub(crate) fn floats<'a>(values: impl IntoIterator<Item = &'a f32>) -> Json {
 }
 
 /// Uploads a texture or cubemap of a serialized file under `handle`: `{ name, width, height,
-/// format, mipCount, dimension, rgbm, linear }`, `format` the stored TextureFormat. RGBA32, RGB24
+/// format, mipCount, dimension, usageMode, linear }` (`usageMode`: its `m_LightmapFormat`), `format` the stored TextureFormat. RGBA32, RGB24
 /// (opaque alpha added) and Alpha8 data (the install's built-in textures); another format is an
 /// error naming it.
 pub fn load_texture_object(
@@ -218,7 +218,7 @@ pub fn load_texture_object(
         "format": t.format,
         "mipCount": t.mip_count,
         "dimension": t.dimension,
-        "rgbm": t.lightmap_format == 5,
+        "usageMode": t.lightmap_format,
         "linear": t.color_space != 1,
     }))
 }

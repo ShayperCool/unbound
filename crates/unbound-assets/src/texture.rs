@@ -166,6 +166,10 @@ pub struct TextureSettings {
     /// The measured Android 2D colour compression path stores HDR radiance as RGBM bytes.
     #[serde(default)]
     pub rgbm_encoding: bool,
+    /// Set by the importer: how the build target stores this texture's HDR radiance when it is
+    /// a lightmap or an HDR cubemap ([`unbound_compat::LightingEncodings`]).
+    #[serde(default)]
+    pub hdr_encoding: unbound_compat::HdrEncoding,
     /// Set by the importer for a build target whose normal maps are encoded XYZ (what
     /// `UNITY_NO_DXT5nm` shaders read) instead of DXT5nm (1, y, y, x).
     #[serde(default)]
@@ -366,6 +370,7 @@ impl TextureSettings {
             compressed_fallback_alpha: None,
             gamma_hdr: false,
             rgbm_encoding: false,
+            hdr_encoding: unbound_compat::HdrEncoding::Native,
             normal_maps_xyz: false,
             alpha_source,
             alpha_is_transparency: boolean(imp, "alphaIsTransparency").unwrap_or(false),
@@ -562,6 +567,10 @@ pub struct ImportedTexture {
     /// The build target stores the pixels uncompressed ([`Storage::Uncompressed`]).
     #[serde(default)]
     pub uncompressed: bool,
+    /// Unity's `TextureUsageMode` of HDR radiance stored as bytes, which says how shaders decode
+    /// it: 1 a double LDR lightmap, 2 an RGBM lightmap, 5 RGBM, 7 double LDR; 0 otherwise.
+    #[serde(default)]
+    pub usage_mode: i32,
     /// Why the texture is not stored the way the build target stores it (a compressed format
     /// Unbound does not produce, [`Storage::Unsupported`]; blocks of Unbound's own encoder), for
     /// the warning given when it is loaded.
@@ -782,6 +791,14 @@ pub fn storage(
         Some(_) if s.uncompressed => return Storage::Uncompressed,
         Some(f) => return unsupported(&format!("TextureImporterFormat {f}")),
         None if android && hdr && s.rgbm_encoding => BlockFormat::Etc2Rgba8,
+        // A float lightmap (High quality encoding) is ASTC HDR whatever the default format:
+        // measured at 6x6 for Normal compression (tests/projects/lightmapencoding); the other
+        // qualities take the block sizes of automatic LDR ASTC (unmeasured).
+        None if android && hdr && s.texture_type == TextureType::Lightmap => match s.compression {
+            2 => BlockFormat::AstcHdr4x4,
+            3 => BlockFormat::AstcHdr8x8,
+            _ => BlockFormat::AstcHdr6x6,
+        },
         None if android && hdr => return unsupported("HDR textures of the Android target"),
         None if hdr => BlockFormat::Bc6h,
         None => match s.texture_type {
@@ -797,10 +814,13 @@ pub fn storage(
                 return unsupported("EAC textures of the Android target");
             }
             TextureType::SingleChannel => BlockFormat::Bc4,
+            // Lightmaps compress as colour (measured for their double LDR and RGBM bytes,
+            // tests/projects/lightmapencoding).
             TextureType::Default
             | TextureType::NormalMap
             | TextureType::Sprite
             | TextureType::Gui
+            | TextureType::Lightmap
                 if android =>
             {
                 let alpha = texture.has_alpha && s.texture_type != TextureType::NormalMap;
@@ -820,7 +840,8 @@ pub fn storage(
             TextureType::Default
             | TextureType::NormalMap
             | TextureType::Sprite
-            | TextureType::Gui => {
+            | TextureType::Gui
+            | TextureType::Lightmap => {
                 if s.compression == 2 {
                     BlockFormat::Bc7
                 } else if texture.has_alpha || s.texture_type == TextureType::NormalMap {
@@ -1019,11 +1040,12 @@ impl ImportedTexture {
     /// tests/projects/texturecompression NpotOpaqueNormal, NpotNormal: a compressed setting on a
     /// size that is not compressed) a Cookie keeps its alpha alone (Alpha8), a Single Channel
     /// texture its channel (Alpha8 or R8), other textures RGB24 without transparent texels and
-    /// RGBA32 with them. A Single Channel Alpha texture is Alpha8 compressed too
-    /// (texture-samples.jsonl SingleAlphaCompressed). None where Unbound keeps its RGBA32 or float
-    /// answer: explicit uncompressed formats other than Alpha8, RGB24, RGBA32, RG16 and R8,
-    /// compressed formats Unbound does not produce, HDR, normal maps and lightmaps stored
-    /// uncompressed (unmeasured).
+    /// RGBA32 with them (an 8-bit lightmap too: tests/projects/lightmapencoding LightmapLdr;
+    /// double LDR bytes RGB24, RGBM bytes RGBA32). A Single Channel Alpha texture is Alpha8
+    /// compressed too (texture-samples.jsonl SingleAlphaCompressed). None where Unbound keeps its
+    /// RGBA32 or float answer: explicit uncompressed formats other than Alpha8, RGB24, RGBA32,
+    /// RG16 and R8, compressed formats Unbound does not produce, HDR, normal maps, directional
+    /// lightmaps and shadowmasks stored uncompressed (unmeasured).
     pub fn reported_format(&self) -> Option<i32> {
         if let Some(archive) = &self.crunched {
             return Some(archive.format.unity_format());
@@ -1038,6 +1060,15 @@ impl ImportedTexture {
         if self.uncompressed && self.format == TextureFormat::Rgba8 {
             if s.compressed_fallback_alpha == Some(false) {
                 return Some(unity_format::RGB24);
+            }
+            match self.usage_mode {
+                usage_mode::LIGHTMAP_DOUBLE_LDR | usage_mode::DOUBLE_LDR => {
+                    return Some(unity_format::RGB24);
+                }
+                usage_mode::LIGHTMAP_RGBM | usage_mode::RGBM => {
+                    return Some(unity_format::RGBA32);
+                }
+                _ => {}
             }
             if s.rgbm_encoding {
                 return Some(unity_format::RGBA32);
@@ -1058,10 +1089,9 @@ impl ImportedTexture {
         match s.texture_type {
             TextureType::Cookie => Some(unity_format::ALPHA8),
             TextureType::SingleChannel => Some(unity_format::R8),
-            TextureType::NormalMap
-            | TextureType::Lightmap
-            | TextureType::Shadowmask
-            | TextureType::DirectionalLightmap => None,
+            TextureType::NormalMap | TextureType::Shadowmask | TextureType::DirectionalLightmap => {
+                None
+            }
             _ if self.has_alpha => Some(unity_format::RGBA32),
             _ => Some(unity_format::RGB24),
         }
@@ -1187,6 +1217,8 @@ pub struct TextureImporter {
     pub normal_maps_xyz: bool,
     /// The project's settings for the target's compressed formats.
     pub project: ProjectCompression,
+    /// How the build target stores lightmaps and HDR cubemaps.
+    pub lighting: unbound_compat::LightingEncodings,
 }
 
 impl Default for TextureImporter {
@@ -1197,6 +1229,7 @@ impl Default for TextureImporter {
             gamma: false,
             normal_maps_xyz: false,
             project: ProjectCompression::default(),
+            lighting: unbound_compat::LightingEncodings::default(),
         }
     }
 }
@@ -1273,12 +1306,23 @@ impl TextureImporter {
             && (settings.explicit_format == Some(65)
                 || (settings.explicit_format.is_none() && !settings.uncompressed));
         settings.normal_maps_xyz = self.normal_maps_xyz;
+        // A lightmap follows the target's lightmap encoding, any other HDR cubemap but a normal
+        // map its HDR cubemap encoding (applied to float sources alone, import_texture). An
+        // explicit format keeps half floats (unmeasured).
+        settings.hdr_encoding = match settings.texture_type {
+            _ if settings.explicit_format.is_some() => unbound_compat::HdrEncoding::Native,
+            TextureType::Lightmap => self.lighting.lightmap,
+            TextureType::NormalMap => unbound_compat::HdrEncoding::Native,
+            _ if settings.shape == TextureShape::Cube => self.lighting.cubemap,
+            _ => unbound_compat::HdrEncoding::Native,
+        };
         settings
     }
 
     /// Stores an imported texture as the build target stores it: compressed to the target's
     /// format (its mips then hold the decoded blocks), or kept uncompressed.
     pub fn store(&self, texture: &mut ImportedTexture) -> Result<()> {
+        encode_lighting(texture);
         let selected = storage(texture, &self.build_target, &self.project, self.gamma);
         if texture.format == TextureFormat::Rgba32F
             && texture.settings.rgbm_encoding
@@ -1292,6 +1336,7 @@ impl TextureImporter {
             for mip in &mut texture.mips {
                 mip.data = rgbm::encode(&mip.data, !texture.settings.srgb_flag);
             }
+            texture.usage_mode = usage_mode::RGBM;
             texture.format = TextureFormat::Rgba8;
             texture.srgb = texture.settings.srgb_flag;
             texture.has_alpha = true;
@@ -1399,7 +1444,8 @@ impl Importer for TextureImporter {
     // 41: RGBM multiplier normalization preserves division rounding.
     // 42: gray and RGB TIFFs with extra samples read their first extra sample as alpha.
     // 43: TIFF tags stored once per sample (SampleFormat) are read (such files failed to import).
-    const VERSION: u32 = 43;
+    // 44: float lightmaps and HDR cubemaps take the build target's double LDR or RGBM encoding.
+    const VERSION: u32 = 44;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let settings = self.settings(meta);
@@ -1411,13 +1457,14 @@ impl Importer for TextureImporter {
     fn options_key(&self) -> String {
         // Resized textures depend on the Editor's job worker count, which follows the machine.
         format!(
-            "{}{}{}{}+workers{}+{}",
+            "{}{}{}{}+workers{}+{}+{:?}",
             self.build_target,
             if self.compress { "+bc7" } else { "" },
             if self.gamma { "+gamma" } else { "" },
             if self.normal_maps_xyz { "+xyz" } else { "" },
             resize::job_workers(),
-            self.project.key(&self.build_target)
+            self.project.key(&self.build_target),
+            self.lighting
         )
     }
 }
@@ -1484,6 +1531,63 @@ pub fn compress_bc7(texture: &ImportedTexture) -> Option<Vec<serde_bytes::ByteBu
     )
 }
 
+/// Stores a lightmap or a float HDR cubemap as the build target's encoding gives
+/// ([`TextureSettings::hdr_encoding`]), each level from its filtered linear radiance: RGBM bytes
+/// ([`rgbm::encode`]) or double LDR bytes ([`rgbm::encode_double_ldr`]), with the usage mode
+/// that tells shaders how to decode them. An 8-bit lightmap's radiance is its stored value
+/// (byte / 255, whatever its sRGB setting). Matches the Unity 6000.0.71f1 Editor,
+/// tests/projects/lightmapencoding. The target's compression then applies to the bytes.
+fn encode_lighting(texture: &mut ImportedTexture) {
+    use unbound_compat::HdrEncoding;
+    let encoding = texture.settings.hdr_encoding;
+    if encoding == HdrEncoding::Native {
+        return;
+    }
+    if texture.format == TextureFormat::Rgba8 {
+        for mip in &mut texture.mips {
+            mip.data = mip
+                .data
+                .iter()
+                .flat_map(|&b| (f32::from(b) / 255.0).to_le_bytes())
+                .collect();
+        }
+        texture.format = TextureFormat::Rgba32F;
+    }
+    if texture.format != TextureFormat::Rgba32F {
+        return;
+    }
+    let lightmap = texture.settings.texture_type == TextureType::Lightmap;
+    // A linear-flagged source is gamma-decoded first, as the 2D RGBM path measured
+    // (texturecompression); lightmaps and HDR cubemaps were measured sRGB-flagged alone.
+    let decode_gamma = !texture.settings.srgb_flag;
+    for mip in &mut texture.mips {
+        mip.data = match encoding {
+            HdrEncoding::Rgbm => rgbm::encode(&mip.data, decode_gamma),
+            HdrEncoding::DoubleLdr => rgbm::encode_double_ldr(&mip.data, decode_gamma),
+            HdrEncoding::Native => unreachable!(),
+        };
+    }
+    texture.usage_mode = match (encoding, lightmap) {
+        (HdrEncoding::DoubleLdr, true) => usage_mode::LIGHTMAP_DOUBLE_LDR,
+        (HdrEncoding::Rgbm, true) => usage_mode::LIGHTMAP_RGBM,
+        (HdrEncoding::Rgbm, false) => usage_mode::RGBM,
+        _ => usage_mode::DOUBLE_LDR,
+    };
+    texture.format = TextureFormat::Rgba8;
+    texture.srgb = texture.settings.srgb_flag;
+    texture.has_alpha = encoding == HdrEncoding::Rgbm;
+    texture.settings.format_alpha = Some(texture.has_alpha);
+    texture.import_settings_hash = texture.settings.hash();
+}
+
+/// Unity's `TextureUsageMode` values of HDR radiance stored as bytes.
+pub mod usage_mode {
+    pub const LIGHTMAP_DOUBLE_LDR: i32 = 1;
+    pub const LIGHTMAP_RGBM: i32 = 2;
+    pub const RGBM: i32 = 5;
+    pub const DOUBLE_LDR: i32 = 7;
+}
+
 /// Imports a texture with already-read `settings` (`meta` supplies the sprite sheet).
 pub fn import_texture(
     source: &Path,
@@ -1493,8 +1597,14 @@ pub fn import_texture(
 ) -> Result<ImportedTexture> {
     let mut image = decode(source, bytes, settings.remove_matte).context("decoding")?;
     settings.rgbm_encoding &= image.format == TextureFormat::Rgba32F;
-    if settings.rgbm_encoding {
-        // RGBM conversion consumes filtered linear radiance in either project colour space.
+    // An 8-bit lightmap is encoded as well (encode_lighting); other 8-bit textures keep their
+    // bytes.
+    if image.format != TextureFormat::Rgba32F && settings.texture_type != TextureType::Lightmap {
+        settings.hdr_encoding = unbound_compat::HdrEncoding::Native;
+    }
+    if settings.rgbm_encoding || settings.hdr_encoding != unbound_compat::HdrEncoding::Native {
+        // RGBM and double LDR conversion consume filtered linear radiance in either project
+        // colour space (encode_lighting).
         settings.gamma_hdr = false;
     }
     let (original_width, original_height) = (image.width, image.height);
@@ -1612,6 +1722,7 @@ pub fn import_texture(
         blocks: None,
         crunched: None,
         uncompressed: false,
+        usage_mode: 0,
         approximation: None,
         bc7: None,
     })
@@ -1683,6 +1794,7 @@ pub fn import_pixels(
         blocks: None,
         crunched: None,
         uncompressed: false,
+        usage_mode: 0,
         approximation: None,
         bc7: None,
     }
@@ -1872,6 +1984,7 @@ fn import_flipbook(
         blocks: None,
         crunched: None,
         uncompressed: false,
+        usage_mode: 0,
         approximation: None,
         bc7: None,
     })
@@ -2138,6 +2251,7 @@ fn import_cubemap(
         blocks: None,
         crunched: None,
         uncompressed: false,
+        usage_mode: 0,
         approximation: None,
         bc7: None,
     })

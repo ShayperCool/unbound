@@ -21,8 +21,10 @@ namespace UnityEngine
         internal bool m_Linear;
         /// <summary>Per face, per mip level: the pixels (readable cubemaps).</summary>
         Color[][][] m_Pixels;
-        /// <summary>The data is RGBM encoded (a reflection cubemap).</summary>
-        internal bool m_Rgbm;
+        /// <summary>How its HDR radiance is stored as bytes (<see cref="HdrDecode"/>; 5 RGBM, 7
+        /// double LDR, 0 none) and whether that data is sRGB.</summary>
+        internal int m_UsageMode;
+        internal bool m_UsageSrgb;
         /// <summary>An imported cubemap whose faces the importer gives on first access (an unreadable
         /// one's on its first clone).</summary>
         string m_AssetGuid;
@@ -417,8 +419,9 @@ namespace UnityEngine
             m_MipCount = Math.Max(1, body.Int("m_MipCount", 1));
             m_Readable = false;
             m_Pixels = null;
-            m_Rgbm = body.Int("m_LightmapFormat") == 5;
-            m_Linear = m_Rgbm || body.Int("m_ColorSpace", 1) == 0;
+            m_UsageMode = body.Int("m_LightmapFormat");
+            m_UsageSrgb = body.Int("m_ColorSpace", 1) == 1;
+            m_Linear = m_UsageMode == HdrDecode.Rgbm || !m_UsageSrgb;
             var settings = body.Get("m_TextureSettings");
             if (settings != null)
             {
@@ -475,6 +478,8 @@ namespace UnityEngine
             cube.m_MipCount = Math.Max(1, info.MipCount);
             cube.m_Linear = info.Srgb == 0 || info.Format == 2;
             cube.m_Format = PixelFormats.ImportedFormat(info);
+            cube.m_UsageMode = info.UsageMode;
+            cube.m_UsageSrgb = !cube.m_Linear;
             cube.m_WrapModeW = (TextureWrapMode)info.WrapW;
             cube.filterMode = (FilterMode)info.FilterMode;
             cube.wrapModeU = (TextureWrapMode)info.WrapU;
@@ -501,7 +506,8 @@ namespace UnityEngine
                 cube.m_Width = root.GetProperty("width").GetInt32();
                 cube.m_Height = root.GetProperty("height").GetInt32();
                 cube.m_MipCount = root.GetProperty("mipCount").GetInt32();
-                cube.m_Rgbm = root.GetProperty("rgbm").GetBoolean();
+                cube.m_UsageMode = root.GetProperty("usageMode").GetInt32();
+                cube.m_UsageSrgb = !root.GetProperty("linear").GetBoolean();
                 return cube;
             }
             catch (Exception e)

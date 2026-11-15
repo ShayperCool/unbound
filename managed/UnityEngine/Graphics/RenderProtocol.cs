@@ -92,6 +92,9 @@ namespace Unbound.Runtime
         /// <summary>Unity's TextureFormat the Editor reports for the import, 0 when it is the one
         /// <see cref="Format"/>'s data gives (NativeApi 31).</summary>
         internal int TextureFormat;
+        /// <summary>Unity's TextureUsageMode of HDR radiance stored as bytes (lightmaps, HDR
+        /// cubemaps; NativeApi 79), 0 otherwise.</summary>
+        internal int UsageMode;
     }
 
     [StructLayout(LayoutKind.Sequential)]

@@ -146,8 +146,8 @@ namespace UnityEngine
         /// <summary>What objects outside every probe reflect: the scene's default reflection.</summary>
         public static Texture defaultTexture => RenderSettings.DefaultReflectionTexture;
 
-        /// <summary>How shaders decode it: an RGBM reflection's range (5, raised to 2.2 in linear
-        /// color space), else as stored, scaled by the lighting settings' reflection intensity in
+        /// <summary>How shaders decode it: by how the cubemap stores its radiance
+        /// (<see cref="HdrDecode"/>), scaled by the lighting settings' reflection intensity in
         /// the project's color space (linear projects take the intensity through the sRGB curve;
         /// measured for an HDR default reflection that is not RGBM-encoded: tests/projects/indirectspec, reflection
         /// intensity 0.25 gives 0.25 in gamma and 0.05087609 in linear, in this value and in
@@ -163,12 +163,8 @@ namespace UnityEngine
             }
         }
 
-        static Vector4 DecodeValues(Texture texture)
-        {
-            if (texture is Cubemap cube && cube.m_Rgbm)
-                return QualitySettings.activeColorSpace == ColorSpace.Linear ? new Vector4(Mathf.Pow(5f, 2.2f), 2.2f, 0f, 1f) : new Vector4(5f, 1f, 0f, 1f);
-            return new Vector4(1f, 1f, 0f, 0f);
-        }
+        static Vector4 DecodeValues(Texture texture) =>
+            texture is Cubemap cube ? HdrDecode.Of(cube.m_UsageMode, cube.m_UsageSrgb) : HdrDecode.Of(0, false);
 
         /// <summary>
         /// The probes a renderer reflects and their weights, as the Editor gives them (measured:

@@ -18,6 +18,9 @@ namespace UnityEngine
         int m_GpuMipCount = 1;
         internal bool m_IsReadable;
         internal bool m_Linear;
+        /// <summary>How an imported lightmap stores its HDR radiance as bytes
+        /// (<see cref="HdrDecode"/>; 1 double LDR, 2 RGBM, 0 none).</summary>
+        internal int m_UsageMode;
         /// <summary>CPU pixels of a texture made by code, bottom row first.</summary>
         internal Color32[] m_Pixels;
         /// <summary>The CPU pixels instead of <see cref="m_Pixels"/> for floating point formats
@@ -786,6 +789,7 @@ namespace UnityEngine
             m_IsReadable = info.Readable != 0;
             m_Linear = info.Srgb == 0 || info.Format == 2;
             m_Format = PixelFormats.ImportedFormat(info);
+            m_UsageMode = info.UsageMode;
             // A block-compressed import reports its format and keeps its blocks; its pixels are
             // what the blocks decode to.
             if (BlockFormats.BlockBytes((TextureFormat)info.TextureFormat) > 0)

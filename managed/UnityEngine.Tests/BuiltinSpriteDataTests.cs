@@ -326,7 +326,7 @@ namespace UnityEngine.Tests
             {
                 // The five textures are stored as RGBA32 (TextureFormat 4).
                 ["name"] = name, ["width"] = width, ["height"] = height, ["format"] = 4, ["mipCount"] = mips,
-                ["dimension"] = 2, ["rgbm"] = false, ["linear"] = false,
+                ["dimension"] = 2, ["usageMode"] = 0, ["linear"] = false,
             }.ToJsonString();
 
         /// <summary>The record the host answers for an installed texture: its name, size, mips and

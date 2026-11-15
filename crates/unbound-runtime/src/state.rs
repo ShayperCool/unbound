@@ -1355,12 +1355,18 @@ fn texture_importer(s: &RuntimeState) -> TextureImporter {
 }
 
 /// The active build target; `normal_maps_xyz` when its shaders read XYZ normal maps
-/// (`UNITY_NO_DXT5nm`), else textures import normal maps DXT5nm-encoded.
-pub fn set_build_target(target: &str, normal_maps_xyz: bool) {
+/// (`UNITY_NO_DXT5nm`), else textures import normal maps DXT5nm-encoded; `lighting` how it
+/// stores lightmaps and HDR cubemaps.
+pub fn set_build_target(
+    target: &str,
+    normal_maps_xyz: bool,
+    lighting: unbound_compat::LightingEncodings,
+) {
     state().audio_importer.write().unwrap().build_target = target.to_string();
     let mut textures = state().texture_importer.write().unwrap();
     textures.build_target = target.to_string();
     textures.normal_maps_xyz = normal_maps_xyz;
+    textures.lighting = lighting;
 }
 
 /// A downloaded audio file of the Unity `AudioType` `audio_type` decoded into a mixer clip handle
@@ -1851,6 +1857,7 @@ fn upload_imported(
         dimension,
         wrap_w: wrap(texture.wrap_w),
         texture_format,
+        usage_mode: texture.usage_mode,
     })
 }
 

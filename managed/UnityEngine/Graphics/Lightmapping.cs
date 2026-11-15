@@ -75,6 +75,18 @@ namespace UnityEngine
 
         internal static int Count => s_Lightmaps.Length;
 
+        /// <summary>unity_Lightmap_HDR, boxed: how the first lightmap's color texture stores its
+        /// radiance decides it for every lightmap (<see cref="HdrDecode"/>; matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/lightmapencoding).</summary>
+        internal static object DecodeValues
+        {
+            get
+            {
+                var first = s_Lightmaps.Length > 0 ? s_Lightmaps[0]?.m_Light : null;
+                return first is Texture2D t ? HdrDecode.Boxed(t.m_UsageMode, !t.m_Linear) : HdrDecode.Boxed(0, false);
+            }
+        }
+
         internal static void Append(LightmapData[] maps)
         {
             var all = new LightmapData[s_Lightmaps.Length + maps.Length];
@@ -230,6 +242,7 @@ namespace UnityEngine
         static readonly int s_LightmapInd = Shader.PropertyToID("unity_LightmapInd");
         static readonly int s_ShadowMask = Shader.PropertyToID("unity_ShadowMask");
         static readonly int s_LightmapST = Shader.PropertyToID("unity_LightmapST");
+        static readonly int s_LightmapHDR = Shader.PropertyToID("unity_Lightmap_HDR");
         static readonly int s_DynamicLightmap = Shader.PropertyToID("unity_DynamicLightmap");
         static readonly int s_DynamicLightmapST = Shader.PropertyToID("unity_DynamicLightmapST");
         static readonly int s_DynamicLightmapHDR = Shader.PropertyToID("unity_DynamicLightmap_HDR");
@@ -325,6 +338,7 @@ namespace UnityEngine
                 if (!realtime) properties = DrawPropertyPool.Copy(properties);
                 properties[s_Lightmap] = map?.m_Light ?? (map != null ? DefaultTextures.Black : DefaultTextures.Gray);
                 properties[s_LightmapST] = renderer.lightmapScaleOffset;
+                properties[s_LightmapHDR] = LightmapSettings.DecodeValues;
                 keywords.Add("LIGHTMAP_ON");
                 if ((map?.m_Dir != null || terrainLightmapped) && directional)
                 {

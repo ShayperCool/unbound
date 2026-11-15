@@ -24,6 +24,7 @@ namespace UnityEngine
                 m_GpuMipCount = m_GpuMipCount,
                 m_IsReadable = m_IsReadable,
                 m_Linear = m_Linear,
+                m_UsageMode = m_UsageMode,
                 m_SourceFormat = m_SourceFormat,
                 m_SourceMips = m_SourceMips,
                 m_SourceRaw = Copy(blocks),

@@ -416,6 +416,9 @@ pub struct ImportedTextureInfo {
     /// Unity's `TextureFormat` the Editor reports for the import (`Texture2D.format`), 0 when
     /// it is the one `format`'s data gives (`NativeApi` 31).
     pub texture_format: i32,
+    /// Unity's `TextureUsageMode` of HDR radiance stored as bytes (lightmaps, HDR cubemaps), 0
+    /// otherwise (`NativeApi` 79).
+    pub usage_mode: i32,
 }
 
 #[repr(C)]

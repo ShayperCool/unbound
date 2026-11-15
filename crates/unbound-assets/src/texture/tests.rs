@@ -493,6 +493,73 @@ fn a_baked_reflection_imports_as_a_convolved_cubemap() {
     }
 }
 
+/// Float lightmaps and HDR cubemaps take the build target's encoding (tests/projects/
+/// lightmapencoding): Android's default stores the lightmap as double LDR bytes, RGB24, in
+/// either project colour space; a Normal-quality cubemap stores every convolved level as RGBM
+/// bytes; Standalone's default keeps floats.
+#[test]
+fn lightmaps_and_hdr_cubemaps_take_the_targets_encoding() {
+    use unbound_compat::{LightingEncodings, UnityVersion};
+    let read = |path: &str| {
+        let file = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects")
+            .join(path);
+        let meta = unbound_yaml::parse_value(
+            &std::fs::read_to_string(format!("{}.meta", file.display())).unwrap(),
+        )
+        .unwrap();
+        (std::fs::read(&file).unwrap(), meta, file)
+    };
+    let measured = UnityVersion::new(6000, 0, 71);
+    let importer = |target: &str, lightmap, cubemap, gamma| TextureImporter {
+        build_target: target.into(),
+        gamma,
+        lighting: LightingEncodings::resolve(measured, target, lightmap, cubemap),
+        ..TextureImporter::default()
+    };
+    let (bytes, meta, file) = read("lightmapencoding/Assets/Resources/Lightmap.exr");
+    for gamma in [false, true] {
+        let tex = importer("Android", None, None, gamma)
+            .import(&file, &bytes, &meta)
+            .unwrap();
+        assert_eq!(tex.format, TextureFormat::Rgba8);
+        assert_eq!(tex.usage_mode, usage_mode::LIGHTMAP_DOUBLE_LDR);
+        assert_eq!(tex.reported_format(), Some(unity_format::RGB24));
+        assert!(tex.srgb && !tex.has_alpha);
+        // Row 0: 0, 0.002, ... 2 at x = 12 (byte 175, as the Editor stores it), 9 clamped.
+        let row = &tex.mips[0].data[..16 * 4];
+        assert_eq!(
+            [row[0], row[4], row[12 * 4], row[15 * 4], row[15 * 4 + 3]],
+            [0, 3, 175, 255, 255]
+        );
+    }
+    let tex = importer("Standalone", None, None, false)
+        .import(&file, &bytes, &meta)
+        .unwrap();
+    assert_eq!((tex.format, tex.usage_mode), (TextureFormat::Rgba32F, 0));
+    // Standalone Low lightmaps are RGBM (no double LDR lightmaps on the target).
+    let tex = importer("Standalone", Some(0), None, false)
+        .import(&file, &bytes, &meta)
+        .unwrap();
+    assert_eq!(tex.usage_mode, usage_mode::LIGHTMAP_RGBM);
+    assert_eq!(tex.reported_format(), Some(unity_format::RGBA32));
+
+    let (bytes, meta, file) = read("baked/Assets/Scenes/Baked/ReflectionProbe-0.exr");
+    let tex = importer("Android", None, Some(1), false)
+        .import(&file, &bytes, &meta)
+        .unwrap();
+    assert_eq!(
+        (tex.format, tex.usage_mode),
+        (TextureFormat::Rgba8, usage_mode::RGBM)
+    );
+    assert_eq!(tex.mips.len(), 6 * 7);
+    assert!(tex.has_alpha);
+    let tex = importer("Android", None, Some(2), false)
+        .import(&file, &bytes, &meta)
+        .unwrap();
+    assert_eq!((tex.format, tex.usage_mode), (TextureFormat::Rgba32F, 0));
+}
+
 /// An unmeasured ASTC profile keeps the pixels and gives the GPU
 /// BC7 blocks.
 #[test]
@@ -628,6 +695,7 @@ fn a_target_that_keeps_the_pixels_is_not_block_compressed() {
         gamma: false,
         normal_maps_xyz: true,
         project: ProjectCompression::default(),
+        ..TextureImporter::default()
     };
     let rgba32 = unbound_yaml::parse_value(&rgba32).unwrap();
     let texture = importer
@@ -647,6 +715,7 @@ fn single_cell_arrays_and_volumes_are_not_block_compressed() {
         gamma: false,
         normal_maps_xyz: false,
         project: ProjectCompression::default(),
+        ..TextureImporter::default()
     };
     for shape in [4, 8] {
         let meta = unbound_yaml::parse_value(&format!(

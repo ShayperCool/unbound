@@ -186,7 +186,11 @@ impl Game {
             .settings
             .shader_defines(&options.target, crate::graphics_device::get())
             .contains(&"UNITY_NO_DXT5nm");
-        state::set_build_target(&options.target, normal_maps_xyz);
+        state::set_build_target(
+            &options.target,
+            normal_maps_xyz,
+            project.settings.lighting_encodings(&options.target),
+        );
         if let Some(backend) = backend {
             state::set_backend(backend);
         }
