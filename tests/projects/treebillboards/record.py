@@ -2,6 +2,7 @@
 """Editor side of the tree billboard probe, in copies of the project under the validation cache.
 
     record.py create  --release 6000.0.71f1   # run ProbeRunner.Create, copy Assets/ back
+    record.py extend  --release 6000.0.71f1   # run ProbeRunner.Extend, copy Assets/Resources back
     record.py record  --release 6000.0.71f1   # two independent GPU captures
     record.py publish --release 6000.0.71f1   # write Reference/unity-<release>/ when both agree; an existing
                                               # reference only gains rows after its own and new images
@@ -35,15 +36,15 @@ def outputs(directory):
 def complete(directory):
     path = directory/'treebillboards.jsonl'
     lines = path.read_text().splitlines() if path.is_file() else []
-    if sum('"image"' in line for line in lines) != 14 or not any('"defaults"' in line for line in lines) \
-            or not any('"atlas"' in line for line in lines):
+    if sum('"image"' in line for line in lines) != 19 or sum('"atlasImage"' in line for line in lines) != 3 \
+            or not any('"defaults"' in line for line in lines) or not any('"atlas"' in line for line in lines):
         return 'missing or incomplete treebillboards.jsonl'
     return None
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('command', choices=['create', 'record', 'publish'])
+    parser.add_argument('command', choices=['create', 'extend', 'record', 'publish'])
     parser.add_argument('--release', required=True)
     parser.add_argument('--label', default='record')
     args = parser.parse_args()
@@ -63,6 +64,20 @@ def main():
         shutil.rmtree(PROBE/'Assets')
         shutil.copytree(project/'Assets', PROBE/'Assets')
         shutil.copyfile(project/'ProjectSettings/EditorBuildSettings.asset', PROBE/'ProjectSettings/EditorBuildSettings.asset')
+        return 0
+    if args.command == 'extend':
+        out = work/'extend'
+        project = copy_project(out/'project', args.release)
+        result = run(EditorJob(project, out/'editor.log', out, batch=True,
+                               args=['-quit', '-executeMethod', 'ProbeRunner.Extend'], timeout=900))
+        reason = result_problem(out, gpu=True)
+        if reason or result.get('exit_code') != 0:
+            print(f'Editor extend failed: {reason or result}', file=sys.stderr)
+            return 1
+        if (PROBE/'Assets/Resources').exists():
+            shutil.rmtree(PROBE/'Assets/Resources')
+        shutil.copytree(project/'Assets/Resources', PROBE/'Assets/Resources')
+        shutil.copyfile(project/'Assets/Resources.meta', PROBE/'Assets/Resources.meta')
         return 0
     if args.command == 'record':
         for out in captures:

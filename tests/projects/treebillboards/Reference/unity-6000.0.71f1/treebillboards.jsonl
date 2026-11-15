@@ -15,3 +15,11 @@
 {"image":"wide","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
 {"image":"many","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
 {"atlasSampler":"Tree Imposter Texture","anisoLevel":1,"autoGenerateMips":true,"mipmapCount":9}
+{"image":"wideasset","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"atlasImage":"wideassetatlas","width":512,"height":256}
+{"image":"wideasset20","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":13.24,"yaw":0.00}
+{"image":"sixlights","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"atlasImage":"sixlightsatlas","width":256,"height":256}
+{"image":"creator","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":0.82,"yaw":0.00}
+{"atlasImage":"creatoratlas","width":256,"height":256}
+{"image":"creator20","treeMaximumFullLODCount":50,"treeBillboardDistance":50,"treeCrossFadeLength":5,"treeDistance":5000,"pitch":13.24,"yaw":0.00}

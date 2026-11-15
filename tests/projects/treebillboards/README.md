@@ -18,18 +18,29 @@ to 380 units ahead of the cameras, of several width and height scales and colors
   `pointlight` (a point light among the near trees), `wide` (every fifth tree a third prototype
   made at run time, the round tree flattened to three times its width and 0.4 of its height: not
   an asset, so the Editor logs an error and draws none of those trees) and
-  `many` (2400 trees in a dense grid): the ground view with other settings.
+  `many` (2400 trees in a dense grid): the ground view with other settings;
+- later cases, recorded after those rows: `wideasset` and `wideasset20` (the `wide` prototype saved
+  as an asset, `Resources/Wide`, from the ground and at 13 degrees down, with its atlas as
+  `wideassetatlas`), `sixlights` (five more directional lights of several colors, intensities and
+  directions, made after the sun; atlas `sixlightsatlas`) and `creator`, `creator20` (a Tree Creator
+  tree, `Resources/Creator`: a trunk, boughs and leaves in Tree Creator materials, its optimized
+  mesh and materials as the Tree Creator generates them, as the only prototype; atlas
+  `creatoratlas`).
 
 What it shows (Unity 6000.0.71f1, NVIDIA): such trees are drawn as their meshes up to the billboard
 start plus the fade (distances across the ground), squashed towards the billboard across the fade,
 and as camera-facing billboards past it, cut from an atlas cell into which the prototype is drawn
 with its BillboardShader copies, seen orthographically from the camera's pitch and yaw, drawn
 again when the camera turns or the lights change. The mesh trees take the forward vertex lights
-(`Lighting On` passes without a LightMode). treeMaximumFullLODCount changes nothing here.
+(`Lighting On` passes without a LightMode). treeMaximumFullLODCount changes nothing here. A
+prototype asset wider than tall gets an atlas cell as wide as it is (the atlas grows to 512), six
+directional lights light the atlas as the first four made do, and a Tree Creator tree is drawn and
+cut into the atlas by the same rules.
 
 Make the assets once and record Unity's reference (two GPU captures, published when they agree):
 
     python3 tests/projects/treebillboards/record.py create --release 6000.0.71f1
+    python3 tests/projects/treebillboards/record.py extend --release 6000.0.71f1   # the later cases' prototypes
     python3 tests/projects/treebillboards/record.py record --release 6000.0.71f1
     python3 tests/projects/treebillboards/record.py publish --release 6000.0.71f1
 

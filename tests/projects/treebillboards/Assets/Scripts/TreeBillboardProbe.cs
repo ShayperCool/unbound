@@ -13,8 +13,9 @@ using UnityEngine;
 /// Images from the ground, from above at two pitches, with a nearer billboard start, a long cross
 /// fade and a short tree distance, turned about up, under a brighter tinted sun and with at most
 /// three mesh trees, with a second directional light, with a point light, with a third prototype
-/// wider than tall and with 2400 trees, and the billboard atlas as the ground view left it. Every fourth tree is the
-/// tall prototype. Writes <c>treebillboards.jsonl</c> (the settings each image used)
+/// wider than tall and with 2400 trees, and the billboard atlas as the ground view left it; then
+/// (later rows) a wider-than-tall prototype saved as an asset, six directional lights and a Tree Creator
+/// tree, each with its atlas. Every fourth tree is the tall prototype. Writes <c>treebillboards.jsonl</c> (the settings each image used)
 /// and PNGs into <c>TREE_BILLBOARD_PROBE_OUT</c>, then quits.
 /// </summary>
 public class TreeBillboardProbe : MonoBehaviour
@@ -146,6 +147,46 @@ public class TreeBillboardProbe : MonoBehaviour
         foreach (var rt in Resources.FindObjectsOfTypeAll<RenderTexture>())
             if (rt.name == "Tree Imposter Texture")
                 m_Out.Append($"{{\"atlasSampler\":\"{rt.name}\",\"anisoLevel\":{rt.anisoLevel},\"autoGenerateMips\":{(rt.autoGenerateMips ? "true" : "false")},\"mipmapCount\":{rt.mipmapCount}}}\n");
+        // Later cases (rows after the ones above). A prototype wider than tall saved as an asset
+        // (Resources/Wide), every fifth tree.
+        var original = data.treePrototypes;
+        data.treePrototypes = new[] { original[0], original[1], new TreePrototype { prefab = Resources.Load<GameObject>("Wide") } };
+        data.SetTreeInstances(widened.ToArray(), false);
+        terrain.Flush();
+        Capture(dir, "wideasset", terrain, ground.position, ground.target, 50f, 5f, 5000f);
+        AppendAtlas(dir, "wideassetatlas");
+        Capture(dir, "wideasset20", terrain, new Vector3(0f, 40f, -60f), new Vector3(0f, 0f, 110f), 50f, 5f, 5000f);
+        // Six directional lights of several colors, intensities and directions, the sun first.
+        data.treePrototypes = new[] { original[0], original[1] };
+        data.SetTreeInstances(trees.ToArray(), false);
+        terrain.Flush();
+        var extra = new List<GameObject>();
+        for (int i = 0; i < 5; i++)
+        {
+            var light = new GameObject("Light " + i).AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.transform.rotation = Quaternion.Euler(20f + 12f * i, -150f + 70f * i, 0f);
+            light.color = Color.HSVToRGB(0.15f * i, 0.6f, 1f);
+            light.intensity = 0.3f + 0.25f * i;
+            extra.Add(light.gameObject);
+        }
+        Capture(dir, "sixlights", terrain, ground.position, ground.target, 50f, 5f, 5000f);
+        AppendAtlas(dir, "sixlightsatlas");
+        foreach (var light in extra) DestroyImmediate(light);
+        // A Tree Creator tree (Resources/Creator) as the only prototype.
+        data.treePrototypes = new[] { new TreePrototype { prefab = Resources.Load<GameObject>("Creator") } };
+        var creator = new List<TreeInstance>(trees);
+        for (int i = 0; i < creator.Count; i++)
+        {
+            var tree = creator[i];
+            tree.prototypeIndex = 0;
+            creator[i] = tree;
+        }
+        data.SetTreeInstances(creator.ToArray(), false);
+        terrain.Flush();
+        Capture(dir, "creator", terrain, ground.position, ground.target, 50f, 5f, 5000f);
+        AppendAtlas(dir, "creatoratlas");
+        Capture(dir, "creator20", terrain, new Vector3(0f, 40f, -60f), new Vector3(0f, 0f, 110f), 50f, 5f, 5000f);
         File.WriteAllText(Path.Combine(dir, "treebillboards.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -157,24 +198,27 @@ public class TreeBillboardProbe : MonoBehaviour
     /// <summary>The atlas the billboards are cut from (the render texture named "Tree Imposter
     /// Texture"), as the last capture left it: a row of its size, format and sampler, and its
     /// first mip as atlas.png.</summary>
-    void AppendAtlas(string dir)
+    void AppendAtlas(string dir, string image = "atlas")
     {
         RenderTexture atlas = null;
         foreach (var rt in Resources.FindObjectsOfTypeAll<RenderTexture>())
             if (rt.name == "Tree Imposter Texture") atlas = rt;
         if (atlas == null)
         {
-            m_Out.Append("{\"atlas\":null}\n");
+            m_Out.Append(image == "atlas" ? "{\"atlas\":null}\n" : $"{{\"atlasImage\":\"{image}\",\"atlas\":null}}\n");
             return;
         }
-        m_Out.Append($"{{\"atlas\":\"{atlas.name}\",\"width\":{atlas.width},\"height\":{atlas.height},\"graphicsFormat\":\"{atlas.graphicsFormat}\",\"depth\":{atlas.depth},\"mipmaps\":{(atlas.useMipMap ? "true" : "false")},\"sRGB\":{(atlas.sRGB ? "true" : "false")},\"filterMode\":\"{atlas.filterMode}\",\"wrapMode\":\"{atlas.wrapMode}\",\"mipMapBias\":{F(atlas.mipMapBias)},\"hideFlags\":{(int)atlas.hideFlags}}}\n");
+        if (image != "atlas")
+            m_Out.Append($"{{\"atlasImage\":\"{image}\",\"width\":{atlas.width},\"height\":{atlas.height}}}\n");
+        else
+            m_Out.Append($"{{\"atlas\":\"{atlas.name}\",\"width\":{atlas.width},\"height\":{atlas.height},\"graphicsFormat\":\"{atlas.graphicsFormat}\",\"depth\":{atlas.depth},\"mipmaps\":{(atlas.useMipMap ? "true" : "false")},\"sRGB\":{(atlas.sRGB ? "true" : "false")},\"filterMode\":\"{atlas.filterMode}\",\"wrapMode\":\"{atlas.wrapMode}\",\"mipMapBias\":{F(atlas.mipMapBias)},\"hideFlags\":{(int)atlas.hideFlags}}}\n");
         var previous = RenderTexture.active;
         RenderTexture.active = atlas;
         var texture = new Texture2D(atlas.width, atlas.height, TextureFormat.RGBA32, false);
         texture.ReadPixels(new Rect(0, 0, atlas.width, atlas.height), 0, 0);
         texture.Apply();
         RenderTexture.active = previous;
-        File.WriteAllBytes(Path.Combine(dir, "atlas.png"), texture.EncodeToPNG());
+        File.WriteAllBytes(Path.Combine(dir, image + ".png"), texture.EncodeToPNG());
         Destroy(texture);
     }
 
