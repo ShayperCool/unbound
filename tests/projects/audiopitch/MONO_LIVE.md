@@ -97,8 +97,9 @@ see [the Q449 correction](#q449-duplicate-diagnostics) below.
   `topology-diagnostics` failures only in the six two-listener Mono controls,
   whose second listener carries an isolated Echo (the same startup case); the
   single-listener Mono controls pass strictly. That second Echo receives two
-  delay values (11, then 17 ms) before its first render, while the passing
-  primary chain sets its Echo delay once. No probe changes
+  delay values (11, then 17 ms) before its first render; this is an observation
+  only, since the isolated `mono-live` Echo controls set one delay and also
+  differ at startup. No probe changes
   `AudioEchoFilter.delay` or a mixer Echo Delay while a tail is running
   ([mixerecho](../mixerecho/README.md) states this limit), and
   the engine clears the Echo history whenever the delay frame count changes.
