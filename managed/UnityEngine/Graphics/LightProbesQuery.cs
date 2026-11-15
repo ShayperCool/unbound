@@ -37,7 +37,7 @@ namespace UnityEngine
             };
             m_LightProbeContextWrapper = GCHandle.ToIntPtr(GCHandle.Alloc(context));
             m_AllocatorLabel = allocator;
-            m_Safety = AtomicSafetyHandle.Create();
+            AtomicSafetyHandle.CreateHandle(out m_Safety, allocator);
         }
 
         public bool IsCreated => m_LightProbeContextWrapper != IntPtr.Zero;

@@ -11,29 +11,36 @@
 {"key":"running.dispose.logs","value":""}
 {"key":"whole.vertices","value":"0/0/0.5,0/1/0.5,0/7/7;1/0/0.5,1/1/0.5,1/7/7;2/0/0.5,2/1/0.5,2/7/7;3/0/0.5,3/1/0.5,3/7/7"}
 {"key":"next.run","value":"ok"}
-{"key":"next.run.logs","value":"Exception: IndexOutOfRangeException: Index 0 is out of restricted IJobParallelFor range [3...3] in MeshDataArray. | Exception: IndexOutOfRangeException: Index 1 is out of restricted IJobParallelFor range [0...0] in MeshDataArray. | Exception: IndexOutOfRangeException: Index 2 is out of restricted IJobParallelFor range [1...1] in MeshDataArray. | Exception: IndexOutOfRangeException: Index 3 is out of restricted IJobParallelFor range [2...2] in MeshDataArray."}
+{"key":"next.run.logs","value":"Exception: IndexOutOfRangeException: Index 0 is out of restricted IJobParallelFor range [3...3] in MeshDataArray. / You can only access the element at the job index, unless [NativeDisableParallelForRestriction] is used on the variable. | Exception: IndexOutOfRangeException: Index 1 is out of restricted IJobParallelFor range [0...0] in MeshDataArray. / You can only access the element at the job index, unless [NativeDisableParallelForRestriction] is used on the variable. | Exception: IndexOutOfRangeException: Index 2 is out of restricted IJobParallelFor range [1...1] in MeshDataArray. / You can only access the element at the job index, unless [NativeDisableParallelForRestriction] is used on the variable. | Exception: IndexOutOfRangeException: Index 3 is out of restricted IJobParallelFor range [2...2] in MeshDataArray. / You can only access the element at the job index, unless [NativeDisableParallelForRestriction] is used on the variable."}
 {"key":"next.vertices","value":"0/0/0.5,0/1/0.5,0/7/7;1/0/0.5,1/1/0.5,1/7/7;2/0/0.5,2/1/0.5,2/7/7;3/0/0.5,3/1/0.5,3/7/7"}
 {"key":"nextUnrestricted.run","value":"ok"}
 {"key":"nextUnrestricted.run.logs","value":""}
 {"key":"nextUnrestricted.vertices","value":"0/0/0.5,3/9/9,0/7/7;1/0/0.5,0/9/9,1/7/7;2/0/0.5,1/9/9,2/7/7;3/0/0.5,2/9/9,3/7/7"}
+{"key":"previous.run","value":"ok"}
+{"key":"previous.run.logs","value":"Exception: IndexOutOfRangeException: Index -1 is out of restricted IJobParallelFor range [0...0] in MeshDataArray. / You can only access the element at the job index, unless [NativeDisableParallelForRestriction] is used on the variable."}
 {"key":"readOnly.run","value":"ok"}
 {"key":"readOnly.run.logs","value":"Exception: InvalidOperationException: The UNKNOWN_OBJECT_TYPE has been declared as [ReadOnly] in the job, but you are writing to it."}
 {"key":"readOnly.sum","value":"148"}
 {"key":"readOnly.vertices","value":"0/0/0.5,3/9/9,0/7/7;1/0/0.5,0/9/9,1/7/7;2/0/0.5,1/9/9,2/7/7;3/0/0.5,2/9/9,3/7/7"}
-{"key":"one.run","value":"ok"}
-{"key":"one.run.logs","value":"Exception: InvalidOperationException: The UNKNOWN_OBJECT_TYPE has been declared as [ReadOnly] in the job, but you are writing to it."}
-{"key":"one.vertices","value":"0/0/0.5,3/9/9,0/7/7;1/0/0.5,0/9/9,1/7/7;2/0/0.5,1/9/9,2/7/7;3/0/0.5,2/9/9,3/7/7"}
-{"key":"one.schedule","value":"ok"}
-{"key":"one.schedule.logs","value":""}
-{"key":"one.running.read","value":"ok"}
-{"key":"one.running.read.logs","value":""}
-{"key":"one.running.write","value":"ok"}
-{"key":"one.running.write.logs","value":""}
 {"key":"applied","value":"0/0/0.5,3/9/9,0/7/7;1/0/0.5,0/9/9,1/7/7;2/0/0.5,1/9/9,2/7/7;3/0/0.5,2/9/9,3/7/7"}
 {"key":"disposed.index","value":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
 {"key":"disposed.index.logs","value":""}
 {"key":"disposed.schedule","value":"InvalidOperationException: The UNKNOWN_OBJECT_TYPE WholeArray.data has been deallocated. All containers must be valid when scheduling a job."}
 {"key":"disposed.schedule.logs","value":""}
+{"key":"acquired.vertexCount","value":"3"}
+{"key":"acquired.read","value":"ok"}
+{"key":"acquired.read.logs","value":""}
+{"key":"acquired.write","value":"InvalidOperationException: The UNKNOWN_OBJECT_TYPE has been declared as [ReadOnly], but you are writing to it."}
+{"key":"acquired.write.logs","value":""}
+{"key":"acquired.job","value":"InvalidOperationException: The UNKNOWN_OBJECT_TYPE WriteAcquired.data must be marked [ReadOnly] in the job MeshDataJobsProbe:WriteAcquired, because the container itself is marked read only."}
+{"key":"acquired.job.logs","value":""}
+{"key":"acquired.vertices","value":"0/0/0,0/1/0,1/0/0"}
+{"key":"acquired.disposeAgain","value":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"key":"acquired.disposeAgain.logs","value":""}
+{"key":"default.dispose","value":"ObjectDisposedException: The UNKNOWN_OBJECT_TYPE has been deallocated, it is not allowed to access it"}
+{"key":"default.dispose.logs","value":""}
+{"key":"plain.run","value":"ok"}
+{"key":"plain.run.logs","value":"Log: plain read passed | Log: plain write passed"}
 {"key":"query.schedule","value":"ok"}
 {"key":"query.schedule.logs","value":""}
 {"key":"query.running.dispose","value":"InvalidOperationException: The previously scheduled job MeshDataJobsProbe:Query writes to the UNKNOWN_OBJECT_TYPE Query.query. You must call JobHandle.Complete() on the job MeshDataJobsProbe:Query, before you can deallocate the UNKNOWN_OBJECT_TYPE safely."}

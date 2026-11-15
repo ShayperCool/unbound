@@ -7,6 +7,7 @@
     "managed/UnityEngine/Graphics/MeshData.cs",
     "managed/UnityEngine/Graphics/LightProbesQuery.cs",
     "managed/UnityEngine/Jobs/JobLayout.cs",
+    "managed/UnityEngine/Jobs/JobSystem.cs",
     "managed/UnityEngine/Collections/Safety.cs"
   ]
 }

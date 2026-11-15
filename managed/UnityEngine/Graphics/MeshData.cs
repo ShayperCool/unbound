@@ -416,24 +416,34 @@ namespace UnityEngine
             {
                 get
                 {
+                    if (index < m_MinIndex || index > m_MaxIndex) FailOutOfRangeError(index);
                     AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
-                    if (index < m_MinIndex || index > m_MaxIndex)
-                    {
-                        if (index >= 0 && index < m_Length)
-                            throw new IndexOutOfRangeException($"Index {index} is out of restricted IJobParallelFor range [{m_MinIndex}...{m_MaxIndex}] in MeshDataArray.");
-                        throw new IndexOutOfRangeException($"Index {index} is out of range of '{m_Length}' Length.");
-                    }
                     return new MeshData { m_Ptr = m_Ptrs[index], m_Safety = m_Safety };
                 }
             }
 
-            void Allocate(int count)
+            void FailOutOfRangeError(int index)
+            {
+                if (index < Length && (m_MinIndex != 0 || m_MaxIndex != Length - 1))
+                    throw new IndexOutOfRangeException($"Index {index} is out of restricted IJobParallelFor range [{m_MinIndex}...{m_MaxIndex}] in MeshDataArray.\n" +
+                        "You can only access the element at the job index, unless [NativeDisableParallelForRestriction] is used on the variable.");
+                throw new IndexOutOfRangeException($"Index {index} is out of range of '{Length}' Length.");
+            }
+
+            /// <summary>Data acquired from meshes without a copy is read-only through its handle's
+            /// secondary version.</summary>
+            void Allocate(int count, bool readOnly)
             {
                 m_Length = count;
                 m_MinIndex = 0;
                 m_MaxIndex = count - 1;
                 m_Ptrs = (IntPtr*)UnsafeUtility.Malloc(Math.Max(1, count) * (long)sizeof(IntPtr), 16, Allocator.Persistent);
-                m_Safety = AtomicSafetyHandle.Create();
+                AtomicSafetyHandle.CreateHandle(out m_Safety, Allocator.TempJob);
+                if (readOnly)
+                {
+                    AtomicSafetyHandle.SetAllowSecondaryVersionWriting(m_Safety, false);
+                    AtomicSafetyHandle.UseSecondaryVersion(ref m_Safety);
+                }
             }
 
             internal MeshDataArray(int meshesCount)
@@ -441,7 +451,7 @@ namespace UnityEngine
                 if (meshesCount < 0) throw new InvalidOperationException($"Mesh count can not be negative (was {meshesCount})");
                 m_Ptrs = null;
                 m_Length = m_MinIndex = m_MaxIndex = 0;
-                Allocate(meshesCount);
+                Allocate(meshesCount, false);
                 for (int i = 0; i < meshesCount; i++) m_Ptrs[i] = GCHandle.ToIntPtr(GCHandle.Alloc(new MeshDataStore(false)));
             }
 
@@ -459,16 +469,17 @@ namespace UnityEngine
                     if (meshes[i] == null) throw new ArgumentNullException(nameof(meshes), $"Mesh at index {i} is null");
                     if (checkReadWrite && !meshes[i].isReadable) throw new InvalidOperationException($"Not allowed to access vertex data on mesh '{meshes[i].name}' (isReadable is false; Read/Write must be enabled in import settings)");
                 }
-                Allocate(meshesCount);
+                Allocate(meshesCount, !createAsCopy);
                 for (int i = 0; i < meshesCount; i++)
                     m_Ptrs[i] = GCHandle.ToIntPtr(GCHandle.Alloc(MeshDataStore.Of(meshes[i], !createAsCopy)));
             }
 
             public void Dispose()
             {
+                // A default array has no handle, which reports itself deallocated.
+                if (AtomicSafetyHandle.IsDefaultValue(m_Safety)) throw Unbound.Runtime.Safety.Deallocated(m_Safety);
+                AtomicSafetyHandle.DisposeHandle(ref m_Safety);
                 if (m_Ptrs == null) return;
-                AtomicSafetyHandle.CheckDeallocateAndThrow(m_Safety);
-                AtomicSafetyHandle.Release(m_Safety);
                 for (int i = 0; i < m_Length; i++)
                 {
                     var handle = GCHandle.FromIntPtr(m_Ptrs[i]);

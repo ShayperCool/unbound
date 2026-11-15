@@ -154,6 +154,17 @@ namespace Unbound.Runtime
 
         static bool IsSecondary(in AtomicSafetyHandle handle) => (long)handle.versionNode != (long)NodeBase(handle.versionNode);
 
+        /// <summary>Whether the handle is a read-only view: its secondary version, which may not write
+        /// (data acquired read-only, such as Mesh.AcquireReadOnlyMeshData).</summary>
+        internal static bool IsReadOnlyView(in AtomicSafetyHandle handle)
+        {
+            lock (s_Lock)
+            {
+                var node = RealNode(handle);
+                return node != null && IsSecondary(handle) && !node.AllowSecondaryWriting;
+            }
+        }
+
         static bool Matches(in AtomicSafetyHandle handle) =>
             handle.versionNode != IntPtr.Zero &&
             (handle.version & VersionMask) == (Volatile.Read(ref *(int*)handle.versionNode) & VersionMask);
@@ -549,7 +560,7 @@ namespace Unbound.Runtime
                 return s_CustomMessages.TryGetValue((staticSafetyId, errorType), out var message) ? message : null;
         }
 
-        static Exception Deallocated(in AtomicSafetyHandle handle) =>
+        internal static Exception Deallocated(in AtomicSafetyHandle handle) =>
             new ObjectDisposedException(null, CustomMessage(handle.staticSafetyId, AtomicSafetyErrorType.Deallocated)
                 ?? $"The {TypeName(handle.staticSafetyId)} has been deallocated, it is not allowed to access it");
 

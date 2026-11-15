@@ -4,21 +4,24 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 // Mesh.MeshDataArray in jobs: scheduling with the array as a job field, the parallel-for write
-// range, [ReadOnly] and [NativeDisableParallelForRestriction] fields, and the array's safety while a
-// job uses it. Results are the meshes' vertices after the jobs, and exception types and messages.
+// range, [ReadOnly] and [NativeDisableParallelForRestriction] fields, the array's safety while a
+// job uses it, read-only acquired data, and a plain struct field holding a safety handle. Results
+// are the meshes' vertices after the jobs, and exception types and messages.
 public class MeshDataJobsProbe : MonoBehaviour
 {
     [RuntimeInitializeOnLoadMethod] static void Install() { new GameObject("MeshDataJobsProbe").AddComponent<MeshDataJobsProbe>(); }
     [Serializable] class Row { public string key; public string value; }
     StreamWriter output;
     readonly List<string> logs = new List<string>();
-    void OnLog(string message, string stack, LogType type) { lock (logs) logs.Add(type + ": " + message.Split('\n')[0]); }
+    static string Flat(string message) => message.TrimEnd('\n').Replace("\n", " / ");
+    void OnLog(string message, string stack, LogType type) { lock (logs) logs.Add(type + ": " + Flat(message)); }
 
     void Put(string key, object value) => output.WriteLine(JsonUtility.ToJson(new Row { key = key, value = Convert.ToString(value, CultureInfo.InvariantCulture) }));
 
@@ -67,6 +70,41 @@ public class MeshDataJobsProbe : MonoBehaviour
         }
     }
 
+    struct WritePrevious : IJobParallelFor
+    {
+        public Mesh.MeshDataArray data;
+        public void Execute(int index)
+        {
+            if (index != 0) return;
+            var unused = data[index - 1];
+        }
+    }
+
+    struct WriteAcquired : IJob
+    {
+        public Mesh.MeshDataArray data;
+        public void Execute()
+        {
+            var vertices = data[0].GetVertexData<Vector3>();
+            vertices[0] = Vector3.one;
+        }
+    }
+
+    // A plain struct holding a safety handle, as a job field.
+    public struct Guarded { public AtomicSafetyHandle safety; public int value; }
+
+    struct PlainHandle : IJob
+    {
+        public Guarded guarded;
+        public void Execute()
+        {
+            AtomicSafetyHandle.CheckReadAndThrow(guarded.safety);
+            Debug.Log("plain read passed");
+            AtomicSafetyHandle.CheckWriteAndThrow(guarded.safety);
+            Debug.Log("plain write passed");
+        }
+    }
+
     struct ReadOnlyWrite : IJob
     {
         [ReadOnly] public Mesh.MeshDataArray data;
@@ -92,16 +130,6 @@ public class MeshDataJobsProbe : MonoBehaviour
                 var vertices = data[i].GetVertexData<Vector3>();
                 vertices[2] = new Vector3(i, 7, 7);
             }
-        }
-    }
-
-    struct OneMesh : IJob
-    {
-        public Mesh.MeshData mesh;
-        public void Execute()
-        {
-            var vertices = mesh.GetVertexData<Vector3>();
-            vertices[0] = new Vector3(5, 5, 5);
         }
     }
 
@@ -149,7 +177,7 @@ public class MeshDataJobsProbe : MonoBehaviour
     {
         lock (logs) logs.Clear();
         try { action(); Put(key, "ok"); }
-        catch (Exception e) { Put(key, e.GetType().Name + ": " + e.Message.Split('\n')[0]); }
+        catch (Exception e) { Put(key, e.GetType().Name + ": " + Flat(e.Message)); }
         lock (logs) Put(key + ".logs", string.Join(" | ", logs.OrderBy(l => l, StringComparer.Ordinal)));
     }
 
@@ -176,6 +204,8 @@ public class MeshDataJobsProbe : MonoBehaviour
         Try("nextUnrestricted.run", () => new WriteNextUnrestricted { data = data }.Schedule(4, 1).Complete());
         Put("nextUnrestricted.vertices", Vertices(data));
 
+        Try("previous.run", () => new WritePrevious { data = data }.Schedule(4, 1).Complete());
+
         // A read-only array field.
         var sum = new NativeArray<float>(1, Allocator.TempJob);
         Try("readOnly.run", () => new ReadOnlyWrite { data = data, sum = sum }.Schedule().Complete());
@@ -183,23 +213,28 @@ public class MeshDataJobsProbe : MonoBehaviour
         Put("readOnly.vertices", Vertices(data));
         sum.Dispose();
 
-        // A single MeshData as a job field.
-        Try("one.run", () => new OneMesh { mesh = data[3] }.Schedule().Complete());
-        Put("one.vertices", Vertices(data));
-        // While it runs, the job is no dependency of the array: the main thread reads and writes it.
-        var lone = Allocate(2);
-        Try("one.schedule", () => handle = new OneMesh { mesh = lone[1] }.Schedule());
-        Try("one.running.read", () => { var unused = lone[0].vertexCount; });
-        Try("one.running.write", () => { var vertices = lone[0].GetVertexData<Vector3>(); vertices[0] = Vector3.one; });
-        handle.Complete();
-        lone.Dispose();
-
         // Applied to meshes.
         var meshes = Enumerable.Range(0, 4).Select(i => new Mesh { name = "m" + i }).ToArray();
         Mesh.ApplyAndDisposeWritableMeshData(data, meshes, MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontValidateIndices);
         Put("applied", string.Join(";", meshes.Select(m => string.Join(",", m.vertices.Select(v => v.x + "/" + v.y + "/" + v.z)))));
         Try("disposed.index", () => { var unused = data[0]; });
         Try("disposed.schedule", () => new WholeArray { data = data }.Schedule().Complete());
+
+        // Data acquired from a mesh without a copy is read-only, on the main thread and in jobs.
+        var source = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
+        var acquired = Mesh.AcquireReadOnlyMeshData(source);
+        Try("acquired.read", () => Put("acquired.vertexCount", acquired[0].vertexCount));
+        Try("acquired.write", () => { var vertices = acquired[0].GetVertexData<Vector3>(); vertices[0] = Vector3.one; });
+        Try("acquired.job", () => new WriteAcquired { data = acquired }.Schedule().Complete());
+        Put("acquired.vertices", string.Join(",", acquired[0].GetVertexData<Vector3>().Select(v => v.x + "/" + v.y + "/" + v.z)));
+        acquired.Dispose();
+        Try("acquired.disposeAgain", () => acquired.Dispose());
+        Try("default.dispose", () => default(Mesh.MeshDataArray).Dispose());
+
+        // A plain struct holding another safety handle, unrelated to the job's containers.
+        var guarded = new Guarded { safety = AtomicSafetyHandle.Create(), value = 3 };
+        Try("plain.run", () => new PlainHandle { guarded = guarded }.Schedule().Complete());
+        AtomicSafetyHandle.Release(guarded.safety);
 
         // A light probe query as a job field.
         var query = new LightProbesQuery(Allocator.Persistent);

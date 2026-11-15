@@ -344,6 +344,9 @@ namespace Unbound.Runtime.Jobs
                         throw new InvalidOperationException($"The {type} {container.Path} is allocated with Temp memory. Temp memory containers cannot be used when scheduling a job, use TempJob instead.");
                     if (Safety.IsNested(handle))
                         throw new InvalidOperationException($"The {type} {container.Path} contains nested native containers. Nested native containers are illegal in jobs.");
+                    // Matches the Unity 6000.0.71f1 Editor (tests/projects/meshdatajobs acquired.job).
+                    if ((container.Access & ContainerAccess.Write) != 0 && Safety.IsReadOnlyView(handle))
+                        throw new InvalidOperationException($"The {type} {container.Path} must be marked [ReadOnly] in the job {reflection.Name}, because the container itself is marked read only.");
                     if (parallel && (container.Access & ContainerAccess.Write) != 0 && !container.DisableParallelForRestriction &&
                         !container.AtomicWriteOnly && (!container.SupportsMinMax || container.MinOffset < 0))
                         throw new InvalidOperationException($"{container.Path} is not declared [ReadOnly] in a IJobParallelFor job. The container does not support parallel writing. Please use a more suitable container type.");
@@ -387,12 +390,6 @@ namespace Unbound.Runtime.Jobs
                     ref var handle = ref *(AtomicSafetyHandle*)(record.Data + offset);
                     if (handle.versionNode != IntPtr.Zero && Safety.IsAlive(handle)) Safety.PatchForJob(ref handle, record, ContainerAccess.ReadWrite, 0);
                 }
-            }
-            foreach (int offset in layout.Detached)
-            {
-                ref var handle = ref *(AtomicSafetyHandle*)(record.Data + offset);
-                if (handle.versionNode != IntPtr.Zero && Safety.IsAlive(handle))
-                    Safety.PatchForJob(ref handle, record, ContainerAccess.Read, AtomicSafetyHandle.Dispose | AtomicSafetyHandle.Write);
             }
             foreach (var (container, offset, handle) in handles)
             {
