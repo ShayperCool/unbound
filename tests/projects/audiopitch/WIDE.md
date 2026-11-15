@@ -168,7 +168,10 @@ all earlier raw failures and the existing admission guards remain unchanged.
 ## Q457 scope
 
 Both excluded rate/buffer pairs stay excluded without a further attempt. The
-Flange spike depends on storage beyond the history, which the authored input
-does not determine. The Pitch Shifter, source Chorus and Reset differences remain
-unexplained and are recorded with the counts above. No admission, reference or
-tolerance changes.
+Flange spike falls at the history-endpoint boundary identified in Q449; storage
+beyond the cleared history is a candidate source that the authored input cannot
+determine, and its cause is unconfirmed. The Pitch Shifter, source Chorus and
+per-case Reset differences remain unexplained and are recorded with the counts
+above. No pair is recorded as captured on an otherwise idle machine; whether
+concurrent load contributes is untested. No admission, reference or tolerance
+changes.

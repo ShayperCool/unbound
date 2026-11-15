@@ -96,8 +96,11 @@ see [the Q449 correction](#q449-duplicate-diagnostics) below.
   this from a general Mono reverb folding defect. Q457 finds the remaining
   `topology-diagnostics` failures only in the six two-listener Mono controls,
   whose second listener carries an isolated Echo (the same startup case); the
-  single-listener Mono controls pass strictly. No probe changes `AudioEchoFilter.delay` or a mixer Echo Delay while
-  a tail is running ([mixerecho](../mixerecho/README.md) states this limit), and
+  single-listener Mono controls pass strictly. That second Echo receives two
+  delay values (11, then 17 ms) before its first render, while the passing
+  primary chain sets its Echo delay once. No probe changes
+  `AudioEchoFilter.delay` or a mixer Echo Delay while a tail is running
+  ([mixerecho](../mixerecho/README.md) states this limit), and
   the engine clears the Echo history whenever the delay frame count changes.
   Runtime delay controls (decrease, increase, a reversal inside 2048 frames, on a
   source and a listener) are needed before the startup transition can be modelled
@@ -105,9 +108,11 @@ see [the Q449 correction](#q449-duplicate-diagnostics) below.
 - **Q416-R4b, composed source precision.** Stereo and Quad LowPass/Chorus and
   Reverb/Echo controls retain sparse Master and device differences. They are
   outside this new PCM qualification; their complete samples and original float
-  bounds remain in `mono-live`. Q457 records them as rounding-level residuals:
-  Master errors of `2.13e-5` to `3.06e-5`, near the `2e-5` absolute bound, with
-  isolated LowPass and Reverb passing. No further arithmetic search is made.
+  bounds remain in `mono-live`. Q457 makes no further arithmetic search: the
+  Master errors of `2.13e-5` to `3.06e-5` are about one 16-bit step in
+  magnitude, consistent with the candidate delay-history quantization, and
+  isolated LowPass and Reverb pass. The 93/116 Master samples remain gate
+  failures at the unchanged bounds.
 - **Q416-R4d, live listener connections.** Q457 closes the measured component
   attachment and script creation slice in [LIVE_LISTENERS.md](LIVE_LISTENERS.md).
   The original six controls now retain 610/864 gate failures, all initial Mono

@@ -109,10 +109,12 @@ difference reports are retained alongside the earlier Q449 topology results.
 
 ## Q457 scope
 
-No further reset capture is made. Independent Editor pairs of the same controls
-agree in some sessions (Q416 at both rates, Q449 at 48000 Hz) and disagree in
-others (Q390 at 48000 Hz, Q449 at 44100 Hz), so these reset references are not
-repeatable and no engine timing is fitted to them. All of these captures ran on
-a machine shared with other builds and Editor runs; whether that load causes the
-disagreement is untested and needs repeats on an otherwise idle machine.
-Q416-R1 stays open. No engine behavior, reference or tolerance changes.
+No further reset capture is made. Independent Editor pairs disagree in several
+sessions: the 19-control recovery profile at 48000 Hz (404,561 values), the
+scheduled diagnostic at 44100 Hz (421,351) and the Q449 62-control immediate
+diagnostic at 44100 Hz (665,500). Other pairs agree exactly: the Q416 recovery
+profile at both rates and the Q449 immediate diagnostic at 48000 Hz. These reset
+references are therefore not repeatable, and no engine timing is fitted to them.
+No pair is recorded as captured on an otherwise idle machine; whether concurrent
+load causes the disagreement is untested and is the next check. Q416-R1 stays
+open. No engine behavior, reference or tolerance changes.
