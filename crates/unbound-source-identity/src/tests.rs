@@ -237,3 +237,76 @@ fn super_paths_and_test_code() {
         ]
     );
 }
+
+/// Code the reading cannot follow, or that hides its paths from a plain reading, still reaches
+/// what it names: each case reaches the rules crate's `audio` module.
+#[test]
+fn hidden_and_unfollowable_names_reach_what_they_name() {
+    let audio = "crates/unbound-rules/src/audio.rs".to_string();
+    let cases = [
+        // A nested group names its later items too.
+        ("nested", "use unbound_rules::{device::{Device}, Audio};\n"),
+        // A comment marker in a string is no comment.
+        (
+            "string",
+            "const G: &str = \"Shaders/*.shader\";\nuse unbound_rules::Audio;\nconst H: &str = \"*/\";\n",
+        ),
+        (
+            "url",
+            "const U: &str = \"http://x\"; use unbound_rules::Audio;\n",
+        ),
+        // A brace in a test item's string does not take the code after it.
+        (
+            "test-brace",
+            "#[cfg(test)]\nfn helper() -> &'static str { \"{\" }\nuse unbound_rules::Audio;\n",
+        ),
+        // A crate under another name: all of it.
+        (
+            "alias",
+            "use unbound_rules as r;\nfn f() { r::Device::A; }\n",
+        ),
+    ];
+    for (case, fit) in cases {
+        let ws = compiler_and_rules(case);
+        ws.write("crates/unbound-compiler/src/fit.rs", fit);
+        assert!(
+            ws.sources("unbound_compiler", &[]).contains(&audio),
+            "{case}"
+        );
+    }
+    // Macros defined in a crate partly reached: all of it (their uses expand unread).
+    let ws = compiler_and_rules("macro");
+    ws.write(
+        "crates/unbound-rules/src/audio.rs",
+        "pub struct Audio;\n#[macro_export]\nmacro_rules! gain { () => {} }\n",
+    );
+    assert!(ws.sources("unbound_compiler", &[]).contains(&audio));
+    // `super::` from a directory's `mod.rs` names the crate root's modules.
+    let ws = compiler_and_rules("mod-rs");
+    std::fs::remove_file(ws.0.join("crates/unbound-rules/src/device.rs")).unwrap();
+    std::fs::create_dir_all(ws.0.join("crates/unbound-rules/src/device")).unwrap();
+    ws.write(
+        "crates/unbound-rules/src/device/mod.rs",
+        "pub enum Device { A }\npub fn select() {}\nfn g() { super::audio::Audio; }\n",
+    );
+    assert!(ws.sources("unbound_compiler", &[]).contains(&audio));
+    // An include of a computed path: all of the crate; included code: all of it too.
+    for (case, device) in [
+        (
+            "computed",
+            "pub enum Device { A }\npub fn select() {}\nconst T: &str = include_str!(concat!(\"a\", \"b\"));\n",
+        ),
+        (
+            "include",
+            "pub enum Device { A }\npub fn select() {}\ninclude!(\"generated.rs\");\n",
+        ),
+    ] {
+        let ws = compiler_and_rules(case);
+        ws.write("crates/unbound-rules/src/device.rs", device);
+        ws.write("crates/unbound-rules/src/generated.rs", "");
+        assert!(
+            ws.sources("unbound_compiler", &[]).contains(&audio),
+            "{case}"
+        );
+    }
+}

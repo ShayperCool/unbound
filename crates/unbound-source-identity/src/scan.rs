@@ -50,46 +50,171 @@ fn rust_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(out)
 }
 
-/// A file's text without its comments and test code (string literals are kept: a path named in
-/// one counts, which only reaches more).
-fn code(text: &str) -> String {
+/// A file read for the paths its code names.
+struct Code {
+    /// Its code without comments and test code, its string and character literals emptied
+    /// (`""`, `' '`): what they hold names nothing.
+    text: String,
+    /// The paths its `include_str!`, `include_bytes!` and `include!` name, with whether the
+    /// include is code (`include!`).
+    includes: Vec<(String, bool)>,
+    /// It holds something the reading cannot follow: an include of a computed path, a crate
+    /// alias, a `#[path]` module, a macro (its expansion names what the reading does not see).
+    unsure: bool,
+}
+
+/// Reads a file's text for its paths ([`Code`]).
+fn code(text: &str) -> Code {
+    let chars: Vec<char> = text.chars().collect();
     let mut out = String::with_capacity(text.len());
-    let mut chars = text.chars().peekable();
-    while let Some(c) = chars.next() {
-        if c == '/' && chars.peek() == Some(&'/') {
-            for c in chars.by_ref() {
-                if c == '\n' {
-                    out.push('\n');
-                    break;
-                }
+    let mut includes = Vec::new();
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        let next = chars.get(i + 1).copied();
+        let prev_ident = out.chars().next_back().is_some_and(is_ident);
+        if c == '/' && next == Some('/') {
+            while i < chars.len() && chars[i] != '\n' {
+                i += 1;
             }
-        } else if c == '/' && chars.peek() == Some(&'*') {
-            chars.next();
-            let mut depth = 1;
-            let mut last = ' ';
-            for c in chars.by_ref() {
-                if last == '/' && c == '*' {
+        } else if c == '/' && next == Some('*') {
+            let mut depth = 0;
+            while i < chars.len() {
+                if chars[i] == '/' && chars.get(i + 1) == Some(&'*') {
                     depth += 1;
-                    last = ' ';
-                } else if last == '*' && c == '/' {
+                    i += 2;
+                } else if chars[i] == '*' && chars.get(i + 1) == Some(&'/') {
                     depth -= 1;
+                    i += 2;
                     if depth == 0 {
                         break;
                     }
-                    last = ' ';
                 } else {
-                    last = c;
+                    i += 1;
                 }
             }
             out.push(' ');
+        } else if c == 'r'
+            && !prev_ident
+            && matches!(next, Some('"' | '#'))
+            && raw_string_start(&chars[i + 1..]).is_some()
+        {
+            // A raw string: `r"..."`, `r#"..."#`.
+            let hashes = raw_string_start(&chars[i + 1..]).unwrap();
+            i += 2 + hashes;
+            let start = i;
+            while i < chars.len()
+                && !(chars[i] == '"'
+                    && chars[i + 1..].iter().take(hashes).all(|&h| h == '#')
+                    && chars.len() >= i + 1 + hashes)
+            {
+                i += 1;
+            }
+            let literal: String = chars[start..i.min(chars.len())].iter().collect();
+            note_include(&out, &literal, &mut includes);
+            out.push_str("\"\"");
+            i += 1 + hashes;
+        } else if c == '"' {
+            i += 1;
+            let mut literal = String::new();
+            while i < chars.len() && chars[i] != '"' {
+                if chars[i] == '\\' {
+                    i += 1;
+                }
+                if i < chars.len() {
+                    literal.push(chars[i]);
+                }
+                i += 1;
+            }
+            note_include(&out, &literal, &mut includes);
+            out.push_str("\"\"");
+            i += 1;
+        } else if c == '\'' {
+            // A character literal (`'a'`, `'\n'`, `'{'`) or a lifetime (`'a`).
+            let close = match next {
+                Some('\\') => chars[i + 2..]
+                    .iter()
+                    .position(|&c| c == '\'')
+                    .map(|p| i + 2 + p),
+                Some(_) if chars.get(i + 2) == Some(&'\'') => Some(i + 2),
+                _ => None,
+            };
+            match close {
+                Some(end) => {
+                    out.push_str("' '");
+                    i = end + 1;
+                }
+                None => {
+                    out.push(c);
+                    i += 1;
+                }
+            }
         } else {
             out.push(c);
+            i += 1;
         }
     }
-    without_tests(&out)
+    let text = without_tests(&out);
+    // An include whose path is not a literal (`concat!`, `env!`) is not followed.
+    let computed_include = ["include_str!(", "include_bytes!(", "include!("]
+        .iter()
+        .any(|m| {
+            word_starts(&text, m).any(|at| !text[at + m.len()..].trim_start().starts_with('"'))
+        });
+    let unsure = computed_include
+        || text.contains("#[path")
+        || text.contains("#![path")
+        || text.contains("macro_rules!")
+        || text.contains("#[macro_use]")
+        || word_starts(&text, "extern").any(|at| text[at + 6..].trim_start().starts_with("crate"))
+        || crate_aliases(&text);
+    Code {
+        text,
+        includes,
+        unsure,
+    }
 }
 
-/// A text without its items under `#[cfg(test)]` (test code is not in the output's build).
+/// How many `#` open a raw string at the start of `rest` (after its `r`), if one does.
+fn raw_string_start(rest: &[char]) -> Option<usize> {
+    let hashes = rest.iter().take_while(|&&c| c == '#').count();
+    (rest.get(hashes) == Some(&'"')).then_some(hashes)
+}
+
+/// Records a string literal that is the path of an include macro the code before it opens.
+fn note_include(before: &str, literal: &str, includes: &mut Vec<(String, bool)>) {
+    let before = before.trim_end();
+    for (name, is_code) in [
+        ("include_str!(", false),
+        ("include_bytes!(", false),
+        ("include!(", true),
+    ] {
+        if before.ends_with(name) && !before[..before.len() - name.len()].ends_with(is_ident) {
+            includes.push((literal.to_string(), is_code));
+        }
+    }
+}
+
+/// Whether a text names its own crate or a workspace crate under another name (`use crate as
+/// c`, `use unbound_x as y`): the reading does not follow such names.
+fn crate_aliases(text: &str) -> bool {
+    word_starts(text, "as").any(|at| {
+        let before = text[..at].trim_end();
+        let name: String = before
+            .chars()
+            .rev()
+            .take_while(|c| is_ident(*c))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect();
+        let path_end = before.len() - name.len();
+        (name == "crate" || name.starts_with("unbound_")) && !before[..path_end].ends_with("::")
+    })
+}
+
+/// A text without its items under `#[cfg(test)]` (test code is not in the output's build). An
+/// item whose end it cannot find is kept.
 fn without_tests(text: &str) -> String {
     const MARK: &str = "#[cfg(test)]";
     let mut out = String::with_capacity(text.len());
@@ -99,25 +224,31 @@ fn without_tests(text: &str) -> String {
         let item = &rest[at + MARK.len()..];
         // The item ends at its first `;` outside braces, or where its first brace closes.
         let mut depth = 0i32;
-        let mut end = item.len();
+        let mut end = None;
         for (i, c) in item.char_indices() {
             match c {
                 '{' => depth += 1,
                 '}' => {
                     depth -= 1;
                     if depth == 0 {
-                        end = i + 1;
+                        end = Some(i + 1);
                         break;
                     }
                 }
                 ';' if depth == 0 => {
-                    end = i + 1;
+                    end = Some(i + 1);
                     break;
                 }
                 _ => {}
             }
         }
-        rest = &item[end..];
+        match end {
+            Some(end) => rest = &item[end..],
+            None => {
+                out.push_str(&rest[at..]);
+                rest = "";
+            }
+        }
     }
     out.push_str(rest);
     out
@@ -206,7 +337,13 @@ fn named_crates(text: &str) -> BTreeMap<String, Vec<String>> {
         .filter(|&at| !text[..at].chars().next_back().is_some_and(is_ident));
     for start in starts {
         let name: String = text[start..].chars().take_while(|c| is_ident(*c)).collect();
-        if !text[start + name.len()..].starts_with("::") {
+        let after = &text[start + name.len()..];
+        // Under another name (`use unbound_x as y`) its paths are not followed: all of it.
+        if after.starts_with(char::is_whitespace) && after.trim_start().starts_with("as ") {
+            out.entry(name).or_default().push("*".into());
+            continue;
+        }
+        if !after.starts_with("::") {
             continue;
         }
         let prefix = format!("{name}::");
@@ -220,19 +357,29 @@ fn named_crates(text: &str) -> BTreeMap<String, Vec<String>> {
     out
 }
 
-/// How many items the path or group at the start of `rest` names.
+/// How many items the path or group at the start of `rest` names (a group's items at its own
+/// depth: `{a::{B, C}, d}` names two).
 fn first_group(rest: &str) -> usize {
-    match rest.strip_prefix('{') {
-        Some(group) => {
-            let end = group.find('}').unwrap_or(group.len());
-            group[..end]
-                .split(',')
-                .filter(|s| !s.trim().is_empty())
-                .count()
-                .max(1)
+    let Some(group) = rest.strip_prefix('{') else {
+        return 1;
+    };
+    let mut depth = 0;
+    let mut items = 0;
+    let mut in_item = false;
+    for c in group.chars() {
+        match c {
+            '{' => depth += 1,
+            '}' if depth == 0 => break,
+            '}' => depth -= 1,
+            ',' if depth == 0 => in_item = false,
+            c if !c.is_whitespace() && depth == 0 && !in_item => {
+                in_item = true;
+                items += 1;
+            }
+            _ => {}
         }
-        None => 1,
     }
+    items.max(1)
 }
 
 /// Whether `text` defines an item named `ident` (`fn`, `struct`, ... or an inline `mod`).
@@ -446,7 +593,7 @@ fn resolve(src: &Path, ident: &str) -> io::Result<Change> {
     if crate_modules(src)?.contains(ident) {
         return Ok(Change::Module(ident.to_string()));
     }
-    let lib = code(&std::fs::read_to_string(src.join("lib.rs"))?);
+    let lib = code(&std::fs::read_to_string(src.join("lib.rs"))?).text;
     if let Some(module) = reexported_from(&lib, ident) {
         return Ok(match crate_modules(src)?.contains(&module) {
             true => Change::Module(module),
@@ -473,26 +620,6 @@ fn lexical(path: &Path) -> PathBuf {
         }
     }
     out
-}
-
-/// The files `include_str!` / `include_bytes!` read, relative to the including file.
-fn included_data(text: &str, path: &Path, files: &mut BTreeSet<PathBuf>) {
-    for name in ["include_str!(", "include_bytes!("] {
-        for (at, _) in text.match_indices(name) {
-            let rest = text[at + name.len()..].trim_start();
-            if let Some(literal) = rest.strip_prefix('"')
-                && let Some(end) = literal.find('"')
-                && let Some(dir) = path.parent()
-            {
-                // A file that is not there is no include (the macro's name in a string): a
-                // missing include does not compile.
-                let file = lexical(&dir.join(&literal[..end]));
-                if file.is_file() {
-                    files.insert(file);
-                }
-            }
-        }
-    }
 }
 
 /// The source files of the output `modules` of the workspace crate `start` (its Rust name; no
@@ -528,8 +655,19 @@ pub fn producing_sources(
                 }
                 Ok(out)
             };
+            // A crate that defines macros: what their uses expand to is not read, so a crate
+            // only partly reached counts whole.
+            if !r.whole {
+                for path in rust_files(&src)? {
+                    let text = code(&std::fs::read_to_string(&path)?).text;
+                    if text.contains("macro_rules!") || text.contains("#[macro_use]") {
+                        changes.push((name.clone(), Change::Whole));
+                        break;
+                    }
+                }
+            }
             // The texts read: the reached modules' files (and the root's items with code).
-            let mut texts: Vec<(PathBuf, String)> = Vec::new();
+            let mut texts: Vec<(PathBuf, Code)> = Vec::new();
             if r.whole {
                 for path in rust_files(&src)? {
                     texts.push((path.clone(), code(&std::fs::read_to_string(&path)?)));
@@ -546,12 +684,22 @@ pub fn producing_sources(
                 }
                 if r.root_code {
                     let root_text = std::fs::read_to_string(&lib_path)?;
-                    texts.push((lib_path.clone(), code(&root_code(&root_text))));
+                    let mut root_items = code(&root_text);
+                    root_items.text = root_code(&root_items.text);
+                    texts.push((lib_path.clone(), root_items));
                 }
             }
-            for (path, text) in &texts {
+            for (path, read) in &texts {
+                let text = &read.text;
                 files.insert(path.clone());
-                included_data(text, path, &mut files);
+                for (include, is_code) in &read.includes {
+                    let file = lexical(&path.parent().unwrap_or(&src).join(include));
+                    files.insert(file);
+                    // Included code is read where it stands: the reading does not follow it.
+                    if *is_code {
+                        changes.push((name.clone(), Change::Whole));
+                    }
+                }
                 for (other, idents) in named_crates(text) {
                     if other == *name {
                         continue;
@@ -568,16 +716,21 @@ pub fn producing_sources(
                 if r.whole {
                     continue;
                 }
-                if text.contains("#[path") || text.contains("#![path") {
+                if read.unsure {
                     changes.push((name.clone(), Change::Whole));
                 }
                 let mut named = named_after(text, "crate::");
-                // How deep the file is below `src`: a module's own directory holds its
-                // submodules, whose `super::` names the module (reached with them).
-                let depth = path
+                // How deep the file's module is below the crate: a module's own directory holds
+                // its submodules, whose `super::` names the module (reached with them); a
+                // `mod.rs` is its directory's module itself.
+                let dirs = path
                     .parent()
                     .and_then(|p| p.strip_prefix(&src).ok())
                     .map_or(0, |p| p.components().count());
+                let depth = match path.file_name().is_some_and(|f| f == "mod.rs") {
+                    true => dirs.saturating_sub(1),
+                    false => dirs,
+                };
                 let inline = has_inline_module(text);
                 for (supers, ident) in super_paths(text) {
                     // From an inline module (`mod tests { use super::*; }`), the file itself.
@@ -603,15 +756,15 @@ pub fn producing_sources(
             }
             // Modules that implement the types reached.
             let mut types = BTreeSet::new();
-            for (_, text) in &texts {
-                types.extend(defined_types(text));
+            for (_, read) in &texts {
+                types.extend(defined_types(&read.text));
             }
             for m in crate_modules(&src)? {
                 if r.modules.contains(&m) {
                     continue;
                 }
                 for path in module_files(&m)? {
-                    if implements(&code(&std::fs::read_to_string(&path)?), &types) {
+                    if implements(&code(&std::fs::read_to_string(&path)?).text, &types) {
                         changes.push((name.clone(), Change::Module(m.clone())));
                     }
                 }
