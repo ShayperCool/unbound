@@ -93,6 +93,20 @@ public class RuntimePanelProbe : MonoBehaviour
         fourth.panelSettings = settingsB;
         Put("fourth.reportsB", ReferenceEquals(fourth.runtimePanel, panelB));
 
+        // A document enabled on its settings keeps that panel after a later change, whether it was
+        // activated or re-enabled, before it is asked.
+        var fifth = Document("Fifth", settingsA, false);
+        fifth.gameObject.SetActive(true);
+        fifth.panelSettings = settingsB;
+        Put("fifth.reportsA", ReferenceEquals(fifth.runtimePanel, panelA));
+        var sixth = Document("Sixth", null);
+        sixth.panelSettings = settingsA;
+        sixth.enabled = false;
+        sixth.enabled = true;
+        sixth.panelSettings = settingsB;
+        Put("sixth.reportsA", ReferenceEquals(sixth.runtimePanel, panelA));
+        Put("sixth.rootPanelIsB", ReferenceEquals(sixth.rootVisualElement.panel, panelB));
+
         // An inactive document has no panel; once active it reports one.
         var inactive = Document("Inactive", settingsA, false);
         Put("inactive.root", inactive.rootVisualElement == null);

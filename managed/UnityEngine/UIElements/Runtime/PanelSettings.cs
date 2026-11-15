@@ -340,16 +340,19 @@ namespace UnityEngine.UIElements
 
         RuntimePanel m_RuntimePanel;
 
-        /// <summary>The panel the document's root was first found on: it stays the same after the
-        /// document's settings change (matches the Unity 6000.0.71f1 Editor, tests/projects/runtimepanels).</summary>
+        /// <summary>The panel the document's root was first found on, when the document was enabled
+        /// or asked: it stays the same after the document's settings change (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/runtimepanels).</summary>
         public IRuntimePanel runtimePanel
         {
             get
             {
-                m_RuntimePanel ??= rootVisualElement?.panel as RuntimePanel;
+                ResolveRuntimePanel();
                 return m_RuntimePanel;
             }
         }
+
+        void ResolveRuntimePanel() => m_RuntimePanel ??= rootVisualElement?.panel as RuntimePanel;
 
         public float sortingOrder
         {
@@ -373,6 +376,7 @@ namespace UnityEngine.UIElements
             if (m_ParentUI != null && m_PanelSettings == null) m_PanelSettings = m_ParentUI.m_PanelSettings;
             if (m_RootVisualElement == null) RecreateUI();
             else AddRootVisualElementToTree();
+            ResolveRuntimePanel();
         }
 
         void OnDisable()

@@ -42,6 +42,9 @@
 {"key":"third.visualTree","value":"True"}
 {"key":"third.disposable","value":"True"}
 {"key":"fourth.reportsB","value":"True"}
+{"key":"fifth.reportsA","value":"True"}
+{"key":"sixth.reportsA","value":"True"}
+{"key":"sixth.rootPanelIsB","value":"True"}
 {"key":"inactive.root","value":"True"}
 {"key":"inactive.null","value":"True"}
 {"key":"activated.reportsA","value":"True"}

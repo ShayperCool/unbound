@@ -17,7 +17,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ADocumentReportsTheRuntimePanelItWasFirstFoundOn()
+        public void ADocumentReportsTheRuntimePanelItWasFirstEnabledOrAskedOn()
         {
             var settingsA = ScriptableObject.CreateInstance<PanelSettings>();
             var settingsB = ScriptableObject.CreateInstance<PanelSettings>();
@@ -25,6 +25,7 @@ namespace UnityEngine.Tests
             var first = Document("First", settingsA);
             var fourth = Document("Fourth", settingsA);
             var bare = Document("Bare", null);
+            var sixth = Document("Sixth", null);
             var selectable = new GameObject("Selectable");
             try
             {
@@ -49,6 +50,13 @@ namespace UnityEngine.Tests
                 Assert.Same(panelA, first.runtimePanel);
                 fourth.panelSettings = settingsB;
                 Assert.Same(panelB, fourth.runtimePanel);
+                // Enabling on its settings is enough: a later change keeps that panel.
+                sixth.panelSettings = settingsA;
+                sixth.enabled = false;
+                sixth.enabled = true;
+                sixth.panelSettings = settingsB;
+                Assert.Same(panelB, sixth.rootVisualElement.panel);
+                Assert.Same(panelA, sixth.runtimePanel);
 
                 // A root that is on no panel reports none.
                 Assert.NotNull(bare.rootVisualElement);
@@ -59,6 +67,7 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(first.gameObject);
                 Object.DestroyImmediate(fourth.gameObject);
                 Object.DestroyImmediate(bare.gameObject);
+                Object.DestroyImmediate(sixth.gameObject);
                 Object.DestroyImmediate(selectable);
                 Object.DestroyImmediate(settingsA);
                 Object.DestroyImmediate(settingsB);
