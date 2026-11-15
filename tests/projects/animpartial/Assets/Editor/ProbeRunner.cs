@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
@@ -6,8 +7,8 @@ using UnityEngine;
 
 /// <summary>
 /// <c>Create</c> (batchmode) authors the probe's clips and controllers into Assets/Resources. With
-/// <c>ANIM_PARTIAL_OUT</c> set, a windowed Editor opens the scene, enters Play mode and quits when
-/// <see cref="PartialProbe"/> has written its record.
+/// <c>ANIM_PARTIAL_OUT</c> set, a windowed Editor (or a batchmode one through <see cref="Record"/>)
+/// opens the scene, enters Play mode and quits when <see cref="PartialProbe"/> has written its record.
 /// </summary>
 [InitializeOnLoad]
 public static class ProbeRunner
@@ -15,7 +16,15 @@ public static class ProbeRunner
     static ProbeRunner()
     {
         if (typeof(Camera).Assembly.GetType("Unbound.Runtime.FrameBuilder") != null) return;
-        if (Environment.GetEnvironmentVariable("ANIM_PARTIAL_OUT") == null || Application.isBatchMode) return;
+        if (Environment.GetEnvironmentVariable("ANIM_PARTIAL_OUT") == null) return;
+        if (Application.isBatchMode)
+        {
+            EditorApplication.update += () =>
+            {
+                if (EditorApplication.isPlaying && PartialProbe.Finished) EditorApplication.Exit(0);
+            };
+            return;
+        }
         if (SessionState.GetBool("PartialProbe.finished", false))
         {
             EditorApplication.delayCall += () => EditorApplication.Exit(0);
@@ -47,6 +56,14 @@ public static class ProbeRunner
             EditorApplication.EnterPlaymode();
         };
         EditorApplication.update += wait;
+    }
+
+    /// <summary>Batchmode capture (<c>-executeMethod ProbeRunner.Record</c> without <c>-quit</c>):
+    /// enters Play mode in the probe scene; the Editor exits when the record is written.</summary>
+    public static void Record()
+    {
+        EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
+        EditorApplication.EnterPlaymode();
     }
 
     static void Tick()
@@ -171,6 +188,33 @@ public static class ProbeRunner
         return Save(clip, loop: false);
     }
 
+    /// <summary>LE (legacy, 1 s, loops): A's x position from 0 to 1, and events calling
+    /// PartialTarget.Hit at 0.3125, 0.4375, 0.5625 and 0.6875 s (between the 0.125 s frames).</summary>
+    static AnimationClip LE()
+    {
+        var clip = new AnimationClip { name = "LE", frameRate = 60f, legacy = true };
+        Float(clip, "A", typeof(Transform), "m_LocalPosition.x", 0f, 0f, 1f, 1f);
+        AnimationUtility.SetAnimationEvents(clip, Array.ConvertAll(new[] { 0.3125f, 0.4375f, 0.5625f, 0.6875f },
+            t => new AnimationEvent { time = t, functionName = "Hit", stringParameter = "e" + t.ToString("R", System.Globalization.CultureInfo.InvariantCulture) }));
+        return Save(clip);
+    }
+
+    /// <summary>One layer: P (default) and Q, an Any State transition to Q on "a" (0.25 s fixed,
+    /// not to itself).</summary>
+    static void Any(string name, AnimationClip p, AnimationClip q)
+    {
+        var c = AnimatorController.CreateAnimatorControllerAtPath(Dir + name + ".controller");
+        c.AddParameter("a", AnimatorControllerParameterType.Bool);
+        var machine = c.layers[0].stateMachine;
+        var sp = machine.AddState("P");
+        sp.motion = p;
+        machine.AddState("Q").motion = q;
+        machine.defaultState = sp;
+        var any = machine.AddAnyStateTransition(machine.states[1].state);
+        any.hasExitTime = false; any.hasFixedDuration = true; any.duration = 0.25f; any.canTransitionToSelf = false;
+        any.AddCondition(AnimatorConditionMode.If, 0f, "a");
+    }
+
     static AnimationClip Save(AnimationClip clip, bool loop = true)
     {
         var settings = AnimationUtility.GetAnimationClipSettings(clip);
@@ -183,9 +227,10 @@ public static class ProbeRunner
 
     public static void Create()
     {
-        P(true); Q(true); R(true); S(true); Bools(true);
+        P(true); Q(true); R(true); S(true); Bools(true); LE();
         var p = P(false);
         var q = Q(false);
+        Any("Any", p, q);
         R(false);
         var bools = Bools(false);
         {
@@ -198,18 +243,85 @@ public static class ProbeRunner
             Switch("Switch" + (wd ? "On" : "Off"), p, q, wd);
             Tree("Tree" + (wd ? "On" : "Off"), p, q, wd);
         }
+        Humans();
         AssetDatabase.SaveAssets();
     }
 
+    /// <summary>Humanoid .anim clips of 1 s that animate only some muscles of HumanA (the humanoid
+    /// probe's rig, copied to Assets/Rig/Resources): HM (Spine Front-Back, Left Arm Down-Up, Left
+    /// Forearm Stretch, Right Upper Leg Front-Back) and HN (Spine Front-Back, Left Forearm Stretch,
+    /// Head Nod Down-Up, Right Arm Down-Up), no body or goal curves; and controllers, each with write
+    /// defaults on and off (On/Off suffix): HumanSwitch (HM, to HN on "q" and back on not "q", 0.25 s
+    /// fixed), HumanTree (a 1D tree of HM at 0 and HN at 1 on "blend"), HumanFromA (HumanA's own clip
+    /// A, to HM on "q" and back); HumanOver (A, HM on an override layer of weight 1), HumanOverHalf
+    /// (weight 0.6), HumanMask (HM on an override layer of weight 1 through MaskLeftArm, a humanoid
+    /// mask with only LeftArm on), HumanMaskHalf (the same at 0.6), HumanAdd (HM on an additive
+    /// layer of weight 0.6), HumanAddMask (the same through MaskLeftArm) and HumanOverN (HN on the
+    /// base layer, HM on an override layer of weight 0.5).</summary>
+    static void Humans()
+    {
+        var a = AssetDatabase.LoadAllAssetsAtPath("Assets/Rig/Resources/HumanA.fbx").OfType<AnimationClip>().First(c => c.name == "Scene");
+        AnimationClip Muscles(string name, params (string Muscle, float From, float To)[] curves)
+        {
+            var clip = new AnimationClip { name = name, frameRate = 60f };
+            foreach (var (muscle, from, to) in curves)
+                AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Animator), muscle), Linear(0f, from, 1f, to));
+            return Save(clip);
+        }
+        var hm = Muscles("HM", ("Spine Front-Back", 0.1f, 0.5f), ("Left Arm Down-Up", 0.3f, -0.4f),
+            ("Left Forearm Stretch", -0.2f, 0.6f), ("Right Upper Leg Front-Back", 0.4f, -0.1f));
+        var hn = Muscles("HN", ("Spine Front-Back", -0.3f, 0.2f), ("Left Forearm Stretch", 0.5f, 0.1f),
+            ("Head Nod Down-Up", 0.2f, -0.5f), ("Right Arm Down-Up", -0.3f, 0.4f));
+        var leftArm = new AvatarMask();
+        for (var part = AvatarMaskBodyPart.Root; part < AvatarMaskBodyPart.LastBodyPart; part++)
+            leftArm.SetHumanoidBodyPartActive(part, part == AvatarMaskBodyPart.LeftArm);
+        AssetDatabase.CreateAsset(leftArm, Dir + "MaskLeftArm.mask");
+        foreach (bool wd in new[] { true, false })
+        {
+            string suffix = wd ? "On" : "Off";
+            Switch("HumanSwitch" + suffix, hm, hn, wd, "HM", "HN");
+            Tree("HumanTree" + suffix, hm, hn, wd);
+            Switch("HumanFromA" + suffix, a, hm, wd, "A", "HM");
+            Layered("HumanOver" + suffix, a, hm, AnimatorLayerBlendingMode.Override, 1f, null, wd);
+            Layered("HumanOverHalf" + suffix, a, hm, AnimatorLayerBlendingMode.Override, 0.6f, null, wd);
+            Layered("HumanMask" + suffix, a, hm, AnimatorLayerBlendingMode.Override, 1f, leftArm, wd);
+            Layered("HumanMaskHalf" + suffix, a, hm, AnimatorLayerBlendingMode.Override, 0.6f, leftArm, wd);
+            Layered("HumanAdd" + suffix, a, hm, AnimatorLayerBlendingMode.Additive, 0.6f, null, wd);
+            Layered("HumanAddMask" + suffix, a, hm, AnimatorLayerBlendingMode.Additive, 0.6f, leftArm, wd);
+            Layered("HumanOverN" + suffix, hn, hm, AnimatorLayerBlendingMode.Override, 0.5f, null, wd);
+        }
+    }
+
+    /// <summary>Two layers: <paramref name="base"/> on the base layer and <paramref name="clip"/> on
+    /// a second layer with the given blending, weight and mask.</summary>
+    static void Layered(string name, AnimationClip @base, AnimationClip clip, AnimatorLayerBlendingMode mode, float weight, AvatarMask mask,
+        bool writeDefaults)
+    {
+        var c = AnimatorController.CreateAnimatorControllerAtPath(Dir + name + ".controller");
+        var first = c.layers[0].stateMachine.AddState("Base");
+        first.motion = @base;
+        first.writeDefaultValues = writeDefaults;
+        c.AddLayer("Layer");
+        var layers = c.layers;
+        layers[1].blendingMode = mode;
+        layers[1].defaultWeight = weight;
+        layers[1].avatarMask = mask;
+        c.layers = layers;
+        var second = c.layers[1].stateMachine.AddState("Top");
+        second.motion = clip;
+        second.writeDefaultValues = writeDefaults;
+        EditorUtility.SetDirty(c);
+    }
+
     /// <summary>One layer: P, to Q on "q" and back on not "q", 0.25 s fixed transitions.</summary>
-    static void Switch(string name, AnimationClip p, AnimationClip q, bool writeDefaults)
+    static void Switch(string name, AnimationClip p, AnimationClip q, bool writeDefaults, string first = "P", string second = "Q")
     {
         var c = AnimatorController.CreateAnimatorControllerAtPath(Dir + name + ".controller");
         c.AddParameter("q", AnimatorControllerParameterType.Bool);
         var machine = c.layers[0].stateMachine;
-        var sp = machine.AddState("P");
+        var sp = machine.AddState(first);
         sp.motion = p;
-        var sq = machine.AddState("Q");
+        var sq = machine.AddState(second);
         sq.motion = q;
         machine.defaultState = sp;
         sp.writeDefaultValues = writeDefaults;

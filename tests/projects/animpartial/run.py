@@ -4,6 +4,10 @@
     run.py create  --release R                 authors the clips and controllers (batchmode Editor)
     run.py editor  --release R --label L       two independent windowed GPU Editor captures
     run.py publish --release R --label L       publishes the identical captures to Reference/unity-R.jsonl
+    run.py batch   --release R --label L       two batchmode Editor captures, one after the other
+                                               (any OS; for records that do not depend on the OS)
+    run.py merge   --release R --label L       adds the records of identical batch captures that the
+                                               reference lacks to Reference/unity-R.jsonl
     run.py unbound --release R [--label L]     runs Unbound and compares with Reference/
                                                (modelroot's comparator: numbers within 2e-4)
 
@@ -22,10 +26,12 @@ PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 sys.path.insert(0, str(REPO / 'tests'))
 from editor_runner import EditorJob, run, run_parallel, summary, result_problem  # noqa: E402
-from probe_paths import run_root  # noqa: E402
+from probe_paths import editor_path, run_root  # noqa: E402
 
 REPEATS = ('native1', 'native2')
 COMPARE = PROBE.parent / 'modelroot/compare.py'
+# The humanoid cases play HumanA, the humanoid probe's rig (its .meta holds the avatar).
+RIG = PROBE.parent / 'humanoid/Assets/Resources/HumanA.fbx'
 
 
 def prepare(project, release):
@@ -40,6 +46,10 @@ def prepare(project, release):
     dependencies = {f'com.unity.modules.{name}': '1.0.0' for name in ('animation',)}
     (project / 'Packages/manifest.json').write_text(json.dumps({'dependencies': dependencies}))
     (project / 'Assets/Resources').mkdir(exist_ok=True)
+    rig = project / 'Assets/Rig/Resources'
+    rig.mkdir(parents=True)
+    for source in (RIG, RIG.with_name(RIG.name + '.meta')):
+        shutil.copyfile(source, rig / source.name)
 
 
 def capture_problem(directory):
@@ -73,13 +83,52 @@ def job(project, out, create, release):
                          'supervisor': str(REPO / 'tests/editor_runner.py')}})
 
 
+def batch(work, release):
+    """Two batchmode Editors (no graphics), one after the other, each in its own project copy."""
+    for repeat in REPEATS:
+        project, out = work / 'projects' / repeat, work / repeat
+        prepare(project, release)
+        out.mkdir()
+        values = out / 'values.jsonl'
+        with (out / 'editor.out').open('w') as log:
+            try:
+                code = subprocess.run([str(editor_path()), '-batchmode', '-nographics', '-projectPath', str(project),
+                                       '-executeMethod', 'ProbeRunner.Record', '-logFile', str(out / 'editor.log')],
+                                      env=dict(os.environ, ANIM_PARTIAL_OUT=str(values)), stdout=log, stderr=subprocess.STDOUT,
+                                      timeout=900).returncode
+            except subprocess.TimeoutExpired:
+                raise SystemExit(f'{repeat}: the Editor did not finish in 900 s')
+        print(repeat, 'exit', code)
+        rows = [json.loads(line) for line in values.read_text().splitlines() if line.strip()] if values.exists() else []
+        if code or not rows or rows[-1] != {'k': 'complete', 'v': True} or any(r['k'] == 'error' for r in rows):
+            raise SystemExit(f'{repeat}: invalid capture, see {out / "editor.log"}')
+    return compare(work / 'native1/values.jsonl', work / 'native2/values.jsonl')
+
+
+def merge(work, reference):
+    """Appends the records of the identical batch captures that the reference lacks, before its
+    completion record; the reference's own records stay as they are."""
+    first, second = (work / r / 'values.jsonl' for r in REPEATS)
+    if first.read_bytes() != second.read_bytes():
+        raise SystemExit('the two captures differ')
+    old = [line for line in reference.read_text().splitlines() if line.strip()]
+    keys = {json.loads(line)['k'] for line in old}
+    complete = json.dumps({'k': 'complete', 'v': True}, separators=(',', ':'))
+    if old[-1] != complete:
+        raise SystemExit('the reference does not end with its completion record')
+    new = [line for line in first.read_text().splitlines() if line.strip() and json.loads(line)['k'] not in keys]
+    reference.write_text('\n'.join(old[:-1] + new + [complete]) + '\n')
+    print('added', len(new), 'records to', reference.relative_to(REPO))
+    return 0
+
+
 def compare(reference, actual):
     return subprocess.run([sys.executable, str(COMPARE), str(reference), str(actual), '--name', 'animpartial']).returncode
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound'))
+    p.add_argument('mode', choices=('create', 'editor', 'publish', 'batch', 'merge', 'unbound'))
     p.add_argument('--release', required=True)
     p.add_argument('--label', default='run-' + str(time.time_ns()))
     args = p.parse_args()
@@ -112,6 +161,10 @@ def main():
         if problems:
             raise SystemExit('; '.join(problems))
         return compare(work / 'native1/values.jsonl', work / 'native2/values.jsonl')
+    if args.mode == 'batch':
+        return batch(work, args.release)
+    if args.mode == 'merge':
+        return merge(work, reference)
     if args.mode == 'publish':
         for repeat in REPEATS:
             problem = capture_problem(work / repeat)

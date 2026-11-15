@@ -102,6 +102,20 @@ public class PartialProbe : MonoBehaviour
     static void Animators()
     {
         Case("bools", "Bools");
+        // An Any State transition to Q whose condition becomes true in the update a Play request
+        // enters P (any.request), without the request (any.plain), and before the first update.
+        Case("any.request", "Any", (animator, step) =>
+        {
+            if (step == 3) { animator.SetBool("a", true); animator.Play("P", 0, 0.5f); }
+        });
+        Case("any.plain", "Any", (animator, step) =>
+        {
+            if (step == 3) animator.SetBool("a", true);
+        });
+        Case("any.first", "Any", (animator, step) =>
+        {
+            if (step == 0) animator.SetBool("a", true);
+        });
         foreach (string wd in new[] { "On", "Off" })
         {
             string sw = "Switch" + wd, tree = "Tree" + wd, w = wd.ToLowerInvariant();
@@ -159,6 +173,90 @@ public class PartialProbe : MonoBehaviour
         }
     }
 
+    // ---- Humanoid clips that animate only some muscles (HumanA): Animator.Update(0), then ten of 0.125 s ----
+
+    static readonly HumanBodyBones[] s_Bones =
+    {
+        HumanBodyBones.Hips, HumanBodyBones.Spine, HumanBodyBones.Head, HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm,
+        HumanBodyBones.LeftHand, HumanBodyBones.RightUpperArm, HumanBodyBones.RightHand, HumanBodyBones.RightUpperLeg,
+    };
+
+    /// <summary>The hips' local position, the local rotations of <see cref="s_Bones"/>, and the human
+    /// pose read back by a HumanPoseHandler (body position and rotation, every muscle by its index).</summary>
+    static string HumanSnapshot(Animator animator, HumanPoseHandler handler)
+    {
+        var parts = new StringBuilder();
+        parts.Append("\"hips.p\":").Append(V(animator.GetBoneTransform(HumanBodyBones.Hips).localPosition));
+        foreach (var bone in s_Bones)
+            parts.Append(",\"").Append(bone).Append(".r\":").Append(Q(animator.GetBoneTransform(bone).localRotation));
+        var pose = new HumanPose();
+        handler.GetHumanPose(ref pose);
+        parts.Append(",\"body.p\":").Append(V(pose.bodyPosition)).Append(",\"body.r\":").Append(Q(pose.bodyRotation));
+        for (int i = 0; i < pose.muscles.Length; i++)
+            parts.Append(",\"m").Append(i.ToString("D2")).Append("\":").Append(F(pose.muscles[i]));
+        return parts.ToString();
+    }
+
+    /// <summary>A script write to bones the clips do not drive directly (the right hand, the left
+    /// upper arm), between steps.</summary>
+    static void PokeHuman(Animator animator)
+    {
+        animator.GetBoneTransform(HumanBodyBones.RightHand).localRotation = Quaternion.Euler(30f, 10f, 0f);
+        animator.GetBoneTransform(HumanBodyBones.LeftUpperArm).localRotation = Quaternion.Euler(0f, 40f, 20f);
+    }
+
+    static void HumanCase(string key, string controller, Action<Animator, int> before = null)
+    {
+        var instance = Instantiate(Resources.Load<GameObject>("HumanA"));
+        var animator = instance.GetComponent<Animator>();
+        animator.applyRootMotion = false;
+        animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>(controller);
+        var handler = new HumanPoseHandler(animator.avatar, instance.transform);
+        for (int step = 0; step <= 10; step++)
+        {
+            before?.Invoke(animator, step);
+            animator.Update(step == 0 ? 0f : Step);
+            Record(key + ".step" + step, HumanSnapshot(animator, handler));
+        }
+        handler.Dispose();
+        DestroyImmediate(instance);
+    }
+
+    static void Humans()
+    {
+        foreach (string wd in new[] { "On", "Off" })
+        {
+            string w = "." + wd.ToLowerInvariant();
+            // HM alone; to HN at step 3 and back at step 7; with script writes at steps 4 and 9.
+            HumanCase("human.alone" + w, "HumanSwitch" + wd);
+            HumanCase("human.switch" + w, "HumanSwitch" + wd, (animator, step) =>
+            {
+                if (step == 3) animator.SetBool("q", true);
+                if (step == 7) animator.SetBool("q", false);
+            });
+            HumanCase("human.switch" + w + ".poke", "HumanSwitch" + wd, (animator, step) =>
+            {
+                if (step == 3) animator.SetBool("q", true);
+                if (step == 4 || step == 9) PokeHuman(animator);
+                if (step == 7) animator.SetBool("q", false);
+            });
+            HumanCase("human.tree" + w, "HumanTree" + wd, (animator, step) =>
+            {
+                if (step == 0) animator.SetFloat("blend", 0.3f);
+                if (step == 5) animator.SetFloat("blend", 0.8f);
+                if (step == 8) animator.SetFloat("blend", 1f);
+            });
+            // HumanA's whole clip to HM at step 3 and back at step 7.
+            HumanCase("human.froma" + w, "HumanFromA" + wd, (animator, step) =>
+            {
+                if (step == 3) animator.SetBool("q", true);
+                if (step == 7) animator.SetBool("q", false);
+            });
+            foreach (string layered in new[] { "Over", "OverHalf", "Mask", "MaskHalf", "Add", "AddMask", "OverN" })
+                HumanCase("human." + layered.ToLowerInvariant() + w, "Human" + layered + wd);
+        }
+    }
+
     // ---- Legacy Animation: one rig per case, actions in Update, records in LateUpdate ----
 
     sealed class LegacyCase
@@ -167,12 +265,13 @@ public class PartialProbe : MonoBehaviour
         public Transform Root;
         public Animation Animation;
         public Action<LegacyCase, int> Act;
+        public bool Events;
     }
 
     readonly List<LegacyCase> m_Legacy = new List<LegacyCase>();
     int m_Frame;
 
-    void Legacy(string key, Action<LegacyCase, int> act, Action<Animation> setup = null)
+    void Legacy(string key, Action<LegacyCase, int> act, Action<Animation> setup = null, bool events = false)
     {
         var root = Rig();
         var animation = root.AddComponent<Animation>();
@@ -180,7 +279,7 @@ public class PartialProbe : MonoBehaviour
         foreach (string name in new[] { "LP", "LQ", "LR", "LS", "LBools" })
             animation.AddClip(Resources.Load<AnimationClip>(name), name);
         setup?.Invoke(animation);
-        m_Legacy.Add(new LegacyCase { Key = key, Root = root.transform, Animation = animation, Act = act });
+        m_Legacy.Add(new LegacyCase { Key = key, Root = root.transform, Animation = animation, Act = act, Events = events });
     }
 
     static Action<LegacyCase, int> At(params (int Frame, Action<LegacyCase> Action)[] actions) => (c, frame) =>
@@ -248,11 +347,35 @@ public class PartialProbe : MonoBehaviour
             (6, c => c.Root.gameObject.SetActive(true))));
         Legacy("legacy.disable", At((0, c => c.Animation.Play("LP")), (4, c => c.Animation.enabled = false),
             (6, c => c.Animation.enabled = true)));
+        // The once clip played backwards from its end, alone and cross-faded in over 0.25 s.
+        Legacy("legacy.once.reverse", At((0, c => Reverse(c.Animation, "LS", 0f))));
+        Legacy("legacy.once.reverse.fade", At((0, c => c.Animation.Play("LP")), (1, c => Reverse(c.Animation, "LS", 0.25f))));
+        // LE's events while a CrossFade to Q over 0.25 s fades it out and stops it, while Stop
+        // stops it, and at weight 0 (recorded per frame in .events records).
+        Legacy("legacy.events.fade", At((0, c => c.Animation.Play("LE")), (2, c => c.Animation.CrossFade("LQ", 0.25f))),
+            animation => animation.AddClip(Resources.Load<AnimationClip>("LE"), "LE"), events: true);
+        Legacy("legacy.events.stop", At((0, c => c.Animation.Play("LE")), (3, c => c.Animation.Stop("LE"))),
+            animation => animation.AddClip(Resources.Load<AnimationClip>("LE"), "LE"), events: true);
+        // LE enabled at weight 0 from frame 1 (it keeps playing).
+        Legacy("legacy.events.zero", At((0, c => c.Animation.Play("LE")), (1, c => c.Animation["LE"].weight = 0f)),
+            animation => animation.AddClip(Resources.Load<AnimationClip>("LE"), "LE"), events: true);
+    }
+
+    /// <summary>Plays a state backwards from its end: speed -1, time at its length; a fade length
+    /// of 0 plays it, otherwise it is cross-faded in.</summary>
+    static void Reverse(Animation animation, string name, float fade)
+    {
+        var state = animation[name];
+        state.speed = -1f;
+        state.time = state.length;
+        if (fade > 0f) animation.CrossFade(name, fade);
+        else animation.Play(name);
     }
 
     void Start()
     {
         Animators();
+        Humans();
         LegacyCases();
         Time.captureDeltaTime = Step;
     }
@@ -265,7 +388,15 @@ public class PartialProbe : MonoBehaviour
     void LateUpdate()
     {
         foreach (var c in m_Legacy)
+        {
             Record(c.Key + ".frame" + m_Frame, Snapshot(c.Root) + "," + States(c.Animation));
+            if (!c.Events) continue;
+            var target = c.Root.GetComponent<PartialTarget>();
+            var state = c.Animation["LE"];
+            Record(c.Key + ".frame" + m_Frame + ".events", "\"hits\":[" + string.Join(",", target.Hits.ConvertAll(S)) + "],\"LE\":["
+                + (state.enabled ? "1" : "0") + "," + F(state.weight) + "," + F(state.time) + "]");
+            target.Hits.Clear();
+        }
         if (++m_Frame < Frames) return;
         enabled = false;
         Record("complete", "true");
