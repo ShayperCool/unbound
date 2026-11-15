@@ -15,7 +15,7 @@ for name, source in [('Liberation', '/usr/share/fonts/truetype/liberation/Libera
     sub.populate(text=' AafilstAVTo\u0300\u0301\u0302\u0308\u0323\u0327\ufb01\ufb02')
     sub.subset(font)
     for n in font['name'].names:
-        if n.nameID in (1, 3, 4, 6, 16): n.string = ('UnboundProbe'+name).encode(n.getEncoding())
+        if n.nameID in (1, 3, 4, 6, 16): n.string = ('UnboundLayoutSans' if name == 'Liberation' else 'UnboundLayoutExtended').encode(n.getEncoding())
     font.save(ROOT/'Assets/Fonts'/f'{name}.ttf')
 font = TTFont(ROOT/'Assets/Fonts/Liberation.ttf')
 for table in ('GSUB', 'GPOS', 'GDEF', 'kern'):
@@ -28,4 +28,6 @@ lookup Second useExtension { sub f i by fl; sub A V by fl; } Second;
 feature liga { lookup First; } liga;
 feature dlig { lookup Second; } dlig;
 '''.replace(' fi', ' ' + font.getBestCmap()[0xfb01]).replace(' fl', ' ' + font.getBestCmap()[0xfb02]))
+for n in font['name'].names:
+    if n.nameID in (1, 3, 4, 6, 16): n.string = 'UnboundLayoutControl'.encode(n.getEncoding())
 font.save(ROOT/'Assets/Fonts/Controlled.ttf')
