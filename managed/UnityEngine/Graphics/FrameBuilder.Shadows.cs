@@ -243,10 +243,11 @@ namespace Unbound.Runtime
         static void CollectCasters(Light light, CameraContext context)
         {
             s_Casters.Clear();
+            using var stripShadows = new StripShadowScope(context, true, light);
             var culling = Culler.ForCamera(context.Camera, context.Position, context.Forward);
             foreach (var renderer in RenderRegistry.Renderers)
             {
-                if (!renderer || !(IsMeshLike(renderer)) || renderer.forceRenderingOff) continue;
+                if (!renderer || !(IsMeshLike(renderer) || renderer is LineRenderer || renderer is TrailRenderer) || renderer.forceRenderingOff) continue;
                 if (!renderer.enabled || !renderer.m_GameObject.activeInHierarchy || renderer.shadowCastingMode == ShadowCastingMode.Off) continue;
                 // Only what the camera's layers show casts shadows (measured:
                 // tests/projects/messages, a caster outside the culling mask is not visible).

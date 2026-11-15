@@ -1,12 +1,16 @@
 {
  "commands": [
-  "python3 tests/projects/lines/check_miters.py --release \"$UNBOUND_PROBE_UNITY_VERSION\""
+  "python3 tests/projects/lines/check_miters.py --release \"$UNBOUND_PROBE_UNITY_VERSION\"",
+  "python3 tests/projects/lines/check_miters.py --release \"$UNBOUND_PROBE_UNITY_VERSION\" --shadow"
  ],
  "summary": "lines gate: .*",
  "engine_paths": [
   "managed/UnityEngine/Graphics/LineRenderers.cs",
   "managed/UnityEngine/Graphics/LineBuilder.cs",
   "managed/UnityEngine/Math/Gradient.cs",
-  "managed/UnityEngine/Graphics/Mesh.cs"
+  "managed/UnityEngine/Graphics/Mesh.cs",
+  "managed/UnityEngine/Graphics/LineRenderMeshes.cs",
+  "managed/UnityEngine/Graphics/FrameBuilder.cs",
+  "managed/UnityEngine/Graphics/FrameBuilder.Shadows.cs"
  ]
 }

@@ -101,9 +101,39 @@ public partial class LineProbe
                 Image(key + ".normal",camera);
                 SaveShadowTarget(key + ".map",target);
             }
+            var framePoints = new[] { new Vector3(-0.6f,0f,0f), new Vector3(0.05f,0.25f,0.15f), new Vector3(0.65f,-0.15f,0.3f) };
+            if (trail)
+            {
+                tr.emitting = true;
+                tr.Clear();
+                tr.AddPositions(framePoints);
+                tr.emitting = false;
+                tr.numCornerVertices = tr.numCapVertices = 2;
+            }
+            else
+            {
+                line.positionCount = framePoints.Length;
+                line.SetPositions(framePoints);
+                line.numCornerVertices = line.numCapVertices = 2;
+            }
+            sunObject.transform.position = new Vector3(1.1f,0.8f,-0.7f);
+            foreach (string control in new[] { "orthoNear03", "orthoNear2", "perspective", "scaledLight" })
+            {
+                camera.orthographic = control != "perspective";
+                camera.nearClipPlane = control == "orthoNear2" ? 2f : 0.3f;
+                sunObject.transform.localScale = control == "scaledLight" ? new Vector3(2,3,4) : Vector3.one;
+                string key = "shadow." + (trail ? "trail" : "line") + ".lightFrame." + control;
+                Bake(key + ".bake",renderer,camera,false);
+                Image(key + ".normal",camera);
+                SaveShadowTarget(key + ".map",target);
+            }
+            camera.orthographic = true;
+            camera.nearClipPlane = 0.3f;
             camera.transform.position = new Vector3(0,0,-10);
             camera.transform.LookAt(Vector3.zero);
             sunObject.transform.rotation = Quaternion.identity;
+            sunObject.transform.position = Vector3.zero;
+            sunObject.transform.localScale = Vector3.one;
             DestroyImmediate(go);
         }
         light.RemoveAllCommandBuffers();

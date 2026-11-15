@@ -87,7 +87,11 @@ namespace UnityEngine
 
         internal override void OnEngineDisable() => s_Enabled.Remove(this);
 
-        internal override void OnEngineDestroy() => s_Enabled.Remove(this);
+        internal override void OnEngineDestroy()
+        {
+            s_Enabled.Remove(this);
+            LineRenderMeshes.Release(this);
+        }
 
         // ------------------------------------------------------------------ statics
 

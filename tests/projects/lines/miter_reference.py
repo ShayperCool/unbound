@@ -68,11 +68,20 @@ for renderer in ('line', 'trail'):
         SHADOW_KEYS += [prefix + suffix for suffix in ('.normal.pixels', '.map.covered', '.map.pixels')]
         SHADOW_IMAGES += [prefix + suffix for suffix in ('.normal.rgba', '.map.rgba')]
 
+SHADOW_FRAME_FILE = 'shadowframe.values.jsonl'
+SHADOW_FRAME_KEYS, SHADOW_FRAME_IMAGES = [], []
+for renderer in ('line', 'trail'):
+    for name in ('orthoNear03', 'orthoNear2', 'perspective', 'scaledLight'):
+        prefix = f'shadow.{renderer}.lightFrame.{name}'
+        SHADOW_FRAME_KEYS += [prefix + suffix for suffix in ('.bake', '.normal.pixels', '.map.covered', '.map.pixels')]
+        SHADOW_FRAME_IMAGES += [prefix + suffix for suffix in ('.normal.rgba', '.map.rgba')]
+
 # The control files beside the canonical reference, in publication order, with their images:
 # each extends the capture after the previous ones and is published only once those exist.
 SETS = {'reversal': (FILE, KEYS, (IMAGE,)), 'chain': (CHAIN_FILE, CHAIN_KEYS, ()),
         'space': (SPACE_FILE, SPACE_KEYS, ()), 'edge': (EDGE_FILE, EDGE_KEYS, EDGE_IMAGES),
-        'shadow': (SHADOW_FILE, SHADOW_KEYS, SHADOW_IMAGES)}
+        'shadow': (SHADOW_FILE, SHADOW_KEYS, SHADOW_IMAGES),
+        'shadowframe': (SHADOW_FRAME_FILE, SHADOW_FRAME_KEYS, SHADOW_FRAME_IMAGES)}
 ORDER = list(SETS)
 
 
@@ -161,6 +170,7 @@ if __name__ == '__main__':
     parser.add_argument('--space', action='store_true', help='publish the build-space and Simplify controls')
     parser.add_argument('--edge', action='store_true', help='publish the edge and object-matrix controls')
     parser.add_argument('--shadow', action='store_true', help='publish line/trail shadow-bias controls')
+    parser.add_argument('--shadow-frame', action='store_true', help='publish light-frame and camera-near controls')
     args = parser.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
-    publish(args.release, args.label, args.receipt, args.chains, 'shadow' if args.shadow else 'space' if args.space else 'edge' if args.edge else None)
+    publish(args.release, args.label, args.receipt, args.chains, 'shadowframe' if args.shadow_frame else 'shadow' if args.shadow else 'space' if args.space else 'edge' if args.edge else None)

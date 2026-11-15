@@ -291,8 +291,9 @@ A custom caster program writes world z into depth while projecting world xy dire
 A light command buffer binds the active depth sub-element explicitly. On the Unity
 6000.0.71f1 Editor's NVIDIA OpenGL Core device, bias 0.5 at width 0.3 shifts the line's view-aligned
 caster by 0.15 along the directional light's forward axis. The angled control rules out
-using the normal camera's forward axis. The unbiased caster also uses a different build
-frame from the normal View strip; its complete frame rule remains unresolved. The tilted,
+using the normal camera's forward axis. The unbiased caster uses the light's unscaled world-to-local frame, including its position,
+without reversing the forward axis. Orthographic culling adds the camera's near distance
+in that frame before the strip is built. The tilted,
 variable-width TransformZ controls distinguish the renderer's frame and sampled widths.
 
 The Unity 6000.0 [LineRenderer.shadowBias](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LineRenderer-shadowBias.html)
@@ -305,12 +306,25 @@ reproduce all 2,201 previous record bytes and all 12 previous images. Publish th
 
 `shadow.values.jsonl` and its images extend the reference without rewriting prior files.
 Compare a shadow capture using `compare.py --mode shadow`; it preserves the entire key
-union, every mismatch and the existing numeric and image tolerances. The normal gate uses
-`--mode miter` and keeps its original capture scope. It now requires all 15 trail frame-count
+union, every mismatch and the existing numeric and image tolerances. The ordinary gate uses
+`--mode miter` and keeps its original capture scope. A second gate records and compares
+the shadow controls in `--mode shadow`, retaining the same open gradient byte. It now requires all 15 trail frame-count
 records strictly, since Q374 resolved them; the perceptual-gradient byte remains open.
 
-Shadow rendering is still open: built-in caster collection currently excludes line and
-trail renderers. A complete fix needs the shadow build frame and separate cached geometry
-for each light/cascade or cube face, while normal rendering and BakeMesh stay unbiased.
-Shifting the normal strip is ruled out by the angled control. Spot lights, point lights,
-multiple cascades and SRP shadow lists are unmeasured by this diagnostic.
+The additional `shadow.*.lightFrame.*` controls use three spatial points, caps and corners,
+a translated and rotated light, two orthographic near distances, perspective culling and a
+scaled light. Scaling the light leaves the captured depth map unchanged; changing the
+orthographic near distance changes it. Two independent NVIDIA GPU repeats preserve every
+previous 2,249 record byte and all 40 earlier images, then add 32 records and 16 images.
+Publish this disjoint extension with:
+
+    python3 tests/projects/lines/miter_reference.py --release 6000.0.71f1 --label L --shadow-frame --receipt ~/.cache/unbound/lines-shadow-frame-receipt.json
+
+Caster collection includes line and trail renderers. The shared strip builder applies each
+point's sampled full width times shadowBias along its build depth, after sides and miters
+are constructed and before caps and corners choose their orientation. TransformZ reverses
+the bias sign because that frame reverses depth. Ordinary rendering and BakeMesh remain
+unbiased. Each renderer reuses distinct meshes for each camera and shadow light; destroying
+either owner releases those meshes. Cascades and cube faces share the light's geometry.
+Spot lights, point lights, multiple cascades and SRP shadow lists remain unmeasured by this
+directional-light diagnostic. No stronger device or pipeline parity is claimed.

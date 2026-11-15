@@ -23,6 +23,10 @@ namespace Unbound.Runtime
             internal Vector3 Position;
             internal Vector3 Forward;
             internal Matrix4x4 View;
+            // Geometry generation has its own light frame; shader and sorting views stay unchanged.
+            internal bool StripShadowPass;
+            internal Light StripShadowLight;
+            internal Matrix4x4 StripShadowView;
             internal Matrix4x4 Projection;
             internal Rect Viewport;
             internal bool Orthographic;
@@ -44,6 +48,35 @@ namespace Unbound.Runtime
                     TransparencySortMode.CustomAxis => DistanceMetric.CustomAxis,
                     _ => camera.orthographic ? DistanceMetric.Orthographic : DistanceMetric.Perspective,
                 };
+            }
+        }
+
+        internal readonly struct StripShadowScope : IDisposable
+        {
+            readonly CameraContext m_Context;
+            readonly bool m_PreviousPass;
+            readonly Light m_PreviousLight;
+            readonly Matrix4x4 m_PreviousView;
+
+            internal StripShadowScope(CameraContext context, bool shadows, Light light)
+            {
+                m_Context = context;
+                m_PreviousPass = context.StripShadowPass;
+                m_PreviousLight = context.StripShadowLight;
+                m_PreviousView = context.StripShadowView;
+                context.StripShadowPass = shadows;
+                context.StripShadowLight = light;
+                // Strip casters face the light's unscaled axes, with positive forward z.
+                context.StripShadowView = light != null
+                    ? Matrix4x4.TRS(light.transform.position, light.transform.rotation, Vector3.one).inverseDoublePrecision
+                    : Matrix4x4.identity;
+            }
+
+            public void Dispose()
+            {
+                m_Context.StripShadowPass = m_PreviousPass;
+                m_Context.StripShadowLight = m_PreviousLight;
+                m_Context.StripShadowView = m_PreviousView;
             }
         }
 
@@ -753,6 +786,9 @@ namespace Unbound.Runtime
             // The draws' merged properties live until the list is written.
             using var pooled = DrawPropertyPool.Begin();
             var context = ContextOf(data.Camera);
+            var stripLight = shadows.HasValue && shadowLight >= 0 && shadowLight < data.Lights.Length
+                ? data.Lights[shadowLight].light : null;
+            using var stripShadows = new StripShadowScope(context, shadows.HasValue, stripLight);
             SpriteMasking.Begin(data.Camera, context);
             var sorting = drawing.sortingSettings;
             context.Position = sorting.cameraPosition;

@@ -131,23 +131,17 @@ namespace UnityEngine
         }
     }
 
-    /// <summary>The shared behaviour of LineRenderer and TrailRenderer: a strip mesh per camera.</summary>
+    /// <summary>Build spaces and shadow bias shared by LineRenderer and TrailRenderer.</summary>
     internal static class LineDrawing
     {
-        internal static Mesh MeshFor(Dictionary<Camera, Mesh> meshes, Camera camera, string name)
+        internal static float ShadowBias(LineParameters parameters, FrameBuilder.CameraContext context)
         {
-            if (camera == null) camera = Camera.main;
-            if (camera != null && meshes.TryGetValue(camera, out var mesh) && mesh != null) return mesh;
-            if (meshes.Count > 8)
-            {
-                var dead = new List<Camera>();
-                foreach (var pair in meshes)
-                    if (pair.Key == null) dead.Add(pair.Key);
-                foreach (var c in dead) meshes.Remove(c);
-            }
-            mesh = new Mesh { name = name };
-            if (camera != null) meshes[camera] = mesh;
-            return mesh;
+            if (!context.StripShadowPass) return 0f;
+            if (!Compat.RenderingMeasured)
+                throw new NotSupportedException("Unbound: line and trail shadow geometry requires a measured rendering profile.");
+            if (context.StripShadowLight == null)
+                throw new NotSupportedException("Unbound: a line or trail shadow draw requires its culling light.");
+            return parameters.Alignment == LineAlignment.View ? parameters.ShadowBias : -parameters.ShadowBias;
         }
 
         /// <summary>A strip's build space as <paramref name="camera"/> sees it; a TransformZ
@@ -159,7 +153,7 @@ namespace UnityEngine
 
         internal static LineSpace Space(Renderer renderer, LineParameters p, FrameBuilder.CameraContext camera, Matrix4x4 frame, bool trail,
             Matrix4x4 inputToWorld, Matrix4x4 worldToOutput) =>
-            LineSpace.Of(p, camera.View, camera.Orthographic, camera.Camera != null ? camera.Camera.nearClipPlane : 0f, frame,
+            LineSpace.Of(p, camera.StripShadowPass ? camera.StripShadowView : camera.View, camera.Orthographic, camera.Camera != null ? camera.Camera.nearClipPlane : 0f, frame,
                 Origin(renderer, p, frame, trail), inputToWorld, worldToOutput);
 
         static Vector3 Origin(Renderer renderer, LineParameters p, Matrix4x4 frame, bool trail)
@@ -199,7 +193,7 @@ namespace UnityEngine
         SpriteMaskInteraction m_MaskInteraction;
         readonly LineStrip m_Strip = new LineStrip();
         readonly List<Vector3> m_World = new List<Vector3>();
-        readonly Dictionary<Camera, Mesh> m_Meshes = new Dictionary<Camera, Mesh>();
+        readonly LineRenderMeshes m_Meshes = new LineRenderMeshes();
 
         public LineRenderer() { InitializeStripDefaults(); }
 
@@ -380,8 +374,8 @@ namespace UnityEngine
 
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
-            if (!m_Strip.Build(m_Positions, null, m_Loop, m_Parameters, Space(null, camera, false))) return;
-            var mesh = LineDrawing.MeshFor(m_Meshes, camera.Camera, "LineRenderer");
+            if (!m_Strip.Build(m_Positions, null, m_Loop, m_Parameters, Space(null, camera, false), LineDrawing.ShadowBias(m_Parameters, camera))) return;
+            var mesh = m_Meshes.Get(camera, "LineRenderer");
             m_Strip.WriteTo(mesh, streaming: true);
             FrameBuilder.AddMeshDraws(this, mesh, Matrix4x4.identity, Color.white, camera, into);
         }
@@ -389,7 +383,6 @@ namespace UnityEngine
         internal override void OnEngineDestroy()
         {
             base.OnEngineDestroy();
-            foreach (var mesh in m_Meshes.Values) if (mesh != null) DestroyImmediate(mesh);
             m_Meshes.Clear();
         }
 
@@ -466,7 +459,7 @@ namespace UnityEngine
         readonly List<Vector3> m_Draw = new List<Vector3>();
         /// <summary>Each strip point's width scale: 0 for a point added while not emitting.</summary>
         readonly List<float> m_DrawWidths = new List<float>();
-        readonly Dictionary<Camera, Mesh> m_Meshes = new Dictionary<Camera, Mesh>();
+        readonly LineRenderMeshes m_Meshes = new LineRenderMeshes();
 
         public TrailRenderer() { InitializeStripDefaults(); }
 
@@ -756,8 +749,8 @@ namespace UnityEngine
             var points = DrawPoints();
             var space = LineDrawing.Space(this, m_Parameters, camera, transform.localToWorldMatrix, true, Matrix4x4.identity, Matrix4x4.identity);
             if (m_Points.Count > 0) space.StaticOffset = Vector3.Distance(points[0], m_Points[m_Points.Count - 1].Position) + m_StaticPath;
-            if (!m_Strip.Build(points, m_DrawWidths, false, m_Parameters, space)) return;
-            var mesh = LineDrawing.MeshFor(m_Meshes, camera.Camera, "TrailRenderer");
+            if (!m_Strip.Build(points, m_DrawWidths, false, m_Parameters, space, LineDrawing.ShadowBias(m_Parameters, camera))) return;
+            var mesh = m_Meshes.Get(camera, "TrailRenderer");
             m_Strip.WriteTo(mesh, streaming: true);
             FrameBuilder.AddMeshDraws(this, mesh, Matrix4x4.identity, Color.white, camera, into);
         }
@@ -782,7 +775,6 @@ namespace UnityEngine
         {
             base.OnEngineDestroy();
             TrailSystem.Remove(this);
-            foreach (var mesh in m_Meshes.Values) if (mesh != null) DestroyImmediate(mesh);
             m_Meshes.Clear();
         }
 

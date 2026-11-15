@@ -125,7 +125,7 @@ namespace UnityEngine
         /// <summary>Builds the strip through <paramref name="points"/>; <paramref name="widths"/>
         /// (null: all 1) scales each point's width (a trail's points added while it was not emitting
         /// have 0). Returns false when there is nothing to draw (fewer than two points).</summary>
-        internal bool Build(IReadOnlyList<Vector3> points, IReadOnlyList<float> widths, bool loop, LineParameters p, in LineSpace space)
+        internal bool Build(IReadOnlyList<Vector3> points, IReadOnlyList<float> widths, bool loop, LineParameters p, in LineSpace space, float shadowBias = 0f)
         {
             VertexCount = IndexCount = 0;
             Lighting = p.GenerateLightingData;
@@ -189,6 +189,9 @@ namespace UnityEngine
                 m_U = t * uScale;
                 m_Color = VertexColor(p.ColorGradient.Evaluate(sample), linear);
                 float width = p.WidthCurve.Evaluate(sample) * p.WidthMultiplier * (widths != null ? widths[i - first] : 1f);
+                // Width-scaled depth bias is applied after constructing sides and miters, but
+                // before caps and corners decide which side of the build plane the point is on.
+                if (shadowBias != 0f) m_Points[i].z += width * shadowBias;
                 Point(i, 0.5f * width);
             }
             return true;

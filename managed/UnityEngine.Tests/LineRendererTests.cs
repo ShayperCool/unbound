@@ -131,7 +131,7 @@ namespace UnityEngine.Tests
                 {
                     Camera = camera, Position = camera.transform.position, Forward = Vector3.forward,
                 }, new System.Collections.Generic.List<Unbound.Runtime.FrameBuilder.DrawItem>());
-                var meshes = (System.Collections.Generic.Dictionary<Camera, Mesh>)typeof(LineRenderer)
+                var meshes = (LineRenderMeshes)typeof(LineRenderer)
                     .GetField("m_Meshes", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
                     .GetValue(line);
                 float[] expected = {
@@ -145,7 +145,7 @@ namespace UnityEngine.Tests
                 };
                 // A drawn strip's mesh is streamed: its arrays keep a capacity, the strip is the
                 // streamed count.
-                var drawn = meshes[camera];
+                var drawn = meshes.Get(new Unbound.Runtime.FrameBuilder.CameraContext { Camera = camera }, "LineRenderer");
                 var rendered = new System.ArraySegment<Vector3>(drawn.m_Vertices, 0, drawn.m_StreamVertexCount).ToArray();
                 Assert.Equal(expected.Length / 3, rendered.Length);
                 for (int i = 0; i < rendered.Length; i++)
@@ -719,9 +719,9 @@ namespace UnityEngine.Tests
                 };
                 var draws = new System.Collections.Generic.List<Unbound.Runtime.FrameBuilder.DrawItem>();
                 line.CollectDraws(context, draws);
-                var meshes = (System.Collections.Generic.Dictionary<Camera, Mesh>)typeof(LineRenderer)
+                var meshes = (LineRenderMeshes)typeof(LineRenderer)
                     .GetField("m_Meshes", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(line);
-                var mesh = meshes[camera];
+                var mesh = meshes.Get(context, "LineRenderer");
                 var arrays = new object[] { mesh.m_Vertices, mesh.m_Normals, mesh.m_Tangents, mesh.m_Colors, mesh.m_UVs[0], mesh.m_SubMeshes[0].Indices };
                 int vertices = mesh.m_StreamVertexCount;
                 line.SetPosition(3, new Vector3(2, -1));

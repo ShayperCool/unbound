@@ -17,7 +17,7 @@ import compare
 import run
 
 
-def components(reference, capture):
+def components(reference, capture, mode='miter'):
     """All failing leaves, including missing/extra values and every failing image channel."""
     out = {}
 
@@ -43,7 +43,7 @@ def components(reference, capture):
         elif compare.differ(a, b):
             out[path] = dict(reference=a, actual=b)
 
-    ref = compare.load_reference(reference, 'miter')
+    ref = compare.load_reference(reference, mode)
     cap = compare.load(capture)
     walk(ref, cap, '')
     for k in ref.keys() & cap.keys():
@@ -75,7 +75,9 @@ def main():
     parser.add_argument('--release', default=os.environ.get('UNBOUND_PROBE_UNITY_VERSION'), required=False)
     parser.add_argument('--capture', type=Path)
     parser.add_argument('--before', type=Path)
+    parser.add_argument('--shadow', action='store_true', help='require shadow geometry as well as ordinary strips')
     args = parser.parse_args()
+    mode = 'shadow' if args.shadow else 'miter'
     if not args.release:
         parser.error('select --release or UNBOUND_PROBE_UNITY_VERSION')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
@@ -85,6 +87,7 @@ def main():
             parser.error('set UNBOUND_CLI or UNBOUND to this checkout build')
         os.environ['UNBOUND_CLI'] = cli
         label = 'miter-check-'+str(time.time_ns())
+        os.environ['LINE_SHADOW_PROBE'] = '1' if args.shadow else ''
         code = run.unbound(run.run_root(run.PROBE, label))
         if code:
             return code
@@ -94,16 +97,16 @@ def main():
     reference = run.reference_root(run.PROBE)
     report = args.capture/'comparison.json'
     command = [sys.executable, str(run.PROBE/'compare.py'), str(reference), str(args.capture),
-               '--mode', 'miter', '--report', str(report)]
+               '--mode', mode, '--report', str(report)]
     if args.before:
         command += ['--before', str(args.before)]
     code = subprocess.run(command).returncode
     if code not in (0, 1) or not report.is_file():
         return code or 1
     full = json.loads(report.read_text())
-    detail = dict(after=components(reference, args.capture))
+    detail = dict(after=components(reference, args.capture, mode))
     if args.before:
-        detail['before'] = components(reference, args.before)
+        detail['before'] = components(reference, args.before, mode)
         detail['introduced'] = sorted(detail['after'].keys() - detail['before'].keys())
         detail['resolved'] = sorted(detail['before'].keys() - detail['after'].keys())
     (args.capture/'components.json').write_text(json.dumps(detail, indent=1)+'\n')
