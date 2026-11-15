@@ -96,7 +96,8 @@ def start_cache_daemon(wrapper, env):
     of a build instead, it would keep that build's CPU niceness (the job runner lowers jobs outside
     a landing gate, the post-land checker runs lower still) and serve every later build of the
     cache, gate builds included, at it. The user service manager starts it at its own niceness;
-    without one, a plain start behaves as before. Nothing here fails a build.
+    without systemd-run, a plain start behaves as before; with an unreachable service manager the
+    first compiler starts it as before. Nothing here fails a build.
 
     A unit that already exists means another build is starting the same daemon: this build waits
     for it instead of starting one at its own niceness."""
