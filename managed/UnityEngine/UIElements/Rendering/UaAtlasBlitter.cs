@@ -1,21 +1,20 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Unbound.Runtime;
 using UnityEngine;
 
 namespace Unbound.UIElements
 {
     // Atlas copies include one texel beyond each source edge. The source sampler supplies the
-    // clamp/repeat/mirror border, including the four corners. Resources survive subsequent copies.
+    // clamp/repeat/mirror border, including the four corners. The quad is uploaded only once.
     internal static class UaAtlasBlitter
     {
-        static Mesh s_Mesh;
         static Material s_Material;
-        static readonly Vector3[] s_Positions = new Vector3[4];
-        static readonly Vector4[] s_Uvs = new Vector4[4];
-        static readonly Color32[] s_Colors = { Color.white, Color.white, Color.white, Color.white };
-        static readonly int[] s_Indices = { 0, 1, 2, 0, 2, 3 };
         static readonly Dictionary<int, object> s_Properties = new Dictionary<int, object>();
         static readonly int s_MainTex = Shader.PropertyToID("_MainTex");
+        static readonly int s_MainTexST = Shader.PropertyToID("_MainTex_ST");
+        // The command stream reads this box before Copy returns. Reuse it when UVs change.
+        static readonly object s_UvTransform = new Vector4(1, 1, 0, 0);
 
         internal static void Copy(Texture source, RenderTexture destination, RectInt rect, bool border)
         {
@@ -23,29 +22,18 @@ namespace Unbound.UIElements
             {
                 var shader = Shader.Find("Hidden/BlitCopy");
                 if (shader == null) throw new System.InvalidOperationException("UI Toolkit dynamic atlas copy shader is unavailable.");
-                using (ObjectRegistry.AsAssets())
-                {
-                    s_Material = new Material(shader) { name = "UI Toolkit atlas copy" };
-                    s_Mesh = new Mesh { name = "UI Toolkit atlas copy quad" };
-                }
+                using (ObjectRegistry.AsAssets()) s_Material = new Material(shader) { name = "UI Toolkit atlas copy" };
                 s_Material.IsPersistentAsset = true;
-                s_Mesh.MarkDynamic();
-                s_Mesh.AdoptVertices(s_Positions);
-                s_Mesh.m_UVs[0] = s_Uvs; s_Mesh.m_UVDimensions[0] = 3;
-                s_Mesh.m_Colors = s_Colors; s_Mesh.m_SubMeshes[0].Indices = s_Indices;
+                s_Properties[s_MainTexST] = s_UvTransform;
             }
             float padding = border ? UaAtlasAllocator.Border : 0;
-            float x0 = rect.x - padding, x1 = rect.xMax + padding;
-            float y0 = rect.y - padding, y1 = rect.yMax + padding;
-            float u0 = -padding / source.width, u1 = 1f + padding / source.width;
-            float v0 = -padding / source.height, v1 = 1f + padding / source.height;
-            s_Positions[0] = new Vector3(x0, y0, 0); s_Uvs[0] = new Vector4(u0, v0, 0, 0);
-            s_Positions[1] = new Vector3(x0, y1, 0); s_Uvs[1] = new Vector4(u0, v1, 0, 0);
-            s_Positions[2] = new Vector3(x1, y1, 0); s_Uvs[2] = new Vector4(u1, v1, 0, 0);
-            s_Positions[3] = new Vector3(x1, y0, 0); s_Uvs[3] = new Vector4(u1, v0, 0, 0);
-            s_Mesh.AdoptVertices(s_Positions);
-            s_Mesh.FinishStreamedWrite(4, 6, false);
+            float x0 = rect.x - padding, y0 = rect.y - padding;
+            float u0 = -padding / source.width, v0 = -padding / source.height;
+            Unsafe.Unbox<Vector4>(s_UvTransform) = new Vector4(1f - 2f * u0, 1f - 2f * v0, u0, v0);
             s_Properties[s_MainTex] = source;
+            var model = Matrix4x4.identity;
+            model.m00 = rect.width + 2f * padding; model.m11 = rect.height + 2f * padding;
+            model.m03 = x0; model.m13 = y0;
             var saved = GfxStream.Current;
             try
             {
@@ -53,7 +41,7 @@ namespace Unbound.UIElements
                 GfxStream.SetTarget(destination.EnsureCreated());
                 GfxStream.Viewport(new Rect(0, 0, destination.width, destination.height));
                 GfxStream.Camera(Matrix4x4.identity, Matrix4x4.Ortho(0, destination.width, 0, destination.height, -1, 1));
-                GfxStream.Draw(s_Mesh.Sync(), 0, s_Material.Sync(), 0, Matrix4x4.identity, Color.white, properties: s_Properties);
+                GfxStream.Draw(Immediate.BlitQuad.Sync(), 0, s_Material.Sync(), 0, model, Color.white, properties: s_Properties);
             }
             finally { GfxStream.Restore(saved); }
         }

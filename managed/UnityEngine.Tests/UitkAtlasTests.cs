@@ -141,11 +141,13 @@ namespace UnityEngine.Tests
                 Unbound.Runtime.GfxStream.BeginFrame(128, 128, ColorSpace.Gamma);
                 Unbound.Runtime.GfxStream.Scissor(scissor);
                 for (int i = 0; i < 8; i++) { UaAtlasBlitter.Copy(source, target, rect, true); Unbound.Runtime.GfxStream.Flush(); }
+                int uploads = Unbound.Runtime.Immediate.BlitQuad.m_SyncVersion;
                 AllocationMeasurement.EmptyAllocationContext();
                 long before = GC.GetAllocatedBytesForCurrentThread();
                 for (int i = 0; i < 4; i++) { UaAtlasBlitter.Copy(source, target, rect, true); Unbound.Runtime.GfxStream.Flush(); }
                 long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
                 Assert.Equal(0, allocated);
+                Assert.Equal(uploads, Unbound.Runtime.Immediate.BlitQuad.m_SyncVersion);
                 Assert.Equal(scissor, Unbound.Runtime.GfxStream.Current.Scissor);
                 int start = Unbound.Runtime.GfxStream.Recorded.Length;
                 UaAtlasBlitter.Copy(source, target, rect, true);
