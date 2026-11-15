@@ -247,8 +247,10 @@ In dependency order; each item ends with an Editor-reference probe.
       shaders name a BillboardShader (`tests/projects/treebillboards`), the default reflection
       and layer metallic and smoothness (`tests/projects/defaultreflection`), URP terrains
       (`tests/projects/urpterrain`) and a realtime lightmap index without a realtime lightmap
-      (`tests/projects/terrainlightmaps`) (Q442, Q455). The rest is in the Terrain rows of
-      COMPATIBILITY_GAPS.md (wind zones, Tree Creator trees, the URP base map at a grazing angle).
+      (`tests/projects/terrainlightmaps`) (Q442, Q455), Tree Creator trees, wide prototype assets
+      and six lights as billboards, and render textures' anisotropic filtering, which brought the
+      URP base map at a grazing angle to the Editor's (Q484, Q485). The rest is in the Terrain rows
+      of COMPATIBILITY_GAPS.md (wind zones).
 - [x] AssetBundles the Editor builds (UnityFS: uncompressed, LZ4, LZMA): LoadFromFile, Memory,
       Stream and their async forms, LoadAsset (by path or name, sub-assets), LoadAllAssets, Unload,
       the manifest, scenes through SceneManager; player data read by its type trees (references
