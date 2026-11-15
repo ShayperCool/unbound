@@ -429,3 +429,38 @@ fn aliases_super_paths_and_root_attributes_reach_what_they_name() {
         );
     }
 }
+
+/// `super` under another name, a `super::` group climbing further, and space before `::`:
+/// each reaches the rules crate's `audio` module (the reading counts the crate whole).
+#[test]
+fn renamed_and_climbing_super_paths_reach_what_they_name() {
+    let audio = "crates/unbound-rules/src/audio.rs".to_string();
+    for (case, device) in [
+        (
+            "super-as",
+            "use super as p;\npub enum Device { A }\npub fn select() { p::audio::Audio; }\n",
+        ),
+        (
+            "spaced",
+            "pub enum Device { A }\npub fn select() { super ::audio::Audio; }\n",
+        ),
+    ] {
+        let ws = compiler_and_rules(case);
+        ws.write("crates/unbound-rules/src/device.rs", device);
+        assert!(
+            ws.sources("unbound_compiler", &[]).contains(&audio),
+            "{case}"
+        );
+    }
+    let ws = compiler_and_rules("climbing-group");
+    std::fs::create_dir_all(ws.0.join("crates/unbound-rules/src/device")).unwrap();
+    ws.write(
+        "crates/unbound-rules/src/device.rs",
+        "mod x;\npub enum Device { A }\npub fn select() {}\n",
+    );
+    ws.write(
+        "crates/unbound-rules/src/device/x.rs",
+        "use super::{super::audio::Audio, Device};\n",
+    );
+    assert!(ws.sources("unbound_compiler", &[]).contains(&audio));
+}

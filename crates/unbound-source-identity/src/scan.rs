@@ -158,12 +158,11 @@ fn code(text: &str) -> Code {
             word_starts(&text, m).any(|at| !text[at + m.len()..].trim_start().starts_with('"'))
         });
     let unsure = computed_include
-        || use_renames_self(&text)
         || module_paths(&text)
         || text.contains("macro_rules!")
         || text.contains("#[macro_use]")
         || word_starts(&text, "extern").any(|at| text[at + 6..].trim_start().starts_with("crate"))
-        || crate_aliases(&text);
+        || odd_paths(&text);
     Code {
         text,
         includes,
@@ -194,14 +193,58 @@ fn module_paths(text: &str) -> bool {
     })
 }
 
-/// Whether a `use` names a module under another name (`use crate::{self as c}`), which the
-/// reading does not follow (`self as i32` in an expression is a cast).
-fn use_renames_self(text: &str) -> bool {
-    word_starts(text, "use").any(|at| {
+/// Whether a text names modules in a way the reading does not follow: `crate`, `self` or
+/// `super` (or a workspace crate) under another name (`use super as p`, `{self as r}`), with
+/// space before its `::`, or a `super::{..}` group that climbs further (`super::{super::a}`).
+fn odd_paths(text: &str) -> bool {
+    let follows = |text: &str, at: usize, kw: &str, what: &str| {
+        let next = &text[at + kw.len()..];
+        !next.starts_with("::") && next.trim_start().starts_with(what)
+    };
+    let spaced = ["crate", "self", "super"]
+        .iter()
+        .any(|kw| word_starts(text, kw).any(|at| follows(text, at, kw, "::")));
+    // Renamed in a `use` (`self as i32` elsewhere is a cast).
+    let renamed = word_starts(text, "use").any(|at| {
         let statement = &text[at..];
         let statement = &statement[..statement.find(';').unwrap_or(statement.len())];
-        word_starts(statement, "self").any(|s| statement[s + 4..].trim_start().starts_with("as "))
-    })
+        ["crate", "self", "super"].iter().any(|kw| {
+            word_starts(statement, kw).any(|k| {
+                let next = statement[k + kw.len()..].trim_start();
+                next.strip_prefix("as")
+                    .is_some_and(|r| r.starts_with(char::is_whitespace))
+            })
+        })
+    });
+    let keyword_odd = spaced || renamed;
+    let crate_odd = text
+        .match_indices("unbound_")
+        .filter(|&(at, _)| !text[..at].chars().next_back().is_some_and(is_ident))
+        .any(|(at, _)| {
+            let name_end = text[at..]
+                .find(|c: char| !is_ident(c))
+                .map_or(text.len(), |e| at + e);
+            let next = &text[name_end..];
+            !next.starts_with("::") && next.trim_start().starts_with("::")
+        });
+    let climbing_group = text.match_indices("super::{").any(|(at, _)| {
+        let group = &text[at + "super::{".len()..];
+        let mut depth = 0;
+        let end = group
+            .char_indices()
+            .find(|&(_, c)| {
+                match c {
+                    '{' => depth += 1,
+                    '}' if depth == 0 => return true,
+                    '}' => depth -= 1,
+                    _ => {}
+                }
+                false
+            })
+            .map_or(group.len(), |(i, _)| i);
+        word_starts(&group[..end], "super").next().is_some()
+    });
+    keyword_odd || crate_odd || climbing_group
 }
 
 /// How many `#` open a raw string at the start of `rest` (after its `r`), if one does.
@@ -222,24 +265,6 @@ fn note_include(before: &str, literal: &str, includes: &mut Vec<(String, bool)>)
             includes.push((literal.to_string(), is_code));
         }
     }
-}
-
-/// Whether a text names its own crate or a workspace crate under another name (`use crate as
-/// c`, `use unbound_x as y`): the reading does not follow such names.
-fn crate_aliases(text: &str) -> bool {
-    word_starts(text, "as").any(|at| {
-        let before = text[..at].trim_end();
-        let name: String = before
-            .chars()
-            .rev()
-            .take_while(|c| is_ident(*c))
-            .collect::<Vec<_>>()
-            .into_iter()
-            .rev()
-            .collect();
-        let path_end = before.len() - name.len();
-        (name == "crate" || name.starts_with("unbound_")) && !before[..path_end].ends_with("::")
-    })
 }
 
 /// A text without its items under `#[cfg(test)]` (test code is not in the output's build). An
