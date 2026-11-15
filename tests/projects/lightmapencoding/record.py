@@ -4,7 +4,8 @@
     record.py create  --release 6000.0.71f1   # run ProbeRunner.Create, copy Assets/ back
     record.py record  --release 6000.0.71f1   # two independent GPU captures of every profile
     record.py publish --release 6000.0.71f1   # write Reference/unity-<release>/<profile>.jsonl when
-                                              # both captures agree; never overwrites a file
+                                              # both captures agree; a published file only gains
+                                              # rows after its own
 
 `--profile NAME` (repeatable) limits record/publish to those profiles (profiles.py).
 """
@@ -27,7 +28,7 @@ OUTPUT = 'lightmapencoding.jsonl'
 def complete(directory):
     path = directory/OUTPUT
     lines = path.read_text().splitlines() if path.is_file() else []
-    if sum('"capture"' in line for line in lines) != 13:
+    if sum('"capture"' in line for line in lines) != 18:
         return f'missing or incomplete {OUTPUT}'
     return None
 
@@ -86,7 +87,11 @@ def main():
             sys.exit(f'{profile}: the captures differ ('+'; '.join(problems)+'); not publishing')
         path = target/f'{profile}.jsonl'
         if path.exists():
-            sys.exit(f'{path} exists; not publishing')
+            # Rows already published stay as they are; a re-record may only add rows after them.
+            old = path.read_text().splitlines(keepends=True)
+            new = (work/profile/'editor1'/OUTPUT).read_text().splitlines(keepends=True)
+            if new[:len(old)] != old:
+                sys.exit(f'{path}: the published rows changed; not publishing')
     target.mkdir(parents=True, exist_ok=True)
     for profile in profiles:
         shutil.copyfile(work/profile/'editor1'/OUTPUT, target/f'{profile}.jsonl')

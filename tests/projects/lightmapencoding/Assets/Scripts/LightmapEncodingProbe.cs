@@ -14,7 +14,9 @@ using UnityEngine.Rendering;
 /// each of the 96 cube texel centres, unity_SpecCube0_HDR and DecodeHDR, through the scene's
 /// custom default reflection and through a Custom reflection probe; and the quad drawn with the
 /// built-in Legacy Shaders/Diffuse; the first three again with an 8-bit (PNG) lightmap; the
-/// formats of a compressed HDR lightmap and cubemap. Writes <c>lightmapencoding.jsonl</c> into
+/// formats of a compressed HDR lightmap and cubemap; a material's <c>_Cube_HDR</c> and
+/// <c>_Flat_HDR</c> and its cube decoded with them; level 1 of mipmapped float and 8-bit
+/// lightmaps. Writes <c>lightmapencoding.jsonl</c> into
 /// <c>LIGHTMAP_ENCODING_PROBE_OUT</c>, then quits.
 /// </summary>
 public class LightmapEncodingProbe : MonoBehaviour
@@ -108,6 +110,23 @@ public class LightmapEncodingProbe : MonoBehaviour
             diagnostic.SetFloat("_Mode", mode);
             Capture(camera, target, "probe/" + modes[mode]);
         }
+
+        // Material textures (as a Skybox/Cubemap's): <name>_HDR, the cube decoded with it, and a
+        // 2D texture's (the float lightmap's) decode values.
+        diagnostic.SetTexture("_Cube", cube);
+        diagnostic.SetTexture("_Flat", lightmap);
+        string[] material = { "material/cubeDecode", "material/cubeDecoded", "material/flatDecode" };
+        for (int mode = 6; mode < 9; mode++)
+        {
+            diagnostic.SetFloat("_Mode", mode);
+            Capture(camera, target, material[mode - 6]);
+        }
+        // Level 1 of mipmapped float and 8-bit lightmaps.
+        diagnostic.SetFloat("_Mode", 9);
+        LightmapSettings.lightmaps = new[] { new LightmapData { lightmapColor = Resources.Load<Texture2D>("LightmapMips") } };
+        Capture(camera, target, "mips/lightmapLevel1");
+        LightmapSettings.lightmaps = new[] { new LightmapData { lightmapColor = Resources.Load<Texture2D>("LightmapLdrMips") } };
+        Capture(camera, target, "mips/ldrLevel1");
 
         File.WriteAllText(Path.Combine(dir, "lightmapencoding.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR

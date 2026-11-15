@@ -57,6 +57,15 @@ public static class ProbeRunner
         var ldrImporter = (TextureImporter)AssetImporter.GetAtPath("Assets/Resources/LightmapLdr.png");
         ldrImporter.textureType = TextureImporterType.Lightmap;
         Exact(ldrImporter);
+        // Mipmapped float and 8-bit lightmaps (box-filtered levels, point sampled).
+        WriteExr("Assets/Resources/LightmapMips.exr", 16, 8, (x, y) => Tints[y] * Levels[x]);
+        var mips = (TextureImporter)AssetImporter.GetAtPath("Assets/Resources/LightmapMips.exr");
+        mips.textureType = TextureImporterType.Lightmap;
+        Mipmapped(mips);
+        AssetDatabase.CopyAsset("Assets/Resources/LightmapLdr.png", "Assets/Resources/LightmapLdrMips.png");
+        var ldrMips = (TextureImporter)AssetImporter.GetAtPath("Assets/Resources/LightmapLdrMips.png");
+        ldrMips.textureType = TextureImporterType.Lightmap;
+        Mipmapped(ldrMips);
         // The same HDR lightmap and cubemap with the importer's default compression.
         WriteExr("Assets/Resources/LightmapCompressed.exr", 16, 8, (x, y) => Tints[y] * Levels[x]);
         var compressed = (TextureImporter)AssetImporter.GetAtPath("Assets/Resources/LightmapCompressed.exr");
@@ -84,6 +93,15 @@ public static class ProbeRunner
         importer.filterMode = FilterMode.Point;
         importer.wrapMode = TextureWrapMode.Clamp;
         importer.mipmapEnabled = false;
+        importer.textureCompression = TextureImporterCompression.Uncompressed;
+        importer.SaveAndReimport();
+    }
+
+    static void Mipmapped(TextureImporter importer)
+    {
+        importer.filterMode = FilterMode.Point;
+        importer.wrapMode = TextureWrapMode.Clamp;
+        importer.mipmapEnabled = true;
         importer.textureCompression = TextureImporterCompression.Uncompressed;
         importer.SaveAndReimport();
     }

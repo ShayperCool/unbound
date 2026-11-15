@@ -3,9 +3,9 @@
 Unity 6000.0.71f1, built-in pipeline. How the active build target stores baked HDR lighting and
 how shaders decode it. `ProbeRunner.Create` authored `Assets/Resources/`: a 16x8 float lightmap
 (EXR, Lightmap type, intensities 0 to 45 along x and eight tints), a 6:1 strip of 4x4 float cube
-faces (EXR, Cube shape), an 8-bit (PNG) Lightmap-type texture, and compressed copies of the float
-lightmap and cubemap (the importer's default compression). The four uncompressed ones are point
-sampled, clamped and mipless.
+faces (EXR, Cube shape), an 8-bit (PNG) Lightmap-type texture, mipmapped copies of the two
+lightmaps, and compressed copies of the float lightmap and cubemap (the importer's default
+compression). The uncompressed ones are point sampled and clamped, mipless but for the copies.
 
 `Scripts/LightmapEncodingProbe` writes `lightmapencoding.jsonl`: every
 `GraphicsSettings.HasShaderDefine` answer, each texture's format, graphics format, `isDataSRGB`
@@ -13,7 +13,9 @@ and mip count, `ReflectionProbe.defaultTextureHDRDecodeValues` and a Custom prob
 `textureHDRDecodeValues`, and 16x8 float readbacks of a quad lightmapped one pixel per texel:
 the raw lightmap texel, `unity_Lightmap_HDR` and `DecodeLightmap`; the raw reflection at the 96
 cube texel centres, `unity_SpecCube0_HDR` and `DecodeHDR` (scene default reflection and the
-probe); the quad drawn with Legacy Shaders/Diffuse; the first three with the 8-bit lightmap.
+probe); the quad drawn with Legacy Shaders/Diffuse; the first three with the 8-bit lightmap; a
+material's `_Cube_HDR` and `_Flat_HDR` and its cube decoded with them; level 1 of mipmapped
+float and 8-bit lightmaps.
 
 `profiles.py` lists the eight profiles, each a project copy with a build target, colour space and
 the Player Settings lists `m_BuildTargetGroupLightmapEncodingQuality` and
@@ -28,7 +30,9 @@ Measured (the Editor's defaults are Standalone High/High and Android Low/Low):
   lightmap encoding. The tier defines are never answered, LPPV follows the tier settings.
 - Lightmaps: Low is double LDR on Android (RGB24, the byte is half the gamma-space value) and
   RGBM on Standalone; Normal is RGBM (RGBA32); High keeps half floats. An 8-bit lightmap's stored
-  value (byte / 255) is taken as its radiance and encoded alike.
+  value (byte / 255) is taken as its radiance, filtered into mips as floats and encoded alike;
+  an unencoded one filters its mips as stored (not in linear light).
+- A material's `<name>_HDR` is its texture's decode values.
 - HDR cubemaps: Low double LDR, Normal RGBM, High half floats, on both targets.
 - Decode values: double LDR 2 (2^2.2 for sRGB data in Linear), RGBM 5 and alpha (5^2.2, exponent
   2.2 in Linear); `unity_Lightmap_HDR` follows the first lightmap.
@@ -44,6 +48,6 @@ UNBOUND=<unbound> python3 tests/projects/lightmapencoding/run.py check
 
 `run.py check` compares every record; capture pixels within a relative 1e-3 (the Editor's
 readbacks of 8-bit sRGB data carry about 2^-11 of rounding, one 8-bit step is more than 0.9%).
-The engine matches 464/472 records. The 8 others are the compressed cubemaps (Unbound keeps
+The engine matches 504/512 records. The 8 others are the compressed cubemaps (Unbound keeps
 their pixels uncompressed), listed exactly in `residuals.json`; an entry that stops occurring
 fails the check.
