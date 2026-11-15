@@ -22,6 +22,7 @@ namespace UnityEngine
         internal Vector2 m_Pivot = new Vector2(0.5f, 0.5f);
         Rect m_LastRect;
         bool m_HasLastRect;
+        bool m_SendChildDimensionsChange;
 
         /// <summary>Set by a component that controls this rect (a root Canvas, a layout group).</summary>
         internal Object m_DrivenBy;
@@ -36,6 +37,12 @@ namespace UnityEngine
                 var size = ParentSize() * (m_AnchorMax - m_AnchorMin) + m_SizeDelta;
                 return new Rect(-m_Pivot.x * size.x, -m_Pivot.y * size.y, size.x, size.y);
             }
+        }
+
+        public bool sendChildDimensionsChange
+        {
+            get { MainThreadCheck.Check("get_sendChildDimensionsChange"); return m_SendChildDimensionsChange; }
+            set { MainThreadCheck.Check("set_sendChildDimensionsChange"); m_SendChildDimensionsChange = value; }
         }
 
         public Vector2 anchorMin
@@ -365,7 +372,7 @@ namespace UnityEngine
 
 namespace Unbound.Runtime
 {
-    /// <summary>Engine messages of the UI: dimension changes travel down the RectTransform hierarchy.</summary>
+    /// <summary>UI dimension messages on a rect and its flagged direct parent.</summary>
     internal static class UiMessages
     {
         internal static void DimensionsChanged(UnityEngine.RectTransform t)
@@ -373,6 +380,9 @@ namespace Unbound.Runtime
             var go = t.m_GameObject;
             if (go == null || go.m_Destroyed) return;
             Messaging.SendFast(go, "OnRectTransformDimensionsChange");
+            // A self callback can reparent the rect, so resolve the receiver afterward.
+            if (t.m_Parent is UnityEngine.RectTransform parent && parent.sendChildDimensionsChange)
+                Messaging.SendFast(parent.m_GameObject, "OnChildRectTransformDimensionsChange");
         }
     }
 }

@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/rectmessages/run.py check --release $UNBOUND_PROBE_UNITY_VERSION"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Core/RectTransform.cs",
+    "managed/UnityEngine/Core/Transform.cs",
+    "managed/UnityEngine/Runtime/Messages.cs"
+  ]
+}

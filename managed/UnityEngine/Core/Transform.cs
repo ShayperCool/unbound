@@ -307,9 +307,10 @@ namespace UnityEngine
             m_HasChanged = true;
             m_Version++;
             m_WorldDirty = true;
-            OnParentChanged();
             for (int i = 0; i < m_Children.Count; i++)
                 m_Children[i].MarkParentChanged();
+            // Dimension listeners can read world matrices on this branch's descendants.
+            OnParentChanged();
         }
 
         /// <summary>RectTransforms recompute their rect when the parent's changes.</summary>

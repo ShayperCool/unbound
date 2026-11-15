@@ -1714,7 +1714,6 @@ namespace UnityEngine
     unsafe partial class RectTransform
     {
         [global::Unbound.Stub] internal global::UnityEngine.Rect GetRectInParentSpace() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RectTransform.GetRectInParentSpace"); return default; }
-        public bool sendChildDimensionsChange { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RectTransform.sendChildDimensionsChange"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RectTransform.sendChildDimensionsChange"); } }
     }
     unsafe partial class ReflectionProbe
     {

@@ -116,14 +116,12 @@ namespace UnityEngine.Tests
 
         // --- per-case tests ---
 
-        /// <summary>RED at 747e3f23: OnChildRectTransformDimensionsChange is not listed, no key.</summary>
         [Fact]
-        public void NotSentMessageWarnsOnceForItsMember()
+        public void ChildDimensionMessageDoesNotWarn()
         {
             ScriptMessages.For(typeof(ChildDimensionsScript));
             ScriptMessages.For(typeof(ChildDimensionsScript));
-            Assert.Equal(new[] { Prefix + "ChildDimensionsScript.OnChildRectTransformDimensionsChange" },
-                KeysFor("ChildDimensionsScript"));
+            Assert.Empty(KeysFor("ChildDimensionsScript"));
         }
 
         /// <summary>Control for the already listed entry. GREEN at 747e3f23; red recipe: remove
@@ -147,15 +145,13 @@ namespace UnityEngine.Tests
             Assert.Empty(KeysFor("SentOnlyScript", "ImplicitReceiverScript", "ExplicitReceiverScript"));
         }
 
-        /// <summary>RED at 747e3f23: OnChildRectTransformDimensionsChange is not listed, no key.</summary>
         [Fact]
-        public void DerivedClassesWarnOnceOnTheDeclaringBase()
+        public void InheritedChildDimensionMessageDoesNotWarn()
         {
             ScriptMessages.For(typeof(ChildDimensionsLeft));
             ScriptMessages.For(typeof(ChildDimensionsRight));
             ScriptMessages.For(typeof(ChildDimensionsBase));
-            Assert.Equal(new[] { Prefix + "ChildDimensionsBase.OnChildRectTransformDimensionsChange" },
-                KeysFor("ChildDimensionsBase", "ChildDimensionsLeft", "ChildDimensionsRight"));
+            Assert.Empty(KeysFor("ChildDimensionsBase", "ChildDimensionsLeft", "ChildDimensionsRight"));
         }
 
         /// <summary>RED at 747e3f23: each closed base type gets its own key
@@ -264,7 +260,7 @@ namespace UnityEngine.Tests
             (MonoBehaviourPage, "OnAudioFilterRead", Delivery.Sent),
             (MonoBehaviourPage, "OnBecameInvisible", Delivery.Sent),
             (MonoBehaviourPage, "OnBecameVisible", Delivery.Sent),
-            (MonoBehaviourPage, "OnChildRectTransformDimensionsChange", Delivery.NotSent),
+            (MonoBehaviourPage, "OnChildRectTransformDimensionsChange", Delivery.Sent),
             (MonoBehaviourPage, "OnCollisionEnter", Delivery.Sent),
             (MonoBehaviourPage, "OnCollisionEnter2D", Delivery.Sent),
             (MonoBehaviourPage, "OnCollisionExit", Delivery.Sent),
@@ -343,16 +339,14 @@ namespace UnityEngine.Tests
             return names;
         }
 
-        /// <summary>A documented static assertion against the curated table above. RED at 747e3f23:
-        /// OnChildRectTransformDimensionsChange is not listed. The overlap checks
-        /// are guards (GREEN at 747e3f23; red recipe: list a Sent or EditorAbsent name, or a
-        /// name a ScriptMessages dispatch delegate is named after).</summary>
+        /// <summary>Unsupported messages match the curated classification without overlapping
+        /// supported messages, Editor-only messages or cached dispatch delegates.</summary>
         [Fact]
         public void NotSentListMatchesTheClassification()
         {
             Assert.Equal(74, s_Documented.Length);
             Assert.Equal(s_Documented.Length, s_Documented.Select(d => (d.Page, d.Name)).Distinct().Count());
-            Assert.Equal(68, s_Documented.Count(d => d.Class == Delivery.Sent));
+            Assert.Equal(69, s_Documented.Count(d => d.Class == Delivery.Sent));
             Assert.Equal(4, s_Documented.Count(d => d.Class == Delivery.EditorAbsent));
 
             var listed = ListedNames();

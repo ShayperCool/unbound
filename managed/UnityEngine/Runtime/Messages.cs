@@ -119,9 +119,6 @@ namespace Unbound.Runtime
         static readonly (Type Host, string Name)[] s_NotSent =
         {
             (typeof(MonoBehaviour), "OnParticleUpdateJobScheduled"),
-            // Only sent while the parent's RectTransform.sendChildDimensionsChange is true, which
-            // Unbound does not implement (a generated stub).
-            (typeof(MonoBehaviour), "OnChildRectTransformDimensionsChange"),
         };
 
         internal static System.Collections.Generic.IReadOnlyList<(Type Host, string Name)> NotSent => s_NotSent;
