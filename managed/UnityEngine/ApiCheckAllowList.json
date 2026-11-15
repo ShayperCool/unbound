@@ -100,13 +100,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.Animator",
-    "Message": "P:animatePhysics():System.Boolean attributes is [System.ObsoleteAttribute:M:.ctor`0(System.String):System.Void(System.String:\"Animator.animatePhysics has been deprecated. Use Animator.updateMode instead.\"){}], Unity's is []",
-    "Reason": "Q410-Animator-animatePhysics: Queued Animator physics-sync migration: the current property aliases updateMode, while Unity 6000.0 documents synchronization of animated kinematic Rigidbody transforms. Measure and adapt animation/physics synchronization with divergent-state and moving-platform controls before removing this obsolete annotation. Follow-up: Q410-Animator-animatePhysics."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.LightProbesQuery",
     "Message": "F:m_LightProbeContextWrapper:System.IntPtr attributes is [], Unity's is [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute:M:.ctor`0():System.Void(){}]",
     "Reason": "Q410-job-container-payloads: UnityEngine.LightProbesQuery needs its selected handle/buffer ownership and safety metadata integrated with JobLayout and UnsafeUtility, which read these attributes. Add scheduling, access-range, disposal and lifetime controls before advertising native-container or unsafe-pointer restrictions; do not ignore the kinds."

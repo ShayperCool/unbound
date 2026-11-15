@@ -112,9 +112,9 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After column notifications |
+| Category | Before Q410 | After animatePhysics |
 | --- | ---: | ---: |
-| Attributes | 938 | 22 |
+| Attributes | 938 | 21 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
@@ -123,7 +123,7 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 0 |
 | Lookup policies | 11 | 10 |
-| Total | 1,332 | 146 |
+| Total | 1,332 | 145 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -155,10 +155,12 @@ separate legacy storage from active state and record focus selection/cursor
 behavior in both modes. GuiCompat selects the measured mechanism for 6000.0.71f1;
 other releases keep their previous, unmeasured field linkage and require their
 own reference before that fallback changes.
-Animator.animatePhysics remains queued as Q410-Animator-animatePhysics: its current setter
-changes updateMode, while the [Unity 6000.0 contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-animatePhysics.html)
-covers animated kinematic Rigidbody transforms influencing other bodies. That migration
-needs divergent-state and moving-platform controls with the runtime adaptation.
+Animator.animatePhysics is its own serialized state beside updateMode, as the
+[Unity 6000.0 contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-animatePhysics.html)
+describes: the pose such an Animator writes moves the kinematic bodies on the written
+transforms, and below them, as kinematic moves that carry resting bodies, in both update
+modes. `animatephysics` holds the authored, cloned and set state and categorical
+moving-platform outcomes.
 
 The parameter slice fixes 73 exact optional-default and array direction entries.
 Metadata controls cover each changed parameter; invocation controls exercise omitted
@@ -388,7 +390,7 @@ comparison tolerances stay unchanged in this slice.
 
 | Follow-up | Exact entries | Required work |
 | --- | ---: | --- |
-| `Q410-Animator-animatePhysics` | 1 | Animated kinematic body synchronization with moving-body controls. |
+| `Q410-Animator-animatePhysics` | 0 | Done by `animatephysics`: stored state beside updateMode and kinematic moves for bodies on transforms the Animator writes. |
 | `Q410-Core-built-in-serialization` | 3 | Harmonic/mask built-in payloads across root/nested JSON, YAML and cloning. |
 | `Q410-Editor-computed-setters` | 2 | Live focus state and assembly-cache invalidation before private setter alignment. |
 | `Q410-Editor-interfaces` | 8 | Window/menu/preview, request callbacks and connection dispatch; converter bridging is covered by `uxmlconverter` and persistent-call type names by `eventtypenames`. |

@@ -777,6 +777,8 @@ namespace Unbound.Runtime
         static void CreateBody(Rigidbody rb)
         {
             var t = rb.m_GameObject.m_Transform;
+            // A new body starts where its Transform is: earlier animated writes are not its moves.
+            rb.m_AnimatedPhysicsSeen = AnimatedPhysicsWrites.s_LastStamp;
             var position = t.position;
             var rotation = t.rotation;
             var def = new B3.BodyDef
@@ -1111,10 +1113,17 @@ namespace Unbound.Runtime
                 rb.m_TransformVersion = t.m_Version;
                 var position = t.position;
                 var rotation = t.rotation;
+                int animatedSince = rb.m_AnimatedPhysicsSeen;
+                rb.m_AnimatedPhysicsSeen = AnimatedPhysicsWrites.s_LastStamp;
                 if (SamePose(position, rotation, rb.m_SyncPosition, rb.m_SyncRotation)) continue;
-                rb.Teleport(position, rotation);
                 rb.m_SyncPosition = position;
                 rb.m_SyncRotation = rotation;
+                if (rb.m_IsKinematic && AnimatedPhysicsWrites.MovedSince(t, animatedSince))
+                {
+                    rb.MoveAnimated(position, rotation);
+                    continue;
+                }
+                rb.Teleport(position, rotation);
                 rb.m_PreviousPosition = rb.m_CurrentPosition = position;
                 rb.m_PreviousRotation = rb.m_CurrentRotation = rotation;
             }

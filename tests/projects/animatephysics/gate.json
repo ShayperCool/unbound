@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/animatephysics/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Animation/AnimatedPhysicsWrites.cs",
+    "managed/UnityEngine/Animation/Animator.cs",
+    "managed/UnityEngine/Physics/PhysicsWorld.cs",
+    "managed/UnityEngine/Physics/Rigidbody.cs"
+  ]
+}

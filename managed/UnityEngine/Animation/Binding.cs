@@ -447,6 +447,10 @@ namespace Unbound.Runtime
     /// hierarchy: groups, their channels and default values, and the clips bound to them.</summary>
     internal sealed class AnimationBindings
     {
+        /// <summary>The Animator whose pose these bindings write (null for legacy Animation and
+        /// editor sampling).</summary>
+        internal Animator Owner;
+
         /// <summary>A bool property (GameObject activity, enabled flags, bool fields) takes a
         /// blended value as true when it is more than <see cref="BoolThreshold"/> from 0 (matches
         /// the Unity 6000.0.71f1 Editor, tests/projects/animpartial bools, legacy.bools).</summary>

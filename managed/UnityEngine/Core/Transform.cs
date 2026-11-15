@@ -26,6 +26,12 @@ namespace UnityEngine
         /// <summary>Bumped on every change of this transform or a parent: lets consumers see changes.</summary>
         internal int m_Version;
 
+        /// <summary>While an Animator with animatePhysics writes its pose: the stamp of that write
+        /// (<see cref="Unbound.Runtime.AnimatedPhysicsWrites"/>); 0 otherwise.</summary>
+        internal static int s_AnimatedPhysicsStamp;
+        /// <summary>The stamp of the last such write that changed this transform.</summary>
+        internal int m_AnimatedPhysicsStamp;
+
         protected Transform()
         {
         }
@@ -294,6 +300,7 @@ namespace UnityEngine
         /// <summary>This transform changed: it and every descendant must recompute their world state.</summary>
         internal void MarkChanged()
         {
+            if (s_AnimatedPhysicsStamp != 0) m_AnimatedPhysicsStamp = s_AnimatedPhysicsStamp;
             m_HasChanged = true;
             m_Version++;
             m_WorldDirty = true;

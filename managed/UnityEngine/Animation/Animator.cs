@@ -16,6 +16,7 @@ namespace UnityEngine
         internal AnimatorCullingMode m_CullingMode;
         internal AnimatorUpdateMode m_UpdateMode;
         internal bool m_ApplyRootMotion;
+        internal bool m_AnimatePhysics;
         internal bool m_KeepAnimatorStateOnDisable;
         internal bool m_WriteDefaultValuesOnDisable;
         internal float m_Speed = 1f;
@@ -38,7 +39,7 @@ namespace UnityEngine
                 if (m_GameObject == null) return null;
                 var player = EnsurePlayer();
                 if (player != null) return player.Bindings;
-                return m_OutputBindings ??= new AnimationBindings(m_GameObject);
+                return m_OutputBindings ??= new AnimationBindings(m_GameObject) { Owner = this };
             }
         }
 
@@ -103,11 +104,14 @@ namespace UnityEngine
             set { MainThreadCheck.Check("set_applyRootMotion"); m_ApplyRootMotion = value; }
         }
 
-        [Obsolete("Animator.animatePhysics has been deprecated. Use Animator.updateMode instead.")]
+        /// <summary>Whether the pose this Animator writes moves the kinematic bodies on the written
+        /// transforms (and below them) as kinematic moves, which carry other bodies along, instead
+        /// of teleporting them; independent of <see cref="updateMode"/> (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/animatephysics).</summary>
         public bool animatePhysics
         {
-            get { MainThreadCheck.Check("get_animatePhysics"); return m_UpdateMode == AnimatorUpdateMode.Fixed; }
-            set { MainThreadCheck.Check("set_animatePhysics"); m_UpdateMode = value ? AnimatorUpdateMode.Fixed : AnimatorUpdateMode.Normal; }
+            get { MainThreadCheck.Check("get_animatePhysics"); return m_AnimatePhysics; }
+            set { MainThreadCheck.Check("set_animatePhysics"); m_AnimatePhysics = value; }
         }
 
         public AnimatorUpdateMode updateMode
@@ -1114,6 +1118,7 @@ namespace UnityEngine
             m_CullingMode = (AnimatorCullingMode)body.Int("m_CullingMode");
             m_UpdateMode = (AnimatorUpdateMode)body.Int("m_UpdateMode");
             m_ApplyRootMotion = body.Bool("m_ApplyRootMotion");
+            m_AnimatePhysics = body.Bool("m_AnimatePhysics");
             m_KeepAnimatorStateOnDisable = body.Bool("m_KeepAnimatorStateOnDisable") || body.Bool("m_KeepAnimatorControllerStateOnDisable");
             m_WriteDefaultValuesOnDisable = body.Bool("m_WriteDefaultValuesOnDisable");
             m_NoHierarchy = !body.Bool("m_HasTransformHierarchy", true);
@@ -1134,6 +1139,7 @@ namespace UnityEngine
             m_CullingMode = s.m_CullingMode;
             m_UpdateMode = s.m_UpdateMode;
             m_ApplyRootMotion = s.m_ApplyRootMotion;
+            m_AnimatePhysics = s.m_AnimatePhysics;
             m_Avatar = s.m_Avatar;
             m_KeepAnimatorStateOnDisable = s.m_KeepAnimatorStateOnDisable;
             m_WriteDefaultValuesOnDisable = s.m_WriteDefaultValuesOnDisable;

@@ -491,6 +491,7 @@ namespace Unbound.Runtime.Humanoid
         /// (the skeleton's nodes, for an Animator without its transform hierarchy).</summary>
         void Write()
         {
+            using var physics = AnimatedPhysicsWrites.Begin(m_Animator);
             var skeleton = m_Animator.m_NoHierarchy ? m_Animator.Skeleton : null;
             if (skeleton != null && skeleton.Avatar == m_Constant)
             {

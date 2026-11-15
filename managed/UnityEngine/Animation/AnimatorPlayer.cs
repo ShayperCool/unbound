@@ -189,6 +189,7 @@ namespace Unbound.Runtime
                 Bools[i] = p.DefaultBool;
             }
             Bindings = bindings ?? new AnimationBindings(animator.m_GameObject);
+            Bindings.Owner ??= animator;
             // Clips may animate this Animator's own parameters: binding them asks the Animator for
             // its player, which is this one from here on.
             if (attached) animator.m_Player = this;

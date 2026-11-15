@@ -266,6 +266,13 @@ namespace UnityEngine
             B3.ua3_body_set_target_transform(m_Body, position, rotation, Time.fixedDeltaTime);
         }
 
+        /// <summary>The last animatePhysics write stamp the transform sync looked at.</summary>
+        internal int m_AnimatedPhysicsSeen;
+
+        /// <summary>A kinematic body's Transform moved by an Animator with animatePhysics: a move to
+        /// the pose over the next step, not a teleport.</summary>
+        internal void MoveAnimated(Vector3 position, Quaternion rotation) => SetMoveTarget(position, QuaternionMath.Normalize(rotation));
+
         /// <summary>A Transform teleport replaces the whole target, including any pending move.</summary>
         internal void Teleport(Vector3 position, Quaternion rotation)
         {

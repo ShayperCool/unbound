@@ -796,6 +796,7 @@ namespace Unbound.Runtime
 
         static void Write(AnimationBindings b, Scratch s, bool skipTransforms = false, Transform rootDuringCull = null)
         {
+            using var physics = AnimatedPhysicsWrites.Begin(b.Owner);
             // The group list may grow (it is only appended to) while game code runs: iterate
             // what exists now.
             var groups = b.Groups;
