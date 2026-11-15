@@ -431,9 +431,7 @@ namespace Unbound.Runtime
         {
             var t = m_Leaf;
             if (t == typeof(float)) return v;
-            // A blended bool is true while any curve keeps it from 0 (measured: true through a
-            // transition away from the clip that sets it).
-            if (t == typeof(bool)) return v != 0f;
+            if (t == typeof(bool)) return AnimationBindings.AnimatedBool(v);
             if (t == typeof(double)) return (double)v;
             // Integers round half up (0.5 is 1, 2.5 is 3: measured).
             long n = (long)Math.Floor(v + 0.5f);
@@ -446,6 +444,13 @@ namespace Unbound.Runtime
     /// hierarchy: groups, their channels and default values, and the clips bound to them.</summary>
     internal sealed class AnimationBindings
     {
+        /// <summary>A bool property (GameObject activity, enabled flags, bool fields) takes a
+        /// blended value as true when it is more than <see cref="BoolThreshold"/> from 0 (matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/animpartial bools, legacy.bools).</summary>
+        internal static bool AnimatedBool(float v) => v < -BoolThreshold || v > BoolThreshold;
+
+        const float BoolThreshold = 0.001f;
+
         static int[] NewMinusOnes(int n)
         {
             var a = new int[n];
@@ -1007,7 +1012,7 @@ namespace Unbound.Runtime
                 if (attribute == "m_IsActive" && !objectValued)
                     return Make(go, "active", 0, () => new AccessorGroup(go, 1,
                         () => new Vector4(go.m_IsActive ? 1f : 0f, 0, 0, 0),
-                        v => go.SetActive(v.x >= 0.5f)));
+                        v => go.SetActive(AnimationBindings.AnimatedBool(v.x))));
                 Unsupported(clip, binding);
                 return spec;
             }
@@ -1036,9 +1041,9 @@ namespace Unbound.Runtime
                     if (TryComponent(attribute, "m_Size", out c))
                         return Make(sr, "size", c, () => new AccessorGroup(sr, 2, () => sr.size, v => sr.size = v));
                     if (attribute == "m_FlipX")
-                        return Make(sr, "flipX", 0, () => new AccessorGroup(sr, 1, () => new Vector4(sr.flipX ? 1 : 0, 0), v => sr.flipX = v.x >= 0.5f));
+                        return Make(sr, "flipX", 0, () => new AccessorGroup(sr, 1, () => new Vector4(sr.flipX ? 1 : 0, 0), v => sr.flipX = AnimationBindings.AnimatedBool(v.x)));
                     if (attribute == "m_FlipY")
-                        return Make(sr, "flipY", 0, () => new AccessorGroup(sr, 1, () => new Vector4(sr.flipY ? 1 : 0, 0), v => sr.flipY = v.x >= 0.5f));
+                        return Make(sr, "flipY", 0, () => new AccessorGroup(sr, 1, () => new Vector4(sr.flipY ? 1 : 0, 0), v => sr.flipY = AnimationBindings.AnimatedBool(v.x)));
                     break;
                 }
                 case CanvasGroup cg:
@@ -1046,9 +1051,9 @@ namespace Unbound.Runtime
                     if (attribute == "m_Alpha")
                         return Make(cg, "alpha", 0, () => new AccessorGroup(cg, 1, () => new Vector4(cg.alpha, 0), v => cg.alpha = v.x));
                     if (attribute == "m_Interactable")
-                        return Make(cg, "interactable", 0, () => new AccessorGroup(cg, 1, () => new Vector4(cg.interactable ? 1 : 0, 0), v => cg.interactable = v.x >= 0.5f));
+                        return Make(cg, "interactable", 0, () => new AccessorGroup(cg, 1, () => new Vector4(cg.interactable ? 1 : 0, 0), v => cg.interactable = AnimationBindings.AnimatedBool(v.x)));
                     if (attribute == "m_BlocksRaycasts")
-                        return Make(cg, "blocksRaycasts", 0, () => new AccessorGroup(cg, 1, () => new Vector4(cg.blocksRaycasts ? 1 : 0, 0), v => cg.blocksRaycasts = v.x >= 0.5f));
+                        return Make(cg, "blocksRaycasts", 0, () => new AccessorGroup(cg, 1, () => new Vector4(cg.blocksRaycasts ? 1 : 0, 0), v => cg.blocksRaycasts = AnimationBindings.AnimatedBool(v.x)));
                     break;
                 }
                 case Animator animator:
@@ -1147,11 +1152,11 @@ namespace Unbound.Runtime
             switch (component)
             {
                 case Behaviour b:
-                    return Make(b, "enabled", 0, () => new AccessorGroup(b, 1, () => new Vector4(b.enabled ? 1 : 0, 0), v => b.enabled = v.x >= 0.5f));
+                    return Make(b, "enabled", 0, () => new AccessorGroup(b, 1, () => new Vector4(b.enabled ? 1 : 0, 0), v => b.enabled = AnimationBindings.AnimatedBool(v.x)));
                 case Renderer r:
-                    return Make(r, "enabled", 0, () => new AccessorGroup(r, 1, () => new Vector4(r.enabled ? 1 : 0, 0), v => r.enabled = v.x >= 0.5f));
+                    return Make(r, "enabled", 0, () => new AccessorGroup(r, 1, () => new Vector4(r.enabled ? 1 : 0, 0), v => r.enabled = AnimationBindings.AnimatedBool(v.x)));
                 case Collider c:
-                    return Make(c, "enabled", 0, () => new AccessorGroup(c, 1, () => new Vector4(c.enabled ? 1 : 0, 0), v => c.enabled = v.x >= 0.5f));
+                    return Make(c, "enabled", 0, () => new AccessorGroup(c, 1, () => new Vector4(c.enabled ? 1 : 0, 0), v => c.enabled = AnimationBindings.AnimatedBool(v.x)));
             }
             Unsupported(clip, binding);
             return default;
