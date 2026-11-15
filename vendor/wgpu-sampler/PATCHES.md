@@ -242,4 +242,5 @@ game thread's rendering removed them. So did waiting only here. Which driver ope
 overlaps is not known (inferred, not measured). Other drivers are unmeasured.
 Cost: the present's thread waits for the GPU once per presented frame, holding the context
 while it waits, so the game thread's rendering does not overlap that wait. The probe's run
-time did not change measurably under load. The cost on an idle machine is unmeasured.
+time did not change measurably under load. Wall times of instrumented runs were 509 to 546 s with
+the wait (6 runs) and 434 to 545 s without it (5 runs), on a machine with a load average of 40 to 50. The cost on an idle machine is unmeasured.

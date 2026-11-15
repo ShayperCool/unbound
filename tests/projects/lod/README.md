@@ -37,4 +37,5 @@ Stress check for render-texture reads under load (not part of the reference or t
 whose 9x9 pixels differ from the sample's own read to `repeat.jsonl` next to `lod.jsonl`
 (nothing is written when all repeats agree). On the OpenGL Core device, before the window
 present waited for its copy (vendor/wgpu-sampler/PATCHES.md `gl-present-wait.patch`), a loaded
-machine gave about one or two such samples per run; measured on the NVIDIA driver only.
+machine gave 0 to 3 such samples in each of 3 runs; measured on the NVIDIA driver only. A sample
+whose own read was wrong shows as one line per repeat.

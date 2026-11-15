@@ -107,6 +107,7 @@ public class LodProbe : MonoBehaviour
         var repeatSetting = System.Environment.GetEnvironmentVariable("LOD_PROBE_REPEAT");
         if (!string.IsNullOrEmpty(repeatSetting)) m_Repeat = int.Parse(repeatSetting, CultureInfo.InvariantCulture);
         m_Dir = dir;
+        if (m_Repeat > 0) File.Delete(Path.Combine(dir, "repeat.jsonl"));
         m_Target = new RenderTexture(9, 9, 24, RenderTextureFormat.ARGB32);
         m_Read = new Texture2D(9, 9, TextureFormat.RGBA32, false);
         float startBias = QualitySettings.lodBias;
