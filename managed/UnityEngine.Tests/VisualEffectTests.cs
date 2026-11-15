@@ -265,11 +265,12 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void OverridesFollowTheirNameAndTypeThroughAssetChanges()
+        public void AnAssetChangeKeepsCurrentAndSavedOverridesByNameAndType()
         {
             var first = First();
             var second = Second();
             var effect = Effect(first);
+            GameObject clone = null;
             try
             {
                 effect.SetFloat("Rate", 50f);
@@ -279,24 +280,43 @@ namespace UnityEngine.Tests
                 Assert.Equal(50f, effect.GetFloat("Rate"));
                 Assert.Equal(1.5f, effect.GetFloat("Count"));
                 Assert.False(effect.HasInt("Count"));
-                // An override of the other type under the same name is kept apart from the first.
-                effect.SetFloat("Count", 9.5f);
                 effect.SetFloat("Rate", 60f);
                 effect.visualEffectAsset = first;
                 Assert.Equal(60f, effect.GetFloat("Rate"));
-                Assert.Equal(41, effect.GetInt("Count"));
+                // The int override only lived in the first sheet: the change away dropped it.
+                Assert.Equal(-7, effect.GetInt("Count"));
+
+                // A clone serializes the effect: its overrides are saved from then on.
+                effect.SetInt("Count", 41);
+                clone = Object.Instantiate(effect.gameObject);
+                Assert.Equal(41, clone.GetComponent<VisualEffect>().GetInt("Count"));
+                Assert.Equal(60f, clone.GetComponent<VisualEffect>().GetFloat("Rate"));
                 effect.visualEffectAsset = second;
-                Assert.Equal(9.5f, effect.GetFloat("Count"));
-                // A reset override is not brought back by a later change.
-                effect.ResetOverride("Rate");
                 effect.visualEffectAsset = first;
-                Assert.Equal(4f, effect.GetFloat("Rate"));
+                Assert.Equal(41, effect.GetInt("Count"));
+                // Changes after the save are current ones: they win at the next change...
+                effect.SetFloat("Rate", 70f);
+                effect.visualEffectAsset = first;
+                Assert.Equal(70f, effect.GetFloat("Rate"));
+                // ...but are not saved: with no asset in between, the saved value is back.
                 effect.visualEffectAsset = null;
                 Assert.False(effect.HasFloat("Rate"));
                 effect.visualEffectAsset = first;
+                Assert.Equal(60f, effect.GetFloat("Rate"));
+                // A reset override is saved as overridden still: it returns the same way.
+                effect.ResetOverride("Count");
+                Assert.Equal(-7, effect.GetInt("Count"));
+                effect.visualEffectAsset = first;
+                Assert.Equal(-7, effect.GetInt("Count"));
+                effect.visualEffectAsset = null;
+                effect.visualEffectAsset = first;
                 Assert.Equal(41, effect.GetInt("Count"));
             }
-            finally { Object.DestroyImmediate(effect.gameObject); }
+            finally
+            {
+                Object.DestroyImmediate(effect.gameObject);
+                if (clone != null) Object.DestroyImmediate(clone);
+            }
         }
 
         [Fact]
@@ -387,7 +407,9 @@ VisualEffect:
             var effect = Effect(asset);
             try
             {
-                Assert.Null(new GameObject("bare").AddComponent<VisualEffect>().CreateVFXEventAttribute());
+                var bare = new GameObject("bare").AddComponent<VisualEffect>();
+                Assert.Null(bare.CreateVFXEventAttribute());
+                Object.DestroyImmediate(bare.gameObject);
                 var attribute = effect.CreateVFXEventAttribute();
                 Assert.True(attribute.HasFloat("spawnCount"));
                 Assert.False(attribute.HasInt("spawnCount"));
@@ -413,6 +435,127 @@ VisualEffect:
                 Assert.Throws<NullReferenceException>(() => attribute.HasFloat("spawnCount"));
             }
             finally { Object.DestroyImmediate(effect.gameObject); }
+        }
+
+        static VFXLayoutElementDesc Attribute(string name, VFXValueType type, uint element, uint stride) =>
+            new VFXLayoutElementDesc { name = name, type = type, offset = new VFXLayoutOffset { structure = stride, element = element } };
+
+        static VisualEffectAsset WithAttributes(uint stride, params VFXLayoutElementDesc[] layout)
+        {
+            var data = new VFXCPUBufferData();
+            for (uint i = 0; i < stride; i++) data.PushFloat(0f);
+            return Asset(new VFXExpressionSheet { expressions = new[] { Value(VFXValueType.Float) } },
+                new[] { new VFXCPUBufferDesc { layout = layout, capacity = 1, stride = stride, initialData = data } });
+        }
+
+        [Fact]
+        public void EventAttributesCopyByNameBetweenLayouts()
+        {
+            var first = Effect(WithAttributes(9, Attribute("spawnCount", VFXValueType.Float, 0, 9), Attribute("lifetime", VFXValueType.Float, 1, 9),
+                Attribute("velocity", VFXValueType.Float3, 2, 9), Attribute("color", VFXValueType.Float3, 5, 9), Attribute("alive", VFXValueType.Boolean, 8, 9)));
+            var second = Effect(WithAttributes(6, Attribute("spawnCount", VFXValueType.Float, 0, 6), Attribute("color", VFXValueType.Float3, 1, 6),
+                Attribute("size", VFXValueType.Float, 4, 6), Attribute("lifetime", VFXValueType.Float, 5, 6)));
+            try
+            {
+                var a = first.CreateVFXEventAttribute();
+                a.SetFloat("spawnCount", 5f);
+                a.SetFloat("lifetime", 9f);
+                a.SetVector3("velocity", new Vector3(1f, 2f, 3f));
+                a.SetVector3("color", new Vector3(0.125f, 0.25f, 0.375f));
+                a.SetBool("alive", true);
+                var b = second.CreateVFXEventAttribute();
+                b.SetFloat("size", 4f);
+                b.SetVector3("color", new Vector3(0.875f, 0.75f, 0.625f));
+                b.CopyValuesFrom(a);
+                // Shared names take the other set's values wherever they lie; its own keep theirs.
+                Assert.Equal(5f, b.GetFloat("spawnCount"));
+                Assert.Equal(9f, b.GetFloat("lifetime"));
+                Assert.Equal(new Vector3(0.125f, 0.25f, 0.375f), b.GetVector3("color"));
+                Assert.Equal(4f, b.GetFloat("size"));
+                Assert.False(b.HasVector3("velocity"));
+                var back = first.CreateVFXEventAttribute();
+                back.SetVector3("velocity", new Vector3(7f, 8f, 9f));
+                back.SetBool("alive", true);
+                b.SetFloat("lifetime", 2f);
+                back.CopyValuesFrom(b);
+                Assert.Equal(2f, back.GetFloat("lifetime"));
+                Assert.Equal(new Vector3(7f, 8f, 9f), back.GetVector3("velocity"));
+                Assert.True(back.GetBool("alive"));
+                Assert.Equal(new Vector3(0.125f, 0.25f, 0.375f), back.GetVector3("color"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(first.gameObject);
+                Object.DestroyImmediate(second.gameObject);
+            }
+        }
+
+        sealed class Warnings : ILogHandler, IDisposable
+        {
+            readonly ILogHandler m_Previous = Debug.unityLogger.logHandler;
+            public readonly List<string> Messages = new List<string>();
+            public Warnings() { Debug.unityLogger.logHandler = this; }
+            public void Dispose() { Debug.unityLogger.logHandler = m_Previous; }
+            public void LogException(Exception exception, Object context) { }
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning) Messages.Add(string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args));
+            }
+        }
+
+        [Fact]
+        public void TheFirstEffectWithSystemsSaysEffectsAreNotSimulated()
+        {
+            bool warned = VisualEffect.s_WarnedNotSimulated;
+            VisualEffect.s_WarnedNotSimulated = false;
+            var withSystems = First();
+            withSystems.m_Name = "Smoke";
+            var empty = VisualEffectAsset.Create();
+            var objects = new List<GameObject>();
+            try
+            {
+                using var warnings = new Warnings();
+                // No asset, and an asset without systems: nothing would be simulated.
+                objects.Add(new GameObject("bare").AddComponent<VisualEffect>().gameObject);
+                var none = new GameObject("empty").AddComponent<VisualEffect>();
+                objects.Add(none.gameObject);
+                none.visualEffectAsset = empty;
+                Assert.DoesNotContain(warnings.Messages, m => m.Contains("not simulated"));
+                var effect = new GameObject("chimney").AddComponent<VisualEffect>();
+                objects.Add(effect.gameObject);
+                effect.visualEffectAsset = withSystems;
+                var said = Assert.Single(warnings.Messages, m => m.Contains("not simulated"));
+                Assert.Equal("Unbound: VisualEffect 'chimney' (Smoke): " + VisualEffect.NotSimulated + ". `unbound doctor` lists the project's effects.", said);
+                // Once: a second effect does not repeat it.
+                var again = new GameObject("second").AddComponent<VisualEffect>();
+                objects.Add(again.gameObject);
+                again.visualEffectAsset = withSystems;
+                Assert.Single(warnings.Messages, m => m.Contains("not simulated"));
+            }
+            finally
+            {
+                VisualEffect.s_WarnedNotSimulated = warned;
+                foreach (var o in objects) Object.DestroyImmediate(o);
+            }
+        }
+
+        [Fact]
+        public void TheDoctorListsEffectsWithAnAssetAsNotSimulated()
+        {
+            const string scene = "--- !u!2083052967 &11\nVisualEffect:\n  m_Enabled: 1\n  m_Asset: {fileID: 8926484042661614526, guid: 0123456789abcdef0123456789abcdef, type: 3}\n"
+                + "--- !u!2083052967 &12\nVisualEffect:\n  m_Enabled: 1\n  m_Asset: {fileID: 0}\n";
+            var found = new ClassCoverage.Found
+            {
+                ClassId = 2083052967, TypeName = "VisualEffect", Keys = new List<string> { "m_Enabled", "m_Asset" }, Referenced = new List<string>(),
+                Documents = new Dictionary<string, string> { ["Assets/Scene.unity"] = scene },
+            };
+            var entry = Assert.Single(ClassCoverage.Report("6000.0.71f1", new[] { found }).Classes);
+            Assert.Equal(ClassReading.Unsupported.ToString(), entry.Reading);
+            Assert.Equal("Assets/Scene.unity fileID 11: " + VisualEffect.NotSimulated, entry.Detail);
+            // Without an asset there is nothing to simulate: the class is simply read.
+            found.Documents["Assets/Scene.unity"] = "--- !u!2083052967 &12\nVisualEffect:\n  m_Enabled: 1\n  m_Asset: {fileID: 0}\n";
+            entry = Assert.Single(ClassCoverage.Report("6000.0.71f1", new[] { found }).Classes);
+            Assert.Equal(ClassReading.Read.ToString(), entry.Reading);
         }
 
         [Fact]
