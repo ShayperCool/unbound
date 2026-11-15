@@ -431,7 +431,7 @@ namespace Unbound.Runtime
                         // (Default-Skybox stores the simple sun disk, its shader's default is the
                         // high-quality one: tests/projects/lightingdatanan sun.png, builtinresources).
                         var material = new Material { name = name };
-                        material.ReadBuiltinRecord(fields, shader);
+                        material.ReadBuiltinRecord(fields);
                         material.m_CustomRenderQueue = rawQueue;
                         obj = material;
                         break;

@@ -4,7 +4,7 @@
     "reason": "Two pixels on the mirror spheres' silhouettes differ by up to 8; every other pixel within 2."
   },
   "sun.png": {
-    "mean": 0.61, "worst": 37, "over8": 10,
+    "mean": 0.62, "worst": 37, "over8": 10,
     "reason": "The procedural sky's simple sun disk (the default sky's): the disk's four edge pixels on each side differ by up to 37, the Editor's edge a little asymmetric (a fraction of a pixel), Unbound's symmetric; the disk itself and the sky elsewhere within 2."
   }
 }

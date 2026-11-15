@@ -1400,16 +1400,12 @@ namespace UnityEngine
 
         /// <summary>A built-in Material's stored state from its record (the install's object as
         /// the host reads it: references as {fileID, guid} into the built-in files), read as a
-        /// project material's; the shader stays the one its record named.</summary>
-        internal void ReadBuiltinRecord(System.Text.Json.JsonElement fields, Shader shader)
+        /// project material's: its shader, keywords, saved properties and flags.</summary>
+        internal void ReadBuiltinRecord(System.Text.Json.JsonElement fields)
         {
-            var name = m_Name;
-            if (fields.ValueKind == System.Text.Json.JsonValueKind.Object)
-                ((ISerializedAsset)this).ReadSerialized(YNode.FromJson(fields), BuiltinReferences.Instance);
-            m_Shader = shader;
-            m_Name = name;
-            AddTextureNames();
-            MarkDirty();
+            if (fields.ValueKind != System.Text.Json.JsonValueKind.Object)
+                throw new FormatException($"the record of built-in Material '{m_Name}' is not an object");
+            ((ISerializedAsset)this).ReadSerialized(YNode.FromJson(fields), BuiltinReferences.Instance);
         }
 
         /// <summary>References of the install's built-in resource files, resolved to their objects.</summary>
