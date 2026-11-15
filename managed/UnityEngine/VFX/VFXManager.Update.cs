@@ -23,8 +23,11 @@ namespace UnityEngine.VFX
             internal float DeltaTime, UnscaledDeltaTime;
         }
 
-        /// <summary>The smallest fixed time step the settings are taken as, and what the longest
-        /// step is extended by when counting the fixed steps it holds.</summary>
+        /// <summary>The smallest fixed time step the settings are taken as (so a step of zero
+        /// cannot divide), and what the longest step is extended by when counting the fixed
+        /// steps it holds (so a longest step that is a whole number of steps, as the default
+        /// 0.05 is of three sixtieths, counts them all). Neither has a control of its own: the
+        /// default settings' three steps are measured (tests/projects/vfx, `sim/rate*` from frame 37).</summary>
         const float MinFixedTimeStep = 1e-4f, StepCountSlack = 1e-5f;
 
         static readonly List<VisualEffect> s_Effects = new List<VisualEffect>();
@@ -78,6 +81,9 @@ namespace UnityEngine.VFX
             return time;
         }
 
+        /// <summary>The frame count of a session's first frame.</summary>
+        const int FirstFrame = 1;
+
         /// <summary>A camera culled its renderers: effects update in the next frame's update.</summary>
         internal static void CameraCulled() => s_UpdateRequested = true;
 
@@ -89,6 +95,11 @@ namespace UnityEngine.VFX
         static void Update()
         {
             int count = s_Effects.Count;
+            // In the Editor a value a script gives a property in the first frame of play is gone
+            // in the second: every effect is back at its saved values (tests/projects/vfx,
+            // `sim/override timing`, `sim/expressions others|scene|copy`; later frames keep theirs).
+            if (Time.frameCount == FirstFrame)
+                for (int i = 0; i < count; i++) s_Effects[i].RevertToSavedOverrides();
             if (count == 0 || !s_UpdateRequested) return;
             s_UpdateRequested = false;
             s_Frame++;
@@ -102,7 +113,9 @@ namespace UnityEngine.VFX
                 var effect = s_Snapshot[i];
                 s_Snapshot[i] = null;
                 if (!effect || !effect.isActiveAndEnabled) continue;
-                effect.UpdateEffect(time);
+                // One effect's failure (a script's spawner block throwing) is its own.
+                try { effect.UpdateEffect(time); }
+                catch (Exception e) { Debug.LogException(e, effect); }
                 s_UpdateRequested |= effect.SimulatesWhenCulled;
             }
         }

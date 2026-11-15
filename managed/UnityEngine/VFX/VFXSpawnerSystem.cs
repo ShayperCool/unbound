@@ -275,6 +275,8 @@ namespace Unbound.Runtime
             /// random sequence.</summary>
             protected float Draw(int rangeExpression, VisualEffectState state)
             {
+                // A block compiled without the input draws nothing.
+                if (rangeExpression < 0) return 0f;
                 var range = Values.GetVector(rangeExpression, 2);
                 return (range.y - range.x) * state.Random.NextValue() + range.x;
             }

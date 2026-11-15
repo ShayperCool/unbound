@@ -68,7 +68,8 @@ namespace UnityEngine.VFX
         uint m_StartSeed;
         bool m_ResetSeedOnPlay = true;
         /// <summary>Whether the effect may be batched with others of its asset, and the resource
-        /// version its component was saved with: kept as serialized (nothing is simulated yet).</summary>
+        /// version its component was saved with: kept as serialized (every effect is a batch of
+        /// its own here).</summary>
         bool m_AllowInstancing = true;
         uint m_ResourceVersion;
         bool m_Pause;
@@ -117,7 +118,7 @@ namespace UnityEngine.VFX
                 Apply(merged);
                 // Another asset's systems, started as a new effect.
                 DestroySystems();
-                if (m_Registered) CreateSystems(true);
+                CreateSystems(true);
             }
         }
 
@@ -199,6 +200,15 @@ namespace UnityEngine.VFX
                 s.m_SheetChanged = false;
             }
             m_Serialized = s.m_Serialized == null ? null : new List<SerializedOverride>(s.m_Serialized);
+            CreateSheet();
+            Apply(m_Serialized);
+        }
+
+        /// <summary>Back to the saved overrides: what scripts set since is dropped.</summary>
+        internal void RevertToSavedOverrides()
+        {
+            if (!m_SheetChanged) return;
+            m_SheetChanged = false;
             CreateSheet();
             Apply(m_Serialized);
         }

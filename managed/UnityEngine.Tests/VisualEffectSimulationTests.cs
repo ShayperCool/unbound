@@ -183,10 +183,10 @@ namespace UnityEngine.Tests
             Assert.Equal(5u, values.GetWord(14));
             Assert.Equal(9u, values.GetWord(15));
             Assert.Equal(unchecked((uint)-1), values.GetWord(16));
-            // Operations a type does not have leave the value as it was (zero here).
-            Assert.Equal(0u, values.GetWord(17));
+            // Operations a type does not have leave the value as it was (never evaluated: every bit set).
+            Assert.Equal(uint.MaxValue, values.GetWord(17));
             Assert.Equal(5u, values.GetWord(18));
-            Assert.Equal(0u, values.GetWord(19));
+            Assert.Equal(uint.MaxValue, values.GetWord(19));
         }
 
         [Fact]
@@ -209,9 +209,9 @@ namespace UnityEngine.Tests
             }, new[] { Constant(0, 2.5f), Constant(1, -2.5f), Constant(2, float.NaN), Constant(3, 0.75f) });
             var values = new VisualEffectValues(data);
             VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
-            // Halves round away from zero.
-            Assert.Equal(3f, values.GetFloat(4));
-            Assert.Equal(-3f, values.GetFloat(5));
+            // Halves round to the even neighbour.
+            Assert.Equal(2f, values.GetFloat(4));
+            Assert.Equal(-2f, values.GetFloat(5));
             Assert.Equal(0.5f, values.GetFloat(6));
             Assert.Equal(1f, values.GetFloat(7));
             Assert.Equal(0f, values.GetFloat(8));
@@ -256,12 +256,9 @@ namespace UnityEngine.Tests
             Assert.Equal(0x7ffffff8u, values.GetWord(13));
             Assert.Equal(0xfffffff0u ^ 33u, values.GetWord(14));
             Assert.Equal(~33u, values.GetWord(15));
-            float random = values.GetFloat(16);
-            Assert.InRange(random, 0f, 0.99999994f);
-            // The same hash, the same number.
-            uint h = 33u;
-            h = ((h >> 16) ^ h) * 0x45d9f3b; h = ((h >> 16) ^ h) * 0x45d9f3b; h = (h >> 16) ^ h;
-            Assert.Equal(BitConverter.UInt32BitsToSingle((h >> 9) | 0x3f800000) - 1f, random);
+            // The number a hash gives, in [0, 1): pinned (the Editor's draw from an effect's seed
+            // is recorded by tests/projects/vfx, `sim/expressions/inputs/*/f32`).
+            Assert.Equal(0x3e244738u, values.GetWord(16));
             Assert.Equal(new uint[] { 0, 1, 1 }, new[] { values.GetWord(17), values.GetWord(18), values.GetWord(19) });
         }
 
@@ -289,13 +286,15 @@ namespace UnityEngine.Tests
             Assert.Equal((77u, 12u), (values.GetWord(4), values.GetWord(5)));
             Assert.Equal(state.LocalToWorld, values.GetMatrix(6));
             Assert.Equal(new Vector4(12f, 24f, 36f, 0f), values.GetVector(8, 3));
+            // A value nothing evaluated yet has every bit set.
+            Assert.Equal(uint.MaxValue, new VisualEffectValues(data).GetWord(0));
             Assert.Equal(new Vector4(2f, 4f, 6f, 0f), values.GetVector(9, 3));
             var direction = (Vector3)values.GetVector(10, 3);
             Assert.Equal(1f, direction.magnitude, 5);
             Assert.Equal(24f, values.GetFloat(11));
             Assert.Equal(new Vector4(0.25f, 3f, 0f, 0f), values.GetVector(12, 2));
-            // A spawner's own values are not evaluated outside one: the value stays.
-            Assert.Equal(0u, values.GetWord(13));
+            // A spawner's own values are not evaluated outside one: the value stays (every bit set).
+            Assert.Equal(uint.MaxValue, values.GetWord(13));
         }
 
         [Fact]
@@ -310,6 +309,70 @@ namespace UnityEngine.Tests
                 new VFXEditorSystemDesc { name = "Trail", type = VFXSystemType.Particle, layer = 0, flags = VFXSystemFlag.SystemHasKill | VFXSystemFlag.SystemHasStrips, tasks = Array.Empty<VFXEditorTaskDesc>() },
             });
             Assert.Equal("SystemHasStrips of the system 'Trail'", VisualEffect.Unsupported(strips));
+        }
+
+        [Fact]
+        public void TransformsOfAFrameMatchTheEditorsBits()
+        {
+            // The frame of tests/projects/vfx `sim/expressions`: its matrix, the transforms of
+            // (1, 2, 3) and its inverse, bit for bit as recorded there (m00, v03, v04, q00, m01).
+            int f3 = (int)VFXValueType.Float3, f4 = (int)VFXValueType.Float4;
+            var data = Data(new[]
+            {
+                Value(VFXValueType.Float3), Value(VFXValueType.Float3), Value(VFXValueType.Float3), Value(VFXValueType.Float3), Value(VFXValueType.Float4), // 0..4
+                Op(VFXExpressionOperation.TRSToMatrix, 0, 1, 2), Op(VFXExpressionOperation.TransformPos, 5, 3, -1, f3),                                  // 5, 6
+                Op(VFXExpressionOperation.TransformVec, 5, 3, -1, f3), Op(VFXExpressionOperation.TransformVector4, 5, 4, -1, f4),                        // 7, 8
+                Op(VFXExpressionOperation.InverseTRSMatrix, 5), Op(VFXExpressionOperation.TransformDir, 5, 3, -1, f3),                                   // 9, 10
+            }, new[]
+            {
+                Constant(0, new Vector3(10f, 20f, 30f)), Constant(1, new Vector3(30f, 45f, 60f)), Constant(2, new Vector3(2f, 3f, 4f)),
+                Constant(3, new Vector3(1f, 2f, 3f)), Constant(4, new Vector4(1f, 2f, 3f, 1f)),
+            });
+            var values = new VisualEffectValues(data);
+            VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
+            uint[] Words(int expression, int count)
+            {
+                var words = new uint[count];
+                Array.Copy(values.Words, data.ValueOffsets[expression], words, 0, count);
+                return words;
+            }
+            Assert.Equal(new uint[]
+            {
+                0x3fa8e4b2, 0x3fbfffff, 0xbdc20428, 0x00000000, 0xbfa744cc, 0x3fa646e2, 0x40178442, 0x00000000,
+                0x401cc470, 0xbffffffe, 0x401cc470, 0x00000000, 0x41200000, 0x41a00000, 0x41f00000, 0x3f800000,
+            }, Words(5, 16));
+            Assert.Equal(new uint[] { 0x41806f5c, 0x4190c8dd, 0x4227f45b }, Words(6, 3));
+            Assert.Equal(new uint[] { 0x40c1bd6e, 0xbff37234, 0x413fd16c }, Words(7, 3));
+            Assert.Equal(new uint[] { 0x41806f5c, 0x4190c8dd, 0x4227f45b, 0x3f800000 }, Words(8, 4));
+            Assert.Equal(new uint[]
+            {
+                0x3ea8e4b3, 0xbe14aeef, 0x3e1cc472, 0x00000000, 0x3ec00000, 0x3e13cd3c, 0xbe000000, 0x00000000,
+                0xbcc20422, 0x3e86ae74, 0x3e1cc471, 0x00000000, 0xc121693a, 0xc115385a, 0xc067eb1b, 0x3f800000,
+            }, Words(9, 16));
+            // A direction comes out of unit length.
+            var direction = (Vector3)values.GetVector(10, 3);
+            Assert.Equal(1f, direction.magnitude, 6);
+
+            // A frame of no depth has no inverse: a matrix of zeros.
+            values.SetVector(2, new Vector3(1f, 1f, 0f), 3);
+            VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
+            Assert.All(Words(9, 16), word => Assert.Equal(0u, word));
+        }
+
+        [Fact]
+        public void AKernelsTexturesAndBuffersAreItsTasksObjectValues()
+        {
+            var data = Data(new[] { Value(VFXValueType.Float), Value(VFXValueType.Texture2D), Value(VFXValueType.Buffer), Value(VFXValueType.Curve), Value(VFXValueType.Texture3D) },
+                Array.Empty<VFXExpressionValueContainerDesc>());
+            var task = new VFXEditorTaskDesc
+            {
+                type = VFXTaskType.Initialize,
+                values = new[] { new VFXMapping("rate", 0), new VFXMapping("mainTexture", 1), new VFXMapping("points", 2), new VFXMapping("curve", 3), new VFXMapping("field", 4), new VFXMapping("gone", -1) },
+            };
+            // Numbers reach a kernel through the graph values, curves as baked textures: the
+            // textures and the buffer are bound by name.
+            Assert.Equal(new[] { (Shader.PropertyToID("mainTexture"), 1), (Shader.PropertyToID("points"), 2), (Shader.PropertyToID("field"), 4) }, VFXParticleSystem.ObjectValues(data, task));
+            Assert.Empty(VFXParticleSystem.ObjectValues(data, new VFXEditorTaskDesc { type = VFXTaskType.Update }));
         }
 
         // ------------------------------------------------------------------- the frame's steps
@@ -492,6 +555,15 @@ namespace UnityEngine.Tests
                 Assert.Equal(0, effect.aliveParticleCount);
                 Assert.Equal(VFXSpawnerLoopState.Finished, effect.GetSpawnSystemInfo("Spawn").loopState);
                 Assert.Equal(new[] { 1, 2 }, Counts(effect, 2));
+                // Disabled, it keeps its systems and its state; enabled again, it starts over.
+                Counts(effect, 1);
+                effect.enabled = false;
+                Assert.Equal(3, effect.aliveParticleCount);
+                Assert.Equal(VFXSpawnerLoopState.Looping, effect.GetSpawnSystemInfo("Spawn").loopState);
+                effect.enabled = true;
+                Assert.Equal(0, effect.aliveParticleCount);
+                Assert.Equal(VFXSpawnerLoopState.Finished, effect.GetSpawnSystemInfo("Spawn").loopState);
+                Assert.Equal(new[] { 1, 2 }, Counts(effect, 2));
                 // Without its initial event it waits for a play.
                 effect.Reinit(false);
                 Assert.Equal(new[] { 0, 0 }, Counts(effect, 2));
@@ -554,11 +626,9 @@ namespace UnityEngine.Tests
                 var wrong = Assert.Throws<ArgumentException>(() => effect.GetSpawnSystemInfo("Particles"));
                 Assert.Equal("System \"Particles\" does not exist or is not a particle system", wrong.Message);
                 Assert.Throws<NullReferenceException>(() => effect.GetSpawnSystemInfo(Shader.PropertyToID("Spawn"), null));
-                // Without running systems (the effect disabled), a particle system the asset has is an error.
+                // A disabled effect keeps its systems: they still answer.
                 effect.enabled = false;
-                var gone = Assert.Throws<ArgumentException>(() => effect.GetParticleSystemInfo("Particles"));
-                Assert.Equal("System \"Particles\" does not exist or is not a particle system", gone.Message);
-                Assert.Equal(0, effect.aliveParticleCount);
+                Assert.Equal(20u, effect.GetParticleSystemInfo("Particles").capacity);
             }
             finally
             {

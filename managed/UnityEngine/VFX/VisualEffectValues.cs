@@ -21,6 +21,9 @@ namespace Unbound.Runtime
         {
             m_Data = data;
             m_Words = new uint[data.WordCount];
+            // A value nothing evaluated yet has every bit set (Unity 6000.0.71f1, tests/projects/vfx
+            // `sim/expressions/inputs/play1`: a spawner's own values read before its first step).
+            Array.Fill(m_Words, uint.MaxValue);
             m_Objects = new object[data.ObjectCount];
             for (int i = 0; i < data.ConstantOf.Length; i++)
                 if (data.ConstantOf[i] >= 0) LoadConstant(i);

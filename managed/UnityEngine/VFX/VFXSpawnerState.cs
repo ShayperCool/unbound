@@ -271,7 +271,10 @@ namespace UnityEngine.VFX
             m_DeltaTime = source.m_DeltaTime;
             if (source.m_Attribute != null)
             {
-                m_Attribute = new VFXEventAttribute(source.m_Attribute);
+                // A state filled before keeps its attributes object when it fits.
+                var from = source.m_Attribute.Words;
+                if (m_Attribute != null && m_Attribute.vfxAsset == source.m_Attribute.vfxAsset && m_Attribute.Words.Length == from.Length) Array.Copy(from, m_Attribute.Words, from.Length);
+                else m_Attribute = new VFXEventAttribute(source.m_Attribute);
                 m_Attribute.SpawnCount = spawnCount;
             }
             m_NewLoop = newLoop;

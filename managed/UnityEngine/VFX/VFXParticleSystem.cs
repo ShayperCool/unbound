@@ -203,6 +203,7 @@ namespace Unbound.Runtime
             m_ReadbackPending = false;
             m_ReadbackGeneration++;
             m_NextReadbackFrame = VFXManager.Frame + 1;
+            m_PrefixWords[0] = m_PrefixWords[1] = 0;
             if (Capacity == 0) return;
 
             // Every particle dead: the list holds the capacity as its count and the indices so
@@ -210,18 +211,25 @@ namespace Unbound.Runtime
             // (no particle alive).
             if (m_DeadList >= 0)
             {
-                var list = new uint[DeadListHeaderWords + Capacity];
-                list[0] = list[1] = Capacity;
-                for (uint i = 0; i < Capacity; i++) list[DeadListHeaderWords + i] = Capacity - i - 1;
-                Effect.GpuBuffer(m_DeadList, list.Length).SetData(list);
+                if (m_NewDeadList == null)
+                {
+                    m_NewDeadList = new uint[DeadListHeaderWords + Capacity];
+                    m_NewDeadList[0] = m_NewDeadList[1] = Capacity;
+                    for (uint i = 0; i < Capacity; i++) m_NewDeadList[DeadListHeaderWords + i] = Capacity - i - 1;
+                }
+                Effect.GpuBuffer(m_DeadList, m_NewDeadList.Length).SetData(m_NewDeadList);
             }
             if (m_AttributeBuffer >= 0)
             {
                 var buffer = Effect.GpuBuffer(m_AttributeBuffer, 1);
-                buffer.SetData(new uint[buffer.count]);
+                buffer.SetData(m_NoAttributes ??= new uint[buffer.count]);
             }
-            if (m_Indirection >= 0) Effect.GpuBuffer(m_Indirection, 2).SetData(new uint[2]);
+            if (m_Indirection >= 0) Effect.GpuBuffer(m_Indirection, 2).SetData(m_PrefixWords, 0, 0, 2);
         }
+
+        /// <summary>What a reset uploads, made once: a dead list of every particle, and
+        /// attributes of none.</summary>
+        uint[] m_NewDeadList, m_NoAttributes;
 
         /// <summary>Takes a spawn event: the whole particles it asks for, as far as the system
         /// has room (a system whose particles never die fills up for good).</summary>
@@ -266,8 +274,22 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Whether every kernel of the system compiles (checked once, before its
+        /// first step): a system with one that does not is stopped, and says so.</summary>
+        bool KernelsUsable()
+        {
+            if (m_KernelsChecked) return m_KernelsUsable;
+            m_KernelsChecked = true;
+            m_KernelsUsable = m_Initialize == null || m_Initialize.Usable();
+            foreach (var update in m_Updates) m_KernelsUsable &= update.Usable();
+            return m_KernelsUsable;
+        }
+
+        bool m_KernelsChecked, m_KernelsUsable;
+
         internal override void Update(VisualEffectState state)
         {
+            if (!KernelsUsable()) return;
             foreach (var spawner in m_Spawners) TakeEvent(spawner.State.Attribute.Words);
             m_Total += m_Spawned;
             UpdateSleepState(state.FrameIndex);
@@ -362,6 +384,21 @@ namespace Unbound.Runtime
             x = rows == 0 ? 0 : (int)((groups + rows - 1) / rows);
         }
 
+        /// <summary>The values of a task that are objects: the textures and graphics buffers
+        /// its kernel declares, by the names it declares them with (numbers reach a kernel
+        /// through the graph values).</summary>
+        internal static (int Name, int Expression)[] ObjectValues(VisualEffectCompiledData data, in VFXEditorTaskDesc task)
+        {
+            var objects = new List<(int, int)>();
+            foreach (var value in task.values ?? Array.Empty<VFXMapping>())
+            {
+                if (value.index < 0 || value.index >= data.ExpressionTypes.Length) continue;
+                var type = data.ExpressionTypes[value.index];
+                if (VisualEffectCompiledData.IsTextureType(type) || type == VFXValueType.Buffer) objects.Add((Shader.PropertyToID(value.name), value.index));
+            }
+            return objects.ToArray();
+        }
+
         /// <summary>A compute task of the system: its shader with the buffers it reads bound.</summary>
         sealed class Kernel
         {
@@ -376,8 +413,12 @@ namespace Unbound.Runtime
             readonly int[] m_BufferNames;
             /// <summary>The buffers bound, to bind one again only once it was replaced.</summary>
             readonly GraphicsBuffer[] m_Bound;
+            /// <summary>The textures and graphics buffers the kernel reads: values of the
+            /// effect, bound by name (again only once the value is another object).</summary>
+            readonly (int Name, int Expression)[] m_Objects;
+            readonly object[] m_BoundObjects;
             int m_DispatchWidth = -1, m_PrefixOffset = -1;
-            bool m_Failed;
+            bool m_Checked, m_Failed;
 
             internal Kernel(VFXParticleSystem system, in VFXEditorTaskDesc task, ComputeShader shader)
             {
@@ -390,10 +431,31 @@ namespace Unbound.Runtime
                 m_BufferNames = new int[count];
                 m_Bound = new GraphicsBuffer[count];
                 for (int i = 0; i < count; i++) m_BufferNames[i] = Shader.PropertyToID(task.buffers[i].name);
+                m_Objects = ObjectValues(system.Effect.Data, task);
+                m_BoundObjects = new object[m_Objects.Length];
                 // One instance, active, in a batch of one, at offset zero: the counts as the
                 // kernels read them, the bits of unsigned integers.
                 float one = BitConverter.Int32BitsToSingle(1);
                 m_Shader.SetVector(s_InstancingConstants, new Vector4(one, one, one, 0f));
+            }
+
+            /// <summary>Whether the kernel compiles here; said once when it does not (a system
+            /// whose kernel cannot run stops, rather than count particles nothing spawns).</summary>
+            internal bool Usable()
+            {
+                if (m_Checked) return !m_Failed;
+                m_Checked = true;
+                try
+                {
+                    m_Shader.GetKernelThreadGroupSizes(m_Kernel, out _, out _, out _);
+                }
+                catch (Exception e)
+                {
+                    m_Failed = true;
+                    var effect = m_System.Effect;
+                    Debug.LogError($"Unbound: VisualEffect '{effect.name}': the {m_Task.type} kernel of '{m_System.Desc.name}' does not compile ({e.Message}); the system does not simulate", effect);
+                }
+                return !m_Failed;
             }
 
             /// <summary>Runs the kernel over <paramref name="count"/> threads, the instance's
@@ -402,28 +464,29 @@ namespace Unbound.Runtime
             {
                 if (count == 0 || m_Failed) return;
                 var effect = m_System.Effect;
-                try
+                var values = effect.Values;
+                for (int i = 0; i < m_Objects.Length; i++)
                 {
-                    for (int i = 0; i < m_BufferNames.Length; i++)
-                    {
-                        int index = m_Task.buffers[i].index;
-                        if (index < 0) continue;
-                        var buffer = effect.GpuBuffer(index, 0);
-                        if (ReferenceEquals(buffer, m_Bound[i])) continue;
-                        m_Bound[i] = buffer;
-                        m_Shader.SetBuffer(m_Kernel, m_BufferNames[i], buffer);
-                    }
-                    ThreadGroups(count, out int x, out int y);
-                    if (x != m_DispatchWidth) m_Shader.SetInt(s_DispatchWidth, m_DispatchWidth = x);
-                    if (prefixOffset != m_PrefixOffset) m_Shader.SetVector(s_InstancingBufferOffsets, new Vector4(0f, m_PrefixOffset = prefixOffset, 0f, 0f));
-                    m_Shader.Dispatch(m_Kernel, x, y, 1);
+                    var value = values.GetObject(m_Objects[i].Expression);
+                    if (ReferenceEquals(value, m_BoundObjects[i])) continue;
+                    m_BoundObjects[i] = value;
+                    // A property without an object leaves the kernel's default.
+                    if (value is Texture texture && texture) m_Shader.SetTexture(m_Kernel, m_Objects[i].Name, texture);
+                    else if (value is GraphicsBuffer graphicsBuffer) m_Shader.SetBuffer(m_Kernel, m_Objects[i].Name, graphicsBuffer);
                 }
-                catch (Exception e)
+                for (int i = 0; i < m_BufferNames.Length; i++)
                 {
-                    // A kernel that does not compile here stops its task, said once.
-                    m_Failed = true;
-                    Debug.LogError($"Unbound: VisualEffect '{effect.name}': the {m_Task.type} kernel of '{m_System.Desc.name}' cannot run ({e.Message}); the system does not simulate", effect);
+                    int index = m_Task.buffers[i].index;
+                    if (index < 0) continue;
+                    var buffer = effect.GpuBuffer(index, 0);
+                    if (ReferenceEquals(buffer, m_Bound[i])) continue;
+                    m_Bound[i] = buffer;
+                    m_Shader.SetBuffer(m_Kernel, m_BufferNames[i], buffer);
                 }
+                ThreadGroups(count, out int x, out int y);
+                if (x != m_DispatchWidth) m_Shader.SetInt(s_DispatchWidth, m_DispatchWidth = x);
+                if (prefixOffset != m_PrefixOffset) m_Shader.SetVector(s_InstancingBufferOffsets, new Vector4(0f, m_PrefixOffset = prefixOffset, 0f, 0f));
+                m_Shader.Dispatch(m_Kernel, x, y, 1);
             }
 
             internal void Release() => UnityEngine.Object.Destroy(m_Shader);

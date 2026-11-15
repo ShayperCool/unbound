@@ -11,7 +11,9 @@ namespace UnityEngine.VFX
     // (tests/projects/vfx).
     public partial class VisualEffect
     {
-        /// <summary>A step shorter than this does not advance the effect.</summary>
+        /// <summary>A step no longer than this does not advance the effect (a millionth of a
+        /// second, as a float; a rate of zero or a pause gives such steps: tests/projects/vfx
+        /// `sim/control`).</summary>
         const float MinDeltaTime = 9.99999997e-07f;
 
         /// <summary>What a step does, as <see cref="StepFlags"/> says.</summary>
@@ -54,7 +56,9 @@ namespace UnityEngine.VFX
         StartState m_Start;
         float m_TotalTime;
         uint m_Seed;
-        bool m_AdvanceOneFrame, m_Simulated, m_Registered;
+        bool m_AdvanceOneFrame, m_Registered;
+        /// <summary>Whether the effect ever ran a step (starting over does not undo it).</summary>
+        bool m_EverSimulated;
         Bounds m_LocalBounds;
         bool m_HasBounds;
         /// <summary>What the graph uses that Unbound does not run yet; such an effect does not simulate.</summary>
@@ -75,18 +79,23 @@ namespace UnityEngine.VFX
 
         // --------------------------------------------------------------------- the systems
 
+        /// <summary>An effect enabled again after it started starts over; one that has not taken
+        /// its initial event yet goes on waiting for it.</summary>
         internal override void OnEngineEnable()
         {
             VFXManager.Add(this);
             m_Registered = true;
+            m_EnabledFrame = Time.frameCount;
             if (m_Systems.Length == 0) CreateSystems(true);
+            else if (m_Start == StartState.Started) Initialize(true);
         }
 
+        /// <summary>A disabled effect, or one on an inactive object, stops updating and keeps its
+        /// systems (tests/projects/vfx, `sim/disabled`, `sim/inactive`, `sim/toggle*`).</summary>
         internal override void OnEngineDisable()
         {
             VFXManager.Remove(this);
             m_Registered = false;
-            DestroySystems();
         }
 
         internal override void OnEngineDestroy()
@@ -118,7 +127,8 @@ namespace UnityEngine.VFX
         void CreateSystems(bool sendInitialEvent)
         {
             DestroySystems();
-            if (m_Asset == null || m_Data.Systems.Length == 0 || !m_Registered) return;
+            // Systems are made once the effect's object is active (enabled or not), and kept.
+            if (m_Asset == null || m_Data.Systems.Length == 0 || !(m_Registered || gameObject.activeInHierarchy)) return;
             m_Unsupported = Unsupported(m_Data);
             if (m_Unsupported != null)
             {
@@ -172,7 +182,6 @@ namespace UnityEngine.VFX
             m_TotalTime = 0f;
             m_Seed = m_ResetSeedOnPlay ? NewSeed() : m_StartSeed;
             m_State.Random = Random.State.FromSeed(unchecked((int)m_Seed));
-            m_Simulated = false;
             m_Start = StartState.Pending;
             if (sendInitialEvent) m_Queue.Add(new Queued { Kind = QueuedKind.Initial, NameId = initialEventID });
         }
@@ -222,7 +231,7 @@ namespace UnityEngine.VFX
         {
             if (m_Systems.Length == 0)
             {
-                if (m_Registered) CreateSystems(sendInitialEventAndPrewarm);
+                CreateSystems(sendInitialEventAndPrewarm);
                 return;
             }
             Initialize(sendInitialEventAndPrewarm);
@@ -263,14 +272,11 @@ namespace UnityEngine.VFX
             if (steps == 0) return;
             var state = m_State;
             float delta = state.DeltaTime, unscaled = state.UnscaledDeltaTime;
-            bool last = state.LastStep;
             state.DeltaTime = state.UnscaledDeltaTime = deltaTime;
-            state.LastStep = false;
             state.NeedsEvaluation = true;
             for (uint i = 0; i < steps; i++) Step(StepFlags.Evaluate | StepFlags.Simulate);
             state.DeltaTime = delta;
             state.UnscaledDeltaTime = unscaled;
-            state.LastStep = last;
         }
 
         void TakeEvents()
@@ -321,7 +327,7 @@ namespace UnityEngine.VFX
             foreach (var system in m_Systems) system.Update(state);
             state.TotalTime += state.DeltaTime;
             state.NeedsEvaluation = true;
-            m_Simulated = true;
+            m_EverSimulated = true;
         }
 
         /// <summary>The union of the systems' bounds, in the effect's space: what the renderer
@@ -372,14 +378,21 @@ namespace UnityEngine.VFX
             }
         }
 
-        /// <summary>Whether no camera sees the effect: a camera took its renderer in the last
-        /// frame, or the effect is new (not simulated yet, so its first frame runs whole).</summary>
+        /// <summary>Whether no camera sees the effect: none took its renderer in the last frame.
+        /// A renderer no camera ever took counts as seen until the effect first simulated, so
+        /// a new effect's first frame runs whole (measured for new effects, tests/projects/vfx
+        /// `sim/behind*`; an effect started over out of view is not measured).</summary>
         bool ComputeCulled()
         {
             if (!m_Renderer && !TryGetComponent(out m_Renderer)) return true;
-            if (m_Renderer.m_RenderedFrame < 0) return m_Simulated;
-            return m_Renderer.m_RenderedFrame < Time.frameCount - 1;
+            if (m_Renderer.m_RenderedFrame < 0) return m_EverSimulated;
+            // A disabled effect is not drawn: what a camera took of its renderer before the
+            // effect was last enabled does not count (`sim/toggle`).
+            return m_Renderer.m_RenderedFrame < Math.Max(Time.frameCount - 1, m_EnabledFrame);
         }
+
+        /// <summary>The frame the effect was last enabled in.</summary>
+        int m_EnabledFrame;
 
         VFXRenderer m_Renderer;
 
@@ -423,11 +436,7 @@ namespace UnityEngine.VFX
             state.FrameIndex = VFXManager.Frame;
             state.Seed = m_Seed;
             state.NeedsEvaluation = true;
-            for (uint step = 1; step <= steps; step++)
-            {
-                state.LastStep = step == steps;
-                Step(flags);
-            }
+            for (uint step = 0; step < steps; step++) Step(flags);
             m_TotalTime = state.TotalTime;
             m_AdvanceOneFrame = false;
             foreach (var system in m_ParticleSystems) system.UpdateReadback();

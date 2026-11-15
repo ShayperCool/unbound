@@ -18,8 +18,6 @@ namespace Unbound.Runtime
         internal UnityEngine.Random.State Random;
         /// <summary>Whether a step ran since the expressions were last evaluated.</summary>
         internal bool NeedsEvaluation = true;
-        /// <summary>Whether the step is the last of its frame.</summary>
-        internal bool LastStep = true;
     }
 
     /// <summary>
@@ -39,8 +37,10 @@ namespace Unbound.Runtime
         {
             switch (op)
             {
-                case VFXExpressionOperation.TRSToMatrix:
-                case VFXExpressionOperation.InverseTRSMatrix:
+                // No control records these two yet (the graph compiler has no operator that
+                // gives the first; the second reads an event's attributes in a spawn context).
+                case VFXExpressionOperation.InverseMatrix:
+                case VFXExpressionOperation.ReadEventAttribute:
                 case VFXExpressionOperation.ExtractPositionFromMatrix:
                 case VFXExpressionOperation.ExtractAnglesFromMatrix:
                 case VFXExpressionOperation.ExtractScaleFromMatrix:
@@ -174,19 +174,34 @@ namespace Unbound.Runtime
                         break;
                     }
 
-                    case VFXExpressionOperation.InverseMatrix: Store(w, at, Load(w, p0).inverse); break;
+                    case VFXExpressionOperation.TRSToMatrix:
+                    {
+                        // A position, angles in degrees and a scale, as Matrix4x4.TRS takes them.
+                        int scale = offsets[operands[d + 2]];
+                        var angles = new Vector3(Float(w[p1]), Float(w[p1 + 1]), Float(w[p1 + 2]));
+                        Store(w, at, Matrix4x4.TRS(new Vector3(Float(w[p0]), Float(w[p0 + 1]), Float(w[p0 + 2])), Quaternion.Euler(angles),
+                            new Vector3(Float(w[scale]), Float(w[scale + 1]), Float(w[scale + 2]))));
+                        break;
+                    }
+                    case VFXExpressionOperation.InverseTRSMatrix:
+                    {
+                        // The inverse of a matrix of a rotation, scale and translation; a matrix
+                        // that has none (a scale of zero) gives a matrix of zeros.
+                        Matrix4x4.InverseAffine(Load(w, p0), out var inverse);
+                        Store(w, at, inverse);
+                        break;
+                    }
                     case VFXExpressionOperation.TransposeMatrix: Store(w, at, Load(w, p0).transpose); break;
                     case VFXExpressionOperation.TransformMatrix: Store(w, at, Load(w, p0) * Load(w, p1)); break;
                     case VFXExpressionOperation.TransformPos:
                     case VFXExpressionOperation.TransformVec:
                     case VFXExpressionOperation.TransformDir:
                     {
-                        // Column by column, the last column's terms first: the order the sums
-                        // round in.
+                        // Column by column, in the columns' order: the order the sums round in.
                         float x = Float(w[p1]), y = Float(w[p1 + 1]), z = Float(w[p1 + 2]);
-                        float rx = Float(w[p0 + 8]) * z + Float(w[p0 + 4]) * y + Float(w[p0]) * x;
-                        float ry = Float(w[p0 + 9]) * z + Float(w[p0 + 5]) * y + Float(w[p0 + 1]) * x;
-                        float rz = Float(w[p0 + 10]) * z + Float(w[p0 + 6]) * y + Float(w[p0 + 2]) * x;
+                        float rx = Float(w[p0]) * x + Float(w[p0 + 4]) * y + Float(w[p0 + 8]) * z;
+                        float ry = Float(w[p0 + 1]) * x + Float(w[p0 + 5]) * y + Float(w[p0 + 9]) * z;
+                        float rz = Float(w[p0 + 2]) * x + Float(w[p0 + 6]) * y + Float(w[p0 + 10]) * z;
                         if (op == VFXExpressionOperation.TransformPos)
                         {
                             rx += Float(w[p0 + 12]);
@@ -195,7 +210,8 @@ namespace Unbound.Runtime
                         }
                         else if (op == VFXExpressionOperation.TransformDir)
                         {
-                            float length = MathF.Sqrt(rz * rz + ry * ry + rx * rx);
+                            // Each component divided by the length.
+                            float length = MathF.Sqrt(rx * rx + ry * ry + rz * rz);
                             rx /= length;
                             ry /= length;
                             rz /= length;
@@ -207,7 +223,7 @@ namespace Unbound.Runtime
                     {
                         float x = Float(w[p1]), y = Float(w[p1 + 1]), z = Float(w[p1 + 2]), t = Float(w[p1 + 3]);
                         for (int row = 0; row < 4; row++)
-                            w[at + row] = Bits(Float(w[p0 + 12 + row]) * t + Float(w[p0 + 8 + row]) * z + Float(w[p0 + 4 + row]) * y + Float(w[p0 + row]) * x);
+                            w[at + row] = Bits(Float(w[p0 + row]) * x + Float(w[p0 + 4 + row]) * y + Float(w[p0 + 8 + row]) * z + Float(w[p0 + 12 + row]) * t);
                         break;
                     }
 
@@ -283,20 +299,6 @@ namespace Unbound.Runtime
                     case VFXExpressionOperation.GenerateRandom: w[at] = Bits(state.Random.NextValue()); break;
                     case VFXExpressionOperation.GenerateFixedRandom: w[at] = Bits(FixedRandom(w[p0])); break;
 
-                    case VFXExpressionOperation.ReadEventAttribute:
-                    {
-                        if (spawner == null) break;
-                        var words = spawner.EventAttribute.Words;
-                        int from = operands[d + 2];
-                        var type = (VFXValueType)operands[d + 3];
-                        if (type == VFXValueType.Boolean) w[at] = words[from] & 0xff;
-                        else
-                        {
-                            int size = VFXExpressionHelper.GetSizeOfType(type);
-                            for (int i = 0; i < size; i++) w[at + i] = words[from + i];
-                        }
-                        break;
-                    }
                     case VFXExpressionOperation.SpawnerStateNewLoop: if (spawner != null) w[at] = spawner.NewLoop ? 1u : 0u; break;
                     case VFXExpressionOperation.SpawnerStateLoopState: if (spawner != null) w[at] = (uint)spawner.LoopState; break;
                     case VFXExpressionOperation.SpawnerStateSpawnCount: if (spawner != null) w[at] = Bits(spawner.SpawnCount); break;
@@ -351,7 +353,8 @@ namespace Unbound.Runtime
                 // A NaN stays one: it loses neither comparison.
                 case VFXExpressionOperation.Saturate: { float low = 0f > x ? 0f : x; return 1f < low ? 1f : low; }
                 case VFXExpressionOperation.Ceil: return MathF.Ceiling(x);
-                case VFXExpressionOperation.Round: return MathF.Round(x, MidpointRounding.AwayFromZero);
+                // Halves round to the even neighbour.
+                case VFXExpressionOperation.Round: return MathF.Round(x, MidpointRounding.ToEven);
                 case VFXExpressionOperation.Frac: return x - MathF.Floor(x);
                 case VFXExpressionOperation.Floor: return MathF.Floor(x);
                 default: return MathF.Log2(x);
