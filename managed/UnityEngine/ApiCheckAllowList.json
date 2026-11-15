@@ -471,13 +471,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEngine.UIElements.RuntimePanel",
-    "Message": "type interfaces is , Unity's is System.IDisposable,UnityEngine.UIElements.IPanel,UnityEngine.UIElements.IRuntimePanel",
-    "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.RuntimePanel needs panel lifetime, settings ownership and event-system integration. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.UIElements.SortColumnDescription",
     "Message": "type interfaces is , Unity's is UnityEngine.UIElements.INotifyBindablePropertyChanged",
     "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.SortColumnDescription needs bindable direction and column-selection notifications. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."

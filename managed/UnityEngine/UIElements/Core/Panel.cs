@@ -677,7 +677,13 @@ namespace UnityEngine.UIElements
         public Color color;
     }
 
-    internal partial class RuntimePanel : BaseRuntimePanel
+    public partial interface IRuntimePanel : IPanel, IDisposable
+    {
+        PanelSettings panelSettings { get; }
+        GameObject selectableGameObject { get; set; }
+    }
+
+    internal partial class RuntimePanel : BaseRuntimePanel, IRuntimePanel, IPanel, IDisposable
     {
         internal static readonly EventDispatcher s_EventDispatcher = EventDispatcher.CreateDefault();
         readonly PanelSettings m_PanelSettings;

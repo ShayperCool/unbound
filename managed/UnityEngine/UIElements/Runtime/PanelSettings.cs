@@ -338,6 +338,19 @@ namespace UnityEngine.UIElements
 
         public VisualElement rootVisualElement => m_RootVisualElement;
 
+        RuntimePanel m_RuntimePanel;
+
+        /// <summary>The panel the document's root was first found on: it stays the same after the
+        /// document's settings change (matches the Unity 6000.0.71f1 Editor, tests/projects/runtimepanels).</summary>
+        public IRuntimePanel runtimePanel
+        {
+            get
+            {
+                m_RuntimePanel ??= rootVisualElement?.panel as RuntimePanel;
+                return m_RuntimePanel;
+            }
+        }
+
         public float sortingOrder
         {
             get => m_SortingOrder;

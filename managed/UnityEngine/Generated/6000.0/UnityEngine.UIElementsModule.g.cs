@@ -1986,11 +1986,6 @@ namespace UnityEngine.UIElements
         string label { get; }
         global::UnityEngine.UIElements.Label labelElement { get; }
     }
-    public unsafe partial interface IRuntimePanel : global::UnityEngine.UIElements.IPanel, global::System.IDisposable
-    {
-        global::UnityEngine.UIElements.PanelSettings panelSettings { get; }
-        global::UnityEngine.GameObject selectableGameObject { get; set; }
-    }
     internal unsafe partial interface IScheduler
     {
         global::UnityEngine.UIElements.ScheduledItem ScheduleOnce(global::System.Action<global::UnityEngine.UIElements.TimerState> timerUpdateEvent, long delayMs);
@@ -4738,7 +4733,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void HandleLiveReload() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.HandleLiveReload"); }
         internal int firstChildInserIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.firstChildInserIndex"); return default; } }
         internal global::UnityEngine.UIElements.UIDocument.WorldSpaceSizeMode worldSpaceSizeMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.worldSpaceSizeMode"); return default; } }
-        public global::UnityEngine.UIElements.IRuntimePanel runtimePanel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIDocument.runtimePanel"); return default; } }
         internal enum WorldSpaceSizeMode
         {
             Dynamic = 0,
