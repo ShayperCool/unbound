@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/Graphics/GraphicsFormats.cs",
     "managed/UnityEngine/Graphics/TextureArrays.cs",
-    "managed/UnityEngine/Graphics/Texture2D.cs"
+    "managed/UnityEngine/Graphics/Texture2D.cs",
+    "managed/UnityEngine/Graphics/FormatSwizzles.cs"
   ]
 }

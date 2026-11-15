@@ -9,7 +9,8 @@ using UnityEngine.Experimental.Rendering;
 /// Records how texture and graphics formats map onto each other: GraphicsFormatUtility.
 /// GetTextureFormat for every GraphicsFormat, GetGraphicsFormat for every TextureFormat (linear and
 /// sRGB), and the format and graphicsFormat of 2D, 3D and array textures created from the
-/// single- and two-channel 8-bit GraphicsFormats. Writes values.jsonl into FORMAT_MAPPING_OUT and exits.
+/// single- and two-channel 8-bit GraphicsFormats; the channel swizzles of every format and which
+/// texture formats are crunched. Writes values.jsonl into FORMAT_MAPPING_OUT and exits.
 /// </summary>
 public sealed class FormatMappingProbe : MonoBehaviour
 {
@@ -50,6 +51,23 @@ public sealed class FormatMappingProbe : MonoBehaviour
                 Rec("create3d/" + g, Try(() => { var x = new Texture3D(4, 4, 2, g, TextureCreationFlags.None, 1); return (int)x.format + " " + (int)x.graphicsFormat; }));
                 Rec("createArray/" + g, Try(() => { var x = new Texture2DArray(4, 4, 2, g, TextureCreationFlags.None); return (int)x.format + " " + (int)x.graphicsFormat; }));
             }
+            // The component each channel reads (GetSwizzleR/G/B/A) for every GraphicsFormat, and
+            // through the TextureFormat overloads; IsCrunchFormat for every TextureFormat.
+            foreach (var name in Enum.GetNames(typeof(GraphicsFormat)))
+            {
+                var g = (GraphicsFormat)Enum.Parse(typeof(GraphicsFormat), name);
+                Rec("swizzle/" + name, Try(() => GraphicsFormatUtility.GetSwizzleR(g) + " " + GraphicsFormatUtility.GetSwizzleG(g) + " "
+                    + GraphicsFormatUtility.GetSwizzleB(g) + " " + GraphicsFormatUtility.GetSwizzleA(g)));
+            }
+            foreach (var name in Enum.GetNames(typeof(TextureFormat)))
+            {
+                var t = (TextureFormat)Enum.Parse(typeof(TextureFormat), name);
+                Rec("swizzleTexture/" + name, Try(() => GraphicsFormatUtility.GetSwizzleR(t) + " " + GraphicsFormatUtility.GetSwizzleG(t) + " "
+                    + GraphicsFormatUtility.GetSwizzleB(t) + " " + GraphicsFormatUtility.GetSwizzleA(t)));
+                Rec("crunch/" + name, Try(() => GraphicsFormatUtility.IsCrunchFormat(t).ToString()));
+            }
+            Rec("crunch/unnamed99", Try(() => GraphicsFormatUtility.IsCrunchFormat((TextureFormat)99).ToString()));
+            Rec("swizzle/unnamed9999", Try(() => GraphicsFormatUtility.GetSwizzleR((GraphicsFormat)9999).ToString()));
             m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
             var dir = Environment.GetEnvironmentVariable("FORMAT_MAPPING_OUT");
             if (string.IsNullOrEmpty(dir)) Debug.Log(m_Out.ToString());

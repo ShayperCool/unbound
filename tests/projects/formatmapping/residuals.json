@@ -52,5 +52,24 @@
   "graphics/ETC_RGB4_3DS/srgb",
   "graphics/ETC_RGBA8_3DS/linear",
   "graphics/ETC_RGBA8_3DS/srgb"
+ ],
+ "GraphicsFormatUtility.GetSwizzleR/G/B/A(TextureFormat) of the texture formats whose GetGraphicsFormat differs (the two residuals above): the overloads read the swizzles of GetGraphicsFormat(format, false), as the release's do; follow-up with GetGraphicsFormat in docs/COMPATIBILITY_GAPS.md": [
+  "swizzleTexture/ARGB32",
+  "swizzleTexture/ASTC_RGBA_10x10",
+  "swizzleTexture/ASTC_RGBA_12x12",
+  "swizzleTexture/ASTC_RGBA_8x8",
+  "swizzleTexture/ASTC_RGB_10x10",
+  "swizzleTexture/ASTC_RGB_5x5",
+  "swizzleTexture/ASTC_RGB_6x6",
+  "swizzleTexture/ASTC_RGB_8x8",
+  "swizzleTexture/Alpha8",
+  "swizzleTexture/DXT1Crunched",
+  "swizzleTexture/DXT5Crunched",
+  "swizzleTexture/ETC2_RGBA8Crunched",
+  "swizzleTexture/ETC_RGB4Crunched",
+  "swizzleTexture/PVRTC_RGB2",
+  "swizzleTexture/PVRTC_RGB4",
+  "swizzleTexture/PVRTC_RGBA2",
+  "swizzleTexture/PVRTC_RGBA4"
  ]
 }
