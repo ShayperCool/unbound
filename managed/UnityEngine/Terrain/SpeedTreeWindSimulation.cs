@@ -656,7 +656,7 @@ namespace UnityEngine
         /// The wind a tree's draw takes: its local wind's, else its asset's. A tree drawn while
         /// spherical zones blow on it and without a local wind gets one after the draw (its group's
         /// sharer gets it first; the tree joins it at a later draw); when the asset's wind has
-        /// strength it starts from the asset's wind, otherwise from rest (unmeasured).
+        /// strength it starts from the asset's wind, otherwise from rest (tests/projects/speedtree9wind LateSettled).
         /// </summary>
         static SpeedTreeWindState WindOf(Tree tree, Renderer renderer, SpeedTreeWindAsset asset)
         {
