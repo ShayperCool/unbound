@@ -361,7 +361,8 @@ public class PartialProbe : MonoBehaviour
         Legacy("legacy.events.zero", At((0, c => c.Animation.Play("LE")), (1, c => c.Animation["LE"].weight = 0f)),
             animation => animation.AddClip(Resources.Load<AnimationClip>("LE"), "LE"), events: "LE");
         // LZ's event at its start (and at 0.3125 s) when it starts: cross-faded in from weight 0 over
-        // 0.25 s, blended in from weight 0 to 0.5 over 0.25 s, played, and played and set to weight 0.
+        // 0.25 s, blended in from weight 0 to 0.5 over 0.25 s, played, played and set to weight 0,
+        // and played at speed 0 for a while.
         Action<Animation> lz = animation => animation.AddClip(Resources.Load<AnimationClip>("LZ"), "LZ");
         Legacy("legacy.events.start.crossfade", At((0, c => c.Animation.Play("LP")), (2, c => c.Animation.CrossFade("LZ", 0.25f))), lz, "LZ");
         Legacy("legacy.events.start.blend", At((0, c => c.Animation.Play("LP")), (2, c => c.Animation.Blend("LZ", 0.5f, 0.25f))), lz, "LZ");
@@ -371,6 +372,12 @@ public class PartialProbe : MonoBehaviour
             c.Animation.Play("LZ");
             c.Animation["LZ"].weight = 0f;
         })), lz, "LZ");
+        // Played at speed 0, its time held for two updates, then at speed 1.
+        Legacy("legacy.events.start.speed0", At((0, c => c.Animation.Play("LP")), (2, c =>
+        {
+            c.Animation["LZ"].speed = 0f;
+            c.Animation.Play("LZ");
+        }), (5, c => c.Animation["LZ"].speed = 1f)), lz, "LZ");
     }
 
     /// <summary>Plays a state backwards from its end: speed -1, time at its length; a fade length
