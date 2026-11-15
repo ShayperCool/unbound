@@ -395,6 +395,12 @@ public class NativeGfxMetalProbe : MonoBehaviour
             case 6:
                 ScreenCameraCopies();
                 break;
+            case 7:
+                SrgbConversions();
+                break;
+            case 8:
+                LoadsOutside();
+                break;
         }
     }
 
@@ -456,6 +462,79 @@ public class NativeGfxMetalProbe : MonoBehaviour
         DestroyImmediate(camera.gameObject);
     }
 
+    /// <summary>The device's sRGB conversions: an sRGB render texture cleared, and one drawn into
+    /// (GL immediate mode, orthographic),
+    /// with a color whose encoded red is exactly half way between two bytes (0.5) and whose blue is
+    /// 0.75; their stored bytes; then each sampled (decoded) into a float render texture, its
+    /// values as float bits.</summary>
+    void SrgbConversions()
+    {
+        screenLogs = new List<string>();
+        var color = new Color(0.5f, 0.25f, 0.75f, 1f);
+        var cleared = Target("srgbcleared", 0, readWrite: RenderTextureReadWrite.sRGB);
+        Clear(cleared, color);
+        var drawn = Target("srgbdrawn", 0, readWrite: RenderTextureReadWrite.sRGB);
+        Clear(drawn, Color.black);
+        var material = Keep(new Material(Shader.Find("Hidden/Internal-Colored")) { color = color });
+        material.SetInt("_Cull", 0);
+        material.SetInt("_ZTest", (int)CompareFunction.Always);
+        var active = RenderTexture.active;
+        RenderTexture.active = drawn;
+        GL.PushMatrix();
+        GL.LoadOrtho();
+        material.SetPass(0);
+        GL.Begin(GL.QUADS);
+        GL.Color(Color.white);
+        GL.Vertex3(0f, 0f, 0f);
+        GL.Vertex3(0f, 1f, 0f);
+        GL.Vertex3(1f, 1f, 0f);
+        GL.Vertex3(1f, 0f, 0f);
+        GL.End();
+        GL.PopMatrix();
+        RenderTexture.active = active;
+        foreach (var (name, texture) in new[] { ("cleared", cleared), ("drawn", drawn) })
+        {
+            var previous = RenderTexture.active;
+            RenderTexture.active = texture;
+            var bytes = new Texture2D(8, 8, TextureFormat.RGBA32, false, true);
+            bytes.ReadPixels(new Rect(0, 0, 8, 8), 0, 0);
+            RenderTexture.active = previous;
+            Value("srgb." + name + ".bytes", Rows(bytes.GetPixels32(), 8, 8));
+            DestroyImmediate(bytes);
+            var floats = Target("srgbfloat" + name, 0, RenderTextureFormat.ARGBFloat);
+            Graphics.Blit(texture, floats);
+            RenderTexture.active = floats;
+            var values = new Texture2D(8, 8, TextureFormat.RGBAFloat, false, true);
+            values.ReadPixels(new Rect(0, 0, 8, 8), 0, 0);
+            RenderTexture.active = previous;
+            var c = values.GetPixel(3, 3);
+            Value("srgb." + name + ".decoded", L(new[] { c.r, c.g, c.b, c.a }.Select(v => BitConverter.SingleToInt32Bits(v).ToString("x8"))));
+            DestroyImmediate(values);
+        }
+        Value("srgb.logs", L(screenLogs));
+        screenLogs = null;
+    }
+
+    /// <summary>Unfiltered loads (<c>Texture2D.Load</c>) of a 2x2 texture (red, green; blue,
+    /// white) at each pixel of an 8x8 target: what the device reads outside the texture.</summary>
+    void LoadsOutside()
+    {
+        screenLogs = new List<string>();
+        var small = Keep(new Texture2D(2, 2, TextureFormat.RGBA32, false, true) { name = "loadoutside", filterMode = FilterMode.Point });
+        small.SetPixels32(new[] { new Color32(255, 0, 0, 255), new Color32(0, 255, 0, 255), new Color32(0, 0, 255, 255), new Color32(255, 255, 255, 255) });
+        small.Apply(false);
+        var material = Keep(new Material(Shader.Find("Probe/NativeGfx/LoadOutside")));
+        material.SetTexture("_Src", small);
+        var output = Target("loadoutside", 0);
+        Clear(output, Color.gray);
+        var active = RenderTexture.active;
+        Graphics.Blit(Texture2D.blackTexture, output, material);
+        RenderTexture.active = active;
+        Value("loadoutside.pixels", Pixels(output, 8, 8));
+        Value("loadoutside.logs", L(screenLogs));
+        screenLogs = null;
+    }
+
     void Finish()
     {
         Value("target.pixels", Pixels(target, 8, 8));
@@ -500,7 +579,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
         int code = 0;
         try { Setup(); }
         catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
-        for (int frame = 1; frame <= 6 && code == 0; frame++)
+        for (int frame = 1; frame <= 8 && code == 0; frame++)
         {
             try { Frame(frame); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }

@@ -5,6 +5,13 @@
 {"k":"screencamera.copy.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
 {"k":"screencamera.drawn.pixels","v":["ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8","ff370dbf*8"]}
 {"k":"screencamera.logs","v":["Error: Graphics.CopyTexture called with null source texture","Error: Graphics.CopyTexture called with null destination texture"]}
+{"k":"srgb.cleared.bytes","v":["bc89e1ff*8","bc89e1ff*8","bc89e1ff*8","bc89e1ff*8","bc89e1ff*8","bc89e1ff*8","bc89e1ff*8","bc89e1ff*8"]}
+{"k":"srgb.cleared.decoded","v":["3f00b80c","3e800801","3f40bc0c","3f800000"]}
+{"k":"srgb.drawn.bytes","v":["7f40bfff*8","7f40bfff*8","7f40bfff*8","7f40bfff*8","7f40bfff*8","7f40bfff*8","7f40bfff*8","7f40bfff*8"]}
+{"k":"srgb.drawn.decoded","v":["3e594d95","3d520d21","3f055856","3f800000"]}
+{"k":"srgb.logs","v":[]}
+{"k":"loadoutside.pixels","v":["ff0000ff*1 00ff00ff*1 00000000*6","0000ffff*1 ffffffff*1 00000000*6","00000000*8","00000000*8","00000000*8","00000000*8","00000000*8","00000000*8"]}
+{"k":"loadoutside.logs","v":[]}
 {"k":"target.pixels","v":["ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4"]}
 {"k":"camera.pixels","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
 {"k":"second.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
