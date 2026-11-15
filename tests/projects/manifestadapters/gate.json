@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/manifestadapters/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Runtime/AssetAdapters.cs",
+    "managed/UnityEngine/Runtime/AssetBundles.cs",
+    "managed/UnityEngine/Runtime/Instantiation.cs"
+  ]
+}

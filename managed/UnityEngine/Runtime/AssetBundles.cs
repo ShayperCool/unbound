@@ -461,7 +461,7 @@ namespace UnityEngine
 
     /// <summary>A bundle build's manifest: the bundles, their hashes and dependencies.</summary>
     [ClassId(290)]
-    public partial class AssetBundleManifest : Object, ISerializedAsset
+    public partial class AssetBundleManifest : Object
     {
         readonly SortedDictionary<int, string> m_Names = new SortedDictionary<int, string>();
         readonly Dictionary<int, (Hash128 Hash, int[] Dependencies)> m_Infos = new Dictionary<int, (Hash128, int[])>();
@@ -469,16 +469,50 @@ namespace UnityEngine
 
         internal AssetBundleManifest() { }
 
+        internal Object CloneObject()
+        {
+            // Runtime manifest clones use transient ownership, independently of source flags.
+            var copy = new AssetBundleManifest { hideFlags = HideFlags.HideAndDontSave };
+            foreach (var pair in m_Names) copy.m_Names.Add(pair.Key, pair.Value);
+            foreach (var pair in m_Infos)
+                copy.m_Infos.Add(pair.Key, (pair.Value.Hash, (int[])pair.Value.Dependencies.Clone()));
+            copy.m_WithVariant.AddRange(m_WithVariant);
+            return copy;
+        }
+
         int IndexOf(string name)
         {
             foreach (var pair in m_Names)
-                if (pair.Value == name) return pair.Key;
+                if (MatchesName(pair.Value, name)) return pair.Key;
             return -1;
         }
 
-        public string[] GetAllAssetBundles() => m_Names.Values.ToArray();
+        // Bundle names use ASCII case folding, independently of the current culture.
+        // Ownership and lookup controls: tests/projects/manifestadapters, Unity 6000.0.71f1.
+        static bool MatchesName(string stored, string query)
+        {
+            if (query == null) return stored.Length == 0;
+            if (stored.Length != query.Length) return false;
+            for (int i = 0; i < stored.Length; i++)
+            {
+                char value = query[i];
+                if (value >= 'A' && value <= 'Z') value = (char)(value + ('a' - 'A'));
+                if (value == '\\') value = '/';
+                if (stored[i] != value) return false;
+            }
+            return true;
+        }
 
-        public string[] GetAllAssetBundlesWithVariant() => m_WithVariant.ToArray();
+        public string[] GetAllAssetBundles() => SortedNames(m_Names.Values);
+
+        public string[] GetAllAssetBundlesWithVariant() => SortedNames(m_WithVariant);
+
+        static string[] SortedNames(IEnumerable<string> values)
+        {
+            var result = values.ToArray();
+            Array.Sort(result, StringComparer.Ordinal);
+            return result;
+        }
 
         public Hash128 GetAssetBundleHash(string assetBundleName) =>
             m_Infos.TryGetValue(IndexOf(assetBundleName), out var info) ? info.Hash : default;
@@ -503,7 +537,7 @@ namespace UnityEngine
             return result.ToArray();
         }
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             foreach (var pair in body.Get("AssetBundleNames")?.Seq() ?? Array.Empty<YNode>())
                 m_Names[pair.Int("first")] = pair.Str("second");

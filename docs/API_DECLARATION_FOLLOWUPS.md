@@ -3,7 +3,7 @@
 This audit covers the remaining Q410 behavior rows after Q453's payload, adapter,
 value, equality and enumerator slices. The exact selected-release exceptions remain in
 `managed/UnityEngine/ApiCheckAllowList.json`; the table below does not replace them.
-The retained count is 155 for Unity 6000.0.71f1. Selected declaration payloads and
+The retained count is 154 for Unity 6000.0.71f1. Selected declaration payloads and
 current callers were audited before assigning these follow-ups. An audit establishes
 scope, not runtime parity. Each follow-up still needs its own divergent-state Editor
 controls, implementation and independent review.
@@ -13,7 +13,7 @@ The completed slices and strict probe counts are recorded in
 
 | Row | Retained entries | Audit result and next behavior control |
 | --- | ---: | --- |
-| Asset adapters | 28 | Typed external dispatch serves PhysicsMaterial, PhysicsMaterial2D, TextAsset, AudioClip and Font. Audio/font ownership is covered by `audioadapters` and `assetinstantiate`. Remaining types need operation-specific registration: some expose only a reader or only a clone. RenderTexture and CustomRenderTexture have separate explicit reader/clone slots; migrating their base registration alone can hide the derived operations. Preserve that dispatch while adding ownership controls, including mixer subasset restrictions and imported/runtime resource reloads. Rendering, importer, terrain and animation ownership still overlaps active work. |
+| Asset adapters | 27 | Typed external dispatch serves PhysicsMaterial, PhysicsMaterial2D, TextAsset, AudioClip, Font and AssetBundleManifest. Manifest clone ownership and unload/reload are covered by `manifestadapters`; variant payload copying also has a nondefault managed control. Audio/font ownership is covered by `audioadapters` and `assetinstantiate`. Remaining types need operation-specific registration: some expose only a reader or only a clone. RenderTexture and CustomRenderTexture have separate explicit reader/clone slots; migrating their base registration alone can hide the derived operations. Preserve that dispatch while adding ownership controls, including mixer subasset restrictions and imported/runtime resource reloads. Rendering, importer, terrain and animation ownership still overlaps active work. |
 | Wrapper layouts | 60 | YieldInstruction/WaitForSeconds interop works, with two raw default-packing discrepancies retained. Object owns additional managed identity/reload/destruction state, and derived wrappers need a coordinated state/base-layout migration. GUIContent also lacks a serialized cache and event state. Coroutine owns execution state beyond its selected pointer payload. Require complete field transfers, native-resource lifetimes and derived-type controls for the other 58 wrappers. |
 | Value layouts | 1 | Ray-tracing BuildSettings still needs the selected flags/origin payload and copy/interop controls with the rendering owner. Five XR values, LocationInfo and retired AnimationInfo are now covered separately. |
 | Editor serialized payloads | 13 | Window/view fields include tree, owner, overlay, persistence, geometry and rendering state. PackageInfo has a much larger identity/dependency/compliance payload than its constructor properties. Requests need error/status/identity and fetched-result state beyond completed-result storage. Coordinate field/type markers with shared serialization and live state restoration; use nondefault root/nested overwrite, omitted fields and independent copies. |

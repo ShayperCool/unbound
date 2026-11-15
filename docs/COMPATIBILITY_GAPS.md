@@ -8,6 +8,13 @@ Audit of 2026-10-29: read-only, every subsystem; nothing was measured against th
 row still needs a probe before and after it is fixed. Paths are relative to `managed/UnityEngine/`
 unless they start with `crates/` or `native/`.
 
+## API declaration follow-ups
+
+AssetBundleManifest typed reader and independent clone ownership are covered by
+`tests/projects/manifestadapters` on Unity 6000.0.71f1, with 913 exact controls across
+three bundle formats, array mutation and unload/reload. Other declaration debt stays
+in [API_DECLARATION_FOLLOWUPS.md](API_DECLARATION_FOLLOWUPS.md).
+
 ## Known insignificant residuals
 
 By the user's decision of 2026-11-01, small differences with no visible effect or

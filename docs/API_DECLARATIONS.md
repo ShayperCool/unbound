@@ -112,18 +112,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After converter dispatch |
+| Category | Before Q410 | After manifest adapters |
 | --- | ---: | ---: |
 | Attributes | 938 | 22 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
 | Layout | 68 | 61 |
-| Interfaces | 65 | 50 |
+| Interfaces | 65 | 49 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 1 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 155 |
+| Total | 1,332 | 154 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -572,3 +572,13 @@ formatting. Managed tests also load a custom value through the attribute reader,
 change the cached converter state, and distinguish constructor exceptions from an
 explicit invocation exception thrown by converter code. Existing `uxmlattributes`
 controls still cover custom values and lists. One exact interface entry is removed.
+
+The manifest adapter slice removes one extra interface from AssetBundleManifest.
+Typed reader and clone dispatch preserve loaded bundle names, hashes and dependencies.
+The `manifestadapters` probe records 913 exact controls across LZ4, LZMA and
+uncompressed bundle fixtures, including changed returned arrays, independent clone
+names, source/clone hide flags, retained objects after `Unload(false)`, reloads and
+clones surviving `Unload(true)`. ASCII case folding accepts uppercase names while spaces and Unicode
+lookalikes remain distinct. Null and unknown names return empty dependencies and
+zero hashes in the selected 6000.0.71f1 capture. The remaining asset families retain
+their existing exceptions and operation/ownership follow-ups.
