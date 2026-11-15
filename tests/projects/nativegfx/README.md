@@ -286,12 +286,16 @@ The marked one's native texture becomes 8x4 in that frame (also one made after t
 temporary one, and 15x13 ones: rounded up) while its `width` and `height` stay; at 1 it is 16x16
 again and still holds its last color. A camera drawing into it has `pixelWidth` 16 but
 `scaledPixelWidth` and `pixelRect` 8x4, with `allowDynamicResolution` on or off; into the plain one
-16x16. A Blit from it samples its whole 8x4 image, its `_MainTex_TexelSize` is 16x16, and draws
-into it (a Blit, a camera's command buffer) see `_ScreenParams` 8x4. `ReadPixels` of 16x16 from it
-logs `Reading pixels out of bounds of the current active render texture` and reads nothing; of
-8x4 it reads zeros. Factors outside (0, 1] are asserted against (`Invalid widthScale: 2.000000`)
-and kept within [0.05, 1] (0 keeps 0.0500000119); 16 x 0.3 and 16 x 0.7 give 5x12, 10 x 0.3 gives
-3 (the product in single precision).
+16x16. A Blit from it samples its whole 8x4 image and its `_MainTex_TexelSize` is 16x16; a draw
+into it from a camera's command buffer sees `_ScreenParams` 8x4 (`cameraparams.sampled`), while
+the image a Blit into it leaves samples as zero there (`blitparams.sampled`; the rows without
+`.sampled` read through ReadPixels, which reads zeros). `ReadPixels` of 16x16 from it logs
+`Reading pixels out of bounds of the current active render texture` and reads nothing; of 8x4 it
+reads zeros. Factors outside (0, 1] are asserted against (`Invalid widthScale: 2.000000`, NaN
+printed `nan`) and kept within [0.05, 1] (0 keeps 0.0500000119, NaN 1); 16 x 0.3 and 16 x 0.7
+give 5x12, 10 x 0.3 gives 3 (the product in single precision). A texture marked
+`useDynamicScaleExplicit` too stays 16x16 until `ApplyDynamicScale`, then takes the factors of
+the time (`dynres.explicit.*`); the call changes nothing for a plain dynamic one.
 
 Windowed (`run.py native --device metal --windowed`, the Editor with its windows, Play mode in
 its Game view, Run In Background set in the copy): `Reference/unity-6000.0.71f1/metal-windowed.jsonl`
@@ -305,14 +309,14 @@ drawing left). Plugin events run later there, on the Editor's render thread: `ca
 `executed.pixels` show colors the scripts set after the events. The engine run is compared with
 the batch-mode reference only.
 
-Unbound matches 320/357 records with 37 declared residuals (`residuals-metal.json`, each with its
+Unbound matches 332/371 records with 39 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a screen
 camera with command buffers drawing into Unbound's texture standing for the screen, a Blit from
 it green 1/255 apart (the batch-mode screen is not sRGB-encoded), ETC2_RGBA1, signed EAC and
-PVRTC arrays kept as texels, and a dynamically scaled texture's content after a change of scale
-(Unbound's is remade cleared). The screen is shared:
+PVRTC arrays kept as texels, a dynamically scaled texture's content after a change of scale
+(Unbound's is remade cleared) and what a Blit into one leaves there (zero in the Editor). The screen is shared:
 outside render texture targets the current encoder is over the screen's color texture and depth
 buffer (loaded), in callbacks and from scripts, and its descriptor is there before the plugin asks
 for the encoder (`plugin.peek.screen`, `plugin.peek.outside`); store actions are unknown until the
