@@ -106,6 +106,36 @@ namespace UnityEditor
 
         internal static int Int(string key, int fallback) =>
             int.TryParse(Text(key, ""), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : fallback;
+
+        /// <summary>The graphics APIs (<c>GraphicsDeviceType</c> values) a platform
+        /// (<c>AndroidPlayer</c>, ...) lists in <c>m_BuildTargetGraphicsAPIs</c>; null when the
+        /// platform has no entry or is left automatic.</summary>
+        internal static int[] GraphicsApis(string buildTarget)
+        {
+            string text;
+            try
+            {
+                var file = Path.Combine(ProjectInfo.ProjectPath, "ProjectSettings", "ProjectSettings.asset");
+                if (!File.Exists(file)) return null;
+                text = File.ReadAllText(file);
+            }
+            catch (IOException) { return null; }
+            var section = Regex.Match(text, @"^  m_BuildTargetGraphicsAPIs:\s*\n((?:  - .*\n|    .*\n)*)", RegexOptions.Multiline);
+            if (!section.Success) return null;
+            foreach (Match entry in Regex.Matches(section.Groups[1].Value,
+                         @"^  - m_BuildTarget: (\w+)\s*\n    m_APIs: ([0-9a-fA-F]*)\s*\n    m_Automatic: (\d+)", RegexOptions.Multiline))
+            {
+                if (entry.Groups[1].Value != buildTarget) continue;
+                if (entry.Groups[3].Value != "0") return null;
+                string hex = entry.Groups[2].Value;
+                if (hex.Length % 8 != 0) return null;
+                var apis = new int[hex.Length / 8];
+                for (int i = 0; i < apis.Length; i++)
+                    apis[i] = System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(Convert.FromHexString(hex.Substring(i * 8, 8)));
+                return apis;
+            }
+            return null;
+        }
     }
 
     [global::System.@ObsoleteAttribute("ScriptingRuntimeVersion has been deprecated in 2019.3 now that legacy mono has been removed")] public enum ScriptingRuntimeVersion
