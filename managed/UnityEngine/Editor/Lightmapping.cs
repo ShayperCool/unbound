@@ -31,7 +31,13 @@ namespace UnityEditor
         /// replaces the scene's baked lighting) is not supported.</summary>
         public static LightingDataAsset lightingDataAsset
         {
-            get => LightingDataAsset.Of(SceneRegistry.Active?.LightingDataRef ?? default);
+            get
+            {
+                var scene = SceneRegistry.Active;
+                if (scene != null && scene.BakedOnOpen)
+                    Stubs.Ignored("Lightmapping.lightingDataAsset", "of a scene baked when it opened is the Editor's new asset; Unbound answers null");
+                return scene == null || scene.BakedOnOpen ? null : LightingDataAsset.Of(scene.LightingDataRef);
+            }
             set => throw new NotSupportedException("Unbound: assigning Lightmapping.lightingDataAsset (replacing a scene's baked lighting) is not supported.");
         }
 

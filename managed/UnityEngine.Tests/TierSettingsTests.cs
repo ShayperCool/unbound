@@ -33,6 +33,20 @@ namespace Unbound.Tests
                 Assert.Equal(ShaderQuality.High, EditorGraphicsSettings.GetTierSettings(BuildTargetGroup.WebGL, GraphicsTier.Tier1).standardShaderQuality);
                 // No entry for the tier at all: the session gave no table for it, loudly.
                 Assert.Throws<InvalidOperationException>(() => EditorGraphicsSettings.GetTierSettings(BuildTargetGroup.WebGL, GraphicsTier.Tier2));
+                Assert.Throws<ArgumentOutOfRangeException>(() => EditorGraphicsSettings.GetTierSettings(BuildTargetGroup.Android, (GraphicsTier)5));
+                // Named targets whose name is not the group's: Windows Store Apps is WSA (14), Server
+                // builds for Standalone (1).
+                EditorGraphicsSettings.SetTierTable(new[]
+                {
+                    (0, 0, Quality(ShaderQuality.High)),
+                    (1, 2, Quality(ShaderQuality.Medium)),
+                    (14, 0, Quality(ShaderQuality.Low)),
+                });
+                Assert.Equal(ShaderQuality.Low, EditorGraphicsSettings.GetTierSettings(NamedBuildTarget.WindowsStoreApps, GraphicsTier.Tier1).standardShaderQuality);
+                Assert.Equal(ShaderQuality.Medium, EditorGraphicsSettings.GetTierSettings(NamedBuildTarget.Server, GraphicsTier.Tier3).standardShaderQuality);
+                Assert.Equal(BuildTargetGroup.Switch, NamedBuildTarget.NintendoSwitch.ToBuildTargetGroup());
+                Assert.Equal(NamedBuildTarget.WindowsStoreApps, NamedBuildTarget.FromBuildTargetGroup(BuildTargetGroup.WSA));
+                Assert.Equal(NamedBuildTarget.iOS, NamedBuildTarget.FromBuildTargetGroup(BuildTargetGroup.iOS));
             }
             finally
             {

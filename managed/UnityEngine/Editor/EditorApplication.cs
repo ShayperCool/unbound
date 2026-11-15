@@ -351,9 +351,30 @@ namespace UnityEditor.Build
         public static readonly NamedBuildTarget EmbeddedLinux = new NamedBuildTarget("EmbeddedLinux");
         public static readonly NamedBuildTarget QNX = new NamedBuildTarget("QNX");
 
-        public static NamedBuildTarget FromBuildTargetGroup(BuildTargetGroup buildTargetGroup) => new NamedBuildTarget(buildTargetGroup.ToString());
+        /// <summary>The target names that are not the group's enum name (the Server target builds
+        /// for the Standalone group).</summary>
+        static readonly (string Name, BuildTargetGroup Group)[] s_Names =
+        {
+            ("iPhone", BuildTargetGroup.iOS),
+            ("Windows Store Apps", BuildTargetGroup.WSA),
+            ("Nintendo Switch", BuildTargetGroup.Switch),
+            ("Nintendo Switch 2", BuildTargetGroup.Switch2),
+        };
 
-        public BuildTargetGroup ToBuildTargetGroup() => Enum.TryParse<BuildTargetGroup>(TargetName, out var g) ? g : BuildTargetGroup.Unknown;
+        public static NamedBuildTarget FromBuildTargetGroup(BuildTargetGroup buildTargetGroup)
+        {
+            foreach (var (name, group) in s_Names)
+                if (group == buildTargetGroup) return new NamedBuildTarget(name);
+            return new NamedBuildTarget(buildTargetGroup.ToString());
+        }
+
+        public BuildTargetGroup ToBuildTargetGroup()
+        {
+            if (TargetName == Server.TargetName) return BuildTargetGroup.Standalone;
+            foreach (var (name, group) in s_Names)
+                if (name == TargetName) return group;
+            return Enum.TryParse<BuildTargetGroup>(TargetName, out var g) ? g : BuildTargetGroup.Unknown;
+        }
 
         public bool Equals(NamedBuildTarget other) => TargetName == other.TargetName;
         public override bool Equals(object obj) => obj is NamedBuildTarget other && Equals(other);

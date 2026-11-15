@@ -632,6 +632,7 @@ namespace Unbound.Runtime
                 if (scene != null)
                 {
                     scene.LightingDataRef = references.Data;
+                    scene.BakedOnOpen = bake;
                     var settings = references.Settings;
                     scene.LightingSettings = settings.IsNull || resolver == null ? null : resolver.Resolve(settings, typeof(LightingSettings)) as LightingSettings;
                     if (first) DynamicGI.SceneLoaded(scene.LightingSettings);
