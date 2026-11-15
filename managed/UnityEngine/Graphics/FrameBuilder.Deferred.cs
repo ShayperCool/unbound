@@ -102,8 +102,7 @@ namespace Unbound.Runtime
 
             // Shadows: collected against the G-buffer's depth.
             s_CameraDepth = depth;
-            RenderAdditionalShadows(camera, context, width, height);
-            RenderMainLightShadows(camera, context, width, height);
+            RenderShadows(camera, context, width, height);
             GfxStream.GlobalTexture("_CameraDepthTexture", depthHandle);
 
             // The lights and reflections draw as quads over the view (Unity's global).

@@ -633,12 +633,11 @@ namespace UnityEngine
         }
 
         /// <summary>The sun of a scene being loaded (its objects are built, not yet active): the
-        /// light its RenderSettings name, else its brightest enabled directional light
-        /// (tests/projects/realtimegi legacynamedsun, a named light that is turned;
-        /// legacytwosuns, legacytwosunsturned). Not measured: a named light at the default
-        /// angles (the sun here, as any named light), a named object that is not a light of the
-        /// scene (the brightest light here), a named light that is disabled or not directional
-        /// (itself here).</summary>
+        /// light its RenderSettings name, else its brightest enabled directional light, as
+        /// <see cref="sun"/> chooses it (tests/projects/realtimegi legacynamedsun, a named light
+        /// that is turned; legacytwosuns, legacytwosunsturned). Not measured: a named light at the
+        /// default angles (the sun here, as any named light), a named object that is not a light
+        /// of the scene (the brightest light here).</summary>
         static Light SceneSun(YNode body, LoadedFile file)
         {
             var named = body.Ref("m_Sun");
@@ -646,7 +645,7 @@ namespace UnityEngine
             Light best = null;
             float bestValue = -1f;
             foreach (var candidate in file.Objects.Values)
-                if (candidate is Light light && light.type == LightType.Directional && light.enabled && light.gameObject.activeSelf)
+                if (candidate is Light light && LightingGlobals.CanBeSun(light) && light.enabled && light.gameObject.activeSelf)
                     LightingGlobals.KeepBrighter(light, ref best, ref bestValue);
             return best;
         }
@@ -738,7 +737,9 @@ namespace UnityEngine
         }
         public static Color subtractiveShadowColor { get => s_SubtractiveShadowColor; set => s_SubtractiveShadowColor = value; }
         public static Material skybox { get => s_Skybox; set => s_Skybox = value; }
-        public static Light sun
+        /// <summary>The light the lighting settings name as the sun (a script's or the scene's),
+        /// whatever its type and state; null when none is named or it was destroyed.</summary>
+        internal static Light NamedSun
         {
             get
             {
@@ -747,7 +748,20 @@ namespace UnityEngine
                     s_PendingSun = null;
                     s_Sun = pending.Resolver.Resolve(pending.Ref, typeof(Light)) as Light;
                 }
-                return s_Sun;
+                return s_Sun != null ? s_Sun : null;
+            }
+        }
+
+        /// <summary>The named sun, else (none named, or destroyed) the brightest directional light
+        /// at the time of the call (<see cref="LightingGlobals.BrightestDirectional"/>). Matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/rendersettingssun: a named light is the
+        /// sun when disabled, inactive or not directional; assigning null names none.</summary>
+        public static Light sun
+        {
+            get
+            {
+                var named = NamedSun;
+                return named != null ? named : LightingGlobals.BrightestDirectional();
             }
             set
             {
@@ -825,18 +839,8 @@ namespace Unbound.Runtime
 
             // The main light.
             var main = MainLight();
-            if (main != null)
-            {
-                var forward = main.transform.forward;
-                into.Add(("_WorldSpaceLightPos0", new Vector4(-forward.x, -forward.y, -forward.z, 0f)));
-                into.Add(("_LightColor0", (Vector4)main.FinalColor(linear)));
-            }
-            else
-            {
-                // No light: zero (measured: tests/projects/video; the sky sees another value).
-                into.Add(("_WorldSpaceLightPos0", new Vector4(0f, 0f, 0f, 0f)));
-                into.Add(("_LightColor0", Vector4.zero));
-            }
+            into.Add(("_WorldSpaceLightPos0", MainLightPosition(main)));
+            into.Add(("_LightColor0", main != null ? (Vector4)main.FinalColor(linear) : Vector4.zero));
 
             // Ambient: ShadeSH9's constants from the ambient probe (linear; gamma projects convert
             // the result back). The ambient colors go as the lighting settings hold them: the
@@ -892,44 +896,76 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>The direction to the main light as the base passes read it
+        /// (<c>_WorldSpaceLightPos0</c>); without one zero (measured: tests/projects/video; the sky
+        /// sees another value).</summary>
+        internal static Vector4 MainLightPosition(Light main)
+        {
+            if (main == null) return Vector4.zero;
+            var forward = main.transform.forward;
+            return new Vector4(-forward.x, -forward.y, -forward.z, 0f);
+        }
+
+        /// <summary>The forward base pass's main light (<see cref="MainLight"/>).</summary>
         internal static Light MainLightOf() => MainLight();
 
-        /// <summary>The sun a sky is drawn with: the main light, else (a scene whose directional
-        /// lights are all fully baked) the one chosen as the main light with baked lights included
-        /// (measured: tests/projects/lightingdatanan, whose baked sun lights the procedural sky and
-        /// draws its disk while it lights no object at run time; a baked named sun beside a
-        /// realtime directional light is unmeasured).</summary>
-        internal static Light SkySun() => MainLight() ?? MainLight(allowBaked: true);
+        /// <summary>The sun a sky is drawn with: <see cref="UnityEngine.RenderSettings.sun"/>,
+        /// which may be a light that lights nothing (disabled, fully baked, culled, with a cookie,
+        /// not directional). Matches the Unity 6000.0.71f1 Editor, tests/projects/rendersettingssun
+        /// (sky readbacks) and tests/projects/lightingdatanan (a baked sun draws the procedural
+        /// sky's disk).</summary>
+        internal static Light SkySun() => UnityEngine.RenderSettings.sun;
 
-        /// <summary>The direction to the light a sky is drawn with when the scene has no main
-        /// light (built-in pipeline).</summary>
+        /// <summary>The direction to the light a sky is drawn with when the scene has no sun
+        /// (built-in pipeline).</summary>
         internal static readonly Vector3 SkyWithoutSun = new Vector3(0f, 0f, -1f);
 
-        /// <summary>The scene's sun when it is an enabled directional light, else the brightest
-        /// enabled directional light. A light with a cookie is never it: the base pass has no
-        /// cookie variant, such a light draws in the ForwardAdd pass (measured:
-        /// tests/projects/builtinrp main_light_cookie).</summary>
-        static Light MainLight(bool allowBaked = false)
+        /// <summary>Whether a light is a candidate for the scene's sun or a camera's main light:
+        /// a directional light that is not Not Important.</summary>
+        internal static bool CanBeSun(Light light) =>
+            light.type == LightType.Directional && light.renderMode != LightRenderMode.ForceVertex;
+
+        /// <summary>The scene's sun when none is named: the brightest of the enabled
+        /// <see cref="CanBeSun"/> lights (<see cref="KeepBrighter"/>), whether baked, culled or
+        /// with a cookie, even at intensity 0; the first enabled of equals.</summary>
+        internal static Light BrightestDirectional()
+        {
+            Light best = null;
+            float bestValue = -1f;
+            foreach (var l in Light.s_Enabled)
+                if (l != null && l.isActiveAndEnabled && CanBeSun(l)) KeepBrighter(l, ref best, ref bestValue);
+            return best;
+        }
+
+        /// <summary>The main light of the forward base pass: the brightest
+        /// (<see cref="KeepBrighter"/>) <see cref="CanBeSun"/> light, whether or not it is the
+        /// named sun. Not one that is fully baked, below the visible intensity, with an empty
+        /// culling mask or (built-in pipeline) with a cookie: the base pass has no cookie variant,
+        /// such a light draws in the ForwardAdd pass. Objects outside the main light's culling
+        /// mask take another base light (<see cref="ForwardLights.BaseLightFor"/>). Matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/rendersettingssun (forward readbacks) and
+        /// tests/projects/builtinrp main_light_cookie. Of equal lights the first enabled is
+        /// taken; the Editor's choice between equals varies between runs.</summary>
+        static Light MainLight()
         {
             bool builtin = GraphicsSettings.currentRenderPipeline == null;
-            var sun = UnityEngine.RenderSettings.sun;
-            if (sun != null && sun.isActiveAndEnabled && sun.type == LightType.Directional && (allowBaked || !sun.IsFullyBaked) && !(builtin && sun.cookie != null)) return sun;
             Light best = null;
             float bestValue = -1f;
             foreach (var l in Light.s_Enabled)
             {
-                if (l == null || !l.isActiveAndEnabled || l.type != LightType.Directional || (!allowBaked && l.IsFullyBaked)) continue;
+                if (l == null || !l.isActiveAndEnabled || !CanBeSun(l) || l.IsFullyBaked) continue;
+                if (l.intensity < LightImportance.MinimumVisibleIntensity || l.cullingMask == 0) continue;
                 if (builtin && l.cookie != null) continue;
                 KeepBrighter(l, ref best, ref bestValue);
             }
             return best;
         }
 
-        /// <summary>Keeps the brighter of a directional light and the brightest so far (the
-        /// first of equals): how a scene without a named sun finds its sun.</summary>
+        /// <summary>Keeps the brighter of a directional light and the brightest so far by
+        /// <see cref="LightImportance.SunRank"/> (the first of equals).</summary>
         internal static void KeepBrighter(Light candidate, ref Light best, ref float bestValue)
         {
-            float value = candidate.intensity * candidate.color.grayscale;
+            float value = LightImportance.SunRank(candidate);
             if (value <= bestValue) return;
             best = candidate;
             bestValue = value;

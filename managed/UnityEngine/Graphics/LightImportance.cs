@@ -47,6 +47,17 @@ namespace Unbound.Runtime
             return (c.b * BlueWeight + c.g * GreenWeight + c.r * RedWeight) * light.intensity;
         }
 
+        /// <summary>How a directional light ranks as the scene's sun and a camera's main light:
+        /// ((0.3 r + 0.59 g) + 0.11 b) of its colour as set, times its intensity, sixteen times
+        /// when it casts shadows; its render mode adds nothing. Matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/rendersettingssun.</summary>
+        internal static float SunRank(Light light)
+        {
+            var c = light.color;
+            float rank = (c.r * RedWeight + c.g * GreenWeight + c.b * BlueWeight) * light.intensity;
+            return light.shadows != LightShadows.None ? rank * ShadowedDirectionalWeight : rank;
+        }
+
         /// <summary>A light's importance for an object whose bounds are centred at <paramref name="center"/>.</summary>
         internal static float Of(Light light, LightType type, Vector3 position, float range, Vector3 center)
         {

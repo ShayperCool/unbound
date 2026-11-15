@@ -664,33 +664,35 @@ namespace Unbound.Runtime
                 properties: SkyboxLightProperties(camera, material));
         }
 
+        /// <summary>The sky draw's light vectors, refilled for each draw (the stream reads them when
+        /// the draw is written).</summary>
+        static readonly Dictionary<int, object> s_SkyLight = new Dictionary<int, object>();
+
         internal static Dictionary<int, object> SkyboxLightProperties(Camera camera, Material material)
         {
-            Dictionary<int, object> properties = null;
             // The environment's capture is drawn as the built-in pipeline draws a sky, whatever
             // the pipeline.
             bool builtin = GraphicsSettings.currentRenderPipeline == null || camera.m_EnvironmentCapture;
-            // The sky's sun is the main light, else a fully baked one (SkySun), which lights no
-            // object and so is not in the globals.
-            var sun = builtin ? LightingGlobals.SkySun() : null;
-            if (builtin && (sun == null || sun.IsFullyBaked))
-            {
-                properties = sun == null
-                    ? new Dictionary<int, object> { [s_WorldSpaceLightPos0Id] = (Vector4)LightingGlobals.SkyWithoutSun }
-                    : new Dictionary<int, object>
-                    {
-                        [s_WorldSpaceLightPos0Id] = (Vector4)(-sun.transform.forward),
-                        [s_LightColor0Id] = (Vector4)sun.FinalColor(QualitySettings.activeColorSpace == ColorSpace.Linear),
-                    };
-            }
-            // The ambient projection leaves out the main light's colour, whatever the sky's
-            // shader (Compat.SkyAmbientWithoutLightColor).
-            if (camera.m_EnvironmentCapture && Compat.SkyAmbientWithoutLightColor)
-            {
-                properties ??= new Dictionary<int, object>();
-                properties[s_LightColor0Id] = Vector4.zero;
-            }
-            return properties;
+            if (!builtin) return null;
+            // The sky's sun is RenderSettings.sun (SkySun), which need not be the main light the
+            // globals hold: without one, the direction (0, 0, -1) and no colour.
+            var sun = LightingGlobals.SkySun();
+            var toSun = sun != null ? -sun.transform.forward : LightingGlobals.SkyWithoutSun;
+            // The ambient projection leaves out the light's colour, whatever the sky's shader
+            // (Compat.SkyAmbientWithoutLightColor).
+            var color = sun == null || (camera.m_EnvironmentCapture && Compat.SkyAmbientWithoutLightColor)
+                ? Vector4.zero
+                : (Vector4)sun.FinalColor(QualitySettings.activeColorSpace == ColorSpace.Linear);
+            SetSkyVector(s_WorldSpaceLightPos0Id, new Vector4(toSun.x, toSun.y, toSun.z, 0f));
+            SetSkyVector(s_LightColor0Id, color);
+            return s_SkyLight;
+        }
+
+        /// <summary>Boxes a sky vector again only when it changed.</summary>
+        static void SetSkyVector(int id, Vector4 value)
+        {
+            if (s_SkyLight.TryGetValue(id, out var held) && held is Vector4 old && old.Equals(value)) return;
+            s_SkyLight[id] = value;
         }
 
         /// <summary>The sky mesh: an octahedron whose triangles are split in four five times,
@@ -1595,13 +1597,7 @@ namespace Unbound.Runtime
                 if (!deferred && ((mode & (DepthTextureMode.Depth | DepthTextureMode.MotionVectors)) != 0 || (!vertexLit && NeedsShadowDepth(camera))))
                     CameraDepth(context, width, height, camera);
                 if ((mode & DepthTextureMode.DepthNormals) != 0) RenderDepthNormals(camera, context, width, height);
-                // The other lights' shadows first: the main light's mask is the global the base
-                // passes read.
-                if (!deferred && !vertexLit)
-                {
-                    RenderAdditionalShadows(camera, context, width, height);
-                    RenderMainLightShadows(camera, context, width, height);
-                }
+                if (!deferred && !vertexLit) RenderShadows(camera, context, width, height);
                 ulong target = sceneTarget != null ? TextureHandles.Of(sceneTarget) : 0;
                 RenderTexture.SetActiveQuietly(sceneTarget);
                 camera.m_Rendering = true;

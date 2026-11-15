@@ -44,6 +44,18 @@ namespace Unbound.Runtime
             return Mathf.Clamp(size, 16, max);
         }
 
+        /// <summary>Draws a camera's shadows: the other lights' first, then the main light's
+        /// screen-space mask, the global the base passes read. The shadow passes set
+        /// <c>_WorldSpaceLightPos0</c> to their own light; the base passes get the main light's
+        /// back (measured: tests/projects/rendersettingssun shadows short, an other directional
+        /// light casting shadows).</summary>
+        static void RenderShadows(Camera camera, CameraContext context, int width, int height)
+        {
+            RenderAdditionalShadows(camera, context, width, height);
+            RenderMainLightShadows(camera, context, width, height);
+            GfxStream.GlobalVector("_WorldSpaceLightPos0", LightingGlobals.MainLightPosition(LightingGlobals.MainLightOf()));
+        }
+
         /// <summary>Draws the main light's shadows for a camera into its screen-space mask and
         /// makes it the forward base passes' _ShadowMapTexture; false when the light casts none.</summary>
         static bool RenderMainLightShadows(Camera camera, CameraContext context, int width, int height)
