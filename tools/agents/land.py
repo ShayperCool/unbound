@@ -290,6 +290,42 @@ def automatic_probes(worktree, changed, explicit, environment=None):
     return selected
 
 
+def suite_label(argv):
+    """The label an executing suite takes: argparse keeps the last --label."""
+    label = None
+    for position, token in enumerate(argv):
+        if token == '--label' and position+1 < len(argv):
+            label = argv[position+1]
+        elif token.startswith('--label='):
+            label = token.split('=', 1)[1]
+    return label
+
+
+def fresh_suite_label(command):
+    """(command, new label): a fixed explicit suite label whose output exists gets a new one.
+
+    Train failure isolation and repeated landings run the same explicit command again, and
+    suite.py refuses a label it has used. The earlier output stays; this run appends a later
+    --label, which the suite's parser takes. Labels made by shell expansion, and commands with
+    a trailing comment that would swallow the appended option, are left unchanged."""
+    argv = suite_arguments(command)
+    if argv is None:
+        return command, None
+    label = suite_label(argv)
+    if label is None or re.search(r'[$`*?\[\]{}~\\]', label):
+        return command, None
+    try:
+        if shlex.split(command, comments=True) != shlex.split(command):
+            return command, None
+    except ValueError:
+        return command, None
+    import suite
+    if not ((suite.AGENTS/'suite'/label).exists() or (suite.CACHE/'validation/suite'/label).exists()):
+        return command, None
+    fresh = f'{label}-retry-{time.time_ns()}'
+    return f'{command} --label {shlex.quote(fresh)}', fresh
+
+
 def without_suite_label(argv):
     result, skip = [], False
     for token in argv:
@@ -529,7 +565,10 @@ class Gate:
             except ValueError as error:
                 die(2, str(error))
             exclusive = self.probe_exclusive(probe, specs)
-            command = probe
+            command, fresh = fresh_suite_label(probe)
+            if fresh:
+                self.note(f'probe {index}: its suite label has output from an earlier run; '
+                          f'this run uses label {fresh}')
             owners = self.probe_owners[index-1] if self.probe_owners else []
             name = f'probe {index} ({release})' + (f' [{", ".join(owners)}]' if owners else '')
             log = logs/f'{index:03d}.log'

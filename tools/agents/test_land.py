@@ -20,6 +20,7 @@ import os
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import land
 import probe_runtime
+import suite as suite_module
 
 
 class TouchedCratesTests(unittest.TestCase):
@@ -277,6 +278,11 @@ class ParallelProbeTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+        # Suite output roots as the fake suites below set them, so label reuse is read here too.
+        for name, value in (('AGENTS', self.root/'agents'), ('CACHE', self.root/'cache')):
+            patcher = mock.patch.object(suite_module, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.gate = land.Gate(self.root, 'HEAD', [], False, self.root/'gate.log', priority=True)
         self.script = self.root/'driver.py'
         self.script.write_text('''import json, os, sys, time
@@ -444,6 +450,48 @@ raise SystemExit(int(code))
              mock.patch.object(suite.signal, 'signal'):
             self.assertEqual(suite.main(), 0)
         self.assertTrue((self.root/'d.start').is_file())
+
+    def fake_suite(self, names):
+        source = self.root/'tools/agents/suite.py'
+        source.parent.mkdir(parents=True, exist_ok=True)
+        actual = Path(__file__).resolve().parent
+        for name in names:
+            (self.root/'tests/projects'/name/'Reference').mkdir(parents=True, exist_ok=True)
+        source.write_text(f"import sys\nsys.path.insert(0, {str(actual)!r})\n" + 'from pathlib import Path\nimport suite\nroot=Path.cwd()\nsuite.REPO=root\nsuite.PROJECTS=root/\'tests/projects\'\nsuite.CACHE=root/\'cache\'\nsuite.AGENTS=root/\'agents\'\nsuite.default_cli=lambda: Path(sys.executable)\nsuite.managed_for=lambda cli: root\nsuite.make_runtime=lambda *args: root\nsuite.recipes=lambda release: {name:[suite.Step(\'compare\',[sys.executable,\'-c\',\'print("ok")\'])] for name in ' + repr(tuple(names)) + '}\nraise SystemExit(suite.main())\n')
+
+    def test_fixed_explicit_suite_label_is_renewed_when_a_retry_runs_it_again(self):
+        self.fake_suite(['a'])
+        command = 'python3 tools/agents/suite.py --only a --label requested > out.log'
+        self.gate.probes = [command]
+        self.gate.run_probes()
+        # Train failure isolation runs the same request again in a later gate.
+        retry = land.Gate(self.root, 'HEAD', [command], False, self.root/'retry.log', priority=True)
+        retry.run_probes()
+        labels = sorted(path.parent.name for path in (self.root/'agents/suite').glob('*/summary.json'))
+        self.assertEqual(len(labels), 2)
+        self.assertEqual(labels[0], 'requested')
+        self.assertRegex(labels[1], r'^requested-retry-\d+$')
+        self.assertIn(f'this run uses label {labels[1]}', (self.root/'retry.log').read_text())
+        self.assertIn(f'--label {labels[1]}', (self.root/'retry.log').read_text())
+        self.assertNotIn('this run uses label', (self.root/'gate.log').read_text())
+
+    def test_label_renewal_leaves_expansions_comments_and_other_commands_alone(self):
+        (self.root/'agents/suite/used').mkdir(parents=True)
+        (self.root/'cache/validation/suite/work-only').mkdir(parents=True)
+        for command in ['python3 tools/agents/suite.py --only a --label "x-$(date +%s%N)"',
+                        'python3 tools/agents/suite.py --only a --label used # keep',
+                        'cd tests && python3 ../tools/agents/suite.py --only a --label used',
+                        'python3 tests/projects/a/run.py --label used',
+                        'python3 tools/agents/suite.py --only a --label fresh',
+                        'python3 tools/agents/suite.py --only a']:
+            self.assertEqual(land.fresh_suite_label(command), (command, None), command)
+        for command, label in [('python3 tools/agents/suite.py --only a --label used', 'used'),
+                               ('python3 tools/agents/suite.py --label=unused --only a --label=work-only', 'work-only'),
+                               ('/usr/bin/python3 -u tools/agents/suite.py --label used --only a 2>&1', 'used')]:
+            renewed, fresh = land.fresh_suite_label(command)
+            self.assertRegex(fresh, rf'^{label}-retry-\d+$')
+            self.assertEqual(land.suite_label(land.suite_arguments(renewed)), fresh)
+            self.assertTrue(renewed.startswith(command))
 
     def test_explicit_suites_have_unique_labels_and_preserve_shell_expansions(self):
         source = self.root/'tools/agents/suite.py'
