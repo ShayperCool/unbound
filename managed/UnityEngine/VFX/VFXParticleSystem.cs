@@ -275,17 +275,23 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Whether every kernel of the system compiles (checked once, before its
-        /// first step): a system with one that does not is stopped, and says so.</summary>
+        /// first step): a system with one that does not is stopped, and says so. Without a
+        /// renderer (a headless run, a test) no kernel runs, nothing is read back and nothing
+        /// is said: the system goes on with what it counts itself. Whether there is a renderer
+        /// is asked then too, and that answer is final for the system.</summary>
         bool KernelsUsable()
         {
             if (m_KernelsChecked) return m_KernelsUsable;
             m_KernelsChecked = true;
-            m_KernelsUsable = m_Initialize == null || m_Initialize.Usable();
+            m_HasRenderer = GraphicsFences.RendererPresent;
+            m_KernelsUsable = true;
+            if (!m_HasRenderer) return true;
+            if (m_Initialize != null) m_KernelsUsable = m_Initialize.Usable();
             foreach (var update in m_Updates) m_KernelsUsable &= update.Usable();
             return m_KernelsUsable;
         }
 
-        bool m_KernelsChecked, m_KernelsUsable;
+        bool m_KernelsChecked, m_KernelsUsable, m_HasRenderer;
 
         internal override void Update(VisualEffectState state)
         {
@@ -352,7 +358,7 @@ namespace Unbound.Runtime
         /// kills particles, once a period, and takes an answer that arrived.</summary>
         internal void UpdateReadback()
         {
-            if (!HasKill || HasStrips || m_DeadList < 0 || Capacity == 0) return;
+            if (!HasKill || HasStrips || m_DeadList < 0 || Capacity == 0 || !m_HasRenderer) return;
             uint frame = VFXManager.Frame;
             if (m_ReadbackPending || m_NextReadbackFrame > frame || m_Sleeping) return;
             m_ReadbackPending = true;
@@ -440,14 +446,11 @@ namespace Unbound.Runtime
             }
 
             /// <summary>Whether the kernel compiles here; said once when it does not (a system
-            /// whose kernel cannot run stops, rather than count particles nothing spawns).
-            /// Without a renderer (a headless run, a test) no kernel runs and nothing is said:
-            /// the system goes on with what it counts itself.</summary>
+            /// whose kernel cannot run stops, rather than count particles nothing spawns).</summary>
             internal bool Usable()
             {
                 if (m_Checked) return !m_Failed;
                 m_Checked = true;
-                if (!GraphicsFences.RendererPresent) return true;
                 try
                 {
                     m_Shader.GetKernelThreadGroupSizes(m_Kernel, out _, out _, out _);

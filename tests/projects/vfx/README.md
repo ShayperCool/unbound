@@ -183,7 +183,12 @@ does: neither is among the controls.
 
 Known residual (`residuals.json`): the coroutine of `override timing` that waits for the end of
 the frame resumes in the first frame in this capture and from the second frame in Unbound,
-which follows what `tests/projects/eofstartup` measured with the built-in render pipeline.
+which follows what `tests/projects/eofstartup` measured. What makes the two captures differ
+(the render pipeline, how long the Editor settles, the Game view's focus) is not isolated.
+
+To do with the next capture: the inputs that convert an unsigned number and a float to a bool
+(`b17`, `b18`) only ever hold numbers other than zero (zero is covered by unit tests only), and
+a capture that lists graphs in `capture/graphs imported while playing` is not refused yet.
 
 ## Not covered yet
 

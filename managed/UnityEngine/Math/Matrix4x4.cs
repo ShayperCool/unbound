@@ -512,8 +512,9 @@ namespace UnityEngine
         /// The inverse of an affine matrix (bottom row 0, 0, 0, 1) in single precision: the 3x3
         /// part by its cofactors over its determinant (summed as its positive and its negative
         /// products), the translation through the inverted part. A singular 3x3 part gives false
-        /// and a zero matrix; one with a cell that is not a number gives true and no numbers. Matches the Unity 6000.0.71f1 Editor bit for bit where a Visual
-        /// Effect Graph inverts a transform (tests/projects/vfx, `sim/expressions/inputs/*/m01`).
+        /// and a zero matrix; one with a cell that is not a number gives true and no numbers.
+        /// Matches the Unity 6000.0.71f1 Editor bit for bit where a Visual Effect Graph inverts
+        /// a transform (tests/projects/vfx, `sim/expressions/inputs/*/m01`).
         /// </summary>
         internal static bool InverseAffine(in Matrix4x4 m, out Matrix4x4 inverse)
         {

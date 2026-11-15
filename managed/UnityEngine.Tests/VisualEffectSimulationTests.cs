@@ -378,6 +378,33 @@ namespace UnityEngine.Tests
         // ------------------------------------------------------------------- the frame's steps
 
         [Fact]
+        public void WhatWasBoundToAKernelCanBeTakenBack()
+        {
+            // A kernel object whose value goes away (a property without a texture, a destroyed
+            // one) is unbound: the kernel reads what it reads when nothing was ever bound.
+            var shader = ComputeShader.FromFile("Tests/VfxUnbind.compute", "VfxUnbind", "#pragma kernel CSMain\n#pragma kernel CSOther\n");
+            var texture = new Texture2D(2, 2);
+            int main = shader.FindKernel("CSMain"), other = shader.FindKernel("CSOther"), name = Shader.PropertyToID("Image");
+            try
+            {
+                shader.SetTexture(main, name, texture);
+                shader.SetTexture(other, name, texture);
+                Assert.Contains(shader.Properties(main, null), p => p.Name == "Image");
+                shader.Unbind(main, name);
+                Assert.DoesNotContain(shader.Properties(main, null), p => p.Name == "Image");
+                // The other kernel keeps its own, and taking back what is not bound is nothing.
+                Assert.Contains(shader.Properties(other, null), p => p.Name == "Image");
+                shader.Unbind(main, name);
+                Assert.DoesNotContain(shader.Properties(main, null), p => p.Name == "Image");
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(shader);
+            }
+        }
+
+        [Fact]
         public void AFramesFixedStepsAreTheNearestCountAndKeepTheRest()
         {
             float step = 1f / 60f, remainder = 0f;
