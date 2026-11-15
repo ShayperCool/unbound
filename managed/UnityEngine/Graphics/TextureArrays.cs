@@ -409,30 +409,12 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>The bytes of a blittable array from <paramref name="start"/>.</summary>
-        internal static unsafe ReadOnlySpan<byte> Bytes<T>(T[] data, int start)
+        /// <summary>SetPixelData's level check for a layered texture (after its element and face).</summary>
+        internal static int PixelDataLevelBytes(LayeredPixels pixels, bool validImage, int mip, string api, string name)
         {
-            if (data == null) throw new ArgumentNullException(nameof(data));
-            if (start < 0 || start > data.Length) throw new ArgumentOutOfRangeException("sourceDataStartIndex");
-            int size = System.Runtime.CompilerServices.Unsafe.SizeOf<T>();
-            var bytes = new byte[(long)(data.Length - start) * size];
-            var pin = GCHandle.Alloc(data, GCHandleType.Pinned);
-            try
-            {
-                new ReadOnlySpan<byte>((byte*)pin.AddrOfPinnedObject() + (long)start * size, bytes.Length).CopyTo(bytes);
-            }
-            finally
-            {
-                pin.Free();
-            }
-            return bytes;
-        }
-
-        internal static unsafe ReadOnlySpan<byte> Bytes<T>(NativeArray<T> data, int start) where T : struct
-        {
-            int size = UnsafeUtility.SizeOf<T>();
-            if (start < 0 || start > data.Length) throw new ArgumentOutOfRangeException("sourceDataStartIndex");
-            return new ReadOnlySpan<byte>((byte*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(data) + (long)start * size, (data.Length - start) * size);
+            if (!validImage) throw PixelDataTransfer.InvalidArgument(api, name);
+            if (mip < 0 || mip >= pixels.Mips) throw PixelDataTransfer.InvalidMip(api, name);
+            return pixels.LevelBytes(mip);
         }
     }
 
@@ -522,11 +504,25 @@ namespace UnityEngine
 
         public NativeArray<T> GetPixelData<T>(int mipLevel, int element) where T : struct => Level(null, element, mipLevel).View<T>(element, mipLevel);
 
-        public void SetPixelData<T>(T[] data, int mipLevel, int element, int sourceDataStartIndex = 0) =>
-            Level(null, element, mipLevel).CopyIn(LayeredTextures.Bytes(data, sourceDataStartIndex), element, mipLevel);
+        const string PixelDataApi = "Texture2DArray.SetPixelData";
 
-        public void SetPixelData<T>(NativeArray<T> data, int mipLevel, int element, int sourceDataStartIndex = 0) where T : struct =>
-            Level(null, element, mipLevel).CopyIn(LayeredTextures.Bytes(data, sourceDataStartIndex), element, mipLevel);
+        public void SetPixelData<T>(T[] data, int mipLevel, int element, int sourceDataStartIndex = 0)
+        {
+            PixelDataTransfer.CheckStart(sourceDataStartIndex);
+            var pixels = Pixels(null);
+            int elementSize = PixelDataTransfer.ElementSize(data);
+            int bytes = LayeredTextures.PixelDataLevelBytes(pixels, element >= 0 && element < m_Depth, mipLevel, PixelDataApi, name);
+            pixels.CopyIn(PixelDataTransfer.Level(data, sourceDataStartIndex, elementSize, bytes, PixelDataApi, name), element, mipLevel);
+        }
+
+        public void SetPixelData<T>(NativeArray<T> data, int mipLevel, int element, int sourceDataStartIndex = 0) where T : struct
+        {
+            PixelDataTransfer.CheckStart(sourceDataStartIndex);
+            var pixels = Pixels(null);
+            int elementSize = PixelDataTransfer.ElementSize(data);
+            int bytes = LayeredTextures.PixelDataLevelBytes(pixels, element >= 0 && element < m_Depth, mipLevel, PixelDataApi, name);
+            pixels.CopyIn(PixelDataTransfer.Level(data, sourceDataStartIndex, elementSize, bytes, PixelDataApi, name), element, mipLevel);
+        }
 
         public void Apply() => Apply(true, false);
         public void Apply(bool updateMipmaps) => Apply(updateMipmaps, false);
@@ -656,10 +652,16 @@ namespace UnityEngine
         public override TextureDimension dimension { get => TextureDimension.CubeArray; set => throw new NotImplementedException(); }
         internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(m_Format, !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear);
 
-        LayeredPixels Level(string api, CubemapFace face, int element, int mip)
+        LayeredPixels Pixels(string api)
         {
             if (!m_Readable || m_Pixels == null)
                 throw api == null ? LayeredTextures.NoMemoryAccess(name) : LayeredTextures.NotReadable(api, name);
+            return m_Pixels;
+        }
+
+        LayeredPixels Level(string api, CubemapFace face, int element, int mip)
+        {
+            Pixels(api);
             if (face < CubemapFace.PositiveX || face > CubemapFace.NegativeZ) throw new ArgumentException($"Invalid cubemap face {face}.", nameof(face));
             if (element < 0 || element >= m_Count) throw new ArgumentException($"Invalid array element {element}.", nameof(element));
             if (mip < 0 || mip >= m_Pixels.Mips) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
@@ -683,11 +685,28 @@ namespace UnityEngine
         public NativeArray<T> GetPixelData<T>(int mipLevel, CubemapFace face, int element) where T : struct =>
             Level(null, face, element, mipLevel).View<T>(Image(face, element), mipLevel);
 
-        public void SetPixelData<T>(T[] data, int mipLevel, CubemapFace face, int element, int sourceDataStartIndex = 0) =>
-            Level(null, face, element, mipLevel).CopyIn(LayeredTextures.Bytes(data, sourceDataStartIndex), Image(face, element), mipLevel);
+        const string PixelDataApi = "CubemapArray.SetPixelData";
 
-        public void SetPixelData<T>(NativeArray<T> data, int mipLevel, CubemapFace face, int element, int sourceDataStartIndex = 0) where T : struct =>
-            Level(null, face, element, mipLevel).CopyIn(LayeredTextures.Bytes(data, sourceDataStartIndex), Image(face, element), mipLevel);
+        bool ValidImage(CubemapFace face, int element) =>
+            face >= CubemapFace.PositiveX && face <= CubemapFace.NegativeZ && element >= 0 && element < m_Count;
+
+        public void SetPixelData<T>(T[] data, int mipLevel, CubemapFace face, int element, int sourceDataStartIndex = 0)
+        {
+            PixelDataTransfer.CheckStart(sourceDataStartIndex);
+            var pixels = Pixels(null);
+            int elementSize = PixelDataTransfer.ElementSize(data);
+            int bytes = LayeredTextures.PixelDataLevelBytes(pixels, ValidImage(face, element), mipLevel, PixelDataApi, name);
+            pixels.CopyIn(PixelDataTransfer.Level(data, sourceDataStartIndex, elementSize, bytes, PixelDataApi, name), Image(face, element), mipLevel);
+        }
+
+        public void SetPixelData<T>(NativeArray<T> data, int mipLevel, CubemapFace face, int element, int sourceDataStartIndex = 0) where T : struct
+        {
+            PixelDataTransfer.CheckStart(sourceDataStartIndex);
+            var pixels = Pixels(null);
+            int elementSize = PixelDataTransfer.ElementSize(data);
+            int bytes = LayeredTextures.PixelDataLevelBytes(pixels, ValidImage(face, element), mipLevel, PixelDataApi, name);
+            pixels.CopyIn(PixelDataTransfer.Level(data, sourceDataStartIndex, elementSize, bytes, PixelDataApi, name), Image(face, element), mipLevel);
+        }
 
         public void Apply() => Apply(true, false);
         public void Apply(bool updateMipmaps) => Apply(updateMipmaps, false);
@@ -796,13 +815,19 @@ namespace UnityEngine
         public override TextureDimension dimension { get => TextureDimension.Tex3D; set => throw new NotImplementedException(); }
         internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(m_Format, !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear);
 
-        LayeredPixels Level(string api, int mip)
+        LayeredPixels Pixels(string api)
         {
             CheckExternalCpu(api ?? "Texture3D pixel data");
             if (m_Readable && m_Pixels == null && m_AssetGuid != null)
                 m_Pixels = LayeredTextures.FetchImported(m_AssetGuid, name, m_Width, m_Height, m_Depth, m_MipCount, true, m_Format);
             if (!m_Readable || m_Pixels == null)
                 throw api == null ? LayeredTextures.NoMemoryAccess(name) : LayeredTextures.NotReadable(api, name);
+            return m_Pixels;
+        }
+
+        LayeredPixels Level(string api, int mip)
+        {
+            Pixels(api);
             if (mip < 0 || mip >= m_Pixels.Mips) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
             return m_Pixels;
         }
@@ -819,11 +844,25 @@ namespace UnityEngine
 
         public NativeArray<T> GetPixelData<T>(int mipLevel) where T : struct => Level(null, mipLevel).View<T>(0, mipLevel);
 
-        public void SetPixelData<T>(T[] data, int mipLevel, int sourceDataStartIndex = 0) =>
-            Level(null, mipLevel).CopyIn(LayeredTextures.Bytes(data, sourceDataStartIndex), 0, mipLevel);
+        const string PixelDataApi = "Texture3D.SetPixelData";
 
-        public void SetPixelData<T>(NativeArray<T> data, int mipLevel, int sourceDataStartIndex = 0) where T : struct =>
-            Level(null, mipLevel).CopyIn(LayeredTextures.Bytes(data, sourceDataStartIndex), 0, mipLevel);
+        public void SetPixelData<T>(T[] data, int mipLevel, int sourceDataStartIndex = 0)
+        {
+            PixelDataTransfer.CheckStart(sourceDataStartIndex);
+            var pixels = Pixels(null);
+            int elementSize = PixelDataTransfer.ElementSize(data);
+            int bytes = LayeredTextures.PixelDataLevelBytes(pixels, true, mipLevel, PixelDataApi, name);
+            pixels.CopyIn(PixelDataTransfer.Level(data, sourceDataStartIndex, elementSize, bytes, PixelDataApi, name), 0, mipLevel);
+        }
+
+        public void SetPixelData<T>(NativeArray<T> data, int mipLevel, int sourceDataStartIndex = 0) where T : struct
+        {
+            PixelDataTransfer.CheckStart(sourceDataStartIndex);
+            var pixels = Pixels(null);
+            int elementSize = PixelDataTransfer.ElementSize(data);
+            int bytes = LayeredTextures.PixelDataLevelBytes(pixels, true, mipLevel, PixelDataApi, name);
+            pixels.CopyIn(PixelDataTransfer.Level(data, sourceDataStartIndex, elementSize, bytes, PixelDataApi, name), 0, mipLevel);
+        }
 
         public void SetPixel(int x, int y, int z, Color color) => SetPixel(x, y, z, color, 0);
 

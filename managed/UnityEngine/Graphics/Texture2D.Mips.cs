@@ -416,36 +416,36 @@ namespace UnityEngine
             Marshal.Copy(data, bytes, 0, size);
             LoadRawTextureData(bytes);
         }
-        public void SetPixelData<T>(T[] data, int mipLevel, int sourceDataStartIndex = 0) where T : struct
+        const string PixelDataApi = "Texture2D.SetPixelData";
+
+        public void SetPixelData<T>(T[] data, int mipLevel, int sourceDataStartIndex = 0)
         {
+            PixelDataTransfer.CheckStart(sourceDataStartIndex);
             RequireReadable(pixels: !SourceBlocks);
-            CheckMip(mipLevel);
-            if (data == null) throw new ArgumentNullException(nameof(data));
-            if (sourceDataStartIndex < 0 || sourceDataStartIndex > data.Length) throw new ArgumentOutOfRangeException(nameof(sourceDataStartIndex));
-            SetPixelBytes(MemoryMarshal.AsBytes(new ReadOnlySpan<T>(data, sourceDataStartIndex, data.Length - sourceDataStartIndex)), mipLevel);
+            int elementSize = PixelDataTransfer.ElementSize(data);
+            SetPixelBytes(PixelDataTransfer.Level(data, sourceDataStartIndex, elementSize, PixelDataLevelBytes(mipLevel), PixelDataApi, name), mipLevel);
         }
 
         public void SetPixelData<T>(Unity.Collections.NativeArray<T> data, int mipLevel, int sourceDataStartIndex = 0) where T : struct
         {
+            PixelDataTransfer.CheckStart(sourceDataStartIndex);
             RequireReadable(pixels: !SourceBlocks);
-            CheckMip(mipLevel);
-            if (!data.IsCreated) throw new ArgumentException("SetPixelData: the data array is not created.");
-            if (sourceDataStartIndex < 0 || sourceDataStartIndex > data.Length) throw new ArgumentOutOfRangeException(nameof(sourceDataStartIndex));
-            SetPixelBytes(MemoryMarshal.AsBytes(data.AsReadOnlySpan().Slice(sourceDataStartIndex)), mipLevel);
+            int elementSize = PixelDataTransfer.ElementSize(data);
+            SetPixelBytes(PixelDataTransfer.Level(data, sourceDataStartIndex, elementSize, PixelDataLevelBytes(mipLevel), PixelDataApi, name), mipLevel);
+        }
+
+        /// <summary>The bytes SetPixelData writes to a level: its blocks for a compressed texture.</summary>
+        int PixelDataLevelBytes(int mip)
+        {
+            if (!ValidMip(mip)) throw PixelDataTransfer.InvalidMip(PixelDataApi, name);
+            return SourceBlocks ? SourceLevelSize(mip) : RawMipSize(mip);
         }
 
         /// <summary>SetPixelData's bytes for one level, in the texture's format.</summary>
         void SetPixelBytes(ReadOnlySpan<byte> bytes, int mipLevel)
         {
-            if (SourceBlocks)
-            {
-                SetBlockLevel(bytes, mipLevel);
-                CpuTexelsChanged();
-                return;
-            }
-            int size = RawMipSize(mipLevel);
-            if (bytes.Length < size) throw new ArgumentException("SetPixelData: not enough data provided.");
-            DecodeLevel(bytes.Slice(0, size), mipLevel);
+            if (SourceBlocks) SetBlockLevel(bytes, mipLevel);
+            else DecodeLevel(bytes, mipLevel);
             CpuTexelsChanged();
         }
         public byte[] GetRawTextureData()

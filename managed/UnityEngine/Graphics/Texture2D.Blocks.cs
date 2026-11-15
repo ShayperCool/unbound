@@ -178,7 +178,6 @@ namespace UnityEngine
         {
             if (SourceCrunch) throw new UnityException("SetPixelData of Crunch archives is unsupported; use LoadRawTextureData with a complete archive.");
             int size = SourceLevelSize(mip);
-            if (data.Length < size) throw new ArgumentException("SetPixelData: not enough data provided.");
             DecodeRaw();
             var blocks = CurrentBlocks();
             int at = 0;

@@ -112,7 +112,7 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After manifest adapters |
+| Category | Before Q410 | After pixel transfer |
 | --- | ---: | ---: |
 | Attributes | 938 | 22 |
 | Modifiers | 87 | 8 |
@@ -121,9 +121,9 @@ Editor and collection-validation methods.
 | Layout | 68 | 61 |
 | Interfaces | 65 | 49 |
 | Accessibility | 18 | 0 |
-| Constraints | 1 | 1 |
+| Constraints | 1 | 0 |
 | Lookup policies | 11 | 11 |
-| Total | 1,332 | 154 |
+| Total | 1,332 | 153 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.

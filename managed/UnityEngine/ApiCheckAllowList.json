@@ -169,13 +169,6 @@
   },
   {
     "Release": "6000.0.71f1",
-    "Category": "constraints",
-    "Type": "UnityEngine.Texture2D",
-    "Message": "M:SetPixelData`1(!!0[],System.Int32,System.Int32):System.Void generic[0] is None,class=False,struct=True,new=False,unmanaged=False,notnull=False,ref-like=False;, Unity's is None,class=False,struct=False,new=False,unmanaged=False,notnull=False,ref-like=False;",
-    "Reason": "Q410-unconstrained-pixel-data: Texture2D.SetPixelData<T>(T[]) currently uses the struct-constrained MemoryMarshal byte-transfer path. Add a shared allocation-free unconstrained transfer rule with null, empty, reference-containing, bool and ordinary pixel-array controls before removing the constraint; preserve layered texture callers."
-  },
-  {
-    "Release": "6000.0.71f1",
     "Category": "interfaces",
     "Type": "UnityEditor.ConsoleWindow",
     "Message": "type interfaces is , Unity's is UnityEditor.IHasCustomMenu",

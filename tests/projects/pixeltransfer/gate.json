@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/pixeltransfer/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/PixelDataTransfer.cs",
+    "managed/UnityEngine/Graphics/Texture2D.Mips.cs",
+    "managed/UnityEngine/Graphics/Texture2D.Blocks.cs",
+    "managed/UnityEngine/Graphics/TextureArrays.cs"
+  ]
+}

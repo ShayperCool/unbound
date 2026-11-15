@@ -1,0 +1,201 @@
+{"key":"r8.bytes.start0.result","value":"ok"}
+{"key":"r8.bytes.start0.logs","value":""}
+{"key":"r8.bytes.start0.bytes","value":"01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3ba"}
+{"key":"r8.bytes.start5.result","value":"ok"}
+{"key":"r8.bytes.start5.logs","value":""}
+{"key":"r8.bytes.start5.bytes","value":"262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8df"}
+{"key":"r8.bytes.extra.result","value":"ok"}
+{"key":"r8.bytes.extra.logs","value":""}
+{"key":"r8.bytes.extra.bytes","value":"0910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2"}
+{"key":"rgba.mips","value":"3"}
+{"key":"rgba.color32.result","value":"ok"}
+{"key":"rgba.color32.logs","value":""}
+{"key":"rgba.color32.bytes","value":"0000ff000103fe0b0206fd160309fc21040cfb2c050ffa370612f9420715f84d0818f758091bf6630a1ef56e0b21f4790c24f3840d27f28f0e2af19a0f2df0a5"}
+{"key":"rgba.color32.mip1.result","value":"ok"}
+{"key":"rgba.color32.mip1.logs","value":""}
+{"key":"rgba.color32.mip1.bytes","value":"091bf6630a1ef56e0b21f4790c24f384"}
+{"key":"rgba.uint.mip2.result","value":"ok"}
+{"key":"rgba.uint.mip2.logs","value":""}
+{"key":"rgba.uint.mip2.bytes","value":"88776655"}
+{"key":"r8.bool.start0.result","value":"ok"}
+{"key":"r8.bool.start0.logs","value":""}
+{"key":"r8.bool.start0.bytes","value":"01000001000001000001000001000001000001000001000001000001000001000001000001000001000001000001000001000001000001000001000001000001"}
+{"key":"r8.bool.start2.result","value":"ok"}
+{"key":"r8.bool.start2.logs","value":""}
+{"key":"r8.bool.start2.bytes","value":"00010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000"}
+{"key":"r8.char.start0.result","value":"ok"}
+{"key":"r8.char.start0.logs","value":""}
+{"key":"r8.char.start0.bytes","value":"412046204b20502055205a205f20642069206e20732078207d20822087208c20912096209b20a020a520aa20af20b420b920be20c320c820cd20d220d720dc20"}
+{"key":"r8.char.start3.result","value":"ArgumentException: Texture2D.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'r8')"}
+{"key":"r8.char.start3.logs","value":""}
+{"key":"r8.char.start3.bytes","value":"412046204b20502055205a205f20642069206e20732078207d20822087208c20912096209b20a020a520aa20af20b420b920be20c320c820cd20d220d720dc20"}
+{"key":"r8.boolpair.start0.result","value":"ok"}
+{"key":"r8.boolpair.start0.logs","value":""}
+{"key":"r8.boolpair.start0.bytes","value":"006401650066016700680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f0080018100820183"}
+{"key":"r8.boolpair.start1.result","value":"ok"}
+{"key":"r8.boolpair.start1.logs","value":""}
+{"key":"r8.boolpair.start1.bytes","value":"00680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f00800181008201830084018500860187"}
+{"key":"r8.named.result","value":"ok"}
+{"key":"r8.named.logs","value":""}
+{"key":"r8.named.bytes","value":"040302010000000008060402000000000c09060300000000100c080400000000"}
+{"key":"r8.string.result","value":"ArgumentException"}
+{"key":"r8.string.logs","value":""}
+{"key":"r8.string.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.object.result","value":"ArgumentException"}
+{"key":"r8.object.logs","value":""}
+{"key":"r8.object.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.boxed.result","value":"ArgumentException"}
+{"key":"r8.boxed.logs","value":""}
+{"key":"r8.boxed.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.nullFirst.result","value":"NullReferenceException"}
+{"key":"r8.nullFirst.logs","value":""}
+{"key":"r8.nullFirst.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.nullFirstBoxed.result","value":"NullReferenceException"}
+{"key":"r8.nullFirstBoxed.logs","value":""}
+{"key":"r8.nullFirstBoxed.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.null.result","value":"UnityException: No texture data provided to SetPixelData."}
+{"key":"r8.null.logs","value":""}
+{"key":"r8.null.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.empty.result","value":"UnityException: No texture data provided to SetPixelData."}
+{"key":"r8.empty.logs","value":""}
+{"key":"r8.empty.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.startNegative.result","value":"UnityException: SetPixelData: sourceDataStartIndex cannot be less than 0."}
+{"key":"r8.startNegative.logs","value":""}
+{"key":"r8.startNegative.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.startNegativeNull.result","value":"UnityException: SetPixelData: sourceDataStartIndex cannot be less than 0."}
+{"key":"r8.startNegativeNull.logs","value":""}
+{"key":"r8.startNegativeNull.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.startAtEnd.result","value":"ArgumentException: Texture2D.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'r8')"}
+{"key":"r8.startAtEnd.logs","value":""}
+{"key":"r8.startAtEnd.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.short.result","value":"ArgumentException: Texture2D.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'r8')"}
+{"key":"r8.short.logs","value":""}
+{"key":"r8.short.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.shortAfterStart.result","value":"ArgumentException: Texture2D.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'r8')"}
+{"key":"r8.shortAfterStart.logs","value":""}
+{"key":"r8.shortAfterStart.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.mipMissing.result","value":"ArgumentException: Texture2D.SetPixelData: invalid mipmap level. (Texture 'r8')"}
+{"key":"r8.mipMissing.logs","value":""}
+{"key":"r8.mipMissing.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.mipNegative.result","value":"ArgumentException: Texture2D.SetPixelData: invalid mipmap level. (Texture 'r8')"}
+{"key":"r8.mipNegative.logs","value":""}
+{"key":"r8.mipNegative.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"r8.mipMissingShort.result","value":"ArgumentException: Texture2D.SetPixelData: invalid mipmap level. (Texture 'r8')"}
+{"key":"r8.mipMissingShort.logs","value":""}
+{"key":"r8.mipMissingShort.bytes","value":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7be"}
+{"key":"rgba.mip2.short.result","value":"ArgumentException: Texture2D.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'rgba')"}
+{"key":"rgba.mip2.short.logs","value":""}
+{"key":"rgba.mip2.short.bytes","value":"88776655"}
+{"key":"r8.native.ok.result","value":"ok"}
+{"key":"r8.native.ok.logs","value":""}
+{"key":"r8.native.ok.bytes","value":"1f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8"}
+{"key":"r8.native.start4.result","value":"ok"}
+{"key":"r8.native.start4.logs","value":""}
+{"key":"r8.native.start4.bytes","value":"3d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6"}
+{"key":"r8.native.startNegative.result","value":"UnityException: SetPixelData: sourceDataStartIndex cannot be less than 0."}
+{"key":"r8.native.startNegative.logs","value":""}
+{"key":"r8.native.startNegative.bytes","value":"3d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6"}
+{"key":"r8.native.default.result","value":"UnityException: No texture data provided to SetPixelData."}
+{"key":"r8.native.default.logs","value":""}
+{"key":"r8.native.default.bytes","value":"3d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6"}
+{"key":"r8.native.empty.result","value":"UnityException: No texture data provided to SetPixelData."}
+{"key":"r8.native.empty.logs","value":""}
+{"key":"r8.native.empty.bytes","value":"3d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6"}
+{"key":"r8.native.short.result","value":"ArgumentException: Texture2D.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'r8')"}
+{"key":"r8.native.short.logs","value":""}
+{"key":"r8.native.short.bytes","value":"3d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6"}
+{"key":"r8.native.bool.result","value":"ok"}
+{"key":"r8.native.bool.logs","value":""}
+{"key":"r8.native.bool.bytes","value":"00010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000"}
+{"key":"locked.readable","value":"False"}
+{"key":"locked.bytes.result","value":"UnityException: Texture 'locked' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
+{"key":"locked.bytes.logs","value":""}
+{"key":"locked.null.result","value":"UnityException: Texture 'locked' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
+{"key":"locked.null.logs","value":""}
+{"key":"locked.startNegative.result","value":"UnityException: SetPixelData: sourceDataStartIndex cannot be less than 0."}
+{"key":"locked.startNegative.logs","value":""}
+{"key":"locked.native.result","value":"UnityException: Texture 'locked' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
+{"key":"locked.native.logs","value":""}
+{"key":"array.bool.start2.result","value":"ok"}
+{"key":"array.bool.start2.logs","value":""}
+{"key":"array.bool.start2.bytes","value":"323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4eb00010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000"}
+{"key":"array.char.start3.result","value":"ArgumentException: Texture2DArray.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'array')"}
+{"key":"array.char.start3.logs","value":""}
+{"key":"array.char.start3.bytes","value":"323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4eb00010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000"}
+{"key":"array.boolpair.result","value":"ok"}
+{"key":"array.boolpair.logs","value":""}
+{"key":"array.boolpair.bytes","value":"323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4eb006401650066016700680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f0080018100820183"}
+{"key":"array.null.result","value":"UnityException: No texture data provided to SetPixelData."}
+{"key":"array.null.logs","value":""}
+{"key":"array.null.bytes","value":"323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4eb006401650066016700680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f0080018100820183"}
+{"key":"array.empty.result","value":"UnityException: No texture data provided to SetPixelData."}
+{"key":"array.empty.logs","value":""}
+{"key":"array.empty.bytes","value":"323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4eb006401650066016700680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f0080018100820183"}
+{"key":"array.startNegative.result","value":"UnityException: SetPixelData: sourceDataStartIndex cannot be less than 0."}
+{"key":"array.startNegative.logs","value":""}
+{"key":"array.startNegative.bytes","value":"323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4eb006401650066016700680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f0080018100820183"}
+{"key":"array.short.result","value":"ArgumentException: Texture2DArray.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'array')"}
+{"key":"array.short.logs","value":""}
+{"key":"array.short.bytes","value":"323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4eb006401650066016700680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f0080018100820183"}
+{"key":"array.string.result","value":"ArgumentException"}
+{"key":"array.string.logs","value":""}
+{"key":"array.string.bytes","value":"323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4eb006401650066016700680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f0080018100820183"}
+{"key":"array.elementMissing.result","value":"ArgumentException: Texture2DArray.SetPixelData: one of the arguments is not valid. (Texture 'array')"}
+{"key":"array.elementMissing.logs","value":""}
+{"key":"array.elementMissing.bytes","value":"323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4eb006401650066016700680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f0080018100820183"}
+{"key":"array.elementNegative.result","value":"ArgumentException: Texture2DArray.SetPixelData: one of the arguments is not valid. (Texture 'array')"}
+{"key":"array.elementNegative.logs","value":""}
+{"key":"array.elementNegative.bytes","value":"323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4eb006401650066016700680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f0080018100820183"}
+{"key":"array.mipMissing.result","value":"ArgumentException: Texture2DArray.SetPixelData: invalid mipmap level. (Texture 'array')"}
+{"key":"array.mipMissing.logs","value":""}
+{"key":"array.mipMissing.bytes","value":"323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4eb006401650066016700680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f0080018100820183"}
+{"key":"array.mipMissingShort.result","value":"ArgumentException: Texture2DArray.SetPixelData: invalid mipmap level. (Texture 'array')"}
+{"key":"array.mipMissingShort.logs","value":""}
+{"key":"array.mipMissingShort.bytes","value":"323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4eb006401650066016700680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f0080018100820183"}
+{"key":"volume.bool.start2.result","value":"ok"}
+{"key":"volume.bool.start2.logs","value":""}
+{"key":"volume.bool.start2.bytes","value":"00010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000010000"}
+{"key":"volume.boolpair.start1.result","value":"ok"}
+{"key":"volume.boolpair.start1.logs","value":""}
+{"key":"volume.boolpair.start1.bytes","value":"00680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f00800181008201830084018500860187"}
+{"key":"volume.null.result","value":"UnityException: No texture data provided to SetPixelData."}
+{"key":"volume.null.logs","value":""}
+{"key":"volume.null.bytes","value":"00680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f00800181008201830084018500860187"}
+{"key":"volume.startNegative.result","value":"UnityException: SetPixelData: sourceDataStartIndex cannot be less than 0."}
+{"key":"volume.startNegative.logs","value":""}
+{"key":"volume.startNegative.bytes","value":"00680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f00800181008201830084018500860187"}
+{"key":"volume.short.result","value":"ArgumentException: Texture3D.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'volume')"}
+{"key":"volume.short.logs","value":""}
+{"key":"volume.short.bytes","value":"00680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f00800181008201830084018500860187"}
+{"key":"volume.mipMissing.result","value":"ArgumentException: Texture3D.SetPixelData: invalid mipmap level. (Texture 'volume')"}
+{"key":"volume.mipMissing.logs","value":""}
+{"key":"volume.mipMissing.bytes","value":"00680169006a016b006c016d006e016f0070017100720173007401750076017700780179007a017b007c017d007e017f00800181008201830084018500860187"}
+{"key":"cubes.bool.start2.result","value":"ok"}
+{"key":"cubes.bool.start2.logs","value":""}
+{"key":"cubes.bool.start2.bytes","value":"00010000010000010000010000010000"}
+{"key":"cubes.char.start1.result","value":"ok"}
+{"key":"cubes.char.start1.logs","value":""}
+{"key":"cubes.char.start1.bytes","value":"2046204b20502055205a205f20642069"}
+{"key":"cubes.null.result","value":"UnityException: No texture data provided to SetPixelData."}
+{"key":"cubes.null.logs","value":""}
+{"key":"cubes.null.bytes","value":"2046204b20502055205a205f20642069"}
+{"key":"cubes.startNegative.result","value":"UnityException: SetPixelData: sourceDataStartIndex cannot be less than 0."}
+{"key":"cubes.startNegative.logs","value":""}
+{"key":"cubes.startNegative.bytes","value":"2046204b20502055205a205f20642069"}
+{"key":"cubes.short.result","value":"ArgumentException: CubemapArray.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'cubes')"}
+{"key":"cubes.short.logs","value":""}
+{"key":"cubes.short.bytes","value":"2046204b20502055205a205f20642069"}
+{"key":"cubes.elementMissing.result","value":"ArgumentException: CubemapArray.SetPixelData: one of the arguments is not valid. (Texture 'cubes')"}
+{"key":"cubes.elementMissing.logs","value":""}
+{"key":"cubes.elementMissing.bytes","value":"2046204b20502055205a205f20642069"}
+{"key":"cubes.mipMissing.result","value":"ArgumentException: CubemapArray.SetPixelData: invalid mipmap level. (Texture 'cubes')"}
+{"key":"cubes.mipMissing.logs","value":""}
+{"key":"cubes.mipMissing.bytes","value":"2046204b20502055205a205f20642069"}
+{"key":"cubes.faceInvalid.result","value":"ArgumentException: CubemapArray.SetPixelData: one of the arguments is not valid. (Texture 'cubes')"}
+{"key":"cubes.faceInvalid.logs","value":""}
+{"key":"cubes.faceInvalid.bytes","value":"2046204b20502055205a205f20642069"}
+{"key":"cubes.faceUnknown.result","value":"ArgumentException: CubemapArray.SetPixelData: one of the arguments is not valid. (Texture 'cubes')"}
+{"key":"cubes.faceUnknown.logs","value":""}
+{"key":"cubes.faceUnknown.bytes","value":"2046204b20502055205a205f20642069"}
+{"key":"cubes.otherFace","value":"4a51585f666d747b828990979ea5acb3"}
+{"key":"complete","value":"1"}
