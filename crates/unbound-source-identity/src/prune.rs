@@ -8,7 +8,11 @@
 //! can be taken exclusively (no running process holds it) is moved aside and removed. A build
 //! that ran within the retention, or one running now however long ago it started, keeps its
 //! entries. Entries of the layout before keyed directories (files directly in the parent) are
-//! removed once they are as old: a build still reading them compiles what it misses.
+//! removed once they are as old: a build still reading them compiles what it misses. A prune
+//! interrupted while removing a directory (the process exited) leaves it set aside, and a later
+//! prune finishes it. A build of before claims (holding no lock) is judged by its directory's
+//! time alone; the built-in layouts of before (`builtin-shaders/generated-v*`,
+//! `declarations-v*`, a few kilobytes) are not pruned.
 use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::io;
@@ -75,8 +79,10 @@ fn last_used(dir: &Path) -> io::Result<SystemTime> {
 }
 
 /// Removes the siblings of `keep` under `parent` unused since `now - retention` and not held by
-/// a running process, and the files directly in `parent` (entries of the layout before keyed
-/// directories) modified before then. Returns what it removed.
+/// a running process, the files directly in `parent` (entries of the layout before keyed
+/// directories) modified before then, and what an interrupted prune left set aside. Returns what
+/// it removed. An entry that cannot be read or removed (another pruner took it first) is passed
+/// over.
 pub fn prune(
     parent: &Path,
     keep: &Path,
@@ -85,49 +91,110 @@ pub fn prune(
 ) -> io::Result<Vec<PathBuf>> {
     let before = now.checked_sub(retention).unwrap_or(SystemTime::UNIX_EPOCH);
     let mut removed = Vec::new();
-    for entry in std::fs::read_dir(parent)? {
-        let entry = entry?;
+    for entry in std::fs::read_dir(parent)?.flatten() {
         let path = entry.path();
-        let name = entry.file_name().to_string_lossy().into_owned();
-        // Another pruner's directory being removed, a temporary file being written.
-        if name.starts_with('.') || path == keep {
-            continue;
+        match prune_entry(parent, &entry, keep, before) {
+            Ok(true) => removed.push(path),
+            Ok(false) => {}
+            Err(e) => tracing::debug!("not pruning {}: {e}", path.display()),
         }
-        let kind = entry.file_type()?;
-        if kind.is_file() {
-            if entry.metadata()?.modified()? < before {
-                std::fs::remove_file(&path)?;
-                removed.push(path);
-            }
-            continue;
-        }
-        if !kind.is_dir() || last_used(&path)? >= before {
-            continue;
-        }
-        // A running process holding it keeps it; so does one claiming it meanwhile, which
-        // waits for no lock but finds the directory gone and makes it again.
-        let Ok(lock) = OpenOptions::new()
-            .create(true)
-            .truncate(false)
-            .write(true)
-            .open(path.join(LOCK))
-        else {
-            continue;
-        };
-        if lock.try_lock().is_err() {
-            continue;
-        }
-        // Checked again under the lock: a claim may have marked it used since.
-        if last_used(&path)? >= before {
-            continue;
-        }
-        let aside = parent.join(format!(".pruned-{}-{name}", std::process::id()));
-        std::fs::rename(&path, &aside)?;
-        drop(lock);
-        std::fs::remove_dir_all(&aside)?;
-        removed.push(path);
     }
     Ok(removed)
+}
+
+/// Prunes one entry of a cache directory ([`prune`]): whether it removed it.
+fn prune_entry(
+    parent: &Path,
+    entry: &std::fs::DirEntry,
+    keep: &Path,
+    before: SystemTime,
+) -> io::Result<bool> {
+    let path = entry.path();
+    let name = entry.file_name().to_string_lossy().into_owned();
+    let kind = entry.file_type()?;
+    if name.starts_with(ASIDE) && kind.is_dir() {
+        // Set aside by a prune: finished here unless that prune is still removing it (it holds
+        // the directory's lock until its last file).
+        return remove_aside(&path);
+    }
+    // A temporary file being written, a lock or marker, the directory in use.
+    if name.starts_with('.') || path == keep {
+        return Ok(false);
+    }
+    if kind.is_file() {
+        if entry.metadata()?.modified()? >= before {
+            return Ok(false);
+        }
+        std::fs::remove_file(&path)?;
+        return Ok(true);
+    }
+    if !kind.is_dir() || last_used(&path)? >= before {
+        return Ok(false);
+    }
+    // A running process holding it keeps it. A process claiming it meanwhile (its claim waits
+    // for the lock) holds the lock of a directory set aside: its entries are written to a new
+    // directory, made again, and compile what they miss.
+    let lock = lock_file(&path)?;
+    if lock.try_lock().is_err() {
+        return Ok(false);
+    }
+    // Checked again under the lock: a claim may have marked it used since.
+    if last_used(&path)? >= before {
+        return Ok(false);
+    }
+    let unique = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_or(0, |d| d.as_nanos());
+    let aside = parent.join(format!("{ASIDE}{}-{unique}-{name}", std::process::id()));
+    std::fs::rename(&path, &aside)?;
+    // The lock moved with the directory: it is held while the files go.
+    finish(&aside, lock)?;
+    Ok(true)
+}
+
+/// The name a directory being removed is set aside under.
+const ASIDE: &str = ".pruned-";
+
+/// A directory's lock file, opened.
+fn lock_file(dir: &Path) -> io::Result<File> {
+    OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(dir.join(LOCK))
+}
+
+/// Removes a directory set aside by a prune, unless a process (that prune) holds its lock.
+fn remove_aside(dir: &Path) -> io::Result<bool> {
+    let lock = lock_file(dir)?;
+    if lock.try_lock().is_err() {
+        return Ok(false);
+    }
+    finish(dir, lock)?;
+    Ok(true)
+}
+
+/// Removes a directory whose lock `lock` holds: its files, then the lock file, then itself.
+fn finish(dir: &Path, lock: File) -> io::Result<()> {
+    remove_contents(dir)?;
+    drop(lock);
+    std::fs::remove_file(dir.join(LOCK))?;
+    std::fs::remove_dir(dir)
+}
+
+/// Removes everything in a directory but its lock file.
+fn remove_contents(dir: &Path) -> io::Result<()> {
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        if entry.file_name() == LOCK {
+            continue;
+        }
+        match entry.file_type()?.is_dir() {
+            true => std::fs::remove_dir_all(entry.path())?,
+            false => std::fs::remove_file(entry.path())?,
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -163,8 +230,8 @@ mod tests {
         dir
     }
 
-    /// Stale siblings go; recent ones, the kept one, ones a running process holds and hidden
-    /// entries stay; old files of the flat layout go, recent ones stay.
+    /// Stale siblings go; recent ones, the kept one, ones a running process holds and one
+    /// another prune is removing stay; old files of the flat layout go, recent ones stay.
     #[test]
     fn stale_unheld_siblings_are_removed() {
         let scratch = Scratch::new("siblings");
@@ -173,7 +240,10 @@ mod tests {
         let stale = keyed(parent, "stale", 8);
         let recent = keyed(parent, "recent", 2);
         let held = keyed(parent, "held", 30);
-        let pruning = keyed(parent, ".pruned-1-other", 30);
+        // A directory another prune is still removing.
+        let pruning = keyed(parent, ".pruned-1-2-other", 30);
+        let removing = File::create(pruning.join(LOCK)).unwrap();
+        removing.lock().unwrap();
         let lock = File::create(held.join(LOCK)).unwrap();
         lock.lock_shared().unwrap();
         let old_file = parent.join("0abc.json");
@@ -196,6 +266,32 @@ mod tests {
         drop(lock);
         prune(parent, &mine, RETENTION, SystemTime::now()).unwrap();
         assert!(!held.exists());
+    }
+
+    /// A directory a prune set aside and did not finish is removed by a later prune, unless the
+    /// pruning process still holds its lock.
+    #[test]
+    fn an_interrupted_removal_is_finished_later() {
+        let scratch = Scratch::new("aside");
+        let parent = &scratch.0;
+        let aside = keyed(parent, ".pruned-1-2-old", 30);
+        std::fs::create_dir_all(aside.join("nested")).unwrap();
+        std::fs::write(aside.join("nested/entry.json"), "{}").unwrap();
+        let lock = File::create(aside.join(LOCK)).unwrap();
+        lock.lock().unwrap();
+        let mine = parent.join("mine");
+        assert!(
+            prune(parent, &mine, RETENTION, SystemTime::now())
+                .unwrap()
+                .is_empty()
+        );
+        assert!(aside.exists());
+        drop(lock);
+        assert_eq!(
+            prune(parent, &mine, RETENTION, SystemTime::now()).unwrap(),
+            [aside.clone()]
+        );
+        assert!(!aside.exists());
     }
 
     /// A claim makes the directory, marks it used and holds it: a pruner (another process, or a
