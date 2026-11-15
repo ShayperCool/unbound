@@ -132,7 +132,7 @@ namespace UnityEngine.Tests
             EditorProcess.s_CommandLine = explicitPath ? new[] { "Unity", "-logFile", requested } : new[] { "Unity" };
             ConsoleLog.Append("first view session");
             string physical = Path.Combine(Logs, explicitPath ? "session.log" : "Editor.log");
-            Assert.Equal(explicitPath ? requested : physical, ConsoleLog.Path);
+            Assert.Equal(explicitPath ? requested : Path.Combine(view, "Library/Unbound/Editor.log"), ConsoleLog.Path);
             Assert.Contains("first view session", File.ReadAllText(physical));
             ConsoleLog.Reset();
             ConsoleLog.Append("second view session");
