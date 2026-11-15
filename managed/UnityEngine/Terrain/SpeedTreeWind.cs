@@ -115,6 +115,8 @@ namespace UnityEngine
         /// <summary>Whether the tree's renderer has been drawn while the world had wind (until
         /// then it draws with zero wind constants).</summary>
         internal bool m_DrawnWithWind;
+        /// <summary>The tree's local wind (spherical zones reach it), if it has one.</summary>
+        internal SpeedTreeWindSystem.LocalWind m_LocalWind;
 
         public Tree() { }
 

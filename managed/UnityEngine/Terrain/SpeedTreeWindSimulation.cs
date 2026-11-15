@@ -16,7 +16,8 @@ namespace UnityEngine
     /// 20-sample curves (bend, oscillation, turbulence, flexibility, speed); the speed moves each
     /// part's noise position against the wind. Gusts take no part (the measured release never
     /// turns them on). The shader constants of the SpeedTree 9 shaders hold the current values and,
-    /// for motion vectors, the previous frame's.
+    /// for motion vectors, the previous frame's. A tree in reach of a spherical zone gets a local
+    /// wind of its own (<see cref="Begin"/>, <see cref="UpdateLocal"/>).
     /// </summary>
     internal sealed class SpeedTreeWindState
     {
@@ -27,6 +28,16 @@ namespace UnityEngine
         /// <summary>How close the direction and strength must be to their targets to count as
         /// arrived.</summary>
         const float Arrived = 1e-6f;
+        /// <summary>How close a local wind's noise positions, and its wind vector, must be to its
+        /// asset's wind to count as the same.</summary>
+        const float Close = 1e-5f, CloseSquared = Close * Close;
+        /// <summary>A local wind's noise positions converge with its asset's wind's at this many
+        /// times the speed the noise drifts at.</summary>
+        const float CatchUpSpeed = 4f;
+        /// <summary>A return to the asset's wind that would take longer (in seconds) jumps instead.</summary>
+        const float LongestCatchUp = 15f;
+        /// <summary>Distances below this (between noise positions) take no catching up.</summary>
+        const float NoDistance = 1e-6f;
 
         float m_Time = Unset, m_PreviousTime = Unset;
         float m_Strength, m_PreviousStrength, m_StrengthTarget, m_StrengthFrom, m_StrengthStart, m_StrengthEnd;
@@ -35,6 +46,10 @@ namespace UnityEngine
         /// <summary>The noise positions of the shared part, the two branch levels and the ripple,
         /// and those of the frame before.</summary>
         readonly Vector3[] m_Noise = new Vector3[4], m_PreviousNoise = new Vector3[4];
+        /// <summary>A local wind's return to its asset's wind, per part: when it starts and ends
+        /// (<see cref="Unset"/>: none), where its noise position starts and ends.</summary>
+        float[] m_ReturnStart, m_ReturnEnd;
+        Vector3[] m_ReturnFrom, m_ReturnTo;
 
         /// <summary>The 22 constants as boxed Vector4 values, updated in place each frame (the
         /// draws take them without boxing anew).</summary>
@@ -46,6 +61,9 @@ namespace UnityEngine
             for (int i = 0; i < values.Length; i++) values[i] = Vector4.zero;
             return values;
         }
+
+        /// <summary>The strength the constants and curves take (clamped to [0, 1]).</summary>
+        internal float DrawnStrength => Clamp01(m_Strength);
 
         /// <summary>Whether the wind still moves: on its way to its target, or with strength.</summary>
         internal bool Blowing => InTransition || Clamp01(m_Strength) > 0f;
@@ -74,16 +92,193 @@ namespace UnityEngine
                     SetDirection(time, direction, c->directionResponse);
                     SetStrength(time, strength, c->strengthResponse);
                     Advance(time);
-                    Curve(Clamp01(m_Strength), out int i0, out int i1, out float t);
-                    float dt = m_Time - m_PreviousTime;
-                    var step = new Vector3(m_Direction.x * dt, m_Direction.y * dt, dt * m_Direction.z);
-                    if (c->doShared != 0) MoveNoise(0, step, Sample(c->speedShared, i0, i1, t));
-                    if (c->doBranch1 != 0) MoveNoise(1, step, Sample(c->speedBranch1, i0, i1, t));
-                    if (c->doBranch2 != 0) MoveNoise(2, step, Sample(c->speedBranch2, i0, i1, t));
-                    if (c->doRipple != 0) MoveNoise(3, step, Sample(c->speedRipple, i0, i1, t));
+                    MoveNoises(c);
                 }
-                Write(0, c, m_Direction, Clamp01(m_Strength), m_Noise);
-                Write(HistoryOffset, c, m_PreviousDirection, m_PreviousStrength, m_PreviousNoise);
+                WriteAll(c);
+            }
+        }
+
+        /// <summary>Moves each enabled part's noise position against the wind for the time since
+        /// the previous update, at its speed for the current strength.</summary>
+        unsafe void MoveNoises(SpeedTreeWindConfig9* c)
+        {
+            Curve(Clamp01(m_Strength), out int i0, out int i1, out float t);
+            float dt = m_Time - m_PreviousTime;
+            var step = new Vector3(m_Direction.x * dt, m_Direction.y * dt, dt * m_Direction.z);
+            if (c->doShared != 0) MoveNoise(0, step, Sample(c->speedShared, i0, i1, t));
+            if (c->doBranch1 != 0) MoveNoise(1, step, Sample(c->speedBranch1, i0, i1, t));
+            if (c->doBranch2 != 0) MoveNoise(2, step, Sample(c->speedBranch2, i0, i1, t));
+            if (c->doRipple != 0) MoveNoise(3, step, Sample(c->speedRipple, i0, i1, t));
+        }
+
+        unsafe void WriteAll(SpeedTreeWindConfig9* c)
+        {
+            Write(0, c, m_Direction, Clamp01(m_Strength), m_Noise);
+            Write(HistoryOffset, c, m_PreviousDirection, m_PreviousStrength, m_PreviousNoise);
+        }
+
+        /// <summary>
+        /// Starts a local wind (a tree's own, in reach of spherical zones) from its asset's wind
+        /// <paramref name="from"/>: its direction, strength, targets and time, and its noise
+        /// positions, now easing toward <paramref name="wind"/> (the directional and the
+        /// spherical wind at the tree), when <paramref name="sync"/> (the asset's wind has
+        /// strength); otherwise from rest. Until its first update the local wind gives the
+        /// asset's wind's constants of this frame.
+        /// </summary>
+        internal unsafe void Begin(SpeedTreeWindState from, Vector3 wind, ref SpeedTreeWindConfig9 config, bool sync)
+        {
+            m_ReturnStart = new[] { Unset, Unset, Unset, Unset };
+            m_ReturnEnd = new[] { Unset, Unset, Unset, Unset };
+            m_ReturnFrom = new Vector3[4];
+            m_ReturnTo = new Vector3[4];
+            for (int i = 0; i < ConstantCount; i++) Set(i, Unsafe.Unbox<Vector4>(from.Values[i]));
+            if (!sync) return;
+            m_Direction = from.m_Direction;
+            m_Strength = from.m_Strength;
+            m_Time = from.m_Time;
+            m_StrengthTarget = from.m_StrengthTarget;
+            m_DirectionTarget = from.m_DirectionTarget;
+            float time = from.m_Time;
+            float length = MathF.Sqrt((wind.x * wind.x + wind.y * wind.y) + wind.z * wind.z);
+            fixed (SpeedTreeWindConfig9* c = &config)
+            {
+                // A spherical wind that cancels the directional one exactly leaves the direction
+                // as it is.
+                if (length > 0f) SetDirection(time, Divide(wind, length), c->directionResponse);
+                SetStrength(time, length, c->strengthResponse);
+                Advance(time);
+                Array.Copy(from.m_Noise, m_Noise, m_Noise.Length);
+                Array.Copy(from.m_PreviousNoise, m_PreviousNoise, m_PreviousNoise.Length);
+                MoveNoises(c);
+            }
+        }
+
+        /// <summary>
+        /// Advances a local wind to <paramref name="time"/>: it eases toward the directional wind
+        /// plus the spherical wind at its tree (<paramref name="spherical"/>) as the asset's wind
+        /// does toward the directional one, and its noise moves while it has strength. Out of
+        /// every spherical zone's reach, while the asset's wind blows, its noise positions return
+        /// to the asset's wind's (<see cref="StartReturn"/>). Returns whether it has become the
+        /// asset's wind again (arrived, the same wind vector and noise): its trees then take the
+        /// asset's wind.
+        /// </summary>
+        internal unsafe bool UpdateLocal(float time, Vector3 directional, Vector3 spherical, SpeedTreeWindState asset, ref SpeedTreeWindConfig9 config)
+        {
+            bool reached = (spherical.x * spherical.x + spherical.y * spherical.y) + spherical.z * spherical.z != 0f;
+            var wind = new Vector3(directional.x + spherical.x, directional.y + spherical.y, directional.z + spherical.z);
+            float length = MathF.Sqrt((wind.x * wind.x + wind.y * wind.y) + wind.z * wind.z);
+            var direction = length > 0f ? Divide(wind, length) : wind;
+            fixed (SpeedTreeWindConfig9* c = &config)
+            {
+                SetDirection(time, direction, c->directionResponse);
+                SetStrength(time, length, c->strengthResponse);
+                Advance(time);
+                float dt = m_Time - m_PreviousTime;
+                if (Clamp01(m_Strength) > 0f) MoveNoises(c);
+                float assetStrength = Clamp01(asset.m_Strength);
+                if (!reached && assetStrength > 0f && !SameNoise(asset))
+                {
+                    StartReturn(asset, time - dt, c, assetStrength);
+                    Return(time);
+                }
+                bool same = SameNoise(asset);
+                WriteAll(c);
+                if (InTransition) return false;
+                float dx = directional.x - wind.x, dy = directional.y - wind.y, dz = directional.z - wind.z;
+                return (dy * dy + dx * dx) + dz * dz <= CloseSquared && same;
+            }
+        }
+
+        /// <summary>Whether each part's noise position is within <see cref="Close"/> of the other
+        /// wind's.</summary>
+        bool SameNoise(SpeedTreeWindState other)
+        {
+            for (int part = 0; part < m_Noise.Length; part++)
+            {
+                var a = m_Noise[part];
+                var b = other.m_Noise[part];
+                float dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+                if ((dz * dz + dy * dy) + dx * dx > CloseSquared) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Starts each part's return (one not already returning) to the asset's wind's noise
+        /// position from <paramref name="now"/>: the asset's position drifts against the asset's
+        /// wind at the part's speed; this one moves straight at <see cref="CatchUpSpeed"/> times
+        /// that speed to where they meet, the earliest positive meeting time (none: it jumps). A
+        /// part without speed whose positions already agree takes no return. When any part's
+        /// meeting is later than <see cref="LongestCatchUp"/>, every part jumps to its meeting
+        /// point. Every part counts, whether the asset's wind uses it or not.
+        /// </summary>
+        unsafe void StartReturn(SpeedTreeWindState asset, float now, SpeedTreeWindConfig9* c, float strength)
+        {
+            bool late = false;
+            var direction = asset.m_Direction;
+            Curve(strength, out int i0, out int i1, out float t);
+            for (int part = 0; part < 4; part++)
+            {
+                if (m_ReturnStart[part] != Unset) continue;
+                float* curve = part switch { 0 => c->speedShared, 1 => c->speedBranch1, 2 => c->speedBranch2, _ => c->speedRipple };
+                float speed = Sample(curve, i0, i1, t);
+                var position = m_Noise[part];
+                var target = asset.m_Noise[part];
+                float dx = position.x - target.x, dy = position.y - target.y, dz = position.z - target.z;
+                if (speed == 0f && (dy * dy + dx * dx) + dz * dz <= CloseSquared) continue;
+                // The asset's position drifts against the wind.
+                float vx = direction.x * speed, vy = direction.y * speed, vz = direction.z * speed;
+                float drift_x = -vx, drift_y = -0f - vy, drift_z = -vz;
+                float distance = MathF.Sqrt((dx * dx + dy * dy) + dz * dz);
+                float meeting = 0f;
+                if (Math.Abs(distance) > NoDistance)
+                {
+                    float driftSpeed = MathF.Sqrt((vx * vx + vy * vy) + vz * vz);
+                    float ratio = speed * CatchUpSpeed / driftSpeed;
+                    float cos = (drift_x / driftSpeed * (dx / distance) + dy / distance * (drift_y / driftSpeed)) + drift_z / driftSpeed * (dz / distance);
+                    float discriminant = (cos * cos + ratio * ratio) + -1f;
+                    if (!(0f > discriminant))
+                    {
+                        float root = MathF.Sqrt(discriminant);
+                        if (ratio != 0f)
+                        {
+                            float scale = distance / (ratio * ratio + -1f);
+                            float first = scale * (root - cos) / driftSpeed, second = scale * (-cos - root) / driftSpeed;
+                            if (second > 0f && first > 0f) meeting = second > first ? first : second;
+                            else
+                            {
+                                float later = first > second ? first : second;
+                                meeting = later > 0f ? later : 0f;
+                            }
+                        }
+                    }
+                }
+                late |= meeting > LongestCatchUp;
+                m_ReturnStart[part] = now;
+                m_ReturnEnd[part] = (meeting > LongestCatchUp ? 0f : meeting) + now;
+                m_ReturnTo[part] = new Vector3(drift_x * meeting + target.x, drift_y * meeting + target.y, meeting * drift_z + target.z);
+                m_ReturnFrom[part] = position;
+            }
+            if (!late) return;
+            for (int part = 0; part < 4; part++) m_ReturnStart[part] = m_ReturnEnd[part] = now;
+        }
+
+        /// <summary>Moves each part's noise position along its return at <paramref name="time"/>
+        /// (the previous position becomes the history); a part at the end of its return (or
+        /// without one) is at its end point, and its return is over.</summary>
+        void Return(float time)
+        {
+            for (int part = 0; part < 4; part++)
+            {
+                m_PreviousNoise[part] = m_Noise[part];
+                float start = m_ReturnStart[part], span = m_ReturnEnd[part] - start;
+                float f = span != 0f ? (time - start) / span : 1f;
+                if (1f <= f) f = 1f;
+                if (f <= 0f) f = 0f;
+                float g = 1f - f;
+                Vector3 a = m_ReturnFrom[part], b = m_ReturnTo[part];
+                m_Noise[part] = new Vector3(a.x * g + b.x * f, a.y * g + b.y * f, g * a.z + b.z * f);
+                if (f == 1f) m_ReturnStart[part] = m_ReturnEnd[part] = Unset;
             }
         }
 
@@ -241,8 +436,18 @@ namespace UnityEngine
     /// spherical zone without wind is unmeasured and counts) and from then on
     /// draws with its wind's constants of each frame, also once the wind has settled (its last
     /// direction, no strength, its noise where it stopped). Before that it draws with zeros (the
-    /// Editor's draw reads whatever an earlier draw left). A spherical zone's own wind on the trees inside its
-    /// radius is not simulated: such a tree is warned about and keeps the directional wind.
+    /// Editor's draw reads whatever an earlier draw left).
+    /// <para>
+    /// A tree drawn while spherical zones reach its bounds (the bounds of its LOD group's tree
+    /// renderers, else its renderer's) gets a local wind of its own after that draw (the draw
+    /// still takes its asset's wind): each zone whose radius reaches the bounds blows from the
+    /// zone's position toward the bounds' center raised by a quarter of their height, at its
+    /// main wind. The local wind starts from the asset's wind and eases each frame toward the
+    /// directional wind plus the spherical wind at the tree (<see cref="SpeedTreeWindState.UpdateLocal"/>);
+    /// out of every zone's reach it returns to the asset's wind and is given up once it is that
+    /// wind again. The trees of one LOD group with the same asset share the local wind of the
+    /// group's first such renderer (unmeasured: the probes' trees are single levels).
+    /// </para>
     /// The GPU Resident Drawer's trees (<see cref="WriteBuffer"/>) take the same constants from
     /// their instance data instead, which the drawer writes each frame they are visible.
     /// </summary>
@@ -256,9 +461,25 @@ namespace UnityEngine
         /// renderer without per-object motion vectors.</summary>
         static readonly object[] s_Zero = SpeedTreeWindState.NewValues();
         static readonly int[] s_Ids = Ids();
-        /// <summary>This frame's spherical zones.</summary>
-        static readonly List<WindZone> s_Spherical = new List<WindZone>();
-        static bool s_AnyWind, s_WarnedSpherical;
+        /// <summary>Whether a spherical zone was active at this frame's wind update (the draws
+        /// look for local winds only then, though they take the zones active when they draw).</summary>
+        static bool s_AnySpherical;
+        /// <summary>The local winds, in the order they started, and the directional wind of this
+        /// frame.</summary>
+        static readonly List<LocalWind> s_Locals = new List<LocalWind>();
+        static Vector3 s_Directional;
+        static bool s_AnyWind;
+
+        /// <summary>A local wind and the trees that draw with it (its first tree's bounds say
+        /// which zones reach it).</summary>
+        internal sealed class LocalWind
+        {
+            internal readonly SpeedTreeWindState Wind = new SpeedTreeWindState();
+            internal readonly SpeedTreeWindAsset Asset;
+            internal readonly List<Tree> Trees = new List<Tree>();
+
+            internal LocalWind(SpeedTreeWindAsset asset) => Asset = asset;
+        }
 
         static int[] Ids()
         {
@@ -294,18 +515,29 @@ namespace UnityEngine
         internal static void TreeDisabled(Tree tree)
         {
             if (s_Trees.TryGetValue(tree.m_GameObject, out var known) && ReferenceEquals(known, tree)) s_Trees.Remove(tree.m_GameObject);
+            Detach(tree);
+        }
+
+        /// <summary>Takes a tree off its local wind, which ends with its last tree.</summary>
+        static void Detach(Tree tree)
+        {
+            var local = tree.m_LocalWind;
+            if (local == null) return;
+            tree.m_LocalWind = null;
+            local.Trees.Remove(tree);
+            if (local.Trees.Count == 0) s_Locals.Remove(local);
         }
 
         /// <summary>PreUpdate.WindUpdate.</summary>
         internal static void Update()
         {
             var wind = Vector3.zero;
-            s_Spherical.Clear();
+            s_AnySpherical = false;
             foreach (var zone in WindZone.All)
             {
                 if (zone.mode == WindZoneMode.Spherical)
                 {
-                    s_Spherical.Add(zone);
+                    s_AnySpherical = true;
                     continue;
                 }
                 var d = zone.SpeedTreeDirection();
@@ -321,7 +553,133 @@ namespace UnityEngine
                 asset.Wind.Update(time, direction, strength, ref asset.Config);
                 blowing |= asset.Wind.Blowing;
             }
-            s_AnyWind = wind.x != 0f || wind.y != 0f || wind.z != 0f || s_Spherical.Count > 0 || blowing;
+            s_Directional = wind;
+            UpdateLocals(time);
+            s_AnyWind = wind.x != 0f || wind.y != 0f || wind.z != 0f || s_AnySpherical || blowing || s_Locals.Count > 0;
+        }
+
+        /// <summary>Advances the local winds after their assets' winds. A local wind that has
+        /// become its asset's wind again gives up one tree a frame (its first); one whose asset is
+        /// gone gives up all of them.</summary>
+        static void UpdateLocals(float time)
+        {
+            for (int i = 0; i < s_Locals.Count; i++)
+            {
+                var local = s_Locals[i];
+                var asset = local.Asset;
+                if (asset == null)
+                {
+                    foreach (var tree in local.Trees) tree.m_LocalWind = null;
+                    local.Trees.Clear();
+                    s_Locals.RemoveAt(i--);
+                    continue;
+                }
+                var spherical = SphericalWind(TreeBounds(local.Trees[0]));
+                if (!local.Wind.UpdateLocal(time, s_Directional, spherical, asset.Wind, ref asset.Config)) continue;
+                var first = local.Trees[0];
+                Detach(first);
+                if (local.Trees.Count == 0) i--;
+            }
+        }
+
+        /// <summary>The wind of the active spherical zones at bounds: each zone whose radius
+        /// reaches the bounds blows at its main wind from its position toward the bounds' center
+        /// raised by a quarter of their height (Unity 6000.0.71f1, tests/projects/speedtree9wind).</summary>
+        internal static Vector3 SphericalWind(Bounds bounds)
+        {
+            var sum = Vector3.zero;
+            foreach (var zone in WindZone.All)
+            {
+                if (zone.mode != WindZoneMode.Spherical) continue;
+                var position = zone.transform.position;
+                float radius = zone.radius;
+                if (1f - bounds.SqrDistanceUnchecked(position) / (radius * radius) <= 0f) continue;
+                Vector3 center = bounds.center, extents = bounds.extents;
+                float x = center.x - position.x;
+                float y = ((center.y + extents.y) - (center.y - extents.y)) * 0.25f + center.y - position.y;
+                float z = center.z - position.z;
+                float length = MathF.Sqrt((x * x + y * y) + z * z);
+                float main = zone.windMain;
+                sum = new Vector3(sum.x + x / length * main, sum.y + y / length * main, sum.z + z / length * main);
+            }
+            return sum;
+        }
+
+        /// <summary>The bounds the spherical zones reach a tree by: those of its LOD group's
+        /// renderers with a Tree, else its renderer's.</summary>
+        static Bounds TreeBounds(Tree tree)
+        {
+            var renderer = tree.m_GameObject.GetComponent<MeshRenderer>();
+            if (renderer is null) return new Bounds(tree.transform.position, Vector3.zero);
+            var group = renderer.m_LODGroup;
+            if (group is null || !group) return renderer.bounds;
+            bool any = false;
+            var bounds = default(Bounds);
+            foreach (var lod in group.m_LODs)
+            {
+                if (lod.renderers == null) continue;
+                foreach (var member in lod.renderers)
+                {
+                    if (member == null || member.m_GameObject.GetComponent<Tree>() is null) continue;
+                    if (any) bounds.Encapsulate(member.bounds);
+                    else bounds = member.bounds;
+                    any = true;
+                }
+            }
+            return any ? bounds : renderer.bounds;
+        }
+
+        /// <summary>The tree whose local wind a tree shares: the first renderer of its LOD group
+        /// whose Tree has the same wind asset, else the tree itself.</summary>
+        static Tree Sharer(Tree tree, Renderer renderer, SpeedTreeWindAsset asset)
+        {
+            var group = renderer.m_LODGroup;
+            if (group is null || !group) return tree;
+            foreach (var lod in group.m_LODs)
+            {
+                if (lod.renderers == null) continue;
+                foreach (var member in lod.renderers)
+                {
+                    if (member == null) continue;
+                    var other = member.m_GameObject.GetComponent<Tree>();
+                    if (other is not null && ReferenceEquals(other.windAsset, asset)) return other;
+                }
+            }
+            return tree;
+        }
+
+        /// <summary>
+        /// The wind a tree's draw takes: its local wind's, else its asset's. A tree drawn while
+        /// spherical zones blow on it and without a local wind gets one after the draw (its group's
+        /// sharer gets it first; the tree joins it at a later draw); when the asset's wind has
+        /// strength it starts from the asset's wind, otherwise from rest (unmeasured).
+        /// </summary>
+        static SpeedTreeWindState WindOf(Tree tree, Renderer renderer, SpeedTreeWindAsset asset)
+        {
+            var local = tree.m_LocalWind;
+            if (local != null) return local.Wind;
+            if (s_AnySpherical) Join(tree, renderer, asset);
+            return asset.Wind;
+        }
+
+        static void Join(Tree tree, Renderer renderer, SpeedTreeWindAsset asset)
+        {
+            var spherical = SphericalWind(TreeBounds(tree));
+            if (spherical.x == 0f && spherical.y == 0f && spherical.z == 0f) return;
+            var sharer = Sharer(tree, renderer, asset);
+            if (sharer.m_LocalWind != null)
+            {
+                if (ReferenceEquals(sharer, tree)) return;
+                tree.m_LocalWind = sharer.m_LocalWind;
+                sharer.m_LocalWind.Trees.Add(tree);
+                return;
+            }
+            var local = new LocalWind(asset);
+            local.Trees.Add(sharer);
+            sharer.m_LocalWind = local;
+            s_Locals.Add(local);
+            var wind = new Vector3(s_Directional.x + spherical.x, s_Directional.y + spherical.y, s_Directional.z + spherical.z);
+            local.Wind.Begin(asset.Wind, wind, ref asset.Config, asset.Wind.DrawnStrength != 0f);
         }
 
         /// <summary>The number of float4 wind parameters per drawer tree instance (the SpeedTree 8
@@ -371,13 +729,12 @@ namespace UnityEngine
                     ClearParams(data, buffer, at);
                     continue;
                 }
-                if (s_Spherical.Count > 0 && !s_WarnedSpherical) WarnIfInSphericalZone(renderer);
+                var values = WindOf(tree, renderer, tree.windAsset).Values;
                 if (history && renderer.m_MotionVectorGenerationMode != MotionVectorGenerationMode.Object)
                 {
                     ClearParams(data, buffer, at);
                     continue;
                 }
-                var values = tree.windAsset.Wind.Values;
                 int from = history ? SpeedTreeWindState.HistoryOffset : 0;
                 for (int p = 0; p < SpeedTreeWindState.HistoryOffset; p++)
                     *(Vector4*)(data + buffer.uintParamOffsets[p] + at) = Unsafe.Unbox<Vector4>(values[from + p]);
@@ -391,25 +748,6 @@ namespace UnityEngine
             for (int p = first; p < BufferParams; p++) *(Vector4*)(data + buffer.uintParamOffsets[p] + at) = Vector4.zero;
         }
 
-        /// <summary>Lets the spherical zone warning be given again (tests).</summary>
-        internal static void ResetSphericalWarning() => s_WarnedSpherical = false;
-
-        /// <summary>Warns once when a tree drawn with wind is inside a spherical zone's radius.</summary>
-        static void WarnIfInSphericalZone(Renderer renderer)
-        {
-            var bounds = renderer.bounds;
-            foreach (var zone in s_Spherical)
-            {
-                if (zone == null) continue;
-                float radius = zone.radius;
-                if (bounds.SqrDistance(zone.transform.position) >= radius * radius) continue;
-                s_WarnedSpherical = true;
-                Debug.LogWarning("Unbound: SpeedTree 9 trees inside a spherical WindZone's radius ('" + renderer.name +
-                    "') are bent only by the directional wind zones; the spherical zone's own wind is not simulated.");
-                return;
-            }
-        }
-
         /// <summary>A draw's properties with the wind constants of its renderer's tree, if it has
         /// one. The previous frame's constants are only for a renderer that draws per-object
         /// motion vectors (others draw with zeros there).</summary>
@@ -419,9 +757,9 @@ namespace UnityEngine
             var asset = tree.windAsset;
             // A destroyed asset's wind is no longer advanced: the tree draws without wind.
             if (asset == null) return properties;
-            if (s_Spherical.Count > 0 && !s_WarnedSpherical) WarnIfInSphericalZone(renderer);
             if (s_AnyWind) tree.m_DrawnWithWind = true;
-            var values = tree.m_DrawnWithWind ? asset.Wind.Values : s_Zero;
+            var wind = WindOf(tree, renderer, asset);
+            var values = tree.m_DrawnWithWind ? wind.Values : s_Zero;
             var history = renderer.m_MotionVectorGenerationMode == MotionVectorGenerationMode.Object ? values : s_Zero;
             var merged = DrawPropertyPool.Copy(properties);
             for (int i = 0; i < SpeedTreeWindState.HistoryOffset; i++) merged[s_Ids[i]] = values[i];

@@ -156,8 +156,12 @@ namespace UnityEngine.Tests
                 Messages.Add(logType + ": " + string.Format(format, args));
         }
 
+        /// <summary>A spherical zone over a tree: the draw that finds it takes the asset's wind and
+        /// gives the tree a local wind, which then eases toward the zone's wind (away from the
+        /// zone) on top of the directional wind; a renderer without a Tree is left alone. Once the
+        /// zone is gone the local wind returns to the asset's wind and is given up.</summary>
         [Fact]
-        public void ATreeRendererDrawsWithItsWindAndASphericalZoneOverItWarnsOnce()
+        public void ASphericalZoneOverATreeGivesItALocalWind()
         {
             var previous = Debug.unityLogger.logHandler;
             var warnings = new Warnings();
@@ -166,41 +170,99 @@ namespace UnityEngine.Tests
             var zone = new GameObject("Sphere").AddComponent<WindZone>();
             var directional = new GameObject("Directional").AddComponent<WindZone>();
             SpeedTreeWindAsset asset = null;
+            float time = (float)Time.s_Time;
             try
             {
                 Debug.unityLogger.logHandler = warnings;
-                SpeedTreeWindSystem.ResetSphericalWarning();
                 tree.AddComponent<MeshFilter>().sharedMesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
                 var renderer = tree.AddComponent<MeshRenderer>();
                 renderer.motionVectorGenerationMode = MotionVectorGenerationMode.Camera;
                 asset = new SpeedTreeWindAsset(1, Config());
-                tree.AddComponent<Tree>().windAsset = asset;
+                var component = tree.AddComponent<Tree>();
+                component.windAsset = asset;
                 var plainRenderer = plain.AddComponent<MeshRenderer>();
+                directional.windMain = 0.5f;
                 zone.mode = WindZoneMode.Spherical;
                 zone.radius = 5f;
-                SpeedTreeWindSystem.Update();
-                SpeedTreeWindSystem.Update();
+                zone.windMain = 1f;
+                // The zone blows from x = -3 toward the tree.
+                zone.transform.position = new Vector3(-3f, 0.25f, 0f);
+                for (int frame = 1; frame <= 3; frame++)
+                {
+                    Time.s_Time = frame * Dt;
+                    SpeedTreeWindSystem.Update();
+                }
                 using (Unbound.Runtime.DrawPropertyPool.Begin())
                 {
                     var drawn = SpeedTreeWindSystem.Apply(renderer, null);
                     Assert.Equal(SpeedTreeWindState.ConstantCount, drawn.Count);
-                    Assert.Equal(new Vector4(2f, 4f, 3f, 0.25f), (Vector4)drawn[Shader.PropertyToID("_ST_TreeExtents_SharedHeightStart")]);
+                    Assert.Equal((Vector4)asset.Wind.Values[0], (Vector4)drawn[Shader.PropertyToID("_ST_WindVector")]);
                     // Camera motion vectors: no history.
                     Assert.Equal(Vector4.zero, (Vector4)drawn[Shader.PropertyToID("_ST_HistoryTreeExtents_SharedHeightStart")]);
-                    SpeedTreeWindSystem.Apply(renderer, null);
                     Assert.Null(SpeedTreeWindSystem.Apply(plainRenderer, null));
                 }
-                Assert.Single(warnings.Messages);
-                Assert.Contains("spherical WindZone", warnings.Messages[0]);
+                Assert.NotNull(component.m_LocalWind);
+                for (int frame = 4; frame <= 200; frame++)
+                {
+                    Time.s_Time = frame * Dt;
+                    SpeedTreeWindSystem.Update();
+                }
+                var local = (Vector4)component.m_LocalWind.Wind.Values[0];
+                // The directional wind blows along +z; the zone pushes the tree along +x.
+                Assert.True(local.x > 0.5f, local.ToString());
+                Assert.True(local.w > 0.5f, local.ToString());
+                Assert.True(((Vector4)asset.Wind.Values[0]).x < 1e-4f);
+                Assert.Empty(warnings.Messages);
+
+                // The zone goes: the local wind returns to the asset's wind and is given up.
+                zone.gameObject.SetActive(false);
+                for (int frame = 201; frame <= 900 && component.m_LocalWind != null; frame++)
+                {
+                    Time.s_Time = frame * Dt;
+                    SpeedTreeWindSystem.Update();
+                }
+                Assert.Null(component.m_LocalWind);
             }
             finally
             {
+                Time.s_Time = time;
                 Debug.unityLogger.logHandler = previous;
                 Object.DestroyImmediate(tree);
                 Object.DestroyImmediate(plain);
                 Object.DestroyImmediate(zone.gameObject);
                 Object.DestroyImmediate(directional.gameObject);
                 if (asset != null) Object.DestroyImmediate(asset);
+                SpeedTreeWindSystem.Update();
+            }
+        }
+
+        /// <summary>The spherical wind at bounds: zones out of reach take no part; one in reach
+        /// blows from its position toward the center raised by a quarter of the height.</summary>
+        [Fact]
+        public void TheSphericalWindPointsFromTheZoneAtItsMainWind()
+        {
+            var near = new GameObject("Near").AddComponent<WindZone>();
+            var far = new GameObject("Far").AddComponent<WindZone>();
+            try
+            {
+                near.mode = far.mode = WindZoneMode.Spherical;
+                near.radius = 10f;
+                near.windMain = 2f;
+                near.transform.position = new Vector3(0f, 1f, -4f);
+                far.radius = 1f;
+                far.transform.position = new Vector3(0f, 0f, 50f);
+                SpeedTreeWindSystem.Update();
+                // Center (0, 0, 0), height 4: the point is (0, 1, 0), straight along +z from the zone.
+                var wind = SpeedTreeWindSystem.SphericalWind(new Bounds(Vector3.zero, new Vector3(2f, 4f, 2f)));
+                Assert.Equal(0f, wind.x, 6);
+                Assert.Equal(0f, wind.y, 6);
+                Assert.Equal(2f, wind.z, 6);
+            }
+            finally
+            {
+                Object.DestroyImmediate(near.gameObject);
+                Object.DestroyImmediate(far.gameObject);
+                SpeedTreeWindSystem.Update();
             }
         }
 
