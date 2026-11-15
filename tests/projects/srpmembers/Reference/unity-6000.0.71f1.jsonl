@@ -18,6 +18,7 @@
 {"k":"guard.on.clear","v":"ok"}
 {"k":"guard.on.graphicsSetRenderTarget","v":"ok"}
 {"k":"guard.off.rt","v":"ok"}
+{"k":"log.guard","v":""}
 {"k":"usage.vertex","v":"LockBufferForWrite"}
 {"k":"usage.index","v":"LockBufferForWrite"}
 {"k":"usage.vertexIndex","v":"LockBufferForWrite"}
@@ -51,6 +52,7 @@
 {"k":"lock.zero","v":"0 50,2,3,8,9,105,106,107"}
 {"k":"lock.getDataWhileLocked","v":"-2,-2,-2,-2,-2,-2,-2,-2 then 60,2,3,8,9,105,106,107"}
 {"k":"lock.setDataWhileUnlocked","v":"60,2,3,8,9,105,5,6"}
+{"k":"log.buffers","v":""}
 {"k":"element.colorDepth.block.Default","v":"0.251,0.498,0.749,1.000 get:rt"}
 {"k":"element.colorDepth.material.Default","v":"0.251,0.498,0.749,1.000"}
 {"k":"element.colorDepth.block.Color","v":"0.251,0.498,0.749,1.000 get:rt"}
@@ -69,6 +71,7 @@
 {"k":"element.depthOnly.blockReplaced","v":"0.300,0.000,0.000,1.000"}
 {"k":"element.blockNull","v":"throws ArgumentNullException: Value cannot be null.\u000aParameter name: value"}
 {"k":"element.blockByName","v":"0.300,0.000,0.000,1.000"}
+{"k":"log.elements","v":""}
 {"k":"keyword.global","v":"SRPM_GLOBAL"}
 {"k":"keyword.default","v":"null"}
 {"k":"keyword.empty","v":""}
@@ -76,6 +79,7 @@
 {"k":"keyword.valid","v":"True True False"}
 {"k":"keyword.setBuiltin","v":"False False 0"}
 {"k":"keyword.set","v":"False False False"}
+{"k":"log.keywords","v":"Error: ShaderKeywordSet cannot be used outside of IPreprocessShaders or IPreprocessComputeShaders. | Error: ShaderKeywordSet has been created manually. This is not supported. Operations on this object will have no effect. | Error: ShaderKeywordSet cannot be used outside of IPreprocessShaders or IPreprocessComputeShaders. | Error: ShaderKeywordSet has been created manually. This is not supported. Operations on this object will have no effect. | Error: ShaderKeywordSet cannot be used outside of IPreprocessShaders or IPreprocessComputeShaders. | Error: ShaderKeywordSet has been created manually. This is not supported. Operations on this object will have no effect. | Error: ShaderKeywordSet cannot be used outside of IPreprocessShaders or IPreprocessComputeShaders. | Error: ShaderKeywordSet has been created manually. This is not supported. Operations on this object will have no effect. | Error: ShaderKeywordSet cannot be used outside of IPreprocessShaders or IPreprocessComputeShaders. | Error: ShaderKeywordSet has been created manually. This is not supported. Operations on this object will have no effect. | Error: ShaderKeywordSet cannot be used outside of IPreprocessShaders or IPreprocessComputeShaders. | Error: ShaderKeywordSet has been created manually. This is not supported. Operations on this object will have no effect. | Error: ShaderKeywordSet cannot be used outside of IPreprocessShaders or IPreprocessComputeShaders. | Error: ShaderKeywordSet has been created manually. This is not supported. Operations on this object will have no effect. | Error: ShaderKeywordSet cannot be used outside of IPreprocessShaders or IPreprocessComputeShaders. | Error: ShaderKeywordSet has been created manually. This is not supported. Operations on this object will have no effect. | Error: ShaderKeywordSet cannot be used outside of IPreprocessShaders or IPreprocessComputeShaders. | Error: ShaderKeywordSet has been created manually. This is not supported. Operations on this object will have no effect."}
 {"k":"tier.active","v":"Tier3"}
 {"k":"tier.set","v":"Tier1 Tier3"}
 {"k":"tier.outOfRange","v":"7"}
@@ -85,6 +89,7 @@
 {"k":"tiled.R16G16B16A16_SFloat.4","v":"32"}
 {"k":"tiled.D24_UNorm_S8_UInt.1","v":"4"}
 {"k":"tiled.None.1","v":"0"}
+{"k":"log.caps","v":""}
 {"k":"instanced.eleven","v":"48"}
 {"k":"instanced.twelve","v":"48"}
 {"k":"instanced.twelveTwo","v":"32"}
@@ -93,6 +98,8 @@
 {"k":"instanced.proxyNull","v":"throws ArgumentException: Argument lightProbeProxyVolume must not be null if lightProbeUsage is set to UseProxyVolume.\u000aParameter name: lightProbeProxyVolume"}
 {"k":"instanced.listProxyNull","v":"throws ArgumentException: Argument lightProbeProxyVolume must not be null if lightProbeUsage is set to UseProxyVolume.\u000aParameter name: lightProbeProxyVolume"}
 {"k":"instanced.nullMatrices","v":"throws ArgumentNullException: Value cannot be null.\u000aParameter name: matrices"}
+{"k":"instanced.nullMatricesFourArguments","v":"throws NullReferenceException: Object reference not set to an instance of an object"}
 {"k":"instanced.zeroCount","v":"0"}
 {"k":"instanced.afterErrors","v":"0"}
+{"k":"log.instanced","v":""}
 {"k":"complete","v":true}

@@ -58,19 +58,46 @@ public class SrpMembersProbe : MonoBehaviour
         DontDestroyOnLoad(new GameObject("SrpMembersProbe").AddComponent<SrpMembersProbe>().gameObject);
     }
 
+    static readonly List<string> s_Logs = new List<string>();
+
+    static void OnLog(string message, string stack, LogType type)
+    {
+        lock (s_Logs) s_Logs.Add(type + ": " + message);
+    }
+
+    /// <summary>Records the messages game code received since the previous section.</summary>
+    static void Logs(string section)
+    {
+        string[] messages;
+        lock (s_Logs)
+        {
+            messages = s_Logs.ToArray();
+            s_Logs.Clear();
+        }
+        Record("log." + section, string.Join(" | ", messages));
+    }
+
     void Start()
     {
+        Application.logMessageReceivedThreaded += OnLog;
         try
         {
             SetRenderTargetGuard();
+            Logs("guard");
             BufferUsage();
             BufferLocks();
+            Logs("buffers");
             SubElements();
+            Logs("elements");
             Keywords();
+            Logs("keywords");
             TiersAndCaps();
+            Logs("caps");
             Instanced();
+            Logs("instanced");
         }
         catch (Exception e) { Record("error", e.ToString()); }
+        Application.logMessageReceivedThreaded -= OnLog;
         s_Output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Environment.GetEnvironmentVariable(OutVariable), s_Output.ToString());
         Finished = true;
@@ -476,6 +503,7 @@ public class SrpMembersProbe : MonoBehaviour
         Try("instanced.proxyNull", () => Graphics.DrawMeshInstanced(cube, 0, material, matrices, 3, null, ShadowCastingMode.Off, false, 0, camera, LightProbeUsage.UseProxyVolume, null));
         Try("instanced.listProxyNull", () => Graphics.DrawMeshInstanced(cube, 0, material, new List<Matrix4x4>(matrices), null, ShadowCastingMode.Off, false, 0, camera, LightProbeUsage.UseProxyVolume, null));
         Try("instanced.nullMatrices", () => Graphics.DrawMeshInstanced(cube, 0, material, (Matrix4x4[])null, 0));
+        Try("instanced.nullMatricesFourArguments", () => Graphics.DrawMeshInstanced(cube, 0, material, (Matrix4x4[])null));
         Try("instanced.zeroCount", () =>
         {
             Graphics.DrawMeshInstanced(cube, 0, material, matrices, 0, null, ShadowCastingMode.Off, false, 0, camera, LightProbeUsage.Off, null);

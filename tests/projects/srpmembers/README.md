@@ -21,9 +21,11 @@ Unity 6000.0.71f1, built-in pipeline, OpenGL Core (`Assets/Scripts/SrpMembersPro
 * **Tiers and caps** (`tier.*`, `gles.*`, `tiled.*`): `Graphics.activeTier` (set and restored,
   also out of range), `Graphics.minOpenGLESVersion` (Standalone target),
   `SystemInfo.maxTiledPixelStorageSize` and `GetTiledRenderTargetStorageSize`.
+* **Logs** (`log.*`): the messages game code receives per section.
 * **DrawMeshInstanced** (`instanced.*`): red pixels of three cubes drawn through the eleven- and
   twelve-argument overloads into a camera's target, counts past the matrices, negative and zero
-  counts, a proxy-volume usage without a volume (array and list overloads), null matrices.
+  counts, a proxy-volume usage without a volume (array and list overloads), null matrices (also
+  through the four-argument overload).
 
 ```bash
 python3 tests/projects/srpmembers/run.py editor --release 6000.0.71f1 --label <label>
@@ -41,7 +43,8 @@ past `countWritten` are kept; an unlock with a negative count releases the array
 lock open, and `GetData` leaves its array untouched while a lock is open; a depth sub-element
 samples as (d, 0, 0, 1) through a property block as through a material, and an element the
 texture lacks binds nothing and reads back as no texture; `new ShaderKeyword(name)` makes a valid
-global keyword; a `ShaderKeywordSet` made with `new` enables nothing; tier 3; no OpenGL ES
+global keyword; a `ShaderKeywordSet` made with `new` enables nothing and each of its operations
+logs two errors; tier 3; no OpenGL ES
 version for the Standalone target; tile storage is the format's block size times the samples,
 at most `int.MaxValue`; `DrawMeshInstanced` takes counts within the matrices only.
 
