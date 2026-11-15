@@ -112,8 +112,11 @@ fn string_literals(text: &str) -> Vec<String> {
             // A character literal (`'"'`, `'\''`) is skipped; a lifetime (`'a`) is not one.
             match next {
                 Some('\\') => {
-                    let close = chars[i + 2..].iter().position(|&c| c == '\'');
-                    i = close.map_or(i + 1, |p| i + 2 + p + 1);
+                    // The escaped character, then up to the closing quote (`'\''`, `'\u{..}'`).
+                    let close = chars
+                        .get(i + 3..)
+                        .and_then(|r| r.iter().position(|&c| c == '\''));
+                    i = close.map_or(i + 1, |p| i + 3 + p + 1);
                 }
                 Some(_) if chars.get(i + 2) == Some(&'\'') => i += 3,
                 _ => i += 1,
@@ -129,6 +132,37 @@ fn string_literals(text: &str) -> Vec<String> {
 fn raw_string_start(rest: &[char]) -> Option<usize> {
     let hashes = rest.iter().take_while(|&&c| c == '#').count();
     (rest.get(hashes) == Some(&'"')).then_some(hashes)
+}
+
+/// The entries of the workspace's manifest, each a line, or a `[...dependencies.<key>]` table
+/// joined into one line keyed by `<key>` (so that the line naming a crate names its key too).
+fn workspace_entries(workspace: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut table: Option<String> = None;
+    for line in workspace.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('[') {
+            if let Some(entry) = table.take() {
+                out.push(entry);
+            }
+            let header = trimmed.trim_matches(['[', ']']).trim();
+            if let Some((parent, key)) = header.rsplit_once('.')
+                && parent.trim().ends_with("dependencies")
+            {
+                table = Some(format!("{} =", key.trim().trim_matches(['"', '\''])));
+                continue;
+            }
+        }
+        match &mut table {
+            Some(entry) => {
+                entry.push(' ');
+                entry.push_str(trimmed);
+            }
+            None => out.push(line.to_string()),
+        }
+    }
+    out.extend(table);
+    out
 }
 
 /// The workspace crates (directories of `crates/` with a manifest), by directory name.
@@ -158,7 +192,7 @@ fn dependencies(manifest: &str, workspace: &str, crates: &[String]) -> Vec<Strin
             let underscored = dir.replace('-', "_");
             names(manifest, dir)
                 || names(manifest, &underscored)
-                || workspace.lines().any(|line| {
+                || workspace_entries(workspace).iter().any(|line| {
                     let key = line.split('=').next().unwrap_or("").trim();
                     let key = key
                         .split('.')
@@ -200,7 +234,8 @@ pub fn producing_sources(
                 .filter(|d| *d != name),
         );
     }
-    let mut files = BTreeSet::new();
+    // The workspace's manifest too: its dependency features and patches decide what is built.
+    let mut files = BTreeSet::from([root.join("Cargo.toml")]);
     let mut watched = BTreeSet::from([root.join("Cargo.toml")]);
     for name in &reached {
         let dir = root.join("crates").join(name);

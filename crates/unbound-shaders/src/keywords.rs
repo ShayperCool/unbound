@@ -3,7 +3,7 @@
 //! branches and in plain `#include`s are not the program's, `#include_with_pragmas` ones are.
 //!
 //! These are the rules of one release. Which release has them is the compatibility profile's
-//! choice (`unbound_graphics::ShaderKeywordRules`); this module does not look at versions, and a
+//! choice (`unbound_compat::ShaderKeywordRules`); this module does not look at versions, and a
 //! caller must not apply it for a release the profile gives no rules. Measured on 6000.0.71f1
 //! (tests/projects/shaderkeywords `Reference/unity-6000.0.71f1.jsonl`, probe shaders on a Linux
 //! Editor with OpenGLCore) and checked offline against the keyword lists Unity serialized for its

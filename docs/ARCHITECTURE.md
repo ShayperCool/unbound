@@ -435,6 +435,7 @@ Unbound package store, and finally the release's own built-in packages and bundl
 ```
 crates/
   unbound-compat     Unity versions, compatibility profiles, define tables
+  unbound-graphics   the graphics device a run has (re-exported by unbound-compat)
   unbound-yaml       Unity YAML reader
   unbound-project    project model: settings, asset database, packages, assembly graph
   unbound-cache      content-addressed cache
@@ -443,6 +444,7 @@ crates/
   unbound-runtime    the running game: native API, frame loop, render protocol
   unbound-app        the windowed player: Bevy app, input, renderer of the render protocol
   unbound-shaders    Unity shader programs (CG/HLSL) compiled to WGSL for the renderer
+  unbound-source-identity  identities of the code that makes cache entries (cache keys)
   unbound            the CLI
 native/
   physx             PhysX 4.1.2, vendored; patch inventory in UNBOUND_PATCHES.md there

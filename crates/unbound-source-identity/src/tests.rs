@@ -175,7 +175,7 @@ fn files_of_the_crates_and_the_files_they_name() {
 /// and lifetimes do not open strings.
 #[test]
 fn string_literals_are_read_as_written() {
-    let text = "// \"not\"\nfn f<'a>(x: &'a str) { let q = '\"'; let e = '\\''; let a = \"one\\\"two\"; let b = br#\"three\"#; let c = r\"four\"; }\n";
+    let text = "// \"not\"\nfn f<'a>(x: &'a str) { let q = '\"'; let e = ['\\'','\"']; let a = \"one\\\"two\"; let b = br#\"three\"#; let c = r\"four\"; }\n";
     assert_eq!(
         string_literals(text),
         ["one\"two", "three", "four"].map(String::from)
@@ -193,5 +193,22 @@ fn the_shader_compiler_depends_on_the_device_rules_only() {
         !files
             .iter()
             .any(|f| f.starts_with(root.join("crates/unbound-compat")))
+    );
+}
+
+/// A dependency of the workspace's manifest written as a table of its own counts.
+#[test]
+fn workspace_dependency_tables_count() {
+    let ws = workspace(
+        "table",
+        "[package]\nname = \"unbound-compiler\"\n[dependencies]\nrules.workspace = true\n",
+    );
+    ws.write(
+        "Cargo.toml",
+        "[workspace]\n[workspace.dependencies.rules]\npackage = \"unbound-rules\"\npath = \"crates/unbound-rules\"\n",
+    );
+    assert!(
+        ws.sources("unbound-compiler")
+            .contains(&"crates/unbound-rules/src/audio.rs".to_string())
     );
 }
