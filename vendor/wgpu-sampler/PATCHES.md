@@ -189,7 +189,8 @@ other drivers or releases.
 With bounds checks on, the Metal backend now translates texel loads (`textureLoad`, HLSL
 `Load`) with naga's `ReadZeroSkipWrite` policy instead of `Restrict`: a load outside the image
 or its levels reads zero instead of the nearest edge texel. Buffer and index accesses keep
-`Restrict`; unchecked modules stay unchecked.
+`Restrict`; unchecked modules stay unchecked. Loads past the levels, layers or samples read
+zero too, by HLSL's contract; those cases are unmeasured on the macOS Editor.
 
 Measured: Unity 6000.0.71f1 on the macOS Editor's Metal device (two identical batch-mode
 captures, Apple M2 Pro) loads zero outside a 2x2 texture, tests/projects/nativegfx
