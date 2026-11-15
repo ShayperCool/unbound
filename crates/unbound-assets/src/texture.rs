@@ -1444,7 +1444,8 @@ impl Importer for TextureImporter {
     // 41: RGBM multiplier normalization preserves division rounding.
     // 42: gray and RGB TIFFs with extra samples read their first extra sample as alpha.
     // 43: TIFF tags stored once per sample (SampleFormat) are read (such files failed to import).
-    // 44: float lightmaps and HDR cubemaps take the build target's double LDR or RGBM encoding.
+    // 44: float lightmaps and HDR cubemaps take the build target's double LDR or RGBM encoding;
+    //     8-bit lightmap mips are filtered as stored.
     const VERSION: u32 = 44;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
@@ -1534,26 +1535,13 @@ pub fn compress_bc7(texture: &ImportedTexture) -> Option<Vec<serde_bytes::ByteBu
 /// Stores a lightmap or a float HDR cubemap as the build target's encoding gives
 /// ([`TextureSettings::hdr_encoding`]), each level from its filtered linear radiance: RGBM bytes
 /// ([`rgbm::encode`]) or double LDR bytes ([`rgbm::encode_double_ldr`]), with the usage mode
-/// that tells shaders how to decode them. An 8-bit lightmap's radiance is its stored value
-/// (byte / 255, whatever its sRGB setting). Matches the Unity 6000.0.71f1 Editor,
-/// tests/projects/lightmapencoding. The target's compression then applies to the bytes.
+/// that tells shaders how to decode them (an 8-bit lightmap was read as floats, import_texture).
+/// Matches the Unity 6000.0.71f1 Editor, tests/projects/lightmapencoding. The target's
+/// compression then applies to the bytes.
 fn encode_lighting(texture: &mut ImportedTexture) {
     use unbound_compat::HdrEncoding;
     let encoding = texture.settings.hdr_encoding;
-    if encoding == HdrEncoding::Native {
-        return;
-    }
-    if texture.format == TextureFormat::Rgba8 {
-        for mip in &mut texture.mips {
-            mip.data = mip
-                .data
-                .iter()
-                .flat_map(|&b| (f32::from(b) / 255.0).to_le_bytes())
-                .collect();
-        }
-        texture.format = TextureFormat::Rgba32F;
-    }
-    if texture.format != TextureFormat::Rgba32F {
+    if encoding == HdrEncoding::Native || texture.format != TextureFormat::Rgba32F {
         return;
     }
     let lightmap = texture.settings.texture_type == TextureType::Lightmap;
@@ -1606,6 +1594,19 @@ pub fn import_texture(
         // RGBM and double LDR conversion consume filtered linear radiance in either project
         // colour space (encode_lighting).
         settings.gamma_hdr = false;
+    }
+    if settings.hdr_encoding != unbound_compat::HdrEncoding::Native
+        && image.format == TextureFormat::Rgba8
+    {
+        // An encoded 8-bit lightmap's radiance is its stored value (byte / 255, whatever its sRGB
+        // setting), filtered into mips and encoded as floats are (tests/projects/
+        // lightmapencoding LightmapLdr, mips/ldrLevel1).
+        image.data = image
+            .data
+            .iter()
+            .flat_map(|&b| (f32::from(b) / 255.0).to_le_bytes())
+            .collect();
+        image.format = TextureFormat::Rgba32F;
     }
     let (original_width, original_height) = (image.width, image.height);
     let (w, h) = npot_size(image.width, image.height, settings.npot_scale);
@@ -1842,8 +1843,11 @@ fn mip_chain_with_columns(
         .map(|(scale, filter)| (scale, filter == 1));
     let levels = settings.mipmaps && (image.width > 1 || image.height > 1);
     // The Editor filters sRGB colour in linear light (only when there are mips to make) and
-    // makes normals from float heights; other 8-bit textures keep their top level in bytes.
+    // makes normals from float heights; other 8-bit textures keep their top level in bytes. A
+    // lightmap's stored values are its radiance: filtered as stored, whatever its sRGB setting
+    // (tests/projects/lightmapencoding mips/ldrLevel1).
     let srgb = (settings.srgb || settings.single_channel_mip_srgb)
+        && settings.texture_type != TextureType::Lightmap
         && format == TextureFormat::Rgba8
         && levels
         && height.is_none();

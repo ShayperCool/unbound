@@ -1462,7 +1462,18 @@ namespace UnityEngine
             foreach (var p in m_Vectors)
                 Add(p.Key, 1, ConvertsProperty(p.Key) ? (Vector4)((Color)p.Value).linear : p.Value, 0, default);
             foreach (var p in m_Textures)
+            {
                 Add(p.Key, 2, default, TextureElements.MaterialHandle(p.Value.Texture, p.Value.Element), new Vector4(p.Value.Scale.x, p.Value.Scale.y, p.Value.Offset.x, p.Value.Offset.y));
+                // `<name>_HDR`: how the shader decodes the texture's HDR radiance, which Unity sets
+                // for every texture property (Manual: Accessing shader properties in Cg/HLSL;
+                // tests/projects/lightmapencoding material/*). Textures that store it as is take
+                // the renderer's neutral (1, 1, 0, 0).
+                if (HdrDecode.Encoded(p.Value.Texture))
+                {
+                    int hdr = Shader.PropertyToID(Shader.IdToName(p.Key) + "_HDR");
+                    if (!m_Vectors.ContainsKey(hdr)) Add(hdr, 1, (Vector4)HdrDecode.Of(p.Value.Texture), 0, default);
+                }
+            }
             foreach (var p in m_Buffers) Add(p.Key, 5, default, BufferHandle(p.Value), default);
             foreach (var p in m_Matrices)
             {

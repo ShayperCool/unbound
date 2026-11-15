@@ -33,5 +33,22 @@ namespace UnityEngine
         }
 
         internal static Vector4 Of(int usage, bool srgb) => (Vector4)Boxed(usage, srgb);
+
+        /// <summary>The decode values of a texture, boxed: an imported or serialized 2D texture's
+        /// or cubemap's usage mode; any other texture decodes as stored.</summary>
+        internal static object Of(Texture texture) => texture switch
+        {
+            Texture2D t => Boxed(t.m_UsageMode, !t.m_Linear),
+            Cubemap c => Boxed(c.m_UsageMode, c.m_UsageSrgb),
+            _ => s_AsStored,
+        };
+
+        /// <summary>Whether <paramref name="texture"/> stores encoded HDR radiance.</summary>
+        internal static bool Encoded(Texture texture) => texture switch
+        {
+            Texture2D t => t.m_UsageMode != 0,
+            Cubemap c => c.m_UsageMode != 0,
+            _ => false,
+        };
     }
 }

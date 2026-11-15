@@ -85,6 +85,11 @@ fn main() -> Result<()> {
     let gamma = root
         .and_then(|r| std::fs::read_to_string(r.join("ProjectSettings/ProjectSettings.asset")).ok())
         .is_some_and(|text| !text.contains("m_ActiveColorSpace: 1"));
+    // How the target stores lightmaps and HDR cubemaps, as the engine imports them.
+    let lighting = root
+        .and_then(|r| unbound_project::Settings::read(r).ok())
+        .map(|settings| settings.lighting_encodings(&target))
+        .unwrap_or_default();
     let streaming = dir.join("StreamingAssets");
     let mut files = Vec::new();
     let mut skipped_streaming = 0;
@@ -116,7 +121,7 @@ fn main() -> Result<()> {
     for pass in ["first pass", "second pass (fresh cache instance)"] {
         let cache = AssetCache::new(&cache_dir);
         let start = Instant::now();
-        let stats = run(&cache, &files, &target, &project, gamma);
+        let stats = run(&cache, &files, &target, &project, gamma, lighting);
         cache.save()?;
         let elapsed = start.elapsed();
         println!("\n== {pass}: {:.2?}", elapsed);
@@ -164,6 +169,7 @@ fn run(
     target: &str,
     project: &unbound_assets::texture::ProjectCompression,
     gamma: bool,
+    lighting: unbound_compat::LightingEncodings,
 ) -> Stats {
     let textures = TextureImporter {
         build_target: target.to_string(),
@@ -171,6 +177,7 @@ fn run(
         gamma,
         normal_maps_xyz: target == "Android",
         project: project.clone(),
+        lighting,
     };
     let audio = AudioImporter {
         build_target: target.to_string(),

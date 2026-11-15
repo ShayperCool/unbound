@@ -80,11 +80,7 @@ namespace UnityEngine
         /// 6000.0.71f1 Editor, tests/projects/lightmapencoding).</summary>
         internal static object DecodeValues
         {
-            get
-            {
-                var first = s_Lightmaps.Length > 0 ? s_Lightmaps[0]?.m_Light : null;
-                return first is Texture2D t ? HdrDecode.Boxed(t.m_UsageMode, !t.m_Linear) : HdrDecode.Boxed(0, false);
-            }
+            get => HdrDecode.Of(s_Lightmaps.Length > 0 ? s_Lightmaps[0]?.m_Light : null);
         }
 
         internal static void Append(LightmapData[] maps)

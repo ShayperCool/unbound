@@ -163,8 +163,7 @@ namespace UnityEngine
             }
         }
 
-        static Vector4 DecodeValues(Texture texture) =>
-            texture is Cubemap cube ? HdrDecode.Of(cube.m_UsageMode, cube.m_UsageSrgb) : HdrDecode.Of(0, false);
+        static Vector4 DecodeValues(Texture texture) => (Vector4)HdrDecode.Of(texture);
 
         /// <summary>
         /// The probes a renderer reflects and their weights, as the Editor gives them (measured:
