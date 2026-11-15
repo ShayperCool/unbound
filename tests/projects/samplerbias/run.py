@@ -75,7 +75,7 @@ hashes = {str(x.resolve()): hashlib.sha256(x.read_bytes()).hexdigest() for x in 
 sources = {str(x.relative_to(project)): hashlib.sha256(x.read_bytes()).hexdigest()
            for x in sorted(project.rglob('*')) if x.is_file()}
 (output/'execution.json').write_text(json.dumps(dict(command=command, sha256=hashes, sources=sources, release=a.release,
-    anisotropy=a.anisotropy, bilinear_control=a.bilinear_control, live_control=a.live_control,
+    anisotropy=None if a.target_control else a.anisotropy, bilinear_control=a.bilinear_control, live_control=a.live_control,
     cache_control=a.cache_control, target_control=a.target_control, device=a.device,
     sampler_environment={k: v for k, v in env.items() if k.startswith('SAMPLER_BIAS_')}), indent=2)+'\n')
 with (output/'process.log').open('w') as log:

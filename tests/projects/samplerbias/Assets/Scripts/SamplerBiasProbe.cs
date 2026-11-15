@@ -231,15 +231,15 @@ public class UitkProbe : MonoBehaviour
         Texture.SetGlobalAnisotropicFilteringLimits(4, 16);
         float[] levels = { -0.5f, 0f, 0.25f, 0.5f, 0.75f, 1f, 1.5f, 2f, 2.5f, 3f };
         var policies = new[] { AnisotropicFiltering.ForceEnable, AnisotropicFiltering.Enable, AnisotropicFiltering.Disable };
-        void Sample(string prefix, RenderTexture rt, bool array)
+        void Sample(string prefix, Texture texture, bool array)
         {
-            material.SetTexture(array ? "_ArrayTex" : "_ModernTex", rt);
+            material.SetTexture(array ? "_ArrayTex" : "_ModernTex", texture);
             for (int mode = array ? 6 : 0; mode < (array ? 9 : 6); mode++)
             foreach (float level in mode == 1 || mode == 4 || mode == 7 ? new[] { 0f } : levels)
             {
                 material.SetFloat("_Mode", mode);
                 material.SetFloat("_Level", level);
-                Graphics.Blit(array ? (Texture)texel : rt, target, material);
+                Graphics.Blit(array ? texel : texture, target, material);
                 var previous = RenderTexture.active; RenderTexture.active = target;
                 readback.ReadPixels(new Rect(0, 0, 1, 1), 0, 0); readback.Apply(); RenderTexture.active = previous;
                 var value = readback.GetPixel(0, 0);
@@ -300,6 +300,32 @@ public class UitkProbe : MonoBehaviour
                 State(prefix + "/raised", rt);
                 Sample(prefix + "/raised", rt, false);
                 rt.Release(); DestroyImmediate(rt);
+            }
+            // Texture2DArray assets of the same shape, for comparison with the array targets.
+            foreach (FilterMode filter in new[] { FilterMode.Bilinear, FilterMode.Trilinear })
+            foreach (int aniso in new[] { 0, 1, 2, 16 })
+            {
+                QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable;
+                var asset = new Texture2DArray(16, 8, 2, TextureFormat.RFloat, true, true)
+                {
+                    filterMode = filter, wrapMode = TextureWrapMode.Clamp, anisoLevel = aniso,
+                };
+                for (int mip = 0; mip < asset.mipmapCount; mip++)
+                {
+                    var pixels = new Color[Math.Max(1, 16 >> mip) * Math.Max(1, 8 >> mip)];
+                    for (int i = 0; i < pixels.Length; i++) pixels[i] = new Color((mip + 1) * 0.125f, 0, 0, 1);
+                    for (int slice = 0; slice < 2; slice++) asset.SetPixels(pixels, slice, mip);
+                }
+                asset.Apply(false, true);
+                string prefix = "arrayAsset/" + filter + "/" + aniso;
+                rows.Append("{\"k\":\"state/").Append(prefix).Append("\",\"v\":[").Append((int)asset.filterMode).Append(',').Append(asset.anisoLevel)
+                    .Append(',').Append(asset.mipmapCount).Append("]}\n");
+                foreach (var policy in policies)
+                {
+                    QualitySettings.anisotropicFiltering = policy;
+                    Sample(prefix + "/" + policy, asset, true);
+                }
+                DestroyImmediate(asset);
             }
         }
         finally
