@@ -1,7 +1,7 @@
 # SetPixelData element transfer
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 201 rows. Every value is a CPU copy read back with
+byte-identical and the canonical reference has 220 rows. Every value is a CPU copy read back with
 `GetPixelData<byte>`, so the rows do not depend on the OS or the graphics device. The gate compares
 every missing, extra or unequal row exactly.
 
@@ -9,16 +9,20 @@ The probe calls the managed-array and NativeArray `SetPixelData` overloads of Te
 Texture2DArray, Texture3D and CubemapArray. Each call records `ok` or its exception, the log lines
 it produced and the level's stored bytes.
 
-- Order of checks: a negative start index throws before readability, readability before missing
-  data (null or empty arrays and default or empty NativeArrays), then the texture's element, face and
-  mip level (a mip level is checked before the size), then the size.
+- Order of checks (the same for an unreadable Texture2D and Texture2DArray): a negative start
+  index throws before readability, readability before missing data (null or empty arrays and
+  default or empty NativeArrays), then the texture's element, face and mip level (a mip level is
+  checked before the size), then the size.
 - Element size: a managed array's elements count as the marshaled size of the first element's type,
   not the array's own stride. A `bool[]` starting at index 2 starts at byte 8; a `char[]` counts one
   byte per element, so its level is the first half of the UTF-16 storage; a `{bool, byte}` struct
-  counts eight bytes over a two-byte stride. A NativeArray counts its element type's own size.
-- Element types: strings, `object` and plain classes cannot be marshaled and throw; a null first
-  reference throws a null-reference error. A struct holding a string and an integer is accepted: only
-  the integer half of each element is compared, since the other half holds an address.
+  counts eight bytes over a two-byte stride. A generic struct is sized like any other, and an
+  `int?[]` counts four bytes per element over its eight-byte storage. A NativeArray counts its
+  element type's own size.
+- Element types: strings, `object`, plain classes and `DateTime` cannot be marshaled and throw; a
+  null first reference or empty first Nullable throws a null-reference error. A struct holding a
+  string and an integer is accepted: only the integer half of each element is compared, since the
+  other half holds an address.
 - The size check: `(length − start) × element size` must cover the level.
 
 Exceptions the runtime's marshaling raises are recorded by type only; Unity's own messages are

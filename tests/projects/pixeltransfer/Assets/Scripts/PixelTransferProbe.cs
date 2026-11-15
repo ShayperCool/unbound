@@ -16,6 +16,7 @@ public class PixelTransferProbe : MonoBehaviour
     public struct BoolPair { public bool flag; public byte value; }
     public struct NamedValue { public string name; public int value; }
     public class Boxed { public int value; }
+    public struct Pair<T> { public T first; public T second; }
 
     StreamWriter output;
     readonly List<string> logs = new List<string>();
@@ -109,6 +110,14 @@ public class PixelTransferProbe : MonoBehaviour
             return scalars;
         });
         r8.SetPixelData(Pattern(64, 5), 0);
+        var generic = new Pair<byte>[40];
+        for (int i = 0; i < generic.Length; i++) generic[i] = new Pair<byte> { first = (byte)i, second = (byte)(i + 50) };
+        Call("r8.generic.start3", () => r8.SetPixelData(generic, 0, 3), r8Bytes);
+        var nullable = new int?[20];
+        for (int i = 0; i < nullable.Length; i += 2) nullable[i] = 0x01020304 * (i + 1);
+        Call("r8.nullable", () => r8.SetPixelData(nullable, 0), r8Bytes);
+        Call("r8.nullableNullFirst", () => r8.SetPixelData(new int?[20], 0), r8Bytes, true);
+        Call("r8.dateTime", () => r8.SetPixelData(new DateTime[20], 0), r8Bytes, true);
         Call("r8.string", () => r8.SetPixelData(new[] { "a", "b" }, 0), r8Bytes, true);
         Call("r8.object", () => r8.SetPixelData(new object[] { new object() }, 0), r8Bytes, true);
         Call("r8.boxed", () => r8.SetPixelData(new[] { new Boxed { value = 5 } }, 0), r8Bytes, true);
@@ -161,10 +170,17 @@ public class PixelTransferProbe : MonoBehaviour
         Call("array.startNegative", () => array.SetPixelData(Pattern(64, 55), 0, 0, -1), arrayBytes);
         Call("array.short", () => array.SetPixelData(Pattern(10, 57), 0, 0), arrayBytes);
         Call("array.string", () => array.SetPixelData(new[] { "a" }, 0, 0), arrayBytes, true);
+        Call("array.generic", () => array.SetPixelData(generic, 0, 1, 1), arrayBytes);
         Call("array.elementMissing", () => array.SetPixelData(Pattern(64, 59), 0, 2), arrayBytes);
         Call("array.elementNegative", () => array.SetPixelData(Pattern(64, 59), 0, -1), arrayBytes);
         Call("array.mipMissing", () => array.SetPixelData(Pattern(64, 59), 1, 0), arrayBytes);
         Call("array.mipMissingShort", () => array.SetPixelData(Pattern(2, 59), 1, 0), arrayBytes);
+
+        var lockedArray = new Texture2DArray(4, 4, 1, TextureFormat.R8, false) { name = "lockedArray" };
+        lockedArray.SetPixelData(Pattern(16, 1), 0, 0);
+        lockedArray.Apply(false, true);
+        Call("lockedArray.null", () => lockedArray.SetPixelData((byte[])null, 0, 0), null);
+        Call("lockedArray.startNegative", () => lockedArray.SetPixelData((byte[])null, 0, 0, -1), null);
 
         var volume = new Texture3D(4, 4, 4, TextureFormat.R8, false) { name = "volume" };
         volume.SetPixelData(Pattern(64, 60), 0);

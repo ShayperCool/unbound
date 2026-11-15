@@ -11,6 +11,7 @@ namespace UnityEngine.Tests
     {
         struct BoolPair { public bool flag; public byte value; }
         struct NamedValue { public string name; public int value; }
+        struct Pair<T> { public T first; public T second; }
 
         static Texture2D R8(string name)
         {
@@ -57,6 +58,22 @@ namespace UnityEngine.Tests
             Fill(texture, named, 0);
             bytes = texture.GetPixelData<byte>(0).ToArray();
             Assert.Equal(new byte[] { 4, 3, 2, 1 }, bytes[8..12]);
+
+            // Generic structs and Nullable elements are sized by the first element's runtime type.
+            var generic = new Pair<byte>[40];
+            for (int i = 0; i < generic.Length; i++) generic[i] = new Pair<byte> { first = (byte)i, second = (byte)(i + 50) };
+            Fill(texture, generic, 3);
+            bytes = texture.GetPixelData<byte>(0).ToArray();
+            Assert.Equal(new byte[] { 3, 53, 4, 54 }, bytes[..4]);
+            var nullable = new int?[20];
+            nullable[0] = 1;
+            nullable[1] = 0x0A0B0C0D;
+            Fill(texture, nullable, 0);
+            bytes = texture.GetPixelData<byte>(0).ToArray();
+            // Four marshaled bytes per element over the eight-byte Nullable storage.
+            Assert.Equal(new byte[] { 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0x0D, 0x0C, 0x0B, 0x0A }, bytes[..16]);
+            Assert.IsType<NullReferenceException>(Thrown(() => Fill(texture, new int?[20], 0)));
+            Assert.IsType<ArgumentException>(Thrown(() => Fill(texture, new DateTime[20], 0)));
             Object.DestroyImmediate(texture);
         }
 
@@ -113,9 +130,11 @@ namespace UnityEngine.Tests
             // Writing a level reads the array in place.
             var data = new byte[64];
             array.SetPixelData(data, 0, 0);
+            array.SetPixelData(bools, 0, 1, 2);
             AllocationMeasurement.EmptyAllocationContext();
             long before = GC.GetAllocatedBytesForCurrentThread();
             array.SetPixelData(data, 0, 0);
+            array.SetPixelData(bools, 0, 1, 2);
             Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
             Object.DestroyImmediate(array);
             Object.DestroyImmediate(cubes);

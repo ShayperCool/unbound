@@ -26,7 +26,33 @@ namespace UnityEngine
         internal static int ElementSize<T>(T[] data)
         {
             if (data == null || data.Length == 0) throw NoData();
-            return typeof(T).IsValueType ? Marshal.SizeOf<T>() : Marshal.SizeOf(data[0].GetType());
+            if (ValueSize<T>.Cached) return ValueSize<T>.Size;
+            object first = data[0];
+            // The first element's runtime type decides: a null reference or empty Nullable has none.
+            if (first == null) throw new NullReferenceException();
+            return Marshal.SizeOf(first);
+        }
+
+        /// <summary>The marshaled size of a value type other than Nullable, which has a single
+        /// runtime type (generic structs included), computed once per type.</summary>
+        static class ValueSize<T>
+        {
+            internal static readonly bool Cached;
+            internal static readonly int Size;
+
+            static ValueSize()
+            {
+                if (!typeof(T).IsValueType || Nullable.GetUnderlyingType(typeof(T)) != null) return;
+                try
+                {
+                    Size = Marshal.SizeOf((object)default(T));
+                    Cached = true;
+                }
+                catch (ArgumentException)
+                {
+                    // Not marshalable: each call sizes its first element and raises the runtime's error.
+                }
+            }
         }
 
         internal static int ElementSize<T>(NativeArray<T> data) where T : struct
