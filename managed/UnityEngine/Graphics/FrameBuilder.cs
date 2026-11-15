@@ -1077,7 +1077,9 @@ namespace Unbound.Runtime
             else if (item.Lighting != null)
             {
                 var lighting = item.Lighting;
-                if (probes && lighting.Probes == LightProbeUsage.BlendProbes)
+                if (lightmaps && lighting.LightmapIndex >= 0)
+                    properties = BakedLighting.ApplyLightmap(lighting.LightmapIndex, properties, s_DrawKeywords);
+                else if (probes && lighting.Probes == LightProbeUsage.BlendProbes)
                     properties = BakedLighting.ApplyProbes(lighting.Anchor != null ? lighting.Anchor.position : lighting.ProbePosition ?? item.Bounds.center, properties);
                 properties = ReflectionProbe.Apply(item.Bounds, lighting.Reflections, properties, srp);
             }

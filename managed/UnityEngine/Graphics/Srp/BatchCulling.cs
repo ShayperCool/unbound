@@ -324,15 +324,19 @@ namespace Unbound.Runtime
             outputs.Clear();
         }
 
-        static readonly Dictionary<(ShadowCastingMode, bool), ImmediateLighting> s_Lighting = new Dictionary<(ShadowCastingMode, bool), ImmediateLighting>();
+        static readonly Dictionary<(ShadowCastingMode, bool, int), ImmediateLighting> s_Lighting = new Dictionary<(ShadowCastingMode, bool, int), ImmediateLighting>();
 
-        /// <summary>A draw range's lighting: its shadow settings, without light or reflection probes
-        /// (a group provides its instances' lighting data itself).</summary>
-        static ImmediateLighting LightingOf(in BatchFilterSettings filter)
+        /// <summary>A draw's lighting: its range's shadow settings and its command's lightmap (-1:
+        /// none), without light or reflection probes (a group provides its instances' lighting data
+        /// itself).</summary>
+        static ImmediateLighting LightingOf(in BatchFilterSettings filter, int lightmap)
         {
-            var key = (filter.shadowCastingMode, filter.receiveShadows);
+            var key = (filter.shadowCastingMode, filter.receiveShadows, lightmap);
             if (!s_Lighting.TryGetValue(key, out var lighting))
-                s_Lighting[key] = lighting = ImmediateLighting.Of(key.Item1, key.Item2, LightProbeUsage.Off, null, ReflectionProbeUsage.Off);
+                s_Lighting[key] = lighting = new ImmediateLighting
+                {
+                    Cast = key.Item1, Receive = key.Item2, Probes = LightProbeUsage.Off, Reflections = ReflectionProbeUsage.Off, LightmapIndex = lightmap,
+                };
             return lighting;
         }
 
@@ -353,7 +357,7 @@ namespace Unbound.Runtime
             "BatchRendererGroup indirect draw commands of a topology other than triangles are not supported yet; they are not drawn.",
             "BatchRendererGroup procedural draw commands are not supported yet; they are not drawn.",
             "BatchRendererGroup procedural indirect draw commands are not supported yet; they are not drawn.",
-            "BatchRendererGroup draw commands flagged IsLightMapped draw without their lightmaps (LIGHTMAP_ON and the lightmap of lightmapIndex are not bound yet).",
+            "BatchRendererGroup draw commands flagged IsLightMapped without UseLegacyLightmapsKeyword (lightmap texture arrays) draw without their lightmaps; the legacy lightmaps keyword's commands draw with the lightmap of their lightmapIndex.",
             "BatchRendererGroup draw commands flagged LODCrossFadeKeyword draw without LOD_FADE_CROSSFADE (not enabled yet).",
             "a BatchRendererGroup culling callback gave draw commands or visible instances without allocating their arrays; its output is not drawn.",
             "a BatchRendererGroup draw command flagged HasSortingPosition points outside instanceSortingPositions; it sorts by its sortingPosition as an approximate depth.",
@@ -469,7 +473,7 @@ namespace Unbound.Runtime
                         if (command.visibleCount == 0) continue;
                         if (shadows && splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
                         if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
-                        var item = Item(output, (int)c, false, mesh, command.submeshIndex, material, command.flags, batch.Properties, filter, main, ref sequence);
+                        var item = Item(output, (int)c, false, mesh, command.submeshIndex, material, command.flags, command.lightmapIndex, batch.Properties, filter, main, ref sequence);
                         if ((command.flags & BatchDrawCommandFlags.HasSortingPosition) == 0 || camera == null)
                         {
                             item.Distance = ApproximateDistance(command.sortingPosition);
@@ -519,7 +523,7 @@ namespace Unbound.Runtime
                 }
                 // The arguments give the indices (the first one and the count): the mesh's whole
                 // index buffer is read.
-                var item = Item(output, (int)c, true, mesh, 0, material, command.flags,
+                var item = Item(output, (int)c, true, mesh, 0, material, command.flags, command.lightmapIndex,
                     batch.WithVisibility(command.visibleInstancesBufferHandle), filter, main, ref sequence);
                 // The instance count is on the GPU: a command with sorting positions sorts at its
                 // first instance's (unmeasured for indirect commands).
@@ -557,7 +561,7 @@ namespace Unbound.Runtime
         /// <summary>A command's draw item: its mesh, submesh and material at the default sorting
         /// layer, its batch's properties and its header.</summary>
         static FrameBuilder.DrawItem Item(Output output, int command, bool indirect, Mesh mesh, int submesh, Material material, BatchDrawCommandFlags commandFlags,
-            Dictionary<int, object> properties, in BatchFilterSettings filter, Light main, ref long sequence)
+            ushort lightmapIndex, Dictionary<int, object> properties, in BatchFilterSettings filter, Light main, ref long sequence)
         {
             uint motion = filter.motionMode switch
             {
@@ -567,8 +571,13 @@ namespace Unbound.Runtime
             };
             bool lit = main != null && (main.cullingMask & (1 << filter.layer)) != 0;
             var flags = (uint)commandFlags;
-            bool lightmapped = (commandFlags & BatchDrawCommandFlags.IsLightMapped) != 0;
-            if (lightmapped) WarnOnce(UnsupportedLightmap);
+            // The legacy lightmaps keyword's commands (URP's GPU Resident Drawer sets it on every
+            // command) sample the scene lightmap of their index; commands flagged IsLightMapped
+            // alone are for lightmap texture arrays, which are not supported.
+            bool legacy = (commandFlags & BatchDrawCommandFlags.UseLegacyLightmapsKeyword) != 0;
+            int lightmap = legacy && BakedLighting.IsLightmapIndex(lightmapIndex) ? lightmapIndex : -1;
+            if ((commandFlags & BatchDrawCommandFlags.IsLightMapped) != 0 && !legacy) WarnOnce(UnsupportedLightmap);
+            bool lightmapped = lightmap >= 0 || (commandFlags & BatchDrawCommandFlags.IsLightMapped) != 0;
             if ((commandFlags & BatchDrawCommandFlags.LODCrossFadeKeyword) == BatchDrawCommandFlags.LODCrossFadeKeyword) WarnOnce(UnsupportedCrossFadeKeyword);
             var bounds = mesh.bounds;
             var header = new Header
@@ -590,7 +599,7 @@ namespace Unbound.Runtime
                 Queue = material.renderQueue,
                 Sequence = sequence++,
                 Properties = properties,
-                Lighting = LightingOf(filter),
+                Lighting = LightingOf(filter, lightmap),
                 Bounds = group.m_GlobalBounds ?? default,
                 CullBounds = group.m_GlobalBounds ?? default,
                 Layer = filter.layer,

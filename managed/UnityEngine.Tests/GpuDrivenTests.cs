@@ -232,8 +232,11 @@ namespace UnityEngine.Tests
             return found.ToArray();
         }
 
+        /// <summary>Lightmapped renderers are taken (the Editor's drawer holds them:
+        /// tests/projects/residentdrawer lightmaps); renderers with a realtime GI lightmap stay on
+        /// the ordinary path with one warning (Unbound's own refusal).</summary>
         [Fact]
-        public void LightmappedAndRealtimeGIRenderersStayOnTheOrdinaryPathWithAWarningEach()
+        public void LightmappedRenderersAreTakenAndRealtimeGIRenderersStayOnTheOrdinaryPath()
         {
             GPUDrivenProcessor.s_WarnedRefusals = 0;
             var processor = new GPUDrivenProcessor();
@@ -245,14 +248,17 @@ namespace UnityEngine.Tests
             influence.lightmapIndex = 0xFFFE;
             var realtime = Renderer("realtime", m_Dots);
             realtime.realtimeLightmapIndex = 0;
+            var realtime2 = Renderer("realtime2", m_Dots);
+            realtime2.realtimeLightmapIndex = 1;
             var none = Renderer("none", m_Dots);
             Assert.Equal(-1, none.lightmapIndex);
             Assert.Equal(-1, none.realtimeLightmapIndex);
-            var taken = Taken(processor, lightmapped, lightmapped2, influence, realtime, none);
-            Assert.Equal(new[] { influence.GetInstanceID(), none.GetInstanceID() }, taken);
-            Assert.False(lightmapped.m_GpuDriven);
+            var taken = Taken(processor, lightmapped, lightmapped2, influence, realtime, realtime2, none);
+            Assert.Equal(new[] { lightmapped.GetInstanceID(), lightmapped2.GetInstanceID(), influence.GetInstanceID(), none.GetInstanceID() }, taken);
+            Assert.True(lightmapped.m_GpuDriven);
             Assert.False(realtime.m_GpuDriven);
-            Assert.Single(m_Logs, m => m.StartsWith("Warning: Unbound: GPU-driven rendering does not take lightmapped renderers yet"));
+            Assert.False(realtime2.m_GpuDriven);
+            Assert.DoesNotContain(m_Logs, m => m.Contains("lightmapped renderers"));
             Assert.Single(m_Logs, m => m.StartsWith("Warning: Unbound: GPU-driven rendering leaves renderers with realtime GI lightmaps to the normal rendering path"));
             processor.Dispose();
         }

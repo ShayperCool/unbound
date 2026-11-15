@@ -159,7 +159,7 @@ namespace UnityEngine.Rendering
     /// vertex stream, probe anchor with blended probes, property block, sorting layer or order
     /// other than the default or sorting group, no script of its GameObject receives
     /// OnWillRenderObject, OnBecameVisible or OnBecameInvisible, it has no TextMesh, is not forced
-    /// off, is not lightmapped (Unbound's own refusal until BatchRendererGroup draws lightmaps), its
+    /// off, has no realtime GI lightmap (Unbound's own refusal; lightmapped renderers are taken), its
     /// LOD group (if any) does not animate cross-fading and every material's shader has a DOTS
     /// instancing variant (a pass declaring <c>DOTS_INSTANCING_ON</c>). Refused renderers are
     /// drawn as usual. Matches the Unity 6000.0.71f1 Editor, tests/projects/residentdrawer (the
@@ -292,23 +292,20 @@ namespace UnityEngine.Rendering
             if (renderer.HasPropertyBlock()) return false;
             if (ReceivesVisibilityMessages(go)) return false;
             if (renderer.forceRenderingOff || go.GetComponent<TextMesh>() != null) return false;
-            // Unbound's own refusals, each warned once: BatchRendererGroup draws no lightmaps yet
-            // (the Editor's drawer takes lightmapped renderers), and the drawer supports static
-            // global illumination only (the Manual's requirements; whether the Editor's drawer
-            // refuses realtime GI renderers is not measured): such renderers keep their lightmaps on
-            // the ordinary path.
-            if (Lightmapped(renderer.lightmapIndex)) return RefusedByUnbound(renderer, RefusedLightmapped);
+            // Unbound's own refusal, warned once: the drawer supports static global illumination only
+            // (the Manual's requirements; whether the Editor's drawer refuses realtime GI renderers
+            // is not measured): such renderers keep their realtime lightmaps on the ordinary path.
+            // Lightmapped renderers are taken (tests/projects/residentdrawer lightmaps).
             if (Lightmapped(renderer.realtimeLightmapIndex)) return RefusedByUnbound(renderer, RefusedRealtimeGI);
             if (SortingLayer.GetLayerValueFromID(renderer.m_SortingLayerID) != 0 || renderer.m_SortingOrder != 0 || SortingGroup.Enclosing(renderer) != null) return false;
             var group = renderer.m_LODGroup;
             return group is null || !group || !group.animateCrossFading;
         }
 
-        const int RefusedLightmapped = 0, RefusedRealtimeGI = 1;
+        const int RefusedRealtimeGI = 0;
 
         static readonly string[] s_Refusals =
         {
-            "GPU-driven rendering does not take lightmapped renderers yet (BatchRendererGroup draws no lightmaps)",
             "GPU-driven rendering leaves renderers with realtime GI lightmaps to the normal rendering path (the GPU Resident Drawer supports static global illumination only)",
         };
 

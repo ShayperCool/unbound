@@ -390,6 +390,9 @@ namespace Unbound.Runtime
         /// batch's bounds centre.</summary>
         internal UnityEngine.Vector3? ProbePosition;
         internal ReflectionProbeUsage Reflections = ReflectionProbeUsage.BlendProbes;
+        /// <summary>The scene lightmap a BatchRendererGroup draw samples (its command's index), or
+        /// -1: none.</summary>
+        internal int LightmapIndex = -1;
 
         /// <summary>Graphics.DrawMesh's defaults: casts and receives shadows, light probes.</summary>
         internal static readonly ImmediateLighting Default = new ImmediateLighting();

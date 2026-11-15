@@ -333,26 +333,8 @@ namespace UnityEngine
             if ((map != null && map.m_Light != null) || terrainLightmapped)
             {
                 if (!realtime) properties = DrawPropertyPool.Copy(properties);
-                properties[s_Lightmap] = map?.m_Light ?? (map != null ? DefaultTextures.Black : DefaultTextures.AbsentLightmap);
                 properties[s_LightmapST] = renderer.lightmapScaleOffset;
-                properties[s_LightmapHDR] = LightmapSettings.DecodeValues;
-                keywords.Add("LIGHTMAP_ON");
-                if ((map?.m_Dir != null || terrainLightmapped) && directional)
-                {
-                    properties[s_LightmapInd] = map?.m_Dir ?? DefaultTextures.Black;
-                    if (!realtimeDirectional) keywords.Add("DIRLIGHTMAP_COMBINED");
-                }
-                else if (realtimeDirectional) properties[s_LightmapInd] = FlatDirection;
-                if (map?.m_ShadowMask != null)
-                {
-                    properties[s_ShadowMask] = map.m_ShadowMask;
-                    // Mixed lighting's shadow masks are bound. A render pipeline mixes them with
-                    // its realtime shadows itself (URP sets their keywords: tests/projects/urp
-                    // lightmap_shadowmask, lightmap_distance_shadowmask); the built-in one does not yet.
-                    if (GraphicsSettings.currentRenderPipeline == null)
-                        Unbound.Runtime.Stubs.Ignored("QualitySettings.shadowmaskMode",
-                        "baked shadow masks are not mixed with realtime shadows yet (shadowmaskMode and Light.lightShadowCasterMode have no effect)");
-                }
+                BindLightmap(map, terrainLightmapped, directional, realtimeDirectional, properties, keywords);
                 // Its light is in the lightmap: a render pipeline's draw gets no probe (zero SH;
                 // measured: tests/projects/urp per-object-constants.jsonl, the lightmapped
                 // renderers); the built-in pipeline's keeps the ambient probe whatever its probe
@@ -372,6 +354,48 @@ namespace UnityEngine
             if (!lightProbes.Interpolate(position, ref cell, out var sh)) return properties;
             renderer.m_ProbeCell = cell;
             return WithProbe(sh, properties, owner: renderer);
+        }
+
+        /// <summary>A lightmap's textures and keywords on a draw's own properties: the lightmap
+        /// (black for an empty slot, an opaque grey for an absent one where a terrain selects it),
+        /// its decode values, LIGHTMAP_ON, its directions with directional lightmaps
+        /// (DIRLIGHTMAP_COMBINED, unless the realtime lightmap's directions set it) and its shadow
+        /// mask. The scale and offset are the caller's.</summary>
+        static void BindLightmap(LightmapData map, bool selected, bool directional, bool realtimeDirectional, Dictionary<int, object> properties, List<string> keywords)
+        {
+            properties[s_Lightmap] = map?.m_Light ?? (map != null ? DefaultTextures.Black : DefaultTextures.AbsentLightmap);
+            properties[s_LightmapHDR] = LightmapSettings.DecodeValues;
+            keywords.Add("LIGHTMAP_ON");
+            if ((map?.m_Dir != null || selected) && directional)
+            {
+                properties[s_LightmapInd] = map?.m_Dir ?? DefaultTextures.Black;
+                if (!realtimeDirectional) keywords.Add("DIRLIGHTMAP_COMBINED");
+            }
+            else if (realtimeDirectional) properties[s_LightmapInd] = FlatDirection;
+            if (map?.m_ShadowMask != null)
+            {
+                properties[s_ShadowMask] = map.m_ShadowMask;
+                // Mixed lighting's shadow masks are bound. A render pipeline mixes them with
+                // its realtime shadows itself (URP sets their keywords: tests/projects/urp
+                // lightmap_shadowmask, lightmap_distance_shadowmask); the built-in one does not yet.
+                if (GraphicsSettings.currentRenderPipeline == null)
+                    Unbound.Runtime.Stubs.Ignored("QualitySettings.shadowmaskMode",
+                    "baked shadow masks are not mixed with realtime shadows yet (shadowmaskMode and Light.lightShadowCasterMode have no effect)");
+            }
+        }
+
+        /// <summary>A BatchRendererGroup draw's lightmap (its command's index, the legacy lightmaps
+        /// keyword: URP's GPU Resident Drawer): the textures and keywords of the scene's lightmap
+        /// at <paramref name="index"/>; each instance's scale and offset are its own instance data
+        /// (unity_LightmapST). An index without a lightmap draws without one. Matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/residentdrawer lightmaps.</summary>
+        internal static Dictionary<int, object> ApplyLightmap(int index, Dictionary<int, object> properties, List<string> keywords)
+        {
+            var map = LightmapSettings.Of(index);
+            if (map == null || map.m_Light == null) return properties;
+            properties = DrawPropertyPool.Copy(properties);
+            BindLightmap(map, false, LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional, false, properties, keywords);
+            return properties;
         }
 
         static int s_ImmediateCell = -1;
