@@ -184,22 +184,22 @@ namespace Unbound.Tests
             Assert.True(LayeredPixels.Keeps(TextureFormat.PVRTC_RGBA4, 6, 6));
             Assert.False(LayeredPixels.Keeps(TextureFormat.PVRTC_RGB2, 24, 8));
             Assert.True(LayeredPixels.Keeps(TextureFormat.PVRTC_RGB2, 32, 8));
+            // Not whole blocks, though their block counts are powers of two.
+            Assert.False(LayeredPixels.Keeps(TextureFormat.PVRTC_RGBA4, 13, 13));
+            Assert.False(LayeredPixels.Keeps(TextureFormat.PVRTC_RGBA4, 14, 16));
+            Assert.False(LayeredPixels.Keeps(TextureFormat.PVRTC_RGB2, 30, 8));
+            Assert.True(LayeredPixels.Keeps(TextureFormat.PVRTC_RGB2, 4, 4));
             Assert.True(LayeredPixels.Keeps(TextureFormat.ETC2_RGBA1, 12, 12));
-            var capture = new Capture();
-            var previous = Debug.unityLogger.logHandler;
-            Debug.unityLogger.logHandler = capture;
-            Texture2DArray array = null, small = null;
-            try
-            {
-                array = new Texture2DArray(12, 12, 1, TextureFormat.PVRTC_RGBA4, false, true);
-                small = new Texture2DArray(6, 6, 1, TextureFormat.PVRTC_RGBA4, false, true);
-            }
-            finally { Debug.unityLogger.logHandler = previous; }
+            // Warned (once a process: the hits count every fallback).
+            int Hits() => Stubs.HitReport().Where(h => h.Key == "layered PVRTC_RGBA4 textures").Sum(h => h.Value);
+            int before = Hits();
+            var array = new Texture2DArray(12, 12, 1, TextureFormat.PVRTC_RGBA4, false, true);
+            var small = new Texture2DArray(6, 6, 1, TextureFormat.PVRTC_RGBA4, false, true);
             try
             {
                 Assert.Equal(12 * 12 * 4, array.GetPixelData<byte>(0, 0).Length);
                 Assert.Equal(32, small.GetPixelData<byte>(0, 0).Length);
-                Assert.Contains(capture.Messages, m => m.Contains("layered PVRTC_RGBA4 textures"));
+                Assert.Equal(before + 1, Hits());
             }
             finally
             {
@@ -221,11 +221,18 @@ namespace Unbound.Tests
             {
                 LayeredTextures.Serialized Read(int side) => LayeredTextures.Read(host, YNode.MakeMap(
                     ("m_Format", YNode.MakeScalar(((int)UnityEngine.Experimental.Rendering.GraphicsFormat.RGBA_PVRTC_4Bpp_UNorm).ToString())),
-                    ("m_Width", YNode.MakeScalar(side.ToString())), ("m_Height", YNode.MakeScalar(side.ToString())),
-                    ("image data", YNode.MakeScalar(new string('7', 2 * BlockFormats.LevelSize(TextureFormat.PVRTC_RGBA4, side, side))))));
+                    ("image data", YNode.MakeScalar(new string('7', 2 * BlockFormats.LevelSize(TextureFormat.PVRTC_RGBA4, side, side))))),
+                    side, side);
                 var unreadable = Read(12);
                 Assert.Null(unreadable.Data);
                 Assert.Contains(capture.Messages, m => m.Contains("'serialized' is stored as RGBA_PVRTC_4Bpp_UNorm, which Unbound does not read yet"));
+                // A cube array's square faces, given by its caller (its asset has no height).
+                capture.Messages.Clear();
+                var cube = LayeredTextures.Read(host, YNode.MakeMap(
+                    ("m_Format", YNode.MakeScalar(((int)UnityEngine.Experimental.Rendering.GraphicsFormat.RGB_PVRTC_2Bpp_UNorm).ToString())),
+                    ("image data", YNode.MakeScalar(new string('7', 2 * BlockFormats.LevelSize(TextureFormat.PVRTC_RGB2, 12, 12))))), 12, 12);
+                Assert.Null(cube.Data);
+                Assert.Contains(capture.Messages, m => m.Contains("RGB_PVRTC_2Bpp_UNorm, which Unbound does not read yet"));
                 var readable = Read(16);
                 Assert.Equal(TextureFormat.PVRTC_RGBA4, readable.Format);
                 Assert.Equal(128, readable.Data.Length);

@@ -83,16 +83,17 @@ namespace UnityEngine
         internal static bool Supported(TextureFormat format) => PixelFormats.Size(format, 1, 1) > 0 || BlockStored(format);
 
         /// <summary>Whether Unbound keeps a `width` x `height` layered texture of the format
-        /// (<see cref="Supported"/>): PVRTC only where its decoder reads the levels, whose block
-        /// counts (of a level padded to 8x8 texels at 4 bits, 16x8 at 2) are powers of two; the
-        /// Editor's answer for other sizes is unmeasured.</summary>
+        /// (<see cref="Supported"/>): PVRTC only where its decoder reads every level, whose sides
+        /// padded to their least (8 texels, 16 across at 2 bits) are powers of two (whole blocks,
+        /// a power of two of them each way); the Editor's answer for other sizes is
+        /// unmeasured.</summary>
         internal static bool Keeps(TextureFormat format, int width, int height)
         {
             if (!Supported(format)) return false;
             if (!BlockFormats.IsPvrtc(format)) return true;
             bool two = format is TextureFormat.PVRTC_RGB2 or TextureFormat.PVRTC_RGBA2;
-            int across = (Math.Max(width, two ? 16 : 8) + (two ? 7 : 3)) / (two ? 8 : 4), down = (Math.Max(height, 8) + 3) / 4;
-            return System.Numerics.BitOperations.IsPow2(across) && System.Numerics.BitOperations.IsPow2(down);
+            return System.Numerics.BitOperations.IsPow2(Math.Max(width, two ? 16 : 8))
+                && System.Numerics.BitOperations.IsPow2(Math.Max(height, 8));
         }
 
         static bool BlockStored(TextureFormat format) => format == BlockFormats.Uncrunched(format)
@@ -533,7 +534,9 @@ namespace UnityEngine
         /// <summary>The fields a Texture3D, Texture2DArray or CubemapArray asset keeps: its
         /// GraphicsFormat (<c>m_Format</c>), colour space (1 sRGB), mips, readability, sampler and
         /// pixels (the YAML form's <c>_typelessdata</c>, a binary file's <c>image data</c>).</summary>
-        internal static Serialized Read(Texture texture, YNode body)
+        /// <param name="width">The texture's width, and <paramref name="height"/> its height (a
+        /// cube array's faces are square: its asset has no height).</param>
+        internal static Serialized Read(Texture texture, YNode body, int width, int height)
         {
             var graphics = (GraphicsFormat)body.Int("m_Format");
             // The stored bytes follow the GraphicsFormat. B8G8R8A8 bytes are BGRA32's
@@ -556,7 +559,7 @@ namespace UnityEngine
                 data = Convert.FromHexString(hex.Length % 2 == 0 ? hex : hex.Substring(0, hex.Length - 1));
             else if (body.Get("m_StreamData") is YNode stream && stream.Str("path").Length > 0)
                 Debug.LogWarning($"Unbound: {texture.GetType().Name} '{texture.name}' keeps its pixels in a stream file ({stream.Str("path")}), which is not read yet: it has no pixels.");
-            if (data != null && !LayeredPixels.Keeps(format, body.Int("m_Width"), body.Int("m_Height")))
+            if (data != null && !LayeredPixels.Keeps(format, width, height))
             {
                 Debug.LogWarning($"Unbound: {texture.GetType().Name} '{texture.name}' is stored as {graphics}, which Unbound does not read yet: it has no pixels.");
                 data = null;
@@ -759,7 +762,7 @@ namespace UnityEngine
             m_Width = body.Int("m_Width");
             m_Height = body.Int("m_Height");
             m_Depth = Math.Max(1, body.Int("m_Depth", 1));
-            var read = LayeredTextures.Read(this, body);
+            var read = LayeredTextures.Read(this, body, m_Width, m_Height);
             m_Format = read.Format;
             m_Linear = !read.Srgb;
             m_MipCount = read.Mips;
@@ -944,7 +947,7 @@ namespace UnityEngine
         {
             m_Width = m_Height = body.Int("m_Width");
             m_Count = Math.Max(1, body.Int("m_CubemapCount", 1));
-            var read = LayeredTextures.Read(this, body);
+            var read = LayeredTextures.Read(this, body, m_Width, m_Height);
             m_Format = read.Format;
             m_Linear = !read.Srgb;
             m_MipCount = read.Mips;
@@ -1135,7 +1138,7 @@ namespace UnityEngine
             m_Width = body.Int("m_Width");
             m_Height = body.Int("m_Height");
             m_Depth = Math.Max(1, body.Int("m_Depth", 1));
-            var read = LayeredTextures.Read(this, body);
+            var read = LayeredTextures.Read(this, body, m_Width, m_Height);
             m_Format = read.Format;
             m_Linear = !read.Srgb;
             m_MipCount = read.Mips;
