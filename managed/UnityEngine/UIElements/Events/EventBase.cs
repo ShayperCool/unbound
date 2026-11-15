@@ -399,7 +399,7 @@ namespace UnityEngine.UIElements
         uint m_GateDepth;
         readonly Stack<(uint Gates, Queue<Record> Queue)> m_Contexts = new Stack<(uint, Queue<Record>)>();
 
-        internal Unbound.UIElements.ClickDetection m_UaClickDetector = new Unbound.UIElements.ClickDetection();
+        internal ClickDetector m_ClickDetector = new ClickDetector();
         internal Unbound.UIElements.PointerCaptureState m_UaPointerState = new Unbound.UIElements.PointerCaptureState();
 
         internal uint GateDepth => m_GateDepth;

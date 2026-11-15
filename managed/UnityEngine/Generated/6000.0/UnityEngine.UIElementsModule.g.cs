@@ -274,7 +274,6 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] internal static int getScreenRenderingHeight(int display) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.getScreenRenderingHeight"); return default; }
         [global::Unbound.Stub] internal static int getScreenRenderingWidth(int display) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.getScreenRenderingWidth"); return default; }
-        public global::UnityEngine.GameObject selectableGameObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.selectableGameObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.selectableGameObject"); } }
         internal int screenRenderingWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.screenRenderingWidth"); return default; } }
         internal int screenRenderingHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.screenRenderingHeight"); return default; } }
         internal event global::System.Action drawsInCamerasChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.drawsInCamerasChanged"); } [global::Unbound.Stub] remove { } }
@@ -689,14 +688,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public ChunkAllocatingArray() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChunkAllocatingArray<T>.ctor"); }
         public T this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChunkAllocatingArray<T>.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ChunkAllocatingArray<T>.this[]"); } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class ClickDetector
-    {
-        [global::Unbound.Stub] public ClickDetector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClickDetector.ctor"); }
-        [global::Unbound.Stub] public void ProcessEvent<TEvent>(global::UnityEngine.UIElements.PointerEventBase<TEvent> evt) where TEvent : global::UnityEngine.UIElements.PointerEventBase<TEvent>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClickDetector.ProcessEvent"); }
-        [global::Unbound.Stub] internal void Cleanup(global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElement> elements) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClickDetector.Cleanup"); }
-        internal static int s_DoubleClickTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClickDetector.s_DoubleClickTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ClickDetector.s_DoubleClickTime"); } }
-    }
     unsafe partial class CollectionViewController
     {
         [global::Unbound.Stub] private protected void SetHierarchyViewModelWithoutNotify(global::Unity.Hierarchy.HierarchyViewModel source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CollectionViewController.SetHierarchyViewModelWithoutNotify"); }
@@ -772,16 +763,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Init(ref T obj, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.UxmlObjectTraits<T>.Init"); }
             [global::Unbound.Stub] public UxmlObjectTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Columns.UxmlObjectTraits<T>.ctor"); }
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class CommandEventBase<T> : global::UnityEngine.UIElements.EventBase<T>, global::UnityEngine.UIElements.ICommandEvent where T : global::UnityEngine.UIElements.CommandEventBase<T>, new()
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CommandEventBase<T>.Init"); }
-        [global::Unbound.Stub] public static T GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CommandEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] public static T GetPooled(string commandName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CommandEventBase<T>.GetPooled"); return default; }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CommandEventBase<T>.Dispatch"); }
-        [global::Unbound.Stub] protected CommandEventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CommandEventBase<T>.ctor"); }
-        public string commandName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CommandEventBase<T>.commandName"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CommandEventBase<T>.commandName"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct ComputedStyle
@@ -945,11 +926,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static bool HasTransitionProperty(this ref global::UnityEngine.UIElements.ComputedStyle computedStyle, global::UnityEngine.UIElements.StyleSheets.StylePropertyId id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ComputedTransitionUtils.HasTransitionProperty"); return default; }
         [global::Unbound.Stub] internal static bool GetTransitionProperty(this ref global::UnityEngine.UIElements.ComputedStyle computedStyle, global::UnityEngine.UIElements.StyleSheets.StylePropertyId id, out global::UnityEngine.UIElements.ComputedTransitionProperty result) { result = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ComputedTransitionUtils.GetTransitionProperty"); return default; }
         [global::Unbound.Stub] internal static bool SameTransitionProperty(ref global::UnityEngine.UIElements.ComputedStyle x, ref global::UnityEngine.UIElements.ComputedStyle y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ComputedTransitionUtils.SameTransitionProperty"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ContextClickEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.ContextClickEvent>
-    {
-        [global::Unbound.Stub] public ContextClickEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ContextClickEvent.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ConverterDrawerAttribute : global::UnityEngine.PropertyAttribute
@@ -1248,12 +1224,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DoubleField.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class DragAndDropEventBase<T> : global::UnityEngine.UIElements.MouseEventBase<T>, global::UnityEngine.UIElements.IDragAndDropEvent where T : global::UnityEngine.UIElements.DragAndDropEventBase<T>, new()
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropEventBase<T>.Init"); }
-        [global::Unbound.Stub] protected DragAndDropEventBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropEventBase<T>.ctor"); }
-    }
     unsafe static partial class DragAndDropUtility
     {
         [global::Unbound.Stub] internal static void RegisterMakeClientFunc(global::System.Func<global::UnityEngine.UIElements.IDragAndDrop> makeClient) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragAndDropUtility.RegisterMakeClientFunc"); }
@@ -1269,31 +1239,10 @@ namespace UnityEngine.UIElements
         internal virtual bool isEditorContext { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragEventsProcessor.isEditorContext"); return default; } }
     }
     [global::Unbound.Stub]
-    public unsafe partial class DragExitedEvent : global::UnityEngine.UIElements.DragAndDropEventBase<global::UnityEngine.UIElements.DragExitedEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragExitedEvent.Init"); }
-        [global::Unbound.Stub] public DragExitedEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragExitedEvent.ctor"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.DragExitedEvent GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragExitedEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragExitedEvent.PostDispatch"); }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class DragLeaveEvent : global::UnityEngine.UIElements.DragAndDropEventBase<global::UnityEngine.UIElements.DragLeaveEvent>
     {
         [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragLeaveEvent.Init"); }
         [global::Unbound.Stub] public DragLeaveEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragLeaveEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class DragPerformEvent : global::UnityEngine.UIElements.DragAndDropEventBase<global::UnityEngine.UIElements.DragPerformEvent>
-    {
-        [global::Unbound.Stub] public DragPerformEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragPerformEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class DragUpdatedEvent : global::UnityEngine.UIElements.DragAndDropEventBase<global::UnityEngine.UIElements.DragUpdatedEvent>
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.DragUpdatedEvent GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragUpdatedEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.DragUpdatedEvent GetPooled(global::UnityEngine.UIElements.PointerMoveEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragUpdatedEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragUpdatedEvent.PostDispatch"); }
-        [global::Unbound.Stub] public DragUpdatedEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DragUpdatedEvent.ctor"); }
     }
     unsafe partial class DropdownField
     {
@@ -1607,7 +1556,6 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class EventDispatcher
     {
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.ClickDetector m_ClickDetector;
         internal const int k_MaxGateDepth = 500;
         internal const int k_NumberOfEventsWithStackInfo = 10;
         internal const int k_NumberOfEventsWithEventInfo = 100;
@@ -1631,11 +1579,6 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] internal static void GetDefaultEventInterests(global::System.Type elementType, out int defaultActionCategories, out int defaultActionAtTargetCategories, out int handleEventTrickleDownCategories, out int handleEventBubbleUpCategories) { defaultActionCategories = default; defaultActionAtTargetCategories = default; handleEventTrickleDownCategories = default; handleEventBubbleUpCategories = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventInterestReflectionUtils.GetDefaultEventInterests"); }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.EventCategory GetEventCategory(global::System.Type eventType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventInterestReflectionUtils.GetEventCategory"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ExecuteCommandEvent : global::UnityEngine.UIElements.CommandEventBase<global::UnityEngine.UIElements.ExecuteCommandEvent>
-    {
-        [global::Unbound.Stub] public ExecuteCommandEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ExecuteCommandEvent.ctor"); }
     }
     [global::Unbound.Stub]
     public unsafe partial class FieldMouseDragger<T> : global::UnityEngine.UIElements.BaseFieldMouseDragger
@@ -1885,10 +1828,6 @@ namespace UnityEngine.UIElements
         void Bind(global::UnityEngine.UIElements.VisualElement element);
         void Release();
     }
-    public unsafe partial interface ICommandEvent
-    {
-        string commandName { get; }
-    }
     internal unsafe partial interface ICursorManager
     {
         void SetCursor(global::UnityEngine.UIElements.Cursor cursor);
@@ -1897,9 +1836,6 @@ namespace UnityEngine.UIElements
     public unsafe partial interface IDebugPanelChangeReceiver
     {
         void OnVisualElementChange(global::UnityEngine.UIElements.VisualElement element, global::UnityEngine.UIElements.VersionChangeType changeType);
-    }
-    public unsafe partial interface IDragAndDropEvent
-    {
     }
     internal unsafe partial interface IEditableElement
     {
@@ -2015,14 +1951,6 @@ namespace UnityEngine.UIElements
             public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class IMGUIEvent : global::UnityEngine.UIElements.EventBase<global::UnityEngine.UIElements.IMGUIEvent>
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.IMGUIEvent GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIEvent.Init"); }
-        [global::Unbound.Stub] public IMGUIEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIEvent.ctor"); }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIEvent.Dispatch"); }
-    }
     public unsafe partial interface IMixedValueSupport
     {
         bool showMixedValue { get; set; }
@@ -2074,10 +2002,6 @@ namespace UnityEngine.UIElements
     {
         global::UnityEngine.UIElements.PanelSettings panelSettings { get; }
         global::UnityEngine.GameObject selectableGameObject { get; set; }
-    }
-    internal unsafe partial interface IRuntimePanelComponent
-    {
-        global::UnityEngine.UIElements.IPanel panel { get; set; }
     }
     internal unsafe partial interface IScheduler
     {
@@ -2476,11 +2400,9 @@ namespace UnityEngine.UIElements
     {
         internal bool functionKey { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventBase<T>.functionKey"); return default; } }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class KeyboardEventExtensions
+    unsafe static partial class KeyboardEventExtensions
     {
         [global::Unbound.Stub] internal static bool ShouldSendNavigationMoveEvent(this global::UnityEngine.UIElements.KeyDownEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventExtensions.ShouldSendNavigationMoveEvent"); return default; }
-        [global::Unbound.Stub] internal static bool ShouldSendNavigationMoveEventRuntime(this global::UnityEngine.Event e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardEventExtensions.ShouldSendNavigationMoveEventRuntime"); return default; }
     }
     [global::Unbound.Stub]
     internal unsafe partial class KeyboardTextEditorEventHandler : global::UnityEngine.UIElements.TextEditorEventHandler
@@ -2874,27 +2796,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.MouseDownEvent GetPooled(global::UnityEngine.UIElements.PointerMoveEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseDownEvent.GetPooled"); return default; }
     }
     [global::Unbound.Stub]
-    public unsafe partial class MouseEnterWindowEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.MouseEnterWindowEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEnterWindowEvent.Init"); }
-        [global::Unbound.Stub] public MouseEnterWindowEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEnterWindowEvent.ctor"); }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEnterWindowEvent.PostDispatch"); }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEnterWindowEvent.Dispatch"); }
-    }
-    [global::Unbound.Stub]
     internal unsafe static partial class MouseEventsHelper
     {
         [global::Unbound.Stub] internal static void SendEnterLeave<TLeaveEvent, TEnterEvent>(global::UnityEngine.UIElements.VisualElement previousTopElementUnderMouse, global::UnityEngine.UIElements.VisualElement currentTopElementUnderMouse, global::UnityEngine.UIElements.IMouseEvent triggerEvent, global::UnityEngine.Vector2 mousePosition) where TLeaveEvent : global::UnityEngine.UIElements.MouseEventBase<TLeaveEvent>, new() where TEnterEvent : global::UnityEngine.UIElements.MouseEventBase<TEnterEvent>, new() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventsHelper.SendEnterLeave"); }
         [global::Unbound.Stub] internal static void SendMouseOverMouseOut(global::UnityEngine.UIElements.VisualElement previousTopElementUnderMouse, global::UnityEngine.UIElements.VisualElement currentTopElementUnderMouse, global::UnityEngine.UIElements.IMouseEvent triggerEvent, global::UnityEngine.Vector2 mousePosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseEventsHelper.SendMouseOverMouseOut"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class MouseLeaveWindowEvent : global::UnityEngine.UIElements.MouseEventBase<global::UnityEngine.UIElements.MouseLeaveWindowEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseLeaveWindowEvent.Init"); }
-        [global::Unbound.Stub] public MouseLeaveWindowEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseLeaveWindowEvent.ctor"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.MouseLeaveWindowEvent GetPooled(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseLeaveWindowEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] protected internal override void PostDispatch(global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseLeaveWindowEvent.PostDispatch"); }
-        [global::Unbound.Stub] internal override void Dispatch(global::UnityEngine.UIElements.BaseVisualElementPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MouseLeaveWindowEvent.Dispatch"); }
     }
     unsafe partial class MouseMoveEvent
     {
@@ -4895,9 +4800,7 @@ namespace UnityEngine.UIElements
     }
     unsafe static partial class UIElementsRuntimeUtility
     {
-        [global::Unbound.Stub] internal static int s_ResolvedSortingIndexMax;
         [global::Unbound.Stub] internal static readonly string s_RepaintProfilerMarkerName;
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.EventBase CreateEvent(global::UnityEngine.Event systemEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.CreateEvent"); return default; }
         [global::Unbound.Stub] internal static void BeginRenderOverlays(int displayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.BeginRenderOverlays"); }
         [global::Unbound.Stub] internal static void RenderOverlaysBeforePriority(int displayIndex, float maxPriority) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.RenderOverlaysBeforePriority"); }
         [global::Unbound.Stub] internal static void EndRenderOverlays(int displayIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.EndRenderOverlays"); }
@@ -4908,7 +4811,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static float GetEditorDisplayHeight(int targetDisplay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.GetEditorDisplayHeight"); return default; }
         [global::Unbound.Stub] internal static void OnEnteredPlayMode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.OnEnteredPlayMode"); }
         [global::Unbound.Stub] internal static void OnExitingPlayMode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.OnExitingPlayMode"); }
-        public static event global::System.Action<global::UnityEngine.UIElements.BaseRuntimePanel> onCreatePanel { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.onCreatePanel"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class UIElementsRuntimeUtilityNative
@@ -5581,11 +5483,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override bool Equals(global::UnityEngine.UIElements.UxmlTypeRestriction other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlValueMatches.Equals"); return default; }
         [global::Unbound.Stub] public UxmlValueMatches() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlValueMatches.ctor"); }
         public string regex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlValueMatches.regex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlValueMatches.regex"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ValidateCommandEvent : global::UnityEngine.UIElements.CommandEventBase<global::UnityEngine.UIElements.ValidateCommandEvent>
-    {
-        [global::Unbound.Stub] public ValidateCommandEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ValidateCommandEvent.ctor"); }
     }
     [global::Unbound.Stub]
     public unsafe partial class Vector2Field : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector2, global::UnityEngine.UIElements.FloatField, float>
@@ -6878,10 +6775,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override void OnVersionChanged(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.VersionChangeType versionChangeType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeWorldSpaceHierarchyFlagsUpdater.OnVersionChanged"); }
         [global::Unbound.Stub] public override void Update() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeWorldSpaceHierarchyFlagsUpdater.Update"); }
         [global::Unbound.Stub] public VisualTreeWorldSpaceHierarchyFlagsUpdater() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeWorldSpaceHierarchyFlagsUpdater.ctor"); }
-    }
-    unsafe partial class WheelEvent
-    {
-        [global::Unbound.Stub] internal static global::UnityEngine.UIElements.WheelEvent GetPooled(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.IPointerEvent pointerEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.WheelEvent.GetPooled"); return default; }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct WorldSpaceData

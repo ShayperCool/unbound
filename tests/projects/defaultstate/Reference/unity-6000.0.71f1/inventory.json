@@ -7251,6 +7251,18 @@
     {
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
+      "status": "open-generic",
+      "type": "UnityEngine.UIElements.CommandEventBase`1"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.ContextClickEvent"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
       "status": "abstract",
       "type": "UnityEngine.UIElements.ContextualMenuManager"
     },
@@ -7353,6 +7365,30 @@
     {
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
+      "status": "open-generic",
+      "type": "UnityEngine.UIElements.DragAndDropEventBase`1"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.DragExitedEvent"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.DragPerformEvent"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.DragUpdatedEvent"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.DropdownField"
     },
@@ -7427,6 +7463,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEngine.UIElements.EventInterestAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.ExecuteCommandEvent"
     },
     {
       "category": "class",
@@ -7523,6 +7565,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.IMGUIContainer"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.IMGUIEvent"
     },
     {
       "category": "class",
@@ -7659,6 +7707,12 @@
     {
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.MouseEnterWindowEvent"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
       "status": "open-generic",
       "type": "UnityEngine.UIElements.MouseEventBase`1"
     },
@@ -7667,6 +7721,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.MouseLeaveEvent"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.MouseLeaveWindowEvent"
     },
     {
       "category": "class",
@@ -8405,6 +8465,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.UxmlUnsignedLongAttributeDescription"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.ValidateCommandEvent"
     },
     {
       "category": "scriptable",

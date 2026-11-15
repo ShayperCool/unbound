@@ -15,6 +15,9 @@ namespace UnityEngine.UIElements
         static readonly Dictionary<int, Panel> s_Panels = new Dictionary<int, Panel>();
         static readonly List<Panel> s_SortedRuntimePanels = new List<Panel>();
         static bool s_PanelOrderingDirty = true;
+        internal static int s_ResolvedSortingIndexMax;
+        public static event Action<BaseRuntimePanel> onCreatePanel;
+
         static bool s_RegisteredPlayerloopCallback;
         static DefaultEventSystem s_DefaultEventSystem;
         static readonly List<PanelSettings> s_PotentiallyEmptyPanelSettings = new List<PanelSettings>();
@@ -39,6 +42,7 @@ namespace UnityEngine.UIElements
                 s_RegisteredPlayerloopCallback = true;
                 RegisterPlayerloopCallback();
             }
+            onCreatePanel?.Invoke(panel);
             return panel;
         }
 
@@ -95,6 +99,7 @@ namespace UnityEngine.UIElements
             });
             for (int i = 0; i < s_SortedRuntimePanels.Count; i++)
                 if (s_SortedRuntimePanels[i] is BaseRuntimePanel r) r.resolvedSortingIndex = i;
+            s_ResolvedSortingIndexMax = s_SortedRuntimePanels.Count - 1;
             s_PanelOrderingDirty = false;
         }
 

@@ -558,7 +558,7 @@ namespace UnityEngine.UIElements
         protected internal override void PostDispatch(IPanel panel)
         {
             panel.focusController.SwitchFocusOnEvent(panel.focusController.GetLeafFocusedElement(), this);
-            panel.dispatcher.m_UaClickDetector.ProcessEvent(this);
+            panel.dispatcher.m_ClickDetector.ProcessEvent(this);
             base.PostDispatch(panel);
         }
     }
@@ -594,7 +594,7 @@ namespace UnityEngine.UIElements
 
         protected internal override void PostDispatch(IPanel panel)
         {
-            panel.dispatcher.m_UaClickDetector.ProcessEvent(this);
+            panel.dispatcher.m_ClickDetector.ProcessEvent(this);
             base.PostDispatch(panel);
         }
     }
@@ -618,7 +618,7 @@ namespace UnityEngine.UIElements
 
         protected internal override void PostDispatch(IPanel panel)
         {
-            panel.dispatcher.m_UaClickDetector.ProcessEvent(this);
+            panel.dispatcher.m_ClickDetector.ProcessEvent(this);
             if (PointerType.IsDirectManipulationDevice(pointerType))
             {
                 panel.ReleasePointer(pointerId);
@@ -648,7 +648,7 @@ namespace UnityEngine.UIElements
 
         protected internal override void PostDispatch(IPanel panel)
         {
-            panel.dispatcher.m_UaClickDetector.ProcessEvent(this);
+            panel.dispatcher.m_ClickDetector.ProcessEvent(this);
             if (PointerType.IsDirectManipulationDevice(pointerType))
             {
                 panel.ReleasePointer(pointerId);
@@ -886,6 +886,11 @@ namespace UnityEngine.UIElements
             return e;
         }
 
+        protected void UaCommitElementUnderPointers(IPanel panel)
+        {
+            if (((IMouseEventInternal)this).sourcePointerEvent == null) (panel as BaseVisualElementPanel)?.CommitElementUnderPointers();
+        }
+
         internal static T UaFromPointer(IPointerEvent pointerEvent) => GetPooled(pointerEvent);
 
         protected MouseEventBase() { LocalInit(); }
@@ -961,6 +966,13 @@ namespace UnityEngine.UIElements
             e.delta = delta;
             e.mousePosition = mousePosition;
             e.modifiers = modifiers;
+            return e;
+        }
+
+        internal static WheelEvent GetPooled(Vector3 delta, IPointerEvent pointerEvent)
+        {
+            var e = MouseEventBase<WheelEvent>.GetPooled(pointerEvent);
+            e.delta = delta;
             return e;
         }
 
@@ -1484,13 +1496,10 @@ namespace UnityEngine.UIElements
     }
 }
 
-namespace Unbound.UIElements
+namespace UnityEngine.UIElements
 {
-    using UnityEngine;
-    using UnityEngine.UIElements;
-
     /// <summary>Click events from pointer down/up pairs, as Unity's click detector sends them.</summary>
-    internal sealed class ClickDetection
+    internal partial class ClickDetector
     {
         sealed class Status
         {
@@ -1508,12 +1517,12 @@ namespace Unbound.UIElements
         }
 
         readonly Status[] m_Status = new Status[PointerId.maxPointers];
-        static int s_DoubleClickTime = -1;
+        internal static int s_DoubleClickTime { get; set; } = -1;
 
-        internal ClickDetection()
+        public ClickDetector()
         {
             for (int i = 0; i < m_Status.Length; i++) m_Status[i] = new Status();
-            if (s_DoubleClickTime == -1) s_DoubleClickTime = 500;
+            if (s_DoubleClickTime == -1) s_DoubleClickTime = Event.GetDoubleClickTime();
         }
 
         void Start(EventBase evt, IPointerEvent pe)
@@ -1549,7 +1558,7 @@ namespace Unbound.UIElements
             return element == top || element.Contains(top);
         }
 
-        internal void ProcessEvent<TEvent>(PointerEventBase<TEvent> evt) where TEvent : PointerEventBase<TEvent>, new()
+        public void ProcessEvent<TEvent>(PointerEventBase<TEvent> evt) where TEvent : PointerEventBase<TEvent>, new()
         {
             long type = evt.eventTypeId;
             if (type == EventBase<PointerDownEvent>.TypeId() && evt.button == 0)

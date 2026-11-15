@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/uitkruntime/run.py check --release $UNBOUND_PROBE_UNITY_VERSION"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Runtime/RuntimeUtility.cs",
+    "managed/UnityEngine/UIElements/Core/Panel.cs",
+    "managed/UnityEngine/UIElements/Events/"
+  ]
+}

@@ -515,8 +515,36 @@ namespace UnityEngine.UIElements
         }
     }
 
+    internal partial interface IRuntimePanelComponent
+    {
+        IPanel panel { get; set; }
+    }
+
     internal abstract partial class BaseRuntimePanel : Panel
     {
+        GameObject m_SelectableGameObject;
+        public GameObject selectableGameObject
+        {
+            get => m_SelectableGameObject;
+            set
+            {
+                if (m_SelectableGameObject == value) return;
+                AssignPanelToComponents(null);
+                m_SelectableGameObject = value;
+                AssignPanelToComponents(this);
+            }
+        }
+
+        void AssignPanelToComponents(IPanel panel)
+        {
+            if (m_SelectableGameObject == null) return;
+            using (UnityEngine.Pool.ListPool<IRuntimePanelComponent>.Get(out var components))
+            {
+                m_SelectableGameObject.GetComponents(components);
+                foreach (var component in components) component.panel = panel;
+            }
+        }
+
         float m_SortingPriority;
         static int s_CurrentRuntimePanelCounter;
         internal readonly int m_RuntimePanelCreationIndex;

@@ -380,7 +380,7 @@ namespace UnityEngine.UIElements
             using (new UaEventDispatcherGate(p?.dispatcher))
             using (new UaEventDispatcherGate(previous?.dispatcher != null && previous.dispatcher != p?.dispatcher ? previous.dispatcher : null))
             {
-                previous?.dispatcher?.m_UaClickDetector.Cleanup(list);
+                previous?.dispatcher?.m_ClickDetector.Cleanup(list);
                 foreach (var e in list) e.WillChangePanel(p);
                 foreach (var e in list)
                 {
