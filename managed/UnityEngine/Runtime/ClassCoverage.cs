@@ -215,7 +215,7 @@ namespace Unbound.Runtime
                     return false;
                 }
                 var (reading, detail) = Classify(f.ClassId, HasData, release);
-                Func<YNode, string> check = f.ClassId == 213 ? SpriteProblem : null;
+                Func<YNode, string> check = f.ClassId == 213 ? SpriteProblem : f.ClassId == VisualEffectClassId ? VisualEffectProblem : null;
                 if (check != null && f.Documents != null)
                 {
                     // Each problem once, with the objects that have it.
@@ -267,6 +267,13 @@ namespace Unbound.Runtime
             }
             return report;
         }
+
+        const int VisualEffectClassId = 2083052967;
+
+        /// <summary>An effect with an asset: the engine reads it and answers its API, but does
+        /// not simulate or draw its systems yet.</summary>
+        static string VisualEffectProblem(YNode body) =>
+            body.Ref("m_Asset").IsNull ? null : UnityEngine.VFX.VisualEffect.NotSimulated;
 
         static string SpriteProblem(YNode body)
         {

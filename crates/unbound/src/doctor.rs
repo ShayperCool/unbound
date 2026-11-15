@@ -33,7 +33,10 @@ const DATA_KEYS: &[&str] = &["m_OcclusionCullingData", "m_NavMeshData"];
 
 /// Classes whose documents the managed side checks value by value (`ClassCoverage.Report`):
 /// Sprite (213) layouts. Lighting Settings are checked together with scenes by the field audit.
-const CHECKED_CLASSES: &[i32] = &[213];
+const CHECKED_CLASSES: &[i32] = &[213, VISUAL_EFFECT_CLASS];
+
+/// VisualEffect components: listed while the engine does not simulate their systems.
+const VISUAL_EFFECT_CLASS: i32 = 2083052967;
 
 /// The objects of one class in the project's files.
 #[derive(Default)]
