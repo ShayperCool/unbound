@@ -145,6 +145,7 @@ public partial class LineProbe
         DestroyImmediate(camera.gameObject);
         DestroyImmediate(sunObject);
         RenderSettings.sun = null;
+        LocalShadowControls();
     }
 
     void SaveShadowTarget(string key, RenderTexture target)

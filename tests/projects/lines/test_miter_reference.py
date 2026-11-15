@@ -119,6 +119,20 @@ class PublicationTests(unittest.TestCase):
         self.assertEqual({k: ref.layout.tree(self.target)[k] for k in before}, before)
         self.assertEqual(len(ref.load(self.target)), len(self.rows))
 
+    def test_frame_publication_order_accepts_only_the_declared_interleaving(self):
+        old = ['ordinary', 'complete', *ref.SHADOW_KEYS, *ref.SHADOW_FRAME_KEYS]
+        expected = ['ordinary']
+        for renderer in ('line', 'trail'):
+            expected += [k for k in ref.SHADOW_KEYS if k.startswith(f'shadow.{renderer}.')]
+            expected += [k for k in ref.SHADOW_FRAME_KEYS if k.startswith(f'shadow.{renderer}.')]
+        expected += ['new.control', 'complete']
+        self.assertTrue(ref.known_shadow_frame_order(old, expected))
+        changed = expected.copy()
+        changed[1], changed[2] = changed[2], changed[1]
+        self.assertFalse(ref.known_shadow_frame_order(old, changed))
+        self.assertFalse(ref.known_shadow_frame_order(old, expected[:-1]))
+        self.assertFalse(ref.known_shadow_frame_order(old, expected + [expected[1]]))
+
     def test_shadow_extension_keeps_every_previous_record_and_image(self):
         for name in ref.ORDER:
             file, keys, images = ref.SETS[name]
@@ -135,10 +149,10 @@ class PublicationTests(unittest.TestCase):
             self.receipt.unlink()
         captured = {json.loads(row)['k'] for row in self.rows}
         self.assertEqual(set(ref.load(self.target, shadows=True)), captured)
-        self.assertEqual(set(ref.load(self.target)), {k for k in captured if not k.startswith("shadow.")})
+        self.assertEqual(set(ref.load(self.target)), {k for k in captured if not k.startswith(("shadow.", "shadowLocal."))})
         self.assertTrue((self.target/ref.SHADOW_FILE).exists())
         self.assertTrue((self.target/ref.SHADOW_FRAME_FILE).exists())
-        for image in (*ref.SHADOW_IMAGES, *ref.SHADOW_FRAME_IMAGES):
+        for image in (*ref.SHADOW_IMAGES, *ref.SHADOW_FRAME_IMAGES, *ref.SHADOW_LOCAL_IMAGES):
             self.assertEqual(gzip.decompress((self.target/(image+'.gz')).read_bytes()), image.encode())
 
 if __name__ == '__main__':

@@ -148,6 +148,8 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
+        [InlineData(LightType.Rectangle, false, false)]
+        [InlineData(LightType.Rectangle, false, true)]
         [InlineData(LightType.Point, false, false)]
         [InlineData(LightType.Spot, false, false)]
         [InlineData(LightType.Directional, true, false)]
@@ -158,7 +160,7 @@ namespace UnityEngine.Tests
         [InlineData(LightType.Directional, true, true)]
         [InlineData(LightType.Point, true, true)]
         [InlineData(LightType.Spot, true, true)]
-        public void CollectorsLogUnsupportedStripsWithoutDrawingAndRestoreTheirScope(LightType type, bool srp, bool trail)
+        public void CollectorsRespectMeasuredLightBoundaryAndRestoreTheirScope(LightType type, bool srp, bool trail)
         {
             string version = ProjectInfo.UnityVersion;
             var logger = Debug.unityLogger;
@@ -239,11 +241,17 @@ namespace UnityEngine.Tests
                         .Invoke(null, new object[] { light, context });
                     var casters = (List<FrameBuilder.DrawItem>)typeof(FrameBuilder)
                         .GetField("s_Casters", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
-                    Assert.DoesNotContain(casters, item => ReferenceEquals(item.Renderer, strip));
+                    if (type == LightType.Rectangle) Assert.DoesNotContain(casters, item => ReferenceEquals(item.Renderer, strip));
+                    else Assert.Contains(casters, item => ReferenceEquals(item.Renderer, strip));
                 }
-                var error = Assert.Single(logs.Errors.FindAll(entry => ReferenceEquals(entry.Context, strip))).Error;
-                Assert.IsType<NotSupportedException>(error);
-                Assert.Contains("supported only for built-in directional lights", error.Message);
+                var errors = logs.Errors.FindAll(entry => ReferenceEquals(entry.Context, strip));
+                if (srp || type == LightType.Rectangle)
+                {
+                    var error = Assert.Single(errors).Error;
+                    Assert.IsType<NotSupportedException>(error);
+                    Assert.Contains("supported only for built-in directional, point and spot lights", error.Message);
+                }
+                else Assert.Empty(errors);
                 Assert.Equal(before, FrameBuilder.s_DrawCount);
                 Assert.False(context.StripShadowPass);
                 Assert.False(context.StripShadowSrp);

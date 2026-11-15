@@ -76,12 +76,25 @@ for renderer in ('line', 'trail'):
         SHADOW_FRAME_KEYS += [prefix + suffix for suffix in ('.bake', '.normal.pixels', '.map.covered', '.map.pixels')]
         SHADOW_FRAME_IMAGES += [prefix + suffix for suffix in ('.normal.rgba', '.map.rgba')]
 
+SHADOW_LOCAL_FILE = 'shadowlocal.values.jsonl'
+SHADOW_LOCAL_KEYS, SHADOW_LOCAL_IMAGES = [], []
+for light in ('Spot', 'Point'):
+    for renderer in ('line', 'trail'):
+        for control in ('view0', 'viewBias', 'turnedLight', 'transformZ'):
+            prefix = f'shadowLocal.{light}.{renderer}.{control}'
+            SHADOW_LOCAL_KEYS += [prefix + '.bake', prefix + '.normal.pixels']
+            SHADOW_LOCAL_IMAGES.append(prefix + '.normal.rgba')
+            for face in range(6 if light == 'Point' else 1):
+                SHADOW_LOCAL_KEYS += [f'{prefix}.face{face}{suffix}' for suffix in ('.covered', '.pixels')]
+                SHADOW_LOCAL_IMAGES.append(f'{prefix}.face{face}.rgba')
+
 # The control files beside the canonical reference, in publication order, with their images:
 # each extends the capture after the previous ones and is published only once those exist.
 SETS = {'reversal': (FILE, KEYS, (IMAGE,)), 'chain': (CHAIN_FILE, CHAIN_KEYS, ()),
         'space': (SPACE_FILE, SPACE_KEYS, ()), 'edge': (EDGE_FILE, EDGE_KEYS, EDGE_IMAGES),
         'shadow': (SHADOW_FILE, SHADOW_KEYS, SHADOW_IMAGES),
-        'shadowframe': (SHADOW_FRAME_FILE, SHADOW_FRAME_KEYS, SHADOW_FRAME_IMAGES)}
+        'shadowframe': (SHADOW_FRAME_FILE, SHADOW_FRAME_KEYS, SHADOW_FRAME_IMAGES),
+        'shadowlocal': (SHADOW_LOCAL_FILE, SHADOW_LOCAL_KEYS, SHADOW_LOCAL_IMAGES)}
 ORDER = list(SETS)
 
 
@@ -102,6 +115,20 @@ def load(directory, shadows=False):
             raise SystemExit(f'{name} reference keys differ from the declared disjoint controls')
         rows.update({k: json.loads(v)['v'] for k, v in extra.items()})
     return rows
+
+
+def known_shadow_frame_order(old_order, captured_order):
+    """The frame controls run after their own renderer's earlier shadow controls."""
+    if not set(SHADOW_FRAME_KEYS).issubset(old_order):
+        return False
+    expected = [k for k in old_order if k not in SHADOW_FRAME_KEYS and k != 'complete']
+    for renderer in ('line', 'trail'):
+        anchor = f'shadow.{renderer}.angledView.bias0.5.map.pixels'
+        at = expected.index(anchor) + 1
+        expected[at:at] = [k for k in SHADOW_FRAME_KEYS if k.startswith(f'shadow.{renderer}.')]
+    expected.append('complete')
+    old_keys = set(old_order)
+    return [k for k in captured_order if k in old_keys] == expected
 
 
 def publish(release, label, receipt, chains=False, extension=None):
@@ -139,7 +166,7 @@ def publish(release, label, receipt, chains=False, extension=None):
         raise SystemExit('existing reference records changed')
     if [k for k in captured_order if k not in old] != keys:
         raise SystemExit(f'new records differ from declared {name} controls')
-    if not layout.known_order_delta(order, captured_order):
+    if not (layout.known_order_delta(order, captured_order) or known_shadow_frame_order(order, captured_order)):
         raise SystemExit('old records moved beyond the known completion move')
     old_images = sorted(p.name.removesuffix('.gz') for p in target.glob('*.rgba.gz'))
     if run.images(repeats[0]) != sorted(old_images + list(images)):
@@ -171,6 +198,7 @@ if __name__ == '__main__':
     parser.add_argument('--edge', action='store_true', help='publish the edge and object-matrix controls')
     parser.add_argument('--shadow', action='store_true', help='publish line/trail shadow-bias controls')
     parser.add_argument('--shadow-frame', action='store_true', help='publish light-frame and camera-near controls')
+    parser.add_argument('--shadow-local', action='store_true', help='publish spot and point strip-shadow controls')
     args = parser.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
-    publish(args.release, args.label, args.receipt, args.chains, 'shadowframe' if args.shadow_frame else 'shadow' if args.shadow else 'space' if args.space else 'edge' if args.edge else None)
+    publish(args.release, args.label, args.receipt, args.chains, 'shadowlocal' if args.shadow_local else 'shadowframe' if args.shadow_frame else 'shadow' if args.shadow else 'space' if args.space else 'edge' if args.edge else None)

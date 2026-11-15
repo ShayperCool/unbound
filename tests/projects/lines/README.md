@@ -326,8 +326,27 @@ are constructed and before caps and corners choose their orientation. TransformZ
 the bias sign because that frame reverses depth. Ordinary rendering and BakeMesh remain
 unbiased. Each renderer reuses distinct meshes for each camera and shadow light; destroying
 either owner releases those meshes. Cascades and cube faces share the light's geometry.
-Spot lights, point lights, multiple cascades and SRP shadow lists remain unmeasured by this
-directional-light diagnostic. Strip shadow draws explicitly reject other light types and
+Multiple cascades and SRP shadow lists remain unmeasured by this
+directional-light diagnostic. Strip shadow draws explicitly reject area lights and
 SRP lists; ordinary strip drawing remains available. Multiple cascades share the supported
 directional light frame, but have no capture here. No stronger device or pipeline parity
 is claimed.
+
+The local-light extension uses a visible, non-casting lit receiver to schedule built-in
+spot and point shadows. It records both strip types with zero and width-scaled bias,
+TransformZ, and a turned/scaled light with a perspective camera. The trails are anchored
+at their final supplied point, so automatic emitter movement does not add another segment.
+The shadow shader keeps the light's projection and writes world z as depth. Spot maps are
+read directly; the point cube's six faces are read with comparisons at depth 0.51, 0.53 and
+0.55, encoded in RGB as 0.5 or 1. This measures coverage and bias threshold crossings;
+it does not measure raw cube-depth readback. The strips occupy the positive-z face in these
+controls, and the five other faces stay clear. Two independent NVIDIA OpenGL Core captures
+add 144 records and 72 images, preserving all 2281 earlier records and 56 earlier images.
+Publish with `miter_reference.py --release 6000.0.71f1 --label L --shadow-local --receipt FILE`.
+The ordinary gate stays at 2200/2201; `--shadow` is 2424/2425, retaining the same gradient byte.
+
+The [6000.0 LineRenderer.shadowBias](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LineRenderer-shadowBias.html)
+and [TrailRenderer.shadowBias](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TrailRenderer-shadowBias.html)
+contracts specify bias as a proportion of each segment's width. The local zero/bias controls
+change their stored shadow depths or comparison masks while their ordinary geometry stays
+unbiased. Light frame orientation and the bias sign are measured release behavior.
