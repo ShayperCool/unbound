@@ -455,6 +455,58 @@ public static class EditorUIProbe
         ClipLengths();
         // After them (recorded with the Linux Editor): the keys SetCurve adds to a vector's components.
         InsertedKeys();
+        InsertedKeyEdges();
+    }
+
+    /// <summary>Edges of SetCurve's vector keys: key times about 1.9e-6 s and 2.1e-6 s apart and
+    /// at 100 s, a component set alone with keys 5e-7 s apart, curves without keys, and the clip
+    /// settings' range after the Euler angles' removal and a later change.</summary>
+    static void InsertedKeyEdges()
+    {
+        foreach (var legacy in new[] { true, false })
+        {
+            string tag = legacy ? "legacy" : "generic";
+            Call("SetCurveKeys." + tag + ".tolerance", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                c.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+                c.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0.5f, 1f), new Keyframe(0.5000019f, 2f),
+                    new Keyframe(1f, 3f), new Keyframe(1.0000021f, 4f), new Keyframe(100f, 5f), new Keyframe(100.0000076f, 6f)));
+                var result = new[] { Keys(c, "m_LocalPosition.x"), Keys(c, "m_LocalPosition.y") };
+                UnityEngine.Object.DestroyImmediate(c);
+                return result;
+            });
+            Call("SetCurveKeys." + tag + ".alone", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                c.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve(new Keyframe(0.5f, 1f), new Keyframe(0.5000005f, 2f), new Keyframe(1f, 3f)));
+                var result = new[] { Keys(c, "m_LocalPosition.x"), Keys(c, "m_LocalPosition.y") };
+                UnityEngine.Object.DestroyImmediate(c);
+                return result;
+            });
+            Call("SetCurveKeys." + tag + ".empty", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                c.SetCurve("", typeof(Transform), "localPosition.x", new AnimationCurve());
+                var steps = new List<object> { AnimationUtility.GetCurveBindings(c).Length, Keys(c, "m_LocalPosition.x"), Keys(c, "m_LocalPosition.y") };
+                c.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 1f, 1f, 2f));
+                steps.Add(Keys(c, "m_LocalPosition.x"));
+                steps.Add(Keys(c, "m_LocalPosition.y"));
+                UnityEngine.Object.DestroyImmediate(c);
+                return steps;
+            });
+            Call("SetCurveKeys." + tag + ".eulerRemovalThenLight", () =>
+            {
+                var c = new AnimationClip { legacy = legacy };
+                c.SetCurve("", typeof(Transform), "localEulerAngles.x", AnimationCurve.Linear(0f, 0f, 2f, 1f));
+                c.SetCurve("", typeof(Transform), "m_LocalEuler", null);
+                var steps = new List<object> { Span(c) };
+                c.SetCurve("", typeof(Light), "m_Intensity", AnimationCurve.Linear(0f, 0f, 0.5f, 1f));
+                steps.Add(Span(c));
+                UnityEngine.Object.DestroyImmediate(c);
+                return steps;
+            });
+        }
     }
 
     /// <summary>Every key of a clip's curve for a binding: time, value, both tangents, weighted mode.</summary>

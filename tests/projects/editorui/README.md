@@ -43,7 +43,10 @@ components, and how a clip of one position component plays.
 rows equal the reference's) records every key (time, value, tangents, weighted mode) of a
 Transform vector's components after AnimationClip.SetCurve keys one component at times the others
 lack: inside and outside each curve's keys, on a Hermite segment with unequal tangents, on stepped
-segments (with a key 5e-7 s after another), and on a rotation, for legacy and non-legacy clips.
+segments (with a key 5e-7 s after another), and on a rotation, for legacy and non-legacy clips;
+then key times about 1.9e-6 s and 2.1e-6 s apart and at 100 s, a component set alone with keys
+5e-7 s apart, curves without keys, and the clip settings' range after the Euler angles' removal
+and a later SetCurve.
 Infinite tangents are recorded as "+inf"/"-inf".
 
 Every call matches but one expected difference: Unity's reorderable list keeps its elements'
