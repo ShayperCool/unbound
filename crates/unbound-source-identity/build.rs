@@ -1,5 +1,5 @@
-//! Makes the identities of the cache producers (`PRODUCERS` in `src/lib.rs`) from the
-//! workspace's sources and builds them into the crate.
+//! Makes the identities of the cache producers (`PRODUCERS` in `src/producers.rs`) from the
+//! workspace's files and builds them into the crate.
 #[path = "src/scan.rs"]
 mod scan;
 
@@ -14,13 +14,13 @@ fn main() {
         "cargo:rerun-if-changed={}",
         root.join("Cargo.lock").display()
     );
-    for (env, start, modules, locked) in PRODUCERS {
+    for (env, start) in PRODUCERS {
         let (files, watched) =
-            scan::producing_sources(&root, start, modules).expect("reading the producing sources");
+            scan::producing_sources(&root, start).expect("reading the producing sources");
         for path in watched.iter().chain(&files) {
             println!("cargo:rerun-if-changed={}", path.display());
         }
-        let id = scan::identity(&root, &files, locked).expect("hashing the producing sources");
+        let id = scan::identity(&root, &files).expect("hashing the producing sources");
         println!("cargo:rustc-env={env}={id}");
     }
 }
