@@ -1441,6 +1441,36 @@ fn a_clip_is_reduced_on_its_takes_frames_and_then_moved_to_its_start() {
     assert_eq!(beyond.length, 0.333_333_37);
 }
 
+/// A Humanoid clip's normalized event and parameter curve times lie on its range's span, its
+/// end less its start: frames 1 to 31 at 30 a second put events at normalized 0.5 and 1 at 0.5
+/// and 1 (tests/projects/modelclips events.HumanLateEvents, ends.HumanLateCurve), where the last
+/// transform key is at 1.00000012. The same file imported as Generic keeps them on its length,
+/// so an event at normalized 1 stays at the clip's end (unmeasured where the two differ).
+#[test]
+fn a_humanoid_clips_events_lie_on_its_span_and_other_clips_on_their_length() {
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/modelclips/Assets/Resources/HumanLateCurve.fbx");
+    let text = std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap();
+    assert!(text.contains("animationType: 3"));
+    let bytes = std::fs::read(&source).unwrap();
+    let clip = |text: &str| {
+        let model = ModelImporter::default()
+            .import(&source, &bytes, &meta(text))
+            .unwrap();
+        model.clips.into_iter().find(|c| !c.preview).unwrap()
+    };
+    let human = clip(&text);
+    let times: Vec<f32> = human.events.iter().map(|e| e.time).collect();
+    assert_eq!(times, [0.5, 1.0]);
+    let speed = &human.parameters[0].keys;
+    assert_eq!((speed[0].time, speed[1].time), (0.0, 1.0));
+    let generic = clip(&text.replace("animationType: 3", "animationType: 2"));
+    assert_eq!(generic.length, 1.000_000_1);
+    let times: Vec<f32> = generic.events.iter().map(|e| e.time).collect();
+    assert_eq!(times, [0.5 * generic.length, generic.length]);
+    assert_eq!(generic.parameters[0].keys[1].time, generic.length);
+}
+
 /// A Humanoid clip's transform keys take the frame times of every other rig type: the frame
 /// count times one frame's length in single precision, positions ending at the take's end and
 /// rotations and scales on its last frame's time. The Editor shows these keys through the

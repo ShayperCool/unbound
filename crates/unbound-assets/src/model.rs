@@ -1858,12 +1858,18 @@ impl<'a> Builder<'a> {
             if let Some(node) = motion_node.filter(|_| !no_frames) {
                 floats.extend(self.motion_curves(node, &stack.anim, start, end, fps));
             }
-            // Event and parameter curve times are normalized to the range's span, its end less
-            // its start (frames 1 to 31 at 30 a second: 1, where the last key is at 1.00000012
-            // and a Humanoid clip's last muscle key at 0.99999994; tests/projects/modelclips
-            // events.HumanLateEvents, ends.HumanLateCurve). A range of no frames takes its
-            // length of 1.
-            let span = if empty { length } else { (end - start) as f32 };
+            // Event and parameter curve times are normalized: a Humanoid clip's to the range's
+            // span, its end less its start (frames 1 to 31 at 30 a second: 1, where the last
+            // transform key is at 1.00000012 and the last muscle key at 0.99999994; the clip
+            // then ends at its last key or event, managed `HumanClip`; tests/projects/modelclips
+            // events.HumanLateEvents, ends.HumanLateCurve), other clips' to their length, which
+            // they keep (unmeasured where the two differ: an end event past a shorter length
+            // would not fire). A range of no frames takes its length of 1.
+            let span = if empty || !human {
+                length
+            } else {
+                (end - start) as f32
+            };
             clips.push(ModelClip {
                 file_id: file_id.into(),
                 name: range.name,

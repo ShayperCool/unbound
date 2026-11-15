@@ -245,9 +245,8 @@ were recorded after the `Shapes*` records, the same way. Its 64 muscle curves th
 noise have 31 keys each: the conversion steps one frame length at a time on the take's times from
 the clip's start and moves the samples back (0, 0.0333333351, 0.06666668, ..., 0.966666639,
 0.99999994), and the clip ends at its last key, 0.99999994. Unbound matches every key time
-exactly (on the clip's own frame times before, 63 records were outside the tolerance); its clip
-is 1.00000012 long, its last transform key (open: which ranges end at their last muscle key,
-which ones lose a frame there, and how events and parameter curves move with it are unmeasured).
+exactly (on the clip's own frame times before, 63 records were outside the tolerance) and the
+length (see `HumanTwistLate` below; open: which ranges lose a frame at their end).
 
 `HumanTwistLate` (tests/projects/humanoid/make_models.py, `ProbeRunner.CreateHumanTwistLate`) is
 `HumanTwistAll`'s settings (a mask made from the model, every transform on) on the same rig and
@@ -265,7 +264,9 @@ at normalized 0.5 and 1 (`ProbeRunner.CreateHumanLateEvents`), the second with a
 parameter curve `Speed` from 0 at 0 to 1 at 1; `events.<model>.<clip>` records the events.
 
 - The events lie at 0.5 and 1 and the parameter curve's keys at 0 and 1: normalized times are
-  placed on the range's span, its end less its start (1), not on the last key's time.
+  placed on the range's span, its end less its start (1), not on the last key's time (measured on
+  Humanoid clips; Generic and Legacy clips keep theirs on their length, unmeasured where the two
+  differ).
 - Both clips are 1 long, their last event's (and parameter key's) time, past the muscle keys'
   0.99999994: a clip ends at its last key or event.
 
