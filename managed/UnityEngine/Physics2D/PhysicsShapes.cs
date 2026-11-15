@@ -323,8 +323,9 @@ namespace UnityEngine
         /// <summary>
         /// The hash of the collider's shapes as they are now: each shape's hash is seeded with the
         /// previous one's, in shape order. A polygon hashes its radius and then its vertices (as the
-        /// rigidbody space holds them, in hull order), a chain likewise; a lone edge leaves the hash
-        /// unchanged. A circle or capsule hashes an eight-byte record header, its type, radius and
+        /// rigidbody space holds them, in hull order), a chain likewise. Edge colliders make chains
+        /// on the measured release; a lone edge shape (only built for unmeasured releases) leaves
+        /// the hash unchanged, unmeasured. A circle or capsule hashes an eight-byte record header, its type, radius and
         /// points: the header is zero here, but Unity's differs between Editor processes, so only
         /// equality within one run is reproducible for those (tests/projects/shapes2d).
         /// </summary>

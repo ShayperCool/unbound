@@ -197,6 +197,32 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AFullRebuildAfterTileChangesStartsAgainWithoutARead()
+        {
+            var tile = GridTile();
+            var (map, collider) = Tilemap(tile, Block());
+            uint fresh = collider.GetShapeHash();
+            map.SetTile(new Vector3Int(1, 0, 0), null);
+            collider.ProcessTilemapChanges();
+            map.SetTile(new Vector3Int(1, 0, 0), tile);
+            collider.ProcessTilemapChanges();
+            // No read before the toggle: the re-enabled collider is built whole, in z, y, x order.
+            collider.enabled = false; collider.enabled = true;
+            Assert.Equal(fresh, collider.GetShapeHash());
+            var group = new PhysicsShapeGroup2D();
+            collider.GetShapes(group);
+            Assert.Equal(new Vector2(2, 0), group.GetShapeVertex(1, 0));
+            // The same holds for a geometry setting changed after a pass.
+            map.SetTile(new Vector3Int(1, 0, 0), null);
+            collider.ProcessTilemapChanges();
+            map.SetTile(new Vector3Int(1, 0, 0), tile);
+            collider.ProcessTilemapChanges();
+            collider.offset = Vector2.zero;
+            collider.useDelaunayMesh = true;
+            Assert.Equal(fresh, collider.GetShapeHash());
+        }
+
+        [Fact]
         public void ATilemapOnABodyCarriesTheHashToo()
         {
             var tile = GridTile();

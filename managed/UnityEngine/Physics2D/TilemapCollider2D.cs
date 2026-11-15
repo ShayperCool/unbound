@@ -123,6 +123,13 @@ namespace UnityEngine.Tilemaps
             m_Processed = true;
             map.m_ShapeChanges.Clear();
             ShapeChanged();
+            if (!m_HashPending) return;
+            // Unity creates the changed shapes here: build them now, so that a later rebuild for
+            // another reason is a full one. Shapes that cannot be built now (a disabled collider,
+            // a running step) are built whole later, in z, y, x order, from the seed.
+            W.Flush();
+            m_HashPending = false;
+            m_HashSteps.Clear();
         }
 
         /// <summary>
