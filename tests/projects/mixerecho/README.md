@@ -37,17 +37,19 @@ attenuation are captured at both rates. Max channels values 0, 1, 2 and 16 have 
 response. Echo groups retain their initial input fade even with the effect or group bypassed.
 The exposed and zero-duration snapshot cases set parameters before playback, then check exact
 GetFloat bits at the first render and compare independent serialized controls. They do not
-measure changes during a running tail or timed snapshot transitions.
+measure changes during a running tail or timed snapshot transitions; the audiodistortion live
+`echo_delays` session measures delay changes during a running tail.
 
 Global effect-slot wet mixing is distinct from Echo's Drymix and Wetmix and remains unsupported.
 Other releases, surround output, mixer auto-suspend and timed parameter changes are unmeasured.
 This fixture establishes only the listed Echo behavior, not full audio parity.
 
-The backend limits each stereo Echo history to 8 MiB. Group configuration and audio resets
-validate this limit before replacing the current configuration. Oversized histories caused by
-malformed sample rates fail explicitly; the measured delay bounds remain unchanged. Allocations
-within the limit use a fallible reserve. A five-second history at 384 kHz fits this resource
-budget, which does not establish behavior parity at that unmeasured rate.
+The backend limits each stereo Echo delay to 8 MiB of history; its ring adds up to half a
+second plus 128 frames beyond the delay (tests/projects/audiodistortion LIVE.md). Group
+configuration and audio resets validate this limit before replacing the current configuration.
+Oversized histories caused by malformed sample rates fail explicitly; the measured delay bounds
+remain unchanged. Allocations use a fallible reserve. A five-second delay at 384 kHz fits this
+resource budget, which does not establish behavior parity at that unmeasured rate.
 
 ## Reproduce
 

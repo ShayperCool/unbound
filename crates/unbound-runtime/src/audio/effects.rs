@@ -338,6 +338,17 @@ impl EffectSpec {
             && self.kernel_settings_match(other)
     }
 
+    /// The Echo unit's own parameters: delay, decay, dry and wet mix, and max channels.
+    fn echo_parameters(&self) -> [f32; 5] {
+        [
+            self.delay,
+            self.decay,
+            self.dry_mix,
+            self.wet_mix,
+            self.max_channels,
+        ]
+    }
+
     /// Parameter and resource checks that hold wherever the effect runs (group or source).
     pub(crate) fn validate(&self, rate: u32, buffer: u32) -> anyhow::Result<()> {
         if self.kind == "Echo" {
@@ -1109,7 +1120,13 @@ impl Effect {
             self.gain_ramp = ParameterRamp::new(self.gain);
         }
         let kind = EffectKind::parse(&spec.kind);
-        if kind == Some(EffectKind::Echo) {
+        // The Echo takes its delay when one of its own parameters is submitted; an update for
+        // another unit, the slot's wet level or the group is no submission for it.
+        if kind == Some(EffectKind::Echo)
+            && (spec.echo_parameters() != self.spec.echo_parameters()
+                || rate != self.rate
+                || self.echo.history.is_empty())
+        {
             self.echo
                 .tune(spec.delay, rate, spec.effect_transitions_measured)?;
         }
@@ -1191,7 +1208,8 @@ impl Effect {
     }
 
     /// Forgets the histories and the parameter ramp, leaving the effect as [`Effect::new`] makes
-    /// it at the current rate. The Echo buffer keeps its allocation (zeroed).
+    /// it at the current rate, except that the Echo keeps its ring and the delay it last
+    /// applied (zeroed, as the measured reset does).
     pub fn reset(&mut self) {
         self.clear_state(false);
     }
@@ -2774,6 +2792,25 @@ mod tests {
         echo.tune(37.0, 48000, true).unwrap();
         echo.tune(37.01, 48000, true).unwrap();
         assert_eq!(echo.crossfade, 0);
+    }
+
+    #[test]
+    fn only_an_echo_parameter_submission_applies_a_waiting_delay() {
+        let mut spec = echo_spec(37.0, 0.4, 0.7, 0.6, true);
+        let mut effect = Effect::new(spec.clone(), 48000, 1024).unwrap();
+        spec.delay = 11.0;
+        effect.update(spec.clone(), 48000, 1024).unwrap();
+        spec.delay = 300.0;
+        effect.update(spec.clone(), 48000, 1024).unwrap();
+        effect.process(&mut [0.0; 2 * 2048], false);
+        assert_eq!(effect.echo.crossfade, 0);
+        // A resubmitted group with a new slot wet level is no Echo submission.
+        spec.mix_level = Some(0.5);
+        effect.update(spec.clone(), 48000, 1024).unwrap();
+        assert_eq!(effect.echo.delay, 11.0);
+        spec.wet_mix = 0.5;
+        effect.update(spec.clone(), 48000, 1024).unwrap();
+        assert_eq!((effect.echo.delay, effect.echo.frames), (300.0, 14400));
     }
 
     #[test]

@@ -99,13 +99,17 @@ see [the Q449 correction](#q449-duplicate-diagnostics) below.
   single-listener Mono controls pass strictly. That second Echo receives two
   delay values (11, then 17 ms) before its first render; this is an observation
   only, since the isolated `mono-live` Echo controls set one delay and also
-  differ at startup. No probe changes
-  `AudioEchoFilter.delay` or a mixer Echo Delay while a tail is running
-  ([mixerecho](../mixerecho/README.md) states this limit), and
-  the engine clears the Echo history whenever the delay frame count changes.
-  Runtime delay controls (decrease, increase, a reversal inside 2048 frames, on a
-  source and a listener) are needed before the startup transition can be modelled
-  as a change from the 500 ms default. No engine change is made.
+  differ at startup. Q518 records runtime delay changes in the audiodistortion live
+  `echo_delays` session ([LIVE.md](../audiodistortion/LIVE.md#echo-delay-changes)) and
+  implements that rule: a changed delay keeps the history and crossfades from the
+  previous tap over 2048 frames. The rule alone does not settle this startup case.
+  The isolated Mono Echo startup values fit that crossfade from the 500 ms default
+  to the authored delay, while Echo/Chorus construction shows none; which
+  constructions publish the authored delay as a change, or reset the unit before
+  its first render, is not measured. The engine still creates each unit with its
+  final delay, and the counts are unchanged: `mono-live` 29638/31048 gate failures
+  (36607/37211 strict), `topology-diagnostics` 2418/3398 (3222/4422 strict) at
+  48000/44100 Hz.
 - **Q416-R4b, composed source precision.** Stereo and Quad LowPass/Chorus and
   Reverb/Echo controls retain sparse Master and device differences. They are
   outside this new PCM qualification; their complete samples and original float
