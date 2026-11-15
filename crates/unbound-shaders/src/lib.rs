@@ -33,7 +33,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 50;
+pub const FORMAT_VERSION: u32 = 51;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -217,8 +217,9 @@ pub struct TextureSlot {
     /// the slot): only then does the slot bind one. Where a program samples through the sampler
     /// it names, textures share samplers (the Unity 6000.0 Manual, Using sampler states: "sample
     /// a second texture with the sampler from a texture"), and a device may bind fewer samplers
-    /// than textures in a stage (16 on wgpu's Metal device).
-    #[serde(default)]
+    /// than textures in a stage (16 on wgpu's Metal device). Required in a cache entry: one
+    /// written without it (another build's, of the same format number) is compiled again, as
+    /// reading it as no sampler would leave the program's samplers out of its layout.
     pub sampler: bool,
 }
 
@@ -2144,6 +2145,23 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
                 ("_LinearClamp", false)
             ])
         );
+    }
+
+    /// A cached slot written without its sampler flag (another build's entry of the same format
+    /// number) does not read: the program is compiled again instead of binding no sampler.
+    #[test]
+    fn a_cached_slot_without_its_sampler_flag_does_not_read() {
+        let slot = TextureSlot {
+            sampler: true,
+            ..Default::default()
+        };
+        let mut value = serde_json::to_value(slot).unwrap();
+        assert_eq!(
+            serde_json::from_value::<TextureSlot>(value.clone()).unwrap(),
+            slot
+        );
+        value.as_object_mut().unwrap().remove("sampler");
+        assert!(serde_json::from_value::<TextureSlot>(value).is_err());
     }
 
     /// The render pipelines' instancing library under the replay: read without instancing, so
