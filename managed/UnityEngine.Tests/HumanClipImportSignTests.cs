@@ -43,8 +43,9 @@ namespace UnityEngine.Tests
             Assert.False(HumanClipImport.ImporterSign(-q));
         }
 
-        /// <summary>The rule itself: w positive while the rotation's matrix has a positive trace
-        /// (|w| above 1/2), else the component of the largest diagonal element positive.</summary>
+        /// <summary>The rule itself: w positive while the rotation's matrix has a trace that is not
+        /// negative (|w| at least 1/2), else the component of the largest diagonal element
+        /// positive.</summary>
         [Fact]
         public void TheSignFollowsTheTraceThenTheLargestDiagonalElement()
         {
@@ -62,6 +63,14 @@ namespace UnityEngine.Tests
             Assert.True(HumanClipImport.ImporterSign(new F4(0.18301271f, -0.6830127f, 0.6830127f, -0.18301271f)));
             Assert.False(HumanClipImport.ImporterSign(new F4(-0.18301271f, 0.6830127f, -0.6830127f, 0.18301271f)));
             Assert.True(HumanClipImport.ImporterSign(M.QNormalize(new F4(-0.18f, 0.69f, -0.68f, 0.18f))));
+            // A tie of x with y or z: x decides; a trace of exactly zero: w decides
+            // (tests/projects/modelclips nodes.AxisTies/*).
+            float h = 0.70710677f;
+            Assert.True(HumanClipImport.ImporterSign(new F4(h, -h, 0f, 0f)));
+            Assert.False(HumanClipImport.ImporterSign(new F4(-h, h, 0f, 0f)));
+            Assert.True(HumanClipImport.ImporterSign(new F4(h, 0f, -h, 0f)));
+            Assert.True(HumanClipImport.ImporterSign(new F4(-0.5f, 0.5f, -0.5f, 0.5f)));
+            Assert.False(HumanClipImport.ImporterSign(new F4(0.5f, -0.5f, 0.5f, -0.5f)));
         }
 
         /// <summary>A conversion's curves do not depend on the sign the samples hold a node's

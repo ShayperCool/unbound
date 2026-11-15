@@ -143,6 +143,8 @@ namespace UnityEngine
         {
             get
             {
+                // A Humanoid model clip's length is known once its muscle curves are.
+                if (m_HumanAvatar != null && !m_HumanConverted) ConvertHumanCurves();
                 if (m_HasRange) return Math.Max(0f, m_StopTime - m_StartTime);
                 if (!Compat.DefaultConstructorStateMeasured) return CurveEnd();
                 bool found = false;

@@ -145,5 +145,54 @@ namespace UnityEngine.Tests
             Assert.True(times[31] > stop);
             Assert.Equal(2f * frame, HumanClipImport.SampleTimes(0f, stop, 30f, 1)[2]);
         }
+
+        /// <summary>A converted clip ends at its last key: on frames 1 to 31 of a take at 30 fps
+        /// its transform keys end at 1.00000012 (the importer's range), its muscle keys at
+        /// 0.99999994, which is its length (tests/projects/modelclips keys.HumanLate); a transform
+        /// curve the clip keeps that ends at 1.00000012 keeps that length
+        /// (ends.HumanTwistLate).</summary>
+        [Theory]
+        [InlineData(false, 0.99999994f)]
+        [InlineData(true, 1.00000012f)]
+        public void AConvertedClipEndsAtItsLastKey(bool keptCurve, float length)
+        {
+            var root = AnimationHumanStreamTests.Humanoid(out var animator);
+            m_Created.Add(root);
+            m_Created.Add(animator.avatar);
+            float frame = 1f / 30f;
+            var clip = new AnimationClip { frameRate = 30f };
+            m_Created.Add(clip);
+            var rotation = new[] { new Keyframe[31], new Keyframe[31], new Keyframe[31], new Keyframe[31] };
+            var kept = new Keyframe[31];
+            for (int i = 0; i <= 30; i++)
+            {
+                // The take's frame times moved back by the clip's start (frame 1).
+                float time = (i + 1) * frame - frame;
+                var q = Quaternion.Euler(40f * MathF.Sin(i * 0.3f), 0f, 0f);
+                for (int c = 0; c < 4; c++) rotation[c][i] = new Keyframe(time, q[c]);
+                kept[i] = new Keyframe(time, 1f + 0.01f * i);
+            }
+            Assert.Equal(1.00000012f, rotation[0][30].time);
+            for (int c = 0; c < 4; c++)
+                clip.m_Curves.Add(new ClipCurve
+                {
+                    Binding = new CurveBinding { Path = "Hips/LeftUpperLeg", Attribute = "m_LocalRotation." + "xyzw"[c], ClassId = EngineTypes.TransformId },
+                    Curve = new AnimationCurve(rotation[c]),
+                });
+            if (keptCurve)
+                clip.m_Curves.Add(new ClipCurve
+                {
+                    Binding = new CurveBinding { Path = "Extra", Attribute = "m_LocalScale.x", ClassId = EngineTypes.TransformId },
+                    Curve = new AnimationCurve(kept),
+                });
+            clip.m_HumanAvatar = animator.avatar;
+            clip.m_TakeStart = frame;
+            clip.m_StartTime = 0f;
+            clip.m_StopTime = 1.00000012f;
+            clip.m_HasRange = true;
+            // Reading the length converts the clip first.
+            Assert.Equal(length, clip.length);
+            Assert.True(clip.HasHumanCurves);
+        }
     }
 }

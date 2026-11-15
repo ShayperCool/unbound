@@ -303,25 +303,25 @@ namespace Unbound.Runtime.Humanoid
         /// <summary>Whether a rotation has the sign the Editor's model importer gives a node's
         /// rotation and the first key of its rotation curve (the later keys follow in its
         /// hemisphere): the sign a rotation matrix gives its quaternion, w positive while the
-        /// matrix's trace is positive (|w| above 1/2), else the component of the largest
+        /// matrix's trace is not negative (|w| at least 1/2), else the component of the largest
         /// diagonal element positive. The muscles do not depend on it; the goal curves keep it,
         /// and a blend with the identity below a total weight of one shows it. Matches the
         /// Unity 6000.0.71f1 Editor, tests/projects/humanoid body.directLowB and
         /// body.directEmptyChild (model clips' goals completed by the identity), and a capture
         /// outside the reference of the probe's three models imported as Generic: all 105
         /// rotation curves and 108 node rotations follow it, eight of each with a negative w.
-        /// A diagonal element decides only when it is larger than the later ones: on a tie the
-        /// later axis decides (measured on an imported node whose y and z elements are equal,
-        /// tests/projects/modelclips nodes.AxisSigned/U2S1B0H0; a tie with x and a trace of
-        /// exactly zero are unmeasured). The model importer gives its node rotations and clip
+        /// On a tie x decides against y or z and z against y, and a trace of exactly zero takes
+        /// w (measured on imported nodes: tests/projects/modelclips nodes.AxisSigned/U2S1B0H0,
+        /// whose y and z elements are equal, and nodes.AxisTies/*, the axis conversions of all 48
+        /// axis systems of an FBX file). The model importer gives its node rotations and clip
         /// keys the same rule (crates/unbound-assets/src/model.rs `importer_sign`).</summary>
         internal static bool ImporterSign(F4 q)
         {
             float xx = q.x * q.x, yy = q.y * q.y, zz = q.z * q.z;
             // The diagonal of the rotation's matrix, for a unit rotation.
             float m00 = 1f - 2f * (yy + zz), m11 = 1f - 2f * (xx + zz), m22 = 1f - 2f * (xx + yy);
-            if (m00 + m11 + m22 > 0f) return q.w > 0f;
-            if (m00 > m11 && m00 > m22) return q.x > 0f;
+            if (m00 + m11 + m22 >= 0f) return q.w > 0f;
+            if (m00 >= m11 && m00 >= m22) return q.x > 0f;
             return m11 > m22 ? q.y > 0f : q.z > 0f;
         }
 

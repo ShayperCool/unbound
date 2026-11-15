@@ -460,6 +460,18 @@ namespace UnityEngine
                     Curve = new AnimationCurve(keys),
                 });
             }
+            // The clip ends at its last key: its muscle curves' (stepping from the clip's start,
+            // 0.99999994 for frames 1 to 31 of a take at 30 a second) or the transform curves'
+            // it keeps (their rotations and scales end at 1.00000012 there). Matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/modelclips keys.HumanLate (0.99999994),
+            // ends.HumanTwistLate (1.00000012).
+            if (m_HasRange)
+            {
+                float last = float.NegativeInfinity;
+                foreach (var c in m_Curves)
+                    if (c.Curve != null && c.Curve.length > 0) last = Math.Max(last, c.Curve[c.Curve.length - 1].time);
+                if (last > 0f) m_StopTime = m_StartTime + last;
+            }
             m_Version++;
         }
 
