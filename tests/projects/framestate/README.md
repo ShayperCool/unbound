@@ -42,20 +42,29 @@ differs in, per device, with the reason, and every report lists them.
 * An executed buffer draws with GL's matrices: `GL.LoadOrtho`'s inside it, identity from its own
   `SetViewProjectionMatrices`, and those do not last past it (the next buffer and `DrawMeshNow`
   take GL's again). `Camera.Render` gives the matrices before it back. In an end-of-frame
-  coroutine (windowed Editors; batchmode Editors run none) GL's matrices are the frame's last
-  rendered camera's view and projection.
-* What GL's matrices are between frames depends on the context. Batchmode Editors start a frame
-  from identity (`matrices.early`; on Vulkan with the y flip of a texture target and the
-  unconverted depth row). The batchmode OpenGL Core Editor then gives back a zero projection after
-  any executed buffer or `Camera.Render` (`fresh`, `aftercamera`, `late` and the pixels drawn
-  with them are black); the batchmode Vulkan Editor gives back identity in the device's form.
-  Windowed Editors start from the pixel matrix their own window drawing left (1280x217 in these
-  captures, not the 64x32 Game view), which depends on the Editor's layout.
+  coroutine (windowed Editors; batchmode Editors run none) GL's matrices are the view and
+  projection of the frame's last rendered camera (of two screen cameras, the one with the higher
+  depth), for an executed buffer, `DrawMeshNow` and `GL.modelview` alike (`matrices.endofframe*`,
+  `gl.modelview.endofframe`).
+* Between frames, per record:
+  * windowed Editors: every dump from EarlyUpdate to LateUpdate shows the pixel matrix their own
+    window drawing left (1280x217 in these captures, not the 64x32 Game view), which depends on
+    the Editor's layout; `GL.modelview` reads identity;
+  * batchmode Vulkan: `matrices.early` is identity with a texture target's y flip and an
+    unconverted depth row; after the first executed buffer every dump is identity in the device's
+    converted form;
+  * batchmode OpenGL Core: `matrices.early` is identity; after the first executed buffer every
+    dump has a zero projection (`fresh`, `aftercamera`, `corner`, `after`, `late`, and the pixels
+    drawn with them are black); `GL.modelview` reads all zeros.
 
-Unbound starts each frame from identity, leaves the frame's last camera's matrices for the
-end-of-frame callbacks and gives them back after `Camera.Render`. The windowed Editors' pixel
-matrix between frames is not emulated (10 declared residuals per device). A scriptable pipeline's
-frame, overlay canvases and OnGUI before the end-of-frame callbacks are unmeasured. The Scripting API pages for
+Unbound starts each frame from identity (in the device's converted form on Vulkan), leaves the
+frame's last camera's matrices for the end-of-frame callbacks and gives them back after
+`Camera.Render`. The windowed Editors' pixel matrix between frames is not emulated (10 declared
+residuals per device). Unmeasured: a last camera with image effects, a scriptable pipeline's
+frame, overlay canvases and the windowed macOS Editor. The Scripting API pages for
 [Graphics.ExecuteCommandBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.ExecuteCommandBuffer.html)
 and [RenderTexture.active](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture-active.html)
-state neither rule; both are observed in these captures.
+state neither rule; both are observed in these captures. The documented screen coordinates of
+[Graphics.DrawTexture](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.DrawTexture.html)
+inside OnGUI are not given to scripts' GL drawing there (it draws with GL's current matrices):
+recorded in docs/COMPATIBILITY_GAPS.md.

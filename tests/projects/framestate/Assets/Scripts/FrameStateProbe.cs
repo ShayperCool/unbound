@@ -14,7 +14,8 @@ using UnityEngine.Rendering;
 /// (EarlyUpdate and Update), with the screen camera rendering and with no camera rendering; and
 /// the matrices a command buffer executed outside cameras draws with (at the start of Update,
 /// after a camera rendered, with its own identity matrices, inside GL.LoadOrtho, and whether its
-/// own matrices last past it), with GL.modelview read alongside. Pixels are read back.
+/// own matrices last past it), with GL.modelview read alongside, and at the end of a frame two
+/// screen cameras rendered (the second last). Pixels are read back.
 /// </summary>
 public class FrameStateProbe : MonoBehaviour
 {
@@ -25,7 +26,7 @@ public class FrameStateProbe : MonoBehaviour
     readonly List<UnityEngine.Object> made = new List<UnityEngine.Object>();
     string output;
     int firstFrame = -1;
-    Camera screen;
+    Camera screen, last;
     Mesh quad, corner;
     Material white, matrices;
     bool eofLeaves;
@@ -92,7 +93,20 @@ public class FrameStateProbe : MonoBehaviour
         while (!Finished)
         {
             yield return new WaitForEndOfFrame();
-            if (Step == 8) Value("matrices.endofframe", DumpNow("endofframe"));
+            if (Step == 8)
+            {
+                // The frame's last camera was the second screen camera (depth 1).
+                Value("matrices.endofframe", DumpNow("endofframe"));
+                Value("gl.modelview.endofframe", M(GL.modelview));
+                // DrawMeshNow takes GL's matrices too.
+                var previous = RenderTexture.active;
+                var dump = Dump();
+                RenderTexture.active = dump;
+                matrices.SetPass(0);
+                Graphics.DrawMeshNow(quad, Matrix4x4.identity);
+                RenderTexture.active = previous;
+                Value("matrices.endofframe.now", Read(dump));
+            }
             if (Step == 6)
             {
                 // Left active by the end-of-frame coroutine; read in the next frame.
@@ -145,8 +159,16 @@ public class FrameStateProbe : MonoBehaviour
                     break;
                 case 8:
                     OutsideDraws();
+                    // A second screen camera rendering after the first (depth 1) this frame.
+                    last = new GameObject("FrameStateLast").AddComponent<Camera>();
+                    last.depth = 1f;
+                    last.fieldOfView = 40f;
+                    last.transform.position = new Vector3(0f, 0f, -2f);
+                    last.cullingMask = 0;
+                    last.clearFlags = CameraClearFlags.Nothing;
                     break;
                 case 9:
+                    if (last != null) DestroyImmediate(last.gameObject);
                     Finish();
                     break;
             }
