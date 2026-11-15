@@ -60,6 +60,11 @@ namespace Unbound.Runtime
         /// <summary>SystemInfo.supportsTextureWrapMirrorOnce: 1 where the Editor's device answers
         /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>
         internal int TextureWrapMirrorOnce { get; init; } = 1;
+        /// <summary>The compressed formats the device refuses for a Texture3D, by the name its
+        /// error gives the format (Metal: PVRTC, ETC and EAC, tests/projects/nativegfx
+        /// `metal.jsonl` `volume.make.*`, two macOS Editor captures; the names are those of the
+        /// linear formats the TextureFormat constructors make). Null: none refused (unmeasured).</summary>
+        internal System.Collections.Generic.IReadOnlyDictionary<TextureFormat, string> RefusedVolumeFormats { get; init; }
 
         /// <summary>SystemInfo.maxTiledPixelStorageSize where it is measured (Metal: 64, tests/projects/urp
         /// `device-metal.jsonl`; OpenGL Core: int.MaxValue, tests/projects/srpmembers tiled.max);
@@ -158,6 +163,21 @@ namespace Unbound.Runtime
             HiddenSurfaceRemovalOnGPU = true,
             TextureWrapMirrorOnce = 0,
             EditorDynamicResolution = true,
+            RefusedVolumeFormats = new System.Collections.Generic.Dictionary<TextureFormat, string>
+            {
+                [TextureFormat.PVRTC_RGB2] = "RGB Compressed PVRTC 2BPP UNorm",
+                [TextureFormat.PVRTC_RGBA2] = "RGBA Compressed PVRTC 2BPP UNorm",
+                [TextureFormat.PVRTC_RGB4] = "RGB Compressed PVRTC 4BPP UNorm",
+                [TextureFormat.PVRTC_RGBA4] = "RGBA Compressed PVRTC 4BPP UNorm",
+                [TextureFormat.ETC_RGB4] = "RGB Compressed ETC UNorm",
+                [TextureFormat.EAC_R] = "R Compressed EAC UNorm",
+                [TextureFormat.EAC_R_SIGNED] = "R Compressed EAC SNorm",
+                [TextureFormat.EAC_RG] = "RG Compressed EAC UNorm",
+                [TextureFormat.EAC_RG_SIGNED] = "RG Compressed EAC SNorm",
+                [TextureFormat.ETC2_RGB] = "RGB Compressed ETC2 UNorm",
+                [TextureFormat.ETC2_RGBA1] = "RGBA Compressed ETC2 punchthrough UNorm",
+                [TextureFormat.ETC2_RGBA8] = "RGBA Compressed ETC2 UNorm",
+            },
             MaxTiledPixelStorage = 64,
             // tests/projects/urp CapsProbe `device-metal.jsonl`. (The renderer's Metal device
             // binds 29 storage buffers a stage: 2 of Metal's 31 buffer slots are its own.)

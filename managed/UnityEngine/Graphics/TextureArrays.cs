@@ -791,6 +791,16 @@ namespace UnityEngine
         {
             if (width <= 0 || height <= 0 || depth <= 0)
                 throw new UnityException($"Failed to create 3D texture because of invalid parameters. Width {width}, height {height}, depth {depth}.");
+            // Measured on the macOS Editor's Metal device (tests/projects/nativegfx metal.jsonl
+            // volume.make.*): no Crunched volume; the device's refused compressed formats log and throw.
+            if (GraphicsFormatUtility.IsCrunchFormat(textureFormat))
+                throw new ArgumentException("Crunched Texture3D is not supported.");
+            var device = Unbound.Runtime.GraphicsDeviceProfile.Current;
+            if (device.RefusedVolumeFormats != null && device.RefusedVolumeFormats.TryGetValue(textureFormat, out var refused))
+            {
+                Debug.LogError($"{device.Type} does not support {refused} texture format for Texture3D");
+                throw new UnityException("Failed to create texture because of invalid parameters.");
+            }
             m_Width = width;
             m_Height = height;
             m_Depth = depth;
