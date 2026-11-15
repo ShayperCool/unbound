@@ -53,11 +53,15 @@ namespace UnityEngine.Tests
             // Eight marshaled bytes per pair over a two-byte stride: the level starts at the fifth pair.
             Assert.Equal(new byte[] { 0, 104, 1, 105 }, bytes[..4]);
 
+            // Elements holding references would copy object addresses: unsupported, loudly, after
+            // the marshaled size (which a string field has) and before any texel changes.
+            var before = texture.GetPixelData<byte>(0).ToArray();
             var named = new NamedValue[8];
             for (int i = 0; i < named.Length; i++) named[i] = new NamedValue { name = "n" + i, value = 0x01020304 * (i + 1) };
-            Fill(texture, named, 0);
-            bytes = texture.GetPixelData<byte>(0).ToArray();
-            Assert.Equal(new byte[] { 4, 3, 2, 1 }, bytes[8..12]);
+            Assert.StartsWith("Unbound: SetPixelData of NamedValue elements, which hold object references, is not supported",
+                Assert.IsType<UnityException>(Thrown(() => Fill(texture, named, 0))).Message);
+            Assert.StartsWith("Unbound:", Assert.IsType<UnityException>(Thrown(() => Fill(texture, new object[] { 1, 2 }, 0))).Message);
+            Assert.Equal(before, texture.GetPixelData<byte>(0).ToArray());
 
             // Generic structs and Nullable elements are sized by the first element's runtime type.
             var generic = new Pair<byte>[40];

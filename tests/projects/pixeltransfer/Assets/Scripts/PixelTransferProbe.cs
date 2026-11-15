@@ -14,7 +14,6 @@ public class PixelTransferProbe : MonoBehaviour
     [RuntimeInitializeOnLoadMethod] static void Install() { new GameObject("PixelTransferProbe").AddComponent<PixelTransferProbe>(); }
     [Serializable] class Row { public string key; public string value; }
     public struct BoolPair { public bool flag; public byte value; }
-    public struct NamedValue { public string name; public int value; }
     public class Boxed { public int value; }
     public struct Pair<T> { public T first; public T second; }
 
@@ -99,17 +98,6 @@ public class PixelTransferProbe : MonoBehaviour
         for (int i = 0; i < pairs.Length; i++) pairs[i] = new BoolPair { flag = i % 2 == 1, value = (byte)(i + 100) };
         Call("r8.boolpair.start0", () => r8.SetPixelData(pairs, 0), r8Bytes);
         Call("r8.boolpair.start1", () => r8.SetPixelData(pairs, 0, 1), r8Bytes);
-        var named = new NamedValue[8];
-        for (int i = 0; i < named.Length; i++) named[i] = new NamedValue { name = "n" + i, value = 0x01020304 * (i + 1) };
-        Call("r8.named", () => r8.SetPixelData(named, 0), () =>
-        {
-            // The reference slots hold addresses; only the scalar half of each element is compared.
-            var all = r8.GetPixelData<byte>(0).ToArray();
-            var scalars = new byte[all.Length / 2];
-            for (int e = 0; e < all.Length / 16; e++) Array.Copy(all, e * 16 + 8, scalars, e * 8, 8);
-            return scalars;
-        });
-        r8.SetPixelData(Pattern(64, 5), 0);
         var generic = new Pair<byte>[40];
         for (int i = 0; i < generic.Length; i++) generic[i] = new Pair<byte> { first = (byte)i, second = (byte)(i + 50) };
         Call("r8.generic.start3", () => r8.SetPixelData(generic, 0, 3), r8Bytes);

@@ -12,7 +12,8 @@ namespace UnityEngine
     /// size) its element, face and mip level, and that (length − start) × element size covers the
     /// level. A managed array's element size is the marshaled size of its first element's type (a
     /// bool counts four bytes, a char one; a null first reference has no type), a NativeArray's that
-    /// of its element type. The level's bytes are the array's own storage from start × element size.
+    /// of its element type. The level's bytes are the array's own storage from start × element size;
+    /// element types that hold object references are not supported.
     /// </summary>
     internal static class PixelDataTransfer
     {
@@ -26,11 +27,22 @@ namespace UnityEngine
         internal static int ElementSize<T>(T[] data)
         {
             if (data == null || data.Length == 0) throw NoData();
-            if (ValueSize<T>.Cached) return ValueSize<T>.Size;
-            object first = data[0];
-            // The first element's runtime type decides: a null reference or empty Nullable has none.
-            if (first == null) throw new NullReferenceException();
-            return Marshal.SizeOf(first);
+            int size;
+            if (ValueSize<T>.Cached) size = ValueSize<T>.Size;
+            else
+            {
+                object first = data[0];
+                // The first element's runtime type decides: a null reference or empty Nullable has none.
+                if (first == null) throw new NullReferenceException();
+                size = Marshal.SizeOf(first);
+            }
+            // The reference then copies the array's memory as its runtime lays it out, object
+            // addresses included, with fields in declaration order; this runtime orders a struct's
+            // references first.
+            if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
+                throw new UnityException($"Unbound: SetPixelData of {typeof(T).Name} elements, which hold object references, is not supported: " +
+                                         "the texture would receive the array's memory, object addresses included.");
+            return size;
         }
 
         /// <summary>The marshaled size of a value type other than Nullable, which has a single
