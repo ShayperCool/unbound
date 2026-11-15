@@ -36,8 +36,11 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         1, 2, 10, 11, 12, 13, 15, 20, 30, 45, 51, 52, 55, 70, 76, 77, 80, 90, 100,
         106, 107, 115, 121, 125, 131, 132, 140, 160, 200, 201, 250, 300, 301, 330, 336, 340,
         341, 345, 351, 353, 355, 361, 362, 370, 400, 401, 402, 410, 420,
+        // Spherical zones reaching trees.
+        425, 426, 427, 428, 429, 430, 432, 435, 440, 450, 460, 480, 490, 491, 492, 493, 495, 500, 501, 502, 503, 505,
+        510, 520, 530, 540, 541, 542, 545, 550, 560, 570, 580, 581, 582, 585, 590, 600, 620, 640, 660, 700, 740, 780,
     };
-    const int LastFrame = 420;
+    const int LastFrame = 780;
 
     readonly StringBuilder m_Out = new StringBuilder();
     /// <summary>Each tree's camera and the constants it records: a renderer without per-object
@@ -51,7 +54,7 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
     Texture2D m_Read;
     GameObject m_Gusty, m_Calm;
     Material m_Dump;
-    WindZone m_A, m_B, m_Sphere, m_Still, m_Again;
+    WindZone m_A, m_B, m_Sphere, m_Still, m_Again, m_NearA, m_NearB;
     int m_Frame;
     bool m_Failed;
 
@@ -185,9 +188,21 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
             GraphicsSettings.defaultRenderPipeline = null;
             QualitySettings.renderPipeline = null;
         }
+        // A spherical zone reaching GustyA (a local wind of its own), then moved out of reach
+        // (the local wind returns to the asset's wind); another reaching GustyB (per-object motion
+        // vectors), then the directional wind goes (spherical wind only), then both zones go.
+        if (m_Frame == 425) m_NearA = Zone("NearA", null, WindZoneMode.Spherical, 1.2f, Quaternion.identity, new Vector3(98f, 0.5f, 1f), 4f);
+        if (m_Frame == 490) m_NearA.transform.position = new Vector3(100f, 0f, -60f);
+        if (m_Frame == 500) m_NearB = Zone("NearB", null, WindZoneMode.Spherical, 0.8f, Quaternion.identity, new Vector3(201.5f, -0.5f, -2f), 5f);
+        if (m_Frame == 540) m_Again.gameObject.SetActive(false);
+        if (m_Frame == 580)
+        {
+            m_NearA.gameObject.SetActive(false);
+            m_NearB.gameObject.SetActive(false);
+        }
     }
 
-    static WindZone Zone(string name, Transform parent, WindZoneMode mode, float main, Quaternion rotation, Vector3 position)
+    static WindZone Zone(string name, Transform parent, WindZoneMode mode, float main, Quaternion rotation, Vector3 position, float radius = 10f)
     {
         var go = new GameObject("Wind" + name);
         go.transform.SetParent(parent, false);
@@ -195,7 +210,7 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         go.transform.localRotation = rotation;
         var zone = go.AddComponent<WindZone>();
         zone.mode = mode;
-        zone.radius = 10f;
+        zone.radius = radius;
         zone.windMain = main;
         return zone;
     }

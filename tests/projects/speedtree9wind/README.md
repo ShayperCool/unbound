@@ -33,8 +33,17 @@ wind vectors), first when the tree draws while the world has wind (a directional
 spherical zone or a wind still moving; not a zone without wind), and keeps them bound; `SpeedTreeWindHistory` only for a renderer drawing per-object motion vectors (for
 `GustyA` it holds what an earlier draw left, so its history is not recorded); the constants of a
 wind part the asset turns off are never written (they held other memory in a built-in pipeline
-capture), so `Calm`'s first branch level is not recorded. Spherical zones whose radius reaches a
-tree are not covered.
+capture), so `Calm`'s first branch level is not recorded.
+
+From frame 425 spherical zones reach trees (frames 425 to 780, still through the built-in
+pipeline): one reaches `GustyA` (frame 425) and is moved out of its reach (490), another reaches
+`GustyB` (500), then the directional zone goes (540), so `GustyB`'s wind is the spherical zone's
+alone, and both spherical zones go (580). A tree in reach gets a wind of its own (a local wind),
+which starts from its asset's wind at its first draw while the zones reach it and eases toward
+the directional wind plus the spherical zones' wind at the tree; out of reach its noise returns
+to its asset's wind's and it takes its asset's wind again. The draw takes the zones active when it
+draws, as long as a spherical zone was active at the frame's wind update (`GustyB` gets its local
+wind in the frame its zone is made). The earlier rows of the reference are unchanged.
 
     python3 tests/projects/speedtree9wind/make_trees.py              # rewrite the trees
     python3 tests/projects/speedtree9wind/run.py record --label A     # Editor capture (GPU)
