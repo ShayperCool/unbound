@@ -93,11 +93,21 @@ see [the Q449 correction](#q449-duplicate-diagnostics) below.
   retain startup differences in source and listener placements. Parameter
   publication and construction history need further controls; a fixed startup
   delay does not describe these cases. Single-unit Reverb controls distinguish
-  this from a general Mono reverb folding defect.
+  this from a general Mono reverb folding defect. Q457 finds the remaining
+  `topology-diagnostics` failures only in the six two-listener Mono controls,
+  whose second listener carries an isolated Echo (the same startup case); the
+  single-listener Mono controls pass strictly. No probe changes `AudioEchoFilter.delay` or a mixer Echo Delay while
+  a tail is running ([mixerecho](../mixerecho/README.md) states this limit), and
+  the engine clears the Echo history whenever the delay frame count changes.
+  Runtime delay controls (decrease, increase, a reversal inside 2048 frames, on a
+  source and a listener) are needed before the startup transition can be modelled
+  as a change from the 500 ms default. No engine change is made.
 - **Q416-R4b, composed source precision.** Stereo and Quad LowPass/Chorus and
   Reverb/Echo controls retain sparse Master and device differences. They are
   outside this new PCM qualification; their complete samples and original float
-  bounds remain in `mono-live`.
+  bounds remain in `mono-live`. Q457 records them as rounding-level residuals:
+  Master errors of `2.13e-5` to `3.06e-5`, near the `2e-5` absolute bound, with
+  isolated LowPass and Reverb passing. No further arithmetic search is made.
 - **Q416-R4d, live listener connections.** Q457 closes the measured component
   attachment and script creation slice in [LIVE_LISTENERS.md](LIVE_LISTENERS.md).
   The original six controls now retain 610/864 gate failures, all initial Mono

@@ -164,3 +164,11 @@ repeatable amplitude correction. No arbitrary padding value or effect-specific
 sample exception is introduced. The device-only Pitch Shifter and source Chorus
 spikes and the separate Reset histories remain unexplained. Both entire pairs,
 all earlier raw failures and the existing admission guards remain unchanged.
+
+## Q457 scope
+
+Both excluded rate/buffer pairs stay excluded without a further attempt. The
+Flange spike depends on storage beyond the history, which the authored input
+does not determine. The Pitch Shifter, source Chorus and Reset differences remain
+unexplained and are recorded with the counts above. No admission, reference or
+tolerance changes.

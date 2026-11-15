@@ -106,3 +106,13 @@ scheduled re-records were stopped without a completed result; their partial
 logs remain outside Git. The earlier scheduled counterexamples and the separate
 qualified scheduling controls remain unchanged. All new immediate PCM and full
 difference reports are retained alongside the earlier Q449 topology results.
+
+## Q457 scope
+
+No further reset capture is made. Independent Editor pairs of the same controls
+agree in some sessions (Q416 at both rates, Q449 at 48000 Hz) and disagree in
+others (Q390 at 48000 Hz, Q449 at 44100 Hz), so these reset references are not
+repeatable and no engine timing is fitted to them. All of these captures ran on
+a machine shared with other builds and Editor runs; whether that load causes the
+disagreement is untested and needs repeats on an otherwise idle machine.
+Q416-R1 stays open. No engine behavior, reference or tolerance changes.
