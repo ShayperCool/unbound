@@ -638,17 +638,7 @@ namespace UnityEngine
                 cameraPixelHeight = pixelHeight,
             };
             var planes = FrustumPlanes(matrix);
-            if (m_CullingMatrix == null && !m_HasCustomProjection && !m_HasCustomWorldToCamera)
-            {
-                // The camera's own frustum: its near and far planes from its position, forward and
-                // clip distances. Taken from the matrix, the far plane's normal is the difference
-                // of two nearly equal rows and keeps a few float ulps of each (0.14 units at a
-                // far plane of 1000); the Editor's is exact (tests/projects/brg plane5).
-                var forward = t.forward;
-                float along = Vector3.Dot(forward, t.position);
-                planes[4] = new Plane(forward, -(along + nearClipPlane));
-                planes[5] = new Plane(-forward, along + farClipPlane);
-            }
+            if (m_CullingMatrix == null) CorrectClipPlanes(planes);
             cullingParameters.cullingPlaneCount = planes.Length;
             for (int i = 0; i < planes.Length; i++) cullingParameters.SetCullingPlane(i, planes[i]);
             var distances = layerCullDistances;
@@ -671,8 +661,32 @@ namespace UnityEngine
         internal static Plane[] FrustumPlanes(in Matrix4x4 m)
         {
             var planes = new Plane[6];
+            FrustumPlanes(m, planes);
+            return planes;
+        }
+
+        internal void BuiltinCullingPlanes(Span<Plane> planes)
+        {
+            FrustumPlanes(projectionMatrix * worldToCameraMatrix, planes);
+            CorrectClipPlanes(planes);
+        }
+
+        void CorrectClipPlanes(Span<Plane> planes)
+        {
+            if (m_HasCustomProjection || m_HasCustomWorldToCamera) return;
+            // Keep the camera's exact clip distances rather than subtracting nearly equal
+            // matrix rows (tests/projects/brg plane5).
+            var t = transform;
+            var forward = t.forward;
+            float along = Vector3.Dot(forward, t.position);
+            planes[4] = new Plane(forward, -(along + nearClipPlane));
+            planes[5] = new Plane(-forward, along + farClipPlane);
+        }
+
+        static void FrustumPlanes(in Matrix4x4 m, Span<Plane> planes)
+        {
             Vector4 row0 = m.GetRow(0), row1 = m.GetRow(1), row2 = m.GetRow(2), row3 = m.GetRow(3);
-            Vector4[] coefficients = { row3 + row0, row3 - row0, row3 + row1, row3 - row1, row3 + row2, row3 - row2 };
+            Span<Vector4> coefficients = stackalloc Vector4[] { row3 + row0, row3 - row0, row3 + row1, row3 - row1, row3 + row2, row3 - row2 };
             for (int i = 0; i < 6; i++)
             {
                 var c = coefficients[i];
@@ -680,7 +694,6 @@ namespace UnityEngine
                 float length = normal.magnitude;
                 planes[i] = length > 0 ? new Plane(normal / length, c.w / length) : new Plane(Vector3.up, 0);
             }
-            return planes;
         }
 
         readonly Dictionary<CameraEvent, List<CommandBuffer>> m_CommandBuffers = new Dictionary<CameraEvent, List<CommandBuffer>>();

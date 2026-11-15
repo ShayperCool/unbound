@@ -221,6 +221,7 @@ namespace UnityEngine.Tests
                 FrameBuilder.Sources.Clear();
                 FrameBuilder.Sources.Add(observer);
                 int before = FrameBuilder.s_DrawCount;
+                int expectedDraws = srp ? 1 : 0;
                 if (srp)
                 {
                     data.Renderers.Add(strip);
@@ -243,6 +244,18 @@ namespace UnityEngine.Tests
                         .GetField("s_Casters", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
                     if (type == LightType.Rectangle) Assert.DoesNotContain(casters, item => ReferenceEquals(item.Renderer, strip));
                     else Assert.Contains(casters, item => ReferenceEquals(item.Renderer, strip));
+                    if (type == LightType.Directional)
+                    {
+                        var draw = typeof(FrameBuilder).GetMethod("DrawCasters", BindingFlags.Static | BindingFlags.NonPublic);
+                        draw.Invoke(null, new object[] { default(ShadowSplitData) });
+                        Assert.Equal(before + 1, FrameBuilder.s_DrawCount);
+                        var excluded = default(ShadowSplitData);
+                        excluded.cullingPlaneCount = 1;
+                        excluded.SetCullingPlane(0, new Plane(Vector3.right, -100));
+                        draw.Invoke(null, new object[] { excluded });
+                        Assert.Equal(before + 2, FrameBuilder.s_DrawCount);
+                        expectedDraws += 2;
+                    }
                 }
                 var errors = logs.Errors.FindAll(entry => ReferenceEquals(entry.Context, strip));
                 if (type == LightType.Rectangle)
@@ -252,7 +265,7 @@ namespace UnityEngine.Tests
                     Assert.Contains("supported only for directional, point and spot lights", error.Message);
                 }
                 else Assert.Empty(errors);
-                Assert.Equal(before + (srp ? 1 : 0), FrameBuilder.s_DrawCount);
+                Assert.Equal(before + expectedDraws, FrameBuilder.s_DrawCount);
                 Assert.False(context.StripShadowPass);
                 Assert.False(context.StripShadowSrp);
                 Assert.Null(context.StripShadowLight);

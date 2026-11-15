@@ -357,7 +357,10 @@ and TransformZ. All 2425 earlier records and 128 images stay byte-identical. Pub
 `miter_reference.py --release 6000.0.71f1 --label L --shadow-cascades --receipt FILE`.
 For the measured 6000.0.71f1 built-in pipeline, orthographic cameras use one directional
 shadow map regardless of quality cascade count or splits; perspective cameras use the
-configured counts and splits. The rule also applies to the regular mesh control. Other
+configured counts and splits. Two cascades use a half-height atlas, with each tile
+normalized against its actual width and height. Each cascade filters trusted caster bounds
+with its receiver planes; renderers with unmeasured coarse bounds stay conservative.
+The rule also applies to the regular mesh control. Other
 release profiles retain the prior quality-count path until measured. This does not alter
 the SRP cascade API or caster geometry. URP multi-cascade residuals are recorded in
 `tests/projects/stripshadows`.

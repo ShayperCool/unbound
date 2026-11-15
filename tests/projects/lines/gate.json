@@ -11,6 +11,7 @@
   "managed/UnityEngine/Graphics/Mesh.cs",
   "managed/UnityEngine/Graphics/LineRenderMeshes.cs",
   "managed/UnityEngine/Graphics/FrameBuilder.cs",
-  "managed/UnityEngine/Graphics/FrameBuilder.Shadows.cs"
+  "managed/UnityEngine/Graphics/FrameBuilder.Shadows.cs",
+  "managed/UnityEngine/Graphics/Camera.cs"
  ]
 }

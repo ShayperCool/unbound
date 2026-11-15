@@ -380,7 +380,8 @@ namespace UnityEngine.Rendering
 
         /// <summary>A directional light's shadow cascade (see
         /// <see cref="ComputeDirectionalShadowMatricesAndCullingPrimitives"/>; the built-in pipeline's
-        /// cascades are the same, measured for perspective cameras; its orthographic ones are not): its
+        /// cascades share this fit for perspective cameras; orthographic cameras use one map,
+        /// tests/projects/lines shadowCascade.*): its
         /// view and projection, culling sphere and near plane.</summary>
         internal static bool DirectionalShadowSlice(Camera camera, Matrix4x4 lightLocalToWorld, int splitIndex, int splitCount, Vector3 splitRatio,
             int shadowResolution, float distance, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out Vector4 cullingSphere, out float cullingNear,

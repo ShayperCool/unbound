@@ -124,6 +124,20 @@ namespace Unbound.Runtime
             return count >= 4 ? 4 : count >= 2 ? 2 : 1;
         }
 
+        internal static int BuiltinShadowAtlasHeight(int width, int cascades) =>
+            Compat.RenderingMeasured && cascades == 2 ? width / 2 : width;
+
+        internal static Matrix4x4 BuiltinShadowTileTransform(int atlas, int height, int tile, int cascade)
+        {
+            float sx = (float)tile / atlas, sy = (float)tile / height;
+            float ox = (cascade % 2) * sx, oy = (cascade / 2) * sy;
+            return new Matrix4x4(
+                new Vector4(0.5f * sx, 0f, 0f, 0f),
+                new Vector4(0f, 0.5f * sy, 0f, 0f),
+                new Vector4(0f, 0f, GraphicsDeviceProfile.Current.ShadowDepthScale, 0f),
+                new Vector4(0.5f * sx + ox, 0.5f * sy + oy, 0.5f, 1f));
+        }
+
         /// <summary>A directional light's shadows collected into a screen-space mask (what its
         /// passes read with SHADOWS_SCREEN); null when it casts none.</summary>
         static RenderTexture RenderDirectionalShadow(Light light, Camera camera, CameraContext context, int width, int height)
@@ -136,6 +150,7 @@ namespace Unbound.Runtime
             var ratios = cascades == 4 ? QualitySettings.shadowCascade4Split : new Vector3(QualitySettings.shadowCascade2Split, 0f, 0f);
             int atlas = ShadowMapSize(light, Mathf.Max(width, height));
             int tile = cascades == 1 ? atlas : atlas / 2;
+            int atlasHeight = BuiltinShadowAtlasHeight(atlas, cascades);
             bool soft = light.shadows == LightShadows.Soft && QualitySettings.shadows == ShadowQuality.All;
 
             // The camera's depth texture first, then the light's casters.
@@ -144,7 +159,7 @@ namespace Unbound.Runtime
             GfxStream.Keyword("SHADOWS_DEPTH", true);
 
             // The cascades, each leaving its bias set (the last one's stays, as in the Editor).
-            var shadowMap = Temporary(new RenderTextureDescriptor(atlas, atlas, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt) { shadowSamplingMode = ShadowSamplingMode.CompareDepths });
+            var shadowMap = Temporary(new RenderTextureDescriptor(atlas, atlasHeight, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt) { shadowSamplingMode = ShadowSamplingMode.CompareDepths });
             ulong shadowTarget = TextureHandles.Of(shadowMap);
             var lightToWorld = light.transform.localToWorldMatrix;
             var forward = light.transform.forward;
@@ -152,17 +167,25 @@ namespace Unbound.Runtime
             var spheres = new float[16];
             Vector4 splitsNear = default, splitsFar = default, radii = default;
             float near = camera.nearClipPlane;
-            float scale = cascades == 1 ? 1f : 0.5f;
+            var parameters = default(ScriptableCullingParameters);
+            if (Compat.RenderingMeasured)
+            {
+                Span<Plane> planes = stackalloc Plane[6];
+                camera.BuiltinCullingPlanes(planes);
+                parameters.cullingPlaneCount = planes.Length;
+                for (int i = 0; i < planes.Length; i++) parameters.SetCullingPlane(i, planes[i]);
+                parameters.shadowDistance = distance;
+            }
             // The casters draw with a hardware slope-scaled bias besides their shaders' (measured:
             // a slope factor of 1 matches the Editor's screen-space masks; the constant shows no
             // effect at these depths).
             GfxStream.DepthBias(1f, 1f);
             // The whole atlas is cleared, then each cascade draws into its tile.
-            SetupCamera(shadowTarget, new Rect(0, 0, atlas, atlas), CameraClearFlags.Depth, Color.black, Matrix4x4.identity, Matrix4x4.identity, 0);
+            SetupCamera(shadowTarget, new Rect(0, 0, atlas, atlasHeight), CameraClearFlags.Depth, Color.black, Matrix4x4.identity, Matrix4x4.identity, 0);
             RunLightEvent(camera, light, LightEvent.BeforeShadowMap, shadowMap);
             for (int c = 0; c < cascades; c++)
             {
-                if (!CullingResults.DirectionalShadowSlice(camera, lightToWorld, c, cascades, ratios, tile, distance, out var view, out var projection, out var sphere, out _))
+                if (!CullingResults.DirectionalShadowSlice(camera, lightToWorld, c, cascades, ratios, tile, distance, out var view, out var projection, out var sphere, out float cullingNear))
                     continue;
                 var rect = cascades == 1 ? new Rect(0, 0, atlas, atlas) : new Rect((c % 2) * tile, (c / 2) * tile, tile, tile);
                 var cascadePass = (ShadowMapPass)((int)ShadowMapPass.DirectionalCascade0 << c);
@@ -179,15 +202,13 @@ namespace Unbound.Runtime
                 float clipBias = light.shadowBias * 2f / range * Unbound.Runtime.GraphicsDeviceProfile.Current.ClipDepthSlope;
                 GfxStream.GlobalVector("unity_LightShadowBias", new Vector4(clipBias, 1f, normalBias, 0f));
                 GfxStream.GlobalVector("_WorldSpaceLightPos0", new Vector4(-forward.x, -forward.y, -forward.z, 0f));
-                DrawCasters();
+                var split = default(ShadowSplitData);
+                if (Compat.RenderingMeasured)
+                    CullingResults.CasterCullingPlanes(ref parameters, camera, cullingNear, sphere, forward, ref split);
+                DrawCasters(split);
                 RunLightEvent(camera, light, LightEvent.AfterShadowMapPass, shadowMap, cascadePass);
                 // Clip space to the cascade's tile of the atlas, depth as the shadow map stores it.
-                float ox = cascades == 1 ? 0f : (c % 2) * 0.5f, oy = cascades == 1 ? 0f : (c / 2) * 0.5f;
-                var toTexture = new Matrix4x4(
-                    new Vector4(0.5f * scale, 0f, 0f, 0f),
-                    new Vector4(0f, 0.5f * scale, 0f, 0f),
-                    new Vector4(0f, 0f, Unbound.Runtime.GraphicsDeviceProfile.Current.ShadowDepthScale, 0f),
-                    new Vector4(0.5f * scale + ox, 0.5f * scale + oy, 0.5f, 1f));
+                var toTexture = BuiltinShadowTileTransform(atlas, atlasHeight, tile, c);
                 var m = toTexture * projection * view;
                 for (int k = 0; k < 16; k++) worldToShadow[c * 16 + k] = m[k % 4, k / 4];
                 spheres[c * 4] = sphere.x;
@@ -291,13 +312,25 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Casters.Count; i++) s_Casters[i].Material.Sync();
         }
 
+        internal static bool BuiltinSeesShadowSplit(in DrawItem source, in ShadowSplitData split)
+        {
+            if (source.Renderer != null)
+            {
+                // Retain renderers whose coarse bounds need not contain their drawn geometry.
+                if (!Culler.TrustsBounds(source.Renderer)) return true;
+                return ShadowCasterCulling.InsidePlanes(source.Renderer.CullingBounds, split);
+            }
+            return ShadowCasterCulling.InsidePlanes(source.CullBounds, split);
+        }
+
         /// <summary>The casters' ShadowCaster passes; a TwoSided caster draws both faces (its
         /// pass's culling off).</summary>
-        static void DrawCasters()
+        static void DrawCasters(ShadowSplitData split = default)
         {
             bool twoSided = false;
             foreach (var source in s_Casters)
             {
+                if (!BuiltinSeesShadowSplit(source, split)) continue;
                 if (!ShadowCaster(source.Material, out var material, out int pass)) continue;
                 var item = source;
                 item.Material = material;
