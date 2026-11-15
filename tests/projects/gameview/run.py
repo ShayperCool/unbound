@@ -13,18 +13,43 @@ spec = importlib.util.spec_from_file_location('screenread_runner', PROBE.parent/
 base = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(base)
 base.PROBE = PROBE
-def display():
+def display(log_path=None):
     # X assigns and reserves the display before returning its number, including across runners.
     import select
+    import tempfile
+    if log_path is None:
+        directory = base.run_root(PROBE, 'displays')
+        directory.mkdir(parents=True, exist_ok=True)
+        descriptor, filename = tempfile.mkstemp(prefix='xserver-', suffix='.log', dir=directory)
+        os.close(descriptor)
+        log_path = Path(filename)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     reader, writer = os.pipe()
-    server = subprocess.Popen(['Xvfb','-displayfd',str(writer),'-noreset','-screen','0','1280x720x24','-nolisten','tcp'],
-                              pass_fds=(writer,),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-    os.close(writer)
     try:
-        ready, _, _ = select.select([reader],[],[],10)
-        number = os.read(reader,64).decode().strip() if ready else ''
-        if not number.isdigit() or server.poll() is not None:
-            raise RuntimeError('private X server did not assign a display')
+        with log_path.open('w') as log:
+            server = subprocess.Popen(['Xvfb','-displayfd',str(writer),'-noreset','-screen','0','1280x720x24','-nolisten','tcp'],
+                                      pass_fds=(writer,),stdout=log,stderr=log)
+    except BaseException:
+        os.close(reader)
+        raise
+    finally:
+        os.close(writer)
+    server.startup_log = log_path
+    try:
+        deadline = time.monotonic() + 10
+        # The display number and its newline can arrive in separate writes.
+        assigned = b''
+        while b'\n' not in assigned:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not select.select([reader], [], [], remaining)[0]:
+                break
+            part = os.read(reader, 64)
+            if not part:
+                break
+            assigned += part
+        number = assigned.decode().strip()
+        if not assigned.endswith(b'\n') or not number.isdigit() or server.poll() is not None:
+            raise RuntimeError(f'private X server did not assign a complete display number; startup log: {log_path}')
         return ':'+number,server
     except BaseException:
         server.terminate();server.wait()
@@ -48,7 +73,7 @@ def unbound(work, gate=False):
     from PIL import ImageGrab
     import json
     cli = os.environ.get('UNBOUND_CLI', str(base.REPO/'target/release/unbound'))
-    name, server = display()
+    name, server = display(work/'xserver.log')
     combined = []
     try:
         for c, (ww,wh) in enumerate(((640,360),(360,640),(640,360),(640,360),(641,361),(360,640),(640,360),(640,360))):

@@ -5,7 +5,9 @@ Two independent windowed Editor captures agree on all 50 records. The Game view 
 floating window with its toolbar hidden and its default zoom, with real X pointer movement.
 Xvfb atomically assigns each private display before a capture starts and keeps it from
 resetting between client connections. A reconnect control checks 300 independent X clients,
-covering the handoff from adapter probing to window creation.
+covering the handoff from adapter probing to window creation. Display assignment consumes
+the complete newline-terminated message before closing its pipe, including split writes.
+Each run retains its X server startup log.
 
 Six window/target pairs cover square, wide, tall, integer enlargement, fractional reduction
 and odd window dimensions. Records include the available view rectangle, the image rectangle,
