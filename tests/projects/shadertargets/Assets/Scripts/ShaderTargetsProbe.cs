@@ -184,7 +184,8 @@ public class UitkProbe : MonoBehaviour
     /// <summary>Framebuffer fetch past one draw of one triangle per texel: <c>fetch.Overlap</c>, one
     /// draw whose two copies of a quad each cover the texel (Probe/Fetch/Plain over (0.5, 0.25,
     /// 0.75, 1)); <c>fetch.Second.*</c>, a fetch of color target 1 (Probe/Fetch/Second, the targets
-    /// cleared to (0.5, 0.25, 0.75, 1) and (0.25, 0.75, 0.5, 1)); <c>fetch.Msaa.*</c>, a 4x
+    /// cleared to (0.5, 0.25, 0.75, 1) and (0.25, 0.75, 0.5, 1)), then of a target 1 the draw
+    /// lacks (also by Probe/Fetch/SecondHalf, which writes half of it to target 0); <c>fetch.Msaa.*</c>, a 4x
     /// multisampled texel half covered by a white triangle over black, resolved, then squared by
     /// Probe/Fetch/Square and resolved (each sample's square, or the square of their average).</summary>
     static void FetchLimits(StringBuilder rows, RenderTexture target, Texture2D readback)
@@ -217,6 +218,15 @@ public class UitkProbe : MonoBehaviour
         Draw(new UnityEngine.Rendering.RenderTargetIdentifier[] { first, other }, first, quad, second);
         ReadInto(rows, "fetch.Second.0", first, readback);
         ReadInto(rows, "fetch.Second.1", other, readback);
+        // The same program over one color target: target 1, which it reads, is missing.
+        ClearTo(first, new Color(0.5f, 0.25f, 0.75f, 1f));
+        Draw(new UnityEngine.Rendering.RenderTargetIdentifier[] { first }, first, quad, second);
+        ReadInto(rows, "fetch.Second.missing", first, readback);
+        var secondHalf = new Material(Shader.Find("Probe/Fetch/SecondHalf"));
+        ClearTo(first, new Color(0.5f, 0.25f, 0.75f, 1f));
+        Draw(new UnityEngine.Rendering.RenderTargetIdentifier[] { first }, first, quad, secondHalf);
+        ReadInto(rows, "fetch.SecondHalf.missing", first, readback);
+        DestroyImmediate(secondHalf);
 
         var square = new Material(Shader.Find("Probe/Fetch/Square"));
         var white = new Material(Shader.Find("Hidden/Internal-Colored")) { color = Color.white };
