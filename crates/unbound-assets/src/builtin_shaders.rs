@@ -25,12 +25,16 @@ pub const MASKED_PREFIX: &str = "Hidden/Unbound/Masked/";
 /// [`FORMAT_VERSION`] and the generator's code (`unbound_source_identity::BUILTIN_SHADERS`), so
 /// a build never takes another generator's sources. `unity_data` is the install's `Editor/Data`.
 pub fn write_generated(unity_data: &Path, cache_root: &Path, release: &str) -> Result<PathBuf> {
-    let dir = unbound_source_identity::keyed_dir(
+    let keyed = unbound_source_identity::keyed_dir(
         &cache_root.join("builtin-shaders").join("generated"),
         FORMAT_VERSION,
         unbound_source_identity::BUILTIN_SHADERS,
-    )
-    .join(release);
+    );
+    // Held for this process; stale siblings pruned.
+    if let Err(e) = unbound_source_identity::claim(&keyed) {
+        tracing::debug!("claiming {}: {e}", keyed.display());
+    }
+    let dir = keyed.join(release);
     if dir.join(".complete").is_file() {
         return Ok(dir);
     }
@@ -421,7 +425,16 @@ pub fn declarations(unity_data: &Path, cache_root: &Path) -> Result<DeclarationM
     let files = declaration_sources(unity_data);
     let key = declarations_key(&files)?;
     let cached = declarations_entry_path(cache_root, &key);
+    // The keyed directory is held for this process once used; stale siblings are pruned.
+    let claim = || {
+        if let Some(dir) = cached.parent()
+            && let Err(e) = unbound_source_identity::claim(dir)
+        {
+            tracing::debug!("claiming {}: {e}", dir.display());
+        }
+    };
     if let Some(map) = read_declarations_entry(&cached, &key) {
+        claim();
         return Ok(map);
     }
     let mut map = DeclarationMap::new();
@@ -450,6 +463,7 @@ pub fn declarations(unity_data: &Path, cache_root: &Path) -> Result<DeclarationM
     }
     match encode_declarations_entry(&key, &map) {
         Ok(bytes) => {
+            claim();
             if let Err(e) = publish(&cached, &bytes) {
                 tracing::debug!("not caching built-in shader declarations: {e}");
             }

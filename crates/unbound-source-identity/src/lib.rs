@@ -19,7 +19,9 @@
 //! sources and declarations caches).
 use std::path::{Path, PathBuf};
 
+pub mod prune;
 mod scan;
+pub use prune::claim;
 pub use scan::{identity, producing_sources};
 
 /// The identity of the shader compiler: `unbound-shaders` and the workspace crates it depends

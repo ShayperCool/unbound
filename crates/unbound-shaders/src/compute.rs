@@ -212,11 +212,7 @@ impl ShaderCompiler {
         let source = self.preprocess(&p, &defines)?.text;
         let opengl = self.settings.opengl_shading_language;
         let hash = kernel_cache_key(&source, kernel, &selected, storage_formats, opengl);
-        let cached = self
-            .settings
-            .cache_dir
-            .as_ref()
-            .map(|d| d.join(format!("k-{hash}.json")));
+        let cached = self.cache_dir().map(|d| d.join(format!("k-{hash}.json")));
         if let Some(path) = &cached
             && let Ok(text) = std::fs::read_to_string(path)
             && let Ok(compiled) = serde_json::from_str::<CompiledKernel>(&text)

@@ -6700,6 +6700,7 @@ name = "unbound-source-identity"
 version = "0.1.0"
 dependencies = [
  "blake3",
+ "tracing",
 ]
 
 [[package]]

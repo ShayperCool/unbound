@@ -698,6 +698,8 @@ pub struct ShaderCompiler {
     /// The shader files and requirement names warned of ([`ShaderCompiler::pragmas`]): each
     /// once per file, however many of its passes and variants read them.
     warned: HashSet<(PathBuf, String)>,
+    /// The cache directory is claimed for this process ([`unbound_source_identity::claim`]).
+    claimed: bool,
 }
 
 /// The device's framebuffer fetch define (Metal). With it every program also compiles with
@@ -731,7 +733,21 @@ impl ShaderCompiler {
             memory: HashMap::new(),
             pragmas: HashMap::new(),
             warned: HashSet::new(),
+            claimed: false,
         })
+    }
+
+    /// The directory of this compiler's cache entries, claimed for the process on first use
+    /// (marked used and held, its stale siblings pruned: [`unbound_source_identity::claim`]).
+    pub(crate) fn cache_dir(&mut self) -> Option<PathBuf> {
+        let dir = self.settings.cache_dir.clone()?;
+        if !self.claimed {
+            self.claimed = true;
+            if let Err(e) = unbound_source_identity::claim(&dir) {
+                tracing::debug!("claiming the shader cache {}: {e}", dir.display());
+            }
+        }
+        Some(dir)
     }
 
     /// The program's pragmas (keyword sets, entry points), read once. A surface shader's are
@@ -932,11 +948,7 @@ impl ShaderCompiler {
             h.update(format!("{mesh_instance_stride:?}/{mesh_instance_uniform_scaling}/{mesh_instance_max_count:?}").as_bytes());
             h.finalize().to_hex().to_string()
         };
-        let cached = self
-            .settings
-            .cache_dir
-            .as_ref()
-            .map(|d| d.join(format!("{hash}.json")));
+        let cached = self.cache_dir().map(|d| d.join(format!("{hash}.json")));
         if let Some(path) = &cached
             && let Ok(text) = std::fs::read_to_string(path)
             && let Ok(compiled) = serde_json::from_str::<Compiled>(&text)
