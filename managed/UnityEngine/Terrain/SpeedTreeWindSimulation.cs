@@ -350,8 +350,8 @@ namespace UnityEngine
         /// for the history. The parameters the SpeedTree 9 layout does not use, and those of an
         /// instance that is no longer a tree with a live wind asset (its Tree or asset was
         /// removed after the drawer took it), get zeros: the drawer uploads every parameter of
-        /// every listed instance from a buffer it does not clear, and the Editor leaves them as
-        /// that buffer held them.
+        /// every listed instance from a buffer it does not clear (what the Editor uploads for
+        /// them is unmeasured).
         /// </summary>
         internal static unsafe void WriteBuffer(ReadOnlySpan<int> renderersID, in SpeedTreeWindParamsBufferIterator buffer, bool history)
         {
