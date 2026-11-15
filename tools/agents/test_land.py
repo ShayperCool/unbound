@@ -191,13 +191,14 @@ class GateTimingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary, \
              mock.patch.object(land, 'STATE', Path(temporary)), \
              contextlib.redirect_stdout(io.StringIO()):
-            with land.land_lock('slot/first'):
+            with land.land_lock('slot/first', request='a'*32):
                 self.assertTrue((Path(temporary)/'land.holder').is_file())
             with self.assertRaises(SystemExit):
                 with land.land_lock('slot/second'):
                     land.die(5, 'control failure')
             rows = [json.loads(line) for line in (Path(temporary)/'land-lock.jsonl').read_text().splitlines()]
         self.assertEqual([row['branch'] for row in rows], ['slot/first', 'slot/second'])
+        self.assertEqual([row['request'] for row in rows], ['a'*32, None])
         for row in rows:
             self.assertLessEqual(row['requested'], row['acquired'])
             self.assertLessEqual(row['acquired'], row['released'])

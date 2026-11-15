@@ -630,7 +630,7 @@ class LandTrain:
                     return self.finish(current, current['result'])
                 # Join the same blocking lock queue as older callers. Polling a
                 # nonblocking lock could starve behind a continuous legacy queue.
-                with self.api.land_lock(branch):
+                with self.api.land_lock(branch, request=request['id']):
                     current = next((item for item in self.queue.entries() if item['id'] == request['id']), None)
                     if current and current.get('result'):
                         self.recover_ready(current)

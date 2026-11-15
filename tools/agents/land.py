@@ -831,7 +831,7 @@ def journal_lock(entry):
 
 
 @contextlib.contextmanager
-def land_lock(branch):
+def land_lock(branch, request=None):
     STATE.mkdir(parents=True, exist_ok=True)
     holder = STATE/'land.holder'
     with open(STATE/'land.lock', 'a+') as handle:
@@ -848,7 +848,7 @@ def land_lock(branch):
             yield
         finally:
             released = time.time()
-            journal_lock({'branch': branch, 'pid': os.getpid(), 'requested': round(requested, 1),
+            journal_lock({'branch': branch, 'request': request, 'pid': os.getpid(), 'requested': round(requested, 1),
                           'acquired': round(acquired, 1), 'released': round(released, 1),
                           'waited_s': round(acquired-requested, 1), 'held_s': round(released-acquired, 1)})
             holder.unlink(missing_ok=True)

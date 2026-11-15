@@ -50,7 +50,11 @@ events = out/'events.jsonl'
 # neither wait for nor block the jobs of the machine-wide pools.
 state = out/'state'
 state.mkdir()
-(state/'job-limits.json').write_bytes(Path(__file__).with_name('job-limits.json').read_bytes())
+shipped_policy=json.loads(Path(__file__).with_name('job-limits.json').read_text())
+assert shipped_policy['ordinary_nice']==10,shipped_policy.get('ordinary_nice')
+# The admission and timing checks below measure slot logic, not CPU contention: these
+# test jobs carry no gate marker, so they run at niceness 0 except in the CPU-priority check.
+(state/'job-limits.json').write_text(json.dumps(dict(shipped_policy,ordinary_nice=0)))
 os.environ['UNBOUND_JOB_RUNNER_STATE'] = str(state)
 
 spec=importlib.util.spec_from_file_location('job_runner',Path(__file__).with_name('job_runner.py'))
@@ -289,12 +293,19 @@ finally:
 # niceness, and a caller that is already nicer is never raised. This holds for pooled
 # scopes and for exclusive jobs run in the caller's own cgroup.
 base=os.getpriority(os.PRIO_PROCESS,0)
-ordinary_nice=runner.policy()['ordinary_nice']
-assert ordinary_nice==10,ordinary_nice
-nicer=min(19,max(base,ordinary_nice)+3)
-cases=[('tool','cpu-ordinary',False,None,max(base,ordinary_nice)),
+ordinary_nice=shipped_policy['ordinary_nice']
+timing_policy=(state/'job-limits.json').read_text()
+(state/'job-limits.json').write_text(json.dumps(shipped_policy))
+assert runner.policy()['ordinary_nice']==ordinary_nice
+assert base<ordinary_nice,f'run this check at a niceness below {ordinary_nice} (it is {base}), or it cannot tell gate and ordinary jobs apart'
+# Niceness orders jobs across pools only while the pool slices share unbound.slice's CPU
+# group: a cpu controller delegated below unbound.slice would make each scope its own group.
+controllers=runner.group_path(runner.policy()['slice']).parent/'cgroup.subtree_control'
+assert 'cpu' not in controllers.read_text().split(),('unbound.slice delegates the cpu controller',controllers.read_text())
+nicer=ordinary_nice+3
+cases=[('tool','cpu-ordinary',False,None,ordinary_nice),
        ('tool','cpu-gate',True,None,base),
-       ('heavy','cpu-ordinary-heavy',False,None,max(base,ordinary_nice)),
+       ('heavy','cpu-ordinary-heavy',False,None,ordinary_nice),
        ('editor-cpu','cpu-gate-editor',True,None,base),
        ('tool','cpu-nicer-ordinary',False,nicer,nicer),
        ('tool','cpu-nicer-gate',True,nicer,nicer)]
@@ -307,6 +318,7 @@ for kind,name,priority,nice,expected in cases:
     assert measured==expected,(name,measured,expected)
     timing=next(t for t in timings if (' '+name+' ') in t['cmd'])
     assert timing['nice']==expected and timing['land_gate'] is priority,(name,timing)
+(state/'job-limits.json').write_text(timing_policy)
 for invalid in [-1,20,'10',True]:
     policy_copy=json.loads((state/'job-limits.json').read_text())
     policy_copy['ordinary_nice']=invalid
