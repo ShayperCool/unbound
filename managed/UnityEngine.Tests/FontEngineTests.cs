@@ -10,6 +10,28 @@ namespace UnityEngine.Tests
     public class FontEngineTests
     {
         [Fact]
+        public void PairQueriesDistinguishExactArraysFilteredBuffersAndNullInputsWithoutAFace()
+        {
+            string release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try
+            {
+                FontEngine.UnloadAllFontFaces();
+                Assert.Empty(FontEngine.GetAllPairAdjustmentRecords());
+                Assert.Empty(FontEngine.GetPairAdjustmentRecords(12u));
+                Assert.Null(FontEngine.GetPairAdjustmentRecords(new List<uint> { 12 }));
+                Assert.Null(FontEngine.GetPairAdjustmentRecords(1, 12u));
+                Assert.Null(FontEngine.GetGlyphPairAdjustmentRecords(12u, out int count));
+                Assert.Equal(0, count);
+                Assert.Null(FontEngine.GetGlyphPairAdjustmentTable(null));
+                Assert.Throws<System.NullReferenceException>(() => FontEngine.GetGlyphPairAdjustmentRecords((List<uint>)null, out _));
+                Assert.Throws<System.NullReferenceException>(() => FontEngine.GetGlyphPairAdjustmentRecords(null, new List<uint>()));
+                Assert.Throws<System.NullReferenceException>(() => FontEngine.GetGlyphPairAdjustmentRecords(new List<uint>(), null));
+            }
+            finally { ProjectInfo.UnityVersion = release; }
+        }
+
+        [Fact]
         public void MarkRecordsRetainSignedCoordinatesAndSequentialLayout()
         {
             var anchor = new GlyphAnchorPoint { xCoordinate = -123.5f, yCoordinate = 456.25f };

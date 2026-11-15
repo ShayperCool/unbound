@@ -990,6 +990,28 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             Ok(crate::fonts::ligatures(r.handle, r.glyphs.as_deref(), r.lookup)?.to_string())
         }
+        "font-pair-adjustments" => {
+            #[derive(Deserialize)]
+            struct Request {
+                handle: u64,
+                glyphs: Option<Vec<u32>>,
+                lookup: Option<i32>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(
+                crate::fonts::pair_adjustments(r.handle, r.glyphs.as_deref(), r.lookup)?
+                    .to_string(),
+            )
+        }
+        "font-legacy-kerning" => {
+            #[derive(Deserialize)]
+            struct Request {
+                handle: u64,
+                pixels: i32,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(crate::fonts::legacy_kerning(r.handle, r.pixels)?.to_string())
+        }
         "font-kerning" => {
             #[derive(Deserialize)]
             struct Request {

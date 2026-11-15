@@ -78,6 +78,7 @@ pub struct GlyphBitmap {
 pub struct FontFace {
     data: Arc<[u8]>,
     pub(crate) features: OnceLock<crate::font_features::FontFeatures>,
+    legacy_kern_pairs: OnceLock<Vec<(u16, u16)>>,
     freetype: OnceLock<Mutex<Option<crate::font_freetype::FreeTypeFace>>>,
     index: u32,
     metrics: FaceMetrics,
@@ -93,6 +94,7 @@ impl FontFace {
             data: data.into(),
             freetype: OnceLock::new(),
             features: OnceLock::new(),
+            legacy_kern_pairs: OnceLock::new(),
             index,
             metrics,
         })
@@ -164,6 +166,28 @@ impl FontFace {
     /// TextCore: the strike a bitmap-only face uses for `pixels` per em; `None` for a scalable face.
     pub fn textcore_strike(&self, pixels: i32) -> Option<TextCoreStrike> {
         self.with_freetype(|face| face.textcore_strike(pixels))?
+    }
+
+    /// Legacy KERN adjustments in pixels, independently of a face's GPOS table.
+    pub fn legacy_kerning(&self, pixels: i32) -> Vec<(u16, u16, f32)> {
+        let pairs = self.legacy_kern_pairs.get_or_init(|| {
+            let mut pairs = Vec::new();
+            if let Some(table) = self.face().tables().kern {
+                for subtable in table.subtables {
+                    if !subtable.horizontal || subtable.has_cross_stream || subtable.variable {
+                        continue;
+                    }
+                    if let ttf_parser::kern::Format::Format0(table) = subtable.format {
+                        pairs.extend(table.pairs.into_iter().map(|p| (p.left().0, p.right().0)));
+                    }
+                }
+            }
+            pairs.sort_unstable();
+            pairs.dedup();
+            pairs
+        });
+        self.with_freetype(|face| face.legacy_kerning(pixels, pairs))
+            .unwrap_or_default()
     }
 
     fn with_freetype<T>(

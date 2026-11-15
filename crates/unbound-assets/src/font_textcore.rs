@@ -90,6 +90,35 @@ fn mode(render_mode: i32) -> Option<(ft::FT_Int32, Raster)> {
 }
 
 impl FreeTypeFace {
+    pub(crate) fn legacy_kerning(
+        &mut self,
+        pixels: i32,
+        pairs: &[(u16, u16)],
+    ) -> Vec<(u16, u16, f32)> {
+        if !self.set_pixel_size(pixels) {
+            return Vec::new();
+        }
+        // Unfitted kerning uses FreeType's 26.6 pixel coordinates.
+        const SUBPIXELS_PER_PIXEL: f32 = 64.0;
+        let mut result = Vec::new();
+        for &(first, second) in pairs {
+            let mut value = ft::FT_Vector { x: 0, y: 0 };
+            let error = unsafe {
+                ft::FT_Get_Kerning(
+                    self.face,
+                    u32::from(first),
+                    u32::from(second),
+                    ft::FT_KERNING_UNFITTED,
+                    &mut value,
+                )
+            };
+            if error == 0 && value.x != 0 {
+                result.push((first, second, value.x as f32 / SUBPIXELS_PER_PIXEL));
+            }
+        }
+        result
+    }
+
     /// Sizes the face to `pixels` per em: a scalable face directly, a bitmap-only face to the
     /// strike nearest that size (scanning the strikes in order while they get closer). Measured
     /// for a face of one strike (tests/projects/textcolor); the choice among several is not.

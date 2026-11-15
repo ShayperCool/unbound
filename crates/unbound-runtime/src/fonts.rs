@@ -132,6 +132,16 @@ pub fn kerning(handle: u64, firsts: Option<&[u16]>, seconds: Option<&[u16]>) -> 
     ))
 }
 
+pub fn pair_adjustments(handle: u64, glyphs: Option<&[u32]>, lookup: Option<i32>) -> Result<Json> {
+    let face = face(handle).context("no such face")?;
+    Ok(serde_json::to_value(face.pair_adjustments(glyphs, lookup))?)
+}
+
+pub fn legacy_kerning(handle: u64, pixels: i32) -> Result<Json> {
+    let face = face(handle).context("no such face")?;
+    Ok(json!(face.legacy_kerning(pixels)))
+}
+
 /// A legacy dynamic-font glyph of a face at `size` pixels per em. `style` holds Unity's
 /// `FontStyle` (1 bold, 2 italic) and, from bit 8, the requesting font's `FontRenderingMode`.
 ///

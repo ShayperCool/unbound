@@ -1,0 +1,4 @@
+{
+  "commands": ["python3 tests/projects/fontpairs/run.py check"],
+  "engine_paths": ["managed/UnityEngine/Text/FontEngine", "crates/unbound-assets/src/font_features.rs", "crates/unbound-assets/src/font_textcore.rs"]
+}

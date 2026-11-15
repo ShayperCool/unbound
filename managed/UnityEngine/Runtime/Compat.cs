@@ -198,6 +198,7 @@ namespace Unbound.Runtime
         /// <summary>The measured font feature lookup-index queries return records only for -1.
         /// tests/projects/fontfeatures, Unity 6000.0.71f1.</summary>
         internal static bool FontFeatureLookupIndexQueriesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool FontPairQueriesMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Vector and rounded stencil shapes stay with an element's retained geometry
         /// until repaint. Measured in tests/projects/uitkvector on Unity 6000.0.71f1.

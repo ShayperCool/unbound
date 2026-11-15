@@ -684,24 +684,25 @@ namespace UnityEngine.TextCore.LowLevel
         static float PixelScale => s_Face != null ? (float)FaceSize / Math.Max(1, s_Face.Info.UnitsPerEm) : 1f;
 
         internal static GlyphPairAdjustmentRecord[] GetGlyphPairAdjustmentTable(uint[] glyphIndexes) =>
-            glyphIndexes == null ? Array.Empty<GlyphPairAdjustmentRecord>() : Records(Kerning(glyphIndexes, glyphIndexes), PixelScale);
+            Compat.FontPairQueriesMeasured ? LegacyPairRecords(glyphIndexes) : glyphIndexes == null ? Array.Empty<GlyphPairAdjustmentRecord>() : Records(Kerning(glyphIndexes, glyphIndexes), PixelScale);
 
         internal static GlyphPairAdjustmentRecord[] GetGlyphPairAdjustmentRecords(List<uint> glyphIndexes, out int recordCount)
         {
-            var records = glyphIndexes == null ? Array.Empty<GlyphPairAdjustmentRecord>() : Records(Kerning(glyphIndexes, glyphIndexes), PixelScale);
-            recordCount = records.Length;
+            var records = Compat.FontPairQueriesMeasured ? LegacyPairRecords(FeatureGlyphList(glyphIndexes)) : glyphIndexes == null ? Array.Empty<GlyphPairAdjustmentRecord>() : Records(Kerning(glyphIndexes, glyphIndexes), PixelScale);
+            recordCount = Compat.FontPairQueriesMeasured ? s_LegacyPairQuery.Count : records.Length;
             return records;
         }
 
         internal static GlyphPairAdjustmentRecord[] GetGlyphPairAdjustmentRecords(uint glyphIndex, out int recordCount)
         {
-            var records = Records(Kerning(new[] { glyphIndex }, null), PixelScale);
-            recordCount = records.Length;
+            var records = Compat.FontPairQueriesMeasured ? LegacyPairRecords(glyphIndex) : Records(Kerning(new[] { glyphIndex }, null), PixelScale);
+            recordCount = Compat.FontPairQueriesMeasured ? s_LegacyPairQuery.Count : records.Length;
             return records;
         }
 
         internal static GlyphPairAdjustmentRecord[] GetGlyphPairAdjustmentRecords(List<uint> newGlyphIndexes, List<uint> allGlyphIndexes)
         {
+            if (Compat.FontPairQueriesMeasured) return LegacyPairRecords(newGlyphIndexes, allGlyphIndexes);
             if (newGlyphIndexes == null || allGlyphIndexes == null) return Array.Empty<GlyphPairAdjustmentRecord>();
             var pairs = Kerning(newGlyphIndexes, allGlyphIndexes);
             pairs.AddRange(Kerning(allGlyphIndexes, newGlyphIndexes));
@@ -712,25 +713,27 @@ namespace UnityEngine.TextCore.LowLevel
 
         internal static GlyphPairAdjustmentRecord GetGlyphPairAdjustmentRecord(uint firstGlyphIndex, uint secondGlyphIndex)
         {
+            if (Compat.FontPairQueriesMeasured) return LegacyPairRecord(firstGlyphIndex, secondGlyphIndex);
             var records = Records(Kerning(new[] { firstGlyphIndex }, new[] { secondGlyphIndex }), PixelScale);
             return records.Length > 0 ? records[0] : default;
         }
 
         /// <summary>Every pair whose first glyph is <paramref name="glyphIndex"/>, in font units.</summary>
-        internal static GlyphPairAdjustmentRecord[] GetPairAdjustmentRecords(uint glyphIndex) => Records(Kerning(new[] { glyphIndex }, null), 1f);
+        internal static GlyphPairAdjustmentRecord[] GetPairAdjustmentRecords(uint glyphIndex) => Compat.FontPairQueriesMeasured ? PairRecords(new[] { glyphIndex }, null, true) : Records(Kerning(new[] { glyphIndex }, null), 1f);
 
         internal static GlyphPairAdjustmentRecord GetPairAdjustmentRecord(uint firstGlyphIndex, uint secondGlyphIndex)
         {
+            if (Compat.FontPairQueriesMeasured) return ScaledPairRecord(firstGlyphIndex, secondGlyphIndex);
             var records = Records(Kerning(new[] { firstGlyphIndex }, new[] { secondGlyphIndex }), 1f);
             return records.Length > 0 ? records[0] : default;
         }
 
-        internal static GlyphPairAdjustmentRecord[] GetAllPairAdjustmentRecords() => Records(Kerning(null, null), 1f);
+        internal static GlyphPairAdjustmentRecord[] GetAllPairAdjustmentRecords() => Compat.FontPairQueriesMeasured ? PairRecords(null, null, true) : Records(Kerning(null, null), 1f);
 
         /// <summary>Every pair whose first glyph is one of <paramref name="glyphIndexes"/>, in font
         /// units: as glyphs are added, the pairs with any glyph added later are already known.</summary>
         internal static GlyphPairAdjustmentRecord[] GetPairAdjustmentRecords(List<uint> glyphIndexes) =>
-            glyphIndexes == null || glyphIndexes.Count == 0 ? Array.Empty<GlyphPairAdjustmentRecord>() : Records(Kerning(glyphIndexes, null), 1f);
+            Compat.FontPairQueriesMeasured ? PairRecords(FeatureGlyphList(glyphIndexes), null, false) : glyphIndexes == null || glyphIndexes.Count == 0 ? Array.Empty<GlyphPairAdjustmentRecord>() : Records(Kerning(glyphIndexes, null), 1f);
     }
 
     /// <summary>MaxRects bin packing (Jylänki) on lists of free and used rects, y up.</summary>
