@@ -61,6 +61,7 @@ UNBOUND=<unbound> python3 tests/projects/lightmapencoding/run.py check
 
 `run.py check` compares every record; capture pixels within a relative 1e-3 (the Editor's
 readbacks of 8-bit sRGB data carry about 2^-11 of rounding, one 8-bit step is more than 0.9%).
-The engine matches 744/752 records. The 8 others are the compressed cubemaps (Unbound keeps
-their pixels uncompressed), listed exactly in `residuals.json`; an entry that stops occurring
-fails the check.
+The engine matches all 752 records, the compressed cubemaps included (Q497: a cubemap's faces
+are compressed as 2D textures of the face size, tests/projects/cubecompression).
+`residuals.json` lists the open differences (none); an entry that stops occurring fails the
+check.
