@@ -147,8 +147,21 @@ namespace UnityEngine
         public static Texture defaultTexture => RenderSettings.DefaultReflectionTexture;
 
         /// <summary>How shaders decode it: an RGBM reflection's range (5, raised to 2.2 in linear
-        /// color space), else as stored.</summary>
-        public static Vector4 defaultTextureHDRDecodeValues => DecodeValues(defaultTexture);
+        /// color space), else as stored, scaled by the lighting settings' reflection intensity in
+        /// the project's color space (linear projects take the intensity through the sRGB curve;
+        /// measured for a half-float default reflection: tests/projects/indirectspec, reflection
+        /// intensity 0.25 gives 0.25 in gamma and 0.05087609 in linear, in this value and in
+        /// unity_SpecCube0_HDR).</summary>
+        public static Vector4 defaultTextureHDRDecodeValues
+        {
+            get
+            {
+                var decode = DecodeValues(defaultTexture);
+                float intensity = RenderSettings.reflectionIntensity;
+                decode.x *= QualitySettings.activeColorSpace == ColorSpace.Linear ? Mathf.GammaToLinearSpace(intensity) : intensity;
+                return decode;
+            }
+        }
 
         static Vector4 DecodeValues(Texture texture)
         {
@@ -311,22 +324,10 @@ namespace UnityEngine
         static void SetUnbounded(Dictionary<int, object> properties, BoxedVectors boxes, int slot, int cube, int hdr, int min, int max, int position, float weight)
         {
             properties[cube] = defaultTexture;
-            properties[hdr] = BoxedVectors.Of(boxes, slot, DefaultDecode);
+            properties[hdr] = BoxedVectors.Of(boxes, slot, defaultTextureHDRDecodeValues);
             properties[min] = BoxedVectors.Of(boxes, slot + 1, new Vector4(float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity, weight));
             properties[max] = BoxedVectors.Of(boxes, slot + 2, new Vector4(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity, 0f));
             properties[position] = BoxedVectors.Of(boxes, slot + 3, Vector4.zero);
-        }
-
-        /// <summary>The default reflection's decode values with the lighting settings' reflection
-        /// intensity (the frame's unity_SpecCube0_HDR).</summary>
-        internal static Vector4 DefaultDecode
-        {
-            get
-            {
-                var decode = defaultTextureHDRDecodeValues;
-                decode.x *= RenderSettings.reflectionIntensity;
-                return decode;
-            }
         }
 
         /// <summary>A probe's slot. With <paramref name="renderer"/> (the built-in pipeline's

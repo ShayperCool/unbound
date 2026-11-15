@@ -543,7 +543,7 @@ namespace Unbound.Runtime
             // cube when the scene has none).
             ulong handle = TextureHandles.Of(ReflectionProbe.defaultTexture);
             // The lighting settings' reflection intensity scales what it gives.
-            var decode = ReflectionProbe.DefaultDecode;
+            var decode = ReflectionProbe.defaultTextureHDRDecodeValues;
             GfxStream.GlobalTexture("unity_SpecCube0", handle);
             GfxStream.GlobalTexture("unity_SpecCube1", handle);
             GfxStream.GlobalVector("unity_SpecCube0_HDR", decode);

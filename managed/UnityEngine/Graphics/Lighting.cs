@@ -839,11 +839,12 @@ namespace Unbound.Runtime
             }
 
             // Ambient: ShadeSH9's constants from the ambient probe (linear; gamma projects convert
-            // the result back).
-            float intensity = UnityEngine.RenderSettings.ambientIntensity;
-            var sky = Space(UnityEngine.RenderSettings.ambientSkyColor) * intensity;
-            var equator = Space(UnityEngine.RenderSettings.ambientEquatorColor) * intensity;
-            var ground = Space(UnityEngine.RenderSettings.ambientGroundColor) * intensity;
+            // the result back). The ambient colors go as the lighting settings hold them: the
+            // ambient intensity scales only the probe (measured: tests/projects/indirectspec,
+            // Trilight ambient at intensity 0.5, both color spaces).
+            var sky = Space(UnityEngine.RenderSettings.ambientSkyColor);
+            var equator = Space(UnityEngine.RenderSettings.ambientEquatorColor);
+            var ground = Space(UnityEngine.RenderSettings.ambientGroundColor);
             UnityEngine.RenderSettings.ambientProbe.ShaderConstants(out var shAr, out var shAg, out var shAb, out var shBr, out var shBg, out var shBb, out var shC);
             into.Add(("unity_SHAr", shAr));
             into.Add(("unity_SHAg", shAg));

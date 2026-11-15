@@ -136,7 +136,6 @@ namespace Unbound.Runtime
             if (!ReferenceEquals(defaultReflection, ReflectionProbe.Black))
             {
                 var decode = ReflectionProbe.defaultTextureHDRDecodeValues;
-                decode.x *= RenderSettings.reflectionIntensity;
                 DrawReflection(quadMesh, quadModel, reflectionMaterial, defaultReflection, decode,
                     new Vector3(-1e6f, -1e6f, -1e6f), new Vector3(1e6f, 1e6f, 1e6f), Vector3.zero, false, 1f);
             }

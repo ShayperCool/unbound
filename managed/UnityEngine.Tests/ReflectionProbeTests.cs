@@ -147,9 +147,12 @@ namespace UnityEngine.Tests
                         Assert.Equal(new Color(0f, 0f, 0f, 0f), black.GetPixel((CubemapFace)face, 0, 0) * new Color(1f, 1f, 1f, 0f));
                     Assert.Equal(new Vector4(1f, 1f, 0f, 0f), ReflectionProbe.defaultTextureHDRDecodeValues);
                 }
-                // The frame's decode values carry the reflection intensity all the same.
-                RenderSettings.reflectionIntensity = 0.5f;
-                Assert.Equal(new Vector4(0.5f, 1f, 0f, 0f), ReflectionProbe.DefaultDecode);
+                // The decode values carry the reflection intensity in the project's color space
+                // all the same (6000.0.71f1, tests/projects/indirectspec: 0.25 gives 0.25 in gamma
+                // and 0.05087609 in linear).
+                RenderSettings.reflectionIntensity = 0.25f;
+                float expected = QualitySettings.activeColorSpace == ColorSpace.Linear ? 0.05087609f : 0.25f;
+                Assert.Equal(new Vector4(expected, 1f, 0f, 0f), ReflectionProbe.defaultTextureHDRDecodeValues);
                 // Control: a scene's own reflection is the default one.
                 RenderSettings.customReflectionTexture = own;
                 Assert.Same(own, ReflectionProbe.defaultTexture);
