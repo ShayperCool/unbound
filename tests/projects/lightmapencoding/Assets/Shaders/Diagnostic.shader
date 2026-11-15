@@ -28,6 +28,7 @@ float4 frag(v2f i):SV_Target {
  if (_Mode > 5.5) {
   // Material textures: their decode values, the cube decoded with them, a lightmap's level 1,
   // a global texture's decode values.
+  if (_Mode > 10.5) return tex2Dlod(_Flat,float4(0.5,0.5,0,0));
   if (_Mode > 9.5) return _GlobalCube_HDR;
   if (_Mode < 6.5) return _Cube_HDR;
   if (_Mode < 7.5) {

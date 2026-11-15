@@ -18,7 +18,8 @@ using UnityEngine.Rendering;
 /// <c>_Flat_HDR</c> and its cube decoded with them; level 1 of mipmapped float and 8-bit
 /// lightmaps; a float 2D texture's material decode values; the cube's through a property block
 /// and as a global texture; unity_Lightmap_HDR with a plain first lightmap; which of a texture's
-/// and an explicit <c>_HDR</c> value wins through materials, blocks and globals. Writes <c>lightmapencoding.jsonl</c> into
+/// and an explicit <c>_HDR</c> value wins through materials, blocks and globals; the built-in
+/// default textures. Writes <c>lightmapencoding.jsonl</c> into
 /// <c>LIGHTMAP_ENCODING_PROBE_OUT</c>, then quits.
 /// </summary>
 public class LightmapEncodingProbe : MonoBehaviour
@@ -202,6 +203,23 @@ public class LightmapEncodingProbe : MonoBehaviour
         Shader.SetGlobalTexture("_Cube", cube);
         renderer.sharedMaterial = plainMaterial;
         Capture(camera, target, "precedence/globalOverMaterialPlain");
+
+        // The built-in default textures: their description and the texel a shader samples.
+        var defaults = new (string, Texture2D)[]
+        {
+            ("whiteTexture", Texture2D.whiteTexture), ("blackTexture", Texture2D.blackTexture),
+            ("grayTexture", Texture2D.grayTexture), ("linearGrayTexture", Texture2D.linearGrayTexture),
+            ("redTexture", Texture2D.redTexture), ("normalTexture", Texture2D.normalTexture),
+        };
+        renderer.sharedMaterial = bare;
+        bare.SetFloat("_Mode", 11);
+        foreach (var (name, texture) in defaults)
+        {
+            m_Out.Append($"{{\"default\":\"{name}\",\"name\":\"{texture.name}\",\"isReadable\":{(texture.isReadable ? "true" : "false")}}}\n");
+            Describe("default/" + name, texture);
+            bare.SetTexture("_Flat", texture);
+            Capture(camera, target, "default/" + name);
+        }
 
         File.WriteAllText(Path.Combine(dir, "lightmapencoding.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
