@@ -1446,7 +1446,9 @@ fn a_clip_is_reduced_on_its_takes_frames_and_then_moved_to_its_start() {
 /// rotation key is at 1.00000012, Humanoid and Generic alike (tests/projects/modelclips
 /// events.HumanLateEvents, ends.HumanLateCurve, events.GenericLateCurve; the Generic clip stays
 /// 1.00000012 long, its last key). A clip whose last event lies past its last key ends at the
-/// event (a range one step shorter than its span; Humanoid measured, Generic by the same rule).
+/// event (Humanoid: HumanLateEvents; Generic: GenericEvents515, frames 5 to 15, whose span
+/// 0.333333343 is one step past its last key, and GenericEventsBeyond, an event at normalized
+/// 1.25 that ends the clip at 1.25).
 #[test]
 fn clip_events_lie_on_the_range_span_and_end_the_clip_past_its_last_key() {
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -1470,17 +1472,31 @@ fn clip_events_lie_on_the_range_span_and_end_the_clip_past_its_last_key() {
     let times: Vec<f32> = generic.events.iter().map(|e| e.time).collect();
     assert_eq!(times, [0.5, 1.0]);
     assert_eq!(generic.parameters[0].keys[1].time, 1.0);
-    // An event past the last key: normalized 1.5 of the span ends the clip at 1.5 (Unbound's
-    // rule, measured for Humanoid clips only, unmeasured for Generic ones; the probe's Generic
-    // events lie inside the clip).
+    // An event past the last key: normalized 1.5 of the span ends the clip at 1.5 (the Editor's
+    // GenericEventsBeyond: 1.25).
     let later = text.replacen("- time: 1\n", "- time: 1.5\n", 1);
     assert_ne!(later, text);
     let generic = clip(&later.replace("animationType: 3", "animationType: 2"));
     assert_eq!(generic.length, 1.5);
-    // A Legacy clip keeps them on its range's length.
-    let legacy = clip(&text.replace("animationType: 3", "animationType: 1"));
-    let times: Vec<f32> = legacy.events.iter().map(|e| e.time).collect();
-    assert_eq!(times, [0.5 * legacy.length, legacy.length]);
+    // A Legacy model clip has no events, and its length is its span: frames 1 to 17 at 30 a
+    // second are 0.533333361 long, where the difference of the ends in single precision is
+    // 0.5333333 (modelclips events.LegacyEvents117, ends.LegacyEvents117).
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/modelclips/Assets/Resources/LegacyEvents117.fbx");
+    let model = ModelImporter::default()
+        .import(
+            &source,
+            &std::fs::read(&source).unwrap(),
+            &meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap()),
+        )
+        .unwrap();
+    let legacy = model.clips.into_iter().find(|c| !c.preview).unwrap();
+    assert!(legacy.events.is_empty());
+    assert_eq!(legacy.length, 0.533_333_36);
+    assert_ne!(
+        legacy.length,
+        (17.0f64 / 30.0) as f32 - (1.0f64 / 30.0) as f32
+    );
 }
 
 /// A Humanoid clip's transform keys take the frame times of every other rig type: the frame

@@ -852,7 +852,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 57;
+    const VERSION: u32 = 58;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1817,14 +1817,16 @@ impl<'a> Builder<'a> {
             // 24 fps is 0.33333337 s). A Generic or Humanoid clip ends at the clip time of its last
             // frame: 31 frames at 30 a second are 1.0333334 s, one step past the range's 1.0333333
             // (tests/projects/modelclips HumanLong), and frames 1 to 31 of a take are 1.00000012 s
-            // (`ShapesOff`); a Legacy clip at its range's end (tests/projects/modelaxis Reduced:
-            // Drift, 3 s). A Humanoid clip ends at its last key after its conversion into
+            // (`ShapesOff`); a Legacy clip at its range's span, its end less its start in single
+            // precision (tests/projects/modelaxis Reduced: Drift, 3 s; modelclips
+            // ends.LegacyEvents117: frames 1 to 17 at 30 a second, 0.533333361, one step past the
+            // difference of the ends in single precision). A Humanoid clip ends at its last key after its conversion into
             // muscle curves (managed `HumanClip`: `HumanLate` is 0.99999994 s long, its last
             // muscle key). A clip without keys has the range (0, 1) of an empty AnimationClip.
             let length = if empty {
                 1.0
             } else if self.settings.animation_type == 1 {
-                end as f32 - start as f32
+                (end - start) as f32
             } else {
                 take_key_time(end, fps) - start as f32
             };
@@ -1864,8 +1866,9 @@ impl<'a> Builder<'a> {
             // tests/projects/modelclips events.HumanLateEvents, ends.HumanLateCurve,
             // events.GenericLateCurve), and a Generic or Humanoid clip ends at its last key or
             // event, whichever is later (a Humanoid clip's keys are its converted curves': managed
-            // `HumanClip`). A Legacy clip keeps them on its range's length (unmeasured), and a
-            // range of no frames on its length of 1.
+            // `HumanClip`). A Legacy clip's length is its span; a range of no frames keeps them on
+            // its length of 1. A Legacy model clip has no events, whatever its settings list
+            // (modelclips events.LegacyEvents117).
             let legacy = self.settings.animation_type == 1;
             let span = if empty || legacy {
                 length
@@ -1898,6 +1901,7 @@ impl<'a> Builder<'a> {
                 events: range
                     .events
                     .iter()
+                    .filter(|_| !legacy)
                     .map(|e| ClipEvent {
                         time: e.time * span,
                         ..e.clone()
