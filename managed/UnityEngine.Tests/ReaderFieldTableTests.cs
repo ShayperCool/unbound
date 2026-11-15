@@ -22,7 +22,7 @@ namespace UnityEngine.Tests
                 foreach (var d in FieldCoverage.Declarations("projectSettings", id, null)) yield return d;
             foreach (var script in new[] { typeof(Script), typeof(Settings) })
                 foreach (var d in FieldCoverage.Declarations(null, EngineTypes.MonoBehaviourId, script)) yield return d;
-            foreach (int id in new[] { EngineTypes.PrefabInstanceId, 1660057539, 142, 115, EngineTypes.GameObjectId, 104, 157, 196, 124 })
+            foreach (int id in FieldCoverage.FixedDocumentIds)
                 foreach (var d in FieldCoverage.Declarations(null, id, null)) yield return d;
             foreach (int id in EngineTypes.RegisteredIds.ToArray())
                 if (EngineTypes.ForClassId(id, null, warn: false) is Type type)

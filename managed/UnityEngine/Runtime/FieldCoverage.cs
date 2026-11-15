@@ -44,9 +44,12 @@ namespace Unbound.Runtime
             public Object Resolve(ObjectRef reference, Type expected) => null;
         }
 
-        static bool IsFixed(int classId) => classId == EngineTypes.PrefabInstanceId || classId == 1660057539 || classId == 142
-            || classId == 115 || classId == 150 || classId == EngineTypes.GameObjectId || classId == 104 || classId == 157
-            || classId == 196 || classId == 124;
+        /// <summary>The scene and bundle documents with fixed readers (each a case of
+        /// <see cref="Declarations"/>), not read by their registered type.</summary>
+        internal static readonly int[] FixedDocumentIds =
+            { EngineTypes.PrefabInstanceId, 1660057539, 142, 115, 150, EngineTypes.GameObjectId, 104, 157, 196, 124 };
+
+        static bool IsFixed(int classId) => Array.IndexOf(FixedDocumentIds, classId) >= 0;
 
         /// <summary>The reader declarations whose generated field tables a document of this kind
         /// consumes (the readers the loader runs for it); <paramref name="type"/> is the script type of
@@ -148,6 +151,8 @@ namespace Unbound.Runtime
                         scriptType = ObjectGraphBuilder.ScriptOf(body.Ref("m_Script"), doc.FileGuid, scripts);
                     var type = doc.Context != null ? null : doc.ClassId == EngineTypes.MonoBehaviourId ? scriptType
                         : EngineTypes.ForClassId(doc.ClassId, doc.TypeName, warn: false);
+                    (ObjectRef Data, ObjectRef Settings) lighting = default;
+                    if (doc.Context == null && doc.ClassId == 157) lighting = SceneSettings.LightingReferences(body);
                     foreach (var (owner, method, parameters, node) in Declarations(doc.Context, doc.ClassId, type))
                         Schema(owner, method, parameters, node);
                     if (doc.Context == null) switch (doc.ClassId)
@@ -157,7 +162,6 @@ namespace Unbound.Runtime
                             new YamlReader(new References()).ScanScriptObject(scriptType, body);
                             break;
                         case 157:
-                            var lighting = SceneSettings.LightingReferences(body);
                             result.Lighting = new LightingInput { DataGuid = lighting.Data.Guid, DataId = lighting.Data.FileId,
                                 SettingsGuid = lighting.Settings.Guid, SettingsId = lighting.Settings.FileId };
                             break;

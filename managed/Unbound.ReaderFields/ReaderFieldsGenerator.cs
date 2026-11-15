@@ -451,9 +451,11 @@ public sealed class ReaderFieldsGenerator : IIncrementalGenerator
             return local.Returns;
         }
 
-        /// <summary>An interpolation's values as the string it formats: integer format strings
-        /// (<c>{k:D2}</c>) and alignment (<c>{k,2}</c> pads on the left, <c>{k,-2}</c> on the
-        /// right). A pattern value cannot be padded or formatted and is reported unknown.</summary>
+        /// <summary>An interpolation's values as the string it formats: a format string applies to
+        /// an integral operand at its own width (<c>{k:D2}</c>) and is ignored for a string, as in
+        /// string formatting; alignment pads (<c>{k,2}</c> on the left, <c>{k,-2}</c> on the right).
+        /// A pattern, a parameter placeholder or an operand of another type cannot be formatted
+        /// and is reported unknown.</summary>
         HashSet<string> Formatted(InterpolationSyntax item, HashSet<string> values)
         {
             if (item.AlignmentClause == null && item.FormatClause == null) return values;
@@ -465,10 +467,12 @@ public sealed class ReaderFieldsGenerator : IIncrementalGenerator
                 width = Convert.ToInt32(alignment.Value, CultureInfo.InvariantCulture);
             }
             string format = item.FormatClause?.FormatStringToken.ValueText;
+            var operand = Model(item.Expression).GetTypeInfo(item.Expression).Type?.SpecialType ?? SpecialType.None;
+            if (format != null && operand == SpecialType.System_String) format = null;
             var result = new HashSet<string>(StringComparer.Ordinal);
             foreach (var value in values)
             {
-                if (value.Contains('*') || value.Contains('¤') || value.StartsWith("!unknown", StringComparison.Ordinal))
+                if (value.Contains('*') || value.Contains('¤') || value.Contains('§') || value.StartsWith("!unknown", StringComparison.Ordinal))
                 {
                     result.Add("!unknown formatted interpolation");
                     continue;
@@ -476,16 +480,39 @@ public sealed class ReaderFieldsGenerator : IIncrementalGenerator
                 string text = value;
                 if (format != null)
                 {
-                    if (!long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long number))
+                    text = Integral(value, operand, format);
+                    if (text == null)
                     {
                         result.Add("!unknown formatted interpolation");
                         continue;
                     }
-                    text = number.ToString(format, CultureInfo.InvariantCulture);
                 }
                 result.Add(width >= 0 ? text.PadLeft(width) : text.PadRight(-width));
             }
             return result;
+        }
+
+        /// <summary>An integral value formatted at its operand's own type (hex widths differ), or
+        /// null for another operand type.</summary>
+        static string Integral(string value, SpecialType type, string format)
+        {
+            if (!long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long n)) return null;
+            var c = CultureInfo.InvariantCulture;
+            unchecked
+            {
+                switch (type)
+                {
+                    case SpecialType.System_SByte: return ((sbyte)n).ToString(format, c);
+                    case SpecialType.System_Byte: return ((byte)n).ToString(format, c);
+                    case SpecialType.System_Int16: return ((short)n).ToString(format, c);
+                    case SpecialType.System_UInt16: return ((ushort)n).ToString(format, c);
+                    case SpecialType.System_Int32: return ((int)n).ToString(format, c);
+                    case SpecialType.System_UInt32: return ((uint)n).ToString(format, c);
+                    case SpecialType.System_Int64: return n.ToString(format, c);
+                    case SpecialType.System_UInt64: return ((ulong)n).ToString(format, c);
+                    default: return null;
+                }
+            }
         }
 
         HashSet<string> Text(ExpressionSyntax expression, State state)

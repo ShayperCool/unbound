@@ -52,6 +52,44 @@ namespace Unbound.Tests
         {
             for (int i = 0; i < 0; i++) body.Int($"key{i}");
         }
+        static void DeclaredPadded(YNode body)
+        {
+            for (int i = 9; i < 11; i++) body.Int($"p{i,2}");
+        }
+        static void DeclaredLeftAligned(YNode body)
+        {
+            for (int i = 0; i < 2; i++) body.Int($"q{i,-3}.");
+        }
+        static void DeclaredFormatted(YNode body)
+        {
+            for (int i = 3; i < 5; i++) body.Int($"f{i:D2}");
+            for (short n = -1; n < 0; n++) body.Int($"h{n:X}");
+            const string text = "5";
+            body.Int($"t{text:D2}");
+        }
+        static void DeclaredPaddedCounted(YNode body)
+        {
+            for (int i = 0; i < body.Int("count"); i++) body.Int($"c{i,2}");
+        }
+        static void DeclaredPaddedArgument(YNode body) => DeclaredPaddedHelper(body, "x");
+        static void DeclaredPaddedHelper(YNode body, string name) => body.Int($"{name,3}");
+
+        /// <summary>Interpolated keys are formatted as string formatting formats them: alignment
+        /// pads, an integer format applies at the operand's width and a string ignores it; a value
+        /// known only as a pattern or a parameter cannot be padded and is declared unknown.</summary>
+        [Fact]
+        public void InterpolatedKeysKeepTheirAlignmentAndFormat()
+        {
+            string[] Fields(string method) => ReaderFieldSchema.Fields(typeof(FieldCoverageTests), method, method == nameof(DeclaredPaddedHelper) ? 2 : 1);
+            Assert.Equal(new[] { "kp 9", "kp10" }, Fields(nameof(DeclaredPadded)).OrderBy(f => f, StringComparer.Ordinal));
+            Assert.Equal(new[] { "kq0  .", "kq1  ." }, Fields(nameof(DeclaredLeftAligned)).OrderBy(f => f, StringComparer.Ordinal));
+            Assert.Equal(new[] { "kf03", "kf04", "khFFFF", "kt5" }, Fields(nameof(DeclaredFormatted)).OrderBy(f => f, StringComparer.Ordinal));
+            var counted = Fields(nameof(DeclaredPaddedCounted));
+            Assert.Contains(counted, f => f.Contains("!unknown formatted interpolation"));
+            var empty = new YNode { Kind = YKind.Map, Keys = Array.Empty<string>(), Values = Array.Empty<YNode>() };
+            Assert.Throws<NotSupportedException>(() => ReaderFieldSchema.Consume(empty, counted));
+            Assert.Contains(Fields(nameof(DeclaredPaddedArgument)), f => f.Contains("!unknown formatted interpolation"));
+        }
 
         [Fact]
         public void GeneratedFieldsFollowReadersAndHelpersWithoutInvokingThem()
