@@ -44,6 +44,17 @@ turnstile too, so it cannot deadlock a gate behind that turnstile. A killed wait
 releases its notice automatically; a running job is never preempted. `--check`
 does not hold the landing lock and keeps ordinary admission priority.
 
+The same marker sets CPU priority. Every job started without it (workers' builds,
+tests, tools, Editors and engine runs, `--check` gates and suites) runs at the policy's
+`ordinary_nice` (10), and so does everything it starts; gate jobs keep their caller's
+niceness (normally 0). All pool slices sit in one CPU cgroup (`unbound.slice` does not
+delegate the cpu controller to its pool slices), so the gate's compilers, tests and
+probe engines win the CPU over ordinary jobs in every pool while the machine is
+oversubscribed, and ordinary jobs use whatever the gate leaves idle. A caller that is
+already nicer keeps its value; the runner never raises a priority. The disks use the
+`none` and `mq-deadline` schedulers, which ignore I/O priorities, so only CPU niceness
+is set.
+
 Reinstall after landing runner changes with `python3 tools/validation/install_job_runner.py`.
 Already waiting processes retain the code they started with. Relaunch those jobs
 to adopt a changed admission protocol; all new runners observe later gate notices
@@ -70,8 +81,9 @@ killed. All Editor children, import workers and compiler servers count toward th
 Editor slice. Lock descriptors are closed for child commands. At pool idle, only
 owned Unity Roslyn servers in the pool's scopes are terminated. Shared licensing
 and other users' compiler processes are excluded.
-Every job appends its kind, queue wait, run time, exit code and the scope's memory
-peak to `~/.cache/compat/job-timings.jsonl`; use it to tune the limits.
+Every job appends its kind, queue wait, run time, exit code, the scope's memory
+peak, its niceness and whether it belonged to a landing gate to
+`~/.cache/compat/job-timings.jsonl`; use it to tune the limits.
 `test_job_runner.py OUT` checks the checkout's runner with private lock files and
 policy (`UNBOUND_JOB_RUNNER_STATE`), so it neither waits for nor blocks live jobs.
 The launcher disables .NET shared compilation, node reuse and the MSBuild server

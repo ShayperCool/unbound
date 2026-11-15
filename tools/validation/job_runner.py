@@ -7,7 +7,9 @@ measured peaks), engine slots, a build slot, a test slot and a GPU slot. A job t
 everything releases what it took and retries, so a waiting job never pins tokens
 and never blocks other jobs whose resources are free. Only an exclusive 'heavy' job
 keeps the entry lock while it waits, so newer pooled jobs queue behind it.
-Every job appends its wait and run time to job-timings.jsonl."""
+Jobs outside a landing gate run at a lower CPU priority (ordinary_nice), so the gate that
+holds the machine-wide land lock gets the CPU first. Every job appends its wait and run time
+to job-timings.jsonl."""
 import contextlib
 import fcntl
 import getopt
@@ -64,17 +66,38 @@ def policy():
     # the count caps and the systemd slices bound the pools.
     value.setdefault('memory_tokens', 0)
     value.setdefault('weights', {})
+    # CPU niceness of jobs started outside a landing gate. Gate jobs keep their caller's
+    # niceness, so the gate holding the land lock wins the CPU on an oversubscribed machine.
+    value.setdefault('ordinary_nice', 10)
     assert 1 <= value['engine_slots'] <= 8
     assert 1 <= value['build_slots'] <= 3
     assert 1 <= value['gpu_slots'] <= len(GPU_SLOT_NAMES)
     assert 1 <= value['tool_slots'] <= 8
     assert 1 <= value['test_slots'] <= 4
     assert 0 <= value['memory_tokens'] <= 64
+    assert type(value['ordinary_nice']) is int and 0 <= value['ordinary_nice'] <= 19
     assert value['memory_tokens']*2**30 <= value['memory_max_bytes']
     if value['memory_tokens']:
         for kind in KINDS:
             assert 1 <= value['weights'][kind] <= value['memory_tokens'], kind
     return value
+
+
+def land_gate():
+    return os.environ.get(LAND_PRIORITY) == '1'
+
+
+def yield_cpu(config):
+    """Lower an ordinary job (and everything it starts) below landing-gate jobs.
+
+    All pools share one CPU cgroup (unbound.slice delegates no cpu controller to its
+    pool slices), so niceness orders gate and ordinary jobs across Editors, engines and
+    builds. A caller that is already nicer keeps its own value; nothing is ever raised."""
+    if land_gate():
+        return
+    current = os.getpriority(os.PRIO_PROCESS, 0)
+    if current < config['ordinary_nice']:
+        os.setpriority(os.PRIO_PROCESS, 0, config['ordinary_nice'])
 
 
 def record(entry):
@@ -242,7 +265,7 @@ def admit(kind, config):
         print(f'with-heavy-job: waiting for {kind}; '+ '; '.join(blocking_holders(names)),
               file=sys.stderr, flush=True)
 
-    priority = os.environ.get(LAND_PRIORITY) == '1'
+    priority = land_gate()
     with contextlib.ExitStack() as waiting:
         if priority:
             # This is a notice, not an admission token. Publish it before waiting for the
@@ -349,7 +372,8 @@ def execute(command, kind, config):
         finished = time.time()
     record({'kind': kind, 'start': round(queued, 1), 'wait_s': round(started-queued, 1),
             'run_s': round(finished-started, 1), 'exit': result, 'cwd': os.getcwd(),
-            'cmd': ' '.join(command)[:300], 'memory_peak': own_memory_peak() if pooled else None})
+            'cmd': ' '.join(command)[:300], 'memory_peak': own_memory_peak() if pooled else None,
+            'land_gate': land_gate(), 'nice': os.getpriority(os.PRIO_PROCESS, 0)})
     if editor:
         clean_idle_compilers(config)
     return result
@@ -499,6 +523,7 @@ def main(args):
               'build lease.', file=sys.stderr)
         return 125
     config = policy()
+    yield_cpu(config)
     if kind is None or (kind=='build' and not worker and classify(args)=='test'):
         # Callers that still pass `--kind build` for `dotnet test` get the test pool.
         kind = classify(args)

@@ -37,7 +37,7 @@ if len(sys.argv)>1 and sys.argv[1]=='worker':
     fd = os.open(output,os.O_WRONLY|os.O_CREAT|os.O_APPEND,0o600)
     for phase in ['start','end']:
         os.write(fd,(json.dumps(dict(name=name,kind=kind,phase=phase,time=time.monotonic(),pid=os.getpid(),
-            project=os.environ.get('TEST_ENGINE_PROJECT')))+'\n').encode())
+            project=os.environ.get('TEST_ENGINE_PROJECT'),nice=os.getpriority(os.PRIO_PROCESS,0)))+'\n').encode())
         if phase=='start':
             time.sleep(seconds)
     os.close(fd)
@@ -156,7 +156,7 @@ fake.write_text('#!/usr/bin/env bash\nset -euo pipefail\nexport TEST_ENGINE_PROJ
                shlex.quote(sys.executable)+' '+shlex.quote(str(Path(__file__).resolve()))+' "$@"\n')
 fake.chmod(0o755)
 
-def spawn(kind, name, seconds=.4, project=None, priority=False):
+def spawn(kind, name, seconds=.4, project=None, priority=False, nice=None):
     handle=(out/(name+'.log')).open('w')
     command=([str(fake),'run','-p',str(project)] if project else [sys.executable,__file__])
     env = dict(os.environ)
@@ -165,7 +165,7 @@ def spawn(kind, name, seconds=.4, project=None, priority=False):
         env[runner.LAND_PRIORITY] = '1'
     process=subprocess.Popen([sys.executable,str(RUNNER),'--kind',kind,*command,
                               'worker',str(events),name,str(seconds),kind],stdout=handle,stderr=subprocess.STDOUT,
-                              env=env)
+                              env=env,preexec_fn=None if nice is None else lambda: os.setpriority(os.PRIO_PROCESS,0,nice))
     return process,handle
 
 
@@ -284,6 +284,43 @@ try:
 finally:
     for handle in handles:
         handle.close()
+
+# CPU priority: jobs outside a gate run at ordinary_nice, gate jobs keep their caller's
+# niceness, and a caller that is already nicer is never raised. This holds for pooled
+# scopes and for exclusive jobs run in the caller's own cgroup.
+base=os.getpriority(os.PRIO_PROCESS,0)
+ordinary_nice=runner.policy()['ordinary_nice']
+assert ordinary_nice==10,ordinary_nice
+nicer=min(19,max(base,ordinary_nice)+3)
+cases=[('tool','cpu-ordinary',False,None,max(base,ordinary_nice)),
+       ('tool','cpu-gate',True,None,base),
+       ('heavy','cpu-ordinary-heavy',False,None,max(base,ordinary_nice)),
+       ('editor-cpu','cpu-gate-editor',True,None,base),
+       ('tool','cpu-nicer-ordinary',False,nicer,nicer),
+       ('tool','cpu-nicer-gate',True,nicer,nicer)]
+for kind,name,priority,nice,_ in cases:
+    join([spawn(kind,name,.05,priority=priority,nice=nice)])
+rows=[json.loads(line) for line in events.read_text().splitlines()]
+timings=[json.loads(line) for line in (state/'job-timings.jsonl').read_text().splitlines()]
+for kind,name,priority,nice,expected in cases:
+    measured=next(r['nice'] for r in rows if r['name']==name and r['phase']=='start')
+    assert measured==expected,(name,measured,expected)
+    timing=next(t for t in timings if (' '+name+' ') in t['cmd'])
+    assert timing['nice']==expected and timing['land_gate'] is priority,(name,timing)
+for invalid in [-1,20,'10',True]:
+    policy_copy=json.loads((state/'job-limits.json').read_text())
+    policy_copy['ordinary_nice']=invalid
+    original_policy=(state/'job-limits.json').read_text()
+    (state/'job-limits.json').write_text(json.dumps(policy_copy))
+    try:
+        try:
+            runner.policy()
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError(('invalid ordinary_nice accepted',invalid))
+    finally:
+        (state/'job-limits.json').write_text(original_policy)
 
 # Weighted-memory policies define weights for pooled kinds, never for exclusive
 # writers. All kinds must still admit, and an ordinary writer must yield to a
@@ -474,6 +511,6 @@ for kind in ['editor-cpu','engine-cpu']:
     mixed_overlap=mixed_overlap,no_head_of_line_blocking=True,land_priority=True,
     combined_memory_max_bytes=16*2**30,engine_memory_max_bytes=8*2**30,
     engine_job_memory_max_bytes=4*2**30,swap_allowed=True,exclusive_builds=False,build_slots=config['build_slots'],
-    build_overlap=build_overlap,project_serial=True,cancellation=True),indent=2)+'\n')
+    build_overlap=build_overlap,project_serial=True,cancellation=True,ordinary_nice=ordinary_nice),indent=2)+'\n')
 print('Editor/engine/build/GPU slots, gate priority, no head-of-line blocking, exclusive writer and cancellation verified;',
       'Editor peak',peak,'engine peak',engine_peak,'GPU peak',gpu_peak)

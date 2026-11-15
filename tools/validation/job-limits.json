@@ -16,5 +16,6 @@
   "memory_tokens": 0,
   "tool_slots": 4,
   "measured": "2026-11-01 09:46-10:01 with 4 GPU and 1 build slot: 4 GPU Editors at once used at most 1.55 GiB of 8 GiB VRAM (39% mean GPU use), RAM available stayed >= 6 GiB, and up to 7 builds queued behind one.",
-  "test_slots": 2
+  "test_slots": 2,
+  "ordinary_nice": 10
 }
