@@ -79,7 +79,24 @@ namespace UnityEngine.VFX
         /// NullReferenceException, as a use of a released native object does.</summary>
         public void Dispose() => m_Words = null;
 
-        uint[] Words => m_Words ?? throw new NullReferenceException();
+        internal uint[] Words => m_Words ?? throw new NullReferenceException();
+
+        /// <summary>The attributes a spawn system spawns with: the asset's event attributes,
+        /// starting from their initial values.</summary>
+        internal static VFXEventAttribute ForSpawner(VisualEffectAsset asset)
+        {
+            var attribute = new VFXEventAttribute();
+            attribute.Internal_InitFromAsset(asset);
+            return attribute;
+        }
+
+        /// <summary>How many particles the attributes ask for: their first value, as a float
+        /// (the spawn count comes first in every event attribute layout).</summary>
+        internal float SpawnCount
+        {
+            get => m_Words != null && m_Words.Length > 0 ? BitConverter.UInt32BitsToSingle(m_Words[0]) : 0f;
+            set { if (m_Words != null && m_Words.Length > 0) m_Words[0] = BitConverter.SingleToUInt32Bits(value); }
+        }
 
         /// <summary>Takes the values of another attribute set, attribute by attribute: each
         /// attribute of this layout takes the value the other set has under the same name, where

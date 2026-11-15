@@ -89,19 +89,16 @@ namespace UnityEngine.VFX
 
         /// <summary>What Unbound does not do with an effect yet (the load warning and
         /// <c>unbound doctor</c> say it).</summary>
-        internal const string NotSimulated = "Visual Effect Graph systems are not simulated or drawn yet: the effect shows nothing";
+        internal const string NotDrawn = "Visual Effect Graph outputs are not drawn yet: the effect is simulated and shows nothing";
 
-        internal static bool s_WarnedNotSimulated;
+        internal static bool s_WarnedNotDrawn;
 
-        internal override void OnEngineEnable() => WarnNotSimulated();
-
-        /// <summary>Says once, for the first enabled effect whose asset has systems, that
-        /// effects are not simulated.</summary>
-        void WarnNotSimulated()
+        /// <summary>Says once, for the first effect that runs, that effects are not drawn.</summary>
+        void WarnNotDrawn()
         {
-            if (s_WarnedNotSimulated || m_Asset == null || m_Data.Systems.Length == 0 || !isActiveAndEnabled) return;
-            s_WarnedNotSimulated = true;
-            Debug.LogWarning($"Unbound: VisualEffect '{name}' ({m_Asset.name}): {NotSimulated}. `unbound doctor` lists the project's effects.", this);
+            if (s_WarnedNotDrawn) return;
+            s_WarnedNotDrawn = true;
+            Debug.LogWarning($"Unbound: VisualEffect '{name}' ({m_Asset.name}): {NotDrawn}. `unbound doctor` lists the project's effects.", this);
         }
 
         /// <summary>AddComponent&lt;VisualEffect&gt;() adds the effect's renderer with it.</summary>
@@ -118,18 +115,9 @@ namespace UnityEngine.VFX
                 m_Asset = value;
                 CreateSheet();
                 Apply(merged);
-                WarnNotSimulated();
-            }
-        }
-
-        /// <summary>Whether no camera sees the effect. Nothing draws an effect yet, so none does
-        /// (said once): the value a new effect has in the Editor before its first frame.</summary>
-        public bool culled
-        {
-            get
-            {
-                Stubs.Ignored("VisualEffect.culled", "is always true: effects are not drawn yet, so no camera sees one");
-                return true;
+                // Another asset's systems, started as a new effect.
+                DestroySystems();
+                if (m_Registered) CreateSystems(true);
             }
         }
 

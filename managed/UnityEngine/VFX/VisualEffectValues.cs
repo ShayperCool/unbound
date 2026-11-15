@@ -50,6 +50,9 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>All the words, for the evaluator and the uploads (by <see cref="VisualEffectCompiledData.ValueOffsets"/>).</summary>
+        internal uint[] Words => m_Words;
+
         internal uint GetWord(int expression) => m_Words[m_Data.ValueOffsets[expression]];
 
         internal void SetWord(int expression, uint value) => m_Words[m_Data.ValueOffsets[expression]] = value;

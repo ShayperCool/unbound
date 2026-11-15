@@ -535,10 +535,10 @@ VisualEffect:
         }
 
         [Fact]
-        public void TheFirstEffectWithSystemsSaysEffectsAreNotSimulated()
+        public void TheFirstEffectWithSystemsSaysEffectsAreNotDrawn()
         {
-            bool warned = VisualEffect.s_WarnedNotSimulated;
-            VisualEffect.s_WarnedNotSimulated = false;
+            bool warned = VisualEffect.s_WarnedNotDrawn;
+            VisualEffect.s_WarnedNotDrawn = false;
             var withSystems = First();
             withSystems.m_Name = "Smoke";
             var empty = VisualEffectAsset.Create();
@@ -546,32 +546,32 @@ VisualEffect:
             try
             {
                 using var warnings = new Warnings();
-                // No asset, and an asset without systems: nothing would be simulated.
+                // No asset, and an asset without systems: nothing runs, so nothing would be drawn.
                 objects.Add(new GameObject("bare").AddComponent<VisualEffect>().gameObject);
                 var none = new GameObject("empty").AddComponent<VisualEffect>();
                 objects.Add(none.gameObject);
                 none.visualEffectAsset = empty;
-                Assert.DoesNotContain(warnings.Messages, m => m.Contains("not simulated"));
+                Assert.DoesNotContain(warnings.Messages, m => m.Contains("not drawn"));
                 var effect = new GameObject("chimney").AddComponent<VisualEffect>();
                 objects.Add(effect.gameObject);
                 effect.visualEffectAsset = withSystems;
-                var said = Assert.Single(warnings.Messages, m => m.Contains("not simulated"));
-                Assert.Equal("Unbound: VisualEffect 'chimney' (Smoke): " + VisualEffect.NotSimulated + ". `unbound doctor` lists the project's effects.", said);
+                var said = Assert.Single(warnings.Messages, m => m.Contains("not drawn"));
+                Assert.Equal("Unbound: VisualEffect 'chimney' (Smoke): " + VisualEffect.NotDrawn + ". `unbound doctor` lists the project's effects.", said);
                 // Once: a second effect does not repeat it.
                 var again = new GameObject("second").AddComponent<VisualEffect>();
                 objects.Add(again.gameObject);
                 again.visualEffectAsset = withSystems;
-                Assert.Single(warnings.Messages, m => m.Contains("not simulated"));
+                Assert.Single(warnings.Messages, m => m.Contains("not drawn"));
             }
             finally
             {
-                VisualEffect.s_WarnedNotSimulated = warned;
+                VisualEffect.s_WarnedNotDrawn = warned;
                 foreach (var o in objects) Object.DestroyImmediate(o);
             }
         }
 
         [Fact]
-        public void TheDoctorListsEffectsWithAnAssetAsNotSimulated()
+        public void TheDoctorListsEffectsWithAnAssetAsNotDrawn()
         {
             const string scene = "--- !u!2083052967 &11\nVisualEffect:\n  m_Enabled: 1\n  m_Asset: {fileID: 8926484042661614526, guid: 0123456789abcdef0123456789abcdef, type: 3}\n"
                 + "--- !u!2083052967 &12\nVisualEffect:\n  m_Enabled: 1\n  m_Asset: {fileID: 0}\n";
@@ -582,8 +582,8 @@ VisualEffect:
             };
             var entry = Assert.Single(ClassCoverage.Report("6000.0.71f1", new[] { found }).Classes);
             Assert.Equal(ClassReading.Unsupported.ToString(), entry.Reading);
-            Assert.Equal("Assets/Scene.unity fileID 11: " + VisualEffect.NotSimulated, entry.Detail);
-            // Without an asset there is nothing to simulate: the class is simply read.
+            Assert.Equal("Assets/Scene.unity fileID 11: " + VisualEffect.NotDrawn, entry.Detail);
+            // Without an asset there is nothing to draw: the class is simply read.
             found.Documents["Assets/Scene.unity"] = "--- !u!2083052967 &12\nVisualEffect:\n  m_Enabled: 1\n  m_Asset: {fileID: 0}\n";
             entry = Assert.Single(ClassCoverage.Report("6000.0.71f1", new[] { found }).Classes);
             Assert.Equal(ClassReading.Read.ToString(), entry.Reading);

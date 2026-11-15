@@ -176,6 +176,8 @@ namespace Unbound.Runtime
 
         int[] m_ExposedIds = Array.Empty<int>();
         int[] m_SystemIds = Array.Empty<int>();
+        /// <summary>Per event: its name's id.</summary>
+        internal int[] EventIds = Array.Empty<int>();
 
         /// <summary>Per expression (the per-event ones after the others): its value type.</summary>
         internal VFXValueType[] ExpressionTypes = Array.Empty<VFXValueType>();
@@ -186,6 +188,11 @@ namespace Unbound.Runtime
 
         /// <summary>Per expression: the index of its constant in <see cref="Values"/>, -1 for a computed one.</summary>
         internal int[] ConstantOf = Array.Empty<int>();
+
+        /// <summary>Per expression: its operation, and its four operands (parents, a type, a
+        /// component, as the operation takes them).</summary>
+        internal VFXExpressionOperation[] Operations = Array.Empty<VFXExpressionOperation>();
+        internal int[] Operands = Array.Empty<int>();
 
         /// <summary>How many words and object slots the values of all expressions take.</summary>
         internal int WordCount, ObjectCount;
@@ -201,14 +208,21 @@ namespace Unbound.Runtime
             for (int i = 0; i < Exposed.Length; i++) m_ExposedIds[i] = Shader.PropertyToID(Exposed[i].mapping.name);
             m_SystemIds = new int[Systems.Length];
             for (int i = 0; i < Systems.Length; i++) m_SystemIds[i] = Shader.PropertyToID(Systems[i].name);
+            EventIds = new int[Events.Length];
+            for (int i = 0; i < Events.Length; i++) EventIds[i] = Shader.PropertyToID(Events[i].name);
 
             int count = Expressions.Length + ExpressionsPerSpawnEventAttribute.Length;
             ExpressionTypes = new VFXValueType[count];
             ValueOffsets = new int[count];
             ConstantOf = new int[count];
             WordCount = ObjectCount = 0;
+            Operations = new VFXExpressionOperation[count];
+            Operands = new int[count * 4];
             for (int i = 0; i < count; i++)
             {
+                var desc = i < Expressions.Length ? Expressions[i] : ExpressionsPerSpawnEventAttribute[i - Expressions.Length];
+                Operations[i] = desc.op;
+                for (int k = 0; k < 4; k++) Operands[i * 4 + k] = desc.data != null && k < desc.data.Length ? desc.data[k] : -1;
                 var type = ExpressionTypes[i] = ExpressionType(i);
                 ConstantOf[i] = -1;
                 if (type == VFXValueType.None || type > VFXValueType.SkinnedMeshRenderer || type == VFXValueType.Spline) ValueOffsets[i] = -1;

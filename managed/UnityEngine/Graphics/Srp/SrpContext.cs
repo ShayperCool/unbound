@@ -1127,6 +1127,7 @@ namespace Unbound.Runtime
             data.Camera = camera;
             data.Parameters = parameters;
             uint mask = parameters.cullingMask;
+            UnityEngine.VFX.VFXManager.CameraCulled();
             // As in the built-in pipeline's culling (not measured in a scriptable pipeline).
             CullingGroup.EvaluateForCamera(camera);
             Renderer.SendWillRenderObject(camera != null ? camera.projectionMatrix * camera.worldToCameraMatrix : Matrix4x4.zero, (int)mask);

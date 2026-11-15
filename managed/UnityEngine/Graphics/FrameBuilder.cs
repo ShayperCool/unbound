@@ -1340,6 +1340,7 @@ namespace Unbound.Runtime
 
         static CameraContext CullCameraCore(Camera camera)
         {
+            UnityEngine.VFX.VFXManager.CameraCulled();
             CullingGroup.EvaluateForCamera(camera);
             var context = ContextOf(camera);
             SpriteMasking.Begin(camera, context);

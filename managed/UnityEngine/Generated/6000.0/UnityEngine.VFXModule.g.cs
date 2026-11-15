@@ -53,37 +53,10 @@ namespace UnityEngine.VFX
             [global::Unbound.Stub] public static global::UnityEngine.VFX.VFXEventAttribute ConvertToManaged(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXEventAttribute.BindingsMarshaller.ConvertToManaged"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class VFXExpressionValues
+    unsafe partial class VFXExpressionValues
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
         [global::Unbound.Stub] internal static global::UnityEngine.VFX.VFXExpressionValues CreateExpressionValuesWrapper(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.CreateExpressionValuesWrapper"); return default; }
-        [global::Unbound.Stub] public bool GetBool(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetBool"); return default; }
-        [global::Unbound.Stub] public int GetInt(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetInt"); return default; }
-        [global::Unbound.Stub] public uint GetUInt(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetUInt"); return default; }
-        [global::Unbound.Stub] public float GetFloat(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetFloat"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 GetVector2(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetVector2"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 GetVector3(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetVector3"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector4 GetVector4(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetVector4"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Matrix4x4 GetMatrix4x4(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetMatrix4x4"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Texture GetTexture(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetTexture"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Mesh GetMesh(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetMesh"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimationCurve GetAnimationCurve(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetAnimationCurve"); return default; }
-        [global::Unbound.Stub] internal void Internal_GetAnimationCurveFromScript(int nameID, global::UnityEngine.AnimationCurve curve) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.Internal_GetAnimationCurveFromScript"); }
-        [global::Unbound.Stub] public global::UnityEngine.Gradient GetGradient(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetGradient"); return default; }
-        [global::Unbound.Stub] internal void Internal_GetGradientFromScript(int nameID, global::UnityEngine.Gradient gradient) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.Internal_GetGradientFromScript"); }
-        [global::Unbound.Stub] public bool GetBool(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetBool"); return default; }
-        [global::Unbound.Stub] public int GetInt(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetInt"); return default; }
-        [global::Unbound.Stub] public uint GetUInt(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetUInt"); return default; }
-        [global::Unbound.Stub] public float GetFloat(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetFloat"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 GetVector2(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetVector2"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 GetVector3(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetVector3"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector4 GetVector4(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetVector4"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Matrix4x4 GetMatrix4x4(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetMatrix4x4"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Texture GetTexture(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetTexture"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.AnimationCurve GetAnimationCurve(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetAnimationCurve"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Gradient GetGradient(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetGradient"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Mesh GetMesh(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXExpressionValues.GetMesh"); return default; }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -92,7 +65,6 @@ namespace UnityEngine.VFX
     }
     unsafe static partial class VFXManager
     {
-        [global::Unbound.Stub] public static global::UnityEngine.VFX.VisualEffect[] GetComponents() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.GetComponents"); return global::System.Array.Empty<global::UnityEngine.VFX.VisualEffect>(); }
         [global::Unbound.Stub] internal static void ResyncMaterials(global::UnityEngine.VFX.VisualEffectAsset asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.ResyncMaterials"); }
         [global::Unbound.Stub] internal static void CleanupEmptyBatches(bool force = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.CleanupEmptyBatches"); }
         [global::Unbound.Stub] public static void FlushEmptyBatches() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.FlushEmptyBatches"); }
@@ -118,38 +90,14 @@ namespace UnityEngine.VFX
         internal static bool renderInSceneView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.renderInSceneView"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.renderInSceneView"); } }
         internal static bool activateVFX { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.activateVFX"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.activateVFX"); } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe abstract partial class VFXSpawnerCallbacks : global::UnityEngine.ScriptableObject
+    unsafe partial class VFXSpawnerState
     {
-        public abstract void OnPlay(global::UnityEngine.VFX.VFXSpawnerState state, global::UnityEngine.VFX.VFXExpressionValues vfxValues, global::UnityEngine.VFX.VisualEffect vfxComponent);
-        public abstract void OnUpdate(global::UnityEngine.VFX.VFXSpawnerState state, global::UnityEngine.VFX.VFXExpressionValues vfxValues, global::UnityEngine.VFX.VisualEffect vfxComponent);
-        public abstract void OnStop(global::UnityEngine.VFX.VFXSpawnerState state, global::UnityEngine.VFX.VFXExpressionValues vfxValues, global::UnityEngine.VFX.VisualEffect vfxComponent);
-        [global::Unbound.Stub] protected VFXSpawnerCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerCallbacks.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class VFXSpawnerState : global::System.IDisposable
-    {
-        [global::Unbound.Stub] public VFXSpawnerState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.ctor"); }
         [global::Unbound.Stub] internal VFXSpawnerState(global::System.IntPtr ptr, bool owner) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.ctor"); }
         [global::Unbound.Stub] internal static global::System.IntPtr Internal_Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.Internal_Create"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.VFX.VFXSpawnerState CreateSpawnerStateWrapper() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.CreateSpawnerStateWrapper"); return default; }
         [global::Unbound.Stub] internal void SetWrapValue(global::System.IntPtr ptrToSpawnerState, global::System.IntPtr ptrToEventAttribute) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.SetWrapValue"); }
         [global::Unbound.Stub] internal global::System.IntPtr GetPtr() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.GetPtr"); return default; }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.Dispose"); }
         [global::Unbound.Stub] internal global::UnityEngine.VFX.VFXEventAttribute Internal_GetVFXEventAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.Internal_GetVFXEventAttribute"); return default; }
-        public bool playing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.playing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.playing"); } }
-        public bool newLoop { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.newLoop"); return default; } }
-        public global::UnityEngine.VFX.VFXSpawnerLoopState loopState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.loopState"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.loopState"); } }
-        public float spawnCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.spawnCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.spawnCount"); } }
-        public float deltaTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.deltaTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.deltaTime"); } }
-        public float totalTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.totalTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.totalTime"); } }
-        public float delayBeforeLoop { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.delayBeforeLoop"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.delayBeforeLoop"); } }
-        public float loopDuration { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.loopDuration"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.loopDuration"); } }
-        public float delayAfterLoop { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.delayAfterLoop"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.delayAfterLoop"); } }
-        public int loopIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.loopIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.loopIndex"); } }
-        public int loopCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.loopCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.loopCount"); } }
-        public global::UnityEngine.VFX.VFXEventAttribute vfxEventAttribute { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXSpawnerState.vfxEventAttribute"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -158,38 +106,18 @@ namespace UnityEngine.VFX
     }
     unsafe partial class VisualEffect
     {
-        [global::Unbound.Stub] public void SendEvent(int eventNameID, global::UnityEngine.VFX.VFXEventAttribute eventAttribute) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.SendEvent"); }
-        [global::Unbound.Stub] public void SendEvent(string eventName, global::UnityEngine.VFX.VFXEventAttribute eventAttribute) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.SendEvent"); }
-        [global::Unbound.Stub] public void SendEvent(int eventNameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.SendEvent"); }
-        [global::Unbound.Stub] public void SendEvent(string eventName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.SendEvent"); }
-        [global::Unbound.Stub] public void Play(global::UnityEngine.VFX.VFXEventAttribute eventAttribute) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.Play"); }
-        [global::Unbound.Stub] public void Play() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.Play"); }
-        [global::Unbound.Stub] public void Stop(global::UnityEngine.VFX.VFXEventAttribute eventAttribute) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.Stop"); }
-        [global::Unbound.Stub] public void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.Stop"); }
-        [global::Unbound.Stub] public void Reinit() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.Reinit"); }
-        [global::Unbound.Stub] internal void Reinit(bool sendInitialEventAndPrewarm = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.Reinit"); }
-        [global::Unbound.Stub] public void AdvanceOneFrame() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.AdvanceOneFrame"); }
         [global::Unbound.Stub] internal void RecreateData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.RecreateData"); }
         [global::Unbound.Stub] internal string GetCPUEffectMarkerName(int markerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetCPUEffectMarkerName"); return default; }
         [global::Unbound.Stub] internal void RegisterForProfiling() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.RegisterForProfiling"); }
         [global::Unbound.Stub] internal void UnregisterForProfiling() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.UnregisterForProfiling"); }
         [global::Unbound.Stub] internal bool IsRegisteredForProfiling() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.IsRegisteredForProfiling"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.VFX.VFXParticleSystemInfo GetParticleSystemInfo(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetParticleSystemInfo"); return default; }
-        [global::Unbound.Stub] public bool HasAnySystemAwake() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.HasAnySystemAwake"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Bounds GetComputedBounds(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetComputedBounds"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Vector3 GetCurrentBoundsPadding(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetCurrentBoundsPadding"); return default; }
-        [global::Unbound.Stub] public void GetSpawnSystemInfo(int nameID, global::UnityEngine.VFX.VFXSpawnerState spawnState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetSpawnSystemInfo"); }
-        [global::Unbound.Stub] public global::UnityEngine.VFX.VFXSpawnerState GetSpawnSystemInfo(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetSpawnSystemInfo"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.VFX.VFXParticleSystemInfo GetParticleSystemInfo(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetParticleSystemInfo"); return default; }
         [global::Unbound.Stub] internal string GetGPUTaskMarkerName(string systemName, int taskIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetGPUTaskMarkerName"); return default; }
         [global::Unbound.Stub] internal string GetCPUSystemMarkerName(string systemName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetCPUSystemMarkerName"); return default; }
         [global::Unbound.Stub] internal string GetCPUEffectMarkerName(global::UnityEngine.VFX.VisualEffect.VFXCPUEffectMarkers markerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetCPUEffectMarkerName"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.VFX.VFXSpawnerState GetSpawnSystemInfo(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetSpawnSystemInfo"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Bounds GetComputedBounds(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetComputedBounds"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Vector3 GetCurrentBoundsPadding(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetCurrentBoundsPadding"); return default; }
-        [global::Unbound.Stub] public void Simulate(float stepDeltaTime, uint stepCount = 1U) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.Simulate"); }
-        public int aliveParticleCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.aliveParticleCount"); return default; } }
-        internal float time { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.time"); return default; } }
         internal enum VFXCPUEffectMarkers
         {
             FullUpdate = 0,

@@ -23,6 +23,10 @@ namespace UnityEngine.VFX
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver) => ReadRendererData(body, resolver);
+
+        /// <summary>The renderer's bounds are its effect's: the union of the systems' bounds.</summary>
+        internal override Bounds GetLocalBounds() =>
+            TryGetComponent<VisualEffect>(out var effect) && effect.RendererBounds(out var bounds) ? bounds : new Bounds(Vector3.zero, Vector3.zero);
     }
 
     /// <summary>

@@ -270,10 +270,10 @@ namespace Unbound.Runtime
 
         const int VisualEffectClassId = 2083052967;
 
-        /// <summary>An effect with an asset: the engine reads it and answers its API, but does
-        /// not simulate or draw its systems yet.</summary>
+        /// <summary>An effect with an asset: the engine reads it, answers its API and simulates
+        /// its systems, but does not draw its outputs yet.</summary>
         static string VisualEffectProblem(YNode body) =>
-            body.Ref("m_Asset").IsNull ? null : UnityEngine.VFX.VisualEffect.NotSimulated;
+            body.Ref("m_Asset").IsNull ? null : UnityEngine.VFX.VisualEffect.NotDrawn;
 
         static string SpriteProblem(YNode body)
         {
