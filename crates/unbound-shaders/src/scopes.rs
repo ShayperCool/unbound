@@ -91,7 +91,7 @@ fn hoist_cbuffer_statics(source: &str) -> String {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Kind {
+pub(crate) enum Kind {
     /// An identifier or a number.
     Word,
     /// One punctuation byte, or `::`.
@@ -101,12 +101,12 @@ enum Kind {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Token {
-    kind: Kind,
-    start: usize,
-    end: usize,
+pub(crate) struct Token {
+    pub(crate) kind: Kind,
+    pub(crate) start: usize,
+    pub(crate) end: usize,
     /// Brace depth before the token.
-    depth: u32,
+    pub(crate) depth: u32,
 }
 
 fn is_word_byte(b: u8) -> bool {
@@ -115,7 +115,7 @@ fn is_word_byte(b: u8) -> bool {
 
 /// Tokens of the source, skipping whitespace, comments and preprocessor lines (glslang's
 /// expanded text keeps `#line` lines).
-fn tokens(source: &str) -> Vec<Token> {
+pub(crate) fn tokens(source: &str) -> Vec<Token> {
     let bytes = source.as_bytes();
     let mut out = Vec::new();
     let (mut i, mut depth, mut line_start) = (0usize, 0u32, true);
@@ -186,13 +186,17 @@ fn tokens(source: &str) -> Vec<Token> {
     out
 }
 
-fn text<'a>(source: &'a str, t: &Token) -> &'a str {
+pub(crate) fn text<'a>(source: &'a str, t: &Token) -> &'a str {
     &source[t.start..t.end]
 }
 
 /// The source without the byte ranges given (sorted, not overlapping), with `inserts` (byte
 /// offset, text) added.
-fn edit(source: &str, mut removed: Vec<Range<usize>>, mut inserts: Vec<(usize, String)>) -> String {
+pub(crate) fn edit(
+    source: &str,
+    mut removed: Vec<Range<usize>>,
+    mut inserts: Vec<(usize, String)>,
+) -> String {
     removed.sort_by_key(|r| r.start);
     inserts.sort_by_key(|(at, _)| *at);
     let mut out = String::with_capacity(source.len());
@@ -290,7 +294,7 @@ struct StructDef<'a> {
 }
 
 /// The index of the token closing the bracket opened at `open`.
-fn matching(source: &str, toks: &[Token], open: usize) -> Option<usize> {
+pub(crate) fn matching(source: &str, toks: &[Token], open: usize) -> Option<usize> {
     let (o, c) = match text(source, &toks[open]) {
         "(" => ("(", ")"),
         "[" => ("[", "]"),
@@ -317,7 +321,7 @@ fn matching(source: &str, toks: &[Token], open: usize) -> Option<usize> {
 
 /// The first token of the item that ends before token `k` at `depth` (after the previous `;`,
 /// `{` or `}` at that depth).
-fn item_start(source: &str, toks: &[Token], k: usize, depth: u32) -> usize {
+pub(crate) fn item_start(source: &str, toks: &[Token], k: usize, depth: u32) -> usize {
     let mut j = k;
     while j > 0 {
         let t = &toks[j - 1];

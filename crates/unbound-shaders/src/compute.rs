@@ -887,6 +887,47 @@ RWStructuredBuffer<uint> _Out;
         assert_eq!(p.select(&["OFFSET_ON".into()]), ["OFFSET_ON"]);
     }
 
+    /// A buffer with a counter passed to a function, as the Visual Effect Graph's output kernels
+    /// append to their indirect buffers: the function works on the buffer the call names.
+    #[test]
+    fn compiles_a_counter_buffer_passed_to_a_function() {
+        let source = "#pragma kernel Append\n\
+            struct Kvp { float sortKey; uint index; };\n\
+            RWStructuredBuffer<Kvp> outputBuffer0;\n\
+            RWStructuredBuffer<Kvp> outputBuffer1;\n\
+            void AppendOutput(RWStructuredBuffer<Kvp> outputBuffer, Kvp output, uint slot, uint increment = 1)\n\
+            {\n\
+                uint at;\n\
+                InterlockedAdd(outputBuffer[slot].index, increment, at);\n\
+                outputBuffer[at] = output;\n\
+            }\n\
+            [numthreads(64,1,1)]\n\
+            void Append(uint3 id : SV_DispatchThreadID)\n\
+            {\n\
+                Kvp k; k.sortKey = 1; k.index = id.x;\n\
+                AppendOutput(outputBuffer0, k, 0);\n\
+                AppendOutput(outputBuffer1, k, 0, 2);\n\
+            }\n";
+        let program = ComputeProgram {
+            file: PathBuf::from("Append.compute"),
+            source: source.into(),
+        };
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let k = compiler
+            .compile_kernel(&program, "Append", &[], &[])
+            .unwrap();
+        for buffer in ["outputBuffer0", "outputBuffer1"] {
+            assert!(
+                k.resources.iter().any(
+                    |r| r.name == buffer && r.kind == ResourceKind::Buffer { read_only: false }
+                ),
+                "{buffer} in {:?}",
+                k.resources
+            );
+        }
+        assert_eq!(k.wgsl.matches("atomicAdd(").count(), 2, "{}", k.wgsl);
+    }
+
     #[test]
     fn compiles_a_kernel() {
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
