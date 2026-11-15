@@ -21,6 +21,8 @@ records:
   errors logged;
 - a UI Toolkit panel (`emoji-panel.png`) drawing the three emoji with a COLOR font asset, an SDFAA
   one and the Font itself (atlases large enough for all three, so no OS fallback font is used);
+- an independent imported bitmap font requested at its exact 109-point strike twice, including
+  glyph metrics, UVs, Alpha8 texture dimensions and captured pixels;
 - the logs of the run;
 - 72 independent generator controls with fresh fonts: updated and unchanged bounds, overflowing
   and bounded layout, upper-left/centre/lower-right anchors, pivots 0/0.5/1, two requested heights,
@@ -38,7 +40,8 @@ history details below are observations from this 6000.0.71f1 capture.
 A bitmap-only face takes its strike's size whatever is
 asked (face info and font assets report 109 points); colour atlases hold the colour bitmaps with
 their colours premultiplied by alpha; UI Toolkit draws text of a non-Alpha8 atlas as a textured
-mesh; a legacy font's glyph on a bitmap-only face has no pixels and its unscaled advance; the
+mesh; a legacy request without an exact bitmap strike has no pixels and its unscaled advance;
+a request at the exact 109-point strike has Alpha8 coverage pixels in a 256 x 512 texture; the
 importer's character spacing widens the texture packing, not the advances; a canvas requests its
 text at the font size times the scale factor only; a full 4096 x 4096 legacy texture is neither
 grown nor reset (no rebuild event), and each request that does not fit logs an error. A generator
@@ -60,3 +63,9 @@ python3 tests/projects/textcolor/run.py gate
 Numbers compare within 1e-4. The appended generator controls preserve all 19 earlier reference
 rows byte for byte. The direct-generator placement and subsequent packing residuals are resolved;
 the earlier OS fallback reload warning also no longer occurs. Measured on the NVIDIA driver only.
+
+The exact-strike control uses a separate imported font asset so its atlas starts empty. Two
+independent GPU Editor repeats are byte-identical. It adds one observation while preserving
+all 102 preceding reference rows and the panel image byte for byte; Unbound already matched
+this behavior. COLR vector glyphs, several strikes per face and a full 4096 legacy texture
+retaining glyphs from older frames remain unmeasured.

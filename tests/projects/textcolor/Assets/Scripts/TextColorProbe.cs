@@ -61,6 +61,7 @@ public class TextColorProbe : MonoBehaviour
         for (int i = 0; i < logs.Count; i++) sb.Append(i == 0 ? "" : ",").Append(Str(logs[i]));
         Value("logs", sb.Append("]").ToString());
         Step("generator-controls", () => GeneratorControls(spacing0));
+        Step("legacy-exact-strike", () => LegacyEmoji(Resources.Load<Font>("Fonts/EmojiStrikeProbe"), 109, 109, "legacy/exact-strike"));
         m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
@@ -203,14 +204,14 @@ public class TextColorProbe : MonoBehaviour
         }
     }
 
-    // The emoji font as a legacy dynamic font: a heart asked for at 32 and 64, its character info
-    // and the font texture's format and pixels around it.
-    void LegacyEmoji(Font emoji)
+    // The bitmap font as a legacy dynamic font: request a heart at both sizes and capture
+    // its character info and the texture's format and pixels around it.
+    void LegacyEmoji(Font emoji, int firstSize = 32, int secondSize = 64, string key = "legacy/emoji")
     {
-        emoji.RequestCharactersInTexture("❤", 32);
-        emoji.RequestCharactersInTexture("❤", 64);
-        bool heart = emoji.GetCharacterInfo('❤', out var info, 32);
-        bool large = emoji.GetCharacterInfo('❤', out var info64, 64);
+        emoji.RequestCharactersInTexture("❤", firstSize);
+        emoji.RequestCharactersInTexture("❤", secondSize);
+        bool heart = emoji.GetCharacterInfo('❤', out var info, firstSize);
+        bool large = emoji.GetCharacterInfo('❤', out var info64, secondSize);
         var texture = emoji.material != null ? emoji.material.mainTexture as Texture2D : null;
         var sb = new StringBuilder("{\"heart\":").Append(heart ? Info(info) : "null").Append(",\"heart64\":").Append(large ? Info(info64) : "null")
             .Append(",\"texture\":");
@@ -238,7 +239,7 @@ public class TextColorProbe : MonoBehaviour
             }
             sb.Append('}');
         }
-        Value("legacy/emoji", sb.Append('}').ToString());
+        Value(key, sb.Append('}').ToString());
     }
 
     static string Info(CharacterInfo c) =>
