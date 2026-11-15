@@ -465,6 +465,92 @@ class JanitorTests(unittest.TestCase):
                 self.j.remove(run, kind='run', hours=72)
         self.assertTrue(run.is_dir())
 
+    def assert_target_kept(self, target, act):
+        """act() runs after discovery; the target must survive, by a keep or a deferral."""
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            act()
+            self.j.apply = True
+            try:
+                self.assertFalse(self.j.remove(target, kind='task'))
+            except janitor.ReferenceChanged:
+                pass
+        self.assertTrue(target.exists())
+
+    def test_a_path_recreated_after_a_settled_move_is_watched_again(self):
+        target = self.directory('q1/target')
+        work = self.cache/'work'
+        (work/'x').mkdir(parents=True)
+        def act():
+            (work/'x').rename(self.root/'outside-x')
+            self.j.refresh_links()
+            (work/'x').mkdir()
+            self.j.refresh_links()
+            (work/'x'/'link').symlink_to(target/'output')
+        self.assert_target_kept(target, act)
+
+    def test_a_directory_moved_back_after_a_settled_move_is_watched_again(self):
+        target = self.directory('q1/target')
+        work = self.cache/'work'
+        (work/'x').mkdir(parents=True)
+        def act():
+            (work/'x').rename(self.root/'outside-x')
+            self.j.refresh_links()
+            (self.root/'outside-x').rename(work/'x')
+            self.j.refresh_links()
+            (work/'x'/'sub').mkdir()
+            (work/'x'/'sub'/'link').symlink_to(target/'output')
+        self.assert_target_kept(target, act)
+
+    def test_unverified_names_follow_a_renamed_directory(self):
+        target = self.directory('q1/target')
+        holder = self.cache/'d'
+        holder.mkdir()
+        def act():
+            (holder/'n').symlink_to(target/'output')
+            holder.rename(self.cache/'d2')
+            (self.cache/'d2'/'n').rename(self.root/'outside-n')
+        self.assert_target_kept(target, act)
+
+    def test_a_new_directory_moved_out_before_its_walk_defers(self):
+        target = self.directory('q1/target')
+        fresh = self.cache/'x'
+        def act():
+            fresh.mkdir()
+            (fresh/'l').symlink_to(target/'output')
+            self.j.watch.poll()  # sees a directory, not yet walked
+            fresh.rename(self.root/'outside-x')
+        self.assert_target_kept(target, act)
+
+    def link_target_outside_roots_replaced(self, replace):
+        target = self.directory('q1/target')
+        outside = self.root/'ext'/'T'
+        outside.mkdir(parents=True)
+        (self.cache/'l').symlink_to(outside)
+        def act():
+            if replace == 'move':
+                outside.rename(outside.parent/'T.old')
+            else:
+                outside.rmdir()
+            outside.mkdir()
+            (outside/'link').symlink_to(target/'output')
+        self.assert_target_kept(target, act)
+
+    def test_a_link_target_outside_the_roots_moved_and_recreated_defers(self):
+        self.link_target_outside_roots_replaced('move')
+
+    def test_a_link_target_outside_the_roots_deleted_and_recreated_defers(self):
+        self.link_target_outside_roots_replaced('delete')
+
+    def test_a_link_moved_out_and_replaced_by_a_file_before_inspection_defers(self):
+        target = self.directory('q1/target')
+        def act():
+            (self.cache/'n').symlink_to(target/'output')
+            (self.cache/'n').rename(self.root/'outside-n')
+            (self.cache/'n').write_text('regular file under the same name')
+        self.assert_target_kept(target, act)
+
     def test_too_many_unverified_names_fail_closed(self):
         watcher = janitor.ReferenceWatch()
         self.addCleanup(watcher.close)
