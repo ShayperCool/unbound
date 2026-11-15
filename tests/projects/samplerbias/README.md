@@ -63,18 +63,18 @@ and verify that the GPU still holds its prior pixels. Only the following Apply
 makes the replacement pixels visible. The complete cache control contains 171
 observations. Its paired Native reference preserves all 153 earlier observations.
 
-`--target-control` samples render textures (`Probe/SamplerBiasTarget`): 16x8 float targets
-with mipmaps holding a constant per mip, without depth and with 16- and 24-bit depth buffers, 2D
-and 2D array, Bilinear and Trilinear, anisoLevel 0, 1, 2 and 16, each sampled under ForceEnable,
+`--target-control` samples render textures (`Probe/SamplerBiasTarget`): 16x8 float targets with
+mipmaps holding a constant per mip, without depth and with 16- and 24-bit depth buffers, 2D and
+2D array, Bilinear and Trilinear, anisoLevel 0, 1, 2 and 16, each sampled under ForceEnable,
 Enable and Disable (the forced range set to 4..16) through the legacy and object-style 2D or
 array samplers, isotropically and with a footprint eight times longer across, so that levels 1,
 2, 4 and 16 select different mips; and two targets made while forced on whose level is raised to
-16 on the live texture; then Texture2DArray assets of the same shape, filters and levels. Its reference lives in `Target/` (and `vulkan/Target/`): a color target
-with a depth buffer samples as level 1 under every policy and level; one without depth follows
-the global policy as a texture asset does (level 0 opts out of the forced level), 2D arrays
-included, as Texture2DArray assets do. The profile switches the policy itself: pass
-`--target-control` alone to run.py and verify.py. 5,268 rows, 26,384 observations on each device
-(NVIDIA).
+16 on the live texture; then Texture2DArray assets of the same shape, filters and levels. Its
+reference lives in `Target/` (and `vulkan/Target/`): a color target with a depth buffer samples
+as level 1 under every policy and level; one without depth follows the global policy as a
+texture asset does (level 0 opts out of the forced level), 2D arrays included, as Texture2DArray
+assets do. The profile switches the policy itself: pass `--target-control` alone to run.py and
+verify.py. 5,268 rows, 26,384 observations on each device (NVIDIA).
 
 The combined engine replay matches all 371,166 original sampler observations and
 all 171 cache observations. No previously accepted numeric error increases. The
