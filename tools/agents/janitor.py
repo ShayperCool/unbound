@@ -47,9 +47,9 @@ MAX_BUFFERED_EVENT_BYTES = 256*2**20
 # Unverified names tracked at most (each a short-lived name gone before it could be inspected);
 # beyond that monitoring counts as broken.
 MAX_UNVERIFIED_NAMES = 2_000_000
-# Dangling link destinations tracked at most (links to files count until revived() sees them);
-# counts as broken.
-MAX_DANGLING_DESTINATIONS = 1_000_000
+# Link destinations watched through sentinels at most (about 200 in the measured cache: missing
+# or file destinations outside the walked trees); beyond that monitoring counts as broken.
+MAX_SENTINEL_DESTINATIONS = 100_000
 MAX_REDISCOVERIES = 2
 # Keep land's lock independent of a service manager or a historical backlog.
 GATE_HANDOFF_SECONDS = 2
@@ -294,6 +294,7 @@ class ReferenceWatch:
         self.fd = self.libc.inotify_init1(os.O_NONBLOCK | os.O_CLOEXEC)
         if self.fd < 0:
             raise OSError(ctypes.get_errno(), 'cannot monitor reference directories')
+        # Watches of removed candidates: events from them are their own removal.
         self.directories, self.references, self.retired = {}, set(), set()
         self.moves, self.handled_moves, self.invalidated = {}, set(), set()
         self.excluded = tuple(p.resolve() for p in excluded)
@@ -312,10 +313,15 @@ class ReferenceWatch:
         # watches of a tree that moved out can be removed without touching a directory created
         # at the same place later.
         self.parent_of, self.children = {}, {}
-        # Link destinations outside excluded trees that did not exist when their link was read:
-        # a directory appearing there later (created, or moved in from outside the view) is in
-        # the protected view through that link and must be walked.
-        self.dangling = set()
+        # Sentinels: watches on the nearest existing directory above a link destination that no
+        # processed watch covers (a missing destination, or a file, outside the walked trees).
+        # {descriptor: directory} and {descriptor: {next name toward it: {destinations}}}.
+        # Whatever appears at that name is looked at, so a tree arriving where a link in the
+        # view points is walked.
+        self.sentinel_dirs, self.sentinel_names, self.sentinel_count = {}, {}, 0
+        # Destinations where something already stood when their sentinel was added: no event
+        # will report it, so the next poll() or walk looks at them.
+        self.arrived = set()
         self.broken = False
         # Millions of watched directories on a busy volume fill the kernel's event queue
         # (fs.inotify.max_queued_events) within seconds. A reader thread moves events into
@@ -395,6 +401,9 @@ class ReferenceWatch:
         self.link(descriptor, None)
         for child in self.children.pop(descriptor, set()):
             self.parent_of.pop(child, None)
+        self.retired.discard(descriptor)
+        if descriptor in self.sentinel_dirs:
+            self.unsentinel(descriptor)
 
     def unverify(self, directory, name):
         names = self.unverified.setdefault(str(directory), set())
@@ -405,41 +414,95 @@ class ReferenceWatch:
                 self.broken = True
                 raise ReferenceChanged('too many short-lived names to track; remaining work retained')
 
-    def dangle(self, target, *, missing=False):
-        """Track a link destination seen missing (missing=True: by the caller, which may be a
-        while ago); revived() looks at it again, so something that appeared meanwhile is
-        walked. Destinations in excluded trees are not protected."""
-        if (not missing and os.path.lexists(target)) or any(inside(target, p) for p in self.excluded):
+    def observe(self, destination):
+        """Make sure a change at a link destination that is not walked as a directory is seen:
+        the nearest existing directory above it is watched, by a processed watch already or
+        else by a sentinel for the next name toward the destination."""
+        destination = os.fspath(destination)
+        if any(inside(destination, p) for p in self.excluded):
             return
-        self.dangling.add(Path(target))
-        if len(self.dangling) > MAX_DANGLING_DESTINATIONS:
+        anchor, name = os.path.dirname(destination), os.path.basename(destination)
+        while not os.path.isdir(anchor):
+            if os.path.dirname(anchor) == anchor:
+                return
+            anchor, name = os.path.dirname(anchor), os.path.basename(anchor)
+        descriptor = self.watched.get(anchor)
+        if descriptor is not None and descriptor not in self.retired:
+            return  # a processed watch walks whatever appears there
+        mask = self.CREATE | self.MOVED_FROM | self.MOVED_TO | self.DELETE_SELF | self.MOVE_SELF | self.ONLYDIR | self.NOFOLLOW
+        descriptor = self.libc.inotify_add_watch(self.fd, os.fsencode(anchor), mask)
+        if descriptor < 0:
+            number = ctypes.get_errno()
+            if number == errno.ENOENT:
+                return self.observe(destination)  # the anchor went away meanwhile: go higher
             self.broken = True
-            raise ReferenceChanged('too many dangling link destinations to track; remaining work retained')
+            raise ReferenceChanged(f'cannot watch above link destination {destination}: {os.strerror(number)}')
+        if descriptor in self.directories and descriptor not in self.retired:
+            return
+        self.sentinel_dirs[descriptor] = anchor
+        names = self.sentinel_names.setdefault(descriptor, {}).setdefault(name, set())
+        if destination not in names:
+            names.add(destination)
+            self.sentinel_count += 1
+            if self.sentinel_count > MAX_SENTINEL_DESTINATIONS:
+                self.broken = True
+                raise ReferenceChanged('too many link destinations to watch; remaining work retained')
+            # Watch first, then look: what stood there before the watch sends no event.
+            if os.path.lexists(os.path.join(anchor, name)):
+                self.arrived.add(destination)
 
-    def revived(self):
-        """Directories to walk where a tracked dangling destination exists now. A link appearing
-        there adds its destinations to the references (and is tracked again if it dangles); a
-        file there holds no links."""
-        walk = []
-        for path in [path for path in self.dangling if os.path.lexists(path)]:
-            self.dangling.discard(path)
-            try:
-                if path.is_symlink():
-                    raw = path.readlink()
-                    target = raw if raw.is_absolute() else path.parent/raw
-                    self.references.update((Path(os.path.abspath(target)), target.resolve()))
-                    if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
-                        walk.append(target.resolve())
-                    else:
-                        # Not walked now: whatever appears there later is looked at again.
-                        self.dangle(target.resolve(), missing=True)
-                elif path.is_dir():
-                    walk.append(path)
-            except OSError as error:
-                if not gone(error):
-                    raise
-                self.dangling.add(path)  # changed again meanwhile: look at it next time
-        return walk
+    def unsentinel(self, descriptor):
+        """Drop a sentinel and anchor its destinations again where they are now."""
+        self.sentinel_dirs.pop(descriptor, None)
+        destinations = [d for names in self.sentinel_names.pop(descriptor, {}).values() for d in names]
+        self.sentinel_count -= len(destinations)
+        for destination in destinations:
+            self.observe(destination)
+
+    def reach(self, destination, pending):
+        """Something appeared on the way to a link destination: look at it once more."""
+        try:
+            if os.path.islink(destination):
+                link = Path(destination)
+                raw = link.readlink()
+                target = raw if raw.is_absolute() else link.parent/raw
+                self.references.update((Path(os.path.abspath(target)), target.resolve()))
+                if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
+                    pending.add(target.resolve())
+                else:
+                    self.observe(target.resolve())
+            elif os.path.isdir(destination) and not any(inside(destination, p) for p in self.excluded):
+                pending.add(Path(destination))
+        except OSError as error:
+            if not gone(error):
+                raise
+        # Keep watching the way there: it can change again.
+        self.observe(destination)
+
+    def take_arrivals(self, pending):
+        """Look at destinations reached before their sentinel existed."""
+        while self.arrived:
+            self.reach(self.arrived.pop(), pending)
+
+    def sentinel_event(self, descriptor, mask, name, pending):
+        if mask & (self.DELETE_SELF | self.MOVE_SELF | self.IGNORED):
+            if not mask & self.IGNORED:
+                self.libc.inotify_rm_watch(self.fd, descriptor)
+            self.unsentinel(descriptor)
+            return
+        destinations = self.sentinel_names.get(descriptor, {}).get(name)
+        if destinations and mask & (self.CREATE | self.MOVED_TO):
+            for destination in list(destinations):
+                self.reach(destination, pending)
+
+    def retire(self, path):
+        """Ignore the events of a candidate's own removal: its watch and those below it."""
+        root = self.watched.get(os.fspath(path))
+        pending = [] if root is None else [root]
+        while pending:
+            descriptor = pending.pop()
+            self.retired.add(descriptor)
+            pending.extend(self.children.get(descriptor, ()))
 
     def listed(self, directory):
         self.unlisted.discard(os.fspath(directory))
@@ -449,7 +512,7 @@ class ReferenceWatch:
 
         An unpaired move left the watched view: its destination is excluded or outside the scan
         roots, where links are not protected anyway, unless a link in the view names it; such
-        dangling destinations are walked as soon as they exist (revived()). What it moved was either listed by a walk
+        destinations are observed (observe()), so a tree arriving there is walked. What it moved was either listed by a walk
         (its links are already protected) or appeared later, and then poll() inspected it or
         recorded its name as unverified. A move is unsafe when it moved an unverified name, a
         new directory no walk has listed yet, or a directory holding either. A watched directory
@@ -570,8 +633,15 @@ class ReferenceWatch:
                         if mask & self.OVERFLOW:
                             self.broken = True
                             raise ReferenceChanged('reference change queue overflowed; batch deferred')
+                        if descriptor in self.retired:
+                            # The removal of a candidate; only the end of its watches matters.
+                            if mask & (self.DELETE_SELF | self.IGNORED):
+                                self.drop_watch(descriptor)
+                            continue
                         directory = self.directories.get(descriptor)
-                        if directory is None or any(inside(directory, p) for p in self.retired):
+                        if directory is None:
+                            if descriptor in self.sentinel_dirs:
+                                self.sentinel_event(descriptor, mask, name, pending)
                             continue
                         if any(inside(directory, root) for root in self.metadata_roots):
                             self.metadata_dirty = True
@@ -621,8 +691,8 @@ class ReferenceWatch:
                                 if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
                                     pending.add(target.resolve())
                                 else:
-                                    # Not walked now: whatever appears there later is looked at again.
-                                    self.dangle(target.resolve(), missing=True)
+                                    # Not walked now: whatever appears there later is looked at.
+                                    self.observe(target.resolve())
                             elif path.is_dir() and not any(inside(path, p) for p in self.excluded):
                                 self.add(path)
                                 self.unlisted.add(str(path))
@@ -633,6 +703,7 @@ class ReferenceWatch:
                             if not gone(error):
                                 raise
                             self.unverify(directory, name)
+                self.take_arrivals(pending)
             except BaseException:
                 self.broken = True
                 raise
@@ -672,16 +743,15 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
     join = os.path.join
     # Directories that vanished before this walk; ones vanishing during it stay unsafe.
     vanished_before = set(watcher.vanished) if watcher else set()
-    # Link destinations queued for walking: one gone by its turn is tracked as dangling.
-    link_targets = set()
     try:
         if prefetch:
             index.warm_all()
-        pending = [str(root) for root in roots if root.exists()]
+        pending = [str(root) for root in roots]
         while True:
-            if not pending and watcher:
-                # A dangling link destination that appeared meanwhile is in view now: walk it.
-                pending.extend(map(str, watcher.revived()))
+            if not pending and watcher and watcher.arrived:
+                arrivals = set()
+                watcher.take_arrivals(arrivals)
+                pending.extend(map(str, arrivals))
             if not pending:
                 break
             batch = pending[-index.batch_size:]
@@ -696,8 +766,8 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
             for directory, info in zip(batch, index.stat_many(batch)):
                 if isinstance(info, OSError):
                     if gone(info):
-                        if watcher and directory in link_targets:
-                            watcher.dangle(Path(directory), missing=True)
+                        if watcher:
+                            watcher.observe(directory)  # a link destination can come back
                         continue
                     raise info
                 identity = (info.st_dev, info.st_ino)
@@ -717,8 +787,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                     entries = index.entries(directory, info)
                 except OSError as error:
                     if watcher and gone(error):
-                        if directory in link_targets:
-                            watcher.dangle(Path(directory), missing=True)
+                        watcher.observe(directory)
                         continue
                     if watcher and str(error).startswith('run-cache directory changed during indexing:'):
                         pending.append(directory)
@@ -747,10 +816,9 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                             watcher.references.update((lexical, target))
                         if is_dir and not any(inside(target, p) for p in excluded):
                             pending.append(str(target))
-                            link_targets.add(str(target))
                         elif watcher:
-                            # Not walked now: whatever appears there later is looked at again.
-                            watcher.dangle(target, missing=True)
+                            # Not walked now: whatever appears there later is looked at.
+                            watcher.observe(target)
                     elif entry.kind == 'dir':
                         path = join(directory, entry.name)
                         if path not in excluded_names:
@@ -960,7 +1028,7 @@ class Janitor:
     def refresh_links(self):
         if self.watch is None:
             return
-        pending = self.watch.poll() | set(self.watch.revived())
+        pending = self.watch.poll()
         # A pending walk can rediscover moved directories; it settles the moves itself.
         unsafe = [] if pending else self.watch.settle_moves()
         if pending or unsafe:
@@ -1080,7 +1148,7 @@ class Janitor:
                     self.emit('removing', path=str(path), kind=kind, allocated_bytes=allocated,
                               reclaimable_bytes=reclaimable)
                     if self.watch:
-                        self.watch.retired.add(path)
+                        self.watch.retire(path)
                     if directory:
                         shutil.rmtree(path)
                     else:

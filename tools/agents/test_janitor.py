@@ -807,6 +807,69 @@ class JanitorTests(unittest.TestCase):
                 pass
         self.assertTrue(target.exists())
 
+    def test_a_file_destination_outside_the_view_replaced_by_a_moved_tree_is_walked(self):
+        target = self.directory('q1/target')
+        destination = self.root/'outside'/'X'
+        destination.parent.mkdir(parents=True)
+        destination.write_text('file')
+        tree = self.cache/'T'
+        tree.mkdir()
+        (self.cache/'L').symlink_to(destination)
+        def act():
+            destination.unlink()
+            tree.rename(destination)
+            self.j.refresh_links()
+            (destination/'link').symlink_to(target/'output')
+        self.assert_target_kept(target, act)
+
+    def test_a_new_links_directory_gone_before_its_walk_is_observed(self):
+        target = self.directory('q1/target')
+        destination = self.root/'outside'/'D'
+        destination.mkdir(parents=True)
+        tree = self.cache/'T'
+        tree.mkdir()
+        original = janitor.ReferenceWatch.poll
+        state = {'armed': False}
+        def poll(watch):
+            result = original(watch)
+            if state['armed'] and destination.exists():
+                destination.rmdir()  # the walk of the poll's result finds it gone
+                state['armed'] = False
+            return result
+        def act():
+            (self.cache/'L').symlink_to(destination)
+            state['armed'] = True
+            with patch.object(janitor.ReferenceWatch, 'poll', poll):
+                self.j.refresh_links()
+            tree.rename(destination)
+            self.j.refresh_links()
+            (destination/'link').symlink_to(target/'output')
+        self.assert_target_kept(target, act)
+
+    def test_sentinels_are_few_and_follow_their_anchor(self):
+        # A missing destination two levels below an unwatched directory: the sentinel moves
+        # down as the levels appear, and a directory at the destination is walked.
+        target = self.directory('q1/target')
+        outside = self.root/'outside'
+        outside.mkdir()
+        (self.cache/'L').symlink_to(outside/'a'/'b'/'D')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            self.assertEqual(list(self.j.watch.sentinel_dirs.values()), [str(outside)])
+            (outside/'a').mkdir()
+            self.j.refresh_links()
+            self.assertIn(str(outside/'a'), self.j.watch.sentinel_dirs.values())
+            (outside/'a'/'b'/'D').mkdir(parents=True)
+            self.j.refresh_links()
+            (outside/'a'/'b'/'D'/'link').symlink_to(target/'output')
+            self.j.apply = True
+            try:
+                self.assertFalse(self.j.remove(target, kind='task'))
+            except janitor.ReferenceChanged:
+                pass
+        self.assertTrue(target.exists())
+
     def test_too_many_unverified_names_fail_closed(self):
         watcher = janitor.ReferenceWatch()
         self.addCleanup(watcher.close)
