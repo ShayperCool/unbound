@@ -5729,7 +5729,7 @@ mod tests {
             assert_eq!(slots.handle("_GrabTexture", F::Rgba8UnormSrgb), rgba);
             assert_eq!(slots.handle("_GrabTexture", F::Bgra8UnormSrgb), bgra);
         }
-        // Other storages share the red-first slot (their format code tells them apart).
+        // Other storages share the red-first slot (`grab` remakes its texture: `same_storage`).
         assert_eq!(slots.handle("_GrabTexture", F::Rgba16Float), rgba);
         let named = slots.handle("_Named", F::Rgba8Unorm);
         assert!(![rgba, bgra].contains(&named));
