@@ -255,7 +255,9 @@ of render textures (color, depth, multisampled samples, depth-only), what the re
 pointers give (`RenderBufferFromHandle` returns the pointer; their texture, resolved texture,
 stencil texture), an external texture of the plugin's, and the pixels.
 
-The screen's color texture is BGRA8Unorm (format 80), as Unbound's screen on Metal is. Screen
+The screen's color texture is BGRA8Unorm (format 80), as Unbound's screen on Metal is; a screen
+camera with command buffers draws into a texture standing for the screen, stored as the screen is,
+which a callback in its buffer finds as that format too. Screen
 copies (`screencopy.*`, `screencamera.*`, appended to the reference by two further identical
 captures): in this batch-mode Editor, which has no Game view, `CommandBuffer.CopyTexture` naming
 `CameraTarget`, from an executed buffer and inside a camera drawing to the screen (the plugin finds
@@ -316,13 +318,12 @@ drawing left). Plugin events run later there, on the Editor's render thread: `ca
 `executed.pixels` show colors the scripts set after the events. The engine run is compared with
 the batch-mode reference only.
 
-Unbound matches 332/371 records with 39 declared residuals before Q515 (328/371 with 43 expected
+Unbound matches 333/371 records with 38 declared residuals before Q515 (328/371 with 43 expected
 after it, the four `outside.*` rows; not rerun on macOS for that change) (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
-Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a screen
-camera with command buffers drawing into Unbound's texture standing for the screen, a Blit from
-it green 1/255 apart (the batch-mode screen is not sRGB-encoded), ETC2_RGBA1, signed EAC and
+Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a Blit from a
+screen camera's target green 1/255 apart (the batch-mode screen is not sRGB-encoded), ETC2_RGBA1, signed EAC and
 PVRTC arrays kept as texels, a dynamically scaled texture's content after a change of scale
 (Unbound's is remade cleared) and what a Blit into one leaves there (zero in the Editor). The screen is shared:
 outside render texture targets the current encoder is over the screen's color texture and depth
