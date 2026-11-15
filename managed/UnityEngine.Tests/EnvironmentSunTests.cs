@@ -66,9 +66,10 @@ namespace Unbound.Tests
 
         /// <summary>The sky is drawn with RenderSettings.sun, not with the main light: a named
         /// fully baked sun lights nothing at run time (tests/projects/lightingdatanan) and stays
-        /// the sky's sun beside a realtime directional light, which is the main light
-        /// (tests/projects/rendersettingssun named dim, baked); without a named sun the brighter
-        /// of the two is the sky's, baked or not.</summary>
+        /// the sky's sun beside a realtime directional light, which is the main light (as a named
+        /// dim realtime sun does: tests/projects/rendersettingssun named dim). Without a named sun
+        /// the brighter of the two is the sky's, as the documented "brightest directional light"
+        /// rule gives (unmeasured for a fully baked light beside a realtime one).</summary>
         [Fact]
         public void SkyTakesTheSunNotTheMainLight()
         {
