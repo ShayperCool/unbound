@@ -8,7 +8,7 @@ Navigation follow-up, 2026-11-14 (Q426): link activation and stale pending resul
 reduce strict navlinks differences from 325 to 258; all 2306 added control values
 match. The navigation gate retains 212 navmesh frame scenarios, 3 avoidance
 configurations, 23 bent-route, 2 wide-link, 17 post-avoidance, 14 height-agent and
-523 stacked-link differences. Runtime height generation remains unsupported.
+523 stacked-link differences. Runtime height generation remains unsupported (Q519 later implements it; tests/projects/navheight).
 Current scope and validation are recorded in [COMPATIBILITY_GAPS.md](COMPATIBILITY_GAPS.md)
 and the navigation probe READMEs; the historical log below remains unchanged.
 

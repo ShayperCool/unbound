@@ -63,7 +63,7 @@ Q376 and Q385 runtime-build corrections, Unity 6000.0.71f1:
   and 96 indices. All nine bounds controls match, including negative, swapped-axis
   and elevated translations. The merge threshold is selected through Compat for
   6000.0.71f1; other releases retain the previous zero-cell threshold, unmeasured
-  there. Runtime height-mesh generation remains a separate unsupported feature.
+  there. Runtime height-mesh generation remains a separate unsupported feature (Q519 later implements it: tests/projects/navheight).
 - `BuildSurface` restores the committed baked data before creating the agents.
   All existing agent records are unchanged by the correction. The 238 differing
   frame scenarios have distinct first divergences: climber at 13, right at 17,

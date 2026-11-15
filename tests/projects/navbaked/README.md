@@ -95,6 +95,9 @@ ramp the end lies about 7 mm above the agent's height-mesh position, so the agen
 frame 205 as in the Editor. Comparing the steps in the ground plane instead would make navlinks
 `endatlink` land a frame late. Imported height queries remain 103/103; no reference changed.
 
+Q519 builds height meshes at run time (`buildHeightMesh`), measured in tests/projects/navheight;
+the earlier mentions of runtime height generation as unsupported describe their own passes.
+
 | Contract or observation | Scope and control |
 | --- | --- |
 | [autoBraking, Unity 6000.0](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-autoBraking.html) describes slowing near the destination to avoid overshoot | It does not specify velocity preparation order or three-dimensional sampling. The existing ramp, stairs and bump agents exercise arrival on different surfaces. |

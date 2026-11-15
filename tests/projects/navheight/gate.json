@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/navheight/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/AI/NavMeshBuilder.cs",
+    "managed/UnityEngine/AI/NavMeshHeightMesh.cs",
+    "managed/UnityEngine/AI/NavWorld.cs"
+  ]
+}
