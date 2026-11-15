@@ -986,7 +986,7 @@ namespace UnityEngine
             internal AnimationState State;
             internal double From, To;
             internal bool Fresh, Stopped;
-            internal float SampleTime, Weight, WeightBefore;
+            internal float SampleTime, Weight;
         }
 
         readonly List<Playing> m_Playing = new List<Playing>();
@@ -1014,7 +1014,6 @@ namespace UnityEngine
                 if (!s.m_Enabled || s.m_WaitingInQueue || s.m_Clip == null || !s.m_Clip.m_Legacy) continue;
                 double from = s.m_Time;
                 bool stopped = false;
-                float before = s.m_Weight;
                 if (advance)
                 {
                     // A state enabled since the last update is sampled where it starts: neither
@@ -1028,7 +1027,7 @@ namespace UnityEngine
                 m_Playing.Add(new Playing
                 {
                     State = s, From = from, To = to, Fresh = s.m_Fresh, Stopped = stopped,
-                    SampleTime = sampleTime, Weight = stopped ? StoppedSampleWeight : s.m_Weight, WeightBefore = before,
+                    SampleTime = sampleTime, Weight = stopped ? StoppedSampleWeight : s.m_Weight,
                 });
             }
 
@@ -1069,7 +1068,11 @@ namespace UnityEngine
                 var p = m_Playing[i];
                 var s = p.State;
                 if (advance) s.m_Fresh = false;
-                if (advance && (s.m_Weight > 0f || p.WeightBefore > 0f))
+                // Every state enabled at the update fires the events its time passed, whatever its
+                // weight, also when its fade stops it in this update (matches the Unity 6000.0.71f1
+                // Editor, tests/projects/animpartial legacy.events.zero: weight 0;
+                // legacy.events.fade: the stopping update's events).
+                if (advance)
                 {
                     float length = s.length;
                     if (length > 0f || p.Fresh)

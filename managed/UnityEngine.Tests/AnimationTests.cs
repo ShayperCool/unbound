@@ -612,6 +612,49 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(go);
         }
 
+        /// <summary>A legacy state fires the events its time passes in an update whatever its
+        /// weight: at weight 0, and in the update its fade passes 0 and stops it (the Unity
+        /// 6000.0.71f1 Editor, tests/projects/animpartial legacy.events.zero, legacy.events.fade).</summary>
+        [Fact]
+        public void LegacyStatesFireEventsAtWeightZeroAndInTheUpdateTheirFadeStopsThem()
+        {
+            var go = new GameObject("Legacy");
+            var receiver = go.AddComponent<AnimationEventReceiver>();
+            var animation = go.AddComponent<Animation>();
+            var e = new AnimationClip { legacy = true, wrapMode = WrapMode.Loop, name = "e" };
+            e.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+            foreach (float t in new[] { 0.3125f, 0.4375f, 0.5625f })
+                e.AddEvent(new AnimationEvent { time = t, functionName = "OnHit", floatParameter = t });
+            animation.AddClip(e, "e");
+            animation.AddClip(LegacyClip("q", WrapMode.Loop, ("localPosition.y", AnimationCurve.Constant(0f, 1f, 2f))), "q");
+            animation.Play("e");
+            animation.Step(0.125f); // its first update samples its start
+            animation.Step(0.125f);
+            animation.Step(0.125f); // 0.25
+            animation.CrossFade("q", 0.25f);
+            animation.Step(0.125f); // 0.375 at weight 0.5
+            Assert.Equal(new[] { "OnHit(0.3125)" }, receiver.Calls);
+            animation.Step(0.125f); // 0.5 at weight 0: still enabled (the fade has not passed 0)
+            Near.Equal(0f, animation["e"].weight);
+            Assert.True(animation.IsPlaying("e"));
+            Assert.Equal(new[] { "OnHit(0.3125)", "OnHit(0.4375)" }, receiver.Calls);
+            animation.Step(0.125f); // the fade passes 0 and stops it: 0.5 to 0.625 fires
+            Assert.False(animation.IsPlaying("e"));
+            Assert.Equal(new[] { "OnHit(0.3125)", "OnHit(0.4375)", "OnHit(0.5625)" }, receiver.Calls);
+            animation.Step(0.125f);
+            Assert.Equal(3, receiver.Calls.Count);
+
+            // At weight 0 from the start of its play: its events still fire.
+            receiver.Calls.Clear();
+            animation.Play("e");
+            animation["e"].weight = 0f;
+            animation.Step(0.125f);
+            animation.Step(0.25f);
+            animation.Step(0.25f); // 0.5
+            Assert.Equal(new[] { "OnHit(0.3125)", "OnHit(0.4375)" }, receiver.Calls);
+            Object.DestroyImmediate(go);
+        }
+
         /// <summary>A legacy additive state adds its difference from its clip's first keys, by its
         /// weight up to 1, to what the other states write, or to the current value where none
         /// does (which then accumulates), on a Transform's position (tests/projects/animpartial
