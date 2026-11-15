@@ -40,12 +40,17 @@ namespace UnityEngine.TextCore.LowLevel
         {
             if (lookup.HasValue && lookup.Value != -1 && Compat.FontFeatureLookupIndexQueriesMeasured) return null;
             if (s_Face == null) return all ? Array.Empty<LigatureSubstitutionRecord>() : null;
-            var request = JsonSerializer.Serialize(new { handle = s_Face.Handle, glyphs, lookup = lookup == -1 ? null : lookup });
-            var source = JsonSerializer.Deserialize<LigatureJson[]>(Native.Call("font-ligatures", request), s_Json);
-            int count = source.Length;
-            var result = FeatureBuffer(count, ref s_LigatureRecords, all);
+            var request = new { handle = s_Face.Handle, glyphs, lookup = lookup == -1 ? null : lookup };
+            return FeatureRecords<LigatureJson, LigatureSubstitutionRecord>("font-ligatures", request, all, ref s_LigatureRecords, LigatureRecord);
+        }
+        static LigatureSubstitutionRecord LigatureRecord(LigatureJson r) => new LigatureSubstitutionRecord { componentGlyphIDs = r.Components, ligatureGlyphID = r.Glyph };
+
+        static T[] FeatureRecords<TJson, T>(string operation, object request, bool exact, ref T[] cache, Func<TJson, T> convert)
+        {
+            var source = JsonSerializer.Deserialize<TJson[]>(Native.Call(operation, JsonSerializer.Serialize(request)), s_Json);
+            var result = FeatureBuffer(source.Length, ref cache, exact);
             if (result == null) return null;
-            for (int i = 0; i < count; i++) result[i] = new LigatureSubstitutionRecord { componentGlyphIDs = source[i].Components, ligatureGlyphID = source[i].Glyph };
+            for (int i = 0; i < source.Length; i++) result[i] = convert(source[i]);
             return result;
         }
 
@@ -54,6 +59,22 @@ namespace UnityEngine.TextCore.LowLevel
         internal static LigatureSubstitutionRecord[] GetLigatureSubstitutionRecords(List<uint> glyphIndexes) => Ligatures(FeatureGlyphList(glyphIndexes), null, false);
         internal static LigatureSubstitutionRecord[] GetLigatureSubstitutionRecords(int lookupIndex, uint glyphIndex) => Ligatures(new[] { glyphIndex }, lookupIndex, false);
         internal static LigatureSubstitutionRecord[] GetLigatureSubstitutionRecords(int lookupIndex, List<uint> glyphIndexes) => Ligatures(FeatureGlyphList(glyphIndexes), lookupIndex, false);
+
+        sealed class AdjustmentJson
+        {
+            public uint Glyph { get; set; }
+            public int[] Values { get; set; }
+        }
+        static GlyphAdjustmentRecord[] s_SingleAdjustmentRecords;
+        static GlyphAdjustmentRecord Adjustment(AdjustmentJson r) => new GlyphAdjustmentRecord(r.Glyph,
+            new GlyphValueRecord(r.Values[0], r.Values[1], r.Values[2], r.Values[3]));
+        static GlyphAdjustmentRecord[] SingleAdjustments(int lookup, IEnumerable<uint> glyphs)
+        {
+            if (s_Face == null) return null;
+            return FeatureRecords<AdjustmentJson, GlyphAdjustmentRecord>("font-single-adjustments", new { handle = s_Face.Handle, glyphs, lookup }, false, ref s_SingleAdjustmentRecords, Adjustment);
+        }
+        internal static GlyphAdjustmentRecord[] GetSingleAdjustmentRecords(int lookupIndex, uint glyphIndex) => SingleAdjustments(lookupIndex, new[] { glyphIndex });
+        internal static GlyphAdjustmentRecord[] GetSingleAdjustmentRecords(int lookupIndex, List<uint> glyphIndexes) => SingleAdjustments(lookupIndex, FeatureGlyphList(glyphIndexes));
 
         static T[] FeatureBuffer<T>(int count, ref T[] cache, bool exact)
         {

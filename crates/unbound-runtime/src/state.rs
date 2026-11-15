@@ -986,6 +986,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             Ok(crate::fonts::strike(r.handle, r.pixels)?.to_string())
         }
+        "font-single-adjustments" => {
+            let r: crate::fonts::SingleAdjustmentRequest = serde_json::from_str(request)?;
+            Ok(crate::fonts::single_adjustments(&r)?.to_string())
+        }
         "font-marks" => {
             let r: crate::fonts::MarkRequest = serde_json::from_str(request)?;
             Ok(crate::fonts::marks(&r)?.to_string())

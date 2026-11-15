@@ -607,3 +607,16 @@ pub fn marks(request: &MarkRequest) -> Result<Json> {
         request.preserve_missing,
     ))?)
 }
+
+#[derive(Deserialize)]
+pub struct SingleAdjustmentRequest {
+    handle: u64,
+    glyphs: Vec<u32>,
+    lookup: i32,
+}
+pub fn single_adjustments(request: &SingleAdjustmentRequest) -> Result<Json> {
+    let face = face(request.handle).context("no such face")?;
+    Ok(serde_json::to_value(
+        face.single_adjustments(&request.glyphs, request.lookup),
+    )?)
+}

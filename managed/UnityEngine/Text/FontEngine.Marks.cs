@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using Unbound.Runtime;
 
 namespace UnityEngine.TextCore.LowLevel
@@ -60,13 +59,10 @@ namespace UnityEngine.TextCore.LowLevel
             bool exact, ref T[] cache, Func<MarkJson, T> convert)
         {
             if (s_Face == null) return exact ? Array.Empty<T>() : null;
-            var request = JsonSerializer.Serialize(new { handle = s_Face.Handle, glyphs, lookup, markToMark, zeroTerminated, preserveMissing = Compat.FontMarkNullAnchorMeasured });
-            var source = JsonSerializer.Deserialize<MarkJson[]>(Native.Call("font-marks", request), s_Json);
-            var result = FeatureBuffer(source.Length, ref cache, exact);
-            if (result == null) return null;
-            for (int i = 0; i < source.Length; i++) result[i] = convert(source[i]);
-            return result;
+            var request = new { handle = s_Face.Handle, glyphs, lookup, markToMark, zeroTerminated, preserveMissing = Compat.FontMarkNullAnchorMeasured };
+            return FeatureRecords<MarkJson, T>("font-marks", request, exact, ref cache, convert);
         }
+
         static MarkToBaseAdjustmentRecord BaseRecord(MarkJson r) => new MarkToBaseAdjustmentRecord {
             baseGlyphID = r.Base, markGlyphID = r.Mark,
             baseGlyphAnchorPoint = new GlyphAnchorPoint { xCoordinate = r.BaseAnchor[0], yCoordinate = r.BaseAnchor[1] },

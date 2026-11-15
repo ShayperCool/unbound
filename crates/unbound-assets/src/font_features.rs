@@ -3,7 +3,10 @@
 use crate::font::FontFace;
 use serde::Serialize;
 use ttf_parser::{
-    GlyphId, Tag, gpos::PositioningSubtable, gsub::SubstitutionSubtable, opentype_layout::Coverage,
+    GlyphId, Tag,
+    gpos::{PositioningSubtable, SingleAdjustment},
+    gsub::SubstitutionSubtable,
+    opentype_layout::Coverage,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -23,9 +26,16 @@ pub struct MarkRecord {
     pub missing_anchor: bool,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct AdjustmentRecord {
+    pub glyph: u32,
+    pub values: [i16; 4],
+}
+
 #[derive(Default)]
 pub(crate) struct FontFeatures {
     ligatures: Vec<(u16, u16, LigatureRecord)>,
+    singles: Vec<(u16, u16, AdjustmentRecord)>,
     mark_to_base: Vec<(u16, u16, MarkRecord)>,
     mark_to_mark: Vec<(u16, u16, MarkRecord)>,
 }
@@ -98,25 +108,51 @@ impl FontFeatures {
                     continue;
                 };
                 for subtable_index in 0..lookup.subtables.len() {
+                    let Some(subtable) = lookup.subtables.get(subtable_index) else {
+                        continue;
+                    };
+                    if let PositioningSubtable::Single(single) = subtable {
+                        coverage(single.coverage(), |i, glyph| {
+                            let value = match single {
+                                SingleAdjustment::Format1 { value, .. } => Some(value),
+                                SingleAdjustment::Format2 { values, .. } => values.get(i),
+                            };
+                            if let Some(v) = value {
+                                result.singles.push((
+                                    lookup_index,
+                                    subtable_index,
+                                    AdjustmentRecord {
+                                        glyph: u32::from(glyph.0),
+                                        values: [
+                                            v.x_placement,
+                                            v.y_placement,
+                                            v.x_advance,
+                                            v.y_advance,
+                                        ],
+                                    },
+                                ));
+                            }
+                        });
+                        continue;
+                    }
                     let header = mark_matrix(data, lookup_index, subtable_index);
-                    let (marks, bases, anchors, matrix, output) =
-                        match lookup.subtables.get(subtable_index) {
-                            Some(PositioningSubtable::MarkToBase(t)) => (
-                                t.mark_coverage,
-                                t.base_coverage,
-                                t.marks,
-                                t.anchors,
-                                &mut result.mark_to_base,
-                            ),
-                            Some(PositioningSubtable::MarkToMark(t)) => (
-                                t.mark1_coverage,
-                                t.mark2_coverage,
-                                t.marks,
-                                t.mark2_matrix,
-                                &mut result.mark_to_mark,
-                            ),
-                            _ => continue,
-                        };
+                    let (marks, bases, anchors, matrix, output) = match subtable {
+                        PositioningSubtable::MarkToBase(t) => (
+                            t.mark_coverage,
+                            t.base_coverage,
+                            t.marks,
+                            t.anchors,
+                            &mut result.mark_to_base,
+                        ),
+                        PositioningSubtable::MarkToMark(t) => (
+                            t.mark1_coverage,
+                            t.mark2_coverage,
+                            t.marks,
+                            t.mark2_matrix,
+                            &mut result.mark_to_mark,
+                        ),
+                        _ => continue,
+                    };
                     coverage(marks, |mark_index, mark| {
                         let Some((class, mark_anchor)) = anchors.get(mark_index) else {
                             return;
@@ -168,6 +204,21 @@ impl FontFace {
             lookup,
             true,
             |r| r.components[0],
+            |_| true,
+        )
+    }
+
+    /// Single-position adjustments in font units, including explicitly stored zero values.
+    pub fn single_adjustments(&self, glyphs: &[u32], lookup: i32) -> Vec<AdjustmentRecord> {
+        let features = self
+            .features
+            .get_or_init(|| FontFeatures::read(&self.face()));
+        select(
+            &features.singles,
+            Some(glyphs),
+            Some(lookup),
+            true,
+            |r| r.glyph,
             |_| true,
         )
     }
@@ -303,6 +354,39 @@ mod tests {
             0,
         )
         .unwrap()
+    }
+
+    #[test]
+    fn single_adjustments_preserve_four_axes_extensions_and_zero_records() {
+        let face = FontFace::from_bytes(
+            include_bytes!("../../../tests/projects/fontsingles/Assets/Fonts/Singles.ttf").to_vec(),
+            0,
+        )
+        .unwrap();
+        let ids: Vec<u32> = ['A', 'f', 'i', 'l', 't']
+            .into_iter()
+            .map(|c| u32::from(face.glyph_index(c)))
+            .collect();
+        let records = face.single_adjustments(&ids, 0);
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].values, [11, -12, 13, -14]);
+        assert_eq!(records[1].values, [-21, 22, -23, 24]);
+        let shared = face.single_adjustments(&ids, 1);
+        assert_eq!(shared.len(), 2);
+        assert_eq!(shared[0].values, [7, 8, 9, 10]);
+        assert_eq!(shared[0].values, shared[1].values);
+        let zero = face.single_adjustments(&ids, 2);
+        assert_eq!(zero.len(), 1);
+        assert_eq!(zero[0].glyph, ids[4]);
+        assert_eq!(zero[0].values, [0; 4]);
+        assert!(face.single_adjustments(&ids, 3).is_empty());
+        assert_eq!(
+            face.single_adjustments(&[ids[0], ids[0], ids[1], 0, ids[0]], 0)
+                .len(),
+            3
+        );
+        assert!(face.single_adjustments(&[ids[0] + 65536], 0).is_empty());
+        assert!(face.single_adjustments(&ids, -1).is_empty());
     }
 
     #[test]
