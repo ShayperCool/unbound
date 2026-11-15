@@ -365,41 +365,6 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>The render queue override a built-in Material stores (`m_CustomRenderQueue`,
-        /// read from the install's resource file by the host): -1 is none, the material then
-        /// follows its shader's queue; another value is its override (Material.rawRenderQueue,
-        /// 6000.0). False, with an error naming the object, when it cannot be read (no host, no
-        /// such Material, malformed data): no queue is guessed for it.</summary>
-        static bool TryStoredRenderQueue(string guid, long fileId, string name, out int queue)
-        {
-            queue = -1;
-            var identity = $"built-in Material '{name}' ({{fileID: {fileId}, guid: {guid}}})";
-            if (!Native.IsReady)
-            {
-                Debug.LogError($"Unbound: {identity} is not available: its stored render queue is read from the install's resources by the host.");
-                return false;
-            }
-            try
-            {
-                var answer = Native.Call("builtin-material-queue", System.Text.Json.JsonSerializer.Serialize(new { guid, fileId }));
-                using var document = System.Text.Json.JsonDocument.Parse(answer);
-                var root = document.RootElement;
-                if (root.ValueKind == System.Text.Json.JsonValueKind.Object
-                    && root.TryGetProperty("classId", out var classId) && classId.ValueKind == System.Text.Json.JsonValueKind.Number
-                    && classId.TryGetInt32(out var id) && id == 21
-                    && root.TryGetProperty("customRenderQueue", out var stored) && stored.ValueKind == System.Text.Json.JsonValueKind.Number
-                    && stored.TryGetInt32(out queue))
-                    return true;
-                throw new FormatException($"unexpected answer {answer}");
-            }
-            catch (Exception e)
-            {
-                queue = -1;
-                Debug.LogError($"Unbound: {identity} is not available: its stored render queue could not be read ({e.Message}).");
-                return false;
-            }
-        }
-
         internal static Object Get(string guid, long fileId, string name)
         {
             guid = guid.ToLowerInvariant();
@@ -422,18 +387,12 @@ namespace Unbound.Runtime
                     {
                         obj = BuiltinFonts.Get(name);
                         if (obj != null) break;
-                        // Read before the material exists: one that cannot be read is not made.
-                        if (!TryStoredRenderQueue(guid, fileId, name, out var rawQueue)) return null;
-                        var shader = BuiltinSpriteData.MaterialShader(guid, fileId, name, out var fields);
-                        if (shader == null) return null;
-                        // Made from its record as a project material is from its file: its
-                        // keywords, saved properties and flags, not its shader's defaults
-                        // (Default-Skybox stores the simple sun disk, its shader's default is the
-                        // high-quality one: tests/projects/lightingdatanan sun.png, builtinresources).
-                        var material = new Material { name = name };
-                        material.ReadBuiltinRecord(fields);
-                        material.m_CustomRenderQueue = rawQueue;
-                        obj = material;
+                        // From its record, not its shader's defaults (Default-Skybox stores the
+                        // simple sun disk, its shader's default is the high-quality one:
+                        // tests/projects/lightingdatanan sun.png, builtinresources state rows); one
+                        // that cannot be read is not made.
+                        obj = BuiltinSpriteData.LoadMaterial(guid, fileId, name);
+                        if (obj == null) return null;
                         break;
                     }
                     case 28:

@@ -122,34 +122,57 @@ namespace Unbound.Runtime
             return Field(root, "fields").Clone();
         }
 
-        /// <summary>The shader the installed Material `fileId` names (its record's `m_Shader`, a
-        /// built-in shader), and the record's fields in <paramref name="fields"/> (its keywords,
-        /// saved properties and flags). Null, with an error naming the material, when the record
-        /// cannot be read or names no built-in shader.</summary>
-        internal static Shader MaterialShader(string guid, long fileId, string name, out JsonElement fields)
+        /// <summary>The installed Material `fileId`, made from its record as a project material
+        /// is from its file: the shader it references (a built-in one), its keywords, saved
+        /// properties and flags, and its stored render queue override (`m_CustomRenderQueue`: -1
+        /// is none, the material then follows its shader's queue; another value is its override,
+        /// Material.rawRenderQueue, 6000.0). Null, with an error naming the material, when the
+        /// record cannot be read: another name or class, no built-in shader, no 32-bit integer
+        /// queue (none is guessed), malformed data, or no host.</summary>
+        internal static Material LoadMaterial(string guid, long fileId, string name)
         {
-            fields = default;
             var identity = Identity("Material", guid, fileId, name);
             if (!Native.IsReady)
             {
                 Debug.LogError($"Unbound: {identity} is not available: it is read from the install's resources by the host, which is not connected.");
                 return null;
             }
+            Material material = null;
             try
             {
-                fields = RecordFields(guid, fileId, MaterialClassId, "Material");
+                var fields = RecordFields(guid, fileId, MaterialClassId, "Material");
                 var recordName = Str(fields, "m_Name");
                 if (recordName != name) throw new FormatException($"the install's object {fileId} is the material '{recordName}'");
                 if (!Reference(Field(fields, "m_Shader"), out var shaderGuid, out var shaderFileId))
                     throw new FormatException("the material has no shader");
-                if (BuiltinShaders.Resolve(shaderGuid, shaderFileId) is Shader shader) return shader;
-                throw new FormatException($"its shader {{fileID: {shaderFileId}, guid: {shaderGuid}}} is not a built-in shader");
+                if (BuiltinShaders.Resolve(shaderGuid, shaderFileId) is not Shader)
+                    throw new FormatException($"its shader {{fileID: {shaderFileId}, guid: {shaderGuid}}} is not a built-in shader");
+                int queue = StoredRenderQueue(fields);
+                material = new Material { name = name };
+                material.ReadBuiltinRecord(fields);
+                material.m_CustomRenderQueue = queue;
+                return material;
             }
             catch (Exception e)
             {
+                if (material != null) Object.DestroyImmediate(material, true);
                 Debug.LogError($"Unbound: {identity} is not available: its record could not be read ({e.Message}).");
                 return null;
             }
+        }
+
+        /// <summary>The record's `m_CustomRenderQueue` exactly as stored (the host writes scalars
+        /// as text): any 32-bit integer; a missing or other value is an error.</summary>
+        static int StoredRenderQueue(JsonElement fields)
+        {
+            if (fields.ValueKind != JsonValueKind.Object || !fields.TryGetProperty("m_CustomRenderQueue", out var field))
+                throw new FormatException("the material has no stored render queue (m_CustomRenderQueue)");
+            if (field.ValueKind != JsonValueKind.String)
+                throw new FormatException($"its stored render queue is not a number: {field.GetRawText()}");
+            var text = field.GetString();
+            if (!int.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var queue))
+                throw new FormatException($"its stored render queue `{text}` is not a 32-bit integer");
+            return queue;
         }
 
         /// <summary>The installed Sprite `fileId` of `unity_builtin_extra` from its record: its

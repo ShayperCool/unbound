@@ -13,11 +13,11 @@ using Xunit;
 namespace UnityEngine.Tests
 {
     /// <summary>
-    /// A built-in Material (`unity_builtin_extra`, `unity default resources`) is made with the
-    /// render queue override its installed object stores, `m_CustomRenderQueue`: -1 is none (the
-    /// material follows its shader's queue), another value is its override (Material.rawRenderQueue
-    /// and Material.renderQueue, 6000.0). A stand-in host answers the `builtin-material-queue`
-    /// call. Where a row names an installed object, its value is the byte the 6000.0.71f1 install
+    /// A built-in Material (`unity_builtin_extra`, `unity default resources`) is made from its
+    /// installed record, with the render queue override it stores, `m_CustomRenderQueue`: -1 is
+    /// none (the material follows its shader's queue), another value is its override
+    /// (Material.rawRenderQueue and Material.renderQueue, 6000.0). A stand-in host answers the
+    /// `editor-resource` call with the record (scalars as text, as the host writes them). Where a row names an installed object, its value is the byte the 6000.0.71f1 install
     /// stores (a Native asset-state observation of the resource file, not a measured API readout);
     /// the host's own reading of the installed files is tested on the Rust side. Rows without an
     /// installed object, the malformed answers and the shader declarations are mechanism
@@ -37,11 +37,10 @@ namespace UnityEngine.Tests
         static readonly IDictionary Replacements = (IDictionary)typeof(FrameBuilder).GetField("s_ReplacementMaterials", PrivateStatic).GetValue(null);
         static readonly MethodInfo ReplacementMaterial = typeof(FrameBuilder).GetMethod("ReplacementMaterial", PrivateStatic);
 
-        /// <summary>The stand-in host's answers by (guid, fileId): status 0 with JSON, else an error.</summary>
-        static readonly Dictionary<(string, long), (int Status, string Answer)> s_Answers = new Dictionary<(string, long), (int, string)>();
-        /// <summary>The stand-in host's material records (`editor-resource`) by (guid, fileId).</summary>
-        static readonly Dictionary<(string, long), string> s_Records = new Dictionary<(string, long), string>();
-        /// <summary>Every native call in order: "method guid fileId" for queue and record calls, else the method.</summary>
+        /// <summary>The stand-in host's material records (`editor-resource`) by (guid, fileId):
+        /// status 0 with JSON, else an error.</summary>
+        static readonly Dictionary<(string, long), (int Status, string Answer)> s_Records = new Dictionary<(string, long), (int, string)>();
+        /// <summary>Every native call in order: "method guid fileId" for record calls, else the method.</summary>
         static readonly List<string> s_Calls = new List<string>();
 
         readonly object m_PreviousApi = Api.GetValue(null), m_PreviousReady = Ready.GetValue(null);
@@ -64,7 +63,6 @@ namespace UnityEngine.Tests
             m_ShadersByName = Keys(ShadersByName);
             m_BuiltinShaders = Keys(BuiltinShaderCache);
             m_Replacements = Keys(Replacements);
-            s_Answers.Clear();
             s_Records.Clear();
             s_Calls.Clear();
             ShaderDeclarations.ResetForTests();
@@ -115,7 +113,6 @@ namespace UnityEngine.Tests
             ShaderDeclarations.ResetForTests();
             Api.SetValue(null, m_PreviousApi);
             Ready.SetValue(null, m_PreviousReady);
-            s_Answers.Clear();
             s_Records.Clear();
             s_Calls.Clear();
         }
@@ -145,15 +142,7 @@ namespace UnityEngine.Tests
                     var guid = input.RootElement.GetProperty("guid").GetString();
                     long fileId = input.RootElement.GetProperty("fileId").GetInt64();
                     s_Calls.Add(name + " " + guid + " " + fileId);
-                    (status, result) = s_Records.TryGetValue((guid, fileId), out var record) ? (0, record) : (1, "no object " + fileId);
-                }
-                else if (name == "builtin-material-queue")
-                {
-                    using var input = JsonDocument.Parse(Encoding.UTF8.GetString(request, requestLength));
-                    var guid = input.RootElement.GetProperty("guid").GetString();
-                    long fileId = input.RootElement.GetProperty("fileId").GetInt64();
-                    s_Calls.Add(name + " " + guid + " " + fileId);
-                    (status, result) = s_Answers.TryGetValue((guid, fileId), out var answer) ? answer : (1, "no object " + fileId);
+                    (status, result) = s_Records.TryGetValue((guid, fileId), out var record) ? record : (1, "no object " + fileId);
                 }
                 else
                 {
@@ -193,22 +182,27 @@ namespace UnityEngine.Tests
             classes[fileId] = classId;
         }
 
-        /// <summary>A built-in Material in the profile's table whose installed object the host
-        /// answers with <paramref name="answer"/> (status 0) or an error, and whose record names
-        /// the built-in shader <paramref name="shaderFileId"/> of its own file.</summary>
+        /// <summary>A built-in Material in the profile's table whose record the host answers with
+        /// <paramref name="answer"/> (status 0) or an error; its shader is the built-in shader
+        /// <paramref name="shaderFileId"/> of its own file.</summary>
         void Builtin(string guid, long fileId, string name, string shader, long shaderFileId, int status, string answer)
         {
             Register(guid, fileId, name, 21);
             Register(guid, shaderFileId, shader, 48);
-            s_Answers[(guid, fileId)] = (status, answer);
-            s_Records[(guid, fileId)] = "{\"classId\":21,\"fields\":{\"m_Name\":\"" + name + "\",\"m_Shader\":{\"fileID\":" + shaderFileId + ",\"guid\":\"" + guid + "\"}}}";
+            s_Records[(guid, fileId)] = (status, answer);
         }
 
-        void Builtin(string guid, long fileId, string name, string shader, long shaderFileId, int stored) =>
-            Builtin(guid, fileId, name, shader, shaderFileId, 0,
-                "{\"classId\":21,\"name\":\"" + name + "\",\"customRenderQueue\":" + stored + "}");
+        /// <summary>The record of a Material named <paramref name="name"/> with the shader
+        /// <paramref name="shaderFileId"/> and the given stored queue field (null: none) and
+        /// further fields.</summary>
+        static string Record(string guid, string name, long shaderFileId, string queueField, string more = "") =>
+            "{\"classId\":21,\"fields\":{\"m_Name\":\"" + name + "\",\"m_Shader\":{\"fileID\":" + shaderFileId + ",\"guid\":\"" + guid + "\"}"
+            + (queueField != null ? ",\"m_CustomRenderQueue\":" + queueField : "") + more + "}}";
 
-        static int Asked(string guid, long fileId) => s_Calls.Count(c => c == "builtin-material-queue " + guid + " " + fileId);
+        void Builtin(string guid, long fileId, string name, string shader, long shaderFileId, int stored) =>
+            Builtin(guid, fileId, name, shader, shaderFileId, 0, Record(guid, name, shaderFileId, "\"" + stored + "\""));
+
+        static int Asked(string guid, long fileId) => s_Calls.Count(c => c == "editor-resource " + guid + " " + fileId);
 
         sealed class CaptureHandler : ILogHandler
         {
@@ -264,8 +258,8 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ installed objects
 
-        /// <summary>Red on 1f41393e (assertion): no `builtin-material-queue` call is made (Asked 0)
-        /// and the override rows come out -1 instead of the stored 3000 / 2000. Every row is the
+        /// <summary>Red on 1f41393e (assertion): the override rows come out -1 instead of the
+        /// stored 3000 / 2000. Every row is the
         /// 6000.0.71f1 install's class-21 object (Native asset-state observation:
         /// builtin-material-state.json), with the shader its record references (`m_Shader`, as
         /// the Editor answers them: tests/projects/builtinresources).</summary>
@@ -316,17 +310,16 @@ namespace UnityEngine.Tests
         /// <summary>A built-in Material takes its record's keywords and saved properties, as a
         /// project material does, not its shader's defaults: the record's form is the host's
         /// (binary type trees: saved properties as first/second pairs, scalars as text). The
-        /// stored queue still comes from the queue call. Mechanism stand-in (the install's
+        /// stored queue is the record's. Mechanism stand-in (the install's
         /// Default-Skybox stores the simple sun disk: tests/projects/lightingdatanan sun.png).</summary>
         [Fact]
         public void TheRecordsKeywordsAndSavedPropertiesAreTheMaterials()
         {
-            Builtin(Extra, 10304, "Default-Skybox", "Skybox/Procedural", 106, -1);
-            s_Records[(Extra, 10304)] = "{\"classId\":21,\"fields\":{\"m_Name\":\"Default-Skybox\",\"m_Shader\":{\"fileID\":106,\"guid\":\"" + Extra + "\"},"
-                + "\"m_ValidKeywords\":[\"_SUNDISK_SIMPLE\"],\"m_InvalidKeywords\":[],\"m_CustomRenderQueue\":\"2500\",\"m_LightmapFlags\":\"4\","
+            Builtin(Extra, 10304, "Default-Skybox", "Skybox/Procedural", 106, 0, Record(Extra, "Default-Skybox", 106, "\"2500\"",
+                ",\"m_ValidKeywords\":[\"_SUNDISK_SIMPLE\"],\"m_InvalidKeywords\":[],\"m_LightmapFlags\":\"5\",\"m_EnableInstancingVariants\":\"1\","
                 + "\"m_SavedProperties\":{\"m_TexEnvs\":[],\"m_Ints\":[],"
                 + "\"m_Floats\":[{\"first\":{\"name\":\"_SunDisk\"},\"second\":\"1\"},{\"first\":{\"name\":\"_Exposure\"},\"second\":\"1.3\"}],"
-                + "\"m_Colors\":[{\"first\":{\"name\":\"_SkyTint\"},\"second\":{\"r\":\"0.5\",\"g\":\"0.25\",\"b\":\"0.5\",\"a\":\"1\"}}]}}}";
+                + "\"m_Colors\":[{\"first\":{\"name\":\"_SkyTint\"},\"second\":{\"r\":\"0.5\",\"g\":\"0.25\",\"b\":\"0.5\",\"a\":\"1\"}}]}"));
             var material = (Material)BuiltinObjects.Get(Extra, 10304, "Default-Skybox");
             Assert.Equal("Default-Skybox", material.name);
             Assert.Equal("Skybox/Procedural", material.shader.name);
@@ -334,22 +327,23 @@ namespace UnityEngine.Tests
             Assert.Equal(1f, material.m_Floats[Shader.PropertyToID("_SunDisk")]);
             Assert.Equal(1.3f, material.m_Floats[Shader.PropertyToID("_Exposure")]);
             Assert.Equal(new Vector4(0.5f, 0.25f, 0.5f, 1f), material.m_Vectors[Shader.PropertyToID("_SkyTint")]);
-            Assert.Equal(MaterialGlobalIlluminationFlags.EmissiveIsBlack, material.globalIlluminationFlags);
-            // The queue call's answer, not the record's field.
-            Assert.Equal(-1, material.rawRenderQueue);
+            Assert.Equal(MaterialGlobalIlluminationFlags.RealtimeEmissive | MaterialGlobalIlluminationFlags.EmissiveIsBlack, material.globalIlluminationFlags);
+            Assert.True(material.enableInstancing);
+            Assert.Equal(2500, material.rawRenderQueue);
+            Assert.Equal(1, Asked(Extra, 10304));
         }
 
         /// <summary>Red on 1f41393e (assertion): the host is never asked (Asked 0) and the raw
-        /// queue is -1. During the load only the stored queue is read: no shader declarations or
-        /// passes are asked for (no first use of Shader.renderQueue), and the queue call comes
-        /// before any shader call; the value is in place when the material is handed out.</summary>
+        /// queue is -1. During the load only the record is read: no shader declarations or passes
+        /// are asked for (no first use of Shader.renderQueue), and the record call comes before
+        /// any shader call; the value is in place when the material is handed out.</summary>
         [Fact]
         public void TheStoredQueueIsReadBeforeTheMaterialIsHandedOutWithoutAShaderQueueQuery()
         {
             Builtin(Extra, 10308, "Default-ParticleSystem", "Particles/Standard Unlit", 211, 3000);
             var material = (Material)BuiltinObjects.Get(Extra, 10308, "Default-ParticleSystem");
             Assert.Equal(1, Asked(Extra, 10308));
-            Assert.Equal("builtin-material-queue " + Extra + " 10308", s_Calls[0]);
+            Assert.Equal("editor-resource " + Extra + " 10308", s_Calls[0]);
             Assert.DoesNotContain("shader-passes", s_Calls);
             Assert.Empty(m_Declared);
             Assert.Equal(3000, material.rawRenderQueue);
@@ -384,24 +378,26 @@ namespace UnityEngine.Tests
         // ------------------------------------------------------------------ failures
 
         /// <summary>Red on 1f41393e (assertion): a material is made with -1 although nothing was
-        /// read. A record the host cannot read, of another class or with no integer queue makes no
-        /// material: an error names the object, nothing is cached and the next reference asks
-        /// again. Stand-in answers (mechanism, not Unity data).</summary>
+        /// read. A record the host cannot read, of another name or class, without a built-in
+        /// shader or with no 32-bit integer queue makes no material: an error names the object,
+        /// nothing is cached and the next reference asks again. Stand-in answers (mechanism, not
+        /// Unity data).</summary>
         [Theory]
-        [InlineData(1, "built-in Material 10308 of unity_builtin_extra: no object 10308")]
-        [InlineData(1, "built-in Material 10308: object 10308 is class 48, not a Material (21)")]
-        [InlineData(1, "unknown native method `builtin-material-queue`")]
-        [InlineData(0, "{\"classId\":48,\"name\":\"Default-ParticleSystem\",\"customRenderQueue\":-1}")]
-        [InlineData(0, "{\"classId\":21,\"name\":\"Default-ParticleSystem\"}")]
-        [InlineData(0, "{\"name\":\"Default-ParticleSystem\",\"customRenderQueue\":3000}")]
-        [InlineData(0, "{\"classId\":21,\"name\":\"Default-ParticleSystem\",\"customRenderQueue\":\"3000\"}")]
-        [InlineData(0, "{\"classId\":21,\"name\":\"Default-ParticleSystem\",\"customRenderQueue\":3000.5}")]
-        [InlineData(0, "{\"classId\":21,\"name\":\"Default-ParticleSystem\",\"customRenderQueue\":4294967295}")]
-        [InlineData(0, "{\"classId\":21,\"name\":\"Default-ParticleSystem\",\"customRenderQueue\":null}")]
+        [InlineData(1, "no object 10308")]
+        [InlineData(0, "{\"classId\":48,\"fields\":{\"m_Name\":\"Default-ParticleSystem\"}}")]
+        [InlineData(0, "{\"classId\":21,\"fields\":{\"m_Name\":\"Default-Particle\",\"m_Shader\":{\"fileID\":211,\"guid\":\"" + Extra + "\"},\"m_CustomRenderQueue\":\"3000\"}}")]
+        [InlineData(0, "{\"classId\":21,\"fields\":{\"m_Name\":\"Default-ParticleSystem\",\"m_CustomRenderQueue\":\"3000\"}}")]
+        [InlineData(0, "{\"classId\":21,\"fields\":{\"m_Name\":\"Default-ParticleSystem\",\"m_Shader\":{\"fileID\":211,\"guid\":\"" + Extra + "\"}}}")]
+        [InlineData(0, "{\"classId\":21,\"fields\":{\"m_Name\":\"Default-ParticleSystem\",\"m_Shader\":{\"fileID\":211,\"guid\":\"" + Extra + "\"},\"m_CustomRenderQueue\":\"3000.5\"}}")]
+        [InlineData(0, "{\"classId\":21,\"fields\":{\"m_Name\":\"Default-ParticleSystem\",\"m_Shader\":{\"fileID\":211,\"guid\":\"" + Extra + "\"},\"m_CustomRenderQueue\":\"Transparent\"}}")]
+        [InlineData(0, "{\"classId\":21,\"fields\":{\"m_Name\":\"Default-ParticleSystem\",\"m_Shader\":{\"fileID\":211,\"guid\":\"" + Extra + "\"},\"m_CustomRenderQueue\":\"4294967295\"}}")]
+        [InlineData(0, "{\"classId\":21,\"fields\":{\"m_Name\":\"Default-ParticleSystem\",\"m_Shader\":{\"fileID\":211,\"guid\":\"" + Extra + "\"},\"m_CustomRenderQueue\":{}}}")]
+        [InlineData(0, "{\"classId\":21,\"fields\":{\"m_Name\":\"Default-ParticleSystem\",\"m_Shader\":{\"fileID\":211,\"guid\":\"" + Extra + "\"},\"m_CustomRenderQueue\":null}}")]
+        [InlineData(0, "{\"classId\":21}")]
         [InlineData(0, "null")]
         [InlineData(0, "[]")]
         [InlineData(0, "not json")]
-        public void AnUnreadableStoredQueueMakesNoMaterial(int status, string answer)
+        public void AnUnreadableRecordMakesNoMaterial(int status, string answer)
         {
             Builtin(Extra, 10308, "Default-ParticleSystem", "Particles/Standard Unlit", 211, status, answer);
             Object material = null;
@@ -409,7 +405,7 @@ namespace UnityEngine.Tests
             Assert.Null(material);
             var error = Assert.Single(errors);
             Assert.Contains("built-in Material 'Default-ParticleSystem' ({fileID: 10308, guid: " + Extra + "})", error);
-            Assert.Contains("stored render queue", error);
+            Assert.Contains("its record could not be read", error);
             Assert.DoesNotContain(Keys(Objects).Cast<ValueTuple<string, long>>(), k => k == (Extra, 10308L));
             Errors(() => BuiltinShaders.Resolve(Extra, 10308));
             Assert.Equal(2, Asked(Extra, 10308));
@@ -458,7 +454,7 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>Guard (passes on 1f41393e too): a saved Material is read by its own reader
-        /// with its own stored queue; the built-in queue call is not made for it, even when its
+        /// with its own stored queue; no built-in record is asked for it, even when its
         /// shader is a built-in one.</summary>
         [Fact]
         public void ASavedMaterialKeepsItsOwnReader()
@@ -473,7 +469,7 @@ namespace UnityEngine.Tests
 "), new BuiltinReferences());
             Assert.Equal("Particles/Standard Unlit", material.shader.name);
             Assert.Equal(2450, material.rawRenderQueue);
-            Assert.DoesNotContain(s_Calls, c => c.StartsWith("builtin-material-queue", StringComparison.Ordinal));
+            Assert.DoesNotContain(s_Calls, c => c.StartsWith("editor-resource", StringComparison.Ordinal));
         }
 
         sealed class BuiltinReferences : IReferenceResolver
