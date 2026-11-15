@@ -36,6 +36,7 @@ namespace Unbound.Tests
             {
                 Version = NativeApi.CurrentVersion, Call = &Call, FreeBuffer = &Free, SubmitCommands = &Submit,
                 ReleaseMaterial = &Release, ReleaseTexture = &Release, ReleaseMesh = &Release, UploadTexture = &Upload,
+                DecodeBlockTexel = &Texel,
             };
             Native.Initialize(&api);
             GraphicsDeviceProfile.Select("Metal");
@@ -67,6 +68,18 @@ namespace Unbound.Tests
 
         [UnmanagedCallersOnly]
         static void Free(NativeBuffer buffer) => NativeMemory.Free(buffer.Data);
+
+        /// <summary>A texel of one block: its first and last bytes and the texel's index.</summary>
+        [UnmanagedCallersOnly]
+        static int Texel(int format, byte* block, uint index, float* output)
+        {
+            if (format != (int)TextureFormat.ETC2_RGBA1) return 0;
+            output[0] = block[0] / 255f;
+            output[1] = block[7] / 255f;
+            output[2] = index / 255f;
+            output[3] = 1f;
+            return 1;
+        }
 
         [UnmanagedCallersOnly]
         static void Submit(byte* commands, long length) { }
@@ -134,6 +147,33 @@ namespace Unbound.Tests
                 }
                 finally { Object.DestroyImmediate(array); }
             }
+        }
+
+        /// <summary>An ETC2_RGBA1 texel reads through its 8-byte block (a volume on a device that
+        /// makes ETC2 volumes, OpenGL Core): block (1, 0) of the 8x8 level holds bytes 8..15.</summary>
+        [Fact]
+        public void AnEtc2Rgba1TexelReadsItsBlock()
+        {
+            GraphicsDeviceProfile.Select("OpenGLCore");
+            var volume = new Texture3D(8, 8, 1, TextureFormat.ETC2_RGBA1, false);
+            try
+            {
+                var bytes = Enumerable.Range(0, 32).Select(i => (byte)i).ToArray();
+                volume.SetPixelData(bytes, 0);
+                // Texel (5, 2): block (1, 0), its index 2 * 4 + 1 in the block.
+                Assert.Equal(new Color32(8, 15, 9, 255), (Color32)volume.GetPixel(5, 2, 0));
+            }
+            finally { Object.DestroyImmediate(volume); }
+        }
+
+        /// <summary>PVRTC of sides that are not powers of two (which the decoder cannot read; the
+        /// Editor's answer is unmeasured) keeps RGBA32 texels, warned, as before.</summary>
+        [Fact]
+        public void PvrtcOfOtherSidesKeepsTexels()
+        {
+            var array = new Texture2DArray(12, 12, 1, TextureFormat.PVRTC_RGBA4, false, true);
+            try { Assert.Equal(12 * 12 * 4, array.GetPixelData<byte>(0, 0).Length); }
+            finally { Object.DestroyImmediate(array); }
         }
 
         /// <summary>A PVRTC texel reads through its decoded level (its neighbours' blocks take

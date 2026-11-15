@@ -77,8 +77,9 @@ namespace UnityEngine
         }
 
         /// <summary>Whether Unbound keeps a layered texture of the format: its texels (which it
-        /// reads and writes), or the blocks of a block format it decodes (DXT, BC, ETC and ETC2
-        /// color, EAC R and RG, ASTC), set through SetPixelData and read decoded.</summary>
+        /// reads and writes), or the blocks of a block format it decodes (DXT, BC, ETC1, ETC2
+        /// color and RGBA1, EAC R and RG signed or not, ASTC, PVRTC), set through SetPixelData and
+        /// read decoded (signed EAC is not read).</summary>
         internal static bool Supported(TextureFormat format) => PixelFormats.Size(format, 1, 1) > 0 || BlockStored(format);
 
         static bool BlockStored(TextureFormat format) => format == BlockFormats.Uncrunched(format)
@@ -121,15 +122,18 @@ namespace UnityEngine
         unsafe Color BlockTexel(int image, int mip, int index)
         {
             RequireReadableBlocks();
-            // A PVRTC texel depends on its neighbouring blocks: its level decodes whole.
+            // A PVRTC texel depends on its neighbouring blocks: its slice of the level decodes
+            // whole.
             if (BlockFormats.IsPvrtc(Format))
             {
-                var level = DecodedBlocks(image, mip, false);
-                return new Color(level[index * 4] / 255f, level[index * 4 + 1] / 255f, level[index * 4 + 2] / 255f, level[index * 4 + 3] / 255f);
+                int w0 = W(mip), h0 = H(mip), slice = LevelBytes(mip) / D(mip), z0 = index / (w0 * h0);
+                var texels = BlockFormats.DecodeRgba(Format, new ReadOnlySpan<byte>(Data, Offset(image, mip) + z0 * slice, slice), w0, h0);
+                int texel = index % (w0 * h0) * 4;
+                return new Color(texels[texel] / 255f, texels[texel + 1] / 255f, texels[texel + 2] / 255f, texels[texel + 3] / 255f);
             }
             if (Format == TextureFormat.BC6H)
                 Stubs.Ignored("layered BC6H blocks", "read back clamped to 0..1 in 8-bit steps: Unbound has no float decoding of them");
-            int w = W(mip), h = H(mip), side = BlockFormats.Footprint(Format), size = BlockFormats.BlockBytes(Format);
+            int w = W(mip), h = H(mip), side = BlockFormats.Footprint(Format), size = BlockFormats.LayeredBlockBytes(Format);
             int z = index / (w * h), x = index % w, y = index / w % h;
             int at = Offset(image, mip) + z * (LevelBytes(mip) / D(mip)) + ((y / side) * ((w + side - 1) / side) + x / side) * size;
             var block = new ReadOnlySpan<byte>(Data, at, size);
@@ -165,7 +169,7 @@ namespace UnityEngine
                     continue;
                 }
                 // DXT and BC4/BC5 blocks decode here, as Texture2D's do.
-                int side = BlockFormats.Footprint(Format), size = BlockFormats.BlockBytes(Format), across = (w + side - 1) / side;
+                int side = BlockFormats.Footprint(Format), size = BlockFormats.LayeredBlockBytes(Format), across = (w + side - 1) / side;
                 for (int y = 0; y < h; y++)
                     for (int x = 0; x < w; x++)
                     {
@@ -634,7 +638,7 @@ namespace UnityEngine
             m_Linear = linear;
             int full = LayeredPixels.FullMipCount(width, height, 1);
             m_MipCount = mipCount < 0 ? full : Math.Max(1, Math.Min(mipCount, full));
-            m_Pixels = new LayeredPixels(width, height, depth, m_MipCount, false, PixelStorage(textureFormat));
+            m_Pixels = new LayeredPixels(width, height, depth, m_MipCount, false, PixelStorage(textureFormat, width, height));
         }
 
         public Texture2DArray(int width, int height, int depth, GraphicsFormat format, TextureCreationFlags flags) : this(width, height, depth, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
@@ -645,13 +649,15 @@ namespace UnityEngine
         public Texture2DArray(int width, int height, int depth, DefaultFormat format, TextureCreationFlags flags) : this(width, height, depth, SystemInfo.GetGraphicsFormat(format), flags) { }
         public Texture2DArray(int width, int height, int depth, DefaultFormat format, TextureCreationFlags flags, int mipCount) : this(width, height, depth, SystemInfo.GetGraphicsFormat(format), flags, mipCount) { }
 
-        /// <summary>Formats Unbound cannot store run as RGBA32 (their pixels are kept as colours).</summary>
         /// <summary>The format a layered texture keeps: its own, else RGBA32 texels (warned for a
-        /// compressed format: signed EAC, ETC2_RGBA1 and PVRTC blocks are not kept, Unbound having
-        /// no decoder for them).</summary>
-        internal static TextureFormat PixelStorage(TextureFormat format)
+        /// compressed format Unbound keeps no blocks of: crunched ones, and PVRTC of sides that are
+        /// not powers of two, whose levels its PVRTC decoder cannot read; the Editor's answer for
+        /// those sizes is unmeasured).</summary>
+        internal static TextureFormat PixelStorage(TextureFormat format, int width, int height)
         {
-            if (LayeredPixels.Supported(format)) return format;
+            if (LayeredPixels.Supported(format)
+                && (!BlockFormats.IsPvrtc(format) || (System.Numerics.BitOperations.IsPow2(width) && System.Numerics.BitOperations.IsPow2(height))))
+                return format;
             if (GraphicsFormatUtility.IsCompressedFormat(format))
                 Unbound.Runtime.Stubs.Ignored($"layered {format} textures", "keep RGBA32 texels instead of their blocks: SetPixelData takes RGBA32 data and SetPixels writes, unlike the Editor");
             return TextureFormat.RGBA32;
@@ -827,7 +833,7 @@ namespace UnityEngine
             m_Linear = linear;
             int full = LayeredPixels.FullMipCount(width, width, 1);
             m_MipCount = mipCount < 0 ? full : Math.Max(1, Math.Min(mipCount, full));
-            m_Pixels = new LayeredPixels(width, width, cubemapCount * 6, m_MipCount, false, Texture2DArray.PixelStorage(textureFormat));
+            m_Pixels = new LayeredPixels(width, width, cubemapCount * 6, m_MipCount, false, Texture2DArray.PixelStorage(textureFormat, width, width));
         }
 
         public CubemapArray(int width, int cubemapCount, GraphicsFormat format, TextureCreationFlags flags) : this(width, cubemapCount, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
@@ -1002,7 +1008,7 @@ namespace UnityEngine
             m_Format = textureFormat;
             int full = LayeredPixels.FullMipCount(width, height, depth);
             m_MipCount = mipCount < 0 ? full : Math.Max(1, Math.Min(mipCount, full));
-            m_Pixels = new LayeredPixels(width, height, depth, m_MipCount, true, Texture2DArray.PixelStorage(textureFormat));
+            m_Pixels = new LayeredPixels(width, height, depth, m_MipCount, true, Texture2DArray.PixelStorage(textureFormat, width, height));
         }
 
         public Texture3D(int width, int height, int depth, GraphicsFormat format, TextureCreationFlags flags) : this(width, height, depth, format, flags, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1) { }
