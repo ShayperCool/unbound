@@ -398,6 +398,7 @@ namespace UnityEngine.UIElements
 
         void NotifyPropertyChanged(in BindingId property) => propertyChanged?.Invoke(this, new BindablePropertyChangedEventArgs(property));
 
+        [Unbound.EditorFaithful("Unity's: a change of the first column is not forwarded")]
         void OnColumnPropertyChanged(object sender, BindablePropertyChangedEventArgs args)
         {
             int index = m_Columns.IndexOf((Column)sender);
