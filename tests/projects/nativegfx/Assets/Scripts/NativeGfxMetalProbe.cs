@@ -423,7 +423,143 @@ public class NativeGfxMetalProbe : MonoBehaviour
                     .Where(f => UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsCompressedFormat(f))
                     .Select(f => ((int)f).ToString())));
                 break;
+            case 13:
+                DynamicScaleSetup();
+                DynamicScale("same");
+                break;
+            case 14:
+                DynamicScale("next");
+                // Factors outside (0, 1]: what is kept, and the size it gives.
+                ScalableBufferManager.ResizeBuffers(2f, 0f);
+                Value("dynres.factors.outside", Factors());
+                NativeGfxMtl_Describe("dynres.outside", dynamicTarget.GetNativeTexturePtr());
+                // Factors whose products are not whole: 16 x 0.3 and 16 x 0.7, and 10 x 0.3, which
+                // is 3 in single precision and above 3 in double.
+                var edge = Keep(new RenderTexture(10, 10, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+                    { name = "edge", useDynamicScale = true });
+                edge.Create();
+                ScalableBufferManager.ResizeBuffers(0.3f, 0.7f);
+                Value("dynres.factors.fraction", Factors());
+                Clear(dynamicTarget, Color.green);
+                Clear(edge, Color.green);
+                NativeGfxMtl_Describe("dynres.fraction", dynamicTarget.GetNativeTexturePtr());
+                NativeGfxMtl_Describe("dynres.edge", edge.GetNativeTexturePtr());
+                ScalableBufferManager.ResizeBuffers(1f, 1f);
+                Value("dynres.factors.reset", Factors());
+                // Back at full size: the native texture, and what is left of its texels.
+                NativeGfxMtl_Describe("dynres.reset", dynamicTarget.GetNativeTexturePtr());
+                Value("dynres.reset.texels", Read(dynamicTarget, 16, 16));
+                break;
         }
+    }
+
+    RenderTexture dynamicTarget, fixedTarget, oddBefore;
+    Material dynamicParams;
+
+    static string Factors() => Q($"{ScalableBufferManager.widthScaleFactor:R} {ScalableBufferManager.heightScaleFactor:R}");
+
+    /// <summary>Dynamic resolution: a 16x16 render texture marked <c>useDynamicScale</c> and a plain
+    /// one, then <c>ScalableBufferManager.ResizeBuffers(0.5, 0.25)</c>.</summary>
+    void DynamicScaleSetup()
+    {
+        dynamicTarget = Keep(new RenderTexture(16, 16, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+            { name = "dynamic", useDynamicScale = true });
+        dynamicTarget.Create();
+        fixedTarget = Keep(new RenderTexture(16, 16, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+            { name = "fixed" });
+        fixedTarget.Create();
+        // Sizes the factors do not divide: how a scaled size rounds.
+        oddBefore = Keep(new RenderTexture(15, 13, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+            { name = "oddbefore", useDynamicScale = true });
+        oddBefore.Create();
+        dynamicParams = Keep(new Material(Shader.Find("Probe/NativeGfx/DynamicParams")));
+        Value("dynres.factors.before", Factors());
+        ScalableBufferManager.ResizeBuffers(0.5f, 0.25f);
+        Value("dynres.factors.resized", Factors());
+        // Made after the resize: a render texture and a temporary one.
+        var oddAfter = Keep(new RenderTexture(15, 13, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+            { name = "oddafter", useDynamicScale = true });
+        oddAfter.Create();
+        var temporary = RenderTexture.GetTemporary(new RenderTextureDescriptor(15, 13, RenderTextureFormat.ARGB32, 0)
+            { useDynamicScale = true, sRGB = false });
+        temporary.Create();
+        foreach (var (key, texture) in new[] { ("oddbefore", oddBefore), ("oddafter", oddAfter), ("temporary", temporary) })
+        {
+            NativeGfxMtl_Describe("dynres." + key, texture.GetNativeTexturePtr());
+            Value($"dynres.{key}.size", Q($"{texture.width}x{texture.height}"));
+        }
+        RenderTexture.ReleaseTemporary(temporary);
+    }
+
+    /// <summary>A render texture's texels read with <c>ReadPixels</c> (no sampling).</summary>
+    static string Read(RenderTexture source, int width, int height)
+    {
+        var previous = RenderTexture.active;
+        var cpu = new Texture2D(width, height, TextureFormat.RGBA32, false, true);
+        RenderTexture.active = source;
+        cpu.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+        RenderTexture.active = previous;
+        var pixels = cpu.GetPixels32();
+        DestroyImmediate(cpu);
+        return Rows(pixels, width, height);
+    }
+
+    /// <summary>In the frame of the resize (<c>same</c>) and the next: each texture cleared blue,
+    /// then a camera clearing it red, with and without <c>allowDynamicResolution</c>: the camera's
+    /// sizes and the texels it covered; the dynamic texture sampled by a Blit, a Blit of white
+    /// into it, its sizes and the native texture behind it.</summary>
+    void DynamicScale(string when)
+    {
+        screenLogs = new List<string>();
+        var camera = new GameObject("dynamic camera").AddComponent<Camera>();
+        camera.enabled = false;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = Color.red;
+        camera.cullingMask = 0;
+        camera.allowHDR = false;
+        camera.allowMSAA = false;
+        foreach (var texture in new[] { dynamicTarget, fixedTarget })
+        {
+            foreach (var allow in new[] { true, false })
+            {
+                var k = $"dynres.{when}.{texture.name}.{(allow ? "allow" : "plain")}";
+                Clear(texture, Color.blue);
+                camera.targetTexture = texture;
+                camera.allowDynamicResolution = allow;
+                Value(k + ".camera", Q($"pixel {camera.pixelWidth}x{camera.pixelHeight} scaled {camera.scaledPixelWidth}x{camera.scaledPixelHeight} rect {camera.pixelRect}"));
+                camera.Render();
+                Value(k + ".texels", Read(texture, 16, 16));
+                if (texture == dynamicTarget) Value(k + ".scaledtexels", Read(texture, 8, 4));
+            }
+            Value($"dynres.{when}.{texture.name}.size", Q($"{texture.width}x{texture.height}"));
+        }
+        Value($"dynres.{when}.dynamic.sampled", Pixels(dynamicTarget, 16, 16));
+        Clear(dynamicTarget, Color.blue);
+        Graphics.Blit(Texture2D.whiteTexture, dynamicTarget);
+        Value($"dynres.{when}.dynamic.blitinto", Read(dynamicTarget, 16, 16));
+        Value($"dynres.{when}.dynamic.blitinto.scaled", Read(dynamicTarget, 8, 4));
+        // What shaders see: a Blit from it (its texel size), a draw into it from a camera's
+        // command buffer and from a Blit (the screen parameters).
+        var seen = Target("dynamicseen", 0);
+        Graphics.Blit(dynamicTarget, seen, dynamicParams, 0);
+        Value($"dynres.{when}.texelsize", Read(seen, 1, 1));
+        var drawParams = new CommandBuffer { name = "dynamic params" };
+        drawParams.DrawMesh(quad, Matrix4x4.identity, dynamicParams, 0, 1);
+        camera.targetTexture = dynamicTarget;
+        camera.allowDynamicResolution = false;
+        camera.AddCommandBuffer(CameraEvent.AfterEverything, drawParams);
+        camera.Render();
+        camera.RemoveAllCommandBuffers();
+        drawParams.Release();
+        Value($"dynres.{when}.cameraparams", Read(dynamicTarget, 8, 4));
+        Graphics.Blit(null, dynamicTarget, dynamicParams, 1);
+        Value($"dynres.{when}.blitparams", Read(dynamicTarget, 8, 4));
+        camera.targetTexture = oddBefore;
+        Value($"dynres.{when}.oddbefore.camera", Q($"pixel {camera.pixelWidth}x{camera.pixelHeight} scaled {camera.scaledPixelWidth}x{camera.scaledPixelHeight} rect {camera.pixelRect}"));
+        NativeGfxMtl_Describe("dynres." + when, dynamicTarget.GetNativeTexturePtr());
+        Value($"dynres.{when}.logs", L(screenLogs));
+        screenLogs = null;
+        DestroyImmediate(camera.gameObject);
     }
 
     /// <summary>The screen (BGRA8Unorm on Metal) and RGBA8 render textures, copied both ways with
@@ -821,7 +957,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
         int code = 0;
         try { Setup(); }
         catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
-        for (int frame = 1; frame <= 12 && code == 0; frame++)
+        for (int frame = 1; frame <= 14 && code == 0; frame++)
         {
             try { Frame(frame); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }

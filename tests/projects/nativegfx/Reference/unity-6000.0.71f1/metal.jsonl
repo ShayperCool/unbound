@@ -86,6 +86,55 @@
 {"k":"outside.after","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4"]}
 {"k":"outside.logs","v":[]}
 {"k":"compressed.formats","v":["10","12","24","25","26","27","28","29","30","31","32","33","34","41","42","43","44","45","46","47","48","49","50","51","52","53","64","65","66","67","68","69","70","71"]}
+{"k":"dynres.factors.before","v":"1 1"}
+{"k":"dynres.factors.resized","v":"0.5 0.25"}
+{"k":"dynres.oddbefore.size","v":"15x13"}
+{"k":"dynres.oddafter.size","v":"15x13"}
+{"k":"dynres.temporary.size","v":"15x13"}
+{"k":"dynres.same.dynamic.allow.camera","v":"pixel 16x16 scaled 8x4 rect (x:0.00, y:0.00, width:8.00, height:4.00)"}
+{"k":"dynres.same.dynamic.allow.texels","v":["cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16"]}
+{"k":"dynres.same.dynamic.allow.scaledtexels","v":["00000000*8","00000000*8","00000000*8","00000000*8"]}
+{"k":"dynres.same.dynamic.plain.camera","v":"pixel 16x16 scaled 8x4 rect (x:0.00, y:0.00, width:8.00, height:4.00)"}
+{"k":"dynres.same.dynamic.plain.texels","v":["cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16"]}
+{"k":"dynres.same.dynamic.plain.scaledtexels","v":["00000000*8","00000000*8","00000000*8","00000000*8"]}
+{"k":"dynres.same.dynamic.size","v":"16x16"}
+{"k":"dynres.same.fixed.allow.camera","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}
+{"k":"dynres.same.fixed.allow.texels","v":["ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16"]}
+{"k":"dynres.same.fixed.plain.camera","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}
+{"k":"dynres.same.fixed.plain.texels","v":["ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16"]}
+{"k":"dynres.same.fixed.size","v":"16x16"}
+{"k":"dynres.same.dynamic.sampled","v":["ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16"]}
+{"k":"dynres.same.dynamic.blitinto","v":["cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16"]}
+{"k":"dynres.same.dynamic.blitinto.scaled","v":["00000000*8","00000000*8","00000000*8","00000000*8"]}
+{"k":"dynres.same.texelsize","v":["40404040*1"]}
+{"k":"dynres.same.cameraparams","v":["00000000*8","00000000*8","00000000*8","00000000*8"]}
+{"k":"dynres.same.blitparams","v":["00000000*8","00000000*8","00000000*8","00000000*8"]}
+{"k":"dynres.same.oddbefore.camera","v":"pixel 15x13 scaled 8x4 rect (x:0.00, y:0.00, width:8.00, height:4.00)"}
+{"k":"dynres.same.logs","v":["Error: Reading pixels out of bounds of the current active render texture","Error: Reading pixels out of bounds of the current active render texture","Error: Reading pixels out of bounds of the current active render texture"]}
+{"k":"dynres.next.dynamic.allow.camera","v":"pixel 16x16 scaled 8x4 rect (x:0.00, y:0.00, width:8.00, height:4.00)"}
+{"k":"dynres.next.dynamic.allow.texels","v":["cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16"]}
+{"k":"dynres.next.dynamic.allow.scaledtexels","v":["00000000*8","00000000*8","00000000*8","00000000*8"]}
+{"k":"dynres.next.dynamic.plain.camera","v":"pixel 16x16 scaled 8x4 rect (x:0.00, y:0.00, width:8.00, height:4.00)"}
+{"k":"dynres.next.dynamic.plain.texels","v":["cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16"]}
+{"k":"dynres.next.dynamic.plain.scaledtexels","v":["00000000*8","00000000*8","00000000*8","00000000*8"]}
+{"k":"dynres.next.dynamic.size","v":"16x16"}
+{"k":"dynres.next.fixed.allow.camera","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}
+{"k":"dynres.next.fixed.allow.texels","v":["ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16"]}
+{"k":"dynres.next.fixed.plain.camera","v":"pixel 16x16 scaled 16x16 rect (x:0.00, y:0.00, width:16.00, height:16.00)"}
+{"k":"dynres.next.fixed.plain.texels","v":["ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16"]}
+{"k":"dynres.next.fixed.size","v":"16x16"}
+{"k":"dynres.next.dynamic.sampled","v":["ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16","ff0000ff*16"]}
+{"k":"dynres.next.dynamic.blitinto","v":["cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16","cdcdcdcd*16"]}
+{"k":"dynres.next.dynamic.blitinto.scaled","v":["00000000*8","00000000*8","00000000*8","00000000*8"]}
+{"k":"dynres.next.texelsize","v":["40404040*1"]}
+{"k":"dynres.next.cameraparams","v":["00000000*8","00000000*8","00000000*8","00000000*8"]}
+{"k":"dynres.next.blitparams","v":["00000000*8","00000000*8","00000000*8","00000000*8"]}
+{"k":"dynres.next.oddbefore.camera","v":"pixel 15x13 scaled 8x4 rect (x:0.00, y:0.00, width:8.00, height:4.00)"}
+{"k":"dynres.next.logs","v":["Error: Reading pixels out of bounds of the current active render texture","Error: Reading pixels out of bounds of the current active render texture","Error: Reading pixels out of bounds of the current active render texture"]}
+{"k":"dynres.factors.outside","v":"1 0.0500000119"}
+{"k":"dynres.factors.fraction","v":"0.3 0.7"}
+{"k":"dynres.factors.reset","v":"1 1"}
+{"k":"dynres.reset.texels","v":["00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16","00ff00ff*16"]}
 {"k":"target.pixels","v":["ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","ffff00ff*4 cdcdcdcd*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4","0000ffff*4 00ff00ff*4"]}
 {"k":"camera.pixels","v":["ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8","ff0000ff*8"]}
 {"k":"second.pixels","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*8"]}
@@ -286,4 +335,23 @@
 {"k":"plugin.state.depth.actions.screencamera","v":"state.depth.actions step=screencamera load=1 store=4"}
 {"k":"plugin.state.stencil.screencamera","v":"state.stencil step=screencamera texture=other same_as_depth=1"}
 {"k":"plugin.state.stencil.actions.screencamera","v":"state.stencil.actions step=screencamera load=1 store=4"}
+{"k":"plugin.native.dynres.oddbefore","v":"native.dynres.oddbefore texture=1 format=70 type=2 size=8x4x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.dynres.oddbefore.memory.screencamera","v":"native.dynres.oddbefore.memory step=screencamera usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.dynres.oddafter","v":"native.dynres.oddafter texture=1 format=70 type=2 size=8x4x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.dynres.oddafter.memory.screencamera","v":"native.dynres.oddafter.memory step=screencamera usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.dynres.temporary","v":"native.dynres.temporary texture=1 format=70 type=2 size=8x4x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.dynres.temporary.memory.screencamera","v":"native.dynres.temporary.memory step=screencamera usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.dynres.same","v":"native.dynres.same texture=1 format=70 type=2 size=8x4x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.dynres.same.memory.screencamera","v":"native.dynres.same.memory step=screencamera usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.dynres.next","v":"native.dynres.next texture=1 format=70 type=2 size=8x4x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.dynres.next.memory.screencamera","v":"native.dynres.next.memory step=screencamera usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.dynres.outside","v":"native.dynres.outside texture=1 format=70 type=2 size=16x1x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.dynres.outside.memory.screencamera","v":"native.dynres.outside.memory step=screencamera usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.dynres.fraction","v":"native.dynres.fraction texture=1 format=70 type=2 size=5x12x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.dynres.fraction.memory.screencamera","v":"native.dynres.fraction.memory step=screencamera usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.dynres.edge","v":"native.dynres.edge texture=1 format=70 type=2 size=3x7x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.dynres.edge.memory.screencamera","v":"native.dynres.edge.memory step=screencamera usage=5 storage=2 framebufferOnly=0"}
+{"k":"plugin.native.dynres.reset","v":"native.dynres.reset texture=1 format=70 type=2 size=16x16x1 mips=1 layers=1 samples=1"}
+{"k":"plugin.native.dynres.reset.memory.screencamera","v":"native.dynres.reset.memory step=screencamera usage=5 storage=2 framebufferOnly=0"}
+{"k":"logs","v":["Assert: Invalid widthScale: 2.000000","Assert: Invalid heightScale: 0.000000"]}
 {"k":"complete","v":true}
