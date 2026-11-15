@@ -27,7 +27,7 @@ public static class ResidentDrawerRunner
     public static void Record()
     {
         EditorSettings.asyncShaderCompilation = true;
-        // RESIDENT_DRAWER_SCENE: a scene of the staged project to record as it is (the lightmaps profile).
+        // RESIDENT_DRAWER_SCENE: a scene of the staged project to record as it is (the lightmaps and shadowmask profiles).
         var scene = System.Environment.GetEnvironmentVariable("RESIDENT_DRAWER_SCENE");
         EditorSceneManager.OpenScene(string.IsNullOrEmpty(scene) ? "Assets/Scenes/Probe.unity" : "Assets/Scenes/" + scene + ".unity");
         SessionState.SetBool(k_Waiting, true);

@@ -64,7 +64,7 @@ public class ResidentDrawerProbe : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("ResidentDrawerProbe").AddComponent<ResidentDrawerProbe>();
 
-    /// <summary>A scene recorded as it is (RESIDENT_DRAWER_SCENE, the lightmaps profile): its own
+    /// <summary>A scene recorded as it is (RESIDENT_DRAWER_SCENE, the lightmaps and shadowmask profiles): its own
     /// renderers, no scripted changes, two capture frames.</summary>
     static readonly bool s_SceneMode = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RESIDENT_DRAWER_SCENE"));
     static readonly int[] SceneCaptures = { 8, 14 };
