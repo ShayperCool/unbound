@@ -21,6 +21,9 @@ namespace UnityEngine.Tests
         struct WithPacked { public Packed packed; public byte tail; public string name; }
         struct Optional { public string name; public int? count; public byte tail; }
         struct Callback { public Action action; public int value; }
+        struct LeadByteColor { public byte lead; public Color32 color; public string name; }
+        struct LeadBytePacked { public byte lead; public Packed packed; public string name; }
+        struct WithDecimal { public string name; public int count; public decimal amount; }
         [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
         struct Overlaid { [System.Runtime.InteropServices.FieldOffset(0)] public string name; [System.Runtime.InteropServices.FieldOffset(8)] public int value; }
         struct Pair<T> { public T first; public T second; }
@@ -115,6 +118,17 @@ namespace UnityEngine.Tests
             for (int i = 0; i < withPacked.Length; i++) withPacked[i] = new WithPacked { packed = new Packed { a = 7, b = 0x01020304 }, tail = 5, name = "p" };
             Fill(texture, withPacked, 0);
             Assert.Equal(new byte[] { 7, 4, 3, 2, 1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, Without(texture.GetPixelData<byte>(0).ToArray(), 8)[..16]);
+            // After a smaller field a block starts at its own alignment: Color32 at 4, Pack = 1 at 1.
+            var leadColor = new LeadByteColor[4];
+            for (int i = 0; i < leadColor.Length; i++) leadColor[i] = new LeadByteColor { lead = 0xEE, color = new Color32(1, 2, 3, 4), name = "c" };
+            Fill(texture, leadColor, 0);
+            Assert.Equal(new byte[] { 0xEE, 0, 0, 0, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0 }, Without(texture.GetPixelData<byte>(0).ToArray(), 8)[..16]);
+            var leadPacked = new LeadBytePacked[4];
+            for (int i = 0; i < leadPacked.Length; i++) leadPacked[i] = new LeadBytePacked { lead = 0xEE, packed = new Packed { a = 7, b = 0x01020304 }, name = "q" };
+            Fill(texture, leadPacked, 0);
+            Assert.Equal(new byte[] { 0xEE, 7, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xEE }, Without(texture.GetPixelData<byte>(0).ToArray(), 8)[..17]);
+            Assert.StartsWith("Unbound: Texture2D.SetPixelData of WithDecimal elements is not supported: the reference runtime's layout of its Decimal field is unknown",
+                Assert.IsType<UnityException>(Thrown(() => Fill(texture, new WithDecimal[8], 0))).Message);
             var optional = new Optional[4];
             optional[0] = new Optional { name = "o", count = 0x0A0B0C0D, tail = 6 };
             optional[1] = new Optional { name = "o", count = null, tail = 7 };

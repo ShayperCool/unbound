@@ -27,6 +27,8 @@ public class PixelTransferProbe : MonoBehaviour
     public struct WithPacked { public Packed packed; public byte tail; public string name; }
     public struct Optional { public string name; public int? count; public byte tail; }
     public struct Callback { public Action action; public int value; }
+    public struct LeadByteColor { public byte lead; public Color32 color; public string name; }
+    public struct LeadBytePacked { public byte lead; public Packed packed; public string name; }
 
     StreamWriter output;
     readonly List<string> logs = new List<string>();
@@ -140,6 +142,12 @@ public class PixelTransferProbe : MonoBehaviour
         var withPacked = new WithPacked[4];
         for (int i = 0; i < withPacked.Length; i++) withPacked[i] = new WithPacked { packed = new Packed { a = (byte)(7 + i), b = 0x01020304 }, tail = 5, name = "p" };
         Call("r8.withPacked", () => r8.SetPixelData(withPacked, 0), Masked(8, 24, 40, 56));
+        var leadColor = new LeadByteColor[4];
+        for (int i = 0; i < leadColor.Length; i++) leadColor[i] = new LeadByteColor { lead = (byte)(0xE0 + i), color = new Color32(1, 2, 3, (byte)i), name = "c" };
+        Call("r8.leadColor", () => r8.SetPixelData(leadColor, 0), Masked(8, 24, 40, 56));
+        var leadPacked = new LeadBytePacked[4];
+        for (int i = 0; i < leadPacked.Length; i++) leadPacked[i] = new LeadBytePacked { lead = (byte)(0xE0 + i), packed = new Packed { a = (byte)(7 + i), b = 0x01020304 }, name = "q" };
+        Call("r8.leadPacked", () => r8.SetPixelData(leadPacked, 0), Masked(8, 24, 40, 56));
         var optional = new Optional[4];
         optional[0] = new Optional { name = "o", count = 0x0A0B0C0D, tail = 6 };
         optional[1] = new Optional { name = "o", count = null, tail = 7 };

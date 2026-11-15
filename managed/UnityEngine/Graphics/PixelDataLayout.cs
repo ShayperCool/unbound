@@ -12,8 +12,8 @@ namespace UnityEngine
     /// struct's references first, so SetPixelData writes these elements field by field: a reference
     /// as its object's address (arbitrary in both runtimes), a Nullable as its flag then its value,
     /// a struct without references as its own bytes, aligned to its largest field within its packing.
-    /// Explicit layouts, packing or sizes on structs holding references, Nullables holding references
-    /// and pointers are not supported.</summary>
+    /// Explicit layouts, packing or sizes on structs holding references, Nullables holding references,
+    /// pointers and the class library's own structs are not supported.</summary>
     internal sealed class DeclaredLayout
     {
         enum Kind { Reference, Bytes, Nullable, Struct }
@@ -182,6 +182,10 @@ namespace UnityEngine
             if (type.IsPointer) return (IntPtr.Size, IntPtr.Size);
             int size = RuntimeHelpers.SizeOf(type.TypeHandle);
             if (type.IsPrimitive || type.IsEnum) return (size, size);
+            // The two runtimes' class libraries declare their own structs' fields differently
+            // (decimal's alignment, for one).
+            if (type.Assembly == typeof(object).Assembly)
+                throw new NotSupportedException($"the reference runtime's layout of its {type.Name} field is unknown");
             int align = 1;
             foreach (var field in Fields(type)) align = Math.Max(align, Block(field.FieldType).align);
             var layout = type.StructLayoutAttribute;

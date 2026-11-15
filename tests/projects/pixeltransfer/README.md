@@ -1,7 +1,7 @@
 # SetPixelData element transfer
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 250 rows. Every value is a CPU copy read back with
+byte-identical and the canonical reference has 256 rows. Every value is a CPU copy read back with
 `GetPixelData<byte>`, so the rows do not depend on the OS or the graphics device. The gate compares
 every missing, extra or unequal row exactly.
 
@@ -25,7 +25,8 @@ it produced and the level's stored bytes.
   fields in declaration order, each at a multiple of its alignment, references eight bytes. A
   `{int; string}` element puts the integer first, a `{byte; string; short; string; int}` element
   takes 40 bytes, and a nested struct keeps its place. A struct without references (Color32, a
-  `Pack = 1` struct) keeps its own bytes at its fields' alignment within its packing; a Nullable
+  `Pack = 1` struct) keeps its own bytes at its fields' alignment within its packing (after a
+  leading byte, Color32 starts at 4 and the packed struct at 1); a Nullable
   field is its flag then its value; a delegate field is a reference. The reference slots hold
   object addresses and are cleared before the bytes are compared.
 - The size check: `(length − start) × element size` must cover the level.
@@ -41,7 +42,8 @@ recorded in full.
 Not compared: a start index beyond the array length and a marshaled size larger than the array's
 stride make the reference read memory after the array, whose contents are undefined; Unbound throws
 instead. Explicit layouts, packing or sizes on structs holding references, Nullables holding
-references and pointer fields are not supported. Marshaled sizes the two runtimes
+references, pointer fields and the class library's own structs (whose fields the two runtimes
+declare differently, decimal for one) are not supported. Marshaled sizes the two runtimes
 disagree on (an `object` field has one in the reference) are not compared. Cubemap.SetPixelData is
 not supported yet. Other releases are unmeasured.
 
