@@ -240,8 +240,7 @@ per check. A touched recipe exceeding 300 s still fails (exit 5 in `--check`, a 
 landing) unless every declared command is supplied explicitly, or an explicit suite invocation
 covers it. Trains leave these checks to the post-land checker (see Post-land checks). A passing train fast-forwards main through each branch, records one `landed.jsonl`
 line per branch and pushes once. Each caller then refreshes its own branch to its rebased tip.
-A single queued branch uses its original worktree and warm target, as before. `--check` remains
-an independent gate and can still supply a reusable pass when main and the checks are unchanged.
+A single queued branch uses its original worktree and warm target, as before. `--check` remains an independent gate that also runs the automatic checks; because trains no longer run them, a `--check` pass is not reused by a train for a code change.
 
 A failed train is bisected by gating prefixes. Passing prefixes land; the first failing branch
 receives its failed gate log. Remaining branches are rebased without that branch and tested

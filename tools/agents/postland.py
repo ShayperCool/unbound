@@ -17,11 +17,14 @@ for suite checks (--against), the same 600 s budget and 300 s limit per check wi
 of time-limited checks, and the same strict comparisons.
 
 A failing check is run once more alone at the same commit, so that a load timeout or a flake
-is not blamed on a landing. A check that still fails is run at the range's base: when it fails
-there too, the failure predates the range. Otherwise the landings of the range are bisected.
-When one landing turns the check from passing to failing, its commits are reverted on a branch
-and landed through land.py with the reason, if the revert applies cleanly and that landing was
-not reverted before. Every failure, revert or not, is written to
+is not blamed on a landing. A check that still fails is run at the range's base (unless the range
+adds its probe): when it fails there too, the failure predates the range. Otherwise the landings
+of the range are bisected; a non-passing result counts only when a second run agrees, and a time
+limit, a flake or a commit that cannot be built ends the search with a report. When one landing
+turns the check from passing to failing, confirmed by two failing runs at its tip and two passing
+runs at its parent, its commits are reverted on a branch and landed through land.py (at normal
+priority, as it may lead a train) if the revert applies cleanly and that landing was not reverted
+before. Every finding, revert or not, is written to
 ~/.cache/unbound/agents/postland/<time>-<probe>.json for the orchestrator. Suite output uses
 fresh labels; sheriff suites and baselines are only read.
 """
@@ -123,7 +126,7 @@ class Checker:
         return environment
 
     def run(self, commit, checks, label):
-        """The failing checks of `checks` at commit, as (check, log) pairs; [] when all pass."""
+        """The failing checks of `checks` at commit as (check, log, exit code); [] when all pass."""
         self.checkout(commit)
         log = land.STATE/'logs'/f'{stamp()}-postland-{label}-{commit[:10]}.log'
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -138,14 +141,44 @@ class Checker:
                 raise CheckerError(f'checks could not run at {commit[:10]}; log {log}')
             logs = gate.log.with_suffix('.automatic')
             failed = []
-            for row in gate.failures:
+            for row, code in gate.failures:
                 index = int(Path(row[3]).name.split('.')[0])
-                failed.append((list(checks[index-1]), str(logs/Path(row[3]).name)))
+                failed.append((list(checks[index-1]), str(logs/Path(row[3]).name), code))
             return failed
         return []
 
-    def passes(self, commit, check, label):
-        return not self.run(commit, [check], label)
+    def outcome(self, commit, check, label):
+        """('pass' | 'fail' | 'time limit' | 'unchecked', log) of one check alone at commit."""
+        try:
+            failed = self.run(commit, [check], label)
+        except CheckerError as error:
+            return 'unchecked', str(error)
+        if not failed:
+            return 'pass', None
+        _, log, code = failed[0]
+        return ('time limit' if code == land.TIME_LIMIT_EXIT else 'fail'), log
+
+    def decide(self, commit, check, label, logs):
+        """'pass' or 'fail' only when two runs agree on it; otherwise why it is undecided."""
+        results = []
+        for attempt in range(2):
+            result, log = self.outcome(commit, check, label)
+            if log:
+                logs.append(log)
+            results.append(result)
+            if attempt == 0 and result == 'pass' and label != 'confirm':
+                return 'pass'
+        if results == ['pass', 'pass']:
+            return 'pass'
+        if results == ['fail', 'fail']:
+            return 'fail'
+        return ' then '.join(results)
+
+    def exists(self, commit, check):
+        """Whether the check's probe project exists at commit (a range can add it)."""
+        name = check[0]
+        return subprocess.run(['git', 'cat-file', '-e', f'{commit}:tests/projects/{name}'], cwd=self.repo,
+                              capture_output=True).returncode == 0
 
     # --- outcomes --------------------------------------------------------------------------
     def report(self, check, kind, **fields):
@@ -157,12 +190,20 @@ class Checker:
         print(f'postland: {kind}: {check[0]}; {path}', flush=True)
         return path
 
-    def revert(self, culprit, check, logs):
+    def land_revert(self):
+        """land.py for the revert branch, at normal priority: it may lead other workers' train."""
+        settings = [f'--setenv={key}={os.environ[key]}' for key in land.POSTLAND_ENVIRONMENT if key in os.environ]
+        return subprocess.run(['systemd-run', '--user', '--wait', '--pipe', '--quiet', '--collect',
+                               f'--unit=unbound-postland-revert-{time.time_ns()}',
+                               f'--working-directory={self.worktree}', *settings,
+                               sys.executable, str(self.worktree/'tools/agents/land.py')],
+                              cwd=self.worktree, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+
+    def revert(self, culprit, check, logs, common):
         """Land a revert of the culprit landing; a report either way."""
         reverted = self.state().get('reverted', [])
-        common = {'culprit': culprit, 'logs': logs}
         if culprit['new'] in reverted:
-            return self.report(check, 'fails after its revert', **common)
+            return self.report(check, 'fails after its revert', culprit=culprit, logs=logs, **common)
         main = self.git('rev-parse', 'main')
         branch = f"postland/revert-{culprit['new'][:10]}"
         self.checkout(main)
@@ -173,45 +214,62 @@ class Checker:
             subprocess.run(['git', 'revert', '--abort'], cwd=self.worktree, capture_output=True)
             self.git('switch', '--quiet', '--detach', main, cwd=self.worktree)
             self.git('branch', '-D', branch, cwd=self.worktree)
-            return self.report(check, 'revert does not apply', error=applied.stderr.strip(), **common)
+            return self.report(check, 'revert does not apply', error=applied.stderr.strip(), culprit=culprit,
+                               logs=logs, **common)
         message = (f"fix(postland): revert {culprit['branch']}\n\n"
                    f"Its landing ({culprit['old'][:10]}..{culprit['new'][:10]}) turned the automatic check "
-                   f"{check[0]} from passing to failing on main; the check fails alone at the landing's tip "
-                   f"and passes at its parent. Check log: {logs[-1]}\n")
+                   f"{check[0]} from passing to failing on main: twice failing at the landing's tip, "
+                   f"twice passing at its parent.\n")
         self.git('commit', '--quiet', '-m', message, cwd=self.worktree)
-        landing = subprocess.run([sys.executable, str(self.worktree/'tools/agents/land.py')], cwd=self.worktree,
-                                 capture_output=True, text=True, env=self.environment())
+        landing = self.land_revert()
         if landing.returncode:
             path = self.report(check, 'revert did not land', land_exit=landing.returncode,
-                               land_output=(landing.stdout+landing.stderr)[-4000:], **common)
+                               land_output=(landing.stdout+landing.stderr)[-4000:], culprit=culprit,
+                               logs=logs, **common)
         else:
             self.save(reverted=[*reverted, culprit['new']])
             path = self.report(check, 'reverted', revert=self.git('rev-parse', 'HEAD', cwd=self.worktree),
-                               **common)
+                               culprit=culprit, logs=logs, **common)
         self.git('switch', '--quiet', '--detach', self.git('rev-parse', 'main'), cwd=self.worktree)
         self.git('branch', '-D', branch, cwd=self.worktree, check=False)
         return path
 
     def isolate(self, rows, check, logs, target):
-        """Report a confirmed failure, and revert its landing when one landing is the clear cause."""
+        """Report a confirmed failure, and revert its landing when one landing is the clear cause.
+        Only two agreeing runs decide; a time limit, a flake or an unbuildable commit is reported."""
         base = rows[0]['old']
         common = {'range': [base, target], 'landings': [
             {key: row.get(key) for key in ('branch', 'old', 'new', 'request_id', 'log')} for row in rows]}
-        if not self.passes(base, check, 'base'):
-            return self.report(check, 'fails before the range', logs=logs, **common)
+        if self.exists(base, check):
+            result = self.decide(base, check, 'base', logs)
+            if result == 'fail':
+                return self.report(check, 'fails before the range', logs=logs, **common)
+            if result != 'pass':
+                return self.report(check, 'undecided', at=base, result=result, logs=logs, **common)
         low, high = -1, len(rows)-1  # rows[low]['new'] (or base) passes, rows[high]['new'] fails
         while high-low > 1:
             middle = (low+high)//2
-            if self.passes(rows[middle]['new'], check, 'bisect'):
+            commit = rows[middle]['new']
+            result = self.decide(commit, check, 'bisect', logs) if self.exists(commit, check) else 'pass'
+            if result == 'pass':
                 low = middle
-            else:
+            elif result == 'fail':
                 high = middle
+            else:
+                return self.report(check, 'undecided', at=commit, result=result, logs=logs, **common)
         culprit = {key: rows[high].get(key) for key in ('branch', 'old', 'new', 'request_id', 'log')}
         before = rows[high-1]['new'] if high else base
         if before != culprit['old']:
             # Another landing sits between them on main; no single landing is the clear cause.
             return self.report(check, 'no single landing', culprit=culprit, logs=logs, **common)
-        return self.revert(culprit, check, logs)
+        # Confirm before touching main: twice failing at the tip, twice passing at the parent.
+        tip = self.decide(culprit['new'], check, 'confirm', logs)
+        parent = (self.decide(culprit['old'], check, 'confirm', logs)
+                  if self.exists(culprit['old'], check) else 'pass')
+        if (tip, parent) != ('fail', 'pass'):
+            return self.report(check, 'undecided', at=culprit['new'], result=f'tip {tip}, parent {parent}',
+                               culprit=culprit, logs=logs, **common)
+        return self.revert(culprit, check, logs, common)
 
     def round(self):
         """Check every landing up to main; True when main was reached."""
@@ -222,19 +280,18 @@ class Checker:
         if not checks:
             self.save(checked=target)
             return True
-        failures = self.run(target, checks, 'main')
-        reverted = False
-        for check, log in failures:
+        span = [rows[0]['old'], target]
+        for check, log, code in self.run(target, checks, 'main'):
             # A rerun alone separates a flake or a load timeout from a result change.
-            again = self.run(target, [check], 'alone')
-            if not again:
-                self.report(check, 'passed alone after failing beside others', logs=[log],
-                            range=[rows[0]['old'], target])
-                continue
-            path = self.isolate(rows, check, [log, again[0][1]], target)
-            reverted |= json.loads(Path(path).read_text())['kind'] == 'reverted'
-        if reverted:
-            return False  # main moved: check the range again, revert included
+            again, alone = self.outcome(target, check, 'alone')
+            logs = [log, *([alone] if alone else [])]
+            if again == 'pass':
+                self.report(check, 'passed alone after failing beside others', logs=logs, range=span)
+            elif again != 'fail':
+                self.report(check, 'undecided', at=target, result=f'{again} alone', logs=logs, range=span)
+            elif json.loads(Path(self.isolate(rows, check, logs, target)).read_text())['kind'] == 'reverted':
+                # Main moved; the other failures are checked again with the revert.
+                return False
         self.save(checked=target)
         return self.git('rev-parse', 'main') == target
 
@@ -251,10 +308,12 @@ def run(repo):
             try:
                 while not checker.round():
                     pass
-            except CheckerError as error:
+            except (CheckerError, SystemExit, Exception) as error:
+                # Whatever stops a round is written for the orchestrator; the range stays unchecked.
+                main = checker.git('rev-parse', 'main', check=False)
                 land.atomic_json(checker.root/f'{stamp()}-checker.json',
                                  {'time': f'{datetime.datetime.now():%F %T}', 'kind': 'checker error',
-                                  'error': str(error), 'main': checker.git('rev-parse', 'main')})
+                                  'error': f'{type(error).__name__}: {error}', 'main': main})
                 print(f'postland: {error}', file=sys.stderr, flush=True)
                 return 1
         # A landing between the last round and releasing the lock found the lock held.

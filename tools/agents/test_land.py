@@ -596,6 +596,7 @@ if os.environ.get('TRAIN_LEGACY_REQUEST'):
     land_train.Queue.register = legacy_register
 land.run_gate = gate
 land.pin_main = lambda *args, **kwargs: None
+land.request_postland = lambda main: event({'postland_request': str(main)})
 if not os.environ.get('TRAIN_REAL_PUSH'):
     land.push_main = lambda *args: event({'push': True})
 if os.environ.get('TRAIN_CRASH_AFTER_ADVANCE'):
@@ -1039,6 +1040,10 @@ class TrainIntegrationTests(unittest.TestCase):
         self.assertEqual(gates[0]['probes'], ['probe-a', 'probe-common'])
         self.assertEqual(gates[0]['probe_owners'], [['first', 'second'], ['second', 'third']])
         self.assertTrue(gates[0]['priority'])
+        # One publication starts the post-land checker once, on the main checkout.
+        requests = [json.loads(line) for line in self.events.read_text().splitlines() if 'postland_request' in line]
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(Path(requests[0]['postland_request']).resolve(), self.repo.resolve())
         rows = self.rows()
         self.assertEqual([row['branch'] for row in rows], ['first', 'second', 'third'])
         self.assertEqual(len({row['train_id'] for row in rows}), 1)

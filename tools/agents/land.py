@@ -647,8 +647,8 @@ class Gate:
             retried = {row[3]: code for row, (_, code) in zip(limited, outcomes)}
             results = [(row, retried.get(row[3], code)) for row, code in results]
         # The post-land checker reads which checks failed.
-        self.failures = [row for row, code in results if code]
-        failed = [row[0] for row in self.failures]
+        self.failures = [(row, code) for row, code in results if code]
+        failed = [row[0] for row, _ in self.failures]
         if failed:
             advice = '; longer checks can be supplied with --probe' if deadline is not None else ''
             self.fail('; '.join(failed)+advice)

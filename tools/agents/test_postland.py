@@ -36,6 +36,9 @@ class PostlandTests(unittest.TestCase):
         self.git('config', 'user.name', 'Control')
         self.git('config', 'user.email', 'control@example.invalid')
         (self.repo/'value.txt').write_text('0\n')
+        for name in ('probe', 'old', 'flaky', 'shared', 'left', 'a', 'b'):
+            (self.repo/'tests/projects'/name).mkdir(parents=True)
+            (self.repo/'tests/projects'/name/'gate.json').write_text('{}\n')
         self.git('add', '.')
         self.git('commit', '-qm', 'base')
         self.base = self.git('rev-parse', 'HEAD')
@@ -66,10 +69,16 @@ class PostlandTests(unittest.TestCase):
 
         def run(commit, checks, label):
             calls.append((commit, [check[0] for check in checks], label))
-            return [(list(check), f'/logs/{label}-{commit[:7]}-{check[0]}.log')
-                    for check in checks if outcome(commit, check, label)]
+            results = [(list(check), f'/logs/{label}-{commit[:7]}-{check[0]}.log', outcome(commit, check, label))
+                       for check in checks]
+            # outcome: False passes, True fails, or an exit code.
+            return [(check, log, 1 if code is True else code) for check, log, code in results if code]
         checker.run = run
         checker.calls = calls
+
+        def no_landing():
+            raise AssertionError('a test reached the real revert landing')
+        checker.land_revert = no_landing
         return checker
 
     def reports(self):
@@ -128,17 +137,15 @@ class PostlandTests(unittest.TestCase):
         checker = self.checker(broken)
         landed = []
 
-        def land_revert(command, cwd=None, **kwargs):
-            if command[-1].endswith('land.py'):
-                # Stand-in for land.py: fast-forward main to the revert branch.
-                head = REAL_RUN(['git', 'rev-parse', 'HEAD'], cwd=cwd, capture_output=True,
-                                text=True).stdout.strip()
-                self.git('merge', '--ff-only', '-q', head)
-                landed.append(head)
-                return subprocess.CompletedProcess(command, 0, 'landed', '')
-            return REAL_RUN(command, cwd=cwd, **kwargs)
-        with mock.patch.object(postland.subprocess, 'run', side_effect=land_revert):
-            self.assertFalse(checker.round())
+        def land_revert():
+            # Stand-in for land.py: fast-forward main to the revert branch.
+            head = REAL_RUN(['git', 'rev-parse', 'HEAD'], cwd=checker.worktree, capture_output=True,
+                            text=True).stdout.strip()
+            self.git('merge', '--ff-only', '-q', head)
+            landed.append(head)
+            return subprocess.CompletedProcess([], 0, 'landed', '')
+        checker.land_revert = land_revert
+        self.assertFalse(checker.round())
         self.assertEqual(len(landed), 1)
         self.assertEqual((self.repo/'value.txt').read_text(), '0\n')
         message = self.git('log', '-1', '--format=%B', 'main')
@@ -152,7 +159,9 @@ class PostlandTests(unittest.TestCase):
         self.assertNotEqual(checker.state().get('checked'), self.git('rev-parse', 'main'))
         labels = [call[2] for call in checker.calls]
         self.assertEqual(labels[:3], ['main', 'alone', 'base'])
-        self.assertTrue(all(label == 'bisect' for label in labels[3:]))
+        self.assertEqual(labels[-4:], ['confirm']*4)
+        self.assertTrue(all(label == 'bisect' for label in labels[3:-4]))
+        self.assertGreaterEqual(labels.count('bisect'), 1)
 
     def test_a_revert_that_does_not_apply_is_reported(self):
         check = ['probe', 'probe-check', 'engine paths', 'r']
@@ -203,6 +212,92 @@ class PostlandTests(unittest.TestCase):
         self.assertEqual(json.loads((self.state/'postland/state.json').read_text())['checked'],
                          self.git('rev-parse', 'main'))
 
+    def test_time_limits_never_lead_to_a_revert(self):
+        check = ['probe', 'probe-check', 'engine paths', 'r']
+        self.land_branch('first', {'a.txt': '1'}, [check])
+        self.land_branch('second', {'value.txt': 'broken\n'}, [check])
+        self.land_branch('third', {'c.txt': '1'}, [check])
+        middle = self.rows[1]['new']
+
+        def outcome(commit, check, label):
+            # The check really fails from the second landing on, but that bisection point times out.
+            if commit == middle and label == 'bisect':
+                return land.TIME_LIMIT_EXIT
+            return self.git('show', f'{commit}:value.txt') == 'broken'
+        checker = self.checker(outcome)
+        before = self.git('rev-parse', 'main')
+        self.assertTrue(checker.round())
+        self.assertEqual(self.git('rev-parse', 'main'), before)
+        report = self.reports()[-1]
+        self.assertEqual(report['kind'], 'undecided')
+        self.assertEqual(report['result'], 'time limit then time limit')
+
+    def test_a_time_limit_alone_at_main_is_reported_without_bisecting(self):
+        check = ['probe', 'probe-check', 'engine paths', 'r']
+        self.land_branch('first', {'a.txt': '1'}, [check])
+        checker = self.checker(lambda commit, check, label: land.TIME_LIMIT_EXIT)
+        self.assertTrue(checker.round())
+        self.assertEqual(self.reports()[-1]['result'], 'time limit alone')
+        self.assertEqual([call[2] for call in checker.calls], ['main', 'alone'])
+
+    def test_a_flaky_parent_blocks_the_revert(self):
+        check = ['probe', 'probe-check', 'engine paths', 'r']
+        culprit = self.land_branch('first', {'value.txt': 'broken\n'}, [check])
+        confirms = []
+
+        def outcome(commit, check, label):
+            if label == 'confirm' and commit == culprit['old']:
+                confirms.append(commit)
+                return len(confirms) == 2  # passes once, then fails
+            return self.git('show', f'{commit}:value.txt') == 'broken'
+        checker = self.checker(outcome)
+        self.assertTrue(checker.round())
+        report = self.reports()[-1]
+        self.assertEqual(report['kind'], 'undecided')
+        self.assertEqual(report['result'], 'tip fail, parent pass then fail')
+
+    def test_an_unbuildable_bisection_point_is_reported_and_the_checker_moves_on(self):
+        check = ['probe', 'probe-check', 'engine paths', 'r']
+        self.land_branch('first', {'a.txt': '1'}, [check])
+        self.land_branch('second', {'value.txt': 'broken\n'}, [check])
+        self.land_branch('third', {'c.txt': '1'}, [check])
+        middle = self.rows[1]['new']
+        checker = self.checker(lambda commit, check, label: self.git('show', f'{commit}:value.txt') == 'broken')
+        original = checker.run
+
+        def run(commit, checks, label):
+            if commit == middle:
+                raise postland.CheckerError('build failed')
+            return original(commit, checks, label)
+        checker.run = run
+        self.assertTrue(checker.round())
+        report = self.reports()[-1]
+        self.assertEqual(report['kind'], 'undecided')
+        self.assertIn('unchecked', report['result'])
+        self.assertEqual(checker.state()['checked'], self.git('rev-parse', 'main'))
+
+    def test_a_probe_added_by_the_range_is_not_blamed_on_the_base(self):
+        check = ['newprobe', 'newprobe-check', 'changed files', 'r']
+        self.land_branch('first', {'a.txt': '1'}, [])
+        (self.repo/'tests/projects/newprobe').mkdir()
+        culprit = self.land_branch('second', {'tests/projects/newprobe/gate.json': '{}'}, [check])
+        checker = self.checker(lambda commit, check, label: True)
+        landed = []
+        checker.land_revert = lambda: landed.append(1) or subprocess.CompletedProcess([], 1, '', 'refused')
+        self.assertTrue(checker.round())
+        kinds = [report['kind'] for report in self.reports()]
+        self.assertNotIn('fails before the range', kinds)
+        self.assertNotIn('base', [call[2] for call in checker.calls])
+        self.assertEqual(self.reports()[-1]['culprit']['new'], culprit['new'])
+        self.assertEqual(landed, [1])
+
+    def test_unexpected_errors_are_written_for_the_orchestrator(self):
+        self.land_branch('first', {'a.txt': '1'}, [['probe', 'probe-check', 'fast check', 'r']])
+        with mock.patch.object(postland.Checker, 'round', side_effect=ValueError('bad landed line')):
+            self.assertEqual(postland.run(self.repo), 1)
+        errors = [json.loads(path.read_text()) for path in (self.state/'postland').glob('*-checker.json')]
+        self.assertEqual([error['error'] for error in errors], ['ValueError: bad landed line'])
+
     def test_checker_errors_are_written_for_the_orchestrator(self):
         self.land_branch('first', {'a.txt': '1'}, [['probe', 'probe-check', 'fast check', 'r']])
         with mock.patch.object(postland.Checker, 'run', side_effect=postland.CheckerError('build failed')):
@@ -239,11 +334,11 @@ class PostlandTests(unittest.TestCase):
 
         def check_only(gate):
             logs = gate.log.with_suffix('.automatic')
-            gate.failures = [('auto b', 'b-check', 'r', logs/'002.log', False)]
+            gate.failures = [(('auto b', 'b-check', 'r', logs/'002.log', False), 1)]
             raise SystemExit(5)
         with mock.patch.object(land.Gate, 'check_only', check_only):
             failures = checker.run(self.git('rev-parse', 'main'), checks, 'main')
-        self.assertEqual([check for check, _ in failures], [checks[1]])
+        self.assertEqual([(check, code) for check, _, code in failures], [(checks[1], 1)])
         with mock.patch.object(land.Gate, 'check_only', side_effect=SystemExit(5)):
             with self.assertRaises(postland.CheckerError):
                 checker.run(self.git('rev-parse', 'main'), checks, 'main')
