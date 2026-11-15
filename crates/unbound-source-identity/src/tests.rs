@@ -670,3 +670,50 @@ fn a_library_without_its_root_file_counts_every_crate() {
     assert!(sources.contains(&"crates/unbound-rules/src/audio.rs".to_string()));
     assert!(sources.contains(&"crates/unbound-other/src/other.rs".to_string()));
 }
+
+/// A crate counted whole hashes every file of its directory and the files its manifest and
+/// path attributes point at outside it; a crate directory named with underscores is found.
+#[test]
+fn whole_crates_hash_their_files_wherever_they_are() {
+    let identity_of = |ws: &Workspace| ws.identity("unbound_compiler", &[]);
+    // A library kept at the crate's root (`[lib] path`).
+    let ws = compiler_and_rules("lib-at-root");
+    std::fs::create_dir_all(ws.0.join("crates/unbound-other")).unwrap();
+    ws.write(
+        "crates/unbound-other/Cargo.toml",
+        "[package]\nname = \"unbound-other\"\n[lib]\npath = \"lib.rs\"\n",
+    );
+    ws.write("crates/unbound-other/lib.rs", "pub struct Other;\n");
+    ws.write(
+        "crates/unbound-compiler/src/fit.rs",
+        "use unbound_other::Other;\n",
+    );
+    let before = identity_of(&ws);
+    ws.write("crates/unbound-other/lib.rs", "pub struct Other(u8);\n");
+    assert_ne!(identity_of(&ws), before);
+    // A module at a file outside the crate.
+    let ws = compiler_and_rules("outside-module");
+    std::fs::create_dir_all(ws.0.join("extra")).unwrap();
+    ws.write("extra/x.rs", "pub struct X;\n");
+    ws.write(
+        "crates/unbound-rules/src/device.rs",
+        "#[path = \"../../../extra/x.rs\"]\nmod x;\npub enum Device { A }\npub fn select() {}\n",
+    );
+    let before = identity_of(&ws);
+    ws.write("extra/x.rs", "pub struct X(u8);\n");
+    assert_ne!(identity_of(&ws), before);
+    // A crate directory with underscores.
+    let ws = compiler_and_rules("underscores");
+    std::fs::create_dir_all(ws.0.join("crates/unbound_x/src")).unwrap();
+    ws.write(
+        "crates/unbound_x/Cargo.toml",
+        "[package]\nname = \"unbound_x\"\n",
+    );
+    ws.write("crates/unbound_x/src/lib.rs", "mod x;\npub use x::X;\n");
+    ws.write("crates/unbound_x/src/x.rs", "pub struct X;\n");
+    ws.write("crates/unbound-compiler/src/fit.rs", "use unbound_x::X;\n");
+    assert!(
+        ws.sources("unbound_compiler", &[])
+            .contains(&"crates/unbound_x/src/x.rs".to_string())
+    );
+}

@@ -21,9 +21,20 @@ enum Change {
     Module(String),
 }
 
-/// A workspace crate's directory below `crates/`, from its Rust name (`unbound_compat`).
-fn crate_dir(name: &str) -> String {
-    name.replace('_', "-")
+/// A workspace crate's directory below `crates/`, from its Rust name (`unbound_compat`): the
+/// directory whose name reads as it (`unbound-compat`, also `unbound_compat`), else the name
+/// with dashes.
+fn crate_dir(root: &Path, name: &str) -> PathBuf {
+    let crates = root.join("crates");
+    if let Ok(entries) = std::fs::read_dir(&crates) {
+        for entry in entries.flatten() {
+            let dir = entry.file_name().to_string_lossy().into_owned();
+            if dir.replace('-', "_") == name {
+                return crates.join(dir);
+            }
+        }
+    }
+    crates.join(name.replace('_', "-"))
 }
 
 /// Every Rust file below `dir`, sorted (none when it is not a directory).
@@ -47,14 +58,31 @@ fn rust_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(out)
 }
 
+/// Every file below `dir`, sorted.
+fn all_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
+    let mut out = Vec::new();
+    let mut pending = vec![dir.to_path_buf()];
+    while let Some(dir) = pending.pop() {
+        for entry in std::fs::read_dir(&dir)? {
+            let path = entry?.path();
+            if path.is_dir() {
+                pending.push(path);
+            } else {
+                out.push(path);
+            }
+        }
+    }
+    out.sort();
+    Ok(out)
+}
+
 /// A file read for the paths its code names.
 struct Code {
     /// Its code without comments and test code, its string and character literals emptied
     /// (`""`, `' '`): what they hold names nothing.
     text: String,
-    /// The paths its `include_str!`, `include_bytes!` and `include!` name, with whether the
-    /// include is code (`include!`).
-    includes: Vec<(String, bool)>,
+    /// The paths its `include_str!`, `include_bytes!`, `include!` and path attributes name.
+    includes: Vec<(String, Include)>,
     /// It holds something the reading cannot follow: an include of a computed path, a crate
     /// alias, a `#[path]` module, a macro (its expansion names what the reading does not see).
     unsure: bool,
@@ -286,17 +314,43 @@ fn raw_string_start(rest: &[char]) -> Option<usize> {
 }
 
 /// Records a string literal that is the path of an include macro the code before it opens.
-fn note_include(before: &str, literal: &str, includes: &mut Vec<(String, bool)>) {
+fn note_include(before: &str, literal: &str, includes: &mut Vec<(String, Include)>) {
     let before = before.trim_end();
-    for (name, is_code) in [
-        ("include_str!(", false),
-        ("include_bytes!(", false),
-        ("include!(", true),
+    // A module's file (`#[path = "x.rs"]`, also under `cfg_attr`): `path =` inside an open
+    // attribute.
+    let in_attribute = before.rfind('#').is_some_and(|at| {
+        before[at..]
+            .trim_start_matches(['#', '!'])
+            .trim_start()
+            .starts_with('[')
+            && !before[at..].contains(']')
+    });
+    if in_attribute
+        && before.ends_with('=')
+        && before[..before.len() - 1].trim_end().ends_with("path")
+    {
+        includes.push((literal.to_string(), Include::ModuleFile));
+    }
+    for (name, kind) in [
+        ("include_str!(", Include::Data),
+        ("include_bytes!(", Include::Data),
+        ("include!(", Include::Code),
     ] {
         if before.ends_with(name) && !before[..before.len() - name.len()].ends_with(is_ident) {
-            includes.push((literal.to_string(), is_code));
+            includes.push((literal.to_string(), kind));
         }
     }
+}
+
+/// What a file names another file for.
+#[derive(Clone, Copy, PartialEq)]
+enum Include {
+    /// `include_str!`, `include_bytes!`: its bytes.
+    Data,
+    /// `include!`: code read where it stands.
+    Code,
+    /// A path attribute: a module's file.
+    ModuleFile,
 }
 
 /// A text without its items under `#[cfg(test)]` (test code is not in the output's build). An
@@ -802,7 +856,7 @@ pub fn producing_sources(
         let mut files = BTreeSet::new();
         let mut changes: Vec<(String, Change)> = Vec::new();
         for (name, r) in &reach {
-            let dir = root.join("crates").join(crate_dir(name));
+            let dir = crate_dir(root, name);
             let src = dir.join("src");
             let lib_path = src.join("lib.rs");
             files.insert(dir.join("Cargo.toml"));
@@ -825,7 +879,7 @@ pub fn producing_sources(
                 };
                 for package in renamed {
                     let other = package.replace('-', "_");
-                    let other_dir = root.join("crates").join(crate_dir(&other));
+                    let other_dir = crate_dir(root, &other);
                     if other_dir.join("Cargo.toml").is_file() {
                         changes.push((other, Change::Whole));
                     }
@@ -842,6 +896,24 @@ pub fn producing_sources(
             // A root with code of its own (items, impls, the `use` lines they rely on), or with
             // what the reading cannot follow (`#[path]`, an alias, a computed include), is not
             // read apart: a crate only partly reached counts whole.
+            // The files its manifest points at (`[lib] path`, a binary's): hashed.
+            let manifest = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap_or_default();
+            for (at, _) in manifest.match_indices("path") {
+                let value = manifest[at + 4..].trim_start();
+                if let Some(value) = value.strip_prefix('=')
+                    && let Some(quoted) = value.trim_start().strip_prefix(['"', '\''])
+                    && let Some(target) = quoted.split(['"', '\'']).next()
+                {
+                    let file = lexical(&dir.join(target));
+                    if file.is_file() {
+                        files.insert(file);
+                    }
+                }
+            }
+            // A build script may set what the crate's code compiles to.
+            if !r.whole && dir.join("build.rs").is_file() {
+                changes.push((name.clone(), Change::Whole));
+            }
             if !r.whole {
                 let root = code(&std::fs::read_to_string(&lib_path).unwrap_or_default());
                 if !lib_path.is_file() || root.unsure || !root_code(&root.text).trim().is_empty() {
@@ -862,8 +934,14 @@ pub fn producing_sources(
             // The texts read: the reached modules' files.
             let mut texts: Vec<(PathBuf, Code)> = Vec::new();
             if r.whole {
-                for path in rust_files(&src)? {
-                    texts.push((path.clone(), code(&std::fs::read_to_string(&path)?)));
+                // Every file of its directory (build script, other sources, data); its Rust
+                // files are read.
+                for path in all_files(&dir)? {
+                    if path.extension().is_some_and(|e| e == "rs") {
+                        texts.push((path.clone(), code(&std::fs::read_to_string(&path)?)));
+                    } else {
+                        files.insert(path);
+                    }
                 }
             } else {
                 for m in &r.modules {
@@ -879,11 +957,31 @@ pub fn producing_sources(
             for (path, read) in &texts {
                 let text = &read.text;
                 files.insert(path.clone());
-                for (include, is_code) in &read.includes {
-                    let file = lexical(&path.parent().unwrap_or(&src).join(include));
-                    files.insert(file);
-                    // Included code is read where it stands: the reading does not follow it.
-                    if *is_code {
+                let here = path.parent().unwrap_or(&src);
+                for (include, kind) in &read.includes {
+                    // A module file is relative to the file's directory, or (from a file that
+                    // is not a directory's module) to the directory of the file's own name.
+                    let own_dir = here.join(path.file_stem().unwrap_or_default());
+                    let candidates = match kind {
+                        Include::ModuleFile => vec![here.join(include), own_dir.join(include)],
+                        _ => vec![here.join(include)],
+                    };
+                    let found: Vec<PathBuf> = candidates
+                        .iter()
+                        .map(|c| lexical(c))
+                        .filter(|c| c.is_file())
+                        .collect();
+                    if found.is_empty() && *kind == Include::ModuleFile && include.contains("..") {
+                        // A module from outside the crate that this reading cannot find.
+                        return Err(io::Error::other(format!(
+                            "{}: cannot find the module file {include} it names",
+                            path.display()
+                        )));
+                    }
+                    files.extend(found);
+                    // Included code and modules at other files are read where they stand: the
+                    // reading does not follow them.
+                    if *kind != Include::Data {
                         changes.push((name.clone(), Change::Whole));
                     }
                 }
@@ -891,7 +989,7 @@ pub fn producing_sources(
                     if other == *name {
                         continue;
                     }
-                    let other_src = root.join("crates").join(crate_dir(&other)).join("src");
+                    let other_src = crate_dir(root, &other).join("src");
                     if !other_src.join("lib.rs").is_file() {
                         // Not a workspace crate (or not one of `crates/`): a package.
                         continue;
@@ -970,7 +1068,7 @@ pub fn producing_sources(
             // The workspace's manifest is read for renames too.
             let watched = reach
                 .keys()
-                .map(|name| root.join("crates").join(crate_dir(name)))
+                .map(|name| crate_dir(root, name))
                 .chain([root.join("Cargo.toml")])
                 .collect();
             return Ok((files, watched));
