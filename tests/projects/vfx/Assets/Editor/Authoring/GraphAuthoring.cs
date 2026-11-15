@@ -44,6 +44,21 @@ public static class GraphAuthoring
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
+        Bundled();
+    }
+
+    /// <summary>Where the probe finds the bundle (under StreamingAssets, so by a path of the
+    /// project's in the Editor and in the engine alike).</summary>
+    public const string BundleFolder = "Assets/StreamingAssets/VfxProbe", BundleName = "vfxgraphs";
+
+    /// <summary>An AssetBundle holding the Basic graph's asset as the Editor builds it: its
+    /// compiled graph, without the graph file.</summary>
+    static void Bundled()
+    {
+        Directory.CreateDirectory(BundleFolder);
+        var build = new AssetBundleBuild { assetBundleName = BundleName, assetNames = new[] { Folder + "/Basic.vfx" } };
+        BuildPipeline.BuildAssetBundles(BundleFolder, new[] { build }, BuildAssetBundleOptions.None, BuildTarget.StandaloneLinux64);
+        AssetDatabase.Refresh();
     }
 
     /// <summary>Two textures and two meshes for object-typed properties: defaults and overrides.</summary>

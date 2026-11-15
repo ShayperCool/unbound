@@ -188,13 +188,16 @@ def images(directory):
     return sorted(p.name for p in Path(directory).glob('*.png'))
 
 
-def record(probe, method, variable, label, batch):
+RECORD_TIMEOUT = 900
+
+
+def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT):
     out = run_root(probe, label)
     project = assemble(probe, out)
     capture = out/'capture'
     capture.mkdir(parents=True)
     job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', method], batch=batch,
-        graphics=True, env={variable: str(capture)}, timeout=900, label=probe.name+'-'+label)
+        graphics=True, env={variable: str(capture)}, timeout=timeout, label=probe.name+'-'+label)
     print(editor_runner.summary(editor_runner.run(job)))
     problem = editor_runner.result_problem(out, gpu=True) or editor_runner.jsonl_complete()(capture)
     if problem:
@@ -277,11 +280,13 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None):
     return 1 if failures or code else 0
 
 
-def main(probe, method, variable, tolerance, engine_args, batch=True, authored=None):
+def main(probe, method, variable, tolerance, engine_args, batch=True, authored=None, record_timeout=RECORD_TIMEOUT):
     """batch=False records in a windowed Editor (on the private display): batch mode calls no OnGUI.
     authored names the probe's authored set (tests/authored_project.py) when its Editor run also
     authors inputs the engine needs: publish keeps the first capture's project as that set and
-    the gate assembles it instead of the bare fixture."""
+    the gate assembles it instead of the bare fixture. record_timeout is how many seconds an
+    Editor capture may take before it is stopped (a probe whose capture authors and builds much
+    gives itself more)."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('record', 'publish', 'gate'))
     parser.add_argument('labels', nargs='*')
@@ -289,7 +294,7 @@ def main(probe, method, variable, tolerance, engine_args, batch=True, authored=N
     args = parser.parse_args()
     label = args.label or time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     if args.mode == 'record':
-        return record(probe, method, variable, label, batch)
+        return record(probe, method, variable, label, batch, record_timeout)
     if args.mode == 'publish':
         code = publish(probe, args.labels)
         if authored and not code:

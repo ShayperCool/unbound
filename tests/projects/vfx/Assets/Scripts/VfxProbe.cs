@@ -1,3 +1,6 @@
+// The probe runs in the Editor only: a player build of the project (the AssetBundle the authoring
+// step builds compiles one) has none of the editor classes it uses.
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -82,6 +85,7 @@ public sealed class VfxProbe : MonoBehaviour
             Rec("manager/maxDeltaTime", F(VFXManager.maxDeltaTime));
             BeginSimulation();
             BeginDrawing();
+            Bundled();
             SpawnerStates(m_Running[0].Effect);
             AffineInverse();
         }
@@ -161,10 +165,46 @@ public sealed class VfxProbe : MonoBehaviour
         Draw("textured", "DrawTextured", 5);
     }
 
+    // ---------------------------------------------------------------------------- bundle
+
+    VisualEffect m_Bundled;
+
+    /// <summary>The asset of a graph as an AssetBundle holds it (built by the authoring step,
+    /// without the graph file): what loads, what it answers, and an effect that uses it.</summary>
+    void Bundled()
+    {
+        var bundle = AssetBundle.LoadFromFile(Path.Combine(Application.streamingAssetsPath, "VfxProbe/vfxgraphs"));
+        Rec("bundle/loaded", bundle != null);
+        if (bundle == null) return;
+        Rec("bundle/names", string.Join(", ", bundle.GetAllAssetNames().OrderBy(n => n, StringComparer.Ordinal)));
+        var asset = bundle.LoadAsset<VisualEffectAsset>("Assets/Graphs/Basic.vfx");
+        Rec("bundle/asset", asset == null ? "null" : asset.GetType().Name + " " + asset.name);
+        if (asset == null) return;
+        Rec("bundle/asset/is the project's", asset == AssetDatabase.LoadAssetAtPath<VisualEffectAsset>("Assets/Graphs/Basic.vfx"));
+        var events = new List<string>();
+        asset.GetEvents(events);
+        Rec("bundle/asset/events", string.Join(", ", events));
+        var exposed = new List<VFXExposedProperty>();
+        asset.GetExposedProperties(exposed);
+        Rec("bundle/asset/exposed", exposed.Count.ToString());
+        var systems = new List<string>();
+        var go = new GameObject("bundled");
+        go.transform.position = new Vector3(0f, 0f, 0f);
+        m_Bundled = go.AddComponent<VisualEffect>();
+        m_Bundled.resetSeedOnPlay = false;
+        m_Bundled.startSeed = 7;
+        m_Bundled.visualEffectAsset = asset;
+        Rec("bundle/effect/asset", m_Bundled.visualEffectAsset == asset);
+        m_Bundled.GetSystemNames(systems);
+        Rec("bundle/effect/systems", string.Join(", ", systems));
+    }
+
     /// <summary>At the end of a frame: the stages whose image this frame is, with what the
     /// effect says of itself.</summary>
     void Shoot()
     {
+        if (m_Bundled != null && (m_Frame == 3 || m_Frame == 20))
+            Rec("bundle/effect/f" + m_Frame.ToString("000"), "culled=" + (m_Bundled.culled ? 1 : 0) + " awake=" + (m_Bundled.HasAnySystemAwake() ? 1 : 0) + " renderer " + RendererState(m_Bundled));
         foreach (var stage in m_Stages)
         {
             if (Array.IndexOf(stage.Frames, m_Frame) < 0) continue;
@@ -1061,3 +1101,4 @@ public sealed class VfxProbe : MonoBehaviour
         }
     }
 }
+#endif

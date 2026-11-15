@@ -217,6 +217,19 @@ decide an edge pixel differently). Not shown by them: quads turned to face a cam
 cameras here look straight at them), and where a draw of many quads is split into instances
 (the image is the same either way; a unit test holds the split).
 
+## A built asset
+
+The authoring step builds an AssetBundle with the `Basic` graph's asset
+(`Assets/StreamingAssets/VfxProbe/vfxgraphs`: the compiled graph, without the graph file; the
+probe's own script is compiled for the Editor only, since the build compiles the project's
+scripts for a player). The probe loads it (`bundle/*`): the bundle and the asset's name in it,
+the asset (an object of its own, not the project's), its events and exposed properties, and an
+effect that uses it (its systems, and at frames 3 and 20 whether it is culled and awake).
+
+Known residuals (`residuals.json`): Unbound loads the built asset as a live object with its
+name, but does not read its compiled graph yet, so its events, the effect's systems and the
+effect's state differ; the load says so.
+
 ## Not covered yet
 
 Outputs that are sorted or culled per camera (alpha blended ones are, by default: the effects
