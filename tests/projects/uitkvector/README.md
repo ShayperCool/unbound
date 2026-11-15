@@ -31,10 +31,20 @@ Play mode, where `VectorProbe` (from the first frame's `Start`) records:
   row - (row >> 8), so the copies from row 256 on sample an earlier row's settings); and the logs
   of the whole run.
 
+The appended controls load solid vector images through UXML inline `--unity-image` URLs
+(absolute and relative) and `Button.iconImage`. A separate panel then overwrites the vector
+image used by a clipping background with `Painter2D.SaveToVectorImage`. Its old background and
+mask remain until `MarkDirtyRepaint`; changing overflow also refreshes the geometry. A hidden
+parent still masks a visible child. The six `vector-control-*.png` images record these transitions.
+All previous 69 value rows and both previous panel images stay byte-identical.
+
 Documented (Unity 6000.0 Scripting API: [VectorImage](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.VectorImage.html),
 [Background](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.Background.html),
 [Image](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.Image.html),
 [MeshGenerationContext.DrawVectorImage](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.MeshGenerationContext.DrawVectorImage.html);
+[VisualElement.MarkDirtyRepaint](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.VisualElement.MarkDirtyRepaint.html),
+[Painter2D.SaveToVectorImage](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.Painter2D.SaveToVectorImage.html);
+Manual: [Image](https://docs.unity3d.com/6000.0/Documentation/Manual/UIE-uxml-element-Image.html);
 package manual: [Vector Graphics 2.0](https://docs.unity3d.com/Packages/com.unity.vectorgraphics@2.0/manual/index.html)):
 the asset types and API. Observed in this capture only: how the images are placed and cut (the
 rules in `managed/UnityEngine/UIElements/Rendering/UaPainter.Vector.cs`), that a background's
@@ -57,3 +67,14 @@ gradient-stroked line whose gradient coordinates the package computes as NaN (th
 what such a fragment samples; measured on the NVIDIA driver only), and single pixels at gradient
 row ends and wrap/mirror seams, which the Editor samples from its dynamic-atlas copy of the
 gradients. The package is resolved through `Packages/packages-lock.json` (the Editor's).
+
+The Image manual uses the `--unity-image` custom style property for image sources; a
+`vector-image` UXML attribute is not a supported Image source. The SaveToVectorImage API
+initializes an existing image, and MarkDirtyRepaint requests regeneration. The controls change
+the image before requesting repaint, so the repaint changes the visible result. Mask retention
+and refresh on overflow changes are observations in 6000.0.71f1, selected through Compat. Other
+releases retain their previous per-paint mask generation, which remains unmeasured.
+
+The new mask images retain small Painter2D fringe coverage residuals, with at most eight channel
+steps on NVIDIA and no pixel above that. Their separate image limits bound the measured fringe
+differences and reject the changed mask coverage seen before this fix. The original gradient image limits and numeric tolerance are unchanged.

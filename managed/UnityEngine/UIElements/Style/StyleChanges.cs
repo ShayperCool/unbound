@@ -58,6 +58,7 @@ namespace Unbound.UIElements
             {
                 layout = true;
                 change |= VersionChangeType.Overflow;
+                if (Unbound.Runtime.Compat.RetainedStencilShapesMeasured) change |= VersionChangeType.Repaint;
             }
             if (!layout && (change & VersionChangeType.Repaint) == 0
                 && (x.unitySliceType != y.unitySliceType || x.textOverflow != y.textOverflow || x.unitySliceScale != y.unitySliceScale))

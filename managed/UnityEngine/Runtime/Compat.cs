@@ -207,6 +207,11 @@ namespace Unbound.Runtime
         /// tests/projects/fontfeatures, Unity 6000.0.71f1.</summary>
         internal static bool FontFeatureLookupIndexQueriesMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Vector and rounded stencil shapes stay with an element's retained geometry
+        /// until repaint. Measured in tests/projects/uitkvector on Unity 6000.0.71f1.
+        /// Other releases retain per-paint mask generation, unmeasured.</summary>
+        internal static bool RetainedStencilShapesMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Legacy generator pivot translation uses updated bounds, and primes the base
         /// space separately. Measured in tests/projects/textcolor on Unity 6000.0.71f1.
         /// Other releases retain generation-extents translation and batched glyph requests, unmeasured.</summary>

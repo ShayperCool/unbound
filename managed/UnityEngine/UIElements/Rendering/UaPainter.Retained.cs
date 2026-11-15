@@ -16,13 +16,14 @@ namespace Unbound.UIElements
     {
         internal readonly UaRetainedMesh Visuals = new UaRetainedMesh();
         internal readonly UaRetainedMesh Content = new UaRetainedMesh();
+        internal UaRetainedMesh Mask;
         internal bool Valid;
 
         internal void Invalidate() => Valid = false;
 
         /// <summary>Whether the textures it samples are the ones it was generated for (a destroyed
         /// texture or a text atlas that changed size needs the geometry generated again).</summary>
-        internal bool TexturesValid() => Visuals.TexturesValid() && Content.TexturesValid();
+        internal bool TexturesValid() => Visuals.TexturesValid() && Content.TexturesValid() && (Mask == null || Mask.TexturesValid());
     }
 
     internal sealed class UaRetainedMesh
@@ -151,6 +152,7 @@ namespace Unbound.UIElements
             g ??= new UaRetainedGeometry();
             g.Visuals.Clear();
             g.Content.Clear();
+            g.Mask?.Clear();
             if (style.visibility == Visibility.Visible)
             {
                 m_Recording = g.Visuals;
@@ -174,6 +176,18 @@ namespace Unbound.UIElements
                 finally
                 {
                     GUIUtility.uaContentPixelsPerPoint = devicePixelsPerPoint;
+                    CloseSegment();
+                    m_Recording = null;
+                }
+            }
+            if (Unbound.Runtime.Compat.RetainedStencilShapesMeasured && style.overflow != OverflowInternal.Visible
+                && (HasRadius(ve, style) || style.backgroundImage.vectorImage != null))
+            {
+                g.Mask ??= new UaRetainedMesh();
+                m_Recording = g.Mask;
+                try { DrawStencilMask(ve, style); }
+                finally
+                {
                     CloseSegment();
                     m_Recording = null;
                 }

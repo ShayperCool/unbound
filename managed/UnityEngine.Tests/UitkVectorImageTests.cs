@@ -94,6 +94,87 @@ namespace UnityEngine.Tests
             return area;
         }
 
+        static (float min, float max) MaskX(UaPainter painter)
+        {
+            var xs = painter.Batches.Where(b => b.Stencil == UaPainter.StencilKind.PushMask)
+                .SelectMany(b => painter.Indices.Skip(b.IndexStart).Take(b.IndexCount))
+                .Select(i => painter.Positions[i].x).ToArray();
+            return (xs.Min(), xs.Max());
+        }
+
+        [Fact]
+        public void VectorMaskKeepsItsGeometryUntilRepaintAndMovesWithItsElement()
+        {
+            var release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try
+            {
+                using var panel = new Panel(null, ContextType.Player, EventDispatcher.CreateDefault(), null);
+                panel.visualTree.style.width = 100;
+                panel.visualTree.style.height = 100;
+                var image = Quad(10, 10, Color.white);
+                var element = Element(40, 40, s => {
+                    s.backgroundImage = new StyleBackground(image);
+                    s.unityBackgroundScaleMode = ScaleMode.StretchToFill;
+                    s.overflow = Overflow.Hidden;
+                });
+                element.style.position = Position.Absolute;
+                panel.visualTree.Add(element);
+                panel.ApplyStyles(); panel.ValidateLayout();
+                var painter = new UaPainter();
+                painter.Paint(panel, 100);
+                Assert.Equal((0f, 40f), MaskX(painter));
+                for (int i = 0; i < image.vertices.Length; i++) image.vertices[i].position.x *= 0.5f;
+                painter.Paint(panel, 100);
+                Assert.Equal((0f, 40f), MaskX(painter));
+                element.style.translate = new Translate(12, 9);
+                panel.ApplyStyles(); panel.ValidateLayout();
+                painter.Paint(panel, 100);
+                Assert.Equal((12f, 52f), MaskX(painter));
+                element.MarkDirtyRepaint();
+                painter.Paint(panel, 100);
+                Assert.Equal((12f, 32f), MaskX(painter));
+                element.style.overflow = Overflow.Visible;
+                panel.ApplyStyles(); panel.ValidateLayout();
+                painter.Paint(panel, 100);
+                Assert.DoesNotContain(painter.Batches, b => b.Stencil == UaPainter.StencilKind.PushMask);
+                for (int i = 0; i < image.vertices.Length; i++) image.vertices[i].position.x *= 2;
+                element.style.overflow = Overflow.Hidden;
+                panel.ApplyStyles(); panel.ValidateLayout();
+                painter.Paint(panel, 100);
+                Assert.Equal((12f, 52f), MaskX(painter));
+            }
+            finally { ProjectInfo.UnityVersion = release; }
+        }
+
+        [Fact]
+        public void HiddenParentStillMasksItsVisibleChild()
+        {
+            var release = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try
+            {
+                using var panel = new Panel(null, ContextType.Player, EventDispatcher.CreateDefault(), null);
+                panel.visualTree.style.width = 100;
+                panel.visualTree.style.height = 100;
+                var parent = Element(40, 40, s => {
+                    s.backgroundImage = new StyleBackground(Quad(10, 10, Color.white));
+                    s.overflow = Overflow.Hidden;
+                    s.visibility = Visibility.Hidden;
+                });
+                var child = Element(40, 40, s => { s.backgroundColor = Color.green; s.visibility = Visibility.Visible; });
+                parent.Add(child);
+                panel.visualTree.Add(parent);
+                panel.ApplyStyles(); panel.ValidateLayout();
+                var painter = new UaPainter();
+                painter.Paint(panel, 100);
+                Assert.True(painter.UsesStencil);
+                Assert.Equal((0f, 40f), MaskX(painter));
+                Assert.Contains(painter.Batches, b => b.Stencil == UaPainter.StencilKind.Draw && b.StencilRef == 1 && b.IndexCount > 0);
+            }
+            finally { ProjectInfo.UnityVersion = release; }
+        }
+
         [Fact]
         public void BackgroundScaleToFitCentresAndScaleAndCropStretches()
         {

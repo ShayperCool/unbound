@@ -183,7 +183,7 @@ namespace Unbound.UIElements
                     masked = true;
                     UsesStencil = true;
                     m_StencilKind = StencilKind.PushMask;
-                    DrawStencilMask(ve, style);
+                    DrawElementMask(ve, style, geometry);
                     m_StencilKind = StencilKind.Draw;
                     m_StencilRef++;
                 }
@@ -208,11 +208,24 @@ namespace Unbound.UIElements
                 m_Matrix = ve.worldTransform;
                 m_Identity = m_Matrix.isIdentity;
                 m_StencilKind = StencilKind.PopMask;
-                DrawStencilMask(ve, style);
+                DrawElementMask(ve, style, geometry);
                 m_StencilKind = StencilKind.Draw;
             }
             m_StencilRef = savedStencil;
             m_Scissor = savedScissor;
+        }
+
+        void DrawElementMask(VisualElement ve, ComputedValues style, UaRetainedGeometry geometry)
+        {
+            if (!Unbound.Runtime.Compat.RetainedStencilShapesMeasured)
+            {
+                DrawStencilMask(ve, style);
+                return;
+            }
+            int opacity = m_OpacityId;
+            m_OpacityId = 0;
+            if (geometry.Mask != null) Replay(geometry.Mask);
+            m_OpacityId = opacity;
         }
 
         /// <summary>The shape an element clips its content to (DefaultElementBuilder's stencil

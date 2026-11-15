@@ -67,4 +67,5 @@
 {"k":"layout/align-content","v":[302.4,368,50.3999939,30.3999939]}
 {"k":"layout/draw-vector-image","v":[400,368,90.3999939,60]}
 {"k":"logs","v":["Warning: No Theme Style Sheet set to PanelSettings , UI will not render properly"]}
+{"k":"uxml/vector-references","v":[true,true,true]}
 {"k":"complete","v":true}

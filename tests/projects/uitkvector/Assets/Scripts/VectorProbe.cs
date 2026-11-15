@@ -60,6 +60,7 @@ public class VectorProbe : MonoBehaviour
         var sb = new StringBuilder("[");
         for (int i = 0; i < logs.Count; i++) sb.Append(i == 0 ? "" : ",").Append(Str(logs[i]));
         Value(output, "logs", sb.Append("]").ToString());
+        VisualControls(dir, output);
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(dir, "values.jsonl"), output.ToString());
 #if UNITY_EDITOR
@@ -124,6 +125,88 @@ public class VectorProbe : MonoBehaviour
             var e = root.Q(cases[i].name);
             Value(output, "layout/" + cases[i].name, Rect(e.layout));
         }
+    }
+
+    static void VisualControls(string dir, StringBuilder output)
+    {
+        var tree = Resources.Load<VisualTreeAsset>("VectorRefs").CloneTree();
+        var direct = tree.Q<Image>("direct");
+        var relative = tree.Q<Image>("relative");
+        var button = tree.Q<Button>("icon");
+        var source = Resources.Load<VectorImage>("Vector/shapes");
+        var target = new RenderTexture(320, 80, 24, RenderTextureFormat.ARGB32);
+        target.Create();
+        var settings = ScriptableObject.CreateInstance<PanelSettings>();
+        settings.targetTexture = target;
+        settings.scaleMode = PanelScaleMode.ConstantPixelSize;
+        settings.clearColor = true;
+        settings.colorClearValue = Color.black;
+        var go = new GameObject("VectorControls");
+        go.SetActive(false);
+        var doc = go.AddComponent<UIDocument>();
+        doc.panelSettings = settings;
+        go.SetActive(true);
+        var root = doc.rootVisualElement;
+        var vi = ScriptableObject.CreateInstance<VectorImage>();
+        void Paint(bool flipped)
+        {
+            var painter = new Painter2D();
+            painter.fillColor = Color.red;
+            painter.BeginPath();
+            painter.MoveTo(new Vector2(flipped ? 64 : 0, flipped ? 64 : 0));
+            painter.LineTo(new Vector2(64, 0));
+            painter.LineTo(new Vector2(0, 64));
+            painter.ClosePath();
+            painter.Fill();
+            painter.SaveToVectorImage(vi);
+            painter.Dispose();
+        }
+        Paint(false);
+        var mask = new VisualElement();
+        mask.style.position = Position.Absolute;
+        mask.style.left = 0; mask.style.top = 0; mask.style.width = 64; mask.style.height = 64;
+        mask.style.backgroundImage = Background.FromVectorImage(vi);
+        mask.style.unityBackgroundScaleMode = ScaleMode.StretchToFill;
+        mask.style.overflow = Overflow.Hidden;
+        var child = new VisualElement();
+        child.style.width = 64; child.style.height = 64; child.style.backgroundColor = Color.green;
+        mask.Add(child); root.Add(mask);
+        tree.style.position = Position.Absolute;
+        tree.style.left = 80; tree.style.top = 0; tree.style.width = 240; tree.style.height = 80;
+        int index = 0;
+        foreach (var element in new VisualElement[] { direct, relative, button })
+        {
+            element.style.position = Position.Absolute;
+            element.style.left = index++ * 72;
+            element.style.top = 0; element.style.width = 64; element.style.height = 64;
+        }
+        root.Add(tree);
+        Update(); Update();
+        Value(output, "uxml/vector-references", "[" + (direct.vectorImage == source ? "true" : "false") + "," +
+            (relative.vectorImage == source ? "true" : "false") + "," + (button.iconImage.vectorImage == source ? "true" : "false") + "]");
+        Render(target, Path.Combine(dir, "vector-control-before.png"));
+        Paint(true);
+        Update();
+        Render(target, Path.Combine(dir, "vector-control-unmarked.png"));
+        mask.MarkDirtyRepaint();
+        Update();
+        Render(target, Path.Combine(dir, "vector-control-repaint.png"));
+        mask.style.overflow = Overflow.Visible;
+        Update();
+        Render(target, Path.Combine(dir, "vector-control-visible-overflow.png"));
+        Paint(false);
+        mask.style.overflow = Overflow.Hidden;
+        Update();
+        Render(target, Path.Combine(dir, "vector-control-reclip.png"));
+        mask.style.visibility = Visibility.Hidden;
+        child.style.visibility = Visibility.Visible;
+        Update();
+        Render(target, Path.Combine(dir, "vector-control-hidden-parent.png"));
+        UnityEngine.Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(settings);
+        target.Release();
+        UnityEngine.Object.DestroyImmediate(target);
+        UnityEngine.Object.DestroyImmediate(vi);
     }
 
     static List<Case> Cases(Dictionary<string, VectorImage> vi)

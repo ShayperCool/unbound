@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <ui:Image name="direct" style="--unity-image: url('/Assets/Resources/Vector/shapes.svg');" />
+  <ui:Image name="relative" style="--unity-image: url('Vector/shapes.svg');" />
+  <ui:Button name="icon" icon-image="/Assets/Resources/Vector/shapes.svg" />
+</ui:UXML>
