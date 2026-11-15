@@ -127,7 +127,10 @@ namespace Unbound.Tests
                 var packet = s_Packet.Value;
                 Assert.Equal(PixelFormats.GpuRG16UNorm, packet.Format);
                 Assert.Equal(2, packet.MipCount);
+                Assert.Equal(2, packet.Layers);
                 Assert.Equal(2 * (64 + 16) * 4, packet.Data.Length);
+                // Slice 0 level 0 (256 bytes), level 1 (64), then slice 1's.
+                Assert.Equal(new byte[] { 1, 2, 3, 4 }, new[] { 0, 256, 320, 576 }.Select(at => packet.Data[at]).ToArray());
             }
             finally { Object.DestroyImmediate(rg); }
         }
