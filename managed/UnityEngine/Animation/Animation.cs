@@ -1088,6 +1088,7 @@ namespace UnityEngine
                         double n0 = length > 0f ? p.From / length : 0.0, n1 = length > 0f ? p.To / length : 0.0;
                         m_EventState = s;
                         AnimationEvents.FireCrossed(s.m_Clip, n0, n1, loop, fromStart, m_FireEvent ??= FireEvent);
+                        m_EventState = null;
                     }
                 }
                 if (p.Stopped && s.m_IsClone) RemoveState(s);

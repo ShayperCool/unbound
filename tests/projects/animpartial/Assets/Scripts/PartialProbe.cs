@@ -372,7 +372,7 @@ public class PartialProbe : MonoBehaviour
             c.Animation.Play("LZ");
             c.Animation["LZ"].weight = 0f;
         })), lz, "LZ");
-        // Played at speed 0, its time held for two updates, then at speed 1.
+        // Played at speed 0 for three updates (its start and two more), then at speed 1.
         Legacy("legacy.events.start.speed0", At((0, c => c.Animation.Play("LP")), (2, c =>
         {
             c.Animation["LZ"].speed = 0f;
