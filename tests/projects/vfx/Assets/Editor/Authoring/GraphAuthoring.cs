@@ -16,20 +16,60 @@ using UnityEngine.VFX;
 public static class GraphAuthoring
 {
     const string Folder = "Assets/Graphs";
+    const string ObjectFolder = "Assets/Objects";
     public const string Scene = "Assets/Scenes/Probe.unity";
 
     public static void Author()
     {
         Directory.CreateDirectory(Folder);
+        Directory.CreateDirectory(ObjectFolder);
         AssetDatabase.Refresh();
+        Objects();
         Empty();
         Basic();
         Exposed();
         Exposed2();
         Events();
+        Attributes();
+        Attributes2();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
+    }
+
+    /// <summary>Two textures and two meshes for object-typed properties: defaults and overrides.</summary>
+    static void Objects()
+    {
+        foreach (var (name, color) in new[] { ("ImageA", Color.red), ("ImageB", Color.green) })
+        {
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            texture.SetPixels(new[] { color, color, color, color });
+            File.WriteAllBytes(ObjectFolder + "/" + name + ".png", texture.EncodeToPNG());
+        }
+        foreach (var name in new[] { "ShapeA", "ShapeB" })
+        {
+            var mesh = new Mesh
+            {
+                vertices = new[] { Vector3.zero, Vector3.up, Vector3.right },
+                triangles = new[] { 0, 1, 2 },
+            };
+            AssetDatabase.CreateAsset(mesh, ObjectFolder + "/" + name + ".asset");
+        }
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+    }
+
+    static T Object<T>(string name) where T : UnityEngine.Object =>
+        AssetDatabase.LoadAssetAtPath<T>(ObjectFolder + "/" + name + (typeof(T) == typeof(Mesh) ? ".asset" : ".png"));
+
+    /// <summary>A block that initializes an attribute from the spawn event's value of it: the
+    /// attribute becomes part of the graph's event attributes.</summary>
+    static void Inherit(VFXContext context, string attribute)
+    {
+        var block = Make<SetAttribute>();
+        block.SetSettingValue("attribute", attribute);
+        block.SetSettingValue("Source", SetAttribute.ValueSource.Source);
+        context.AddChild(block);
     }
 
     static T Make<T>() where T : VFXModel => ScriptableObject.CreateInstance<T>();
@@ -130,12 +170,12 @@ public static class GraphAuthoring
         gradient.SetKeys(new[] { new GradientColorKey(Color.red, 0f), new GradientColorKey(Color.blue, 1f) },
             new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) });
         Parameter(graph, typeof(Gradient), "Ramp", gradient);
-        Parameter(graph, typeof(Texture2D), "Image");
+        Parameter(graph, typeof(Texture2D), "Image", Object<Texture2D>("ImageA"));
         Parameter(graph, typeof(Texture3D), "Volume");
         Parameter(graph, typeof(Cubemap), "Sky");
         Parameter(graph, typeof(Texture2DArray), "Layers");
         Parameter(graph, typeof(CubemapArray), "Skies");
-        Parameter(graph, typeof(Mesh), "Shape");
+        Parameter(graph, typeof(Mesh), "Shape", Object<Mesh>("ShapeA"));
         Parameter(graph, typeof(SkinnedMeshRenderer), "Skin");
         Parameter(graph, typeof(GraphicsBuffer), "Data");
         Parameter(graph, typeof(TSphere), "Ball");
@@ -194,6 +234,31 @@ public static class GraphAuthoring
         Save(graph);
     }
 
+    /// <summary>A system whose particles take several attributes of different types from the
+    /// spawn event: floats, vectors, a bool and an unsigned integer.</summary>
+    static void Attributes()
+    {
+        var graph = NewGraph("Attributes");
+        var (spawn, init, _, _) = System(graph, 8);
+        var rate = Make<VFXSpawnerConstantRate>();
+        spawn.AddChild(rate);
+        rate.inputSlots[0].value = 2f;
+        foreach (var attribute in new[] { "lifetime", "velocity", "color", "alive", "seed" }) Inherit(init, attribute);
+        Save(graph);
+    }
+
+    /// <summary>Some of the same event attributes as Attributes in another order, and one of its own.</summary>
+    static void Attributes2()
+    {
+        var graph = NewGraph("Attributes2");
+        var (spawn, init, _, _) = System(graph, 8);
+        var rate = Make<VFXSpawnerConstantRate>();
+        spawn.AddChild(rate);
+        rate.inputSlots[0].value = 2f;
+        foreach (var attribute in new[] { "color", "size", "lifetime" }) Inherit(init, attribute);
+        Save(graph);
+    }
+
     /// <summary>The probe scene: effects saved with their serialized state, one with overrides.</summary>
     static void BuildScene()
     {
@@ -217,6 +282,12 @@ public static class GraphAuthoring
         overridden.SetVector4("Tint", new Vector4(1f, 0f, 0f, 0.5f));
         overridden.SetVector3("WhereWorld", new Vector3(-1f, -2f, -3f));
         overridden.SetAnimationCurve("Curve", AnimationCurve.Constant(0f, 1f, 5f));
+        var ramp = new Gradient();
+        ramp.SetKeys(new[] { new GradientColorKey(Color.yellow, 0.25f), new GradientColorKey(Color.cyan, 0.75f) },
+            new[] { new GradientAlphaKey(0.25f, 0.125f), new GradientAlphaKey(0.75f, 0.5f) });
+        overridden.SetGradient("Ramp", ramp);
+        overridden.SetTexture("Image", Object<Texture2D>("ImageB"));
+        overridden.SetMesh("Shape", Object<Mesh>("ShapeB"));
         overridden.startSeed = 1234;
         overridden.resetSeedOnPlay = false;
         overridden.initialEventName = "Custom";

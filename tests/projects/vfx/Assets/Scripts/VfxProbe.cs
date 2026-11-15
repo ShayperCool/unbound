@@ -17,7 +17,7 @@ using UnityEngine.VFX;
 public sealed class VfxProbe : MonoBehaviour
 {
     const BindingFlags Any = BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-    static readonly string[] k_Graphs = { "Empty", "Basic", "Exposed", "Exposed2", "Events" };
+    static readonly string[] k_Graphs = { "Empty", "Basic", "Exposed", "Exposed2", "Events", "Attributes", "Attributes2" };
 
     readonly StringBuilder m_Out = new StringBuilder();
     readonly List<string> m_Logs = new List<string>();
@@ -57,7 +57,8 @@ public sealed class VfxProbe : MonoBehaviour
         string thrown = "";
         try { action(); }
         // The runtime words an argument exception's message its own way: its parameter is the fact.
-        catch (ArgumentException e) { thrown = e.GetType().Name + " " + e.ParamName; }
+        catch (ArgumentNullException e) { thrown = e.GetType().Name + " " + e.ParamName; }
+        catch (ArgumentException e) { thrown = e.GetType().Name + ": " + e.Message.Split('\n')[0] + (e.ParamName == null ? "" : " [" + e.ParamName + "]"); }
         catch (Exception e) { thrown = e.GetType().Name + ": " + e.Message; }
         Application.logMessageReceived -= handler;
         Rec(key + "/logs", string.Join(" | ", m_Logs));
@@ -73,6 +74,7 @@ public sealed class VfxProbe : MonoBehaviour
             foreach (var name in new[] { "Plain", "Overridden", "Events", "NoAsset" }) Component("scene/" + name, GameObject.Find(name).GetComponent<VisualEffect>());
             Scripted();
             Attributes();
+            RuntimeData();
             Rec("manager/fixedTimeStep", F(VFXManager.fixedTimeStep));
             Rec("manager/maxDeltaTime", F(VFXManager.maxDeltaTime));
         }
@@ -120,6 +122,7 @@ public sealed class VfxProbe : MonoBehaviour
         Rec("tables/type/outside", Convert.ToInt32(typeOf.Invoke(null, new object[] { Enum.ToObject(operation, 155), 0, 0, 0, 1 })));
         Logged("tables/size/outside", () => Rec("tables/size/outside", Convert.ToInt32(sizeOf.Invoke(null, new object[] { Enum.ToObject(valueType, 21) }))));
         Rec("tables/dimension/outside", dimension.Invoke(null, new object[] { Enum.ToObject(valueType, 21) }).ToString());
+        Rec("tables/runtime data version", typeof(VisualEffectAsset).GetProperty("currentRuntimeDataVersion", Any).GetValue(null).ToString());
     }
 
     void Asset(string name)
@@ -341,6 +344,21 @@ public sealed class VfxProbe : MonoBehaviour
         e.visualEffectAsset = null;
         Rec("scripted/swap/null/has", Has(e, "Rate"));
         Logged("scripted/swap/null/get", () => Rec("scripted/swap/null/get", F(e.GetFloat("Rate"))));
+        // And an asset again after none: are the overrides still there?
+        e.visualEffectAsset = Graph("Exposed");
+        Rec("scripted/swap/after null/Rate", F(e.GetFloat("Rate")));
+        Rec("scripted/swap/after null/Count", e.GetInt("Count"));
+        // An object override through an asset that has no such property.
+        e.SetTexture("Image", image);
+        e.SetMesh("Shape", mesh);
+        e.visualEffectAsset = Graph("Exposed2");
+        e.visualEffectAsset = Graph("Exposed");
+        Rec("scripted/swap/objects/Image", Name(e.GetTexture("Image")));
+        Rec("scripted/swap/objects/Shape", Name(e.GetMesh("Shape")));
+        e.ResetOverride("Image");
+        e.ResetOverride("Shape");
+        Rec("scripted/swap/objects/Image/reset", Name(e.GetTexture("Image")));
+        Rec("scripted/swap/objects/Shape/reset", Name(e.GetMesh("Shape")));
 
         // State set from script.
         e.pause = true;
@@ -420,6 +438,80 @@ public sealed class VfxProbe : MonoBehaviour
             Rec(key + "/copied/other asset/color", Has(b, "color") + " " + V(b.GetVector3("color")));
             a.Dispose();
             Logged(key + "/disposed/get", () => Rec(key + "/disposed/get", F(a.GetFloat("spawnCount"))));
+        }
+        {
+            // Layouts with several attributes of different types, and copies between them.
+            var first = new GameObject("Attributes first").AddComponent<VisualEffect>();
+            first.visualEffectAsset = Graph("Attributes");
+            var second = new GameObject("Attributes second").AddComponent<VisualEffect>();
+            second.visualEffectAsset = Graph("Attributes2");
+            var a = first.CreateVFXEventAttribute();
+            var b = second.CreateVFXEventAttribute();
+            const string key = "attributes/layouts";
+            a.SetFloat("spawnCount", 5f);
+            a.SetFloat("lifetime", 9f);
+            a.SetVector3("velocity", new Vector3(1f, 2f, 3f));
+            a.SetVector3("color", new Vector3(0.125f, 0.25f, 0.375f));
+            a.SetBool("alive", false);
+            a.SetUint("seed", 4000000001u);
+            Rec(key + "/first", Layout(a));
+            // A wrong type for a name the layout has: nothing written, the default read.
+            Logged(key + "/wrong/alive/int", () => a.SetInt("alive", 7));
+            Logged(key + "/wrong/seed/int", () => a.SetInt("seed", 7));
+            Logged(key + "/wrong/velocity/vector4", () => a.SetVector4("velocity", Vector4.one));
+            Rec(key + "/first/after wrong writes", Layout(a));
+            Rec(key + "/first/wrong reads", (a.GetInt("alive") + " " + a.GetInt("seed") + " " + V(a.GetVector4("velocity")) + " " + V(a.GetVector2("color"))));
+            b.SetFloat("spawnCount", 6f);
+            b.SetFloat("lifetime", 2f);
+            b.SetFloat("size", 4f);
+            b.SetVector3("color", new Vector3(0.875f, 0.75f, 0.625f));
+            Rec(key + "/second", Layout(b));
+            // Into the second layout from the first, and into a fresh first from the second.
+            var intoSecond = new VFXEventAttribute(b);
+            Logged(key + "/second from first", () => intoSecond.CopyValuesFrom(a));
+            Rec(key + "/second from first", Layout(intoSecond));
+            var intoFirst = first.CreateVFXEventAttribute();
+            Rec(key + "/first/fresh", Layout(intoFirst));
+            Logged(key + "/first from second", () => intoFirst.CopyValuesFrom(b));
+            Rec(key + "/first from second", Layout(intoFirst));
+            // A copy made by the constructor keeps its source's layout.
+            var copy = new VFXEventAttribute(a);
+            Rec(key + "/first/copy", Layout(copy));
+        }
+    }
+
+    /// <summary>Every attribute an attribute set has among the probed names, with its value by
+    /// the getter of the type it answers to.</summary>
+    static string Layout(VFXEventAttribute a)
+    {
+        var b = new StringBuilder();
+        foreach (var n in k_Attributes)
+        {
+            if (a.HasFloat(n)) b.Append(n).Append('=').Append(F(a.GetFloat(n))).Append("; ");
+            else if (a.HasVector2(n)) b.Append(n).Append('=').Append(V(a.GetVector2(n))).Append("; ");
+            else if (a.HasVector3(n)) b.Append(n).Append('=').Append(V(a.GetVector3(n))).Append("; ");
+            else if (a.HasVector4(n)) b.Append(n).Append('=').Append(V(a.GetVector4(n))).Append("; ");
+            else if (a.HasBool(n)) b.Append(n).Append('=').Append(a.GetBool(n) ? "true" : "false").Append("; ");
+            else if (a.HasUint(n)) b.Append(n).Append('=').Append(a.GetUint(n)).Append("u; ");
+            else if (a.HasInt(n)) b.Append(n).Append('=').Append(a.GetInt(n)).Append("; ");
+            else if (a.HasMatrix4x4(n)) b.Append(n).Append('=').Append(M(a.GetMatrix4x4(n))).Append("; ");
+        }
+        return b.ToString().TrimEnd();
+    }
+
+    /// <summary>Compiled graphs handed to a resource by hand (the cases of the editor assembly's
+    /// RuntimeDataCases): what each logs and throws.</summary>
+    void RuntimeData()
+    {
+        var cases = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("RuntimeDataCases")).First(t => t != null);
+        var run = cases.GetMethod("Run", Any);
+        foreach (var name in (string[])cases.GetMethod("Names", Any).Invoke(null, null))
+        {
+            Logged("runtime data/" + name, () =>
+            {
+                try { run.Invoke(null, new object[] { name }); }
+                catch (TargetInvocationException e) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(e.InnerException).Throw(); }
+            });
         }
     }
 }
