@@ -558,6 +558,30 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(go);
         }
 
+        /// <summary>Play during a once clip's fade out before its end sets the weight back to 1
+        /// and the clip still stops at its end; a cross-faded once clip stops after fading out.</summary>
+        [Fact]
+        public void LegacyOnceClipPlayedDuringItsEndFadeStillStops()
+        {
+            var go = new GameObject("Legacy");
+            var animation = go.AddComponent<Animation>();
+            animation.AddClip(LegacyClip("s", WrapMode.Once, ("localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 1f))), "s");
+            animation.CrossFade("s", 0.5f);
+            animation.Step(0f);
+            for (int i = 0; i < 7; i++) animation.Step(0.1f); // 0.7 s: in the last 0.5 s, fading out
+            Assert.True(animation["s"].weight < 1f);
+            animation.Play("s");
+            Assert.Equal(1f, animation["s"].weight);
+            for (int i = 0; i < 4; i++) animation.Step(0.1f); // past the end
+            Assert.False(animation.IsPlaying("s"));
+            Near.Equal(1f, go.transform.localPosition.x, 1e-3f);
+            animation.CrossFade("s", 0.25f);
+            animation.Step(0f);
+            for (int i = 0; i < 15 && animation.IsPlaying("s"); i++) animation.Step(0.1f);
+            Assert.False(animation.IsPlaying("s"));
+            Object.DestroyImmediate(go);
+        }
+
         [Fact]
         public void AnimatedBoolsAreTrueBeyondAThousandthOfZero()
         {

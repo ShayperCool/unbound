@@ -555,8 +555,7 @@ namespace UnityEngine
             StopOthers(state, mode);
             state.m_Enabled = true;
             state.m_WaitingInQueue = false;
-            state.m_Weight = 1f;
-            state.m_Fading = false;
+            state.SetWeightImmediate(1f);
             state.m_FadeOutLength = 0f;
             if (!state.m_Playing) state.Begin();
             return true;
@@ -714,7 +713,7 @@ namespace UnityEngine
             {
                 StopOthers(clone, clone.m_QueuePlayMode);
                 clone.m_Enabled = true;
-                clone.m_Weight = 1f;
+                clone.SetWeightImmediate(1f);
                 clone.m_FadeOutLength = 0f;
                 clone.Begin();
             }
@@ -1233,8 +1232,7 @@ namespace UnityEngine
             set
             {
                 RequireState();
-                m_Weight = value;
-                m_Fading = false;
+                SetWeightImmediate(value);
             }
         }
 
@@ -1385,6 +1383,15 @@ namespace UnityEngine
         {
             m_Playing = true;
             m_Fresh = true;
+        }
+
+        /// <summary>Sets the weight at once and ends any fade, the fade out before a once clip's
+        /// end too (which starts again from the clip's state at its next update).</summary>
+        internal void SetWeightImmediate(float weight)
+        {
+            m_Weight = weight;
+            m_Fading = false;
+            m_EndFade = false;
         }
 
         /// <summary>Stops the state: its time goes back to 0, its weight stays.</summary>
