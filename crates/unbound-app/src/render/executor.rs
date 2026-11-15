@@ -321,6 +321,7 @@ fn channel_copy_kind(
         (F::Rgba8Unorm, F::R8Unorm) => Some(CopyKind::ToR8),
         (F::R8Unorm, F::Rgba8Unorm) => Some(CopyKind::ToRgba8),
         (F::Bgra8Unorm, F::Rgba8Unorm) if screen_order => Some(CopyKind::ToRgba8),
+        (F::Bgra8Unorm, F::R8Unorm) if screen_order => Some(CopyKind::ToR8),
         (F::Rgba8Unorm, F::Bgra8Unorm) if screen_order => Some(CopyKind::ToBgra8),
         _ => None,
     }
@@ -1223,12 +1224,16 @@ impl UnityRenderer {
             return None;
         }
         let (source, srgb) = (t.texture.clone(), t.srgb_view.is_some());
+        // The copy's sRGB view takes the source's channel order (a screen camera's stand-in is
+        // stored blue first where the screen is).
+        let srgb_format = source.format().add_srgb_suffix();
         let fits = self.feedback_copies.get(&handle).is_some_and(|c| {
             c.size() == source.size()
                 && c.format() == source.format()
                 && c.mip_level_count() == source.mip_level_count()
         });
         if !fits {
+            let srgb_formats = [srgb_format];
             let copy = self.device.create_texture(&wgpu::TextureDescriptor {
                 label: Some("unbound feedback copy"),
                 size: source.size(),
@@ -1237,11 +1242,7 @@ impl UnityRenderer {
                 dimension: wgpu::TextureDimension::D2,
                 format: source.format(),
                 usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-                view_formats: if srgb {
-                    &[wgpu::TextureFormat::Rgba8UnormSrgb]
-                } else {
-                    &[]
-                },
+                view_formats: if srgb { &srgb_formats } else { &[] },
             });
             self.feedback_copies.insert(handle, copy);
         }
@@ -1261,7 +1262,7 @@ impl UnityRenderer {
             });
         }
         Some(copy.create_view(&wgpu::TextureViewDescriptor {
-            format: (srgb && space == 1).then_some(wgpu::TextureFormat::Rgba8UnormSrgb),
+            format: (srgb && space == 1).then_some(srgb_format),
             ..Default::default()
         }))
     }
@@ -5897,7 +5898,10 @@ mod tests {
             assert_eq!(channel_copy_kind(F::Rgba8Unorm, F::Rg8Unorm, screen), None);
             assert_eq!(channel_copy_kind(F::R8Unorm, F::Rg8Unorm, screen), None);
             assert_eq!(channel_copy_kind(F::Rgba16Float, F::R8Unorm, screen), None);
-            assert_eq!(channel_copy_kind(F::Bgra8Unorm, F::R8Unorm, screen), None);
+            assert_eq!(
+                channel_copy_kind(F::Bgra8Unorm, F::R8Unorm, screen),
+                screen.then_some(CopyKind::ToR8)
+            );
             assert_eq!(
                 channel_copy_kind(F::Bgra8UnormSrgb, F::Rgba8Unorm, screen),
                 None
