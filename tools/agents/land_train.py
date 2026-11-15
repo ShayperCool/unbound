@@ -211,7 +211,10 @@ class LandTrain:
                 row = {'time': f'{datetime.datetime.now():%F %T}', 'branch': entry['branch'],
                        'old': result['old'], 'new': result['new'], 'commits': result['commits'],
                        'worktree': entry['worktree'], 'request_id': entry['id'],
-                       'train_id': result['train_id'], 'log': result.get('log')}
+                       'train_id': result['train_id'], 'log': result.get('log'),
+                       # The post-land checker runs these on the new main (tools/agents/postland.py).
+                       'automatic': result.get('automatic', []), 'probes': result.get('probes', []),
+                       'releases': result.get('releases', [])}
                 with path.open('a') as stream:
                     stream.write(json.dumps(row)+'\n')
                     stream.flush()
@@ -257,6 +260,8 @@ class LandTrain:
                     delivered.append((train_id, request_id))
         if not delivered:
             return
+        # Automatic checks of the landed branches run on the new main outside the lock.
+        self.api.request_postland(main_checkout)
         # The intent survives both completed caller results and an interrupted push.
         # Replaying a push after a crash is safe; a healthy train launches it once.
         if self.api.push_main(main_checkout) is False:
@@ -380,7 +385,8 @@ class LandTrain:
         selected = [*context, *entries]
         probes = list(dict.fromkeys((command, release) for item in selected
                                    for command, release in zip(item['probes'], item['releases'])))
-        automatic = self.api.automatic_union([item.get('automatic', []) for item in selected], probes)
+        # Automatic checks run after landing, outside the lock (tools/agents/postland.py).
+        automatic = self.api.automatic_union([item.get('automatic', []) for item in entries], probes)
         changed = sorted({path for item in selected for path in item['changed']})
         crates = sorted({crate for item in selected for crate in item['crates']})
         log = self.log_path('gate-'+entries[-1]['id'][:10])
@@ -401,7 +407,8 @@ class LandTrain:
             runtime = self.api.run_gate(workspace.path, base, [item[0] for item in probes],
                                         any(item['full'] for item in selected), 'train-'+self.id[:12],
                                         priority=True, log=log, changed=changed, crates=crates,
-                                        releases=[item[1] for item in probes], environment=environment, automatic=automatic,
+                                        releases=[item[1] for item in probes], environment=environment, automatic=[],
+                                        postland=automatic,
                                         probe_owners=[[item.get('branch', item['id']) for item in selected
                                                        if pair in zip(item['probes'], item['releases'])]
                                                       for pair in probes])
@@ -429,7 +436,9 @@ class LandTrain:
             preceding.append(self.context(entry))
             record = {'code': 0, 'old': entry['before'], 'new': entry['tip'],
                       'commits': int(self.git('rev-list', '--count', entry['before']+'..'+entry['tip'])),
-                      'train_id': self.id, 'log': outcome['log']}
+                      'train_id': self.id, 'log': outcome['log'],
+                      'automatic': entry.get('automatic', []), 'probes': entry['probes'],
+                      'releases': entry['releases']}
             self.queue.update(entry['id'], prepared=record)
             prepared.append((entry, record))
         self.prepare_publication(prepared)

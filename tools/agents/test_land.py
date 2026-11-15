@@ -558,7 +558,8 @@ def gate(root, base, probes, full, branch, **options):
     values = {path.name: path.read_text().strip() for path in root.glob('*.txt')}
     event({'gate': values, 'probes': probes, 'crates': options['crates'],
            'changed': options['changed'], 'priority': options['priority'],
-           'automatic': options.get('automatic', []), 'probe_owners': options.get('probe_owners', [])})
+           'automatic': options.get('automatic', []), 'postland': [list(row) for row in options.get('postland', [])],
+           'probe_owners': options.get('probe_owners', [])})
     log = options['log']
     log.write_text('fixture gate: '+json.dumps(values)+'\n')
     if probes and all(command.startswith('python3 -c ') for command in probes):
@@ -575,10 +576,7 @@ def gate(root, base, probes, full, branch, **options):
         deadline = time.monotonic()+10
         while (land.STATE/'pause-gate').exists() and time.monotonic()<deadline:
             time.sleep(.02)
-    automatic_left = any(row[0] == 'left' and 'tools/agents/suite.py' in row[1]
-                         for row in options.get('automatic', []))
-    inherited_fast = any(row[1] == 'retained-fast' for row in options.get('automatic', []))
-    if (inherited_fast and values.get('break-inherited.txt') == 'yes') or (automatic_left and values.get('break-left.txt') == 'yes') or values.get('bad.txt') == 'fail' or ('probe-b' in probes and values.get('bad-probe.txt') == 'fail') or ('probe-a' in probes and (values.get('a.txt') != 'ok' or values.get('break-a.txt') == 'yes')):
+    if values.get('bad.txt') == 'fail' or ('probe-b' in probes and values.get('bad-probe.txt') == 'fail') or ('probe-a' in probes and (values.get('a.txt') != 'ok' or values.get('break-a.txt') == 'yes')):
         raise SystemExit(5)
     return None
 if os.environ.get('TRAIN_LEGACY_REQUEST'):
@@ -780,13 +778,17 @@ class TrainIntegrationTests(unittest.TestCase):
         self.assertEqual([code for code, _ in results], [0, 0], results)
         gates = self.gates()
         self.assertEqual(len(gates), 1)
-        checks = gates[0]['automatic']
+        self.assertEqual(gates[0]['automatic'], [])  # run after landing, outside the lock
+        checks = gates[0]['postland']
         self.assertEqual(sum(row[1] == 'shared-fast-check' for row in checks), 1, gates)
+        rows = self.rows()
+        self.assertEqual(sorted(row[0] for row in rows[0]['automatic'] if 'suite.py' in row[1]), ['left'])
+        self.assertEqual(sorted(row[0] for row in rows[1]['automatic'] if 'suite.py' in row[1]), ['left', 'right'])
         suites = [row[0] for row in checks if 'tools/agents/suite.py' in row[1]]
         self.assertEqual(sorted(suites), ['left', 'right'])
         self.assertEqual(len({land.automatic_key(row[1], row[3]) for row in checks}), len(checks))
 
-    def test_failure_isolation_keeps_automatic_checks_from_the_landed_prefix(self):
+    def test_automatic_checks_are_recorded_with_landings_and_never_fail_the_train(self):
         project = self.repo/'tests/projects/left'
         (project/'Reference').mkdir(parents=True)
         (project/'Reference/control.json').write_text('{}\n')
@@ -803,9 +805,12 @@ class TrainIntegrationTests(unittest.TestCase):
                 workers.append(self.start(path))
                 self.registered(count)
         results = self.finish(workers)
-        self.assertEqual([code for code, _ in results], [0, 5, 5], results)
-        self.assertEqual([row['branch'] for row in self.rows()], ['first'])
-        self.assertTrue(any(row[0] == 'left' for row in self.gates()[-1]['automatic']))
+        self.assertEqual([code for code, _ in results], [0, 5, 0], results)
+        rows = self.rows()
+        self.assertEqual([row['branch'] for row in rows], ['first', 'third'])
+        self.assertTrue(any(row[0] == 'left' for row in rows[0]['automatic']))
+        self.assertEqual(rows[1]['automatic'], [])
+        self.assertTrue(all(gate['automatic'] == [] for gate in self.gates()))
 
     def test_invalid_automatic_metadata_rejects_only_its_branch(self):
         first = self.branch('first', {'tests/projects/control/gate.json':
@@ -834,7 +839,7 @@ class TrainIntegrationTests(unittest.TestCase):
             self.registered(2)
         results = self.finish(workers)
         self.assertEqual([code for code, _ in results], [0, 0], results)
-        checks = self.gates()[0]['automatic']
+        checks = self.gates()[0]['postland']
         self.assertEqual({row[3] for row in checks}, {'6000.0.71f1', '2022.3.10f1'})
         self.assertEqual([row[1] for row in checks], ['shared-fast', 'shared-fast'])
 
@@ -877,8 +882,11 @@ class TrainIntegrationTests(unittest.TestCase):
         self.registered(2)
         (self.state/'pause-leader').unlink()
         results = self.finish([owner, peer])
-        self.assertEqual([code for code, _ in results], [5, 5], results)
-        self.assertEqual(self.rows(), [])
+        # The train gates the stacked tip, whose a.txt is fixed; the left check runs after landing.
+        self.assertEqual([code for code, _ in results], [0, 0], results)
+        rows = self.rows()
+        self.assertEqual([row['branch'] for row in rows], ['first', 'second'])
+        self.assertTrue(all(any(row[0] == 'left' for row in item['automatic']) for item in rows))
 
     def test_queued_metadata_edits_do_not_enter_a_stacked_peers_checks(self):
         metadata = self.repo/'tests/projects/control/gate.json'
@@ -897,7 +905,7 @@ class TrainIntegrationTests(unittest.TestCase):
         (self.state/'pause-leader').unlink()
         results = self.finish([owner, peer])
         self.assertEqual([code for code, _ in results], [2, 0], results)
-        checks = self.gates()[-1]['automatic']
+        checks = self.gates()[-1]['postland']
         self.assertEqual([row[1] for row in checks], ['good-check'])
         self.assertIn('uncommitted-check', edited.read_text())
 
@@ -915,7 +923,7 @@ class TrainIntegrationTests(unittest.TestCase):
             self.registered(2)
         results = self.finish([owner, peer])
         self.assertEqual([code for code, _ in results], [0, 0], results)
-        self.assertEqual([row[1] for row in self.gates()[0]['automatic']], ['legacy-fast'])
+        self.assertEqual([row[1] for row in self.gates()[0]['postland']], ['legacy-fast'])
 
     def test_rebased_selections_are_saved_before_gate_and_survive_handoff(self):
         project = self.repo/'tests/projects/left'
@@ -947,9 +955,10 @@ class TrainIntegrationTests(unittest.TestCase):
         self.assertTrue(all(any(row[0] == 'left' for row in entry['automatic']) for entry in records))
         (self.state/'pause-gate').unlink()
         results = self.finish([owner, peer])
-        self.assertEqual([code for code, _ in results], [5, 5], results)
-        self.assertEqual(self.rows(), [])
-        self.assertTrue(any(row[0] == 'left' for row in self.gates()[-1]['automatic']))
+        self.assertEqual([code for code, _ in results], [0, 0], results)
+        rows = self.rows()
+        self.assertEqual([row['branch'] for row in rows], ['first', 'second'])
+        self.assertTrue(all(any(row[0] == 'left' for row in item['automatic']) for item in rows))
 
     def test_dirty_legacy_ancestor_reads_committed_metadata_and_keeps_inherited_fast_check(self):
         metadata_path = 'tests/projects/control/gate.json'
@@ -966,9 +975,10 @@ class TrainIntegrationTests(unittest.TestCase):
         edited.write_text(json.dumps({'commands': ['true'], 'fast_commands': ['uncommitted-only']}))
         (self.state/'pause-leader').unlink()
         results = self.finish([owner, peer])
-        self.assertEqual([code for code, _ in results], [2, 5], results)
-        self.assertEqual(self.rows(), [])
-        checks = self.gates()[-1]['automatic']
+        self.assertEqual([code for code, _ in results], [2, 0], results)
+        rows = self.rows()
+        self.assertEqual([row['branch'] for row in rows], ['second'])
+        checks = rows[0]['automatic']
         self.assertIn('retained-fast', [row[1] for row in checks])
         self.assertNotIn('uncommitted-only', [row[1] for row in checks])
         self.assertIn('uncommitted-only', edited.read_text())
@@ -1006,9 +1016,10 @@ class TrainIntegrationTests(unittest.TestCase):
 
     def test_legacy_valid_metadata_preserves_fast_check_in_stacked_peer(self):
         results = self.legacy_metadata_repair(malformed=False)
-        self.assertEqual([code for code, _ in results], [0, 5], results)
-        self.assertEqual([row['branch'] for row in self.rows()], ['first'])
-        self.assertIn('retained-fast', [row[1] for row in self.gates()[-1]['automatic']])
+        self.assertEqual([code for code, _ in results], [0, 0], results)
+        rows = self.rows()
+        self.assertEqual([row['branch'] for row in rows], ['first', 'second'])
+        self.assertIn('retained-fast', [row[1] for row in rows[1]['automatic']])
 
     def test_all_branches_share_one_gate_and_one_push(self):
         first = self.branch('first', {'a.txt': 'ok', 'crates/alpha/src/lib.rs': '// changed\n'})
@@ -1154,7 +1165,7 @@ class TrainIntegrationTests(unittest.TestCase):
         combined_logs = list((self.state/'logs').glob('*.probes/003.log'))
         self.assertTrue(any('last finished' in path.read_text() for path in combined_logs))
 
-    def test_parallel_automatic_failure_returns_only_its_requesting_branch(self):
+    def test_automatic_failures_do_not_hold_the_land_lock(self):
         for name in ('left', 'right'):
             project = self.repo/'tests/projects'/name
             (project/'Reference').mkdir(parents=True)
@@ -1176,11 +1187,13 @@ class TrainIntegrationTests(unittest.TestCase):
                 workers.append(self.start(path))
                 self.registered(count)
         results = self.finish(workers)
-        self.assertEqual([code for code, _ in results], [0, 5, 0], results)
-        self.assertEqual([row['branch'] for row in self.rows()], ['first', 'last'])
-        logs = [path.read_text() for path in (self.state/'logs').glob('*.automatic/*.log')]
-        self.assertTrue(any('automatic failure detail' in text for text in logs))
-        self.assertTrue(any('last automatic finished' in text for text in logs))
+        # The failing check is the post-land checker's: every branch lands, each with its checks.
+        self.assertEqual([code for code, _ in results], [0, 0, 0], results)
+        rows = self.rows()
+        self.assertEqual([row['branch'] for row in rows], ['first', 'broken', 'last'])
+        for row, command in zip(rows, commands):
+            self.assertIn(command, [check[1] for check in row['automatic']])
+        self.assertEqual(list((self.state/'logs').glob('*.automatic/*.log')), [])
 
     def test_rejected_ancestor_checks_follow_its_commits_in_a_stacked_branch(self):
         first = self.branch('first', {'a.txt': 'ok'})

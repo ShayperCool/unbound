@@ -76,6 +76,17 @@ def worktrees(repo):
     return entries
 
 
+def locked_worktrees(repo):
+    """Worktrees git marks as locked (active land trains, the post-land checker)."""
+    locked, current = set(), None
+    for line in git('worktree', 'list', '--porcelain', cwd=repo).splitlines():
+        if line.startswith('worktree '):
+            current = Path(line[len('worktree '):]).resolve()
+        elif line == 'locked' or line.startswith('locked '):
+            locked.add(current)
+    return locked
+
+
 def unmerged_commits(path, repo):
     head = git('rev-parse', 'HEAD', cwd=path)
     return int(git('rev-list', '--count', f'main..{head}', cwd=repo))
@@ -311,6 +322,7 @@ def cmd_reap(args, repo):
     linked = None
     removed = kept_unmerged = 0
     entries = worktrees(repo)
+    locked = locked_worktrees(repo)
     for path, head, branch in entries:
         if not path.exists():
             continue
@@ -319,7 +331,9 @@ def cmd_reap(args, repo):
             continue
         # Cheapest checks first: there are many worktrees and `git status` is the slow one.
         reason = None
-        if idle_seconds(path) < args.idle_hours*3600:
+        if path in locked:
+            reason = 'locked'
+        elif idle_seconds(path) < args.idle_hours*3600:
             reason = 'recently active'
         elif changed_paths(path):
             reason = 'has changed or untracked paths'

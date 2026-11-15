@@ -9,7 +9,8 @@ Machine-local state lives in `~/.cache/unbound/agents/` (not in Git):
 | Path | Contents |
 |---|---|
 | `QUEUE.md` | the orchestrator's task queue |
-| `landed.jsonl` | one line per landed branch, including its train ID and gate log |
+| `landed.jsonl` | one line per landed branch, including its train ID, gate log and automatic checks |
+| `postland/` | the post-land checker's state, lock and one JSON file per failure it found |
 | `land-queue.json` | queued callers, requested probes, and recoverable results |
 | `land-publications.json` | durable publication receipts, retained until the push is queued |
 | `logs/` | gate logs, with start and finish times of every gate step |
@@ -128,7 +129,8 @@ tools/validation/README.md for why that is unsafe).
      does not build without stubs or when `managed/UnityEngine/Generated/` differs from what the
      generator writes, and restores `Generated/` afterwards. Regenerate, commit, land again.
    - Automatic probe checks select a probe when its files or its `gate.json` `engine_paths`
-     change. Those paths are repository-relative files, directory prefixes or globs. A suite-only
+     change. A landing records them and the post-land checker runs them on the new main (see
+     Post-land checks); `--check` still runs them in its gate. Those paths are repository-relative files, directory prefixes or globs. A suite-only
      probe may declare just this metadata. `fast_commands` declares static/short checks to run on
      every code landing, without an Editor capture or long engine replay. Selected full recipes
      run through the suite against the current sheriff baseline when present, preserving its
@@ -234,9 +236,9 @@ Other private X display helpers and the audio reference recorder's named PulseAu
 to reference recording. Gate commands cannot run those paths because the Editor guard refuses
 them. Audio gate captures use private run directories and virtual engine device layouts.
 Automatic checks use the same bounded driver pool and exclusivity barriers, with the same total 600 s wall-clock budget and 300 s limit
-per check. A touched recipe exceeding 300 s still fails with exit 5 unless every declared command
-is supplied explicitly, or an explicit suite invocation covers it. These jobs retain landing priority in the shared
-job pool. A passing train fast-forwards main through each branch, records one `landed.jsonl`
+per check. A touched recipe exceeding 300 s still fails (exit 5 in `--check`, a post-land finding after
+landing) unless every declared command is supplied explicitly, or an explicit suite invocation
+covers it. Trains leave these checks to the post-land checker (see Post-land checks). A passing train fast-forwards main through each branch, records one `landed.jsonl`
 line per branch and pushes once. Each caller then refreshes its own branch to its rebased tip.
 A single queued branch uses its original worktree and warm target, as before. `--check` remains
 an independent gate and can still supply a reusable pass when main and the checks are unchanged.
@@ -331,6 +333,34 @@ spend Editor captures or research just to close such a residual.
 - Run every build, Editor and engine through `tools/build.py` or `~/.cache/compat/with-heavy-job`;
   never nest the launcher around a driver that already uses it.
 - Keep long outputs in log files and print only summaries; context fills up quickly.
+
+## Post-land checks
+
+Under the land lock a train runs only the release build, gen-stubs with the API checks and
+tooling tests, the managed tests, the Rust tests of the touched crates, each branch's oracle
+guard and the requested `--probe` commands. The automatic checks the train selects for each
+branch (the same selection as above) are written to that branch's `landed.jsonl` line, and the
+gate log names them. After main advances, `land.py` starts `tools/agents/postland.py` from the
+main checkout in the background (`systemd-run`, Nice=15; its jobs never carry the gate marker).
+
+One checker runs at a time and checks every landing between the last checked main and the
+current main, so landings that arrive while it runs are checked in its next round. It builds main
+in its own locked worktree beside the land trains and runs the union of those checks with the
+gate's rules: the sheriff baseline frozen for suite checks (`--against`), the 600 s budget, the
+300 s limit per check with one rerun of time-limited checks, and unchanged comparators.
+
+A failing check runs once more alone at the same commit; passing then is reported as a flake
+or load timeout and blames no landing. A check that still fails runs at the range's base; when
+it fails there too the failure predates the range. Otherwise the checker bisects the range's
+landings. When one landing turns the check from passing to failing, it reverts that landing's
+commits on a `postland/revert-*` branch and lands the revert through `land.py` with the reason,
+if the revert applies cleanly and the landing was not reverted before; the range is then checked
+again. Every finding, reverted or not, is written to
+`~/.cache/unbound/agents/postland/<time>-<probe>.json` with the probe, the commits and the logs,
+and a checker that cannot build writes `<time>-checker.json`; the orchestrator turns them into
+queue rows. Suite output uses fresh labels; sheriff suites and the baseline are only read.
+`UNBOUND_POSTLAND=0` keeps a landing from starting the checker; the next landing's checker still
+covers the skipped range. `slot.py reap` keeps locked worktrees, including the checker's.
 
 ## Main push delivery
 

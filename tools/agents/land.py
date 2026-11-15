@@ -38,7 +38,9 @@ Exclusive recipes remain barriers. Each automatic check gets a separate log. Whe
 failed, checks stopped by a time limit run once more after the batch, a few at a time, with
 the same 300s limit; failing again fails the gate. Explicit --probe commands
 retain their existing time limits. Suite recipes keep the sheriff baseline's regression policy.
-Changes that touch only Markdown/docs skip the build and tests. --full forces every step
+Train gates under the land lock record the automatic checks with each landed branch instead of
+running them; tools/agents/postland.py runs them on the new main after landing. --check runs
+them in its gate. Changes that touch only Markdown/docs skip the build and tests. --full forces every step
 (all Rust crates).
 
 Exit codes:
@@ -431,6 +433,7 @@ class Gate:
         self.processes = set()
         self.cancelled = False
         self.durations = {}
+        self.failures = []
 
     def note(self, text):
         """A timestamped line in the gate log for phases that are not commands."""
@@ -493,22 +496,7 @@ class Gate:
         if not self.full and all(DOCS_ONLY.search(path) for path in changed):
             print('land: docs-only change, build and tests skipped', flush=True)
             return
-        build_py = [sys.executable, 'tools/build.py']
-        selected = json.loads(subprocess.run([*build_py, '--print-env'], cwd=self.worktree, check=True,
-                                             capture_output=True, text=True, env=self.env).stdout)
-        self.env.update(selected)
-        target = Path(selected['CARGO_TARGET_DIR'])
-        self.env['UNBOUND'] = str(target/'release/unbound')
-
-        mark = self.log.stat().st_size if self.log.exists() else 0
-        if self.step('build', [*build_py, '--', 'build', '--release', '--locked', '-p', 'unbound']):
-            self.fail('build')
-        with self.log.open(errors='replace') as out:
-            out.seek(mark)
-            if 'WITHOUT compatibility stubs' in out.read():
-                print(tail(self.log), file=sys.stderr)
-                die(5, 'the managed engine was built WITHOUT compatibility stubs: run '
-                       '`$UNBOUND gen-stubs -p tests/projects/packages`, commit, land again')
+        build_py, target = self.build()
 
         if self.full or any(STUB_INPUTS.match(path) for path in changed):
             self.stubs(Path(self.env['UNBOUND']))
@@ -531,6 +519,34 @@ class Gate:
             self.automatic = automatic_checks(self.worktree, changed, self.probes, full=self.full)
         self.run_automatic_probes()
         self.note('gate passed')
+
+    def build(self):
+        """The release build of this checkout: (build command prefix, Cargo target)."""
+        build_py = [sys.executable, 'tools/build.py']
+        selected = json.loads(subprocess.run([*build_py, '--print-env'], cwd=self.worktree, check=True,
+                                             capture_output=True, text=True, env=self.env).stdout)
+        self.env.update(selected)
+        target = Path(selected['CARGO_TARGET_DIR'])
+        self.env['UNBOUND'] = str(target/'release/unbound')
+
+        mark = self.log.stat().st_size if self.log.exists() else 0
+        if self.step('build', [*build_py, '--', 'build', '--release', '--locked', '-p', 'unbound']):
+            self.fail('build')
+        with self.log.open(errors='replace') as out:
+            out.seek(mark)
+            if 'WITHOUT compatibility stubs' in out.read():
+                print(tail(self.log), file=sys.stderr)
+                die(5, 'the managed engine was built WITHOUT compatibility stubs: run '
+                       '`$UNBOUND gen-stubs -p tests/projects/packages`, commit, land again')
+        return build_py, target
+
+    def check_only(self):
+        """Build this checkout and run its automatic checks: the post-land checker's gate."""
+        self.note('post-land checks started')
+        _, target = self.build()
+        self.prepare_probe_runtime(target)
+        self.run_automatic_probes()
+        self.note('post-land checks passed')
 
     def prepare_probe_runtime(self, target):
         """Freeze matching build outputs before any probe, retaining their run reference."""
@@ -630,7 +646,9 @@ class Gate:
             self.report(outcomes)
             retried = {row[3]: code for row, (_, code) in zip(limited, outcomes)}
             results = [(row, retried.get(row[3], code)) for row, code in results]
-        failed = [row[0] for row, code in results if code]
+        # The post-land checker reads which checks failed.
+        self.failures = [row for row, code in results if code]
+        failed = [row[0] for row in self.failures]
         if failed:
             advice = '; longer checks can be supplied with --probe' if deadline is not None else ''
             self.fail('; '.join(failed)+advice)
@@ -879,7 +897,7 @@ def stamp_path(tree, probes, full, root, *, base=None, changed=(), crates=(), re
 
 
 def run_gate(worktree, base, probes, full, branch, priority=False, *, log=None, changed=None,
-             crates=None, releases=None, environment=None, automatic=None, probe_owners=None):
+             crates=None, releases=None, environment=None, automatic=None, probe_owners=None, postland=()):
     tree = git('rev-parse', 'HEAD^{tree}', cwd=worktree)
     base = git('rev-parse', base, cwd=worktree)
     if changed is None:
@@ -912,6 +930,9 @@ def run_gate(worktree, base, probes, full, branch, priority=False, *, log=None, 
     print(f'land: gate for tree {tree[:12]}, log {log}', flush=True)
     gate = Gate(worktree, base, probes, full, log, priority=priority, changed=changed, crates=crates,
                 releases=releases, environment=environment, automatic=automatic, probe_owners=probe_owners)
+    if postland:
+        gate.note(f'{len(postland)} automatic checks run after landing on main (tools/agents/postland.py): '
+                  + ', '.join(sorted({row[0] for row in postland})) + ';')
     gate.run()
     atomic_json(runtime_record, {'runtime': str(gate.probe_runtime) if gate.probe_runtime else None, 'log': str(log)})
     stamp.parent.mkdir(parents=True, exist_ok=True)
@@ -951,6 +972,33 @@ def land_lock(branch, request=None):
                           'waited_s': round(acquired-requested, 1), 'held_s': round(released-acquired, 1)})
             holder.unlink(missing_ok=True)
             fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+POSTLAND_ENVIRONMENT = ('PATH', 'DISPLAY', 'XAUTHORITY', 'XDG_RUNTIME_DIR', 'XDG_CACHE_HOME',
+                        'DOTNET_ROOT', 'LANG', 'UNBOUND_BUILD_ROOT')
+
+
+def request_postland(main_checkout):
+    """Start the post-land checker from the main checkout in the background.
+
+    It runs the landed branches' automatic checks on the new main at background priority.
+    One checker runs at a time and picks up every landing up to the current main, so a request
+    while one runs needs nothing more. A failed start never affects the landing: the next
+    landing's checker covers this range too."""
+    script = Path(main_checkout)/'tools/agents/postland.py'
+    if os.environ.get('UNBOUND_POSTLAND') == '0' or not script.is_file():
+        return
+    settings = [f'--setenv={key}={os.environ[key]}' for key in POSTLAND_ENVIRONMENT if key in os.environ]
+    command = ['systemd-run', '--user', '--quiet', '--collect', f'--unit=unbound-postland-{time.time_ns()}',
+               '--property=Nice=15', f'--working-directory={main_checkout}', *settings,
+               sys.executable, str(script), '--repo', str(main_checkout)]
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True, timeout=30)
+        print('land: post-land checks requested', flush=True)
+    except (OSError, subprocess.SubprocessError) as error:
+        detail = getattr(error, 'stderr', None) or error
+        print(f'land: post-land checks could not be started now; the next landing covers this range: {detail}',
+              file=sys.stderr)
 
 
 def push_main(main_checkout):

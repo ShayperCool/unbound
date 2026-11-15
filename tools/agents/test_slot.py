@@ -167,7 +167,11 @@ class SlotTests(unittest.TestCase):
         runs = Path(self.env['XDG_CACHE_HOME'])/'unbound'/'validation'/'runs'
         runs.mkdir(parents=True)
         (runs/'probe').symlink_to(linked/'a.txt')
-        for path in (finished, unlanded, dirty, linked, self.slot_path(1)):
+        # A locked checkout (the post-land checker, an active train) is never reaped.
+        locked = base/'wt-locked'
+        self.git('worktree', 'add', '-q', '--detach', str(locked), 'main')
+        self.git('worktree', 'lock', '--reason', 'post-land checker', str(locked))
+        for path in (finished, unlanded, dirty, linked, locked, self.slot_path(1)):
             self.make_old(path)
         orphan = self.make_target(base/'gone')
         slot_target = self.make_target(self.slot_path(1))
@@ -185,7 +189,7 @@ class SlotTests(unittest.TestCase):
         self.assertFalse(unlanded.exists())
         self.assertFalse(unlanded_target.exists())
         self.assertEqual(self.git('rev-parse', 't3/unlanded'), unlanded_head)
-        for kept in (dirty, active, linked, self.repo, self.slot_path(1), slot_target):
+        for kept in (dirty, active, linked, locked, self.repo, self.slot_path(1), slot_target):
             self.assertTrue(kept.exists(), kept)
         self.assertIn('t3/finished', self.git('branch', '--list', 't3/finished'))
 
