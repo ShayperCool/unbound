@@ -275,6 +275,18 @@ namespace UnityEngine.Tests
             Assert.All(ages, a => Assert.True(a <= Time.maximumParticleDeltaTime || Mathf.Abs(a - 0.1f) < 1e-4f, $"age {a}"));
         }
 
+        /// <summary>The long steps are the duration when it is shorter: a 0.5 s loop steps 0.5 s
+        /// while more than 5 s are left (prewarm/birth_child12_dur05: 27 children, 72 with equal
+        /// steps).</summary>
+        [Fact]
+        public void ALongPrewarmStepsByAShorterDuration()
+        {
+            var parent = Parent(p => { var m = p.main; m.duration = 0.5f; m.startLifetime = 0.35f; });
+            var child = Child(parent, c => { var m = c.main; m.startLifetime = 12f; });
+            parent.Play();
+            Assert.Equal(27, child.particleCount);
+        }
+
         [Fact]
         public void APrewarmChainAddsEachLifetimeAndStartsTheChain()
         {

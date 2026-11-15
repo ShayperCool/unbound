@@ -1219,7 +1219,8 @@ namespace UnityEngine
         /// <see cref="Compat.ParticlePrewarmMeasured"/>): one simulation call as long as the longest
         /// start lifetime plus, for systems with sub-emitters, the longest lifetime down each chain of
         /// sub-emitters (<see cref="SubEmitterLifetimeSpan"/>), split into equal steps of at most
-        /// Time.maximumParticleDeltaTime, starting the playback clock at duration less that span's
+        /// Time.maximumParticleDeltaTime but longer ones while more than 5 s of it are left
+        /// (<see cref="LongStep"/>), starting the playback clock at duration less that span's
         /// remainder so it ends on a loop's end; the rate counts from the call's start and bursts
         /// fire as the clock passes them. The clock then stays where the call left it (the duration,
         /// or just past the loop's start). Sub-emitter children emitted in the call are kept only when

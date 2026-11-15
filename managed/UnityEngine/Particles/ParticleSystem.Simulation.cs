@@ -100,9 +100,7 @@ namespace UnityEngine
             m_CollectTriggers = true;
             try
             {
-                // A frame's advance takes the long steps a Play-mode update takes (more than 5 s
-                // left: a culled system catching up; unmeasured there, the rule measured on prewarm).
-                Advance(catchUp + dt, m_FrameDistance, true, longSteps: true);
+                Advance(catchUp + dt, m_FrameDistance, true);
             }
             finally { m_CollectTriggers = false; }
             return true;
@@ -246,20 +244,30 @@ namespace UnityEngine
             float remaining = carry ? dt + m_StepRemainder : dt;
             m_CallStartTime = m_Time;
             float previous = step, elapsed = 0f;
+            // Long steps take fewer iterations than equal ones, except where the duration caps them
+            // below the equal step (a huge span): then as many as they need.
+            int guard = longSteps ? (int)Math.Min(int.MaxValue - 1, 100000.0 + Math.Ceiling(dt / Math.Max(Mathf.Min(m_Main.duration, 0.2f), 1e-4f))) : 100000;
+            bool tookLong = false;
             try
             {
-                for (int i = 0; remaining > 1e-6f && i < 100000; i++)
+                for (int i = 0; remaining > 1e-6f && i < guard; i++)
                 {
                     // The Native acceleration controls match subtraction of the remaining
                     // call time, with residuals at or below one microsecond left unstepped.
                     float used = Mathf.Min(step, remaining);
-                    if (longSteps) used = LongStep(remaining, used, previous);
-                    previous = used;
                     if (longSteps)
                     {
+                        float stepped = LongStep(remaining, used, previous);
+                        tookLong |= stepped != used;
+                        used = stepped;
+                    }
+                    previous = used;
+                    if (tookLong)
+                    {
+                        // Once a long step is taken the steps no longer count equal parts.
                         m_StepFrom = from + (to - from) * Mathf.Min(elapsed / dt, 1f);
                         m_StepTo = from + (to - from) * Mathf.Min((elapsed + used) / dt, 1f);
-                        share = distance * (used / dt);
+                        share = elapsed < dt ? distance * (Mathf.Min(used, dt - elapsed) / dt) : 0f;
                     }
                     else
                     {
@@ -268,7 +276,7 @@ namespace UnityEngine
                     }
                     elapsed += used;
                     m_StepDt = used;
-                    Step(used, longSteps || i < steps ? share : 0f);
+                    Step(used, tookLong || i < steps ? share : 0f);
                     if (m_SimulatingBirths || m_Prewarming) m_BirthCallRemaining -= used;
                     remaining -= used;
                     if (stopWhenPaused && (m_IsPaused || !m_Registered)) break;
@@ -285,8 +293,8 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>A step of a long advance in Play mode (a prewarm or a frame, not Simulate, which
-        /// keeps its equal steps):
+        /// <summary>A step of a prewarm (Simulate calls keep their equal steps, catchup/*; frame
+        /// updates longer than 5 s, such as a culled system catching up, keep them too, unmeasured):
         /// while more than 10 s of the call are left the step is the previous one if longer than 1 s,
         /// else the duration up to 1 s; while more than 5 s are left, the previous one if longer than
         /// 0.2 s, else the duration up to 0.2 s; then the equal step (matches the Unity 6000.0.71f1
