@@ -6,15 +6,39 @@
 //! target parameter that starts as the target's color under the fragment (`fetch.*`: a draw reads
 //! what the draw before it left).
 //!
-//! The renderer has no framebuffer reads: an `inout` color target becomes an output that starts
-//! as the texel at the fragment's position of [`TEXTURE`], which the renderer fills with a copy of
-//! the target before each draw of such a program. Triangles of one draw that overlap read the
-//! color from before the draw (Metal's read what the earlier ones wrote).
+//! The renderer has no framebuffer reads: an `inout` color target `n` becomes an output that starts
+//! as the texel at the fragment's position of [`texture`]`(n)`, which the renderer fills with a
+//! copy of that color target before each draw of such a program (`fetch.Second.*`: a program
+//! reads any of its targets). Triangles of one draw that overlap read the color from before the
+//! draw (the macOS Editor's read what the earlier ones wrote, `fetch.Overlap`), and a multisampled
+//! target is read resolved (the Editor's read their own sample, `fetch.Msaa.squared`).
 
 use anyhow::{Result, bail};
 
-/// The texture an `inout` color target reads (the copy of color target 0 before the draw).
-pub const TEXTURE: &str = "_UnboundFramebufferFetch0";
+/// The name the copies of the color targets an `inout` color target reads start with (then the
+/// target's index).
+pub const TEXTURE_PREFIX: &str = "_UnboundFramebufferFetch";
+
+/// The textures `inout` color targets read, by target index (the copies of the color targets
+/// before the draw).
+const TEXTURES: [&str; TARGETS as usize] = [
+    "_UnboundFramebufferFetch0",
+    "_UnboundFramebufferFetch1",
+    "_UnboundFramebufferFetch2",
+    "_UnboundFramebufferFetch3",
+    "_UnboundFramebufferFetch4",
+    "_UnboundFramebufferFetch5",
+    "_UnboundFramebufferFetch6",
+    "_UnboundFramebufferFetch7",
+];
+
+/// The texture an `inout` color target `index` (below [`TARGETS`]) reads.
+pub fn texture(index: u32) -> &'static str {
+    TEXTURES[index as usize]
+}
+
+/// How many color targets a draw has (the bits of [`rewrite`]'s mask).
+pub const TARGETS: u32 = 8;
 
 /// The color target semantic HLSLSupport.cginc names `SV_Target` as with fetch enabled.
 const TARGET: &str = "CoLoR";
@@ -23,11 +47,11 @@ const TARGET: &str = "CoLoR";
 const VERTEX_COLOR: &str = "VCOLOR";
 
 /// A fragment program preprocessed for a device with framebuffer fetch (its semantics named
-/// again: [`semantics`]) with its entry's `inout` color target reading [`TEXTURE`]; whether it
-/// reads it.
-pub fn rewrite(source: &str, entry: &str) -> Result<(String, bool)> {
+/// again: [`semantics`]) with its entry's `inout` color targets reading [`texture`]s; the color
+/// targets it reads, one bit each.
+pub fn rewrite(source: &str, entry: &str) -> Result<(String, u8)> {
     let mut text = source.to_string();
-    let mut reads = false;
+    let mut reads = 0u8;
     if let Some(function) = find_definition(&text, entry) {
         let params = split_params(&text[function.open + 1..function.close]);
         let mut fetched = Vec::new();
@@ -56,15 +80,20 @@ pub fn rewrite(source: &str, entry: &str) -> Result<(String, bool)> {
             if words.first() == Some(&"inout")
                 && let Some(index) = index
             {
-                if !(index.is_empty() || index == "0") {
+                let index = if index.is_empty() {
+                    0
+                } else {
+                    index.parse::<u32>().unwrap_or(u32::MAX)
+                };
+                if index >= TARGETS {
                     bail!(
-                        "framebuffer fetch of color target {index} (`inout ... : SV_Target{index}`): Unbound reads color target 0 only"
+                        "framebuffer fetch of color target {index} (`{param}`): a draw has {TARGETS} color targets"
                     );
                 }
                 let [_, ty @ .., name] = words.as_slice() else {
                     bail!("framebuffer fetch: cannot read the parameter `{param}`");
                 };
-                fetched.push((param.clone(), ty.join(" "), name.to_string()));
+                fetched.push((param.clone(), ty.join(" "), name.to_string(), index));
             }
         }
         if position.is_none() {
@@ -73,8 +102,8 @@ pub fn rewrite(source: &str, entry: &str) -> Result<(String, bool)> {
         if !fetched.is_empty() {
             let mut list: Vec<String> = params
                 .iter()
-                .map(|p| match fetched.iter().find(|(f, _, _)| f == p) {
-                    Some((_, ty, name)) => format!("out {ty} {name} : {TARGET}"),
+                .map(|p| match fetched.iter().find(|(f, ..)| f == p) {
+                    Some((_, ty, name, index)) => format!("out {ty} {name} : {TARGET}{index}"),
                     None => p.clone(),
                 })
                 .collect();
@@ -87,20 +116,27 @@ pub fn rewrite(source: &str, entry: &str) -> Result<(String, bool)> {
             };
             let loads: String = fetched
                 .iter()
-                .map(|(_, ty, name)| {
-                    format!("\n{name} = ({ty}){TEXTURE}.Load(int3(int2(({position}).xy), 0));")
+                .map(|(_, ty, name, index)| {
+                    let texture = texture(*index);
+                    format!("\n{name} = ({ty}){texture}.Load(int3(int2(({position}).xy), 0));")
                 })
+                .collect();
+            for (.., index) in &fetched {
+                reads |= 1 << index;
+            }
+            let declarations: String = (0..TARGETS)
+                .filter(|index| reads & 1 << index != 0)
+                .map(|index| format!("Texture2D<float4> {};\n", texture(index)))
                 .collect();
             let mut rewritten = String::with_capacity(text.len() + 256);
             rewritten.push_str(&text[..function.line]);
-            rewritten.push_str(&format!("Texture2D<float4> {TEXTURE};\n"));
+            rewritten.push_str(&declarations);
             rewritten.push_str(&text[function.line..function.open + 1]);
             rewritten.push_str(&list.join(", "));
             rewritten.push_str(&text[function.close..=function.body]);
             rewritten.push_str(&loads);
             rewritten.push_str(&text[function.body + 1..]);
             text = rewritten;
-            reads = true;
         }
     }
     Ok((rename_semantics(&text), reads))
@@ -305,14 +341,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_textures_are_named_by_target() {
+        for index in 0..TARGETS {
+            assert_eq!(texture(index), format!("{TEXTURE_PREFIX}{index}"));
+        }
+    }
+
+    #[test]
     fn an_inout_target_reads_the_copy_at_the_fragment_position() {
         let source = "float4 vert(float4 v : POSITION) : SV_POSITION { return v; }\n\
                       void frag(float4 pos : SV_POSITION, inout half4 ocol : CoLoR)\n\
                       {\n    ocol = ocol * 0.5;\n}\n";
         let (text, reads) = rewrite(source, "frag").unwrap();
-        assert!(reads);
+        assert_eq!(reads, 1);
         assert!(text.contains("Texture2D<float4> _UnboundFramebufferFetch0;\nvoid frag("));
-        assert!(text.contains("out half4 ocol : SV_Target)"), "{text}");
+        assert!(text.contains("out half4 ocol : SV_Target0)"), "{text}");
         assert!(
             text.contains(
                 "{\nocol = (half4)_UnboundFramebufferFetch0.Load(int3(int2((pos).xy), 0));"
@@ -334,7 +377,7 @@ mod tests {
                       void frag(v2f i, inout float4 c : CoLoR) { c += 1; }\n";
         let (text, _) = rewrite(source, "frag").unwrap();
         assert!(
-            text.contains("out float4 c : SV_Target, float4 _unbound_FragCoord : SV_Position)"),
+            text.contains("out float4 c : SV_Target0, float4 _unbound_FragCoord : SV_Position)"),
             "{text}"
         );
     }
@@ -347,7 +390,7 @@ mod tests {
                       o frag(float4 p : SV_POSITION) { o r; r.a = 1; r.b = 0; return r; }\n\
                       half4 COLORS; half4 CoLoRful;\n";
         let (text, reads) = rewrite(source, "frag").unwrap();
-        assert!(!reads);
+        assert_eq!(reads, 0);
         assert!(text.contains("half4 a : SV_Target0; half4 b : SV_Target1;"));
         assert!(text.contains("half4 COLORS; half4 CoLoRful;"));
         assert_eq!(semantics("float4 v : CoLoR;"), "float4 v : SV_Target;");
@@ -380,9 +423,26 @@ mod tests {
         assert!(rewrite(source, "frag").is_err());
     }
 
+    /// Any color target can be read (each from its own copy); a ninth one does not exist.
     #[test]
-    fn a_further_target_is_refused() {
-        let source = "void frag(float4 p : SV_POSITION, inout half4 c : CoLoR1) { }\n";
+    fn further_targets_read_their_own_copies() {
+        let source = "void frag(float4 p : SV_POSITION, out half4 a : CoLoR0, inout half4 b : CoLoR1, inout half4 c : SV_Target7) { a = b; }\n";
+        let (text, reads) = rewrite(source, "frag").unwrap();
+        assert_eq!(reads, 0b1000_0010);
+        assert!(
+            text.contains("Texture2D<float4> _UnboundFramebufferFetch1;\nTexture2D<float4> _UnboundFramebufferFetch7;\nvoid frag("),
+            "{text}"
+        );
+        assert!(
+            text.contains(
+                "out half4 a : SV_Target0, out half4 b : SV_Target1, out half4 c : SV_Target7)"
+            ),
+            "{text}"
+        );
+        assert!(text.contains("b = (half4)_UnboundFramebufferFetch1.Load(int3(int2((p).xy), 0));"));
+        assert!(text.contains("c = (half4)_UnboundFramebufferFetch7.Load(int3(int2((p).xy), 0));"));
+        assert!(!text.contains("_UnboundFramebufferFetch0"));
+        let source = "void frag(float4 p : SV_POSITION, inout half4 c : CoLoR8) { }\n";
         assert!(rewrite(source, "frag").is_err());
     }
 }

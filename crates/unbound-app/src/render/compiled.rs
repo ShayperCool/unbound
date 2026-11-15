@@ -1660,7 +1660,7 @@ mod tests {
             buffers: Vec::new(),
             extra_vertex_inputs: false,
             vertex_inputs: true,
-            framebuffer_fetch: false,
+            framebuffer_fetch: 0,
         };
         let desktop = wgpu::Limits {
             max_uniform_buffer_binding_size: 65536,
@@ -1890,7 +1890,7 @@ mod tests {
             }],
             extra_vertex_inputs: false,
             vertex_inputs: true,
-            framebuffer_fetch: false,
+            framebuffer_fetch: 0,
         };
         let plan: Vec<Source> = program
             .uniforms
@@ -2106,7 +2106,7 @@ mod tests {
             }],
             extra_vertex_inputs: false,
             vertex_inputs: true,
-            framebuffer_fetch: false,
+            framebuffer_fetch: 0,
         };
         let size = |name: &str| (name == "_MainTex").then_some((64, 32));
         let globals_index = Default::default();

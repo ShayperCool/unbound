@@ -4002,7 +4002,12 @@ impl UnityRenderer {
         self.globals_index.refresh(&globals);
         for (pass_index, pass) in passes {
             if let Some(name) = &pass.grab {
-                if let Some(copy) = self.grab(name, target) {
+                if let Some(copy) = self.grab(
+                    name,
+                    target.texture.clone(),
+                    (target.width, target.height),
+                    target.alpha_one,
+                ) {
                     planned.push(Planned::Grab(copy));
                 }
                 globals = self.globals.clone();
@@ -4159,9 +4164,10 @@ impl UnityRenderer {
             } else {
                 None
             };
-            // A program reading its color target (framebuffer fetch, Metal) reads a copy of it
+            // A program reading its color targets (framebuffer fetch, Metal) reads a copy of each
             // made right before the draw (`unbound_shaders::fetch`).
-            if !errored && self.compiled.program(id).framebuffer_fetch {
+            let reads = self.compiled.program(id).framebuffer_fetch;
+            if !errored && reads != 0 {
                 if target.samples > 1 {
                     let shader = resolved.shader.clone();
                     self.warn_once(format!("fetchmsaa{shader}#{pass_index}"), || {
@@ -4170,15 +4176,32 @@ impl UnityRenderer {
                         )
                     });
                 }
-                match self.grab(unbound_shaders::fetch::TEXTURE, target) {
-                    Some(copy) => planned.push(Planned::Grab(copy)),
-                    None => {
-                        let shader = resolved.shader.clone();
-                        self.warn_once(format!("fetch{shader}#{pass_index}"), || {
-                            format!(
-                                "shader `{shader}` pass {pass_index} reads its color target (framebuffer fetch), which has no texture to copy: it reads black"
-                            )
-                        });
+                for index in (0..unbound_shaders::fetch::TARGETS).filter(|i| reads & 1 << i != 0) {
+                    let source = match index {
+                        0 => Some((target.texture.clone(), target.alpha_one)),
+                        _ => target
+                            .extra
+                            .get(index as usize - 1)
+                            .map(|e| (e.texture.clone(), e.alpha_one)),
+                    };
+                    let copy = source.and_then(|(texture, alpha_one)| {
+                        self.grab(
+                            unbound_shaders::fetch::texture(index),
+                            texture,
+                            (target.width, target.height),
+                            alpha_one,
+                        )
+                    });
+                    match copy {
+                        Some(copy) => planned.push(Planned::Grab(copy)),
+                        None => {
+                            let shader = resolved.shader.clone();
+                            self.warn_once(format!("fetch{shader}#{pass_index}/{index}"), || {
+                                format!(
+                                    "shader `{shader}` pass {pass_index} reads color target {index} (framebuffer fetch), which the draw has no texture of to copy: it reads black"
+                                )
+                            });
+                        }
                     }
                 }
                 globals = self.globals.clone();
@@ -4360,18 +4383,21 @@ impl UnityRenderer {
     /// when a named texture was grabbed in this camera's render already (measured: Unity grabs
     /// those once per camera render, `_GrabTexture` for every object). Framebuffer fetch's copy
     /// is one too, made before each draw that reads it.
-    fn grab(&mut self, name: &str, target: &Target) -> Option<Copy> {
-        // `_GrabTexture` and the framebuffer fetch copy are made for every draw.
+    fn grab(
+        &mut self,
+        name: &str,
+        texture: Option<(wgpu::Texture, u32, u32)>,
+        (width, height): (u32, u32),
+        alpha_one: bool,
+    ) -> Option<Copy> {
+        // `_GrabTexture` and the framebuffer fetch copies are made for every draw.
         if name != "_GrabTexture"
-            && name != unbound_shaders::fetch::TEXTURE
+            && !name.starts_with(unbound_shaders::fetch::TEXTURE_PREFIX)
             && !self.grabbed.insert(name.to_string())
         {
             return None;
         }
-        let Some((source, layer, mip)) = target.texture.clone() else {
-            return None;
-        };
-        let (width, height) = (target.width, target.height);
+        let (source, layer, mip) = texture?;
         let format = match source.format().remove_srgb_suffix() {
             wgpu::TextureFormat::Rgba16Float => 2,
             wgpu::TextureFormat::R32Float => 6,
@@ -4387,7 +4413,7 @@ impl UnityRenderer {
             wgpu::TextureFormat::R16Snorm => texture_format::R16_SNORM,
             wgpu::TextureFormat::Rg16Snorm => texture_format::RG16_SNORM,
             wgpu::TextureFormat::Rgba16Snorm => {
-                if target.alpha_one {
+                if alpha_one {
                     texture_format::RGB16_SNORM
                 } else {
                     texture_format::RGBA16_SNORM

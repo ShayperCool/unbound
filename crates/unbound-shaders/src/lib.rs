@@ -163,10 +163,10 @@ pub struct Compiled {
     /// Whether the vertex program reads any vertex input: one that reads none (built from its
     /// vertex and instance ids) draws without vertex buffers, so any index it is given is safe.
     pub vertex_inputs: bool,
-    /// Whether the fragment program reads its color target ([`fetch::TEXTURE`]): the renderer
-    /// copies the target there before each draw.
+    /// The color targets the fragment program reads, one bit each ([`fetch::texture`]): the
+    /// renderer copies each there before each draw.
     #[serde(default)]
-    pub framebuffer_fetch: bool,
+    pub framebuffer_fetch: u8,
 }
 
 /// A buffer a program reads (or, in the fragment program, writes) by name.
@@ -864,17 +864,17 @@ impl ShaderCompiler {
             fetch::rewrite(&fragment.text, &fragment_entry)
                 .with_context(|| program.file.display().to_string())?
         } else {
-            (fragment.text, false)
+            (fragment.text, 0)
         };
-        if framebuffer_fetch
+        if framebuffer_fetch != 0
             && self
                 .warned
                 .insert((program.file.clone(), FRAMEBUFFER_FETCH_AVAILABLE.into()))
         {
             tracing::warn!(
-                "{}: the program reads its color target (framebuffer fetch): Unbound copies the \
-                 target before each of its draws, so triangles of one draw that overlap read the \
-                 color from before the draw",
+                "{}: the program reads its color targets (framebuffer fetch): Unbound copies \
+                 them before each of its draws, so triangles of one draw that overlap read the \
+                 color from before the draw (Metal's read what the earlier ones wrote)",
                 program.file.display()
             );
         }
@@ -3445,8 +3445,8 @@ float4 frag(v2f i) : SV_Target
         let compiled = compiler
             .compile(&program(&fetching, false), &[], false)
             .unwrap();
-        assert!(compiled.framebuffer_fetch);
-        assert!(compiled.textures.iter().any(|t| t == fetch::TEXTURE));
+        assert_eq!(compiled.framebuffer_fetch, 1);
+        assert!(compiled.textures.iter().any(|t| *t == fetch::texture(0)));
         // Without framebuffer fetch (another device) an inout color target is not read.
         let mut other = ShaderCompiler::new(Settings {
             unity_version: 6000071,
@@ -3469,8 +3469,8 @@ float4 frag(v2f i) : SV_Target
         let plain = compiler
             .compile(&program(PROGRAM, false), &[], false)
             .unwrap();
-        assert!(!plain.framebuffer_fetch);
-        assert!(!plain.textures.iter().any(|t| t == fetch::TEXTURE));
+        assert_eq!(plain.framebuffer_fetch, 0);
+        assert!(!plain.textures.iter().any(|t| *t == fetch::texture(0)));
     }
 
     #[test]
@@ -4062,19 +4062,19 @@ fixed4 frag(v2f i) : COLOR { return i.color; }
         let c = compiler
             .compile(&program(fetching, true), &[], false)
             .unwrap();
-        assert!(c.framebuffer_fetch);
+        assert_eq!(c.framebuffer_fetch, 1);
         assert!(
-            c.textures.iter().any(|t| t == fetch::TEXTURE),
+            c.textures.iter().any(|t| *t == fetch::texture(0)),
             "{:?}",
             c.textures
         );
         let c = compiler.compile(&program(plain, true), &[], false).unwrap();
-        assert!(!c.framebuffer_fetch);
+        assert_eq!(c.framebuffer_fetch, 0);
         assert!(c.fragment.contains("location(1)"), "{}", c.fragment);
         let c = compiler
             .compile(&program(colored, true), &[], false)
             .unwrap();
-        assert!(!c.framebuffer_fetch);
+        assert_eq!(c.framebuffer_fetch, 0);
         // A surface shader's vertex color reaches its Input (the analysis reads COLOR too).
         let surface = r#"
 #pragma surface surf Lambert

@@ -1414,7 +1414,7 @@ pub(crate) fn fit(
             .collect(),
         extra_vertex_inputs,
         vertex_inputs,
-        framebuffer_fetch: false,
+        framebuffer_fetch: 0,
     })
 }
 
