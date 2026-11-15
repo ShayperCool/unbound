@@ -38,6 +38,7 @@ TESTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TESTS))
 from probe_paths import run_root, reference_root, unity_version  # noqa: E402
 import editor_runner  # noqa: E402
+import authored_project  # noqa: E402
 
 REPO = TESTS.parent
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
@@ -224,9 +225,13 @@ def publish(probe, labels):
                                  complete=[editor_runner.jsonl_complete()], gpu=True)
 
 
-def gate(probe, variable, label, tolerance, engine_args):
+def gate(probe, variable, label, tolerance, engine_args, authored=None):
     out = run_root(probe, label)
-    project = assemble(probe, out)
+    if authored:
+        project = out/'project'
+        authored_project.assemble(probe.name, unity_version(), authored, project)
+    else:
+        project = assemble(probe, out)
     capture = out/'engine'
     capture.mkdir(parents=True)
     cli = os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI') or str(REPO/'target/release/unbound')
@@ -272,8 +277,11 @@ def gate(probe, variable, label, tolerance, engine_args):
     return 1 if failures or code else 0
 
 
-def main(probe, method, variable, tolerance, engine_args, batch=True):
-    """batch=False records in a windowed Editor (on the private display): batch mode calls no OnGUI."""
+def main(probe, method, variable, tolerance, engine_args, batch=True, authored=None):
+    """batch=False records in a windowed Editor (on the private display): batch mode calls no OnGUI.
+    authored names the probe's authored set (tests/authored_project.py) when its Editor run also
+    authors inputs the engine needs: publish keeps the first capture's project as that set and
+    the gate assembles it instead of the bare fixture."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('record', 'publish', 'gate'))
     parser.add_argument('labels', nargs='*')
@@ -283,5 +291,9 @@ def main(probe, method, variable, tolerance, engine_args, batch=True):
     if args.mode == 'record':
         return record(probe, method, variable, label, batch)
     if args.mode == 'publish':
-        return publish(probe, args.labels)
-    return gate(probe, variable, label, tolerance, engine_args)
+        code = publish(probe, args.labels)
+        if authored and not code:
+            authored_project.record(probe.name, unity_version(), authored, run_root(probe, args.labels[0])/'project',
+                                    f'python3 tests/projects/{probe.name}/run.py record')
+        return code
+    return gate(probe, variable, label, tolerance, engine_args, authored)

@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/vfx/run.py gate"
+  ],
+  "summary": "vfx: .*",
+  "engine_paths": [
+    "managed/UnityEngine/VFX/",
+    "managed/UnityEngine/Editor/VFX/",
+    "managed/UnityEngine/Editor/AssetPostprocessing.cs",
+    "managed/UnityEngine/Editor/Tuples.cs"
+  ]
+}
