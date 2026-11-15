@@ -39,6 +39,29 @@ namespace Unbound.Tests
             return recorded;
         }
 
+        /// <summary>The frame's cleanup leaves no render texture active for the next frame
+        /// (tests/projects/nativegfx metal.jsonl active.nextframe).</summary>
+        [Fact]
+        public void TheNextFrameStartsWithNoActiveRenderTexture()
+        {
+            FrameBuilder.EnsureRegistered();
+            var previous = RenderTexture.ActiveTarget;
+            var texture = new RenderTexture(4, 4, 0);
+            try
+            {
+                RenderTexture.active = texture;
+                Assert.Same(texture, RenderTexture.active);
+                typeof(PlayerLoopDriver).GetMethod("CleanupFrame",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, null);
+                Assert.Null(RenderTexture.active);
+            }
+            finally
+            {
+                RenderTexture.SetActiveQuietly(previous);
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+        }
+
         [Fact]
         public void ExecutedCommandsStartFromGlMatrices()
         {
