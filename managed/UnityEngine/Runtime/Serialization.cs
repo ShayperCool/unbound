@@ -647,11 +647,15 @@ namespace Unbound.Runtime
             foreach (var member in SerializationRules.Members(type, guiStatePayload))
             {
                 var value = member.Field.GetValue(source);
-                member.Field.SetValue(target, Copy(value, member.Field.FieldType, member.Shape, member.ElementType, member.ElementShape, depth));
+                var current = member.Field.FieldType.IsValueType ? member.Field.GetValue(target) : null;
+                member.Field.SetValue(target, Copy(value, member.Field.FieldType, member.Shape, member.ElementType, member.ElementShape, depth, current));
             }
         }
 
-        object Copy(object value, Type type, Shape shape, Type elementType, Shape elementShape, int depth)
+        /// <param name="current">The target's current value of a struct field: a copied struct starts
+        /// from it, so its non-serialized members keep the copy's own values (an array element, with
+        /// none, starts from the default; tests/projects/declarationextras clone.pair).</param>
+        object Copy(object value, Type type, Shape shape, Type elementType, Shape elementShape, int depth, object current = null)
         {
             if (value == null)
             {
@@ -695,8 +699,7 @@ namespace Unbound.Runtime
                     {
                         try { before.OnBeforeSerialize(); } catch (Exception e) { Debug.LogException(e); }
                     }
-                    var copy = type.IsValueType ? value : SerializationRules.Create(type);
-                    if (type.IsValueType) copy = RuntimeHelpers.GetObjectValue(value);
+                    var copy = type.IsValueType && current != null ? current : SerializationRules.Create(type);
                     CopyFields(value, copy, type, depth + 1, shape == Shape.GuiStyleState);
                     if (copy is ISerializationCallbackReceiver after)
                     {

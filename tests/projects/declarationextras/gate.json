@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/declarationextras/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Runtime/Serialization.cs",
+    "managed/UnityEngine/Physics2D/Rigidbody2D.cs",
+    "managed/UnityEngine/UIElements/Core/VisualElement.cs"
+  ]
+}

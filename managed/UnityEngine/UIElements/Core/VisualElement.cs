@@ -652,7 +652,7 @@ namespace UnityEngine.UIElements
             return e;
         }
 
-        public partial struct Hierarchy : IEquatable<Hierarchy>
+        public partial struct Hierarchy
         {
             readonly VisualElement m_Owner;
 

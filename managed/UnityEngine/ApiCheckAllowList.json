@@ -100,20 +100,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.Rigidbody2D+SlideResults",
-    "Message": "field <slideHit>k__BackingField attributes is [], Unity's is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",
-    "Reason": "Q410-slide-result-serialization: The selected slideHit/surfaceHit backing fields carry collision payloads. Integrate nondefault hit serialization with the collision wrapper schema and nested/overwrite controls before exposing the fields to serialization."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Rigidbody2D+SlideResults",
-    "Message": "field <surfaceHit>k__BackingField attributes is [], Unity's is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",
-    "Reason": "Q410-slide-result-serialization: The selected slideHit/surfaceHit backing fields carry collision payloads. Integrate nondefault hit serialization with the collision wrapper schema and nested/overwrite controls before exposing the fields to serialization."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.UIElements.TextElement",
     "Message": "M:HandleEventBubbleUp`0(UnityEngine.UIElements.EventBase):System.Void attributes is [], Unity's is [UnityEngine.UIElements.EventInterestAttribute:M:.ctor`0(System.Type[]):System.Void(System.Type[]:[System.Type:UnityEngine.UIElements.ContextualMenuPopulateEvent,System.Type:UnityEngine.UIElements.KeyDownEvent,System.Type:UnityEngine.UIElements.KeyUpEvent,System.Type:UnityEngine.UIElements.ValidateCommandEvent,System.Type:UnityEngine.UIElements.ExecuteCommandEvent,System.Type:UnityEngine.UIElements.FocusEvent,System.Type:UnityEngine.UIElements.BlurEvent,System.Type:UnityEngine.UIElements.FocusInEvent,System.Type:UnityEngine.UIElements.FocusOutEvent,System.Type:UnityEngine.UIElements.PointerDownEvent,System.Type:UnityEngine.UIElements.PointerUpEvent,System.Type:UnityEngine.UIElements.PointerMoveEvent,System.Type:UnityEngine.UIElements.NavigationMoveEvent,System.Type:UnityEngine.UIElements.NavigationSubmitEvent,System.Type:UnityEngine.UIElements.NavigationCancelEvent,System.Type:UnityEngine.UIElements.IMEEvent,System.Type:UnityEngine.UIElements.GeometryChangedEvent,System.Type:UnityEngine.UIElements.AttachToPanelEvent,System.Type:UnityEngine.UIElements.DetachFromPanelEvent]){}]",
     "Reason": "Q410-UI-command-events: The exact EventInterest list includes ValidateCommandEvent, ExecuteCommandEvent and IMEEvent. Add their handwritten pooling/propagation behavior and independent dispatch controls before registering the complete list."
@@ -236,13 +222,6 @@
     "Type": "UnityEngine.UIElements.VisualElement",
     "Message": "type interfaces is UnityEngine.UIElements.Experimental.ITransitionAnimations,UnityEngine.UIElements.IExperimentalFeatures,UnityEngine.UIElements.IResolvedStyle,UnityEngine.UIElements.ITransform,UnityEngine.UIElements.IVisualElementScheduler, Unity's is UnityEngine.UIElements.Experimental.ITransitionAnimations,UnityEngine.UIElements.IExperimentalFeatures,UnityEngine.UIElements.IResolvedStyle,UnityEngine.UIElements.IStylePropertyAnimations,UnityEngine.UIElements.ITransform,UnityEngine.UIElements.IVisualElementScheduler",
     "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.VisualElement needs style-property animation ownership and cancellation. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
-    "Type": "UnityEngine.UIElements.VisualElement+Hierarchy",
-    "Message": "type interfaces is System.IEquatable`1<UnityEngine.UIElements.VisualElement+Hierarchy>, Unity's is ",
-    "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.VisualElement+Hierarchy needs generic hierarchy equality is consumed by engine collections; preserve equality and hashing when removing the extra interface. Remove the extra interface only after migrating its internal callers and proving existing cleanup or equality behavior with independent controls."
   },
   {
     "Release": "6000.0.71f1",

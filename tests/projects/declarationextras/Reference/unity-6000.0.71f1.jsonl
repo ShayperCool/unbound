@@ -1,0 +1,13 @@
+{"key":"slide.fields","value":"<iterationsUsed>k__BackingField:True,<position>k__BackingField:True,<remainingVelocity>k__BackingField:True,<slideHit>k__BackingField:True,<surfaceHit>k__BackingField:True"}
+{"key":"hit.serializable","value":"False"}
+{"key":"json","value":"{\"results\":{\"<remainingVelocity>k__BackingField\":{\"x\":5.0,\"y\":-5.0},\"<position>k__BackingField\":{\"x\":10.0,\"y\":1.0},\"<iterationsUsed>k__BackingField\":5},\"after\":3}"}
+{"key":"editorJson","value":"{\"results\":{\"<remainingVelocity>k__BackingField\":{\"x\":5.0,\"y\":-5.0},\"<position>k__BackingField\":{\"x\":10.0,\"y\":1.0},\"<iterationsUsed>k__BackingField\":5},\"after\":3}"}
+{"key":"json.fromJson","value":"5/-5|10/1|5|0/0,0/0,0,0,0/0|0/0,0/0,0,0,0/0"}
+{"key":"json.overwrite","value":"5/-5|10/1|5|50/51,0/1,52,0.25,53/54|60/61,0/1,62,0.25,63/64"}
+{"key":"clone","value":"7/-7|14/1|7|0/0,0/0,0,0,0/0|0/0,0/0,0,0,0/0"}
+{"key":"clone.original","value":"7/-7|14/1|7|17/18,0/1,19,0.25,20/21|27/28,0/1,29,0.25,30/31"}
+{"key":"clone.pair","value":"5/9/6/4|6/0"}
+{"key":"hierarchy.interfaces","value":""}
+{"key":"hierarchy.equality","value":"True|False|True|False|False|True|True"}
+{"key":"hierarchy.set","value":"3"}
+{"key":"complete","value":"1"}

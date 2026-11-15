@@ -1289,8 +1289,9 @@ namespace UnityEngine
             [field: SerializeField] public Vector2 remainingVelocity { get; set; }
             [field: SerializeField] public Vector2 position { get; set; }
             [field: SerializeField] public int iterationsUsed { get; set; }
-            public RaycastHit2D slideHit { get; set; }
-            public RaycastHit2D surfaceHit { get; set; }
+            // Serialized fields of a type that is not serializable: never written (tests/projects/declarationextras).
+            [field: SerializeField] public RaycastHit2D slideHit { get; set; }
+            [field: SerializeField] public RaycastHit2D surfaceHit { get; set; }
         }
 
         // ------------------------------------------------------------------ serialization
