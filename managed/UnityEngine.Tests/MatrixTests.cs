@@ -81,6 +81,31 @@ namespace Unbound.Tests
                 0xbcc20422, 0x3e86ae74, 0x3e1cc471, 0x00000000, 0xc121693a, 0xc115385a, 0xc067eb1b, 0x3f800000,
             };
             for (int i = 0; i < 16; i++) Assert.Equal(expected[i], System.BitConverter.SingleToUInt32Bits(result[i]));
+
+            // Where a matrix stops having an inverse: by its determinant's square, whatever its
+            // sign (`math/inverse affine/thin*`, `small*`); the bottom row's zeros take the sign.
+            static Matrix4x4 Thin(float x, float z)
+            {
+                var matrix = Matrix4x4.identity;
+                matrix.m00 = x;
+                matrix.m22 = z;
+                matrix.m03 = 10f;
+                return matrix;
+            }
+            Assert.True(Matrix4x4.Inverse3DAffine(Thin(1f, 3.2e-13f), ref result));
+            Assert.Equal((0x5435e621u, 0xc1200000u, 0x00000000u), (System.BitConverter.SingleToUInt32Bits(result.m22), System.BitConverter.SingleToUInt32Bits(result.m03), System.BitConverter.SingleToUInt32Bits(result.m30)));
+            Assert.False(Matrix4x4.Inverse3DAffine(Thin(1f, 3.1e-13f), ref result));
+            Assert.Equal(Matrix4x4.zero, result);
+            Assert.True(Matrix4x4.Inverse3DAffine(Thin(-1f, 3.2e-13f), ref result));
+            Assert.Equal((0xbf800000u, 0x41200000u, 0x80000000u), (System.BitConverter.SingleToUInt32Bits(result.m00), System.BitConverter.SingleToUInt32Bits(result.m03), System.BitConverter.SingleToUInt32Bits(result.m30)));
+            Assert.False(Matrix4x4.Inverse3DAffine(Thin(-1f, 3.1e-13f), ref result));
+            Assert.True(Matrix4x4.Inverse3DAffine(Matrix4x4.Scale(new Vector3(1e-4f, 1e-4f, 1e-4f)), ref result));
+            Assert.Equal(10000f, result.m11);
+            Assert.False(Matrix4x4.Inverse3DAffine(Matrix4x4.Scale(new Vector3(5e-5f, 5e-5f, 5e-5f)), ref result));
+            // A cell that is not a number: no numbers come back, and it counts as inverted.
+            Assert.True(Matrix4x4.Inverse3DAffine(Thin(float.NaN, 1f), ref result));
+            for (int i = 0; i < 15; i++) Assert.True(float.IsNaN(result[i]));
+            Assert.Equal(1f, result.m33);
         }
 
         [Fact]

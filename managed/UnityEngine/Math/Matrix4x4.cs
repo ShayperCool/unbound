@@ -503,14 +503,16 @@ namespace UnityEngine
         /// </summary>
         public static bool Inverse3DAffine(Matrix4x4 input, ref Matrix4x4 result) => InverseAffine(input, out result);
 
-        /// <summary>The determinant of a 3x3 part whose square is under this is singular.</summary>
+        /// <summary>The determinant of a 3x3 part whose square is under this is singular: a
+        /// determinant of 3.2e-13 inverts and one of 3.1e-13 does not, of either sign (Unity
+        /// 6000.0.71f1, tests/projects/vfx `math/inverse affine/thin*`, `small*`).</summary>
         const float SingularDeterminantSquared = 1e-25f;
 
         /// <summary>
         /// The inverse of an affine matrix (bottom row 0, 0, 0, 1) in single precision: the 3x3
         /// part by its cofactors over its determinant (summed as its positive and its negative
         /// products), the translation through the inverted part. A singular 3x3 part gives false
-        /// and a zero matrix. Matches the Unity 6000.0.71f1 Editor bit for bit where a Visual
+        /// and a zero matrix; one with a cell that is not a number gives true and no numbers. Matches the Unity 6000.0.71f1 Editor bit for bit where a Visual
         /// Effect Graph inverts a transform (tests/projects/vfx, `sim/expressions/inputs/*/m01`).
         /// </summary>
         internal static bool InverseAffine(in Matrix4x4 m, out Matrix4x4 inverse)
@@ -543,6 +545,8 @@ namespace UnityEngine
             inverse.m03 = -(m.m03 * inverse.m00 + m.m13 * inverse.m01 + m.m23 * inverse.m02);
             inverse.m13 = -(m.m03 * inverse.m10 + m.m13 * inverse.m11 + m.m23 * inverse.m12);
             inverse.m23 = -(m.m03 * inverse.m20 + m.m13 * inverse.m21 + m.m23 * inverse.m22);
+            // The bottom row's zeros are scaled with the rest: they take the determinant's sign.
+            inverse.m30 = inverse.m31 = inverse.m32 = 0f * scale;
             inverse.m33 = 1f;
             return true;
         }
