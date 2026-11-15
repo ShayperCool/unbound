@@ -634,9 +634,14 @@ namespace UnityEngine
             RenderTexture faceCopy = null;
             if (face)
             {
-                faceCopy = RenderTexture.GetTemporary(new RenderTextureDescriptor(src.width, src.height, src.graphicsFormat, 0));
+                // A compressed cubemap's blocks cannot be copied into a colour target: its face is
+                // drawn by sampling into a target of its decoded pixels' format.
+                var compressed = src is Cubemap { m_SourceFormat: not null } cube ? cube : null;
+                var faceFormat = compressed != null ? compressed.PixelGraphicsFormat : src.graphicsFormat;
+                faceCopy = RenderTexture.GetTemporary(new RenderTextureDescriptor(src.width, src.height, faceFormat, 0));
                 faceCopy.filterMode = src.filterMode;
-                GfxStream.CopyTexture(TextureHandles.Of(src), 0, 0, new RectInt(0, 0, -1, -1), faceCopy.EnsureCreated(), 0, 0, 0, 0);
+                if (compressed != null) ReflectionProbe.DrawCubeFace(compressed, 0, faceCopy);
+                else GfxStream.CopyTexture(TextureHandles.Of(src), 0, 0, new RectInt(0, 0, -1, -1), faceCopy.EnsureCreated(), 0, 0, 0, 0);
             }
             var temporary = RenderTexture.GetTemporary(new RenderTextureDescriptor(dst.width, dst.height, format, 0));
             Immediate.Blit(faceCopy != null ? faceCopy : src, temporary, null, -1, Vector2.one, Vector2.zero);

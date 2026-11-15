@@ -1751,15 +1751,6 @@ fn upload_imported(
     };
     let mip_count = texture.mip_count();
     let dimension = texture.dimension();
-    if dimension == 4 && texture.blocks.is_none() {
-        // The import cache keeps bottom-up rows for CPU reads. Cube sampling addresses
-        // each GPU face top-down, so reverse each face's mip rows only for this upload
-        // (a compressed cubemap's blocks are top-down already).
-        for mip in &mut texture.mips {
-            let row = mip.data.len() / mip.height.max(1) as usize;
-            unbound_assets::texture::flip_rows(&mut mip.data, row);
-        }
-    }
     // The import's blocks, else BC7 blocks made for the GPU when it samples them, else the
     // pixels.
     let gpu_bc = GPU_BC.load(std::sync::atomic::Ordering::Relaxed);
@@ -1786,6 +1777,15 @@ fn upload_imported(
         }
         (None, Some(blocks)) if gpu_bc => (format + texture_format::BC7_COLOR, concat(&blocks)),
         _ => {
+            if dimension == 4 {
+                // The import cache keeps bottom-up rows for CPU reads. Cube sampling addresses
+                // each GPU face top-down, so reverse each face's mip rows only for this upload
+                // (a compressed cubemap's blocks are top-down already).
+                for mip in &mut texture.mips {
+                    let row = mip.data.len() / mip.height.max(1) as usize;
+                    unbound_assets::texture::flip_rows(&mut mip.data, row);
+                }
+            }
             // Mip 0 keeps its buffer; the smaller levels are appended to it.
             let total: usize = texture.mips.iter().map(|m| m.data.len()).sum();
             let mut mips = std::mem::take(&mut texture.mips).into_iter();

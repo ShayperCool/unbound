@@ -876,6 +876,14 @@ pub fn storage(
     if !faces && (s.shape != TextureShape::Texture2D || texture.layers != 1) {
         return unsupported(&format!("compressed {:?} textures", s.shape));
     }
+    // Faces of the sizes a 2D texture would keep uncompressed are unmeasured for cubemaps: their
+    // pixels stay uncompressed, with the warning.
+    let unmeasured_faces = || {
+        unsupported(
+            "compressed cubemaps whose faces are not a multiple of 4 texels (or, with mips, not a \
+             power of two)",
+        )
+    };
     if format.is_astc() {
         if !project.encoders.measured_astc_encoders {
             return unsupported("ASTC encoders of this release");
@@ -885,7 +893,11 @@ pub fn storage(
         if texture.mip_count() > 1
             && (!texture.width.is_power_of_two() || !texture.height.is_power_of_two())
         {
-            return Storage::UncompressedRgba;
+            return if faces {
+                unmeasured_faces()
+            } else {
+                Storage::UncompressedRgba
+            };
         }
         if format.is_astc_hdr() != hdr {
             return unsupported(&format!("{format:?} from {:?} data", texture.format));
@@ -924,6 +936,9 @@ pub fn storage(
     let mipmapped = texture.mip_count() > 1;
     let pot = format == BlockFormat::Etc1 || mipmapped;
     let compressible = |side: u32| side % 4 == 0 && (side.is_power_of_two() || !pot);
+    if faces && (!compressible(texture.width) || !compressible(texture.height)) {
+        return unmeasured_faces();
+    }
     if !compressible(texture.width) || !compressible(texture.height) {
         // An automatic ETC_RGB4 at mipless multiple-of-4 sizes that are not powers of two is
         // unmeasured (only the explicit one is).

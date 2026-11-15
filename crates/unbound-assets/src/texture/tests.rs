@@ -535,6 +535,21 @@ fn cubemap_faces_are_compressed_top_down() {
     );
     assert!(near(&tex.mips[0].data[..4], bottom));
 
+    // Faces that are not a multiple of 4 texels are unmeasured: uncompressed, with the warning.
+    let odd = png(36, 6, |_, y| if y < 3 { top } else { bottom });
+    let unscaled = unbound_yaml::parse_value("TextureImporter:\n  textureShape: 2\n  generateCubemap: 6\n  nPOTScale: 0\n  mipmaps:\n    enableMipMap: 0\n    sRGBTexture: 0\n  textureCompression: 1\n").unwrap();
+    let tex = importer
+        .import(Path::new("Odd.png"), &odd, &unscaled)
+        .unwrap();
+    assert_eq!(tex.width, 6);
+    assert!(tex.blocks.is_none());
+    assert!(
+        tex.approximation
+            .as_deref()
+            .unwrap()
+            .contains("not a multiple of 4")
+    );
+
     // Floats: BC6H, the pixels kept as they were.
     let data: Vec<f32> = (0..48 * 8)
         .flat_map(|i| [(i % 7) as f32 * 0.75, 1.5, 0.25, 1.0])

@@ -1,5 +1,6 @@
-// Every texel of one mip of a cubemap, one strip of the six faces (+X, -X, +Y, -Y, +Z, -Z) a
-// face wide each: the texel at (x, y) of a face is sampled through the direction to its centre.
+// Every texel of one mip of a cubemap, one strip of its faces (+X, -X, +Y, -Y, +Z, -Z; the first
+// _Faces of them) a face wide each: the texel at (x, y) of a face is sampled through the
+// direction to its centre.
 Shader "Hidden/CubeTexels"
 {
     Properties
@@ -7,6 +8,7 @@ Shader "Hidden/CubeTexels"
         _Cube ("Cube", Cube) = "" {}
         _Mip ("Mip", Float) = 0
         _Size ("Face size of the mip", Float) = 8
+        _Faces ("Faces drawn, from +X", Float) = 6
     }
     SubShader
     {
@@ -21,10 +23,11 @@ Shader "Hidden/CubeTexels"
             samplerCUBE _Cube;
             float _Mip;
             float _Size;
+            float _Faces;
 
             float4 frag(v2f_img i) : SV_Target
             {
-                float column = floor(i.uv.x * 6 * _Size);
+                float column = floor(i.uv.x * _Faces * _Size);
                 float face = floor(column / _Size);
                 float x = column - face * _Size;
                 float y = floor(i.uv.y * _Size);

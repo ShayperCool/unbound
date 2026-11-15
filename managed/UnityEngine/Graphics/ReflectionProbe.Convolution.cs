@@ -47,24 +47,7 @@ namespace UnityEngine
             int size = cube.width;
             int mips = cube.mipmapCount;
             if (mips < 2) return;
-            if (s_ConvolutionUnavailable) return;
-            if (s_CubeBlur == null)
-            {
-                var blur = Shader.Find("Hidden/CubeBlur");
-                var copy = Shader.Find("Hidden/CubeCopy");
-                if (blur == null || copy == null)
-                {
-                    s_ConvolutionUnavailable = true;
-                    Debug.LogError("Unbound: the built-in Hidden/CubeBlur or Hidden/CubeCopy shader is missing; realtime reflection probes get no glossy mips (only mip 0 is drawn).");
-                    return;
-                }
-                using (ObjectRegistry.AsAssets())
-                {
-                    s_CubeBlur = new Material(blur) { hideFlags = HideFlags.HideAndDontSave };
-                    s_CubeCopy = new Material(copy) { hideFlags = HideFlags.HideAndDontSave };
-                    s_FaceQuads = FaceQuads();
-                }
-            }
+            if (!CubeShaders()) return;
             var descriptor = new RenderTextureDescriptor(size, size, cube.graphicsFormat, 0)
             {
                 dimension = TextureDimension.Cube,
@@ -87,6 +70,54 @@ namespace UnityEngine
                 RenderTexture.active = active;
                 RenderTexture.ReleaseTemporary(chain);
             }
+        }
+
+        /// <summary>Loads Unity's Hidden/CubeBlur and Hidden/CubeCopy and the face quads once;
+        /// false (said once) when the shaders are missing.</summary>
+        static bool CubeShaders()
+        {
+            if (s_ConvolutionUnavailable) return false;
+            if (s_CubeBlur != null) return true;
+            var blur = Shader.Find("Hidden/CubeBlur");
+            var copy = Shader.Find("Hidden/CubeCopy");
+            if (blur == null || copy == null)
+            {
+                s_ConvolutionUnavailable = true;
+                Debug.LogError("Unbound: the built-in Hidden/CubeBlur or Hidden/CubeCopy shader is missing; realtime reflection probes get no glossy mips (only mip 0 is drawn) and compressed cubemap faces cannot be converted.");
+                return false;
+            }
+            using (ObjectRegistry.AsAssets())
+            {
+                s_CubeBlur = new Material(blur) { hideFlags = HideFlags.HideAndDontSave };
+                s_CubeCopy = new Material(copy) { hideFlags = HideFlags.HideAndDontSave };
+                s_FaceQuads = FaceQuads();
+            }
+            return true;
+        }
+
+        /// <summary>Draws face <paramref name="face"/> of <paramref name="cube"/>'s mip 0 into the 2D
+        /// <paramref name="target"/> by sampling it (Hidden/CubeCopy), laid out as a copy of the
+        /// face is: for a compressed cubemap, whose blocks cannot be copied into a colour target.
+        /// False when the shaders are missing.</summary>
+        internal static bool DrawCubeFace(Texture cube, int face, RenderTexture target)
+        {
+            if (!CubeShaders()) return false;
+            var saved = GfxStream.Current;
+            var properties = s_ConvolveProperties;
+            try
+            {
+                GfxStream.Camera(Matrix4x4.identity, Matrix4x4.identity, saved.Flags);
+                properties[s_MainTexId] = cube;
+                properties[s_LevelId] = WholeLevel(0);
+                GfxStream.SetTarget(target.EnsureCreated(), 0, 0, 0);
+                GfxStream.Draw(s_FaceQuads.Sync(), face, s_CubeCopy.Sync(), 0, Matrix4x4.identity, Color.white, properties: properties);
+            }
+            finally
+            {
+                properties.Clear();
+                GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
+            }
+            return true;
         }
 
         static void Convolve(RenderTexture cube, RenderTexture chain, int size, int mips, uint flags)
