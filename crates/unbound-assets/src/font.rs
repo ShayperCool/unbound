@@ -77,6 +77,7 @@ pub struct GlyphBitmap {
 /// A loaded face: the font file's bytes and the face index in it.
 pub struct FontFace {
     data: Arc<[u8]>,
+    pub(crate) features: OnceLock<crate::font_features::FontFeatures>,
     freetype: OnceLock<Mutex<Option<crate::font_freetype::FreeTypeFace>>>,
     index: u32,
     metrics: FaceMetrics,
@@ -91,6 +92,7 @@ impl FontFace {
         Ok(Self {
             data: data.into(),
             freetype: OnceLock::new(),
+            features: OnceLock::new(),
             index,
             metrics,
         })
@@ -104,7 +106,7 @@ impl FontFace {
         &self.data
     }
 
-    fn face(&self) -> Face<'_> {
+    pub(crate) fn face(&self) -> Face<'_> {
         Face::parse(&self.data, self.index).expect("the face parsed when it was loaded")
     }
 

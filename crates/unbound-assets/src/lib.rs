@@ -22,6 +22,7 @@ pub mod cache;
 pub mod color;
 pub mod dilate;
 pub mod font;
+mod font_features;
 mod font_freetype;
 mod font_legacy;
 mod font_textcore;

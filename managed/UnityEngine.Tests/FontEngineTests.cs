@@ -9,6 +9,21 @@ namespace UnityEngine.Tests
     /// Faces and glyph rendering are checked by the `hello` fixture project.</summary>
     public class FontEngineTests
     {
+        [Fact]
+        public void LigatureEqualityUsesComponentsAndReplacement()
+        {
+            var first = new LigatureSubstitutionRecord { componentGlyphIDs = new uint[] { 4, 5 }, ligatureGlyphID = 6 };
+            var equal = new LigatureSubstitutionRecord { componentGlyphIDs = new uint[] { 4, 5 }, ligatureGlyphID = 6 };
+            Assert.True(first == equal);
+            equal.componentGlyphIDs = new uint[] { 5, 4 };
+            Assert.False(first.Equals(equal));
+            equal = first;
+            equal.ligatureGlyphID = 7;
+            Assert.True(first != equal);
+            Assert.False(first.Equals(new LigatureSubstitutionRecord { ligatureGlyphID = 6 }));
+            Assert.True(default(LigatureSubstitutionRecord) == default(LigatureSubstitutionRecord));
+        }
+
         static List<GlyphRect> Atlas(int width, int height) =>
             // TextMeshPro starts a dynamic atlas this way.
             new List<GlyphRect> { new GlyphRect(0, 0, width - 1, height - 1) };

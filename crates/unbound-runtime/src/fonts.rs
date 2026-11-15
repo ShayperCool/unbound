@@ -579,3 +579,9 @@ pub(crate) fn decode_base64(text: &str) -> Option<Vec<u8>> {
     }
     Some(out)
 }
+
+/// GSUB ligatures of the selected face, in lookup and subtable order.
+pub fn ligatures(handle: u64, glyphs: Option<&[u32]>, lookup: Option<i32>) -> Result<Json> {
+    let face = face(handle).context("no such face")?;
+    Ok(serde_json::to_value(face.ligatures(glyphs, lookup))?)
+}
