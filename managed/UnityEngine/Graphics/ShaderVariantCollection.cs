@@ -26,7 +26,7 @@ namespace UnityEngine
     /// </list>
     /// </summary>
     [ClassId(200)]
-    public sealed partial class ShaderVariantCollection : Object, ISerializedAsset, Instantiation.ICloneable
+    public sealed partial class ShaderVariantCollection : Object
     {
         readonly struct Variant : IEquatable<Variant>
         {
@@ -149,7 +149,7 @@ namespace UnityEngine
             return new Variant(variant.passType, string.Join(" ", kept));
         }
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             Clear();
             var list = body.Get("m_Shaders");
@@ -168,7 +168,7 @@ namespace UnityEngine
             }
         }
 
-        Object Instantiation.ICloneable.CloneObject()
+        internal Object CloneObject()
         {
             var copy = new ShaderVariantCollection { m_VariantCount = m_VariantCount };
             foreach (var pair in m_Shaders) copy.m_Shaders[pair.Key] = new HashSet<Variant>(pair.Value);

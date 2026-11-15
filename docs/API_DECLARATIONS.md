@@ -112,18 +112,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After animatePhysics |
+| Category | Before Q410 | After asset dispatch |
 | --- | ---: | ---: |
 | Attributes | 938 | 21 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
 | Layout | 68 | 61 |
-| Interfaces | 65 | 43 |
+| Interfaces | 65 | 18 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 0 |
 | Lookup policies | 11 | 10 |
-| Total | 1,332 | 145 |
+| Total | 1,332 | 120 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -402,7 +402,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-UI-interfaces` | 8 | Panel/group ownership, editable-field and slider interfaces, animations and internal equality cleanup; the runtime panel interface is covered by `runtimepanels` and column binding notifications by `columnnotify`. |
 | `Q410-XR-value-payloads` | 0 | Done for value identity, equality, hashing and capability storage by `xrvalues`; physical feature-provider queries remain unsupported and outside this payload slice. |
 | `Q410-animation-job-producer` | 1 | Animation producer payload and scheduling/lifetime controls. |
-| `Q410-asset-interface-adapters` | 27 | PhysicsMaterial, PhysicsMaterial2D and TextAsset are covered by `assetadapters`; AudioClip and Font use the same typed dispatch with ownership controls in `audioadapters` and `assetinstantiate`. Other asset types still need migration; retain mixer subasset restrictions. |
+| `Q410-asset-interface-adapters` | 2 | All asset types use the typed registry (`assetdispatch`, `assetadapters`, `audioadapters`, `manifestadapters`); the mixer group and snapshot still need the Editor subasset-duplication marker. |
 | `Q410-built-in-inspector-registration` | 3 | Target-specific single/multiple-object inspector behavior before registry annotations. |
 | `Q410-enumerator-current-state` | 0 | Done by `propertyenumerator`: Current caches each advance, including false, and preserves its state across Reset/Dispose for enumerable, list, indexed and default forms. |
 | `Q410-generic-equality-interfaces` | 0 | Done by `scenevalues`: generic collections use Scene object equality/hash behavior after removal of the extra interface; internal registries already use their own handles and keys. |

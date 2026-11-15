@@ -88,7 +88,7 @@ Mesh:
             var mesh = new Mesh();
             try
             {
-                ((ISerializedAsset)mesh).ReadSerialized(TestYaml.DocumentBody(WideTwoSubmeshMesh), new NullResolver());
+                mesh.ReadSerialized(TestYaml.DocumentBody(WideTwoSubmeshMesh), new NullResolver());
 
                 Assert.Equal(IndexFormat.UInt32, mesh.indexFormat);
                 Assert.Equal(6, mesh.vertexCount);

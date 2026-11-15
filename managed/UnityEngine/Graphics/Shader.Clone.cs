@@ -2,9 +2,9 @@ using Unbound.Runtime;
 
 namespace UnityEngine
 {
-    public sealed partial class Shader : Instantiation.ICloneable
+    public sealed partial class Shader
     {
-        Object Instantiation.ICloneable.CloneObject()
+        internal Object CloneObject()
         {
             var copy = new Shader
             {

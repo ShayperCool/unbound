@@ -18,7 +18,7 @@ namespace UnityEngine
     /// <para>Setters clamp and round as Unity 6000.0.71f1's do (tests/projects/lightingassets).</para>
     /// </summary>
     [ClassId(850595691)]
-    public sealed partial class LightingSettings : Object, ISerializedAsset, Instantiation.ICloneable
+    public sealed partial class LightingSettings : Object
     {
         /// <summary>The serialized state; its defaults are a new object's (`new LightingSettings()`,
         /// Lightmapping.lightingSettingsDefaults).</summary>
@@ -290,7 +290,7 @@ namespace UnityEngine
         /// Keys an older serializedVersion lacks keep the defaults.</summary>
         internal static bool ReadRealtimeGI(YNode body, bool fallback = false) => body.Bool("m_EnableRealtimeLightmaps", fallback);
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_State.BakedGI = body.Bool("m_EnableBakedLightmaps", m_State.BakedGI);
             m_State.RealtimeGI = ReadRealtimeGI(body, m_State.RealtimeGI);
@@ -344,7 +344,7 @@ namespace UnityEngine
             m_State.RespectSceneVisibility = body.Bool("m_RespectSceneVisibilityWhenBakingGI", m_State.RespectSceneVisibility);
         }
 
-        Object Instantiation.ICloneable.CloneObject() => new LightingSettings { m_State = m_State };
+        internal Object CloneObject() => new LightingSettings { m_State = m_State };
 
         public enum Lightmapper
         {

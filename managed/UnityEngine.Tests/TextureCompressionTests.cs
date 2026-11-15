@@ -147,7 +147,7 @@ namespace UnityEngine.Tests
   _typelessdata: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ";
             var texture = new Texture2D(1, 1) { hideFlags = HideFlags.HideAndDontSave };
-            ((ISerializedAsset)texture).ReadSerialized(TestYaml.DocumentBody(yaml.Replace("READABLE", readable ? "1" : "0")), null);
+            texture.ReadSerialized(TestYaml.DocumentBody(yaml.Replace("READABLE", readable ? "1" : "0")), null);
             texture.name = "Bundled";
             return texture;
         }
@@ -242,7 +242,7 @@ namespace UnityEngine.Tests
   _typelessdata: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ";
             var texture = new Texture2D(1, 1) { hideFlags = HideFlags.HideAndDontSave };
-            ((ISerializedAsset)texture).ReadSerialized(TestYaml.DocumentBody(yaml), null);
+            texture.ReadSerialized(TestYaml.DocumentBody(yaml), null);
             texture.Compress(false);
             Assert.Equal(TextureFormat.ETC2_RGBA8, texture.format);
             Assert.Equal(16, texture.GetRawTextureData().Length);

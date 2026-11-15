@@ -75,7 +75,7 @@ namespace UnityEngine.Tests
             try
             {
                 var data = new NavMeshData();
-                ((ISerializedAsset)data).ReadSerialized(UnityYaml.Parse(yaml)[0].Body, new Resolver());
+                data.ReadSerialized(UnityYaml.Parse(yaml)[0].Body, new Resolver());
                 Assert.Equal(3, data.m_Links.Count);
                 Assert.False(data.m_Links[0].Bidirectional);
                 Assert.Equal(OffMeshLinkType.LinkTypeJumpAcross, data.m_Links[0].Type);

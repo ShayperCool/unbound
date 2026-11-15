@@ -174,7 +174,7 @@ Mesh:
             const string guid = "c0de0000000000000000000000000002";
             var mesh = new Mesh { name = "Triangle", IsPersistentAsset = true };
             var file = Loaded(guid, "Assets/Resources/Triangle.asset", 4300000, mesh);
-            ((ISerializedAsset)mesh).ReadSerialized(UnityYaml.Parse(TriangleMesh)[0].Body, file);
+            mesh.ReadSerialized(UnityYaml.Parse(TriangleMesh)[0].Body, file);
             var reads = new List<string>();
             var previous = AssetDatabaseRuntime.ReloadDocuments;
             AssetDatabaseRuntime.ReloadDocuments = g => { reads.Add(g); return UnityYaml.Parse(TriangleMesh); };
@@ -467,7 +467,7 @@ Mesh:
             Loaded(textureGuid, "Assets/Resources/Unused.png", AssetImporters.Texture2DFileId, texture);
             var mesh = new Mesh { name = "Triangle", IsPersistentAsset = true };
             var meshFile = Loaded(meshGuid, "Assets/Resources/Triangle.asset", 4300000, mesh);
-            ((ISerializedAsset)mesh).ReadSerialized(UnityYaml.Parse(TriangleMesh)[0].Body, meshFile);
+            mesh.ReadSerialized(UnityYaml.Parse(TriangleMesh)[0].Body, meshFile);
             var textPath = TempFile("note 0");
             var text = ImportedText(textPath);
             Loaded(textGuid, "Assets/Resources/Note.txt", AssetImporters.TextAssetFileId, text);

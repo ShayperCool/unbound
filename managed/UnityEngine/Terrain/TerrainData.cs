@@ -13,7 +13,7 @@ namespace UnityEngine
     /// extrapolated past the edges.
     /// </summary>
     [ClassId(156)]
-    public sealed partial class TerrainData : Object, ISerializedAsset
+    public sealed partial class TerrainData : Object
     {
         // Minimum thickness of flat terrain bounds in the defaultstate reference.
         const float MinimumBoundsHeight = 0.0002f;
@@ -741,7 +741,7 @@ namespace UnityEngine
 
         // ------------------------------------------------------------ the asset
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             var heightmap = body.Get("m_Heightmap");
             if (heightmap != null)

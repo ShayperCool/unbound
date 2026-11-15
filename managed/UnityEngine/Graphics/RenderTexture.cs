@@ -8,7 +8,7 @@ namespace UnityEngine
 {
     /// <summary>A texture cameras, blits and command buffers render into.</summary>
     [ClassId(84)]
-    public partial class RenderTexture : Texture, ISerializedAsset
+    public partial class RenderTexture : Texture
     {
         RenderTextureDescriptor m_Descriptor;
         bool m_Created;
@@ -54,7 +54,7 @@ namespace UnityEngine
         /// <summary>A `.renderTexture` asset: its size, formats, samples, mips, dimension and
         /// sampler as saved (measured: tests/projects/builtinrp rt.*). Older files name the formats
         /// by RenderTextureFormat and depth bits.</summary>
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver) => ReadRenderTexture(body);
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver) => ReadRenderTexture(body);
 
         /// <summary>The render texture fields of a serialized render texture (custom render
         /// textures read theirs after these).</summary>

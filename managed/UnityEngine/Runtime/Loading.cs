@@ -979,7 +979,7 @@ namespace Unbound.Runtime
             var saved = new Mesh { m_Name = document.Body.Str("m_Name") };
             try
             {
-                ((ISerializedAsset)saved).ReadSerialized(document.Body, file);
+                saved.ReadSerialized(document.Body, file);
                 mesh.RevertTo(saved);
             }
             finally

@@ -6,7 +6,7 @@ using UnityEngine.U2D;
 
 namespace UnityEngine
 {
-    public sealed partial class Sprite : ISerializedAsset
+    public sealed partial class Sprite
     {
         // The authored offset is independent of the original rectangle, e.g. trimmed meshes.
         Vector2? m_SerializedTextureRectOffset;
@@ -125,7 +125,7 @@ namespace UnityEngine
             };
         }
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             var data = ReadSpriteData(body);
             Texture2D texture = null;

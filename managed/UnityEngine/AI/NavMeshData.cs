@@ -12,7 +12,7 @@ namespace UnityEngine.AI
     /// <see cref="UnityNavMeshTiles"/>); runtime builds make tiles with Recast.
     /// </summary>
     [ClassId(238)]
-    public sealed partial class NavMeshData : Object, ISerializedAsset
+    public sealed partial class NavMeshData : Object
     {
         internal readonly List<DtMeshData> m_Tiles = new List<DtMeshData>();
         internal NavMeshBuildSettings m_Settings = NavMeshBuildSettings.Default;
@@ -54,7 +54,7 @@ namespace UnityEngine.AI
 
         internal NavMeshBuildSettings buildSettings => m_Settings;
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_Settings = NavMeshBuildSettings.Read(body.Get("m_NavMeshBuildSettings"));
             m_Settings.agentTypeID = body.Int("m_AgentTypeID", m_Settings.agentTypeID);

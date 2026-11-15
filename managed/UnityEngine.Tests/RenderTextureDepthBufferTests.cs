@@ -74,7 +74,7 @@ namespace Unbound.Tests
             var texture = (RenderTexture)Activator.CreateInstance(typeof(RenderTexture), nonPublic: true);
             try
             {
-                ((Unbound.Runtime.ISerializedAsset)texture).ReadSerialized(body, null);
+                texture.ReadSerialized(body, null);
                 Assert.Equal(converted ? Compatible(format) : format, texture.depthStencilFormat);
                 texture.descriptor = new RenderTextureDescriptor(4, 2, GraphicsFormat.R8G8B8A8_UNorm, format);
                 Assert.Equal(Compatible(format), texture.depthStencilFormat);

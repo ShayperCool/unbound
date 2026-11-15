@@ -7,7 +7,7 @@ namespace UnityEngine
 {
     /// <summary>A Mesh read from its document: the sub-asset of an imported model, whose geometry
     /// the native side holds (the document names the model and the mesh's index in it).</summary>
-    public sealed partial class Mesh : ISerializedAsset
+    public sealed partial class Mesh
     {
         /// <summary>Per bind pose, the hash of its bone's path below the model's root, and the root
         /// bone's (0: none): how a renderer without bones finds them in an Animator's skeleton
@@ -15,7 +15,7 @@ namespace UnityEngine
         internal uint[] m_BoneNameHashes;
         internal uint m_RootBoneNameHash;
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             if (body.Get("m_UnboundBonePaths") is YNode bones)
             {

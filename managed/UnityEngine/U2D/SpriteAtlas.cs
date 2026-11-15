@@ -20,7 +20,7 @@ namespace UnityEngine.U2D
     /// </summary>
     [ClassId(687078895)]
     [ClassId(612988286)]
-    public partial class SpriteAtlas : Object, ISerializedAsset
+    public partial class SpriteAtlas : Object
     {
         /// <summary>The main object's fileID in a `.spriteatlasv2` (made by its importer; the file's
         /// own document is &amp;1).</summary>
@@ -93,7 +93,7 @@ namespace UnityEngine.U2D
             return m_Sprites = found.Distinct().OrderBy(s => s.name, StringComparer.Ordinal).ToList();
         }
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_Packables.Clear();
             var data = body.Get("m_ImporterData") ?? body.Get("m_EditorData");

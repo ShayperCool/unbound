@@ -94,7 +94,7 @@ namespace UnityEngine.Tests
         Material Read(string yaml, Dictionary<string, Object> objects)
         {
             var m = Own(new Material());
-            ((ISerializedAsset)m).ReadSerialized(TestYaml.DocumentBody(yaml), new ByGuid(objects));
+            m.ReadSerialized(TestYaml.DocumentBody(yaml), new ByGuid(objects));
             return m;
         }
 

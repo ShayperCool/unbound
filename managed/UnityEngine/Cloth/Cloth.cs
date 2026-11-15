@@ -776,7 +776,7 @@ namespace UnityEngine
             {
                 if (m_Rendered == null)
                 {
-                    m_Rendered = (Mesh)((Instantiation.ICloneable)m_Source).CloneObject();
+                    m_Rendered = (Mesh)m_Source.CloneObject();
                     m_Rendered.ClearBlendShapes();
                     // Its buffer is the renderer's skin output (SkinnedMeshRenderer.GetVertexBuffer).
                     m_Rendered.SetSkinOutputLayout();

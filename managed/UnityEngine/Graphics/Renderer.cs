@@ -748,7 +748,7 @@ namespace UnityEngine
                 if (m_Mesh != null && m_Mesh.vertexCount > 0)
                 {
                     var source = m_Mesh;
-                    m_Mesh = (Mesh)((Instantiation.ICloneable)source).CloneObject();
+                    m_Mesh = (Mesh)source.CloneObject();
                     m_Mesh.name = source.name + " Instance";
                 }
                 else

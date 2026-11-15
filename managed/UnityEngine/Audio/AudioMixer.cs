@@ -13,7 +13,7 @@ namespace UnityEngine.Audio
     /// group signal in serialized effect order.
     /// </summary>
     [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(241)]
-    [global::UnityEngine.@ExcludeFromObjectFactoryAttribute] public partial class AudioMixer : Object, ISerializedAsset
+    [global::UnityEngine.@ExcludeFromObjectFactoryAttribute] public partial class AudioMixer : Object
     {
         internal AudioMixerGroup m_OutputGroup;
         internal AudioMixerGroup m_MasterGroup;
@@ -342,7 +342,7 @@ namespace UnityEngine.Audio
             return from + (to - from) * t;
         }
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             T Resolve<T>(ObjectRef r) where T : Object => r.IsNull || resolver == null ? null : resolver.Resolve(r, typeof(T)) as T;
             m_OutputGroup = Resolve<AudioMixerGroup>(body.Ref("m_OutputGroup"));
@@ -439,7 +439,7 @@ namespace UnityEngine.Audio
 
     /// <summary>A group of a mixer (AudioMixerGroupController in the asset).</summary>
     [ClassId(243)]
-    public partial class AudioMixerGroup : Object, ISerializedAsset
+    public partial class AudioMixerGroup : Object
     {
         internal AudioMixer m_Mixer;
         internal AudioMixerGroup m_Parent;
@@ -628,7 +628,7 @@ namespace UnityEngine.Audio
             return false;
         }
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             T Resolve<T>(ObjectRef r) where T : Object => r.IsNull || resolver == null ? null : resolver.Resolve(r, typeof(T)) as T;
             m_Mixer = Resolve<AudioMixer>(body.Ref("m_AudioMixer"));
@@ -660,7 +660,7 @@ namespace UnityEngine.Audio
 
     /// <summary>A snapshot: stored parameter values (and per-parameter transition types).</summary>
     [ClassId(245)]
-    public partial class AudioMixerSnapshot : Object, ISerializedAsset
+    public partial class AudioMixerSnapshot : Object
     {
         internal AudioMixer m_Mixer;
         internal string m_SnapshotId;
@@ -676,7 +676,7 @@ namespace UnityEngine.Audio
         internal float ValueOf(string guid, Dictionary<string, float> defaults) =>
             m_Values.TryGetValue(guid, out var v) ? v : defaults.TryGetValue(guid, out v) ? v : 0f;
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             var mixer = body.Ref("m_AudioMixer");
             m_Mixer = mixer.IsNull || resolver == null ? null : resolver.Resolve(mixer, typeof(AudioMixer)) as AudioMixer;

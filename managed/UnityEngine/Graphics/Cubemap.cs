@@ -13,7 +13,7 @@ namespace UnityEngine
     /// keep their pixels (RGBA, floats for HDR formats) and upload on Apply; built-in ones load
     /// straight to the renderer.</summary>
     [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(89)]
-    public sealed partial class Cubemap : Texture, ISerializedAsset
+    public sealed partial class Cubemap : Texture
     {
         TextureFormat m_Format = TextureFormat.RGBA32;
         int m_MipCount = 1;
@@ -519,7 +519,7 @@ namespace UnityEngine
         /// <summary>A cubemap in Unity's serialization (an AssetBundle's skybox reflection): six
         /// images one after the other, each with its mip chain; RGBA32 (RGBM encoded when its
         /// lightmap format is 5) goes straight to the renderer.</summary>
-        unsafe void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal unsafe void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_Width = body.Int("m_Width");
             m_Height = body.Int("m_Height");

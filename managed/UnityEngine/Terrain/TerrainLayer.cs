@@ -4,7 +4,7 @@ namespace UnityEngine
 {
     /// <summary>A terrain's paint layer (a `.terrainlayer` asset): its textures and how they tile.</summary>
     [ClassId(1953259897)]
-    public sealed partial class TerrainLayer : Object, ISerializedAsset
+    public sealed partial class TerrainLayer : Object
     {
         Texture2D m_DiffuseTexture, m_NormalMapTexture, m_MaskMapTexture;
         Vector2 m_TileSize = Compat.DefaultConstructorStateMeasured ? new Vector2(2f, 2f) : new Vector2(15f, 15f);
@@ -31,7 +31,7 @@ namespace UnityEngine
         public Vector4 maskMapRemapMax { get => m_MaskMapRemapMax; set => m_MaskMapRemapMax = value; }
         public TerrainLayerSmoothnessSource smoothnessSource { get => m_SmoothnessSource; set => m_SmoothnessSource = value; }
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             Texture2D Texture(string key)
             {

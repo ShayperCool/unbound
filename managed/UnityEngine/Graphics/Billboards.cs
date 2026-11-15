@@ -7,7 +7,7 @@ namespace UnityEngine
     /// <summary>A billboard's shape (vertices in 0..1 over its width and height), the images of the
     /// views it was rendered from, its size and material.</summary>
     [ClassId(226)]
-    public sealed partial class BillboardAsset : Object, ISerializedAsset
+    public sealed partial class BillboardAsset : Object
     {
         float m_Width = Compat.DefaultConstructorStateMeasured ? 0f : 1f, m_Height = Compat.DefaultConstructorStateMeasured ? 0f : 1f, m_Bottom;
         Vector4[] m_ImageTexCoords = Array.Empty<Vector4>();
@@ -43,7 +43,7 @@ namespace UnityEngine
         internal Vector2[] Vertices => m_Vertices;
         internal ushort[] Indices => m_Indices;
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_Width = body.Float("width", 1f);
             m_Height = body.Float("height", 1f);

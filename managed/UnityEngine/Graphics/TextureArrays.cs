@@ -556,7 +556,7 @@ namespace UnityEngine
 
     /// <summary>An array of 2D textures of one size and format, sampled by slice.</summary>
     [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(187)]
-    public sealed partial class Texture2DArray : Texture, ISerializedAsset
+    public sealed partial class Texture2DArray : Texture
     {
         TextureFormat m_Format;
         bool m_Linear;
@@ -690,7 +690,7 @@ namespace UnityEngine
         }
 
         /// <summary>A Texture2DArray asset; as in Unity, an unreadable one keeps no CPU copy.</summary>
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_Width = body.Int("m_Width");
             m_Height = body.Int("m_Height");
@@ -750,7 +750,7 @@ namespace UnityEngine
     /// <summary>An array of cube maps of one size and format: six faces each (layer element × 6 +
     /// face), sampled by direction and element.</summary>
     [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(188)]
-    public sealed partial class CubemapArray : Texture, ISerializedAsset
+    public sealed partial class CubemapArray : Texture
     {
         TextureFormat m_Format;
         bool m_Linear;
@@ -875,7 +875,7 @@ namespace UnityEngine
 
         /// <summary>A CubemapArray asset: each cube's six faces (+X, -X, +Y, -Y, +Z, -Z), each
         /// face with its mip chain in turn.</summary>
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_Width = m_Height = body.Int("m_Width");
             m_Count = Math.Max(1, body.Int("m_CubemapCount", 1));
@@ -904,7 +904,7 @@ namespace UnityEngine
 
     /// <summary>A 3D texture: width × height × depth texels, sampled in three coordinates.</summary>
     [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(117)]
-    public sealed partial class Texture3D : Texture, ISerializedAsset
+    public sealed partial class Texture3D : Texture
     {
         TextureFormat m_Format;
         bool m_Linear = true;
@@ -1064,7 +1064,7 @@ namespace UnityEngine
         }
 
         /// <summary>A Texture3D asset: its levels one after another, each all its depth slices.</summary>
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_Width = body.Int("m_Width");
             m_Height = body.Int("m_Height");

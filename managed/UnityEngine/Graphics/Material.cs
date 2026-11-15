@@ -9,7 +9,7 @@ namespace UnityEngine
     /// <summary>A shader and the values of its properties. Changes are sent to the renderer before the
     /// next frame is drawn.</summary>
     [ClassId(21)]
-    public partial class Material : Object, ISerializedAsset, Instantiation.ICloneable
+    public partial class Material : Object
     {
         internal sealed class TextureSlot
         {
@@ -203,7 +203,7 @@ namespace UnityEngine
             MarkDirty();
         }
 
-        Object Instantiation.ICloneable.CloneObject() => new Material(this);
+        internal Object CloneObject() => new Material(this);
 
         internal void MarkDirty()
         {
@@ -1325,7 +1325,7 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ serialized data
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             var shaderRef = body.Ref("m_Shader");
             m_Shader = shaderRef.IsNull ? null : resolver.Resolve(shaderRef, typeof(Shader)) as Shader;
@@ -1405,7 +1405,7 @@ namespace UnityEngine
         {
             if (fields.ValueKind != System.Text.Json.JsonValueKind.Object)
                 throw new FormatException($"the record of built-in Material '{m_Name}' is not an object");
-            ((ISerializedAsset)this).ReadSerialized(YNode.FromJson(fields), BuiltinReferences.Instance);
+            ReadSerialized(YNode.FromJson(fields), BuiltinReferences.Instance);
         }
 
         /// <summary>References of the install's built-in resource files, resolved to their objects.</summary>

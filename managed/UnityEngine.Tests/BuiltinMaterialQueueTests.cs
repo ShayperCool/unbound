@@ -462,7 +462,7 @@ namespace UnityEngine.Tests
             Register(Extra, 211, "Particles/Standard Unlit", 48);
             var material = new Material();
             m_Owned.Add(material);
-            ((ISerializedAsset)material).ReadSerialized(TestYaml.DocumentBody(@"Material:
+            material.ReadSerialized(TestYaml.DocumentBody(@"Material:
   m_Name: Saved
   m_Shader: {fileID: 211, guid: 0000000000000000f000000000000000, type: 0}
   m_CustomRenderQueue: 2450

@@ -352,7 +352,7 @@ namespace UnityEngine
             {
                 // The deformed copy shares everything but positions, normals and tangents with its source.
                 if (m_Skinned != null) DestroyImmediate(m_Skinned);
-                m_Skinned = (Mesh)((Instantiation.ICloneable)mesh).CloneObject();
+                m_Skinned = (Mesh)mesh.CloneObject();
                 m_Skinned.ClearBlendShapes();
                 m_Skinned.m_BoneWeights = null;
                 m_Skinned.m_Bindposes = null;
@@ -401,7 +401,7 @@ namespace UnityEngine
         {
             if (m_SkinnedPrevious == null)
             {
-                m_SkinnedPrevious = (Mesh)((Instantiation.ICloneable)m_Skinned).CloneObject();
+                m_SkinnedPrevious = (Mesh)m_Skinned.CloneObject();
                 m_SkinnedPrevious.name = m_Skinned.name;
             }
             (m_Skinned, m_SkinnedPrevious) = (m_SkinnedPrevious, m_Skinned);

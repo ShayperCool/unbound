@@ -7,7 +7,7 @@ namespace UnityEngine
     /// <summary>A region of a texture drawn as a quad (or a tight mesh), with a pivot and a scale
     /// (pixels per unit).</summary>
     [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(213)]
-    public sealed partial class Sprite : Object, Instantiation.ICloneable
+    public sealed partial class Sprite : Object
     {
         internal Texture2D m_Texture;
         internal Rect m_Rect;
@@ -50,7 +50,7 @@ namespace UnityEngine
         Sprite() { }
 
         /// <summary>A copy sharing the texture (what Instantiate and SpriteAtlas.GetSprite give).</summary>
-        Object Instantiation.ICloneable.CloneObject()
+        internal Object CloneObject()
         {
             var copy = new Sprite();
             foreach (var field in typeof(Sprite).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public

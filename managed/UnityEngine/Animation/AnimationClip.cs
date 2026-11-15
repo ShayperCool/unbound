@@ -67,7 +67,7 @@ namespace UnityEngine
     /// component's class id or script); object references (sprite swaps) are stepped PPtr curves.
     /// </summary>
     [ClassId(74)]
-    public sealed partial class AnimationClip : Motion, ISerializedAsset, Instantiation.ICloneable
+    public sealed partial class AnimationClip : Motion
     {
         internal List<ClipCurve> m_Curves = new List<ClipCurve>();
         internal List<ClipObjectCurve> m_ObjectCurves = new List<ClipObjectCurve>();
@@ -890,11 +890,11 @@ namespace UnityEngine
             return clip;
         }
 
-        Object Instantiation.ICloneable.CloneObject() => Clone();
+        internal Object CloneObject() => Clone();
 
         // ------------------------------------------------------------------ serialized data
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver) => ClipReader.Read(this, body, resolver);
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver) => ClipReader.Read(this, body, resolver);
     }
 }
 

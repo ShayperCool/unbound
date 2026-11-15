@@ -539,7 +539,7 @@ namespace UnityEngine.Tests
         static Material Read(string yaml, Dictionary<string, Object> objects)
         {
             var m = new Material();
-            ((ISerializedAsset)m).ReadSerialized(TestYaml.DocumentBody(yaml), new ByGuid(objects));
+            m.ReadSerialized(TestYaml.DocumentBody(yaml), new ByGuid(objects));
             return m;
         }
 

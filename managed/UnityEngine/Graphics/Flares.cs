@@ -7,7 +7,7 @@ namespace UnityEngine
     /// <summary>A lens flare asset: its texture, how the texture is split into images, and the
     /// elements drawn along the line from the flare to the view axis (the screen's center under a centred projection).</summary>
     [ClassId(121)]
-    public sealed partial class Flare : Object, ISerializedAsset
+    public sealed partial class Flare : Object
     {
         internal struct Element
         {
@@ -24,7 +24,7 @@ namespace UnityEngine
 
         public Flare() { }
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             var texture = body.Ref("m_FlareTexture");
             m_FlareTexture = texture.IsNull ? null : resolver.Resolve(texture, typeof(Texture)) as Texture;

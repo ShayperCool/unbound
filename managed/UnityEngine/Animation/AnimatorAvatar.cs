@@ -10,7 +10,7 @@ namespace UnityEngine
     /// humanoid avatar is built (as the importer does) from its model's hierarchy and the meta's human
     /// description the first time it is used.</summary>
     [ClassId(90)]
-    public partial class Avatar : Object, ISerializedAsset
+    public partial class Avatar : Object
     {
         Avatar() { }
 
@@ -78,7 +78,7 @@ namespace UnityEngine
 
         public HumanDescription humanDescription => m_Description.Copy();
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             var root = body.Ref("m_UnboundRoot");
             m_Root = root.IsNull ? null : resolver.Resolve(root, typeof(GameObject)) as GameObject;

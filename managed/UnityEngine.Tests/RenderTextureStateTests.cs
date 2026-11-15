@@ -140,7 +140,7 @@ namespace Unbound.Tests
             var texture = (RenderTexture)Activator.CreateInstance(typeof(RenderTexture), nonPublic: true);
             try
             {
-                ((ISerializedAsset)texture).ReadSerialized(body, null);
+                texture.ReadSerialized(body, null);
                 var flags = texture.descriptor.flags;
                 Assert.Equal((RenderTextureCreationFlags)0, flags & RenderTextureCreationFlags.CreatedFromScript);
                 Assert.Equal(texture.sRGB, (flags & RenderTextureCreationFlags.SRGB) != 0);

@@ -8,7 +8,7 @@ namespace UnityEngine
     /// <summary>Vertices, attributes and submesh indices. The data lives here; the renderer gets a copy
     /// when the mesh changed.</summary>
     [global::UnityEngine.@ExcludeFromPresetAttribute] [ClassId(43)]
-    public sealed partial class Mesh : Object, Instantiation.ICloneable
+    public sealed partial class Mesh : Object
     {
         internal Vector3[] m_Vertices = Array.Empty<Vector3>();
         internal Vector3[] m_Normals;
@@ -86,7 +86,7 @@ namespace UnityEngine
             m_Name = "";
         }
 
-        Object Instantiation.ICloneable.CloneObject()
+        internal Object CloneObject()
         {
             var m = new Mesh();
             m.CopyGeometryFrom(this);

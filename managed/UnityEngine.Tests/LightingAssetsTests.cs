@@ -73,7 +73,7 @@ namespace Unbound.Tests
         static T Read<T>(string yaml, IReferenceResolver resolver = null) where T : Object, new()
         {
             var asset = new T();
-            ((ISerializedAsset)asset).ReadSerialized(UnityYaml.Parse(yaml)[0].Body, resolver ?? new Resolver());
+            Assert.True(AssetAdapters.TryRead(asset, UnityYaml.Parse(yaml)[0].Body, resolver ?? new Resolver()));
             return asset;
         }
 

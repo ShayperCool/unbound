@@ -10,7 +10,7 @@ namespace UnityEngine
     /// transitions and blend trees are the file's other documents, compiled into a graph on first use.
     /// </summary>
     [ClassId(91)]
-    [global::UnityEngine.@ExcludeFromObjectFactoryAttribute] public partial class RuntimeAnimatorController : Object, ISerializedAsset, Instantiation.ICloneable
+    [global::UnityEngine.@ExcludeFromObjectFactoryAttribute] public partial class RuntimeAnimatorController : Object
     {
         internal List<AnimatorControllerParameter> m_Parameters = new List<AnimatorControllerParameter>();
         internal List<ControllerLayerData> m_Layers = new List<ControllerLayerData>();
@@ -52,7 +52,7 @@ namespace UnityEngine
         /// <summary>Changes when overrides change: Animators rebind their clips.</summary>
         internal virtual int OverrideVersion => 0;
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver) => ReadAsset(body, resolver);
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver) => ReadAsset(body, resolver);
 
         internal virtual void ReadAsset(YNode body, IReferenceResolver resolver)
         {
@@ -115,7 +115,7 @@ namespace UnityEngine
             m_Layers = new List<ControllerLayerData>(m_Layers),
         };
 
-        Object Instantiation.ICloneable.CloneObject() => CloneController();
+        internal Object CloneObject() => CloneController();
 
         internal static T Resolve<T>(IReferenceResolver resolver, ObjectRef reference) where T : Object =>
             reference.IsNull ? null : resolver.Resolve(reference, typeof(T)) as T;
@@ -281,7 +281,7 @@ namespace UnityEngine
 
     /// <summary>Which transforms an animator layer animates (the generic part of an AvatarMask).</summary>
     [ClassId(319)]
-    public sealed partial class AvatarMask : Object, ISerializedAsset
+    public sealed partial class AvatarMask : Object
     {
         internal readonly List<(string Path, bool Active)> m_Elements = new List<(string, bool)>();
 
@@ -346,7 +346,7 @@ namespace UnityEngine
             return false;
         }
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_Elements.Clear();
             foreach (var e in body.Get("m_Elements")?.Seq() ?? Array.Empty<YNode>())

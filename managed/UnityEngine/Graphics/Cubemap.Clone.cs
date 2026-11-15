@@ -3,7 +3,7 @@ using Unbound.Runtime;
 
 namespace UnityEngine
 {
-    public sealed partial class Cubemap : Instantiation.ICloneable
+    public sealed partial class Cubemap
     {
         /// <summary>The CPU copy an unreadable cubemap retains (made unreadable by Apply, or
         /// imported without Read/Write and read from the importer on its first clone): scripts
@@ -17,7 +17,7 @@ namespace UnityEngine
         /// unreadable copy. A cubemap with no retained data copies each GPU face and mip instead
         /// (6000.0.71f1: tests/projects/assetinstantiate).
         /// </summary>
-        Object Instantiation.ICloneable.CloneObject()
+        internal Object CloneObject()
         {
             if (!m_Readable && Compat.AssetCloneResourcesMeasured)
                 Debug.LogError($"Instantiating a non-readable '{name}' texture is not allowed! Please mark the texture readable in the inspector or don't instantiate it.");

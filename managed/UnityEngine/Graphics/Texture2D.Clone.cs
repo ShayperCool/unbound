@@ -3,9 +3,9 @@ using Unbound.Runtime;
 
 namespace UnityEngine
 {
-    public sealed partial class Texture2D : Instantiation.ICloneable
+    public sealed partial class Texture2D
     {
-        Object Instantiation.ICloneable.CloneObject()
+        internal Object CloneObject()
         {
             DecodeRaw();
             SyncFromStore();
