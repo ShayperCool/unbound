@@ -105,6 +105,46 @@ namespace Unbound.Tests
             }
         }
 
+        sealed class RepaintMatrices : MonoBehaviour
+        {
+            internal Matrix4x4? Projection, ModelView;
+            void OnGUI()
+            {
+                if (Event.current.type != EventType.Repaint) return;
+                Projection = Immediate.Projection;
+                ModelView = GL.modelview;
+            }
+        }
+
+        /// <summary>OnGUI's Repaint draws with the screen's pixel matrix from its top left, whatever
+        /// the last camera left, and the matrix stays for the end-of-frame callbacks
+        /// (tests/projects/framestate matrices.ongui, matrices.endofframe.gui).</summary>
+        [Fact]
+        public void OnGuiRepaintLoadsTheScreensPixelMatrix()
+        {
+            var go = new GameObject("framestate gui");
+            var gui = go.AddComponent<RepaintMatrices>();
+            var (projection, modelView) = (Immediate.Projection, Immediate.ModelView);
+            try
+            {
+                Immediate.Projection = Matrix4x4.Perspective(40f, 2f, 0.3f, 1000f);
+                Immediate.ModelView = Matrix4x4.TRS(new Vector3(0f, 0f, -2f), Quaternion.identity, Vector3.one);
+                typeof(GuiDispatch).GetMethod("RunFrame", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                    .Invoke(null, null);
+                var pixels = Matrix4x4.Ortho(0f, Screen.width, Screen.height, 0f, -1f, 100f);
+                Assert.Equal(pixels, gui.Projection);
+                Assert.Equal(Matrix4x4.identity, gui.ModelView);
+                Assert.Equal(pixels, Immediate.Projection);
+                Assert.Equal(Matrix4x4.identity, Immediate.ModelView);
+            }
+            finally
+            {
+                (Immediate.Projection, Immediate.ModelView) = (projection, modelView);
+                GuiRender.Clear();
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
         [Fact]
         public void ExecutedCommandsStartFromGlMatrices()
         {

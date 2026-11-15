@@ -596,10 +596,19 @@ namespace Unbound.Runtime
                 GuiRender.Clear();
                 var repaint = new Event { type = EventType.Repaint, mousePosition = MousePosition() };
                 foreach (var mb in Sorted(descending: true))
+                {
+                    LoadRepaintMatrices();
                     Call(mb, repaint);
+                }
                 if (!s_AtlasRebuilt) break;
             }
         }
+
+        /// <summary>GL's matrices in a Repaint: the screen's pixels from its top left (near -1,
+        /// far 100) and identity modelview. They stay after the GUI, for the end-of-frame callbacks
+        /// (Unity 6000.0.71f1 windowed Editor, OpenGL Core and Vulkan: tests/projects/framestate
+        /// matrices.ongui, gl.modelview.ongui, matrices.endofframe.gui).</summary>
+        internal static void LoadRepaintMatrices() => GL.LoadPixelMatrix(0f, Screen.width, Screen.height, 0f);
 
         /// <summary>The frame's input events, at PreUpdate.IMGUISendQueuedEvents: after the fixed
         /// steps, before the Input System's update and Update (measured,
