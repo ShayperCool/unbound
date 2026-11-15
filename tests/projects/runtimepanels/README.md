@@ -25,8 +25,9 @@ The probe creates UI documents on two runtime-made panel settings and reads thei
 | [IRuntimePanel](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.IRuntimePanel.html) | `panel.isRuntimePanel`, `first.settings` and the `selectable*` rows read the panel's own state through the interface after it changed. |
 | [UIDocument.runtimePanel](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.UIDocument-runtimePanel.html) | `changed.reportsA` with `changed.rootPanelIsB`, `fifth.reportsA` and `sixth.reportsA` (enabled, never asked), against `fourth.reportsB`. |
 
-Only flat (screen-space) panels exist here, so the reference's later resolution for other panels
-does not apply. Other releases are unmeasured.
+The reference also resolves a world-space document's panel every frame. Unbound accepts world-space
+settings but treats every panel as flat and does not draw world-space panels, so that per-frame
+resolution is not reproduced (open). Other releases are unmeasured.
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
