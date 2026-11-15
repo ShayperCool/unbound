@@ -464,3 +464,58 @@ fn renamed_and_climbing_super_paths_reach_what_they_name() {
     );
     assert!(ws.sources("unbound_compiler", &[]).contains(&audio));
 }
+
+/// Paths spaced around `::` and renames with any whitespace, and a workspace crate depended on
+/// under another name: each reaches the rules crate's `audio` module.
+#[test]
+fn spaced_paths_and_renamed_dependencies_reach_what_they_name() {
+    let audio = "crates/unbound-rules/src/audio.rs".to_string();
+    for (case, fit) in [
+        ("spaced-crate", "fn f() { unbound_rules ::audio::Audio; }\n"),
+        (
+            "as-newline",
+            "use unbound_rules as\n    r;\nfn f() { r::Audio; }\n",
+        ),
+        (
+            "self-as-tab",
+            "use unbound_rules::{self as\tr};\nfn f() { r::Audio; }\n",
+        ),
+    ] {
+        let ws = compiler_and_rules(case);
+        ws.write("crates/unbound-compiler/src/fit.rs", fit);
+        assert!(
+            ws.sources("unbound_compiler", &[]).contains(&audio),
+            "{case}"
+        );
+    }
+    for (case, x) in [
+        ("super-space", "use super:: super::audio::Audio;\n"),
+        ("super-comment", "use super::/* c */super::audio::Audio;\n"),
+        (
+            "group-space",
+            "use super:: {super::audio::Audio, Device};\n",
+        ),
+    ] {
+        let ws = compiler_and_rules(case);
+        std::fs::create_dir_all(ws.0.join("crates/unbound-rules/src/device")).unwrap();
+        ws.write(
+            "crates/unbound-rules/src/device.rs",
+            "mod x;\npub enum Device { A }\npub fn select() {}\n",
+        );
+        ws.write("crates/unbound-rules/src/device/x.rs", x);
+        assert!(
+            ws.sources("unbound_compiler", &[]).contains(&audio),
+            "{case}"
+        );
+    }
+    let ws = compiler_and_rules("renamed-dependency");
+    ws.write(
+        "crates/unbound-compiler/Cargo.toml",
+        "[package]\n[dependencies]\nrules = { package = \"unbound-rules\", path = \"../unbound-rules\" }\n",
+    );
+    ws.write(
+        "crates/unbound-compiler/src/fit.rs",
+        "fn f() { rules::Audio; }\n",
+    );
+    assert!(ws.sources("unbound_compiler", &[]).contains(&audio));
+}

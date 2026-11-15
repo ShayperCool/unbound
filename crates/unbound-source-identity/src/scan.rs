@@ -150,7 +150,7 @@ fn code(text: &str) -> Code {
             i += 1;
         }
     }
-    let text = without_tests(&out);
+    let text = tight_paths(&without_tests(&out));
     // An include whose path is not a literal (`concat!`, `env!`) is not followed.
     let computed_include = ["include_str!(", "include_bytes!(", "include!("]
         .iter()
@@ -194,39 +194,16 @@ fn module_paths(text: &str) -> bool {
 }
 
 /// Whether a text names modules in a way the reading does not follow: `crate`, `self` or
-/// `super` (or a workspace crate) under another name (`use super as p`, `{self as r}`), with
-/// space before its `::`, or a `super::{..}` group that climbs further (`super::{super::a}`).
+/// `super` under another name in a `use` (`use super as p`, `{self as r}`; `self as i32`
+/// elsewhere is a cast), or a `super::{..}` group that climbs further (`super::{super::a}`).
 fn odd_paths(text: &str) -> bool {
-    let follows = |text: &str, at: usize, kw: &str, what: &str| {
-        let next = &text[at + kw.len()..];
-        !next.starts_with("::") && next.trim_start().starts_with(what)
-    };
-    let spaced = ["crate", "self", "super"]
-        .iter()
-        .any(|kw| word_starts(text, kw).any(|at| follows(text, at, kw, "::")));
-    // Renamed in a `use` (`self as i32` elsewhere is a cast).
     let renamed = word_starts(text, "use").any(|at| {
         let statement = &text[at..];
         let statement = &statement[..statement.find(';').unwrap_or(statement.len())];
         ["crate", "self", "super"].iter().any(|kw| {
-            word_starts(statement, kw).any(|k| {
-                let next = statement[k + kw.len()..].trim_start();
-                next.strip_prefix("as")
-                    .is_some_and(|r| r.starts_with(char::is_whitespace))
-            })
+            word_starts(statement, kw).any(|k| is_as(statement[k + kw.len()..].trim_start()))
         })
     });
-    let keyword_odd = spaced || renamed;
-    let crate_odd = text
-        .match_indices("unbound_")
-        .filter(|&(at, _)| !text[..at].chars().next_back().is_some_and(is_ident))
-        .any(|(at, _)| {
-            let name_end = text[at..]
-                .find(|c: char| !is_ident(c))
-                .map_or(text.len(), |e| at + e);
-            let next = &text[name_end..];
-            !next.starts_with("::") && next.trim_start().starts_with("::")
-        });
     let climbing_group = text.match_indices("super::{").any(|(at, _)| {
         let group = &text[at + "super::{".len()..];
         let mut depth = 0;
@@ -244,7 +221,27 @@ fn odd_paths(text: &str) -> bool {
             .map_or(group.len(), |(i, _)| i);
         word_starts(&group[..end], "super").next().is_some()
     });
-    keyword_odd || crate_odd || climbing_group
+    renamed || climbing_group
+}
+
+/// Whether a text starts with the keyword `as`.
+fn is_as(text: &str) -> bool {
+    text.strip_prefix("as")
+        .is_some_and(|r| r.starts_with(char::is_whitespace))
+}
+
+/// A text with the whitespace around its `::` removed (`super:: super::a`, `crate ::a`): its
+/// paths are read as written without it, which means the same.
+fn tight_paths(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = rest.find("::") {
+        out.push_str(rest[..at].trim_end());
+        out.push_str("::");
+        rest = rest[at + 2..].trim_start();
+    }
+    out.push_str(rest);
+    out
 }
 
 /// How many `#` open a raw string at the start of `rest` (after its `r`), if one does.
@@ -393,7 +390,7 @@ fn named_crates(text: &str) -> BTreeMap<String, Vec<String>> {
         let name: String = text[start..].chars().take_while(|c| is_ident(*c)).collect();
         let after = &text[start + name.len()..];
         // Under another name (`use unbound_x as y`) its paths are not followed: all of it.
-        if after.starts_with(char::is_whitespace) && after.trim_start().starts_with("as ") {
+        if after.starts_with(char::is_whitespace) && is_as(after.trim_start()) {
             out.entry(name).or_default().push("*".into());
             continue;
         }
@@ -405,7 +402,7 @@ fn named_crates(text: &str) -> BTreeMap<String, Vec<String>> {
         // statement's end).
         let statement_end = after.find(';').unwrap_or(after.len());
         if word_starts(&after[..statement_end], "self")
-            .any(|at| after[at + 4..statement_end].trim_start().starts_with("as "))
+            .any(|at| is_as(after[at + 4..statement_end].trim_start()))
         {
             out.entry(name.clone()).or_default().push("*".into());
         }
@@ -675,6 +672,19 @@ pub fn producing_sources(
             let lib_path = src.join("lib.rs");
             files.insert(dir.join("Cargo.toml"));
             files.insert(lib_path.clone());
+            // A workspace crate depended on under another name (`foo = { package =
+            // "unbound-x", .. }`) is named by paths the reading does not follow: all of it.
+            let manifest = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap_or_default();
+            for (at, _) in manifest.match_indices("package") {
+                let value = manifest[at + "package".len()..].trim_start();
+                if let Some(value) = value.strip_prefix('=')
+                    && let Some(quoted) = value.trim_start().strip_prefix('"')
+                    && let Some(package) = quoted.split('"').next()
+                    && package.starts_with("unbound-")
+                {
+                    changes.push((package.replace('-', "_"), Change::Whole));
+                }
+            }
             let module_files = |m: &str| -> io::Result<Vec<PathBuf>> {
                 let mut out = rust_files(&src.join(m))?;
                 let file = src.join(format!("{m}.rs"));
