@@ -590,3 +590,8 @@ checks do for a disposed or closed handle.
 The render API members slice (Q479) adds `ShaderKeywordSet` to the handwritten inventory. Two
 independent 6000.0.71f1 GPU Editor captures agree on its one row (a struct), appended before the
 completion row; every earlier row and inventory entry is byte-identical.
+
+The graphics tier slice adds `UnityEditor.Rendering.TierSettings` (a struct of zeroed fields) and
+`UnityEditor.LightingDataAsset` (no public parameterless constructor) to the handwritten
+inventory. Two independent 6000.0.71f1 GPU Editor captures agree on all 14 of their rows,
+appended before the completion row; every earlier row and inventory entry is byte-identical.

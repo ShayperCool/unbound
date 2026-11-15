@@ -1437,6 +1437,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.LightingDataAsset"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "static",
       "type": "UnityEditor.Lightmapping"
     },
@@ -1637,6 +1643,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.Rendering.EditorGraphicsSettings"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Rendering.TierSettings"
     },
     {
       "category": "class",
