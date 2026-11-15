@@ -106,9 +106,12 @@ namespace UnityEngine
         }
 
         /// <summary>Texel `index` of a level of block storage, decoding only its block, as
-        /// Texture2D's GetPixel reads a compressed texel (float for BC6H and ASTC HDR).</summary>
+        /// Texture2D's GetPixel reads a compressed texel (float for ASTC HDR; BC6H clamped to 0..1,
+        /// warned).</summary>
         unsafe Color BlockTexel(int image, int mip, int index)
         {
+            if (Format == TextureFormat.BC6H)
+                Stubs.Ignored("layered BC6H blocks", "read back clamped to 0..1 in 8-bit steps: Unbound has no float decoding of them");
             int w = W(mip), h = H(mip), side = BlockFormats.Footprint(Format), size = BlockFormats.BlockBytes(Format);
             int z = index / (w * h), x = index % w, y = index / w % h;
             int at = Offset(image, mip) + z * (LevelBytes(mip) / D(mip)) + ((y / side) * ((w + side - 1) / side) + x / side) * size;
