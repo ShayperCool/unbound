@@ -98,12 +98,41 @@ namespace UnityEngine
                 * BlockFormats.BlockBytes(Format) * D(mip);
         }
 
-        /// <summary>Texel access to block storage fails with a message (its blocks are not decoded
-        /// or encoded here).</summary>
+        /// <summary>Texel writes to block storage fail as Texture2D's do (its blocks are not
+        /// encoded here; the layered case is unmeasured); the wrappers name the API and texture.</summary>
         void RequireTexels()
         {
-            if (Blocks)
-                throw new UnityException($"Unbound: the texels of a {Format} layered texture are not read or written; GetPixelData and SetPixelData reach its blocks.");
+            if (Blocks) throw new ArgumentException("texture uses an unsupported format.");
+        }
+
+        /// <summary>A level of block storage decoded to RGBA8 (or float RGBA), its depth slices
+        /// one after another, as GetPixels reads compressed textures.</summary>
+        byte[] DecodedBlocks(int image, int mip, bool floats)
+        {
+            int slice = LevelBytes(mip) / D(mip), texel = floats ? 16 : 4, w = W(mip), h = H(mip);
+            var result = new byte[Size(mip) * texel];
+            for (int z = 0; z < D(mip); z++)
+            {
+                var blocks = new ReadOnlySpan<byte>(Data, Offset(image, mip) + z * slice, slice);
+                int at = z * w * h * texel;
+                if (BlockFormats.NativeDecoded(Format) || floats)
+                {
+                    var rgba = BlockFormats.DecodeRgba(Format, blocks, w, h, floats);
+                    Buffer.BlockCopy(rgba, 0, result, at, Math.Min(rgba.Length, w * h * texel));
+                    continue;
+                }
+                // DXT and BC4/BC5 blocks decode here, as Texture2D's do.
+                int side = BlockFormats.Footprint(Format), size = BlockFormats.BlockBytes(Format), across = (w + side - 1) / side;
+                for (int y = 0; y < h; y++)
+                    for (int x = 0; x < w; x++)
+                    {
+                        var c = BlockFormats.DecodeTexel(Format, blocks.Slice(((y / side) * across + x / side) * size, size),
+                            (y % side) * side + x % side);
+                        int i = at + (y * w + x) * 4;
+                        result[i] = c.r; result[i + 1] = c.g; result[i + 2] = c.b; result[i + 3] = c.a;
+                    }
+            }
+            return result;
         }
         int Offset(int image, int mip) => m_Offsets[image * Mips + mip];
         bool Hdr => GraphicsFormatUtility.IsHDRFormat(Format);
@@ -117,8 +146,14 @@ namespace UnityEngine
         /// Unity 6000.0 Editor's array and volume readers do: tests/projects/texturearrays).</summary>
         internal Color32[] GetPixels32(int image, int mip)
         {
-            RequireTexels();
             var result = new Color32[Size(mip)];
+            if (Blocks)
+            {
+                var rgba = DecodedBlocks(image, mip, false);
+                for (int i = 0; i < result.Length; i++)
+                    result[i] = new Color32(rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2], rgba[i * 4 + 3]);
+                return result;
+            }
             if (Hdr)
             {
                 var colors = GetPixels(image, mip);
@@ -137,8 +172,12 @@ namespace UnityEngine
         /// single precision (not b / 255; measured in tests/projects/texturearrays).</summary>
         internal Color[] GetPixels(int image, int mip)
         {
-            RequireTexels();
             var result = new Color[Size(mip)];
+            if (Blocks && BlockFormats.IsAstcHdr(Format))
+            {
+                PixelFormats.DecodeFloat(TextureFormat.RGBAFloat, DecodedBlocks(image, mip, true), result);
+                return result;
+            }
             if (Hdr)
             {
                 PixelFormats.DecodeFloat(Format, Level(image, mip), result);
@@ -161,7 +200,11 @@ namespace UnityEngine
         /// byte b is b / 255 (not GetPixels' b × (1 / 255); tests/projects/texturepixels).</summary>
         internal Color GetPixel(int image, int mip, int index)
         {
-            RequireTexels();
+            if (Blocks)
+            {
+                var c32 = GetPixels32(image, mip)[index];
+                return BlockFormats.IsAstcHdr(Format) ? GetPixels(image, mip)[index] : new Color(c32.r / 255f, c32.g / 255f, c32.b / 255f, c32.a / 255f);
+            }
             int size = PixelFormats.Size(Format, 1, 1);
             var bytes = new byte[size];
             Buffer.BlockCopy(Data, Offset(image, mip) + index * size, bytes, 0, size);
@@ -362,6 +405,15 @@ namespace UnityEngine
         internal static Exception NotReadable(string api, string name) =>
             new ArgumentException($"{api}: texture data is either not readable, corrupted or does not exist. (Texture '{name}')");
 
+        /// <summary>Texel writes (SetPixel, SetPixels, SetPixels32) to block storage fail as
+        /// Texture2D's do (tests/projects/texturecompression write.setpixels*; the layered case is
+        /// unmeasured).</summary>
+        internal static void CheckTexelWrite(LayeredPixels pixels, string api, string name)
+        {
+            if (pixels.Blocks && api != null && api.Contains(".SetPixel", StringComparison.Ordinal))
+                throw new ArgumentException($"{api}: texture uses an unsupported format. (Texture '{name}')");
+        }
+
         internal static Exception NoMemoryAccess(string name) =>
             new UnityException($"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.");
 
@@ -516,7 +568,15 @@ namespace UnityEngine
         public Texture2DArray(int width, int height, int depth, DefaultFormat format, TextureCreationFlags flags, int mipCount) : this(width, height, depth, SystemInfo.GetGraphicsFormat(format), flags, mipCount) { }
 
         /// <summary>Formats Unbound cannot store run as RGBA32 (their pixels are kept as colours).</summary>
-        internal static TextureFormat PixelStorage(TextureFormat format) => LayeredPixels.Supported(format) ? format : TextureFormat.RGBA32;
+        /// <summary>The format a layered texture keeps: its own, else RGBA32 texels (warned for a
+        /// compressed format: EAC, ETC2_RGBA1 and PVRTC blocks are not kept).</summary>
+        internal static TextureFormat PixelStorage(TextureFormat format)
+        {
+            if (LayeredPixels.Supported(format)) return format;
+            if (GraphicsFormatUtility.IsCompressedFormat(format))
+                Unbound.Runtime.Stubs.Ignored($"layered {format} textures", "keep RGBA32 texels instead of their blocks: SetPixelData takes RGBA32 data and SetPixels writes, unlike the Editor");
+            return TextureFormat.RGBA32;
+        }
 
         public int depth => m_Depth;
         public TextureFormat format => m_Format;
@@ -539,6 +599,7 @@ namespace UnityEngine
             var pixels = Pixels(api);
             if (element < 0 || element >= m_Depth) throw new ArgumentException($"Invalid array element {element}.", nameof(element));
             if (mip < 0 || mip >= pixels.Mips) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
+            LayeredTextures.CheckTexelWrite(pixels, api, name);
             return pixels;
         }
 
@@ -717,6 +778,7 @@ namespace UnityEngine
             if (face < CubemapFace.PositiveX || face > CubemapFace.NegativeZ) throw new ArgumentException($"Invalid cubemap face {face}.", nameof(face));
             if (element < 0 || element >= m_Count) throw new ArgumentException($"Invalid array element {element}.", nameof(element));
             if (mip < 0 || mip >= m_Pixels.Mips) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
+            LayeredTextures.CheckTexelWrite(m_Pixels, api, name);
             return m_Pixels;
         }
 
@@ -891,6 +953,7 @@ namespace UnityEngine
         {
             Pixels(api);
             if (mip < 0 || mip >= m_Pixels.Mips) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
+            LayeredTextures.CheckTexelWrite(m_Pixels, api, name);
             return m_Pixels;
         }
 

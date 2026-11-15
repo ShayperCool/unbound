@@ -69,14 +69,19 @@ namespace Unbound.Tests
 
         /// <summary>Block-compressed volumes and arrays keep their blocks: SetPixelData takes a
         /// level's blocks (a volume level's depth slices one after another) and GetPixelData gives
-        /// them back; texel access fails with a message.</summary>
+        /// them back; GetPixels decodes them (the Scripting API: GetPixels decompresses compressed
+        /// textures; DXT here, the natively decoded formats in tests/projects/nativegfx
+        /// volume.*.cpu); texel writes fail as Texture2D's do.</summary>
         [Fact]
         public void CompressedLayeredTexturesKeepTheirBlocks()
         {
             var red = new byte[] { 0x00, 0xF8, 0x00, 0xF8, 0, 0, 0, 0 };
             var blue = new byte[] { 0x1F, 0x00, 0x1F, 0x00, 0, 0, 0, 0 };
-            var volume = new Texture3D(4, 4, 2, TextureFormat.DXT1, true);
+            var volume = new Texture3D(4, 4, 2, TextureFormat.DXT1, true) { name = "dxt1 volume" };
             var array = new Texture2DArray(8, 8, 2, TextureFormat.BC7, false, true);
+            // ASTC 6x6 over 7x5 texels: 2x1 blocks of 16 bytes per slice (its decoding is native:
+            // tests/projects/nativegfx volume.*.cpu).
+            var astc = new Texture3D(7, 5, 1, TextureFormat.ASTC_6x6, false);
             try
             {
                 var blocks = red.Concat(blue).ToArray();
@@ -86,19 +91,25 @@ namespace Unbound.Tests
                 Assert.Equal(8, volume.GetPixelData<byte>(1).Length);
                 volume.Apply(true);
                 Assert.Equal(blocks, volume.GetPixelData<byte>(0).ToArray());
-                Assert.Throws<UnityException>(() => volume.GetPixels(0));
-                Assert.Throws<UnityException>(() => volume.SetPixels32(new Color32[32], 0));
+                var texels = volume.GetPixels32(0);
+                Assert.Equal(32, texels.Length);
+                Assert.All(texels.Take(16), c => Assert.Equal(new Color32(255, 0, 0, 255), c));
+                Assert.All(texels.Skip(16), c => Assert.Equal(new Color32(0, 0, 255, 255), c));
+                Assert.Equal(new Color(0f, 0f, 1f, 1f), volume.GetPixel(1, 2, 1, 0));
+                var write = Assert.Throws<ArgumentException>(() => volume.SetPixels32(new Color32[32], 0));
+                Assert.Equal("Texture3D.SetPixels32: texture uses an unsupported format. (Texture 'dxt1 volume')", write.Message);
                 // BC7 8x8: four 16-byte blocks per slice.
                 var slice = Enumerable.Range(0, 64).Select(i => (byte)i).ToArray();
                 array.SetPixelData(slice, 0, 1);
                 Assert.Equal(slice, array.GetPixelData<byte>(0, 1).ToArray());
-                Assert.Throws<UnityException>(() => array.GetPixels32(0));
                 array.Apply(false);
+                Assert.Equal(32, astc.GetPixelData<byte>(0).Length);
             }
             finally
             {
                 Object.DestroyImmediate(volume);
                 Object.DestroyImmediate(array);
+                Object.DestroyImmediate(astc);
             }
         }
 
