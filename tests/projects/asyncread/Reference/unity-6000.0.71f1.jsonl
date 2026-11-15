@@ -288,6 +288,8 @@
 {"k":"open.directory.read.disposeTwice","v":"throws InvalidOperationException: ReadHandle.Dispose cannot be called twice on the same ReadHandle"}
 {"k":"open.directory.read.data","v":"eeeeeeee"}
 {"k":"open.directory.close","v":"ok"}
+{"k":"open.closeWithoutDependency.status","v":"Complete"}
+{"k":"open.closeWithoutDependency.data","v":"030a11181f262d34030a11181f262d34"}
 {"k":"open.closeCached","v":"ok"}
 {"k":"open.closeCachedUnknown","v":"ok"}
 {"k":"log.open","v":""}
@@ -321,7 +323,7 @@
 {"k":"timing.default","v":"cpu0 main0 wait0 render0 gpu0 start0 submit0 present0 complete0 ordered:True scale:0x0 sync:0"}
 {"k":"log.timing","v":""}
 {"k":"timing.captureNoEffect","v":true}
-{"k":"timing.growsByOnePerFrame","v":true}
+{"k":"timing.growsAtMostOnePerFrame","v":true}
 {"k":"timing.countAfter12","v":8}
 {"k":"timing.countOf2","v":2}
 {"k":"timing.latest","v":"cpu+ main+ wait0 render+ gpu0 start+ submit+ present+ complete+ ordered:True scale:1x1 sync:refresh"}
@@ -335,5 +337,7 @@
 {"k":"timing.vSync2.syncIsRefreshRate","v":true}
 {"k":"timing.vSync2.latest","v":"cpu+ main+ wait0 render+ gpu0 start+ submit+ present+ complete+ ordered:True scale:1x1 sync:refresh"}
 {"k":"timing.capacity","v":32}
+{"k":"timing.longFrameNewestAfter","v":4}
+{"k":"timing.longFrameIndexAfter10","v":6}
 {"k":"log.frames","v":""}
 {"k":"complete","v":true}

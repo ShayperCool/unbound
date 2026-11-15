@@ -14,14 +14,16 @@ OpenGLCore). `Assets/Scripts/AsyncReadProbe.cs` writes a 4096-byte file under th
   mixed, of size 0, none, a missing file, a directory, an empty and a null name; a command
   array changed right after `Read` (the commands are copied).
 * **File handles** (`open.*`): `OpenFileAsync` of the file, a missing file, a directory, empty and
-  null names; reads through the handle, a read queued before the open completed, `Close` with a
-  dependency, the closed handle; `CloseCachedFileAsync`.
+  null names; reads through the handle, a read queued before the open completed, `Close` with and
+  without a dependency on a queued read, the closed handle; `CloseCachedFileAsync`.
 * **Deferred reads** (`deferred.*`): `ReadDeferred` whose commands a dependency job writes after
   the call, held by a job until the probe releases it.
 * **Cancel** (`cancel.*`): a deferred read canceled while its dependency still holds it.
 * **Frame timings** (`timing.*`): `IsFeatureEnabled`, timer frequencies, the frames kept and how
   they grow, newest first, which durations are positive, whether timestamps are ordered, scales
-  and `syncInterval` under `vSyncCount` 1, 0 and 2. Durations are not recorded (they are timing).
+  and `syncInterval` under `vSyncCount` 1, 0 and 2, and the delay: frame 35 sleeps 250 ms, and
+  the frame on which it is first the newest timing and its index ten frames later are recorded.
+  Durations are not recorded (they are timing).
 * **Logs** (`log.*`): the messages game code receives per section (none: the Editor writes its
   file errors to its own log only).
 
@@ -39,8 +41,9 @@ Measured (two identical captures, NVIDIA driver): a command of nonzero size that
 fails the request and one cut short by the end of the file truncates it, every command still
 running; `ReadCount` counts the commands even when the file does not open; a directory opens
 and its reads fail; a missing file opens as `OpenFailed`; `Close` invalidates the handle at
-once; `Cancel` of a pending request ends it `Canceled` without reading. The frame timings keep
-32 frames, newest first; the timers count nanoseconds; GPU time and present wait are 0 (the
+once and, without a dependency, still lets a read queued before it complete; `Cancel` of a pending request ends it `Canceled` without reading. The frame timings keep
+32 frames, newest first, a frame becoming the newest four frames after it ran (as the Manual
+says); the timers count nanoseconds; GPU time and present wait are 0 (the
 Manual lists GPU time as unsupported on Linux OpenGL); `syncInterval` reads the display's
 refresh rate whatever `vSyncCount` is.
 

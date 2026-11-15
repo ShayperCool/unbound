@@ -354,6 +354,21 @@ public unsafe class AsyncReadProbe : MonoBehaviour
         Handle("open.directory.read", directory, new[] { (0L, 4L) });
         Try("open.directory.close", () => directory.Close().Complete());
 
+        // A read queued before a Close without a dependency.
+        var pending = AsyncReadManager.OpenFileAsync(m_Absolute);
+        var pendingBuffer = Buffer(16);
+        var pendingCommands = (ReadCommand*)UnsafeUtility.Malloc(sizeof(ReadCommand) * 2, 16, Allocator.Persistent);
+        pendingCommands[0] = Command(0, 8, pendingBuffer);
+        pendingCommands[1] = Command(2048, 8, pendingBuffer + 8);
+        var pendingRead = AsyncReadManager.Read(pending, new ReadCommandArray { ReadCommands = pendingCommands, CommandCount = 2 });
+        pending.Close().Complete();
+        pendingRead.JobHandle.Complete();
+        Record("open.closeWithoutDependency.status", pendingRead.Status.ToString());
+        Record("open.closeWithoutDependency.data", Hex(pendingBuffer, 16));
+        pendingRead.Dispose();
+        UnsafeUtility.Free(pendingCommands, Allocator.Persistent);
+        UnsafeUtility.Free(pendingBuffer, Allocator.Persistent);
+
         Try("open.closeCached", () => { AsyncReadManager.CloseCachedFileAsync(m_Absolute).Complete(); return "ok"; });
         Try("open.closeCachedUnknown", () => { AsyncReadManager.CloseCachedFileAsync(m_Missing).Complete(); return "ok"; });
     }
@@ -469,6 +484,8 @@ public unsafe class AsyncReadProbe : MonoBehaviour
     int m_Frame;
     readonly FrameTiming[] m_Timings = new FrameTiming[8];
     readonly FrameTiming[] m_Many = new FrameTiming[256];
+    const int LongFrameMs = 250;
+    int m_LongFrameNewestAt = -1;
     uint m_Previous = uint.MaxValue;
     bool m_GrowsByOne = true;
     bool m_CaptureNoEffect = true;
@@ -484,15 +501,17 @@ public unsafe class AsyncReadProbe : MonoBehaviour
             FrameTimingManager.CaptureFrameTimings();
             uint after = FrameTimingManager.GetLatestTimings(256, m_Many);
             if (before != after) m_CaptureNoEffect = false;
-            // Each frame adds one until the frames kept reach their capacity.
-            if (m_Previous != uint.MaxValue && after != m_Previous + 1 && !(after == m_Previous && after == 32)) m_GrowsByOne = false;
+            // Each frame adds at most one and none is dropped below the capacity (how many exist at
+            // first depends on the frames before Play mode, and the first frames are not
+            // reported yet).
+            if (m_Previous != uint.MaxValue && (after < m_Previous || after > m_Previous + 1)) m_GrowsByOne = false;
             m_Previous = after;
             return;
         }
         if (m_Frame == 13)
         {
             Record("timing.captureNoEffect", m_CaptureNoEffect);
-            Record("timing.growsByOnePerFrame", m_GrowsByOne);
+            Record("timing.growsAtMostOnePerFrame", m_GrowsByOne);
             uint count = FrameTimingManager.GetLatestTimings(8, m_Timings);
             Record("timing.countAfter12", count);
             uint few = FrameTimingManager.GetLatestTimings(2, m_Timings);
@@ -516,9 +535,29 @@ public unsafe class AsyncReadProbe : MonoBehaviour
             QualitySettings.vSyncCount = vSync == 0 ? 2 : 1;
             if (m_Frame == 23) return;
         }
-        if (m_Frame < 33) return;
-        // After 33 frames the frames kept are at their capacity.
-        Record("timing.capacity", FrameTimingManager.GetLatestTimings(256, m_Many));
+        if (m_Frame == 33) return;
+        // The frames' delay: frame 35 lasts at least LongFrameMs; the frame on which it first
+        // reads as the newest timing, counted from it, and where it sits ten frames later.
+        if (m_Frame == 35)
+        {
+            System.Threading.Thread.Sleep(LongFrameMs);
+            return;
+        }
+        if (m_Frame > 35 && m_Frame <= 45)
+        {
+            if (m_LongFrameNewestAt < 0 && FrameTimingManager.GetLatestTimings(1, m_Timings) > 0 && m_Timings[0].cpuFrameTime >= LongFrameMs)
+                m_LongFrameNewestAt = m_Frame - 35;
+            if (m_Frame < 45) return;
+            uint kept = FrameTimingManager.GetLatestTimings(16, m_Many);
+            int index = -1;
+            for (int i = 0; i < kept; i++)
+                if (m_Many[i].cpuFrameTime >= LongFrameMs) { index = i; break; }
+            // After 45 frames the frames kept are at their capacity.
+            Record("timing.capacity", FrameTimingManager.GetLatestTimings(256, m_Many));
+            Record("timing.longFrameNewestAfter", m_LongFrameNewestAt);
+            Record("timing.longFrameIndexAfter10", index);
+        }
+        if (m_Frame < 45) return;
         Logs("frames");
         Application.logMessageReceivedThreaded -= OnLog;
         Record("complete", true);
