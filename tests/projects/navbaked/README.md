@@ -89,6 +89,12 @@ threshold is changed. Runtime height generation remains unsupported. It needs a
 walkable height surface and per-tile query data, including the documented
 terrain-orientation and preserveTilesOutsideBounds controls.
 
+Q493 closes `ramp.f205.vy` (0/816 differing values). A braking agent compares its step with
+the distance left in three dimensions, as tests/projects/navarrival measures for flat ground. On the
+ramp the end lies about 7 mm above the agent's height-mesh position, so the agent keeps moving at
+frame 205 as in the Editor. Comparing the steps in the ground plane instead would make navlinks
+`endatlink` land a frame late. Imported height queries remain 103/103; no reference changed.
+
 | Contract or observation | Scope and control |
 | --- | --- |
 | [autoBraking, Unity 6000.0](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-autoBraking.html) describes slowing near the destination to avoid overshoot | It does not specify velocity preparation order or three-dimensional sampling. The existing ramp, stairs and bump agents exercise arrival on different surfaces. |

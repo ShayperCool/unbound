@@ -183,6 +183,12 @@ a disagreement in the static query at that position. It does not establish a new
 shortcut order or threshold. Desired velocities diverge on 192 and positions on 193.
 A fresh-query correction alone would not account for this first live-path change.
 
+Q493 resolves right's frame-241 record: its last step left 0.0000786 m, within the braking
+arrival distance measured by tests/projects/navarrival, so it lands in that update as in the Editor.
+The frame stays counted because walker also differs there. Left's destination (6, -2.5) lies exactly
+on the polygon edge z = -2.5, which left walks along, and its hasPath at 222 depends on which side
+the boundary point falls on. Like walker's vertex, this is an exact-geometry tie; no rule is fitted.
+
 The default rerun remains at 212 differing frame scenarios. The deferred walker
 vertex tie, three climber rounding records, left's frame-222 hasPath and right's
 frame-241 arrival remain visible. Avoidance retains two near configurations and

@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/navarrival/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/AI/NavMeshAgent.cs",
+    "managed/UnityEngine/AI/NavWorld.cs",
+    "managed/UnityEngine/AI/DotRecast/DotRecast.Detour/DtNavMeshQuery.cs",
+    "managed/UnityEngine/AI/DotRecast/DotRecast.Detour/DtNavMesh.cs",
+    "managed/UnityEngine/AI/DotRecast/DotRecast.Detour.Crowd"
+  ]
+}
