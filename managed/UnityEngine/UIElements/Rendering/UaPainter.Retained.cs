@@ -56,6 +56,7 @@ namespace Unbound.UIElements
             public UaTextCoreSettings settings;
             /// <summary>The VectorImage whose gradient settings the segment's vertices index.</summary>
             public VectorImage gradients;
+            internal bool AtlasEligible;
             internal UaDynamicAtlas Atlas;
             internal UaDynamicAtlas.Entry AtlasEntry;
             internal int AtlasGeneration;
@@ -95,7 +96,9 @@ namespace Unbound.UIElements
                 if (!s.hasTexture) continue;
                 if (s.texture == null) return false;
                 if (s.Atlas != null && s.AtlasGeneration != s.Atlas.Generation) return false;
-                if (s.texture.width != s.textureWidth || s.texture.height != s.textureHeight) return false;
+                // An atlas entry keeps its rectangle until its users release it, even if the
+                // source is resized. Direct text atlases still invalidate when their size changes.
+                if (s.AtlasEntry == null && (s.texture.width != s.textureWidth || s.texture.height != s.textureHeight)) return false;
             }
             return true;
         }
@@ -118,7 +121,7 @@ namespace Unbound.UIElements
         }
 
         /// <summary>A recorded primitive's start: a segment per texture (and text settings).</summary>
-        float BeginRecorded(Texture texture, float sdfScale, float sharpness, VectorImage gradients = null)
+        float BeginRecorded(Texture texture, float sdfScale, float sharpness, VectorImage gradients = null, bool atlasEligible = true)
         {
             var r = m_Recording;
             bool settings = m_HasPendingSettings;
@@ -127,7 +130,7 @@ namespace Unbound.UIElements
             if (n > 0 && !settings)
             {
                 var last = r.Segments[n - 1];
-                if (!last.hasSettings && last.texture == texture && last.sdfScale == sdfScale && last.sharpness == sharpness && last.gradients == gradients) return 0f;
+                if (!last.hasSettings && last.texture == texture && last.sdfScale == sdfScale && last.sharpness == sharpness && last.gradients == gradients && last.AtlasEligible == atlasEligible) return 0f;
             }
             CloseSegment();
             r.Segments.Add(new UaRetainedMesh.Segment
@@ -141,9 +144,10 @@ namespace Unbound.UIElements
                 hasSettings = settings,
                 settings = settings ? m_PendingSettings : default,
                 gradients = gradients,
+                AtlasEligible = atlasEligible,
                 Atlas = Atlas,
                 AtlasGeneration = Atlas?.Generation ?? 0,
-                AtlasEntry = !settings && sdfScale == 0f ? Atlas?.Acquire(texture as Texture2D, gradients != null) : null,
+                AtlasEntry = atlasEligible ? Atlas?.Acquire(texture as Texture2D, gradients != null) : null,
                 vertexStart = r.Vertices.Count,
                 vertexEnd = r.Vertices.Count,
                 indexStart = r.Indices.Count,

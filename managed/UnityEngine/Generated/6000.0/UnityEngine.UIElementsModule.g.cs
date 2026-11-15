@@ -3441,8 +3441,7 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.EventDispatcher Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimeEventDispatcher.Create"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class RuntimePanelUtils
+    unsafe static partial class RuntimePanelUtils
     {
         [global::Unbound.Stub] public static global::UnityEngine.Vector2 ScreenToPanel(global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.Vector2 screenPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanelUtils.ScreenToPanel"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Vector2 CameraTransformWorldToPanel(global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.Vector3 worldPosition, global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanelUtils.CameraTransformWorldToPanel"); return default; }

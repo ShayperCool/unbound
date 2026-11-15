@@ -368,9 +368,9 @@ namespace Unbound.UIElements
 
         /// <summary>Starts a primitive: the batch it goes into (a new one when the scissor changed
         /// or the texture slots are full) and its texture's id there (0 without one).</summary>
-        float Begin(Texture texture, float sdfScale = 0f, float sharpness = 0f)
+        float Begin(Texture texture, float sdfScale = 0f, float sharpness = 0f, bool atlasEligible = true)
         {
-            if (m_Recording != null) return BeginRecorded(texture, sdfScale, sharpness);
+            if (m_Recording != null) return BeginRecorded(texture, sdfScale, sharpness, null, atlasEligible);
             var b = Current;
             bool scissorChanged = b != null && (!SameScissor(b.Scissor, m_Scissor) || b.StencilRef != m_StencilRef || b.Stencil != m_StencilKind);
             bool full = b != null && texture != null && b.SlotOf(texture) < 0 && b.TextureCount == TextureSlots;
@@ -561,7 +561,7 @@ namespace Unbound.UIElements
                 TextSettings.Add(settings);
                 textSettings = TextSettings.Count - 1;
             }
-            float id = Begin(atlas, sdfScale, sharpness);
+            float id = Begin(atlas, sdfScale, sharpness, false);
             var unused = new Vector4(UnusedArc, UnusedArc, UnusedArc, UnusedArc);
             // A colour (non-Alpha8) atlas is drawn as a textured mesh: the glyphs' own colours times
             // the tint (UIR's raster text of several channels).

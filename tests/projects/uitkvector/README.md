@@ -62,11 +62,11 @@ python3 tests/projects/uitkvector/run.py gate
 
 Values compare within 2e-5: the package's tessellation is C# float arithmetic, which the Editor's
 Mono and the engine's CoreCLR evaluate at different intermediate precision (vertex positions
-differ by up to about 1e-5). The images fail beyond the residuals in `image_limits.json`: a
-gradient-stroked line whose gradient coordinates the package computes as NaN (the GPU decides
-what such a fragment samples; measured on the NVIDIA driver only), and single pixels at gradient
-row ends and wrap/mirror seams, which the Editor samples from its dynamic-atlas copy of the
-gradients. The package is resolved through `Packages/packages-lock.json` (the Editor's).
+differ by up to about 1e-5). The images fail beyond the residuals in `image_limits.json`. Dynamic atlas sampling removes
+most of the earlier NaN-line and gradient-seam differences. Remaining vector-image mean errors
+are 0.010405 and 0.016556 at scales 1 and 1.25, with worst channel differences 7 and 9, and zero
+and two pixels above 8. These measurements are from NVIDIA only; the previous limits and numeric
+tolerance are unchanged. The package is resolved through `Packages/packages-lock.json` (the Editor's).
 
 The Image manual uses the `--unity-image` custom style property for image sources; a
 `vector-image` UXML attribute is not a supported Image source. The SaveToVectorImage API
@@ -85,3 +85,37 @@ The ContentBox clip shrinks when its ancestor widens and percentage padding reso
 records both layout and content rectangles plus each image. Retained geometry checks the resolved
 content rectangle, so changes from ancestor layout also refresh masks without explicit repaint.
 See [OverflowClipBox](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.OverflowClipBox.html).
+
+Atlas lifecycle controls use shared mutable textures with readability filtering disabled, separate
+point and bilinear textures, clamp and repeat wrapping, growth, detached users and a replacement
+texture. They record content before and after `SetTextureDirty`, removal of one and then both
+users, reuse, reattachment, reset, a custom rejection filter and dirty notifications for textures
+outside the atlas. Generation counters distinguish content updates from geometry regeneration.
+
+The documented Unity 6000.0 contracts are
+[SetTextureDirty](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.RuntimePanelUtils.SetTextureDirty.html),
+which refreshes a contained texture after its content changes, and
+[ResetDynamicAtlas](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/UIElements.RuntimePanelUtils.ResetDynamicAtlas.html),
+which releases textured geometry and rendering commands for regeneration. The
+[dynamic atlas manual](https://docs.unity3d.com/6000.0/Documentation/Manual/UIE-control-textures-of-the-dynamic-atlas.html)
+describes automatic texture ownership, filters, growth and fragmentation. The controls change
+texture content before notifying the atlas, and remove most users before resetting, so these
+operations change the result.
+
+Observed in this release and project: pages keep their largest dimensions until reset. A shared
+texture resized from 5 by 3 to 9 by 7 keeps its old allocation while another user remains. Resizing
+alone does not regenerate the element. An explicit repaint regenerates that element without
+refreshing the cached texture; a dirty notification copies the current source dimensions into
+the existing page. These are measured observations, selected by Compat. The resize images and
+separate generation counters preserve all four stages.
+
+A raster Alpha8 font asset is drawn with all atlas admission filters disabled, then gains another
+glyph without changing its 128 by 128 texture. Its render mode, glyph counts and both images are
+recorded. Text retains its own font atlas. The small `AtlasControl.ttf` fixture is the licensed
+`UnboundLayoutControl` subset also used by `fontfeatures`; see `ATLAS-FONT-LICENSE.txt` and
+`tests/projects/fontfeatures/make_fonts.py` for its source and construction.
+
+The added atlas images retain rectangle-edge coverage differences also present when sampling
+textures directly: their separate limits record the measured mean and worst differences, all
+with no pixel above eight channel steps. The comparator prints every raw metric. All limits established before Q505 remain
+unchanged. The dirty-content and missing-reset failures are much larger than these fringes.

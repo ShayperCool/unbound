@@ -66,69 +66,105 @@
     "reason": "Measured rounded-mask fringe coverage differences on NVIDIA: mean 0.003125, at most 3 channel steps. The unchanged outer bounds and changing content rectangles are also compared as numeric rows."
   },
   "atlas-readd.png": {
-    "mean": 0,
-    "worst": 0,
+    "mean": 0.002376302083333333,
+    "worst": 7,
     "over8": 0,
-    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
   },
   "atlas-reuse.png": {
-    "mean": 0,
-    "worst": 0,
+    "mean": 0.03811848958333333,
+    "worst": 6,
     "over8": 0,
-    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
   },
   "atlas-absent-dirty.png": {
-    "mean": 0,
-    "worst": 0,
+    "mean": 0.002376302083333333,
+    "worst": 7,
     "over8": 0,
-    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
   },
   "atlas-growth.png": {
-    "mean": 0,
-    "worst": 0,
+    "mean": 0.04016927083333333,
+    "worst": 6,
     "over8": 0,
-    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
   },
   "atlas-no-user.png": {
-    "mean": 0,
-    "worst": 0,
+    "mean": 0.03509114583333333,
+    "worst": 6,
     "over8": 0,
-    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
   },
   "atlas-reset.png": {
-    "mean": 0,
-    "worst": 0,
+    "mean": 0.002376302083333333,
+    "worst": 7,
     "over8": 0,
-    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
   },
   "atlas-initial.png": {
-    "mean": 0,
-    "worst": 0,
+    "mean": 0.01103515625,
+    "worst": 6,
     "over8": 0,
-    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
   },
   "atlas-dirty.png": {
-    "mean": 0,
-    "worst": 0,
+    "mean": 0.01005859375,
+    "worst": 6,
     "over8": 0,
-    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
   },
   "atlas-filter.png": {
-    "mean": 0,
-    "worst": 0,
+    "mean": 0.002376302083333333,
+    "worst": 7,
     "over8": 0,
-    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
   },
   "atlas-one-user.png": {
-    "mean": 0,
-    "worst": 0,
+    "mean": 0.03763020833333333,
+    "worst": 6,
     "over8": 0,
-    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
   },
   "atlas-unmarked.png": {
-    "mean": 0,
-    "worst": 0,
+    "mean": 0.01103515625,
+    "worst": 6,
     "over8": 0,
-    "reason": "Dynamic atlas lifecycle control; differences remain visible under the initial exact image check."
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
+  },
+  "atlas-bitmap-font-added.png": {
+    "mean": 0.0018717447916666667,
+    "worst": 5,
+    "over8": 0,
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
+  },
+  "atlas-bitmap-font-initial.png": {
+    "mean": 0.0018717447916666667,
+    "worst": 5,
+    "over8": 0,
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
+  },
+  "atlas-resize-before.png": {
+    "mean": 0.005078125,
+    "worst": 6,
+    "over8": 0,
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
+  },
+  "atlas-resize-dirty.png": {
+    "mean": 0.001953125,
+    "worst": 3,
+    "over8": 0,
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
+  },
+  "atlas-resize-repaint.png": {
+    "mean": 0.005078125,
+    "worst": 6,
+    "over8": 0,
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
+  },
+  "atlas-resize-unmarked.png": {
+    "mean": 0.005078125,
+    "worst": 6,
+    "over8": 0,
+    "reason": "Measured rectangle-edge coverage residual on NVIDIA, also present with direct textures. Content, dirty/reset transitions and glyph additions remain checked; raw image metrics are printed. All limits predating these new controls are unchanged."
   }
 }

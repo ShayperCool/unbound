@@ -75,4 +75,10 @@
 {"k":"atlas/generation-dirty","v":1}
 {"k":"atlas/generation-readd","v":1}
 {"k":"atlas/generation-reset","v":1}
+{"k":"atlas/resize-generation-before","v":1}
+{"k":"atlas/resize-generation-unmarked","v":1}
+{"k":"atlas/resize-generation-repaint","v":2}
+{"k":"atlas/resize-generation-dirty","v":2}
+{"k":"atlas/bitmap-initial","v":[2,128,128,4118]}
+{"k":"atlas/bitmap-added","v":[3,128,128,4118]}
 {"k":"complete","v":true}

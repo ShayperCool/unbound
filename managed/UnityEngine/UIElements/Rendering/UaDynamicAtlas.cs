@@ -51,7 +51,8 @@ namespace Unbound.UIElements
                     }
                 }
                 foreach (var entry in m_Dirty)
-                    if (entry.Source != null && (entry.Users > 0 || entry.Persistent)) UaAtlasBlitter.Copy(entry.Source, Texture, entry.Rect, true);
+                    if (entry.Source != null && (entry.Users > 0 || entry.Persistent)) UaAtlasBlitter.Copy(entry.Source, Texture,
+                        new RectInt(entry.Rect.x, entry.Rect.y, entry.Source.width, entry.Source.height), true);
                 m_Dirty.Clear(); m_Queued.Clear();
             }
             public void Dispose()
@@ -127,7 +128,7 @@ namespace Unbound.UIElements
             if ((flags & DynamicAtlasFilters.Size) != 0 && (texture.width > m_SubSize || texture.height > m_SubSize)) return false;
             if ((flags & DynamicAtlasFilters.Format) != 0 && !FormatSupported(texture.format)) return false;
             if ((flags & DynamicAtlasFilters.ColorSpace) != 0 && QualitySettings.activeColorSpace == ColorSpace.Linear
-                && texture.activeTextureColorSpace != ColorSpace.Gamma) return false;
+                && !texture.isDataSRGB) return false;
             return (flags & DynamicAtlasFilters.FilterMode) == 0 || texture.filterMode == filter;
         }
         static bool FormatSupported(TextureFormat format) => format switch
