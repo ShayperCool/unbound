@@ -52,8 +52,10 @@ delegate the cpu controller to its pool slices), so the gate's compilers, tests 
 probe engines win the CPU over ordinary jobs in every pool while the machine is
 oversubscribed, and ordinary jobs use whatever the gate leaves idle. A caller that is
 already nicer keeps its value; the runner never raises a priority. A long-lived helper
-keeps the niceness of the job that started it: a compiler cache daemon first launched by
-an ordinary build serves later gate builds at that build's niceness. The disks use the
+keeps the niceness of the job that started it, so `tools/build.py` starts a missing kache
+daemon through the user service manager (`systemd-run --user`, unit `unbound-kache-<hash>`
+per cache directory) before the build job: otherwise the first compiler of an ordinary build
+would start it and later gate builds would be served at that build's niceness. The disks use the
 `none` and `mq-deadline` schedulers, which ignore I/O priorities, so only CPU niceness
 is set.
 

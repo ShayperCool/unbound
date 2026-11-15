@@ -1,6 +1,8 @@
 """Isolation and required side effects of the compiler-cache build environment."""
 from concurrent.futures import ThreadPoolExecutor
+import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -63,6 +65,79 @@ class BuildEnvironmentTests(unittest.TestCase):
         self.assertEqual(env['CXX'], 'custom-cxx')
         self.assertEqual(env['CARGO_BUILD_JOBS'], '2')
 
+
+
+class CacheDaemonTests(unittest.TestCase):
+    """The compiler-cache daemon serves every later build of its cache, so a build starts it
+    through the user service manager instead of letting a (possibly lowered-priority) compiler do it."""
+    ENV = {'KACHE_CACHE_DIR': '/cache/kache', 'KACHE_LOCAL_ONLY': '1', 'PATH': '/bin', 'HOME': '/home/x',
+           'CARGO_TARGET_DIR': '/target'}
+
+    def fake(self, running, failing=()):
+        calls = []
+        state = {'running': running}
+
+        def run(command, **kwargs):
+            calls.append(command)
+            if command[1:3] == ['daemon', 'status']:
+                return subprocess.CompletedProcess(command, 0, json.dumps({'daemon_running': state['running']}), '')
+            if command[0] in failing:
+                raise FileNotFoundError(command[0])
+            state['running'] = True
+            return subprocess.CompletedProcess(command, 0)
+        return calls, run
+
+    def test_a_running_daemon_is_left_alone(self):
+        calls, run = self.fake(True)
+        with patch.object(build.subprocess, 'run', run):
+            build.start_cache_daemon('/k/kache', self.ENV)
+        self.assertEqual(calls, [['/k/kache', 'daemon', 'status', '--json']])
+
+    def test_a_missing_daemon_starts_under_the_service_manager_at_its_priority(self):
+        calls, run = self.fake(False)
+        with patch.object(build.subprocess, 'run', run):
+            build.start_cache_daemon('/k/kache', self.ENV)
+        start = calls[1]
+        self.assertEqual(start[:3], ['systemd-run', '--user', '--quiet'])
+        self.assertIn('--property=Nice=0', start)
+        self.assertEqual(start[-3:], ['/k/kache', 'daemon', 'run'])
+        self.assertIn('--setenv=KACHE_CACHE_DIR=/cache/kache', start)
+        self.assertIn('--setenv=KACHE_LOCAL_ONLY=1', start)
+        self.assertNotIn('--setenv=CARGO_TARGET_DIR=/target', start)
+        # One unit per cache directory: a second build of the same cache cannot start a twin.
+        other = dict(self.ENV, KACHE_CACHE_DIR='/other/kache')
+        calls2, run2 = self.fake(False)
+        with patch.object(build.subprocess, 'run', run2):
+            build.start_cache_daemon('/k/kache', other)
+        unit = [arg for arg in start if arg.startswith('--unit=')]
+        self.assertNotEqual(unit, [arg for arg in calls2[1] if arg.startswith('--unit=')])
+        self.assertEqual(calls[-1], ['/k/kache', 'daemon', 'status', '--json'])
+
+    def test_without_a_service_manager_the_daemon_starts_as_before(self):
+        calls, run = self.fake(False, failing=('systemd-run',))
+        with patch.object(build.subprocess, 'run', run):
+            build.start_cache_daemon('/k/kache', self.ENV)
+        self.assertIn(['/k/kache', 'daemon', 'start'], calls)
+
+    def test_a_daemon_that_never_answers_does_not_fail_the_build(self):
+        def run(command, **kwargs):
+            raise subprocess.TimeoutExpired(command, 30)
+        with patch.object(build.subprocess, 'run', run), patch.object(build, 'DAEMON_READY_SECONDS', .3):
+            build.start_cache_daemon('/k/kache', self.ENV)
+
+    def test_kache_builds_start_the_daemon_before_the_job(self):
+        order = []
+        with tempfile.TemporaryDirectory() as temporary, \
+             patch.object(sys, 'argv', ['build.py', '--direct', '--', 'build']), \
+             patch.object(build, 'build_root', return_value=Path(temporary)/'builds'), \
+             patch.object(build.Path, 'cwd', return_value=Path(temporary)), \
+             patch.object(build, 'environment', return_value=({'CARGO_TARGET_DIR': str(Path(temporary)/'t'),
+                                                               'RUSTC_WRAPPER': '/k/kache'}, 'kache')), \
+             patch.object(build, 'start_cache_daemon', side_effect=lambda *a: order.append('daemon')), \
+             patch.object(build.os, 'execvpe', side_effect=lambda *a: order.append('exec')), \
+             patch.object(build.sys, 'stderr'):
+            build.main()
+        self.assertEqual(order, ['daemon', 'exec'])
 
 if __name__ == '__main__':
     unittest.main()

@@ -13,7 +13,9 @@ import os
 from pathlib import Path
 import shutil
 import shlex
+import subprocess
 import sys
+import time
 
 
 def build_root(env=os.environ):
@@ -76,6 +78,48 @@ def environment(root, cache, backend, env):
     return env, backend
 
 
+# How long a build waits for a daemon it started to listen (kache starts in well under a second).
+DAEMON_READY_SECONDS = 10
+
+
+def cache_daemon_running(wrapper, env):
+    try:
+        status = subprocess.run([wrapper, 'daemon', 'status', '--json'], env=env, stdin=subprocess.DEVNULL,
+                                capture_output=True, text=True, timeout=30)
+        return bool(json.loads(status.stdout).get('daemon_running'))
+    except (OSError, subprocess.SubprocessError, ValueError, AttributeError):
+        return False
+
+
+def start_cache_daemon(wrapper, env):
+    """Start kache's daemon for this cache directory unless it runs. Started by the first compiler
+    of a build instead, it would keep that build's CPU niceness (the job runner lowers jobs outside
+    a landing gate, the post-land checker runs lower still) and serve every later build of the
+    cache, gate builds included, at it. The user service manager starts it at its own niceness;
+    without one, a plain start behaves as before. Nothing here fails a build."""
+    if cache_daemon_running(wrapper, env):
+        return
+    cache = env.get('KACHE_CACHE_DIR', '')
+    unit = 'unbound-kache-'+hashlib.sha256(os.fsencode(cache)).hexdigest()[:12]
+    settings = [f'--setenv={key}={value}' for key, value in env.items()
+                if key.startswith('KACHE_') or key in ('PATH', 'HOME')]
+    commands = [['systemd-run', '--user', '--quiet', '--collect', f'--unit={unit}', '--property=Nice=0',
+                 *settings, wrapper, 'daemon', 'run'],
+                [wrapper, 'daemon', 'start']]
+    for command in commands:
+        try:
+            started = subprocess.run(command, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.DEVNULL, timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if started.returncode == 0:
+            break
+    # The service returns before the daemon listens; a compiler that finds no daemon starts its own.
+    deadline = time.monotonic()+DAEMON_READY_SECONDS
+    while time.monotonic() < deadline and not cache_daemon_running(wrapper, env):
+        time.sleep(.2)
+
+
 def claim_target(target, root):
     target.mkdir(parents=True, exist_ok=True)
     # Readers cannot see the empty interval between creating and writing a marker.
@@ -122,6 +166,8 @@ def main():
     command = ['cargo', *cargo_args]
     if not args.direct and launcher.is_file():
         command = [str(launcher), '--kind', 'build', *command]
+    if backend == 'kache':
+        start_cache_daemon(env['RUSTC_WRAPPER'], env)
     print(f'build: {backend}; target={env["CARGO_TARGET_DIR"]}', file=sys.stderr, flush=True)
     os.execvpe(command[0], command, env)
 
