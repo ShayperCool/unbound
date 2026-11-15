@@ -215,14 +215,19 @@ namespace Unbound.Runtime
         {
             PlayerLoopDriver.RegisterFrameRendering(Render);
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.FinishFrameRendering), RenderLegacyFrame);
-            // The frame's drawing ends after its end-of-frame callbacks; the next frame starts with
-            // no active render texture (measured on the batch-mode macOS Editor: tests/projects/
-            // nativegfx metal.jsonl active.*; a texture made active in one frame's Update is not in
-            // the next one's).
+            // The frame's drawing ends after its end-of-frame callbacks. The next frame starts with
+            // no active render texture, whether Update, LateUpdate or an end-of-frame callback left
+            // one and whether a camera rendered, before EarlyUpdate (Unity 6000.0.71f1, windowed and
+            // batchmode Editors on OpenGL Core and Vulkan: tests/projects/framestate active.*;
+            // batchmode Metal: tests/projects/nativegfx metal.jsonl active.*), and with identity
+            // as GL's matrices (the batchmode Editors' matrices.early; a windowed Editor's own
+            // window drawing leaves its last view's pixel matrix there instead).
             PlayerLoopDriver.RegisterFrameCleanup(() =>
             {
                 InDrawingFrame = false;
                 if (RenderTexture.active != null) RenderTexture.active = null;
+                Immediate.Projection = Matrix4x4.identity;
+                Immediate.ModelView = Matrix4x4.identity;
             });
             UnityEngine.Rendering.OnDemandRendering.EnsureRegistered();
         }
@@ -1824,8 +1829,15 @@ namespace Unbound.Runtime
                 Camera.Internal_SetCurrent(previousCamera);
                 // RenderDontRestore leaves the camera's target active (measured).
                 RenderTexture.SetActiveQuietly(restoreActive ? previousActive : camera.targetTexture ?? camera.BufferTarget);
-                Immediate.Projection = previousProjection;
-                Immediate.ModelView = previousModelView;
+                // Camera.Render gives GL's matrices back; the frame's own camera rendering leaves
+                // its last camera's until the frame ends, so end-of-frame callbacks draw with them
+                // (Unity 6000.0.71f1 windowed Editor, OpenGL Core and Vulkan:
+                // tests/projects/framestate matrices.aftercamera, matrices.endofframe).
+                if (!automatic)
+                {
+                    Immediate.Projection = previousProjection;
+                    Immediate.ModelView = previousModelView;
+                }
             }
         }
 

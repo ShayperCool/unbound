@@ -453,9 +453,10 @@ namespace UnityEngine
             if (buffer == null) throw new ArgumentNullException(nameof(buffer));
             var active = RenderTexture.ActiveTarget;
             // Outside a camera's rendering the commands start from GL's matrices, as immediate
-            // drawing does (identity unless GL loaded others; not a camera's that rendered
-            // before), and their own matrices do not last past them (measured on the batch-mode
-            // macOS Editor: tests/projects/nativegfx metal.jsonl outside.*).
+            // drawing does (GL.LoadOrtho's inside it; Camera.Render gives back the ones before
+            // it), and their own matrices do not last past them (Unity 6000.0.71f1 Editors:
+            // batchmode Metal, tests/projects/nativegfx metal.jsonl outside.*; windowed and
+            // batchmode OpenGL Core and Vulkan, tests/projects/framestate outside.*, matrices.*).
             bool outside = !FrameBuilder.CameraRendering;
             var saved = GfxStream.Current;
             if (outside) GfxStream.Camera(Immediate.ModelView, Immediate.Projection, saved.Flags);

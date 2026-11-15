@@ -10,7 +10,9 @@ namespace Unbound.Tests
     /// <summary>A command buffer executed outside a camera's rendering starts from GL's matrices
     /// (identity unless GL loaded others; not a camera's that rendered before, even one left
     /// current), and the stream's matrices come back after it (tests/projects/nativegfx
-    /// metal.jsonl outside.*).</summary>
+    /// metal.jsonl outside.*; tests/projects/framestate outside.*, matrices.*). Camera.Render
+    /// gives GL's matrices back, the frame's own camera rendering leaves its last camera's, and
+    /// the frame's cleanup sets identity for the next frame.</summary>
     public class OutsideCameraCommandsTests
     {
         static byte[] CameraOf(Matrix4x4 view, Matrix4x4 projection)
@@ -40,7 +42,8 @@ namespace Unbound.Tests
         }
 
         /// <summary>The frame's cleanup leaves no render texture active for the next frame
-        /// (tests/projects/nativegfx metal.jsonl active.nextframe).</summary>
+        /// (tests/projects/nativegfx metal.jsonl active.nextframe; tests/projects/framestate
+        /// active.*).</summary>
         [Fact]
         public void TheNextFrameStartsWithNoActiveRenderTexture()
         {
@@ -51,14 +54,54 @@ namespace Unbound.Tests
             {
                 RenderTexture.active = texture;
                 Assert.Same(texture, RenderTexture.active);
-                typeof(PlayerLoopDriver).GetMethod("CleanupFrame",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, null);
+                CleanupFrame();
                 Assert.Null(RenderTexture.active);
             }
             finally
             {
                 RenderTexture.SetActiveQuietly(previous);
                 UnityEngine.Object.DestroyImmediate(texture);
+            }
+        }
+
+        static void CleanupFrame() =>
+            typeof(PlayerLoopDriver).GetMethod("CleanupFrame",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, null);
+
+        /// <summary>tests/projects/framestate matrices.aftercamera (windowed Editors: Camera.Render
+        /// gives the matrices before it back), matrices.endofframe (the frame's last camera's) and
+        /// the batchmode Editors' matrices.early (identity in the next frame).</summary>
+        [Fact]
+        public void CameraRenderingAndTheFrameEndSetGlMatrices()
+        {
+            FrameBuilder.EnsureRegistered();
+            var go = new GameObject("framestate camera");
+            go.transform.position = new Vector3(1f, 2f, -5f);
+            var camera = go.AddComponent<Camera>();
+            camera.enabled = false;
+            var target = new RenderTexture(8, 8, 16);
+            camera.targetTexture = target;
+            camera.cullingMask = 0;
+            var (projection, modelView) = (Immediate.Projection, Immediate.ModelView);
+            try
+            {
+                GL.LoadOrtho();
+                camera.Render();
+                Assert.Equal(Immediate.Ortho, Immediate.Projection);
+                Assert.Equal(Matrix4x4.identity, Immediate.ModelView);
+                FrameBuilder.RenderCamera(camera, automatic: true);
+                Assert.Equal(camera.projectionMatrix, Immediate.Projection);
+                Assert.Equal(camera.worldToCameraMatrix, Immediate.ModelView);
+                CleanupFrame();
+                Assert.Equal(Matrix4x4.identity, Immediate.Projection);
+                Assert.Equal(Matrix4x4.identity, GL.modelview);
+            }
+            finally
+            {
+                (Immediate.Projection, Immediate.ModelView) = (projection, modelView);
+                camera.targetTexture = null;
+                UnityEngine.Object.DestroyImmediate(target);
+                UnityEngine.Object.DestroyImmediate(go);
             }
         }
 
