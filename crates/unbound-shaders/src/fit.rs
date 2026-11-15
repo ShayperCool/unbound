@@ -1005,9 +1005,10 @@ impl ClipSpace {
 /// programs put one in the clip position of a particle they do not draw), which glslang folds
 /// into constants and WGSL cannot hold, are made where they are used instead: each function
 /// that uses one keeps its bits in a variable and casts what it loads from it. The uses known
-/// to take a value are replaced (stores, constructions, selections, arithmetic, calls,
-/// returns) and a constant left without a use is dropped; one used any other way stays, and
-/// the validator reports it.
+/// to take a value are replaced (stores, constructions, selections, merges of branches,
+/// arithmetic, calls, returns). The constant itself stays declared: read into a module, one
+/// that nothing uses any more is dropped with the module's other unused constants
+/// ([`parse`]), and one still used another way is reported by the validator.
 fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
     const OP_TYPE_INT: u32 = 21;
     const OP_TYPE_FLOAT: u32 = 22;
@@ -1018,6 +1019,7 @@ fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
     const OP_VARIABLE: u32 = 59;
     const OP_LOAD: u32 = 61;
     const OP_BITCAST: u32 = 124;
+    const OP_PHI: u32 = 245;
     const OP_LABEL: u32 = 248;
     const STORAGE_FUNCTION: u32 = 7;
     let list = instructions(words)?;
@@ -1047,43 +1049,40 @@ fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
     if nans.is_empty() {
         return Ok(words.to_vec());
     }
-    // The operands of an instruction that are values (never literals), by its opcode.
-    let values = |code: u32, count: usize| -> std::ops::Range<usize> {
-        match code {
+    // The operands of an instruction that are values (never literals), by its opcode: the
+    // first, one past the last, and the step from one to the next.
+    let values = |code: u32, count: usize| -> std::iter::StepBy<std::ops::Range<usize>> {
+        let (operands, step) = match code {
             // OpStore's object, OpReturnValue's value, OpCompositeInsert's object.
-            62 => 2..3,
-            254 => 1..2,
-            82 => 3..4,
+            62 => (2..3, 1),
+            254 => (1..2, 1),
+            82 => (3..4, 1),
             // OpCompositeConstruct's constituents, OpFunctionCall's arguments, OpExtInst's.
-            80 => 3..count,
-            57 => 4..count,
-            12 => 5..count,
+            80 => (3..count, 1),
+            57 => (4..count, 1),
+            12 => (5..count, 1),
             // OpSelect's two objects; negation, arithmetic and comparisons of floats.
-            169 => 4..6,
-            126 | 127 => 3..4,
-            129 | 131 | 133 | 136 | 141 | 142 | 143 | 180..=191 => 3..5,
-            _ => 0..0,
-        }
+            169 => (4..6, 1),
+            126 | 127 => (3..4, 1),
+            129 | 131 | 133 | 136 | 141 | 142 | 143 | 180..=191 => (3..5, 1),
+            // OpPhi's values, each followed by the block it comes from.
+            OP_PHI => (3..count, 2),
+            _ => (0..0, 1),
+        };
+        operands.step_by(step)
     };
-    let mut bound = words[3];
-    let mut fresh = || {
-        bound += 1;
-        bound - 1
-    };
-    let mut out = words[..5].to_vec();
-    let mut declared: HashMap<u32, u32> = HashMap::new();
+    // Each function's instructions, and the constants its body uses as values (in the order
+    // first used).
+    let mut functions: Vec<(usize, usize, Vec<u32>)> = Vec::new();
     let mut k = 0;
     while k < list.len() {
-        let (at, count) = list[k];
-        if op(at) != OP_FUNCTION {
-            out.extend_from_slice(&words[at..at + count]);
+        if op(list[k].0) != OP_FUNCTION {
             k += 1;
             continue;
         }
         let end = (k..list.len())
             .find(|&e| op(list[e].0) == OP_FUNCTION_END)
             .context("a function without its end")?;
-        // The constants the function's body uses as values, in the order first used.
         let mut used = Vec::new();
         for &(at, count) in &list[k..end] {
             for operand in values(op(at), count) {
@@ -1093,35 +1092,56 @@ fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
                 }
             }
         }
-        if used.is_empty() {
-            for &(at, count) in &list[k..=end] {
-                out.extend_from_slice(&words[at..at + count]);
-            }
-            k = end + 1;
-            continue;
-        }
-        // Before the first function that needs them: the types and the constants' bits.
-        let uint_type = *uint.get_or_insert_with(|| {
-            let id = fresh();
-            out.extend_from_slice(&[(4 << 16) | OP_TYPE_INT, id, 32, 0]);
-            id
-        });
-        let pointer_type = *pointer.get_or_insert_with(|| {
-            let id = fresh();
-            out.extend_from_slice(&[(4 << 16) | OP_TYPE_POINTER, id, STORAGE_FUNCTION, uint_type]);
-            id
-        });
-        for &id in &used {
+        functions.push((k, end, used));
+        k = end + 1;
+    }
+    if functions.iter().all(|(_, _, used)| used.is_empty()) {
+        return Ok(words.to_vec());
+    }
+    let mut bound = words[3];
+    let mut fresh = || {
+        bound += 1;
+        bound - 1
+    };
+    let mut out = words[..5].to_vec();
+    let first = functions[0].0;
+    for &(at, count) in &list[..first] {
+        out.extend_from_slice(&words[at..at + count]);
+    }
+    // Before the first function (types and constants end there): the types the variables
+    // need, where the module has none, and each used constant's bits.
+    let uint_type = uint.unwrap_or_else(|| {
+        let id = fresh();
+        out.extend_from_slice(&[(4 << 16) | OP_TYPE_INT, id, 32, 0]);
+        id
+    });
+    let pointer_type = pointer.unwrap_or_else(|| {
+        let id = fresh();
+        out.extend_from_slice(&[(4 << 16) | OP_TYPE_POINTER, id, STORAGE_FUNCTION, uint_type]);
+        id
+    });
+    let mut declared: HashMap<u32, u32> = HashMap::new();
+    for (_, _, used) in &functions {
+        for &id in used {
             declared.entry(id).or_insert_with(|| {
                 let bits = fresh();
                 out.extend_from_slice(&[(4 << 16) | OP_CONSTANT, uint_type, bits, nans[&id].1]);
                 bits
             });
         }
+    }
+    for &(k, end, ref used) in &functions {
+        if used.is_empty() {
+            for &(at, count) in &list[k..=end] {
+                out.extend_from_slice(&words[at..at + count]);
+            }
+            continue;
+        }
         let label = (k..end)
             .find(|&e| op(list[e].0) == OP_LABEL)
             .context("a function without a block")?;
-        // A block's variables come first: ours after the label, the casts after the last one.
+        // A block's variables come first: ours after the label, the casts after the last
+        // one. The first block dominates every use, a merge of branches included.
         let body = (label + 1..end)
             .find(|&e| op(list[e].0) != OP_VARIABLE)
             .unwrap_or(end);
@@ -1155,44 +1175,20 @@ fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
                 }
             }
         }
-        k = end + 1;
+    }
+    // What follows the last function (nothing, in a module glslang writes).
+    let last = functions[functions.len() - 1].1;
+    for &(at, count) in &list[last + 1..] {
+        out.extend_from_slice(&words[at..at + count]);
     }
     out[3] = bound;
-    // A constant nothing names any more goes (declared, it would still be a literal of the
-    // module). One whose id is still a word of another instruction stays: that may be a use.
-    const OP_NAME: u32 = 5;
-    const OP_DECORATE: u32 = 71;
-    let own = |inst: &[u32], id: u32| match inst[0] & 0xffff {
-        OP_CONSTANT => inst[2] == id,
-        OP_NAME | OP_DECORATE => inst[1] == id,
-        _ => false,
-    };
-    let rewritten = instructions(&out)?;
-    let unused: HashSet<u32> = nans
-        .keys()
-        .copied()
-        .filter(|&id| {
-            rewritten.iter().all(|&(at, count)| {
-                let inst = &out[at..at + count];
-                own(inst, id) || !inst[1..].contains(&id)
-            })
-        })
-        .collect();
-    if unused.is_empty() {
-        return Ok(out);
-    }
-    let mut kept = out[..5].to_vec();
-    for &(at, count) in &rewritten {
-        let inst = &out[at..at + count];
-        if !unused.iter().any(|&id| own(inst, id)) {
-            kept.extend_from_slice(inst);
-        }
-    }
-    Ok(kept)
+    Ok(out)
 }
 
 pub(crate) fn parse(words: &[u32], clip: ClipSpace) -> Result<Module> {
-    let words = runtime_nans(&image_coordinate_vectors(&pack_storage_vectors(words)?)?)?;
+    let fitted = image_coordinate_vectors(&pack_storage_vectors(words)?)?;
+    let words = runtime_nans(&fitted)?;
+    let made_nans = words.len() != fitted.len();
     let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
     let options = naga::front::spv::Options {
         adjust_coordinate_space: clip == ClipSpace::OpenGl,
@@ -1202,6 +1198,12 @@ pub(crate) fn parse(words: &[u32], clip: ClipSpace) -> Result<Module> {
     let mut module = naga::front::spv::parse_u8_slice(&bytes, &options)
         .map_err(|e| anyhow!("reading SPIR-V: {e:?}"))?;
     finite_float_literals(&mut module);
+    if made_nans {
+        // The constants whose uses were made at run time are left without one: unused, they
+        // go (declared, each would still be a literal of the module). Functions, variables
+        // and named types stay as they were read.
+        naga::compact::compact(&mut module, naga::compact::KeepUnused::Yes);
+    }
     Ok(module)
 }
 
@@ -1210,7 +1212,7 @@ pub(crate) fn parse(words: &[u32], clip: ClipSpace) -> Result<Module> {
 /// largest finite float of their sign: the same in comparisons with finite values and in
 /// saturated products (`0 * INF` is NaN, which saturates to 0, as `0 * FLT_MAX` is); `isinf` of
 /// them differs. NaN literals are made at run time before this ([`runtime_nans`]); one that is
-/// left stays (the validator reports it).
+/// still read stays (the validator reports it).
 fn finite_float_literals(module: &mut Module) {
     fn finite(e: &mut Expression) {
         match e {

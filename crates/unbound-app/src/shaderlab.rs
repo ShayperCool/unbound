@@ -572,6 +572,9 @@ impl Selection {
     /// Splits `Name|lod=N|tag=K=V` into the shader's name and the selection. The suffixes are
     /// read from the end, and what is none of them belongs to the name: a shader's own name may
     /// hold the separator (a Visual Effect Graph output's does, `…/Output Particle|Unlit Quad`).
+    /// So a part that is no suffix (`A|junk|lod=5`, `A|tag=K`, a trailing `A|`) ends the
+    /// reading and stays in the name with what precedes it, and a tag's value cannot hold the
+    /// separator (`A|tag=K=a|b` is a name: no tag the pipelines replace by has one).
     pub fn parse(name: &str) -> (&str, Selection) {
         let mut base = name;
         let mut selection = Selection::default();

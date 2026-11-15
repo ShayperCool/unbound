@@ -36,7 +36,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 54;
+pub const FORMAT_VERSION: u32 = 55;
 
 /// The identity of this build's compiler (`src/identity.rs`, made by the build script): the
 /// hash of the sources that decide its output. Cache entries are keyed by it beside
@@ -4600,86 +4600,110 @@ void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_M
     /// Graph's `asfloat(~0u)`) validates, and still casts the same bits.
     #[test]
     fn constants_that_are_not_numbers_are_cast_at_run_time() {
-        let source = "float helper(float x) { return x > 0 ? x : asfloat(~0u); }\n\
-            float4 main(float4 p : POSITION, uint id : SV_VertexID) : SV_Position \
-            { if (id > 3u) { p.x = asfloat(~0u); return p; } p.y = helper(p.y) + min(p.z, asfloat(0x7fc00001u)); return p; }";
-        let compiler = shaderc::Compiler::new().unwrap();
-        let mut o = shaderc::CompileOptions::new().unwrap();
-        o.set_source_language(shaderc::SourceLanguage::HLSL);
-        o.set_auto_bind_uniforms(true);
-        o.set_auto_map_locations(true);
-        o.set_target_env(
-            shaderc::TargetEnv::Vulkan,
-            shaderc::EnvVersion::Vulkan1_1 as u32,
-        );
-        let spv = compiler
-            .compile_into_spirv(source, shaderc::ShaderKind::Vertex, "t", "main", Some(&o))
-            .unwrap();
-        let folded = spv
-            .as_binary()
-            .iter()
-            .filter(|w| f32::from_bits(**w).is_nan() && **w != u32::MAX)
-            .count();
-        let module = fit::parse(spv.as_binary(), fit::ClipSpace::OpenGl).unwrap();
-        let functions = module
-            .functions
-            .iter()
-            .map(|(_, f)| f)
-            .chain(module.entry_points.iter().map(|e| &e.function));
-        let (mut literals, mut casts, mut bits) = (0, 0, Vec::new());
-        for f in functions {
-            for (_, e) in f.expressions.iter() {
-                match e {
-                    naga::Expression::Literal(naga::Literal::F32(v)) if v.is_nan() => literals += 1,
-                    naga::Expression::As {
+        fn read(source: &str) -> naga::Module {
+            let compiler = shaderc::Compiler::new().unwrap();
+            let mut o = shaderc::CompileOptions::new().unwrap();
+            o.set_source_language(shaderc::SourceLanguage::HLSL);
+            o.set_auto_bind_uniforms(true);
+            o.set_auto_map_locations(true);
+            o.set_target_env(
+                shaderc::TargetEnv::Vulkan,
+                shaderc::EnvVersion::Vulkan1_1 as u32,
+            );
+            let spv = compiler
+                .compile_into_spirv(source, shaderc::ShaderKind::Vertex, "t", "main", Some(&o))
+                .unwrap();
+            fit::parse(spv.as_binary(), fit::ClipSpace::OpenGl).unwrap()
+        }
+        fn is_nan(e: &naga::Expression) -> bool {
+            matches!(e, naga::Expression::Literal(naga::Literal::F32(v)) if v.is_nan())
+        }
+        /// The casts of a module that validates and reads back as the renderer gets it.
+        fn casts(module: &naga::Module) -> usize {
+            assert!(module.global_expressions.iter().all(|(_, e)| !is_nan(e)));
+            let functions = module
+                .functions
+                .iter()
+                .map(|(_, f)| f)
+                .chain(module.entry_points.iter().map(|e| &e.function));
+            let mut casts = 0;
+            for f in functions {
+                for (_, e) in f.expressions.iter() {
+                    assert!(!is_nan(e));
+                    if let naga::Expression::As {
                         convert: None,
                         kind: naga::ScalarKind::Float,
                         ..
-                    } => casts += 1,
-                    naga::Expression::Literal(naga::Literal::U32(v))
-                        if f32::from_bits(*v).is_nan() =>
+                    } = e
                     {
-                        bits.push(*v)
+                        casts += 1;
                     }
-                    _ => {}
                 }
             }
+            let info = naga::valid::Validator::new(
+                naga::valid::ValidationFlags::all(),
+                naga::valid::Capabilities::all(),
+            )
+            .validate(module)
+            .unwrap();
+            let wgsl = naga::back::wgsl::write_string(
+                module,
+                &info,
+                naga::back::wgsl::WriterFlags::empty(),
+            )
+            .unwrap();
+            assert!(wgsl.contains("bitcast<f32>"), "{wgsl}");
+            naga::front::wgsl::parse_str(&wgsl).unwrap();
+            casts
         }
-        assert!(module.global_expressions.iter().all(
-            |(_, e)| !matches!(e, naga::Expression::Literal(naga::Literal::F32(v)) if v.is_nan())
-        ));
-        assert_eq!(literals, 0, "{folded} folded");
-        assert!(casts >= 2, "{casts} casts, {folded} folded");
-        // The bits are kept as they were written, where the variables take them from.
-        bits.extend(
-            module
-                .global_expressions
-                .iter()
-                .filter_map(|(_, e)| match e {
-                    naga::Expression::Literal(naga::Literal::U32(v))
-                        if f32::from_bits(*v).is_nan() =>
-                    {
-                        Some(*v)
-                    }
-                    _ => None,
-                }),
+
+        // Stored, returned, and an operand; two different constants.
+        let module = read(
+            "float helper(float x) { return x > 0 ? x : asfloat(~0u); }\n\
+            float4 main(float4 p : POSITION, uint id : SV_VertexID) : SV_Position \
+            { if (id > 3u) { p.x = asfloat(~0u); return p; } p.y = helper(p.y) + min(p.z, asfloat(0x7fc00001u)); return p; }",
         );
+        assert!(casts(&module) >= 2);
+        // The bits are kept as they were written, where the variables take them from.
+        let bits: Vec<u32> = module
+            .global_expressions
+            .iter()
+            .filter_map(|(_, e)| match e {
+                naga::Expression::Literal(naga::Literal::U32(v)) if f32::from_bits(*v).is_nan() => {
+                    Some(*v)
+                }
+                _ => None,
+            })
+            .collect();
         assert!(
             bits.contains(&u32::MAX) && bits.contains(&0x7fc00001),
             "{bits:x?}"
         );
-        let info = naga::valid::Validator::new(
-            naga::valid::ValidationFlags::all(),
-            naga::valid::Capabilities::all(),
-        )
-        .validate(&module)
-        .unwrap();
-        // The program as the renderer gets it reads back, the casts still made of variables.
-        let wgsl =
-            naga::back::wgsl::write_string(&module, &info, naga::back::wgsl::WriterFlags::empty())
-                .unwrap();
-        assert!(wgsl.contains("bitcast<f32>"), "{wgsl}");
-        naga::front::wgsl::parse_str(&wgsl).unwrap();
+
+        // Assigned in one branch only: the constant reaches the merge of the branches, and
+        // one left by a loop.
+        let module = read(
+            "float4 main(float4 p : POSITION, uint id : SV_VertexID) : SV_Position \
+            { float r = p.y; if (id > 3u) r = asfloat(~0u); p.x = r; \
+            float w = p.z; for (uint i = 0u; i < id; i++) { if (i == 2u) { w = asfloat(~0u); break; } w += 1; } p.z = w; return p; }",
+        );
+        assert!(casts(&module) >= 1);
+
+        // Among many whole-number literals, some equal to the ids of the module's values: the
+        // constant is told from them.
+        let mut source = String::from(
+            "float4 main(float4 p : POSITION, uint id : SV_VertexID) : SV_Position { int s = 0;\n",
+        );
+        for literal in (100..=6000).step_by(100) {
+            source.push_str(&format!("s += (int)id * {literal};\n"));
+        }
+        source.push_str("if (s > 7) { p.x = asfloat(~0u); return p; } p.y = (float)s; return p; }");
+        assert!(casts(&read(&source)) >= 1);
+
+        // A program without such a constant is read as it was.
+        let plain =
+            read("float4 main(float4 p : POSITION) : SV_Position { p.x = p.y * 2; return p; }");
+        assert!(plain.entry_points[0].function.local_variables.is_empty());
     }
 
     /// Infinite constants (WGSL has none) read as the largest finite floats: a kernel testing
