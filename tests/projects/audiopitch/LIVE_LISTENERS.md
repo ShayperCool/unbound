@@ -55,8 +55,13 @@ neutral component preserves the surviving histories. The source-side neutral
 component does not change its audio chain.
 
 The engine remembers node creation during runtime component attachment to an
-active GameObject; attachment to an inactive GameObject is unmeasured and keeps
-the prior first-activation path.
+active GameObject. Attachment to an inactive GameObject or a prefab asset is
+unmeasured: it neither reconnects listener units nor creates a script node, and
+keeps the prior first-activation path. Two engine unit tests go beyond these
+controls and are unmeasured: an OnAudioFilterRead script on a disabled listener
+runs again after that listener reconnects (the disabled-listener controls carry
+Echo/Chorus only), and a source script added and destroyed before the next audio
+update still restarts the source's units once.
 The recorded immediate add/disable sequence retains this node. Enabling it later
 does not reconnect the other units. The engine preserves its prior first-activation path for a script loaded
 disabled. Serialized and clone publication still need Editor controls.

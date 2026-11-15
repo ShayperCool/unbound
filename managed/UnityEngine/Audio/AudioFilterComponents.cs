@@ -483,13 +483,15 @@ namespace Unbound.Runtime
 
         internal static void ComponentAdded(GameObject owner, Component component)
         {
+            // Attachment to an inactive GameObject (or a prefab asset) is unmeasured: it neither
+            // reconnects listener units nor creates a script node, keeping the first-activation path.
+            if (!owner.ActiveInHierarchyNoThrow) return;
             var source = owner.FindComponent(typeof(AudioSource)) as AudioSource;
             var listener = owner.FindComponent(typeof(AudioListener)) as AudioListener;
             if (source == null && listener == null) return;
-            // Remember a script's node when it is attached to an active GameObject. Disabling it
-            // immediately afterwards bypasses that existing node rather than undoing creation.
-            // Attachment to an inactive GameObject is unmeasured and keeps the first-activation path.
-            if (AudioFilters.IsFilterScript(component) && owner.activeInHierarchy)
+            // Remember an attached script's node. Disabling it immediately afterwards
+            // bypasses that existing node rather than undoing creation.
+            if (AudioFilters.IsFilterScript(component))
             {
                 int id = component.GetInstanceID();
                 if (source != null)

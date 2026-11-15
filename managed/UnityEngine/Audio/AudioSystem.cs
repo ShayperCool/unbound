@@ -142,7 +142,7 @@ namespace Unbound.Runtime
         {
             s_Listeners.Remove(listener);
             s_Listeners.Add(listener);
-            ListenerComponentAdded(listener);
+            if (Compat.AudioListenerChainMeasured) ConnectListener(listener);
             s_HearingPose = AudioListenerPose.Of(listener);
             if (Compat.AudioSpatialStereoMeasured) s_HearingPosition = s_HearingPose.Position;
             s_HearingVelocity = listener.m_Velocity;
@@ -165,11 +165,16 @@ namespace Unbound.Runtime
             s_HearingVelocity = hearing != null ? hearing.m_Velocity : Vector3.zero;
         }
 
-        // Component attachment reconnects this owner's listener units, including while
-        // the listener is disabled. Pose selection still uses the enabled-listener list.
+        // Enabling a listener and attaching a component to its GameObject both (re)append its
+        // units to the connection order, the latter also while the listener is disabled.
+        // Pose selection still uses the enabled-listener list.
         internal static void ListenerComponentAdded(AudioListener listener)
         {
-            if (!Compat.AudioComponentActivationMeasured) return;
+            if (Compat.AudioListenerChainMeasured) ConnectListener(listener);
+        }
+
+        static void ConnectListener(AudioListener listener)
+        {
             listener.m_FilterConnectionChanged = true;
             var connection = listener.m_FilterConnection ??= new LinkedListNode<AudioListener>(listener);
             if (connection.List != null) s_ListenerConnections.Remove(connection);

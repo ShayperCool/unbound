@@ -1077,7 +1077,7 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void AScriptAddedToAnInactiveOwnerIsNotCreatedAtAttachment(bool onListener)
+        public void AttachmentToAnInactiveOwnerNeitherCreatesNorReconnects(bool onListener)
         {
             var owner = new GameObject("inactive script owner"); m_Objects.Add(owner);
             var source = onListener ? null : owner.AddComponent<AudioSource>();
@@ -1088,6 +1088,8 @@ namespace UnityEngine.Tests
             var members = onListener ? listener.m_FilterMembers : source.m_FilterScripts;
             Assert.False(members != null && members.Contains(script.GetInstanceID()));
             if (source != null) Assert.False(source.m_ResetComponents);
+            owner.AddComponent<NeutralListenerComponent>();
+            if (listener != null) Assert.Null(listener.m_FilterConnection?.List);
         }
 
         [Fact]
