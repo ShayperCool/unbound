@@ -6572,6 +6572,7 @@ dependencies = [
  "anyhow",
  "serde",
  "serde_json",
+ "unbound-graphics",
 ]
 
 [[package]]
@@ -6585,6 +6586,10 @@ dependencies = [
  "unbound-compat",
  "unbound-yaml",
 ]
+
+[[package]]
+name = "unbound-graphics"
+version = "0.1.0"
 
 [[package]]
 name = "unbound-host"
@@ -6686,7 +6691,7 @@ dependencies = [
  "serde_json",
  "shaderc",
  "tracing",
- "unbound-compat",
+ "unbound-graphics",
  "unbound-source-identity",
 ]
 

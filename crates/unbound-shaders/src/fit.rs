@@ -992,7 +992,7 @@ pub(crate) enum ClipSpace {
 }
 
 impl ClipSpace {
-    pub(crate) fn of(conventions: unbound_compat::Conventions) -> Self {
+    pub(crate) fn of(conventions: unbound_graphics::Conventions) -> Self {
         if conventions.clip_depth_zero_to_one {
             ClipSpace::Renderer
         } else {

@@ -1,0 +1,8 @@
+[package]
+name = "unbound-graphics"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "The graphics device a run has, as the Unity Editor picks and reports it"
+
+[dependencies]

@@ -91,7 +91,7 @@ pub struct Settings {
     /// `UNITY_PBS_USE_BRDF2`, ...).
     pub platform_defines: Vec<String>,
     /// The graphics device programs compile for: its `SHADER_API_*` define and clip space.
-    pub device: unbound_compat::GraphicsDevice,
+    pub device: unbound_graphics::GraphicsDevice,
     /// Whether the device is drawn through OpenGL itself
     /// (`GraphicsDevice::drawn_by_opengl`): its programs become OpenGL shading language, which
     /// cannot read a depth texture with `Load`, so a program that does is refused.
@@ -2013,7 +2013,7 @@ float4 frag(V i) : SV_Target {
         // A device that keeps the sampler a program names (Vulkan), drawn as OpenGL shading
         // language.
         let mut compiler = ShaderCompiler::new(Settings {
-            device: unbound_compat::GraphicsDevice::Vulkan,
+            device: unbound_graphics::GraphicsDevice::Vulkan,
             opengl_shading_language: true,
             ..Settings::default()
         })
@@ -2074,8 +2074,8 @@ float4 frag(V i) : SV_Target {
         // Vulkan and Metal bind textures and samplers apart: the texture is one binding, sampled
         // through each sampler the program names.
         for device in [
-            unbound_compat::GraphicsDevice::Vulkan,
-            unbound_compat::GraphicsDevice::Metal,
+            unbound_graphics::GraphicsDevice::Vulkan,
+            unbound_graphics::GraphicsDevice::Metal,
         ] {
             let mut apart = ShaderCompiler::new(Settings {
                 device,
@@ -2106,7 +2106,7 @@ float4 frag(V i) : SV_Target {
         // OpenGL Core samples every texture through its own state: no further variables, and
         // each sample through its texture's own sampler.
         let mut opengl = ShaderCompiler::new(Settings {
-            device: unbound_compat::GraphicsDevice::OpenGLCore,
+            device: unbound_graphics::GraphicsDevice::OpenGLCore,
             ..Settings::default()
         })
         .unwrap();
@@ -2189,8 +2189,8 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
         };
         // The inline state's slot is named by its state (`_LinearClamp`).
         for device in [
-            unbound_compat::GraphicsDevice::Vulkan,
-            unbound_compat::GraphicsDevice::Metal,
+            unbound_graphics::GraphicsDevice::Vulkan,
+            unbound_graphics::GraphicsDevice::Metal,
         ] {
             assert_eq!(
                 sampled(device),
@@ -2207,7 +2207,7 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
         // OpenGL Core's samples go through the textures' own samplers: the inline one, still
         // declared, binds none.
         assert_eq!(
-            sampled(unbound_compat::GraphicsDevice::OpenGLCore),
+            sampled(unbound_graphics::GraphicsDevice::OpenGLCore),
             named(&[
                 ("_A", true),
                 ("_B", true),
@@ -2241,10 +2241,8 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
     fn the_compiler_identity_is_that_of_its_sources() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let (files, _) =
-            unbound_source_identity::producing_sources(&root, "unbound_shaders", &[]).unwrap();
-        let id =
-            unbound_source_identity::identity(&root, &files, &["naga", "shaderc", "shaderc-sys"])
-                .unwrap();
+            unbound_source_identity::producing_sources(&root, "unbound-shaders").unwrap();
+        let id = unbound_source_identity::identity(&root, &files).unwrap();
         assert_eq!(COMPILER, id);
         let compiler = ShaderCompiler::new(Settings {
             cache_dir: Some(PathBuf::from("cache")),
@@ -2525,8 +2523,8 @@ float4 frag(v2f i) : SV_Target
 }
 "#;
         for device in [
-            unbound_compat::GraphicsDevice::OpenGLCore,
-            unbound_compat::GraphicsDevice::Vulkan,
+            unbound_graphics::GraphicsDevice::OpenGLCore,
+            unbound_graphics::GraphicsDevice::Vulkan,
         ] {
             let mut compiler = ShaderCompiler::new(Settings {
                 device,
@@ -2658,7 +2656,7 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
                 .compile(&program(source, false), &[], false)
                 .unwrap()
         };
-        let named = compile(unbound_compat::GraphicsDevice::Vulkan);
+        let named = compile(unbound_graphics::GraphicsDevice::Vulkan);
         assert_eq!(
             sampled(&named),
             pairs(&[
@@ -2688,7 +2686,7 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
                 aniso: 1
             })
         );
-        let own = compile(unbound_compat::GraphicsDevice::OpenGLCore);
+        let own = compile(unbound_graphics::GraphicsDevice::OpenGLCore);
         assert_eq!(
             sampled(&own),
             pairs(&[("_A", "_A"), ("_Shadow", "_Shadow")])
@@ -2813,14 +2811,14 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
                 .unwrap();
                 compiler.compile(&program(&source, false), &[], false)
             };
-            let refused = compile(unbound_compat::GraphicsDevice::Vulkan).unwrap_err();
+            let refused = compile(unbound_graphics::GraphicsDevice::Vulkan).unwrap_err();
             let refused = format!("{refused:#}");
             assert!(
                 refused.contains("Unrecognized inline sampler name 'sampler")
                     && refused.contains(error),
                 "{refused}"
             );
-            let own = compile(unbound_compat::GraphicsDevice::OpenGLCore).unwrap();
+            let own = compile(unbound_graphics::GraphicsDevice::OpenGLCore).unwrap();
             assert!(own.textures.contains(&"_B".to_string()));
         }
     }
@@ -2848,7 +2846,7 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             .unwrap();
             compiler.compile(&program(&source(fragment), false), &[], false)
         };
-        let vulkan = unbound_compat::GraphicsDevice::Vulkan;
+        let vulkan = unbound_graphics::GraphicsDevice::Vulkan;
         // `_B` is declared, but the program does not use it.
         let unused =
             "_Cube.Sample(sampler_Cube, position.xyz) + _Cube.Sample(sampler_B, position.xyz)";
@@ -2857,7 +2855,7 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             format!("{refused:#}").contains("Unrecognized sampler 'sampler_b'"),
             "{refused:#}"
         );
-        compile(unbound_compat::GraphicsDevice::OpenGLCore, unused).unwrap();
+        compile(unbound_graphics::GraphicsDevice::OpenGLCore, unused).unwrap();
         // Used, by a sample or a load, its sampler samples the cube (samplerstates
         // `UsedLoad`).
         for used in [
@@ -2930,8 +2928,8 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
                 .unwrap()
         };
         for device in [
-            unbound_compat::GraphicsDevice::OpenGLCore,
-            unbound_compat::GraphicsDevice::Vulkan,
+            unbound_graphics::GraphicsDevice::OpenGLCore,
+            unbound_graphics::GraphicsDevice::Vulkan,
         ] {
             let compiled = compile(device, source);
             assert_eq!(compiled.textures, ["_B", "_Shadow", "_Shadow"]);
@@ -2984,7 +2982,7 @@ float4 frag(V i) : SV_Target {
     return i.depth + _Shadow.SampleCmpLevelZero(sampler_Shadow, i.position.xy, 0.5);
 }
 "#;
-        let compiled = compile(unbound_compat::GraphicsDevice::OpenGLCore, stages);
+        let compiled = compile(unbound_graphics::GraphicsDevice::OpenGLCore, stages);
         let shadow: Vec<_> = compiled
             .textures
             .iter()
@@ -3007,7 +3005,7 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
     return _Shadow.SampleCmpLevelZero(sampler_Shadow, position.xy, 0.5);
 }
 "#;
-        let compiled = compile(unbound_compat::GraphicsDevice::OpenGLCore, only);
+        let compiled = compile(unbound_graphics::GraphicsDevice::OpenGLCore, only);
         assert_eq!(compiled.textures, ["_Shadow"]);
         assert!(compiled.texture_slots[0].depth() && compiled.texture_slots[0].comparison);
     }
@@ -3093,14 +3091,14 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             .unwrap();
             compiler.compile(&program(source, false), &[], false)
         };
-        let opengl = unbound_compat::GraphicsDevice::OpenGLCore;
+        let opengl = unbound_graphics::GraphicsDevice::OpenGLCore;
         let refused = compile(opengl, true).unwrap_err();
         assert!(
             format!("{refused:#}").contains("compared and read with Load"),
             "{refused:#}"
         );
         compile(opengl, false).unwrap();
-        compile(unbound_compat::GraphicsDevice::Vulkan, false).unwrap();
+        compile(unbound_graphics::GraphicsDevice::Vulkan, false).unwrap();
     }
 
     /// A fragment program's outputs go where their semantics say, by the DX9 names too, which
@@ -3539,7 +3537,7 @@ float4 frag(v2f i) : SV_Target
         let mut compiler = ShaderCompiler::new(Settings {
             unity_version: 6000071,
             platform_defines: defines,
-            device: unbound_compat::GraphicsDevice::Metal,
+            device: unbound_graphics::GraphicsDevice::Metal,
             ..Default::default()
         })
         .unwrap();
@@ -4120,7 +4118,7 @@ half4 frag(v2f i) : SV_Target { return UNITY_READ_FRAMEBUFFER_INPUT(0, i.pos) * 
             },
             unity_version: 6000071,
             platform_defines: defines,
-            device: unbound_compat::GraphicsDevice::Metal,
+            device: unbound_graphics::GraphicsDevice::Metal,
             ..Default::default()
         })
         .unwrap();
@@ -4188,7 +4186,7 @@ fixed4 frag(v2f i) : COLOR { return i.color; }
             },
             unity_version: 6000071,
             platform_defines: defines,
-            device: unbound_compat::GraphicsDevice::Metal,
+            device: unbound_graphics::GraphicsDevice::Metal,
             ..Default::default()
         })
         .unwrap();
@@ -4237,7 +4235,7 @@ void surf(Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_Ma
                     &surface,
                     &[],
                     &targets::Requirements::default()
-                        .variant(&[], unbound_compat::GraphicsDevice::Metal),
+                        .variant(&[], unbound_graphics::GraphicsDevice::Metal),
                     false,
                     "SHADER_STAGE_VERTEX",
                 ),
@@ -4340,8 +4338,8 @@ float4 frag() : SV_Target
 }
 "#;
         for device in [
-            unbound_compat::GraphicsDevice::OpenGLCore,
-            unbound_compat::GraphicsDevice::Vulkan,
+            unbound_graphics::GraphicsDevice::OpenGLCore,
+            unbound_graphics::GraphicsDevice::Vulkan,
         ] {
             let mut compiler = ShaderCompiler::new(Settings {
                 includes: Includes {

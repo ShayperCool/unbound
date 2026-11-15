@@ -24,7 +24,7 @@
 //! Where this differs from the Manual's pragma target reference: 4.6 brings no cube arrays, and
 //! the `es3.0`, `es3.1` and `gl4.1` targets apply nothing on these devices.
 
-use unbound_compat::GraphicsDevice;
+use unbound_graphics::GraphicsDevice;
 
 /// The GPU features Unity's `#pragma require` names, in an order of our own: a feature's bit is
 /// its index. `SHADER_AVAILABLE_<NAME>` is defined for each name (`interpolators15` and

@@ -22,6 +22,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 notify = "8"
 unbound-compat = { path = "crates/unbound-compat" }
+unbound-graphics = { path = "crates/unbound-graphics" }
 unbound-yaml = { path = "crates/unbound-yaml" }
 unbound-project = { path = "crates/unbound-project" }
 unbound-cache = { path = "crates/unbound-cache" }
