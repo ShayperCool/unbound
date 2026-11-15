@@ -117,7 +117,10 @@ def stage(label):
         shutil.copytree(ROOT/'Assets'/part, project/'Assets'/part)
         shutil.copy2(ROOT/'Assets'/(part+'.meta'), project/'Assets'/(part+'.meta'))
     if PROFILE == 'speedtree':
-        # The SpeedTree 9 wind probe's trees, with their import settings.
+        # Its script and dump shader (they need the Wind module), and the SpeedTree 9 wind
+        # probe's trees with their import settings.
+        shutil.copytree(ROOT/'Assets/SpeedTree', project/'Assets/SpeedTree')
+        shutil.copy2(ROOT/'Assets/SpeedTree.meta', project/'Assets/SpeedTree.meta')
         trees = ROOT.parent/'speedtree9wind/Assets/Trees'
         shutil.copytree(trees, project/'Assets/Trees')
         shutil.copy2(trees.with_name('Trees.meta'), project/'Assets/Trees.meta')

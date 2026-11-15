@@ -67,7 +67,7 @@ public sealed class DrawerWindProbe : MonoBehaviour
 #if UNITY_EDITOR
             m_Gusty = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Trees/Gusty.st9");
             m_Calm = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Trees/Calm.st9");
-            m_Dump = new Material(UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/DrawerWindDump.shader"));
+            m_Dump = new Material(UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Assets/SpeedTree/DrawerWindDump.shader"));
 #endif
             m_Target = new RenderTexture(Params, Rows, 0, RenderTextureFormat.ARGBFloat);
             m_Read = new Texture2D(Params, Rows, TextureFormat.RGBAFloat, false);

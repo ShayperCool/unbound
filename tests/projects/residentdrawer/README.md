@@ -48,9 +48,9 @@ the legacy lightmaps keyword flag, and the lightmapped renderers are drawn with 
 (with their directions and shadow mask in `shadowmask`).
 
 `speedtree` stages `tests/projects/speedtree9wind`'s trees (and the Wind module) and records with
-`Assets/Scripts/DrawerWindProbe.cs` instead: the SpeedTree 9 wind parameters the drawer gives tree
+`Assets/SpeedTree/DrawerWindProbe.cs` instead: the SpeedTree 9 wind parameters the drawer gives tree
 instances. Each tree is a copy of an asset's first level (its Tree keeps the asset's wind asset)
-drawing a quad with `Assets/Shaders/DrawerWindDump.shader`, which writes the instance's
+drawing a quad with `Assets/SpeedTree/DrawerWindDump.shader`, which writes the instance's
 `DOTS_ST_WindParam0` to `10` and `DOTS_ST_WindHistoryParam0` to `10` into the tree's row of a 22x8
 float target (-1 without DOTS instancing); one orthographic camera renders all trees once a frame.
 Game time stands still until shaders have compiled, so the wind does not depend on the warm-up.
