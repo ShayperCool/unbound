@@ -134,7 +134,7 @@ class PublicationTests(unittest.TestCase):
             self.assertEqual({k: ref.layout.tree(self.target)[k] for k in before}, before)
             self.receipt.unlink()
         self.assertEqual(len(ref.load(self.target, shadows=True)), len(self.rows))
-        self.assertEqual(len(ref.load(self.target)), len(self.rows) - len(ref.SHADOW_KEYS))
+        self.assertEqual(set(ref.load(self.target)), {k for k in self.rows if not k.startswith("shadow.")})
         self.assertTrue((self.target/ref.SHADOW_FILE).exists())
         for image in ref.SHADOW_IMAGES:
             self.assertEqual(gzip.decompress((self.target/(image+'.gz')).read_bytes()), image.encode())
