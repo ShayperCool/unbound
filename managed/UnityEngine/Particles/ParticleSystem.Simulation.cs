@@ -35,17 +35,19 @@ namespace UnityEngine
         bool m_HasContext;
         /// <summary>The length of the last step.</summary>
         internal float m_LastStepDt;
-        /// <summary>How long ago the custom data module last ran over the live particles, and the
-        /// serial of that run. Each run evaluates the color streams of every live particle, the
-        /// vectors only of the particles it is for. It runs before a step ages its particles, and
-        /// again for the particles a step's emission or Emit starts, after that aging: the
-        /// existing particles' colors then take their current age and the started particles'
-        /// colors their age at birth (6000.0.71f1, tests/projects/particles custom_data).</summary>
-        internal float m_CustomColorLagDt;
+        /// <summary>The custom data module's runs: the serial of the last one, and whether it was
+        /// a run for particles being started rather than a step's update. Each run evaluates the
+        /// color streams of every live particle and the vectors of the particles it is for, each
+        /// at the age it has before it is integrated (<see cref="Particle.m_CustomAge"/>). A
+        /// step's update runs over all particles before it ages them; a start run (a step's
+        /// births, an Emit call, a sub-emitter emission) runs before the started particles are
+        /// integrated, and again before each catch-up step, once the other particles have aged
+        /// (6000.0.71f1, tests/projects/particles custom_data and custom_data_runs/*).</summary>
         internal uint m_CustomRun;
+        bool m_CustomStartRun;
         /// <summary>Whether a step's emission is running, and whether it has started particles:
         /// a step starts all its births in one run, whichever way they are emitted; each Emit call
-        /// and each sub-emitter birth outside the system's own step is a run of its own.</summary>
+        /// and each sub-emitter emission outside the system's own step is a run of its own.</summary>
         bool m_InStepEmission, m_StepStartRunBegun;
 
         /// <summary>A custom data module run for the particles being started.</summary>
@@ -56,7 +58,7 @@ namespace UnityEngine
                 if (m_StepStartRunBegun) return;
                 m_StepStartRunBegun = true;
             }
-            m_CustomColorLagDt = 0f;
+            m_CustomStartRun = true;
             m_CustomRun++;
         }
 
@@ -288,7 +290,7 @@ namespace UnityEngine
         {
             if (m_Trails.enabled || HasAliveTrails) m_TrailTime += dt;
             m_LastStepDt = dt;
-            m_CustomColorLagDt = dt;
+            m_CustomStartRun = false;
             m_CustomRun++;
             // Newborns sample the current scroll but only existing particles advance it.
             if (m_Noise.enabled && m_Count > 0)
@@ -1820,6 +1822,7 @@ namespace UnityEngine
             agedOut = false;
             if ((p.m_Flags & Particle.FlagAgeInitialized) == 0) p.InitializeAge();
             float age = p.Age01;
+            p.m_CustomAge = age;
             float ageBefore = p.m_StartLifetime - p.m_Lifetime;
             // Collisions and triggers see the size a particle had where its previous step ended (a
             // newborn's where its first step ends, below): the sizes are updated after them.
@@ -2475,6 +2478,7 @@ namespace UnityEngine
             {
                 int index = batched ? aligned + k : Allocate();
                 if (index < 0) return;
+                if (k == 0) BeginCustomStartRun();
                 ref var p = ref m_Particles[index];
                 // A padding lane takes the last particle's age and place.
                 bool padding = k >= used;
@@ -2505,6 +2509,7 @@ namespace UnityEngine
                     continue;
                 }
                 p.m_ParentRandomSeed = parent.m_RandomSeed;
+                p.m_CustomRun = m_CustomRun;
                 if ((properties & ParticleSystemSubEmitterProperties.InheritColor) != 0)
                     p.m_StartColor = (Color)p.m_StartColor * parentColor;
                 if ((properties & ParticleSystemSubEmitterProperties.InheritSize) != 0)

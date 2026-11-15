@@ -976,18 +976,16 @@ namespace UnityEngine
 
         Vector4 CustomDataOf(ref Particle p, int stream, ParticleSystemCustomDataMode mode, Vector4 stored)
         {
-            float age = p.Age01;
+            // The streams hold what the module's last run over the particle wrote (see m_CustomRun):
+            // after a start run, the colors of the particles it did not start are at their current age.
+            float age = p.m_CustomAge;
             uint seed = p.m_RandomSeed;
             if (mode == ParticleSystemCustomDataMode.Color)
             {
-                // The module's last run wrote every color (see m_CustomColorLagDt).
-                if (p.m_CustomRun != 0 && p.m_CustomRun == m_CustomRun) age = 0f;
-                else if (p.m_StartLifetime > 0f) age = Mathf.Max(0f, age - m_CustomColorLagDt / p.m_StartLifetime);
+                if (m_CustomStartRun && p.m_CustomRun != m_CustomRun) age = p.Age01;
                 Color c = m_CustomData.colors[stream].Evaluate(age, ModuleValue(seed, 1940387770u - (uint)stream));
                 return new Vector4(c.r, c.g, c.b, c.a);
             }
-            // The vector is written by the last update, at the age before it (measured).
-            if (p.m_StartLifetime > 0f) age = Mathf.Max(0f, age - m_LastStepDt / p.m_StartLifetime);
             int count = Mathf.Clamp(m_CustomData.componentCounts[stream], 0, 4);
             for (int k = 0; k < count; k++)
                 stored[k] = m_CustomData.vectors[stream, k].Evaluate(age, ModuleValue(seed, 1940387771u + (uint)(stream * 4 + k)));

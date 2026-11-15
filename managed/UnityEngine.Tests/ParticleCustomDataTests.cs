@@ -7,15 +7,36 @@ namespace UnityEngine.Tests
     /// tests/projects/particles custom_data and custom_data_runs): each run writes every live
     /// particle's colors but only the vectors of the particles it is for. It runs before a step
     /// ages the particles and again for the particles the step's emission (or Emit) starts.</summary>
-    public class ParticleCustomDataTests
+    public class ParticleCustomDataTests : System.IDisposable
     {
         const float Lifetime = 1.013f;
 
+        // The measured release and step settings (the probe's project defaults).
+        readonly string m_Version = ProjectInfo.UnityVersion;
+        readonly float m_MaximumDelta = Time.maximumParticleDeltaTime, m_FixedDelta = Time.fixedDeltaTime;
+
+        public ParticleCustomDataTests()
+        {
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            Time.maximumParticleDeltaTime = 0.03f;
+            Time.fixedDeltaTime = 0.02f;
+        }
+
+        public void Dispose()
+        {
+            ProjectInfo.UnityVersion = m_Version;
+            Time.maximumParticleDeltaTime = m_MaximumDelta;
+            Time.fixedDeltaTime = m_FixedDelta;
+        }
+
         /// <summary>Custom1 is a one-component vector, Custom2 a white-to-black color: both read
         /// back the normalized age they were evaluated at (the color as 1 - r).</summary>
-        static ParticleSystem Make(float rate, params ParticleSystem.Burst[] bursts)
+        static ParticleSystem Make(float rate, params ParticleSystem.Burst[] bursts) => Make(null, rate, bursts);
+
+        static ParticleSystem Make(Transform parent, float rate, params ParticleSystem.Burst[] bursts)
         {
             var go = new GameObject("customdata"); go.SetActive(false);
+            if (parent != null) go.transform.SetParent(parent, false);
             var ps = go.AddComponent<ParticleSystem>();
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             ps.useAutoRandomSeed = false; ps.randomSeed = 12345;
@@ -141,6 +162,52 @@ namespace UnityEngine.Tests
                 Near(0.025f, read[0].age - read[0].vector);
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void SubEmitterChildrenAreEvaluatedBeforeEachCatchUpStep()
+        {
+            // Two parents die within the second call; each emission's children are caught up to the
+            // call's end in fixed 0.02 s steps, and each emission and catch-up step is a run.
+            var parentGo = new GameObject("parent"); parentGo.SetActive(false);
+            var parent = parentGo.AddComponent<ParticleSystem>();
+            parent.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            parent.useAutoRandomSeed = false; parent.randomSeed = 12345;
+            var main = parent.main; main.playOnAwake = false; main.startLifetime = 0.13f; main.startSpeed = 1f;
+            var shape = parent.shape; shape.enabled = false;
+            var emission = parent.emission; emission.rateOverTime = 0f; emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 2) });
+            var child = Make(parent.transform, 0f, new ParticleSystem.Burst(0f, 2));
+            var subs = parent.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            parentGo.SetActive(true);
+            try
+            {
+                parent.Simulate(0.1f, true, true, false);
+                Assert.Equal(0, child.particleCount);
+                parent.Simulate(0.1f, true, false, false);
+                var read = Read(child);
+                Assert.Equal(4, read.Length);
+                int current = 0, lagging = 0;
+                foreach (var (age, vector, color) in read)
+                {
+                    Near(0.06f, age);
+                    Near(0.04f, vector);
+                    if (System.Math.Abs(color - 0.06f) < 2e-5f) current++;
+                    else { Near(0.04f, color); lagging++; }
+                }
+                // The second emission's catch-up ran after the first emission's children had
+                // finished theirs.
+                Assert.Equal(2, current);
+                Assert.Equal(2, lagging);
+                // The child's next step runs over all of them before it ages them.
+                parent.Simulate(0.1f, true, false, false);
+                foreach (var (age, vector, color) in Read(child))
+                {
+                    Near(age - 0.025f, vector);
+                    Near(age - 0.025f, color);
+                }
+            }
+            finally { Object.DestroyImmediate(parentGo); }
         }
     }
 }

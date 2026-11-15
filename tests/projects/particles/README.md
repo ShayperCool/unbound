@@ -42,14 +42,16 @@ What still differs, and why:
 ## Custom data streams
 
 `custom_data` and the `custom_data_runs/*` controls (rate 7 in 0.1 s calls, a burst followed
-by `Emit`, rate 70 in single 0.02 s steps) record when the custom data module writes its
-streams. Each run of the module writes the colors of every live particle but the vectors only
-of the particles the run is for. It runs before a step ages the particles, and again for the
-particles the step starts, after that aging. A step that starts particles therefore leaves the
-existing particles' colors at their current age and the started particles' colors at their
-birth; a step that starts none leaves every color one step behind, like the vectors. `Emit`
-is a run of its own. Measured on Unity 6000.0.71f1; the added rows come from two GPU Editor
-recordings that agree in every compared value, and every earlier row is unchanged.
+by `Emit`, rate 70 in single 0.02 s steps, Birth and Death sub-emitter children) record when the
+custom data module writes its streams. Each run of the module writes the colors of every live
+particle but the vectors only of the particles the run is for, each at the age the particle has
+before it is integrated. A step's update is a run over all particles before it ages them. The
+particles a step's emission, an `Emit` call or a sub-emitter emission starts get a run before they
+are integrated, and caught-up sub-emitter children another before each catch-up step. So after a
+step that starts particles the other particles' colors are at their current age; after a step
+that starts none every color is one step behind, like the vectors. Measured on Unity 6000.0.71f1;
+the added rows come from two GPU Editor recordings that agree in every compared value, and every
+earlier row is unchanged.
 
 ## Known numerical residuals, 2026-11-02
 
