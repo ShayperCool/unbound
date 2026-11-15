@@ -65,6 +65,10 @@ namespace Unbound.Runtime
         internal Shape Shape;
         internal Func<object, object> Get;
         internal Func<object, object, object> With;
+        /// <summary>Whether the part is a hidden property (iterated, never shown).</summary>
+        internal bool Hidden;
+        /// <summary>The part's type name when it is not the one its shape gives.</summary>
+        internal string TypeName;
 
         static ComponentDef C<TWhole, TPart>(string name, Shape shape, Func<TWhole, TPart> get, Func<TWhole, TPart, TWhole> with) =>
             new ComponentDef
@@ -87,6 +91,16 @@ namespace Unbound.Runtime
                     int row = r, column = c;
                     matrix.Add(C<Matrix4x4, float>($"e{r}{c}", Shape.Float, m => m[row, column], (m, v) => { m[row, column] = v; return m; }));
                 }
+            var harmonics = new ComponentDef[UnityEngine.Rendering.SphericalHarmonicsL2.CoefficientCount];
+            for (int i = 0; i < harmonics.Length; i++)
+            {
+                int index = i;
+                harmonics[i] = C<UnityEngine.Rendering.SphericalHarmonicsL2, float>(UnityEngine.Rendering.SphericalHarmonicsL2.SerializedNames[i], Shape.Float,
+                    sh => sh.Coefficient(index), (sh, v) => { sh.SetCoefficient(index, v); return sh; });
+            }
+            var renderingLayerBits = C<RenderingLayerMask, uint>("m_Bits", Shape.UInt, v => v.value, (v, p) => { v.value = p; return v; });
+            renderingLayerBits.Hidden = true;
+            renderingLayerBits.TypeName = "uint";
             return new Dictionary<Shape, ComponentDef[]>
             {
                 [Shape.Vector2] = new[]
@@ -173,6 +187,9 @@ namespace Unbound.Runtime
                     C<RectOffset, int>("m_Bottom", Shape.Int, v => v.bottom, (v, p) => new RectOffset(v.left, v.right, v.top, p)),
                 },
                 [Shape.Matrix4x4] = matrix.ToArray(),
+                // Measured: tests/projects/builtinserial (the mask's bits are hidden, the coefficients visible).
+                [Shape.RenderingLayerMask] = new[] { renderingLayerBits },
+                [Shape.SphericalHarmonicsL2] = harmonics,
             };
         }
     }
@@ -485,8 +502,9 @@ namespace Unbound.Runtime
                     Shape = def.Shape,
                     Component = def,
                     PropertyType = PropertyTypeOf(def.Shape),
-                    TypeName = TypeNameOf(def.Type, def.Shape),
+                    TypeName = def.TypeName ?? TypeNameOf(def.Type, def.Shape),
                     ReadOnly = node.ReadOnly,
+                    Hidden = def.Hidden,
                 };
                 child.Path = ChildPath(node, child);
                 AddChild(node, child);
@@ -789,6 +807,7 @@ namespace Unbound.Runtime
                 case Shape.BoundsInt: return SerializedPropertyType.BoundsInt;
                 case Shape.LayerMask: return SerializedPropertyType.LayerMask;
                 case Shape.Hash128: return SerializedPropertyType.Hash128;
+                case Shape.RenderingLayerMask: return SerializedPropertyType.RenderingLayerMask;
                 case Shape.AnimationCurve: return SerializedPropertyType.AnimationCurve;
                 case Shape.Gradient: return SerializedPropertyType.Gradient;
                 case Shape.ManagedReference: return SerializedPropertyType.ManagedReference;

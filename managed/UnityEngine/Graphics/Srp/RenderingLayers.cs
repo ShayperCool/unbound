@@ -5,8 +5,9 @@ using UnityEngine.Rendering;
 
 namespace UnityEngine
 {
-    /// <summary>A mask of rendering layers (named in the Tags and Layers settings).</summary>
-    [Serializable]
+    /// <summary>A mask of rendering layers (named in the Tags and Layers settings). Serialized as a
+    /// built-in value (<see cref="Unbound.Runtime.Shape.RenderingLayerMask"/>), not as a CLR
+    /// serializable struct.</summary>
     public partial struct RenderingLayerMask
     {
         internal const int maxRenderingLayerSize = 32;
@@ -14,7 +15,7 @@ namespace UnityEngine
         /// <summary>The project's rendering layer names, by index (undefined ones empty).</summary>
         internal static string[] s_Names = { "Default" };
 
-        [SerializeField] uint m_Bits;
+        uint m_Bits;
 
         public uint value { get => m_Bits; set => m_Bits = value; }
 

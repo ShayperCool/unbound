@@ -332,14 +332,29 @@ namespace Unbound.Runtime
                         m_Out.Append("- {}\n");
                         return;
                     }
-                    // The first field's indentation becomes the dash.
-                    m_Out.Remove(start, level * 2 + 2);
-                    m_Out.Insert(start, new string(' ', level * 2) + "- ");
+                    Dash(start, level);
+                    return;
+                }
+                if (TryBlock(item, shape, out var block))
+                {
+                    var start = m_Out.Length;
+                    foreach (var (key, text) in block) Line(level + 1, key, text);
+                    Dash(start, level);
                     return;
                 }
                 Indent(level);
                 m_Out.Append("- ").Append(Flow(item, type, shape)).Append('\n');
             }
+
+            /// <summary>A sequence item's first line, written one level deeper: its indentation becomes the dash.</summary>
+            void Dash(int start, int level)
+            {
+                m_Out.Remove(start, level * 2 + 2);
+                m_Out.Insert(start, new string(' ', level * 2) + "- ");
+            }
+
+            /// <summary>The spherical harmonics coefficient keys, quoted as Unity writes them.</summary>
+            static readonly string[] s_ShKeys = Array.ConvertAll(UnityEngine.Rendering.SphericalHarmonicsL2.SerializedNames, n => "'" + n + "'");
 
             static bool TryBlock(object value, Shape shape, out List<(string, string)> block)
             {
@@ -355,6 +370,16 @@ namespace Unbound.Runtime
                     case Shape.LayerMask:
                         block = new List<(string, string)> { ("serializedVersion", "2"), ("m_Bits", ((uint)((LayerMask)value).value).ToString(CultureInfo.InvariantCulture)) };
                         return true;
+                    case Shape.RenderingLayerMask:
+                        block = new List<(string, string)> { ("serializedVersion", "0"), ("m_Bits", ((RenderingLayerMask)value).value.ToString(CultureInfo.InvariantCulture)) };
+                        return true;
+                    case Shape.SphericalHarmonicsL2:
+                    {
+                        var sh = (UnityEngine.Rendering.SphericalHarmonicsL2)value;
+                        block = new List<(string, string)>(s_ShKeys.Length);
+                        for (int i = 0; i < s_ShKeys.Length; i++) block.Add((s_ShKeys[i], F(sh.Coefficient(i))));
+                        return true;
+                    }
                 }
                 return false;
             }

@@ -19,6 +19,8 @@ namespace Unbound.Runtime
         UnityObject,
         Vector2, Vector3, Vector4, Vector2Int, Vector3Int, Quaternion, Color, Color32, Rect, RectInt,
         Bounds, BoundsInt, Matrix4x4, LayerMask, Hash128,
+        /// <summary>Built-in structs that are not CLR serializable: written as Unity's own payload.</summary>
+        RenderingLayerMask, SphericalHarmonicsL2,
         /// <summary>A PropertyName: written as its string.</summary>
         PropertyName,
         AnimationCurve, Gradient, RectOffset, GuiStyleState,
@@ -214,6 +216,8 @@ namespace Unbound.Runtime
             if (t == typeof(Matrix4x4)) return Shape.Matrix4x4;
             if (t == typeof(LayerMask)) return Shape.LayerMask;
             if (t == typeof(Hash128)) return Shape.Hash128;
+            if (t == typeof(RenderingLayerMask)) return Shape.RenderingLayerMask;
+            if (t == typeof(UnityEngine.Rendering.SphericalHarmonicsL2)) return Shape.SphericalHarmonicsL2;
             if (t == typeof(PropertyName)) return Shape.PropertyName;
             if (t == typeof(AnimationCurve)) return Shape.AnimationCurve;
             if (t == typeof(Gradient)) return Shape.Gradient;
@@ -489,6 +493,21 @@ namespace Unbound.Runtime
                 }
                 case Shape.LayerMask: return (LayerMask)(int)node.Long("m_Bits");
                 case Shape.Hash128: return Hash128.Parse(node.Str("Hash", node.Kind == YKind.Scalar ? node.Scalar : ""));
+                // Members the data does not name keep their value (as text read over an object).
+                case Shape.RenderingLayerMask:
+                {
+                    var mask = existing is RenderingLayerMask current ? current : default;
+                    if (node.Get("m_Bits") is YNode bits) mask.value = unchecked((uint)bits.AsLong());
+                    return mask;
+                }
+                case Shape.SphericalHarmonicsL2:
+                {
+                    var sh = existing is UnityEngine.Rendering.SphericalHarmonicsL2 current ? current : default;
+                    var names = UnityEngine.Rendering.SphericalHarmonicsL2.SerializedNames;
+                    for (int i = 0; i < names.Length; i++)
+                        if (node.Get(names[i]) is YNode coefficient) sh.SetCoefficient(i, coefficient.AsFloat());
+                    return sh;
+                }
                 case Shape.PropertyName: return new PropertyName(node.Kind == YKind.Scalar ? node.Scalar : "");
                 case Shape.AnimationCurve: return BuiltinReaders.AnimationCurve(node);
                 case Shape.Gradient: return BuiltinReaders.Gradient(node);

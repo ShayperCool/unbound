@@ -47,6 +47,8 @@ namespace UnityEngine.Tests
                 int colon = text.IndexOf(':');
                 if (colon < 0) throw new FormatException("expected a key: " + text);
                 var key = text.Substring(0, colon);
+                // Unity quotes keys that are not plain scalars ('sh[ 0]').
+                if (key.Length >= 2 && key[0] == '\'' && key[key.Length - 1] == '\'') key = key.Substring(1, key.Length - 2);
                 var rest = text.Substring(colon + 1).Trim();
                 i++;
                 YNode value;

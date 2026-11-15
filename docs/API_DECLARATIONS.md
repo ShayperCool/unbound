@@ -112,10 +112,10 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After job containers |
+| Category | Before Q410 | After built-in serialization |
 | --- | ---: | ---: |
-| Attributes | 938 | 16 |
-| Modifiers | 87 | 8 |
+| Attributes | 938 | 15 |
+| Modifiers | 87 | 6 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
 | Layout | 68 | 61 |
@@ -123,7 +123,7 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 0 |
 | Lookup policies | 11 | 10 |
-| Total | 1,332 | 115 |
+| Total | 1,332 | 112 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -198,14 +198,14 @@ struct copies and nonfinite values retain their selected-release behavior. Textu
 graphicsFormat getter is virtual; compiler controls exercise an override, a sealed
 annotation class and an inheritable preference exception.
 
-Q410-Core-built-in-serialization retains three exact differences: the Serializable
-markers on SphericalHarmonicsL2 and RenderingLayerMask, and the mask field's
-SerializeField marker. The 6000.0.71f1 JSON control exposes special nested payloads
-for harmonic coefficients and a versioned rendering mask, while root values write
-empty objects. Removing the markers alone drops existing nested values. The runtime
-needs shared built-in classification and JSON/YAML read/write/clone controls before
-these declarations can migrate. Raw Native and engine differences remain recorded;
-the accepted modifier controls cover the declarations migrated in this slice.
+Q410-Core-built-in-serialization is resolved: SphericalHarmonicsL2 and
+RenderingLayerMask have no Serializable marker and the mask's bits no SerializeField
+marker, as in 6000.0.71f1. The serializer classifies both types by identity as
+built-in values. A mask is written as `serializedVersion: 0` and `m_Bits`, harmonics
+as 27 coefficients named `sh[ 0]` to `sh[26]` in JSON, YAML and the property tree, and
+a value outside a field still writes an empty object. `tests/projects/builtinserial`
+compares JSON and Editor JSON text, reading over diverged values, partial text, cloning,
+an authored asset, a text round trip and the property tree.
 
 The visibility slice resolves all 18 accessibility entries and ten coupled accessor
 entries. It narrows internal types, helpers and properties, exposes the selected
@@ -391,7 +391,7 @@ comparison tolerances stay unchanged in this slice.
 | Follow-up | Exact entries | Required work |
 | --- | ---: | --- |
 | `Q410-Animator-animatePhysics` | 0 | Done by `animatephysics`: stored state beside updateMode and kinematic moves for bodies on transforms the Animator writes. |
-| `Q410-Core-built-in-serialization` | 3 | Harmonic/mask built-in payloads across root/nested JSON, YAML and cloning. |
+| `Q410-Core-built-in-serialization` | 0 | Done by `builtinserial`: the harmonic and mask structs are built-in serialized values, not CLR serializable types. |
 | `Q410-Editor-computed-setters` | 2 | Live focus state and assembly-cache invalidation before private setter alignment. |
 | `Q410-Editor-interfaces` | 8 | Window/menu/preview, request callbacks and connection dispatch; converter bridging is covered by `uxmlconverter` and persistent-call type names by `eventtypenames`. |
 | `Q410-Editor-serialized-payloads` | 13 | Window/view/package/request fields and coupled Serializable classification. |

@@ -6,13 +6,32 @@ namespace UnityEngine.Rendering
     /// Second order spherical harmonics, per color channel nine coefficients stored so that a
     /// direction n = (x, y, z) evaluates to c0 + c1 y + c2 z + c3 x + c4 xy + c5 yz + c6 (3z² − 1)
     /// + c7 xz + c8 (x² − y²) (the Editor's storage, measured: tests/projects/urp CapsProbe).
+    /// Serialized as a built-in value (<see cref="Unbound.Runtime.Shape.SphericalHarmonicsL2"/>), not as
+    /// a CLR serializable struct.
     /// </summary>
-    [Serializable]
     public partial struct SphericalHarmonicsL2 : IEquatable<SphericalHarmonicsL2>
     {
         float shr0, shr1, shr2, shr3, shr4, shr5, shr6, shr7, shr8;
         float shg0, shg1, shg2, shg3, shg4, shg5, shg6, shg7, shg8;
         float shb0, shb1, shb2, shb3, shb4, shb5, shb6, shb7, shb8;
+
+        internal const int CoefficientCount = 27;
+
+        /// <summary>The serialized names of the coefficients, red then green then blue: "sh[ 0]" to
+        /// "sh[26]" (matches the Unity 6000.0.71f1 Editor, tests/projects/builtinserial).</summary>
+        internal static readonly string[] SerializedNames = BuildSerializedNames();
+
+        static string[] BuildSerializedNames()
+        {
+            var names = new string[CoefficientCount];
+            for (int i = 0; i < names.Length; i++) names[i] = $"sh[{i,2}]";
+            return names;
+        }
+
+        /// <summary>A coefficient by its serialized index (channel × 9 + coefficient).</summary>
+        internal float Coefficient(int index) => this[index / 9, index % 9];
+
+        internal void SetCoefficient(int index, float value) => this[index / 9, index % 9] = value;
 
         public unsafe float this[int rgb, int coefficient]
         {

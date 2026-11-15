@@ -386,6 +386,16 @@ namespace UnityEngine
                         break;
                     }
                     case Shape.Hash128: { var v = (Hash128)value; Fields(("serializedVersion", "2"), ("Hash", v.ToString())); break; }
+                    case Shape.RenderingLayerMask: { var v = (RenderingLayerMask)value; Fields(("serializedVersion", "0"), ("m_Bits", v.value)); break; }
+                    case Shape.SphericalHarmonicsL2:
+                    {
+                        var v = (UnityEngine.Rendering.SphericalHarmonicsL2)value;
+                        var names = UnityEngine.Rendering.SphericalHarmonicsL2.SerializedNames;
+                        var fields = new (string, object)[names.Length];
+                        for (int i = 0; i < names.Length; i++) fields[i] = (names[i], v.Coefficient(i));
+                        Fields(fields);
+                        break;
+                    }
                     case Shape.GuiStyleState:
                     case Shape.Composite:
                         if (depth > 10) { m_Out.Append("{}"); break; }
@@ -647,6 +657,21 @@ namespace UnityEngine
                         return m;
                     }
                     case Shape.Hash128: return Hash128.Parse(node.Get("Hash")?.Text ?? "");
+                    // Members the text does not name keep their value (measured, tests/projects/builtinserial).
+                    case Shape.RenderingLayerMask:
+                    {
+                        var mask = existing is RenderingLayerMask current ? current : default;
+                        if (node.Get("m_Bits") is JsonNode bits) mask.value = unchecked((uint)bits.UnsignedInteger);
+                        return mask;
+                    }
+                    case Shape.SphericalHarmonicsL2:
+                    {
+                        var sh = existing is UnityEngine.Rendering.SphericalHarmonicsL2 current ? current : default;
+                        var names = UnityEngine.Rendering.SphericalHarmonicsL2.SerializedNames;
+                        for (int i = 0; i < names.Length; i++)
+                            if (node.Get(names[i]) != null) sh.SetCoefficient(i, F(node, names[i]));
+                        return sh;
+                    }
                     case Shape.GuiStyleState:
                     case Shape.Composite:
                     {

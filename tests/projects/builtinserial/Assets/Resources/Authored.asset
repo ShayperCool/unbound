@@ -1,0 +1,112 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f105c903cac4070b91a7b4f86299159, type: 3}
+  m_Name: Authored
+  m_EditorClassIdentifier: 
+  mask:
+    serializedVersion: 0
+    m_Bits: 2863311530
+  sh:
+    'sh[ 0]': -9.5
+    'sh[ 1]': -9
+    'sh[ 2]': -8.5
+    'sh[ 3]': -8
+    'sh[ 4]': -7.5
+    'sh[ 5]': -7
+    'sh[ 6]': -6.5
+    'sh[ 7]': -6
+    'sh[ 8]': -5.5
+    'sh[ 9]': -5
+    'sh[10]': -4.5
+    'sh[11]': -4
+    'sh[12]': -3.5
+    'sh[13]': -3
+    'sh[14]': -2.5
+    'sh[15]': -2
+    'sh[16]': -1.5
+    'sh[17]': -1
+    'sh[18]': -0.5
+    'sh[19]': 0
+    'sh[20]': 0.5
+    'sh[21]': 1
+    'sh[22]': 1.5
+    'sh[23]': 2
+    'sh[24]': 2.5
+    'sh[25]': 3
+    'sh[26]': 3.5
+  nested:
+    mask:
+      serializedVersion: 0
+      m_Bits: 65536
+    sh:
+      'sh[ 0]': 4
+      'sh[ 1]': 4.5
+      'sh[ 2]': 5
+      'sh[ 3]': 5.5
+      'sh[ 4]': 6
+      'sh[ 5]': 6.5
+      'sh[ 6]': 7
+      'sh[ 7]': 7.5
+      'sh[ 8]': 8
+      'sh[ 9]': 8.5
+      'sh[10]': 9
+      'sh[11]': 9.5
+      'sh[12]': 10
+      'sh[13]': 10.5
+      'sh[14]': 11
+      'sh[15]': 11.5
+      'sh[16]': 12
+      'sh[17]': 12.5
+      'sh[18]': 13
+      'sh[19]': 13.5
+      'sh[20]': 14
+      'sh[21]': 14.5
+      'sh[22]': 15
+      'sh[23]': 15.5
+      'sh[24]': 16
+      'sh[25]': 16.5
+      'sh[26]': 17
+    after: -4
+  masks:
+  - serializedVersion: 0
+    m_Bits: 7
+  - serializedVersion: 0
+    m_Bits: 4294967295
+  shs:
+  - 'sh[ 0]': 17
+    'sh[ 1]': 17.5
+    'sh[ 2]': 18
+    'sh[ 3]': 18.5
+    'sh[ 4]': 19
+    'sh[ 5]': 19.5
+    'sh[ 6]': 20
+    'sh[ 7]': 20.5
+    'sh[ 8]': 21
+    'sh[ 9]': 21.5
+    'sh[10]': 22
+    'sh[11]': 22.5
+    'sh[12]': 23
+    'sh[13]': 23.5
+    'sh[14]': 24
+    'sh[15]': 24.5
+    'sh[16]': 25
+    'sh[17]': 25.5
+    'sh[18]': 26
+    'sh[19]': 26.5
+    'sh[20]': 27
+    'sh[21]': 27.5
+    'sh[22]': 28
+    'sh[23]': 28.5
+    'sh[24]': 29
+    'sh[25]': 29.5
+    'sh[26]': 30
+  after: 12

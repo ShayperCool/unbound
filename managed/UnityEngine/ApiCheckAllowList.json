@@ -100,13 +100,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "attributes",
-    "Type": "UnityEngine.RenderingLayerMask",
-    "Message": "field m_Bits attributes is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}], Unity's is []",
-    "Reason": "Q410-Core-built-in-serialization: nested JSON uses a built-in payload although the selected CLR serialization marker is absent. Current runtime composite handling still needs the harmonic coefficient schema or rendering-layer version/bits schema. Migrate serialization classification, JSON/YAML read/write and cloning with root-versus-nested and round-trip controls before removing this marker; removal alone drops existing nested values."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "attributes",
     "Type": "UnityEngine.Rigidbody2D+SlideResults",
     "Message": "field <slideHit>k__BackingField attributes is [], Unity's is [UnityEngine.SerializeField:M:.ctor`0():System.Void(){}]",
     "Reason": "Q410-slide-result-serialization: The selected slideHit/surfaceHit backing fields carry collision payloads. Integrate nondefault hit serialization with the collision wrapper schema and nested/overwrite controls before exposing the fields to serialization."
@@ -789,20 +782,6 @@
     "Type": "UnityEditor.PackageManager.Requests.SearchRequest",
     "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
     "Reason": "Q410-Editor-serialized-payloads: selected search serialization includes the query and fetched-result/error/request state. Current immutable results and query property need the common request payload migration."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEngine.Rendering.SphericalHarmonicsL2",
-    "Message": "type readonly/ref-like/serializable is False/False/True, Unity's is False/False/False",
-    "Reason": "Q410-Core-built-in-serialization: nested JSON uses a built-in payload although the selected CLR serialization marker is absent. Current runtime composite handling still needs the harmonic coefficient schema or rendering-layer version/bits schema. Migrate serialization classification, JSON/YAML read/write and cloning with root-versus-nested and round-trip controls before removing this marker; removal alone drops existing nested values."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
-    "Type": "UnityEngine.RenderingLayerMask",
-    "Message": "type readonly/ref-like/serializable is False/False/True, Unity's is False/False/False",
-    "Reason": "Q410-Core-built-in-serialization: nested JSON uses a built-in payload although the selected CLR serialization marker is absent. Current runtime composite handling still needs the harmonic coefficient schema or rendering-layer version/bits schema. Migrate serialization classification, JSON/YAML read/write and cloning with root-versus-nested and round-trip controls before removing this marker; removal alone drops existing nested values."
   },
   {
     "Release": "6000.0.71f1",

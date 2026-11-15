@@ -589,7 +589,7 @@ namespace UnityEditor
         static bool IsIntegral(SerializedNode n) =>
             n.PropertyType == SerializedPropertyType.Integer || n.PropertyType == SerializedPropertyType.Enum
             || n.PropertyType == SerializedPropertyType.ArraySize || n.PropertyType == SerializedPropertyType.Character
-            || n.PropertyType == SerializedPropertyType.LayerMask;
+            || n.PropertyType == SerializedPropertyType.LayerMask || n.PropertyType == SerializedPropertyType.RenderingLayerMask;
 
         static long ToLong(object value)
         {
@@ -600,6 +600,7 @@ namespace UnityEditor
                 case char c: return c;
                 case ulong u: return unchecked((long)u);
                 case LayerMask mask: return mask.value;
+                case RenderingLayerMask renderingLayers: return renderingLayers.value;
                 case Enum e:
                     return Enum.GetUnderlyingType(e.GetType()) == typeof(ulong)
                         ? unchecked((long)Convert.ToUInt64(e, CultureInfo.InvariantCulture))
@@ -614,6 +615,7 @@ namespace UnityEditor
             {
                 if (type.IsEnum) return Enum.ToObject(type, value);
                 if (type == typeof(LayerMask)) return (LayerMask)(int)value;
+                if (type == typeof(RenderingLayerMask)) return (RenderingLayerMask)(uint)value;
                 switch (Type.GetTypeCode(type))
                 {
                     case TypeCode.SByte: return (sbyte)value;
