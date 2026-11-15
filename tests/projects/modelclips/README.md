@@ -260,6 +260,15 @@ length and the first and last key time of every curve, `HumanLate`'s too.
   Unbound now matches every end and length bit for bit (before: 0.99999994 and the kept scales
   1.00000012 differed in their last bits, inside the comparison's tolerance).
 
+`HumanLateEvents` and `HumanLateCurve` are copies of `HumanLate.fbx` under its settings with events
+at normalized 0.5 and 1 (`ProbeRunner.CreateHumanLateEvents`), the second with an Animator
+parameter curve `Speed` from 0 at 0 to 1 at 1; `events.<model>.<clip>` records the events.
+
+- The events lie at 0.5 and 1 and the parameter curve's keys at 0 and 1: normalized times are
+  placed on the range's span, its end less its start (1), not on the last key's time.
+- Both clips are 1 long, their last event's (and parameter key's) time, past the muscle keys'
+  0.99999994: a clip ends at its last key or event.
+
 ## Signs of the axis conversions
 
 `AxisTies/*` (`make_axis_ties.py`) are 48 static ASCII FBX files, one per axis system a file can

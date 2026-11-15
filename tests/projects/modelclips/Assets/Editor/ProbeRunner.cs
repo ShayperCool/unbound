@@ -256,6 +256,42 @@ public static class ProbeRunner
         }
     }
 
+    /// <summary>HumanLateEvents and HumanLateCurve (copies of HumanLate.fbx): HumanLate's import
+    /// settings with events at normalized times 0.5 and 1 (Hit, float 1 and 2), and the same with an
+    /// Animator parameter curve Speed from 0 at 0 to 1 at 1 (HumanLateCurve). Changes only their
+    /// importers (run once in a copy of the project; the .meta files are committed).</summary>
+    public static void CreateHumanLateEvents()
+    {
+        try
+        {
+            var source = (ModelImporter)AssetImporter.GetAtPath(Dir + "HumanLate.fbx");
+            foreach (var (name, curve) in new[] { ("HumanLateEvents", false), ("HumanLateCurve", true) })
+            {
+                var importer = (ModelImporter)AssetImporter.GetAtPath(Dir + name + ".fbx");
+                EditorUtility.CopySerialized(source, importer);
+                var clips = importer.clipAnimations;
+                foreach (var clip in clips)
+                {
+                    clip.events = new[]
+                    {
+                        new AnimationEvent { time = 0.5f, functionName = "Hit", floatParameter = 1f },
+                        new AnimationEvent { time = 1f, functionName = "Hit", floatParameter = 2f },
+                    };
+                    if (curve)
+                        clip.curves = new[] { new ClipAnimationInfoCurve { name = "Speed", curve = AnimationCurve.Linear(0f, 0f, 1f, 1f) } };
+                }
+                importer.clipAnimations = clips;
+                importer.SaveAndReimport();
+            }
+            EditorApplication.Exit(0);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
     static AnimationClip Load(string name) =>
         AssetDatabase.LoadAllAssetsAtPath(Model).OfType<AnimationClip>().First(c => c.name == name);
 

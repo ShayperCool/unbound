@@ -353,6 +353,14 @@ public class ClipProbe : MonoBehaviour
             TransformCurves("HumanTwistLate");
             Ends("HumanTwistLate");
             Ends("HumanLate");
+            // Then HumanLate with events at normalized 0.5 and 1, without and with an Animator
+            // parameter curve from normalized 0 to 1: the clip's end, its curves' ends and the
+            // events' times.
+            foreach (var model in new[] { "HumanLateEvents", "HumanLateCurve" })
+            {
+                Ends(model);
+                foreach (var clip in Clips(model)) Record("events." + model + "." + clip.name, Events(clip.events));
+            }
             // Then the rotations of the axis conversion of every axis system an FBX file can name
             // (make_axis_ties.py), whose matrices decide the sign on ties and a trace of 0.
             var ties = new List<string>();
