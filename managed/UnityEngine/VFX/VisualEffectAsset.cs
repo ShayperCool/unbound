@@ -162,6 +162,10 @@ namespace Unbound.Runtime
         /// <summary>Per system and task: the object the task runs with (a compute shader, an
         /// output's material, a spawner's callbacks), null for a task without one.</summary>
         internal Object[][] Processors = Array.Empty<Object[]>();
+        /// <summary>Per system and task: what an output's generated shader does that is not
+        /// drawn yet (<see cref="Unbound.Runtime.VFXOutput.SourceRefusal"/>), null when
+        /// nothing; empty for data that was not imported from a graph.</summary>
+        internal string[][] OutputRefusals = Array.Empty<string[]>();
         internal VFXEventDesc[] Events = Array.Empty<VFXEventDesc>();
         internal VFXGPUBufferDesc[] GpuBuffers = Array.Empty<VFXGPUBufferDesc>();
         internal VFXCPUBufferDesc[] CpuBuffers = Array.Empty<VFXCPUBufferDesc>();

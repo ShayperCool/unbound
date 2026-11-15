@@ -115,7 +115,8 @@ namespace Unbound.Runtime
                 var processor = i < processors.Length ? processors[i] : null;
                 if (VFXOutput.IsOutput(task.type))
                 {
-                    string refusal = VFXOutput.Refusal(Desc, task, processor);
+                    string sourceRefusal = index < data.OutputRefusals.Length && i < data.OutputRefusals[index].Length ? data.OutputRefusals[index][i] : null;
+                    string refusal = VFXOutput.Refusal(Desc, task, processor, sourceRefusal);
                     if (refusal == null) outputs.Add(new VFXOutput(this, task, (Material)processor));
                     else effect.WarnOutputNotDrawn(Desc.name, refusal);
                     continue;

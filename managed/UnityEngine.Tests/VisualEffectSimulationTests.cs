@@ -688,6 +688,22 @@ namespace UnityEngine.Tests
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, parameters = new[] { new VFXMapping("indirectDraw", 0) } }, material));
             Assert.Equal("strips are not drawn yet", VFXOutput.Refusal(new VFXEditorSystemDesc { flags = VFXSystemFlag.SystemHasStrips }, quads, material));
             Assert.Equal("outputs of a Shader Graph are not drawn yet", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, usesMaterialVariant = true }, material));
+            var previous = new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, temporaryBuffers = new[] { new VFXMappingTemporary() } };
+            Assert.StartsWith("it keeps buffers of the frame before (motion vectors)", VFXOutput.Refusal(system, previous, material));
+            // What the generated shader says of itself: an unlit output's passes are drawn...
+            const string unlit = "Shader \"Hidden/VFX/G/S/Output Particle|Unlit Quad\" { SubShader { Pass { Tags { \"LightMode\"=\"SceneSelectionPass\" } }\n"
+                + "Pass { Tags { \"LightMode\"=\"Picking\" } } Pass { Tags { \"LightMode\"=\"DepthOnly\" } } Pass { Tags { \"LightMode\" = \"DepthNormalsOnly\" } }\n"
+                + "Pass { Tags { \"LightMode\"=\"UniversalForwardOnly\" } HLSLPROGRAM\n#define USE_SOFT_PARTICLE 0\n#define VFX_PRIMITIVE_QUAD 1\nENDHLSL }\n"
+                + "Pass { Tags { \"LightMode\"=\"Universal2D\" } } Pass { Tags { \"LightMode\"=\"ShadowCaster\" } } } }";
+            Assert.Null(VFXOutput.SourceRefusal(unlit));
+            Assert.Null(VFXOutput.SourceRefusal(null));
+            // ... a lit one, one that reads the camera's depth and one with another pass are not.
+            Assert.Equal("it is lit, and lit outputs are not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("#define VFX_PRIMITIVE_QUAD 1", "#define URP_LIT 1")));
+            Assert.StartsWith("it fades against the camera's depth (soft particles)", VFXOutput.SourceRefusal(unlit.Replace("#define USE_SOFT_PARTICLE 0", "#define USE_SOFT_PARTICLE 1")));
+            Assert.Equal("its pass 'MotionVectors' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"ShadowCaster\"", "\"MotionVectors\"")));
+            Assert.Equal("its pass 'UniversalGBuffer' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"DepthOnly\"", "\"UniversalGBuffer\"")));
+            // The reason found in the source is the output's when nothing of its task refuses first.
+            Assert.Equal("it is lit, and lit outputs are not drawn yet", VFXOutput.Refusal(system, quads, material, "it is lit, and lit outputs are not drawn yet"));
 
             var asset = WithOutput(VFXTaskType.ParticleQuadOutput, material, new VFXMapping("indirectDraw", 1));
             asset.m_Name = "Smoke";
@@ -706,7 +722,7 @@ namespace UnityEngine.Tests
                 Assert.StartsWith("Unbound: VisualEffect '", said);
                 Assert.Contains("(Smoke): an output of 'Particles' is not drawn: it draws through an indirect buffer", said);
                 // So are the shadows an asset asks its renderer to cast.
-                Assert.Single(warnings.Messages, m => m.Contains("(Smoke): its outputs cast shadows"));
+                Assert.Single(warnings.Messages, m => m.Contains("(Smoke): its outputs cast shadows in the Editor"));
                 // The system runs all the same, and its renderer has no draw.
                 Assert.Equal(new[] { 1, 2, 3 }, Counts(first, 3));
                 var draws = new List<FrameBuilder.DrawItem>();

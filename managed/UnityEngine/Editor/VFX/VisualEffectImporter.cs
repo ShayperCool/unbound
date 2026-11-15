@@ -281,17 +281,21 @@ namespace Unbound.Runtime
                     InstancingDisabledReason = compiled.InstancingDisabledReason,
                     CompiledVersion = compiled.CompiledVersion,
                     Processors = new Object[compiled.Systems.Length][],
+                    OutputRefusals = new string[compiled.Systems.Length][],
                 };
                 var sourceIndices = new int[compiled.Systems.Length][];
                 for (int s = 0; s < compiled.Systems.Length; s++)
                 {
                     var tasks = compiled.Systems[s].tasks ?? Array.Empty<VFXEditorTaskDesc>();
                     data.Processors[s] = new Object[tasks.Length];
+                    data.OutputRefusals[s] = new string[tasks.Length];
                     sourceIndices[s] = new int[tasks.Length];
                     for (int t = 0; t < tasks.Length; t++)
                     {
                         int index = tasks[t].shaderSourceIndex;
                         sourceIndices[s][t] = index;
+                        if (index >= 0 && index < sources.Length && !sources[index].compute && Unbound.Runtime.VFXOutput.IsOutput(tasks[t].type))
+                            data.OutputRefusals[s][t] = Unbound.Runtime.VFXOutput.SourceRefusal(sources[index].source);
                         data.Processors[s][t] = index >= 0 ? (index < shaders.Length ? shaders[index] : null) : tasks[t].externalProcessor;
                     }
                 }

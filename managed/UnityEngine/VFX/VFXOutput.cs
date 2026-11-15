@@ -86,15 +86,55 @@ namespace Unbound.Runtime
         internal static bool IsOutput(VFXTaskType type) =>
             type >= VFXTaskType.ParticlePointOutput && type <= VFXTaskType.ParticleOctagonOutput;
 
-        /// <summary>Why an output task is not drawn, null when it is.</summary>
-        internal static string Refusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task, UnityEngine.Object processor)
+        /// <summary>Why an output task is not drawn, null when it is.
+        /// <paramref name="sourceRefusal"/> is what its generated shader was found to need
+        /// (<see cref="SourceRefusal"/>).</summary>
+        internal static string Refusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task, UnityEngine.Object processor, string sourceRefusal = null)
         {
             if (task.type != VFXTaskType.ParticleQuadOutput) return $"{task.type} is not drawn yet (quads are)";
             if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0) return "strips are not drawn yet";
             if (Parameter(task, "indirectDraw") != 0)
                 return "it draws through an indirect buffer (sorted, culled per camera or asked to), which is not done yet";
             if (task.usesMaterialVariant) return "outputs of a Shader Graph are not drawn yet";
+            // An output with motion vectors keeps each particle's last frame in buffers of its own.
+            if (task.temporaryBuffers != null && task.temporaryBuffers.Length != 0) return "it keeps buffers of the frame before (motion vectors), which is not done yet";
+            if (sourceRefusal != null) return sourceRefusal;
             if (!(processor is Material)) return "its shader was not imported";
+            return null;
+        }
+
+        /// <summary>The passes of a generated output shader that are drawn as measured, by
+        /// their LightMode: the unlit forward pass, the depth passes of an opaque output and
+        /// the shadow pass (shadows themselves are left out, and said so); the selection and
+        /// picking passes are the Editor's own and the 2D renderer's pass is never asked for
+        /// here.</summary>
+        static readonly string[] s_DrawnPasses =
+        {
+            "UniversalForwardOnly", "DepthOnly", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D",
+        };
+
+        /// <summary>The defines the graph compiler writes into an output's shader for what
+        /// the draw would need besides the system's buffers: the pipeline's lighting, and the
+        /// camera's depth for particles that fade against it.</summary>
+        const string LitDefine = "#define URP_LIT 1", SoftParticleDefine = "#define USE_SOFT_PARTICLE 1";
+
+        /// <summary>What the generated shader of an output does that is not drawn yet, read
+        /// off its source; null when it does only what the probe measured
+        /// (tests/projects/vfx, `draw-*`).</summary>
+        internal static string SourceRefusal(string source)
+        {
+            if (string.IsNullOrEmpty(source)) return null;
+            if (source.Contains(LitDefine, StringComparison.Ordinal)) return "it is lit, and lit outputs are not drawn yet";
+            if (source.Contains(SoftParticleDefine, StringComparison.Ordinal)) return "it fades against the camera's depth (soft particles), which is not done yet";
+            const string Tag = "\"LightMode\"";
+            for (int at = source.IndexOf(Tag, StringComparison.Ordinal); at >= 0; at = source.IndexOf(Tag, at + Tag.Length, StringComparison.Ordinal))
+            {
+                int open = source.IndexOf('"', at + Tag.Length);
+                int close = open < 0 ? -1 : source.IndexOf('"', open + 1);
+                if (close < 0) break;
+                string mode = source.Substring(open + 1, close - open - 1);
+                if (Array.IndexOf(s_DrawnPasses, mode) < 0) return $"its pass '{mode}' is not drawn yet";
+            }
             return null;
         }
 

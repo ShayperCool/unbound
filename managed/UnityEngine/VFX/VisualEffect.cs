@@ -90,7 +90,7 @@ namespace UnityEngine.VFX
 
         /// <summary>What Unbound draws of an effect (<c>unbound doctor</c> says it of every
         /// effect with an asset; an effect that runs says which of its outputs it leaves out).</summary>
-        internal const string NotDrawn = "Visual Effect Graph outputs are drawn when they are quads the output draws itself: sorted or indirect outputs, strips, meshes and other primitives show nothing yet";
+        internal const string NotDrawn = "of Visual Effect Graph outputs, unlit quads that the output draws itself are drawn: sorted or indirect outputs, lit outputs, soft particles, motion vectors, Shader Graph outputs, strips, meshes and other primitives show nothing yet, and no effect casts shadows";
 
         /// <summary>The outputs said not to be drawn: once per asset, system and reason.</summary>
         static readonly HashSet<(int Asset, string System, string Reason)> s_WarnedOutputs = new HashSet<(int, string, string)>();
@@ -100,7 +100,7 @@ namespace UnityEngine.VFX
         void WarnShadowsNotCast()
         {
             if (!s_WarnedOutputs.Add((m_Asset.GetInstanceID(), "", "shadows"))) return;
-            Debug.LogWarning($"Unbound: VisualEffect '{name}' ({m_Asset.name}): its outputs cast shadows, which Unbound does not draw yet: they are drawn without. `unbound doctor` lists the project's effects.", this);
+            Debug.LogWarning($"Unbound: VisualEffect '{name}' ({m_Asset.name}): its outputs cast shadows in the Editor; Unbound draws no shadows of effects yet. `unbound doctor` lists the project's effects.", this);
         }
 
         /// <summary>Says, once for the asset, that an output of a system is not drawn and why.</summary>
