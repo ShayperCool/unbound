@@ -1429,12 +1429,14 @@ pub(crate) fn fit(
         named_samplers_resolve(&[&vertex, &fragment])?;
     }
     // A main texture that is compared too or has further variables is a slot of the
-    // program's, like a typed one.
+    // program's, like a typed one; so is one the program never samples through its own sampler
+    // (only through another sampler, or only loaded): the renderer's main group would bind a
+    // sampler nothing uses, which counts against the device's samplers of a stage.
     let main = (MAIN_TEXTURE.to_string(), false);
     let main_texture = dims.get(&main).copied().unwrap_or(TextureDim::D2) == TextureDim::D2
-        && slots
-            .get(&main)
-            .is_none_or(|slot| slot.sample == SampleKind::Float && !slot.multisampled)
+        && slots.get(&main).is_some_and(|slot| {
+            slot.sample == SampleKind::Float && !slot.multisampled && slot.sampler
+        })
         && !names.contains(&(MAIN_TEXTURE.to_string(), true))
         && !further.values().any(|key| key.0 == MAIN_TEXTURE)
         && names.remove(&main);

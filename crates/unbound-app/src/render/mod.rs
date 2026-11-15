@@ -8,6 +8,8 @@ pub mod executor;
 #[cfg(all(test, target_os = "linux"))]
 mod gl_backend_tests;
 pub mod gl_interop;
+#[cfg(test)]
+mod layout_gpu_tests;
 pub mod pipelines;
 pub mod resources;
 

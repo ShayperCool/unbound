@@ -2290,6 +2290,42 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
         );
     }
 
+    /// The main texture is the renderer's group only where the program samples it through its
+    /// own sampler: sampled only through an inline state (or only loaded) it is a slot of the
+    /// program's binding no sampler, on the devices that sample through the sampler a program
+    /// names.
+    #[test]
+    fn the_main_texture_group_is_for_its_own_sampler() {
+        let compile = |body: &str| {
+            let source = format!(
+                "#pragma vertex vert\n#pragma fragment frag\nTexture2D _MainTex;\n\
+                 SamplerState sampler_MainTex;\nSamplerState sampler_LinearClamp;\n\
+                 float4 vert(float4 p : POSITION) : SV_POSITION {{ return p; }}\n\
+                 float4 frag(float4 p : SV_POSITION) : SV_Target {{ return {body}; }}\n"
+            );
+            let mut compiler = ShaderCompiler::new(Settings {
+                device: unbound_compat::GraphicsDevice::Metal,
+                ..Settings::default()
+            })
+            .unwrap();
+            compiler
+                .compile(&program(&source, false), &[], false)
+                .unwrap()
+        };
+        let own = compile("_MainTex.Sample(sampler_MainTex, p.xy)");
+        assert!(own.main_texture);
+        assert!(!own.textures.contains(&"_MainTex".to_string()));
+        for body in [
+            "_MainTex.Sample(sampler_LinearClamp, p.xy)",
+            "_MainTex.Load(int3(p.xy, 0))",
+        ] {
+            let other = compile(body);
+            assert!(!other.main_texture, "{body}");
+            let k = other.textures.iter().position(|t| t == "_MainTex").unwrap();
+            assert!(!other.texture_slots[k].sampler, "{body}");
+        }
+    }
+
     /// The render pipelines' instancing library under the replay: read without instancing, so
     /// an instanced property is a per-draw uniform, and the instance ID input is declared where
     /// a generated pass tests `UNITY_ANY_INSTANCING_ENABLED`.
