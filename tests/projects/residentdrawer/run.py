@@ -57,7 +57,7 @@ CAPTURE = 'capture'
 VALUES = 'values.jsonl'
 PROFILE = 'direct'
 FRAMES = 600
-# The speedtree profile ends itself after its warm-up and 380 frames.
+# The speedtree profile ends itself after its warm-up and 470 frames.
 SPEEDTREE_FRAMES = 5000
 MEAN_BOUND = 0.5
 OVER_SHARE = 0.005

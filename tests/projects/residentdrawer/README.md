@@ -54,11 +54,13 @@ drawing a quad with `Assets/SpeedTree/DrawerWindDump.shader`, which writes the i
 `DOTS_ST_WindParam0` to `10` and `DOTS_ST_WindHistoryParam0` to `10` into the tree's row of a 22x8
 float target (-1 without DOTS instancing); one orthographic camera renders all trees once a frame.
 Game time stands still until shaders have compiled, so the wind does not depend on the warm-up.
-Over 380 frames at a captured 30 frames per second a directional zone comes (frame 10), strengthens
+Over 470 frames at a captured 30 frames per second a directional zone comes (frame 10), strengthens
 (50) and turns around (75); a tree leaves the camera's view (90) and comes back (95); two trees
 appear (100), with camera and per-object motion vectors; the zone goes (130) and the wind settles;
-a zone without wind comes (320), then a wind again (330). The drawer holds every tree; floats are
-recorded as the hex of their bits (values compare exactly).
+a zone without wind comes (320), then a wind again (330); a spherical zone reaches every tree but
+`Calm` (385), so each gets a local wind, and moves out of reach (420), so they return to their
+asset's wind (to frame 470). The drawer holds every tree; floats are recorded as the hex of their
+bits (values compare exactly).
 
     python3 tests/projects/residentdrawer/run.py native --label L [--profile occlusion|controls|lightmaps|shadowmask|speedtree]   # two Editor captures
     python3 tests/projects/residentdrawer/run.py publish L-1 L-2 [--profile occlusion|controls|lightmaps|shadowmask|speedtree]
@@ -88,4 +90,4 @@ Unbound: every value on both profiles; images within the comparator's bounds (me
 3 of 57600 pixels over 8, at shadow edges). The transparent sphere is placed where it overlaps
 little; it matches since the references are recorded after the Editor's start-up work (before,
 the Editor's sphere was brighter, with a highlight, because of the material validation above).
-On `speedtree` Unbound matches every value (3677 of 3677).
+On `speedtree` Unbound matches every value (5405 of 5405).
