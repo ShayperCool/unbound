@@ -1,0 +1,30 @@
+{"k":"active.initial","v":"null"}
+{"k":"active.update.late","v":"updateleft"}
+{"k":"active.update.early","v":"null"}
+{"k":"active.update.next","v":"null"}
+{"k":"gl.modelview.update","v":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}
+{"k":"active.late.early","v":"null"}
+{"k":"active.late.next","v":"null"}
+{"k":"active.nocamera.early","v":"null"}
+{"k":"active.nocamera.next","v":"null"}
+{"k":"active.endofframe.early","v":"null"}
+{"k":"active.endofframe.next","v":"no end of frame"}
+{"k":"matrices.early","v":{"vp":[1,0,0,0,0,-1,0,0,0,0,1,0,0,0,0,1],"v":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],"p":[1,0,0,0,0,-1,0,0,0,0,1,0,0,0,0,1],"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}}
+{"k":"screen","v":[640,480]}
+{"k":"matrices.fresh","v":{"vp":[1,0,0,0,0,-1,0,0,0,0,-0.5,0.5,0,0,0,1],"v":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],"p":[1,0,0,0,0,-1,0,0,0,0,-0.5,0.5,0,0,0,1],"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}}
+{"k":"outside.fresh","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
+{"k":"gl.modelview.aftercamera","v":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}
+{"k":"matrices.aftercamera","v":{"vp":[1,0,0,0,0,-1,0,0,0,0,-0.5,0.5,0,0,0,1],"v":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],"p":[1,0,0,0,0,-1,0,0,0,0,-0.5,0.5,0,0,0,1],"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}}
+{"k":"outside.aftercamera","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
+{"k":"matrices.identity","v":{"vp":[1,0,0,0,0,-1,0,0,0,0,-0.5,0.5,0,0,0,1],"v":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],"p":[1,0,0,0,0,-1,0,0,0,0,-0.5,0.5,0,0,0,1],"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}}
+{"k":"outside.identity","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
+{"k":"matrices.corner","v":{"vp":[1,0,0,0,0,-1,0,0,0,0,-0.5,0.5,0,0,0,1],"v":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],"p":[1,0,0,0,0,-1,0,0,0,0,-0.5,0.5,0,0,0,1],"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}}
+{"k":"outside.corner","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4"]}
+{"k":"matrices.ortho","v":{"vp":[2,0,0,-1,0,-2,0,1,0,0,0.00990099,0.990099,0,0,0,1],"v":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],"p":[2,0,0,-1,0,-2,0,1,0,0,0.00990099,0.990099,0,0,0,1],"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}}
+{"k":"outside.ortho","v":["ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8","ffffffff*8"]}
+{"k":"outside.after","v":["000000ff*8","000000ff*8","000000ff*8","000000ff*8","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4","000000ff*4 ffffffff*4"]}
+{"k":"matrices.after","v":{"vp":[1,0,0,0,0,-1,0,0,0,0,-0.5,0.5,0,0,0,1],"v":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],"p":[1,0,0,0,0,-1,0,0,0,0,-0.5,0.5,0,0,0,1],"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}}
+{"k":"matrices.late","v":{"vp":[1,0,0,0,0,-1,0,0,0,0,-0.5,0.5,0,0,0,1],"v":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],"p":[1,0,0,0,0,-1,0,0,0,0,-0.5,0.5,0,0,0,1],"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}}
+{"k":"device","v":"Vulkan"}
+{"k":"logs","v":[]}
+{"k":"complete","v":1}
