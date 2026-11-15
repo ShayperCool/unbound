@@ -261,7 +261,7 @@ namespace Unbound.Runtime
                         maxTiles = 1 << 12,
                         maxPolys = 1 << 14,
                     };
-                    surface = new Surface { AgentTypeID = agentType, Settings = settings, Mesh = new DtNavMesh() };
+                    surface = new Surface { AgentTypeID = agentType, Settings = settings, Mesh = new DtNavMesh { exactStraightPathMerge = Compat.NavMeshStraightPathExactMergeMeasured } };
                     surface.Mesh.Init(param, DtDetour.DT_VERTS_PER_POLYGON);
                     s_Surfaces[agentType] = surface;
                 }

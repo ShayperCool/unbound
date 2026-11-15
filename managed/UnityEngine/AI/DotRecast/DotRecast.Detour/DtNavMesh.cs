@@ -47,6 +47,10 @@ namespace DotRecast.Detour
         /** The maximum number of vertices per navigation polygon. */
         private int m_maxVertPerPoly;
 
+        /// Unbound: straight paths over this mesh merge only points that are exactly equal, not
+        /// points within Detour's colocation threshold (chosen by the profile when the mesh is made).
+        public bool exactStraightPathMerge;
+
         /// Unbound: the surfaces (NavMesh data instances), in order of their ids, and how many
         /// tiles belong to none.
         private readonly List<DtSurface> m_surfaces = new List<DtSurface>();

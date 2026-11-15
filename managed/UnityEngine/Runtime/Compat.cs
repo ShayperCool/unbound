@@ -129,6 +129,19 @@ namespace Unbound.Runtime
         /// unmeasured immediate stop.</summary>
         internal static bool NavMeshStoppingDistanceMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Straight paths keep points that are not exactly equal (a path's end 1e-7 m from
+        /// its start is a second corner), measured by tests/projects/navarrival `query.*` on
+        /// 6000.0.71f1. Other releases retain Detour's colocation threshold, unmeasured.</summary>
+        internal static bool NavMeshStraightPathExactMergeMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>A braking agent arrives on the step that leaves at most
+        /// <see cref="NavMeshBrakingArrivalDistance"/> to the end, measured by tests/projects/navarrival
+        /// `lane.*` on 6000.0.71f1 (0.0000992 arrives, 0.000131 keeps moving). Other releases
+        /// retain the previous, unmeasured arrival within a millimetre before the step.</summary>
+        internal static bool NavMeshBrakingArrivalMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        internal const float NavMeshBrakingArrivalDistance = 1e-4f;
+
         /// <summary>Braking prepares and reports the next velocity from the steering plan,
         /// measured by tests/projects/navbaked on 6000.0.71f1. Other releases retain
         /// their previous, unmeasured use of the avoidance sample while braking.</summary>

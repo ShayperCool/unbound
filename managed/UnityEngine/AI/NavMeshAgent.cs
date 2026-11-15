@@ -1874,13 +1874,17 @@ namespace Unbound.Runtime
             if (ag.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID || ag.ncorners == 0) return;
             var last = ag.corners[ag.ncorners - 1];
             if ((last.flags & DtStraightPathFlags.DT_STRAIGHTPATH_END) == 0) return;
+            // A braking agent compares its step with the distance left in three dimensions: an end
+            // above a height-mesh agent is farther than its climbing plan reaches (measured:
+            // tests/projects/navbaked `height.agents` ramp; navlinks `endatlink` after a landing).
+            bool measuredBraking = Compat.NavMeshBrakingArrivalMeasured && agent.autoBraking;
             float left = 0f, leftBefore = 0f;
             var p = ag.npos;
             var q = before;
             for (int i = 0; i < ag.ncorners; i++)
             {
                 left += RcVec.Dist2D(p, ag.corners[i].pos);
-                leftBefore += RcVec.Dist2D(q, ag.corners[i].pos);
+                leftBefore += measuredBraking ? RcVec3f.Distance(q, ag.corners[i].pos) : RcVec.Dist2D(q, ag.corners[i].pos);
                 p = q = ag.corners[i].pos;
             }
             float step = ag.vel.Length() * dt;
@@ -1894,9 +1898,13 @@ namespace Unbound.Runtime
                 return;
             }
             // The step that reaches the end from where the update began lands on it (measured).
-            bool reached = agent.autoBraking ? step >= leftBefore
+            // A braking agent also lands when its step leaves no more than a tenth of a millimetre
+            // (measured: tests/projects/navarrival `lane.*`); one without braking lands only by
+            // passing the end.
+            bool reached = agent.autoBraking
+                ? step + (measuredBraking ? Compat.NavMeshBrakingArrivalDistance : 0f) >= leftBefore
                 : ag.ncorners == 1 && CrossesDestination(before, ag.npos, last.pos);
-            if (leftBefore <= ArrivalSnapDistance || reached)
+            if ((!measuredBraking && leftBefore <= ArrivalSnapDistance) || reached)
             {
                 ag.npos = last.pos;
                 ag.vel = RcVec3f.Zero;

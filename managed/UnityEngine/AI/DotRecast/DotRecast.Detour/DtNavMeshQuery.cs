@@ -1422,7 +1422,8 @@ namespace DotRecast.Detour
 
         protected DtStatus AppendVertex(RcVec3f pos, byte flags, long refs, Span<DtStraightPath> straightPath, ref int straightPathCount, int maxStraightPath)
         {
-            if (straightPathCount > 0 && RcVec.Equal(straightPath[straightPathCount - 1].pos, pos))
+            var previous = straightPathCount > 0 ? straightPath[straightPathCount - 1].pos : default;
+            if (straightPathCount > 0 && (m_nav.exactStraightPathMerge ? previous == pos : RcVec.Equal(previous, pos)))
             {
                 // The vertices are equal, update flags and poly.
                 straightPath[straightPathCount - 1] = new DtStraightPath(straightPath[straightPathCount - 1].pos, flags, refs);
