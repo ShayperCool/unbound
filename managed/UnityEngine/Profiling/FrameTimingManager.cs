@@ -59,10 +59,15 @@ namespace Unbound.Runtime
 
     /// <summary>The timings of the frames the engine ran, kept in a fixed ring (no allocation per
     /// frame). A frame's start, rendering and present are marked as they happen; it enters the
-    /// ring when the next one starts, which gives its whole duration.</summary>
+    /// ring when the next one starts, which gives its whole duration, and is reported
+    /// <see cref="FrameTimings.DelayFrames"/> frames after it ran.</summary>
     internal sealed class FrameTimingRing
     {
-        readonly FrameTiming[] m_Ring = new FrameTiming[FrameTimings.Capacity];
+        /// <summary>The frames that ended but are not reported yet: the delay less the frame
+        /// that has just ended, which enters the ring when the current one starts.</summary>
+        const int Withheld = FrameTimings.DelayFrames - 1;
+
+        readonly FrameTiming[] m_Ring = new FrameTiming[FrameTimings.Capacity + Withheld];
         readonly object m_Lock = new object();
         int m_Count;
         int m_Next;
@@ -121,9 +126,10 @@ namespace Unbound.Runtime
         {
             lock (m_Lock)
             {
-                uint count = Math.Min(numFrames, (uint)m_Count);
+                int reported = Math.Min(Math.Max(m_Count - Withheld, 0), FrameTimings.Capacity);
+                uint count = Math.Min(numFrames, (uint)reported);
                 int write = timings == null ? 0 : (int)Math.Min(count, (uint)timings.Length);
-                for (int i = 0; i < write; i++) timings[i] = m_Ring[(m_Next - 1 - i + m_Ring.Length) % m_Ring.Length];
+                for (int i = 0; i < write; i++) timings[i] = m_Ring[(m_Next - 1 - Withheld - i + 2 * m_Ring.Length) % m_Ring.Length];
                 return count;
             }
         }
@@ -134,6 +140,11 @@ namespace Unbound.Runtime
     {
         /// <summary>The Editor keeps 32 frames (asyncread timing.capacity).</summary>
         internal const int Capacity = 32;
+
+        /// <summary>A frame is the newest timing four frames after it ran: in frame N's Update,
+        /// frame N - 4 (asyncread timing.longFrame*; the Manual: "a set delay of four
+        /// frames").</summary>
+        internal const int DelayFrames = 4;
 
         /// <summary>Nanosecond timestamps (asyncread timing.cpuFrequency/gpuFrequency).</summary>
         internal const ulong TimerFrequency = 1_000_000_000;

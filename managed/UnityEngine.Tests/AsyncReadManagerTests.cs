@@ -299,7 +299,8 @@ namespace UnityEngine.Tests
             Assert.Equal((uint)FrameTimings.Capacity, ring.Latest(1000, timings));
             ring.BeginFrame(t);
             Assert.Equal((uint)FrameTimings.Capacity, ring.Latest(1000, timings));
-            ulong newest = t - 1_000_000;
+            // Reported four frames after it ran: the frame that started four frames ago.
+            ulong newest = t - FrameTimings.DelayFrames * 1_000_000UL;
             Assert.Equal(newest, timings[0].frameStartTimestamp);
             Assert.Equal(newest - 1_000_000, timings[1].frameStartTimestamp);
             Assert.Equal(newest + 100, timings[0].firstSubmitTimestamp);
@@ -324,11 +325,61 @@ namespace UnityEngine.Tests
             var ring = new FrameTimingRing();
             ring.BeginFrame(10);
             ring.Present(50, 60);
-            ring.BeginFrame(90);
             var timings = new FrameTiming[1];
-            Assert.Equal(1u, ring.Latest(1, timings));
+            for (int i = 1; i <= FrameTimings.DelayFrames; i++)
+            {
+                ring.BeginFrame(10 + 100UL * (ulong)i);
+                Assert.Equal(i == FrameTimings.DelayFrames ? 1u : 0u, ring.Latest(1, timings));
+            }
+            Assert.Equal(10UL, timings[0].frameStartTimestamp);
             Assert.Equal(50UL, timings[0].firstSubmitTimestamp);
             Assert.Equal(0, timings[0].cpuRenderThreadFrameTime);
+        }
+
+        [Fact]
+        public void ALongFrameIsTheNewestTimingFourFramesLater()
+        {
+            // As the probe measures: frame 35 lasts 250 ms; in frame 39 it is the newest timing,
+            // in frame 45 the seventh.
+            var ring = new FrameTimingRing();
+            var timings = new FrameTiming[16];
+            ulong t = 0;
+            int newestAt = -1;
+            for (int frame = 1; frame <= 45; frame++)
+            {
+                ring.BeginFrame(t);
+                if (newestAt < 0 && ring.Latest(1, timings) > 0 && timings[0].cpuFrameTime >= 250) newestAt = frame;
+                ring.Present(t + 1000, 60);
+                t += frame == 35 ? 250_000_000UL : 16_000_000UL;
+            }
+            Assert.Equal(39, newestAt);
+            Assert.Equal(16u, ring.Latest(16, timings));
+            Assert.Equal(6, Array.FindIndex(timings, timing => timing.cpuFrameTime >= 250));
+        }
+
+        static int s_UserJobRan;
+
+        struct MarkJob : IJob
+        {
+            public void Execute() => Interlocked.Exchange(ref s_UserJobRan, 1);
+        }
+
+        [Fact]
+        public void ARequestStartsWithoutFlushingTheCallersJobs()
+        {
+            Interlocked.Exchange(ref s_UserJobRan, 0);
+            var user = new MarkJob().Schedule();
+            using var buffer = new Buffer(8);
+            var command = new ReadCommand { Offset = 0, Size = 8, Buffer = buffer.Bytes };
+            var read = AsyncReadManager.Read(m_Path, &command, 1);
+            // Polled, never completed: the read runs on its own.
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            while (read.Status == ReadStatus.InProgress && DateTime.UtcNow < deadline) Thread.Sleep(1);
+            Assert.Equal(ReadStatus.Complete, read.Status);
+            Assert.Equal(0, Volatile.Read(ref s_UserJobRan));
+            user.Complete();
+            Assert.Equal(1, s_UserJobRan);
+            read.Dispose();
         }
     }
 }
