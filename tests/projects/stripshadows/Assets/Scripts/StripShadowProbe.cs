@@ -113,15 +113,23 @@ public class StripShadowProbe : MonoBehaviour
                 }
                 renderer.sharedMaterial=material;
                 renderer.shadowCastingMode=ShadowCastingMode.TwoSided;
-                foreach (string control in new[] { "view0", "viewBias", "turnedLight", "transformZ" })
+                var controls=type==LightType.Directional && Environment.GetEnvironmentVariable("STRIP_SHADOW_CASCADES")=="1"
+                    ?new[]{"view0","viewBias","turnedLight","transformZ","cascade2","cascade2Wide","cascade3","cascade4","cascade4Wide","cascade4Ortho"}
+                    :new[]{"view0","viewBias","turnedLight","transformZ"};
+                foreach (string control in controls)
                 {
+                    bool cascaded=control.StartsWith("cascade");
+                    asset.shadowCascadeCount=cascaded?int.Parse(control.Substring(7,1)):1;
+                    asset.cascade2Split=control=="cascade2Wide"?0.6f:0.25f;
+                    asset.cascade3Split=new Vector2(0.2f,0.6f);
+                    asset.cascade4Split=control=="cascade4Wide"?new Vector3(0.2f,0.5f,0.8f):new Vector3(0.067f,0.2f,0.467f);
                     float bias=control=="view0"?0:0.5f;
                     var alignment=control=="transformZ"?LineAlignment.TransformZ:LineAlignment.View;
                     if(trail){tr.shadowBias=bias;tr.alignment=alignment;}else if(line!=null){line.shadowBias=bias;line.alignment=alignment;}
                     go.transform.rotation=Quaternion.Euler(0,25,15);
                     light.transform.SetPositionAndRotation(new Vector3(0.2f,0.4f,-3),control=="turnedLight"?Quaternion.Euler(12,20,9):Quaternion.identity);
                     light.transform.localScale=control=="turnedLight"?new Vector3(2,3,4):Vector3.one;
-                    camera.orthographic=control!="turnedLight";
+                    camera.orthographic=cascaded?control=="cascade4Ortho":control!="turnedLight";
                     string key=type+"."+kind+"."+control;
                     camera.Render();camera.Render();
                     Save(key+".normal",target,false);

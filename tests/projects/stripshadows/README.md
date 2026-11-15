@@ -14,7 +14,7 @@ and uses fixed clip coordinates, so drawing a point caster into an excluded cube
 visible in the atlas. A regular mesh is the control outside the strip geometry path.
 An unlit, non-casting receiver keeps ordinary-image checks independent of lit shading.
 
-The camera uses one directional cascade. Multiple URP cascades, other releases and GPU
+The default gate uses one directional cascade. Other releases and GPU
 drivers are not established by this reference. The built-in pipeline has its own controls
 in tests/projects/lines. Raw cube-depth readback is not part of this probe.
 
@@ -42,3 +42,20 @@ ordinary renderers and queued meshes with them, and clears the stored splits whe
 a culling result. Legacy shadow settings supply their own split planes when no retained
 split exists. Array lifetime, exclusions, fallback planes, touching and unknown/nonfinite
 bounds, and profile scope also have managed controls.
+
+The separate `--cascades` diagnostic adds 72 records and 36 images for two, three and four
+directional cascades, changed two/four split ratios, and an orthographic four-cascade control,
+for each strip type and the regular mesh. Two NVIDIA Editor repeats preserve every earlier
+record and image byte. Publication stores only the new controls in `cascade.values.jsonl`;
+the earlier reference files stay unchanged. Pass `--cascades` to each command above to
+record, publish or compare this diagnostic. Comparisons compose the full 217-key reference
+in the run cache and remain strict.
+
+The diagnostic currently matches 205/217 keys. All 12 failures remain in `comparison.json`:
+`Directional.{line,trail,mesh}.{cascade3,cascade4Wide}.map.{covered,pixels}`. Unbound draws
+one additional atlas tile in each case. Two cascades, the other four-cascade split, and the
+orthographic control match. Changing strip geometry or shadow bias does not explain the
+regular-mesh failures. Receiver-volume containment across cascades remains open; follow-up
+controls must vary the receiver frustum, sphere shrink/blending and culling flags before
+changing the shared caster selection. These failures are outside the default one-cascade
+gate, which retains all 145 strict checks without exceptions.

@@ -326,10 +326,10 @@ are constructed and before caps and corners choose their orientation. TransformZ
 the bias sign because that frame reverses depth. Ordinary rendering and BakeMesh remain
 unbiased. Each renderer reuses distinct meshes for each camera and shadow light; destroying
 either owner releases those meshes. Cascades and cube faces share the light's geometry.
-Multiple cascades remain unmeasured by this directional-light diagnostic. URP shadow lists
+URP shadow lists
 have separate controls in tests/projects/stripshadows. Strip shadow draws explicitly reject
 area lights; ordinary strip drawing remains available. Multiple cascades share the supported
-directional light frame, but have no capture here. No stronger device or pipeline parity
+directional light frame, with the count and split controls described below. No stronger device or pipeline parity
 is claimed.
 
 The local-light extension uses a visible, non-casting lit receiver to schedule built-in
@@ -343,10 +343,28 @@ it does not measure raw cube-depth readback. The strips occupy the positive-z fa
 controls, and the five other faces stay clear. Two independent NVIDIA OpenGL Core captures
 add 144 records and 72 images, preserving all 2281 earlier records and 56 earlier images.
 Publish with `miter_reference.py --release 6000.0.71f1 --label L --shadow-local --receipt FILE`.
-The ordinary gate stays at 2200/2201; `--shadow` is 2424/2425, retaining the same gradient byte.
+The ordinary gate stays at 2200/2201; `--shadow` is 2532/2533, retaining the same gradient byte.
 
 The [6000.0 LineRenderer.shadowBias](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/LineRenderer-shadowBias.html)
 and [TrailRenderer.shadowBias](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/TrailRenderer-shadowBias.html)
 contracts specify bias as a proportion of each segment's width. The local zero/bias controls
 change their stored shadow depths or comparison masks while their ordinary geometry stays
 unbiased. Light frame orientation and the bias sign are measured release behavior.
+
+The cascade extension adds 108 records and 54 images for line, trail and regular-mesh
+casters: two/four quality counts, changed two/four splits, perspective/orthographic cameras,
+and TransformZ. All 2425 earlier records and 128 images stay byte-identical. Publish with
+`miter_reference.py --release 6000.0.71f1 --label L --shadow-cascades --receipt FILE`.
+For the measured 6000.0.71f1 built-in pipeline, orthographic cameras use one directional
+shadow map regardless of quality cascade count or splits; perspective cameras use the
+configured counts and splits. The rule also applies to the regular mesh control. Other
+release profiles retain the prior quality-count path until measured. This does not alter
+the SRP cascade API or caster geometry. URP multi-cascade residuals are recorded in
+`tests/projects/stripshadows`.
+
+The [6000.0 QualitySettings.shadowCascades contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/QualitySettings-shadowCascades.html)
+selects the built-in cascade count, and
+[shadowCascade4Split](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/QualitySettings-shadowCascade4Split.html)
+sets the normalized split positions. Perspective controls change atlas coverage when
+these settings change. The orthographic single-map result is a measured release behavior,
+rather than an additional documented guarantee.

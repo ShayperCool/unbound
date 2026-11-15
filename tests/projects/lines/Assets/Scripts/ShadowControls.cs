@@ -146,6 +146,7 @@ public partial class LineProbe
         DestroyImmediate(sunObject);
         RenderSettings.sun = null;
         LocalShadowControls();
+        CascadeShadowControls();
     }
 
     void SaveShadowTarget(string key, RenderTexture target)

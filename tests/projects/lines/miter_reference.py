@@ -88,13 +88,23 @@ for light in ('Spot', 'Point'):
                 SHADOW_LOCAL_KEYS += [f'{prefix}.face{face}{suffix}' for suffix in ('.covered', '.pixels')]
                 SHADOW_LOCAL_IMAGES.append(f'{prefix}.face{face}.rgba')
 
+SHADOW_CASCADE_FILE = 'shadowcascade.values.jsonl'
+SHADOW_CASCADE_KEYS, SHADOW_CASCADE_IMAGES = [], []
+for renderer in ('line', 'trail', 'mesh'):
+    for control in ('two25', 'two60', 'fourDefault', 'fourWide', 'fourPerspective', 'fourTransformZ',
+                    'twoPerspective25', 'twoPerspective60', 'fourPerspectiveWide'):
+        prefix=f'shadowCascade.{renderer}.{control}'
+        SHADOW_CASCADE_KEYS += [prefix+suffix for suffix in ('.bake', '.normal.pixels', '.map.covered', '.map.pixels')]
+        SHADOW_CASCADE_IMAGES += [prefix+suffix for suffix in ('.normal.rgba', '.map.rgba')]
+
 # The control files beside the canonical reference, in publication order, with their images:
 # each extends the capture after the previous ones and is published only once those exist.
 SETS = {'reversal': (FILE, KEYS, (IMAGE,)), 'chain': (CHAIN_FILE, CHAIN_KEYS, ()),
         'space': (SPACE_FILE, SPACE_KEYS, ()), 'edge': (EDGE_FILE, EDGE_KEYS, EDGE_IMAGES),
         'shadow': (SHADOW_FILE, SHADOW_KEYS, SHADOW_IMAGES),
         'shadowframe': (SHADOW_FRAME_FILE, SHADOW_FRAME_KEYS, SHADOW_FRAME_IMAGES),
-        'shadowlocal': (SHADOW_LOCAL_FILE, SHADOW_LOCAL_KEYS, SHADOW_LOCAL_IMAGES)}
+        'shadowlocal': (SHADOW_LOCAL_FILE, SHADOW_LOCAL_KEYS, SHADOW_LOCAL_IMAGES),
+        'shadowcascade': (SHADOW_CASCADE_FILE, SHADOW_CASCADE_KEYS, SHADOW_CASCADE_IMAGES)}
 ORDER = list(SETS)
 
 
@@ -199,6 +209,7 @@ if __name__ == '__main__':
     parser.add_argument('--shadow', action='store_true', help='publish line/trail shadow-bias controls')
     parser.add_argument('--shadow-frame', action='store_true', help='publish light-frame and camera-near controls')
     parser.add_argument('--shadow-local', action='store_true', help='publish spot and point strip-shadow controls')
+    parser.add_argument('--shadow-cascades',action='store_true',help='publish builtin cascade controls')
     args = parser.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
-    publish(args.release, args.label, args.receipt, args.chains, 'shadowlocal' if args.shadow_local else 'shadowframe' if args.shadow_frame else 'shadow' if args.shadow else 'space' if args.space else 'edge' if args.edge else None)
+    publish(args.release, args.label, args.receipt, args.chains, 'shadowcascade' if args.shadow_cascades else 'shadowlocal' if args.shadow_local else 'shadowframe' if args.shadow_frame else 'shadow' if args.shadow else 'space' if args.space else 'edge' if args.edge else None)

@@ -115,6 +115,15 @@ namespace Unbound.Runtime
 
         static RenderTexture s_CameraDepth;
 
+        /// <summary>The built-in orthographic camera uses one directional shadow map in the
+        /// measured rendering profile, independently of the configured cascade count.</summary>
+        internal static int BuiltinShadowCascades(bool orthographic)
+        {
+            if (Compat.RenderingMeasured && orthographic) return 1;
+            int count = QualitySettings.shadowCascades;
+            return count >= 4 ? 4 : count >= 2 ? 2 : 1;
+        }
+
         /// <summary>A directional light's shadows collected into a screen-space mask (what its
         /// passes read with SHADOWS_SCREEN); null when it casts none.</summary>
         static RenderTexture RenderDirectionalShadow(Light light, Camera camera, CameraContext context, int width, int height)
@@ -123,7 +132,7 @@ namespace Unbound.Runtime
             if (distance <= camera.nearClipPlane) return null;
             if (QualitySettings.shadowNearPlaneOffset != 3f)
                 Stubs.Ignored("QualitySettings.shadowNearPlaneOffset", "directional shadow maps keep the near plane measured at the default offset of 3");
-            int cascades = QualitySettings.shadowCascades >= 4 ? 4 : QualitySettings.shadowCascades >= 2 ? 2 : 1;
+            int cascades = BuiltinShadowCascades(camera.orthographic);
             var ratios = cascades == 4 ? QualitySettings.shadowCascade4Split : new Vector3(QualitySettings.shadowCascade2Split, 0f, 0f);
             int atlas = ShadowMapSize(light, Mathf.Max(width, height));
             int tile = cascades == 1 ? atlas : atlas / 2;

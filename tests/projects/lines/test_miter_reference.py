@@ -149,10 +149,10 @@ class PublicationTests(unittest.TestCase):
             self.receipt.unlink()
         captured = {json.loads(row)['k'] for row in self.rows}
         self.assertEqual(set(ref.load(self.target, shadows=True)), captured)
-        self.assertEqual(set(ref.load(self.target)), {k for k in captured if not k.startswith(("shadow.", "shadowLocal."))})
+        self.assertEqual(set(ref.load(self.target)), {k for k in captured if not k.startswith(("shadow.", "shadowLocal.", "shadowCascade."))})
         self.assertTrue((self.target/ref.SHADOW_FILE).exists())
         self.assertTrue((self.target/ref.SHADOW_FRAME_FILE).exists())
-        for image in (*ref.SHADOW_IMAGES, *ref.SHADOW_FRAME_IMAGES, *ref.SHADOW_LOCAL_IMAGES):
+        for image in (*ref.SHADOW_IMAGES, *ref.SHADOW_FRAME_IMAGES, *ref.SHADOW_LOCAL_IMAGES, *ref.SHADOW_CASCADE_IMAGES):
             self.assertEqual(gzip.decompress((self.target/(image+'.gz')).read_bytes()), image.encode())
 
 if __name__ == '__main__':
