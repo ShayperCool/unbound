@@ -2022,6 +2022,7 @@
 {"k":"sim/override second frame/f003","v":"alive=1 culled=0 | System: Looping playing=1 new=1 count=3f800000 dt=3d088889 t=3d088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/override timing/f003 2 late update","v":"40e00000 41100000"}
 {"k":"sim/override timing/f003 3 end of frame","v":"40e00000 41100000"}
+{"k":"draw/opaque/f003","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"sim/override timing/f004 1 update","v":"40e00000 41100000"}
 {"k":"sim/time/f004","v":"3d088889"}
 {"k":"sim/rate/f004","v":"alive=0 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3dccccce before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -2086,6 +2087,8 @@
 {"k":"sim/override second frame/f005","v":"alive=3 culled=0 | System: Looping playing=1 new=0 count=3f800000 dt=3d088889 t=3dccccce before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/override timing/f005 2 late update","v":"40e00000 41100000"}
 {"k":"sim/override timing/f005 3 end of frame","v":"40e00000 41100000"}
+{"k":"draw/many/f005","v":"alive=20000 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/textured/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"sim/time/f006","v":"3d088889"}
 {"k":"sim/rate/f006","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f006","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -2213,6 +2216,7 @@
 {"k":"sim/toggle object/f010","v":"alive=0 culled=0 | System: Finished playing=0 new=0 count=00000000 dt=00000000 t=00000000 before=00000000 loop=00000000 after=00000000 index=0 of=0"}
 {"k":"sim/toggle at once/f010","v":"alive=0 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/toggle object at once/f010","v":"alive=0 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
+{"k":"draw/opaque/f010","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"sim/time/f011","v":"3d088889"}
 {"k":"sim/rate/f011","v":"alive=2 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3eaaaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f011","v":"alive=2 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3eaaaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -2369,6 +2373,7 @@
 {"k":"sim/expressions/inputs/play1/b17","v":"1"}
 {"k":"sim/expressions/inputs/play1/b18","v":"1"}
 {"k":"sim/expressions/inputs/play1/b19","v":"0"}
+{"k":"sim/expressions/inputs/play1/b20","v":"0"}
 {"k":"sim/expressions/inputs/play1/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions/inputs/play1/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions/inputs/play1/v02","v":"3f000000,40800000,41000000"}
@@ -2500,6 +2505,7 @@
 {"k":"sim/expressions/inputs/play1update1/b17","v":"1"}
 {"k":"sim/expressions/inputs/play1update1/b18","v":"1"}
 {"k":"sim/expressions/inputs/play1update1/b19","v":"0"}
+{"k":"sim/expressions/inputs/play1update1/b20","v":"0"}
 {"k":"sim/expressions/inputs/play1update1/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions/inputs/play1update1/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions/inputs/play1update1/v02","v":"3f000000,40800000,41000000"}
@@ -2629,6 +2635,7 @@
 {"k":"sim/expressions/inputs/play1update2/b17","v":"1"}
 {"k":"sim/expressions/inputs/play1update2/b18","v":"1"}
 {"k":"sim/expressions/inputs/play1update2/b19","v":"0"}
+{"k":"sim/expressions/inputs/play1update2/b20","v":"0"}
 {"k":"sim/expressions/inputs/play1update2/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions/inputs/play1update2/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions/inputs/play1update2/v02","v":"3f000000,40800000,41000000"}
@@ -2758,6 +2765,7 @@
 {"k":"sim/expressions/inputs/play1update3/b17","v":"1"}
 {"k":"sim/expressions/inputs/play1update3/b18","v":"1"}
 {"k":"sim/expressions/inputs/play1update3/b19","v":"0"}
+{"k":"sim/expressions/inputs/play1update3/b20","v":"0"}
 {"k":"sim/expressions/inputs/play1update3/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions/inputs/play1update3/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions/inputs/play1update3/v02","v":"3f000000,40800000,41000000"}
@@ -2887,6 +2895,7 @@
 {"k":"sim/expressions/inputs/play1stop/b17","v":"1"}
 {"k":"sim/expressions/inputs/play1stop/b18","v":"1"}
 {"k":"sim/expressions/inputs/play1stop/b19","v":"0"}
+{"k":"sim/expressions/inputs/play1stop/b20","v":"0"}
 {"k":"sim/expressions/inputs/play1stop/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions/inputs/play1stop/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions/inputs/play1stop/v02","v":"3f000000,40800000,41000000"}
@@ -3016,6 +3025,7 @@
 {"k":"sim/expressions/inputs/play2/b17","v":"1"}
 {"k":"sim/expressions/inputs/play2/b18","v":"1"}
 {"k":"sim/expressions/inputs/play2/b19","v":"0"}
+{"k":"sim/expressions/inputs/play2/b20","v":"0"}
 {"k":"sim/expressions/inputs/play2/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions/inputs/play2/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions/inputs/play2/v02","v":"3f000000,40800000,41000000"}
@@ -3147,6 +3157,7 @@
 {"k":"sim/expressions/inputs/play2update1/b17","v":"1"}
 {"k":"sim/expressions/inputs/play2update1/b18","v":"1"}
 {"k":"sim/expressions/inputs/play2update1/b19","v":"0"}
+{"k":"sim/expressions/inputs/play2update1/b20","v":"0"}
 {"k":"sim/expressions/inputs/play2update1/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions/inputs/play2update1/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions/inputs/play2update1/v02","v":"3f000000,40800000,41000000"}
@@ -3276,6 +3287,7 @@
 {"k":"sim/expressions/inputs/play2update2/b17","v":"1"}
 {"k":"sim/expressions/inputs/play2update2/b18","v":"1"}
 {"k":"sim/expressions/inputs/play2update2/b19","v":"0"}
+{"k":"sim/expressions/inputs/play2update2/b20","v":"0"}
 {"k":"sim/expressions/inputs/play2update2/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions/inputs/play2update2/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions/inputs/play2update2/v02","v":"3f000000,40800000,41000000"}
@@ -3405,6 +3417,7 @@
 {"k":"sim/expressions/inputs/play2update3/b17","v":"1"}
 {"k":"sim/expressions/inputs/play2update3/b18","v":"1"}
 {"k":"sim/expressions/inputs/play2update3/b19","v":"0"}
+{"k":"sim/expressions/inputs/play2update3/b20","v":"0"}
 {"k":"sim/expressions/inputs/play2update3/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions/inputs/play2update3/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions/inputs/play2update3/v02","v":"3f000000,40800000,41000000"}
@@ -3534,7 +3547,8 @@
 {"k":"sim/expressions others/inputs/play1/b16","v":"1"}
 {"k":"sim/expressions others/inputs/play1/b17","v":"1"}
 {"k":"sim/expressions others/inputs/play1/b18","v":"1"}
-{"k":"sim/expressions others/inputs/play1/b19","v":"0"}
+{"k":"sim/expressions others/inputs/play1/b19","v":"1"}
+{"k":"sim/expressions others/inputs/play1/b20","v":"0"}
 {"k":"sim/expressions others/inputs/play1/v00","v":"bf000000,c0800000,41280000"}
 {"k":"sim/expressions others/inputs/play1/v01","v":"bf000000,80000000,41a00000"}
 {"k":"sim/expressions others/inputs/play1/v02","v":"3f000000,40800000,41000000"}
@@ -3665,7 +3679,8 @@
 {"k":"sim/expressions others/inputs/play1update1/b16","v":"1"}
 {"k":"sim/expressions others/inputs/play1update1/b17","v":"1"}
 {"k":"sim/expressions others/inputs/play1update1/b18","v":"1"}
-{"k":"sim/expressions others/inputs/play1update1/b19","v":"0"}
+{"k":"sim/expressions others/inputs/play1update1/b19","v":"1"}
+{"k":"sim/expressions others/inputs/play1update1/b20","v":"0"}
 {"k":"sim/expressions others/inputs/play1update1/v00","v":"bf000000,c0800000,41280000"}
 {"k":"sim/expressions others/inputs/play1update1/v01","v":"bf000000,80000000,41a00000"}
 {"k":"sim/expressions others/inputs/play1update1/v02","v":"3f000000,40800000,41000000"}
@@ -3794,7 +3809,8 @@
 {"k":"sim/expressions others/inputs/play1update2/b16","v":"0"}
 {"k":"sim/expressions others/inputs/play1update2/b17","v":"1"}
 {"k":"sim/expressions others/inputs/play1update2/b18","v":"1"}
-{"k":"sim/expressions others/inputs/play1update2/b19","v":"0"}
+{"k":"sim/expressions others/inputs/play1update2/b19","v":"1"}
+{"k":"sim/expressions others/inputs/play1update2/b20","v":"0"}
 {"k":"sim/expressions others/inputs/play1update2/v00","v":"bf000000,c0800000,41280000"}
 {"k":"sim/expressions others/inputs/play1update2/v01","v":"bf000000,80000000,41a00000"}
 {"k":"sim/expressions others/inputs/play1update2/v02","v":"3f000000,40800000,41000000"}
@@ -3923,7 +3939,8 @@
 {"k":"sim/expressions others/inputs/play1update3/b16","v":"0"}
 {"k":"sim/expressions others/inputs/play1update3/b17","v":"1"}
 {"k":"sim/expressions others/inputs/play1update3/b18","v":"1"}
-{"k":"sim/expressions others/inputs/play1update3/b19","v":"0"}
+{"k":"sim/expressions others/inputs/play1update3/b19","v":"1"}
+{"k":"sim/expressions others/inputs/play1update3/b20","v":"0"}
 {"k":"sim/expressions others/inputs/play1update3/v00","v":"bf000000,c0800000,41280000"}
 {"k":"sim/expressions others/inputs/play1update3/v01","v":"bf000000,80000000,41a00000"}
 {"k":"sim/expressions others/inputs/play1update3/v02","v":"3f000000,40800000,41000000"}
@@ -4052,7 +4069,8 @@
 {"k":"sim/expressions others/inputs/play1stop/b16","v":"0"}
 {"k":"sim/expressions others/inputs/play1stop/b17","v":"1"}
 {"k":"sim/expressions others/inputs/play1stop/b18","v":"1"}
-{"k":"sim/expressions others/inputs/play1stop/b19","v":"0"}
+{"k":"sim/expressions others/inputs/play1stop/b19","v":"1"}
+{"k":"sim/expressions others/inputs/play1stop/b20","v":"0"}
 {"k":"sim/expressions others/inputs/play1stop/v00","v":"bf000000,c0800000,41280000"}
 {"k":"sim/expressions others/inputs/play1stop/v01","v":"bf000000,80000000,41a00000"}
 {"k":"sim/expressions others/inputs/play1stop/v02","v":"3f000000,40800000,41000000"}
@@ -4181,7 +4199,8 @@
 {"k":"sim/expressions others/inputs/play2/b16","v":"0"}
 {"k":"sim/expressions others/inputs/play2/b17","v":"1"}
 {"k":"sim/expressions others/inputs/play2/b18","v":"1"}
-{"k":"sim/expressions others/inputs/play2/b19","v":"0"}
+{"k":"sim/expressions others/inputs/play2/b19","v":"1"}
+{"k":"sim/expressions others/inputs/play2/b20","v":"0"}
 {"k":"sim/expressions others/inputs/play2/v00","v":"bf000000,c0800000,41280000"}
 {"k":"sim/expressions others/inputs/play2/v01","v":"bf000000,80000000,41a00000"}
 {"k":"sim/expressions others/inputs/play2/v02","v":"3f000000,40800000,41000000"}
@@ -4312,7 +4331,8 @@
 {"k":"sim/expressions others/inputs/play2update1/b16","v":"1"}
 {"k":"sim/expressions others/inputs/play2update1/b17","v":"1"}
 {"k":"sim/expressions others/inputs/play2update1/b18","v":"1"}
-{"k":"sim/expressions others/inputs/play2update1/b19","v":"0"}
+{"k":"sim/expressions others/inputs/play2update1/b19","v":"1"}
+{"k":"sim/expressions others/inputs/play2update1/b20","v":"0"}
 {"k":"sim/expressions others/inputs/play2update1/v00","v":"bf000000,c0800000,41280000"}
 {"k":"sim/expressions others/inputs/play2update1/v01","v":"bf000000,80000000,41a00000"}
 {"k":"sim/expressions others/inputs/play2update1/v02","v":"3f000000,40800000,41000000"}
@@ -4441,7 +4461,8 @@
 {"k":"sim/expressions others/inputs/play2update2/b16","v":"0"}
 {"k":"sim/expressions others/inputs/play2update2/b17","v":"1"}
 {"k":"sim/expressions others/inputs/play2update2/b18","v":"1"}
-{"k":"sim/expressions others/inputs/play2update2/b19","v":"0"}
+{"k":"sim/expressions others/inputs/play2update2/b19","v":"1"}
+{"k":"sim/expressions others/inputs/play2update2/b20","v":"0"}
 {"k":"sim/expressions others/inputs/play2update2/v00","v":"bf000000,c0800000,41280000"}
 {"k":"sim/expressions others/inputs/play2update2/v01","v":"bf000000,80000000,41a00000"}
 {"k":"sim/expressions others/inputs/play2update2/v02","v":"3f000000,40800000,41000000"}
@@ -4570,7 +4591,8 @@
 {"k":"sim/expressions others/inputs/play2update3/b16","v":"0"}
 {"k":"sim/expressions others/inputs/play2update3/b17","v":"1"}
 {"k":"sim/expressions others/inputs/play2update3/b18","v":"1"}
-{"k":"sim/expressions others/inputs/play2update3/b19","v":"0"}
+{"k":"sim/expressions others/inputs/play2update3/b19","v":"1"}
+{"k":"sim/expressions others/inputs/play2update3/b20","v":"0"}
 {"k":"sim/expressions others/inputs/play2update3/v00","v":"bf000000,c0800000,41280000"}
 {"k":"sim/expressions others/inputs/play2update3/v01","v":"bf000000,80000000,41a00000"}
 {"k":"sim/expressions others/inputs/play2update3/v02","v":"3f000000,40800000,41000000"}
@@ -4701,6 +4723,7 @@
 {"k":"sim/expressions scene/inputs/play1/b17","v":"1"}
 {"k":"sim/expressions scene/inputs/play1/b18","v":"1"}
 {"k":"sim/expressions scene/inputs/play1/b19","v":"0"}
+{"k":"sim/expressions scene/inputs/play1/b20","v":"0"}
 {"k":"sim/expressions scene/inputs/play1/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions scene/inputs/play1/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions scene/inputs/play1/v02","v":"3f000000,40800000,41000000"}
@@ -4832,6 +4855,7 @@
 {"k":"sim/expressions scene/inputs/play1update1/b17","v":"1"}
 {"k":"sim/expressions scene/inputs/play1update1/b18","v":"1"}
 {"k":"sim/expressions scene/inputs/play1update1/b19","v":"0"}
+{"k":"sim/expressions scene/inputs/play1update1/b20","v":"0"}
 {"k":"sim/expressions scene/inputs/play1update1/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions scene/inputs/play1update1/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions scene/inputs/play1update1/v02","v":"3f000000,40800000,41000000"}
@@ -4961,6 +4985,7 @@
 {"k":"sim/expressions scene/inputs/play1update2/b17","v":"1"}
 {"k":"sim/expressions scene/inputs/play1update2/b18","v":"1"}
 {"k":"sim/expressions scene/inputs/play1update2/b19","v":"0"}
+{"k":"sim/expressions scene/inputs/play1update2/b20","v":"0"}
 {"k":"sim/expressions scene/inputs/play1update2/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions scene/inputs/play1update2/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions scene/inputs/play1update2/v02","v":"3f000000,40800000,41000000"}
@@ -5090,6 +5115,7 @@
 {"k":"sim/expressions scene/inputs/play1update3/b17","v":"1"}
 {"k":"sim/expressions scene/inputs/play1update3/b18","v":"1"}
 {"k":"sim/expressions scene/inputs/play1update3/b19","v":"0"}
+{"k":"sim/expressions scene/inputs/play1update3/b20","v":"0"}
 {"k":"sim/expressions scene/inputs/play1update3/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions scene/inputs/play1update3/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions scene/inputs/play1update3/v02","v":"3f000000,40800000,41000000"}
@@ -5219,6 +5245,7 @@
 {"k":"sim/expressions scene/inputs/play1stop/b17","v":"1"}
 {"k":"sim/expressions scene/inputs/play1stop/b18","v":"1"}
 {"k":"sim/expressions scene/inputs/play1stop/b19","v":"0"}
+{"k":"sim/expressions scene/inputs/play1stop/b20","v":"0"}
 {"k":"sim/expressions scene/inputs/play1stop/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions scene/inputs/play1stop/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions scene/inputs/play1stop/v02","v":"3f000000,40800000,41000000"}
@@ -5348,6 +5375,7 @@
 {"k":"sim/expressions scene/inputs/play2/b17","v":"1"}
 {"k":"sim/expressions scene/inputs/play2/b18","v":"1"}
 {"k":"sim/expressions scene/inputs/play2/b19","v":"0"}
+{"k":"sim/expressions scene/inputs/play2/b20","v":"0"}
 {"k":"sim/expressions scene/inputs/play2/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions scene/inputs/play2/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions scene/inputs/play2/v02","v":"3f000000,40800000,41000000"}
@@ -5479,6 +5507,7 @@
 {"k":"sim/expressions scene/inputs/play2update1/b17","v":"1"}
 {"k":"sim/expressions scene/inputs/play2update1/b18","v":"1"}
 {"k":"sim/expressions scene/inputs/play2update1/b19","v":"0"}
+{"k":"sim/expressions scene/inputs/play2update1/b20","v":"0"}
 {"k":"sim/expressions scene/inputs/play2update1/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions scene/inputs/play2update1/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions scene/inputs/play2update1/v02","v":"3f000000,40800000,41000000"}
@@ -5608,6 +5637,7 @@
 {"k":"sim/expressions scene/inputs/play2update2/b17","v":"1"}
 {"k":"sim/expressions scene/inputs/play2update2/b18","v":"1"}
 {"k":"sim/expressions scene/inputs/play2update2/b19","v":"0"}
+{"k":"sim/expressions scene/inputs/play2update2/b20","v":"0"}
 {"k":"sim/expressions scene/inputs/play2update2/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions scene/inputs/play2update2/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions scene/inputs/play2update2/v02","v":"3f000000,40800000,41000000"}
@@ -5737,6 +5767,7 @@
 {"k":"sim/expressions scene/inputs/play2update3/b17","v":"1"}
 {"k":"sim/expressions scene/inputs/play2update3/b18","v":"1"}
 {"k":"sim/expressions scene/inputs/play2update3/b19","v":"0"}
+{"k":"sim/expressions scene/inputs/play2update3/b20","v":"0"}
 {"k":"sim/expressions scene/inputs/play2update3/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions scene/inputs/play2update3/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions scene/inputs/play2update3/v02","v":"3f000000,40800000,41000000"}
@@ -5867,6 +5898,7 @@
 {"k":"sim/expressions copy/inputs/play1/b17","v":"1"}
 {"k":"sim/expressions copy/inputs/play1/b18","v":"1"}
 {"k":"sim/expressions copy/inputs/play1/b19","v":"0"}
+{"k":"sim/expressions copy/inputs/play1/b20","v":"0"}
 {"k":"sim/expressions copy/inputs/play1/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions copy/inputs/play1/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions copy/inputs/play1/v02","v":"3f000000,40800000,41000000"}
@@ -5998,6 +6030,7 @@
 {"k":"sim/expressions copy/inputs/play1update1/b17","v":"1"}
 {"k":"sim/expressions copy/inputs/play1update1/b18","v":"1"}
 {"k":"sim/expressions copy/inputs/play1update1/b19","v":"0"}
+{"k":"sim/expressions copy/inputs/play1update1/b20","v":"0"}
 {"k":"sim/expressions copy/inputs/play1update1/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions copy/inputs/play1update1/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions copy/inputs/play1update1/v02","v":"3f000000,40800000,41000000"}
@@ -6127,6 +6160,7 @@
 {"k":"sim/expressions copy/inputs/play1update2/b17","v":"1"}
 {"k":"sim/expressions copy/inputs/play1update2/b18","v":"1"}
 {"k":"sim/expressions copy/inputs/play1update2/b19","v":"0"}
+{"k":"sim/expressions copy/inputs/play1update2/b20","v":"0"}
 {"k":"sim/expressions copy/inputs/play1update2/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions copy/inputs/play1update2/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions copy/inputs/play1update2/v02","v":"3f000000,40800000,41000000"}
@@ -6256,6 +6290,7 @@
 {"k":"sim/expressions copy/inputs/play1update3/b17","v":"1"}
 {"k":"sim/expressions copy/inputs/play1update3/b18","v":"1"}
 {"k":"sim/expressions copy/inputs/play1update3/b19","v":"0"}
+{"k":"sim/expressions copy/inputs/play1update3/b20","v":"0"}
 {"k":"sim/expressions copy/inputs/play1update3/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions copy/inputs/play1update3/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions copy/inputs/play1update3/v02","v":"3f000000,40800000,41000000"}
@@ -6385,6 +6420,7 @@
 {"k":"sim/expressions copy/inputs/play1stop/b17","v":"1"}
 {"k":"sim/expressions copy/inputs/play1stop/b18","v":"1"}
 {"k":"sim/expressions copy/inputs/play1stop/b19","v":"0"}
+{"k":"sim/expressions copy/inputs/play1stop/b20","v":"0"}
 {"k":"sim/expressions copy/inputs/play1stop/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions copy/inputs/play1stop/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions copy/inputs/play1stop/v02","v":"3f000000,40800000,41000000"}
@@ -6514,6 +6550,7 @@
 {"k":"sim/expressions copy/inputs/play2/b17","v":"1"}
 {"k":"sim/expressions copy/inputs/play2/b18","v":"1"}
 {"k":"sim/expressions copy/inputs/play2/b19","v":"0"}
+{"k":"sim/expressions copy/inputs/play2/b20","v":"0"}
 {"k":"sim/expressions copy/inputs/play2/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions copy/inputs/play2/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions copy/inputs/play2/v02","v":"3f000000,40800000,41000000"}
@@ -6645,6 +6682,7 @@
 {"k":"sim/expressions copy/inputs/play2update1/b17","v":"1"}
 {"k":"sim/expressions copy/inputs/play2update1/b18","v":"1"}
 {"k":"sim/expressions copy/inputs/play2update1/b19","v":"0"}
+{"k":"sim/expressions copy/inputs/play2update1/b20","v":"0"}
 {"k":"sim/expressions copy/inputs/play2update1/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions copy/inputs/play2update1/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions copy/inputs/play2update1/v02","v":"3f000000,40800000,41000000"}
@@ -6774,6 +6812,7 @@
 {"k":"sim/expressions copy/inputs/play2update2/b17","v":"1"}
 {"k":"sim/expressions copy/inputs/play2update2/b18","v":"1"}
 {"k":"sim/expressions copy/inputs/play2update2/b19","v":"0"}
+{"k":"sim/expressions copy/inputs/play2update2/b20","v":"0"}
 {"k":"sim/expressions copy/inputs/play2update2/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions copy/inputs/play2update2/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions copy/inputs/play2update2/v02","v":"3f000000,40800000,41000000"}
@@ -6903,6 +6942,7 @@
 {"k":"sim/expressions copy/inputs/play2update3/b17","v":"1"}
 {"k":"sim/expressions copy/inputs/play2update3/b18","v":"1"}
 {"k":"sim/expressions copy/inputs/play2update3/b19","v":"0"}
+{"k":"sim/expressions copy/inputs/play2update3/b20","v":"0"}
 {"k":"sim/expressions copy/inputs/play2update3/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions copy/inputs/play2update3/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions copy/inputs/play2update3/v02","v":"3f000000,40800000,41000000"}
@@ -6925,6 +6965,7 @@
 {"k":"sim/expressions copy/inputs/play2update3/g05","v":"same"}
 {"k":"sim/expressions copy/inputs/play2update3/g06","v":"same"}
 {"k":"sim/expressions copy/inputs/lines","v":"13"}
+{"k":"draw/additive/f012","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"sim/time/f013","v":"3d088889"}
 {"k":"sim/rate/f013","v":"alive=2 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3ecccccd before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f013","v":"alive=2 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3ecccccd before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -7269,6 +7310,7 @@
 {"k":"sim/expressions late/inputs/play1/b17","v":"1"}
 {"k":"sim/expressions late/inputs/play1/b18","v":"1"}
 {"k":"sim/expressions late/inputs/play1/b19","v":"0"}
+{"k":"sim/expressions late/inputs/play1/b20","v":"0"}
 {"k":"sim/expressions late/inputs/play1/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions late/inputs/play1/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions late/inputs/play1/v02","v":"3f000000,40800000,41000000"}
@@ -7400,6 +7442,7 @@
 {"k":"sim/expressions late/inputs/play1update1/b17","v":"1"}
 {"k":"sim/expressions late/inputs/play1update1/b18","v":"1"}
 {"k":"sim/expressions late/inputs/play1update1/b19","v":"0"}
+{"k":"sim/expressions late/inputs/play1update1/b20","v":"0"}
 {"k":"sim/expressions late/inputs/play1update1/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions late/inputs/play1update1/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions late/inputs/play1update1/v02","v":"3f000000,40800000,41000000"}
@@ -7529,6 +7572,7 @@
 {"k":"sim/expressions late/inputs/play1update2/b17","v":"1"}
 {"k":"sim/expressions late/inputs/play1update2/b18","v":"1"}
 {"k":"sim/expressions late/inputs/play1update2/b19","v":"0"}
+{"k":"sim/expressions late/inputs/play1update2/b20","v":"0"}
 {"k":"sim/expressions late/inputs/play1update2/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions late/inputs/play1update2/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions late/inputs/play1update2/v02","v":"3f000000,40800000,41000000"}
@@ -7658,6 +7702,7 @@
 {"k":"sim/expressions late/inputs/play1update3/b17","v":"1"}
 {"k":"sim/expressions late/inputs/play1update3/b18","v":"1"}
 {"k":"sim/expressions late/inputs/play1update3/b19","v":"0"}
+{"k":"sim/expressions late/inputs/play1update3/b20","v":"0"}
 {"k":"sim/expressions late/inputs/play1update3/v00","v":"3fc00000,c0000000,41300000"}
 {"k":"sim/expressions late/inputs/play1update3/v01","v":"3f000000,c1000000,41c00000"}
 {"k":"sim/expressions late/inputs/play1update3/v02","v":"3f000000,40800000,41000000"}
@@ -7680,6 +7725,7 @@
 {"k":"sim/expressions late/inputs/play1update3/g05","v":"same"}
 {"k":"sim/expressions late/inputs/play1update3/g06","v":"same"}
 {"k":"sim/expressions late/inputs/lines","v":"6"}
+{"k":"draw/additive/f030","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"sim/time/f031","v":"3d088889"}
 {"k":"sim/rate/f031","v":"alive=7 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f800003 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f031","v":"alive=7 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f800003 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
