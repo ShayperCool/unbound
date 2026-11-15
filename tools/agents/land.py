@@ -629,8 +629,8 @@ class Gate:
         With retry_time_limits, checks stopped only by a time limit while sharing the machine
         with the batch run once more, at most retry_workers() (and at most `workers`) at a time and
         nothing else of this gate beside them, each with the same per-check limit; the retries add
-        at most ceil(retried/that count)*AUTO_PROBE_TIMEOUT_SECONDS. Any other failure fails at
-        once."""
+        at most (exclusive retries + ceil(other retries/that count))*AUTO_PROBE_TIMEOUT_SECONDS,
+        as exclusive checks run alone. Any other failure fails at once."""
         if not commands:
             return
         require_process_watch()

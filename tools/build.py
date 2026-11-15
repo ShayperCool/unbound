@@ -96,24 +96,30 @@ def start_cache_daemon(wrapper, env):
     of a build instead, it would keep that build's CPU niceness (the job runner lowers jobs outside
     a landing gate, the post-land checker runs lower still) and serve every later build of the
     cache, gate builds included, at it. The user service manager starts it at its own niceness;
-    without one, a plain start behaves as before. Nothing here fails a build."""
+    without one, a plain start behaves as before. Nothing here fails a build.
+
+    A unit that already exists means another build is starting the same daemon: this build waits
+    for it instead of starting one at its own niceness."""
     if cache_daemon_running(wrapper, env):
         return
     cache = env.get('KACHE_CACHE_DIR', '')
     unit = 'unbound-kache-'+hashlib.sha256(os.fsencode(cache)).hexdigest()[:12]
     settings = [f'--setenv={key}={value}' for key, value in env.items()
                 if key.startswith('KACHE_') or key in ('PATH', 'HOME')]
-    commands = [['systemd-run', '--user', '--quiet', '--collect', f'--unit={unit}', '--property=Nice=0',
-                 *settings, wrapper, 'daemon', 'run'],
-                [wrapper, 'daemon', 'start']]
-    for command in commands:
+    service = ['systemd-run', '--user', '--quiet', '--collect', f'--unit={unit}', '--property=Nice=0',
+               *settings, wrapper, 'daemon', 'run']
+    try:
+        subprocess.run(service, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, timeout=30)
+    except OSError:
+        # No service manager on this machine.
         try:
-            started = subprocess.run(command, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                                     stderr=subprocess.DEVNULL, timeout=30)
+            subprocess.run([wrapper, 'daemon', 'start'], env=env, stdin=subprocess.DEVNULL,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
         except (OSError, subprocess.SubprocessError):
-            continue
-        if started.returncode == 0:
-            break
+            return
+    except subprocess.SubprocessError:
+        pass
     # The service returns before the daemon listens; a compiler that finds no daemon starts its own.
     deadline = time.monotonic()+DAEMON_READY_SECONDS
     while time.monotonic() < deadline and not cache_daemon_running(wrapper, env):

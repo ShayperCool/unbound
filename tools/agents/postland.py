@@ -200,7 +200,7 @@ class Checker:
         # A round that ends in a revert leaves its range unchecked; the next round checks the same
         # range again with the revert and must not write what it already wrote a second time.
         key = json.dumps([(fields.get('range') or [None])[0], *check[:4], kind,
-                          (fields.get('culprit') or {}).get('new')])
+                          (fields.get('culprit') or {}).get('new'), fields.get('result')])
         reported = self.state().get('reported', {})
         if key in reported:
             print(f'postland: {kind}: {check[0]}; already reported in {reported[key]}', flush=True)

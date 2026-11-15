@@ -113,6 +113,22 @@ class CacheDaemonTests(unittest.TestCase):
         self.assertNotEqual(unit, [arg for arg in calls2[1] if arg.startswith('--unit=')])
         self.assertEqual(calls[-1], ['/k/kache', 'daemon', 'status', '--json'])
 
+    def test_a_build_that_finds_the_unit_starting_waits_for_it(self):
+        # Concurrent builds: the unit exists, so systemd-run fails; a plain start would run the
+        # daemon at this build's niceness.
+        calls, state = [], {'polls': 0}
+
+        def run(command, **kwargs):
+            calls.append(command)
+            if command[1:3] == ['daemon', 'status']:
+                state['polls'] += 1
+                return subprocess.CompletedProcess(command, 0, json.dumps({'daemon_running': state['polls'] > 2}), '')
+            return subprocess.CompletedProcess(command, 1)
+        with patch.object(build.subprocess, 'run', run):
+            build.start_cache_daemon('/k/kache', self.ENV)
+        self.assertNotIn(['/k/kache', 'daemon', 'start'], calls)
+        self.assertEqual(state['polls'], 3)
+
     def test_without_a_service_manager_the_daemon_starts_as_before(self):
         calls, run = self.fake(False, failing=('systemd-run',))
         with patch.object(build.subprocess, 'run', run):
