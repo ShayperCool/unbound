@@ -20,14 +20,17 @@ const PROGRAMS: &[(&str, &str)] = &[("Hidden/Internal-UIRDefault", "Internal/Uni
 /// `_UIRColorMask`.
 pub const MASKED_PREFIX: &str = "Hidden/Unbound/Masked/";
 
-/// Writes the shaders into `<cache>/builtin-shaders/generated-v<N>/<release>/` (once) and returns
-/// that directory, to be indexed like the built-in shader sources. `unity_data` is the install's
-/// `Editor/Data`.
+/// Writes the shaders into `<cache>/builtin-shaders/generated/<key>/<release>/` (once) and
+/// returns that directory, to be indexed like the built-in shader sources; `<key>` is that of
+/// [`FORMAT_VERSION`] and the generator's code (`unbound_source_identity::BUILTIN_SHADERS`), so
+/// a build never takes another generator's sources. `unity_data` is the install's `Editor/Data`.
 pub fn write_generated(unity_data: &Path, cache_root: &Path, release: &str) -> Result<PathBuf> {
-    let dir = cache_root
-        .join("builtin-shaders")
-        .join(format!("generated-v{FORMAT_VERSION}"))
-        .join(release);
+    let dir = unbound_source_identity::keyed_dir(
+        &cache_root.join("builtin-shaders").join("generated"),
+        FORMAT_VERSION,
+        unbound_source_identity::BUILTIN_SHADERS,
+    )
+    .join(release);
     if dir.join(".complete").is_file() {
         return Ok(dir);
     }
@@ -411,7 +414,8 @@ pub fn declarations_key(files: &[PathBuf]) -> Result<[u8; 32]> {
 }
 
 /// Every built-in shader's [`Declarations`] by name, from the install's resource files. Read
-/// once per content of those files and kept in `<cache>/builtin-shaders/declarations-v<N>/`.
+/// once per content of those files and kept in `<cache>/builtin-shaders/declarations/<key>/`,
+/// `<key>` that of the entries' format and the reader's code (as [`write_generated`]'s).
 /// An error (a file missing or unreadable) is not cached: the next call tries again.
 pub fn declarations(unity_data: &Path, cache_root: &Path) -> Result<DeclarationMap> {
     let files = declaration_sources(unity_data);
@@ -457,10 +461,12 @@ pub fn declarations(unity_data: &Path, cache_root: &Path) -> Result<DeclarationM
 
 fn declarations_entry_path(cache_root: &Path, key: &[u8; 32]) -> PathBuf {
     let hex: String = key.iter().map(|b| format!("{b:02x}")).collect();
-    cache_root
-        .join("builtin-shaders")
-        .join(format!("declarations-v{DECLARATIONS_VERSION}"))
-        .join(format!("{hex}.bin"))
+    unbound_source_identity::keyed_dir(
+        &cache_root.join("builtin-shaders").join("declarations"),
+        DECLARATIONS_VERSION,
+        unbound_source_identity::BUILTIN_SHADERS,
+    )
+    .join(format!("{hex}.bin"))
 }
 
 fn encode_declarations_entry(key: &[u8; 32], map: &DeclarationMap) -> Result<Vec<u8>> {
