@@ -569,22 +569,30 @@ pub struct Selection {
 }
 
 impl Selection {
-    /// Splits `Name|lod=N|tag=K=V` into the shader's name and the selection.
+    /// Splits `Name|lod=N|tag=K=V` into the shader's name and the selection. The suffixes are
+    /// read from the end, and what is none of them belongs to the name: a shader's own name may
+    /// hold the separator (a Visual Effect Graph output's does, `…/Output Particle|Unlit Quad`).
     pub fn parse(name: &str) -> (&str, Selection) {
-        let mut parts = name.split('|');
-        let base = parts.next().unwrap_or(name);
+        let mut base = name;
         let mut selection = Selection::default();
-        for part in parts {
+        while let Some((head, part)) = base.rsplit_once('|') {
             if let Some(lod) = part.strip_prefix("lod=") {
-                selection.max_lod =
-                    Some(lod.parse::<i64>().unwrap_or(0).clamp(0, u32::MAX as i64) as u32);
+                // Of two, the last one written counts.
+                selection.max_lod.get_or_insert(
+                    lod.parse::<i64>().unwrap_or(0).clamp(0, u32::MAX as i64) as u32,
+                );
             } else if let Some(tag) = part.strip_prefix("tag=")
                 && let Some((key, value)) = tag.split_once('=')
             {
-                selection.tag = Some((key.to_string(), value.to_string()));
+                selection
+                    .tag
+                    .get_or_insert_with(|| (key.to_string(), value.to_string()));
             } else if part == "vertexlit" {
                 selection.vertex_lit = true;
+            } else {
+                break;
             }
+            base = head;
         }
         (base, selection)
     }
@@ -1905,6 +1913,23 @@ mod tests {
         assert_eq!(names(&lab), ["B"]);
         let lab = ShaderLab::parse_file_for(only, Path::new(""), "d3d11").unwrap();
         assert_eq!(names(&lab), ["A"]);
+    }
+
+    #[test]
+    fn a_selection_leaves_separators_of_the_name_itself() {
+        let own = "Hidden/VFX/Graph/System (1)/Output Particle|Unlit Quad";
+        assert_eq!(Selection::parse(own), (own, Selection::default()));
+        let (name, selection) = Selection::parse(&format!("{own}|lod=200|vertexlit"));
+        assert_eq!(name, own);
+        assert_eq!((selection.max_lod, selection.vertex_lit), (Some(200), true));
+        let (name, selection) = Selection::parse("A|B|tag=RenderType=Opaque");
+        assert_eq!(name, "A|B");
+        assert_eq!(
+            selection.tag,
+            Some(("RenderType".to_string(), "Opaque".to_string()))
+        );
+        // Of two maximum LODs the last counts, as before.
+        assert_eq!(Selection::parse("A|lod=100|lod=300").1.max_lod, Some(300));
     }
 
     #[test]
