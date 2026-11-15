@@ -310,13 +310,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEngine.Events.PersistentCall",
-    "Message": "type interfaces is , Unity's is UnityEngine.ISerializationCallbackReceiver",
-    "Reason": "Q410-Editor-interfaces: UnityEngine.Events.PersistentCall needs persistent target, method and argument restoration callbacks. Selected interface members must use that state and receive divergent-state controls rather than empty implementations."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.Flare",
     "Message": "type interfaces is Unbound.Runtime.ISerializedAsset, Unity's is ",
     "Reason": "Q410-asset-interface-adapters: UnityEngine.Flare is loaded or cloned through engine helper interfaces. Move those calls to external type adapters before removing the extra interfaces; preserve existing serialized fields, ownership and independent clone state."

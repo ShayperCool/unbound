@@ -29,31 +29,36 @@ namespace UnityEngine.Events
         public string stringArgument { get => m_StringArgument; set => m_StringArgument = value; }
         public bool boolArgument { get => m_BoolArgument; set => m_BoolArgument = value; }
 
-        public void OnBeforeSerialize() => m_ObjectArgumentAssemblyTypeName = TidyAssemblyTypeName(m_ObjectArgumentAssemblyTypeName);
-        public void OnAfterDeserialize() => m_ObjectArgumentAssemblyTypeName = TidyAssemblyTypeName(m_ObjectArgumentAssemblyTypeName);
+        public void OnBeforeSerialize() => m_ObjectArgumentAssemblyTypeName = UnityEventTools.TidyAssemblyTypeName(m_ObjectArgumentAssemblyTypeName);
+        public void OnAfterDeserialize() => m_ObjectArgumentAssemblyTypeName = UnityEventTools.TidyAssemblyTypeName(m_ObjectArgumentAssemblyTypeName);
+    }
 
-        /// <summary>Unity's UnityEventTools.TidyAssemblyTypeName: drops version, culture and key,
-        /// and names UnityEngine.*Module types as in UnityEngine.</summary>
-        internal static string TidyAssemblyTypeName(string name)
+    internal partial class UnityEventTools
+    {
+        static readonly string[] s_AssemblyDetails = { ", Version=", ", Culture=", ", PublicKeyToken=" };
+
+        /// <summary>A stored type name without version, culture and key, naming UnityEngine.*Module
+        /// types as in UnityEngine (matches the Unity 6000.0.71f1 Editor, tests/projects/eventtypenames).</summary>
+        internal static string TidyAssemblyTypeName(string assemblyTypeName)
         {
-            if (string.IsNullOrEmpty(name)) return name;
+            if (string.IsNullOrEmpty(assemblyTypeName)) return assemblyTypeName;
             int cut = int.MaxValue;
-            foreach (var part in new[] { ", Version=", ", Culture=", ", PublicKeyToken=" })
+            foreach (var part in s_AssemblyDetails)
             {
-                int i = name.IndexOf(part, StringComparison.Ordinal);
+                int i = assemblyTypeName.IndexOf(part, StringComparison.Ordinal);
                 if (i != -1) cut = Math.Min(cut, i);
             }
-            if (cut != int.MaxValue) name = name.Substring(0, cut);
-            int module = name.IndexOf(", UnityEngine.", StringComparison.Ordinal);
-            if (module != -1 && name.EndsWith("Module", StringComparison.Ordinal))
-                name = name.Substring(0, module) + ", UnityEngine";
-            return name;
+            if (cut != int.MaxValue) assemblyTypeName = assemblyTypeName.Substring(0, cut);
+            int module = assemblyTypeName.IndexOf(", UnityEngine.", StringComparison.Ordinal);
+            if (module != -1 && assemblyTypeName.EndsWith("Module", StringComparison.Ordinal))
+                assemblyTypeName = assemblyTypeName.Substring(0, module) + ", UnityEngine";
+            return assemblyTypeName;
         }
     }
 
     /// <summary>A call the event list stores: a target, a method name and an argument mode.</summary>
     [Serializable]
-    internal partial class PersistentCall
+    internal partial class PersistentCall : ISerializationCallbackReceiver
     {
         [FormerlySerializedAs("instance")] [SerializeField] Object m_Target;
         [SerializeField] string m_TargetAssemblyTypeName;
@@ -68,7 +73,7 @@ namespace UnityEngine.Events
             get
             {
                 if (string.IsNullOrEmpty(m_TargetAssemblyTypeName) && m_Target != null)
-                    m_TargetAssemblyTypeName = ArgumentCache.TidyAssemblyTypeName(m_Target.GetType().AssemblyQualifiedName);
+                    m_TargetAssemblyTypeName = UnityEventTools.TidyAssemblyTypeName(m_Target.GetType().AssemblyQualifiedName);
                 return m_TargetAssemblyTypeName;
             }
         }
@@ -79,6 +84,9 @@ namespace UnityEngine.Events
 
         public bool IsValid() => !string.IsNullOrEmpty(targetAssemblyTypeName) && !string.IsNullOrEmpty(m_MethodName);
 
+        public void OnBeforeSerialize() => m_TargetAssemblyTypeName = UnityEventTools.TidyAssemblyTypeName(m_TargetAssemblyTypeName);
+        public void OnAfterDeserialize() => m_TargetAssemblyTypeName = UnityEventTools.TidyAssemblyTypeName(m_TargetAssemblyTypeName);
+
         internal void Register(Object target, string method, PersistentListenerMode mode)
         {
             Register(target, target?.GetType(), method, mode);
@@ -87,7 +95,7 @@ namespace UnityEngine.Events
         internal void Register(Object target, Type targetType, string method, PersistentListenerMode mode)
         {
             m_Target = target;
-            m_TargetAssemblyTypeName = ArgumentCache.TidyAssemblyTypeName(targetType?.AssemblyQualifiedName);
+            m_TargetAssemblyTypeName = UnityEventTools.TidyAssemblyTypeName(targetType?.AssemblyQualifiedName);
             m_MethodName = method;
             m_Mode = mode;
         }

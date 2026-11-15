@@ -1,0 +1,56 @@
+{"key":"interface","value":"True"}
+{"key":"read.0.count","value":"1"}
+{"key":"read.0","value":"EventTypeNameProbe, Assembly-CSharp"}
+{"key":"write.0.json","value":"tidy"}
+{"key":"write.0.live","value":"EventTypeNameProbe, Assembly-CSharp"}
+{"key":"read.1.count","value":"1"}
+{"key":"read.1","value":"UnityEngine.Rigidbody, UnityEngine"}
+{"key":"write.1.json","value":"tidy"}
+{"key":"write.1.live","value":"UnityEngine.Rigidbody, UnityEngine"}
+{"key":"read.2.count","value":"1"}
+{"key":"read.2","value":"UnityEngine.Rigidbody, UnityEngine"}
+{"key":"write.2.json","value":"tidy"}
+{"key":"write.2.live","value":"UnityEngine.Rigidbody, UnityEngine"}
+{"key":"read.3.count","value":"1"}
+{"key":"read.3","value":"A.B, Lib"}
+{"key":"write.3.json","value":"tidy"}
+{"key":"write.3.live","value":"A.B, Lib"}
+{"key":"read.4.count","value":"1"}
+{"key":"read.4","value":"A.B, Lib"}
+{"key":"write.4.json","value":"tidy"}
+{"key":"write.4.live","value":"A.B, Lib"}
+{"key":"read.5.count","value":"1"}
+{"key":"read.5","value":"A.B, UnityEngine.Thing"}
+{"key":"write.5.json","value":"tidy"}
+{"key":"write.5.live","value":"A.B, UnityEngine.Thing"}
+{"key":"read.6.count","value":"1"}
+{"key":"read.6","value":"A.B, MyUnityEngine.Module"}
+{"key":"write.6.json","value":"untidy"}
+{"key":"write.6.live","value":"A.B, MyUnityEngine.Module"}
+{"key":"read.7.count","value":"1"}
+{"key":"read.7","value":"A.B, Other, UnityEngine"}
+{"key":"write.7.json","value":"tidy"}
+{"key":"write.7.live","value":"A.B, Other, UnityEngine"}
+{"key":"read.8.count","value":"1"}
+{"key":"read.8","value":"Plain"}
+{"key":"write.8.json","value":"untidy"}
+{"key":"write.8.live","value":"Plain"}
+{"key":"read.9.count","value":"1"}
+{"key":"read.9","value":""}
+{"key":"write.9.json","value":"untidy"}
+{"key":"write.9.live","value":""}
+{"key":"nested.read","value":"X.Y, Z"}
+{"key":"nested.tail","value":"9"}
+{"key":"getter.nonEmpty","value":"Placeholder, Lib"}
+{"key":"getter.nonEmpty.stored","value":"Placeholder, Lib"}
+{"key":"getter.empty","value":"EventTypeNameProbe, Assembly-CSharp"}
+{"key":"getter.empty.stored","value":"EventTypeNameProbe, Assembly-CSharp"}
+{"key":"getter.null","value":"EventTypeNameProbe, Assembly-CSharp"}
+{"key":"getter.engineType","value":"UnityEngine.Transform, UnityEngine"}
+{"key":"getter.noTarget","value":"<null>"}
+{"key":"getter.noTarget.stored","value":"<null>"}
+{"key":"clone.stored","value":"EventTypeNameProbe, Assembly-CSharp"}
+{"key":"clone.source","value":"EventTypeNameProbe, Assembly-CSharp"}
+{"key":"invoke.foreignName.fired","value":"1"}
+{"key":"invoke.foreignName.stored","value":"Unknown.Type, Nowhere, Version=9.9.9.9"}
+{"key":"complete","value":"1"}

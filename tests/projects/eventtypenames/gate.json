@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/eventtypenames/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Core/Events.cs",
+    "managed/UnityEngine/Core/JsonUtility.cs",
+    "managed/UnityEngine/Runtime/Serialization.cs"
+  ]
+}

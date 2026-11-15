@@ -3371,13 +3371,11 @@ namespace UnityEngine.Events
         [global::Unbound.Stub] public override bool Find(object targetObj, global::System.Reflection.MethodInfo method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3, T4>.Find"); return default; }
         protected event global::UnityEngine.Events.UnityAction<T1, T2, T3, T4> Delegate { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3, T4>.Delegate"); } [global::Unbound.Stub] remove { } }
     }
-    unsafe partial class PersistentCall : global::UnityEngine.ISerializationCallbackReceiver
+    unsafe partial class PersistentCall
     {
         [global::Unbound.Stub] public global::UnityEngine.Events.BaseInvokableCall GetRuntimeCall(global::UnityEngine.Events.UnityEventBase theEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.PersistentCall.GetRuntimeCall"); return default; }
         [global::Unbound.Stub] public void RegisterPersistentListener(global::UnityEngine.Object ttarget, global::System.Type targetType, string mmethodName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.PersistentCall.RegisterPersistentListener"); }
         [global::Unbound.Stub] public void UnregisterPersistentListener() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.PersistentCall.UnregisterPersistentListener"); }
-        [global::Unbound.Stub] public void OnBeforeSerialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.PersistentCall.OnBeforeSerialize"); }
-        [global::Unbound.Stub] public void OnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.PersistentCall.OnAfterDeserialize"); }
     }
     unsafe partial class PersistentCallGroup
     {
@@ -3443,12 +3441,6 @@ namespace UnityEngine.Events
         [global::Unbound.Stub] internal void RegisterStringPersistentListener(int index, global::UnityEngine.Events.UnityAction<string> call, string argument) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.RegisterStringPersistentListener"); }
         [global::Unbound.Stub] internal void AddObjectPersistentListener<T>(global::UnityEngine.Events.UnityAction<T> call, T argument) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.AddObjectPersistentListener"); }
         [global::Unbound.Stub] internal void RegisterObjectPersistentListener<T>(int index, global::UnityEngine.Events.UnityAction<T> call, T argument) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.RegisterObjectPersistentListener"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class UnityEventTools
-    {
-        [global::Unbound.Stub] internal static string TidyAssemblyTypeName(string assemblyTypeName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventTools.TidyAssemblyTypeName"); return default; }
-        [global::Unbound.Stub] public UnityEventTools() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventTools.ctor"); }
     }
     unsafe partial class UnityEvent<T0>
     {

@@ -112,18 +112,18 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After pixel transfer |
+| Category | Before Q410 | After persistent-call names |
 | --- | ---: | ---: |
 | Attributes | 938 | 22 |
 | Modifiers | 87 | 8 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
 | Layout | 68 | 61 |
-| Interfaces | 65 | 49 |
+| Interfaces | 65 | 47 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 0 |
-| Lookup policies | 11 | 11 |
-| Total | 1,332 | 153 |
+| Lookup policies | 11 | 10 |
+| Total | 1,332 | 150 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes.
@@ -391,7 +391,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-Animator-animatePhysics` | 1 | Animated kinematic body synchronization with moving-body controls. |
 | `Q410-Core-built-in-serialization` | 3 | Harmonic/mask built-in payloads across root/nested JSON, YAML and cloning. |
 | `Q410-Editor-computed-setters` | 2 | Live focus state and assembly-cache invalidation before private setter alignment. |
-| `Q410-Editor-interfaces` | 10 | Window/menu/preview, request callbacks and connection dispatch; converter bridging is covered by `uxmlconverter`. |
+| `Q410-Editor-interfaces` | 8 | Window/menu/preview, request callbacks and connection dispatch; converter bridging is covered by `uxmlconverter` and persistent-call type names by `eventtypenames`. |
 | `Q410-Editor-serialized-payloads` | 13 | Window/view/package/request fields and coupled Serializable classification. |
 | `Q410-FrameRate-serialization` | 0 | Done by `framepayloads`: signed scalar root JSON, reconstruction and overwrite preserve the selected payload; the unmarked nested type stays omitted. |
 | `Q410-GUI-serialized-payloads` | 0 | Done for the selected release by `guipayload`, with shared GUIStyle payloads across YAML, JSON and cloning; wrapper field annotations match the selected declarations. |
@@ -400,13 +400,13 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-UI-interfaces` | 12 | Binding notifications, panel/group ownership, animations and internal equality cleanup. |
 | `Q410-XR-value-payloads` | 0 | Done for value identity, equality, hashing and capability storage by `xrvalues`; physical feature-provider queries remain unsupported and outside this payload slice. |
 | `Q410-animation-job-producer` | 1 | Animation producer payload and scheduling/lifetime controls. |
-| `Q410-asset-interface-adapters` | 28 | PhysicsMaterial, PhysicsMaterial2D and TextAsset are covered by `assetadapters`; AudioClip and Font use the same typed dispatch with ownership controls in `audioadapters` and `assetinstantiate`. Other asset types still need migration; retain mixer subasset restrictions. |
+| `Q410-asset-interface-adapters` | 27 | PhysicsMaterial, PhysicsMaterial2D and TextAsset are covered by `assetadapters`; AudioClip and Font use the same typed dispatch with ownership controls in `audioadapters` and `assetinstantiate`. Other asset types still need migration; retain mixer subasset restrictions. |
 | `Q410-built-in-inspector-registration` | 3 | Target-specific single/multiple-object inspector behavior before registry annotations. |
 | `Q410-enumerator-current-state` | 0 | Done by `propertyenumerator`: Current caches each advance, including false, and preserves its state across Reset/Dispose for enumerable, list, indexed and default forms. |
 | `Q410-generic-equality-interfaces` | 0 | Done by `scenevalues`: generic collections use Scene object equality/hash behavior after removal of the extra interface; internal registries already use their own handles and keys. |
 | `Q410-job-container-payloads` | 5 | Mesh/light-query ownership and safety metadata used by the job scheduler. |
 | `Q410-linked-pool-counter` | 0 | Done by `linkedpool`: counter, storage, capacity and callbacks share one pool state; null, reentrant release, overflow and independent ObjectPool controls are recorded. |
-| `Q410-measured-lookup-policies` | 11 | Retain the eleven direct/inherited discovery policies and their controls. |
+| `Q410-measured-lookup-policies` | 10 | Retain the eleven direct/inherited discovery policies and their controls. |
 | `Q410-slide-result-serialization` | 2 | Nondefault collision-hit backing payloads and overwrite controls. |
 | `Q410-unconstrained-pixel-data` | 0 | Done by `pixeltransfer`: Texture2D and the layered textures share one transfer sized by the first element's marshaled size, reading ordinary arrays in place; invalid, generic, Nullable, reference-holding and non-marshalable inputs are controlled. |
 | `Q410-value-layout-payloads` | 1 | Five XR payloads are covered by `xrvalues`; LocationInfo and the empty retired AnimationInfo value are covered by `valuepayloads`. Ray-tracing BuildSettings still needs its payload migration with the rendering owner. |
