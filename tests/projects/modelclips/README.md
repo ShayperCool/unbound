@@ -19,8 +19,9 @@ clip masks; `HumanTwistGeneric` is the same file imported as Generic. `HumanSing
 frame 5) imported as Humanoid, Generic and Legacy; their records come after the others and were
 recorded with the macOS Editor (two identical captures, whose other records match the Linux
 reference); the `HumanMask*` models (see Body masks) come next and the `Shapes*` models and
-`HumanLate` (see Float curves of a take that starts into its file) last. Other Humanoid clip
-settings are not covered.
+`HumanLate` (see Float curves of a take that starts into its file), then `HumanTwistLate` and the
+`AxisTies` models (recorded with the macOS Editor, two identical captures whose other records
+match the reference) last. Other Humanoid clip settings are not covered.
 
 `ClipProbe` records each imported clip (length, frame rate, flags, events,
 `AnimationUtility.GetAnimationClipSettings`, curve bindings, the curves' values at every half
@@ -210,9 +211,9 @@ front axis, with and without Bake Axis Conversion and Preserve Hierarchy), and `
 of 0.5%; Spine turns up to 40 degrees from its first key and ends 10 degrees from it).
 
 - Legacy node rotations and curves take the Generic import's signs.
-- A converted node takes the sign of its final rotation's matrix. On a tie between two diagonal
-  elements the later axis decides: the root of `U2S1B0H0` and `U2S1B0H1` (y and z elements
-  equal) has z positive and w negative.
+- A converted node takes the sign of its final rotation's matrix. On a tie between the y and z
+  diagonal elements z decides: the root of `U2S1B0H0` and `U2S1B0H1` (y and z elements equal)
+  has z positive and w negative. The ties with x and a trace of exactly 0: see `AxisTies` below.
 - Spine's rotation becomes two keys with its first value, as positions and scales within their
   error of the first value do.
 
@@ -247,6 +248,31 @@ the clip's start and moves the samples back (0, 0.0333333351, 0.06666668, ..., 0
 exactly (on the clip's own frame times before, 63 records were outside the tolerance); its clip
 is 1.00000012 long, its last transform key (open: which ranges end at their last muscle key,
 which ones lose a frame there, and how events and parameter curves move with it are unmeasured).
+
+`HumanTwistLate` (tests/projects/humanoid/make_models.py, `ProbeRunner.CreateHumanTwistLate`) is
+`HumanTwistAll`'s settings (a mask made from the model, every transform on) on the same rig and
+clip over frames 1..31 of a take that starts at frame 1. `ends.<model>.<clip>` records the clip's
+length and the first and last key time of every curve, `HumanLate`'s too.
+
+- The muscle curves end at 0.99999994; the twist bones' kept positions end at 0.99999994 too,
+  their rotations and scales at 1.00000012, and the clip is 1.00000012 long: a Humanoid clip ends
+  at its last key, whichever curve has it (`HumanLate`, without kept curves, is 0.99999994 long).
+  Unbound now matches every end and length bit for bit (before: 0.99999994 and the kept scales
+  1.00000012 differed in their last bits, inside the comparison's tolerance).
+
+## Signs of the axis conversions
+
+`AxisTies/*` (`make_axis_ties.py`) are 48 static ASCII FBX files, one per axis system a file can
+name (the up, front and coordinate axes a permutation of x, y and z, each of either sign), with an
+unrotated `Root` and an unrotated mesh child, imported without Bake Axis Conversion; `nodes.AxisTies/*`
+records their rotations, so the root holds the axis conversion. Among them are half turns about a
+diagonal of two axes (two equal diagonal elements of the rotation's matrix) and thirds of a turn
+about a diagonal of all three (a trace of 0).
+
+- A trace of exactly 0 takes w positive (all eight thirds of a turn).
+- A tie of x with y or with z takes x positive; a tie of y with z takes z positive (as `U2S1B0H0`).
+- The rotations themselves matched before; 12 of the 48 had the other sign (a tie with x went to
+  the later axis and a trace of 0 to the axes).
 
 ## Whole-curve reduction
 

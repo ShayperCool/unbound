@@ -182,6 +182,26 @@ public class ClipProbe : MonoBehaviour
 #endif
     }
 
+    /// <summary>A clip's length and, per curve binding (Animator and Transform curves alike),
+    /// the time of its first and of its last key, in the order of the curves' paths and names.</summary>
+    static void Ends(string model)
+    {
+#if UNITY_EDITOR
+        foreach (var clip in Clips(model))
+        {
+            var bindings = UnityEditor.AnimationUtility.GetCurveBindings(clip)
+                .OrderBy(b => b.path, StringComparer.Ordinal).ThenBy(b => b.propertyName, StringComparer.Ordinal).ToArray();
+            var parts = new List<string>();
+            foreach (var b in bindings)
+            {
+                var keys = UnityEditor.AnimationUtility.GetEditorCurve(clip, b).keys;
+                parts.Add(S(b.path + "|" + b.propertyName) + ":[" + (keys.Length > 0 ? F(keys[0].time) + "," + F(keys[keys.Length - 1].time) : "") + "]");
+            }
+            Record("ends." + model + "." + clip.name, "{\"length\":" + F(clip.length) + ",\"curves\":{" + string.Join(",", parts) + "}}");
+        }
+#endif
+    }
+
     /// <summary>Every transform of a model with its local rotation as imported, the sign
     /// included (fields ending in `.q`, which the comparator does not match with their
     /// negation): HumanTwistGeneric is the HumanTwist rig imported as Generic, whose bones
@@ -326,6 +346,19 @@ public class ClipProbe : MonoBehaviour
             }
             // Then HumanLong's clip on frames 1..31 of a take that starts at frame 1 (HumanLate).
             Keys("HumanLate");
+            // Then HumanTwistAll's settings on HumanTwist's clip on frames 1..31 of a take that
+            // starts at frame 1 (HumanTwistLate): where a Humanoid clip that keeps transform
+            // curves ends, with every curve's first and last key times.
+            Keys("HumanTwistLate");
+            TransformCurves("HumanTwistLate");
+            Ends("HumanTwistLate");
+            Ends("HumanLate");
+            // Then the rotations of the axis conversion of every axis system an FBX file can name
+            // (make_axis_ties.py), whose matrices decide the sign on ties and a trace of 0.
+            var ties = new List<string>();
+            foreach (var model in Resources.LoadAll<GameObject>("AxisTies")) ties.Add(model.name);
+            ties.Sort(StringComparer.Ordinal);
+            foreach (var model in ties) Nodes("AxisTies/" + model);
         }
         catch (Exception e)
         {

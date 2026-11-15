@@ -17,9 +17,12 @@ it goes to tests/projects/modelclips and is made only when named.
 HumanTwist: HumanB's rig and clip with its two twist bones, which are not human bones, animated
 too (the left one turns, the right one moves); it goes to tests/projects/modelclips as
 HumanTwistNone.fbx (copied there under its other clip masks) and is made only when named.
+HumanTwistLate: HumanTwist's rig and clip on frames 1..31 of a take that starts at frame 1 (as
+HumanLate); it goes to tests/projects/modelclips and is made only when named.
 The character faces Blender's -Y, which is Unity's +Z.
 
-Names after `--` generate only those rigs (HumanA, HumanB, HumanT, HumanLong, HumanLate, HumanTwist).
+Names after `--` generate only those rigs (HumanA, HumanB, HumanT, HumanLong, HumanLate, HumanTwist,
+HumanTwistLate).
 """
 import math
 import os
@@ -214,6 +217,11 @@ def human_twist():
     human_b(20, 'HumanTwistNone.fbx', os.path.join(os.path.dirname(PROBE), 'modelclips'), twist=True)
 
 
+def human_twist_late():
+    """HumanTwist's rig and clip on frames 1..31 of a take that starts at frame 1."""
+    human_b(31, 'HumanTwistLate.fbx', os.path.join(os.path.dirname(PROBE), 'modelclips'), twist=True, start=1)
+
+
 def animate(rig, name, end, keys):
     action = bpy.data.actions.new(name)
     rig.animation_data_create()
@@ -249,7 +257,7 @@ def export(rig, file, probe=PROBE):
 only = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else ['HumanA', 'HumanB', 'HumanT']
 for name, make in (('HumanA', human_a), ('HumanB', human_b), ('HumanT', human_t), ('HumanLong', human_long),
                    ('HumanLate', human_late),
-                   ('HumanTwist', human_twist)):
+                   ('HumanTwist', human_twist), ('HumanTwistLate', human_twist_late)):
     if name in only:
         reset()
         make()
