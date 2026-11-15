@@ -280,6 +280,19 @@ after a camera rendered; GL.LoadOrtho's inside a GL.LoadOrtho), the right way up
 matrices do not last past it (a DrawMeshNow after it takes GL's). `compressed.formats` lists the
 TextureFormat values `GraphicsFormatUtility.IsCompressedFormat` answers true for.
 
+Dynamic resolution (`dynres.*`, frames 13 and 14, `Shaders/DynamicParams.shader`): 16x16 render
+textures, one marked `useDynamicScale`, then `ScalableBufferManager.ResizeBuffers(0.5, 0.25)`.
+The marked one's native texture becomes 8x4 in that frame (also one made after the resize, a
+temporary one, and 15x13 ones: rounded up) while its `width` and `height` stay; at 1 it is 16x16
+again and still holds its last color. A camera drawing into it has `pixelWidth` 16 but
+`scaledPixelWidth` and `pixelRect` 8x4, with `allowDynamicResolution` on or off; into the plain one
+16x16. A Blit from it samples its whole 8x4 image, its `_MainTex_TexelSize` is 16x16, and draws
+into it (a Blit, a camera's command buffer) see `_ScreenParams` 8x4. `ReadPixels` of 16x16 from it
+logs `Reading pixels out of bounds of the current active render texture` and reads nothing; of
+8x4 it reads zeros. Factors outside (0, 1] are asserted against (`Invalid widthScale: 2.000000`)
+and kept within [0.05, 1] (0 keeps 0.0500000119); 16 x 0.3 and 16 x 0.7 give 5x12, 10 x 0.3 gives
+3 (the product in single precision).
+
 Windowed (`run.py native --device metal --windowed`, the Editor with its windows, Play mode in
 its Game view, Run In Background set in the copy): `Reference/unity-6000.0.71f1/metal-windowed.jsonl`
 holds the rows other than the plugin's records (whose order varies with the windowed Editor's
@@ -292,13 +305,14 @@ drawing left). Plugin events run later there, on the Editor's render thread: `ca
 `executed.pixels` show colors the scripts set after the events. The engine run is compared with
 the batch-mode reference only.
 
-Unbound matches 253/289 records with 36 declared residuals (`residuals-metal.json`, each with its
+Unbound matches 320/357 records with 37 declared residuals (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a screen
 camera with command buffers drawing into Unbound's texture standing for the screen, a Blit from
-it green 1/255 apart (the batch-mode screen is not sRGB-encoded), and ETC2_RGBA1, signed EAC and
-PVRTC arrays kept as texels. The screen is shared:
+it green 1/255 apart (the batch-mode screen is not sRGB-encoded), ETC2_RGBA1, signed EAC and
+PVRTC arrays kept as texels, and a dynamically scaled texture's content after a change of scale
+(Unbound's is remade cleared). The screen is shared:
 outside render texture targets the current encoder is over the screen's color texture and depth
 buffer (loaded), in callbacks and from scripts, and its descriptor is there before the plugin asks
 for the encoder (`plugin.peek.screen`, `plugin.peek.outside`); store actions are unknown until the
