@@ -47,6 +47,9 @@ MAX_BUFFERED_EVENT_BYTES = 256*2**20
 # Unverified names tracked at most (each a short-lived name gone before it could be inspected);
 # beyond that monitoring counts as broken.
 MAX_UNVERIFIED_NAMES = 2_000_000
+# Dangling link destinations tracked at most (links to files count until revived() sees them);
+# counts as broken.
+MAX_DANGLING_DESTINATIONS = 1_000_000
 MAX_REDISCOVERIES = 2
 # Keep land's lock independent of a service manager or a historical backlog.
 GATE_HANDOFF_SECONDS = 2
@@ -409,6 +412,9 @@ class ReferenceWatch:
         if (not missing and os.path.lexists(target)) or any(inside(target, p) for p in self.excluded):
             return
         self.dangling.add(Path(target))
+        if len(self.dangling) > MAX_DANGLING_DESTINATIONS:
+            self.broken = True
+            raise ReferenceChanged('too many dangling link destinations to track; remaining work retained')
 
     def revived(self):
         """Directories to walk where a tracked dangling destination exists now. A link appearing
@@ -422,9 +428,11 @@ class ReferenceWatch:
                     raw = path.readlink()
                     target = raw if raw.is_absolute() else path.parent/raw
                     self.references.update((Path(os.path.abspath(target)), target.resolve()))
-                    self.dangle(target.resolve())
                     if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
                         walk.append(target.resolve())
+                    else:
+                        # Not walked now: whatever appears there later is looked at again.
+                        self.dangle(target.resolve(), missing=True)
                 elif path.is_dir():
                     walk.append(path)
             except OSError as error:
@@ -610,9 +618,11 @@ class ReferenceWatch:
                                 raw = path.readlink()
                                 target = raw if raw.is_absolute() else path.parent/raw
                                 self.references.update((Path(os.path.abspath(target)), target.resolve()))
-                                self.dangle(target.resolve())
                                 if target.is_dir() and not any(inside(target.resolve(), p) for p in self.excluded):
                                     pending.add(target.resolve())
+                                else:
+                                    # Not walked now: whatever appears there later is looked at again.
+                                    self.dangle(target.resolve(), missing=True)
                             elif path.is_dir() and not any(inside(path, p) for p in self.excluded):
                                 self.add(path)
                                 self.unlisted.add(str(path))
@@ -630,14 +640,14 @@ class ReferenceWatch:
 
 
 def link_target(path):
-    """(lexical target, resolved target, whether it is a directory, whether it exists), or the
-    OSError. Read on the I/O threads."""
+    """(lexical target, resolved target, whether it is a directory), or the OSError.
+    Read on the I/O threads."""
     try:
         path = Path(path)
         target = Path(os.readlink(path))
         target = target if target.is_absolute() else path.parent/target
         resolved = target.resolve()
-        return Path(os.path.abspath(target)), resolved, target.is_dir(), os.path.lexists(resolved)
+        return Path(os.path.abspath(target)), resolved, target.is_dir()
     except OSError as error:
         return error
 
@@ -662,6 +672,8 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
     join = os.path.join
     # Directories that vanished before this walk; ones vanishing during it stay unsafe.
     vanished_before = set(watcher.vanished) if watcher else set()
+    # Link destinations queued for walking: one gone by its turn is tracked as dangling.
+    link_targets = set()
     try:
         if prefetch:
             index.warm_all()
@@ -684,6 +696,8 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
             for directory, info in zip(batch, index.stat_many(batch)):
                 if isinstance(info, OSError):
                     if gone(info):
+                        if watcher and directory in link_targets:
+                            watcher.dangle(Path(directory), missing=True)
                         continue
                     raise info
                 identity = (info.st_dev, info.st_ino)
@@ -703,6 +717,8 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                     entries = index.entries(directory, info)
                 except OSError as error:
                     if watcher and gone(error):
+                        if directory in link_targets:
+                            watcher.dangle(Path(directory), missing=True)
                         continue
                     if watcher and str(error).startswith('run-cache directory changed during indexing:'):
                         pending.append(directory)
@@ -725,14 +741,16 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                             raise result
                         # Keep lexical and resolved destinations. Lexical paths
                         # protect intermediate links in a chain too.
-                        lexical, target, is_dir, exists = result
+                        lexical, target, is_dir = result
                         found.update((lexical, target))
                         if watcher:
                             watcher.references.update((lexical, target))
-                            if not exists:
-                                watcher.dangle(target, missing=True)
                         if is_dir and not any(inside(target, p) for p in excluded):
                             pending.append(str(target))
+                            link_targets.add(str(target))
+                        elif watcher:
+                            # Not walked now: whatever appears there later is looked at again.
+                            watcher.dangle(target, missing=True)
                     elif entry.kind == 'dir':
                         path = join(directory, entry.name)
                         if path not in excluded_names:

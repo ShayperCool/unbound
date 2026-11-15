@@ -723,6 +723,90 @@ class JanitorTests(unittest.TestCase):
                 pass
         self.assertTrue(target.exists())
 
+    def racing_link_target(self, during):
+        """link_target that runs during() for the link cache/L after reading its destination."""
+        def link_target(path):
+            try:
+                path = Path(path)
+                raw = Path(os.readlink(path))
+                target = raw if raw.is_absolute() else path.parent/raw
+                result = Path(os.path.abspath(target)), target.resolve(), target.is_dir()
+            except OSError as error:
+                return error
+            if path.name == 'L':
+                during()
+            return result
+        return link_target
+
+    def test_a_directory_appearing_right_after_its_link_was_read_is_walked(self):
+        target = self.directory('q1/target')
+        destination = self.root/'outside'/'D'
+        destination.parent.mkdir(parents=True)
+        incoming = self.root/'incoming'
+        incoming.mkdir()
+        (incoming/'link').symlink_to(target/'output')
+        (self.cache/'L').symlink_to(destination)
+        def during():
+            if not destination.exists():
+                incoming.rename(destination)
+        with self.guards(), patch.object(janitor, 'link_target', self.racing_link_target(during)):
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            self.j.apply = True
+            try:
+                self.assertFalse(self.j.remove(target, kind='task'))
+            except janitor.ReferenceChanged:
+                pass
+        self.assertTrue(target.exists())
+
+    def test_a_link_target_gone_before_its_walk_is_tracked(self):
+        target = self.directory('q1/target')
+        destination = self.root/'outside'/'D'
+        destination.mkdir(parents=True)
+        incoming = self.root/'incoming'
+        incoming.mkdir()
+        (incoming/'link').symlink_to(target/'output')
+        (self.cache/'L').symlink_to(destination)
+        def during():
+            if destination.exists():
+                destination.rmdir()  # read as a directory, gone before the walk lists it
+        with self.guards(), patch.object(janitor, 'link_target', self.racing_link_target(during)):
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+        with self.guards():
+            incoming.rename(destination)
+            self.j.apply = True
+            try:
+                self.assertFalse(self.j.remove(target, kind='task'))
+            except janitor.ReferenceChanged:
+                pass
+        self.assertTrue(target.exists())
+
+    def test_a_listed_tree_moved_to_a_briefly_present_destination_is_walked(self):
+        target = self.directory('q1/target')
+        destination = self.root/'outside'/'D'
+        destination.parent.mkdir(parents=True)
+        tree = self.cache/'T'
+        tree.mkdir()
+        (self.cache/'L').symlink_to(destination)
+        def during():
+            if not destination.exists():
+                destination.mkdir()
+        with self.guards(), patch.object(janitor, 'link_target', self.racing_link_target(during)):
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+        with self.guards():
+            destination.rmdir()
+            tree.rename(destination)
+            self.j.refresh_links()
+            (destination/'link').symlink_to(target/'output')
+            self.j.apply = True
+            try:
+                self.assertFalse(self.j.remove(target, kind='task'))
+            except janitor.ReferenceChanged:
+                pass
+        self.assertTrue(target.exists())
+
     def test_too_many_unverified_names_fail_closed(self):
         watcher = janitor.ReferenceWatch()
         self.addCleanup(watcher.close)
