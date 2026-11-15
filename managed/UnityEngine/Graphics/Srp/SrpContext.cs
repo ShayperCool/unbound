@@ -1419,7 +1419,7 @@ namespace Unbound.Runtime
             if (data == null || data.Camera == null) return;
             var drawing = new DrawingSettings(s_ShadowCaster, new SortingSettings(data.Camera) { criteria = SortingCriteria.CommonOpaque });
             var filtering = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
-            FrameBuilder.DrawRendererList(data, drawing, filtering, new List<ShaderTagId> { s_ShadowCaster }, shadows: settings.objectsFilter, shadowLight: settings.lightIndex);
+            FrameBuilder.DrawRendererList(data, drawing, filtering, new List<ShaderTagId> { s_ShadowCaster }, shadows: settings.objectsFilter, shadowLight: settings.lightIndex, shadowSplit: settings.splitIndex);
         }
 
         static void DrawRenderers(Entry e)

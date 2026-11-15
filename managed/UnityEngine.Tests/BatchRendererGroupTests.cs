@@ -647,8 +647,9 @@ namespace UnityEngine.Tests
             light.type = LightType.Directional;
             light.shadows = LightShadows.Hard;
             var casting = ShadowCastingMode.ShadowsOnly;
+            ushort mask = 0x1;
             var group = Group((g, c, o, u) => Emit(new BatchFilterSettings { renderingLayerMask = uint.MaxValue, shadowCastingMode = casting }, 1,
-                new BatchDrawCommand { batchID = new BatchID { value = 1 }, meshID = new BatchMeshID { value = 1 }, materialID = new BatchMaterialID { value = 1 }, visibleCount = 1 })(g, c, o, u));
+                new BatchDrawCommand { batchID = new BatchID { value = 1 }, meshID = new BatchMeshID { value = 1 }, materialID = new BatchMaterialID { value = 1 }, visibleCount = 1, splitVisibilityMask = mask })(g, c, o, u));
             group.RegisterMesh(m_Mesh);
             group.RegisterMaterial(m_Material);
             AddBatch(group);
@@ -665,18 +666,37 @@ namespace UnityEngine.Tests
                 var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
                 var items = new List<FrameBuilder.DrawItem>();
                 long sequence = 0;
-                BatchCulling.CollectShadows(data, all, sun, items, ref sequence);
+                BatchCulling.CollectShadows(data, all, sun, 0, items, ref sequence);
                 Assert.Single(items);
                 Assert.Equal(ShadowCastingMode.ShadowsOnly, items[0].Lighting.Cast);
                 items.Clear();
-                BatchCulling.CollectShadows(data, all, sun + 1, items, ref sequence);
+                BatchCulling.CollectShadows(data, all, sun + 1, 0, items, ref sequence);
+                Assert.Empty(items);
+                // A split's list draws the commands whose splitVisibilityMask has its bit (the
+                // Scripting API; tests/projects/brg split_masks): mask 1 is not in split 1.
+                BatchCulling.CollectShadows(data, all, sun, 1, items, ref sequence);
                 Assert.Empty(items);
                 // The camera list leaves the shadow-only range out.
                 Assert.Empty(Collect(data, all));
+                // Masks 2 and 0 are not in split 0 (no shadow there in the Editor), mask 3 is; the
+                // camera list ignores the mask (the Editor draws every pillar of split_masks).
+                foreach (var (m, inSplit0) in new[] { ((ushort)0x2, false), ((ushort)0x0, false), ((ushort)0x3, true) })
+                {
+                    mask = m;
+                    casting = ShadowCastingMode.On;
+                    var masked = new CullingResults { ptr = Culling.Cull(ref parameters) };
+                    new ScriptableRenderContext().CullShadowCasters(masked, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
+                    items.Clear();
+                    BatchCulling.CollectShadows(masked.Data, all, sun, 0, items, ref sequence);
+                    Assert.Equal(inSplit0 ? 1 : 0, items.Count);
+                    Assert.Single(Collect(masked.Data, all));
+                }
+                items.Clear();
+                mask = 0x1;
                 casting = ShadowCastingMode.Off;
                 var off = new CullingResults { ptr = Culling.Cull(ref parameters) };
                 new ScriptableRenderContext().CullShadowCasters(off, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
-                BatchCulling.CollectShadows(off.Data, all, sun, items, ref sequence);
+                BatchCulling.CollectShadows(off.Data, all, sun, 0, items, ref sequence);
                 Assert.Empty(items);
             }
             finally
@@ -699,7 +719,7 @@ namespace UnityEngine.Tests
             light.shadows = LightShadows.Hard;
             var filter = new BatchFilterSettings { renderingLayerMask = uint.MaxValue, layer = 3, shadowCastingMode = ShadowCastingMode.On };
             var group = Group((g, c, o, u) => Emit(filter, 1,
-                new BatchDrawCommand { batchID = new BatchID { value = 1 }, meshID = new BatchMeshID { value = 1 }, materialID = new BatchMaterialID { value = 1 }, visibleCount = 1 })(g, c, o, u));
+                new BatchDrawCommand { batchID = new BatchID { value = 1 }, meshID = new BatchMeshID { value = 1 }, materialID = new BatchMaterialID { value = 1 }, visibleCount = 1, splitVisibilityMask = 0xff })(g, c, o, u));
             group.RegisterMesh(m_Mesh);
             group.RegisterMaterial(m_Material);
             AddBatch(group);
@@ -720,7 +740,7 @@ namespace UnityEngine.Tests
                 new ScriptableRenderContext().CullShadowCasters(results, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
                 var items = new List<FrameBuilder.DrawItem>();
                 long sequence = 0;
-                BatchCulling.CollectShadows(results.Data, all, sun, items, ref sequence);
+                BatchCulling.CollectShadows(results.Data, all, sun, 0, items, ref sequence);
                 Assert.Single(items);
                 // The camera draws it too; a camera culling that leaves the layer out does not, but
                 // its light culling still casts it.
@@ -731,7 +751,7 @@ namespace UnityEngine.Tests
                 new ScriptableRenderContext().CullShadowCasters(results, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
                 Assert.Empty(Collect(results.Data, all));
                 items.Clear();
-                BatchCulling.CollectShadows(results.Data, all, sun, items, ref sequence);
+                BatchCulling.CollectShadows(results.Data, all, sun, 0, items, ref sequence);
                 Assert.Single(items);
             }
             finally

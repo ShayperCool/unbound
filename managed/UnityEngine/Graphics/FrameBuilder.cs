@@ -786,7 +786,7 @@ namespace Unbound.Runtime
         /// <param name="shadows">A shadow caster list: renderers that cast shadows (with
         /// ShadowsOnly ones), else renderers drawn normally (without ShadowsOnly ones).</param>
         internal static void DrawRendererList(CullingData data, DrawingSettings drawing, FilteringSettings filtering, List<ShaderTagId> passNames, ShadowObjectsFilter? shadows = null,
-            RendererLists.TaggedStates tagged = null, int shadowLight = -1)
+            RendererLists.TaggedStates tagged = null, int shadowLight = -1, int shadowSplit = 0)
         {
             // The draws' merged properties live until the list is written.
             using var pooled = DrawPropertyPool.Begin();
@@ -845,7 +845,7 @@ namespace Unbound.Runtime
             }
             // BatchRendererGroup draw commands (default sorting layer): a shadow caster list takes
             // its light culling's.
-            if (shadows.HasValue) BatchCulling.CollectShadows(data, filtering, shadowLight, s_Items, ref s_Sequence);
+            if (shadows.HasValue) BatchCulling.CollectShadows(data, filtering, shadowLight, shadowSplit, s_Items, ref s_Sequence);
             else if (defaultSortingLayer) BatchCulling.Collect(context, data, filtering, drawing.mainLightIndex, s_Items, ref s_Sequence);
             foreach (var source in Sources)
             {

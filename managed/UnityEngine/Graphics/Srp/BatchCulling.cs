@@ -389,15 +389,27 @@ namespace Unbound.Runtime
         internal static void Collect(FrameBuilder.CameraContext camera, CullingData data, FilteringSettings filtering, int mainLight, List<FrameBuilder.DrawItem> into, ref long sequence) =>
             Collect(camera, data, filtering, mainLight, -1, into, ref sequence);
 
-        /// <summary>The draw commands a light's shadow caster list draws: those of the light's
-        /// culling outputs whose ranges cast shadows (On, TwoSided, ShadowsOnly), through the
-        /// list's filters as a camera list's.</summary>
-        internal static void CollectShadows(CullingData data, FilteringSettings filtering, int light, List<FrameBuilder.DrawItem> into, ref long sequence)
+        /// <summary>The draw commands a light's shadow caster list for split <paramref name="split"/>
+        /// draws: those of the light's culling outputs whose ranges cast shadows (On, TwoSided,
+        /// ShadowsOnly) and whose splitVisibilityMask has the split's bit, through the list's
+        /// filters as a camera list's.</summary>
+        internal static void CollectShadows(CullingData data, FilteringSettings filtering, int light, int split, List<FrameBuilder.DrawItem> into, ref long sequence)
         {
-            if (light >= 0) Collect(null, data, filtering, -1, light, into, ref sequence);
+            if (light >= 0) Collect(null, data, filtering, -1, light, into, ref sequence, SplitBit(split));
         }
 
-        static void Collect(FrameBuilder.CameraContext camera, CullingData data, FilteringSettings filtering, int mainLight, int shadowLight, List<FrameBuilder.DrawItem> into, ref long sequence)
+        /// <summary>The splitVisibilityMask bit of a shadow split: "the least significant bit
+        /// corresponds to the first culling split" (the Scripting API's
+        /// BatchDrawCommand.splitVisibilityMask; a camera culling's draws ignore the mask, measured:
+        /// tests/projects/brg split_masks). A split past the sixth is unmeasured: it takes no bit and the mask is not applied.</summary>
+        static ushort SplitBit(int split) => split >= 0 && split < MaxSplits ? (ushort)(1 << split) : (ushort)0;
+
+        /// <summary>The culling splits a mask covers: a directional light's cascades or a point
+        /// light's six cube faces.</summary>
+        const int MaxSplits = 6;
+
+        static void Collect(FrameBuilder.CameraContext camera, CullingData data, FilteringSettings filtering, int mainLight, int shadowLight, List<FrameBuilder.DrawItem> into, ref long sequence,
+            ushort splitBit = 0)
         {
             var main = mainLight >= 0 && mainLight < data.Lights.Length ? data.Lights[mainLight].light : null;
             bool shadows = shadowLight >= 0;
@@ -429,7 +441,7 @@ namespace Unbound.Runtime
                     if (filtering.excludeMotionVectorObjects && filter.motionMode == MotionVectorGenerationMode.Object) continue;
                     if (range.drawCommandsType == BatchDrawCommandType.Indirect)
                     {
-                        CollectIndirect(camera, output, ref d, range, filter, main, into, ref sequence);
+                        CollectIndirect(camera, output, ref d, range, filter, main, shadows ? splitBit : (ushort)0, into, ref sequence);
                         continue;
                     }
                     if (range.drawCommandsType != BatchDrawCommandType.Direct)
@@ -451,6 +463,7 @@ namespace Unbound.Runtime
                             continue;
                         }
                         if (command.visibleCount == 0) continue;
+                        if (shadows && splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
                         if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
                         var item = Item(output, (int)c, false, mesh, command.submeshIndex, material, command.flags, batch.Properties, filter, main, ref sequence);
                         if ((command.flags & BatchDrawCommandFlags.HasSortingPosition) == 0 || camera == null)
@@ -477,7 +490,7 @@ namespace Unbound.Runtime
         /// arguments buffer holds at its offset (IndirectDrawIndexedArgs), the instances' batch
         /// indices read from its visible instance buffer from its visible offset on.</summary>
         static void CollectIndirect(FrameBuilder.CameraContext camera, Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, in BatchFilterSettings filter, Light main,
-            List<FrameBuilder.DrawItem> into, ref long sequence)
+            ushort splitBit, List<FrameBuilder.DrawItem> into, ref long sequence)
         {
             if (range.drawCommandsCount > 0 && d.indirectDrawCommands == null)
             {
@@ -493,6 +506,8 @@ namespace Unbound.Runtime
                 var mesh = group.GetRegisteredMesh(command.meshID);
                 var material = group.GetRegisteredMaterial(command.materialID);
                 if (batch == null || mesh == null || material == null) continue;
+                // A shadow split's list (splitBit set) draws the commands visible in the split.
+                if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
                 if (command.topology != MeshTopology.Triangles)
                 {
                     WarnOnce(UnsupportedIndirectTopology);
