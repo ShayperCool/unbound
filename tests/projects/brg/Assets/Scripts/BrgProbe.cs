@@ -90,6 +90,7 @@ public unsafe class BrgProbe : MonoBehaviour
             ForwardPlus();
             LocalShadows();
             Sorting();
+            SplitMasks();
         }
         catch (Exception e)
         {
@@ -763,6 +764,125 @@ public unsafe class BrgProbe : MonoBehaviour
         };
     }
 
+    // ---- split_masks scenario (inserted into BrgProbe) ----
+
+    /// <summary>The split_masks scenario's pillars: place, scale and splitVisibilityMask.</summary>
+    static readonly (Vector3 Place, Vector3 Scale, ushort Mask)[] s_MaskPillars =
+    {
+        (new Vector3(-2.4f, 0.3f, 1f), new Vector3(0.3f, 1.5f, 0.3f), 0x1),
+        (new Vector3(-0.8f, 0.3f, 1f), new Vector3(0.3f, 1.5f, 0.3f), 0x2),
+        (new Vector3(0.8f, 0.3f, 1f), new Vector3(0.3f, 1.5f, 0.3f), 0x0),
+        (new Vector3(2.4f, 0.3f, 1f), new Vector3(0.3f, 1.5f, 0.3f), 0x3),
+    };
+    GraphicsBuffer m_MaskBuffer;
+    BatchID m_MaskBatch;
+
+    /// <summary>The sun casts hard shadows in two cascades (URP's split at a quarter of the 50
+    /// unit shadow distance) onto a large ground; pillars near the camera (their shadows in the
+    /// first cascade) are drawn by commands whose splitVisibilityMask is 1, 2, 0 and 3. Records each pillar's colour and the ground's where
+    /// its shadow falls.</summary>
+    void SplitMasks()
+    {
+        m_Light = FindFirstObjectByType<Light>();
+        var urp = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+        int cascades = urp.shadowCascadeCount;
+        urp.shadowCascadeCount = 2;
+        m_Light.shadows = LightShadows.Hard;
+        var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        ground.transform.position = new Vector3(0f, -0.45f, 15f);
+        ground.transform.localScale = new Vector3(4f, 1f, 4f);
+
+        int n = s_MaskPillars.Length;
+        int objectToWorld = SizeOfPackedMatrix * 2, worldToObject = objectToWorld + SizeOfPackedMatrix * n, colors = worldToObject + SizeOfPackedMatrix * n;
+        int bytes = (colors + SizeOfFloat4 * n + 255) / 256 * 256;
+        var data = new float[bytes / 4];
+        for (int i = 0; i < n; i++)
+        {
+            var m = Matrix4x4.TRS(s_MaskPillars[i].Place, Quaternion.identity, s_MaskPillars[i].Scale);
+            Pack(data, objectToWorld / 4 + i * 12, m);
+            Pack(data, worldToObject / 4 + i * 12, m.inverse);
+            int o = colors / 4 + i * 4;
+            data[o] = 0.95f; data[o + 1] = 0.85f; data[o + 2] = 0.3f; data[o + 3] = 1f;
+        }
+        m_MaskBuffer = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer
+            ? new GraphicsBuffer(GraphicsBuffer.Target.Constant, bytes / 16, 16)
+            : new GraphicsBuffer(GraphicsBuffer.Target.Raw, bytes / 4, 4);
+        m_MaskBuffer.SetData(data);
+        var metadata = new NativeArray<MetadataValue>(3, Allocator.Temp);
+        metadata[0] = new MetadataValue { NameID = Shader.PropertyToID("unity_ObjectToWorld"), Value = PerInstance | (uint)objectToWorld };
+        metadata[1] = new MetadataValue { NameID = Shader.PropertyToID("unity_WorldToObject"), Value = PerInstance | (uint)worldToObject };
+        metadata[2] = new MetadataValue { NameID = Shader.PropertyToID("_BaseColor"), Value = PerInstance | (uint)colors };
+        m_MaskBatch = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer
+            ? m_Brg.AddBatch(metadata, m_MaskBuffer.bufferHandle, 0, (uint)bytes)
+            : m_Brg.AddBatch(metadata, m_MaskBuffer.bufferHandle);
+        metadata.Dispose();
+
+        Scenario("split_masks");
+        RecordViews();
+        // Each pillar's colour at its centre and the ground's where its centre's shadow falls,
+        // projected as the 320x180 target renders it.
+        var target = RenderTexture.GetTemporary(Width, Height, 24);
+        m_Camera.targetTexture = target;
+        var toGround = m_Light.transform.forward;
+        for (int i = 0; i < n; i++)
+        {
+            var (place, scale, mask) = s_MaskPillars[i];
+            // The shadow of a point near the pillar's top, which falls beside the pillar.
+            var top = place + Vector3.up * (scale.y * 0.4f);
+            var shadow = top + toGround * ((top.y + 0.45f) / -toGround.y);
+            Row("split_masks.p" + i + ".mask", (int)mask);
+            Row("split_masks.p" + i + ".body", Pixel(place));
+            Row("split_masks.p" + i + ".shadow", Pixel(shadow));
+        }
+        m_Camera.targetTexture = null;
+        RenderTexture.ReleaseTemporary(target);
+
+        m_Brg.RemoveBatch(m_MaskBatch);
+        m_MaskBuffer.Dispose();
+        DestroyImmediate(ground);
+        m_Light.shadows = LightShadows.None;
+        urp.shadowCascadeCount = cascades;
+    }
+
+    /// <summary>The last scenario image's colour at a world point (the camera's target set).</summary>
+    double[] Pixel(Vector3 world)
+    {
+        var v = m_Camera.WorldToViewportPoint(world);
+        var pixel = m_LastImage.GetPixel((int)(v.x * Width), (int)(v.y * Height));
+        return new double[] { Math.Round(pixel.r, 3), Math.Round(pixel.g, 3), Math.Round(pixel.b, 3) };
+    }
+
+    /// <summary>The split_masks scenario's commands, in camera and light views alike: one range
+    /// casting and receiving shadows, a command per pillar with its mask.</summary>
+    void SplitMaskCommands(BatchCullingOutputDrawCommands* commands)
+    {
+        int n = s_MaskPillars.Length;
+        int alignment = UnsafeUtility.AlignOf<long>();
+        commands->drawCommands = (BatchDrawCommand*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommand>() * n, alignment, Allocator.TempJob);
+        commands->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>(), alignment, Allocator.TempJob);
+        commands->visibleInstances = (int*)UnsafeUtility.Malloc(n * sizeof(int), alignment, Allocator.TempJob);
+        commands->instanceSortingPositions = null;
+        commands->instanceSortingPositionFloatCount = 0;
+        commands->drawCommandPickingInstanceIDs = null;
+        commands->drawCommandCount = n;
+        commands->drawRangeCount = 1;
+        commands->visibleInstanceCount = n;
+        for (int i = 0; i < n; i++)
+        {
+            commands->visibleInstances[i] = i;
+            commands->drawCommands[i] = new BatchDrawCommand
+            {
+                visibleOffset = (uint)i, visibleCount = 1, batchID = m_MaskBatch, materialID = m_Lit, meshID = m_Cube,
+                submeshIndex = 0, splitVisibilityMask = s_MaskPillars[i].Mask, flags = BatchDrawCommandFlags.None,
+            };
+        }
+        commands->drawRanges[0] = new BatchDrawRange
+        {
+            drawCommandsType = BatchDrawCommandType.Direct, drawCommandsBegin = 0, drawCommandsCount = (uint)n,
+            filterSettings = new BatchFilterSettings { renderingLayerMask = 0xffffffff, shadowCastingMode = ShadowCastingMode.On, receiveShadows = true },
+        };
+    }
+
     JobHandle OnPerformCulling(BatchRendererGroup group, BatchCullingContext context, BatchCullingOutput output, IntPtr user)
     {
         int call = m_Calls++;
@@ -774,6 +894,11 @@ public unsafe class BrgProbe : MonoBehaviour
             m_Views[view] = m_Views.TryGetValue(view, out int n) ? n + 1 : 1;
         }
         if (group != m_Brg || m_NoCommands) return new JobHandle();
+        if (m_Scenario == "split_masks")
+        {
+            SplitMaskCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
+            return new JobHandle();
+        }
         if (m_Scenario == "sorting")
         {
             if (context.viewType == BatchCullingViewType.Camera) SortingCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
