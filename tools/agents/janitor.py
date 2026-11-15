@@ -778,6 +778,9 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
     """
     walk = walk if walk is not None and watcher is not None else Walk()
     resuming = walk.pending is not None
+    if not resuming:
+        # Only a pause saves where the walk stands; anything an interrupted walk left is dropped.
+        walk.__init__()
     found, visited = walk.found, walk.visited
     excluded = set(p.resolve() for p in excluded)
     excluded_names = {str(p) for p in excluded}
@@ -802,7 +805,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
         walk.pending = None
         while True:
             if deadline is not None and time.monotonic() > deadline:
-                walk.pending, walk.seen = pending, set(index.seen)
+                walk.pending, walk.seen = pending, index.seen
                 raise WalkPaused(f'run-cache index exceeded {seconds}s; the walk continues in the next attempt')
             if not pending and watcher and watcher.arrived:
                 arrivals = set()
@@ -951,6 +954,7 @@ class Janitor:
         self.protected = [Path(p).resolve() for p in extra_protected]
         self.removed = self.reclaimable = 0
         self.watch = None
+        self.links = set()
         self.suite_paths, self.suite_roots = set(), set()
         self.baseline_signature = None
         self.run_seconds, self.deadline = run_seconds, None
@@ -995,7 +999,7 @@ class Janitor:
                                      watcher=self.watch, index_root=self.cache, prefetch=True, complete=True,
                                      walk=self.walk)
         self.walk = None
-        self.links = getattr(self, 'links', set()) | links
+        self.links |= links
         self.refresh_baseline(force=True)
         self.emit('references_ready', watched_directories=len(self.watch.directories), references=len(self.links))
         self.processes = process_paths()

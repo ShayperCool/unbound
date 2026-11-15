@@ -992,6 +992,33 @@ class JanitorTests(unittest.TestCase):
                                         index_root=self.cache, walk=walk)
         self.assertIn(target/'output', found)
 
+    def test_a_walk_interrupted_by_another_error_starts_again(self):
+        # Only a pause saves where a walk stands. A timeout mid-batch (a database wait) leaves a
+        # half-filled walk that the next call must not take as finished.
+        target = self.directory('q1/target')
+        for index in range(6):
+            (self.cache/f'd{index}').mkdir()
+            (self.cache/f'd{index}'/'link').symlink_to(target/f'out{index}')
+        watcher = janitor.ReferenceWatch()
+        self.addCleanup(watcher.close)
+        walk = janitor.Walk()
+        calls = {'batches': 0}
+        original = janitor.DirectoryIndex.stat_many
+        def stat_many(index, paths):
+            calls['batches'] += 1
+            if calls['batches'] == 3:
+                raise TimeoutError('database wait')
+            return original(index, paths)
+        with patch.object(janitor.DirectoryIndex, 'batch_size', 1), \
+             patch.object(janitor.DirectoryIndex, 'stat_many', stat_many):
+            with self.assertRaises(TimeoutError) as raised:
+                janitor.reference_paths([self.cache], seconds=None, watcher=watcher, index_root=self.cache, walk=walk)
+        self.assertNotIsInstance(raised.exception, janitor.WalkPaused)
+        self.assertIsNone(walk.pending)
+        found = janitor.reference_paths([self.cache], seconds=None, watcher=watcher, index_root=self.cache, walk=walk)
+        expected = {target/f'out{index}' for index in range(6)}
+        self.assertTrue(expected <= set(found), expected-set(found))
+
     def test_discovery_attempts_continue_one_walk(self):
         target = self.directory('q1/target')
         (self.cache/'deep'/'er').mkdir(parents=True)
