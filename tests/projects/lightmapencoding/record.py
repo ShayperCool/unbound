@@ -28,7 +28,7 @@ OUTPUT = 'lightmapencoding.jsonl'
 def complete(directory):
     path = directory/OUTPUT
     lines = path.read_text().splitlines() if path.is_file() else []
-    if sum('"capture"' in line for line in lines) != 18:
+    if sum('"capture"' in line for line in lines) != 22:
         return f'missing or incomplete {OUTPUT}'
     return None
 

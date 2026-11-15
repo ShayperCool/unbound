@@ -66,6 +66,8 @@ public static class ProbeRunner
         var ldrMips = (TextureImporter)AssetImporter.GetAtPath("Assets/Resources/LightmapLdrMips.png");
         ldrMips.textureType = TextureImporterType.Lightmap;
         Mipmapped(ldrMips);
+        // A float 2D colour texture with the importer's defaults.
+        WriteExr("Assets/Resources/Hdr2d.exr", 16, 8, (x, y) => Tints[y] * Levels[x]);
         // The same HDR lightmap and cubemap with the importer's default compression.
         WriteExr("Assets/Resources/LightmapCompressed.exr", 16, 8, (x, y) => Tints[y] * Levels[x]);
         var compressed = (TextureImporter)AssetImporter.GetAtPath("Assets/Resources/LightmapCompressed.exr");

@@ -10,6 +10,7 @@ CGPROGRAM
 float _Mode;
 samplerCUBE _Cube; float4 _Cube_HDR;
 sampler2D _Flat; float4 _Flat_HDR;
+float4 _GlobalCube_HDR;
 struct v2f { float4 pos:SV_POSITION; float2 uv1:TEXCOORD0; float2 cell:TEXCOORD1; };
 v2f vert(appdata_full v) { v2f o; o.pos=UnityObjectToClipPos(v.vertex); o.uv1=v.texcoord1.xy; o.cell=v.texcoord.xy*float2(16,8); return o; }
 // Row = cube face (+X, -X, +Y, -Y, +Z, -Z), column = texel s + 4t of its 4x4 face, at the texel's centre.
@@ -25,7 +26,9 @@ float3 Direction(float2 cell) {
 }
 float4 frag(v2f i):SV_Target {
  if (_Mode > 5.5) {
-  // Material textures: their decode values, the cube decoded with them, a lightmap's level 1.
+  // Material textures: their decode values, the cube decoded with them, a lightmap's level 1,
+  // a global texture's decode values.
+  if (_Mode > 9.5) return _GlobalCube_HDR;
   if (_Mode < 6.5) return _Cube_HDR;
   if (_Mode < 7.5) {
    if (i.cell.y >= 6) return float4(0,0,0,0);

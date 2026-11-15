@@ -15,7 +15,9 @@ the raw lightmap texel, `unity_Lightmap_HDR` and `DecodeLightmap`; the raw refle
 cube texel centres, `unity_SpecCube0_HDR` and `DecodeHDR` (scene default reflection and the
 probe); the quad drawn with Legacy Shaders/Diffuse; the first three with the 8-bit lightmap; a
 material's `_Cube_HDR` and `_Flat_HDR` and its cube decoded with them; level 1 of mipmapped
-float and 8-bit lightmaps.
+float and 8-bit lightmaps; a float 2D colour texture's (`Hdr2d.exr`) material decode values;
+the cube's decode values through a property block and as a global texture; `unity_Lightmap_HDR`
+of a draw using the second of two lightmaps whose first is a plain texture.
 
 `profiles.py` lists the eight profiles, each a project copy with a build target, colour space and
 the Player Settings lists `m_BuildTargetGroupLightmapEncodingQuality` and
@@ -32,7 +34,10 @@ Measured (the Editor's defaults are Standalone High/High and Android Low/Low):
   RGBM on Standalone; Normal is RGBM (RGBA32); High keeps half floats. An 8-bit lightmap's stored
   value (byte / 255) is taken as its radiance, filtered into mips as floats and encoded alike;
   an unencoded one filters its mips as stored (not in linear light).
-- A material's `<name>_HDR` is its texture's decode values.
+- A texture's `<name>_HDR` is its decode values, on a material, through a property block and as
+  a global texture; Android's float 2D colour texture (RGBM) decodes as RGBM there.
+- `unity_Lightmap_HDR` is the first lightmap's: a plain first texture leaves (1, 1, 0, 0) for an
+  encoded second.
 - HDR cubemaps: Low double LDR, Normal RGBM, High half floats, on both targets.
 - Decode values: double LDR 2 (2^2.2 for sRGB data in Linear), RGBM 5 and alpha (5^2.2, exponent
   2.2 in Linear); `unity_Lightmap_HDR` follows the first lightmap.
@@ -48,6 +53,6 @@ UNBOUND=<unbound> python3 tests/projects/lightmapencoding/run.py check
 
 `run.py check` compares every record; capture pixels within a relative 1e-3 (the Editor's
 readbacks of 8-bit sRGB data carry about 2^-11 of rounding, one 8-bit step is more than 0.9%).
-The engine matches 504/512 records. The 8 others are the compressed cubemaps (Unbound keeps
+The engine matches 536/544 records. The 8 others are the compressed cubemaps (Unbound keeps
 their pixels uncompressed), listed exactly in `residuals.json`; an entry that stops occurring
 fails the check.

@@ -16,7 +16,8 @@ using UnityEngine.Rendering;
 /// built-in Legacy Shaders/Diffuse; the first three again with an 8-bit (PNG) lightmap; the
 /// formats of a compressed HDR lightmap and cubemap; a material's <c>_Cube_HDR</c> and
 /// <c>_Flat_HDR</c> and its cube decoded with them; level 1 of mipmapped float and 8-bit
-/// lightmaps. Writes <c>lightmapencoding.jsonl</c> into
+/// lightmaps; a float 2D texture's material decode values; the cube's through a property block
+/// and as a global texture; unity_Lightmap_HDR with a plain first lightmap. Writes <c>lightmapencoding.jsonl</c> into
 /// <c>LIGHTMAP_ENCODING_PROBE_OUT</c>, then quits.
 /// </summary>
 public class LightmapEncodingProbe : MonoBehaviour
@@ -127,6 +128,28 @@ public class LightmapEncodingProbe : MonoBehaviour
         Capture(camera, target, "mips/lightmapLevel1");
         LightmapSettings.lightmaps = new[] { new LightmapData { lightmapColor = Resources.Load<Texture2D>("LightmapLdrMips") } };
         Capture(camera, target, "mips/ldrLevel1");
+        // A float 2D colour texture's decode values on the material.
+        diagnostic.SetTexture("_Flat", Resources.Load<Texture2D>("Hdr2d"));
+        diagnostic.SetFloat("_Mode", 8);
+        Capture(camera, target, "material/hdr2dDecode");
+        // The cube through a property block on a material without one, and as a global texture.
+        var bare = new Material(diagnostic.shader);
+        bare.SetFloat("_Mode", 6);
+        renderer.sharedMaterial = bare;
+        var block = new MaterialPropertyBlock();
+        block.SetTexture("_Cube", cube);
+        renderer.SetPropertyBlock(block);
+        Capture(camera, target, "block/cubeDecode");
+        renderer.SetPropertyBlock(null);
+        Shader.SetGlobalTexture("_GlobalCube", cube);
+        bare.SetFloat("_Mode", 10);
+        Capture(camera, target, "global/cubeDecode");
+        // Two lightmaps, the first a plain texture: the second's draw decodes as the first says.
+        renderer.sharedMaterial = diagnostic;
+        diagnostic.SetFloat("_Mode", 1);
+        LightmapSettings.lightmaps = new[] { new LightmapData { lightmapColor = Texture2D.whiteTexture }, new LightmapData { lightmapColor = lightmap } };
+        renderer.lightmapIndex = 1;
+        Capture(camera, target, "mixed/lightmapDecode");
 
         File.WriteAllText(Path.Combine(dir, "lightmapencoding.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
