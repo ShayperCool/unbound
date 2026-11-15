@@ -44,6 +44,75 @@ namespace Unbound.Runtime
             public Object Resolve(ObjectRef reference, Type expected) => null;
         }
 
+        static bool IsFixed(int classId) => classId == EngineTypes.PrefabInstanceId || classId == 1660057539 || classId == 142
+            || classId == 115 || classId == 150 || classId == EngineTypes.GameObjectId || classId == 104 || classId == 157
+            || classId == 196 || classId == 124;
+
+        /// <summary>The reader declarations whose generated field tables a document of this kind
+        /// consumes (the readers the loader runs for it); <paramref name="type"/> is the script type of
+        /// a MonoBehaviour, else the registered engine type. Shared with the managed tests, which
+        /// require every key they name to be derived.</summary>
+        internal static IEnumerable<(Type Owner, string Method, int Parameters, int Node)> Declarations(string context, int classId, Type type)
+        {
+            if (context == "projectSettings")
+            {
+                if (classId == 55) yield return (typeof(Physics), nameof(Physics.ReadSettings), 1, 0);
+                if (classId == 19) yield return (typeof(Physics2D), nameof(Physics2D.ReadSettings), 1, 0);
+                if (classId == 126) yield return (typeof(NavMeshAreas), nameof(NavMeshAreas.Read), 1, 0);
+                yield break;
+            }
+            if (context != null) yield break;
+            switch (classId)
+            {
+                case EngineTypes.MonoBehaviourId:
+                    yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.OwnerOf), 1, 0);
+                    // Without its script the rest is not read (the report names the missing script).
+                    if (type == null) yield break;
+                    if (typeof(Component).IsAssignableFrom(type)) yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadComponentHeader), 2, 0);
+                    else yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadName), 2, 1);
+                    if (typeof(Behaviour).IsAssignableFrom(type)) yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadBehaviour), 2, 1);
+                    yield break;
+                case EngineTypes.PrefabInstanceId: yield return (typeof(PrefabLinks), nameof(PrefabLinks.ReadInstance), 2, 0); yield break;
+                case 1660057539: yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.RootReferences), 1, 0); yield break;
+                case 142: yield return (typeof(AssetBundle), nameof(AssetBundle.ReadContentsDocument), 1, 0); yield break;
+                case 115: yield return (typeof(BundleFiles), nameof(BundleFiles.ScriptType), 1, 0); yield break;
+                // Recognized by the loader, but its data has no reader.
+                case 150: yield break;
+                case EngineTypes.GameObjectId:
+                    yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadGameObject), 4, 0);
+                    yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ComponentReferences), 1, 0);
+                    yield break;
+                case 104: yield return (typeof(RenderSettings), nameof(RenderSettings.SceneLoaded), 3, 1); yield break;
+                case 157: yield return (typeof(SceneSettings), nameof(SceneSettings.LightingReferences), 1, 0); yield break;
+                case 196: yield return (typeof(SceneNavMesh), nameof(SceneNavMesh.SceneLoaded), 3, 1); yield break;
+                case 124:
+                    yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadComponentHeader), 2, 0);
+                    yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadBehaviour), 2, 1);
+                    yield break;
+            }
+            if (type == null) yield break;
+            yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.OwnerOf), 1, 0);
+            if (typeof(Component).IsAssignableFrom(type))
+            {
+                yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadComponentHeader), 2, 0);
+                if (typeof(Behaviour).IsAssignableFrom(type)) yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadBehaviour), 2, 1);
+                if (typeof(Transform).IsAssignableFrom(type))
+                {
+                    yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ParentOf), 1, 0);
+                    yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.RootOrder), 1, 0);
+                    yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ChildReferences), 1, 0);
+                }
+                var method = type.GetMethod("ReadSerialized", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                yield return (method.DeclaringType, method.Name, method.GetParameters().Length, 0);
+            }
+            else
+            {
+                yield return (typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadName), 2, 1);
+                if (!typeof(ScriptableObject).IsAssignableFrom(type) && AssetAdapters.Reader(type) is System.Reflection.MethodInfo method)
+                    yield return (method.DeclaringType, method.Name, method.GetParameters().Length, 0);
+            }
+        }
+
         internal static List<Result> Report(List<Input> documents)
         {
             var results = new List<Result>();
@@ -74,58 +143,25 @@ namespace Unbound.Runtime
                 {
                     if (doc.Context == null && doc.ClassId == 850595691)
                         result.Lighting = new LightingInput { RealtimeGI = LightingSettings.ReadRealtimeGI(body) };
-                    if (doc.Context == "projectSettings")
-                    {
-                        if (doc.ClassId == 55) Schema(typeof(Physics), nameof(Physics.ReadSettings), 1);
-                        if (doc.ClassId == 19) Schema(typeof(Physics2D), nameof(Physics2D.ReadSettings), 1);
-                        if (doc.ClassId == 126) Schema(typeof(NavMeshAreas), nameof(NavMeshAreas.Read), 1);
-                    }
-                    else switch (doc.ClassId)
+                    Type scriptType = null;
+                    if (doc.Context == null && doc.ClassId == EngineTypes.MonoBehaviourId)
+                        scriptType = ObjectGraphBuilder.ScriptOf(body.Ref("m_Script"), doc.FileGuid, scripts);
+                    var type = doc.Context != null ? null : doc.ClassId == EngineTypes.MonoBehaviourId ? scriptType
+                        : EngineTypes.ForClassId(doc.ClassId, doc.TypeName, warn: false);
+                    foreach (var (owner, method, parameters, node) in Declarations(doc.Context, doc.ClassId, type))
+                        Schema(owner, method, parameters, node);
+                    if (doc.Context == null) switch (doc.ClassId)
                     {
                         case EngineTypes.MonoBehaviourId:
-                            Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.OwnerOf), 1);
-                            var script = body.Ref("m_Script");
-                            var scriptType = ObjectGraphBuilder.ScriptOf(script, doc.FileGuid, scripts);
                             if (scriptType == null) throw new NotSupportedException("script type is missing or its assembly failed to compile");
-                            if (typeof(Component).IsAssignableFrom(scriptType)) Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadComponentHeader), 2);
-                            else Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadName), 2, 1);
-                            if (typeof(Behaviour).IsAssignableFrom(scriptType)) Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadBehaviour), 2, 1);
                             new YamlReader(new References()).ScanScriptObject(scriptType, body);
-                            break;
-                        case EngineTypes.PrefabInstanceId:
-                            Schema(typeof(PrefabLinks), nameof(PrefabLinks.ReadInstance), 2);
-                            break;
-                        case 1660057539:
-                            Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.RootReferences), 1);
-                            break;
-                        case 142:
-                            Schema(typeof(AssetBundle), nameof(AssetBundle.ReadContentsDocument), 1);
-                            break;
-                        case 115:
-                            Schema(typeof(BundleFiles), nameof(BundleFiles.ScriptType), 1);
-                            break;
-                        case 150:
-                            // Recognized by the loader, but its data has no reader.
-                            break;
-                        case EngineTypes.GameObjectId:
-                            Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadGameObject), 4);
-                            Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ComponentReferences), 1);
-                            break;
-                        case 104:
-                            Schema(typeof(RenderSettings), nameof(RenderSettings.SceneLoaded), 3, 1);
                             break;
                         case 157:
                             var lighting = SceneSettings.LightingReferences(body);
                             result.Lighting = new LightingInput { DataGuid = lighting.Data.Guid, DataId = lighting.Data.FileId,
                                 SettingsGuid = lighting.Settings.Guid, SettingsId = lighting.Settings.FileId };
-                            Schema(typeof(SceneSettings), nameof(SceneSettings.LightingReferences), 1);
-                            break;
-                        case 196:
-                            Schema(typeof(SceneNavMesh), nameof(SceneNavMesh.SceneLoaded), 3, 1);
                             break;
                         case 124:
-                            Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadComponentHeader), 2);
-                            Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadBehaviour), 2, 1);
                             var owner = body.Ref("m_GameObject").FileId;
                             if (!cameras.TryGetValue((doc.FileGuid ?? "", owner), out bool cameraEnabled))
                             {
@@ -139,31 +175,10 @@ namespace Unbound.Runtime
                                 result.Dependency = "Camera disabled: retained disabled; no automatic LensFlare drawing, explicit Camera.Render remains available";
                             break;
                         default:
-                            var type = EngineTypes.ForClassId(doc.ClassId, doc.TypeName, warn: false);
+                            if (IsFixed(doc.ClassId)) break;
                             if (type == null) throw new NotSupportedException("no registered serialized type");
-                            Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.OwnerOf), 1);
-                            if (typeof(Component).IsAssignableFrom(type))
-                            {
-                                Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadComponentHeader), 2);
-                                if (typeof(Behaviour).IsAssignableFrom(type)) Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadBehaviour), 2, 1);
-                                if (typeof(Transform).IsAssignableFrom(type))
-                                {
-                                    Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ParentOf), 1);
-                                    Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.RootOrder), 1);
-                                    Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ChildReferences), 1);
-                                }
-                                var method = type.GetMethod("ReadSerialized", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                                Schema(method.DeclaringType, method.Name, method.GetParameters().Length);
-                            }
-                            else
-                            {
-                                Schema(typeof(ObjectGraphBuilder), nameof(ObjectGraphBuilder.ReadName), 2, 1);
-                                if (typeof(ScriptableObject).IsAssignableFrom(type)) new YamlReader(new References()).ScanScriptObject(type, body);
-                                else if (AssetAdapters.Reader(type) is System.Reflection.MethodInfo method)
-                                {
-                                    Schema(method.DeclaringType, method.Name, method.GetParameters().Length);
-                                }
-                            }
+                            if (!typeof(Component).IsAssignableFrom(type) && typeof(ScriptableObject).IsAssignableFrom(type))
+                                new YamlReader(new References()).ScanScriptObject(type, body);
                             break;
                     }
                 }
