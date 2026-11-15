@@ -8,11 +8,12 @@ uses the low-level native plugin interface and records what it gets; the scripts
     python3 tests/projects/nativegfx/run.py check      # engine run compared with Reference/
 
 Current NVIDIA results against Unity 6000.0.71f1 are OpenGL Core 516/564 with
-48 declared residuals, Vulkan 864/865 with one, the OpenGL stencil profile
-544/605 with 61, and Vulkan stencil 874/890 with 16. Vulkan attachment capabilities and multisample color
+48 declared residuals, Vulkan 932/935 with three, the OpenGL stencil profile
+544/605 with 61, and Vulkan stencil 942/960 with 18. Vulkan attachment capabilities and multisample color
 usage close 63 of its 64 earlier differences. All 518 earlier Vulkan reference
 rows are byte-identical; 49 allocation controls and 298 resolve-access and
-setter controls are appended. The Vulkan stencil profile adds 25 rows.
+setter controls are appended. The foreign-format extension adds 70 rows to both Vulkan profiles; the stencil
+profile also includes its 25 publication rows.
 Comparator tolerances are unchanged.
 
 Recorded:
@@ -265,14 +266,23 @@ address containing the same image handle. Plugin-owned Vulkan imports support
 RGBA32 linear and sRGB, R8, RG16, R16, and R/RG/RGBA half and float storage, initialized
 in GENERAL layout with sampled and transfer usage. Borrowing preserves the physical format;
 it cannot convert channel order, expand channels, decode blocks or replace an unsupported
-format. BGRA, packed and compressed foreign Vulkan storage remain unsupported. Other import
+format. RG32, RGBA64 and signed-normalized R/RG/RGBA 8- and 16-bit storage also retain
+their exact physical formats. DXT1 and DXT5 support linear and sRGB storage; BC4
+and BC5 retain their component counts. Borrowed block images need the device
+compression feature and block-aligned base dimensions. Devices that would expand
+or decode storage are refused before import. BGRA, packed and other compressed
+foreign Vulkan storage remain unsupported. Other import
 layouts and drivers remain outside the measured contract. The public creation API carries
 neither a layout nor a synchronization handoff; a raw VkImage does not expose either.
 `externalVkFormats.*` clears each of three mip levels independently on the GPU, samples
 their distinct values and rewraps after destruction. Float controls retain values above 1.0. All new foreign-format images omit mutable-format
 permission, including sRGB: their views must match their physical storage
 ([Vulkan image-view requirements](https://docs.vulkan.org/refpages/latest/refpages/source/VkImageViewCreateInfo.html)).
-The sRGB control also copies raw bytes into compatible RGBA8 storage. Incompatible copies
+Each block-format control uploads three valid mip blocks with distinct colors.
+The 14 added format/color-space cases produce 70 mip and rewrapping controls.
+The shared coherent transfer allocator also serves stencil readback; upload
+buffers remain alive until fenced readbacks finish all uses.
+The RGBA32 sRGB control also copies raw bytes into compatible RGBA8 storage. Incompatible copies
 between that image and R8 leave both divergent destinations unchanged, with diagnostics.
 The [CopyTexture contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.CopyTexture.html)
 requires compatible formats; physical sRGB storage is never repacked through an invalid
@@ -353,7 +363,12 @@ Compat.RenderingMeasured. The public contract does not specify setter refusal
 or diagnostic text. Other releases retain the earlier unverified setter policy.
 Every native-image query checks successful creation first.
 
-The remaining Vulkan row retains its raw difference: plugin.dontcare.update
+Two sRGB block mip rows retain a nine-digit decimal midpoint formatting difference,
+0.223632813 in the Editor and 0.223632812 here. Both parse back to float32 bits
+0x3e650000. The raw strings remain strict declared residuals; no formatter
+emulation or comparison tolerance was added.
+
+The remaining Vulkan metadata row retains its raw difference: plugin.dontcare.update
 has a command buffer in Unbound and none in this Editor history. The SDK header
 IUnityGraphicsVulkan.h leaves DontCare unconstrained; no recording-state policy
 is inferred from that one history.

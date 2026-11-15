@@ -18,5 +18,9 @@
   "vulkanStencil.8.self",
   "vulkanStencil.8.redraw",
   "vulkanStencil.8.again"
+ ],
+ "Nine-digit decimal midpoint formatting differs between the Editor and managed runtime; both spellings round to the same float bits (Unity 6000.0.71f1, NVIDIA sRGB block mip controls)": [
+  "externalVkFormats.DXT1.srgb.sample1",
+  "externalVkFormats.DXT5.srgb.sample1"
  ]
 }

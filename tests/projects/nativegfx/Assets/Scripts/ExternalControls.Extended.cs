@@ -57,18 +57,22 @@ static partial class ExternalControls
         NativeGfxVk_SetTexture(0, fence.GetNativeTexturePtr());
         var formats = new[] { TextureFormat.RGBA32, TextureFormat.RGBA32, TextureFormat.R8, TextureFormat.RG16,
             TextureFormat.R16, TextureFormat.RHalf, TextureFormat.RGHalf, TextureFormat.RGBAHalf,
-            TextureFormat.RFloat, TextureFormat.RGFloat, TextureFormat.RGBAFloat };
+            TextureFormat.RFloat, TextureFormat.RGFloat, TextureFormat.RGBAFloat,
+            TextureFormat.RG32, TextureFormat.RGBA64, TextureFormat.R8_SIGNED, TextureFormat.RG16_SIGNED,
+            TextureFormat.RGBA32_SIGNED, TextureFormat.R16_SIGNED, TextureFormat.RG32_SIGNED, TextureFormat.RGBA64_SIGNED,
+            TextureFormat.DXT1, TextureFormat.DXT1, TextureFormat.DXT5, TextureFormat.DXT5, TextureFormat.BC4, TextureFormat.BC5 };
         for (int index = 0; index < formats.Length; index++)
         {
             int kind = index + 3;
+            bool srgb = index == 1 || index == 20 || index == 22;
             NativeGfxVk_ExternalPrepare(kind);
             GL.IssuePluginEvent(NativeGfxVk_ExternalEvent(), NativeGfxVk_EventBase() + 1);
             Pixels(fence, 0, 1, 1);
             IntPtr pointer = NativeGfxVk_ExternalPtr(kind);
-            string key = "externalVkFormats." + formats[index] + (index == 1 ? ".srgb" : ".linear");
+            string key = "externalVkFormats." + formats[index] + (srgb ? ".srgb" : ".linear");
             row(key + ".created", B(pointer != IntPtr.Zero));
             if (pointer == IntPtr.Zero) continue;
-            var wrapper = Texture2D.CreateExternalTexture(4, 4, formats[index], true, index != 1, pointer);
+            var wrapper = Texture2D.CreateExternalTexture(4, 4, formats[index], true, !srgb, pointer);
             row(key + ".dimensions", View(wrapper, 0, false, 0, true));
             row(key + ".sample0", View(wrapper, 0, false));
             row(key + ".sample1", View(wrapper, 0, false, 1));
@@ -87,7 +91,7 @@ static partial class ExternalControls
                 UnityEngine.Object.DestroyImmediate(oneChannel);
             }
             UnityEngine.Object.DestroyImmediate(wrapper);
-            var again = Texture2D.CreateExternalTexture(4, 4, formats[index], true, index != 1, pointer);
+            var again = Texture2D.CreateExternalTexture(4, 4, formats[index], true, !srgb, pointer);
             row(key + ".after", View(again, 0, false, 2));
             UnityEngine.Object.DestroyImmediate(again);
         }

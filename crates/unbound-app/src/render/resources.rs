@@ -858,7 +858,7 @@ pub fn set_norm_format_caps(caps: NormFormatCaps) {
     *NORM_FORMAT_CAPS.write().unwrap_or_else(|e| e.into_inner()) = caps;
 }
 
-fn norm_format_caps() -> NormFormatCaps {
+pub(super) fn norm_format_caps() -> NormFormatCaps {
     *NORM_FORMAT_CAPS.read().unwrap_or_else(|e| e.into_inner())
 }
 

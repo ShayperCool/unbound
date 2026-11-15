@@ -943,10 +943,9 @@ impl TextureImages {
             (false, false) => Some(self.msaa.unwrap_or(self.texture)),
             // A bindTextureMS target exposes the samples through both accessors.
             // Without it, resolve access names the separate single-sample image.
-            (false, true) => {
-                self.msaa
-                    .map(|samples| if self.bind_ms { samples } else { self.texture })
-            }
+            (false, true) => self
+                .msaa
+                .map(|samples| if self.bind_ms { samples } else { self.texture }),
         }
     }
 }
@@ -1413,6 +1412,30 @@ fn foreign_texture_format(format: i32, linear: bool) -> Option<i32> {
                 F::SRGB_RGBA8
             }
         } // RGBA32.
+        10 => {
+            if linear {
+                F::BC1_DATA
+            } else {
+                F::BC1_COLOR
+            }
+        } // DXT1.
+        12 => {
+            if linear {
+                F::BC3_DATA
+            } else {
+                F::BC3_COLOR
+            }
+        } // DXT5.
+        26 => F::BC4,          // BC4.
+        27 => F::BC5,          // BC5.
+        72 => F::RG16_UNORM,   // RG32.
+        74 => F::RGBA16_UNORM, // RGBA64.
+        75 => F::R8_SNORM,
+        76 => F::RG8_SNORM,
+        78 => F::RGBA8_SNORM,
+        79 => F::R16_SNORM,
+        80 => F::RG16_SNORM,
+        82 => F::RGBA16_SNORM,
         9 => F::R16_UNORM,     // R16.
         15 => F::R16_FLOAT,    // RHalf.
         16 => F::RG16_FLOAT,   // RGHalf.
@@ -1435,10 +1458,46 @@ fn foreign_texture_descriptor<'a>(
 ) -> wgpu::TextureDescriptor<'a> {
     let mut imported = descriptor.clone();
     imported.view_formats = &[];
-    if format == unbound_runtime::render_protocol::texture_format::SRGB_RGBA8 {
-        imported.format = wgpu::TextureFormat::Rgba8UnormSrgb;
+    use unbound_runtime::render_protocol::texture_format as F;
+    if format == F::SRGB_RGBA8 || F::block_color(format) {
+        imported.format = imported.format.add_srgb_suffix();
     }
     imported
+}
+
+/// Borrowing cannot decode or expand storage when a device lacks an exact format.
+fn validate_foreign_texture_storage(
+    packet: &unbound_runtime::render_protocol::owned::Texture,
+    features: wgpu::Features,
+    caps: &crate::render::resources::NormFormatCaps,
+) -> Result<(), String> {
+    use crate::render::resources::{block_format, can_upload_blocks, texture_storage};
+    let storage = texture_storage(packet, 1, caps);
+    if let Some(fallback) = storage.fallback {
+        return Err(format!(
+            "the Vulkan device cannot borrow this physical format: {fallback:?}"
+        ));
+    }
+    if !features.contains(storage.format.required_features()) {
+        return Err(format!(
+            "the Vulkan device cannot borrow {:?} storage",
+            storage.format
+        ));
+    }
+    if block_format(packet.format).is_some() {
+        if !can_upload_blocks(packet.format, packet.width, packet.height, features) {
+            return Err(
+                "borrowed block storage needs a supported format and block-aligned base dimensions"
+                    .into(),
+            );
+        }
+        if packet.dimension == 3
+            && !features.contains(wgpu::Features::TEXTURE_COMPRESSION_BC_SLICED_3D)
+        {
+            return Err("the Vulkan device cannot borrow volume block storage".into());
+        }
+    }
+    Ok(())
 }
 
 impl UnityRenderer {
@@ -1543,16 +1602,8 @@ impl UnityRenderer {
         // The API supplies the image address, not a queryable image descriptor. The caller
         // must describe its physical storage and initialize every mip in GENERAL layout.
         let format = foreign_texture_format(info.format, info.linear != 0).ok_or_else(|| {
-            format!("plugin-owned Vulkan external TextureFormat {} has no exact borrowed storage mapping; supported formats are RGBA32, R8, RG16, R16, and R/RG/RGBA half or float in GENERAL layout", info.format)
+            format!("plugin-owned Vulkan external TextureFormat {} has no exact borrowed storage mapping; supported storage is RGBA32, R/RG/RGBA normalized, half or float, DXT1, DXT5, BC4 and BC5 in GENERAL layout", info.format)
         })?;
-        if format == unbound_runtime::render_protocol::texture_format::R16_UNORM
-            && !self
-                .device
-                .features()
-                .contains(wgpu::Features::TEXTURE_FORMAT_16BIT_NORM)
-        {
-            return Err("the Vulkan device cannot borrow R16 normalized storage".into());
-        }
         let packet = owned::Texture {
             width: info.width,
             height: info.height,
@@ -1567,6 +1618,11 @@ impl UnityRenderer {
             samples: 1,
             ..Default::default()
         };
+        validate_foreign_texture_storage(
+            &packet,
+            self.device.features(),
+            &crate::render::resources::norm_format_caps(),
+        )?;
         let device = self.device.clone();
         self.generation += 1;
         let gpu = crate::render::resources::upload_texture_with(
@@ -2239,6 +2295,29 @@ mod tests {
         assert!(srgb.view_formats.is_empty());
         assert_eq!(srgb.mip_level_count, 4);
         assert_eq!(srgb.size, original.size);
+        for (code, base, srgb) in [
+            (
+                F::BC1_COLOR,
+                wgpu::TextureFormat::Bc1RgbaUnorm,
+                wgpu::TextureFormat::Bc1RgbaUnormSrgb,
+            ),
+            (
+                F::BC3_COLOR,
+                wgpu::TextureFormat::Bc3RgbaUnorm,
+                wgpu::TextureFormat::Bc3RgbaUnormSrgb,
+            ),
+        ] {
+            let descriptor = wgpu::TextureDescriptor {
+                format: base,
+                ..original.clone()
+            };
+            let imported = foreign_texture_descriptor(&descriptor, code);
+            assert_eq!(imported.format, srgb);
+            assert!(imported.view_formats.is_empty());
+            assert_eq!(imported.size, descriptor.size);
+            assert_eq!(imported.mip_level_count, descriptor.mip_level_count);
+            assert_eq!(descriptor.format, base);
+        }
         let linear = foreign_texture_descriptor(&original, F::LINEAR_RGBA8);
         assert_eq!(linear.format, wgpu::TextureFormat::Rgba8Unorm);
         assert!(linear.view_formats.is_empty());
@@ -2247,6 +2326,75 @@ mod tests {
             original.view_formats,
             &[wgpu::TextureFormat::Rgba8UnormSrgb]
         );
+    }
+
+    #[test]
+    fn foreign_storage_rejects_conversion_and_missing_block_support() {
+        use crate::render::resources::NormFormatCaps;
+        use unbound_runtime::render_protocol::{owned, texture_format as F};
+        let packet = |format| owned::Texture {
+            format,
+            width: 8,
+            height: 4,
+            dimension: 2,
+            mip_count: 4,
+            ..Default::default()
+        };
+        let none = NormFormatCaps::NONE;
+        let features = wgpu::Features::empty();
+        for code in [F::LINEAR_RGBA8, F::RGBA_HALF, F::R32_FLOAT] {
+            assert!(validate_foreign_texture_storage(&packet(code), features, &none).is_ok());
+        }
+        for code in [
+            F::R16_UNORM,
+            F::RG16_UNORM,
+            F::RGBA16_UNORM,
+            F::R8_SNORM,
+            F::RG16_SNORM,
+        ] {
+            assert!(validate_foreign_texture_storage(&packet(code), features, &none).is_err());
+        }
+        let full = Some(wgpu::TextureFormatFeatures {
+            allowed_usages: wgpu::TextureUsages::all(),
+            flags: wgpu::TextureFormatFeatureFlags::all(),
+        });
+        let caps = NormFormatCaps { rg16: full, ..none };
+        // Format availability alone does not enable the device feature.
+        assert!(validate_foreign_texture_storage(&packet(F::RG16_UNORM), features, &caps).is_err());
+        assert!(
+            validate_foreign_texture_storage(
+                &packet(F::RG16_UNORM),
+                wgpu::Features::TEXTURE_FORMAT_16BIT_NORM,
+                &caps
+            )
+            .is_ok()
+        );
+        let bc = wgpu::Features::TEXTURE_COMPRESSION_BC;
+        for code in [
+            F::BC1_DATA,
+            F::BC1_COLOR,
+            F::BC3_DATA,
+            F::BC3_COLOR,
+            F::BC4,
+            F::BC5,
+        ] {
+            let mut texture = packet(code);
+            assert!(validate_foreign_texture_storage(&texture, features, &none).is_err());
+            assert!(validate_foreign_texture_storage(&texture, bc, &none).is_ok());
+            texture.width = 7;
+            assert!(validate_foreign_texture_storage(&texture, bc, &none).is_err());
+            texture.width = 8;
+            texture.dimension = 3;
+            assert!(validate_foreign_texture_storage(&texture, bc, &none).is_err());
+            assert!(
+                validate_foreign_texture_storage(
+                    &texture,
+                    bc | wgpu::Features::TEXTURE_COMPRESSION_BC_SLICED_3D,
+                    &none
+                )
+                .is_ok()
+            );
+        }
     }
 
     #[test]
@@ -2263,16 +2411,33 @@ mod tests {
             (20, F::RGBA32_FLOAT),
             (62, F::RG8_UNORM),
             (63, F::R8_UNORM),
+            (10, F::BC1_DATA),
+            (12, F::BC3_DATA),
+            (26, F::BC4),
+            (27, F::BC5),
+            (72, F::RG16_UNORM),
+            (74, F::RGBA16_UNORM),
+            (75, F::R8_SNORM),
+            (76, F::RG8_SNORM),
+            (78, F::RGBA8_SNORM),
+            (79, F::R16_SNORM),
+            (80, F::RG16_SNORM),
+            (82, F::RGBA16_SNORM),
         ];
         for (input, expected) in cases {
             assert_eq!(foreign_texture_format(input, true), Some(expected));
             assert_eq!(
                 foreign_texture_format(input, false),
-                Some(if input == 4 { F::SRGB_RGBA8 } else { expected })
+                Some(match input {
+                    4 => F::SRGB_RGBA8,
+                    10 => F::BC1_COLOR,
+                    12 => F::BC3_COLOR,
+                    _ => expected,
+                })
             );
         }
-        // These need channel conversion, a distinct channel order, packed storage or blocks.
-        for unsupported in [-1, 0, 1, 3, 5, 7, 10, 12, 14, 22, 72, 74, i32::MAX] {
+        // These need channel conversion, a distinct channel order, packed storage or other blocks.
+        for unsupported in [-1, 0, 1, 3, 5, 7, 14, 22, 24, 25, i32::MAX] {
             assert_eq!(foreign_texture_format(unsupported, true), None);
         }
     }

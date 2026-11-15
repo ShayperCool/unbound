@@ -537,12 +537,80 @@ EXPORT void* NativeGfxVk_DeviceEvent(void) { return (void*)on_msaa_device_event;
 EXPORT void NativeGfxVk_SetDevice(int index, void* pointer) { if (index >= 0 && index < 2) s_device[index] = pointer; }
 
 // Plugin-owned images, kept alive independently of Unity's texture wrappers.
-enum { EXTERNAL_IMAGE_COUNT = 14 };
+enum { EXTERNAL_IMAGE_COUNT = 28, FIRST_SIGNED_KIND = 16, FIRST_BLOCK_KIND = 22, BLOCK_MIPS = 3 };
 static VkImage s_external_images[EXTERNAL_IMAGE_COUNT];
 static VkDeviceMemory s_external_memory[EXTERNAL_IMAGE_COUNT];
 static int s_external_result[EXTERNAL_IMAGE_COUNT];
 static int s_external_pending;
+static VkBuffer s_external_upload_buffers[EXTERNAL_IMAGE_COUNT];
+static VkDeviceMemory s_external_upload_memory[EXTERNAL_IMAGE_COUNT];
 #define DEVICE_PROC(type, name) type name = (type)vk.GetDeviceProcAddr(s_instance.device, #name)
+// Host-coherent transfer storage shared by upload and stencil readback controls.
+static int host_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkBuffer* buffer,
+                       VkDeviceMemory* memory, void** mapping)
+{
+    DEVICE_PROC(PFN_vkCreateBuffer, vkCreateBuffer);
+    DEVICE_PROC(PFN_vkGetBufferMemoryRequirements, vkGetBufferMemoryRequirements);
+    DEVICE_PROC(PFN_vkAllocateMemory, vkAllocateMemory);
+    DEVICE_PROC(PFN_vkBindBufferMemory, vkBindBufferMemory);
+    DEVICE_PROC(PFN_vkMapMemory, vkMapMemory);
+    PFN_vkGetPhysicalDeviceMemoryProperties memory_properties = (PFN_vkGetPhysicalDeviceMemoryProperties)
+        s_instance.getInstanceProcAddr(s_instance.instance, "vkGetPhysicalDeviceMemoryProperties");
+    if (!vkCreateBuffer || !vkGetBufferMemoryRequirements || !vkAllocateMemory || !vkBindBufferMemory || !vkMapMemory || !memory_properties) return 0;
+    VkBufferCreateInfo desc = {.sType=VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, .size=size,
+        .usage=usage, .sharingMode=VK_SHARING_MODE_EXCLUSIVE};
+    if (vkCreateBuffer(s_instance.device,&desc,NULL,buffer)!=VK_SUCCESS) return 0;
+    VkMemoryRequirements requirements; vkGetBufferMemoryRequirements(s_instance.device,*buffer,&requirements);
+    VkPhysicalDeviceMemoryProperties properties; memory_properties(s_instance.physicalDevice,&properties);
+    uint32_t type=0; const VkMemoryPropertyFlags flags=VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    while (type<properties.memoryTypeCount && (!(requirements.memoryTypeBits&(1u<<type)) || (properties.memoryTypes[type].propertyFlags&flags)!=flags)) type++;
+    if (type==properties.memoryTypeCount) return 0;
+    VkMemoryAllocateInfo allocation={.sType=VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,.allocationSize=requirements.size,.memoryTypeIndex=type};
+    return vkAllocateMemory(s_instance.device,&allocation,NULL,memory)==VK_SUCCESS &&
+        vkBindBufferMemory(s_instance.device,*buffer,*memory,0)==VK_SUCCESS &&
+        vkMapMemory(s_instance.device,*memory,0,VK_WHOLE_SIZE,0,mapping)==VK_SUCCESS;
+}
+
+// Each compressed mip is one valid block with a different constant color.
+static int upload_external_blocks(int kind, const VkImageCreateInfo* desc, VkCommandBuffer commands)
+{
+    const int block_kind=kind-FIRST_BLOCK_KIND;
+    const uint32_t bytes=(block_kind==2 || block_kind==3 || block_kind==5) ? 16 : 8;
+    if(desc->mipLevels!=BLOCK_MIPS)return 0;
+    void* mapping=NULL;
+    if(!host_buffer(bytes*BLOCK_MIPS,VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        &s_external_upload_buffers[kind],&s_external_upload_memory[kind],&mapping))return 0;
+    memset(mapping,0,bytes*BLOCK_MIPS);
+    const uint16_t colors[BLOCK_MIPS]={0x8208,0xc410,0xfbe0};
+    VkBufferImageCopy copies[BLOCK_MIPS];memset(copies,0,sizeof copies);
+    for(uint32_t mip=0;mip<BLOCK_MIPS;mip++) {
+        unsigned char* block=(unsigned char*)mapping+bytes*mip;
+        if(block_kind<4) {
+            if(block_kind>=2){block[0]=192;block[1]=32;block+=8;}
+            block[0]=(unsigned char)colors[mip];block[1]=(unsigned char)(colors[mip]>>8);
+        } else {
+            block[0]=96+32*mip;
+            if(block_kind==5)block[8]=160-32*mip;
+        }
+        copies[mip].bufferOffset=bytes*mip;
+        copies[mip].imageSubresource=(VkImageSubresourceLayers){VK_IMAGE_ASPECT_COLOR_BIT,mip,0,1};
+        copies[mip].imageExtent=(VkExtent3D){4u>>mip,4u>>mip,1};
+    }
+    DEVICE_PROC(PFN_vkUnmapMemory, vkUnmapMemory);
+    DEVICE_PROC(PFN_vkCmdCopyBufferToImage, vkCmdCopyBufferToImage);
+    DEVICE_PROC(PFN_vkCmdPipelineBarrier, vkCmdPipelineBarrier);
+    if(!vkUnmapMemory || !vkCmdCopyBufferToImage || !vkCmdPipelineBarrier)return 0;
+    vkUnmapMemory(s_instance.device,s_external_upload_memory[kind]);
+    VkBufferMemoryBarrier barrier={.sType=VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+        .srcAccessMask=VK_ACCESS_HOST_WRITE_BIT,.dstAccessMask=VK_ACCESS_TRANSFER_READ_BIT,
+        .srcQueueFamilyIndex=VK_QUEUE_FAMILY_IGNORED,.dstQueueFamilyIndex=VK_QUEUE_FAMILY_IGNORED,
+        .buffer=s_external_upload_buffers[kind],.offset=0,.size=VK_WHOLE_SIZE};
+    vkCmdPipelineBarrier(commands,VK_PIPELINE_STAGE_HOST_BIT,VK_PIPELINE_STAGE_TRANSFER_BIT,0,0,NULL,1,&barrier,0,NULL);
+    vkCmdCopyBufferToImage(commands,s_external_upload_buffers[kind],s_external_images[kind],
+        VK_IMAGE_LAYOUT_GENERAL,BLOCK_MIPS,copies);
+    return 1;
+}
+
 static void on_external_image_event(int event_id)
 {
     (void)event_id;
@@ -566,7 +634,12 @@ static void on_external_image_event(int event_id)
     static const VkFormat formats[] = { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_SRGB,
         VK_FORMAT_R8_UNORM, VK_FORMAT_R8G8_UNORM, VK_FORMAT_R16_UNORM,
         VK_FORMAT_R16_SFLOAT, VK_FORMAT_R16G16_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT,
-        VK_FORMAT_R32_SFLOAT, VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT };
+        VK_FORMAT_R32_SFLOAT, VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT,
+        VK_FORMAT_R16G16_UNORM, VK_FORMAT_R16G16B16A16_UNORM,
+        VK_FORMAT_R8_SNORM, VK_FORMAT_R8G8_SNORM, VK_FORMAT_R8G8B8A8_SNORM,
+        VK_FORMAT_R16_SNORM, VK_FORMAT_R16G16_SNORM, VK_FORMAT_R16G16B16A16_SNORM,
+        VK_FORMAT_BC1_RGBA_UNORM_BLOCK, VK_FORMAT_BC1_RGBA_SRGB_BLOCK,
+        VK_FORMAT_BC3_UNORM_BLOCK, VK_FORMAT_BC3_SRGB_BLOCK, VK_FORMAT_BC4_UNORM_BLOCK, VK_FORMAT_BC5_UNORM_BLOCK };
     VkImageCreateInfo desc = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .flags = (kind < 3 ? VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT : 0) | (kind == 1 ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0),
         .imageType = kind == 2 ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D,
@@ -594,11 +667,16 @@ static void on_external_image_event(int event_id)
         .image = s_external_images[kind], .subresourceRange = range };
     vkCmdPipelineBarrier(state.commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
     VkClearColorValue color = {{0.25f, 0.5f, 0.75f, 1.0f}};
-    for (uint32_t mip = 0; mip < desc.mipLevels; ++mip) {
-        VkImageSubresourceRange level = {VK_IMAGE_ASPECT_COLOR_BIT, mip, 1, 0, desc.arrayLayers};
-        color.float32[0] = 0.25f + 0.125f * mip;
-        if (kind >= 8) color.float32[1] = 1.5f;
-        vk.CmdClearColorImage(state.commandBuffer, s_external_images[kind], VK_IMAGE_LAYOUT_GENERAL, &color, 1, &level);
+    if (kind >= FIRST_BLOCK_KIND) {
+        if (!upload_external_blocks(kind, &desc, state.commandBuffer)) return;
+    } else {
+        for (uint32_t mip = 0; mip < desc.mipLevels; ++mip) {
+            VkImageSubresourceRange level = {VK_IMAGE_ASPECT_COLOR_BIT, mip, 1, 0, desc.arrayLayers};
+            color.float32[0] = 0.25f + 0.125f * mip;
+            if (kind >= 8) color.float32[1] = 1.5f;
+            if (kind >= FIRST_SIGNED_KIND) color.float32[0] = -.5f + .125f * mip;
+            vk.CmdClearColorImage(state.commandBuffer, s_external_images[kind], VK_IMAGE_LAYOUT_GENERAL, &color, 1, &level);
+        }
     }
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
     barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -611,12 +689,16 @@ EXPORT void* NativeGfxVk_ExternalPtr(int kind) { return kind >= 0 && kind < EXTE
 EXPORT void NativeGfxVk_ExternalDestroy(void)
 {
     DEVICE_PROC(PFN_vkDestroyImage, vkDestroyImage);
+    DEVICE_PROC(PFN_vkDestroyBuffer, vkDestroyBuffer);
     DEVICE_PROC(PFN_vkFreeMemory, vkFreeMemory);
-    if (!vkDestroyImage || !vkFreeMemory) return;
+    if (!vkDestroyImage || !vkDestroyBuffer || !vkFreeMemory) return;
     // The preceding synchronous readback completed every use before wrapper destruction.
     for (int i = 0; i < EXTERNAL_IMAGE_COUNT; i++) {
         if (s_external_images[i]) vkDestroyImage(s_instance.device, s_external_images[i], NULL);
         if (s_external_memory[i]) vkFreeMemory(s_instance.device, s_external_memory[i], NULL);
+        if (s_external_upload_buffers[i]) vkDestroyBuffer(s_instance.device, s_external_upload_buffers[i], NULL);
+        if (s_external_upload_memory[i]) vkFreeMemory(s_instance.device, s_external_upload_memory[i], NULL);
+        s_external_upload_buffers[i] = VK_NULL_HANDLE; s_external_upload_memory[i] = VK_NULL_HANDLE;
         s_external_images[i] = VK_NULL_HANDLE; s_external_memory[i] = VK_NULL_HANDLE; s_external_result[i] = 0;
     }
 }
@@ -655,27 +737,8 @@ static int stencil_buffer(void)
 {
     if (s_stencil_mapping) return 1;
     if (s_stencil_buffer || s_stencil_memory) return 0;
-    DEVICE_PROC(PFN_vkCreateBuffer, vkCreateBuffer);
-    DEVICE_PROC(PFN_vkGetBufferMemoryRequirements, vkGetBufferMemoryRequirements);
-    DEVICE_PROC(PFN_vkAllocateMemory, vkAllocateMemory);
-    DEVICE_PROC(PFN_vkBindBufferMemory, vkBindBufferMemory);
-    DEVICE_PROC(PFN_vkMapMemory, vkMapMemory);
-    PFN_vkGetPhysicalDeviceMemoryProperties memory_properties = (PFN_vkGetPhysicalDeviceMemoryProperties)
-        s_instance.getInstanceProcAddr(s_instance.instance, "vkGetPhysicalDeviceMemoryProperties");
-    if (!vkCreateBuffer || !vkGetBufferMemoryRequirements || !vkAllocateMemory || !vkBindBufferMemory || !vkMapMemory || !memory_properties) return 0;
-    VkBufferCreateInfo buffer = {.sType=VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, .size=STENCIL_READBACK_BYTES,
-        .usage=VK_BUFFER_USAGE_TRANSFER_DST_BIT, .sharingMode=VK_SHARING_MODE_EXCLUSIVE};
-    if (vkCreateBuffer(s_instance.device,&buffer,NULL,&s_stencil_buffer)!=VK_SUCCESS) return 0;
-    VkMemoryRequirements requirements; vkGetBufferMemoryRequirements(s_instance.device,s_stencil_buffer,&requirements);
-    VkPhysicalDeviceMemoryProperties properties; memory_properties(s_instance.physicalDevice,&properties);
-    uint32_t type=0; const VkMemoryPropertyFlags flags=VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    while (type<properties.memoryTypeCount && (!(requirements.memoryTypeBits&(1u<<type)) || (properties.memoryTypes[type].propertyFlags&flags)!=flags)) type++;
-    if (type==properties.memoryTypeCount) return 0;
-    VkMemoryAllocateInfo allocation={.sType=VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,.allocationSize=requirements.size,.memoryTypeIndex=type};
-    if (vkAllocateMemory(s_instance.device,&allocation,NULL,&s_stencil_memory)!=VK_SUCCESS ||
-        vkBindBufferMemory(s_instance.device,s_stencil_buffer,s_stencil_memory,0)!=VK_SUCCESS ||
-        vkMapMemory(s_instance.device,s_stencil_memory,0,VK_WHOLE_SIZE,0,&s_stencil_mapping)!=VK_SUCCESS) return 0;
-    return 1;
+    return host_buffer(STENCIL_READBACK_BYTES, VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        &s_stencil_buffer, &s_stencil_memory, &s_stencil_mapping);
 }
 static void on_stencil_event(int event_id)
 {
