@@ -52,7 +52,7 @@ namespace UnityEngine
             {
                 int size = SourceLevelSize(mip);
                 var level = new ReadOnlySpan<byte>(CurrentBlocks(), at, size);
-                ulong hash = Fnv1a(level);
+                ulong hash = BlockFormats.Fnv1a(level);
                 if (m_BlockCellHashes == null || m_BlockCellHashes[mip] != hash) DecodeBlockLevel(level, mip);
                 (m_BlockCellHashes ??= new ulong[m_SourceMips])[mip] = hash;
                 at += size;
@@ -68,53 +68,33 @@ namespace UnityEngine
             for (int mip = 0; mip < m_SourceMips; mip++)
             {
                 int size = SourceLevelSize(mip);
-                m_BlockCellHashes[mip] = Fnv1a(new ReadOnlySpan<byte>(blocks, at, size));
+                m_BlockCellHashes[mip] = BlockFormats.Fnv1a(new ReadOnlySpan<byte>(blocks, at, size));
                 at += size;
             }
         }
 
         /// <summary>Texel `i` of level `mip` as GetPixel reads it, decoded from its block in the
         /// pixel data store.</summary>
-        unsafe Color BlockTexel(int mip, int i)
+        Color BlockTexel(int mip, int i)
         {
             var format = BlockFormats.Uncrunched(m_SourceFormat.Value);
-            int size = BlockFormats.BlockBytes(format), side = BlockFormats.Footprint(format);
-            int w = MipWidth(mip), x = i % w, y = i / w;
+            int w = MipWidth(mip);
             int at = 0;
             for (int m = 0; m < mip; m++) at += SourceLevelSize(m);
-            at += ((y / side) * ((w + side - 1) / side) + x / side) * size;
-            var block = new ReadOnlySpan<byte>(CurrentBlocks(), at, size);
-            int k = (y % side) * side + x % side;
-            if (BlockFormats.NativeDecoded(format))
+            var level = new ReadOnlySpan<byte>(CurrentBlocks(), at, SourceLevelSize(mip));
+            if (BlockFormats.Texel(format, level, w, i % w, i / w, out var pixel, out var texel))
             {
-                Color pixel = default;
-                fixed (byte* input = block)
-                    if (!Native.DecodeBlockTexel((int)format, input, (uint)k, &pixel))
-                        throw new UnityException("Compressed texel decoding failed.");
                 if (Texture2DTexels.FloatStored(m_Format) && !BlockFormats.IsAstcHdr(format)) pixel.a = 1f;
                 return pixel;
             }
-            Color32 texel = BlockFormats.DecodeTexel(format, block, k);
             if (Texture2DTexels.FloatStored(m_Format)) return new Color(texel.r / 255f, texel.g / 255f, texel.b / 255f, 1f);
             return Texture2DTexels.Pixel(m_Format, texel);
         }
 
         /// <summary>A `width` x `height` level of blocks decoded to RGBA8 as GetPixels32 reads it
         /// (BC6H clamped to 0..1).</summary>
-        byte[] DecodeBlockRgba(ReadOnlySpan<byte> blocks, int width, int height, bool floats = false, bool eac16 = false)
-        {
-            var json = Native.Call("texture-decode-blocks", JsonSerializer.Serialize(new
-            {
-                format = (int)BlockFormats.Uncrunched(m_SourceFormat.Value),
-                width,
-                height,
-                data = Convert.ToBase64String(blocks),
-                floats,
-                eac16,
-            }));
-            using var doc = JsonDocument.Parse(json);
-            return Convert.FromBase64String(doc.RootElement.GetProperty("rgba").GetString());
-        }
+        byte[] DecodeBlockRgba(ReadOnlySpan<byte> blocks, int width, int height, bool floats = false, bool eac16 = false) =>
+            BlockFormats.DecodeRgba(BlockFormats.Uncrunched(m_SourceFormat.Value), blocks, width, height, floats, eac16);
 
         /// <summary>The top level's pixels decoded from the blocks, leaving the texture's cells
         /// alone (engine reads of an unreadable texture); null when there are no blocks.</summary>
@@ -144,16 +124,16 @@ namespace UnityEngine
         /// <summary>Decodes one level of blocks into the pixel cells.</summary>
         void DecodeBlockLevel(ReadOnlySpan<byte> blocks, int mip)
         {
-            bool hdr = BlockFormats.IsAstcHdr(m_SourceFormat.Value);
-            var rgba = DecodeBlockRgba(blocks, MipWidth(mip), MipHeight(mip), hdr);
-            if (hdr)
+            var format = BlockFormats.Uncrunched(m_SourceFormat.Value);
+            bool floats = BlockFormats.IsAstcHdr(format) || format == TextureFormat.BC6H;
+            var rgba = DecodeBlockRgba(blocks, MipWidth(mip), MipHeight(mip), floats);
+            if (floats)
             {
                 m_Hdr ??= new Color[m_Width * m_Height];
                 PixelFormats.DecodeFloat(TextureFormat.RGBAFloat, rgba, FloatLevel(mip));
             }
             else if (Texture2DTexels.FloatStored(m_Format))
             {
-                Stubs.Ignored("Texture2D BC6H blocks", "written BC6H blocks read back clamped to 0..1 in 8-bit steps: Unbound has no float decoding of them");
                 m_Hdr ??= new Color[m_Width * m_Height];
                 var cells = FloatLevel(mip);
                 for (int i = 0; i < cells.Length && i * 4 + 3 < rgba.Length; i++)
@@ -164,13 +144,6 @@ namespace UnityEngine
                 m_Pixels ??= new Color32[m_Width * m_Height];
                 PixelFormats.Decode(TextureFormat.RGBA32, rgba, ByteLevel(mip));
             }
-        }
-
-        static ulong Fnv1a(ReadOnlySpan<byte> data)
-        {
-            ulong hash = 14695981039346656037UL;
-            foreach (var b in data) hash = (hash ^ b) * 1099511628211UL;
-            return hash;
         }
 
         /// <summary>SetPixelData of a block-compressed texture: the level's blocks.</summary>
@@ -188,7 +161,7 @@ namespace UnityEngine
             // Cells not made yet (a texture made by code) are decoded when first read.
             if (m_Pixels == null && m_Hdr == null) return;
             DecodeBlockLevel(new ReadOnlySpan<byte>(blocks, at, size), mip);
-            if (m_BlockCellHashes != null) m_BlockCellHashes[mip] = Fnv1a(new ReadOnlySpan<byte>(blocks, at, size));
+            if (m_BlockCellHashes != null) m_BlockCellHashes[mip] = BlockFormats.Fnv1a(new ReadOnlySpan<byte>(blocks, at, size));
         }
 
         /// <summary>The pixel cells exist before a level is decoded into them (an import's are
@@ -233,26 +206,8 @@ namespace UnityEngine
         /// they decode to where unsupported; EAC retains normalized 16-bit channels. ETC and ASTC stay compressed where supported.</summary>
         unsafe void UploadBlocks()
         {
-            var blocks = CurrentBlocks();
             m_GpuMipCount = m_SourceMips;
-            int format = BlockFormats.GpuCode(BlockFormats.Uncrunched(m_SourceFormat.Value), m_Linear);
-            if (format < 0)
-            {
-                var texels = new System.IO.MemoryStream();
-                bool floats = BlockFormats.IsAstcHdr(m_SourceFormat.Value);
-                bool eac = BlockFormats.IsEac(m_SourceFormat.Value);
-                int at = 0;
-                for (int mip = 0; mip < m_SourceMips; mip++)
-                {
-                    int size = SourceLevelSize(mip);
-                    texels.Write(DecodeBlockRgba(new ReadOnlySpan<byte>(blocks, at, size), MipWidth(mip), MipHeight(mip), floats, eac));
-                    at += size;
-                }
-                blocks = texels.ToArray();
-                format = eac ? PixelFormats.GpuNormFormat(m_SourceFormat.Value == TextureFormat.EAC_R
-                    ? UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm : UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_UNorm)
-                    : floats ? PixelFormats.GpuFloatFormat(TextureFormat.RGBAFloat) : m_Linear ? 1 : 0;
-            }
+            var blocks = BlockFormats.GpuData(BlockFormats.Uncrunched(m_SourceFormat.Value), m_Linear, CurrentBlocks(), 1, m_SourceMips, m_Width, m_Height, out int format);
             fixed (byte* b = blocks)
             {
                 var packet = new TexturePacket
@@ -664,6 +619,80 @@ namespace Unbound.Runtime
             if (index == 6) return 0;
             if (index == 7) return 255;
             { int i = index - 1; return (byte)((a0 * (5 - i) + a1 * i + 2) / 5); }
+        }
+
+        /// <summary>Texel (x, y) of a `width`-texel-wide level of blocks, rows in the blocks'
+        /// order: natively decoded formats give floats (<paramref name="pixel"/>, true), the
+        /// others bytes (<paramref name="texel"/>, false).</summary>
+        internal static unsafe bool Texel(UnityEngine.TextureFormat format, ReadOnlySpan<byte> level, int width, int x, int y,
+            out UnityEngine.Color pixel, out UnityEngine.Color32 texel)
+        {
+            int size = BlockBytes(format), side = Footprint(format);
+            var block = level.Slice(((y / side) * ((width + side - 1) / side) + x / side) * size, size);
+            int k = (y % side) * side + x % side;
+            pixel = default;
+            texel = default;
+            if (!NativeDecoded(format))
+            {
+                texel = DecodeTexel(format, block, k);
+                return false;
+            }
+            UnityEngine.Color decoded = default;
+            fixed (byte* input = block)
+                if (!Native.DecodeBlockTexel((int)format, input, (uint)k, &decoded))
+                    throw new UnityEngine.UnityException("Compressed texel decoding failed.");
+            pixel = decoded;
+            return true;
+        }
+
+        /// <summary>A `width` x `height` level of blocks decoded to RGBA8 as GetPixels32 reads it
+        /// (BC6H clamped to 0..1), float RGBA for ASTC HDR with `floats`, normalized 16-bit
+        /// channels for EAC with `eac16`; rows in the blocks' order.</summary>
+        internal static byte[] DecodeRgba(UnityEngine.TextureFormat format, ReadOnlySpan<byte> blocks, int width, int height, bool floats = false, bool eac16 = false)
+        {
+            var json = Native.Call("texture-decode-blocks", JsonSerializer.Serialize(new
+            {
+                format = (int)format,
+                width,
+                height,
+                data = Convert.ToBase64String(blocks),
+                floats,
+                eac16,
+            }));
+            using var doc = JsonDocument.Parse(json);
+            return Convert.FromBase64String(doc.RootElement.GetProperty("rgba").GetString());
+        }
+
+        /// <summary>What the renderer is given for `images` mip chains of blocks one after the
+        /// other (a cube's six faces), and its packet code: the blocks themselves, or for a format
+        /// it takes no blocks of the texels they decode to (RGBA8; float RGBA for ASTC HDR;
+        /// normalized 16-bit channels for EAC).</summary>
+        internal static byte[] GpuData(UnityEngine.TextureFormat format, bool linear, byte[] blocks, int images, int mips, int width, int height, out int code)
+        {
+            code = GpuCode(format, linear);
+            if (code >= 0) return blocks;
+            var texels = new System.IO.MemoryStream();
+            bool floats = IsAstcHdr(format), eac = IsEac(format);
+            int at = 0;
+            for (int image = 0; image < images; image++)
+                for (int mip = 0; mip < mips; mip++)
+                {
+                    int w = Math.Max(1, width >> mip), h = Math.Max(1, height >> mip), size = LevelSize(format, w, h);
+                    texels.Write(DecodeRgba(format, new ReadOnlySpan<byte>(blocks, at, size), w, h, floats, eac));
+                    at += size;
+                }
+            code = eac ? PixelFormats.GpuNormFormat(format == UnityEngine.TextureFormat.EAC_R
+                ? UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm : UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_UNorm)
+                : floats ? PixelFormats.GpuFloatFormat(UnityEngine.TextureFormat.RGBAFloat) : linear ? 1 : 0;
+            return texels.ToArray();
+        }
+
+        /// <summary>FNV-1a of some bytes (whether a level of blocks changed).</summary>
+        internal static ulong Fnv1a(ReadOnlySpan<byte> data)
+        {
+            ulong hash = 14695981039346656037UL;
+            foreach (var b in data) hash = (hash ^ b) * 1099511628211UL;
+            return hash;
         }
 
         /// <summary>Bytes of a `width` x `height` level.</summary>

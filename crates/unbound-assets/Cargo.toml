@@ -46,6 +46,8 @@ rayon.workspace = true
 # AssetBundles: LZMA blocks, block-compressed (BC, ETC, ASTC) textures of player data.
 lzma-rs = "0.3"
 texture2ddecoder = "0.1"
+# BC6H blocks decoded to floats (CPU reads of BC6H blocks a script wrote).
+bcdec_rs = "0.2"
 # BC7 compression of imported textures for the GPU (Intel ISPC kernels).
 intel_tex_2 = "0.5"
 

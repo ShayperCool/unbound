@@ -90,6 +90,14 @@ namespace UnityEngine
         internal TextureFormat? m_SourceFormat;
 
         public TextureFormat format => m_SourceFormat ?? m_Format;
+
+        /// <summary>The import's blocks once views of them were handed out (or a clone's copy):
+        /// each face's mip chain in turn, rows top-down as the faces' texels.</summary>
+        byte[] m_SourceRaw;
+        /// <summary>The import the blocks are read from (kept after the pixels are fetched).</summary>
+        string m_SourceGuid;
+        GCHandle m_SourceRawPin;
+        AtomicSafetyHandle m_SourceRawSafety;
         public override bool isReadable => m_Readable;
         internal override int MipmapCount() => m_MipCount;
         public override TextureDimension dimension { get => TextureDimension.Cube; set => throw new NotImplementedException(); }
@@ -183,6 +191,14 @@ namespace UnityEngine
         {
             CheckStoreWrite();
             var level = CheckedLevel(face, mip);
+            // A compressed cube keeps its texels and logs its format's linear graphics format,
+            // whatever the colour space (the Unity 6000.0.71f1 Editor, tests/projects/
+            // cubecompression write.*.setpixel: DXT1 97, ETC2_RGB 120 for sRGB data too).
+            if (m_SourceFormat is TextureFormat blocks)
+            {
+                Debug.LogError($"Unsupported GraphicsFormat({(int)GraphicsFormatUtility.GetGraphicsFormat(blocks, false)}) for SetPixel operations.");
+                return;
+            }
             int s = Math.Max(1, m_Width >> mip);
             if (x < 0 || y < 0 || x >= s || y >= s) return;
             var c = level[y * s + x] = PixelFormats.QuantizeFloat(m_Format, color);
@@ -197,6 +213,7 @@ namespace UnityEngine
             int s = Math.Max(1, m_Width >> mip);
             x = Mathf.Clamp(x, 0, s - 1);
             y = Mathf.Clamp(y, 0, s - 1);
+            if (ReadsBlocks(out var blocks)) return BlockTexel(blocks, (int)face, mip, x, y);
             return m_Store != null ? DecodeStored(StoreTexel((int)face, mip, y * s + x)) : level[y * s + x];
         }
 
@@ -205,7 +222,13 @@ namespace UnityEngine
         {
             if (!m_Readable && Compat.AssetCloneResourcesMeasured)
                 throw new ArgumentException($"Cubemap.GetPixels: texture data is either not readable, corrupted or does not exist. (Texture '{name}')");
-            return (Color[])Level(face, miplevel).Clone();
+            var level = (Color[])Level(face, miplevel).Clone();
+            if (ReadsBlocks(out var blocks))
+            {
+                int s = Math.Max(1, m_Width >> miplevel);
+                for (int i = 0; i < level.Length; i++) level[i] = BlockTexel(blocks, (int)face, miplevel, i % s, i / s);
+            }
+            return level;
         }
 
         public void SetPixels(Color[] colors, CubemapFace face) => SetPixels(colors, face, 0);
@@ -214,6 +237,7 @@ namespace UnityEngine
         {
             CheckStoreWrite();
             var level = CheckedLevel(face, miplevel);
+            if (m_SourceFormat != null) throw new ArgumentException($"Cubemap.SetPixels: texture uses an unsupported format. (Texture '{name}')");
             if (colors == null || colors.Length != level.Length) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
             for (int i = 0; i < level.Length; i++) level[i] = PixelFormats.QuantizeFloat(m_Format, colors[i]);
             if (m_Store != null)
@@ -236,10 +260,13 @@ namespace UnityEngine
         int LevelBytes(int mip) => PixelFormats.Size(m_Format, Math.Max(1, m_Width >> mip), Math.Max(1, m_Width >> mip));
         Span<byte> StoreTexel(int face, int mip, int i) => new Span<byte>(m_Store, m_StoreOffsets[face * m_MipCount + mip] + i * TexelBytes, TexelBytes);
 
-        /// <summary>The stored bytes of a face's mip level (no copy, as in Unity).</summary>
+        /// <summary>The stored bytes of a face's mip level (no copy, as in Unity); a compressed
+        /// import's are its blocks, top row first (tests/projects/cubecompression bytes.*,
+        /// write.*.view*).</summary>
         public unsafe NativeArray<T> GetPixelData<T>(int mipLevel, CubemapFace face) where T : struct
         {
             CheckedLevel(face, mipLevel);
+            if (m_SourceFormat is TextureFormat blocks) return BlockData<T>(blocks, mipLevel, face);
             if (m_Store == null)
             {
                 if (TexelBytes == 0) throw new UnityException($"Unbound: Cubemap.GetPixelData of a {m_Format} cubemap is not supported.");
@@ -262,6 +289,63 @@ namespace UnityEngine
             NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, m_StoreSafety);
             return array;
         }
+
+        unsafe NativeArray<T> BlockData<T>(TextureFormat blocks, int mipLevel, CubemapFace face) where T : struct
+        {
+            m_SourceRaw ??= FetchBlocks();
+            if (!m_SourceRawPin.IsAllocated)
+            {
+                m_SourceRawPin = GCHandle.Alloc(m_SourceRaw, GCHandleType.Pinned);
+                m_SourceRawSafety = AtomicSafetyHandle.Create();
+            }
+            int offset = BlockLevelOffset(blocks, (int)face, mipLevel), length = BlockLevelSize(blocks, mipLevel);
+            var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(
+                (byte*)m_SourceRawPin.AddrOfPinnedObject() + offset, length / UnsafeUtility.SizeOf<T>(), Allocator.None);
+            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, m_SourceRawSafety);
+            return array;
+        }
+
+        /// <summary>The import's blocks: each face's mip chain in turn, rows top-down.</summary>
+        byte[] FetchBlocks()
+        {
+            var json = Native.Call("texture-raw", JsonSerializer.Serialize(new { guid = m_SourceGuid }));
+            using var doc = JsonDocument.Parse(json);
+            var raw = Convert.FromBase64String(doc.RootElement.GetProperty("raw").GetString());
+            if (m_SourceFormat is TextureFormat blocks && raw.Length < BlockLevelOffset(blocks, 6, 0))
+                throw new UnityException($"Unbound: the blocks of cubemap '{name}' are shorter than its faces' mip chains.");
+            return raw;
+        }
+
+        int BlockLevelSize(TextureFormat blocks, int mip) => BlockFormats.LevelSize(blocks, Math.Max(1, m_Width >> mip), Math.Max(1, m_Width >> mip));
+
+        int BlockLevelOffset(TextureFormat blocks, int face, int mip)
+        {
+            int offset = 0;
+            for (int i = 0; i < face * m_MipCount + mip; i++) offset += BlockLevelSize(blocks, i % m_MipCount);
+            return offset;
+        }
+
+        /// <summary>Whether a compressed cube's texels are read from its held blocks (views of them
+        /// were handed out, or a clone copied them), as written through the views before or after
+        /// Apply (the Unity 6000.0.71f1 Editor, tests/projects/cubecompression write.*.view*).</summary>
+        bool ReadsBlocks(out TextureFormat blocks)
+        {
+            blocks = m_SourceFormat ?? default;
+            return m_SourceRaw != null && m_SourceFormat != null;
+        }
+
+        /// <summary>Texel (x, y) of a face's level (top row 0) decoded from its block.</summary>
+        Color BlockTexel(TextureFormat blocks, int face, int mip, int x, int y)
+        {
+            var level = new ReadOnlySpan<byte>(m_SourceRaw, BlockLevelOffset(blocks, face, mip), BlockLevelSize(blocks, mip));
+            Color c = BlockFormats.Texel(blocks, level, Math.Max(1, m_Width >> mip), x, y, out var pixel, out var texel) ? pixel : (Color)texel;
+            return PixelFormats.QuantizeFloat(m_Format, c);
+        }
+
+        /// <summary>Uploads the held blocks (the renderer's packet of the format, or the texels
+        /// they decode to where it takes no such blocks).</summary>
+        void UploadBlocks(TextureFormat blocks) =>
+            UploadStorage(BlockFormats.GpuData(blocks, m_Linear, m_SourceRaw, 6, m_MipCount, m_Width, m_Width, out int code), code);
 
         /// <summary>A stored texel: a byte b reads b × (1 / 255), as the cubemap's faces do.</summary>
         Color DecodeStored(ReadOnlySpan<byte> texel)
@@ -305,6 +389,29 @@ namespace UnityEngine
             if (!m_Readable) throw new UnityException($"Texture '{name}' is not readable.");
             if (m_Pixels == null && m_AssetGuid != null) FetchImported();
             if (m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable.");
+            if (m_SourceFormat is not TextureFormat blocks) ApplyPixels(updateMipmaps);
+            else
+            {
+                // A compressed cube's texels change through views of its blocks alone (SetPixel
+                // and SetPixels refuse it), and its mips are not rebuilt (tests/projects/
+                // cubecompression write.*.apply*, write.*.view*).
+                if (updateMipmaps) Debug.LogError("Rebuilding mipmaps of compressed textures is not supported");
+                if (m_SourceRaw != null) UploadBlocks(blocks);
+            }
+            if (makeNoLongerReadable)
+            {
+                ReleaseStore();
+                m_Readable = false;
+                // Kept for clones only, as Texture2D keeps its retained storage.
+                m_UnreadablePixels = m_Pixels;
+                m_Pixels = null;
+            }
+        }
+
+        /// <summary>Uploads the pixels (through the pixel data store while one exists), their mips
+        /// rebuilt from the top level first if asked.</summary>
+        void ApplyPixels(bool updateMipmaps)
+        {
             if (m_Store != null)
                 for (int f = 0; f < 6; f++)
                     for (int m = 0; m < m_MipCount; m++) DecodeStored(f, m, m_Pixels[f][m]);
@@ -317,14 +424,6 @@ namespace UnityEngine
                             for (int i = 0; i < m_Pixels[f][m].Length; i++) EncodeStored(m_Pixels[f][m][i], StoreTexel(f, m, i));
                     }
             Upload();
-            if (makeNoLongerReadable)
-            {
-                ReleaseStore();
-                m_Readable = false;
-                // Kept for clones only, as Texture2D keeps its retained storage.
-                m_UnreadablePixels = m_Pixels;
-                m_Pixels = null;
-            }
         }
 
         static void Downsample(Color[] source, int size, Color[] into)
@@ -390,7 +489,9 @@ namespace UnityEngine
             UploadStorage(data);
         }
 
-        unsafe void UploadStorage(byte[] data)
+        void UploadStorage(byte[] data) => UploadStorage(data, PacketFormat());
+
+        unsafe void UploadStorage(byte[] data, int format)
         {
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             fixed (byte* p = data)
@@ -399,7 +500,7 @@ namespace UnityEngine
                 {
                     Width = m_Width,
                     Height = m_Height,
-                    Format = PacketFormat(),
+                    Format = format,
                     MipCount = m_MipCount,
                     Data = p,
                     DataLength = data?.Length ?? 0,
@@ -486,6 +587,7 @@ namespace UnityEngine
             cube.m_Linear = info.Srgb == 0 || info.Format == 2;
             cube.m_Format = PixelFormats.ImportedFormat(info);
             cube.m_SourceFormat = PixelFormats.ImportedBlockFormat(info);
+            if (cube.m_SourceFormat != null) cube.m_SourceGuid = guid;
             cube.m_UsageMode = info.UsageMode;
             cube.m_UsageSrgb = !cube.m_Linear;
             cube.m_WrapModeW = (TextureWrapMode)info.WrapW;
@@ -528,6 +630,8 @@ namespace UnityEngine
         internal override void OnEngineDestroy()
         {
             ReleaseStore();
+            TexturePixelStore.Release(ref m_SourceRawSafety, ref m_SourceRawPin);
+            m_SourceRaw = null;
             Native.ReleaseTexture(m_NativeHandle);
             m_NativeHandle = 0;
         }

@@ -29,7 +29,7 @@ namespace UnityEngine
         byte[] CrunchBlocks()
         {
             var archive = CrunchArchive();
-            ulong hash = Fnv1a(archive);
+            ulong hash = BlockFormats.Fnv1a(archive);
             if (m_CrunchBlocks != null && hash == m_CrunchHash) return m_CrunchBlocks;
             if (archive.IsEmpty) throw new UnityException("Texture has no Crunch archive. Load a complete archive before reading or uploading pixels.");
             m_CrunchBlocks = DecodeCrunchArchive(archive);
@@ -88,7 +88,7 @@ namespace UnityEngine
             m_SourceRaw = data.ToArray();
             m_CrunchArchiveLength = data.Length;
             m_CrunchBlocks = blocks;
-            m_CrunchHash = Fnv1a(data);
+            m_CrunchHash = BlockFormats.Fnv1a(data);
             DecodeAllBlocks();
         }
 

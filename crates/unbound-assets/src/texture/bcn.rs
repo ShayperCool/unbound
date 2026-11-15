@@ -614,10 +614,37 @@ pub(super) fn f32_to_f16(v: f32) -> u16 {
 /// Decodes one level to RGBA8 (rows as stored) the way the Editor's `GetPixels32` reads it:
 /// colours interpolate with truncating integer thirds (a half in BC1's three-colour mode, whose
 /// fourth entry is transparent black), alpha, red and green steps round to nearest; BC4 reads
-/// (r, 0, 0, 1) and BC5 (r, g, 0, 1). BC6H is clamped to 0..1 (Unbound has no float decoding of
-/// its blocks). `blocks` shorter than the level leaves the missing blocks' texels zero.
+/// (r, 0, 0, 1) and BC5 (r, g, 0, 1). BC6H is clamped to 0..1 ([`decode_bc6h_f32`] keeps its
+/// floats). `blocks` shorter than the level leaves the missing blocks' texels zero.
 pub fn decode_level(format: BlockFormat, blocks: &[u8], width: u32, height: u32) -> Vec<u8> {
     decode(format, blocks, width, height, false)
+}
+
+/// Decodes one level of unsigned BC6H blocks to RGBA floats (alpha 1, rows as stored), unclamped.
+/// `blocks` shorter than the level leaves the missing blocks' texels zero.
+pub fn decode_bc6h_f32(blocks: &[u8], width: u32, height: u32) -> Vec<f32> {
+    let (w, h) = (width.max(1) as usize, height.max(1) as usize);
+    let bw = w.div_ceil(4);
+    let mut out = vec![0.0f32; w * h * 4];
+    let mut texels = [0.0f32; 16 * 3];
+    for (i, block) in blocks.chunks_exact(16).enumerate() {
+        let (bx, by) = (i % bw, i / bw);
+        bc6h_block_f32(block, &mut texels);
+        for t in 0..16 {
+            let (x, y) = (bx * 4 + t % 4, by * 4 + t / 4);
+            if x < w && y < h {
+                let at = (y * w + x) * 4;
+                out[at..at + 3].copy_from_slice(&texels[t * 3..t * 3 + 3]);
+                out[at + 3] = 1.0;
+            }
+        }
+    }
+    out
+}
+
+/// One unsigned BC6H block (Unity's `TextureFormat.BC6H`) to 16 RGB float texels, row by row.
+pub(super) fn bc6h_block_f32(block: &[u8], texels: &mut [f32; 16 * 3]) {
+    bcdec_rs::bc6h_float(&block[..16], texels, 4 * 3, false);
 }
 
 /// [`decode_level`] as GPUs sample the blocks: a BC3 block's colour half always has four

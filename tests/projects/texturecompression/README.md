@@ -45,12 +45,17 @@ exact values, exact compressed blocks and visually close values are separate mea
 
 | Profile | Exact values / total | Listed residual values |
 |---|---:|---:|
-| Gamma | 8511 / 8663 | 152 |
-| Linear | 8513 / 8663 | 150 |
-| AndroidGamma | 7921 / 8663 | 742 |
-| AndroidLinear | 7902 / 8663 | 761 |
-| AndroidETC2 | 7876 / 8663 | 787 |
-| AndroidASTC | 8271 / 8663 | 392 |
+| Gamma | 8573 / 8663 | 90 |
+| Linear | 8553 / 8663 | 110 |
+| AndroidGamma | 7922 / 8663 | 741 |
+| AndroidLinear | 7903 / 8663 | 760 |
+| AndroidETC2 | 7877 / 8663 | 786 |
+| AndroidASTC | 8272 / 8663 | 391 |
+
+Since Q479 BC6H blocks decode to floats for CPU reads: a BC6H import's pixels are what its blocks
+decode to (cache v46), a texel read from blocks decodes to floats, and `GetPixels32` truncates
+them to bytes. Every BC6H value whose blocks match now matches, `new.BC6H` included (before:
+8511/8513/7921/7902/7876/8271 exact values).
 
 Texture cache v41 includes HDR RGBM source preparation and multiplier rounding. NativeApi 66
 provides the compressed-texel callback and ASTC/ETC packet formats. The sections below retain
@@ -578,8 +583,9 @@ Other-release encoder profiles, Split Alpha Channel and mipless automatic NPOT E
 outside the measured implementation. The canonical controls cover Unity 6000.0.71f1 on the
 Linux GPU Editor; they do not establish other-release or other-device parity.
 
-The final six-profile engine gate passes with 8511/8513/7921/7902/7876/8271 exact values out of
-8663 and 152/150/742/761/787/392 listed residuals, in profile-table order. There are no missing,
+The final six-profile engine gate of that work passed with 8511/8513/7921/7902/7876/8271 exact
+values out of 8663 and 152/150/742/761/787/392 listed residuals, in profile-table order (now the
+table's counts). There are no missing,
 extra, unexplained or stale values. Every captured value is unchanged from the part-2 replay.
 Cache v41 and NativeApi 66 remain the landed texture mechanisms.
 

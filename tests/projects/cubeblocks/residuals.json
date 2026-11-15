@@ -1,0 +1,45 @@
+{
+ "Gamma": {
+  "Hdr*.face*.last": "the last mip of an HDR cube in a gamma project, compressed or not (within 0.007; the uncompressed cube's differed before cubes were compressed): the filtering of its gamma-encoded mips, unmeasured",
+  "write.HdrNormal.applymips.last": "the last mip of an HDR cube in a gamma project, compressed or not (within 0.007; the uncompressed cube's differed before cubes were compressed): the filtering of its gamma-encoded mips, unmeasured",
+  "write.LdrUncompressed.view.apply.mip1": "an uncompressed cube's mips rebuilt by Apply(true) (the earlier write controls): one 8-bit step, the rounding of Unbound's box filter (it rebuilt them so before cubes were compressed)"
+ },
+ "Linear": {
+  "write.LdrUncompressed.view.apply.mip1": "an uncompressed cube's mips rebuilt by Apply(true) (the earlier write controls): one 8-bit step, the rounding of Unbound's box filter (it rebuilt them so before cubes were compressed)"
+ },
+ "AndroidGamma": {
+  "Ldr[AHLNOS]*.face*": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "Hdr[HNS]*.face*": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.LdrOpaque.*.read": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.HdrNormal.*.read": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.LdrUncompressed.view.apply.mip1": "an uncompressed cube's mips rebuilt by Apply(true) (the earlier write controls): one 8-bit step, the rounding of Unbound's box filter (it rebuilt them so before cubes were compressed)",
+  "write.HdrNormal.view.apply.mip1": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)"
+ },
+ "AndroidLinear": {
+  "Ldr[AHLNOS]*.face*": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "Hdr[HNS]*.face*": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.LdrOpaque.*.read": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.HdrNormal.*.read": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.HdrNormal.applymips.last": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.LdrUncompressed.view.apply.mip1": "an uncompressed cube's mips rebuilt by Apply(true) (the earlier write controls): one 8-bit step, the rounding of Unbound's box filter (it rebuilt them so before cubes were compressed)",
+  "write.HdrNormal.view.apply.other": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.HdrNormal.view.apply.mip1": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.LdrOpaque.view.apply.other": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.LdrOpaque.view.apply.mip1": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)"
+ },
+ "AndroidETC2": {
+  "Ldr[AHLNOS]*.face*": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "Hdr[HNS]*.face*": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.LdrOpaque.*.read": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.HdrNormal.*.read": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.HdrNormal.applymips.last": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.LdrUncompressed.view.apply.mip1": "an uncompressed cube's mips rebuilt by Apply(true) (the earlier write controls): one 8-bit step, the rounding of Unbound's box filter (it rebuilt them so before cubes were compressed)",
+  "write.HdrNormal.view.apply.other": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.HdrNormal.view.apply.mip1": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.LdrOpaque.view.apply.other": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)",
+  "write.LdrOpaque.view.apply.mip1": "ETC blocks of Unbound's own encoder (an HDR cube's encoded bytes too): format and sizes are the Editor's, exact blocks are not guaranteed (texels within 0.035 here)"
+ },
+ "AndroidASTC": {
+  "write.LdrUncompressed.view.apply.mip1": "an uncompressed cube's mips rebuilt by Apply(true) (the earlier write controls): one 8-bit step, the rounding of Unbound's box filter (it rebuilt them so before cubes were compressed)"
+ }
+}

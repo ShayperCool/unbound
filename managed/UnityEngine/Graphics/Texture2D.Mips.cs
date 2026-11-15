@@ -269,10 +269,18 @@ namespace UnityEngine
             RequireReadable(true);
             CheckMip(miplevel);
             var result = new Color32[MipWidth(miplevel) * MipHeight(miplevel)];
+            // BC6H texels read as bytes truncate their decoded floats (the Unity 6000.0.71f1
+            // Editor, tests/projects/texturecompression new.BC6H.pixels*).
+            bool bc6h = m_Hdr != null && SourceBlocks && BlockFormats.Uncrunched(m_SourceFormat.Value) == TextureFormat.BC6H;
             for (int i = 0; i < result.Length; i++)
-                result[i] = m_Hdr != null ? Texture2DTexels.Pixel32(m_Format, FloatCell(miplevel, i)) : Texture2DTexels.Pixel32(m_Format, Cell(miplevel, i));
+                result[i] = bc6h ? TruncatedBytes(FloatCell(miplevel, i))
+                    : m_Hdr != null ? Texture2DTexels.Pixel32(m_Format, FloatCell(miplevel, i)) : Texture2DTexels.Pixel32(m_Format, Cell(miplevel, i));
             return BlockPadded(result, miplevel);
         }
+
+        static Color32 TruncatedBytes(Color c) => new Color32(
+            (byte)Mathf.Clamp(c.r * 255f, 0f, 255f), (byte)Mathf.Clamp(c.g * 255f, 0f, 255f),
+            (byte)Mathf.Clamp(c.b * 255f, 0f, 255f), (byte)Mathf.Clamp(c.a * 255f, 0f, 255f));
 
         public void SetPixels(Color[] colors) => SetPixels(colors, 0);
         public void SetPixels(Color[] colors, int miplevel)

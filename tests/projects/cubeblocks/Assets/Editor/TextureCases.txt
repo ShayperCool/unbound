@@ -1,0 +1,13 @@
+LdrOpaque compression=normal
+LdrAlpha compression=normal
+LdrHigh compression=high
+LdrLow compression=low
+LdrSpecular compression=normal convolution=specular
+LdrUncompressed compression=none
+LdrNoMips compression=normal mips=0
+LdrLinear compression=normal srgb=0
+HdrNormal compression=normal
+HdrSpecular compression=normal convolution=specular
+HdrHigh compression=high
+HdrUncompressed compression=none
+HdrNoMips compression=normal mips=0

@@ -29,8 +29,11 @@ namespace UnityEngine
                 m_Width = m_Width,
                 m_Height = m_Height,
                 m_Format = m_Format,
-                // A compressed import's clone reports its block format too; it holds the decoded pixels.
+                // A compressed import's clone reports its block format too; it holds the decoded
+                // pixels, and a copy of the blocks when the source held them (written through views).
                 m_SourceFormat = m_SourceFormat,
+                m_SourceGuid = m_SourceGuid,
+                m_SourceRaw = (byte[])m_SourceRaw?.Clone(),
                 m_MipCount = m_MipCount,
                 m_Readable = m_Readable,
                 m_Linear = m_Linear,
@@ -50,7 +53,8 @@ namespace UnityEngine
                             copy.m_NativeHandle, face, mip, 0, 0);
                 return copy;
             }
-            copy.Upload();
+            if (copy.m_SourceRaw != null && copy.m_SourceFormat is TextureFormat blocks) copy.UploadBlocks(blocks);
+            else copy.Upload();
             if (!copy.m_Readable)
             {
                 copy.m_UnreadablePixels = copy.m_Pixels;
