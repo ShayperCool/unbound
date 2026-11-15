@@ -383,6 +383,6 @@ The OpenGL stencil profile's content controls match; its additional callback
 error rows remain visible. Vulkan multisample stencil publication requires a
 depth-and-stencil resolve mechanism; the current depth publication preserves
 stencil and leaves all 15 content differences visible. Broader depth-image
-shapes and mip allocation also remain queued. Separate 2D, array and cube
-controls distinguish public mip counts from actual depth storage; implementing
+shapes and mip allocation also remain queued. Exploratory 2D, array and cube
+measurements distinguish public mip counts from actual depth storage; implementing
 those allocation rules requires corresponding attachment and shader-load controls.
