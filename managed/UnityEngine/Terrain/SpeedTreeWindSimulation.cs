@@ -559,8 +559,8 @@ namespace UnityEngine
         }
 
         /// <summary>Advances the local winds after their assets' winds. A local wind that has
-        /// become its asset's wind again gives up one tree a frame (its first); one whose asset is
-        /// gone gives up all of them.</summary>
+        /// become its asset's wind again gives up one tree a frame (its first; the order is
+        /// unmeasured); one whose asset is gone gives up all of them.</summary>
         static void UpdateLocals(float time)
         {
             for (int i = 0; i < s_Locals.Count; i++)
@@ -609,7 +609,8 @@ namespace UnityEngine
         }
 
         /// <summary>The bounds the spherical zones reach a tree by: those of its LOD group's
-        /// renderers with a Tree, else its renderer's.</summary>
+        /// renderers with a Tree (inactive levels included), else its renderer's. The group's
+        /// bounds together are unmeasured (the probe's levels have the same bounds).</summary>
         static Bounds TreeBounds(Tree tree)
         {
             var renderer = tree.m_GameObject.GetComponent<MeshRenderer>();
@@ -644,9 +645,10 @@ namespace UnityEngine
                 foreach (var member in lod.renderers)
                 {
                     if (member == null) continue;
-                    // An inactive level's tree takes no part.
-                    if (!s_Trees.TryGetValue(member.m_GameObject, out var other)) continue;
-                    if (ReferenceEquals(other.windAsset, asset)) return other;
+                    // An inactive level counts as the bounds do (unmeasured); its local wind is
+                    // still updated.
+                    var other = member.m_GameObject.GetComponent<Tree>();
+                    if (other is not null && ReferenceEquals(other.windAsset, asset)) return other;
                 }
             }
             return tree;

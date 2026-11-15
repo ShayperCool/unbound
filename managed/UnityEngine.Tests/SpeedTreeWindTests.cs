@@ -278,12 +278,101 @@ namespace UnityEngine.Tests
                 levels[1].gameObject.SetActive(false);
                 Assert.Null(trees[1].m_LocalWind);
                 Assert.Single(trees[0].m_LocalWind.Trees);
+                // Disabling the last level ends the local wind. An inactive first level still owns
+                // the group's next local wind (as the bounds count it), which keeps moving, and the
+                // drawn level joins it at its next draw.
+                levels[1].gameObject.SetActive(true);
+                levels[0].gameObject.SetActive(false);
+                Assert.Null(trees[0].m_LocalWind);
+                using (Unbound.Runtime.DrawPropertyPool.Begin())
+                {
+                    SpeedTreeWindSystem.Apply(levels[1], null);
+                    Assert.Null(trees[1].m_LocalWind);
+                    SpeedTreeWindSystem.Apply(levels[1], null);
+                }
+                var shared = trees[0].m_LocalWind;
+                Assert.NotNull(shared);
+                Assert.Same(shared, trees[1].m_LocalWind);
+                var before = (Vector4)shared.Wind.Values[3];
+                zone.windMain = 3f;
+                for (int frame = 1; frame <= 5; frame++)
+                {
+                    Time.s_Time += Dt;
+                    SpeedTreeWindSystem.Update();
+                }
+                Assert.NotEqual(before, (Vector4)shared.Wind.Values[3]);
             }
             finally
             {
                 Object.DestroyImmediate(root);
                 Object.DestroyImmediate(zone.gameObject);
                 Object.DestroyImmediate(asset);
+                SpeedTreeWindSystem.Update();
+            }
+        }
+
+        /// <summary>Degenerate zones reach nothing: a zone without radius over the bounds, and a
+        /// zone exactly at the point it would blow toward (no direction).</summary>
+        [Fact]
+        public void DegenerateSphericalZonesBlowNothing()
+        {
+            var flat = new GameObject("Flat").AddComponent<WindZone>();
+            var centered = new GameObject("Centered").AddComponent<WindZone>();
+            try
+            {
+                flat.mode = centered.mode = WindZoneMode.Spherical;
+                flat.radius = 0f;
+                flat.transform.position = Vector3.zero;
+                centered.radius = 5f;
+                // The bounds' center raised by a quarter of their height.
+                centered.transform.position = new Vector3(0f, 1f, 0f);
+                SpeedTreeWindSystem.Update();
+                var wind = SpeedTreeWindSystem.SphericalWind(new Bounds(Vector3.zero, new Vector3(2f, 4f, 2f)));
+                Assert.Equal(Vector3.zero, wind);
+                Assert.False(float.IsNaN(wind.x));
+            }
+            finally
+            {
+                Object.DestroyImmediate(flat.gameObject);
+                Object.DestroyImmediate(centered.gameObject);
+                SpeedTreeWindSystem.Update();
+            }
+        }
+
+        /// <summary>A tree given another wind asset leaves its local wind, which ends with its
+        /// last tree.</summary>
+        [Fact]
+        public void ATreeGivenAnotherAssetLeavesItsLocalWind()
+        {
+            var tree = new GameObject("WindTree");
+            var zone = new GameObject("Sphere").AddComponent<WindZone>();
+            var asset = new SpeedTreeWindAsset(1, Config());
+            var other = new SpeedTreeWindAsset(1, Config());
+            try
+            {
+                tree.AddComponent<MeshFilter>().sharedMesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
+                var renderer = tree.AddComponent<MeshRenderer>();
+                var component = tree.AddComponent<Tree>();
+                component.windAsset = asset;
+                zone.mode = WindZoneMode.Spherical;
+                zone.radius = 5f;
+                zone.transform.position = new Vector3(-2f, 0f, 0f);
+                SpeedTreeWindSystem.Update();
+                using (Unbound.Runtime.DrawPropertyPool.Begin()) SpeedTreeWindSystem.Apply(renderer, null);
+                var local = component.m_LocalWind;
+                Assert.NotNull(local);
+                component.windAsset = asset;
+                Assert.Same(local, component.m_LocalWind);
+                component.windAsset = other;
+                Assert.Null(component.m_LocalWind);
+                Assert.Empty(local.Trees);
+            }
+            finally
+            {
+                Object.DestroyImmediate(tree);
+                Object.DestroyImmediate(zone.gameObject);
+                Object.DestroyImmediate(asset);
+                Object.DestroyImmediate(other);
                 SpeedTreeWindSystem.Update();
             }
         }
