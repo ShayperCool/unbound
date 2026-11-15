@@ -676,6 +676,16 @@ namespace UnityEngine.Tests
                 Assert.Single(receiver.Calls);
                 animation.Stop();
             }
+            // At speed 0 the time does not move and nothing fires; the start's event fires when it
+            // first moves (legacy.events.start.speed0).
+            receiver.Calls.Clear();
+            animation["z"].speed = 0f;
+            animation.Play("z");
+            for (int i = 0; i < 3; i++) animation.Step(0.125f);
+            Assert.Empty(receiver.Calls);
+            animation["z"].speed = 1f;
+            animation.Step(0.125f);
+            Assert.Equal(new[] { "OnHit(7)" }, receiver.Calls);
             Object.DestroyImmediate(go);
         }
 

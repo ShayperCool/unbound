@@ -1086,19 +1086,25 @@ namespace UnityEngine
                         var wrap = s.EffectiveWrap;
                         bool loop = wrap == WrapMode.Loop || wrap == WrapMode.PingPong;
                         double n0 = length > 0f ? p.From / length : 0.0, n1 = length > 0f ? p.To / length : 0.0;
-                        var source = s;
-                        AnimationEvents.FireCrossed(s.m_Clip, n0, n1, loop, fromStart, e =>
-                        {
-                            var fired = e.Copy();
-                            fired.m_Source = AnimationEventSource.Legacy;
-                            fired.m_StateSender = source;
-                            AnimationEvents.Dispatch(m_GameObject, fired, source.m_Clip);
-                        });
+                        m_EventState = s;
+                        AnimationEvents.FireCrossed(s.m_Clip, n0, n1, loop, fromStart, m_FireEvent ??= FireEvent);
                     }
                 }
                 if (p.Stopped && s.m_IsClone) RemoveState(s);
             }
             m_Playing.Clear();
+        }
+
+        /// <summary>The state whose events <see cref="FireEvent"/> sends (evaluations do not nest).</summary>
+        AnimationState m_EventState;
+        Action<AnimationEvent> m_FireEvent;
+
+        void FireEvent(AnimationEvent e)
+        {
+            var fired = e.Copy();
+            fired.m_Source = AnimationEventSource.Legacy;
+            fired.m_StateSender = m_EventState;
+            AnimationEvents.Dispatch(m_GameObject, fired, m_EventState.m_Clip);
         }
 
         /// <summary>Makes room for a layer's pose at <paramref name="index"/> of the
