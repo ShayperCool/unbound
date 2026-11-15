@@ -182,6 +182,11 @@ namespace Unbound.Tests
                 try { recorded = Execute(); }
                 finally { FrameBuilder.EndCameraRendering(); }
                 Assert.Equal(0, Occurrences(recorded, CameraOf(Matrix4x4.identity, Matrix4x4.identity)));
+                // As a frame starts in Unbound: the screen's pixel matrix.
+                Immediate.LoadScreenPixels();
+                recorded = Execute();
+                Assert.Equal(1, Occurrences(recorded, CameraOf(Matrix4x4.identity, Matrix4x4.Ortho(0f, Screen.width, Screen.height, 0f, -1f, 100f))));
+                Assert.Equal(view, GfxStream.Current.View);
             }
             finally
             {

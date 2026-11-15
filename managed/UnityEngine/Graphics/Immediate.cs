@@ -31,10 +31,8 @@ namespace Unbound.Runtime
         internal static void LoadScreenPixels()
         {
             int width = UnityEngine.Screen.width, height = UnityEngine.Screen.height;
-            Projection = width > 0 && height > 0
-                ? UnityEngine.Matrix4x4.Ortho(0f, width, height, 0f, -1f, 100f)
-                : UnityEngine.Matrix4x4.identity;
-            ModelView = UnityEngine.Matrix4x4.identity;
+            if (width > 0 && height > 0) UnityEngine.GL.LoadPixelMatrix(0f, width, height, 0f);
+            else (Projection, ModelView) = (UnityEngine.Matrix4x4.identity, UnityEngine.Matrix4x4.identity);
         }
 
         static UnityEngine.Mesh s_BlitQuad;
