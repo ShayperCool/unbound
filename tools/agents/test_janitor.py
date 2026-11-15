@@ -3,6 +3,7 @@
 import contextlib
 import io
 import json
+import shutil
 import os
 from pathlib import Path
 import subprocess
@@ -869,6 +870,67 @@ class JanitorTests(unittest.TestCase):
             except janitor.ReferenceChanged:
                 pass
         self.assertTrue(target.exists())
+
+    def test_a_directory_moved_out_of_a_candidate_during_its_removal_stays_watched(self):
+        first = self.directory('q1/first')
+        (first/'sub').mkdir()
+        second = self.directory('q1/second')
+        active = self.cache/'active'
+        active.mkdir()
+        original = shutil.rmtree
+        def rmtree(path, *args, **kwargs):
+            if Path(path) == first:
+                (first/'sub').rename(active/'sub')  # leaves during the removal
+            return original(path, *args, **kwargs)
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            self.j.apply = True
+            with patch.object(janitor.shutil, 'rmtree', rmtree):
+                self.assertTrue(self.j.remove(first, kind='task'))
+            self.j.refresh_links()
+            (active/'sub'/'link').symlink_to(second/'output')
+            try:
+                self.assertFalse(self.j.remove(second, kind='task'))
+            except janitor.ReferenceChanged:
+                pass
+        self.assertTrue(second.exists())
+
+    def test_a_link_on_the_way_to_a_destination_is_followed_not_fatal(self):
+        target = self.directory('q1/target')
+        outside = self.root/'outside'
+        (outside/'real'/'b').mkdir(parents=True)
+        (self.cache/'L').symlink_to(outside/'a'/'b')
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            (outside/'a').symlink_to(outside/'real')
+            self.j.refresh_links()  # no error: the link is looked at, its directory walked
+            (outside/'real'/'b'/'link').symlink_to(target/'output')
+            self.j.apply = True
+            try:
+                self.assertFalse(self.j.remove(target, kind='task'))
+            except janitor.ReferenceChanged:
+                pass
+        self.assertTrue(target.exists())
+
+    def test_an_unreadable_anchor_keeps_moves_out_of_the_view_unsafe(self):
+        run = self.directory('unbound-validation/runs/probe-20261101-old')
+        locked = self.root/'locked'
+        locked.mkdir()
+        (self.cache/'L').symlink_to(locked/'missing')
+        locked.chmod(0o311)  # searchable but not readable: no watch can be placed
+        self.addCleanup(locked.chmod, 0o755)
+        source = self.cache/'source'
+        source.mkdir()
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            source.rename(self.root/'outside-source')
+            self.j.apply = True
+            with self.assertRaises(janitor.ReferenceChanged):
+                self.j.remove(run, kind='run', hours=72)
+        self.assertTrue(run.is_dir())
 
     def test_too_many_unverified_names_fail_closed(self):
         watcher = janitor.ReferenceWatch()

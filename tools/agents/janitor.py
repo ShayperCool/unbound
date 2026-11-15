@@ -47,8 +47,8 @@ MAX_BUFFERED_EVENT_BYTES = 256*2**20
 # Unverified names tracked at most (each a short-lived name gone before it could be inspected);
 # beyond that monitoring counts as broken.
 MAX_UNVERIFIED_NAMES = 2_000_000
-# Link destinations watched through sentinels at most (about 200 in the measured cache: missing
-# or file destinations outside the walked trees); beyond that monitoring counts as broken.
+# Link destinations watched through sentinels at most (496 in a replay of the measured cache);
+# beyond that monitoring counts as broken.
 MAX_SENTINEL_DESTINATIONS = 100_000
 MAX_REDISCOVERIES = 2
 # Keep land's lock independent of a service manager or a historical backlog.
@@ -294,8 +294,12 @@ class ReferenceWatch:
         self.fd = self.libc.inotify_init1(os.O_NONBLOCK | os.O_CLOEXEC)
         if self.fd < 0:
             raise OSError(ctypes.get_errno(), 'cannot monitor reference directories')
-        # Watches of removed candidates: events from them are their own removal.
-        self.directories, self.references, self.retired = {}, set(), set()
+        # Watches of removed candidates, and the candidates' paths: an event from such a watch
+        # while it is still inside such a path is part of the removal.
+        self.directories, self.references, self.retired, self.retired_roots = {}, set(), set(), set()
+        # Link destinations above which no directory could be watched (unreadable): moves out
+        # of the view stay unsafe while any exists.
+        self.unobservable = set()
         self.moves, self.handled_moves, self.invalidated = {}, set(), set()
         self.excluded = tuple(p.resolve() for p in excluded)
         self.metadata_roots = set(metadata_roots)
@@ -314,7 +318,8 @@ class ReferenceWatch:
         # at the same place later.
         self.parent_of, self.children = {}, {}
         # Sentinels: watches on the nearest existing directory above a link destination that no
-        # processed watch covers (a missing destination, or a file, outside the walked trees).
+        # processed watch covered when it was read (a missing destination or a file, outside the
+        # walked trees or not walked yet).
         # {descriptor: directory} and {descriptor: {next name toward it: {destinations}}}.
         # Whatever appears at that name is looked at, so a tree arriving where a link in the
         # view points is walked.
@@ -402,6 +407,8 @@ class ReferenceWatch:
         for child in self.children.pop(descriptor, set()):
             self.parent_of.pop(child, None)
         self.retired.discard(descriptor)
+        if directory is not None:
+            self.retired_roots.discard(str(directory))
         if descriptor in self.sentinel_dirs:
             self.unsentinel(descriptor)
 
@@ -422,7 +429,7 @@ class ReferenceWatch:
         if any(inside(destination, p) for p in self.excluded):
             return
         anchor, name = os.path.dirname(destination), os.path.basename(destination)
-        while not os.path.isdir(anchor):
+        while not real_directory(anchor):
             if os.path.dirname(anchor) == anchor:
                 return
             anchor, name = os.path.dirname(anchor), os.path.basename(anchor)
@@ -433,8 +440,11 @@ class ReferenceWatch:
         descriptor = self.libc.inotify_add_watch(self.fd, os.fsencode(anchor), mask)
         if descriptor < 0:
             number = ctypes.get_errno()
-            if number == errno.ENOENT:
-                return self.observe(destination)  # the anchor went away meanwhile: go higher
+            if number in (errno.ENOENT, errno.ENOTDIR):
+                return self.observe(destination)  # the anchor changed meanwhile: look again
+            if number in (errno.EACCES, errno.EPERM):
+                self.unobservable.add(destination)
+                return
             self.broken = True
             raise ReferenceChanged(f'cannot watch above link destination {destination}: {os.strerror(number)}')
         if descriptor in self.directories and descriptor not in self.retired:
@@ -496,7 +506,9 @@ class ReferenceWatch:
                 self.reach(destination, pending)
 
     def retire(self, path):
-        """Ignore the events of a candidate's own removal: its watch and those below it."""
+        """Ignore the events of a candidate's own removal: its watch and those below it, while
+        they stay inside the candidate's path (a directory moved out of it is watched again)."""
+        self.retired_roots.add(os.fspath(path))
         root = self.watched.get(os.fspath(path))
         pending = [] if root is None else [root]
         while pending:
@@ -521,6 +533,9 @@ class ReferenceWatch:
         directory later created at the same place is watched afresh."""
         if not (self.moves or self.file_moves or self.unresolved):
             return sorted(self.vanished)
+        if self.unobservable:
+            # A move could have taken a tree to a destination nobody can watch.
+            return [*map(Path, sorted(self.unobservable)), *sorted(self.vanished)]
         marked = set(self.unlisted)
         for key, names in self.unverified.items():
             marked.update(os.path.join(key, name) for name in names)
@@ -633,11 +648,13 @@ class ReferenceWatch:
                         if mask & self.OVERFLOW:
                             self.broken = True
                             raise ReferenceChanged('reference change queue overflowed; batch deferred')
-                        if descriptor in self.retired:
+                        if descriptor in self.retired and any(
+                                inside(self.directories.get(descriptor, ''), root) for root in self.retired_roots):
                             # The removal of a candidate; only the end of its watches matters.
                             if mask & (self.DELETE_SELF | self.IGNORED):
                                 self.drop_watch(descriptor)
                             continue
+                        self.retired.discard(descriptor)
                         directory = self.directories.get(descriptor)
                         if directory is None:
                             if descriptor in self.sentinel_dirs:
@@ -708,6 +725,14 @@ class ReferenceWatch:
                 self.broken = True
                 raise
         return pending
+
+
+def real_directory(path):
+    """A directory itself, not a link to one: a watch with NOFOLLOW can be placed on it."""
+    try:
+        return stat.S_ISDIR(os.lstat(path).st_mode)
+    except OSError:
+        return False
 
 
 def link_target(path):
