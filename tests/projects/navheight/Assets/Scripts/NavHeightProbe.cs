@@ -114,13 +114,17 @@ public class NavHeightProbe : MonoBehaviour
         string At(float x) => NavMesh.SamplePosition(new Vector3(x, Profile(x) + 0.3f, 0f), out var h, 0.6f, NavMesh.AllAreas) ? R(h.position.y) : "-";
         // Inside the left half, by the 0.15 m step's edge: the height mesh's height differs from
         // the polygon's there; then the triangulation's size.
-        string State(bool counts)
+        string Triangles() => (NavMesh.CalculateTriangulation().indices.Length / 3).ToString(CultureInfo.InvariantCulture);
+        string State(NavMeshData data)
         {
             var t = NavMesh.CalculateTriangulation();
             var bump = new List<string>();
             foreach (float x in new[] { -1.7f, -1.6f, -1.45f, -1.3f })
                 bump.Add(NavMesh.SamplePosition(new Vector3(x, 0.3f, 3f), out var a, 0.6f, NavMesh.AllAreas) ? R(a.position.y) : "-");
-            return At(-6f) + " " + At(3.1f) + " " + At(6.5f) + " bump " + string.Join(" ", bump) + (counts ? " tris " + t.indices.Length / 3 : "");
+            // The ramp's side edge (z = 1.5 less the agent radius, as built), from inside it.
+            string edge = NavMesh.SamplePosition(new Vector3(-6f, 1.1f, 1.45f), out var e, 0.8f, NavMesh.AllAreas) ? R(e.position.z) : "-";
+            var source = data != null ? " src " + P(data.sourceBounds.center) + " " + P(data.sourceBounds.size) : "";
+            return At(-6f) + " " + At(3.1f) + " " + At(6.5f) + " bump " + string.Join(" ", bump) + " edge " + edge + source;
         }
         var bounds = new Bounds(Vector3.zero, new Vector3(26f, 8f, 16f));
         var left = new Bounds(new Vector3(-6.5f, 0f, 0f), new Vector3(13f, 8f, 16f));
@@ -128,11 +132,13 @@ public class NavHeightProbe : MonoBehaviour
             var plain = NavMesh.GetSettingsByID(0);
             plain.buildHeightMesh = false;
             var instance = NavMesh.AddNavMeshData(NavMeshBuilder.BuildNavMeshData(plain, Sources(true), bounds, Vector3.zero, Quaternion.identity));
-            Put("plain.build", State(true));
+            Put("plain.build", State(null));
+            Put("plain.build.tris", Triangles());
             NavMesh.RemoveNavMeshData(instance);
         }
-        // With 32-voxel tiles (about 5.3 m), heights only: the polygons there are not compared.
-        foreach (var (tag, preserve, tiles) in new[] { ("preserve", true, 0), ("drop", false, 0), ("preserve.small", true, 32) })
+        // Default tiles, then 32-voxel tiles (about 5.3 m); `changed` updates with another tile size
+        // and agent radius, which a preserving update ignores (documented).
+        foreach (var (tag, preserve, tiles, changed) in new[] { ("preserve", true, 0, false), ("drop", false, 0, false), ("preserve.small", true, 32, false), ("drop.small", false, 32, false), ("preserve.changed", true, 32, true) })
         {
             var settings = NavMesh.GetSettingsByID(0);
             if (tiles > 0) { settings.overrideTileSize = true; settings.tileSize = tiles; }
@@ -140,16 +146,24 @@ public class NavHeightProbe : MonoBehaviour
             settings.preserveTilesOutsideBounds = preserve;
             var built = NavMeshBuilder.BuildNavMeshData(settings, Sources(true), bounds, Vector3.zero, Quaternion.identity);
             var instance = NavMesh.AddNavMeshData(built);
-            Put(tag + ".build", State(tiles == 0));
+            Put(tag + ".build", State(built));
+            Put(tag + ".build.tris", Triangles());
             NavMesh.RemoveNavMeshData(instance);
             settings.preserveTilesOutsideBounds = false;
             var data = NavMeshBuilder.BuildNavMeshData(settings, Sources(true), bounds, Vector3.zero, Quaternion.identity);
             instance = NavMesh.AddNavMeshData(data);
-            Put(tag + ".before", State(tiles == 0));
+            Put(tag + ".before", State(data));
+            Put(tag + ".before.tris", Triangles());
             settings.preserveTilesOutsideBounds = preserve;
+            if (changed)
+            {
+                settings.tileSize = 64;
+                settings.agentRadius = 0.9f;
+            }
             bool updated = NavMeshBuilder.UpdateNavMeshData(data, settings, Sources(true), left);
             yield return null;
-            Put(tag + ".update", updated + " " + State(tiles == 0));
+            Put(tag + ".update", updated + " " + State(data));
+            Put(tag + ".update.tris", Triangles());
             NavMesh.RemoveNavMeshData(instance);
             yield return null;
         }

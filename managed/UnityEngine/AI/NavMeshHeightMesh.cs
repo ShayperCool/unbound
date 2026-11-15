@@ -166,16 +166,43 @@ namespace Unbound.Runtime
             nodes.Add(node);
             float dx = cmaxX - cminX, dy = cmaxY - cminY, dz = cmaxZ - cminZ;
             int axis = dx >= dy && dx >= dz ? 0 : dy >= dz ? 1 : 2;
-            Array.Sort(slots, from, to - from, Comparer<int>.Create((a, b) =>
-            {
-                int byCenter = centers[a * 3 + axis].CompareTo(centers[b * 3 + axis]);
-                return byCenter != 0 ? byCenter : a.CompareTo(b);
-            }));
             int middle = from + (to - from) / 2;
+            Select(slots, from, to - 1, middle, centers, axis);
             Subdivide(v, tris, order, centers, slots, from, middle, nodes, leafOrder);
             Subdivide(v, tris, order, centers, slots, middle, to, nodes, leafOrder);
             node.First = -(nodes.Count - index);
             nodes[index] = node;
+        }
+
+        /// <summary>Orders slots[lo..hi] around position <paramref name="k"/> (by center along the axis,
+        /// then triangle): smaller before it, larger after it, without sorting either side.</summary>
+        static void Select(int[] slots, int lo, int hi, int k, float[] centers, int axis)
+        {
+            while (lo < hi)
+            {
+                int pivot = slots[lo + (hi - lo) / 2];
+                int i = lo, j = hi;
+                while (i <= j)
+                {
+                    while (Before(slots[i], pivot, centers, axis)) i++;
+                    while (Before(pivot, slots[j], centers, axis)) j--;
+                    if (i <= j)
+                    {
+                        (slots[i], slots[j]) = (slots[j], slots[i]);
+                        i++;
+                        j--;
+                    }
+                }
+                if (k <= j) hi = j;
+                else if (k >= i) lo = i;
+                else return;
+            }
+        }
+
+        static bool Before(int a, int b, float[] centers, int axis)
+        {
+            float ca = centers[a * 3 + axis], cb = centers[b * 3 + axis];
+            return ca < cb || (ca == cb && a < b);
         }
 
         /// <summary>Raises <paramref name="best"/> to the highest part, lower than <paramref name="top"/>,

@@ -1,7 +1,7 @@
 # NavMesh height meshes built at run time
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 232 rows. Heights come from the build's geometry and
+byte-identical and the canonical reference has 254 rows. Heights come from the build's geometry and
 agent movement, not from the OS or the graphics device. The comparator compares text exactly and
 numbers within 1e-5 m: heights interpolated over a sloped triangle differ in their last bits between
 the Editor and Unbound, while a height mesh changes heights by centimetres (a 0.1 m bump against a
@@ -22,27 +22,38 @@ once from cube meshes and once from box sources, with `buildHeightMesh` set.
   wholly inside its bounds and keeps every other tile; it creates no height mesh and drops the
   data's existing one (`preserve.small.*`, 32-voxel tiles). With no tile wholly inside the bounds
   (`preserve.*` with the default tiles), the data is left exactly as it was, height mesh included,
-  and a first build has no NavMesh at all. `drop.*` updates the same data without preserving tiles:
-  tiles outside the bounds go.
+  and a first build has no NavMesh at all. A preserving update keeps the data's source bounds and,
+  as documented, its own settings: `preserve.changed` passes another tile size and agent radius,
+  and the rebuilt tiles keep the data's (the ramp's side edge stays 1 m from its middle, not 0.6 m).
+  `drop.*` updates the same data without preserving tiles: tiles outside the bounds go, and the
+  source bounds become the update's.
+- Documented, not recorded here: a preserving update also removes the links the data's bake
+  generated. The runtime builder does not generate links (a source asking for them gets a warning),
+  so the probe cannot make such data; a managed test covers the removal on data carrying baked
+  links.
 
 | Unity 6000.0 documentation | Discriminating control |
 | --- | --- |
 | [NavMeshBuildSettings.buildHeightMesh](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshBuildSettings-buildHeightMesh.html) | `mesh.*` and `box.*` against `mesh.none.main`; `preserve.small.update` drops an existing height mesh. |
 | [NavMeshBuildSettings.preserveTilesOutsideBounds](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshBuildSettings-preserveTilesOutsideBounds.html) | `preserve.*` and `drop.*`: the stairs outside the update's bounds stay or go. |
 
+Known residuals, listed in `residuals.json` and reported by every check without failing it: the
+triangle counts with 32-voxel tiles, one triangle fewer in Unbound in every such build (the base
+polygon build, with or without a height mesh); and, unexplained, an update without preserving tiles
+at 32-voxel tiles, after which the Editor's height mesh no longer has the bump's top (0 where
+Unbound has 0.1).
+
 Not compared: an agent walking up the stairs, whose path along x follows the runtime polygons (their
 detail heights and an agent's walk differ by up to 1 cm with or without a height mesh; the heights
 it takes on the steps match); the lines next to the stairs' side edges and path corner heights,
-which read the polygons; triangle counts with 32-voxel tiles, one triangle apart in every such
-build; and, unexplained, an update without preserving tiles at 32-voxel tiles, after which the
-Editor's height mesh no longer has the bump's top (0 where Unbound has 0.1). Terrain sources are
-not supported by the runtime builder (an error says so). Other releases are unmeasured.
+which read the polygons. Terrain sources are not supported by the runtime builder (an error says
+so), nor is link generation (a warning). Other releases are unmeasured.
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
-python3 tests/projects/navheight/run.py native --label reference-e
-python3 tests/projects/navheight/run.py native --label reference-f
-python3 tests/projects/navheight/run.py publish reference-e reference-f
+python3 tests/projects/navheight/run.py native --label reference-g
+python3 tests/projects/navheight/run.py native --label reference-h
+python3 tests/projects/navheight/run.py publish reference-g reference-h
 python3 tests/projects/navheight/run.py check
 ```
 

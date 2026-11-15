@@ -138,7 +138,9 @@ namespace UnityEngine.AI
         public static NavMeshData BuildNavMeshData(NavMeshBuildSettings buildSettings, List<NavMeshBuildSource> sources, Bounds localBounds, Vector3 position, Quaternion rotation)
         {
             if (sources == null) throw new ArgumentNullException(nameof(sources));
-            var data = new NavMeshData(buildSettings.agentTypeID) { position = position, rotation = rotation };
+            // A new data has the settings it is built with, also when the build preserves tiles
+            // (Unity 6000.0.71f1: tests/projects/navheight `preserve.small.build` uses its tile size).
+            var data = new NavMeshData(buildSettings.agentTypeID) { position = position, rotation = rotation, m_Settings = buildSettings };
             UpdateNavMeshData(data, buildSettings, sources, localBounds);
             return data;
         }
@@ -155,6 +157,7 @@ namespace UnityEngine.AI
             }
             NavMeshRecast.Build(data, buildSettings, sources, localBounds);
             NavWorld.DataChanged(data);
+            if (buildSettings.preserveTilesOutsideBounds) NavWorld.GeneratedLinksRemoved(data);
             return true;
         }
 
@@ -292,8 +295,15 @@ namespace Unbound.Runtime
                 }
         }
 
+        static bool s_WarnedLinks;
+
         internal static void Build(NavMeshData data, NavMeshBuildSettings settings, List<NavMeshBuildSource> sources, Bounds localBounds)
         {
+            if (!s_WarnedLinks && sources.Exists(s => s.generateLinks))
+            {
+                s_WarnedLinks = true;
+                Debug.LogWarning("Unbound: runtime NavMesh builds do not generate links yet (NavMeshBuildSource.generateLinks); the NavMesh is built without them.");
+            }
             var dataToWorld = Matrix4x4.TRS(data.position, data.rotation, Vector3.one);
             var g = Gather(sources, dataToWorld.inverseDoublePrecision);
             // Preserving tiles outside the bounds keeps every tile not wholly inside them and
@@ -301,10 +311,16 @@ namespace Unbound.Runtime
             // one, as documented. With no tile wholly inside, the data is left as it was
             // (Unity 6000.0.71f1: tests/projects/navheight `preserve.*`).
             bool preserve = settings.preserveTilesOutsideBounds;
-            float tileWorld = settings.EffectiveTileSize * settings.EffectiveVoxelSize;
-            // The tiles wholly inside the bounds, which a preserving build replaces.
-            int ix0 = Mathf.CeilToInt(localBounds.min.x / tileWorld), iz0 = Mathf.CeilToInt(localBounds.min.z / tileWorld);
-            int ix1 = Mathf.FloorToInt(localBounds.max.x / tileWorld) - 1, iz1 = Mathf.FloorToInt(localBounds.max.z / tileWorld) - 1;
+            // As documented, such an update keeps the data's own settings but for the region area,
+            // the job workers, the debug settings and whether to build a height mesh.
+            if (preserve) settings = Preserving(data.m_Settings, settings);
+            int tileSize = settings.EffectiveTileSize;
+            float cs = settings.EffectiveVoxelSize;
+            float tileWorld = tileSize * cs;
+            // The tiles wholly inside the bounds, which a preserving build replaces (in whole voxels,
+            // so bounds on a tile edge give that tile).
+            int ix0 = CeilDiv(VoxelCeil(localBounds.min.x, cs), tileSize), iz0 = CeilDiv(VoxelCeil(localBounds.min.z, cs), tileSize);
+            int ix1 = FloorDiv(VoxelFloor(localBounds.max.x, cs), tileSize) - 1, iz1 = FloorDiv(VoxelFloor(localBounds.max.z, cs), tileSize) - 1;
             if (preserve && (ix0 > ix1 || iz0 > iz1)) return;
             data.m_Settings = settings;
             var kept = preserve ? new List<DtMeshData>(data.m_Tiles) : null;
@@ -314,16 +330,11 @@ namespace Unbound.Runtime
             if (preserve)
                 foreach (var tile in kept)
                     if (tile.header.x < ix0 || tile.header.x > ix1 || tile.header.y < iz0 || tile.header.y > iz1) data.m_Tiles.Add(tile);
-            if (g.Areas.Count == 0)
-            {
-                data.m_SourceBounds = localBounds;
-                return;
-            }
-            // The data covers the bounds it was built for (measured).
-            data.m_SourceBounds = localBounds;
-            float cs = settings.EffectiveVoxelSize;
+            // The data covers the bounds it was built for (measured); a preserving update keeps the
+            // bounds it had (tests/projects/navheight `preserve.*.update`).
+            if (!preserve || kept.Count == 0) data.m_SourceBounds = localBounds;
+            if (g.Areas.Count == 0) return;
             float ch = cs * 0.5f;
-            int tileSize = settings.EffectiveTileSize;
             int walkableHeight = (int)MathF.Ceiling(settings.agentHeight / ch);
             int walkableClimb = (int)MathF.Floor(settings.agentClimb / ch);
             int walkableRadius = (int)MathF.Ceiling(settings.agentRadius / cs);
@@ -362,7 +373,7 @@ namespace Unbound.Runtime
             // Build Height Mesh: the walkable source triangles give agents and queries their height
             // over the NavMesh's polygons (Unity 6000.0.71f1: tests/projects/navheight).
             if (settings.buildHeightMesh && !preserve
-                && NavMeshHeightMesh.FromTriangles(verts, tris, t => areas[t] != RcRecast.RC_NULL_AREA) is NavMeshHeightMesh height)
+                && NavMeshHeightMesh.FromTriangles(verts, tris, t => areas[t] != RcRecast.RC_NULL_AREA && HasArea(verts, tris, t)) is NavMeshHeightMesh height)
                 data.m_HeightMeshes.Add(height);
             // Clip the raster footprint before rounding to voxels. Padding beyond the source
             // geometry can otherwise shift the grid and its contours (Unity 6000.0.71f1,
@@ -386,6 +397,35 @@ namespace Unbound.Runtime
                     if (tile != null) data.m_Tiles.Add(tile);
                 }
         }
+
+        /// <summary>Whether triangle t encloses any area (one with coincident or collinear corners,
+        /// whose normal is undefined, does not belong to a height mesh).</summary>
+        static bool HasArea(float[] v, int[] tris, int t)
+        {
+            int a = tris[t * 3] * 3, b = tris[t * 3 + 1] * 3, c = tris[t * 3 + 2] * 3;
+            float ux = v[b] - v[a], uy = v[b + 1] - v[a + 1], uz = v[b + 2] - v[a + 2];
+            float wx = v[c] - v[a], wy = v[c + 1] - v[a + 1], wz = v[c + 2] - v[a + 2];
+            float nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx;
+            float area = nx * nx + ny * ny + nz * nz;
+            return area > 0f && !float.IsNaN(area) && !float.IsInfinity(area);
+        }
+
+        static NavMeshBuildSettings Preserving(NavMeshBuildSettings data, NavMeshBuildSettings given)
+        {
+            data.minRegionArea = given.minRegionArea;
+            data.maxJobWorkers = given.maxJobWorkers;
+            data.debug = given.debug;
+            data.buildHeightMesh = given.buildHeightMesh;
+            data.preserveTilesOutsideBounds = true;
+            return data;
+        }
+
+        // Voxel coordinates rounded to whole voxels within a thousandth of one (float division of a
+        // coordinate built from voxels lands just beside the whole number).
+        static int VoxelCeil(float v, float cs) => (int)MathF.Ceiling(v / cs - 1e-3f);
+        static int VoxelFloor(float v, float cs) => (int)MathF.Floor(v / cs + 1e-3f);
+        static int FloorDiv(int a, int b) => a >= 0 ? a / b : -((-a + b - 1) / b);
+        static int CeilDiv(int a, int b) => -FloorDiv(-a, b);
 
         static DtMeshData BuildTile(RcContext ctx, NavMeshBuildSettings settings, float[] verts, int[] tris, int[] areas, Geometry g,
             int tx, int tz, float tileWorld, int tileSize, float cs, float ch, int border, int walkableHeight, int walkableClimb, int walkableRadius, Vector3 buildMin, Vector3 buildMax)

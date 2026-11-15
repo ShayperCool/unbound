@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unbound.Runtime;
 using UnityEngine.AI;
 using Xunit;
@@ -121,6 +122,85 @@ namespace UnityEngine.Tests
             var fresh = NavMeshBuilder.BuildNavMeshData(Tiled(true), Floor(), inside, Vector3.zero, Quaternion.identity);
             Assert.Equal(4, fresh.m_Tiles.Count);
             Assert.False(fresh.hasHeightMeshData);
+        }
+
+        /// <summary>Documented: a preserving update takes its settings from the data but for the
+        /// region area, job workers, debug settings and buildHeightMesh, and removes the links the
+        /// data's bake generated (links added by themselves stay). Measured: it keeps the data's
+        /// source bounds.</summary>
+        [Fact]
+        public void PreservingUpdatesKeepTheDatasSettingsBoundsAndOwnLinksOnly()
+        {
+            var data = NavMeshBuilder.BuildNavMeshData(Tiled(false), Floor(), Whole, Vector3.zero, Quaternion.identity);
+            data.m_Links.Add(new BakedLink { Start = new Vector3(66f, 0f, 66f), End = new Vector3(68f, 0f, 66f), Bidirectional = true });
+            var instance = NavMesh.AddNavMeshData(data);
+            var own = NavMesh.AddLink(new NavMeshLinkData { startPosition = new Vector3(72f, 0f, 72f), endPosition = new Vector3(74f, 0f, 72f), bidirectional = true });
+            try
+            {
+                Assert.Equal(2, NavWorld.Links.Count(l => l.Data != 0 || l.Id == own.id));
+                var changed = Tiled(true);
+                changed.agentRadius = 0.9f;
+                changed.tileSize = 64;
+                changed.minRegionArea = 3f;
+                float tile = 32 * NavMesh.GetSettingsByID(0).voxelSize;
+                var inside = new Bounds(new Vector3(13 * tile, 0f, 13 * tile), new Vector3(2 * tile, 6f, 2 * tile));
+                Assert.True(NavMeshBuilder.UpdateNavMeshData(data, changed, Floor(), inside));
+                Assert.Equal(NavMesh.GetSettingsByID(0).agentRadius, data.buildSettings.agentRadius);
+                Assert.Equal(32, data.buildSettings.tileSize);
+                Assert.Equal(3f, data.buildSettings.minRegionArea);
+                Assert.Equal(Whole, data.sourceBounds);
+                Assert.Empty(data.m_Links);
+                Assert.DoesNotContain(NavWorld.Links, l => l.Data != 0);
+                Assert.Contains(NavWorld.Links, l => l.Id == own.id);
+            }
+            finally
+            {
+                NavMesh.RemoveLink(own);
+                NavMesh.RemoveNavMeshData(instance);
+            }
+        }
+
+        [Fact]
+        public void ZeroAreaTrianglesAreNotPartOfIt()
+        {
+            // A sliver standing on the step's edge, its corners on one line up the step.
+            var sliver = new Mesh
+            {
+                vertices = new[] { new Vector3(73f, 0f, 70f), new Vector3(73f, 0.5f, 70f), new Vector3(73f, 1f, 70f) },
+                triangles = new[] { 0, 1, 2 },
+            };
+            var data = Build(true, new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Mesh, sourceObject = sliver, transform = Matrix4x4.identity, area = 0 });
+            var mesh = Assert.Single(data.m_HeightMeshes);
+            float best = float.NegativeInfinity;
+            mesh.Highest(73f, 70f, 0.05f, 0.75f, ref best);
+            Assert.Equal(0f, best, 5);
+        }
+
+        /// <summary>Data built and added at a position and a rotation: the height mesh is in the
+        /// data's own frame, so the step stands where its source stands in the world.</summary>
+        [Fact]
+        public void AMovedAndTurnedBuildKeepsTheStepWhereItsSourceIs()
+        {
+            var position = new Vector3(5f, 1f, -3f);
+            var rotation = Quaternion.Euler(0f, 30f, 0f);
+            var settings = NavMesh.GetSettingsByID(0);
+            settings.buildHeightMesh = true;
+            var sources = new List<NavMeshBuildSource>
+            {
+                new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, size = new Vector3(10f, 1f, 10f), transform = Matrix4x4.Translate(new Vector3(70f, -0.5f, 70f)), area = 0 },
+                new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, size = new Vector3(1f, 0.2f, 4f), transform = Matrix4x4.Translate(new Vector3(71.5f, 0.1f, 70f)), area = 0 },
+            };
+            var local = new Bounds(Quaternion.Inverse(rotation) * (new Vector3(70f, 0f, 70f) - position), new Vector3(16f, 8f, 16f));
+            var data = NavMeshBuilder.BuildNavMeshData(settings, sources, local, position, rotation);
+            var instance = NavMesh.AddNavMeshData(data, position, rotation);
+            try
+            {
+                Assert.True(NavMesh.SamplePosition(new Vector3(71.5f, 0.5f, 70f), out var hit, 1f, NavMesh.AllAreas));
+                Assert.Equal(0.2f, hit.position.y, 4);
+                Assert.True(NavMesh.SamplePosition(new Vector3(68f, 0.3f, 70f), out hit, 1f, NavMesh.AllAreas));
+                Assert.Equal(0f, hit.position.y, 4);
+            }
+            finally { NavMesh.RemoveNavMeshData(instance); }
         }
 
         /// <summary>The bounding volume tree finds what a search of every triangle finds.</summary>

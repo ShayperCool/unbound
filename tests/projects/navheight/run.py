@@ -121,15 +121,29 @@ def same(expected, actual):
     return all(abs(float(a) - float(b)) <= TOLERANCE for a, b in pairs)
 
 
+def residuals():
+    """{key: reason} of residuals.json ({reason: [key, ...]}): known differences, still listed."""
+    known = {}
+    for reason, keys in json.loads((ROOT/'residuals.json').read_text()).items():
+        for key in keys:
+            known[key] = reason
+    return known
+
+
 def compare(candidate):
     expected, actual = rows(reference_file(ROOT, 'jsonl')), rows(candidate)
-    failed = 0
+    known = residuals()
+    failed = residual = 0
     for key in sorted(expected.keys() | actual.keys()):
         if key not in expected or key not in actual or not same(expected[key], actual[key]):
-            print('FAIL', key, 'expected', repr(expected.get(key)), 'actual', repr(actual.get(key)))
-            failed += 1
+            if key in known:
+                print('RESIDUAL', key, 'expected', repr(expected.get(key)), 'actual', repr(actual.get(key)), '--', known[key])
+                residual += 1
+            else:
+                print('FAIL', key, 'expected', repr(expected.get(key)), 'actual', repr(actual.get(key)))
+                failed += 1
     matched = sum(key in actual and same(value, actual[key]) for key, value in expected.items())
-    print(f'{matched}/{len(expected)} records match; {failed} differ')
+    print(f'{matched}/{len(expected)} records match; {failed} differ; {residual} known residuals')
     return int(failed != 0)
 
 

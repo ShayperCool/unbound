@@ -161,6 +161,18 @@ namespace Unbound.Runtime
             s_Links.RemoveAll(l => l.Data == id);
         }
 
+        /// <summary>A preserving update removes the links the data's bake generated, in every instance
+        /// of it (documented: NavMeshBuildSettings.preserveTilesOutsideBounds, 6000.0); links added
+        /// by themselves stay.</summary>
+        internal static void GeneratedLinksRemoved(NavMeshData data)
+        {
+            if (data.m_Links.Count == 0) return;
+            data.m_Links.Clear();
+            foreach (var d in s_Data)
+                if (ReferenceEquals(d.Data, data)) s_Links.RemoveAll(l => l.Data == d.Id);
+            s_Dirty = true;
+        }
+
         internal static void RemoveAllData()
         {
             s_Data.Clear();

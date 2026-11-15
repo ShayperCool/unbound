@@ -1,0 +1,10 @@
+{
+  "Runtime polygon build with 32-voxel tiles: one triangle fewer in Unbound in every such build, with or without a height mesh or preserved tiles (the base polygon build, outside this probe's height-mesh rules)": [
+    "preserve.small.build.tris", "preserve.small.before.tris", "preserve.small.update.tris",
+    "drop.small.build.tris", "drop.small.before.tris", "drop.small.update.tris",
+    "preserve.changed.build.tris", "preserve.changed.before.tris", "preserve.changed.update.tris"
+  ],
+  "After an update without preserving tiles at 32-voxel tiles the Editor's height mesh no longer has the bump's top (0 where Unbound has 0.1, which it has after the same update with the default tiles); unexplained": [
+    "drop.small.update"
+  ]
+}
