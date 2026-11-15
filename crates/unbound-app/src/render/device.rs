@@ -130,6 +130,8 @@ pub struct DeviceConventions {
     pub depth_resolve_samples: [u32; 4],
     /// Whether measured compute comparisons follow the texture-owned sampler state.
     pub compute_depth_sampler_state: bool,
+    /// The screen's 8-bit color is stored blue first (`GraphicsDevice::screen_bgra`).
+    pub screen_bgra: bool,
 }
 
 impl DeviceConventions {
@@ -145,6 +147,16 @@ impl DeviceConventions {
             clip_depth_zero_to_one: c.clip_depth_zero_to_one,
             depth_resolve_samples: [1, 2, 4, 8].map(|samples| device.depth_resolve_sample(samples)),
             compute_depth_sampler_state: device.compute_depth_sampler_state(),
+            screen_bgra: device.screen_bgra(),
+        }
+    }
+
+    /// The format the screen's color is stored in.
+    pub fn screen_format(&self) -> wgpu::TextureFormat {
+        if self.screen_bgra {
+            wgpu::TextureFormat::Bgra8Unorm
+        } else {
+            wgpu::TextureFormat::Rgba8Unorm
         }
     }
 }

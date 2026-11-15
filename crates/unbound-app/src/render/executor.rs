@@ -84,9 +84,13 @@ struct GpuMaterial {
     blocks: rustc_hash::FxHashMap<u32, Arc<compiled::MaterialBlock>>,
 }
 
-/// The screen: 8-bit RGBA like the Editor's game view, sRGB-encoded in Linear color space
-/// (draws encode, samples decode, readbacks and copies see the stored bytes: measured,
-/// tests/projects/rtdepth `target.screen.*.final` and `ctl.*`).
+/// How many [`UnityRenderer::repack_texture`] shapes are kept.
+const REPACK_TEXTURES_KEPT: usize = 4;
+
+/// The screen: 8-bit color like the Editor's game view (RGBA, or BGRA where the device stores it
+/// so: `DeviceConventions::screen_format`), sRGB-encoded in Linear color space (draws encode,
+/// samples decode, readbacks and copies see the stored bytes: measured, tests/projects/rtdepth
+/// `target.screen.*.final` and `ctl.*`).
 struct ScreenTarget {
     width: u32,
     height: u32,
@@ -106,15 +110,15 @@ struct ScreenTarget {
 
 impl ScreenTarget {
     fn view(&self, color_space: i32) -> (&wgpu::TextureView, wgpu::TextureFormat) {
+        let format = self.texture.format();
         if color_space == 1 {
-            (&self.srgb, wgpu::TextureFormat::Rgba8UnormSrgb)
+            (&self.srgb, format.add_srgb_suffix())
         } else {
-            (&self.color, SCREEN_FORMAT)
+            (&self.color, format)
         }
     }
 }
 
-const SCREEN_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 /// The global buffer that holds the random write target at a UAV register (its number follows;
 /// the managed `Graphics.SetRandomWriteTarget` sets it).
 const RANDOM_WRITE_TARGET: &str = "<RandomWriteTarget>";
@@ -266,16 +270,18 @@ enum CopyKind {
     UintBits,
     /// Floats as signed integer bits.
     SintBits,
-    /// 8-bit normalized texels into one channel and into four ([`ChannelCopy`]).
+    /// 8-bit normalized texels into one channel and into four ([`ChannelCopy`]); four
+    /// channels stored blue first ([`ChannelCopy`] between the screen and a texture).
     ToR8,
     ToRgba8,
+    ToBgra8,
 }
 
 // The texture protocol supports 1, 2, 4 and 8 samples.
 const COPY_SAMPLE_CLASSES: usize = 4;
 
 impl CopyKind {
-    const COUNT: usize = 8;
+    const COUNT: usize = 9;
 
     fn index(self) -> usize {
         self as usize
@@ -296,10 +302,16 @@ struct ChannelCopy {
 }
 
 /// The [`ChannelCopy`] kind from `source` storage into `destination` storage: between R8 and
-/// RGBA8.
+/// RGBA8, and (`screen_order`: one end is a screen stored blue first) between BGRA8 and RGBA8.
+/// Scripts' `CopyTexture` never names the screen (the Editor finds no texture there:
+/// tests/projects/nativegfx `metal.jsonl` `screencopy.*`, `screencamera.*`); Unbound's own
+/// copies of it (a camera seeded from the screen, `CaptureScreenshotIntoRenderTexture`) keep
+/// each channel's stored value. Textures stored blue first elsewhere (a Vulkan plugin's) keep
+/// their exact-storage rule (`raw_copy_compatible`).
 fn channel_copy_kind(
     source: wgpu::TextureFormat,
     destination: wgpu::TextureFormat,
+    screen_order: bool,
 ) -> Option<CopyKind> {
     use wgpu::TextureFormat as F;
     // Repacking reads and writes raw channel values. Physical sRGB storage need not permit
@@ -307,6 +319,8 @@ fn channel_copy_kind(
     match (source, destination) {
         (F::Rgba8Unorm, F::R8Unorm) => Some(CopyKind::ToR8),
         (F::R8Unorm, F::Rgba8Unorm) => Some(CopyKind::ToRgba8),
+        (F::Bgra8Unorm, F::Rgba8Unorm) if screen_order => Some(CopyKind::ToRgba8),
+        (F::Rgba8Unorm, F::Bgra8Unorm) if screen_order => Some(CopyKind::ToBgra8),
         _ => None,
     }
 }
@@ -568,6 +582,8 @@ pub struct UnityRenderer {
     depth_target: Option<u64>,
     /// The pipelines (and their layouts) that copy a depth buffer into a float color texture:
     /// single-sample and multisampled.
+    /// [`Self::repack_texture`]'s textures, oldest first.
+    repack_textures: Vec<wgpu::Texture>,
     depth_copy_pipelines: [Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>;
         CopyKind::COUNT * COPY_SAMPLE_CLASSES],
     /// The `CopyDepth` pipelines, by (source multisampled, destination samples, per sample).
@@ -705,7 +721,8 @@ impl UnityRenderer {
             error_program: None,
             depth_default: [None, None],
             depth_target: None,
-            depth_copy_pipelines: Default::default(),
+            repack_textures: Vec::new(),
+            depth_copy_pipelines: std::array::from_fn(|_| None),
             depth_blit_pipelines: HashMap::default(),
             bit_views: HashMap::default(),
             depth_main_groups: HashMap::default(),
@@ -2106,6 +2123,39 @@ impl UnityRenderer {
         view
     }
 
+    /// The texture a [`ChannelCopy`] draws its source level into, kept for later copies of that
+    /// format and size (the copies of one submission follow each other on the GPU, so they can
+    /// share it; a camera seeded from the screen copies it every frame).
+    fn repack_texture(
+        &mut self,
+        format: wgpu::TextureFormat,
+        size: wgpu::Extent3d,
+    ) -> wgpu::Texture {
+        if let Some(texture) = self
+            .repack_textures
+            .iter()
+            .find(|t| t.format() == format && t.size() == size)
+        {
+            return texture.clone();
+        }
+        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("unbound channel copy"),
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+        // A few shapes at a time (a resized screen leaves its old size behind).
+        if self.repack_textures.len() >= REPACK_TEXTURES_KEPT {
+            self.repack_textures.remove(0);
+        }
+        self.repack_textures.push(texture.clone());
+        texture
+    }
+
     /// The pipeline that writes a depth buffer's depth into a float color texture.
     fn depth_copy_pipeline(
         &mut self,
@@ -2131,7 +2181,7 @@ impl UnityRenderer {
                 ),
             CopyKind::UintBits => BITS_COPY_WGSL.replace("SCALAR", "u32"),
             CopyKind::SintBits => BITS_COPY_WGSL.replace("SCALAR", "i32"),
-            CopyKind::ToR8 | CopyKind::ToRgba8 => CHANNEL_COPY_WGSL.into(),
+            CopyKind::ToR8 | CopyKind::ToRgba8 | CopyKind::ToBgra8 => CHANNEL_COPY_WGSL.into(),
         };
         let (sample_type, target_format) = match kind {
             CopyKind::Depth | CopyKind::DepthMultisampled => (
@@ -2157,6 +2207,10 @@ impl UnityRenderer {
             CopyKind::ToRgba8 => (
                 wgpu::TextureSampleType::Float { filterable: false },
                 wgpu::TextureFormat::Rgba8Unorm,
+            ),
+            CopyKind::ToBgra8 => (
+                wgpu::TextureSampleType::Float { filterable: false },
+                wgpu::TextureFormat::Bgra8Unorm,
             ),
         };
         let multisampled = matches!(
@@ -2457,22 +2511,23 @@ impl UnityRenderer {
                 height,
                 depth_or_array_layers: 1,
             };
+            let format = self.conventions.screen_format();
             let texture = self.device.create_texture(&wgpu::TextureDescriptor {
                 label: Some("unbound screen"),
                 size,
                 mip_level_count: 1,
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
-                format: SCREEN_FORMAT,
+                format,
                 usage: wgpu::TextureUsages::RENDER_ATTACHMENT
                     | wgpu::TextureUsages::TEXTURE_BINDING
                     | wgpu::TextureUsages::COPY_SRC
                     | wgpu::TextureUsages::COPY_DST,
-                view_formats: &[wgpu::TextureFormat::Rgba8UnormSrgb],
+                view_formats: &[format.add_srgb_suffix()],
             });
             let color = texture.create_view(&Default::default());
             let srgb = texture.create_view(&wgpu::TextureViewDescriptor {
-                format: Some(wgpu::TextureFormat::Rgba8UnormSrgb),
+                format: Some(format.add_srgb_suffix()),
                 ..Default::default()
             });
             // The other slots' depth when it has this size: the screen keeps its depth.
@@ -4340,12 +4395,29 @@ impl UnityRenderer {
                 dimension: 2,
             };
             let old = self.textures.remove(&handle);
-            let gpu = resources::upload_texture(
+            // A blue-first source (the screen on such a device) is grabbed into the same storage,
+            // so the copy stays a copy of its texels.
+            let stored = source.format().remove_srgb_suffix();
+            let device = self.device.clone();
+            let gpu = resources::upload_texture_with(
                 &self.device,
                 &self.queue,
                 old,
                 &texture,
                 self.generation,
+                &mut |desc| {
+                    if stored == wgpu::TextureFormat::Bgra8Unorm
+                        && desc.format == wgpu::TextureFormat::Rgba8Unorm
+                    {
+                        device.create_texture(&wgpu::TextureDescriptor {
+                            format: stored,
+                            view_formats: &[stored.add_srgb_suffix()],
+                            ..desc.clone()
+                        })
+                    } else {
+                        device.create_texture(desc)
+                    }
+                },
             );
             self.textures.insert(handle, gpu);
         }
@@ -4442,10 +4514,12 @@ impl UnityRenderer {
             });
             return None;
         }
-        let channel_kind = channel_copy_kind(src.format(), dst.format()).filter(|_| {
-            src.dimension() == wgpu::TextureDimension::D2
-                && dst.dimension() == wgpu::TextureDimension::D2
-        });
+        let screen_order = self.conventions.screen_bgra && (source == 0 || destination == 0);
+        let channel_kind =
+            channel_copy_kind(src.format(), dst.format(), screen_order).filter(|_| {
+                src.dimension() == wgpu::TextureDimension::D2
+                    && dst.dimension() == wgpu::TextureDimension::D2
+            });
         #[cfg(target_os = "linux")]
         let exact_bgra = self.vulkan_plugins.is_some();
         #[cfg(not(target_os = "linux"))]
@@ -4726,17 +4800,10 @@ impl UnityRenderer {
                     let repacked = c.channels.as_ref().map(|channels| {
                         let (pipeline, layout) =
                             self.depth_copy_pipeline(channels.kind, c.source.sample_count());
-                        let texture = device.create_texture(&wgpu::TextureDescriptor {
-                            label: Some("unbound channel copy"),
-                            size: channels.size,
-                            mip_level_count: 1,
-                            sample_count: 1,
-                            dimension: wgpu::TextureDimension::D2,
-                            format: c.destination.format().remove_srgb_suffix(),
-                            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                                | wgpu::TextureUsages::COPY_SRC,
-                            view_formats: &[],
-                        });
+                        let texture = self.repack_texture(
+                            c.destination.format().remove_srgb_suffix(),
+                            channels.size,
+                        );
                         let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                             label: Some("unbound channel copy"),
                             layout: &layout,
@@ -5563,24 +5630,48 @@ mod tests {
         assert!(UnityRenderer::unstarted_screen((64, 32), [70, 0, 4, 4], false).is_empty());
     }
 
-    /// Copies between R8 storages repack their texels; others (RG8 with RGBA8) do not.
+    /// Copies between R8 storages repack their texels; others (RG8 with RGBA8) do not. The
+    /// screen's blue-first storage and RGBA8 swap channels only where one end is that screen.
     #[test]
     fn channel_copies_join_r8_and_rgba8_storages() {
         use wgpu::TextureFormat as F;
+        for screen in [false, true] {
+            assert_eq!(
+                channel_copy_kind(F::Rgba8Unorm, F::R8Unorm, screen),
+                Some(CopyKind::ToR8)
+            );
+            assert_eq!(
+                channel_copy_kind(F::R8Unorm, F::Rgba8Unorm, screen),
+                Some(CopyKind::ToRgba8)
+            );
+            assert_eq!(
+                channel_copy_kind(F::Rgba8UnormSrgb, F::R8Unorm, screen),
+                None
+            );
+            assert_eq!(
+                channel_copy_kind(F::R8Unorm, F::Rgba8UnormSrgb, screen),
+                None
+            );
+            assert_eq!(channel_copy_kind(F::Rg8Unorm, F::Rgba8Unorm, screen), None);
+            assert_eq!(channel_copy_kind(F::Rgba8Unorm, F::Rg8Unorm, screen), None);
+            assert_eq!(channel_copy_kind(F::R8Unorm, F::Rg8Unorm, screen), None);
+            assert_eq!(channel_copy_kind(F::Rgba16Float, F::R8Unorm, screen), None);
+            assert_eq!(channel_copy_kind(F::Bgra8Unorm, F::R8Unorm, screen), None);
+            assert_eq!(
+                channel_copy_kind(F::Bgra8UnormSrgb, F::Rgba8Unorm, screen),
+                None
+            );
+        }
         assert_eq!(
-            channel_copy_kind(F::Rgba8Unorm, F::R8Unorm),
-            Some(CopyKind::ToR8)
-        );
-        assert_eq!(
-            channel_copy_kind(F::R8Unorm, F::Rgba8Unorm),
+            channel_copy_kind(F::Bgra8Unorm, F::Rgba8Unorm, true),
             Some(CopyKind::ToRgba8)
         );
-        assert_eq!(channel_copy_kind(F::Rgba8UnormSrgb, F::R8Unorm), None);
-        assert_eq!(channel_copy_kind(F::R8Unorm, F::Rgba8UnormSrgb), None);
-        assert_eq!(channel_copy_kind(F::Rg8Unorm, F::Rgba8Unorm), None);
-        assert_eq!(channel_copy_kind(F::Rgba8Unorm, F::Rg8Unorm), None);
-        assert_eq!(channel_copy_kind(F::R8Unorm, F::Rg8Unorm), None);
-        assert_eq!(channel_copy_kind(F::Rgba16Float, F::R8Unorm), None);
+        assert_eq!(
+            channel_copy_kind(F::Rgba8Unorm, F::Bgra8Unorm, true),
+            Some(CopyKind::ToBgra8)
+        );
+        assert_eq!(channel_copy_kind(F::Bgra8Unorm, F::Rgba8Unorm, false), None);
+        assert_eq!(channel_copy_kind(F::Rgba8Unorm, F::Bgra8Unorm, false), None);
     }
 
     #[test]

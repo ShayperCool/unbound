@@ -141,6 +141,14 @@ impl GraphicsDevice {
         matches!(self, Self::Vulkan | Self::Metal)
     }
 
+    /// Whether the screen's 8-bit color is stored blue first (BGRA) instead of red first: the
+    /// macOS Editor's Metal screen is `MTLPixelFormatBGRA8Unorm` (tests/projects/nativegfx
+    /// `metal.jsonl`, `plugin.state.color0.screen`). OpenGL Core and Vulkan keep RGBA order
+    /// (unmeasured: no recorded interface exposes their screen's storage).
+    pub fn screen_bgra(self) -> bool {
+        matches!(self, Self::Metal)
+    }
+
     /// Whether a graphics program samples a texture through the texture's own sampler state
     /// whatever sampler it names, an inline one or another texture's: OpenGL Core, where the
     /// state is the texture's. The other devices sample through the sampler a program names
@@ -403,6 +411,7 @@ mod tests {
         assert_eq!(Vulkan.shader_api(), "SHADER_API_VULKAN");
         assert!(Metal.conventions().reversed_z && Metal.conventions().uv_starts_at_top);
         assert_eq!(Metal.shader_api(), "SHADER_API_METAL");
+        assert!(Metal.screen_bgra() && !Vulkan.screen_bgra() && !OpenGLCore.screen_bgra());
         assert_eq!(GraphicsDevice::from_device_type(17), Some(OpenGLCore));
     }
 }
