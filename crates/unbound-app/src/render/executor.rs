@@ -1204,9 +1204,7 @@ impl UnityRenderer {
                 return (bg.clone(), false);
             }
             let mut key = t.sampler_key;
-            if !t.render_target {
-                key.aniso = self.effective_aniso(key.aniso);
-            }
+            key.aniso = self.effective_aniso(key.aniso);
             key.lod_bias_bits = self.sampler_lod_bias(base);
             let sampler = self.sampler(key);
             let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -1243,6 +1241,7 @@ impl UnityRenderer {
             };
             let t = &self.textures[&handle];
             let (mut key, alpha_only) = (t.sampler_key, t.alpha_only);
+            key.aniso = self.effective_aniso(key.aniso);
             key.lod_bias_bits = self.sampler_lod_bias(handle);
             let sampler = self.sampler(key);
             let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -1269,10 +1268,8 @@ impl UnityRenderer {
             t.sampler_key
         };
         // The legacy main-texture binding follows the same global policy as a named 2D
-        // texture binding. Render targets keep their own anisotropic level.
-        if !self.texture_or_default(handle, default).render_target {
-            key.aniso = self.effective_aniso(key.aniso);
-        }
+        // texture binding.
+        key.aniso = self.effective_aniso(key.aniso);
         key.lod_bias_bits = self.sampler_lod_bias(handle);
         let sampler = self.sampler(key);
         let layout = self.pipelines.texture_layout.clone();
@@ -1743,11 +1740,13 @@ impl UnityRenderer {
                     .get(h)
                     .map_or(resources::SamplerKey::LINEAR_CLAMP, |t| t.sampler_key),
             };
-            // The global setting is the 2D texture assets' (render targets, shadow maps and
-            // cubemaps keep their own level: measured, tests/projects/urp's reflection under
-            // ForceEnable).
-            let render_target = self.textures.get(h).is_some_and(|t| t.render_target);
-            if slot.inline.is_none() && !slot.comparison && !render_target && is_2d(*dim) {
+            // The global setting is every 2D and 2D array texture's, render textures included
+            // (tests/projects/samplerbias `--target-control`; a render texture's own level is 0
+            // where its depth buffer turns anisotropy off: managed
+            // RenderTexture.SamplerAnisoLevel); shadow maps compare and cubemaps keep their own
+            // level (measured, tests/projects/urp's reflection under ForceEnable).
+            let planar = is_2d(*dim) || *dim == unbound_shaders::TextureDim::D2Array;
+            if slot.inline.is_none() && !slot.comparison && planar {
                 key.aniso = self.effective_aniso(key.aniso);
             }
             if slot.comparison {
@@ -3099,6 +3098,7 @@ impl UnityRenderer {
                         {
                             texture.bind_groups = [None, None];
                         }
+                        self.depth_main_groups.clear();
                     }
                 }
                 Command::Keyword(name, on) => {

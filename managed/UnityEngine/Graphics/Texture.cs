@@ -63,13 +63,17 @@ namespace UnityEngine
 
         internal virtual void OnSamplerChanged() => EmitSamplingProperties();
 
+        /// <summary>The anisotropic level the device samples the texture at before the global
+        /// setting (QualitySettings.anisotropicFiltering and its limits) applies.</summary>
+        internal virtual int SamplerAnisoLevel => m_AnisoLevel;
+
         internal void EmitSamplingProperties()
         {
             if (m_NativeHandle == 0 || !Unbound.Runtime.Native.IsReady) return;
             Unbound.Runtime.GfxStream.Flush();
             Unbound.Runtime.Native.Call("texture-sampling-properties", System.Text.Json.JsonSerializer.Serialize(
                 new { handle = m_NativeHandle, filterMode = (int)m_FilterMode,
-                    wrapU = (int)m_WrapModeU, wrapV = (int)m_WrapModeV, wrapW = (int)m_WrapModeW, anisoLevel = m_AnisoLevel }));
+                    wrapU = (int)m_WrapModeU, wrapV = (int)m_WrapModeV, wrapW = (int)m_WrapModeW, anisoLevel = SamplerAnisoLevel }));
         }
 
         // The mip bias uses the JSON control channel, outside the texture packet. Initial quiet

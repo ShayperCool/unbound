@@ -41,6 +41,16 @@ namespace UnityEngine
         /// 0 whatever was saved).</summary>
         bool NoAniso => m_Descriptor.dimension == TextureDimension.Cube || m_Descriptor.graphicsFormat == GraphicsFormat.None;
 
+        /// <summary>A 2D or 2D array color target with a depth buffer samples without anisotropic
+        /// filtering whatever its anisoLevel and the global setting, which still raise the level of
+        /// one without depth (matches the Unity 6000.0.71f1 Editor on OpenGL Core and Vulkan,
+        /// NVIDIA: tests/projects/samplerbias `--target-control`); so does a depth-only target.</summary>
+        internal override int SamplerAnisoLevel =>
+            m_Descriptor.graphicsFormat == GraphicsFormat.None
+            || m_Descriptor.depthStencilFormat != GraphicsFormat.None
+                && (m_Descriptor.dimension == TextureDimension.Tex2D || m_Descriptor.dimension == TextureDimension.Tex2DArray)
+                ? 0 : anisoLevel;
+
         /// <summary>A `.renderTexture` asset: its size, formats, samples, mips, dimension and
         /// sampler as saved (measured: tests/projects/builtinrp rt.*). Older files name the formats
         /// by RenderTextureFormat and depth bits.</summary>
@@ -490,7 +500,7 @@ namespace UnityEngine
                 WrapU = (int)wrapModeU,
                 WrapV = (int)wrapModeV,
                 WrapW = (int)wrapModeW,
-                AnisoLevel = anisoLevel,
+                AnisoLevel = SamplerAnisoLevel,
                 // 1: drawn into; 2: written by kernels (a storage binding).
                 RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates | RetainedMsaaResolve | DepthSamplerState | (m_Descriptor.bindMS ? BindMultisampled : 0) | (m_Descriptor.shadowSamplingMode == ShadowSamplingMode.CompareDepths ? CompareDepth : 0) : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),
                 DepthBits = depthBits,
