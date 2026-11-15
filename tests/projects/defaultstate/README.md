@@ -555,7 +555,7 @@ The Visual Effect slice adds nine types to the handwritten inventory: `VFXEventA
 `VFXExposedProperty`, `VFXManager`, `VFXOutputEventArgs`, `VFXParticleSystemInfo`, `VFXRenderer`,
 `VisualEffect`, `VisualEffectAsset` and `VisualEffectObject`. Two independent 6000.0.71f1 GPU
 Editor captures agree on all 107 of their rows, appended before the completion row; every earlier
-row and inventory entry is byte-identical (12,868 rows). A new `VFXRenderer` has no material
+row and inventory entry is byte-identical. A new `VFXRenderer` has no material
 slots, casts and receives no shadows and uses no probes; a new `VisualEffect` is culled, has no
 asset and starts with `OnPlay`; a `VisualEffectAsset` made with `new` is an uncreated wrapper.
 `VisualEffect.initialEventID` is queued with a pattern: it is the session's number for the name
