@@ -117,16 +117,20 @@ fn a_layout_without_the_main_group_draws_beside_one_with_it() {
         label: None,
         entries: &[entry(0, TEXTURE), entry(1, SAMPLER)],
     });
+    // Read by the fragment stage only (a vertex stage's storage buffers are a downlevel feature).
     let buffer_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: None,
-        entries: &[entry(
-            0,
-            wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-        )],
+        entries: &[wgpu::BindGroupLayoutEntry {
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ..entry(
+                0,
+                wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+            )
+        }],
     });
     let pipeline = |entry_point: &str, groups: &[Option<&wgpu::BindGroupLayout>]| {
         let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
