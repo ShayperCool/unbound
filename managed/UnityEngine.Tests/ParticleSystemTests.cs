@@ -821,9 +821,12 @@ namespace UnityEngine.Tests
                 e.rateOverTime = 10f;
             });
             Assert.InRange(ps.particleCount, 9, 11);
-            // At a loop's end, its clock the duration or just past the loop's start (6000.0.71f1:
-            // particlerender prewarm/*; other releases restart at 0).
-            Assert.True(ps.time < 1e-4f || Mathf.Abs(ps.time - 1f) < 1e-4f, $"time {ps.time}");
+            // A whole loop prewarmed: 6000.0.71f1 ends it on the loop's end (particlerender
+            // prewarm/*), other releases restart the clock at 0.
+            if (Unbound.Runtime.Compat.ParticlePrewarmMeasured)
+                Assert.InRange(ps.time, 1f - 1e-4f, 1f);
+            else
+                Assert.Equal(0f, ps.time);
             Done(ps);
         }
 

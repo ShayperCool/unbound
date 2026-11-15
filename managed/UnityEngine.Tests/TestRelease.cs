@@ -10,8 +10,8 @@ namespace UnityEngine.Tests
     /// test of behaviour that does not depend on the release, or of another release's, sets
     /// ProjectInfo.UnityVersion itself (and puts it back). UNBOUND_TEST_UNITY_RELEASE selects
     /// another release for a whole run (for example 6000.0.0f1, a release without measured
-    /// answers). The compatibility profile's features (ProjectInfo.Features) stay empty, as the
-    /// host gives them; a test that needs one adds it.</summary>
+    /// answers). The compatibility profile's features (ProjectInfo.Features), which the host fills
+    /// from the profile (every one for 6000.0.71f1), stay empty; a test that needs one adds it.</summary>
     static class TestRelease
     {
         internal const string Measured = "6000.0.71f1";

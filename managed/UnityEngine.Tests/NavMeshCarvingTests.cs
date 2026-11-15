@@ -688,18 +688,30 @@ namespace UnityEngine.Tests
             Assert.False(agent.hasPath);
         }
 
-        [Fact]
-        public void AnAgentStoppedWithinItsStoppingDistanceStaysStopped()
+        [Theory]
+        [InlineData(TestRelease.Measured)]
+        [InlineData(TestRelease.Unmeasured)]
+        public void AnAgentStoppedWithinItsStoppingDistanceStaysStopped(string release)
         {
-            // The immediate stop of releases without a measurement; 6000.0.71f1 brakes and keeps
-            // its path (Compat.NavMeshStoppingDistanceMeasured, NavMeshAgentLoopTests).
-            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            using var pinned = TestRelease.Pin(release);
             var agent = Walker(new Vector3(-8f, 0f, 0f), new Vector3(4f, 0f, 0f), 3f);
             for (int i = 0; i < 400; i++) Frame();
             var stopped = agent.nextPosition;
-            Assert.True(stopped.x > 0.5f && stopped.x < 1.5f, $"at {stopped}");
             Assert.Equal(Vector3.zero, agent.velocity);
-            // A hole cut between it and its destination: it does not set off again.
+            // It reaches the stopping distance at x = 1. 6000.0.71f1 brakes from there (speed 3.5,
+            // acceleration 8: about 0.77 further) and keeps its path (tests/projects/navlinks;
+            // NavMeshAgentLoopTests); other releases stop at once and drop it.
+            if (Unbound.Runtime.Compat.NavMeshStoppingDistanceMeasured)
+            {
+                Assert.True(stopped.x > 1.5f && stopped.x < 2.2f, $"at {stopped}");
+                Assert.True(agent.hasPath);
+                // A hole would re-plan the kept path around it, longer than the stopping distance;
+                // what 6000.0.71f1 does then is not measured.
+                return;
+            }
+            Assert.True(stopped.x > 0.5f && stopped.x < 1.5f, $"at {stopped}");
+            Assert.False(agent.hasPath);
+            // Without a path, a hole cut between it and its destination does not set it off again.
             Box(new Vector3(2.5f, 0.5f, 0f), Vector3.one);
             for (int i = 0; i < 30; i++) Frame();
             Assert.False(OnNavMesh(2.5f, 0f));

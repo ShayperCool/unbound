@@ -7,8 +7,9 @@ namespace UnityEngine.Tests
 {
     /// <summary>
     /// Rigidbody2D.Slide, Physics2D.simulationLayers and 2D sub-stepping, from the Scripting API
-    /// 6000.0 pages, on the path releases without a measurement keep (TestRelease.Unmeasured; the
-    /// measured 6000.0.71f1 path: Physics2DMeasuredSimulationTests). Assertions on documented
+    /// 6000.0 pages, under the measured release; the cases whose answers differ there run on the
+    /// path releases without a measurement keep (TestRelease.Unmeasured) and name their measured
+    /// counterpart in Physics2DMeasuredSimulationTests. Assertions on documented
     /// behaviour say so; those on Unbound's choices (iteration details, tolerances, constructor
     /// defaults the pages leave open) check Unbound's implementation, not a Unity guarantee.
     /// Only members that exist before this change are used, so every case compiles against the
@@ -18,12 +19,10 @@ namespace UnityEngine.Tests
     {
         readonly List<GameObject> objects = new List<GameObject>();
 
-        readonly IDisposable release;
 
         public Physics2DSlideAndLayersTests()
         {
             Unbound.Runtime.Physics2DWorld.Reset();
-            release = TestRelease.Pin(TestRelease.Unmeasured);
             Physics2D.simulationMode = SimulationMode2D.Script;
             Physics2D.autoSyncTransforms = false;
             Physics2D.gravity = Vector2.zero;
@@ -42,7 +41,6 @@ namespace UnityEngine.Tests
             Physics2D.gravity = new Vector2(0, -9.81f);
             Physics2D.Simulate(.02f);
             Unbound.Runtime.Physics2DWorld.Reset();
-            release.Dispose();
         }
 
         GameObject Box(string name, Vector2 position, Vector2 size, int layer = 0)
@@ -99,6 +97,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void FreeSlideIntegratesTheVelocityAndMovesBodyAndTransformAtOnce()
         {
+            // Other releases; 6000.0.71f1: Physics2DMeasuredSimulationTests.SlideCountsFreeIterationsAndPreservesUnusedDistance.
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var rb = Body("mover", new Vector2(3, 1), RigidbodyType2D.Kinematic);
             var results = rb.Slide(new Vector2(2, 0), .5f, Plain());
             Assert.Equal(0, results.iterationsUsed);
@@ -142,6 +142,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void AContactBelowTheSlideAngleTurnsTheMovementAlongTheSurface()
         {
+            // Other releases; 6000.0.71f1: Physics2DMeasuredSimulationTests.SlideCountsFreeIterationsAndPreservesUnusedDistance.
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var floor = Box("floor", new Vector2(0, -1), new Vector2(40, 1));
             var rb = Body("mover", new Vector2(0, .5f), RigidbodyType2D.Kinematic);
             // Half a unit above the floor, moving (2, -2): it lands after (0.5, -0.5), then the
@@ -156,6 +158,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void MaxIterationsLeavesTheRestOfTheVelocityUnused()
         {
+            // Other releases; 6000.0.71f1: Physics2DMeasuredSimulationTests.SlideCountsFreeIterationsAndPreservesUnusedDistance.
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             Box("floor", new Vector2(0, -1), new Vector2(40, 1));
             var rb = Body("mover", new Vector2(0, .5f), RigidbodyType2D.Kinematic);
             var movement = Plain();
@@ -303,6 +307,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheFirstSlideWithInitializedValuesWarnsAboutUnverifiedSerialization()
         {
+            // Other releases; 6000.0.71f1: Physics2DMeasuredSimulationTests.SlideStructuresUseTheCapturedSerializedNames.
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var rb = Body("mover", new Vector2(3, 1), RigidbodyType2D.Kinematic);
             WithFirstSlideUse(reports =>
             {
@@ -321,6 +327,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheFirstSlideWithAllZeroValuesWarnsBeforeTheArgumentError()
         {
+            // Other releases; 6000.0.71f1: Physics2DMeasuredSimulationTests.SlideStructuresUseTheCapturedSerializedNames.
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var rb = Body("mover", new Vector2(3, 1), RigidbodyType2D.Kinematic);
             WithFirstSlideUse(reports =>
             {
@@ -339,6 +347,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void LaterSlidesDoNotWarnAgain()
         {
+            // Other releases; 6000.0.71f1: Physics2DMeasuredSimulationTests.SlideStructuresUseTheCapturedSerializedNames.
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var rb = Body("mover", Vector2.zero, RigidbodyType2D.Kinematic);
             WithFirstSlideUse(reports =>
             {
@@ -473,6 +483,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void FixedUpdateModeDoesNotSubStep()
         {
+            // Other releases; 6000.0.71f1: Physics2DMeasuredSimulationTests.ExplicitSimulationRejectsAutomaticModes.
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             Physics2D.useSubStepping = true;
             Physics2D.maxSubStepCount = 4;
             Physics2D.simulationMode = SimulationMode2D.FixedUpdate;

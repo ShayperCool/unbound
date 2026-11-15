@@ -166,17 +166,27 @@ namespace UnityEngine.Tests
             Assert.DoesNotContain(TakeLogs(), l => l.Message.StartsWith("Error: Cannot create", StringComparison.Ordinal));
         }
 
-        [Fact]
-        public void AFailedDownloadHasNoClipAndNoData()
+        [Theory]
+        [InlineData(TestRelease.Measured)]
+        [InlineData(TestRelease.Unmeasured)]
+        public void AFailedDownloadHasNoClipAndNoData(string release)
         {
-            using var release = TestRelease.Pin(TestRelease.Measured);
+            using var pinned = TestRelease.Pin(release);
             using var request = Send(UnityWebRequestMultimedia.GetAudioClip("file://" + Path.Combine(directory, "missing.wav"), AudioType.WAV));
             var handler = (DownloadHandlerAudioClip)request.downloadHandler;
-            // A missing file:// answers as a server's 404 (tests/projects/networkcaching
-            // audio.missing.result).
-            Assert.Equal(UnityWebRequest.Result.ProtocolError, request.result);
-            Assert.Equal(404, request.responseCode);
-            Assert.Equal("HTTP/1.1 404 Not Found", request.error);
+            if (Unbound.Runtime.Compat.LocalFileRequestStatusMeasured)
+            {
+                // A missing file:// answers as a server's 404 (tests/projects/networkcaching
+                // audio.missing.result).
+                Assert.Equal(UnityWebRequest.Result.ProtocolError, request.result);
+                Assert.Equal(404, request.responseCode);
+                Assert.Equal("HTTP/1.1 404 Not Found", request.error);
+            }
+            else
+            {
+                // Releases without a measurement fail the transport.
+                Assert.Equal(UnityWebRequest.Result.ConnectionError, request.result);
+            }
             Assert.False(handler.isDone);
             Assert.Null(handler.data);
             Assert.Equal("Cannot access the .audioClip property of an aborted DownloadHandlerAudioClip",

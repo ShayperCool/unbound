@@ -14,18 +14,16 @@ namespace UnityEngine.Tests
 {
     // Unity 6000.0 EdgeCollider2D is "an arbitrary set of connected edges"; useAdjacentStartPoint
     // and useAdjacentEndPoint form the collision normal at the chain's start and end points from
-    // the adjacent points, and without them that normal follows the direction of motion. These
-    // cases check the separate two-sided edges releases without a measurement build
-    // (TestRelease.Unmeasured); 6000.0.71f1 builds one chain (Physics2DEdgeChainTests).
+    // the adjacent points, and without them that normal follows the direction of motion. The
+    // cases that inspect the separate two-sided edges releases without a measurement build run
+    // under TestRelease.Unmeasured; 6000.0.71f1 builds one chain (Physics2DEdgeChainTests).
     public class EdgeCollider2DAdjacencyTests : IDisposable
     {
         readonly List<GameObject> objects = new List<GameObject>();
-        readonly IDisposable release;
 
         public EdgeCollider2DAdjacencyTests()
         {
             Unbound.Runtime.Physics2DWorld.Reset();
-            release = TestRelease.Pin(TestRelease.Unmeasured);
             Physics2D.simulationMode = SimulationMode2D.Script;
             Physics2D.autoSyncTransforms = false;
             Physics2D.gravity = Vector2.zero;
@@ -37,7 +35,6 @@ namespace UnityEngine.Tests
             Physics2D.gravity = new Vector2(0, -9.81f);
             Physics2D.Simulate(.02f);
             Unbound.Runtime.Physics2DWorld.Reset();
-            release.Dispose();
         }
 
         EdgeCollider2D Edge(string name, params Vector2[] points)
@@ -166,6 +163,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void SegmentsAreConnectedTwoSidedEdgesWithOptionalEndPoints()
         {
+            // Other releases; 6000.0.71f1: Physics2DEdgeChainTests.TheMeasuredReleaseUsesOneConnectedShape.
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var edge = Edge("chain", new Vector2(-2, 0), new Vector2(0, 1), new Vector2(2, 0));
             var shapes = Shapes(edge);
             Assert.Equal(2, shapes.Count);
@@ -195,6 +194,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void SingleSegmentWithoutAdjacentPointsStaysIsolated()
         {
+            // Other releases; 6000.0.71f1: Physics2DEdgeChainTests.TheMeasuredReleaseUsesOneConnectedShape.
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var shape = Assert.Single(Shapes(Edge("single", new Vector2(-1, 0), new Vector2(1, 0))));
             Assert.False(shape.OneSided);
             Assert.False(shape.HasVertex0);
@@ -232,6 +233,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void ZeroLengthAdjacentPointsKeepTheStoredFlagsAndPointsButAreNotUsed()
         {
+            // Other releases; 6000.0.71f1: Physics2DEdgeChainTests.TheMeasuredReleaseUsesOneConnectedShape.
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var edge = Edge("chain", new Vector2(0, 0), new Vector2(2, 0), new Vector2(4, 0));
             edge.useAdjacentStartPoint = true;
             edge.adjacentStartPoint = new Vector2(0, 0);
@@ -266,6 +269,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void ZeroLengthInternalGhostSegmentAcrossDroppedSegmentsIsNotUsed()
         {
+            // Other releases; 6000.0.71f1: Physics2DEdgeChainTests.TheMeasuredReleaseUsesOneConnectedShape.
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             float h = B2Settings.LinearSlop * .5f;
             var edge = Edge("chain", new Vector2(0, 0), new Vector2(1.5f * h, 0), new Vector2(.75f * h, 0),
                 new Vector2(0, 0), new Vector2(4, 0));

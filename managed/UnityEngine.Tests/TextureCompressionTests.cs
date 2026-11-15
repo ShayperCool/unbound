@@ -287,6 +287,18 @@ namespace UnityEngine.Tests
             Assert.Null(BlockFormats.CompressTarget(TextureFormat.RHalf, android));
         }
 
+        /// <summary>Releases without a measurement keep ETC2_RGB for R8 and RG16 on Android; the
+        /// other formats as on 6000.0.71f1.</summary>
+        [Theory]
+        [InlineData(TextureFormat.R8, TextureFormat.ETC2_RGB)]
+        [InlineData(TextureFormat.RG16, TextureFormat.ETC2_RGB)]
+        [InlineData(TextureFormat.RGBA32, TextureFormat.ETC2_RGBA8)]
+        public void OtherReleasesCompressSingleAndDualChannelsAsRgb(TextureFormat format, TextureFormat want)
+        {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            Assert.Equal(want, BlockFormats.CompressTarget(format, true));
+        }
+
         /// <summary>Reinitialize to sides a block format cannot have changes nothing
         /// (tests/projects/texturecompression reinit.*): it returns false.</summary>
         [Fact]
