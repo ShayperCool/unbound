@@ -79,7 +79,7 @@ namespace UnityEngine.Tests
             RenderSettings.reflectionIntensity = intensity;
             var decode = ReflectionProbe.defaultTextureHDRDecodeValues;
             Assert.Equal(new Vector4(x, 1f, 0f, 0f), decode);
-            // The frame's variable is the same value.
+            // The DOTS instancing defaults take the same value.
             Assert.Equal(decode, Globals()["unity_DOTS_SpecCube0_HDR"]);
         }
     }

@@ -149,7 +149,7 @@ namespace UnityEngine
         /// <summary>How shaders decode it: an RGBM reflection's range (5, raised to 2.2 in linear
         /// color space), else as stored, scaled by the lighting settings' reflection intensity in
         /// the project's color space (linear projects take the intensity through the sRGB curve;
-        /// measured for a half-float default reflection: tests/projects/indirectspec, reflection
+        /// measured for an HDR default reflection that is not RGBM-encoded: tests/projects/indirectspec, reflection
         /// intensity 0.25 gives 0.25 in gamma and 0.05087609 in linear, in this value and in
         /// unity_SpecCube0_HDR).</summary>
         public static Vector4 defaultTextureHDRDecodeValues
