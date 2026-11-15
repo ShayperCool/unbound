@@ -181,8 +181,8 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   package's postprocessors of the import (it has no post-import pass otherwise). An effect keeps
   one value per expression of its asset (`VisualEffectValues`) and a property sheet over the
   exposed ones; overrides are kept by name and type across asset changes
-  (tests/projects/vfx). Enabled effects update at PostLateUpdate.VFXUpdate, in frames after a
-  camera culled (`VFX/VFXManager.Update.cs`): each runs the steps its asset's update mode asks
+  (tests/projects/vfx). Enabled effects update at PostLateUpdate.VFXUpdate
+  (`VFX/VFXManager.Update.cs`): each runs the steps its asset's update mode asks
   for (`VFX/VisualEffect.Runtime.cs`), a step evaluating the graph's CPU expressions
   (`VFXExpressionEvaluator`), taking the queued events, running the spawn systems
   (`VFXSpawnerSystem`: loop state and blocks, in managed code like the particle system
