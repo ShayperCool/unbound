@@ -294,6 +294,52 @@ public static class ProbeRunner
         }
     }
 
+    /// <summary>Copies of HumanLate.fbx (a take on frames 1..31 at 30 a second) whose span, the
+    /// range's end less its start, is longer than the clip's last key time: LegacyEvents117 (Legacy,
+    /// frames 1..17), GenericEvents515 (Generic, frames 5..15, with the Speed parameter curve from
+    /// 0 at 0 to 1 at 1), each with events at normalized 0.5 and 1; and GenericEventsBeyond
+    /// (Generic, frames 1..31) with events at normalized 0.5 and 1.25. Changes only their importers
+    /// (run once in a copy of the project; the .meta files are committed).</summary>
+    public static void CreateEventSpans()
+    {
+        try
+        {
+            var source = (ModelImporter)AssetImporter.GetAtPath(Dir + "HumanLate.fbx");
+            foreach (var (name, type, first, last, ends, curve) in new[]
+                     {
+                         ("LegacyEvents117", ModelImporterAnimationType.Legacy, 1f, 17f, 1f, false),
+                         ("GenericEvents515", ModelImporterAnimationType.Generic, 5f, 15f, 1f, true),
+                         ("GenericEventsBeyond", ModelImporterAnimationType.Generic, 1f, 31f, 1.25f, false),
+                     })
+            {
+                var importer = (ModelImporter)AssetImporter.GetAtPath(Dir + name + ".fbx");
+                EditorUtility.CopySerialized(source, importer);
+                importer.animationType = type;
+                var clips = importer.clipAnimations;
+                foreach (var clip in clips)
+                {
+                    clip.firstFrame = first;
+                    clip.lastFrame = last;
+                    clip.events = new[]
+                    {
+                        new AnimationEvent { time = 0.5f, functionName = "Hit", floatParameter = 1f },
+                        new AnimationEvent { time = ends, functionName = "Hit", floatParameter = 2f },
+                    };
+                    if (curve)
+                        clip.curves = new[] { new ClipAnimationInfoCurve { name = "Speed", curve = AnimationCurve.Linear(0f, 0f, 1f, 1f) } };
+                }
+                importer.clipAnimations = clips;
+                importer.SaveAndReimport();
+            }
+            EditorApplication.Exit(0);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
     static AnimationClip Load(string name) =>
         AssetDatabase.LoadAllAssetsAtPath(Model).OfType<AnimationClip>().First(c => c.name == name);
 

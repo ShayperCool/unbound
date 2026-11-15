@@ -269,6 +269,17 @@ as Generic; `events.<model>.<clip>` records the events.
   last key's time (Legacy clips unmeasured; Unbound keeps them on their range's length).
 - The Generic clip stays 1.00000012 long, its last rotation key (its positions end at
   0.99999994).
+
+`LegacyEvents117`, `GenericEvents515` and `GenericEventsBeyond` (`ProbeRunner.CreateEventSpans`,
+copies of `HumanLate.fbx`) are frames 1..17 as Legacy and 5..15 as Generic, whose spans are one
+step longer than their last keys, with events at normalized 0.5 and 1 (the Generic one with the
+Speed curve too), and frames 1..31 as Generic with an event at normalized 1.25.
+
+- The Legacy clip has no events, and it is 0.533333361 long, its span; its rotations, scales and
+  unanimated positions end there, its animated positions (Hips) at 0.5333333 (Unbound ends every
+  position at 0.5333333: a last-bit residual).
+- The Generic clips place events and the parameter curve on the span and end at their last event:
+  0.333333343, one step past the last key, and 1.25.
 - Both clips are 1 long, their last event's (and parameter key's) time, past the muscle keys'
   0.99999994: a clip ends at its last key or event.
 
