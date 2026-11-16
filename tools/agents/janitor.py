@@ -450,7 +450,11 @@ class ReferenceWatch:
             os.close(self.fd)
             self.fd = -1
 
-    def add(self, directory):
+    def add(self, directory, *, wait_for_events=False):
+        """Watch a directory. With wait_for_events (the walk, between reads of the change queue),
+        a path still held by the watch of a directory that left it (a rename or removal not read
+        yet) is not watched now and False is returned: two watches would hold one path until those
+        events are read. The caller reads the queue and walks the directory again."""
         # Called for every directory of the walk: string checks, a lazily parsed Path.
         key = os.fspath(directory)
         directory = Path(key)
@@ -461,8 +465,16 @@ class ReferenceWatch:
         if descriptor < 0:
             number = ctypes.get_errno()
             if number == errno.ENOENT:
-                return
+                return True
             raise OSError(number, f'cannot monitor reference directory {directory}; cleanup deferred')
+        holder = self.watched.get(key)
+        if (wait_for_events and holder is not None and holder != descriptor and
+                self.directories.get(holder) == directory and not self.moved_away(holder)):
+            # Another directory is here now. A watch this call created is removed again; one
+            # that was here already keeps its place until its own events move it.
+            if descriptor not in self.directories and descriptor not in self.sentinel_dirs:
+                self.libc.inotify_rm_watch(self.fd, descriptor)
+            return False
         previous = self.directories.get(descriptor)
         if previous is not None and previous != directory:
             self.relocate(previous, directory, handled=False)
@@ -473,6 +485,15 @@ class ReferenceWatch:
         self.directories[descriptor] = directory
         self.watched[key] = descriptor
         self.link(descriptor, self.watched.get(str(directory.parent)))
+        return True
+
+    def moved_away(self, descriptor):
+        """Whether the watched directory, or one above it, moved away (its move event was read)."""
+        while descriptor is not None:
+            if descriptor in self.unresolved:
+                return True
+            descriptor = self.parent_of.get(descriptor)
+        return False
 
     def link(self, descriptor, parent):
         old = self.parent_of.pop(descriptor, None)
@@ -879,6 +900,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
     deadline, index.deadline_in_entries = index.deadline, False
     index.seen = walk.seen  # the listings of earlier attempts stay in the index
     join = os.path.join
+    waited = set()
     if not resuming:
         # Directories that vanished before this walk; ones vanishing during it stay unsafe.
         walk.vanished_before = set(watcher.vanished) if watcher else set()
@@ -903,12 +925,19 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                 break
             batch = pending[-index.batch_size:]
             del pending[-index.batch_size:]
+            waiting = []
             if watcher:
                 # Watch before the stat that validates each listing; read the inodes first
-                # in parallel so the serial watch calls do not wait on the disk.
+                # in parallel so the serial watch calls do not wait on the disk. A directory
+                # that replaced a watched one is walked after the queued changes are read.
                 index.warm(batch)
-                for directory in batch:
-                    watcher.add(directory)
+                # One wait each: the events of a directory whose parent is not watched may never
+                # come, and then the two watches stay and fail closed as before.
+                waiting = [directory for directory in batch
+                           if not watcher.add(directory, wait_for_events=directory not in waited)]
+                waited.update(waiting)
+                if waiting:
+                    batch = [directory for directory in batch if directory not in set(waiting)]
             listed = []
             for directory, info in zip(batch, index.stat_many(batch)):
                 if isinstance(info, OSError):
@@ -972,6 +1001,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                             pending.append(path)
             if watcher:
                 pending.extend(map(str, watcher.poll()))
+                pending.extend(waiting)
                 if watcher.invalidated:
                     stale = [key for key, path in visited.items()
                              if any(inside(path, root) for root in watcher.invalidated)]

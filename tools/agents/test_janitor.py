@@ -101,9 +101,9 @@ class JanitorTests(unittest.TestCase):
         (first/'deep'/'er'/'link').symlink_to(second/'output')
         walked = []
         original = janitor.ReferenceWatch.add
-        def add(watch, directory):
+        def add(watch, directory, **options):
             walked.append(os.fspath(directory))
-            return original(watch, directory)
+            return original(watch, directory, **options)
         with patch.object(janitor.ReferenceWatch, 'add', add):
             self.collect_applied()
         self.assertFalse(first.exists())
@@ -317,10 +317,10 @@ class JanitorTests(unittest.TestCase):
                 if len(calls) == 2:
                     return (self.future, *result[1:])
             return result
-        def add(watch, directory):
+        def add(watch, directory, **options):
             if os.fspath(directory) == str(alpha[1]/'aa'):
                 raise NotADirectoryError(20, 'Not a directory', os.fspath(directory))
-            return original_add(watch, directory)
+            return original_add(watch, directory, **options)
         with patch.object(janitor, 'inventory', inventory), \
              patch.object(janitor.ReferenceWatch, 'add', add):
             self.collect_applied()
@@ -1843,6 +1843,120 @@ class JanitorTests(unittest.TestCase):
             with self.assertRaises(janitor.ReferenceChanged):
                 self.j.remove(target, kind='task')
         self.assertTrue(target.exists())
+
+    def watched_at(self, path):
+        """The watch on the directory now at path, as the janitor records it (None if none)."""
+        watch = self.j.watch
+        mask = watch.CREATE | watch.MOVED_FROM | watch.MOVED_TO | watch.DELETE_SELF | watch.MOVE_SELF | watch.ONLYDIR
+        descriptor = watch.libc.inotify_add_watch(watch.fd, os.fsencode(str(path)), mask | watch.NOFOLLOW)
+        if descriptor not in watch.directories:
+            watch.libc.inotify_rm_watch(watch.fd, descriptor)
+            return None
+        return descriptor
+
+    def rotate(self, cache):
+        # A cache rotation: 02 goes, 03 becomes 02 and a new 03 appears.
+        shutil.rmtree(cache/'02')
+        (cache/'03').rename(cache/'02')
+        (cache/'03').mkdir()
+
+    def test_a_walk_reaching_a_replaced_directory_before_its_rename_is_read_waits_for_it(self):
+        target = self.directory('q1/target')
+        cache = self.directory('cache')
+        (cache/'02').mkdir()
+        (cache/'03'/'inner').mkdir(parents=True)
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            old = self.watched_at(cache/'03')
+            original = janitor.ReferenceWatch.poll
+            def poll(watch):
+                pending = original(watch)
+                if not (cache/'03'/'inner').exists():
+                    return pending
+                self.rotate(cache)  # after the queue was read: the walk reaches 03 and 02 first
+                return pending
+            with patch.object(janitor.ReferenceWatch, 'poll', poll):
+                janitor.reference_paths([cache], watcher=self.j.watch, index_root=self.cache, prune=False)
+            self.j.refresh_links()
+            # Each directory is held by its own watch at its own place.
+            self.assertEqual(self.watched_at(cache/'02'), old)
+            self.assertEqual(self.j.watch.directories[old], cache/'02')
+            self.assertEqual(self.j.watch.directories[self.watched_at(cache/'03')], cache/'03')
+            self.assertEqual(self.j.watch.directories[self.watched_at(cache/'02'/'inner')], cache/'02'/'inner')
+            # A link made in the new directory afterwards protects.
+            (cache/'03'/'link').symlink_to(target/'output')
+            self.j.apply = True
+            self.j.remove(target, kind='task')
+        self.assertTrue((target/'output').is_file())
+
+    def kernel_watches(self):
+        with open(f'/proc/self/fdinfo/{self.j.watch.fd}') as info:
+            return sum(line.startswith('inotify wd:') for line in info)
+
+    def test_a_replaced_walk_root_is_walked_once_its_events_are_read(self):
+        # Nothing above a root is watched, so no event names the new directory: the walk
+        # reaches it again once the root's own events are read.
+        root = self.root/'outside/root'
+        (root/'old').mkdir(parents=True)
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            janitor.reference_paths([root], watcher=self.j.watch, index_root=self.cache, prune=False)
+            root.rename(self.root/'outside/moved')
+            (root/'new').mkdir(parents=True)
+            with self.assertRaises(janitor.ReferenceChanged):  # a moved root still stops deletion
+                janitor.reference_paths([root], watcher=self.j.watch, index_root=self.cache, prune=False)
+            self.assertEqual(self.j.watch.directories.get(self.watched_at(root/'new')), root/'new')
+
+    def test_a_walk_waits_only_once_for_events_that_never_come(self):
+        # A folder above the root was renamed: nothing watched sees it, and a new root appears.
+        root = self.root/'outside/x/root'
+        (root/'old').mkdir(parents=True)
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            janitor.reference_paths([root], watcher=self.j.watch, index_root=self.cache, prune=False)
+            (self.root/'outside/x').rename(self.root/'outside/y')
+            (root/'new').mkdir(parents=True)
+            try:
+                janitor.reference_paths([root], watcher=self.j.watch, index_root=self.cache, prune=False,
+                                        seconds=5)
+            except janitor.ReferenceChanged:
+                pass  # two watches on one path still fail closed
+            self.assertEqual(self.j.watch.directories.get(self.watched_at(root/'new')), root/'new')
+
+    def test_a_folder_under_one_that_moved_away_is_watched_without_waiting(self):
+        cache = self.directory('cache')
+        (cache/'b'/'b').mkdir(parents=True)
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            (cache/'b').rename(self.root/'elsewhere')
+            (cache/'b'/'b').mkdir(parents=True)
+            self.j.watch.poll()  # b moved away; its old child's watch still names cache/b/b
+            self.assertTrue(self.j.watch.add(cache/'b', wait_for_events=True))
+            self.assertTrue(self.j.watch.add(cache/'b'/'b', wait_for_events=True))
+
+    def test_a_replaced_directory_is_watched_once_its_events_are_read(self):
+        cache = self.directory('cache')
+        (cache/'02').mkdir()
+        (cache/'03').mkdir()
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            old = self.watched_at(cache/'03')
+            watches = len(self.j.watch.directories)
+            self.rotate(cache)
+            kernel = self.kernel_watches()
+            self.assertFalse(self.j.watch.add(cache/'03', wait_for_events=True))
+            self.assertEqual(len(self.j.watch.directories), watches)
+            self.assertEqual(self.kernel_watches(), kernel)  # the watch it made is gone again
+            self.assertEqual(self.j.watch.directories[old], cache/'03')  # until its rename is read
+            self.j.watch.poll()
+            self.assertEqual(self.j.watch.directories[old], cache/'02')
+            self.assertTrue(self.j.watch.add(cache/'03', wait_for_events=True))
+            self.assertEqual(self.j.watch.directories[self.watched_at(cache/'03')], cache/'03')
 
     def test_replacement_name_ambiguity_stops_reconciliation(self):
         target = self.directory('q1/target')
