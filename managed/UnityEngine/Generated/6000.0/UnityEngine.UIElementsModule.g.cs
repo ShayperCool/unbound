@@ -318,7 +318,7 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal global::Unity.Hierarchy.HierarchyNode GetHierarchyNodeByIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.GetHierarchyNodeByIndex"); return default; }
         private protected global::Unity.Hierarchy.Hierarchy hierarchy { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.hierarchy"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeViewController.hierarchy"); } }
     }
-    unsafe partial class BaseVerticalCollectionView : global::UnityEngine.ISerializationCallbackReceiver
+    unsafe partial class BaseVerticalCollectionView
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId itemsSourceProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId selectionTypeProperty;
@@ -333,8 +333,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId virtualizationMethodProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId fixedItemHeightProperty;
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnViewDataReady"); }
-        [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnBeforeSerialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnBeforeSerialize"); }
-        [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.OnAfterDeserialize"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BindableElement.UxmlSerializedData

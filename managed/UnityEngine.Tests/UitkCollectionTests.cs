@@ -573,6 +573,61 @@ namespace UnityEngine.Tests
             Assert.Single(order);
             Assert.StartsWith("content (0.00, 0.00)>", order[0]);
         }
+
+        // ------------------------------------------------------------------ serialized selection
+
+        static ListView SelectableList(int count)
+        {
+            var source = new List<string>();
+            for (int i = 0; i < count; i++) source.Add("i" + i);
+            return new ListView(source, RowHeight, () => new Label(), (e, i) => ((Label)e).text = "i" + i) { selectionType = SelectionType.Multiple };
+        }
+
+        static string[] MarkedRows(VisualElement view) => view.Query<Label>(className: BaseVerticalCollectionView.itemUssClassName).ToList()
+            .Where(e => e.ClassListContains(BaseVerticalCollectionView.itemSelectedVariantUssClassName)).Select(e => e.text).OrderBy(t => t, StringComparer.Ordinal).ToArray();
+
+        // [rule] tests/projects/collectionjson (overwrite.*): the selection JsonUtility writes for one
+        // view, read into another view in a panel, becomes that view's selection: ids, indices, one
+        // selection event and the rows marked; a view not deserialized keeps its own.
+        [Fact]
+        public void DeserializedSelectedIdsBecomeTheSelection()
+        {
+            using var panel = NewPanel();
+            var from = SelectableList(8);
+            from.SetSelection(new[] { 6, 1 });
+            var to = SelectableList(8);
+            var untouched = SelectableList(8);
+            untouched.SetSelection(3);
+            panel.visualTree.Add(to);
+            panel.visualTree.Add(untouched);
+            Layout(panel);
+            int events = 0;
+            to.selectionChanged += _ => events++;
+            JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(from), to);
+            Layout(panel);
+            Assert.Equal(new[] { 6, 1 }, to.selectedIds);
+            Assert.Equal(new[] { 6, 1 }, to.selectedIndices);
+            Assert.Equal(1, events);
+            Assert.Equal(new[] { "i1", "i6" }, MarkedRows(to));
+            Assert.Equal(new[] { 3 }, untouched.selectedIndices);
+            // Serializing reads the selection without changing it.
+            JsonUtility.ToJson(to);
+            Assert.Equal(new[] { 6, 1 }, to.selectedIndices);
+            Assert.Equal(1, events);
+        }
+
+        // [rule] every collection view deserializes its selection, a multi-column list too; ids
+        // missing from the source still give their index (a list's id is its index).
+        [Fact]
+        public void MultiColumnListDeserializesItsSelection()
+        {
+            var columns = new MultiColumnListView { itemsSource = Items(5), selectionType = SelectionType.Multiple };
+            columns.columns.Add(new Column { name = "c", makeCell = () => new Label(), bindCell = (e, i) => ((Label)e).text = "c" + i });
+            JsonUtility.FromJsonOverwrite("{\"m_SelectedIds\":[4,9]}", columns);
+            Assert.Equal(new[] { 4, 9 }, columns.selectedIds);
+            Assert.Equal(new[] { 4, 9 }, columns.selectedIndices);
+            Assert.Equal(4, columns.selectedIndex);
+        }
     }
 
     // [measured] tests/projects/uitkcollections absolute section (a 79x40 parent with padding

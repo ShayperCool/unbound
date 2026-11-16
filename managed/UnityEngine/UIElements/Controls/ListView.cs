@@ -8,7 +8,7 @@ namespace UnityEngine.UIElements
 {
     /// <summary>A virtualized vertical list: a pool of item elements in a scroll view, rebound to the
     /// items they show as it scrolls, with single or multiple selection.</summary>
-    public abstract partial class BaseVerticalCollectionView : BindableElement
+    public abstract partial class BaseVerticalCollectionView : BindableElement, ISerializationCallbackReceiver
     {
         sealed class Selection
         {
@@ -127,7 +127,7 @@ namespace UnityEngine.UIElements
         CollectionViewController m_ViewController;
         private protected CollectionVirtualizationController m_VirtualizationController;
         KeyboardNavigationManipulator m_NavigationManipulator;
-        [global::UnityEngine.@SerializeField] [global::Unity.Properties.@DontCreatePropertyAttribute] readonly List<int> m_SelectedIds = new List<int>();
+        [global::UnityEngine.@SerializeField] [global::Unity.Properties.@DontCreatePropertyAttribute] List<int> m_SelectedIds = new List<int>();
         readonly Selection m_Selection;
         float m_LastHeight;
         bool m_IsRangeSelectionDirectionUp;
@@ -526,6 +526,16 @@ namespace UnityEngine.UIElements
             RefreshSelection();
             virtualizationController.Refresh(false);
             PostRefresh();
+        }
+
+        void ISerializationCallbackReceiver.OnBeforeSerialize() { }
+
+        /// <summary>The deserialized selected ids become the selection (the id lookup is left as it
+        /// was), then the items are refreshed, which recomputes the selected indices.</summary>
+        void ISerializationCallbackReceiver.OnAfterDeserialize()
+        {
+            m_Selection.selectedIds = m_SelectedIds;
+            RefreshItems();
         }
 
         [global::System.@ObsoleteAttribute("Refresh() has been deprecated. Use Rebuild() instead. (UnityUpgradable) -> Rebuild()", false)]
