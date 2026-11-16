@@ -67,8 +67,9 @@ pub enum Falloff {
     InverseSquared,
     /// 1 / distance^2 without the window (the table still ends at the range).
     InverseSquaredNoRangeAttenuation,
-    /// The range times (p - 1) / 13 at table position p: not a function of the distance alone
-    /// (matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi `room-delegate-linear`).
+    /// The range times (p - 1) / 13 at table position p: even in the table position rather than
+    /// in the distance, and scaled by the range (matches the Unity 6000.0.71f1 Editor,
+    /// tests/projects/realtimegi `room-delegate-linear*`).
     Linear,
 }
 
@@ -184,28 +185,25 @@ impl FalloffTable {
                 window * window * inverse_squared(x2, range)
             }),
             Falloff::InverseSquaredNoRangeAttenuation => Self::new(|x2| inverse_squared(x2, range)),
+            // The range times (i - 1) / 13 at table position i: linear in the position, which
+            // between the innermost and outermost lit samples makes it
+            // range * 14 (1 - x^2) / (13 (1 + 14 x^2)) of x = distance / range.
             Falloff::Linear => {
-                // Evenly spaced in the table position (not in distance), from the range / 13
-                // at the outermost lit sample to the range itself at the innermost one, then 1
-                // at the light as for every falloff.
-                let steps = (FALLOFF_SAMPLES - 3) as f32;
-                let mut values = [0.0; FALLOFF_SAMPLES];
-                for (i, v) in values
-                    .iter_mut()
-                    .enumerate()
-                    .take(FALLOFF_SAMPLES - 1)
-                    .skip(2)
-                {
-                    *v = (i - 1) as f32 / steps * range;
-                }
-                values[FALLOFF_SAMPLES - 1] = 1.0;
-                Self(values)
+                Self::at_positions(|i| (i - 1) as f32 / (FALLOFF_SAMPLES - 3) as f32 * range)
             }
         }
     }
 
+    /// A table of `falloff` of x^2 = (distance / range)^2 at the sample positions.
     fn new(falloff: impl Fn(f32) -> f32) -> Self {
         let n = FALLOFF_SAMPLES as f32;
+        // x^2 at table position i.
+        Self::at_positions(|i| falloff(((n - 1.0) / i as f32 - 1.0) / (n - 2.0)))
+    }
+
+    /// A table of `value` at each lit table position (2 to N - 2): 0 at the first two (x >= 1),
+    /// 1 at the last (the light).
+    fn at_positions(value: impl Fn(usize) -> f32) -> Self {
         let mut values = [0.0; FALLOFF_SAMPLES];
         for (i, v) in values
             .iter_mut()
@@ -213,8 +211,7 @@ impl FalloffTable {
             .take(FALLOFF_SAMPLES - 1)
             .skip(2)
         {
-            // x^2 at table position i.
-            *v = falloff(((n - 1.0) / i as f32 - 1.0) / (n - 2.0));
+            *v = value(i);
         }
         values[FALLOFF_SAMPLES - 1] = 1.0;
         Self(values)
