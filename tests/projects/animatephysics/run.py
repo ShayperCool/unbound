@@ -22,6 +22,9 @@ from probe_paths import reference_file, run_root
 WORK = run_root(ROOT, 'runs')
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
 OUT = 'values.jsonl'
+# The engine's frames advance game time by a fixed 1/60 s, so the fixed steps per frame (and with
+# them which steps follow an Update) do not depend on the machine's load.
+FIXED_FPS = 60
 
 
 def project_at(out):
@@ -60,7 +63,7 @@ def engine(label):
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = dict(os.environ, ANIMATE_PHYSICS_OUT=str(out/OUT))
     command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
-               '--no-watch', '--frames', '4000', '--size', '96x64']
+               '--no-watch', '--frames', '4000', '--size', '96x64', '--fixed-fps', str(FIXED_FPS)]
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print('engine exit', code, 'log', out/'engine.log')
