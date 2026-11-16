@@ -389,6 +389,7 @@ namespace Unbound.Runtime
                 return;
             }
             bool replaced = false;
+            CollectUnboundEnds();
             // Each changed hole's bounds, per agent radius (usually one).
             var bounds = new Dictionary<float, (float MinX, float MaxX, float MinZ, float MaxZ)[]>();
             foreach (var surface in s_Surfaces.Values)
@@ -403,21 +404,21 @@ namespace Unbound.Runtime
                         bounds[settings.agentRadius] = holes;
                     }
                     if (!Reaches(placed, holes)) continue;
-                    // A link end bound to nothing tries again on a tile cut anew: the whole NavMesh
-                    // is built again (binding runs there).
-                    if (UnboundEndOver(surface, placed))
-                    {
-                        if (replaced) TileVersion++;
-                        s_Dirty = true;
-                        Refresh();
-                        return;
-                    }
                     var old = surface.Mesh.GetTileByRef(placed.Ref);
                     if (old?.data == null) continue;
                     var source = placed.Instance.Data.m_Tiles[placed.Index];
                     var tile = NavMeshCarving.Carve(Place(source, placed.Instance.Position, placed.Instance.Rotation),
                         settings, ObstacleSystem.Holes);
                     Attach(tile, placed.Surface, source.header);
+                    // A link end bound to nothing that the tile cut anew lets attach: the whole
+                    // NavMesh is built again, where binding chooses among all data.
+                    if (UnboundEndAttaches(surface, tile))
+                    {
+                        if (replaced) TileVersion++;
+                        s_Dirty = true;
+                        Refresh();
+                        return;
+                    }
                     tile.ownerData = placed.Instance.Id;
                     AddLinks(surface, tile);
                     tile.header.x = old.data.header.x;
@@ -444,20 +445,38 @@ namespace Unbound.Runtime
             if (replaced) TileVersion++;
         }
 
-        /// <summary>Whether a runtime point link of the surface's agent type has an end bound to
-        /// nothing that may bind again (an end, or a start that has not lost its data) over the
-        /// tile or within the snap radius of it.</summary>
-        static bool UnboundEndOver(Surface surface, PlacedTile tile)
+        /// <summary>The ends bound to nothing that may bind again, by agent type: an end (of a link
+        /// whose start is not waiting for its data to come back) and a start that never bound.</summary>
+        static readonly List<(int AgentType, Vector3 Point)> s_UnboundEnds = new List<(int, Vector3)>();
+
+        static void CollectUnboundEnds()
         {
-            if (s_Bindings.Count == 0) return false;
-            float snap = SnapRadius(surface);
+            s_UnboundEnds.Clear();
+            if (s_Bindings.Count == 0) return;
             foreach (var link in s_Links)
             {
-                if (link.Link.agentTypeID != surface.AgentTypeID || !s_Bindings.TryGetValue(link.Id, out var b)) continue;
-                if ((b.Start == 0 && b.StartAfter == 0 && Over(link.Start)) || (b.End == 0 && Over(link.End))) return true;
+                if (!s_Bindings.TryGetValue(link.Id, out var b)) continue;
+                if (b.Start == 0 && b.StartAfter != 0) continue;
+                if (b.Start == 0) s_UnboundEnds.Add((link.Link.agentTypeID, link.Start));
+                if (b.End == 0) s_UnboundEnds.Add((link.Link.agentTypeID, link.End));
+            }
+        }
+
+        /// <summary>Whether one of <see cref="s_UnboundEnds"/> of the surface's agent type attaches in
+        /// this newly cut tile (not yet added), as Detour would attach it.</summary>
+        static bool UnboundEndAttaches(Surface surface, DtMeshData tile)
+        {
+            if (s_UnboundEnds.Count == 0) return false;
+            float snap = SnapRadius(surface);
+            float climb = NavMesh.GetSettingsByID(surface.AgentTypeID).agentClimb;
+            var h = tile.header;
+            foreach (var (agentType, point) in s_UnboundEnds)
+            {
+                if (agentType != surface.AgentTypeID) continue;
+                if (point.x < h.bmin.X - snap || point.x > h.bmax.X + snap || point.z < h.bmin.Z - snap || point.z > h.bmax.Z + snap) continue;
+                if (surface.Mesh.AttachesInData(tile, new RcVec3f(point.x, point.y, point.z), snap, climb, out _)) return true;
             }
             return false;
-            bool Over(Vector3 p) => p.x >= tile.MinX - snap && p.x <= tile.MaxX + snap && p.z >= tile.MinZ - snap && p.z <= tile.MaxZ + snap;
         }
 
         /// <summary>A changed hole, grown by the agent radius as it is cut, reaches the tile.</summary>

@@ -312,5 +312,45 @@ namespace UnityEngine.Tests
                 NavMesh.RemoveNavMeshData(right);
             }
         });
+
+        [Fact]
+        public void ACarvingChangeWhereAnUnboundEndCannotAttachKeepsTheTileSwap() => NavigationTestRelease.At("6000.0.71f1", () =>
+        {
+            // The link's end is 2 m over the right floor, beyond the climb: it binds to nothing,
+            // and a moving obstacle on that floor does not rebuild the whole NavMesh for it.
+            ObstacleSystem.ResetCarving();
+            var left = NavMesh.AddNavMeshData(Floor(-4f));
+            var right = NavMesh.AddNavMeshData(Floor(4f));
+            var go = new GameObject("obstacle");
+            go.transform.position = new Vector3(94.5f, 0.5f, 2.5f);
+            var obstacle = go.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.size = new Vector3(0.5f, 1f, 0.5f);
+            obstacle.carveOnlyStationary = false;
+            obstacle.carving = true;
+            var link = NavMesh.AddLink(new NavMeshLinkData { startPosition = At(-2.7f, 0.0833f) + Vector3.forward, endPosition = At(2.7f, 2f) + Vector3.forward, bidirectional = true, costModifier = -1f });
+            try
+            {
+                ObstacleSystem.UpdateCarving();
+                ObstacleSystem.UpdateCarving();
+                var path = new NavMeshPath();
+                NavMesh.CalculatePath(At(-3.7f, 0.0833f) + Vector3.forward, At(3.7f, 0.0833f) + Vector3.forward, NavMesh.AllAreas, path);
+                Assert.Equal(NavMeshPathStatus.PathPartial, path.status);
+                int version = NavWorld.Version, tiles = NavWorld.TileVersion;
+                go.transform.position = new Vector3(94.5f, 0.5f, -2.5f);
+                ObstacleSystem.UpdateCarving();
+                ObstacleSystem.UpdateCarving();
+                Assert.True(NavWorld.TileVersion > tiles, "the carving change was cut");
+                Assert.Equal(version, NavWorld.Version);
+            }
+            finally
+            {
+                NavMesh.RemoveLink(link);
+                Object.DestroyImmediate(go);
+                ObstacleSystem.ResetCarving();
+                NavMesh.RemoveNavMeshData(left);
+                NavMesh.RemoveNavMeshData(right);
+            }
+        });
     }
 }
