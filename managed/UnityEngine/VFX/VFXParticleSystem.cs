@@ -123,7 +123,9 @@ namespace Unbound.Runtime
             m_Spawners = spawners.ToArray();
             m_SourceLayout = SourceLayout(data, m_SourceBuffer);
 
-            // The lists of particles to draw: per camera when their name says so.
+            // The lists of particles to draw: per camera when their name says so (the compiler
+            // names a list made for each camera so, which is what an output's
+            // `indirectPerCamera` says of the list it draws).
             var stepLists = new List<int>();
             var cameraLists = new List<int>();
             foreach (var mapping in Desc.buffers ?? Array.Empty<VFXMapping>())
@@ -154,9 +156,23 @@ namespace Unbound.Runtime
                 else if (task.type == VFXTaskType.PerCameraUpdate) perCamera.Add(new Kernel(this, task, shader));
             }
             m_Updates = updates.ToArray();
-            m_PerCamera = perCamera.ToArray();
             m_Outputs = outputs.ToArray();
             foreach (var output in m_Outputs) m_HasIndirect |= output.Indirect;
+            // Only the per-camera kernels whose list an output draws (an output that is not
+            // drawn needs none made).
+            var drawn = new List<Kernel>(perCamera.Count);
+            foreach (var kernel in perCamera)
+                if (Drawn(kernel.List)) drawn.Add(kernel);
+                else kernel.Release();
+            m_PerCamera = drawn.ToArray();
+        }
+
+        /// <summary>Whether an output draws the list of buffer <paramref name="list"/>.</summary>
+        bool Drawn(int list)
+        {
+            foreach (var output in m_Outputs)
+                if (output.Indirect && output.CountBuffer == list) return true;
+            return false;
         }
 
         /// <summary>How the compiler names the system's buffers of lists of particles to draw
@@ -509,6 +525,7 @@ namespace Unbound.Runtime
             static readonly int s_InstancingBufferOffsets = Shader.PropertyToID("instancingBufferOffsets");
             static readonly int s_BakedTexture = Shader.PropertyToID(VFXOutput.BakedTextureName);
             static readonly int s_CameraXRSettings = Shader.PropertyToID("cameraXRSettings");
+            const string FirstListName = "outputBuffer0";
 
             readonly VFXParticleSystem m_System;
             readonly VFXEditorTaskDesc m_Task;
@@ -520,6 +537,9 @@ namespace Unbound.Runtime
             /// <summary>The textures and graphics buffers the kernel reads: values of the
             /// effect, bound by name (again only once the value is another object).</summary>
             readonly VFXTaskObjects m_Objects;
+            /// <summary>The buffer of the list of particles to draw an output-update kernel
+            /// makes (its first, `outputBuffer0`); -1 for another kernel.</summary>
+            internal readonly int List = -1;
             int m_DispatchWidth = -1, m_PrefixOffset = -1;
             Texture2D m_Baked;
             bool m_Checked, m_Failed;
@@ -534,7 +554,11 @@ namespace Unbound.Runtime
                 int count = task.buffers?.Length ?? 0;
                 m_BufferNames = new int[count];
                 m_Bound = new GraphicsBuffer[count];
-                for (int i = 0; i < count; i++) m_BufferNames[i] = Shader.PropertyToID(task.buffers[i].name);
+                for (int i = 0; i < count; i++)
+                {
+                    m_BufferNames[i] = Shader.PropertyToID(task.buffers[i].name);
+                    if (task.buffers[i].name == FirstListName) List = task.buffers[i].index;
+                }
                 m_Objects = new VFXTaskObjects(system.Effect.Data, task);
                 // One instance, active, in a batch of one, at offset zero: the counts as the
                 // kernels read them, the bits of unsigned integers.
