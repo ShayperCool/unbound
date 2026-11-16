@@ -487,6 +487,22 @@ python3 tests/projects/realtimegi/run.py gate --pipeline urp --label gate-urp1  
 python3 tests/projects/realtimegi/run.py gate --color-space gamma --label gate-gamma1   # and its gamma part
 python3 tests/projects/realtimegi/run.py gate --bake --label gate-bake1   # and its bake-on-load part
 ```
+A script's bake (`script_bake.py`, its own reference `Reference/unity-6000.0.71f1/scriptbake`):
+`RoomScriptBake` is `RoomBake` without the bake on load (`script_bake.py setup` writes it); editor
+code that runs as Play mode is entered (`Assets/Editor/ScriptBake.cs`) bakes it with
+`Lightmapping.Bake`, and Play mode (`Assets/Scripts/ScriptBakeProbe.cs`) records the answer and
+events, how many of the renderers that contribute to GI have a realtime lightmap, and what Bake and
+BakeAsync answer, send and log in Play mode. Recorded with the macOS Editor in batch mode (two
+byte-identical captures): the bake answers true with both events, Play mode starts without its
+realtime GI (all 7 renderers at index -1, no lighting data), and in Play mode both calls warn
+"Computing lightmaps is not available in play mode." and answer false.
+
+```bash
+python3 tests/projects/realtimegi/script_bake.py native --label sb1   # and sb2
+python3 tests/projects/realtimegi/script_bake.py publish sb1 sb2
+python3 tests/projects/realtimegi/script_bake.py check               # Unbound (gate.json)
+```
+
 
 `gate` runs `$UNBOUND_CLI` (else `$UNBOUND`, else `target/release/unbound`) on a copy of the
 project and compares with `Reference/unity-<release>/`; `gate --pipeline urp` (and `record`,

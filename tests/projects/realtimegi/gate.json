@@ -3,7 +3,8 @@
     "python3 tests/projects/realtimegi/run.py gate --label gate-$(date +%s%N)",
     "python3 tests/projects/realtimegi/run.py gate --pipeline urp --label gate-urp-$(date +%s%N)",
     "python3 tests/projects/realtimegi/run.py gate --color-space gamma --label gate-gamma-$(date +%s%N)",
-    "python3 tests/projects/realtimegi/run.py gate --bake --label gate-bake-$(date +%s%N)"
+    "python3 tests/projects/realtimegi/run.py gate --bake --label gate-bake-$(date +%s%N)",
+    "python3 tests/projects/realtimegi/script_bake.py check"
   ],
-  "summary": "realtimegi: \\d+ failing state values.*"
+  "summary": "realtimegi: \\d+ failing state values.*|scriptbake: \\d+/\\d+ records match.*"
 }

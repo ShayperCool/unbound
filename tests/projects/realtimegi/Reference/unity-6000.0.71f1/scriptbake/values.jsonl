@@ -1,0 +1,12 @@
+{"key":"entering.isPlaying","value":"False"}
+{"key":"entering.result","value":"True"}
+{"key":"entering.events","value":"started,completed"}
+{"key":"play.contributing","value":"7"}
+{"key":"play.withRealtimeLightmap","value":"0"}
+{"key":"play.indices","value":"Back:-1 Block:-1 Ceiling:-1 Floor:-1 Left:-1 Panel:-1 Right:-1"}
+{"key":"play.lightingData","value":"False"}
+{"key":"play.bake","value":"False"}
+{"key":"play.bakeAsync","value":"False"}
+{"key":"play.events","value":""}
+{"key":"play.log","value":"Warning: Computing lightmaps is not available in play mode. || Warning: Computing lightmaps is not available in play mode."}
+{"key":"complete","value":"1"}
