@@ -98,7 +98,10 @@ namespace UnityEngine
             // step would read it had the Transform changed otherwise: the product left as it was
             // would keep its rounding and build up over a play, tilting later steps' motion
             // (6000.0.71f1, tests/projects/humanoid genericOnHuman.graph, whose root curves alone
-            // write nothing else to the Transform: the Editor's root moves in its plane).
+            // write nothing else to the Transform: the Editor's root moves in its plane). The
+            // position stays as composed: the Transform keeps it as given without a parent, and
+            // with one the stream's conversion through the parent's decomposed TRS is the pose the
+            // Animator reports (see SyncRootPose).
             m_MotionRootRotation = parent == null ? t.localRotation : parent.rotation * t.localRotation;
             m_RootPoseVersion = t.m_Version;
             m_RootPosition = m_MotionRootPosition;
