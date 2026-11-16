@@ -142,7 +142,6 @@ namespace UnityEngine.VFX
             foreach (var system in data.Systems)
             {
                 if (system.type == VFXSystemType.Mesh) return $"the mesh output system '{system.name}'";
-                if (system.type == VFXSystemType.OutputEvent) return $"the output event '{system.name}'";
                 if (system.type != VFXSystemType.Particle) continue;
                 const VFXSystemFlag NotYet = VFXSystemFlag.SystemHasStrips | VFXSystemFlag.SystemReceivedEventGPU | VFXSystemFlag.SystemHasDirectLink
                     | VFXSystemFlag.SystemNeedsComputeBounds | VFXSystemFlag.SystemAutomaticBounds | VFXSystemFlag.SystemIsRayTraced;
@@ -181,6 +180,7 @@ namespace UnityEngine.VFX
                     systems.Add(system);
                     particles.Add(system);
                 }
+                else if (m_Data.Systems[i].type == VFXSystemType.OutputEvent) systems.Add(new VFXOutputEventSystem(this, i, systems));
             }
             foreach (var system in systems) (system as VFXSpawnerSystem)?.Link(systems);
             m_Systems = systems.ToArray();
@@ -199,6 +199,7 @@ namespace UnityEngine.VFX
             m_GpuBuffers = Array.Empty<GraphicsBuffer>();
             m_Queue.Clear();
             m_Taken.Clear();
+            m_OutputEvents.Clear();
             m_Start = StartState.None;
             m_HasBounds = false;
         }
@@ -359,9 +360,42 @@ namespace UnityEngine.VFX
             if ((flags & StepFlags.Bounds) != 0) UpdateBounds();
             if ((flags & StepFlags.Simulate) == 0) return;
             foreach (var system in m_Systems) system.Update(state);
+            SendOutputEvents();
             state.TotalTime += state.DeltaTime;
             state.NeedsEvaluation = true;
             m_EverSimulated = true;
+        }
+
+        // ----------------------------------------------------------------- output events
+
+        /// <summary>The output events raised in the current step: the event's name id and the
+        /// attributes of the spawn context that raised it.</summary>
+        readonly List<(int NameId, VFXEventAttribute Source)> m_OutputEvents = new List<(int, VFXEventAttribute)>();
+        /// <summary>The one attribute set every output event of the effect is handed (made for
+        /// the first event a listener takes, then given each event's attributes).</summary>
+        VFXEventAttribute m_cachedEventAttribute;
+
+        internal void RaiseOutputEvent(int nameId, VFXEventAttribute source) => m_OutputEvents.Add((nameId, source));
+
+        /// <summary>After a step's systems updated: each event it raised, in order, to
+        /// <see cref="outputEventReceived"/> with the attributes that raised it in the effect's one
+        /// output event attribute set. Without a listener the step's events are dropped.</summary>
+        void SendOutputEvents()
+        {
+            if (m_OutputEvents.Count == 0) return;
+            if (outputEventReceived != null)
+            {
+                var attribute = m_cachedEventAttribute ??= CreateVFXEventAttribute();
+                for (int i = 0; i < m_OutputEvents.Count; i++)
+                {
+                    var (nameId, source) = m_OutputEvents[i];
+                    attribute.CopyAllFrom(source);
+                    // A listener's exception is its own: the next events are still handed over.
+                    try { outputEventReceived(new VFXOutputEventArgs(nameId, attribute)); }
+                    catch (Exception e) { Debug.LogException(e, this); }
+                }
+            }
+            m_OutputEvents.Clear();
         }
 
         /// <summary>The union of the systems' bounds, in the effect's space: what the renderer

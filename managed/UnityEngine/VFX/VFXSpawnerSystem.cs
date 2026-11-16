@@ -195,7 +195,7 @@ namespace Unbound.Runtime
 
         /// <summary>Whether a spawner asked for at least one particle this step: what starts or
         /// stops the spawners linked to it.</summary>
-        bool Fired => State.Attribute.SpawnCount >= 1f;
+        internal bool Fired => State.Attribute.SpawnCount >= 1f;
 
         internal override void Update(VisualEffectState state)
         {

@@ -90,6 +90,18 @@ namespace UnityEngine.VFX
             return attribute;
         }
 
+        /// <summary>Becomes a copy of another attribute set, its layout and its values (an
+        /// output event's copy of the attributes that raised it).</summary>
+        internal void CopyAllFrom(VFXEventAttribute source)
+        {
+            var from = source.Words;
+            if (m_Words == null || m_Words.Length != from.Length) m_Words = new uint[from.Length];
+            Array.Copy(from, m_Words, from.Length);
+            m_Asset = source.m_Asset;
+            m_Data = source.m_Data;
+            m_Layout = source.m_Layout;
+        }
+
         /// <summary>How many particles the attributes ask for: their first value, as a float
         /// (the spawn count comes first in every event attribute layout).</summary>
         internal float SpawnCount

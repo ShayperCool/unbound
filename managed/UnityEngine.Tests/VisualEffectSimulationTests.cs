@@ -684,9 +684,9 @@ namespace UnityEngine.Tests
             return asset;
         }
 
-        static readonly VFXManager.FrameTime Thirtieth = new VFXManager.FrameTime { FixedSteps = 2, FixedTime = Frame, DeltaTime = Frame, UnscaledFixedSteps = 2, UnscaledFixedTime = Frame, UnscaledDeltaTime = Frame };
+        internal static readonly VFXManager.FrameTime Thirtieth = new VFXManager.FrameTime { FixedSteps = 2, FixedTime = Frame, DeltaTime = Frame, UnscaledFixedSteps = 2, UnscaledFixedTime = Frame, UnscaledDeltaTime = Frame };
 
-        static VisualEffect Running(VisualEffectAsset asset)
+        internal static VisualEffect Running(VisualEffectAsset asset)
         {
             var effect = new GameObject("effect").AddComponent<VisualEffect>();
             effect.resetSeedOnPlay = false;
