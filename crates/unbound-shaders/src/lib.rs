@@ -34,7 +34,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 60;
+pub const FORMAT_VERSION: u32 = 61;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -1100,6 +1100,10 @@ impl ShaderCompiler {
         for (k, v) in defines {
             pp.define(k, v);
         }
+        if self.settings.device.coarse_derivatives() {
+            pp.define("ddx", "ddx_coarse");
+            pp.define("ddy", "ddy_coarse");
+        }
         let mut source = String::from(SAMPLERS);
         if self.settings.device.compiler_precision_types() {
             source.push_str(PRECISION_TYPES);
@@ -1985,6 +1989,47 @@ float4 array() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
         let module = naga::front::wgsl::parse_str(&compiled.fragment).unwrap();
         assert_ne!(compiled.fragment_entry, "array");
         assert_eq!(module.entry_points[0].name, compiled.fragment_entry);
+    }
+
+    /// HLSL's `ddx`/`ddy` are coarse derivatives on Vulkan, as the Editor's Vulkan programs take
+    /// them (tests/projects/urp `decal_screen_space_*` on Vulkan), and the driver's default
+    /// elsewhere; `ddx_fine` stays fine everywhere.
+    #[test]
+    fn vulkan_programs_take_coarse_derivatives() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4 vert(float4 position : POSITION) : SV_POSITION { return position; }
+float4 frag(float4 p : SV_POSITION) : SV_Target { return float4(ddx(p.x), ddy(p.y), ddx_fine(p.z), 1); }
+"#;
+        for (device, coarse) in [
+            (unbound_graphics::GraphicsDevice::Vulkan, true),
+            (unbound_graphics::GraphicsDevice::OpenGLCore, false),
+        ] {
+            let mut compiler = ShaderCompiler::new(Settings {
+                device,
+                ..Settings::default()
+            })
+            .unwrap();
+            let fragment = compiler
+                .compile(&program(source, false), &[], false)
+                .unwrap()
+                .fragment
+                .clone();
+            for axis in ["dpdx", "dpdy"] {
+                assert_eq!(
+                    fragment.contains(&format!("{axis}Coarse(")),
+                    coarse,
+                    "{device:?}: {fragment}"
+                );
+                assert_eq!(
+                    fragment.contains(&format!("{axis}(")),
+                    !coarse,
+                    "{device:?}: {fragment}"
+                );
+            }
+            assert!(fragment.contains("dpdxFine("), "{device:?}: {fragment}");
+        }
     }
 
     /// Drawn as OpenGL shading language, a texture a graphics program samples through several

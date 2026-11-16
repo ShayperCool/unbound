@@ -173,6 +173,15 @@ impl GraphicsDevice {
         matches!(self, Self::Vulkan | Self::Metal)
     }
 
+    /// Whether a program's `ddx`/`ddy` take the coarse derivative (one per 2x2 quad), as the
+    /// Editor's Vulkan programs do: HLSL's `ddx` is `ddx_coarse` since Shader Model 5, and on
+    /// Vulkan the Editor keeps it so, where its OpenGL Core programs take the driver's default
+    /// (6000.0.71f1, tests/projects/urp rendering paths, `decal_screen_space_*` on Vulkan: the
+    /// silhouette pixels of URP's derivative normal reconstruction).
+    pub fn coarse_derivatives(self) -> bool {
+        matches!(self, Self::Vulkan)
+    }
+
     /// Whether the device is drawn through OpenGL itself on this OS: OpenGL Core on Linux
     /// (macOS has no OpenGL 4.5 and draws every device with Metal). Programs for it are OpenGL
     /// shading language in the end, with that language's limits.
@@ -403,6 +412,13 @@ mod tests {
             Ok(OpenGLCore)
         );
         assert!(select(&request, HostOs::Linux, |_| false).is_err());
+    }
+
+    #[test]
+    fn only_vulkan_programs_take_coarse_derivatives() {
+        assert!(GraphicsDevice::Vulkan.coarse_derivatives());
+        assert!(!GraphicsDevice::OpenGLCore.coarse_derivatives());
+        assert!(!GraphicsDevice::Metal.coarse_derivatives());
     }
 
     #[test]
