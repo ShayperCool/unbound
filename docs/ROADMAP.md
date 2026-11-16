@@ -195,7 +195,8 @@ In dependency order; each item ends with an Editor-reference probe.
       unsorted indirect buffer (`tests/projects/vfxoutputs`). Not yet: outputs that are
       sorted (alpha blended ones by default), lit or mesh outputs through an indirect buffer,
       strips, other primitives, motion vectors and Shader Graph outputs (such an output says
-      once that it is not drawn; its system runs), GPU events,
+      once that it is not drawn; its system runs), strips spawned by GPU events (systems
+      spawned by GPU events run: `tests/projects/vfxevents`),
       output events, bounds computed on the GPU and part of the expression operations (an
       effect using them does not simulate and says what); `unbound doctor` lists the effects.
 - [x] Baked lighting: a scene's LightingData (read through its type tree): lightmaps and each
