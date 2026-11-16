@@ -738,6 +738,16 @@ void Scale(uint3 id : SV_DispatchThreadID)
         );
     }
 
+    /// A character of several bytes right before a typed buffer's name is not split (it is
+    /// no identifier's part, so the name is the buffer's).
+    #[test]
+    fn a_character_of_several_bytes_before_a_typed_buffer_is_not_split() {
+        assert_eq!(
+            typed_scalar_buffers_as_structured("\"\u{20ac}Buffer<uint>\" Buffer<uint> b;"),
+            "\"\u{20ac}StructuredBuffer<uint>\" StructuredBuffer<uint> b;"
+        );
+    }
+
     /// A kernel writing a `RWBuffer<uint>` and reading a `Buffer<uint>` translates: both are
     /// the words of their buffers.
     #[test]
