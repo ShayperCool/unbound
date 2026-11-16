@@ -97,17 +97,18 @@ namespace Unbound.Runtime
             {
                 var data = system.Effect.Data;
                 m_CountBuffer = Parameter(task, "indirectIndex");
-                m_CountPairs = m_CountBuffer < data.GpuBuffers.Length && data.GpuBuffers[m_CountBuffer].stride == KeyIndexPairBytes;
+                m_CountPairs = m_CountBuffer < data.GpuBuffers.Length && data.GpuBuffers[m_CountBuffer].stride == VFXIndirectArgs.KeyIndexPairBytes;
                 m_ArgsEntry = VFXIndirectArgs.Shared.Reserve(ArgumentsKind(task.type));
             }
         }
 
         const string IndirectDrawName = "indirectDraw";
-        /// <summary>The size of a sorted list's element: a key and a particle's index.</summary>
-        const int KeyIndexPairBytes = 8;
 
         /// <summary>Whether the output draws through an indirect buffer.</summary>
         internal bool Indirect => m_ArgsEntry >= 0;
+
+        /// <summary>The buffer whose list an indirect output draws (-1 for a direct one).</summary>
+        internal int CountBuffer => m_CountBuffer;
 
         /// <summary>The kind of indirect arguments of an output task's primitive.</summary>
         internal static VFXIndirectArgs.Kind ArgumentsKind(VFXTaskType type) => (VFXIndirectArgs.Kind)(type - VFXTaskType.ParticlePointOutput);

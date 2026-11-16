@@ -61,6 +61,10 @@ namespace UnityEngine
         public void SetFloat(int nameID, float val) => m_Values[nameID] = val;
         public void SetFloat(string name, float val) => SetFloat(Shader.PropertyToID(name), val);
         public void SetInt(int nameID, int val) => m_Values[nameID] = val;
+        /// <summary>An integer kept boxed by its caller: a value set per dispatch without a new
+        /// box each time.</summary>
+        internal void SetBoxedInt(int nameID, object boxed) =>
+            m_Values[nameID] = boxed is int ? boxed : throw new ArgumentException("not a boxed integer", nameof(boxed));
         public void SetInt(string name, int val) => SetInt(Shader.PropertyToID(name), val);
         public void SetBool(int nameID, bool val) => m_Values[nameID] = val ? 1 : 0;
         public void SetBool(string name, bool val) => SetBool(Shader.PropertyToID(name), val);
