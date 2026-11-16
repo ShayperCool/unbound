@@ -90,8 +90,11 @@ namespace Unbound.Runtime
                     // texel it adds where it clamps); any other from its first key to its
                     // last. Where the last sample's time reaches the last key of a curve
                     // that loops after it, it reads the first key's value, as any time on
-                    // that key does (AnimationCurve.EvaluateCubic); whether it reaches it is
-                    // this expression's rounding (tests/projects/vfx, `draw-loop end`).
+                    // that key does (AnimationCurve.EvaluateCubic: tests/projects/vfx,
+                    // `draw-loop end`, with keys where the time reaches the last key and keys
+                    // where the start plus the range is already short of it). Keys where
+                    // only this expression's product and quotient round below the range are
+                    // not measured.
                     // A curve of one key has no range: every sample is its value, and
                     // the words below are not numbers (the generated code then samples at
                     // whatever its clamp of that gives; the texels are all the same).

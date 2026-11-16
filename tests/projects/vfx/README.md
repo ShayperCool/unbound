@@ -203,7 +203,7 @@ which follows what `tests/projects/eofstartup` measured. What makes the two capt
 
 ## Drawing
 
-Effects of four graphs kept in `Assets/DrawGraphs`, each far from everything else in front of an
+Effects of the graphs kept in `Assets/DrawGraphs`, each far from everything else in front of an
 orthographic camera of its own that renders into a 64x64 texture; at the frames named, at the
 end of the frame, the texture is saved (`draw-<control>-f<frame>.png`) with what the effect
 says of itself (`draw/<control>/f<frame>`). Their outputs are quads the output draws itself
@@ -279,7 +279,9 @@ angles and scales taken from a matrix, colour spaces, meshes, the main camera, n
 and buffer sizes). Of baked curves and gradients, not measured: a curve whose values are larger than a
 half float holds (its scale is held by a unit test, as a gradient's is by `hdr`), a curve
 that ping-pongs, one that loops before its first key and clamps after its last, one that
-loops both ways sampled outside zero to one, a curve or a gradient that is null, a gradient
+loops after its last key with a range whose product by 127 and quotient by 127 round below
+it in single precision (keys at 0 and 0.1552: whether the last sample then reaches the last
+key), one that loops both ways sampled outside zero to one, a curve or a gradient that is null, a gradient
 of one key, one blended perceptually and one whose alpha is over one. A curve the graph
 samples itself (`c00`) is not measured where it loops before its keys or ping-pongs after
 them, with weighted or stepped keys, or with keys closer than a ten-thousandth; the curves baked into the texture are rounded the same way, which
