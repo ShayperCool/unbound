@@ -188,10 +188,12 @@ In dependency order; each item ends with an Editor-reference probe.
       Editor does, and effects simulate: the frame's steps per update mode, spawn contexts and
       their blocks, events, `Reinit`/`Simulate`/pause/play rate, culling flags, alive counts and
       system info, with the graph's initialize and update kernels dispatched on the GPU
-      (`tests/projects/vfx`). Quad outputs that draw themselves (opaque or additive, unsorted)
-      are drawn under URP. Not yet: outputs that are sorted or culled per camera (alpha blended
-      ones by default) or drawn through an indirect buffer, strips, meshes and other
-      primitives (such an output says once that it is not drawn; its system runs), GPU events,
+      (`tests/projects/vfx`). Quad and mesh outputs that draw themselves (opaque or additive,
+      unsorted), unlit or lit by URP in its forward and deferred renderers, are drawn, and
+      effects cast shadows (`tests/projects/vfxlit`). Not yet: outputs that are sorted or
+      culled per camera (alpha blended ones by default) or drawn through an indirect buffer,
+      strips, other primitives, motion vectors and Shader Graph outputs (such an output says
+      once that it is not drawn; its system runs), GPU events,
       output events, bounds computed on the GPU and part of the expression operations (an
       effect using them does not simulate and says what); `unbound doctor` lists the effects.
 - [x] Baked lighting: a scene's LightingData (read through its type tree): lightmaps and each
