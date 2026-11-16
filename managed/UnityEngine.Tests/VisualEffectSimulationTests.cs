@@ -861,7 +861,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void OutputsWhoseShadersShareANameAreNotDrawn()
         {
-            string Source(string name) => "Shader \"" + name + "\" { SubShader { Pass { Tags { \"LightMode\"=\"UniversalForwardOnly\" } } } }";
+            string Source(string name, string body = "") => "Shader \"" + name + "\" { SubShader { Pass { Tags { \"LightMode\"=\"UniversalForwardOnly\" } " + body + "} } }";
             VFXEditorTaskDesc Output(int source) => new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, shaderSourceIndex = source };
             var systems = new[]
             {
@@ -871,15 +871,18 @@ namespace UnityEngine.Tests
             var sources = new[]
             {
                 new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/A/Output Particle|Unlit Quad") },
-                new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/A/Output Particle|Unlit Quad") },
+                new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/A/Output Particle|Unlit Quad", "Cull Off ") },
                 new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/A/Glow") },
                 new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/B/Output Particle|Unlit Quad") },
             };
             var found = VFXOutput.SourceRefusals(systems, sources);
-            Assert.StartsWith("its shader's name 'Hidden/VFX/G/A/Output Particle|Unlit Quad' is another output's", found[0][0]);
+            Assert.StartsWith("its shader's name 'Hidden/VFX/G/A/Output Particle|Unlit Quad' is another output's, whose shader differs", found[0][0]);
             Assert.Equal(found[0][0], found[0][1]);
             Assert.Null(found[0][2]);
             Assert.Null(found[1][0]);
+            // Outputs whose shaders are the same source share one program, and are drawn.
+            sources[1] = sources[0];
+            Assert.Null(VFXOutput.SourceRefusals(systems, sources)[0][0]);
         }
 
         [Fact]
@@ -980,13 +983,16 @@ namespace UnityEngine.Tests
                 buffers = new[] { new VFXMapping("graphValuesBuffer", 4), new VFXMapping("indirectBuffer", read) },
             };
             Assert.Null(VFXOutput.Refusal(system, Indirect(2, 2), material));
-            Assert.Equal("it draws a list of particles no task of its system makes", VFXOutput.Refusal(system, Indirect(2, 3), material));
+            Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(system, Indirect(2, 3), material));
             var sortingOne = new VFXEditorSystemDesc
             {
                 name = "Particles", type = VFXSystemType.Particle,
                 tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.PerOutputSort, buffers = new[] { new VFXMapping("srcBuffer", 2), new VFXMapping("scratchBuffer", -1), new VFXMapping("dstBuffer", 3) } } },
             };
             Assert.Null(VFXOutput.Refusal(sortingOne, Indirect(2, 3), material));
+            // A list longer than one pass sorts, without a scratch list to merge through.
+            sortingOne.capacity = VFXSort.MaxSortedAtOnce + 1;
+            Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(sortingOne, Indirect(2, 3), material));
             var sorting = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.GlobalSort } } };
             Assert.Equal("its system sorts one list for all its outputs, which is not done yet", VFXOutput.Refusal(sorting, Indirect(2, 2), material));
             // A mesh output's task names its mesh and the mask of its submeshes, and draws
@@ -1085,7 +1091,7 @@ namespace UnityEngine.Tests
                 second = Running(asset);
                 var said = Assert.Single(warnings.Messages, m => m.Contains("not drawn"));
                 Assert.StartsWith("Unbound: VisualEffect '", said);
-                Assert.Contains("(Smoke): an output of 'Particles' is not drawn: it draws a list of particles no task of its system makes", said);
+                Assert.Contains("(Smoke): an output of 'Particles' is not drawn: it draws a list of particles no task of its system makes or can sort", said);
                 // The system runs all the same, and its renderer has no draw.
                 Assert.Equal(new[] { 1, 2, 3 }, Counts(first, 3));
                 var draws = new List<FrameBuilder.DrawItem>();

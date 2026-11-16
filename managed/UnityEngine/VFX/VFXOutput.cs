@@ -37,16 +37,16 @@ namespace Unbound.Runtime
     /// <summary>
     /// An output of a particle system: one draw of its particles with the shader the graph
     /// compiled to, whose vertex program finds each particle in the system's buffers by its
-    /// vertex id (or, of a mesh, by its instance). Drawn here: quads, unsorted, either all the
-    /// system has room for (the vertex program leaves out the dead ones) or through an indirect
-    /// buffer: a list of the particles to draw that the system's kernels make (the update
-    /// kernel, an output-update kernel at each step, or one for each camera that sees the
-    /// effect), whose count gives the draw's arguments (<see cref="VFXIndirectArgs"/>); and
-    /// meshes the output draws itself. What an output draws itself may be lit by the pipeline;
-    /// what goes through an indirect buffer is unlit. An output of another
-    /// kind is not drawn and says so once (<see cref="Refusal"/>): the system is simulated all
-    /// the same. The draws match the Unity 6000.0.71f1 Editor (tests/projects/vfx `draw-*`,
-    /// tests/projects/vfxoutputs, tests/projects/vfxlit).
+    /// vertex id (or, of a mesh, by its instance). Drawn here: quads, either all the system has
+    /// room for (the vertex program leaves out the dead ones) or through an indirect buffer: a
+    /// list of the particles to draw that the system's kernels make (the update kernel, an
+    /// output-update kernel at each step, or one for each camera that sees the effect), sorted
+    /// when the output sorts (<see cref="VFXSort"/>), whose count gives the draw's arguments
+    /// (<see cref="VFXIndirectArgs"/>); and meshes the output draws itself. What an output draws
+    /// itself may be lit by the pipeline; what goes through an indirect buffer is unlit. An
+    /// output of another kind is not drawn and says so once (<see cref="Refusal"/>): the system
+    /// is simulated all the same. The draws match the Unity 6000.0.71f1 Editor
+    /// (tests/projects/vfx `draw-*`, tests/projects/vfxoutputs, tests/projects/vfxlit).
     /// </summary>
     internal sealed partial class VFXOutput
     {
@@ -143,7 +143,7 @@ namespace Unbound.Runtime
                 // Meshes are drawn for the particles the system has to draw, not from a list.
                 if (task.type == VFXTaskType.ParticleMeshOutput) return "it draws meshes through an indirect buffer, which is not done yet";
                 if (SortsForAll(system)) return "its system sorts one list for all its outputs, which is not done yet";
-                if (!ListMade(system, task)) return "it draws a list of particles no task of its system makes";
+                if (!ListMade(system, task)) return "it draws a list of particles no task of its system makes or can sort";
             }
             if (task.usesMaterialVariant) return "outputs of a Shader Graph are not drawn yet";
             // An output with motion vectors keeps each particle's last frame in buffers of its own.
@@ -196,14 +196,18 @@ namespace Unbound.Runtime
                 }
             }
             // The renderer finds a generated shader by its name: outputs whose shaders share one
-            // (outputs of one system the graph names alike: no label, no letter) cannot each be
-            // drawn with their own.
-            var seen = new Dictionary<string, int>(StringComparer.Ordinal);
+            // with another source (outputs of one system the graph names alike: no label, no
+            // letter) cannot each be drawn with their own.
+            var seen = new Dictionary<string, string>(StringComparer.Ordinal);
+            var clashing = new HashSet<string>(StringComparer.Ordinal);
             foreach (var system in systems)
                 foreach (var task in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
                     if (task.shaderSourceIndex >= 0 && task.shaderSourceIndex < sources.Length && !sources[task.shaderSourceIndex].compute && IsOutput(task.type)
                         && ShaderLab.Name(sources[task.shaderSourceIndex].source ?? "") is string name)
-                        seen[name] = seen.TryGetValue(name, out int count) ? count + 1 : 1;
+                    {
+                        string source = sources[task.shaderSourceIndex].source;
+                        if (!seen.TryAdd(name, source) && !string.Equals(seen[name], source, StringComparison.Ordinal)) clashing.Add(name);
+                    }
             for (int s = 0; s < systems.Length; s++)
             {
                 var tasks = systems[s].tasks ?? Array.Empty<VFXEditorTaskDesc>();
@@ -211,8 +215,8 @@ namespace Unbound.Runtime
                 {
                     int index = tasks[t].shaderSourceIndex;
                     if (index >= 0 && index < sources.Length && !sources[index].compute && IsOutput(tasks[t].type)
-                        && ShaderLab.Name(sources[index].source ?? "") is string name && seen[name] > 1)
-                        refusals[s][t] ??= $"its shader's name '{name}' is another output's (give the outputs labels), and Unbound finds generated shaders by name";
+                        && ShaderLab.Name(sources[index].source ?? "") is string name && clashing.Contains(name))
+                        refusals[s][t] ??= $"its shader's name '{name}' is another output's, whose shader differs, and Unbound finds generated shaders by name";
                 }
             }
             return refusals;
@@ -252,9 +256,13 @@ namespace Unbound.Runtime
             int read = Buffer(task, "indirectBuffer");
             if (read == Parameter(task, "indirectIndex")) return true;
             foreach (var other in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
-                if (other.type == VFXTaskType.PerOutputSort && Buffer(other, "dstBuffer") == read) return true;
+                if (other.type == VFXTaskType.PerOutputSort && Buffer(other, "dstBuffer") == read)
+                    return VFXSort.Plan(system.capacity, Buffer(other, "scratchBuffer") >= 0) != null;
             return false;
         }
+
+        /// <summary>Whether the output draws a sorted copy of its list.</summary>
+        internal bool Sorted => Indirect && Buffer(m_Task, "indirectBuffer") != m_CountBuffer;
 
         internal static int Buffer(in VFXEditorTaskDesc task, string name)
         {
@@ -318,7 +326,7 @@ namespace Unbound.Runtime
             var arguments = VFXIndirectArgs.Shared;
             if (Indirect)
             {
-                if (!arguments.Ready()) return;
+                if (!arguments.Ready() || Sorted && !VFXSort.Shared.Usable()) return;
                 // Arguments made anew since this camera's were computed are computed again.
                 if (m_FilledGeneration != arguments.Generation && !FillArguments()) return;
             }

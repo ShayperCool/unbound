@@ -36,7 +36,14 @@ namespace Unbound.Runtime
         internal static VFXSort Shared => s_Shared ??= new VFXSort();
 
         ComputeShader m_Shader;
+        /// <summary>The kernels' indices by name, found once.</summary>
+        readonly Dictionary<string, int> m_Kernels = new Dictionary<string, int>(StringComparer.Ordinal);
         bool m_Loaded;
+
+        static readonly string[] s_KernelNames =
+        {
+            "BitonicSort128", "BitonicSort1024", "BitonicSort2048", "BitonicSort4096", "BitonicPrePass", "MergePass", "MergeFinalPass",
+        };
 
         /// <summary>Where a pass reads and writes: the list, the scratch list, or the sorted indices.</summary>
         internal enum Role : byte { List, Scratch, Sorted }
@@ -99,12 +106,24 @@ namespace Unbound.Runtime
             x = (int)((groups + rows - 1) / rows);
         }
 
-        bool Usable()
+        /// <summary>Whether lists can be sorted here: the package's kernels are there (said once
+        /// when they are not; sorted outputs are not drawn then).</summary>
+        internal bool Usable()
         {
             if (m_Loaded) return m_Shader != null;
             m_Loaded = true;
             m_Shader = VFXPackageShaders.Load(SortPath, "sorted outputs are not drawn");
             if (m_Shader == null) return false;
+            foreach (var name in s_KernelNames)
+            {
+                if (!m_Shader.HasKernel(name))
+                {
+                    Debug.LogError($"Unbound: the Visual Effect Graph package's {SortPath} has no kernel {name}; sorted outputs are not drawn");
+                    m_Shader = null;
+                    return false;
+                }
+                m_Kernels[name] = m_Shader.FindKernel(name);
+            }
             // A batch of one instance, its list at the start of the buffers.
             m_Shader.SetBoxed(s_TotalInstanceCount, s_One);
             return true;
@@ -119,7 +138,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < passes.Length; i++)
             {
                 ref var pass = ref passes[i];
-                if (pass.KernelIndex < 0) pass.KernelIndex = m_Shader.FindKernel(pass.Kernel);
+                if (pass.KernelIndex < 0) pass.KernelIndex = m_Kernels[pass.Kernel];
                 int kernel = pass.KernelIndex;
                 m_Shader.SetBuffer(kernel, s_InputSequence, Buffer(pass.From, list, scratch, sorted));
                 m_Shader.SetBuffer(kernel, s_SortedSequence, Buffer(pass.To, list, scratch, sorted));

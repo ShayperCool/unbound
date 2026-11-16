@@ -447,7 +447,8 @@ namespace Unbound.Runtime
             m_UpdatedPrefix = fixedSize ? 0 : 1;
             m_PreparedCamera = null;
             foreach (var update in m_Updates) update.Dispatch(updated, m_UpdatedPrefix);
-            foreach (var sort in m_StepSorts) sort.Run(Effect);
+            if (m_HasRenderer)
+                foreach (var sort in m_StepSorts) sort.Run(Effect);
         }
 
         /// <summary>The sort of an output's list (a task of the compiled graph): the list of key
