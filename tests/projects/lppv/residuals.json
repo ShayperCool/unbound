@@ -1,0 +1,5 @@
+{
+ "One Half Float texel (world, row [2, 1], the occlusion of the first probe) is a half step apart: the Editor's float occlusion there, 0.8791505 (LightProbes.CalculateInterpolatedLightAndOcclusionProbes), lies 1e-7 above the midpoint between two halves and Unbound's interpolation a few float steps below it; both round to nearest. Float arithmetic order, recorded, not chased": [
+  "world.texels"
+ ]
+}
