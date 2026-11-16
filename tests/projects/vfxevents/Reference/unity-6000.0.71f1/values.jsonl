@@ -1,0 +1,450 @@
+{"k":"systems/on die","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/always","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/rate","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/distance","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/at birth","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/two","v":"System, System (1), System (3), System (5) | particle: System (1), System (3), System (5)"}
+{"k":"systems/chain","v":"System, System (1), System (3), System (5) | particle: System (1), System (3), System (5)"}
+{"k":"systems/keep","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/keep room","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/unclamped","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/reinit","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/stopped","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/keep reinit","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/toggled","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/keep toggled","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"systems/paused","v":"System, System (1), System (3) | particle: System (1), System (3)"}
+{"k":"sim/on die/f002","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/always/f002","v":"alive=3 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0"}
+{"k":"sim/rate/f002","v":"alive=2 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/distance/f002","v":"alive=1 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f002","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/two/f002","v":"alive=-3 culled=0 awake=0 | System (1): alive=0 capacity=8 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1 | System (5): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/chain/f002","v":"alive=-3 culled=0 awake=0 | System (1): alive=0 capacity=8 sleeping=1 | System (3): alive=0 capacity=32 sleeping=1 | System (5): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/keep/f002","v":"alive=1 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f002","v":"alive=1 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f002","v":"alive=2 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=0 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f002","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/stopped/f002","v":"alive=2 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f002","v":"alive=1 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f002","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/keep toggled/f002","v":"alive=1 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f002","v":"alive=3 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0"}
+{"k":"sim/on die/f003","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/always/f003","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f003","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f003","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f003","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/two/f003","v":"alive=-3 culled=0 awake=0 | System (1): alive=0 capacity=8 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1 | System (5): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/chain/f003","v":"alive=-3 culled=0 awake=0 | System (1): alive=0 capacity=8 sleeping=1 | System (3): alive=0 capacity=32 sleeping=1 | System (5): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/keep/f003","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f003","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f003","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f003","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/stopped/f003","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f003","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f003","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/keep toggled/f003","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f003","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f004","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/always/f004","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f004","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f004","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/two/f004","v":"alive=-3 culled=0 awake=0 | System (1): alive=0 capacity=8 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1 | System (5): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/chain/f004","v":"alive=-3 culled=0 awake=0 | System (1): alive=0 capacity=8 sleeping=1 | System (3): alive=0 capacity=32 sleeping=1 | System (5): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/keep/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f004","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f004","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/stopped/f004","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f004","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/keep toggled/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f004","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f005","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f005","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f005","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f005","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/two/f005","v":"alive=-3 culled=0 awake=0 | System (1): alive=0 capacity=8 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1 | System (5): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/chain/f005","v":"alive=-3 culled=0 awake=0 | System (1): alive=0 capacity=8 sleeping=1 | System (3): alive=0 capacity=32 sleeping=1 | System (5): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/keep/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f005","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f005","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f005","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f005","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f005","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f006","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f006","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f006","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f006","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/two/f006","v":"alive=-3 culled=0 awake=0 | System (1): alive=0 capacity=8 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1 | System (5): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/chain/f006","v":"alive=-3 culled=0 awake=0 | System (1): alive=0 capacity=8 sleeping=1 | System (3): alive=0 capacity=32 sleeping=1 | System (5): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/keep/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f006","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f006","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f006","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f006","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f006","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f010","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f010","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f010","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f010","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f010","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f010","v":"alive=-3 culled=0 awake=1 | System (1): alive=0 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f010","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f010","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f010","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f010","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f010","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f020","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f020","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f020","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f020","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f020","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f020","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f020","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f020","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f020","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f020","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f020","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f030","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f030","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f030","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f030","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f030","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f030","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f030","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f030","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/stopped/f030","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f030","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f030","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f031","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f031","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f031","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f031","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f031","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f031","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f031","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f031","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/stopped/f031","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f031","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f031","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f032","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f032","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f032","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f032","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f032","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f032","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f032","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f032","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/stopped/f032","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f032","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f032","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f033","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f033","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f033","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f033","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f033","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f033","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f033","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f033","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f033","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f033","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f033","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/stopped/f033","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f033","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f033","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f033","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f033","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f034","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f034","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f034","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f034","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f034","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f034","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f034","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f034","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f034","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f034","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f034","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f034","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f034","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f034","v":"alive=-2 culled=1 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/keep toggled/f034","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f034","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f035","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f035","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f035","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f035","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f035","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f035","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f035","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f035","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f035","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f035","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/keep toggled/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f035","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f036","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f036","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f036","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f036","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f036","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f036","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f036","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f036","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f036","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f036","v":"alive=-2 culled=0 awake=0 | System (1): alive=0 capacity=16 sleeping=1 | System (3): alive=0 capacity=64 sleeping=1"}
+{"k":"sim/keep toggled/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f036","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f040","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f040","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f040","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f040","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f040","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f040","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f040","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f040","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f040","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f040","v":"alive=-2 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f040","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f045","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f045","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f045","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f045","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f045","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f045","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f045","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f045","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f045","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f045","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f045","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f045","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f045","v":"alive=1 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f045","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f045","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f045","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f046","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f046","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f046","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f046","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f046","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f046","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f046","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f046","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f046","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f046","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f046","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f046","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f046","v":"alive=1 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f046","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f046","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f046","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f048","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f048","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f048","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f048","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f048","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f048","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f048","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f048","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f048","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f048","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f048","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f048","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f048","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f048","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f048","v":"alive=-1 culled=1 awake=0 | System (1): alive=0 capacity=4 sleeping=1 | System (3): alive=0 capacity=24 sleeping=1"}
+{"k":"sim/paused/f048","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f049","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f049","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f049","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f049","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f049","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f049","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f049","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f049","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f049","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f049","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f049","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f049","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f049","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f049","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f049","v":"alive=1 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f049","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f050","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f050","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f050","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f050","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f050","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f050","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f050","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f050","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f050","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f050","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f050","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f050","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f050","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f050","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f050","v":"alive=1 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f050","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f060","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f060","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f060","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f060","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f060","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f060","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f060","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f060","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f060","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f060","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f060","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f062","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f062","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/rate/f062","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/distance/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f062","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f062","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f062","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f062","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f062","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f062","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f062","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f062","v":"alive=12 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on die/f063","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f063","v":"alive=32 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=28 capacity=32 sleeping=0"}
+{"k":"sim/rate/f063","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
+{"k":"sim/distance/f063","v":"alive=12 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=10 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f063","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f063","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f063","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f063","v":"alive=26 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=24 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f063","v":"alive=42 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=40 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f063","v":"alive=93 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=90 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f063","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f063","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f063","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f063","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f063","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f063","v":"alive=32 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=28 capacity=32 sleeping=0"}
+{"k":"sim/on die/f064","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f064","v":"alive=32 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=28 capacity=32 sleeping=0"}
+{"k":"sim/rate/f064","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
+{"k":"sim/distance/f064","v":"alive=12 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=10 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f064","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f064","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f064","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f064","v":"alive=26 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=24 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f064","v":"alive=42 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=40 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f064","v":"alive=93 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=90 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f064","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f064","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f064","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f064","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f064","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f064","v":"alive=32 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=28 capacity=32 sleeping=0"}
+{"k":"sim/on die/f065","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f065","v":"alive=32 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=28 capacity=32 sleeping=0"}
+{"k":"sim/rate/f065","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
+{"k":"sim/distance/f065","v":"alive=12 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=10 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f065","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f065","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f065","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f065","v":"alive=26 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=24 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f065","v":"alive=42 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=40 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f065","v":"alive=93 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=90 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f065","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f065","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f065","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f065","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f065","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f065","v":"alive=32 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=28 capacity=32 sleeping=0"}
+{"k":"sim/on die/f066","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/always/f066","v":"alive=32 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=28 capacity=32 sleeping=0"}
+{"k":"sim/rate/f066","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
+{"k":"sim/distance/f066","v":"alive=12 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=10 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f066","v":"alive=4 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
+{"k":"sim/two/f066","v":"alive=3 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0 | System (5): alive=2 capacity=64 sleeping=0"}
+{"k":"sim/chain/f066","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f066","v":"alive=26 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=24 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f066","v":"alive=42 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=40 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f066","v":"alive=93 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=90 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f066","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f066","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f066","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f066","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f066","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f066","v":"alive=32 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=28 capacity=32 sleeping=0"}
+{"k":"sim/on die/f070","v":"alive=15 culled=0 awake=1 | System (1): alive=3 capacity=16 sleeping=0 | System (3): alive=12 capacity=64 sleeping=0"}
+{"k":"sim/always/f070","v":"alive=32 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=28 capacity=32 sleeping=0"}
+{"k":"sim/rate/f070","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
+{"k":"sim/distance/f070","v":"alive=12 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=10 capacity=64 sleeping=0"}
+{"k":"sim/at birth/f070","v":"alive=12 culled=0 awake=1 | System (1): alive=3 capacity=16 sleeping=0 | System (3): alive=9 capacity=64 sleeping=0"}
+{"k":"sim/two/f070","v":"alive=25 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (3): alive=6 capacity=64 sleeping=0 | System (5): alive=16 capacity=64 sleeping=0"}
+{"k":"sim/chain/f070","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0 | System (3): alive=0 capacity=32 sleeping=0 | System (5): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep/f070","v":"alive=26 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=24 capacity=24 sleeping=0"}
+{"k":"sim/keep room/f070","v":"alive=42 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=40 capacity=96 sleeping=0"}
+{"k":"sim/unclamped/f070","v":"alive=93 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=90 capacity=128 sleeping=0"}
+{"k":"sim/reinit/f070","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/stopped/f070","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
+{"k":"sim/keep reinit/f070","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/toggled/f070","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=16 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
+{"k":"sim/keep toggled/f070","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=4 sleeping=0 | System (3): alive=0 capacity=24 sleeping=0"}
+{"k":"sim/paused/f070","v":"alive=32 culled=0 awake=1 | System (1): alive=4 capacity=8 sleeping=0 | System (3): alive=28 capacity=32 sleeping=0"}
+{"k":"capture/graphs imported while playing","v":""}
+{"k": "complete", "v": true}
