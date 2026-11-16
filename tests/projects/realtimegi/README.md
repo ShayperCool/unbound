@@ -199,9 +199,10 @@ there. Then `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`.
 `room-delegate-inversesquared` and `room-delegate-norange` (InverseSquaredNoRangeAttenuation)
 with its range 4, `room-delegate-linear` (Linear) at its own range,
 `room-delegate-linear-range6` with its range 6 and `room-delegate-linear-near` at its own range
-0.4 below the ceiling (the spot light is off in all of them). Last,
-`lights-dilatedrange`: `Light.dilatedRange` of a light of range 5 as a rectangle (2 x 1, 3 x 3, no size), a disc (`areaSize` 1.5 by 0.3 and by 7, 4 by 0.3), and a
-point, spot, directional, pyramid, box and tube light of `areaSize` 2 x 1, and the range
+0.4 below the ceiling (the spot light is off in all of them). Last, `lights-dilatedrange`:
+`Light.dilatedRange` of a light of range 5 as a rectangle (2 x 1, 3 x 3, no size), a disc
+(`areaSize` 1.5 by 0.3 and by 7, 4 by 0.3), and a point, spot, directional, pyramid, box and
+tube light of `areaSize` 2 x 1, and the range
 `LightmapperUtils.Extract` gives the 2 x 1 rectangle and the first disc.
 
 With `--color-space gamma` the same project is in the gamma color space (run.py changes the

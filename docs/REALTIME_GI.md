@@ -181,7 +181,8 @@ ambient color, and a skybox at ambient intensities 1 and 2; lightmaps, light pro
   delegate cases are 0.5% darker, more so in the far texels (the short-range residual below).
   With the light 0.4 below the ceiling (`room-delegate-linear-near`, range 10), the ceiling
   above it reads the table between its innermost sample and the light, where the sample at the
-  light of 1 fits: 3 isolated values, its brightest texels 2-5% below the Editor's as in
+  light of 1 fits: 3 isolated values (and 3 band-1 coefficients of one light probe reported,
+  15-19% off), its brightest texels 2-5% below the Editor's as in
   `room-delegate-linear` (with that sample at the range the falloff right above the light would
   be 2.5 times as large). At range 4 the floor's texels next to the left wall show the
   short-range residual below (a capture outside the reference: texels (8,10) to (8,12) 11-20%
