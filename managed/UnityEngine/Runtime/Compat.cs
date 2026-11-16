@@ -89,6 +89,12 @@ namespace Unbound.Runtime
         /// measured by defaultstate on 6000.0.71f1. Other releases keep their unmeasured previous rules.</summary>
         internal static bool RefreshRateFractionsMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Scene loads the build list cannot serve: the build profile wording and the
+        /// error of an empty name or a negative index, measured by apierrors on 6000.0.71f1.
+        /// Other releases keep the earlier build settings wording (releases before Unity 6 have no
+        /// build profiles; later ones are not measured).</summary>
+        internal static bool BuildProfileLoadErrorsMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Component factory eligibility measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous, unmeasured creation rules.</summary>
         internal static bool ComponentFactoryEligibilityMeasured => Release == (6000, 0, 71, 'f', 1);

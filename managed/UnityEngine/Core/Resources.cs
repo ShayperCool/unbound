@@ -102,16 +102,22 @@ namespace UnityEngine
         public static void UnloadAsset(Object assetToUnload)
         {
             if (assetToUnload == null) return;
-            // An object that is no asset is refused first, whatever its class
-            // (tests/projects/apierrors `resources.unload_game_object`).
+            const string notIndividual = "UnloadAsset may only be used on individual assets and can not be used on GameObject's / Components / AssetBundles or GameManagers";
+            if (assetToUnload is AssetBundle)
+            {
+                Debug.LogError(notIndividual);
+                return;
+            }
+            // A GameObject or component that is no asset is refused as any other object that is
+            // no asset (tests/projects/apierrors `resources.unload_game_object`).
             if (!assetToUnload.IsPersistentAsset)
             {
                 Debug.LogError("UnloadAsset can only be used on assets;");
                 return;
             }
-            if (assetToUnload is GameObject || assetToUnload is Component || assetToUnload is AssetBundle)
+            if (assetToUnload is GameObject || assetToUnload is Component)
             {
-                Debug.LogError("UnloadAsset may only be used on individual assets and can not be used on GameObject's / Components / AssetBundles or GameManagers");
+                Debug.LogError(notIndividual);
                 return;
             }
             // A custom render texture asset stops updating (its unload event fires) and frees its

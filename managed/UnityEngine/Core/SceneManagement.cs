@@ -378,18 +378,31 @@ namespace UnityEngine.SceneManagement
     }
 
     /// <summary>The errors of a scene load the build list cannot serve, as the Unity 6000.0.71f1
-    /// Editor logs them (tests/projects/apierrors `scene.load_*`).</summary>
+    /// Editor logs them (tests/projects/apierrors `scene.load_*`): an empty name or a negative
+    /// index has its own error. Other releases keep the build settings wording
+    /// (<see cref="Compat.BuildProfileLoadErrorsMeasured"/>).</summary>
     static class SceneLoadErrors
     {
-        const string Hint = "\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles";
+        const string ProfileHint = "\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles";
 
-        internal static void Name(string sceneName) =>
-            Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the active build profile or shared scene list or the AssetBundle has not been loaded.{Hint}");
+        internal static void Name(string sceneName)
+        {
+            if (!Compat.BuildProfileLoadErrorsMeasured)
+                Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the build settings or the AssetBundle has not been loaded.\nTo add a scene to the build settings use the menu File->Build Settings...");
+            else if (string.IsNullOrEmpty(sceneName)) Unnamed(-1);
+            else Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the active build profile or shared scene list or the AssetBundle has not been loaded.{ProfileHint}");
+        }
 
-        internal static void BuildIndex(int buildIndex) =>
-            Debug.LogError(buildIndex < 0
-                ? $"Cannot load scene: Invalid scene name (empty string) and invalid build index {buildIndex}"
-                : $"Scene with build index: {buildIndex} couldn't be loaded because it has not been added to the active build profile or shared scene list.{Hint}");
+        internal static void BuildIndex(int buildIndex)
+        {
+            if (!Compat.BuildProfileLoadErrorsMeasured)
+                Debug.LogError($"Scene with build index: {buildIndex} couldn't be loaded because it has not been added to the build settings.");
+            else if (buildIndex < 0) Unnamed(buildIndex);
+            else Debug.LogError($"Scene with build index: {buildIndex} couldn't be loaded because it has not been added to the active build profile or shared scene list.{ProfileHint}");
+        }
+
+        static void Unnamed(int buildIndex) =>
+            Debug.LogError($"Cannot load scene: Invalid scene name (empty string) and invalid build index {buildIndex}");
     }
 
     public static partial class SceneUtility

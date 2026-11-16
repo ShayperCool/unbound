@@ -156,7 +156,8 @@ namespace UnityEngine
         public static AssetBundleCreateRequest LoadFromMemoryAsync(byte[] binary) => LoadFromMemoryAsync(binary, 0);
         public static AssetBundleCreateRequest LoadFromMemoryAsync(byte[] binary, uint crc) => LoadFromMemoryAsync_Internal(binary, crc);
         internal static AssetBundleCreateRequest LoadFromMemoryAsync_Internal(byte[] binary, uint crc) =>
-            Request(LoadFromMemory(binary ?? throw new NullReferenceException(ObjectErrors.RuntimeNullReference), crc));
+            // No data makes no request (tests/projects/apierrors `bundle.load_memory_async_null_request`).
+            binary == null ? null : Request(LoadFromMemory(binary, crc));
 
         public static AssetBundleCreateRequest LoadFromStreamAsync(Stream stream) => LoadFromStreamAsync(stream, 0, 0);
         public static AssetBundleCreateRequest LoadFromStreamAsync(Stream stream, uint crc) => LoadFromStreamAsync(stream, crc, 0);
