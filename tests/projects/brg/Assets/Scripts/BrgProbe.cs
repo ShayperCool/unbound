@@ -89,11 +89,13 @@ public unsafe class BrgProbe : MonoBehaviour
             Errors();
             ForwardPlus();
             LocalShadows();
-            Sorting();
+            Sorting("sorting", false, s_ApproximateDepths);
             SplitMasks("split_masks", 0.25f);
             // The same pillars with the cascades split at 1/20 of the shadow distance: their
             // shadows fall in the second cascade.
             SplitMasks("split_masks_second", 0.05f);
+            // The sorting scenario through an orthographic camera framing the same quads.
+            Sorting("sorting_ortho", true, s_OrthographicDepths);
         }
         catch (Exception e)
         {
@@ -554,6 +556,9 @@ public unsafe class BrgProbe : MonoBehaviour
     /// <summary>The c5 rows' approximate depths, around minus the blue renderer's distance (about
     /// 6.5) and minus its square (about 43).</summary>
     static readonly float[] s_ApproximateDepths = { -50f, -20f, -10f, -5f, -2f, 0f, 3f, 1000000f, -1000000f };
+    /// <summary>The orthographic camera's c5 depths, around minus the blue renderer's view depth (6),
+    /// minus its square (36) and minus the square of its distance (about 42 to 44).</summary>
+    static readonly float[] s_OrthographicDepths = { -50f, -44f, -40f, -37f, -35f, -10f, -7f, -5f, -2f };
 
     static readonly Color SortGreen = new Color(0.1f, 0.9f, 0.2f, 0.5f), SortRed = new Color(0.95f, 0.1f, 0.1f, 0.5f),
         SortBlue = new Color(0.1f, 0.2f, 0.95f, 0.5f);
@@ -590,8 +595,19 @@ public unsafe class BrgProbe : MonoBehaviour
     /// <see cref="s_ApproximateDepths"/>; c6, a flagged red command whose position is 1 nearer, 1
     /// farther than the blue renderer; c7, one flagged command of two instances, red 1 nearer and
     /// green 1 farther than a blue renderer at the same place.</summary>
-    void Sorting()
+    void Sorting(string name, bool orthographic, float[] depths)
     {
+        m_SortPlaces.Clear();
+        m_SortColors.Clear();
+        m_SortPositions.Clear();
+        bool wasOrthographic = m_Camera.orthographic;
+        float size = m_Camera.orthographicSize;
+        if (orthographic)
+        {
+            // The quads' framing at their depth (6) as the perspective camera shows it.
+            m_Camera.orthographic = true;
+            m_Camera.orthographicSize = 6f * Mathf.Tan(0.5f * m_Camera.fieldOfView * Mathf.Deg2Rad);
+        }
         var unlit = Shader.Find("Universal Render Pipeline/Unlit");
         var t = m_TransparentMaterial = new Material(unlit);
         // As URP's material validation sets an alpha-blended transparent surface.
@@ -609,7 +625,7 @@ public unsafe class BrgProbe : MonoBehaviour
         t.SetShaderPassEnabled("ShadowCaster", false);
         t.SetColor("_BaseColor", Color.white);
         m_Transparent = m_Brg.RegisterMaterial(t);
-        Row("sorting.ids.material", m_Transparent.value);
+        Row(name + ".ids.material", m_Transparent.value);
 
         const float Depth = 6f;
         var fwd = m_Camera.transform.forward;
@@ -655,11 +671,11 @@ public unsafe class BrgProbe : MonoBehaviour
             var p = Place(2.4f, rows[r], Depth);
             float d = (p - m_Camera.transform.position).magnitude;
             Blue(p);
-            float depth = s_ApproximateDepths[r];
+            float depth = depths[r];
             int i = SortInstance(p, SortRed, p);
             m_SortCommands.Add((i, 1, false, (int)depth));
-            Row("sorting.c5.r" + r + ".approximateDepth", (int)depth);
-            Row("sorting.c5.r" + r + ".distance", Round(d));
+            Row(name + ".c5.r" + r + ".approximateDepth", (int)depth);
+            Row(name + ".c5.r" + r + ".distance", Round(d));
         }
         for (int r = 0; r < 2; r++)
         {
@@ -706,7 +722,7 @@ public unsafe class BrgProbe : MonoBehaviour
             : m_Brg.AddBatch(metadata, m_SortBuffer.bufferHandle);
         metadata.Dispose();
 
-        Scenario("sorting");
+        Scenario(name);
         RecordViews();
         // The colour at each command's first quad's centre (the overlaps show the drawing order),
         // projected as the 320x180 target renders it.
@@ -717,7 +733,7 @@ public unsafe class BrgProbe : MonoBehaviour
             var place = m_SortPlaces[m_SortCommands[c].First];
             var v = m_Camera.WorldToViewportPoint(place);
             var pixel = m_LastImage.GetPixel((int)(v.x * Width), (int)(v.y * Height));
-            Row("sorting.command" + c + ".pixel", new double[] { Math.Round(pixel.r, 3), Math.Round(pixel.g, 3), Math.Round(pixel.b, 3) });
+            Row(name + ".command" + c + ".pixel", new double[] { Math.Round(pixel.r, 3), Math.Round(pixel.g, 3), Math.Round(pixel.b, 3) });
         }
         m_Camera.targetTexture = null;
         RenderTexture.ReleaseTemporary(target);
@@ -725,6 +741,8 @@ public unsafe class BrgProbe : MonoBehaviour
         m_Brg.RemoveBatch(m_SortBatch);
         m_SortBuffer.Dispose();
         m_SortCommands.Clear();
+        m_Camera.orthographic = wasOrthographic;
+        m_Camera.orthographicSize = size;
     }
 
     /// <summary>The sorting scenario's commands (camera views only; one range).</summary>
@@ -906,7 +924,7 @@ public unsafe class BrgProbe : MonoBehaviour
             SplitMaskCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
             return new JobHandle();
         }
-        if (m_Scenario == "sorting")
+        if (m_Scenario == "sorting" || m_Scenario == "sorting_ortho")
         {
             if (context.viewType == BatchCullingViewType.Camera) SortingCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
             return new JobHandle();

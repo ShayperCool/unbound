@@ -57,6 +57,11 @@ view type how many callbacks ran. Scenarios:
   one by one at their world positions among the other draws; an unflagged command sorts as if
   minus its `sortingPosition` were its squared camera distance (nearer than the renderer from
   -20 up, farther at -50 and below), equal values in command order, its instances in their order.
+  `sorting_ortho`: the same through an orthographic camera framing the quads alike (size 6 tan of
+  half the field of view), the c5 depths from -50 to -2: an unflagged command sorts as if minus its
+  `sortingPosition` were the renderer's view depth, 6 (nearer from -5 up, farther at -7 and
+  below), the orthographic camera's own distance metric; flagged commands sort at their positions
+  as through the perspective camera.
 
 - `split_masks`: the sun casts hard shadows in two cascades onto a large ground; four pillars
   near the camera, their shadows in the first cascade, are drawn by commands of
