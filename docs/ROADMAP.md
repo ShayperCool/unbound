@@ -127,7 +127,8 @@ In dependency order; each item ends with an Editor-reference probe.
       vertex and SH lights, and shadows (the camera depth texture, directional cascades through
       Unity's screen-space collector, spot maps, point cubes, other shadowed suns' own masks);
       `tests/projects/lighting` matches the Editor (shadows within 1/255 on average). Left: the
-      default spot cookie is a fitted curve (the cone's edge, 2/255).
+      default spot cookie is a fitted curve (the cone's edge, 2/255 on average, up to 57/255), and
+      the open built-in lighting images of docs/COMPATIBILITY_GAPS.md.
 - [x] LODGroup: the level each camera draws by the group's screen-relative height (LOD bias,
       maximumLODLevel, ForceLOD, orthographic cameras), shadows cast by the drawn level, read from
       scenes and prefabs; terrain trees of LOD prefabs (`tests/projects/lod`: transitions within a

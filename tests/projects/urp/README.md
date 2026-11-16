@@ -87,7 +87,8 @@ list records the rest with their reasons: `upscale_stp` (open, queued) and `upsc
 (the render scale's integer size without Mono's wider floats, an opt-in) from the gap rows, the
 lightmap scenarios' shadow edge above, and on Vulkan the screen-space decals' edge pixels
 (`decal_screen_space_forward` 160 pixels up to 31/255, `decal_screen_space_deferred` 1205 up to 5,
-`decal_layers_forward` 133 up to 22; not traced). Any other difference fails.
+`decal_layers_forward` 133 up to 22; not traced, open in docs/COMPATIBILITY_GAPS.md). Any other
+difference fails.
 
 `texture-formats.jsonl` (compared by `compare_constants.py`) records the `format` of the cookie
 textures, of two Single Channel textures (Alpha and Red) and of the baked lightmaps, with each
