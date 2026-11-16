@@ -1939,10 +1939,6 @@ namespace UnityEngine.UIElements
         bool forceGammaRendering { get; set; }
         uint vertexBudget { get; set; }
     }
-    internal unsafe partial interface IPointerCaptureEventInternal
-    {
-        int pointerId { get; }
-    }
     internal unsafe partial interface IScheduler
     {
         global::UnityEngine.UIElements.ScheduledItem ScheduleOnce(global::System.Action<global::UnityEngine.UIElements.TimerState> timerUpdateEvent, long delayMs);
