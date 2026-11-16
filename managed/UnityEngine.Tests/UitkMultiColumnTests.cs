@@ -211,23 +211,27 @@ namespace UnityEngine.Tests
             Assert.True(layout.isDirty);
         }
 
-        [Fact]
-        public void ALingeringLayoutMakesRoomAgainstItsLastWidth()
+        [Theory]
+        // tests/projects/columnlayout stale.show: laid out last at 400, the old layout makes room.
+        [InlineData(400f, 100f)]
+        // Laid out last at 600, it has room and leaves the columns.
+        [InlineData(600f, 150f)]
+        public void ALingeringLayoutMakesRoomAgainstItsLastWidth(float lastWidth, float stretched)
         {
             var columns = new Columns { stretchMode = Columns.StretchMode.Grow };
             columns.Add(new Column { name = "a", width = 150, maxWidth = 150, stretchable = true });
             columns.Add(new Column { name = "b", width = 150, maxWidth = 150, stretchable = true });
             columns.Add(new Column { name = "c", width = 200, visible = false });
             var old = new MultiColumnCollectionHeader(columns, new SortColumnDescriptions(), new List<SortColumnDescription>());
-            old.columnLayout.DoLayout(400);
+            old.columnLayout.DoLayout(lastWidth);
             old.Dispose();
             var current = new ColumnLayout(columns);
             current.DoLayout(600);
             columns["c"].visible = true;
             current.DoLayout(600);
-            // tests/projects/columnlayout stale.show: 100, 100, 200.
-            Assert.Equal(100f, columns["a"].desiredWidth);
-            Assert.Equal(100f, columns["b"].desiredWidth);
+            Assert.Equal(stretched, columns["a"].desiredWidth);
+            Assert.Equal(stretched, columns["b"].desiredWidth);
+            Assert.Equal(200f, columns["c"].desiredWidth);
         }
 
         [Fact]
