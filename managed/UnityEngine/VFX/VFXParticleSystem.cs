@@ -82,6 +82,8 @@ namespace Unbound.Runtime
         bool m_ReadbackPending;
         uint m_ReadbackFrame;
         int m_ReadbackGeneration, m_RequestGeneration;
+        /// <summary>The last frame the system was updated in (stepped, or found asleep).</summary>
+        uint m_UpdatedFrame;
         Action<AsyncGPUReadbackRequest> m_OnReadback;
 
         internal VFXParticleSystem(VisualEffect effect, int index, IReadOnlyList<VFXSystem> systems) : base(effect, index)
@@ -346,6 +348,7 @@ namespace Unbound.Runtime
         internal override void Update(VisualEffectState state)
         {
             if (!KernelsUsable()) return;
+            m_UpdatedFrame = VFXManager.Frame;
             foreach (var spawner in m_Spawners) TakeEvent(spawner.State.Attribute.Words);
             m_Total += m_Spawned;
             UpdateSleepState(state.FrameIndex);
@@ -447,12 +450,13 @@ namespace Unbound.Runtime
         }
 
         /// <summary>After the frame's steps: asks the GPU for the alive count of a system that
-        /// kills particles, once a period, and takes an answer that arrived.</summary>
+        /// kills particles, once a period, in a frame it was updated in (an effect culled out
+        /// of its simulation asks nothing: tests/projects/vfxoutputs `away`).</summary>
         internal void UpdateReadback()
         {
             if (!HasKill || HasStrips || m_DeadList < 0 || Capacity == 0 || !m_HasRenderer) return;
             uint frame = VFXManager.Frame;
-            if (m_ReadbackPending || m_NextReadbackFrame > frame || m_Sleeping) return;
+            if (m_ReadbackPending || m_NextReadbackFrame > frame || m_Sleeping || m_UpdatedFrame != frame) return;
             m_ReadbackPending = true;
             m_ReadbackFrame = frame;
             m_RequestGeneration = m_ReadbackGeneration;
