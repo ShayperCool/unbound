@@ -30,7 +30,7 @@ unmeasured. Spatial six-input sources are covered by [SIX_SPATIAL.md](SIX_SPATIA
 six-channel clips are not covered here.
 
 The engine implements this balance and these matrices for non-streamed 2D six-input voices
-on this release (`Compat` AudioOutputRules.six_channel_2d_voices). `context_run.py --profile
+on this release (`Compat` AudioOutputRules.six_channel_voices). `context_run.py --profile
 six-layouts` gates every control at both rates: all 8,323,278 values per rate pass, with
 no failure in the strict comparison either (existing bounds, device PCM compared without
 a 16-bit step). Streamed six-input voices still fail to start with the existing diagnostic. Record two fresh projects per rate with `native.py --release 6000.0.71f1 --rate

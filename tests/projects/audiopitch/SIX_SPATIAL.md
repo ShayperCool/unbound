@@ -47,8 +47,11 @@ Mono, Stereo and 5.1 output.
   2D: its 2D gains are half of each balance gain on the front pair (none on LFE), averaged into
   the Mono speaker at 0.707 times each, and its 3D part averages the two spread directions.
 
-Spatial six-input voices in Prologic output are not measured and fail to start with the
-existing diagnostic. Streamed six-channel clips, other input widths, physical drivers and other
+Unmeasured parts of these rules: a source straight above or below the listener (no lateral or
+forward component at a distance) takes the listener-position level, but every such control is
+at the listener's position itself; the mono-clip spread rule is measured in Mono, Stereo and 5.1
+output only and applied in Quad, Surround, 7.1 and Prologic as well. Spatial six-input voices in
+Prologic output are not measured and fail to start with the existing diagnostic. Streamed six-channel clips, other input widths, physical drivers and other
 backends are not covered here.
 
 The engine implements these rules on this release (`Compat` AudioOutputRules.six_channel_voices

@@ -2978,13 +2978,7 @@ impl Mixer {
                 VoiceGains::stereo(
                     s.matrix.map(|g| g * volume),
                     s.mono_matrix.map(|m| m.map(|g| g * volume)),
-                    (source.params.spatial_blend <= 0.0
-                        && source
-                            .params
-                            .spatial_blend_curve
-                            .iter()
-                            .all(|value| *value <= 0.0))
-                    .then_some(source.params.pan_stereo),
+                    two_d(&source.params).then_some(source.params.pan_stereo),
                 )
             };
             gains.six_input_mode =

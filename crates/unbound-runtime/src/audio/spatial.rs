@@ -237,10 +237,16 @@ pub struct MonoGains {
 /// constant, not 1/sqrt(2) (Unity 6000.0.71f1, tests/projects/audiopitch `context_mono_plain`).
 pub const STEREO_TO_MONO: f32 = 0.707;
 
-/// The mono downmix's weight of the centre speaker's squared level, and of each of the four
-/// surround and side speakers' (the front pair's is 1).
-const MONO_DOWNMIX_CENTRE: f32 = 0.5;
-const MONO_DOWNMIX_SURROUND: f32 = 0.25;
+/// The level a source at the listener's position gives each of a layout's speakers, times the
+/// speaker count: `sqrt(2) / count` each, the single Mono speaker included (tests/projects/
+/// audiopitch SIX_SPATIAL.md and `context_*_3d_*`).
+const AT_LISTENER: f32 = std::f32::consts::SQRT_2;
+
+/// A mono clip at the listener in Mono output: the summed downmix weight of the squared levels
+/// of the speakers beyond the front pair (centre, surround and side), each at [`AT_LISTENER`].
+/// Measured as a sum (`_centre_monoclip`, full and half blend); its split between the speakers
+/// is not.
+const MONO_DOWNMIX_BEYOND_FRONT: f32 = 1.5;
 
 impl MonoGains {
     /// `pan`: `panStereo`; `panning`: the source's blend, attenuation, direction and spread;
@@ -251,11 +257,7 @@ impl MonoGains {
         let [l2, r2] = balance(pan);
         let pan = pan.clamp(-1.0, 1.0);
         let centre = measured && panning.direction.is_none_or(|(x, z)| x == 0.0 && z == 0.0);
-        let three_d = if centre {
-            std::f32::consts::SQRT_2
-        } else {
-            1.0
-        };
+        let three_d = if centre { AT_LISTENER } else { 1.0 };
         let mono = if measured && panning.spread > 0.0 {
             // Two spread directions, mixed like a stereo clip's channels, then averaged.
             flat * (STEREO_TO_MONO * ((l2 + r2) * 0.5)) + blend * three_d
@@ -268,7 +270,7 @@ impl MonoGains {
                 flat * ((1.0 + pan) * 0.5).sqrt() + if centre { blend * three_d } else { 0.0 };
             let others = if centre {
                 let level = blend * three_d;
-                (MONO_DOWNMIX_CENTRE + 4.0 * MONO_DOWNMIX_SURROUND) * level * level
+                MONO_DOWNMIX_BEYOND_FRONT * level * level
             } else {
                 0.0
             };
@@ -604,7 +606,7 @@ impl SpeakerLayout {
     fn pan(&self, x: f32, z: f32, levels: &mut [f32; 8]) {
         let speakers = &self.speakers[..self.count];
         if x == 0.0 && z == 0.0 {
-            let level = std::f32::consts::SQRT_2 / self.count as f32;
+            let level = AT_LISTENER / self.count as f32;
             for speaker in speakers {
                 levels[speaker.channel] += level;
             }
@@ -775,7 +777,7 @@ pub fn input_levels_3d(speakers: Speakers<'_>, panning: &Panning, turn: f32, out
     match speakers {
         Speakers::Mono => {
             out[0] = if x == 0.0 && z == 0.0 {
-                std::f32::consts::SQRT_2
+                AT_LISTENER
             } else {
                 1.0
             };
