@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/bundlenames/run.py gate"
+  ],
+  "summary": "bundlenames: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Runtime/AssetBundles.cs"
+  ]
+}

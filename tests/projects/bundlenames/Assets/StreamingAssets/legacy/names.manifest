@@ -1,0 +1,30 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.0.71f1
+CRC: 3552166262
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 22b9b83f8475b40f2e859fa89489055e
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: e63c4f0380c8173c98827025a66d23cc
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 70a194519bf329ef8baf3c896dd738e5
+HashAppended: 0
+ClassTypes:
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 49
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: 9b2b2a572f51cec81a2421f13d9592f5, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- "Assets/Bundled/\xDCn\xEFcode.txt"
+- Assets/Bundled/Notes.txt
+- Assets/Bundled/Data.asset
+- Assets/Bundled/Checker.png
+Dependencies: []
