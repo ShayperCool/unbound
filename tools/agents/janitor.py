@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Conservative disk hygiene for run caches, completed tasks and orphan targets.
+"""Conservative disk hygiene for validation runs, completed tasks and orphan targets.
 
 Default is dry-run. Use --apply after inspecting it. JSON lines go to stdout and
 agents/janitor/<timestamp>.jsonl. No worktree or live checkout target is removed.
@@ -55,6 +55,11 @@ MAX_UNVERIFIED_NAMES = 2_000_000
 # beyond that monitoring counts as broken.
 MAX_SENTINEL_DESTINATIONS = 100_000
 MAX_REDISCOVERIES = 2
+# Time per run for reading sheriff suites' JSON and log files that are new or changed since an
+# earlier run read them (a finished suite holds about 2,000 such files, 250 MB; 57 suites).
+SUITE_REFERENCE_SECONDS = 900
+# An absolute path to a validation run in suite logs and JSON (any prefix: links lead there).
+RUN_REFERENCE = re.compile(rb'/[^\s"\'<>|;&(),=]*/unbound-validation/runs/[^\s"\'<>|;&(),]+')
 # Keep land's lock independent of a service manager or a historical backlog.
 GATE_HANDOFF_SECONDS = 2
 HARD_STOP_FREE_GIB = 10
@@ -208,6 +213,66 @@ def promoted_suite_paths(cache):
                                 continue
                             protected.update(command_paths(line, allow_root=line.startswith('$ ')))
     return {p.resolve() for p in protected} | protected, {p.resolve() for p in roots}
+
+
+def suite_run_references(roots, known, seconds):
+    """Validation-run paths named by the JSON and log files under roots (sheriff suites), with
+    the files read before (known: {file: [inode, size, mtime_ns, [references]]}) read again only
+    when they changed. Returns (references, files now known, complete). Stops reading at the
+    time budget; an incomplete read names only part of the references."""
+    deadline = time.monotonic()+seconds
+    files, found, complete = {}, set(), True
+    def walk_error(error):
+        if not gone(error):
+            raise error
+    for root in roots:
+        for directory, directories, names in os.walk(root, followlinks=False, onerror=walk_error):
+            for name in names:
+                if not name.endswith(('.json', '.log')):
+                    continue
+                path = os.path.join(directory, name)
+                try:
+                    info = os.lstat(path)
+                except OSError as error:
+                    if gone(error):
+                        continue
+                    raise
+                if not stat.S_ISREG(info.st_mode):
+                    continue
+                identity = [info.st_ino, info.st_size, info.st_mtime_ns]
+                entry = known.get(path)
+                if entry is None or entry[:3] != identity:
+                    if time.monotonic() > deadline:
+                        complete = False
+                        continue
+                    with open(path, 'rb') as stream:
+                        values = sorted({os.fsdecode(match) for match in RUN_REFERENCE.findall(stream.read())})
+                    entry = [*identity, values]
+                files[path] = entry
+                found.update(entry[3])
+    references = set()
+    for value in found:
+        references.update((Path(value), Path(os.path.realpath(value))))
+    return references, files, complete
+
+
+def ancestors(path):
+    path = os.fspath(path)
+    while True:
+        yield path
+        parent = os.path.dirname(path)
+        if parent == path:
+            return
+        path = parent
+
+
+def overlapping(keys, paths):
+    """The keys (path strings) that lie inside one of paths or hold one of them, without
+    comparing every pair."""
+    values = {os.fspath(path) for path in paths}
+    hits = {parent for value in values for parent in ancestors(value) if parent in keys}
+    hits.update(key for key in keys if key not in hits and any(parent in values for parent in ancestors(key)))
+    return hits
 
 
 def gone(error):
@@ -766,12 +831,12 @@ class Walk:
 
 
 def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root=None, prune=True, prefetch=False,
-                    complete=False, walk=None):
+                    complete=False, walk=None, sealed=frozenset()):
     """Resolve links at any depth, including directory aliases and link chains.
 
-    A link within a removal candidate conservatively keeps its target too. We
-    inspect configured caches and all checkouts; installations and compiler stores
-    are excluded. An incomplete index walk permits no deletion.
+    The inside of a sealed directory (a removal candidate, see Janitor.seal_runs) is not walked:
+    a link there is removed with it. We inspect configured caches and all checkouts;
+    installations and compiler stores are excluded. An incomplete index walk permits no deletion.
 
     The walk visits millions of directories, so its loop keeps paths as strings and
     builds Path objects only for links.
@@ -880,7 +945,7 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                             watcher.observe(target)
                     elif entry.kind == 'dir':
                         path = join(directory, entry.name)
-                        if path not in excluded_names:
+                        if path not in excluded_names and path not in sealed:
                             pending.append(path)
             if watcher:
                 pending.extend(map(str, watcher.poll()))
@@ -963,6 +1028,12 @@ class Janitor:
         self.discovery_attempts = self.batch_number = 0
         # A discovery walk that ran out of time, continued by the next attempt.
         self.walk = None
+        # Validation runs that sheriff suites name, and whether every suite file has been read.
+        self.sheriff_paths, self.sheriff_complete = set(), False
+        # Run candidates whose inside the reference walk skips, the links already checked
+        # against them, and what this run removed (see unseal).
+        self.sealed, self.sealed_links, self.removed_paths = set(), set(), []
+        self.sealed_rules_changed = False
 
     def emit(self, action, **fields):
         line = json.dumps({'time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -995,32 +1066,148 @@ class Janitor:
         # An attempt that ran out of time between batches left its walk; this attempt continues it.
         if self.walk is None or self.walk.pending is None:
             self.walk = Walk()
+            self.refresh_sheriff_references()
+            self.seal_runs()
         links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_budget(),
                                      watcher=self.watch, index_root=self.cache, prefetch=True, complete=True,
-                                     walk=self.walk)
+                                     walk=self.walk, sealed=self.sealed)
         self.walk = None
         self.links |= links
         self.refresh_baseline(force=True)
         self.emit('references_ready', watched_directories=len(self.watch.directories), references=len(self.links))
         self.processes = process_paths()
+        self.unseal_protected()
+
+    def refresh_sheriff_references(self):
+        """Validation runs named by any sheriff suite's JSON and logs (the promoted one is read
+        in full by promoted_suite_paths). Until every file has been read once, no run is removed."""
+        roots = sorted({path for base in (self.cache/'agents/suite', self.volume/'unbound-validation/suite')
+                        for path in base.glob('sheriff-*') if path.is_dir() and not path.is_symlink()})
+        state = self.cache/'agents/janitor/suite-references.json'
+        try:
+            known = json.loads(state.read_text())
+        except FileNotFoundError:
+            known = {}
+        references, files, complete = suite_run_references(roots, known, min(SUITE_REFERENCE_SECONDS,
+                                                                             self.scan_budget()))
+        state.parent.mkdir(parents=True, exist_ok=True)
+        temporary = state.with_name(state.name+f'.{os.getpid()}')
+        temporary.write_text(json.dumps(files))
+        os.replace(temporary, state)
+        self.sheriff_paths, self.sheriff_complete = references, complete
+        self.emit('sheriff_references', suites=len(roots), files=len(files), runs=len(references),
+                  complete=complete)
+
+    def seal_runs(self):
+        """Run candidates whose inside the reference walk skips: a link inside a directory being
+        removed goes with it and protects nothing. Only runs this run can remove are sealed (old
+        by their own timestamps, no name-level protection, every sheriff suite read); one that
+        turns out protected or kept is walked then (unseal), and its links protect from then on."""
+        self.sealed = set()
+        if not self.sheriff_complete:
+            return
+        cutoff = time.time()-max(self.idle_hours, self.run_days*24)*3600
+        for path, kind, _ in self.run_candidates():
+            try:
+                info = path.lstat()
+            except FileNotFoundError:
+                continue
+            if max(info.st_mtime, info.st_ctime) < cutoff:
+                self.sealed.add(str(path))
+        self.sealed -= self.named_protected(self.sealed)
+        self.emit('sealed', runs=len(self.sealed))
+
+    def named_protected(self, keys):
+        """named_protection() for many paths at once."""
+        hits = overlapping(keys, [*self.suite_paths, *self.sheriff_paths, *self.protected])
+        hits.update(key for key in keys if any(value.lower() in self.active for part in Path(key).parts
+                                               for value in re.findall(r'(?<![a-zA-Z0-9])q\d+(?!\d)', part, re.I)))
+        return hits
+
+    def unseal(self, path, reason):
+        """Walk a sealed run that is kept after all: its links protect from now on."""
+        key = str(path)
+        if key not in self.sealed:
+            return
+        self.sealed.discard(key)
+        self.emit('unseal', path=key, reason=reason)
+        links = reference_paths([path], excluded=self.excluded, seconds=self.scan_budget(), watcher=self.watch,
+                                index_root=self.cache, prune=False, sealed=self.sealed)
+        new = links-self.links
+        self.links |= links
+        for link in new:
+            if any(inside(link, removed) for removed in self.removed_paths):
+                # Removed earlier in this run while this run looked removable too.
+                self.emit('error', path=key, reason='a kept run links into a removed run', link=str(link))
+        self.unseal_protected()
+
+    def unseal_protected(self):
+        """Walk every sealed run that a link, a live process or a name-level rule now protects."""
+        while self.sealed:
+            hits = {}
+            fresh = self.links-self.sealed_links
+            self.sealed_links |= fresh
+            for paths, reason in ((fresh, 'symlink reference'), (self.processes, 'live process')):
+                for value in paths:
+                    for parent in ancestors(value):
+                        if parent in self.sealed:
+                            hits.setdefault(parent, reason)
+            if self.sealed_rules_changed:
+                # A promotion, a sheriff suite or a task state changed since the last check.
+                self.sealed_rules_changed = False
+                for key in self.named_protected(self.sealed):
+                    hits.setdefault(key, 'suite, task or checkout protection')
+            if not hits:
+                return
+            for key, reason in hits.items():
+                self.unseal(Path(key), reason)
 
     def candidates(self):
         self.refresh_baseline()
+        unread = 0
         for path, kind, hours in self.unprotected_candidates():
             if any(overlaps(path, p) for p in self.suite_paths):
                 self.emit('keep', path=str(path), reason='promoted sheriff suite reference')
                 continue
+            if kind == 'run' and not self.sheriff_complete:
+                unread += 1
+                continue
             yield path, kind, hours
+        if unread:
+            self.emit('keep', runs=unread, reason='sheriff suite references not read yet')
 
     def unprotected_candidates(self):
-        # Probe-named runs/<probe>/ remain live regardless of their age.
-        for root in [self.volume/'unbound-validation/runs']:
-            if root.is_dir():
-                for path in children(root):
-                    if path.is_dir() and not path.is_symlink() and (
-                            re.search(r'(?<!\d)20\d{6}(?!\d)', path.name) or
-                            re.search(r'-t3-[0-9a-f]+', path.name)):
-                        yield path, 'run', self.run_days*24
+        yield from self.run_candidates()
+        yield from self.other_candidates()
+
+    def run_candidates(self):
+        """Dated runs under runs/, and the instances inside probe-named runs/<probe>/ except the
+        newest of each probe (a probe can reuse its last run)."""
+        root = self.volume/'unbound-validation/runs'
+        if not root.is_dir():
+            return
+        for path in children(root):
+            if not path.is_dir() or path.is_symlink():
+                continue
+            if re.search(r'(?<!\d)20\d{6}(?!\d)', path.name) or re.search(r'-t3-[0-9a-f]+', path.name):
+                yield path, 'run', self.run_days*24
+                continue
+            instances = []
+            for instance in children(path):
+                try:
+                    info = instance.lstat()
+                except FileNotFoundError:
+                    continue
+                if stat.S_ISDIR(info.st_mode):
+                    instances.append((info.st_mtime, instance))
+            if instances:
+                newest = max(instances)[1]
+                self.emit('keep', path=str(newest), reason='newest run of its probe')
+                for _, instance in sorted(instances):
+                    if instance != newest:
+                        yield instance, 'run', self.run_days*24
+
+    def other_candidates(self):
         for root in dict.fromkeys([self.volume, self.cache.resolve()]):
             for path in children(root):
                 if not re.fullmatch(r'q\d+', path.name, re.I) or path.is_symlink() or not path.is_dir():
@@ -1047,14 +1234,22 @@ class Janitor:
         else:
             yield path, 'task', self.idle_hours
 
-    def protection_reason(self, path):
+    def named_protection(self, path):
+        """Protections that do not depend on links or processes."""
         if any(overlaps(path, p) for p in self.suite_paths):
             return 'promoted sheriff suite reference'
+        if any(overlaps(path, p) for p in self.sheriff_paths):
+            return 'sheriff suite reference'
         if any(value.lower() in self.active for part in path.parts
                for value in re.findall(r'(?<![a-zA-Z0-9])q\d+(?!\d)', part, re.I)):
             return 'active task directory'
         if any(overlaps(path, p) for p in self.protected):
             return 'protected checkout, slot or train'
+        return None
+
+    def protection_reason(self, path):
+        if reason := self.named_protection(path):
+            return reason
         if any(inside(p, path) for p in self.links):
             return 'symlink reference'
         if any(inside(p, path) for p in self.processes):
@@ -1080,6 +1275,7 @@ class Janitor:
         if force or signature != self.baseline_signature:
             protected, roots = promoted_suite_paths(self.cache)
             # A promotion never unprotects the prior baseline during this run.
+            self.sealed_rules_changed |= not protected <= self.suite_paths
             self.suite_paths.update(protected)
             new_roots = roots-self.suite_roots
             self.suite_roots.update(roots)
@@ -1087,7 +1283,8 @@ class Janitor:
             if self.watch and new_roots:
                 self.watch.metadata_roots.update(new_roots)
                 self.links.update(reference_paths(new_roots, excluded=self.excluded, seconds=self.scan_budget(),
-                                                  watcher=self.watch, index_root=self.cache, prune=False))
+                                                  watcher=self.watch, index_root=self.cache, prune=False,
+                                                  sealed=self.sealed))
                 for directory in list(self.watch.directories.values()):
                     if any(inside(directory, root) for root in new_roots):
                         self.watch.add(directory)
@@ -1103,17 +1300,20 @@ class Janitor:
             roots = self.scan_roots if full else pending
             try:
                 links = reference_paths(roots, excluded=self.excluded, seconds=self.scan_budget(),
-                                        watcher=self.watch, index_root=self.cache, prune=False, complete=full)
+                                        watcher=self.watch, index_root=self.cache, prune=False, complete=full,
+                                        sealed=self.sealed)
             except ReferenceChanged:
                 if full:
                     self.watch.broken = True
                     raise
                 links = reference_paths(self.scan_roots, excluded=self.excluded, seconds=self.scan_budget(),
-                                        watcher=self.watch, index_root=self.cache, prune=False, complete=True)
+                                        watcher=self.watch, index_root=self.cache, prune=False, complete=True,
+                                        sealed=self.sealed)
             self.links.update(links)
         self.links.update(self.watch.references)
         self.refresh_baseline(force=self.watch.metadata_dirty)
         self.watch.metadata_dirty = False
+        self.unseal_protected()
 
     def prepare_removal(self, path, kind, hours):
         path = Path(os.path.abspath(path))
@@ -1121,7 +1321,7 @@ class Janitor:
         try:
             self.refresh_links()
             if reason := self.reason(path, hours):
-                self.emit('keep', path=str(path), reason=reason)
+                self.keep(path, reason)
                 return None
             _, allocated, reclaimable = inventory(path)
             directory = path.is_dir() and not path.is_symlink()
@@ -1138,7 +1338,7 @@ class Janitor:
             # Recheck every descendant after permission preparation. Only the
             # exact ctime changes made above are excluded from the age test.
             if reason := self.reason(path, hours, directory_ctimes):
-                self.emit('keep', path=str(path), reason=reason)
+                self.keep(path, reason)
                 return None
             identity = path.lstat()
             task = next((p.name.lower() for p in path.parents
@@ -1147,6 +1347,10 @@ class Janitor:
             return path, kind, directory, task, allocated, reclaimable, hours, (identity.st_dev, identity.st_ino, stat.S_IFMT(identity.st_mode))
         except FileNotFoundError:
             return None
+
+    def keep(self, path, reason):
+        self.emit('keep', path=str(path), reason=reason)
+        self.unseal(path, reason)
 
     def refresh_guards(self):
         self.processes = process_paths()
@@ -1163,6 +1367,7 @@ class Janitor:
             self.states = task_states(queue)
             self.active = active_tasks(queue)
             self.queue_signature = signature
+            self.sealed_rules_changed = True
 
     def remove_batch(self, candidates):
         # Directory preparation may take minutes. Do not hold an earlier file's
@@ -1200,22 +1405,23 @@ class Janitor:
                     self.refresh_queue()
                     self.refresh_links()
                     if kind == 'task' and self.states.get(task) != 'landed':
-                        self.emit('keep', path=str(path), reason='task state changed')
+                        self.keep(path, 'task state changed')
                         continue
                     if reason := self.protection_reason(path):
-                        self.emit('keep', path=str(path), reason=reason)
+                        self.keep(path, reason)
                         continue
                     current = path.lstat()
                     if (current.st_dev, current.st_ino, stat.S_IFMT(current.st_mode)) != identity:
-                        self.emit('keep', path=str(path), reason='candidate identity changed')
+                        self.keep(path, 'candidate identity changed')
                         continue
                     if not directory and max(current.st_mtime, current.st_ctime) >= time.time()-hours*3600:
-                        self.emit('keep', path=str(path), reason='recently modified')
+                        self.keep(path, 'recently modified')
                         continue
                     self.emit('removing', path=str(path), kind=kind, allocated_bytes=allocated,
                               reclaimable_bytes=reclaimable)
                     if self.watch:
                         self.watch.retire(path)
+                    self.removed_paths.append(path)
                     if directory:
                         shutil.rmtree(path)
                     else:

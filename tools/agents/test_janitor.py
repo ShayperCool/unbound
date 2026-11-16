@@ -75,6 +75,92 @@ class JanitorTests(unittest.TestCase):
         self.assertTrue(linked.is_dir())
         self.assertTrue(old.is_dir())  # dry-run did not delete
 
+    def instances(self, probe, names):
+        """Instances of runs/<probe>/ in age order (the last is the newest)."""
+        self.aged = [self.directory(f'unbound-validation/runs/{probe}/{name}') for name in names]
+        return self.aged
+
+    def collect_applied(self, processes=()):
+        # Instance ages are set last: adding content inside an instance changes its time.
+        for age, path in enumerate(getattr(self, 'aged', [])):
+            os.utime(path, (1_000_000+age, 1_000_000+age))
+        with self.guards(), patch.object(janitor, 'process_paths', return_value=set(processes)):
+            self.j.apply = True
+            self.j.collect()
+
+    def test_old_instances_of_a_probe_are_removed_except_the_newest(self):
+        old, older, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        self.collect_applied()
+        self.assertFalse(old.exists())
+        self.assertFalse(older.exists())
+        self.assertTrue(newest.is_dir())
+
+    def test_a_link_inside_a_removed_run_protects_nothing_and_its_inside_is_not_walked(self):
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        (first/'deep'/'er').mkdir(parents=True)
+        (first/'deep'/'er'/'link').symlink_to(second/'output')
+        walked = []
+        original = janitor.ReferenceWatch.add
+        def add(watch, directory):
+            walked.append(os.fspath(directory))
+            return original(watch, directory)
+        with patch.object(janitor.ReferenceWatch, 'add', add):
+            self.collect_applied()
+        self.assertFalse(first.exists())
+        self.assertFalse(second.exists())
+        self.assertTrue(newest.is_dir())
+        self.assertNotIn(str(first/'deep'), walked)
+        self.assertIn(str(newest), walked)
+
+    def test_a_run_protected_from_outside_keeps_what_its_own_links_name(self):
+        first, second, third, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3', 'gate-4'])
+        (self.cache/'retained').symlink_to(second/'output')
+        (second/'link').symlink_to(first/'output')
+        self.collect_applied()
+        self.assertTrue(second.is_dir())
+        self.assertTrue(first.is_dir())  # named from inside a kept run
+        self.assertFalse(third.exists())
+        self.assertIn('"unseal"', self.output.getvalue())
+
+    def test_a_run_in_live_use_keeps_what_its_own_links_name(self):
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        (second/'link').symlink_to(first/'output')
+        self.collect_applied(processes=[second/'output'])
+        self.assertTrue(second.is_dir())
+        self.assertTrue(first.is_dir())
+
+    def test_a_recently_written_run_keeps_what_its_own_links_name(self):
+        # Old by its own timestamps but written inside lately: kept, and walked from then on.
+        first, second, third, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3', 'gate-4'])
+        (first/'link').symlink_to(third/'output')
+        os.utime(first/'output', (self.future, self.future))
+        self.collect_applied()
+        self.assertTrue(first.is_dir())
+        self.assertTrue(third.is_dir())
+        self.assertFalse(second.exists())
+
+    def test_runs_named_by_a_sheriff_suite_are_kept(self):
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        suite = self.volume/'unbound-validation/suite/sheriff-S9-abc'
+        (suite/'probe').mkdir(parents=True)
+        (suite/'probe'/'run.log').write_text(f'$ python3 run.py --out {second}/output\n')
+        self.collect_applied()
+        self.assertTrue(second.is_dir())
+        self.assertFalse(first.exists())
+        known = json.loads((self.cache/'agents/janitor/suite-references.json').read_text())
+        self.assertEqual(known[str(suite/'probe'/'run.log')][3], [f'{second}/output'])
+
+    def test_no_run_is_removed_until_every_sheriff_suite_file_is_read(self):
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        suite = self.volume/'unbound-validation/suite/sheriff-S9-abc'
+        suite.mkdir(parents=True)
+        (suite/'summary.json').write_text('{}')
+        with patch.object(janitor, 'SUITE_REFERENCE_SECONDS', 0):
+            self.collect_applied()
+        self.assertTrue(first.is_dir())
+        self.assertTrue(second.is_dir())
+        self.assertIn('sheriff suite references not read yet', self.output.getvalue())
+
     def test_active_unknown_and_conflicting_tasks_are_kept(self):
         for name in ('q2', 'q3', 'q4'):
             self.directory(name)
