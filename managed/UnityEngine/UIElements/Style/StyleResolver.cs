@@ -105,7 +105,6 @@ namespace Unbound.UIElements
             {
                 m_Reader.SetContext(element.uaInlineSheet, element.uaInlineRule.properties, variables, pixelsPerPoint);
                 Apply(style, m_Reader, parentStyle);
-                FinalizeApply(style, parentStyle);
             }
             style.dpiScaling = pixelsPerPoint;
             return style;
@@ -161,7 +160,6 @@ namespace Unbound.UIElements
             float dpi = pixelsPerPoint;
             var style = ApplyRules(element, variables, dpi);
             element.uaInlineStyle?.ApplyTo(style);
-            if (element.uaInlineStyle != null) FinalizeApply(style, parentStyle);
             if (element is TextElement text)
             {
                 var hash = new HashCode();
@@ -401,6 +399,10 @@ namespace Unbound.UIElements
 
         static void RemoveCustom(ComputedValues style, UssReader r) => style.customProperties?.Remove(r.property.name);
 
+        /// <summary>A percent font size from the matched rules becomes pixels of the parent's font
+        /// size. Applied once, before the inline values: an inline percentage (from code or a UXML
+        /// style attribute) keeps its number, as in the Unity 6000.0.71f1 Editor
+        /// (tests/projects/uitransitionkinds).</summary>
         internal static void FinalizeApply(ComputedValues style, ComputedValues parent)
         {
             if (style.fontSize.unit == LengthUnit.Percent && !style.fontSize.IsAuto() && !style.fontSize.IsNone())

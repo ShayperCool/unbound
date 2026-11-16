@@ -885,7 +885,6 @@ namespace UnityEngine.UIElements
                 var (display, translate, rotate, scale, origin) = (before.display, before.translate, before.rotate, before.scale, before.transformOrigin);
                 if (removed || ReferenceEquals(before, ComputedValues.Initial)) computedValues = ComputedValues.Initial.Clone();
                 m_InlineStyle.ApplyTo(computedValues);
-                Unbound.UIElements.StyleResolver.FinalizeApply(computedValues, null);
                 // The first style pass will find these values already in place and report no
                 // change for them: what depends on them is told now.
                 var change = VersionChangeType.Repaint;
@@ -907,7 +906,6 @@ namespace UnityEngine.UIElements
                 applied.CopyProperty(id, rules);
             }
             m_InlineStyle.ApplyTo(applied);
-            Unbound.UIElements.StyleResolver.FinalizeApply(applied, hierarchy.parent?.computedValues);
             // Removing a transition declaration does not cancel its current event batch. The
             // next style pass reconciles the list after the panel finishes its animation phases.
             if (id == StylePropertyId.TransitionProperty) return;
