@@ -83,6 +83,9 @@ public class FloatTextProbe : MonoBehaviour
                 double value = m * Math.Pow(2, e);
                 if (!double.IsInfinity(value) && value != 0) Double(value);
             }
+        // Integers whose digits end in 5 before a trailing zero: ties at 15 digits (and neighbours).
+        foreach (var value in new[] { 10000000000000050.0, 12345678901234550.0, -12345678901234550.0, 10000000000000040.0, 10000000000000060.0 })
+            Double(value);
         // Neighbours of a tie: the floats on either side of 245 / 1024.
         float tie = 245f / 1024f;
         Float(BitConverter.ToSingle(BitConverter.GetBytes(BitConverter.ToInt32(BitConverter.GetBytes(tie), 0) - 1), 0));

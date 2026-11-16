@@ -104,7 +104,7 @@ namespace UnityEngine.Tests
         }
 
         // An integer whose digits end in 5 before its trailing zeros is a tie too (5000000000000025
-        // × 2 is 1000000000000005 × 10: a tie at 15 digits).
+        // × 2 is 1000000000000005 × 10: a tie at 15 digits; tests/projects/floattext).
         [Fact]
         public void IntegersWithTrailingZerosTieToo()
         {

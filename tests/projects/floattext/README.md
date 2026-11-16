@@ -4,7 +4,8 @@
 in `$FLOAT_TEXT_OUT` (tests/value_probe.py), keyed by the value's bits and the format: values
 m × 2^e (m from a fixed list of odd numbers, e from -30 to 2 for floats and -60 to 2 for doubles)
 whose exact decimal expansion is short, so that many of them lie exactly halfway between two
-texts at the printed precision, two neighbours of such a value, and some negatives, in the
+texts at the printed precision, two neighbours of such a value, integers whose digits end in 5
+before a trailing zero (10000000000000050), and some negatives, in the
 default, `R`, `G`, `G<n>`, `E<n>`, `F<n>`, `N3` and `P1` formats; also through string.Format,
 string concatenation and Vector3.ToString.
 
