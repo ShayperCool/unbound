@@ -840,6 +840,49 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ASortIsPlannedByItsListsCapacity()
+        {
+            string Kernels(uint capacity) => string.Join(" ", Array.ConvertAll(VFXSort.Plan(capacity, true), p => $"{p.Kernel}:{p.From}>{p.To}:{p.X}x{p.Y}" + (p.SubArraySize != null ? "@" + p.SubArraySize : "")));
+            // One pass while the list fits a group's shared memory, by its size class.
+            Assert.Equal("BitonicSort128:List>Sorted:1x1", Kernels(1));
+            Assert.Equal("BitonicSort128:List>Sorted:1x1", Kernels(128));
+            Assert.Equal("BitonicSort1024:List>Sorted:1x1", Kernels(129));
+            Assert.Equal("BitonicSort2048:List>Sorted:1x1", Kernels(2048));
+            Assert.Equal("BitonicSort4096:List>Sorted:1x1", Kernels(4096));
+            // Longer: chunks sorted into the scratch list, then merged two by two, alternating
+            // between the lists, the last merge writing the indices.
+            Assert.Equal("BitonicPrePass:List>Scratch:2x1 MergeFinalPass:Scratch>Sorted:94x1@4096", Kernels(6000));
+            Assert.Equal("BitonicPrePass:List>Scratch:5x1 MergePass:Scratch>List:313x1@4096 MergePass:List>Scratch:313x1@8192 MergeFinalPass:Scratch>Sorted:313x1@16384", Kernels(20000));
+            // A long list without a scratch list is not planned.
+            Assert.Null(VFXSort.Plan(4097, false));
+            Assert.NotNull(VFXSort.Plan(4096, false));
+        }
+
+        [Fact]
+        public void OutputsWhoseShadersShareANameAreNotDrawn()
+        {
+            string Source(string name) => "Shader \"" + name + "\" { SubShader { Pass { Tags { \"LightMode\"=\"UniversalForwardOnly\" } } } }";
+            VFXEditorTaskDesc Output(int source) => new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, shaderSourceIndex = source };
+            var systems = new[]
+            {
+                new VFXEditorSystemDesc { name = "A", type = VFXSystemType.Particle, tasks = new[] { Output(0), Output(1), Output(2) } },
+                new VFXEditorSystemDesc { name = "B", type = VFXSystemType.Particle, tasks = new[] { Output(3) } },
+            };
+            var sources = new[]
+            {
+                new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/A/Output Particle|Unlit Quad") },
+                new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/A/Output Particle|Unlit Quad") },
+                new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/A/Glow") },
+                new VFXShaderSourceDesc { source = Source("Hidden/VFX/G/B/Output Particle|Unlit Quad") },
+            };
+            var found = VFXOutput.SourceRefusals(systems, sources);
+            Assert.StartsWith("its shader's name 'Hidden/VFX/G/A/Output Particle|Unlit Quad' is another output's", found[0][0]);
+            Assert.Equal(found[0][0], found[0][1]);
+            Assert.Null(found[0][2]);
+            Assert.Null(found[1][0]);
+        }
+
+        [Fact]
         public void IndirectArgumentEntriesAreReservedByKindAndGivenBack()
         {
             // The package's numbering of what arguments are for, from an output's primitive.
@@ -927,8 +970,9 @@ namespace UnityEngine.Tests
             Assert.Null(VFXOutput.Refusal(system, quads, material));
             Assert.Equal("its shader was not imported", VFXOutput.Refusal(system, quads, null));
             Assert.Equal("ParticlePointOutput is not drawn yet (quads and meshes are)", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticlePointOutput }, material));
-            // Through an indirect buffer: drawn from the list that counts its particles; one
-            // drawn from another (sorted) list, or in a system that sorts one, is not.
+            // Through an indirect buffer: drawn from the list that counts its particles, or from
+            // the sorted copy a sort task of its system makes; not from a list no task makes, nor
+            // in a system that sorts one list for all its outputs.
             VFXEditorTaskDesc Indirect(int list, int read) => new VFXEditorTaskDesc
             {
                 type = VFXTaskType.ParticleQuadOutput,
@@ -936,9 +980,15 @@ namespace UnityEngine.Tests
                 buffers = new[] { new VFXMapping("graphValuesBuffer", 4), new VFXMapping("indirectBuffer", read) },
             };
             Assert.Null(VFXOutput.Refusal(system, Indirect(2, 2), material));
-            Assert.Equal("its particles are sorted, which is not done yet", VFXOutput.Refusal(system, Indirect(2, 3), material));
+            Assert.Equal("it draws a list of particles no task of its system makes", VFXOutput.Refusal(system, Indirect(2, 3), material));
+            var sortingOne = new VFXEditorSystemDesc
+            {
+                name = "Particles", type = VFXSystemType.Particle,
+                tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.PerOutputSort, buffers = new[] { new VFXMapping("srcBuffer", 2), new VFXMapping("scratchBuffer", -1), new VFXMapping("dstBuffer", 3) } } },
+            };
+            Assert.Null(VFXOutput.Refusal(sortingOne, Indirect(2, 3), material));
             var sorting = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.GlobalSort } } };
-            Assert.Equal("its particles are sorted, which is not done yet", VFXOutput.Refusal(sorting, Indirect(2, 2), material));
+            Assert.Equal("its system sorts one list for all its outputs, which is not done yet", VFXOutput.Refusal(sorting, Indirect(2, 2), material));
             // A mesh output's task names its mesh and the mask of its submeshes, and draws
             // itself; one through an indirect buffer is not drawn (an output of several meshes
             // compiles to one such task per mesh).
@@ -998,7 +1048,8 @@ namespace UnityEngine.Tests
             {
                 new VFXShaderSourceDesc { compute = true, source = "Tags { \"LightMode\"=\"MotionVectors\" }" },
                 new VFXShaderSourceDesc { source = unlit },
-                new VFXShaderSourceDesc { source = unlit.Replace("\"ShadowCaster\"", "\"MotionVectors\"") },
+                // Another output of the system, named apart (outputs named alike are not drawn).
+                new VFXShaderSourceDesc { source = unlit.Replace("\"ShadowCaster\"", "\"MotionVectors\"").Replace("/Output Particle|Unlit Quad", "/Output Particle MV|Unlit Quad") },
             };
             var found = VFXOutput.SourceRefusals(compiled, sources);
             Assert.Empty(found[0]);
@@ -1034,7 +1085,7 @@ namespace UnityEngine.Tests
                 second = Running(asset);
                 var said = Assert.Single(warnings.Messages, m => m.Contains("not drawn"));
                 Assert.StartsWith("Unbound: VisualEffect '", said);
-                Assert.Contains("(Smoke): an output of 'Particles' is not drawn: its particles are sorted", said);
+                Assert.Contains("(Smoke): an output of 'Particles' is not drawn: it draws a list of particles no task of its system makes", said);
                 // The system runs all the same, and its renderer has no draw.
                 Assert.Equal(new[] { 1, 2, 3 }, Counts(first, 3));
                 var draws = new List<FrameBuilder.DrawItem>();

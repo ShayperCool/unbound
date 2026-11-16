@@ -46,6 +46,9 @@ namespace Unbound.Runtime
         /// <summary>The kernels that make outputs' lists of particles to draw for a camera
         /// (frustum culling, sorting by the camera), run for each camera that sees the effect.</summary>
         readonly Kernel[] m_PerCamera;
+        /// <summary>The sorts of drawn outputs' lists: after each step's kernels, or after a
+        /// camera's.</summary>
+        readonly SortTask[] m_StepSorts, m_CameraSorts;
         readonly VFXOutput[] m_Outputs;
         /// <summary>The buffers that count the particles of the lists of particles to draw:
         /// those the step's kernels make (emptied before each step) and those the camera's do
@@ -127,6 +130,7 @@ namespace Unbound.Runtime
 
             var updates = new List<Kernel>();
             var perCamera = new List<Kernel>();
+            var sorts = new List<VFXEditorTaskDesc>();
             var outputs = new List<VFXOutput>();
             var processors = index < data.Processors.Length ? data.Processors[index] : Array.Empty<UnityEngine.Object>();
             for (int i = 0; i < (Desc.tasks?.Length ?? 0); i++)
@@ -139,6 +143,11 @@ namespace Unbound.Runtime
                     string refusal = VFXOutput.Refusal(Desc, task, processor, sourceRefusal);
                     if (refusal == null) outputs.Add(new VFXOutput(this, task, (Material)processor));
                     else effect.WarnOutputNotDrawn(Desc.name, refusal);
+                    continue;
+                }
+                if (task.type == VFXTaskType.PerOutputSort)
+                {
+                    sorts.Add(task);
                     continue;
                 }
                 if (!(processor is ComputeShader shader)) continue;
@@ -157,6 +166,16 @@ namespace Unbound.Runtime
             cameraLists.RemoveAll(list => !Drawn(list));
             m_StepLists = stepLists.ToArray();
             m_CameraLists = cameraLists.ToArray();
+            var stepSorts = new List<SortTask>();
+            var cameraSorts = new List<SortTask>();
+            foreach (var task in sorts)
+            {
+                var sort = new SortTask(task, Capacity);
+                if (sort.Passes == null || !Drawn(sort.List)) continue;
+                (sort.PerCamera ? cameraSorts : stepSorts).Add(sort);
+            }
+            m_StepSorts = stepSorts.ToArray();
+            m_CameraSorts = cameraSorts.ToArray();
         }
 
         /// <summary>The kernels whose list an output draws, and those that make no list when
@@ -428,6 +447,31 @@ namespace Unbound.Runtime
             m_UpdatedPrefix = fixedSize ? 0 : 1;
             m_PreparedCamera = null;
             foreach (var update in m_Updates) update.Dispatch(updated, m_UpdatedPrefix);
+            foreach (var sort in m_StepSorts) sort.Run(Effect);
+        }
+
+        /// <summary>The sort of an output's list (a task of the compiled graph): the list of key
+        /// and particle pairs an output-update kernel makes, sorted into the indices the output
+        /// draws, with a scratch list for a long one.</summary>
+        sealed class SortTask
+        {
+            internal readonly int List, Scratch, Sorted;
+            internal readonly bool PerCamera;
+            internal readonly VFXSort.Pass[] Passes;
+            readonly object m_Capacity;
+
+            internal SortTask(in VFXEditorTaskDesc task, uint capacity)
+            {
+                List = VFXOutput.Buffer(task, "srcBuffer");
+                Scratch = VFXOutput.Buffer(task, "scratchBuffer");
+                Sorted = VFXOutput.Buffer(task, "dstBuffer");
+                PerCamera = VFXOutput.Parameter(task, "isPerCameraSort") != 0;
+                m_Capacity = (int)capacity;
+                Passes = List < 0 || Sorted < 0 ? null : VFXSort.Plan(capacity, Scratch >= 0);
+            }
+
+            internal void Run(VisualEffect effect) =>
+                VFXSort.Shared.Sort(Passes, m_Capacity, effect.GpuBuffer(List, 0), Scratch >= 0 ? effect.GpuBuffer(Scratch, 0) : null, effect.GpuBuffer(Sorted, 0));
         }
 
         /// <summary>Before a camera's draws of the system: the lists of particles to draw made
@@ -443,7 +487,12 @@ namespace Unbound.Runtime
             m_PreparedView = camera.View;
             m_PreparedProjection = camera.Projection;
             foreach (var list in m_CameraLists) VFXIndirectArgs.Shared.ResetCount(Effect.GpuBuffer(list, 0));
-            foreach (var kernel in m_PerCamera) kernel.Dispatch(m_UpdatedThreads, m_UpdatedPrefix);
+            foreach (var kernel in m_PerCamera)
+            {
+                kernel.SetCamera(camera);
+                kernel.Dispatch(m_UpdatedThreads, m_UpdatedPrefix);
+            }
+            foreach (var sort in m_CameraSorts) sort.Run(Effect);
             foreach (var output in m_Outputs)
                 if (output.Indirect) output.FillArguments();
         }
@@ -454,15 +503,43 @@ namespace Unbound.Runtime
         /// it sleeps (all its particles are dead).</summary>
         internal uint DrawnParticles => !m_Stepped || m_Sleeping ? 0 : !HasKill && !ReceivesGpuEvents ? Math.Min(m_Total, Capacity) : Capacity;
 
-        /// <summary>Adds the draws of the system's outputs, in the graph's order.</summary>
-        internal void CollectDraws(Renderer renderer, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
+        /// <summary>Adds the draws of an effect's systems' outputs, by their priority (each
+        /// output's `sortPriority`, the lowest first; outputs of equal priority in the order of
+        /// their systems, then of the graph): tests/projects/vfxoutputs, `Priority`.</summary>
+        internal static void CollectDraws(VFXParticleSystem[] systems, Renderer renderer, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
-            if (DrawnParticles == 0) return;
-            // Without a renderer (a headless run, a test) no list is made: only direct draws.
-            bool indirect = m_HasIndirect && m_HasRenderer;
-            if (indirect) PrepareCamera(camera);
-            foreach (var output in m_Outputs)
-                if (indirect || !output.Indirect) output.Collect(renderer, camera, into);
+            if (systems.Length == 0) return;
+            // The order is made once, with the systems (kept by the first of them).
+            var order = systems[0].m_EffectOutputs ??= DrawOrder(systems);
+            foreach (var system in systems)
+                if (system.DrawnParticles != 0 && system.m_HasIndirect && system.m_HasRenderer) system.PrepareCamera(camera);
+            foreach (var output in order)
+            {
+                var system = output.System;
+                // Without a renderer (a headless run, a test) no list is made: only direct draws.
+                if (system.DrawnParticles != 0 && (!output.Indirect || system.m_HasRenderer)) output.Collect(renderer, camera, into);
+            }
+        }
+
+        VFXOutput[] m_EffectOutputs;
+
+        static VFXOutput[] DrawOrder(VFXParticleSystem[] systems)
+        {
+            var outputs = new List<VFXOutput>();
+            foreach (var system in systems) outputs.AddRange(system.m_Outputs);
+            var order = outputs.ToArray();
+            // A stable sort: equal priorities keep the systems' order.
+            var keys = new int[order.Length];
+            var places = new int[order.Length];
+            for (int i = 0; i < order.Length; i++)
+            {
+                keys[i] = order[i].SortPriority;
+                places[i] = i;
+            }
+            Array.Sort(places, (a, b) => keys[a] != keys[b] ? keys[a].CompareTo(keys[b]) : a.CompareTo(b));
+            var sorted = new VFXOutput[order.Length];
+            for (int i = 0; i < order.Length; i++) sorted[i] = order[places[i]];
+            return sorted;
         }
 
         /// <summary>The words of the source buffer the step's events reach.</summary>
@@ -533,6 +610,12 @@ namespace Unbound.Runtime
             static readonly int s_InstancingBufferOffsets = Shader.PropertyToID("instancingBufferOffsets");
             static readonly int s_BakedTexture = Shader.PropertyToID(VFXOutput.BakedTextureName);
             static readonly int s_CameraXRSettings = Shader.PropertyToID("cameraXRSettings");
+            /// <summary>The camera values the generated output-update kernels read for a camera
+            /// (its position and its view, as the pipeline sets them for the camera's draws).</summary>
+            static readonly int s_WorldSpaceCameraPos = Shader.PropertyToID("_WorldSpaceCameraPos");
+            static readonly int s_MatrixV = Shader.PropertyToID("unity_MatrixV");
+            /// <summary>Boxes of the camera values, changed in place for each camera.</summary>
+            object m_CameraPosition, m_CameraView;
             const string FirstListName = "outputBuffer0";
 
             readonly VFXParticleSystem m_System;
@@ -627,6 +710,20 @@ namespace Unbound.Runtime
                 if (x != m_DispatchWidth) m_Shader.SetInt(s_DispatchWidth, m_DispatchWidth = x);
                 if (prefixOffset != m_PrefixOffset) m_Shader.SetVector(s_InstancingBufferOffsets, new Vector4(0f, m_PrefixOffset = prefixOffset, 0f, 0f));
                 m_Shader.Dispatch(m_Kernel, x, y, 1);
+            }
+
+            /// <summary>The camera a per-camera kernel runs for.</summary>
+            internal void SetCamera(FrameBuilder.CameraContext camera)
+            {
+                if (m_CameraPosition == null)
+                {
+                    m_CameraPosition = Vector4.zero;
+                    m_CameraView = Matrix4x4.identity;
+                    m_Shader.SetBoxed(s_WorldSpaceCameraPos, m_CameraPosition);
+                    m_Shader.SetBoxed(s_MatrixV, m_CameraView);
+                }
+                System.Runtime.CompilerServices.Unsafe.Unbox<Vector4>(m_CameraPosition) = camera.Position;
+                System.Runtime.CompilerServices.Unsafe.Unbox<Matrix4x4>(m_CameraView) = camera.View;
             }
 
             internal void Release() => UnityEngine.Object.Destroy(m_Shader);

@@ -460,7 +460,7 @@ namespace UnityEngine.VFX
         internal void CollectDraws(Renderer renderer, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             if (!isActiveAndEnabled) return;
-            foreach (var system in m_ParticleSystems) system.CollectDraws(renderer, camera, into);
+            VFXParticleSystem.CollectDraws(m_ParticleSystems, renderer, camera, into);
         }
 
         /// <summary>Whether no camera sees the effect: none took its renderer in the last frame

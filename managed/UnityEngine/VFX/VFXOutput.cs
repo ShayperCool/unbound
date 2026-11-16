@@ -112,6 +112,13 @@ namespace Unbound.Runtime
         /// <summary>Whether the output draws through an indirect buffer.</summary>
         internal bool Indirect => m_ArgsEntry >= 0;
 
+        /// <summary>The system whose particles the output draws.</summary>
+        internal VFXParticleSystem System => m_System;
+
+        /// <summary>The output's place among the effect's outputs (its `sortPriority`): the
+        /// lowest is drawn first.</summary>
+        internal int SortPriority => Parameter(m_Task, "sortPriority");
+
         /// <summary>The buffer whose list an indirect output draws (-1 for a direct one).</summary>
         internal int CountBuffer => m_CountBuffer;
 
@@ -131,10 +138,13 @@ namespace Unbound.Runtime
         {
             if (task.type != VFXTaskType.ParticleQuadOutput && task.type != VFXTaskType.ParticleMeshOutput) return $"{task.type} is not drawn yet (quads and meshes are)";
             if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0) return "strips are not drawn yet";
-            if (Parameter(task, IndirectDrawName) != 0 && Sorted(system, task)) return "its particles are sorted, which is not done yet";
-            // Meshes are drawn for the particles the system has to draw, not from a list.
-            if (Parameter(task, IndirectDrawName) != 0 && task.type == VFXTaskType.ParticleMeshOutput)
-                return "it draws meshes through an indirect buffer, which is not done yet";
+            if (Parameter(task, IndirectDrawName) != 0)
+            {
+                // Meshes are drawn for the particles the system has to draw, not from a list.
+                if (task.type == VFXTaskType.ParticleMeshOutput) return "it draws meshes through an indirect buffer, which is not done yet";
+                if (SortsForAll(system)) return "its system sorts one list for all its outputs, which is not done yet";
+                if (!ListMade(system, task)) return "it draws a list of particles no task of its system makes";
+            }
             if (task.usesMaterialVariant) return "outputs of a Shader Graph are not drawn yet";
             // An output with motion vectors keeps each particle's last frame in buffers of its own.
             if (task.temporaryBuffers != null && task.temporaryBuffers.Length != 0) return "it keeps buffers of the frame before (motion vectors), which is not done yet";
@@ -185,6 +195,26 @@ namespace Unbound.Runtime
                         refusals[s][t] = LitIndirectRefusal;
                 }
             }
+            // The renderer finds a generated shader by its name: outputs whose shaders share one
+            // (outputs of one system the graph names alike: no label, no letter) cannot each be
+            // drawn with their own.
+            var seen = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var system in systems)
+                foreach (var task in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
+                    if (task.shaderSourceIndex >= 0 && task.shaderSourceIndex < sources.Length && !sources[task.shaderSourceIndex].compute && IsOutput(task.type)
+                        && ShaderLab.Name(sources[task.shaderSourceIndex].source ?? "") is string name)
+                        seen[name] = seen.TryGetValue(name, out int count) ? count + 1 : 1;
+            for (int s = 0; s < systems.Length; s++)
+            {
+                var tasks = systems[s].tasks ?? Array.Empty<VFXEditorTaskDesc>();
+                for (int t = 0; t < tasks.Length; t++)
+                {
+                    int index = tasks[t].shaderSourceIndex;
+                    if (index >= 0 && index < sources.Length && !sources[index].compute && IsOutput(tasks[t].type)
+                        && ShaderLab.Name(sources[index].source ?? "") is string name && seen[name] > 1)
+                        refusals[s][t] ??= $"its shader's name '{name}' is another output's (give the outputs labels), and Unbound finds generated shaders by name";
+                }
+            }
             return refusals;
         }
 
@@ -206,17 +236,27 @@ namespace Unbound.Runtime
             return null;
         }
 
-        /// <summary>Whether an output draws its particles in a sorted order: from a sorted copy
-        /// of its list (its indices are another buffer than the one that counts them), or in a
-        /// system that sorts a list for its outputs (any of its outputs is refused then).</summary>
-        static bool Sorted(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task)
+        /// <summary>Whether a system sorts one list of particles for all its outputs (a global
+        /// sort, which the compiler makes for outputs that share their sort).</summary>
+        static bool SortsForAll(in VFXEditorSystemDesc system)
         {
             foreach (var other in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
                 if (other.type == VFXTaskType.GlobalSort) return true;
-            return Buffer(task, "indirectBuffer") != Parameter(task, "indirectIndex");
+            return false;
         }
 
-        static int Buffer(in VFXEditorTaskDesc task, string name)
+        /// <summary>Whether an output draws a sorted copy of its list: one a sort task of its
+        /// system writes (its indices are another buffer than the one that counts them).</summary>
+        static bool ListMade(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task)
+        {
+            int read = Buffer(task, "indirectBuffer");
+            if (read == Parameter(task, "indirectIndex")) return true;
+            foreach (var other in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
+                if (other.type == VFXTaskType.PerOutputSort && Buffer(other, "dstBuffer") == read) return true;
+            return false;
+        }
+
+        internal static int Buffer(in VFXEditorTaskDesc task, string name)
         {
             foreach (var buffer in task.buffers ?? Array.Empty<VFXMapping>())
                 if (buffer.name == name) return buffer.index;
