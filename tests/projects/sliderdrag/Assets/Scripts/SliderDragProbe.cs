@@ -136,10 +136,33 @@ public class SliderDragProbe : MonoBehaviour
         State("past.low", slider);
         Move(label, 7f, 1f);
         State("near.horizontal", slider);
+        // Moves whose axes are within a tenth of each other keep the axis of the move before.
+        Move(label, 3f, 3.1f);
+        State("axis.kept.x", slider);
+        Move(label, 1f, -4f);
+        State("axis.to.y", slider);
+        Move(label, -3.1f, 3f);
+        State("axis.kept.y", slider);
+        Move(label, 10f, 10.9f);
+        State("axis.ratio.below", slider);
+        Move(label, 10f, 0f);
+        Move(label, 10f, 11.2f);
+        State("axis.ratio.above", slider);
         Up(label);
         State("up", slider);
         Move(label, 10f, 0f);
         State("move.after.up", slider);
+
+        // A touch press does not start a drag in a runtime panel.
+        slider.value = 3f;
+        changes = 0;
+        lastChange = "";
+        Send(label, PointerDownEvent.GetPooled(new Touch { fingerId = 0, position = new Vector2(5, 5), phase = TouchPhase.Began, tapCount = 1 }));
+        State("touch.down", slider);
+        Send(label, PointerMoveEvent.GetPooled(new Touch { fingerId = 0, position = new Vector2(25, 5), deltaPosition = new Vector2(20, 0), phase = TouchPhase.Moved }));
+        State("touch.move", slider);
+        Send(label, PointerUpEvent.GetPooled(new Touch { fingerId = 0, position = new Vector2(25, 5), phase = TouchPhase.Ended }));
+        State("touch.up", slider);
 
         // Escape during a drag restores the value the drag started from.
         slider.value = 4f;
@@ -179,6 +202,17 @@ public class SliderDragProbe : MonoBehaviour
         State("int.alt2", sliderInt);
         Move(intLabel, 500f, 0f);
         State("int.past.high", sliderInt);
+        Move(intLabel, -500f, 0f);
+        Move(intLabel, 30f, 0f);
+        State("int.back", sliderInt);
+        Up(intLabel);
+        // The axis kept is shared by every field: a move on another field keeps it.
+        Down(label);
+        Move(label, 0f, -5f);
+        Up(label);
+        Down(intLabel);
+        Move(intLabel, 31f, 30f);
+        State("int.axis.shared", sliderInt);
         Up(intLabel);
         State("int.up", sliderInt);
 
@@ -221,8 +255,20 @@ public class SliderDragProbe : MonoBehaviour
         root.Add(narrow);
         Send(narrow, KeyDownEvent.GetPooled('\0', KeyCode.RightArrow, EventModifiers.None));
         Put("int.narrow.right", narrow.value);
-        Send(narrow, KeyDownEvent.GetPooled('\0', KeyCode.RightArrow, EventModifiers.Shift));
-        Put("int.narrow.shift.right", narrow.value);
+        // Navigation moves the dragger once a submit has made it movable.
+        Send(narrow, NavigationSubmitEvent.GetPooled());
+        Send(narrow, NavigationMoveEvent.GetPooled(Vector2.right));
+        Put("int.narrow.nav.right", narrow.value);
+        Send(narrow, NavigationMoveEvent.GetPooled(Vector2.right, EventModifiers.Shift));
+        Put("int.narrow.nav.shift.right", narrow.value);
+        Send(narrow, NavigationMoveEvent.GetPooled(Vector2.left));
+        Put("int.narrow.nav.left", narrow.value);
+        keyed.value = 503;
+        Send(keyed, NavigationSubmitEvent.GetPooled());
+        Send(keyed, NavigationMoveEvent.GetPooled(Vector2.right));
+        Put("int.keyed.nav.right", keyed.value);
+        Send(keyed, NavigationMoveEvent.GetPooled(Vector2.right, EventModifiers.Shift));
+        Put("int.keyed.nav.shift.right", keyed.value);
         var reversed = new SliderInt("Reversed", 10, 0) { value = 4 };
         root.Add(reversed);
         Put("int.reversed.range", reversed.range);

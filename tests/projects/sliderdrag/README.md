@@ -1,7 +1,7 @@
 # Slider label drags
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 160 rows. The values are managed slider state and
+byte-identical and the canonical reference has 194 rows. The values are managed slider state and
 change notifications in a runtime panel, so they do not depend on the OS or the graphics device.
 The gate compares every missing, extra or unequal row exactly.
 
@@ -17,10 +17,18 @@ the change notification and whether the label holds the mouse capture:
   not start one (`right.button`).
 - The sensitivity is 0.03 % of the range per pixel (`wide.*`); an integer slider rounds each move
   half to even, at least one step per pixel (`int.*`).
+- While a move's two axes are within a tenth of each other, the axis of the move before gives its
+  sign, also when that move was on another field (`axis.*`, `int.axis.shared`).
+- A touch press on the label does not start a drag in a runtime panel (`touch.*`).
 - `IValueField` calls made directly (`direct.*`) add to the current value.
 - SliderInt's own state: defaults, classes, whole page sizes, page and Home/End keys, a reversed
   range and clamping (`int.default`, `int.classes`, `int.pageSize.*`, `int.key.*`, `int.narrow.*`,
-  `int.reversed.*`). Arrow keys do nothing without navigation (`int.key.right*`).
+  `int.reversed.*`). Arrow keys do nothing without navigation (`int.key.right*`); navigation moves
+  step once a submit has made the dragger movable (`int.narrow.nav.*`, `int.keyed.nav.*`).
+
+Tracker clicks and dragger drags are not recorded: a tracker click acts only when the element under
+the pointer (in the Editor, the real mouse's) is the tracker, which a batch-mode capture does not
+control. Managed tests pin SliderInt's tracker rules.
 
 | Unity 6000.0 documentation | Discriminating control |
 | --- | --- |
@@ -30,5 +38,5 @@ the change notification and whether the label holds the mouse capture:
 
 The probe formats floats itself: a first capture concatenated generic values, which the Editor's
 Mono prints with 7 significant digits while Unbound printed the shortest round-trip string (a call
-through a `constrained.` type parameter is not redirected to the Mono number format). Other
-releases are unmeasured.
+through a `constrained.` type parameter is not redirected to the Mono number format; its gap row
+is `Mono number format of generic values`). Other releases are unmeasured.
