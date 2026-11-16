@@ -267,5 +267,50 @@ namespace UnityEngine.Tests
                 NavMesh.RemoveNavMeshData(right);
             }
         });
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void AnEndUncoveredByCarvingAttaches(bool start) => NavigationTestRelease.At("6000.0.71f1", () =>
+        {
+            // A carving obstacle over one end when the link is added: that end binds to nothing.
+            // Once the obstacle goes, the tile is cut anew and the end attaches (as it did before
+            // ends were bound; how Unity binds an end under a hole is unmeasured).
+            ObstacleSystem.ResetCarving();
+            var left = NavMesh.AddNavMeshData(Floor(-4f));
+            var right = NavMesh.AddNavMeshData(Floor(4f));
+            var from = At(-2.7f, 0.0833f) + Vector3.forward;
+            var to = At(2.7f, 0.0833f) + Vector3.forward;
+            var go = new GameObject("obstacle");
+            go.transform.position = (start ? from : to) + new Vector3(0f, 0.4f, 0f);
+            var obstacle = go.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.size = Vector3.one;
+            obstacle.carveOnlyStationary = false;
+            obstacle.carving = true;
+            var link = default(NavMeshLinkInstance);
+            try
+            {
+                ObstacleSystem.UpdateCarving();
+                ObstacleSystem.UpdateCarving();
+                link = NavMesh.AddLink(new NavMeshLinkData { startPosition = from, endPosition = to, bidirectional = true, costModifier = -1f });
+                var path = new NavMeshPath();
+                NavMesh.CalculatePath(At(-3.7f, 0.0833f) + Vector3.forward, At(3.7f, 0.0833f) + Vector3.forward, NavMesh.AllAreas, path);
+                Assert.Equal(NavMeshPathStatus.PathPartial, path.status);
+                Object.DestroyImmediate(go);
+                ObstacleSystem.UpdateCarving();
+                ObstacleSystem.UpdateCarving();
+                NavMesh.CalculatePath(At(-3.7f, 0.0833f) + Vector3.forward, At(3.7f, 0.0833f) + Vector3.forward, NavMesh.AllAreas, path);
+                Assert.Equal(NavMeshPathStatus.PathComplete, path.status);
+            }
+            finally
+            {
+                NavMesh.RemoveLink(link);
+                if (go != null) Object.DestroyImmediate(go);
+                ObstacleSystem.ResetCarving();
+                NavMesh.RemoveNavMeshData(left);
+                NavMesh.RemoveNavMeshData(right);
+            }
+        });
     }
 }

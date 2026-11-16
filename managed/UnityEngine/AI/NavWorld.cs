@@ -403,6 +403,15 @@ namespace Unbound.Runtime
                         bounds[settings.agentRadius] = holes;
                     }
                     if (!Reaches(placed, holes)) continue;
+                    // A link end bound to nothing tries again on a tile cut anew: the whole NavMesh
+                    // is built again (binding runs there).
+                    if (UnboundEndOver(surface, placed))
+                    {
+                        if (replaced) TileVersion++;
+                        s_Dirty = true;
+                        Refresh();
+                        return;
+                    }
                     var old = surface.Mesh.GetTileByRef(placed.Ref);
                     if (old?.data == null) continue;
                     var source = placed.Instance.Data.m_Tiles[placed.Index];
@@ -433,6 +442,22 @@ namespace Unbound.Runtime
                 }
             }
             if (replaced) TileVersion++;
+        }
+
+        /// <summary>Whether a runtime point link of the surface's agent type has an end bound to
+        /// nothing that may bind again (an end, or a start that has not lost its data) over the
+        /// tile or within the snap radius of it.</summary>
+        static bool UnboundEndOver(Surface surface, PlacedTile tile)
+        {
+            if (s_Bindings.Count == 0) return false;
+            float snap = SnapRadius(surface);
+            foreach (var link in s_Links)
+            {
+                if (link.Link.agentTypeID != surface.AgentTypeID || !s_Bindings.TryGetValue(link.Id, out var b)) continue;
+                if ((b.Start == 0 && b.StartAfter == 0 && Over(link.Start)) || (b.End == 0 && Over(link.End))) return true;
+            }
+            return false;
+            bool Over(Vector3 p) => p.x >= tile.MinX - snap && p.x <= tile.MaxX + snap && p.z >= tile.MinZ - snap && p.z <= tile.MaxZ + snap;
         }
 
         /// <summary>A changed hole, grown by the agent radius as it is cut, reaches the tile.</summary>
@@ -553,8 +578,9 @@ namespace Unbound.Runtime
         {
             /// <summary>The data instance ids the ends are bound to (0: none).</summary>
             internal int Start, End;
-            /// <summary>For an unbound start, the stamp (DataInstance.Stamp) data needs to bind it:
-            /// data added, or whose tiles changed, since the start became unbound.</summary>
+            /// <summary>For a start unbound by its data's removal, the stamp (DataInstance.Stamp)
+            /// data needs to bind it: data added, or whose tiles changed, since. 0 for a start that
+            /// has bound to nothing yet: it tries all data at every full refresh.</summary>
             internal int StartAfter;
         }
 
@@ -606,7 +632,7 @@ namespace Unbound.Runtime
                 {
                     b.Start = Nearest(pending, surface, link.Start, snap, climb, 0);
                     b.End = Nearest(pending, surface, link.End, snap, climb, 0);
-                    b.StartAfter = s_NextId;
+                    b.StartAfter = 0;
                 }
                 else
                 {

@@ -1748,7 +1748,8 @@ namespace DotRecast.Detour
         {
             rank = float.MaxValue;
             // A carved tile of a moved surface gets its frame's vertices only when added (AddTile),
-            // after its links: until then they are made for this search and dropped again.
+            // after its links: until then they are made for this search and dropped again. (Carved
+            // tiles have no bounding volume tree, which SetLocalVerts would otherwise drop.)
             bool local = data.surface != null && data.surface.moved && data.localVerts == null;
             if (local)
                 data.surface.SetLocalVerts(data);
