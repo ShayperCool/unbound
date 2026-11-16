@@ -6,9 +6,11 @@ A probe's script writes `values.jsonl` into the directory named by its output va
 `{"k": "complete", "v": true}`. Images are PNG files next to it. The probe's `run.py` calls
 `main(...)` with its project directory, Editor method and output variable:
 
-    run.py record --label L     one Editor capture on the GPU display (run cache); on macOS a
-                                batch-mode capture with the Hub's Editor, for values that
-                                depend on neither the OS nor the graphics device
+    run.py record --label L     one Editor capture on the GPU display (run cache); on macOS,
+                                for a probe that declares `macos_batch` (values that depend
+                                on neither the OS nor the graphics device), a batch-mode
+                                capture with the Hub's Editor (the caller holds the machine's
+                                heavy-job lock)
     run.py publish A B          two byte-identical captures -> Reference/unity-<release>/
     run.py gate [--label L]     the engine on a fresh copy, compared with Reference/
 
@@ -220,9 +222,12 @@ def record_macos(out, project, capture, method, variable, timeout):
     values that depend on neither the OS nor the graphics device."""
     env = {**os.environ, variable: str(capture)}
     with (out/'editor.out').open('w') as log:
-        code = subprocess.run(['timeout', '-s', 'KILL', str(timeout), str(macos_editor()), '-batchmode', '-projectPath',
-                               str(project), '-executeMethod', method, '-logFile', str(out/'editor.log')],
-                              env=env, stdout=log, stderr=subprocess.STDOUT).returncode
+        try:
+            code = subprocess.run([str(macos_editor()), '-batchmode', '-projectPath', str(project), '-executeMethod', method,
+                                   '-logFile', str(out/'editor.log')], env=env, stdout=log, stderr=subprocess.STDOUT,
+                                  timeout=timeout).returncode
+        except subprocess.TimeoutExpired:
+            code = 'timeout'
     (out/MACOS_RESULT).write_text(json.dumps({'exit_code': code, 'editor': str(macos_editor())}) + '\n')
     try:
         read_values(capture/VALUES)
@@ -233,14 +238,14 @@ def record_macos(out, project, capture, method, variable, timeout):
     print('captured', capture)
 
 
-def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None):
+def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None, macos_batch=False):
+    if sys.platform == 'darwin' and not (macos_batch and batch):
+        raise SystemExit(f'{probe.name} records only with the Linux GPU Editor')
     out = run_root(probe, label)
     project = assemble(probe, out, base)
     capture = out/'capture'
     capture.mkdir(parents=True)
     if sys.platform == 'darwin':
-        if not batch:
-            raise SystemExit('a windowed capture needs the Linux GPU Editor')
         return record_macos(out, project, capture, method, variable, timeout)
     job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', method], batch=batch,
         graphics=True, env={variable: str(capture)}, timeout=timeout, label=probe.name+'-'+label)
@@ -352,14 +357,17 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
     return 1 if failures or code else 0
 
 
-def main(probe, method, variable, tolerance, engine_args, batch=True, authored=None, record_timeout=RECORD_TIMEOUT, base=None):
+def main(probe, method, variable, tolerance, engine_args, batch=True, authored=None, record_timeout=RECORD_TIMEOUT, base=None,
+         macos_batch=False):
     """batch=False records in a windowed Editor (on the private display): batch mode calls no OnGUI.
     authored names the probe's authored set (tests/authored_project.py) when its Editor run also
     authors inputs the engine needs: publish keeps the first capture's project as that set and
     the gate assembles it instead of the bare fixture. record_timeout is how many seconds an
     Editor capture may take before it is stopped (a probe whose capture authors and builds much
     gives itself more). base is (another probe's directory, paths in it): parts of that probe's
-    project (scenes, bakes, settings) this probe's own files are laid over."""
+    project (scenes, bakes, settings) this probe's own files are laid over. macos_batch: the
+    probe's values depend on neither the OS nor the graphics device, so it may be recorded with
+    the macOS Editor in batch mode."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('record', 'publish', 'gate'))
     parser.add_argument('labels', nargs='*')
@@ -367,7 +375,7 @@ def main(probe, method, variable, tolerance, engine_args, batch=True, authored=N
     args = parser.parse_args()
     label = args.label or time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     if args.mode == 'record':
-        return record(probe, method, variable, label, batch, record_timeout, base)
+        return record(probe, method, variable, label, batch, record_timeout, base, macos_batch)
     if args.mode == 'publish':
         code = publish(probe, args.labels)
         if authored and not code:

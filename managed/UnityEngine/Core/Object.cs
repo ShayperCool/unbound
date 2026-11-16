@@ -111,6 +111,7 @@ namespace UnityEngine
             {
                 ThrowIfUncreated();
                 MainThreadCheck.Check("set_hideFlags");
+                ThrowIfDestroyed();
                 var previous = m_SharedIdentity?.Flags ?? m_HideFlags;
                 if (m_SharedIdentity == null) m_HideFlags = value;
                 else m_SharedIdentity.Flags = value;
@@ -196,7 +197,7 @@ namespace UnityEngine
         {
             CheckNullArgument(original, "The Object you want to instantiate is null.");
             MainThreadCheck.Check("Internal_CloneSingle");
-            return Instantiation.Clone(original, null, false, null, null);
+            return CloneChecked(original, null, false, null, null);
         }
 
         public static Object Instantiate(Object original, Transform parent) =>
@@ -206,7 +207,7 @@ namespace UnityEngine
         {
             CheckNullArgument(original, "The Object you want to instantiate is null.");
             MainThreadCheck.Check(parent == null ? "Internal_CloneSingle" : "Internal_CloneSingleWithParent");
-            return Instantiation.Clone(original, parent, instantiateInWorldSpace, null, null);
+            return CloneChecked(original, parent, instantiateInWorldSpace, null, null);
         }
 
         public static Object Instantiate(Object original, Vector3 position, Quaternion rotation)
@@ -215,21 +216,21 @@ namespace UnityEngine
             MainThreadCheck.Check("Internal_InstantiateSingle");
             if (original is ScriptableObject)
                 throw new ArgumentException("Cannot instantiate a ScriptableObject with a position and rotation");
-            return Instantiation.Clone(original, null, false, position, rotation);
+            return CloneChecked(original, null, false, position, rotation);
         }
 
         public static Object Instantiate(Object original, Vector3 position, Quaternion rotation, Transform parent)
         {
             CheckNullArgument(original, "The Object you want to instantiate is null.");
             MainThreadCheck.Check(parent == null ? "Internal_InstantiateSingle" : "Internal_InstantiateSingleWithParent");
-            return Instantiation.Clone(original, parent, true, position, rotation);
+            return CloneChecked(original, parent, true, position, rotation);
         }
 
         public static Object Instantiate(Object original, Scene scene)
         {
             CheckNullArgument(original, "The Object you want to instantiate is null.");
             MainThreadCheck.Check("Internal_CloneSingleWithScene");
-            var clone = Instantiation.Clone(original, null, false, null, null);
+            var clone = CloneChecked(original, null, false, null, null);
             if (clone is GameObject go)
                 SceneManager.MoveGameObjectToScene(go, scene);
             else if (clone is Component c)
@@ -294,9 +295,10 @@ namespace UnityEngine
         [Obsolete("use Object.Destroy instead.")]
         public static void DestroyObject(Object obj) => Destroy(obj, 0f);
 
+        /// <summary>No object or a dead one throws, as Unity's binding of the parameter does
+        /// (tests/projects/objecterrors measures the destroyed object).</summary>
         public static void DontDestroyOnLoad(Object target)
         {
-            if ((object)target == null) return;
             ThrowIfNullArgument(target, "target");
             GameObject go = target as GameObject ?? (target as Component)?.gameObject;
             if (go == null)
@@ -409,11 +411,19 @@ namespace UnityEngine
 
         /// <summary>Unity's check of a null reference (an object reference, not Unity's null): a
         /// destroyed or placeholder object passes it and fails the engine's own argument check
-        /// (<see cref="ThrowIfNullArgument"/>) instead (tests/projects/objecterrors).</summary>
+        /// in <see cref="CloneChecked"/> instead (tests/projects/objecterrors).</summary>
         static void CheckNullArgument(object arg, string message)
         {
             if (arg == null) throw new ArgumentException(message);
-            if (arg is Object o) ThrowIfNullArgument(o, "data");
+        }
+
+        /// <summary>The engine's clone of <paramref name="original"/>, after its check of the
+        /// object argument (Unity's parameter "data"), which follows the managed checks of each
+        /// overload as in the release's reference assemblies.</summary>
+        static Object CloneChecked(Object original, Transform parent, bool instantiateInWorldSpace, Vector3? position, Quaternion? rotation)
+        {
+            ThrowIfNullArgument(original, "data");
+            return Instantiation.Clone(original, parent, instantiateInWorldSpace, position, rotation);
         }
 
         /// <summary>A constructor off the main thread: Unity throws before the engine object exists,

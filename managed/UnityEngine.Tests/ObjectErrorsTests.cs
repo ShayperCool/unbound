@@ -165,6 +165,29 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TheReviewedEdgesOfTheArgumentChecks()
+        {
+            // The managed checks of an overload come before the engine's dead-object check
+            // (the release's reference assemblies): a ScriptableObject with a pose is refused first.
+            var asset = ScriptableObject.CreateInstance<Asset>();
+            Object.DestroyImmediate(asset);
+            Assert.Equal("Cannot instantiate a ScriptableObject with a position and rotation",
+                Assert.Throws<ArgumentException>(() => Object.Instantiate(asset, Vector3.zero, Quaternion.identity)).Message);
+            Assert.Equal("target", Assert.Throws<ArgumentNullException>(() => Object.DontDestroyOnLoad(null)).ParamName);
+            var doomed = Make("Doomed");
+            Object.DestroyImmediate(doomed);
+            Assert.Throws<MissingReferenceException>(() => doomed.hideFlags = HideFlags.DontSave);
+            var go = Make("Lists");
+            go.GetComponentsInChildren<Transform>(false, null);
+            go.GetComponentsInParent<Transform>(false, null);
+            // Classes the "already added" refusal was not measured for keep their earlier answer.
+            var rect = Make("Rect");
+            rect.AddComponent<RectTransform>();
+            Assert.Equal(new[] { "Error: A GameObject can only contain one 'Transform' component." },
+                Logs(() => Assert.Null(rect.AddComponent<RectTransform>())));
+        }
+
+        [Fact]
         public void ParentingToItselfChangesNothingQuietly()
         {
             var go = Make("Self");

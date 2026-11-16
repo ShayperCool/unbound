@@ -72,10 +72,9 @@ namespace Unbound.Runtime
                 Debug.LogError("AddComponent with MonoBehaviour is not allowed. Create a class that derives from MonoBehaviour and add it instead.", go);
                 return null;
             }
-            // A base class the object already has a component of (Component, Behaviour, the
-            // Transform): measured for those three; the native abstract classes are taken to
-            // answer the same when the object has one of their components (unmeasured).
-            if (measured && (type == typeof(Component) || typeof(Transform).IsAssignableFrom(type) || Compat.NativeComponentIsAbstract(type))
+            // A base class the object already has a component of: measured for Component,
+            // Behaviour and Transform only; other classes keep their earlier diagnostics.
+            if (measured && (type == typeof(Component) || type == typeof(Behaviour) || type == typeof(Transform))
                 && go.FindComponent(type) != null)
             {
                 Log.Engine(LogType.Log, $"Can't add component '{type.Name}' to {go.name} because such a component is already added to the game object!", go);

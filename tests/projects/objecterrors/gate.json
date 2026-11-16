@@ -1,5 +1,7 @@
 {
   "commands": ["python3 tests/projects/objecterrors/run.py gate"],
   "summary": "objecterrors: .*",
-  "engine_paths": ["managed/UnityEngine/Core/Object.cs", "managed/UnityEngine/Core/GameObject.cs", "managed/UnityEngine/Core/Component.cs", "managed/UnityEngine/Runtime/MonoExceptions.cs"]
+  "engine_paths": ["managed/UnityEngine/Runtime/ObjectErrors.cs", "managed/UnityEngine/Runtime/Components.cs", "managed/UnityEngine/Core/Object.cs",
+                   "managed/UnityEngine/Core/GameObject.cs", "managed/UnityEngine/Core/ScriptableObject.cs", "managed/UnityEngine/Core/Transform.cs",
+                   "managed/UnityEngine/Core/Debug.cs"]
 }

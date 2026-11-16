@@ -289,7 +289,7 @@ namespace UnityEngine
         {
             MainThreadCheck.Check("GetComponentFastPath");
             ThrowIfDestroyed();
-            if (ObjectErrors.ComponentQuery<T>.Error is { } error) throw error;
+            ObjectErrors.CheckComponentQuery<T>();
             return FindComponent<T>();
         }
 
@@ -337,7 +337,7 @@ namespace UnityEngine
 
         public bool TryGetComponent<T>(out T component)
         {
-            if (ObjectErrors.ComponentQuery<T>.Error is { } error) throw error;
+            ObjectErrors.CheckComponentQuery<T>();
             component = FindComponent<T>();
             return component != null && !(component is Object o && o.m_Destroyed);
         }
@@ -395,7 +395,7 @@ namespace UnityEngine
         public void GetComponents<T>(List<T> results)
         {
             MainThreadCheck.Check("GetComponentsInternal");
-            if (ObjectErrors.ComponentQuery<T>.Error is { } error) throw error;
+            ObjectErrors.CheckComponentQuery<T>();
             if (results == null) return;
             results.Clear();
             foreach (var c in m_Components)
@@ -426,7 +426,8 @@ namespace UnityEngine
 
         public void GetComponentsInChildren<T>(bool includeInactive, List<T> results)
         {
-            if (ObjectErrors.ComponentQuery<T>.Error is { } error) throw error;
+            ObjectErrors.CheckComponentQuery<T>();
+            if (results == null) return;
             results.Clear();
             var list = new List<Component>();
             ComponentQueries.AllInChildren(this, typeof(T), includeInactive, list);
@@ -454,7 +455,8 @@ namespace UnityEngine
 
         public void GetComponentsInParent<T>(bool includeInactive, List<T> results)
         {
-            if (ObjectErrors.ComponentQuery<T>.Error is { } error) throw error;
+            ObjectErrors.CheckComponentQuery<T>();
+            if (results == null) return;
             results.Clear();
             var list = new List<Component>();
             ComponentQueries.AllInParent(this, typeof(T), includeInactive, list);

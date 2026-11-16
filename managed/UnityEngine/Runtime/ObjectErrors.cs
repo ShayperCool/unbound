@@ -68,10 +68,16 @@ namespace Unbound.Runtime
             return new ArgumentException($"GetComponent requires that the requested component '{type.Name}' derives from MonoBehaviour or Component or is an interface.");
         }
 
-        /// <summary><see cref="ComponentQueryType"/> for a generic query, decided once per type.</summary>
-        internal static class ComponentQuery<T>
+        /// <summary>Whether a generic query's type is valid, decided once per type; the exception
+        /// itself is made when thrown.</summary>
+        static class ComponentQuery<T>
         {
-            internal static readonly Exception Error = ComponentQueryType(typeof(T));
+            internal static readonly bool Valid = ComponentQueryType(typeof(T)) == null;
+        }
+
+        internal static void CheckComponentQuery<T>()
+        {
+            if (!ComponentQuery<T>.Valid) throw ComponentQueryType(typeof(T));
         }
 
         internal static void CheckComponentQuery(Type type)
