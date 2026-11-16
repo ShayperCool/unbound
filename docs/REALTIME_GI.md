@@ -173,7 +173,10 @@ ambient color, and a skybox at ambient intensities 1 and 2; lightmaps, light pro
   then 1 at the light. The light therefore grows with its range: at the point light's own range
   10 the Room's lightmaps are about five times the legacy falloff's (`room-delegate-linear`:
   2 isolated values outside the comparator's tolerance; two higher-band light probe
-  coefficients of this brightest case reported, as in `room-bounce`). At range 4 the floor's
+  coefficients of this brightest case reported, as in `room-bounce`), and at range 6, where
+  the far corners read the table's outer samples, the scale follows the range
+  (`room-delegate-linear-range6`: 6 isolated values next to the emissive panel, one higher-band
+  probe coefficient reported). At range 4 the floor's
   texels next to the left wall show the short-range residual below (a capture outside the
   reference: texels (8,10) to (8,12) 11-20% above the Editor's).
 - **Spot lights**: the cone of step 1 with the inner angle the delegate gives
@@ -191,11 +194,14 @@ ambient color, and a skybox at ambient intensities 1 and 2; lightmaps, light pro
 With these the engine's lightmaps differ from the Editor's by 0.0003 to 0.0016 on average in
 the light cases (one value of one case outside the comparator's tolerance) and 0.0007 to 0.0035
 in the sky cases, and no light probe or ambient probe value is outside it. Not measured: other
-pipelines' delegates (the High Definition Render Pipeline's), the other falloff types, area
-lights (baked only in the Universal Render Pipeline; a light the delegate gives as one adds
-nothing, with a warning), directional lightmaps and several systems under a pipeline. A delegate a script registers in the built-in pipeline is taken the same way
-(`room-delegate-*`: within the comparator's tolerance, 2 to 4 isolated values off). A delegate
-that throws leaves the frame without lights, with a warning.
+pipelines' delegates (the High Definition Render Pipeline's), falloff types other than the
+inverse-squared one under a pipeline (each is measured with a script's delegate in the built-in
+pipeline, below), area lights (baked only in the Universal Render Pipeline; a light the delegate
+gives as one adds nothing, with a warning), directional lightmaps and several systems under a
+pipeline. A delegate a script registers in the built-in pipeline is taken the same way
+(`room-delegate-*`: within the comparator's tolerance, 2 to 4 isolated values off; the spot
+light is off in those cases, so a spot light's falloff types other than the legacy one are not
+measured). A delegate that throws leaves the frame without lights, with a warning.
 
 Area lights add nothing to realtime GI, but `LightmapperUtils` gives a rectangle or disc light
 the range `Light.dilatedRange`: a rectangle light's range plus half its diagonal, a disc light's
