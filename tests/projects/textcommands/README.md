@@ -25,7 +25,7 @@ laid out text, which a batch-mode Editor sometimes lays out a frame later.
 - `reuse.*`, `imgui.*`: a pooled event comes back reset (no command name, propagation not
   stopped); a command event made from an IMGUI event reads that event's command name.
 - `ime.*`: focusing an editable field sets `Input.imeCompositionMode` to On, its blur back to Auto;
-  a read-only field leaves it.
+  focusing a read-only field leaves a mode set before (`ime.lockedFocused`).
 - `imeEvent.*`: the internal IMEEvent (reflection) is pooled with its composition string,
   trickles down and bubbles without being stopped, still passes enabled ancestors of a disabled
   target, and goes nowhere when sent to the panel without a target. With no input method composing,

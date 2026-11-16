@@ -45,18 +45,6 @@ namespace UnityEngine
             set => s_KeyboardControl = value;
         }
 
-        /// <summary>
-        /// The system-wide clipboard's text (6000.0 Scripting API: "Get access to the system-wide
-        /// clipboard."), through the host's <c>clipboard-get</c>/<c>clipboard-set</c> calls.
-        /// <c>EditorGUIUtility.systemCopyBuffer</c> is this same property. Text and line ends pass
-        /// unchanged. Measured in tests/projects/inputplatform: null becomes empty text; calls
-        /// require the main thread. A clipboard holding no text (empty, another
-        /// format, or not UTF-8) reads as ""; when the clipboard cannot be read or written (no
-        /// display, an older host, an error) the game's in-process copy (<see cref="s_CopyBuffer"/>,
-        /// the last text set or read) answers instead, with one warning each time the clipboard
-        /// stops answering; null is stored as "". Without a native host (unit tests) only the
-        /// in-process copy is used.
-        /// </summary>
         /// <summary>The input method's composition, the IME mode and the IME window position: the
         /// same state as <see cref="Input.compositionString"/>, <see cref="Input.imeCompositionMode"/>
         /// and <see cref="Input.compositionCursorPos"/> (a focused UI Toolkit text field sets the mode
@@ -76,6 +64,18 @@ namespace UnityEngine
             set => Input.SetCompositionCursorPos(value, warn: false);
         }
 
+        /// <summary>
+        /// The system-wide clipboard's text (6000.0 Scripting API: "Get access to the system-wide
+        /// clipboard."), through the host's <c>clipboard-get</c>/<c>clipboard-set</c> calls.
+        /// <c>EditorGUIUtility.systemCopyBuffer</c> is this same property. Text and line ends pass
+        /// unchanged. Measured in tests/projects/inputplatform: null becomes empty text; calls
+        /// require the main thread. A clipboard holding no text (empty, another
+        /// format, or not UTF-8) reads as ""; when the clipboard cannot be read or written (no
+        /// display, an older host, an error) the game's in-process copy (<see cref="s_CopyBuffer"/>,
+        /// the last text set or read) answers instead, with one warning each time the clipboard
+        /// stops answering; null is stored as "". Without a native host (unit tests) only the
+        /// in-process copy is used.
+        /// </summary>
         public static string systemCopyBuffer
         {
             get { MainThreadCheck.Check("get_systemCopyBuffer"); return ReadSystemCopyBuffer(); }

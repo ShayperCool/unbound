@@ -8,8 +8,8 @@ namespace UnityEngine.Tests
     /// <summary>Command and IME events of text fields (Unity 6000.0.71f1, tests/projects/textcommands
     /// for the commands, the IME mode and IMEEvent's pooling and propagation; the composition
     /// preview follows the release's text editing with a stand-in input method, as the Editor
-    /// probe cannot compose). Controls outside the probe: a password field copies its masked text
-    /// as the probe's plain field does, a multiline paste with Windows line ends.</summary>
+    /// probe cannot compose). Controls outside the probe: a paste with Windows line ends into a
+    /// single-line and a multiline field, and a read-only field leaving an IME mode set before.</summary>
     public sealed class UitkTextCommandTests : IDisposable
     {
         readonly Panel m_Panel;
@@ -174,8 +174,9 @@ namespace UnityEngine.Tests
             GUIUtility.systemCopyBuffer = "CLIP";
             var field = Field("locked text");
             field.isReadOnly = true;
+            Input.imeCompositionMode = IMECompositionMode.Off;
             Focus(field, 0, 6);
-            Assert.Equal(IMECompositionMode.Auto, Input.imeCompositionMode);
+            Assert.Equal(IMECompositionMode.Off, Input.imeCompositionMode);
             Assert.Equal(0, Validate(field, "Copy"));
             Assert.Equal(1, Validate(field, "Cut"));
             Assert.Equal(1, Validate(field, "Paste"));

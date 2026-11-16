@@ -38,7 +38,7 @@
 {"key":"imgui.commandName","value":"SelectAll"}
 {"key":"imgui.execute.selectAll","value":"reached 0 trickled 1 bubbled 0 text  i2hello world value  i2hello world cursor 0 select 14 clipboard ne changes 0 "}
 {"key":"multi.execute.paste","value":"reached 0 trickled 1 bubbled 0 text abx\ny value abx\ny cursor 5 select 5 clipboard x\ny changes 1 ab>abx\ny"}
-{"key":"ime.lockedFocused","value":"Auto"}
+{"key":"ime.lockedFocused","value":"On"}
 {"key":"locked.validate.Copy","value":"reached 0 trickled 1 bubbled 0"}
 {"key":"locked.validate.Cut","value":"reached 1 trickled 1 bubbled 1"}
 {"key":"locked.validate.Paste","value":"reached 1 trickled 1 bubbled 1"}

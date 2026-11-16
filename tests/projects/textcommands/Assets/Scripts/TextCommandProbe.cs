@@ -214,7 +214,11 @@ public class TextCommandProbe : MonoBehaviour
         GUIUtility.systemCopyBuffer = "x\ny";
         Execute("multi.execute.paste", multi, "Paste");
 
-        // A read-only field selects and copies but does not cut or paste.
+        // A read-only field selects and copies but does not cut or paste; focusing it leaves the
+        // IME mode as it was (set with nothing focused).
+        multi.Blur();
+        yield return Settle();
+        UnityEngine.Input.imeCompositionMode = IMECompositionMode.On;
         locked.Focus();
         yield return Settle();
         Put("ime.lockedFocused", UnityEngine.Input.imeCompositionMode);
