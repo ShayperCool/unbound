@@ -60,20 +60,27 @@ namespace UnityEngine.Tests
             Assert.Equal(new BoundsInt(1, 2, 3, 7, 7, 7), cells.value);
         }
 
-        [Fact]
-        public void ComponentAttributesSetOneComponentEach()
+        static VisualElement Clone(string body)
         {
-            var bounds = new BoundsField();
-            UxmlBuilder.ApplyAttribute(bounds, "cx", "1");
-            UxmlBuilder.ApplyAttribute(bounds, "ex", "4");
+            var asset = ScriptableObject.CreateInstance<VisualTreeAsset>();
+            asset.name = "CompositeFieldTests";
+            UxmlImporter.Import("Assets/CompositeFieldTests.uxml", "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\">" + body + "</ui:UXML>", asset);
+            var root = new VisualElement();
+            asset.CloneTree(root);
+            return root;
+        }
+
+        [Fact]
+        public void ComponentAttributesMakeTheWholeValue()
+        {
+            var root = Clone("<ui:BoundsField name=\"b\" value=\"9,9,9,9,9,9\" ez=\"6\" cx=\"1\" />" +
+                "<ui:Vector4Field name=\"v\" x=\"not a number\" w=\"0.5\" />" +
+                "<ui:MinMaxSlider name=\"m\" low-limit=\"0\" high-limit=\"10\" x=\"3\" />");
+            var bounds = root.Q<BoundsField>("b");
             Assert.Equal(new Vector3(1, 0, 0), bounds.value.center);
-            Assert.Equal(new Vector3(4, 0, 0), bounds.value.size);
-            var color = new Vector4Field();
-            UxmlBuilder.ApplyAttribute(color, "w", "0.5");
-            UxmlBuilder.ApplyAttribute(color, "value", "1,2,3,4");
-            Assert.Equal(new Vector4(1, 2, 3, 4), color.value);
-            UxmlBuilder.ApplyAttribute(color, "x", "not a number");
-            Assert.Equal(new Vector4(1, 2, 3, 4), color.value);
+            Assert.Equal(new Vector3(0, 0, 6), bounds.value.size);
+            Assert.Equal(new Vector4(0, 0, 0, 0.5f), root.Q<Vector4Field>("v").value);
+            Assert.Equal(new Vector2(0, 10), root.Q<MinMaxSlider>("m").value);
         }
 
         [Fact]

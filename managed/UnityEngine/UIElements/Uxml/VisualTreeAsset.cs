@@ -505,13 +505,13 @@ namespace Unbound.UIElements
 
         static void ApplyAttributes(VisualTreeAsset asset, VisualElement element, UxmlNode node)
         {
-            List<KeyValuePair<string, string>> enumAttributes = null;
+            List<KeyValuePair<string, string>> enumAttributes = null, componentAttributes = null;
             foreach (var a in Ordered(node))
             {
-                if (IsEnumFieldAttribute(element, a.Key)) (enumAttributes ??= new List<KeyValuePair<string, string>>()).Add(a);
-                else ApplyAttribute(element, a.Key, a.Value, asset: asset, node: node);
+                if (!Gather(element, a, ref enumAttributes, ref componentAttributes)) ApplyAttribute(element, a.Key, a.Value, asset: asset, node: node);
             }
             ApplyEnumFieldAttributes(asset, node, element, enumAttributes);
+            ApplyComponentAttributes(element, componentAttributes);
         }
 
         // EnumField's own attributes `type`, `value` and `include-obsolete-values` (the attribute
@@ -616,7 +616,7 @@ namespace Unbound.UIElements
         static void ApplyUxmlAttributes(VisualTreeAsset asset, VisualElement element, UxmlNode node, Type type)
         {
             var members = UxmlTypeIndex.MembersOf(type);
-            List<KeyValuePair<string, string>> enumAttributes = null;
+            List<KeyValuePair<string, string>> enumAttributes = null, componentAttributes = null;
             foreach (var a in Ordered(node))
             {
                 UxmlMember member = null;
@@ -628,14 +628,14 @@ namespace Unbound.UIElements
                 }
                 if (member == null)
                 {
-                    if (IsEnumFieldAttribute(element, a.Key)) (enumAttributes ??= new List<KeyValuePair<string, string>>()).Add(a);
-                    else ApplyAttribute(element, a.Key, a.Value, engineDeclaredOnly: true, asset: asset, node: node);
+                    if (!Gather(element, a, ref enumAttributes, ref componentAttributes)) ApplyAttribute(element, a.Key, a.Value, engineDeclaredOnly: true, asset: asset, node: node);
                     continue;
                 }
                 if (member.Problem != null) continue;
                 ApplyMember(asset, node, element, member, a.Key, a.Value);
             }
             ApplyEnumFieldAttributes(asset, node, element, enumAttributes);
+            ApplyComponentAttributes(element, componentAttributes);
         }
 
         /// <summary>One [UxmlAttribute] member of a custom control or UXML object read from its
@@ -755,14 +755,14 @@ namespace Unbound.UIElements
                     foreach (var obsolete in description.obsoleteNames)
                         if (!string.IsNullOrEmpty(obsolete)) described.Add(obsolete);
             }
-            List<KeyValuePair<string, string>> enumAttributes = null;
+            List<KeyValuePair<string, string>> enumAttributes = null, componentAttributes = null;
             foreach (var a in Ordered(node))
             {
                 if (described.Contains(a.Key)) continue;
-                if (IsEnumFieldAttribute(element, a.Key)) (enumAttributes ??= new List<KeyValuePair<string, string>>()).Add(a);
-                else ApplyAttribute(element, a.Key, a.Value, engineDeclaredOnly: true, asset: asset, node: node);
+                if (!Gather(element, a, ref enumAttributes, ref componentAttributes)) ApplyAttribute(element, a.Key, a.Value, engineDeclaredOnly: true, asset: asset, node: node);
             }
             ApplyEnumFieldAttributes(asset, node, element, enumAttributes);
+            ApplyComponentAttributes(element, componentAttributes);
         }
 
         /// <summary>Applies one attribute as on built-in elements. With <paramref name="engineDeclaredOnly"/>
@@ -821,7 +821,6 @@ namespace Unbound.UIElements
                     element.dataSourceType = UxmlAttributeValues.ReadTypeReference(node, name, value, typeof(object));
                     return;
             }
-            if (TryApplyComponentAttribute(element, name, value)) return;
             var property = FindProperty(element.GetType(), name, engineDeclaredOnly);
             if (property == null)
             {
@@ -1077,85 +1076,83 @@ namespace Unbound.UIElements
                 return false;
             }
             // Vectors, rects, bounds and hashes read as the UXML attributes of game elements do.
-            if (s_ComponentNames.ContainsKey(type) || type == typeof(Hash128))
+            if (IsCompositeValue(type) || type == typeof(Hash128))
                 return UxmlAttributeValues.TryRead(value, type, null, null, out result, out _);
             return false;
         }
 
-        /// <summary>The per-component attributes the composite fields also read (an older UXML
-        /// form, matches the Unity 6000.0.71f1 Editor, tests/projects/compositefields): each sets
-        /// one component of the value, in this order; bounds take a center and a size.</summary>
-        static readonly Dictionary<Type, string[]> s_ComponentNames = new Dictionary<Type, string[]>
+        /// <summary>Attributes applied together once the element's others are applied: EnumField's
+        /// initialization, and a composite field's per-component values.</summary>
+        static bool Gather(VisualElement element, KeyValuePair<string, string> a, ref List<KeyValuePair<string, string>> enumAttributes,
+            ref List<KeyValuePair<string, string>> componentAttributes)
         {
-            [typeof(Vector2)] = new[] { "x", "y" },
-            [typeof(Vector3)] = new[] { "x", "y", "z" },
-            [typeof(Vector4)] = new[] { "x", "y", "z", "w" },
-            [typeof(Rect)] = new[] { "x", "y", "w", "h" },
-            [typeof(Bounds)] = new[] { "cx", "cy", "cz", "ex", "ey", "ez" },
-            [typeof(Vector2Int)] = new[] { "x", "y" },
-            [typeof(Vector3Int)] = new[] { "x", "y", "z" },
-            [typeof(RectInt)] = new[] { "x", "y", "w", "h" },
-            [typeof(BoundsInt)] = new[] { "px", "py", "pz", "sx", "sy", "sz" },
-        };
-
-        static double[] Components(object v) => v switch
-        {
-            Vector2 a => new double[] { a.x, a.y },
-            Vector3 a => new double[] { a.x, a.y, a.z },
-            Vector4 a => new double[] { a.x, a.y, a.z, a.w },
-            Rect a => new double[] { a.x, a.y, a.width, a.height },
-            Bounds a => new double[] { a.center.x, a.center.y, a.center.z, a.size.x, a.size.y, a.size.z },
-            Vector2Int a => new double[] { a.x, a.y },
-            Vector3Int a => new double[] { a.x, a.y, a.z },
-            RectInt a => new double[] { a.x, a.y, a.width, a.height },
-            BoundsInt a => new double[] { a.position.x, a.position.y, a.position.z, a.size.x, a.size.y, a.size.z },
-            _ => null,
-        };
-
-        static object FromComponents(Type type, double[] c)
-        {
-            float F(int i) => (float)c[i];
-            int I(int i) => (int)c[i];
-            if (type == typeof(Vector2)) return new Vector2(F(0), F(1));
-            if (type == typeof(Vector3)) return new Vector3(F(0), F(1), F(2));
-            if (type == typeof(Vector4)) return new Vector4(F(0), F(1), F(2), F(3));
-            if (type == typeof(Rect)) return new Rect(F(0), F(1), F(2), F(3));
-            if (type == typeof(Bounds)) return new Bounds(new Vector3(F(0), F(1), F(2)), new Vector3(F(3), F(4), F(5)));
-            if (type == typeof(Vector2Int)) return new Vector2Int(I(0), I(1));
-            if (type == typeof(Vector3Int)) return new Vector3Int(I(0), I(1), I(2));
-            if (type == typeof(RectInt)) return new RectInt(I(0), I(1), I(2), I(3));
-            return new BoundsInt(I(0), I(1), I(2), I(3), I(4), I(5));
+            if (IsEnumFieldAttribute(element, a.Key)) (enumAttributes ??= new List<KeyValuePair<string, string>>()).Add(a);
+            else if (ComponentFieldOf(element.GetType()) is { } field && Array.IndexOf(field.names, a.Key) >= 0) (componentAttributes ??= new List<KeyValuePair<string, string>>()).Add(a);
+            else return false;
+            return true;
         }
 
-        /// <summary>Applies a per-component attribute of an engine field holding a vector, rect or
-        /// bounds; false for other attributes and elements.</summary>
-        static bool TryApplyComponentAttribute(VisualElement element, string name, string value)
+        /// <summary>The per-component attributes the composite fields also read, an older UXML form
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/compositefields): the components
+        /// given make the whole value, the others 0, replacing a `value` attribute; bounds take a
+        /// center and a size. Fields deriving from these read them too; other fields holding the same
+        /// value types (MinMaxSlider) do not.</summary>
+        static readonly (Type field, Type value, string[] names)[] s_ComponentFields =
         {
-            if (name.Length > 2) return false;
-            Type valueType = null;
-            for (var t = element.GetType(); t != null && valueType == null; t = t.BaseType)
-                if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(BaseField<>)) valueType = t.GetGenericArguments()[0];
-            if (valueType == null || !s_ComponentNames.TryGetValue(valueType, out var names) || !UxmlTypeIndex.IsEngineType(element.GetType())) return false;
-            int index = Array.IndexOf(names, name);
-            if (index < 0) return false;
+            (typeof(Vector2Field), typeof(Vector2), new[] { "x", "y" }),
+            (typeof(Vector3Field), typeof(Vector3), new[] { "x", "y", "z" }),
+            (typeof(Vector4Field), typeof(Vector4), new[] { "x", "y", "z", "w" }),
+            (typeof(RectField), typeof(Rect), new[] { "x", "y", "w", "h" }),
+            (typeof(BoundsField), typeof(Bounds), new[] { "cx", "cy", "cz", "ex", "ey", "ez" }),
+            (typeof(Vector2IntField), typeof(Vector2Int), new[] { "x", "y" }),
+            (typeof(Vector3IntField), typeof(Vector3Int), new[] { "x", "y", "z" }),
+            (typeof(RectIntField), typeof(RectInt), new[] { "x", "y", "w", "h" }),
+            (typeof(BoundsIntField), typeof(BoundsInt), new[] { "px", "py", "pz", "sx", "sy", "sz" }),
+        };
+
+        static readonly Dictionary<Type, int> s_ComponentFieldIndex = new Dictionary<Type, int>();
+
+        /// <summary>The composite field an element type is (or derives from); null for other types.</summary>
+        static (Type field, Type value, string[] names)? ComponentFieldOf(Type type)
+        {
+            if (!s_ComponentFieldIndex.TryGetValue(type, out int index))
+            {
+                index = Array.FindIndex(s_ComponentFields, entry => entry.field.IsAssignableFrom(type));
+                s_ComponentFieldIndex[type] = index;
+            }
+            return index < 0 ? null : s_ComponentFields[index];
+        }
+
+        /// <summary>Whether a value type is one the composite fields hold (read as UXML text by the
+        /// shared attribute reader).</summary>
+        static bool IsCompositeValue(Type type) => Array.Exists(s_ComponentFields, entry => entry.value == type);
+
+        static void ApplyComponentAttributes(VisualElement element, List<KeyValuePair<string, string>> attributes)
+        {
+            if (attributes == null) return;
+            var (_, valueType, names) = ComponentFieldOf(element.GetType()).Value;
             bool integral = valueType == typeof(Vector2Int) || valueType == typeof(Vector3Int) || valueType == typeof(RectInt) || valueType == typeof(BoundsInt);
-            double component;
-            if (integral)
+            var c = new double[names.Length];
+            foreach (var a in attributes)
             {
-                if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i)) return true;
-                component = i;
+                // A component that does not read stays 0.
+                int i = Array.IndexOf(names, a.Key);
+                if (integral) c[i] = int.TryParse(a.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : 0;
+                else c[i] = float.TryParse(a.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var f) ? f : 0;
             }
-            else
-            {
-                if (!float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var f)) return true;
-                component = f;
-            }
-            var property = element.GetType().GetProperty("value", BindingFlags.Public | BindingFlags.Instance, null, valueType, Type.EmptyTypes, null);
-            if (property == null) return false;
-            var components = Components(property.GetValue(element));
-            components[index] = component;
-            property.SetValue(element, FromComponents(valueType, components));
-            return true;
+            object value;
+            float F(int i) => (float)c[i];
+            int I(int i) => (int)c[i];
+            if (valueType == typeof(Vector2)) value = new Vector2(F(0), F(1));
+            else if (valueType == typeof(Vector3)) value = new Vector3(F(0), F(1), F(2));
+            else if (valueType == typeof(Vector4)) value = new Vector4(F(0), F(1), F(2), F(3));
+            else if (valueType == typeof(Rect)) value = new Rect(F(0), F(1), F(2), F(3));
+            else if (valueType == typeof(Bounds)) value = new Bounds(new Vector3(F(0), F(1), F(2)), new Vector3(F(3), F(4), F(5)));
+            else if (valueType == typeof(Vector2Int)) value = new Vector2Int(I(0), I(1));
+            else if (valueType == typeof(Vector3Int)) value = new Vector3Int(I(0), I(1), I(2));
+            else if (valueType == typeof(RectInt)) value = new RectInt(I(0), I(1), I(2), I(3));
+            else value = new BoundsInt(I(0), I(1), I(2), I(3), I(4), I(5));
+            element.GetType().GetProperty("value", BindingFlags.Public | BindingFlags.Instance, null, valueType, Type.EmptyTypes, null)?.SetValue(element, value);
         }
     }
 

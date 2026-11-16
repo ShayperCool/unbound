@@ -47,7 +47,6 @@ namespace UnityEngine.UIElements
 
         readonly List<TField> m_Fields = new List<TField>();
         bool m_ShouldUpdateDisplay = true;
-        bool m_ForceUpdateDisplay;
 
         internal List<TField> fields => m_Fields;
 
@@ -138,10 +137,9 @@ namespace UnityEngine.UIElements
 
         public override void SetValueWithoutNotify(TValueType newValue)
         {
-            bool refresh = m_ForceUpdateDisplay || (m_ShouldUpdateDisplay && !EqualityComparer<TValueType>.Default.Equals(rawValue, newValue));
+            bool refresh = m_ShouldUpdateDisplay && !EqualityComparer<TValueType>.Default.Equals(rawValue, newValue);
             base.SetValueWithoutNotify(newValue);
             if (refresh) UpdateDisplay();
-            m_ForceUpdateDisplay = false;
         }
 
         protected override void UpdateMixedValueContent()
