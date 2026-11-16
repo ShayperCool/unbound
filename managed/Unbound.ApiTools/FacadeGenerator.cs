@@ -27,7 +27,7 @@ namespace Unbound.ApiTools;
 public static class FacadeGenerator
 {
     /// <summary>Bump when the facades generated from the same inputs would differ.</summary>
-    public const string FormatVersion = "unbound-facades-2";
+    public const string FormatVersion = "unbound-facades-3";
 
     const string StampFile = "facades.stamp.json";
 
@@ -36,15 +36,16 @@ public static class FacadeGenerator
     public static FacadeReport Generate(string unityManagedEngineDir, string outputDir, IEnumerable<string>? platformModules = null)
     {
         var watch = Stopwatch.StartNew();
-        var inputs = UnityModules.Files(unityManagedEngineDir, platformModules)
-            .Where(f => Path.GetFileNameWithoutExtension(f) != UnityModules.ImplAssemblyName)
-            .ToList();
+        var all = UnityModules.Files(unityManagedEngineDir, platformModules)
+            .Select(path => (Path: path, Bytes: File.ReadAllBytes(path))).ToList();
         // Read each input once: the cache key and generated image must describe the same bytes.
-        var sources = inputs.Select(path => (Path: path, Bytes: File.ReadAllBytes(path))).ToList();
+        // Unbound implements UnityEngine.CoreModule itself (no facade), but its members are read
+        // for the checked-member list like the other modules'.
+        var sources = all.Where(f => Path.GetFileNameWithoutExtension(f.Path) != UnityModules.ImplAssemblyName).ToList();
         var stamp = new FacadeStamp
         {
             Version = FormatVersion,
-            Inputs = sources.Select(f => $"{Path.GetFileName(f.Path)}\t{Convert.ToHexString(SHA256.HashData(f.Bytes))}").ToList(),
+            Inputs = all.Select(f => $"{Path.GetFileName(f.Path)}\t{Convert.ToHexString(SHA256.HashData(f.Bytes))}").ToList(),
         };
         var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
             JsonSerializer.Serialize(stamp, StampJson)))).ToLowerInvariant();
@@ -54,7 +55,8 @@ public static class FacadeGenerator
             && previous.Version == stamp.Version
             && previous.Inputs.SequenceEqual(stamp.Inputs)
             && previous.Facades.Count == sources.Count
-            && previous.Facades.All(f => File.Exists(Path.Combine(outputDir, f.Name + ".dll")));
+            && previous.Facades.All(f => File.Exists(Path.Combine(outputDir, f.Name + ".dll")))
+            && File.Exists(Path.Combine(outputDir, CheckedMembers.FileName));
         if (Complete())
             return Report(outputDir, ReadStamp(stampPath)!.Facades, reused: true, watch);
 
@@ -65,6 +67,7 @@ public static class FacadeGenerator
         {
             foreach (var source in sources)
                 stamp.Facades.Add(WriteFacade(source.Bytes, source.Path, Path.Combine(staging, Path.GetFileName(source.Path))));
+            File.WriteAllText(Path.Combine(staging, CheckedMembers.FileName), CheckedMembers.Compute(all.Select(f => f.Bytes)));
             File.WriteAllText(Path.Combine(staging, StampFile), JsonSerializer.Serialize(stamp, StampJson));
             try
             {
