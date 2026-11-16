@@ -112,21 +112,22 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | After declaration extras |
+| Category | Before Q410 | Retained now |
 | --- | ---: | ---: |
 | Attributes | 938 | 13 |
 | Modifiers | 87 | 6 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
 | Layout | 68 | 61 |
-| Interfaces | 65 | 17 |
+| Interfaces | 65 | 16 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 0 |
 | Lookup policies | 11 | 10 |
-| Total | 1,332 | 109 |
+| Total | 1,332 | 108 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
-slice removes only the exact entries for declarations it fixes.
+slice removes only the exact entries for declarations it fixes. After the declaration
+extras slice, Q516's slider drag slice removes BaseSlider's IValueField entry.
 
 Q410's enum slice copies obsolete constructor arguments, messages, error flags and
 accompanying annotations for 190 enum declarations. The attribute probe records
