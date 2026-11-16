@@ -1904,7 +1904,7 @@
 {"k":"camera/api/PrepareCamera/thrown","v":""}
 {"k":"camera/api/ProcessCameraCommand/logs","v":""}
 {"k":"camera/api/ProcessCameraCommand/thrown","v":""}
-{"k":"events/names","v":"Tick, Burst, Never"}
+{"k":"events/names","v":"Tick, Burst, Never, Fast"}
 {"k":"bundle/loaded","v":"true"}
 {"k":"bundle/names","v":"assets/bundlegraphs/bundled.vfx"}
 {"k":"bundle/asset","v":"VisualEffectAsset Bundled"}
@@ -1979,6 +1979,14 @@
 {"k":"sim/texture later/settled/f001","v":"alive=-1 info=0/16 sleeping=1 awake=0"}
 {"k":"sim/rate/info/f001","v":"0/20 sleeping=1 awake=0"}
 {"k":"sim/override timing/f001 2 late update","v":"40e00000 none"}
+{"k":"events/events/f001/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 first"}
+{"k":"events/events/f001/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events behind/f001/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 first"}
+{"k":"events/events behind/f001/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f001/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 first"}
+{"k":"events/events paused/f001/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f001/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 first"}
+{"k":"events/events throwing/f001/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"sim/override timing/f001 3 end of frame","v":"40e00000 none"}
 {"k":"camera/needed/f002","v":"main Depth, ortho None, scene None"}
 {"k":"sim/override timing/f002 1 update","v":"40e00000 none"}
@@ -2015,6 +2023,12 @@
 {"k":"sim/scene Overridden/f002","v":"culled=0 | System: Finished playing=0 new=1 count=00000000 dt=3d088889 t=3d088889 before=00000000 loop=bf800000 after=00000000 index=0 of=0"}
 {"k":"sim/override second frame/f002","v":"alive=0 culled=1 | System: Finished playing=0 new=0 count=00000000 dt=00000000 t=00000000 before=00000000 loop=00000000 after=00000000 index=0 of=0"}
 {"k":"sim/override timing/f002 2 late update","v":"40e00000 41100000"}
+{"k":"events/events/f002/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f002/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f002/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f002/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f002/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f002/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"sim/override timing/f002 3 end of frame","v":"40e00000 41100000"}
 {"k":"camera/needed/f003","v":"main Depth, ortho None, scene None"}
 {"k":"sim/override timing/f003 1 update","v":"40e00000 41100000"}
@@ -2050,9 +2064,18 @@
 {"k":"sim/scene Overridden/f003","v":"culled=0 | System: Finished playing=0 new=0 count=00000000 dt=3d088889 t=3d888889 before=00000000 loop=bf800000 after=00000000 index=0 of=0"}
 {"k":"sim/override second frame/f003","v":"alive=1 culled=0 | System: Looping playing=1 new=1 count=3f800000 dt=3d088889 t=3d088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/override timing/f003 2 late update","v":"40e00000 41100000"}
-{"k":"events/events/f003/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 first"}
-{"k":"events/events paused/f003/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 first"}
-{"k":"events/events throwing/f003/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 first"}
+{"k":"events/events/f003/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f003/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f003/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events/f003/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f003/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f003/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events paused/f003/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events paused/f003/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f003/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f003/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events throwing/f003/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events throwing/f003/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"sim/override timing/f003 3 end of frame","v":"40e00000 41100000"}
 {"k":"bundle/effect/f003","v":"culled=0 awake=0 renderer enabled=1 visible=1"}
 {"k":"draw/opaque/f003","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
@@ -2096,6 +2119,12 @@
 {"k":"sim/scene Overridden/f004","v":"culled=0 | System: Finished playing=0 new=0 count=00000000 dt=3d088889 t=3dccccce before=00000000 loop=bf800000 after=00000000 index=0 of=0"}
 {"k":"sim/override second frame/f004","v":"alive=2 culled=0 | System: Looping playing=1 new=0 count=3f800000 dt=3d088889 t=3d888889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/override timing/f004 2 late update","v":"40e00000 41100000"}
+{"k":"events/events/f004/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f004/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f004/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f004/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f004/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f004/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"sim/override timing/f004 3 end of frame","v":"40e00000 41100000"}
 {"k":"camera/needed/f005","v":"main Depth, ortho None, scene None"}
 {"k":"sim/override timing/f005 1 update","v":"40e00000 41100000"}
@@ -2129,6 +2158,10 @@
 {"k":"sim/scene Overridden/f005","v":"culled=0 | System: Finished playing=0 new=0 count=00000000 dt=3d088889 t=3e088889 before=00000000 loop=bf800000 after=00000000 index=0 of=0"}
 {"k":"sim/override second frame/f005","v":"alive=3 culled=0 | System: Looping playing=1 new=0 count=3f800000 dt=3d088889 t=3dccccce before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/override timing/f005 2 late update","v":"40e00000 41100000"}
+{"k":"events/events/f005/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f005/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f005/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f005/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"sim/override timing/f005 3 end of frame","v":"40e00000 41100000"}
 {"k":"draw/many/f005","v":"alive=20000 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/textured/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
@@ -2160,8 +2193,14 @@
 {"k":"sim/scene Plain/f006","v":"culled=0 | System: Looping playing=1 new=0 count=3e888889 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/scene Events/f006","v":"culled=0 | System: Finished playing=0 new=0 count=00000000 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=0 | System (4): Looping playing=1 new=0 count=3d888889 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/scene Overridden/f006","v":"culled=0 | System: Finished playing=0 new=0 count=00000000 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=0"}
-{"k":"events/events/f006/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
-{"k":"events/events throwing/f006/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f006/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f006/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f006/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events/f006/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f006/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f006/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events throwing/f006/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events throwing/f006/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f007","v":"main Depth, ortho None, scene None"}
 {"k":"sim/time/f007","v":"3d088889"}
 {"k":"sim/rate/f007","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e4ccccd before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -2191,7 +2230,11 @@
 {"k":"sim/scene Overridden/f007","v":"culled=0 | System: Finished playing=0 new=0 count=00000000 dt=3d088889 t=3e4ccccd before=00000000 loop=bf800000 after=00000000 index=0 of=0"}
 {"k":"events/events/f007/0","v":"after late update Tick spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
 {"k":"events/events/f007/1","v":"after late update Burst spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
+{"k":"events/events/f007/2","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f007/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events throwing/f007/0","v":"after late update Burst spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
+{"k":"events/events throwing/f007/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f007/2","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f008","v":"main Depth, ortho None, scene None"}
 {"k":"sim/time/f008","v":"3d088889"}
 {"k":"sim/rate/f008","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e6eeeef before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -2221,6 +2264,10 @@
 {"k":"sim/scene Plain/f008","v":"culled=0 | System: Looping playing=1 new=0 count=3e888889 dt=3d088889 t=3e6eeeef before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/scene Events/f008","v":"culled=0 | System: Finished playing=0 new=0 count=00000000 dt=3d088889 t=3e6eeeef before=00000000 loop=bf800000 after=00000000 index=0 of=0 | System (4): Looping playing=1 new=0 count=3d888889 dt=3d088889 t=3e6eeeef before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/scene Overridden/f008","v":"culled=0 | System: Finished playing=0 new=0 count=00000000 dt=3d088889 t=3e6eeeef before=00000000 loop=bf800000 after=00000000 index=0 of=0"}
+{"k":"events/events/f008/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f008/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f008/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f008/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f009","v":"main None, ortho None, scene None"}
 {"k":"sim/time/f009","v":"3d088889"}
 {"k":"sim/rate/f009","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e888889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -2245,8 +2292,14 @@
 {"k":"sim/toggle object/f009","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/toggle at once/f009","v":"alive=0 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3dccccce before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/toggle object at once/f009","v":"alive=0 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3dccccce before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
-{"k":"events/events/f009/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
-{"k":"events/events throwing/f009/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f009/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f009/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f009/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events/f009/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f009/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f009/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events throwing/f009/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events throwing/f009/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f010","v":"main None, ortho None, scene None"}
 {"k":"sim/time/f010","v":"3d088889"}
 {"k":"sim/rate/f010","v":"alive=2 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e99999a before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -2271,6 +2324,12 @@
 {"k":"sim/toggle object/f010","v":"alive=0 culled=0 | System: Finished playing=0 new=0 count=00000000 dt=00000000 t=00000000 before=00000000 loop=00000000 after=00000000 index=0 of=0"}
 {"k":"sim/toggle at once/f010","v":"alive=0 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/toggle object at once/f010","v":"alive=0 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
+{"k":"events/events/f010/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f010/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f010/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 first"}
+{"k":"events/events late/f010/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f010/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f010/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"draw/opaque/f010","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/soft/f010","v":"alive=8 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/soft ortho/f010","v":"alive=8 culled=0 awake=1 renderer enabled=1 visible=1"}
@@ -2299,6 +2358,12 @@
 {"k":"sim/toggle object/f011","v":"alive=0 culled=1 | System: Looping playing=1 new=0 count=00000000 dt=00000000 t=00000000 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/toggle at once/f011","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/toggle object at once/f011","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
+{"k":"events/events/f011/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f011/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f011/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f011/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f011/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f011/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f012","v":"main None, ortho Depth, scene None"}
 {"k":"sim/time/f012","v":"3d088889"}
 {"k":"sim/rate/f012","v":"alive=2 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3ebbbbbc before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -7097,9 +7162,20 @@
 {"k":"sim/expressions copy/inputs/play2update3/g05","v":"same"}
 {"k":"sim/expressions copy/inputs/play2update3/g06","v":"same"}
 {"k":"sim/expressions copy/inputs/lines","v":"13"}
-{"k":"events/events/f012/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
-{"k":"events/events late/f012/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 first"}
-{"k":"events/events throwing/f012/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f012/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f012/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f012/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events/f012/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f012/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f012/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f012/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f012/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events late/f012/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events late/f012/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f012/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f012/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events throwing/f012/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events throwing/f012/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"draw/additive/f012","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/over life/f012","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"camera/needed/f013","v":"main Depth, ortho None, scene None"}
@@ -7119,11 +7195,20 @@
 {"k":"sim/toggle object/f013","v":"alive=0 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3d888889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"events/events/f013/0","v":"after late update Tick spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
 {"k":"events/events/f013/1","v":"after late update Burst spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
-{"k":"events/events paused/f013/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f013/2","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f013/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f013/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f013/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events paused/f013/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events paused/f013/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events late/f013/0","v":"after late update Tick spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
 {"k":"events/events late/f013/1","v":"after late update Burst spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
+{"k":"events/events late/f013/2","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f013/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events throwing/f013/0","v":"after late update Tick spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
 {"k":"events/events throwing/f013/1","v":"after late update Burst spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
+{"k":"events/events throwing/f013/2","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f013/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f014","v":"main Depth, ortho None, scene None"}
 {"k":"sim/time/f014","v":"3d088889"}
 {"k":"sim/rate/f014","v":"alive=3 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3eddddde before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -7139,8 +7224,16 @@
 {"k":"sim/chain/f014","v":"alive=7 culled=0 | System (2): Looping playing=1 new=0 count=00000000 dt=3d088889 t=3eddddde before=00000000 loop=bf800000 after=00000000 index=0 of=-1 | System (3): Looping playing=1 new=0 count=00000000 dt=3d088889 t=3eddddde before=00000000 loop=bf800000 after=00000000 index=0 of=-1 | System: Finished playing=0 new=0 count=00000000 dt=3d088889 t=3dccccce before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/toggle/f014","v":"alive=0 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3dccccce before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/toggle object/f014","v":"alive=0 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3dccccce before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
+{"k":"events/events/f014/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f014/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events paused/f014/0","v":"after late update Tick spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
 {"k":"events/events paused/f014/1","v":"after late update Burst spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
+{"k":"events/events paused/f014/2","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f014/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f014/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f014/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f014/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f014/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f015","v":"main Depth, ortho None, scene None"}
 {"k":"sim/time/f015","v":"3d088889"}
 {"k":"sim/rate/f015","v":"alive=3 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3eeeeeef before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -7156,9 +7249,20 @@
 {"k":"sim/chain/f015","v":"alive=7 culled=0 | System (2): Looping playing=1 new=0 count=00000000 dt=3d088889 t=3eeeeeef before=00000000 loop=bf800000 after=00000000 index=0 of=-1 | System (3): Looping playing=1 new=0 count=00000000 dt=3d088889 t=3eeeeeef before=00000000 loop=bf800000 after=00000000 index=0 of=-1 | System: Finished playing=0 new=0 count=00000000 dt=3d088889 t=3e088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/toggle/f015","v":"alive=0 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/toggle object/f015","v":"alive=0 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
-{"k":"events/events/f015/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
-{"k":"events/events late/f015/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
-{"k":"events/events throwing/f015/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f015/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f015/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f015/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events/f015/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f015/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f015/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f015/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f015/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events late/f015/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events late/f015/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f015/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f015/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events throwing/f015/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events throwing/f015/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f016","v":"main Depth, ortho None, scene None"}
 {"k":"sim/time/f016","v":"3d088889"}
 {"k":"sim/rate/f016","v":"alive=3 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f000000 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -7174,7 +7278,16 @@
 {"k":"sim/chain/f016","v":"alive=7 culled=0 | System (2): Looping playing=1 new=0 count=00000000 dt=3d088889 t=3f000000 before=00000000 loop=bf800000 after=00000000 index=0 of=-1 | System (3): Looping playing=1 new=0 count=00000000 dt=3d088889 t=3f000000 before=00000000 loop=bf800000 after=00000000 index=0 of=-1 | System: Finished playing=0 new=0 count=00000000 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/toggle/f016","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/toggle object/f016","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
-{"k":"events/events paused/f016/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f016/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f016/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f016/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f016/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events paused/f016/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events paused/f016/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f016/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f016/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f016/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f016/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f017","v":"main Depth, ortho None, scene None"}
 {"k":"sim/time/f017","v":"3d088889"}
 {"k":"sim/rate/f017","v":"alive=3 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -7186,6 +7299,14 @@
 {"k":"sim/loop/f017","v":"alive=11 culled=0 | System: DelayingBeforeLoop playing=0 new=0 count=00000000 dt=3d088889 t=3d888889 before=3dcccccd loop=3e4ccccd after=3e19999a index=1 of=2"}
 {"k":"sim/loop random/f017","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3f2aaaab dt=3d088889 t=3d088889 before=3d56bd00 loop=3e3d60bb after=3dcabffb index=1 of=-1"}
 {"k":"sim/control/f017","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=00000000 dt=00000000 t=3e088889 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
+{"k":"events/events/f017/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f017/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f017/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f017/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f017/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f017/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f017/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f017/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f018","v":"main Depth, ortho None, scene None"}
 {"k":"sim/time/f018","v":"3d088889"}
 {"k":"sim/rate/f018","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f111112 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -7197,9 +7318,20 @@
 {"k":"sim/loop/f018","v":"alive=11 culled=0 | System: Looping playing=1 new=0 count=00000000 dt=3d088889 t=00000000 before=3dcccccd loop=3e4ccccd after=3e19999a index=1 of=2"}
 {"k":"sim/loop random/f018","v":"alive=5 culled=0 | System: Looping playing=1 new=0 count=3f2aaaab dt=3d088889 t=3d888889 before=3d56bd00 loop=3e3d60bb after=3dcabffb index=1 of=-1"}
 {"k":"sim/control/f018","v":"alive=2 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
-{"k":"events/events/f018/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
-{"k":"events/events late/f018/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
-{"k":"events/events throwing/f018/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f018/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f018/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f018/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events/f018/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f018/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f018/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f018/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f018/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events late/f018/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events late/f018/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f018/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f018/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events throwing/f018/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events throwing/f018/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f019","v":"main Depth, ortho None, scene None"}
 {"k":"sim/time/f019","v":"3d088889"}
 {"k":"sim/rate/f019","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f19999b before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -7213,11 +7345,20 @@
 {"k":"sim/control/f019","v":"alive=2 culled=0 | System: Looping playing=1 new=0 count=00000000 dt=00000000 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"events/events/f019/0","v":"after late update Tick spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
 {"k":"events/events/f019/1","v":"after late update Burst spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
-{"k":"events/events paused/f019/0","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events/f019/2","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f019/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f019/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f019/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
+{"k":"events/events paused/f019/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
+{"k":"events/events paused/f019/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events late/f019/0","v":"after late update Tick spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
 {"k":"events/events late/f019/1","v":"after late update Burst spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
+{"k":"events/events late/f019/2","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f019/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events throwing/f019/0","v":"after late update Tick spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
 {"k":"events/events throwing/f019/1","v":"after late update Burst spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
+{"k":"events/events throwing/f019/2","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f019/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f020","v":"main Depth, ortho None, scene None"}
 {"k":"sim/time/f020","v":"3d088889"}
 {"k":"sim/rate/f020","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f222224 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -7232,8 +7373,16 @@
 {"k":"sim/late/f020","v":"alive=0 culled=1 | System: Finished playing=0 new=0 count=00000000 dt=00000000 t=00000000 before=00000000 loop=00000000 after=00000000 index=0 of=0"}
 {"k":"sim/expressions late/f020","v":"alive=0 culled=1 | System: Finished playing=0 new=0 count=00000000 dt=00000000 t=00000000 before=00000000 loop=00000000 after=00000000 index=0 of=0 | A=3fe00000"}
 {"k":"sim/late fresh/f020","v":"culled=1 | System: Finished playing=0 new=0 count=00000000 dt=00000000 t=00000000 before=00000000 loop=00000000 after=00000000 index=0 of=0 | Rate=41f00000"}
+{"k":"events/events/f020/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events/f020/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events paused/f020/0","v":"after late update Tick spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
 {"k":"events/events paused/f020/1","v":"after late update Burst spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000 size=3e000000 lifetime=3f800000 same"}
+{"k":"events/events paused/f020/2","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events paused/f020/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f020/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events late/f020/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f020/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events throwing/f020/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"bundle/effect/f020","v":"culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/loop end/f020","v":"alive=12 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/soft/f020","v":"alive=8 culled=0 awake=1 renderer enabled=1 visible=1"}
@@ -7429,7 +7578,7 @@
 {"k":"camera/values/lines","v":"17"}
 {"k":"camera/manager logs","v":"f004 Error: Invalid value for bufferType: 3. One and only one type bit should be set | f004 Error: Invalid value for bufferType: 0. One and only one type bit should be set | f004 Assert: Assertion failed on expression: 'HasFlag(flag, bufferType)' | f008 Warning: Visual effect requires the main camera but there are no active cameras with the \"MainCamera\" tag"}
 {"k":"events/listener logs","v":"f007 after late update Exception: InvalidOperationException: probe listener"}
-{"k":"events/kept attribute","v":"spawnCount=40400000 color=3f800000 3f800000 3f800000 00000000"}
+{"k":"events/kept attribute","v":"spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000"}
 {"k":"sim/time/f021","v":"3d088889"}
 {"k":"sim/rate/f021","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f2aaaad before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f021","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f2aaaad before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
