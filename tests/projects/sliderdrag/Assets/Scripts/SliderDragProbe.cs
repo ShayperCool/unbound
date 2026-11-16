@@ -122,7 +122,9 @@ public class SliderDragProbe : MonoBehaviour
         drag.value = 5;
         var container = drag.Q("unity-drag-container");
         var dragger = drag.Q("unity-dragger");
-        var start = dragger.worldBound.center;
+        // Off the dragger's centre: without a page size the press centres the dragger on the
+        // pointer (the value rounds back to 5), and the moves start from there.
+        var start = dragger.worldBound.center + new Vector2(6f, 0f);
         Send(dragger, PointerMoveEvent.GetPooled(At(EventType.MouseMove, start, Vector2.zero)));
         Send(dragger, PointerDownEvent.GetPooled(At(EventType.MouseDown, start, Vector2.zero)));
         Put("drag.down", drag.value);
@@ -338,15 +340,20 @@ public class SliderDragProbe : MonoBehaviour
         Put("int.reversed.clamp", reversed.value);
 
         // Sliders for the tracker controls, laid out over the next frames.
-        tracks = new SliderInt[5];
+        tracks = new SliderInt[7];
         tracks[0] = new SliderInt("Track", 0, 10) { value = 5 };
         tracks[1] = new SliderInt("Paged", 0, 10, SliderDirection.Horizontal, 2f) { value = 5 };
         tracks[2] = new SliderInt("Inverted", 0, 10, SliderDirection.Horizontal, 2f) { value = 5, inverted = true };
         tracks[3] = new SliderInt("Reversed", 10, 0, SliderDirection.Horizontal, 2f) { value = 5 };
         tracks[4] = new SliderInt("Vertical", 0, 10, SliderDirection.Vertical, 2f) { value = 5 };
+        tracks[5] = new SliderInt("VerticalInverted", 0, 10, SliderDirection.Vertical, 2f) { value = 5, inverted = true };
+        tracks[6] = new SliderInt("VerticalReversed", 10, 0, SliderDirection.Vertical, 2f) { value = 5 };
         foreach (var track in tracks)
         {
             track.style.width = 300;
+            // No room for the label's text: the tracker's size does not depend on text layout.
+            track.labelElement.style.width = 0;
+            track.labelElement.style.minWidth = 0;
             track.style.height = track.direction == SliderDirection.Vertical ? 300 : 30;
             track.Q("unity-dragger").style.width = 20;
             track.Q("unity-dragger").style.height = 20;

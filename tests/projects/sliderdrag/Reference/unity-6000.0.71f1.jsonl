@@ -219,6 +219,18 @@
 {"key":"track4.click.start.up","value":"5 1"}
 {"key":"track4.click.start.again.down","value":"7 1"}
 {"key":"track4.click.start.again.up","value":"7 1"}
+{"key":"track5.click.end.down","value":"7 1"}
+{"key":"track5.click.end.up","value":"7 1"}
+{"key":"track5.click.start.down","value":"5 1"}
+{"key":"track5.click.start.up","value":"5 1"}
+{"key":"track5.click.start.again.down","value":"3 1"}
+{"key":"track5.click.start.again.up","value":"3 1"}
+{"key":"track6.click.end.down","value":"3 1"}
+{"key":"track6.click.end.up","value":"3 1"}
+{"key":"track6.click.start.down","value":"5 1"}
+{"key":"track6.click.start.up","value":"5 1"}
+{"key":"track6.click.start.again.down","value":"7 1"}
+{"key":"track6.click.start.again.up","value":"7 1"}
 {"key":"drag.down","value":"5"}
 {"key":"drag.move60","value":"7"}
 {"key":"drag.move100","value":"9"}
