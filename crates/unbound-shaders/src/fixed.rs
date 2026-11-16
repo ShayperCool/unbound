@@ -120,7 +120,11 @@ pub fn generate(ff: &FixedFunction) -> Result<String> {
         if ff.vertex_lights {
             // Unity's emulation of fixed-function lighting: each light attenuated by distance
             // (1 / (1 + k d²), nothing past its range) and spot cone, at half the color it is
-            // passed with; diffuse clamped per light.
+            // passed with; diffuse clamped per light. The ambient is half too
+            // (`glstate_lightmodel_ambient`, the ambient color halved, times the material's):
+            // VertexLit's `Combine texture * primary DOUBLE` brings the whole back to full
+            // (6000.0.71f1, tests/projects/lighting vertexlit_ambient: the unlit side is the
+            // ambient itself).
             writeln!(
                 vertex,
                 "    float3 n = normalize(mul((float3x3)UNITY_MATRIX_IT_MV, v.normal));
@@ -146,7 +150,7 @@ pub fn generate(ff: &FixedFunction) -> Result<String> {
         }}
     }}
     fixed4 lit;
-    lit.rgb = glstate_lightmodel_ambient.rgb * 2.0 * {ambient}.rgb + {emission}.rgb + diffuseLight;
+    lit.rgb = glstate_lightmodel_ambient.rgb * {ambient}.rgb + {emission}.rgb + diffuseLight;
     lit.a = {diffuse}.a;
     float3 specularColor = {specular}.rgb * specularLight;"
             )?;
