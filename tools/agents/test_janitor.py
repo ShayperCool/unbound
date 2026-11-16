@@ -258,6 +258,23 @@ class JanitorTests(unittest.TestCase):
         self.assertFalse(self.j.partial)
         self.assertTrue(cleaned)
 
+    def test_a_run_whose_files_change_during_its_check_keeps_what_it_names(self):
+        # A file inside gate-3 goes while it is checked: gate-3 is being written to, not gone.
+        first, second, third, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3', 'gate-4'])
+        (third/'link').symlink_to(first/'output')
+        original = janitor.inventory
+        def inventory(path, *args, **kwargs):
+            if path == third and not getattr(inventory, 'raised', False):
+                inventory.raised = True
+                raise FileNotFoundError(2, 'No such file or directory', str(third/'temporary'))
+            return original(path, *args, **kwargs)
+        with patch.object(janitor, 'inventory', inventory):
+            self.collect_applied()
+        self.assertTrue(first.is_dir())  # named from gate-3, which was walked
+        self.assertFalse(second.exists())
+        self.assertIn('"unseal"', self.output.getvalue())
+        self.assertNotIn('links into a removed run', self.output.getvalue())
+
     def test_runs_sealed_again_by_a_rediscovery_are_checked_before_removals(self):
         first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
         task = self.directory('q1')

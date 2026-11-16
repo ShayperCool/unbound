@@ -1174,7 +1174,9 @@ class Janitor:
             try:
                 newest, _, _ = inventory(Path(key))
             except FileNotFoundError:
-                continue
+                if not os.path.lexists(key):
+                    continue  # the run itself is gone
+                newest = cutoff  # something inside went during the check: it is being written to
             if newest >= cutoff:
                 try:
                     self.unseal(Path(key), 'recently modified')
