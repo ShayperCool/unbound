@@ -27,6 +27,10 @@ public class Holder : MonoBehaviour
     public Nested nestedField;
     [NonSerialized] public GameObject nonSerializedField;
     public Transform assignedField;
+    public MonoBehaviour behaviourBaseField;
+    public ScriptableObject scriptableBaseField;
+    public Component componentField;
+    public Behaviour behaviourField;
 
     public GameObject PrivateField => privateField;
 }

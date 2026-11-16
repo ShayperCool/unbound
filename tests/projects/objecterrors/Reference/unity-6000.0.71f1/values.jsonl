@@ -182,6 +182,111 @@
 {"k":"unassigned.assigned.get_component","v":"returns UnityEngine.Transform 'Holder'"}
 {"k":"unassigned.assigned.instantiate","v":"returns UnityEngine.Transform 'Holder(Clone)'"}
 {"k":"unassigned.coalesce","v":"false"}
+{"k":"unassigned.behaviour_base.reference_null","v":"true"}
+{"k":"unassigned.behaviour_base.equals_null","v":"true"}
+{"k":"unassigned.behaviour_base.bool","v":"false"}
+{"k":"unassigned.behaviour_base.is_null","v":"true"}
+{"k":"unassigned.behaviour_base.type","v":"none"}
+{"k":"unassigned.scriptable_base.reference_null","v":"true"}
+{"k":"unassigned.scriptable_base.equals_null","v":"true"}
+{"k":"unassigned.scriptable_base.bool","v":"false"}
+{"k":"unassigned.scriptable_base.is_null","v":"true"}
+{"k":"unassigned.scriptable_base.type","v":"none"}
+{"k":"unassigned.component.reference_null","v":"false"}
+{"k":"unassigned.component.equals_null","v":"true"}
+{"k":"unassigned.component.bool","v":"false"}
+{"k":"unassigned.component.is_null","v":"false"}
+{"k":"unassigned.component.type","v":"UnityEngine.Component"}
+{"k":"unassigned.component.to_string","v":"returns null"}
+{"k":"unassigned.component.name","v":"throws UnityEngine.UnassignedReferenceException: The variable componentField of Holder has not been assigned.\nYou probably need to assign the componentField variable of the Holder script in the inspector."}
+{"k":"unassigned.component.id_zero","v":"returns True"}
+{"k":"unassigned.component.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable componentField of Holder has not been assigned.\nYou probably need to assign the componentField variable of the Holder script in the inspector."}
+{"k":"unassigned.component.equals_self","v":"returns True"}
+{"k":"unassigned.component.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable componentField of Holder has not been assigned.\nYou probably need to assign the componentField variable of the Holder script in the inspector."}
+{"k":"unassigned.component.game_object","v":"throws UnityEngine.UnassignedReferenceException: The variable componentField of Holder has not been assigned.\nYou probably need to assign the componentField variable of the Holder script in the inspector."}
+{"k":"unassigned.component.get_component","v":"throws UnityEngine.UnassignedReferenceException: The variable componentField of Holder has not been assigned.\nYou probably need to assign the componentField variable of the Holder script in the inspector."}
+{"k":"unassigned.component.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable componentField of Holder has not been assigned.\nYou probably need to assign the componentField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.behaviour.reference_null","v":"false"}
+{"k":"unassigned.behaviour.equals_null","v":"true"}
+{"k":"unassigned.behaviour.bool","v":"false"}
+{"k":"unassigned.behaviour.is_null","v":"false"}
+{"k":"unassigned.behaviour.type","v":"UnityEngine.Behaviour"}
+{"k":"unassigned.behaviour.to_string","v":"returns null"}
+{"k":"unassigned.behaviour.name","v":"throws UnityEngine.UnassignedReferenceException: The variable behaviourField of Holder has not been assigned.\nYou probably need to assign the behaviourField variable of the Holder script in the inspector."}
+{"k":"unassigned.behaviour.id_zero","v":"returns True"}
+{"k":"unassigned.behaviour.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable behaviourField of Holder has not been assigned.\nYou probably need to assign the behaviourField variable of the Holder script in the inspector."}
+{"k":"unassigned.behaviour.equals_self","v":"returns True"}
+{"k":"unassigned.behaviour.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable behaviourField of Holder has not been assigned.\nYou probably need to assign the behaviourField variable of the Holder script in the inspector."}
+{"k":"unassigned.behaviour.game_object","v":"throws UnityEngine.UnassignedReferenceException: The variable behaviourField of Holder has not been assigned.\nYou probably need to assign the behaviourField variable of the Holder script in the inspector."}
+{"k":"unassigned.behaviour.get_component","v":"throws UnityEngine.UnassignedReferenceException: The variable behaviourField of Holder has not been assigned.\nYou probably need to assign the behaviourField variable of the Holder script in the inspector."}
+{"k":"unassigned.behaviour.enabled","v":"throws UnityEngine.UnassignedReferenceException: The variable behaviourField of Holder has not been assigned.\nYou probably need to assign the behaviourField variable of the Holder script in the inspector."}
+{"k":"unassigned.behaviour.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable behaviourField of Holder has not been assigned.\nYou probably need to assign the behaviourField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.namespaced.reference_null","v":"false"}
+{"k":"unassigned.namespaced.equals_null","v":"true"}
+{"k":"unassigned.namespaced.bool","v":"false"}
+{"k":"unassigned.namespaced.is_null","v":"false"}
+{"k":"unassigned.namespaced.type","v":"UnityEngine.GameObject"}
+{"k":"unassigned.namespaced.to_string","v":"returns null"}
+{"k":"unassigned.namespaced.name","v":"throws UnityEngine.UnassignedReferenceException: The variable target of NsHolder has not been assigned.\nYou probably need to assign the target variable of the NsHolder script in the inspector."}
+{"k":"unassigned.namespaced.id_zero","v":"returns True"}
+{"k":"unassigned.namespaced.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable target of NsHolder has not been assigned.\nYou probably need to assign the target variable of the NsHolder script in the inspector."}
+{"k":"unassigned.namespaced.equals_self","v":"returns True"}
+{"k":"unassigned.namespaced.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable target of NsHolder has not been assigned.\nYou probably need to assign the target variable of the NsHolder script in the inspector."}
+{"k":"unassigned.namespaced.active_self","v":"throws UnityEngine.UnassignedReferenceException: The variable target of NsHolder has not been assigned.\nYou probably need to assign the target variable of the NsHolder script in the inspector."}
+{"k":"unassigned.namespaced.set_active","v":"throws UnityEngine.UnassignedReferenceException: The variable target of NsHolder has not been assigned.\nYou probably need to assign the target variable of the NsHolder script in the inspector."}
+{"k":"unassigned.namespaced.add_component","v":"throws UnityEngine.UnassignedReferenceException: The variable target of NsHolder has not been assigned.\nYou probably need to assign the target variable of the NsHolder script in the inspector."}
+{"k":"unassigned.namespaced.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable target of NsHolder has not been assigned.\nYou probably need to assign the target variable of the NsHolder script in the inspector. Parameter name: data"}
+{"k":"asset.target.reference_null","v":"false"}
+{"k":"asset.target.equals_null","v":"true"}
+{"k":"asset.target.bool","v":"false"}
+{"k":"asset.target.is_null","v":"false"}
+{"k":"asset.target.type","v":"UnityEngine.GameObject"}
+{"k":"asset.target.to_string","v":"returns null"}
+{"k":"asset.target.name","v":"throws UnityEngine.UnassignedReferenceException: The variable target of DataHolder has not been assigned.\nYou probably need to assign the target variable of the DataHolder script in the inspector."}
+{"k":"asset.target.id_zero","v":"returns True"}
+{"k":"asset.target.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable target of DataHolder has not been assigned.\nYou probably need to assign the target variable of the DataHolder script in the inspector."}
+{"k":"asset.target.equals_self","v":"returns True"}
+{"k":"asset.target.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable target of DataHolder has not been assigned.\nYou probably need to assign the target variable of the DataHolder script in the inspector."}
+{"k":"asset.target.active_self","v":"throws UnityEngine.UnassignedReferenceException: The variable target of DataHolder has not been assigned.\nYou probably need to assign the target variable of the DataHolder script in the inspector."}
+{"k":"asset.target.set_active","v":"throws UnityEngine.UnassignedReferenceException: The variable target of DataHolder has not been assigned.\nYou probably need to assign the target variable of the DataHolder script in the inspector."}
+{"k":"asset.target.add_component","v":"throws UnityEngine.UnassignedReferenceException: The variable target of DataHolder has not been assigned.\nYou probably need to assign the target variable of the DataHolder script in the inspector."}
+{"k":"asset.target.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable target of DataHolder has not been assigned.\nYou probably need to assign the target variable of the DataHolder script in the inspector. Parameter name: data"}
+{"k":"asset.items.length","v":"1"}
+{"k":"asset.items.0.reference_null","v":"false"}
+{"k":"asset.items.0.equals_null","v":"true"}
+{"k":"asset.items.0.bool","v":"false"}
+{"k":"asset.items.0.is_null","v":"false"}
+{"k":"asset.items.0.type","v":"UnityEngine.GameObject"}
+{"k":"asset.items.0.to_string","v":"returns null"}
+{"k":"asset.items.0.name","v":"throws UnityEngine.UnassignedReferenceException: The variable items of DataHolder has not been assigned.\nYou probably need to assign the items variable of the DataHolder script in the inspector."}
+{"k":"asset.items.0.id_zero","v":"returns True"}
+{"k":"asset.items.0.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable items of DataHolder has not been assigned.\nYou probably need to assign the items variable of the DataHolder script in the inspector."}
+{"k":"asset.items.0.equals_self","v":"returns True"}
+{"k":"asset.items.0.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable items of DataHolder has not been assigned.\nYou probably need to assign the items variable of the DataHolder script in the inspector."}
+{"k":"asset.items.0.active_self","v":"throws UnityEngine.UnassignedReferenceException: The variable items of DataHolder has not been assigned.\nYou probably need to assign the items variable of the DataHolder script in the inspector."}
+{"k":"asset.items.0.set_active","v":"throws UnityEngine.UnassignedReferenceException: The variable items of DataHolder has not been assigned.\nYou probably need to assign the items variable of the DataHolder script in the inspector."}
+{"k":"asset.items.0.add_component","v":"throws UnityEngine.UnassignedReferenceException: The variable items of DataHolder has not been assigned.\nYou probably need to assign the items variable of the DataHolder script in the inspector."}
+{"k":"asset.items.0.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable items of DataHolder has not been assigned.\nYou probably need to assign the items variable of the DataHolder script in the inspector. Parameter name: data"}
+{"k":"asset.nested.reference_null","v":"false"}
+{"k":"asset.nested.equals_null","v":"true"}
+{"k":"asset.nested.bool","v":"false"}
+{"k":"asset.nested.is_null","v":"false"}
+{"k":"asset.nested.type","v":"UnityEngine.GameObject"}
+{"k":"asset.nested.to_string","v":"returns null"}
+{"k":"asset.nested.name","v":"throws System.NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"asset.nested.id_zero","v":"returns True"}
+{"k":"asset.nested.hide_flags","v":"throws System.NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"asset.nested.equals_self","v":"returns True"}
+{"k":"asset.nested.transform","v":"throws System.NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"asset.nested.active_self","v":"throws System.NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"asset.nested.set_active","v":"throws System.NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"asset.nested.add_component","v":"throws System.NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"asset.nested.instantiate","v":"throws System.ArgumentNullException: Value cannot be null.\nParameter name: data"}
+{"k":"created.target.reference_null","v":"true"}
+{"k":"created.target.equals_null","v":"true"}
+{"k":"created.target.bool","v":"false"}
+{"k":"created.target.is_null","v":"true"}
+{"k":"created.target.type","v":"none"}
 {"k":"added.game_object.reference_null","v":"true"}
 {"k":"added.game_object.equals_null","v":"true"}
 {"k":"added.game_object.bool","v":"false"}
@@ -273,6 +378,34 @@
 {"k":"missing.behaviour.bool","v":"false"}
 {"k":"missing.behaviour.is_null","v":"true"}
 {"k":"missing.behaviour.type","v":"none"}
+{"k":"missing.abstract.reference_null","v":"false"}
+{"k":"missing.abstract.equals_null","v":"true"}
+{"k":"missing.abstract.bool","v":"false"}
+{"k":"missing.abstract.is_null","v":"false"}
+{"k":"missing.abstract.type","v":"UnityEngine.Collider"}
+{"k":"missing.abstract.to_string","v":"returns null"}
+{"k":"missing.abstract.name","v":"throws UnityEngine.MissingComponentException: There is no 'Collider' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Collider to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.abstract.id_zero","v":"returns True"}
+{"k":"missing.abstract.hide_flags","v":"throws UnityEngine.MissingComponentException: There is no 'Collider' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Collider to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.abstract.equals_self","v":"returns True"}
+{"k":"missing.abstract.transform","v":"throws UnityEngine.MissingComponentException: There is no 'Collider' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Collider to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.abstract.game_object","v":"throws UnityEngine.MissingComponentException: There is no 'Collider' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Collider to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.abstract.get_component","v":"throws UnityEngine.MissingComponentException: There is no 'Collider' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Collider to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.abstract.instantiate","v":"throws UnityEngine.MissingComponentException: There is no 'Collider' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Collider to the game object \"Holder\". Or your script needs to check if the component is attached before using it. Parameter name: data"}
+{"k":"missing.renderer_type.reference_null","v":"false"}
+{"k":"missing.renderer_type.equals_null","v":"true"}
+{"k":"missing.renderer_type.bool","v":"false"}
+{"k":"missing.renderer_type.is_null","v":"false"}
+{"k":"missing.renderer_type.type","v":"UnityEngine.Renderer"}
+{"k":"missing.renderer_type.to_string","v":"returns null"}
+{"k":"missing.renderer_type.name","v":"throws UnityEngine.MissingComponentException: There is no 'Renderer' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Renderer to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.renderer_type.id_zero","v":"returns True"}
+{"k":"missing.renderer_type.hide_flags","v":"throws UnityEngine.MissingComponentException: There is no 'Renderer' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Renderer to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.renderer_type.equals_self","v":"returns True"}
+{"k":"missing.renderer_type.transform","v":"throws UnityEngine.MissingComponentException: There is no 'Renderer' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Renderer to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.renderer_type.game_object","v":"throws UnityEngine.MissingComponentException: There is no 'Renderer' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Renderer to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.renderer_type.get_component","v":"throws UnityEngine.MissingComponentException: There is no 'Renderer' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Renderer to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.renderer_type.instantiate","v":"throws UnityEngine.MissingComponentException: There is no 'Renderer' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Renderer to the game object \"Holder\". Or your script needs to check if the component is attached before using it. Parameter name: data"}
 {"k":"missing.interface","v":"returns null"}
 {"k":"missing.children.reference_null","v":"true"}
 {"k":"missing.children.equals_null","v":"true"}
@@ -399,7 +532,7 @@
 {"k":"argument.create_instance_abstract.logs","v":"Warning: The class named 'AbstractData' is abstract. The script class can't be abstract!\n---\nWarning: The class named 'AbstractData' is abstract. The script class can't be abstract!"}
 {"k":"argument.create_instance_component_name","v":"returns null"}
 {"k":"argument.create_instance_component_name.logs","v":"Error: Instance of Marker couldn't be created. The script class needs to derive from ScriptableObject."}
-{"k":"argument.sibling_index_out_of_range","v":"returns 5"}
+{"k":"argument.sibling_index_out_of_range","v":"returns 6"}
 {"k":"destroyed.game_object.reference_null","v":"false"}
 {"k":"destroyed.game_object.equals_null","v":"true"}
 {"k":"destroyed.game_object.bool","v":"false"}

@@ -136,6 +136,18 @@ public class ObjectErrorsProbe : MonoBehaviour
         Facts("unassigned.non_serialized", holder.nonSerializedField);
         Facts("unassigned.assigned", holder.assignedField);
         Row("unassigned.coalesce", ReferenceEquals(holder.gameObjectField ?? holder.gameObject, holder.gameObject));
+        Facts("unassigned.behaviour_base", holder.behaviourBaseField);
+        Facts("unassigned.scriptable_base", holder.scriptableBaseField);
+        Facts("unassigned.component", holder.componentField);
+        Facts("unassigned.behaviour", holder.behaviourField);
+        Facts("unassigned.namespaced", GameObject.Find("NsHolder").GetComponent<Probes.NsHolder>().target);
+        var asset = Resources.Load<DataHolder>("DataHolder");
+        Facts("asset.target", asset.target);
+        Row("asset.items.length", asset.items.Length.ToString());
+        Facts("asset.items.0", asset.items[0]);
+        Facts("asset.nested", asset.nested.target);
+        var made = ScriptableObject.CreateInstance<DataHolder>();
+        Facts("created.target", made.target);
 
         // A component added at runtime and a scriptable object created at runtime.
         var added = new GameObject("Added").AddComponent<Holder>();
@@ -154,6 +166,8 @@ public class ObjectErrorsProbe : MonoBehaviour
         Facts("missing.type", holder.GetComponent(typeof(Rigidbody)));
         Facts("missing.string", holder.GetComponent("Rigidbody"));
         Facts("missing.behaviour", holder.GetComponent<Marker>());
+        Facts("missing.abstract", holder.GetComponent<Collider>());
+        Facts("missing.renderer_type", holder.GetComponent(typeof(Renderer)));
         Try("missing.interface", () => holder.GetComponent<IMarker>());
         Facts("missing.children", holder.GetComponentInChildren<Rigidbody>());
         Facts("missing.parent", holder.GetComponentInParent<Rigidbody>());
