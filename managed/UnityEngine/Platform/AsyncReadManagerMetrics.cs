@@ -367,7 +367,10 @@ namespace Unity.IO.LowLevel.Unsafe
                     if (at >= 0 && at + m_Records.Length <= s_Records.Count && s_Records[at + m_Records.Length - 1] == m_Records[^1])
                         s_Records.RemoveRange(at, m_Records.Length);
                     else
+                    {
                         foreach (var record in m_Records) s_Records.Remove(record);
+                        at = -1;
+                    }
                     var records = new Record[count];
                     for (int i = 0; i < count; i++)
                     {
