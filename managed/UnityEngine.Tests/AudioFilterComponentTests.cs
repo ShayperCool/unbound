@@ -34,8 +34,8 @@ namespace UnityEngine.Tests
         readonly string m_Release = ProjectInfo.UnityVersion;
 
         [Theory]
-        [InlineData(AudioSpeakerMode.Mono, 0.5f, false)]
-        [InlineData(AudioSpeakerMode.Stereo, 1f, false)]
+        [InlineData(AudioSpeakerMode.Prologic, 0.5f, false)]
+        [InlineData(AudioSpeakerMode.Prologic, 1f, false)]
         [InlineData(AudioSpeakerMode.Stereo, 0f, true)]
         [InlineData(AudioSpeakerMode.Mono, 0f, true)]
         public void SixInputPlaybackRefusesUnmeasuredContexts(AudioSpeakerMode mode, float blend, bool stream)
@@ -61,16 +61,21 @@ namespace UnityEngine.Tests
         }
 
         // The virtual driver is stereo, so Mono is the only layout outside Stereo/Prologic it
-        // activates; the mixer's own tests cover the wider layouts.
-        [Fact]
-        public void SixInputPlaybackIsAdmittedOutsideStereo()
+        // activates; the mixer's own tests cover the wider layouts. Spatial voices are admitted
+        // in every layout but Prologic (audiopitch SIX_SPATIAL.md).
+        [Theory]
+        [InlineData(AudioSpeakerMode.Mono, 0f)]
+        [InlineData(AudioSpeakerMode.Mono, 0.5f)]
+        [InlineData(AudioSpeakerMode.Stereo, 1f)]
+        public void SixInputPlaybackIsAdmittedOutsidePrologicSpatialVoices(AudioSpeakerMode mode, float blend)
         {
             var config = AudioSettings.GetConfiguration();
-            config.speakerMode = AudioSpeakerMode.Mono;
+            config.speakerMode = mode;
             Assert.True(AudioSettings.Reset(config));
-            Assert.Equal(AudioSpeakerMode.Mono, m_Backend.ActiveSpeakerMode);
+            Assert.Equal(mode, m_Backend.ActiveSpeakerMode);
             var source = Source("Six input layout");
             source.playOnAwake = false;
+            source.spatialBlend = blend;
             var clip = AudioClip.Create("Six input", 1024, 6, 48000, false);
             try
             {
@@ -86,6 +91,10 @@ namespace UnityEngine.Tests
         [InlineData(true)]
         public void LeavingSixInputScopeStopsOnlyThoseVoicesAndReportsOnce(bool curve)
         {
+            // Spatial six-input voices are measured in every layout but Prologic.
+            var config = AudioSettings.GetConfiguration();
+            config.speakerMode = AudioSpeakerMode.Prologic;
+            Assert.True(AudioSettings.Reset(config));
             var source = Source("Live six input admission");
             source.playOnAwake = false;
             var six = AudioClip.Create("Six input", 1024, 6, 48000, false);

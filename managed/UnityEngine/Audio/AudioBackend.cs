@@ -30,11 +30,11 @@ namespace Unbound.Runtime
     /// </summary>
     internal abstract class AudioBackend
     {
-        internal const string SixInputUnsupportedMessage = "Unbound: six-channel playback requires a non-streamed 2D voice in the measured audio profile.";
+        internal const string SixInputUnsupportedMessage = "Unbound: six-channel playback requires a non-streamed clip, and a 2D voice in Prologic output, in the measured audio profile.";
 
         internal static void ValidateSixInputClip(AudioClip clip)
         {
-            if (clip != null && clip.m_Channels == 6 && clip.UsesStreamingInput && Compat.AudioSixChannel2DVoicesMeasured)
+            if (clip != null && clip.m_Channels == 6 && clip.UsesStreamingInput && Compat.AudioSixChannelVoicesMeasured)
                 throw new NotSupportedException(SixInputUnsupportedMessage);
         }
         static AudioBackend s_Current;
@@ -357,9 +357,10 @@ namespace Unbound.Runtime
 
         bool RejectsSixInput(Source source, ulong handle)
         {
-            return Compat.AudioSixChannel2DVoicesMeasured
+            return Compat.AudioSixChannelVoicesMeasured
                 && m_Clips.TryGetValue(handle, out var clip) && clip.Channels == 6
-                && (clip.Stream || clip.StreamingInput || !source.TwoDInput);
+                && (clip.Stream || clip.StreamingInput
+                    || (!source.TwoDInput && ActiveSpeakerMode == AudioSpeakerMode.Prologic));
         }
 
         internal override void UpdateSource(ulong handle, ref AudioSourcePacket packet)

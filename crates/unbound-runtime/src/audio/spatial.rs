@@ -191,15 +191,40 @@ pub struct Spatialized {
     pub mono_output: MonoGains,
     /// The gains into a layout wider than stereo, when one was asked for (see [`surround`]).
     pub surround: Option<SurroundGains>,
+    /// What [`input_levels_3d`] needs to pan each input of a multichannel clip.
+    pub panning: Panning,
     pub pitch: f32,
     pub audibility: f32,
 }
 
-/// Gains into a mono output, Unity 6000.0.71f1 (tests/projects/audiopitch `context_mono_*`).
-/// The 2D part mixes the panned speaker levels down to the one speaker: a stereo clip's channels
-/// at [`STEREO_TO_MONO`] times their pan gain, a mono clip at the length of its two pan gains
-/// (pan-independent). The 3D part puts every direction on that speaker at unity, so spread has
-/// no effect. Spatial blend mixes the speaker levels of both parts; attenuation blends apart.
+/// The 3D state shared by every input of a source: its listener-space direction (lateral and
+/// forward components of the unit offset, clamped; `None` at the listener), the spread in
+/// degrees, the spatial blend and the blended distance attenuation.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Panning {
+    pub direction: Option<(f32, f32)>,
+    pub spread: f32,
+    pub blend: f32,
+    pub volume: f32,
+}
+
+impl Panning {
+    const FLAT: Self = Self {
+        direction: None,
+        spread: 0.0,
+        blend: 0.0,
+        volume: 1.0,
+    };
+}
+
+/// Gains into a mono output, Unity 6000.0.71f1 (tests/projects/audiopitch `context_mono_*`,
+/// SIX_SPATIAL.md). The 2D part mixes the panned speaker levels down to the one speaker: a
+/// stereo clip's channels at [`STEREO_TO_MONO`] times their pan gain, a mono clip at the length
+/// of its two pan gains (pan-independent). The 3D part puts every direction on that speaker at
+/// unity; a source at the listener reaches it at `sqrt(2)`. Spatial blend mixes the speaker
+/// levels of both parts; attenuation blends apart. A spatial mono clip with spread is heard as
+/// two directions and so mixes like a stereo clip's two channels averaged; without spread it
+/// takes the speaker levels of every layout speaker, which at the listener are all `sqrt(2)`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MonoGains {
     /// A stereo clip's left and right channel.
@@ -212,22 +237,49 @@ pub struct MonoGains {
 /// constant, not 1/sqrt(2) (Unity 6000.0.71f1, tests/projects/audiopitch `context_mono_plain`).
 pub const STEREO_TO_MONO: f32 = 0.707;
 
+/// The mono downmix's weight of the centre speaker's squared level, and of each of the four
+/// surround and side speakers' (the front pair's is 1).
+const MONO_DOWNMIX_CENTRE: f32 = 0.5;
+const MONO_DOWNMIX_SURROUND: f32 = 0.25;
+
 impl MonoGains {
-    /// `pan`: `panStereo`; `blend`: spatial blend; `volume`: the blended attenuation.
-    fn new(pan: f32, blend: f32, volume: f32) -> Self {
+    /// `pan`: `panStereo`; `panning`: the source's blend, attenuation, direction and spread;
+    /// `measured`: the release's spatial profile (the listener position and spread rules).
+    fn new(pan: f32, panning: &Panning, measured: bool) -> Self {
+        let Panning { blend, volume, .. } = *panning;
         let flat = 1.0 - blend;
         let [l2, r2] = balance(pan);
         let pan = pan.clamp(-1.0, 1.0);
-        // The 3D level lands on the first speaker level whatever the pan or direction, so a
-        // panned mono clip mixes down asymmetrically (`context_mono_3d_half_right`).
-        let left = flat * ((1.0 - pan) * 0.5).sqrt() + blend;
-        let right = flat * ((1.0 + pan) * 0.5).sqrt();
+        let centre = measured && panning.direction.is_none_or(|(x, z)| x == 0.0 && z == 0.0);
+        let three_d = if centre {
+            std::f32::consts::SQRT_2
+        } else {
+            1.0
+        };
+        let mono = if measured && panning.spread > 0.0 {
+            // Two spread directions, mixed like a stereo clip's channels, then averaged.
+            flat * (STEREO_TO_MONO * ((l2 + r2) * 0.5)) + blend * three_d
+        } else {
+            // The 3D level lands on the first speaker level whatever the pan or direction, so
+            // a panned mono clip mixes down asymmetrically (`context_mono_3d_half_right`). At
+            // the listener every speaker but LFE takes it.
+            let left = flat * ((1.0 - pan) * 0.5).sqrt() + blend * three_d;
+            let right =
+                flat * ((1.0 + pan) * 0.5).sqrt() + if centre { blend * three_d } else { 0.0 };
+            let others = if centre {
+                let level = blend * three_d;
+                (MONO_DOWNMIX_CENTRE + 4.0 * MONO_DOWNMIX_SURROUND) * level * level
+            } else {
+                0.0
+            };
+            (left * left + right * right + others).sqrt()
+        };
         Self {
             stereo: [
-                (flat * (STEREO_TO_MONO * l2) + blend) * volume,
-                (flat * (STEREO_TO_MONO * r2) + blend) * volume,
+                (flat * (STEREO_TO_MONO * l2) + blend * three_d) * volume,
+                (flat * (STEREO_TO_MONO * r2) + blend * three_d) * volume,
             ],
-            mono: (left * left + right * right).sqrt() * volume,
+            mono: mono * volume,
         }
     }
 }
@@ -237,8 +289,9 @@ impl Default for Spatialized {
         Self {
             matrix: [1.0, 0.0, 0.0, 1.0],
             mono_matrix: None,
-            mono_output: MonoGains::new(0.0, 0.0, 1.0),
+            mono_output: MonoGains::new(0.0, &Panning::FLAT, false),
             surround: None,
+            panning: Panning::FLAT,
             pitch: 1.0,
             audibility: 1.0,
         }
@@ -306,20 +359,24 @@ fn spatialize_impl(
     }
     .clamp(0.0, 1.0);
     let [l2, r2] = balance(s.pan_stereo);
+    let spread = match s.spread_curve {
+        Some(table) if !table.is_empty() => sample_table(table, normalized) * 360.0,
+        _ => s.spread,
+    };
+    // On the measured release a mono clip with spread is heard as two inputs, in 2D as well.
+    let doubled = measured && spread > 0.0;
     if blend <= 0.0 {
+        let panning = Panning {
+            spread,
+            ..Panning::FLAT
+        };
+        let [mono_left, mono_right, _] = mono_two_d(s.pan_stereo, doubled);
         return Spatialized {
             matrix: [l2, 0.0, 0.0, r2],
-            mono_output: MonoGains::new(s.pan_stereo, 0.0, 1.0),
-            surround: layout.map(|layout| surround(layout, s.pan_stereo, 0.0, 1.0, None, 0.0)),
-            mono_matrix: measured.then(|| {
-                let pan = s.pan_stereo.clamp(-1.0, 1.0);
-                [
-                    ((1.0 - pan) * 0.5).sqrt(),
-                    0.0,
-                    0.0,
-                    ((1.0 + pan) * 0.5).sqrt(),
-                ]
-            }),
+            mono_output: MonoGains::new(s.pan_stereo, &panning, measured),
+            surround: layout.map(|layout| surround(layout, s.pan_stereo, &panning, doubled)),
+            panning,
+            mono_matrix: measured.then_some([mono_left, 0.0, 0.0, mono_right]),
             pitch: 1.0,
             audibility: 1.0,
         };
@@ -352,10 +409,6 @@ fn spatialize_impl(
         (pan, Some(direction))
     } else {
         (0.0, None)
-    };
-    let spread = match s.spread_curve {
-        Some(table) if !table.is_empty() => sample_table(table, normalized) * 360.0,
-        _ => s.spread,
     };
     let flat = 1.0 - blend;
     let pitch = if measured {
@@ -399,10 +452,8 @@ fn spatialize_impl(
     let mono_matrix;
     if measured {
         // Two virtual input directions are rotated by half the spread in listener space.
-        let angle = spread.clamp(0.0, 360.0).to_radians() * 0.5;
-        let (sin, cos) = angle.sin_cos();
-        let left = pan_measured(pan * cos - forward * sin);
-        let right = pan_measured(pan * cos + forward * sin);
+        let [left, right] = STEREO_INPUT_TURNS
+            .map(|turn| pan_measured(turn_by_spread((pan, forward), turn, spread).0));
         // Distance attenuation interpolates independently from channel mapping.
         let volume = flat + blend * gain;
         matrix = [
@@ -411,8 +462,8 @@ fn spatialize_impl(
             blend * left[1] * volume,
             (flat * r2 + blend * right[1]) * volume,
         ];
-        let pan = s.pan_stereo.clamp(-1.0, 1.0);
-        let mono = [((1.0 - pan) * 0.5).sqrt(), ((1.0 + pan) * 0.5).sqrt()];
+        let [mono_left, mono_right, _] = mono_two_d(s.pan_stereo, doubled);
+        let mono = [mono_left, mono_right];
         mono_matrix = Some([
             (flat * mono[0] + blend * (left[0] + right[0]) * 0.5) * volume,
             0.0,
@@ -434,20 +485,18 @@ fn spatialize_impl(
     let volume = flat + blend * gain;
     // Listener-space direction: lateral and forward components of the unit offset, as clamped.
     let surround_direction = direction.map(|_| (pan.clamp(-1.0, 1.0), forward.clamp(-1.0, 1.0)));
+    let panning = Panning {
+        direction: surround_direction,
+        spread,
+        blend,
+        volume,
+    };
     Spatialized {
         matrix,
         mono_matrix,
-        mono_output: MonoGains::new(s.pan_stereo, blend, volume),
-        surround: layout.map(|layout| {
-            surround(
-                layout,
-                s.pan_stereo,
-                blend,
-                volume,
-                surround_direction,
-                spread,
-            )
-        }),
+        mono_output: MonoGains::new(s.pan_stereo, &panning, measured),
+        surround: layout.map(|layout| surround(layout, s.pan_stereo, &panning, doubled)),
+        panning,
         pitch,
         audibility: volume,
     }
@@ -612,31 +661,27 @@ fn pseudo_angle(x: f32, z: f32) -> f32 {
 
 /// Gains into a surround layout (Unity 6000.0.71f1, tests/projects/audiopitch `context_*_3d_*`).
 /// The 2D part puts a stereo clip's channels on the front pair at their balance gains and a mono
-/// clip on the front pair at `sqrt((1 -/+ pan) / 2)` and on LFE at unity. The 3D part pans each
-/// clip channel's direction (rotated by half the spread either way) across the speakers and puts
-/// it on LFE at unity; a mono clip averages its two spread directions. Spatial blend mixes the
-/// speaker levels of both parts; attenuation blends apart.
+/// clip as [`mono_two_d`] gives. The 3D part pans each clip channel's direction (rotated by half
+/// the spread either way) across the speakers and puts it on LFE at unity; a mono clip averages
+/// its two spread directions. Spatial blend mixes the speaker levels of both parts; attenuation
+/// blends apart. `doubled`: see [`mono_two_d`].
 pub fn surround(
     layout: &SpeakerLayout,
     pan_stereo: f32,
-    blend: f32,
-    volume: f32,
-    direction: Option<(f32, f32)>,
-    spread: f32,
+    panning: &Panning,
+    doubled: bool,
 ) -> SurroundGains {
+    let Panning { blend, volume, .. } = *panning;
     let flat = 1.0 - blend;
     let [l2, r2] = balance(pan_stereo);
-    let pan = pan_stereo.clamp(-1.0, 1.0);
-    let mono_2d = [((1.0 - pan) * 0.5).sqrt(), ((1.0 + pan) * 0.5).sqrt()];
+    let [mono_left, mono_right, mono_lfe] = mono_two_d(pan_stereo, doubled);
     // Unit 3D levels of the two clip channels' directions.
     let mut levels = [[0.0f32; 8]; 2];
     if blend > 0.0 {
-        let (x, z) = direction.unwrap_or((0.0, 0.0));
-        let angle = spread.clamp(0.0, 360.0).to_radians() * 0.5;
-        let (sin, cos) = angle.sin_cos();
-        for (channel, sign) in [(0, 1.0f32), (1, -1.0)] {
-            let (sin, cos) = (sin * sign, cos);
-            layout.pan(x * cos - z * sin, x * sin + z * cos, &mut levels[channel]);
+        let direction = panning.direction.unwrap_or((0.0, 0.0));
+        for (channel, turn) in STEREO_INPUT_TURNS.into_iter().enumerate() {
+            let (x, z) = turn_by_spread(direction, turn, panning.spread);
+            layout.pan(x, z, &mut levels[channel]);
         }
     }
     let mut gains = SurroundGains {
@@ -660,7 +705,11 @@ pub fn surround(
             };
             gains.stereo[output * 2 + input] = (flat * two_d + blend * three_d(input)) * volume;
         }
-        let two_d = if lfe { 1.0 } else { front(mono_2d) };
+        let two_d = if lfe {
+            mono_lfe
+        } else {
+            front([mono_left, mono_right])
+        };
         let spread_average = if lfe {
             1.0
         } else {
@@ -669,6 +718,80 @@ pub fn surround(
         gains.mono[output * 2] = (flat * two_d + blend * spread_average) * volume;
     }
     gains
+}
+
+/// A mono clip's 2D gains on the front pair and on LFE (in layouts that have it): the pan's
+/// `sqrt((1 -/+ pan) / 2)` and unity LFE. `doubled`, a mono clip with spread on the measured
+/// release, is heard as two inputs like a stereo clip's, averaged: half the balance gains, no
+/// LFE (Unity 6000.0.71f1, tests/projects/audiopitch SIX_SPATIAL.md `*_monoclip_spread*`).
+fn mono_two_d(pan_stereo: f32, doubled: bool) -> [f32; 3] {
+    if doubled {
+        let [left, right] = balance(pan_stereo);
+        [left * 0.5, right * 0.5, 0.0]
+    } else {
+        let pan = pan_stereo.clamp(-1.0, 1.0);
+        [((1.0 - pan) * 0.5).sqrt(), ((1.0 + pan) * 0.5).sqrt(), 1.0]
+    }
+}
+
+/// The share of half the spread by which each input of a clip turns away from the source's
+/// direction, positive towards the listener's left: the two inputs of a stereo clip turn by
+/// half the spread either way (tests/projects/audiopitch `context_*_3d_stereo`, `_spread`).
+pub const STEREO_INPUT_TURNS: [f32; 2] = [1.0, -1.0];
+
+/// The same for a six-channel clip: the front pair turns by a quarter of the spread either
+/// way, centre and LFE keep the source's direction and the rear pair turns by half the spread
+/// (Unity 6000.0.71f1, tests/projects/audiopitch SIX_SPATIAL.md).
+pub const SIX_INPUT_TURNS: [f32; 6] = [0.5, -0.5, 0.0, 0.0, 1.0, -1.0];
+
+/// `direction` (lateral, forward) turned by `turn` times half of `spread` degrees.
+fn turn_by_spread((x, z): (f32, f32), turn: f32, spread: f32) -> (f32, f32) {
+    let angle = spread.clamp(0.0, 360.0).to_radians() * 0.5 * turn;
+    let (sin, cos) = angle.sin_cos();
+    (x * cos - z * sin, x * sin + z * cos)
+}
+
+/// The output speakers 3D panning distributes an input over.
+#[derive(Debug, Clone, Copy)]
+pub enum Speakers<'a> {
+    Mono,
+    Stereo,
+    Surround(&'a SpeakerLayout),
+}
+
+/// The unit 3D speaker levels (`[output]`) of one clip input that turns by `turn` (see
+/// [`SIX_INPUT_TURNS`]) from the direction of `panning`. A direction at the listener reaches
+/// each of `count` speakers at `sqrt(2) / count`, the single Mono speaker included; any other
+/// direction reaches the Mono speaker at unity. Stereo pans the turned lateral component at
+/// constant power; wider layouts pan between the enclosing speakers and put every input on LFE
+/// at unity. Unity 6000.0.71f1, tests/projects/audiopitch SIX_SPATIAL.md.
+pub fn input_levels_3d(speakers: Speakers<'_>, panning: &Panning, turn: f32, out: &mut [f32; 8]) {
+    *out = [0.0; 8];
+    let (x, z) = turn_by_spread(
+        panning.direction.unwrap_or((0.0, 0.0)),
+        turn,
+        panning.spread,
+    );
+    match speakers {
+        Speakers::Mono => {
+            out[0] = if x == 0.0 && z == 0.0 {
+                std::f32::consts::SQRT_2
+            } else {
+                1.0
+            };
+        }
+        Speakers::Stereo => {
+            let [left, right] = pan_measured(x);
+            out[0] = left;
+            out[1] = right;
+        }
+        Speakers::Surround(layout) => {
+            layout.pan(x, z, out);
+            if let Some(lfe) = layout.lfe {
+                out[lfe] = 1.0;
+            }
+        }
+    }
 }
 
 /// Constant-power stereo gains with the difference between gains equal to lateral direction.
@@ -941,28 +1064,38 @@ mod tests {
         assert_eq!(sample_table(&[3.0], 0.7), 3.0);
     }
 
+    /// A source off the listener's position, without spread.
+    fn towards(blend: f32, volume: f32) -> Panning {
+        Panning {
+            direction: Some((0.6, 0.8)),
+            spread: 0.0,
+            blend,
+            volume,
+        }
+    }
+
     #[test]
     fn mono_output_gains_blend_speaker_levels_before_the_downmix() {
         // 2D: stereo clips at 0.707 times their pan gains, mono clips at full level.
-        let flat = MonoGains::new(-0.5, 0.0, 1.0);
+        let flat = MonoGains::new(-0.5, &Panning::FLAT, true);
         assert_eq!(flat.stereo, [STEREO_TO_MONO, STEREO_TO_MONO * 0.5]);
         assert_eq!(flat.mono, 1.0);
         // Full 3D: unity per channel, so only the attenuation remains.
-        let full = MonoGains::new(0.5, 1.0, 0.25);
+        let full = MonoGains::new(0.5, &towards(1.0, 0.25), true);
         assert_eq!(full.stereo, [0.25, 0.25]);
         assert_eq!(full.mono, 0.25);
         // Half blend, pan -0.5 (tests/projects/audiopitch `context_mono_3d_half`): the levels
         // (0.933, 0.25) mix down to 0.9659, times the blended attenuation.
         let gain = 1.0 / 5f32.sqrt();
         let volume = 0.5 + 0.5 * gain;
-        let half = MonoGains::new(-0.5, 0.5, volume);
+        let half = MonoGains::new(-0.5, &towards(0.5, volume), true);
         assert!(
             (half.mono - 0.965_925_8 * volume).abs() < 1e-6,
             "{}",
             half.mono
         );
         // Pan +0.5 is not the mirror image (`context_mono_3d_half_right`): (0.75, 0.433).
-        let right = MonoGains::new(0.5, 0.5, volume);
+        let right = MonoGains::new(0.5, &towards(0.5, volume), true);
         assert!(
             (right.mono - 0.866_025_4 * volume).abs() < 1e-6,
             "{}",
@@ -973,6 +1106,55 @@ mod tests {
         assert!((l - 0.8535 * volume).abs() < 1e-6 && (r - 0.676_75 * volume).abs() < 1e-6);
     }
 
+    /// Tests/projects/audiopitch SIX_SPATIAL.md: Mono output at the listener's position, and
+    /// mono clips with spread heard as two inputs, on the measured release only.
+    #[test]
+    fn measured_mono_clips_double_with_spread_and_the_listener_position_reaches_every_speaker() {
+        let at_listener = |blend, spread| Panning {
+            direction: None,
+            spread,
+            blend,
+            volume: 1.0,
+        };
+        // Full 3D at the listener: sqrt(2) per stereo channel; a mono clip without spread takes
+        // every speaker's sqrt(2) through the downmix, sqrt(7); with spread, sqrt(2).
+        let full = MonoGains::new(0.0, &at_listener(1.0, 0.0), true);
+        assert_eq!(full.stereo, [std::f32::consts::SQRT_2; 2]);
+        assert!((full.mono - 7f32.sqrt()).abs() < 1e-6);
+        let spread = MonoGains::new(0.0, &at_listener(1.0, 90.0), true);
+        assert_eq!(spread.mono, std::f32::consts::SQRT_2);
+        // Half blend, pan -0.5 (`_centre_monoclip_half`, `_centre_monoclip_spread_half`,
+        // `_centre_stereoclip_half`).
+        let half = MonoGains::new(-0.5, &at_listener(0.5, 0.0), true);
+        assert!((half.mono - 1.722_188).abs() < 1e-5, "{half:?}");
+        assert!(
+            (half.stereo[0] - 1.060_607).abs() < 1e-5 && (half.stereo[1] - 0.883_857).abs() < 1e-5
+        );
+        let half_spread = MonoGains::new(-0.5, &at_listener(0.5, 90.0), true);
+        assert!(
+            (half_spread.mono - 0.972_232).abs() < 1e-5,
+            "{half_spread:?}"
+        );
+        // 2D with spread (`_flat_monoclip_spread`): half of each balance gain, averaged into
+        // Mono, on the front pair of Stereo and 5.1 without LFE.
+        let mut s = source(v(2.0, 0.0, 1.0), 0.0);
+        s.pan_stereo = -0.5;
+        s.spread = 90.0;
+        let flat = spatialize_measured(&s, &Listener::default(), 1.0, 1.0);
+        assert!((flat.mono_output.mono - 0.530_25).abs() < 1e-6);
+        assert_eq!(flat.mono_matrix.unwrap(), [0.5, 0.0, 0.0, 0.25]);
+        let five_one = SpeakerLayout::of(6).unwrap();
+        let surround = spatialize_in(&s, &Listener::default(), 1.0, 1.0, true, Some(&five_one))
+            .surround
+            .unwrap();
+        let mono: Vec<f32> = (0..6).map(|c| surround.mono[c * 2]).collect();
+        assert_eq!(mono, [0.5, 0.25, 0.0, 0.0, 0.0, 0.0]);
+        // Other releases keep the unmeasured mono clip and listener-position gains.
+        let other = spatialize(&s, &Listener::default(), 1.0, 1.0);
+        assert_eq!(other.mono_output.mono, 1.0);
+        assert_eq!(MonoGains::new(0.0, &at_listener(1.0, 0.0), false).mono, 1.0);
+    }
+
     #[test]
     fn surround_gains_pan_between_neighbouring_speakers() {
         // Recorded per-channel gains at attenuation 0.5 (tests/projects/audiopitch).
@@ -981,29 +1163,79 @@ mod tests {
             Some((x / length, z / length))
         };
         let quad = SpeakerLayout::of(4).unwrap();
-        let gains = surround(&quad, 0.0, 1.0, 0.5, direction(1.97, -0.347), 0.0);
+        let gains = surround(
+            &quad,
+            0.0,
+            &Panning {
+                direction: direction(1.97, -0.347),
+                spread: 0.0,
+                blend: 1.0,
+                volume: 0.5,
+            },
+            false,
+        );
         let mono: Vec<f32> = (0..4).map(|c| gains.mono[c * 2]).collect();
         for (got, want) in mono.iter().zip([0.0, 0.28681, 0.0, 0.40946]) {
             assert!((got - want).abs() < 2e-4, "{mono:?}");
         }
         let five_one = SpeakerLayout::of(6).unwrap();
-        let gains = surround(&five_one, 0.0, 1.0, 0.5, direction(1.0, 1.732), 0.0);
+        let gains = surround(
+            &five_one,
+            0.0,
+            &Panning {
+                direction: direction(1.0, 1.732),
+                spread: 0.0,
+                blend: 1.0,
+                volume: 0.5,
+            },
+            false,
+        );
         let mono: Vec<f32> = (0..6).map(|c| gains.mono[c * 2]).collect();
         for (got, want) in mono.iter().zip([0.0, 0.44405, 0.22984, 0.5, 0.0, 0.0]) {
             assert!((got - want).abs() < 2e-4, "{mono:?}");
         }
         // 2D: a mono clip on the front pair and on LFE at unity; a stereo clip on its own
         // front speaker only.
-        let flat = surround(&five_one, 0.0, 0.0, 1.0, None, 0.0);
+        let flat = surround(
+            &five_one,
+            0.0,
+            &Panning {
+                direction: None,
+                spread: 0.0,
+                blend: 0.0,
+                volume: 1.0,
+            },
+            false,
+        );
         assert_eq!(flat.mono[0], 0.5f32.sqrt());
         assert_eq!(flat.mono[3 * 2], 1.0);
         assert_eq!(&flat.stereo[..4], &[1.0, 0.0, 0.0, 1.0]);
         assert!(flat.stereo[4..].iter().all(|g| *g == 0.0));
         // At the listener every speaker gets sqrt(2) / count.
-        let centre = surround(&quad, 0.0, 1.0, 1.0, None, 0.0);
+        let centre = surround(
+            &quad,
+            0.0,
+            &Panning {
+                direction: None,
+                spread: 0.0,
+                blend: 1.0,
+                volume: 1.0,
+            },
+            false,
+        );
         assert_eq!(centre.mono[0], std::f32::consts::SQRT_2 / 4.0);
         // Spread averages the two directions of a mono clip; LFE stays at unity.
-        let spread = surround(&five_one, 0.0, 1.0, 0.5, direction(1.97, -0.347), 90.0);
+        let spread = surround(
+            &five_one,
+            0.0,
+            &Panning {
+                direction: direction(1.97, -0.347),
+                spread: 90.0,
+                blend: 1.0,
+                volume: 0.5,
+            },
+            false,
+        );
         let mono: Vec<f32> = (0..6).map(|c| spread.mono[c * 2]).collect();
         for (got, want) in mono.iter().zip([0.0, 0.24617, 0.0, 0.5, 0.04336, 0.28953]) {
             assert!((got - want).abs() < 2e-4, "{mono:?}");

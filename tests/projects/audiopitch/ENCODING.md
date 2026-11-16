@@ -42,8 +42,9 @@ Stereo/Prologic scope. All 1,310,770 encoding values per rate and device pass
 strictly; the source-processing profile passes all 11,665,952 values per rate.
 `Compat` selects this mechanism. The earlier engine diagnostic's 262052 strict
 and 262014 gate discrepancies per rate are retained as before results, with full
-sample ranges and unchanged bounds. Six-input spatial sources and streamed clips
-remain Q416-R5a. Starting those voices on the measured
+sample ranges and unchanged bounds. Streamed six-input clips and spatial ones in
+Prologic output remain Q416-R5a ([SIX_SPATIAL.md](SIX_SPATIAL.md) covers the other spatial
+layouts). Starting those voices on the measured
 release fails clearly; live context changes stop only unsupported six-input voices
 and report an error on the control thread. Other releases retain their previous
 unqualified first-two-input path. Physical drivers and encoded output

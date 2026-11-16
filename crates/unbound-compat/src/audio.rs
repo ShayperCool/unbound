@@ -9,10 +9,12 @@ const LEGACY_MINIMUM_BUFFER: u32 = 64;
 pub struct AudioOutputRules {
     pub requested_buffer_sizes: bool,
     pub scheduled_start_times: bool,
-    /// Six decoded inputs of a non-streamed 2D voice reach every output layout through one
-    /// balance and a matrix per layout (tests/projects/audiopitch SIX_LAYOUTS.md and
-    /// VOICE_INPUT.md); spatial and streamed six-input voices are refused.
-    pub six_channel_2d_voices: bool,
+    /// Six decoded inputs of a non-streamed voice reach every output layout through a per-voice
+    /// matrix: one balance and a matrix per layout in 2D, each input panned on its own turned
+    /// direction in 3D (tests/projects/audiopitch SIX_LAYOUTS.md, SIX_SPATIAL.md and
+    /// VOICE_INPUT.md). Streamed six-input voices and spatial ones in Prologic output are
+    /// refused.
+    pub six_channel_voices: bool,
 }
 
 impl AudioOutputRules {
@@ -22,7 +24,7 @@ impl AudioOutputRules {
         Self {
             requested_buffer_sizes: version == UnityVersion::new(6000, 0, 71),
             scheduled_start_times: version == UnityVersion::new(6000, 0, 71),
-            six_channel_2d_voices: version == UnityVersion::new(6000, 0, 71),
+            six_channel_voices: version == UnityVersion::new(6000, 0, 71),
         }
     }
 
@@ -75,7 +77,7 @@ mod tests {
     fn positive_buffer_requests_are_preserved_only_on_the_measured_release() {
         let measured = AudioOutputRules::for_version(UnityVersion::new(6000, 0, 71));
         assert!(measured.scheduled_start_times);
-        assert!(measured.six_channel_2d_voices);
+        assert!(measured.six_channel_voices);
         for size in [1, 16, 31, 32, 33, 64, 340, 8192] {
             assert_eq!(measured.buffer_size(size), size);
         }
@@ -87,7 +89,7 @@ mod tests {
         ] {
             let other = AudioOutputRules::for_version(version);
             assert!(!other.scheduled_start_times);
-            assert!(!other.six_channel_2d_voices);
+            assert!(!other.six_channel_voices);
             assert_eq!(other.buffer_size(32), 64);
             assert_eq!(other.buffer_size(340), 340);
         }
