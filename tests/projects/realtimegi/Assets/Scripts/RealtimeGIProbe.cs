@@ -677,12 +677,13 @@ public class RealtimeGIProbe : MonoBehaviour
         // falloff type in turn, set before the room loads: the legacy, the undefined and the
         // linear one at the point light's own range, the inverse-squared ones with it given a
         // range of 4 (the far walls beyond it, so the range attenuation of the one that has it
-        // shows).
+        // shows), and the linear one again with a range of 6 (the far corners near it, so the
+        // outer part of its table and its scale by the range show).
         var falloffs = new[]
         {
             ("legacy", GI.FalloffType.Legacy, 0f), ("inversesquared", GI.FalloffType.InverseSquared, 4f),
             ("norange", GI.FalloffType.InverseSquaredNoRangeAttenuation, 4f), ("undefined", GI.FalloffType.Undefined, 0f),
-            ("linear", GI.FalloffType.Linear, 0f),
+            ("linear", GI.FalloffType.Linear, 0f), ("linear-range6", GI.FalloffType.Linear, 6f),
         };
         foreach (var (name, falloff, range) in falloffs)
         {
