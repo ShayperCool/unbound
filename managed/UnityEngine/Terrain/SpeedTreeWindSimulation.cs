@@ -617,8 +617,9 @@ namespace UnityEngine
         }
 
         /// <summary>The bounds the spherical zones reach a tree by: those of its LOD group's
-        /// renderers with a Tree (inactive levels included), else its renderer's. The group's
-        /// bounds together are unmeasured (the probe's levels have the same bounds).</summary>
+        /// renderers with a Tree together (levels it does not draw included), else its renderer's
+        /// (Unity 6000.0.71f1, tests/projects/speedtree9wind `SplitGroup`: a zone reaching only the
+        /// moved renderer of a level the group does not draw gives the drawn level a local wind).</summary>
         static Bounds TreeBounds(Tree tree)
         {
             var renderer = tree.m_GameObject.GetComponent<MeshRenderer>();
@@ -679,6 +680,8 @@ namespace UnityEngine
         static void Join(Tree tree, Renderer renderer, SpeedTreeWindAsset asset)
         {
             var spherical = SphericalWind(TreeBounds(tree));
+            // Zones whose winds cancel exactly at the tree start no local wind (Unity 6000.0.71f1,
+            // tests/projects/speedtree9wind `Cancelled`, measured with no directional wind).
             if (spherical.x == 0f && spherical.y == 0f && spherical.z == 0f) return;
             var sharer = Sharer(tree, renderer, asset);
             if (sharer.m_LocalWind != null)
