@@ -362,11 +362,10 @@ namespace UnityEngine
             return m_Player;
         }
 
-        AnimatorPlayer PlayerOrWarn()
+        AnimatorPlayer PlayerOrWarn(string warning = AnimatorErrors.NotPlaying)
         {
             var player = EnsurePlayer();
-            if (player == null && m_LogWarnings)
-                Debug.LogWarning("Animator is not playing an AnimatorController", this);
+            if (player == null && m_LogWarnings) Debug.LogWarning(warning, this);
             return player;
         }
 
@@ -637,10 +636,10 @@ namespace UnityEngine
             int index = player.ParameterIndex(name);
             if (index < 0)
             {
-                if (m_LogWarnings) Debug.LogWarning($"Parameter '{name}' does not exist.", this);
+                if (m_LogWarnings) Debug.LogWarning(AnimatorErrors.MissingParameter(name), this);
                 return -1;
             }
-            return CheckType(player, index, expected, name) ? index : -1;
+            return CheckType(player, index, expected, name, 0) ? index : -1;
         }
 
         int Parameter(int id, AnimatorControllerParameterType? expected, out AnimatorPlayer player)
@@ -650,22 +649,17 @@ namespace UnityEngine
             int index = player.ParameterIndex(id);
             if (index < 0)
             {
-                if (m_LogWarnings) Debug.LogWarning($"Parameter '{id}' does not exist.", this);
+                if (m_LogWarnings) Debug.LogWarning(AnimatorErrors.MissingParameter(AnimatorErrors.HashLabel(id)), this);
                 return -1;
             }
-            return CheckType(player, index, expected, player.Graph.Parameters[index].Name) ? index : -1;
+            return CheckType(player, index, expected, null, id) ? index : -1;
         }
 
-        bool CheckType(AnimatorPlayer player, int index, AnimatorControllerParameterType? expected, string name)
+        /// <summary>The parameter's type check, named as the call named it (its name, or its id).</summary>
+        bool CheckType(AnimatorPlayer player, int index, AnimatorControllerParameterType? expected, string name, int id)
         {
-            if (expected == null) return true;
-            var type = player.Graph.Parameters[index].Type;
-            if (type == expected.Value) return true;
-            // Bools and triggers are both boolean values.
-            bool boolean = (type == AnimatorControllerParameterType.Bool || type == AnimatorControllerParameterType.Trigger) &&
-                           (expected == AnimatorControllerParameterType.Bool || expected == AnimatorControllerParameterType.Trigger);
-            if (boolean) return true;
-            if (m_LogWarnings) Debug.LogWarning($"Parameter type '{expected.Value}' does not match parameter '{name}' of type '{type}'.", this);
+            if (expected == null || !AnimatorErrors.Mismatched(player.Graph.Parameters[index].Type, expected.Value)) return true;
+            if (m_LogWarnings) Debug.LogWarning(AnimatorErrors.TypeMismatch(name ?? AnimatorErrors.HashLabel(id)), this);
             return false;
         }
 
@@ -783,13 +777,15 @@ namespace UnityEngine
             }
         }
 
-        public int parameterCount { get { MainThreadCheck.Check("get_parameterCount"); return EnsurePlayer()?.Graph.Parameters.Length ?? 0; } }
+        public int parameterCount { get { MainThreadCheck.Check("get_parameterCount"); return PlayerOrWarn()?.Graph.Parameters.Length ?? 0; } }
 
         public AnimatorControllerParameter GetParameter(int index)
         {
-            var player = EnsurePlayer();
+            // The parameter's lookup and then the count for the message, each warning without a
+            // controller (the release's reference assemblies).
+            var player = PlayerOrWarn();
             if (player == null || index < 0 || index >= player.Graph.Parameters.Length)
-                throw new IndexOutOfRangeException("Index must be between 0 and " + (player?.Graph.Parameters.Length ?? 0));
+                throw new IndexOutOfRangeException("Index must be between 0 and " + parameterCount);
             return CopyParameter(player.Graph.Parameters[index]);
         }
 
@@ -840,20 +836,20 @@ namespace UnityEngine
         // ------------------------------------------------------------------ layers
 
         public int layerCount
-        { get { MainThreadCheck.Check("get_layerCount"); return EnsurePlayer()?.Layers.Length ?? 0; } }
+        { get { MainThreadCheck.Check("get_layerCount"); return PlayerOrWarn()?.Layers.Length ?? 0; } }
 
-        bool ValidLayer(AnimatorPlayer player, int layerIndex)
+        /// <summary>The layer members' checks: a controller playing, then the layer's index (the
+        /// Unity 6000.0.71f1 Editor warns for each, tests/projects/apierrors `animator.*`).</summary>
+        bool Layer(int layerIndex, out AnimatorPlayer player)
         {
-            if (player != null && layerIndex >= 0 && layerIndex < player.Layers.Length) return true;
-            if (player != null) Debug.LogError($"Invalid Layer Index '{layerIndex}'", this);
+            player = PlayerOrWarn();
+            if (player == null) return false;
+            if (layerIndex >= 0 && layerIndex < player.Layers.Length) return true;
+            Debug.LogWarning(AnimatorErrors.InvalidLayer(layerIndex), this);
             return false;
         }
 
-        public string GetLayerName(int layerIndex)
-        {
-            var player = EnsurePlayer();
-            return ValidLayer(player, layerIndex) ? player.Layers[layerIndex].Def.Name : null;
-        }
+        public string GetLayerName(int layerIndex) => Layer(layerIndex, out var player) ? player.Layers[layerIndex].Def.Name : "";
 
         public int GetLayerIndex(string layerName)
         {
@@ -866,15 +862,14 @@ namespace UnityEngine
 
         public float GetLayerWeight(int layerIndex)
         {
-            var player = EnsurePlayer();
-            if (!ValidLayer(player, layerIndex)) return 0f;
+            // Without a controller the weight reads -1 (tests/projects/apierrors `animator.bare_layer_weight`).
+            if (!Layer(layerIndex, out var player)) return player == null ? -1f : 0f;
             return layerIndex == 0 ? 1f : player.Layers[layerIndex].Weight;
         }
 
         public void SetLayerWeight(int layerIndex, float weight)
         {
-            var player = EnsurePlayer();
-            if (!ValidLayer(player, layerIndex)) return;
+            if (!Layer(layerIndex, out var player)) return;
             if (layerIndex == 0) return; // the base layer always has full weight
             player.Layers[layerIndex].Weight = weight;
         }
@@ -884,8 +879,7 @@ namespace UnityEngine
         public AnimatorStateInfo GetCurrentAnimatorStateInfo(int layerIndex)
         {
             MainThreadCheck.Check("GetAnimatorStateInfo");
-            var player = EnsurePlayer();
-            if (!ValidLayer(player, layerIndex)) return default;
+            if (!Layer(layerIndex, out var player)) return default;
             var layer = player.Layers[layerIndex];
             var source = Source(player, layer);
             return player.StateInfo(layer, source.Current);
@@ -893,8 +887,7 @@ namespace UnityEngine
 
         public AnimatorStateInfo GetNextAnimatorStateInfo(int layerIndex)
         {
-            var player = EnsurePlayer();
-            if (!ValidLayer(player, layerIndex)) return default;
+            if (!Layer(layerIndex, out var player)) return default;
             var layer = player.Layers[layerIndex];
             var source = Source(player, layer);
             return source.Transition != null ? player.StateInfo(layer, source.Next) : default;
@@ -902,15 +895,13 @@ namespace UnityEngine
 
         public AnimatorTransitionInfo GetAnimatorTransitionInfo(int layerIndex)
         {
-            var player = EnsurePlayer();
-            if (!ValidLayer(player, layerIndex)) return default;
+            if (!Layer(layerIndex, out var player)) return default;
             return player.TransitionInfo(Source(player, player.Layers[layerIndex]));
         }
 
         public bool IsInTransition(int layerIndex)
         {
-            var player = EnsurePlayer();
-            if (!ValidLayer(player, layerIndex)) return false;
+            if (!Layer(layerIndex, out var player)) return false;
             return Source(player, player.Layers[layerIndex]).Transition != null;
         }
 
@@ -923,8 +914,7 @@ namespace UnityEngine
         List<AnimatorClipInfo> ClipInfos(int layerIndex, bool next)
         {
             var result = new List<AnimatorClipInfo>();
-            var player = EnsurePlayer();
-            if (!ValidLayer(player, layerIndex)) return result;
+            if (!Layer(layerIndex, out var player)) return result;
             var layer = player.Layers[layerIndex];
             var source = Source(player, layer);
             var run = next ? (source.Transition != null ? source.Next : null) : source.Current;
@@ -963,8 +953,7 @@ namespace UnityEngine
 
         public bool HasState(int layerIndex, int stateID)
         {
-            var player = EnsurePlayer();
-            if (!ValidLayer(player, layerIndex)) return false;
+            if (!Layer(layerIndex, out var player)) return false;
             return player.FindLayer(stateID, layerIndex, out _) >= 0;
         }
 
@@ -974,17 +963,17 @@ namespace UnityEngine
         {
             state = null;
             layerIndex = -1;
-            player = PlayerOrWarn();
+            player = PlayerOrWarn(m_Controller == null ? AnimatorErrors.NoController : AnimatorErrors.NotPlaying);
             if (player == null) return false;
             if (layer >= player.Layers.Length || layer < -1)
             {
-                Debug.LogError($"Invalid Layer Index '{layer}'", this);
+                Debug.LogWarning(AnimatorErrors.InvalidLayer(layer), this);
                 return false;
             }
             layerIndex = player.FindLayer(stateNameHash, layer, out state);
             if (layerIndex < 0)
             {
-                Debug.LogWarning($"Animator.GotoState: State could not be found", this);
+                AnimatorErrors.StateMissing(layer, this);
                 return false;
             }
             return true;

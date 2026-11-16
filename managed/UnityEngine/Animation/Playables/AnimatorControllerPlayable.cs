@@ -60,10 +60,10 @@ namespace UnityEngine.Animations
             int i = player.ParameterIndex(name);
             if (i < 0)
             {
-                Debug.LogWarning($"Parameter '{name}' does not exist.");
+                Debug.LogWarning(AnimatorErrors.MissingParameter(name));
                 return -1;
             }
-            return Matches(player, i, expected) ? i : -1;
+            return Matches(player, i, expected, name, 0) ? i : -1;
         }
 
         int Parameter(int id, AnimatorControllerParameterType expected, out AnimatorPlayer player)
@@ -73,20 +73,17 @@ namespace UnityEngine.Animations
             int i = player.ParameterIndex(id);
             if (i < 0)
             {
-                Debug.LogWarning($"Parameter '{id}' does not exist.");
+                Debug.LogWarning(AnimatorErrors.MissingParameter(AnimatorErrors.HashLabel(id)));
                 return -1;
             }
-            return Matches(player, i, expected) ? i : -1;
+            return Matches(player, i, expected, null, id) ? i : -1;
         }
 
-        static bool Matches(AnimatorPlayer player, int index, AnimatorControllerParameterType expected)
+        static bool Matches(AnimatorPlayer player, int index, AnimatorControllerParameterType expected, string name, int id)
         {
-            var type = player.Graph.Parameters[index].Type;
-            if (type == expected) return true;
-            bool boolean = (type == AnimatorControllerParameterType.Bool || type == AnimatorControllerParameterType.Trigger) &&
-                           (expected == AnimatorControllerParameterType.Bool || expected == AnimatorControllerParameterType.Trigger);
-            if (!boolean) Debug.LogWarning($"Parameter type '{expected}' does not match parameter '{player.Graph.Parameters[index].Name}' of type '{type}'.");
-            return boolean;
+            if (!AnimatorErrors.Mismatched(player.Graph.Parameters[index].Type, expected)) return true;
+            Debug.LogWarning(AnimatorErrors.TypeMismatch(name ?? AnimatorErrors.HashLabel(id)));
+            return false;
         }
 
         public float GetFloat(string name) => Parameter(name, AnimatorControllerParameterType.Float, out var p) is int i && i >= 0 ? p.Floats[i] : 0f;
@@ -219,7 +216,7 @@ namespace UnityEngine.Animations
         {
             player = Player;
             if (player != null && layerIndex >= 0 && layerIndex < player.Layers.Length) return true;
-            if (player != null) Debug.LogError($"Invalid Layer Index '{layerIndex}'");
+            if (player != null) Debug.LogWarning(AnimatorErrors.InvalidLayer(layerIndex));
             return false;
         }
 
@@ -231,7 +228,7 @@ namespace UnityEngine.Animations
 
         public int GetLayerCount() => Player?.Layers.Length ?? 0;
 
-        public string GetLayerName(int layerIndex) => Layer(layerIndex, out var p) ? p.Layers[layerIndex].Def.Name : null;
+        public string GetLayerName(int layerIndex) => Layer(layerIndex, out var p) ? p.Layers[layerIndex].Def.Name : "";
 
         public int GetLayerIndex(string layerName)
         {
@@ -314,9 +311,14 @@ namespace UnityEngine.Animations
             layerIndex = -1;
             player = Player;
             if (player == null) return false;
+            if (layer >= player.Layers.Length || layer < -1)
+            {
+                Debug.LogWarning(AnimatorErrors.InvalidLayer(layer));
+                return false;
+            }
             layerIndex = player.FindLayer(stateNameHash, layer, out state);
             if (layerIndex >= 0) return true;
-            Debug.LogWarning("AnimatorControllerPlayable.GotoState: State could not be found");
+            AnimatorErrors.StateMissing(layer, null);
             return false;
         }
 

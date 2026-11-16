@@ -1111,6 +1111,8 @@ namespace UnityEngine.Tests
         {
             Expect("Parameter 'Fly' does not exist.");
             Expect("Animator.GotoState: State could not be found");
+            // A state missing on any layer reports layer -1 too (tests/projects/apierrors `animator.play_missing`).
+            Expect("Invalid Layer Index '-1'");
             Expect("AnimationEvent 'OnStep' on animation 'WalkClip' has no receiver!");
             Expect("The AnimationState could not be played");
             var file = Load(AnimationFixtures.Locomotion);
@@ -1126,7 +1128,45 @@ namespace UnityEngine.Tests
             animator.Update(0.1f);
             var animation = root.AddComponent<Animation>();
             Assert.False(animation.Play("nothing"));
-            Assert.Equal(4, m_Logs.Count);
+            Assert.Equal(5, m_Logs.Count);
+            Object.DestroyImmediate(root);
+        }
+
+        /// <summary>Lookup warnings name a parameter as the call named it and report a bad layer
+        /// as a warning (Unity 6000.0.71f1, tests/projects/apierrors `animator.*`).</summary>
+        [Fact]
+        public void LookupWarningsNameTheParameterAsCalledAndTheLayer()
+        {
+            Expect("does not match.");
+            Expect("does not exist.");
+            Expect("Invalid Layer Index");
+            Expect("Animator.GotoState: State could not be found");
+            var file = Load(AnimationFixtures.Locomotion);
+            var root = Hierarchy("Character", "Body");
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
+            animator.SetFloat("Run", 1f);
+            animator.SetFloat(Animator.StringToHash("Run"), 1f);
+            animator.SetBool(12345, true);
+            Assert.Equal("", animator.GetLayerName(3));
+            Assert.Equal(0f, animator.GetLayerWeight(3));
+            animator.Play("Walk", 3);
+            animator.Play("Swim", 0);
+            Assert.Equal(new[]
+            {
+                "Warning: Parameter type 'Run' does not match.",
+                $"Warning: Parameter type 'Hash {Animator.StringToHash("Run")}' does not match.",
+                "Warning: Parameter 'Hash 12345' does not exist.",
+                "Warning: Invalid Layer Index '3'",
+                "Warning: Invalid Layer Index '3'",
+                "Warning: Invalid Layer Index '3'",
+                "Warning: Animator.GotoState: State could not be found",
+            }, m_Logs);
+            // Controls: a valid layer and parameter answer without warnings.
+            Assert.Equal("Base Layer", animator.GetLayerName(0));
+            animator.SetBool("Run", true);
+            Assert.True(animator.GetBool("Run"));
+            Assert.Equal(7, m_Logs.Count);
             Object.DestroyImmediate(root);
         }
 
