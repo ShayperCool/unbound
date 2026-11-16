@@ -310,6 +310,22 @@ public class LightingProbe : MonoBehaviour
             Point(new Vector3(1.5f, 0.8f, -1f), new Color(1f, 0.6f, 0.2f), 2f, 2f);
             Capture(dir, "vertexlit");
 
+            // VertexLit's terms one at a time: the ambient alone, one point light, one directional
+            // light, and the two point lights above with no pixel lights allowed.
+            Stage(new Material(Shader.Find("Legacy Shaders/VertexLit")) { color = Color.white });
+            Capture(dir, "vertexlit_ambient");
+            Stage(new Material(Shader.Find("Legacy Shaders/VertexLit")) { color = Color.white });
+            Point(new Vector3(0f, 1.5f, -0.5f), Color.white, 4f, 1.5f);
+            Capture(dir, "vertexlit_point");
+            Stage(new Material(Shader.Find("Legacy Shaders/VertexLit")) { color = Color.white });
+            Directional(new Vector3(50f, -30f, 0f), Color.white, 0.8f);
+            Capture(dir, "vertexlit_directional");
+            Stage(new Material(Shader.Find("Legacy Shaders/VertexLit")) { color = Color.white });
+            Point(new Vector3(0f, 1.5f, -0.5f), Color.white, 4f, 1.5f);
+            Point(new Vector3(1.5f, 0.8f, -1f), new Color(1f, 0.6f, 0.2f), 2f, 2f);
+            QualitySettings.pixelLightCount = 0;
+            Capture(dir, "vertexlit_no_pixel_lights");
+
             Stage(white);
             var cookie = Spot(new Vector3(0f, 3f, -1f), new Vector3(0f, 0f, 0.5f), 60f, 6f, 2f, Color.white);
             cookie.cookie = Checker();
