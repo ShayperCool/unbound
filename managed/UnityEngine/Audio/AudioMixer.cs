@@ -60,7 +60,11 @@ namespace UnityEngine.Audio
         public AudioMixerGroup outputAudioMixerGroup
         {
             get => m_OutputGroup;
-            set => m_OutputGroup = value;
+            set
+            {
+                value?.RefuseRouting();
+                m_OutputGroup = value;
+            }
         }
 
         public AudioMixerUpdateMode updateMode
@@ -476,7 +480,8 @@ namespace UnityEngine.Audio
         {
             if (!Compat.AssetCloneResourcesMeasured)
                 throw new NotSupportedException("AudioMixerGroup instantiation is measured only for Unity 6000.0.71f1.");
-            // A loaded group gets its parent when its mixer is built.
+            // A loaded group gets its parent when its mixer is built (defensive: routing through a
+            // clone is refused, so its parent is not used today).
             m_Mixer?.Build();
             var copy = new AudioMixerGroup
             {

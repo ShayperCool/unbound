@@ -40,6 +40,9 @@ namespace UnityEngine.Tests
                 Assert.Contains("instantiated AudioMixerGroup", error.Message);
                 Assert.Null(source.outputAudioMixerGroup);
                 Assert.Throws<System.NotSupportedException>(() => _ = clone.Handle);
+                var other = new AudioMixer { name = "Other" };
+                Assert.Throws<System.NotSupportedException>(() => other.outputAudioMixerGroup = clone);
+                Assert.Null(other.outputAudioMixerGroup);
             }
             finally { Object.DestroyImmediate(go); }
         }
