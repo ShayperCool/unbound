@@ -678,7 +678,15 @@ class ReferenceWatch:
                    if inside(previous, source)]
         if len({previous for _, previous in updates}) != len(updates):
             self.broken = True
-            raise ReferenceChanged('ambiguous replacement directory identity; remaining work retained')
+            # Name a few of the paths held by more than one watch, and whether each watch had
+            # moved away (its own move event read), so that the churn behind this can be traced.
+            held = {}
+            for descriptor, previous in updates:
+                held.setdefault(str(previous), []).append(
+                    'moved away' if descriptor in self.unresolved else 'in place')
+            shared = [f'{path} ({", ".join(states)})' for path, states in sorted(held.items()) if len(states) > 1]
+            raise ReferenceChanged(f'ambiguous replacement directory identity moving {source} to {destination}; '
+                                   'remaining work retained; for example: ' + ', '.join(shared[:5]))
         prefix, target = str(source), str(destination)
         def moved(path):
             return target+path[len(prefix):] if path == prefix or path.startswith(prefix+os.sep) else path

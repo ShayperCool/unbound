@@ -1856,8 +1856,10 @@ class JanitorTests(unittest.TestCase):
             # A retry can register the replacement before draining the rename.
             self.j.watch.add(source)
             self.j.apply = True
-            with self.assertRaises(janitor.ReferenceChanged):
+            with self.assertRaises(janitor.ReferenceChanged) as raised:
                 self.j.refresh_links()
+            # The deferral names the path that two watches hold.
+            self.assertIn(f'{source} (in place, in place)', str(raised.exception))
             (destination/'new-link').symlink_to(target/'output')
             with self.assertRaises(janitor.ReferenceChanged):
                 self.j.remove(target, kind='task')
