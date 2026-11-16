@@ -184,13 +184,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEngine.UIElements.BaseSlider`1",
-    "Message": "type interfaces is , Unity's is UnityEngine.UIElements.IValueField`1<!0>",
-    "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.BaseSlider`1 needs typed value-field conversion and input update notifications. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.UIElements.BaseVerticalCollectionView",
     "Message": "type interfaces is , Unity's is UnityEngine.ISerializationCallbackReceiver",
     "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.BaseVerticalCollectionView needs serialized selection and item-source restoration callbacks. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."

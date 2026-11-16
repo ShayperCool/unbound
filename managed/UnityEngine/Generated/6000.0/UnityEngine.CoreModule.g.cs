@@ -1551,19 +1551,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static void ResetListContents<T>(global::System.Collections.Generic.List<T> list, global::System.ReadOnlySpan<T> span) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NoAllocHelpers.ResetListContents"); }
         [global::Unbound.Stub] public static void ResetListSize<T>(global::System.Collections.Generic.List<T> list, int size) where T : unmanaged { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NoAllocHelpers.ResetListSize"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class NumericFieldDraggerUtility
-    {
-        [global::Unbound.Stub] public static float Acceleration(bool shiftPressed, bool altPressed) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NumericFieldDraggerUtility.Acceleration"); return default; }
-        [global::Unbound.Stub] public static float NiceDelta(global::UnityEngine.Vector2 deviceDelta, float acceleration) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NumericFieldDraggerUtility.NiceDelta"); return default; }
-        [global::Unbound.Stub] public static double CalculateFloatDragSensitivity(double value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NumericFieldDraggerUtility.CalculateFloatDragSensitivity"); return default; }
-        [global::Unbound.Stub] public static double CalculateFloatDragSensitivity(double value, double minValue, double maxValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NumericFieldDraggerUtility.CalculateFloatDragSensitivity"); return default; }
-        [global::Unbound.Stub] public static long CalculateIntDragSensitivity(long value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NumericFieldDraggerUtility.CalculateIntDragSensitivity"); return default; }
-        [global::Unbound.Stub] public static ulong CalculateIntDragSensitivity(ulong value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NumericFieldDraggerUtility.CalculateIntDragSensitivity"); return default; }
-        [global::Unbound.Stub] public static double CalculateIntDragSensitivity(double value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NumericFieldDraggerUtility.CalculateIntDragSensitivity"); return default; }
-        [global::Unbound.Stub] public static long CalculateIntDragSensitivity(long value, long minValue, long maxValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NumericFieldDraggerUtility.CalculateIntDragSensitivity"); return default; }
-        [global::Unbound.Stub] public NumericFieldDraggerUtility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.NumericFieldDraggerUtility.ctor"); }
-    }
     unsafe partial class Object
     {
         [global::System.Obsolete("Object.FindSceneObjectsOfType has been deprecated, Use Object.FindObjectsByType instead which lets you decide whether you need the results sorted or not.  FindSceneObjectsOfType sorts the results by InstanceID but if you do not need this using FindObjectSortMode.None is considerably faster.")] [global::Unbound.Stub] public static global::UnityEngine.Object[] FindSceneObjectsOfType(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.FindSceneObjectsOfType"); return global::System.Array.Empty<global::UnityEngine.Object>(); }

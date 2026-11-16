@@ -7,7 +7,7 @@ namespace UnityEngine.UIElements
 {
     /// <summary>A field set by dragging a dragger along a tracker (or clicking the tracker), as Unity's
     /// sliders do: the dragger is moved with its transform within the drag container.</summary>
-    public abstract partial class BaseSlider<TValueType> : BaseField<TValueType> where TValueType : IComparable<TValueType>
+    public abstract partial class BaseSlider<TValueType> : BaseField<TValueType>, IValueField<TValueType> where TValueType : IComparable<TValueType>
     {
         internal enum SliderKey
         {
@@ -190,8 +190,13 @@ namespace UnityEngine.UIElements
             return Clamp(newValue, low, high);
         }
 
+        /// <summary>A drag of the label changes nothing here; the typed sliders override it.</summary>
         [Unbound.EditorFaithful("Unity's base implementation")]
         public virtual void ApplyInputDeviceDelta(Vector3 delta, DeltaSpeed speed, TValueType startValue) { }
+
+        void IValueField<TValueType>.StartDragging() { }
+
+        void IValueField<TValueType>.StopDragging() { }
 
         public override void SetValueWithoutNotify(TValueType newValue)
         {
@@ -235,6 +240,8 @@ namespace UnityEngine.UIElements
             RegisterCallback<NavigationSubmitEvent>(OnNavigationSubmit);
             RegisterCallback<NavigationMoveEvent>(OnNavigationMove);
             UpdateTextFieldVisibility();
+            // Dragging the label changes the value (measured: tests/projects/sliderdrag).
+            new FieldMouseDragger<TValueType>(this).SetDragZone(labelElement);
             labelElement.AddToClassList(labelDraggerVariantUssClassName);
         }
 
@@ -595,6 +602,17 @@ namespace UnityEngine.UIElements
                 ? Mathf.Clamp((int)(5.0 - Mathf.Log10(Mathf.Abs(perPixel))), 0, 15)
                 : Mathf.Clamp(-Mathf.FloorToInt(Mathf.Log10(Mathf.Abs(perPixel))), 0, 15);
             return (float)Math.Round(lerp, digits, MidpointRounding.AwayFromZero);
+        }
+
+        /// <summary>A label drag moves the value by the pointer's travel times 0.03 % of the range
+        /// per pixel (measured: tests/projects/sliderdrag).</summary>
+        public override void ApplyInputDeviceDelta(Vector3 delta, DeltaSpeed speed, float startValue)
+        {
+            double sensitivity = NumericFieldDraggerUtility.CalculateFloatDragSensitivity(startValue, lowValue, highValue);
+            float acceleration = NumericFieldDraggerUtility.Acceleration(speed == DeltaSpeed.Fast, speed == DeltaSpeed.Slow);
+            double v = value;
+            v += NumericFieldDraggerUtility.NiceDelta(delta, acceleration) * sensitivity;
+            value = (float)v;
         }
 
         internal override float SliderNormalizeValue(float currentValue, float lowerValue, float higherValue)

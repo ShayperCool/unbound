@@ -173,13 +173,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseCompositeField<TValueType, TField, TFieldValue>.UxmlSerializedData.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class BaseFieldMouseDragger
-    {
-        [global::Unbound.Stub] public void SetDragZone(global::UnityEngine.UIElements.VisualElement dragElement) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseFieldMouseDragger.SetDragZone"); }
-        public abstract void SetDragZone(global::UnityEngine.UIElements.VisualElement dragElement, global::UnityEngine.Rect hotZone);
-        [global::Unbound.Stub] protected BaseFieldMouseDragger() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseFieldMouseDragger.ctor"); }
-    }
     [global::System.Obsolete("BaseFieldTraits<TValueType, TValueUxmlAttributeType> is deprecated and will be removed. Use UxmlElementAttribute instead.")]
     [global::Unbound.Stub]
     public unsafe partial class BaseFieldTraits<TValueType, TValueUxmlAttributeType> : global::UnityEngine.UIElements.BaseField<TValueType>.UxmlTraits where TValueUxmlAttributeType : global::UnityEngine.UIElements.TypedUxmlAttributeDescription<TValueType>, new()
@@ -278,7 +271,7 @@ namespace UnityEngine.UIElements
         internal int screenRenderingHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.screenRenderingHeight"); return default; } }
         internal event global::System.Action drawsInCamerasChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseRuntimePanel.drawsInCamerasChanged"); } [global::Unbound.Stub] remove { } }
     }
-    unsafe partial class BaseSlider<TValueType> : global::UnityEngine.UIElements.IValueField<TValueType>
+    unsafe partial class BaseSlider<TValueType>
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId lowValueProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId highValueProperty;
@@ -288,8 +281,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId directionProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId invertedProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId fillProperty;
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.IValueField<TValueType>.StartDragging() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.StartDragging"); }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.IValueField<TValueType>.StopDragging() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.StopDragging"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.OnViewDataReady"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
@@ -1567,14 +1558,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.EventCategory GetEventCategory(global::System.Type eventType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EventInterestReflectionUtils.GetEventCategory"); return default; }
     }
     [global::Unbound.Stub]
-    public unsafe partial class FieldMouseDragger<T> : global::UnityEngine.UIElements.BaseFieldMouseDragger
-    {
-        [global::Unbound.Stub] public FieldMouseDragger(global::UnityEngine.UIElements.IValueField<T> drivenField) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FieldMouseDragger<T>.ctor"); }
-        [global::Unbound.Stub] public sealed override void SetDragZone(global::UnityEngine.UIElements.VisualElement dragElement, global::UnityEngine.Rect hotZone) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FieldMouseDragger<T>.SetDragZone"); }
-        public bool dragging { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FieldMouseDragger<T>.dragging"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FieldMouseDragger<T>.dragging"); } }
-        public T startValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FieldMouseDragger<T>.startValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FieldMouseDragger<T>.startValue"); } }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class FixedItemHeightDecoratorAttribute : global::UnityEngine.PropertyAttribute
     {
         [global::Unbound.Stub] public FixedItemHeightDecoratorAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedItemHeightDecoratorAttribute.ctor"); }
@@ -2092,13 +2075,6 @@ namespace UnityEngine.UIElements
     internal unsafe partial interface IUxmlSerializedDataDeserializeReference
     {
         object DeserializeReference();
-    }
-    public unsafe partial interface IValueField<T>
-    {
-        void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, T startValue);
-        void StartDragging();
-        void StopDragging();
-        T value { get; set; }
     }
     internal unsafe partial interface IVisualTreeEditorUpdater : global::System.IDisposable
     {
@@ -3573,7 +3549,6 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class Slider
     {
-        [global::Unbound.Stub] public override void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, float startValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.ApplyInputDeviceDelta"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseSlider<float>.UxmlSerializedData
@@ -3597,24 +3572,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class SliderInt : global::UnityEngine.UIElements.BaseSlider<int>
+    unsafe partial class SliderInt
     {
-        internal const int kDefaultHighValue = 10;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public SliderInt() : base(default(string), default(int), default(int), default(global::UnityEngine.UIElements.SliderDirection), default(float)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.ctor"); }
-        [global::Unbound.Stub] public SliderInt(int start, int end, global::UnityEngine.UIElements.SliderDirection direction = (global::UnityEngine.UIElements.SliderDirection)0, float pageSize = 0f) : base(default(string), default(int), default(int), default(global::UnityEngine.UIElements.SliderDirection), default(float)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.ctor"); }
-        [global::Unbound.Stub] public SliderInt(string label, int start = 0, int end = 10, global::UnityEngine.UIElements.SliderDirection direction = (global::UnityEngine.UIElements.SliderDirection)0, float pageSize = 0f) : base(default(string), default(int), default(int), default(global::UnityEngine.UIElements.SliderDirection), default(float)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.ctor"); }
-        [global::Unbound.Stub] public override void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, int startValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.ApplyInputDeviceDelta"); }
-        [global::Unbound.Stub] internal override int SliderLerpUnclamped(int a, int b, float interpolant) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.SliderLerpUnclamped"); return default; }
-        [global::Unbound.Stub] internal override float SliderNormalizeValue(int currentValue, int lowerValue, int higherValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.SliderNormalizeValue"); return default; }
-        [global::Unbound.Stub] internal override int SliderRange() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.SliderRange"); return default; }
-        [global::Unbound.Stub] internal override int ParseStringToValue(string previousValue, string newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.ParseStringToValue"); return default; }
-        [global::Unbound.Stub] internal override void ComputeValueAndDirectionFromClick(float sliderLength, float dragElementLength, float dragElementPos, float dragElementLastPos) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.ComputeValueAndDirectionFromClick"); }
-        [global::Unbound.Stub] internal override void ComputeValueFromKey(global::UnityEngine.UIElements.BaseSlider<int>.SliderKey sliderKey, bool isShift) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.ComputeValueFromKey"); }
-        public override float pageSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.pageSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.pageSize"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseSlider<int>.UxmlSerializedData
