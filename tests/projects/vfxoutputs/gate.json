@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/vfxoutputs/run.py gate"
+  ],
+  "summary": "vfxoutputs: .*",
+  "engine_paths": [
+    "managed/UnityEngine/VFX/",
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/Graphics/IndirectDraws.cs",
+    "crates/unbound-shaders/src/compute.rs",
+    "crates/unbound-shaders/src/fit.rs"
+  ]
+}
