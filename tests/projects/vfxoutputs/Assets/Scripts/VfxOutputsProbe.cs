@@ -132,6 +132,15 @@ public sealed class VfxOutputsProbe : MonoBehaviour
                     if (frame == 20) eye.transform.rotation = Quaternion.LookRotation(Vector3.forward);
                 };
             }
+            // Sorted for each camera: two cameras that see the cloud from different places.
+            foreach (var name in new[] { "SortDistance", "SortDepth", "SortReverse", "SortCustom" })
+            {
+                var sorted = Front(AddStage(name, name, 3, 10));
+                Eye(sorted, "offset", new Vector3(2f, 1.5f, -6f), Vector3.forward);
+            }
+            Front(AddStage("SortYoungest", "SortYoungest", 10, 20));
+            Front(AddStage("SortMany", "SortMany", 5));
+            Front(AddStage("Priority", "Priority", 3));
             StartCoroutine(EndOfFrames());
         }
         catch (Exception e)

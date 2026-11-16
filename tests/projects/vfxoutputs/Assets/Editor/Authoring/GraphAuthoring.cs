@@ -29,6 +29,8 @@ public static class GraphAuthoring
         File.WriteAllBytes(WhitePath, white.EncodeToPNG());
         AssetDatabase.Refresh();
         Indirect();
+        Sorted();
+        Prioritized();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -216,6 +218,100 @@ public static class GraphAuthoring
             SetRandom(lateInit, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
             Save(late);
         }
+    }
+
+    /// <summary>Alpha-blended quads over each other (sorted by default), each of a colour of
+    /// its own: the order they are drawn in shows.</summary>
+    static VFXPlanarPrimitiveOutput Overlapping(VFXGraph graph, uint capacity, float count, float size, float spread)
+    {
+        var (spawn, init, output) = System(graph, capacity);
+        output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+        Burst(spawn, count);
+        SetRandom(init, "position", new Vector3(-spread, -spread, -1f), new Vector3(spread, spread, 1f));
+        Set(init, "size", size);
+        Set(init, "alpha", 0.6f);
+        SetRandom(init, "color", new Vector3(0f, 0f, 0f), new Vector3(1f, 1f, 1f));
+        return output;
+    }
+
+    /// <summary>The graphs of the sorted outputs (README.md, "Sorted outputs").</summary>
+    static void Sorted()
+    {
+        void Graph(string name, VFXSortingUtility.SortCriteria mode, bool reverse = false)
+        {
+            var graph = NewGraph(name);
+            var output = Overlapping(graph, 32, 30f, 0.7f, 0.6f);
+            output.SetSettingValue("sortMode", mode);
+            if (reverse) output.SetSettingValue("revertSorting", true);
+            if (mode == VFXSortingUtility.SortCriteria.Custom) Input(output, "sortKey").value = 1f;
+            Save(graph);
+        }
+        Graph("SortDistance", VFXSortingUtility.SortCriteria.DistanceToCamera);
+        Graph("SortDepth", VFXSortingUtility.SortCriteria.CameraDepth);
+        Graph("SortReverse", VFXSortingUtility.SortCriteria.DistanceToCamera, true);
+        // One key for all: the order of equal keys.
+        Graph("SortCustom", VFXSortingUtility.SortCriteria.Custom);
+
+        // Thirty a second living long: the youngest in front.
+        var youngest = NewGraph("SortYoungest");
+        var (spawn, init, output) = System(youngest, 64);
+        output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+        output.SetSettingValue("sortMode", VFXSortingUtility.SortCriteria.YoungestInFront);
+        ConstantRate(spawn, 30f);
+        SetRandom(init, "position", new Vector3(-0.6f, -0.6f, -1f), new Vector3(0.6f, 0.6f, 1f));
+        Set(init, "lifetime", 10f);
+        Set(init, "size", 0.7f);
+        Set(init, "alpha", 0.6f);
+        SetRandom(init, "color", new Vector3(0f, 0f, 0f), new Vector3(1f, 1f, 1f));
+        Save(youngest);
+
+        // More particles than one pass of the sort takes.
+        var many = NewGraph("SortMany");
+        Overlapping(many, 6000, 6000f, 0.12f, 1.4f);
+        Save(many);
+    }
+
+    /// <summary>Outputs drawn one over the other by their priority (README.md, "Output order"):
+    /// two systems of one effect, the first with two outputs, each output of a colour of its own,
+    /// over the same particles (none is sorted: each draws its particles in their order).</summary>
+    static void Prioritized()
+    {
+        var graph = NewGraph("Priority");
+        VFXPlanarPrimitiveOutput Output(VFXBasicUpdate update, int priority, Vector3 color)
+        {
+            var output = Make<VFXPlanarPrimitiveOutput>();
+            // A label of its own: the outputs' shaders are named after it.
+            output.label = "Priority " + priority;
+            graph.AddChild(output);
+            update.LinkTo(output);
+            output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+            output.SetSettingValue("sort", VFXAbstractParticleOutput.SortActivationMode.Off);
+            output.SetSettingValue("vfxSystemSortPriority", priority);
+            SetVector(output, "color", color);
+            return output;
+        }
+        foreach (var (priorities, colors) in new[]
+        {
+            (new[] { 2, 0 }, new[] { new Vector3(1f, 0f, 0f), new Vector3(0f, 1f, 0f) }),
+            (new[] { 1 }, new[] { new Vector3(0f, 0f, 1f) }),
+        })
+        {
+            var spawn = Make<VFXBasicSpawner>();
+            var init = Make<VFXBasicInitialize>();
+            var update = Make<VFXBasicUpdate>();
+            graph.AddChild(spawn);
+            graph.AddChild(init);
+            graph.AddChild(update);
+            spawn.LinkTo(init);
+            init.LinkTo(update);
+            init.GetData().SetSettingValue("capacity", 16u);
+            Burst(spawn, 12f);
+            SetRandom(init, "position", new Vector3(-0.8f, -0.8f, -1f), new Vector3(0.8f, 0.8f, 1f));
+            Set(init, "size", 0.5f);
+            Set(init, "alpha", 0.5f);
+            for (int i = 0; i < priorities.Length; i++) Output(update, priorities[i], colors[i]);
+        }
+        Save(graph);
     }
 
     /// <summary>The probe scene: a camera that sees none of the stages (the probe builds them).</summary>

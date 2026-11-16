@@ -4,7 +4,8 @@ Visual Effect Graph (com.unity.visualeffectgraph 17.0.4, the Editor's built-in p
 under URP 17: how the outputs of the probe's own small graphs are drawn, recorded by the same
 script in the Unity Editor and in Unbound. The `vfx` probe covers the import, the API and the
 simulation, and the outputs that draw every particle a system has room for; this one covers the
-outputs that draw through an indirect buffer.
+outputs that draw through an indirect buffer, sorted outputs and the order of an effect's
+outputs.
 
 The Editor records in a window (not in batch mode): in batch mode no camera ever sees an effect.
 
@@ -39,6 +40,18 @@ The graphs of each route (`Assets/OutputGraphs/<Route><Graph>.vfx`):
   drawn twice shows.
 - `Late`: `Still`'s particles, for an effect made while the others play.
 
+Sorted outputs (`Assets/OutputGraphs/Sort*.vfx`): thirty alpha-blended quads (alpha 0.6, size
+0.7) of random colours over each other, sorted by the output's sort mode, which the package sorts
+with its own kernels (Shaders/Sort.compute) after the kernel that writes each particle's key:
+`SortDistance` (distance to the camera, for each camera), `SortDepth` (camera depth, for each
+camera), `SortReverse` (distance, reversed), `SortCustom` (a custom key of 1 for all: the order of
+equal keys), `SortYoungest` (thirty a second, youngest in front: sorted at each step) and
+`SortMany` (6000 quads: more than one pass of the sort takes, sorted in chunks and merged).
+
+`Priority`: two systems over the same particles (one seed), the first with two outputs and the
+second with one, unsorted and alpha blended, each output of a colour of its own and a label of its
+own, with output priorities (`sortPriority`, the asset's output render order) of 2 and 0, then 1.
+
 `Assets/Scenes/Probe.unity` holds only a camera that sees none of the stages. The Editor-authored
 files (graphs, scene, the package lock) are kept in `Authored/unity-<release>/default`
 (`tests/authored_project.py`); the gate assembles them.
@@ -59,6 +72,11 @@ others with a start seed of 11 and gives it orthographic cameras of its own, eac
 - `many` (frame 5): 20000 quads through the list, drawn as instances.
 - `glow` (frames 3 and 10): `front` and `part` in each frame: each camera's list is made anew
   for it (a list not emptied for the second camera would draw its particles twice).
+- `SortDistance`, `SortDepth`, `SortReverse`, `SortCustom` (frames 3 and 10): `front` and
+  `offset` (2 units right, 1.5 up, 6 units away: the distances and depths order the quads
+  otherwise) in each frame.
+- `SortYoungest` (frames 10 and 20), `SortMany` (frame 5).
+- `Priority` (frame 3): the outputs drawn by their priority, the lowest first, across systems.
 - `late` (frame 10): made in frame 6, after the others' draws began: its outputs take more entries
   of indirect arguments than there were, which are made anew, and every effect's arguments with
   them (the images of the others after frame 6 show it).
@@ -108,6 +126,10 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
   overlapping quads whose order shows.
 - Quads seen at an angle: crossing quads are ties of depth that the Editor's own graphs decide
   differently (the three routes of one graph in one capture).
-- Sorted outputs (alpha blended ones are sorted by default), other primitives, lit outputs, soft
-  particles, motion vectors, strips, meshes and Shader Graph outputs: Unbound refuses them loudly.
+- A system that sorts one list for all its outputs (the compiler's global sort, for outputs that
+  share their sort), other primitives, lit outputs, motion vectors, strips, meshes and Shader
+  Graph outputs: Unbound refuses them loudly. Outputs of one system named alike (no label: the
+  graph's API makes them so; the Editor's window gives them letters) are refused too: Unbound
+  finds generated shaders by name.
+- Sorting on a device whose compute groups share less than 32 KB of memory.
 - Several instances of one asset in one batch: Unbound runs each effect as a batch of its own.
