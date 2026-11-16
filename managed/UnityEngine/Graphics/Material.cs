@@ -107,8 +107,18 @@ namespace UnityEngine
         {
             MainThreadCheck.Check("CreateWithShader");
             if (shader == null) throw new ArgumentNullException(nameof(shader), "Creating a material requires a shader.");
-            m_Shader = shader;
             m_Name = shader.name;
+            StartWith(shader);
+        }
+
+        /// <summary>The shader a new material starts with: its default textures and its keyword
+        /// drawers' keywords, and no earlier shader's defaults (see <see cref="KeepDefaultsOf"/>).
+        /// Also how a model importer that picks the shader itself makes its material (measured:
+        /// the legacy importer's URP Lit materials keep Lit's own _Parallax, tests/projects/modelimport).</summary>
+        internal void StartWith(Shader shader)
+        {
+            m_Shader = shader;
+            m_TextureNames.Clear();
             AddTextureNames();
             foreach (var pair in shader.m_DefaultTextures)
                 if (pair.Value != null) Slot(Shader.PropertyToID(pair.Key)).Texture = pair.Value;

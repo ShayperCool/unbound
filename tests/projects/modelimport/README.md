@@ -45,15 +45,24 @@ avatar (`avatarSetup` 1, the Avatar named `<model>Avatar`); `avatarSetup` 0, the
 metas, gives none even to animated or skinned models. Metas that omit a setting take the current
 defaults. In URP, URP's preprocessors replace the built-in one's materials (Standard's values stay
 for names Lit declares too), the shader's ShaderGUI validates them (blend states, queue control,
-GI flags), and slots without a material get URP's Lit.mat; the legacy importer uses URP's shaders.
+GI flags), and slots without a material get URP's Lit.mat. The legacy importer makes its
+materials with URP's shaders from the start (Lit's own defaults, not Standard's), sets the main
+colour and texture beside `_Color`/`_MainTex`, leaves Lit's blend values alone, tags an opaque
+material with a diffuse, normal or emission texture Opaque (the untextured ones read no
+RenderType), and gives Autodesk Interactive materials URP's Autodesk Interactive shaders with the
+file's values (base colour, emission, roughness and metallic zero when absent; opacity, mask
+threshold, UV offset with V negated and UV scale when present), with no blend mode, keyword,
+queue or GI flag and no ShaderGUI validation.
 
 What still differs: an Autodesk Interactive material with a mask threshold has `_DstBlend` 0 in the
 Editor although its preprocessor sets 10 (queue 3000 stays; when the Editor loads it outside Play
 mode the queue reads 2450, as the shader's GUI would set it); Unbound keeps 10. Material animation
-curves are not imported. URP: the legacy importer's URP materials are not reproduced (Unbound
-makes Standard ones); `GetTag("RenderType", false)` reads "" for the Editor's validated Lit
-materials, "Opaque" in Unbound; materials of Shader Graph shaders keep EmissiveIsBlack and an
-explicit queue where the Editor's generated shaders leave the queue to the shader.
+curves are not imported. URP (7650/7687 values match): `GetTag("RenderType", false)` reads ""
+for the Editor's validated Lit materials, "Opaque" in Unbound (31 values); four description-made
+Shader Graph materials read gi `RealtimeEmissive` in the Editor and `RealtimeEmissive,
+EmissiveIsBlack` in Unbound; the legacy importer's two Autodesk Interactive materials read
+`_QueueControl` 0 in the Editor and the shader's -1 in Unbound (no validation runs on them; what
+sets 0 is not established). These are the probe's only URP differences.
 
 ## Smoothing and take ranges
 

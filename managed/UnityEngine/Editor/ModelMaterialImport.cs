@@ -19,6 +19,8 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class ModelMaterialImport
     {
+        static readonly int s_Color = Shader.PropertyToID("_Color");
+        static readonly int s_MainTex = Shader.PropertyToID("_MainTex");
         static List<(int Order, Type Type, MethodInfo Method)> s_Preprocessors;
 
         internal static void Apply(Material material, YNode import, IReferenceResolver resolver)
@@ -155,55 +157,89 @@ namespace Unbound.Runtime
         }
 
         /// <summary>
-        /// The legacy importer's material (measured: tests/projects/modelimport): Standard with the
-        /// diffuse colour as it is (no factor, no colour-space conversion), the opacity of the
-        /// transparency factor (or 1 minus the transparent colour when the factor is 1),
+        /// The legacy importer's material (measured: tests/projects/modelimport, the built-in
+        /// pipeline and URP): the render pipeline's default shader (Standard without a pipeline)
+        /// with the diffuse colour as it is (no factor, no colour-space conversion), the opacity of
+        /// the transparency factor (or 1 minus the transparent colour when the factor is 1),
         /// transparent below 1 or with a transparent-colour texture, the diffuse, normal (Bump or
         /// NormalMap) and emissive textures, smoothness 0, and baked emission only from an emissive
-        /// texture. Autodesk Interactive materials keep their shader, colour, opacity, roughness
-        /// (as smoothness), metallic and emission.
+        /// texture; an opaque material with one of those textures is tagged Opaque. The colour and texture go to the shader's main colour and texture and to
+        /// <c>_Color</c>/<c>_MainTex</c>; Standard's blend mode properties are written only to a
+        /// shader that has <c>_Mode</c>. Autodesk Interactive materials take the pipeline's Autodesk
+        /// Interactive shaders, or keep their built-in shader's colour, opacity, roughness (as
+        /// smoothness), metallic and emission without a pipeline. A model read while the pipeline
+        /// asset itself loads gets its materials once the asset is read whole.
         /// </summary>
         static void Legacy(MaterialDescription d, Material m)
         {
+            var pipeline = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
+            if (pipeline != null && AssetDatabaseRuntime.WhenLoaded(pipeline, () =>
+                {
+                    using (ObjectRegistry.AsAssets()) Legacy(d, m, pipeline);
+                }))
+                return;
+            Legacy(d, m, pipeline);
+        }
+
+        static void Legacy(MaterialDescription d, Material m, UnityEngine.Rendering.RenderPipelineAsset pipeline)
+        {
             if (d.TryGetProperty("renderAPI", out string api) && api == "SFX_PBS_SHADER")
             {
-                LegacyAutodeskInteractive(d, m);
-                return;
+                if (pipeline != null ? PipelineAutodeskInteractive(d, m, pipeline) : LegacyAutodeskInteractive(d, m))
+                    return;
             }
-            var shader = Shader.Find("Standard");
+            var shader = pipeline != null ? pipeline.defaultShader : null;
+            if (shader == null) shader = Shader.Find("Standard");
             if (shader == null) return;
-            m.shader = shader;
+            StartWith(m, shader);
             float opacity = 1f;
             if (d.TryGetProperty("TransparencyFactor", out float factor))
                 opacity = factor == 1f ? 1f : 1f - factor;
             if (opacity == 1f && d.TryGetProperty("TransparentColor", out Vector4 transparent))
                 opacity = transparent.x == 1f ? 1f : 1f - transparent.x;
-            Transparency(m, opacity < 1f || d.TryGetProperty("TransparentColor", out TexturePropertyDescription _));
-            if (d.TryGetProperty("DiffuseColor", out Vector4 diffuse))
-                m.SetColor("_Color", new Color(diffuse.x, diffuse.y, diffuse.z, opacity));
-            else
-                m.SetColor("_Color", new Color(1f, 1f, 1f, opacity));
+            bool transparentMaterial = opacity < 1f || d.TryGetProperty("TransparentColor", out TexturePropertyDescription _);
+            Transparency(m, transparentMaterial);
+            bool textured = false;
+            var color = d.TryGetProperty("DiffuseColor", out Vector4 diffuse)
+                ? new Color(diffuse.x, diffuse.y, diffuse.z, opacity)
+                : new Color(1f, 1f, 1f, opacity);
+            // The main colour first; _Color then takes it as read back (URP: _Color is one
+            // colour-space round trip further from the description than _BaseColor).
+            m.color = color;
+            if (shader.FlaggedProperty(UnityEngine.Rendering.ShaderPropertyFlags.MainColor, s_Color) != s_Color && m.HasProperty(s_Color))
+                m.SetColor(s_Color, m.color);
             if (d.TryGetProperty("DiffuseColor", out TexturePropertyDescription texture))
-                SetTexture(m, "_MainTex", texture);
+            {
+                int main = shader.FlaggedProperty(UnityEngine.Rendering.ShaderPropertyFlags.MainTexture, s_MainTex);
+                if (main != s_MainTex) SetTexture(m, main, texture);
+                SetTexture(m, s_MainTex, texture);
+                textured = true;
+            }
             if (d.TryGetProperty("Bump", out texture) || d.TryGetProperty("NormalMap", out texture))
             {
-                SetTexture(m, "_BumpMap", texture);
+                SetTexture(m, Shader.PropertyToID("_BumpMap"), texture);
                 m.EnableKeyword("_NORMALMAP");
+                textured = true;
             }
             if (d.TryGetProperty("EmissiveColor", out texture))
             {
-                SetTexture(m, "_EmissionMap", texture);
+                SetTexture(m, Shader.PropertyToID("_EmissionMap"), texture);
                 m.SetColor("_EmissionColor", Color.white);
                 m.EnableKeyword("_EMISSION");
                 m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.BakedEmissive;
+                textured = true;
             }
             m.SetFloat("_Glossiness", 0f);
+            // An opaque material with one of these textures is tagged Opaque (measured with URP's
+            // Lit, whose untextured legacy materials read no RenderType; Standard reads Opaque
+            // either way).
+            if (textured && !transparentMaterial) m.SetOverrideTag("RenderType", "Opaque");
         }
 
-        static void LegacyAutodeskInteractive(MaterialDescription d, Material m)
+        static bool LegacyAutodeskInteractive(MaterialDescription d, Material m)
         {
             var shader = Shader.Find("Autodesk Interactive");
-            if (shader == null) return;
+            if (shader == null) return false;
             m.shader = shader;
             if (!d.TryGetProperty("opacity", out float opacity)) opacity = 1f;
             Transparency(m, opacity < 1f);
@@ -218,20 +254,70 @@ namespace Unbound.Runtime
                 m.EnableKeyword("_EMISSION");
                 m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.BakedEmissive;
             }
+            return true;
         }
 
+        /// <summary>
+        /// An Autodesk Interactive material under a render pipeline (measured with URP:
+        /// tests/projects/modelimport): the pipeline's masked shader with a mask threshold, its
+        /// transparent one with an opacity, its plain one otherwise (the rule of the pipeline's own
+        /// material description import). The base colour, emission (times its intensity),
+        /// roughness and metallic are written as they are, zero when the file has none; the
+        /// opacity, mask threshold and UV offset (V negated) and scale only when the file has them.
+        /// No blend mode, keyword, queue or GI flag is set. False when the pipeline has no such
+        /// shader.
+        /// </summary>
+        static bool PipelineAutodeskInteractive(MaterialDescription d, Material m, UnityEngine.Rendering.RenderPipelineAsset pipeline)
+        {
+            bool masked = d.TryGetProperty("mask_threshold", out float threshold);
+            bool transparent = d.TryGetProperty("opacity", out float opacity);
+            var shader = masked ? pipeline.autodeskInteractiveMaskedShader
+                : transparent ? pipeline.autodeskInteractiveTransparentShader
+                : pipeline.autodeskInteractiveShader;
+            if (shader == null) return false;
+            StartWith(m, shader);
+            d.TryGetProperty("base_color", out Vector4 color);
+            m.SetColor("_Color", color);
+            d.TryGetProperty("emissive", out Vector4 emissive);
+            if (d.TryGetProperty("emissive_intensity", out float intensity)) emissive *= intensity;
+            m.SetColor("_EmissionColor", emissive);
+            d.TryGetProperty("roughness", out float roughness);
+            m.SetFloat("_Glossiness", roughness);
+            d.TryGetProperty("metallic", out float metallic);
+            m.SetFloat("_Metallic", metallic);
+            if (transparent) m.SetFloat("_Opacity", opacity);
+            if (masked) m.SetFloat("_OpacityThreshold", threshold);
+            if (d.TryGetProperty("uv_offset", out Vector4 offset)) m.SetVector("_UvOffset", new Vector4(offset.x, -offset.y, 0f, 0f));
+            if (d.TryGetProperty("uv_scale", out Vector4 scale)) m.SetVector("_UvTiling", new Vector4(scale.x, scale.y, 0f, 0f));
+            return true;
+        }
+
+        /// <summary>The legacy importer makes its material with the shader it picks (the material
+        /// arrives with the engine's placeholder shader and no values of its own).</summary>
+        static void StartWith(Material m, Shader shader)
+        {
+            if (shader == m.shader) return;
+            m.StartWith(shader);
+            m.MarkDirty();
+        }
+
+        /// <summary>The legacy importer's blend set-up; Standard's blend mode properties only on a
+        /// shader with <c>_Mode</c> (URP's Lit keeps its own, measured).</summary>
         static void Transparency(Material m, bool transparent)
         {
-            m.SetFloat("_Mode", transparent ? 3f : 0f);
+            if (m.HasProperty("_Mode"))
+            {
+                m.SetFloat("_Mode", transparent ? 3f : 0f);
+                m.SetFloat("_SrcBlend", 1f);
+                m.SetFloat("_DstBlend", transparent ? 10f : 0f);
+                m.SetFloat("_ZWrite", transparent ? 0f : 1f);
+            }
             m.SetOverrideTag("RenderType", transparent ? "Transparent" : "");
-            m.SetFloat("_SrcBlend", 1f);
-            m.SetFloat("_DstBlend", transparent ? 10f : 0f);
-            m.SetFloat("_ZWrite", transparent ? 0f : 1f);
             if (transparent) m.EnableKeyword("_ALPHAPREMULTIPLY_ON");
             m.renderQueue = transparent ? 3000 : -1;
         }
 
-        static void SetTexture(Material m, string name, TexturePropertyDescription texture)
+        static void SetTexture(Material m, int name, TexturePropertyDescription texture)
         {
             m.SetTexture(name, texture.texture);
             m.SetTextureOffset(name, texture.offset);
