@@ -131,7 +131,6 @@ namespace Unbound.Runtime
             foreach (var mapping in Desc.buffers ?? Array.Empty<VFXMapping>())
                 if (mapping.name.StartsWith(IndirectListName, StringComparison.Ordinal))
                     (mapping.name.EndsWith(PerCameraSuffix, StringComparison.Ordinal) ? cameraLists : stepLists).Add(mapping.index);
-            m_StepLists = stepLists.ToArray();
 
             var updates = new List<Kernel>();
             var perCamera = new List<Kernel>();
@@ -158,22 +157,28 @@ namespace Unbound.Runtime
             foreach (var output in m_Outputs) m_HasIndirect |= output.Indirect;
             // Only the per-camera kernels whose list an output draws, and none of the
             // output-update kernels that run at each step for an output that is not drawn: it
-            // needs no list made. The step's lists are emptied all the same (the update kernel
-            // fills its own whether or not it is drawn).
-            m_PerCamera = KeepDrawn(perCamera, false);
-            m_Updates = KeepDrawn(updates, true);
+            // needs no list made, nor emptied. The update kernel's own list is emptied whether
+            // or not it is drawn (the kernel fills it either way).
+            m_PerCamera = KeepDrawn(perCamera, false, null);
+            m_Updates = KeepDrawn(updates, true, stepLists);
             cameraLists.RemoveAll(list => !Drawn(list));
+            m_StepLists = stepLists.ToArray();
             m_CameraLists = cameraLists.ToArray();
         }
 
         /// <summary>The kernels whose list an output draws, and those that make no list when
-        /// <paramref name="unlisted"/>; the others are released.</summary>
-        Kernel[] KeepDrawn(List<Kernel> kernels, bool unlisted)
+        /// <paramref name="unlisted"/>; the others are released, and their lists taken out of
+        /// <paramref name="lists"/>.</summary>
+        Kernel[] KeepDrawn(List<Kernel> kernels, bool unlisted, List<int> lists)
         {
             var kept = new List<Kernel>(kernels.Count);
             foreach (var kernel in kernels)
                 if (kernel.List < 0 ? unlisted : Drawn(kernel.List)) kept.Add(kernel);
-                else kernel.Release();
+                else
+                {
+                    kernel.Release();
+                    lists?.Remove(kernel.List);
+                }
             return kept.ToArray();
         }
 

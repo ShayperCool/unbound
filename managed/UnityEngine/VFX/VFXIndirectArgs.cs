@@ -94,7 +94,7 @@ namespace Unbound.Runtime
         bool m_Loaded, m_Usable;
 
         /// <summary>The buffer of every entry's words (made anew, its words lost, when entries
-        /// outgrow it: take it after <see cref="Fill"/>).</summary>
+        /// outgrow it: take it after <see cref="Ready"/> or <see cref="Fill"/>).</summary>
         internal GraphicsBuffer Arguments => m_Args;
 
         /// <summary>How many times the entries' buffer was made: an entry filled under another
@@ -160,7 +160,7 @@ namespace Unbound.Runtime
         /// <summary>Buffers for every reserved entry; the descriptions uploaded when they changed.</summary>
         void Prepare()
         {
-            int frame = Time.frameCount;
+            int frame = Time.s_FrameCount;
             if (m_Retired.Count != 0 && frame != m_RetiredFrame)
             {
                 foreach (var buffer in m_Retired) buffer.Release();
