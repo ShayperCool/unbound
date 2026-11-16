@@ -145,13 +145,14 @@ public sealed class VfxOutputsProbe : MonoBehaviour
             Front(AddStage("SortKeyedMany", "SortKeyedMany", 5));
             Front(AddStage("Priority", "Priority", 3));
             Front(AddStage("PriorityTies", "PriorityTies", 3));
-            // Two effects over each other, the second nearer the camera: drawn from the farther.
+            // Two effects over each other, the one made second farther from the camera: drawn
+            // from the farther, against the order they were made in.
             var pair = Front(AddStage("Effects", "SortKeyed", 3));
-            var nearer = new GameObject("stage Effects nearer").AddComponent<VisualEffect>();
-            nearer.transform.position = pair.Effect.transform.position + new Vector3(0.3f, 0.2f, -2f);
-            nearer.resetSeedOnPlay = false;
-            nearer.startSeed = 12;
-            nearer.visualEffectAsset = AssetDatabase.LoadAssetAtPath<VisualEffectAsset>("Assets/OutputGraphs/SortDistance.vfx");
+            var farther = new GameObject("stage Effects farther").AddComponent<VisualEffect>();
+            farther.transform.position = pair.Effect.transform.position + new Vector3(0.3f, 0.2f, 2f);
+            farther.resetSeedOnPlay = false;
+            farther.startSeed = 12;
+            farther.visualEffectAsset = AssetDatabase.LoadAssetAtPath<VisualEffectAsset>("Assets/OutputGraphs/SortDistance.vfx");
             StartCoroutine(EndOfFrames());
         }
         catch (Exception e)

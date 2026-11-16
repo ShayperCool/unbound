@@ -84,8 +84,9 @@ others with a start seed of 11 and gives it orthographic cameras of its own, eac
   `SortMany` (frame 5, values only).
 - `Priority` (frame 3): the outputs drawn by their priority, the lowest first, across systems;
   `PriorityTies` (frame 3): equal ones in their systems' order, then each system's.
-- `Effects` (frame 3): two effects over each other (`SortKeyed`, and `SortDistance` two units
-  nearer the camera): the farther drawn first.
+- `Effects` (frame 3): two effects over each other (`SortKeyed`, and `SortDistance` made after it
+  and two units farther from the camera): the farther drawn first, against the order they were
+  made in.
 - `late` (frame 10): made in frame 6, after the others' draws began: its outputs take more entries
   of indirect arguments than there were, which are made anew, and every effect's arguments with
   them (the images of the others after frame 6 show it).
