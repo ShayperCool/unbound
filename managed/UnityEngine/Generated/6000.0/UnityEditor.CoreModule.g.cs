@@ -11202,10 +11202,8 @@ namespace UnityEditor
         public bool isSceneHeader { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectTreeViewItem.isSceneHeader"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectTreeViewItem.isSceneHeader"); } }
         public global::UnityEngine.SceneManagement.Scene scene { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectTreeViewItem.scene"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectTreeViewItem.scene"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class GameObjectUtility
+    unsafe partial class GameObjectUtility
     {
-        [global::Unbound.Stub] public static global::UnityEditor.StaticEditorFlags GetStaticEditorFlags(global::UnityEngine.GameObject go) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.GetStaticEditorFlags"); return default; }
         [global::Unbound.Stub] public static void SetStaticEditorFlags(global::UnityEngine.GameObject go, global::UnityEditor.StaticEditorFlags flags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.SetStaticEditorFlags"); }
         [global::Unbound.Stub] public static bool AreStaticEditorFlagsSet(global::UnityEngine.GameObject go, global::UnityEditor.StaticEditorFlags flags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.AreStaticEditorFlagsSet"); return default; }
         [global::Unbound.Stub] internal static string GetFirstItemPathAfterGameObjectCreationMenuItems() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.GetFirstItemPathAfterGameObjectCreationMenuItems"); return default; }
@@ -11231,7 +11229,6 @@ namespace UnityEditor
         [global::System.Obsolete("SetNavMeshLayer has been deprecated. To relate a GameObject to an area type, create a NavMeshBuildMarkup and pass it into UnityEngine.AI.NavMeshBuilder.CollectSources(). (UnityUpgradable) -> SetNavMeshArea(*)")] [global::Unbound.Stub] public static void SetNavMeshLayer(global::UnityEngine.GameObject go, int areaIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.SetNavMeshLayer"); }
         [global::System.Obsolete("GetNavMeshLayerFromName has been deprecated. Use NavMesh.GetAreaFromName instead. (UnityUpgradable) -> [UnityEngine] UnityEngine.AI.NavMesh.GetAreaFromName(*)")] [global::Unbound.Stub] public static int GetNavMeshLayerFromName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.GetNavMeshLayerFromName"); return default; }
         [global::System.Obsolete("GetNavMeshLayerNames has been deprecated. Use NavMesh.GetAreaNames instead. (UnityUpgradable) -> [UnityEngine] UnityEngine.AI.NavMesh.GetAreaNames()")] [global::Unbound.Stub] public static string[] GetNavMeshLayerNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.GetNavMeshLayerNames"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public GameObjectUtility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GameObjectUtility.ctor"); }
         internal enum ShouldIncludeChildren
         {
             HasNoChildren = -1,
@@ -24684,18 +24681,6 @@ namespace UnityEditor
     internal unsafe partial struct StaticBatchingEditorHelper
     {
         [global::Unbound.Stub] internal static void CombineAllStaticMeshesForScenePostProcessing(ulong sceneHash, global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.StaticBatchingEditorHelper.CombineAllStaticMeshesForScenePostProcessing"); }
-    }
-    [global::System.Flags]
-    public enum StaticEditorFlags
-    {
-        ContributeGI = 1,
-        OccluderStatic = 2,
-        OccludeeStatic = 16,
-        BatchingStatic = 4,
-        [global::System.Obsolete("Enum member StaticEditorFlags.NavigationStatic has been deprecated. The precise selection of the objects is now done using NavMeshBuilder.CollectSources() and NavMeshBuildMarkup.")] NavigationStatic = 8,
-        [global::System.Obsolete("Enum member StaticEditorFlags.OffMeshLinkGeneration has been deprecated. You can now use NavMeshBuilder.CollectSources() and NavMeshBuildMarkup to nominate the objects that will generate Off-Mesh Links.")] OffMeshLinkGeneration = 32,
-        ReflectionProbeStatic = 64,
-        [global::System.Obsolete("Enum member StaticEditorFlags.LightmapStatic has been deprecated. Use StaticEditorFlags.ContributeGI instead. (UnityUpgradable) -> ContributeGI")] LightmapStatic = 1,
     }
     [global::Unbound.Stub]
     internal unsafe partial class StaticFieldDropdown : global::UnityEditor.PopupWindowContent

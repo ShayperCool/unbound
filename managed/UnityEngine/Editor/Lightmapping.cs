@@ -46,15 +46,14 @@ namespace UnityEditor
         /// <summary>
         /// "Starts a synchronous bake job ... Returns true if the bake ran successfully. Will
         /// return false and print a warning message if it's not possible to start the bake"
-        /// (Scripting API 6000.0). Measured (the Unity 6000.0.71f1 Editor, batch mode): in Play mode
-        /// it bakes nothing, warns and answers false; otherwise, also while the Editor enters Play
-        /// mode, it bakes the open scenes, sending <see cref="bakeStarted"/> and
-        /// <see cref="bakeCompleted"/> before it answers true, and the scene then plays with its
-        /// realtime GI. Unbound bakes a scene the Editor opens whose file is not read yet (the one
-        /// Play mode starts with, while editor code runs as Play mode is entered) as one that asks
-        /// for a bake on load: its realtime GI from Unbound's own precompute when it has no
-        /// lighting data (docs/REALTIME_GI.md). A scene already read is not baked again, nor is
-        /// one with lighting data (each said once).
+        /// (Scripting API 6000.0). Measured (the Unity 6000.0.71f1 Editor, batch mode,
+        /// tests/projects/realtimegi `script_bake.py`): in Play mode it bakes nothing, warns and
+        /// answers false; called by editor code as the Editor enters Play mode it bakes the open
+        /// scenes, sending <see cref="bakeStarted"/> and <see cref="bakeCompleted"/> before it answers
+        /// true, and writes their lighting data, but Play mode starts with the scenes as they were
+        /// (no realtime GI from that bake). Unbound answers and sends the same then and writes no
+        /// lighting data (which later sessions would use: said once). A bake in Edit mode is not
+        /// implemented: it warns and answers false.
         /// </summary>
         public static bool Bake()
         {
@@ -63,8 +62,13 @@ namespace UnityEditor
                 Debug.LogWarning(k_PlayMode);
                 return false;
             }
+            if (!EditorSession.WillChange)
+            {
+                Debug.LogWarning("Unbound: Lightmapping.Bake in Edit mode is not implemented: nothing is baked.");
+                return false;
+            }
+            Stubs.Ignored("Lightmapping.Bake", "as Play mode is entered writes the open scenes' lighting data in the Editor, which later sessions use; Unbound writes none");
             bakeStarted?.Invoke();
-            foreach (var scene in SceneRegistry.Loaded) RealtimeGI.RequestScriptBake(scene);
             bakeCompleted?.Invoke();
             return true;
         }

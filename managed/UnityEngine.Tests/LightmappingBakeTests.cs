@@ -1,28 +1,18 @@
 using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
-using Unbound.Tests;
 using UnityEditor;
 using Xunit;
 
 namespace UnityEngine.Tests
 {
-    /// <summary>Lightmapping.Bake and BakeAsync from scripts (Scripting API 6000.0; measured in the
-    /// Unity 6000.0.71f1 Editor: in Play mode both warn "Computing lightmaps is not available in
-    /// play mode." and answer false; otherwise Bake bakes the open scenes, sending bakeStarted and
-    /// bakeCompleted, and answers true).</summary>
+    /// <summary>Lightmapping.Bake and BakeAsync from scripts in each phase of the Editor (Scripting
+    /// API 6000.0; measured in the Unity 6000.0.71f1 Editor, tests/projects/realtimegi
+    /// `script_bake.py`): refused with a warning in Play mode, a bake with its events as Play mode
+    /// is entered.</summary>
     public class LightmappingBakeTests
     {
-        const string NoBakeOnLoad = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!157 &3\nLightmapSettings:\n" +
-            "  serializedVersion: 13\n  m_BakeOnSceneLoad: 0\n  m_LightingDataAsset: {fileID: 0}\n  m_LightingSettings: {fileID: 0}\n";
-        const string WithData = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!157 &3\nLightmapSettings:\n" +
-            "  serializedVersion: 13\n  m_BakeOnSceneLoad: 0\n" +
-            "  m_LightingDataAsset: {fileID: 112000000, guid: 0123456789abcdef0123456789abcdef, type: 2}\n  m_LightingSettings: {fileID: 0}\n";
-
-        sealed class Resolver : IReferenceResolver
-        {
-            public Object Resolve(ObjectRef reference, Type expected) => null;
-        }
+        const string PlayMode = "Computing lightmaps is not available in play mode.";
 
         sealed class Logs : ILogHandler
         {
@@ -32,9 +22,11 @@ namespace UnityEngine.Tests
                 Messages.Add((logType, args.Length == 0 ? format : string.Format(format, args)));
         }
 
-        /// <summary>Runs <paramref name="body"/> with <paramref name="playing"/> as the Editor's play
-        /// state, the log captured and the bake events counted ("S" started, "C" completed).</summary>
-        static (Logs Logs, string Events) Run(bool playing, Action body)
+        enum Phase { Edit, Entering, Play }
+
+        /// <summary>Runs <paramref name="body"/> in <paramref name="phase"/> with the log captured
+        /// and the bake events listed ("S" started, "C" completed).</summary>
+        static (Logs Logs, string Events) Run(Phase phase, Action body)
         {
             var logs = new Logs();
             var events = "";
@@ -45,13 +37,15 @@ namespace UnityEngine.Tests
             Lightmapping.bakeCompleted += completed;
             try
             {
-                EditorSession.IsPlaying = playing;
+                if (phase == Phase.Entering) EditorSession.BeginEnteringPlayMode();
+                else EditorSession.IsPlaying = phase == Phase.Play;
                 Debug.unityLogger.logHandler = logs;
                 body();
             }
             finally
             {
                 Debug.unityLogger.logHandler = handler;
+                if (phase == Phase.Entering) EditorSession.EndEnteringPlayMode();
                 EditorSession.IsPlaying = wasPlaying;
                 Lightmapping.bakeStarted -= started;
                 Lightmapping.bakeCompleted -= completed;
@@ -59,91 +53,60 @@ namespace UnityEngine.Tests
             return (logs, events);
         }
 
-        static SceneData Open(string name)
-        {
-            var scene = SceneRegistry.Create(name, "Assets/ScriptBake/" + name + "-" + Guid.NewGuid().ToString("N") + ".unity", -1);
-            scene.OpenedInEditor = true;
-            SceneRegistry.Loaded.Add(scene);
-            return scene;
-        }
-
         [Fact]
         public void InPlayModeNeitherBakeStartsAndBothWarn()
         {
-            var scene = Open("Playing");
-            try
+            bool bake = true, bakeAsync = true;
+            var (logs, events) = Run(Phase.Play, () =>
             {
-                bool bake = true, bakeAsync = true;
-                var (logs, events) = Run(playing: true, () =>
-                {
-                    bake = Lightmapping.Bake();
-                    bakeAsync = Lightmapping.BakeAsync();
-                });
-                Assert.False(bake);
-                Assert.False(bakeAsync);
+                bake = Lightmapping.Bake();
+                bakeAsync = Lightmapping.BakeAsync();
+            });
+            Assert.False(bake);
+            Assert.False(bakeAsync);
+            Assert.Equal("", events);
+            Assert.Equal(new[] { (LogType.Warning, PlayMode), (LogType.Warning, PlayMode) }, logs.Messages);
+        }
+
+        [Fact]
+        public void AsPlayModeIsEnteredBakeSendsItsEventsAndAnswersTrue()
+        {
+            bool result = false;
+            var (logs, events) = Run(Phase.Entering, () => result = Lightmapping.Bake());
+            Assert.True(result);
+            Assert.Equal("SC", events);
+            Assert.DoesNotContain(logs.Messages, m => m.Message == PlayMode);
+            // Control: the same call once Play mode has started is refused.
+            Assert.Equal("", Run(Phase.Play, () => Assert.False(Lightmapping.Bake())).Events);
+        }
+
+        [Fact]
+        public void InEditModeABakeIsNotMadeAndSaysSo()
+        {
+            for (int call = 0; call < 2; call++)
+            {
+                bool result = true;
+                var (logs, events) = Run(Phase.Edit, () => result = Lightmapping.Bake());
+                Assert.False(result);
                 Assert.Equal("", events);
-                Assert.Equal(new[] { (LogType.Warning, "Computing lightmaps is not available in play mode."),
-                    (LogType.Warning, "Computing lightmaps is not available in play mode.") }, logs.Messages);
-                Assert.False(RealtimeGI.ScriptBakeRequested(scene.Path));
-            }
-            finally
-            {
-                SceneRegistry.Forget(scene);
+                Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("Edit mode is not implemented"));
             }
         }
 
         [Fact]
-        public void OutsidePlayModeTheOpenSceneIsBakedWhenItIsRead()
+        public void StaticEditorFlagsAreTheGameObjectsOwn()
         {
-            var requested = Open("Requested");
-            var control = SceneRegistry.Create("Control", "Assets/ScriptBake/Control-" + Guid.NewGuid().ToString("N") + ".unity", -1);
-            control.OpenedInEditor = true;
+            var go = new GameObject("flags");
             try
             {
-                bool result = false;
-                var (logs, events) = Run(playing: false, () => result = Lightmapping.Bake());
-                Assert.True(result);
-                Assert.Equal("SC", events);
-                Assert.Empty(logs.Messages);
-                Assert.True(RealtimeGI.ScriptBakeRequested(requested.Path));
-                // Its LightmapSettings do not ask for a bake on load; the script's bake does.
-                SceneSettings.Apply(UnityYaml.Parse(NoBakeOnLoad)[0], new Resolver(), requested);
-                Assert.True(requested.BakedOnOpen);
-                // Control: a scene that was not open when the script baked.
-                SceneSettings.Apply(UnityYaml.Parse(NoBakeOnLoad)[0], new Resolver(), control);
-                Assert.False(control.BakedOnOpen);
+                Assert.Equal((StaticEditorFlags)0, GameObjectUtility.GetStaticEditorFlags(go));
+                go.m_StaticEditorFlags = (uint)(StaticEditorFlags.ContributeGI | StaticEditorFlags.BatchingStatic);
+                Assert.Equal(StaticEditorFlags.ContributeGI | StaticEditorFlags.BatchingStatic, GameObjectUtility.GetStaticEditorFlags(go));
+                Assert.Throws<ArgumentNullException>(() => GameObjectUtility.GetStaticEditorFlags(null));
             }
             finally
             {
-                SceneRegistry.Forget(requested);
-                SceneRegistry.Forget(control);
-            }
-        }
-
-        [Fact]
-        public void ASceneAlreadyReadOrWithLightingDataKeepsWhatItHasAndSaysSo()
-        {
-            var read = Open("Read");
-            var withData = Open("WithData");
-            try
-            {
-                SceneSettings.Apply(UnityYaml.Parse(NoBakeOnLoad)[0], new Resolver(), read);
-                Assert.False(read.BakedOnOpen);
-                var (logs, events) = Run(playing: false, () => Assert.True(Lightmapping.Bake()));
-                Assert.Equal("SC", events);
-                Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains(read.Path)
-                    && m.Message.Contains("already loaded"));
-                Assert.False(RealtimeGI.ScriptBakeRequested(read.Path));
-                var (dataLogs, _) = Run(playing: false, () =>
-                    SceneSettings.Apply(UnityYaml.Parse(WithData)[0], new Resolver(), withData));
-                Assert.False(withData.BakedOnOpen);
-                Assert.Contains(dataLogs.Messages, m => m.Type == LogType.Warning && m.Message.Contains(withData.Path)
-                    && m.Message.Contains("keeps the data it has"));
-            }
-            finally
-            {
-                SceneRegistry.Forget(read);
-                SceneRegistry.Forget(withData);
+                Object.DestroyImmediate(go);
             }
         }
     }

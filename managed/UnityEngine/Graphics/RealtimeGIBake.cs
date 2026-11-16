@@ -26,31 +26,8 @@ namespace UnityEngine
 
         internal static bool BakedThisSession(string path) => !string.IsNullOrEmpty(path) && s_BakedScenes.Contains(path);
 
-        /// <summary>The scenes (paths) a script asked to bake (Lightmapping.Bake) before their
-        /// files were read.</summary>
-        static readonly HashSet<string> s_ScriptBakes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        /// <summary>Lightmapping.Bake outside Play mode: an open scene whose file is not read yet
-        /// is baked as it is read; one already read is not (said once).</summary>
-        internal static void RequestScriptBake(SceneData scene)
-        {
-            if (string.IsNullOrEmpty(scene.Path)) return;
-            if (scene.LightmapSettingsRead)
-                Warn("script-bake:" + scene.Path, $"{scene.Path}: Lightmapping.Bake of a scene already loaded is not made by Unbound: it keeps the realtime GI it loaded with.");
-            else
-                s_ScriptBakes.Add(scene.Path);
-        }
-
-        /// <summary>A scene a script baked has lighting data: Unbound keeps it (the Editor would
-        /// make it again, from the same scene).</summary>
-        internal static void NoteScriptBakeOfLightingData(string path) =>
-            Warn("script-bake-data:" + path, $"{path}: Lightmapping.Bake would make its lighting data again; Unbound keeps the data it has.");
-
-        /// <summary>A script asked to bake the scene before it was read (<see cref="RequestScriptBake"/>).</summary>
-        internal static bool ScriptBakeRequested(string path) => !string.IsNullOrEmpty(path) && s_ScriptBakes.Contains(path);
-
-        /// <summary>Says once what the Editor's bake of a scene (one it opens without lighting
-        /// data, or one a script bakes) would make and Unbound does not: baked lightmaps and the light probes' baked lighting
+        /// <summary>Says once what the Editor's bake of a scene it opens without lighting data
+        /// would make and Unbound does not: baked lightmaps and the light probes' baked lighting
         /// (baked global illumination on; a scene without Lighting Settings has the defaults',
         /// which have it on), the environment lighting from a sky (the ambient probe and the
         /// default reflection), baked reflection probes. Unbound makes the realtime GI alone
@@ -59,14 +36,14 @@ namespace UnityEngine
         {
             string path = file?.Path ?? "a scene";
             if (settings == null || settings.bakedGI)
-                Warn("bake-baked:" + path, $"{path}: the Editor's bake of it would make baked lightmaps and the light probes' baked lighting, which Unbound does not make.");
+                Warn("bake-baked:" + path, $"{path}: its bake on load (Lightmapping.bakeOnSceneLoad) would make baked lightmaps and the light probes' baked lighting, which Unbound does not make.");
             if (RenderSettings.skybox != null || RenderSettings.ambientMode == Rendering.AmbientMode.Skybox)
-                Warn("bake-environment:" + path, $"{path}: the Editor's bake of it would make the environment lighting from the sky (the ambient probe and the default reflection), which Unbound does not make.");
+                Warn("bake-environment:" + path, $"{path}: its bake on load (Lightmapping.bakeOnSceneLoad) would make the environment lighting from the sky (the ambient probe and the default reflection), which Unbound does not make.");
             if (file != null)
                 foreach (var obj in file.Objects.Values)
                     if (obj is ReflectionProbe probe && probe.mode == Rendering.ReflectionProbeMode.Baked)
                     {
-                        Warn("bake-reflection:" + path, $"{path}: the Editor's bake of it would bake its reflection probes, which Unbound does not make.");
+                        Warn("bake-reflection:" + path, $"{path}: its bake on load (Lightmapping.bakeOnSceneLoad) would bake its reflection probes, which Unbound does not make.");
                         break;
                     }
         }
@@ -224,7 +201,7 @@ namespace UnityEngine
             if (renderers.Count == 0)
             {
                 if (probePositions.Count > 0)
-                    Warn("bake-probes:" + file.Path, $"{file.Path}: the Editor's bake of it would light its light probes from realtime GI; it has no renderer Unbound's precompute takes, so they are not lit.");
+                    Warn("bake-probes:" + file.Path, $"{file.Path}: its bake on load would light its light probes from realtime GI; it has no renderer Unbound's precompute takes, so they are not lit.");
                 return null;
             }
             JsonElement root;
