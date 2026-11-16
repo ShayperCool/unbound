@@ -62,7 +62,7 @@ SUITE_REFERENCE_SECONDS = 900
 # into the validation runs are kept (suites name them through linked prefixes too).
 RUN_REFERENCE = re.compile(rb'/[^\s"\'<>|;&(),=]*/runs/[^\s"\'<>|;&(),]+')
 # The cache of suite references: its entries are dropped when this changes.
-SUITE_REFERENCE_FORMAT = 3
+SUITE_REFERENCE_FORMAT = 4
 # Keep land's lock independent of a service manager or a historical backlog.
 GATE_HANDOFF_SECONDS = 2
 HARD_STOP_FREE_GIB = 10
@@ -253,13 +253,17 @@ def suite_run_references(roots, runs, known, seconds):
                         continue
                     with open(path, 'rb') as stream:
                         named = {os.fsdecode(match) for match in RUN_REFERENCE.findall(stream.read())}
+                    # A path that ends a sentence or a log field (".../gate-2." or ".../gate-2:").
+                    named |= {value.rstrip('.:') for value in named}
                     values = set()
                     for value in named:
-                        # The run named, and the one a link inside it leads to.
-                        prefix, rest = value.split('/runs/', 1)
-                        for resolved in (os.path.realpath(prefix+'/runs')+'/'+rest, os.path.realpath(value)):
-                            if inside(resolved, runs):
-                                values.add(resolved)
+                        # The run named, read through a linked prefix at any runs/ in the path,
+                        # and the one a link inside it leads to.
+                        parts = value.split('/runs/')
+                        resolved = {os.path.realpath(value)}
+                        resolved.update(os.path.realpath('/runs/'.join(parts[:split])+'/runs')+'/'+'/runs/'.join(parts[split:])
+                                        for split in range(1, len(parts)))
+                        values.update(path for path in resolved if inside(path, runs))
                     values = sorted(values)
                     entry = [*identity, values]
                 files[path] = entry
@@ -1159,14 +1163,14 @@ class Janitor:
     def verify_sealed(self):
         """Before any run is removed, find the sealed runs that were written inside lately (their
         own timestamps are old) and walk them, so that their links protect from the first removal
-        on. Until every sealed run has been checked, no run is removed (see candidates)."""
+        on. The links inside a sealed run are not read, so until every sealed run has been checked
+        nothing is removed: a check that cannot finish stops this run's removals."""
         hours = max(self.idle_hours, self.run_days*24)
         cutoff = time.time()-hours*3600
+        unchecked = 'sealed runs not all checked for recent writes; remaining work retained'
         for key in sorted(self.sealed):
             if self.deadline is not None and time.monotonic() >= self.deadline:
-                self.partial = True
-                self.emit('keep', runs=len(self.sealed), reason='sealed runs not all checked for recent writes')
-                return False
+                return self.stop_batches(unchecked)
             try:
                 newest, _, _ = inventory(Path(key))
             except FileNotFoundError:
@@ -1177,9 +1181,7 @@ class Janitor:
                 except ReferenceChanged as error:
                     return self.stop_batches(f'sealed run could not be walked: {error}')
                 except TimeoutError:
-                    self.partial = True
-                    self.emit('keep', runs=len(self.sealed), reason='sealed runs not all checked for recent writes')
-                    return False
+                    return self.stop_batches(unchecked)
         self.verified = True
         return True
 
@@ -1211,15 +1213,13 @@ class Janitor:
             if any(overlaps(path, p) for p in self.suite_paths):
                 self.emit('keep', path=str(path), reason='promoted sheriff suite reference')
                 continue
-            if kind == 'run' and not (self.sheriff_complete and self.verified):
+            if kind == 'run' and not self.sheriff_complete:
                 unread += 1
                 continue
             yield path, kind, hours
         if unread:
             self.partial = True
-            reason = ('sheriff suite references not read yet' if not self.sheriff_complete else
-                      'sealed runs not all checked for recent writes')
-            self.emit('keep', runs=unread, reason=reason)
+            self.emit('keep', runs=unread, reason='sheriff suite references not read yet')
 
     def unprotected_candidates(self):
         yield from self.run_candidates(newest=lambda path: self.keep(path, 'newest run of its probe'))
@@ -1523,6 +1523,9 @@ class Janitor:
     def run_batch(self, candidates):
         if self.stopped or not self.ensure_discovery():
             return None
+        # A rediscovery seals runs again: they are checked before anything else is removed.
+        if not self.verified and not self.verify_sealed():
+            return None
         if self.deadline is not None and time.monotonic() >= self.deadline:
             self.stop_batches('run budget exhausted; remaining work retained')
             return None
@@ -1552,8 +1555,7 @@ class Janitor:
     def collect(self):
         self.deadline = time.monotonic()+self.run_seconds
         try:
-            if self.ensure_discovery():
-                self.verify_sealed()
+            if self.ensure_discovery() and self.verify_sealed():
                 self.collect_candidates()
                 if not self.stopped:
                     runtime_snapshot.cleanup(days=self.idle_hours/24, cache=self.runtimes, repo=self.repo,

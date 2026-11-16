@@ -208,12 +208,106 @@ class JanitorTests(unittest.TestCase):
         self.assertIn('sealed runs not all checked for recent writes', self.output.getvalue())
         self.assertTrue(self.j.partial)
 
+    def check_fails_on_recent_run(self, error):
+        """Runs gate-1..4 and a landed task q1 that only gate-1 (old, sealed) links to; gate-3 was
+        written inside lately and its walk at verification fails with error (None: succeeds)."""
+        first, second, third, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3', 'gate-4'])
+        task = self.directory('q1')
+        (first/'link').symlink_to(task/'output')
+        (third/'link').symlink_to(second/'output')
+        os.utime(third/'output', (self.future, self.future))
+        original = janitor.reference_paths
+        def reference_paths(paths, *args, **kwargs):
+            if error and list(paths) == [third]:
+                raise error
+            return original(paths, *args, **kwargs)
+        for age, path in enumerate(self.aged):
+            os.utime(path, (1_000_000+age, 1_000_000+age))
+        with self.guards(), patch.object(janitor, 'reference_paths', reference_paths):
+            self.j.apply = True
+            self.j.collect()
+            cleanup, gc = janitor.runtime_snapshot.cleanup, janitor.Janitor.kache_gc
+            return first, second, task, cleanup.called, gc.called
+
+    def assert_nothing_removed(self, outcome):
+        # The links inside unchecked sealed runs were never read, so nothing else may go either.
+        first, second, task, cleaned, collected = outcome
+        self.assertTrue(first.is_dir())
+        self.assertTrue(second.is_dir())
+        self.assertTrue((task/'output').is_file())
+        self.assertEqual(self.j.removed, 0)
+        self.assertTrue(self.j.partial)
+        self.assertFalse(cleaned)  # no runtime cleanup
+        self.assertTrue(collected)  # kache gc still runs
+        self.assertIn('"batch_limit"', self.output.getvalue())
+
+    def test_a_timed_out_check_of_sealed_runs_removes_nothing(self):
+        self.assert_nothing_removed(self.check_fails_on_recent_run(TimeoutError('janitor run budget exhausted')))
+        self.assertIn('sealed runs not all checked for recent writes', self.output.getvalue())
+
+    def test_a_sealed_run_that_cannot_be_walked_stops_removals(self):
+        self.assert_nothing_removed(self.check_fails_on_recent_run(janitor.ReferenceChanged('moved')))
+        self.assertIn('sealed run could not be walked: moved', self.output.getvalue())
+
+    def test_a_checked_sealed_run_takes_its_links_with_it(self):
+        # Control: once every sealed run is checked, an old run and what only it named go.
+        first, second, task, cleaned, collected = self.check_fails_on_recent_run(None)
+        self.assertFalse(first.exists())
+        self.assertFalse((task/'output').exists())  # a task's contents go
+        self.assertTrue(second.is_dir())  # named from the recently written run
+        self.assertFalse(self.j.partial)
+        self.assertTrue(cleaned)
+
+    def test_runs_sealed_again_by_a_rediscovery_are_checked_before_removals(self):
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        task = self.directory('q1')
+        (first/'link').symlink_to(task/'output')
+        original = janitor.Janitor.remove_batch
+        calls = []
+        def remove_batch(janitor_, candidates):
+            calls.append(candidates)
+            if len(calls) == 1:
+                # gate-1 is written to while its batch runs out of time; it is sealed again.
+                os.utime(first/'output', (self.future, self.future))
+                raise TimeoutError('janitor scan budget exhausted')
+            return original(janitor_, candidates)
+        with patch.object(janitor, 'REMOVAL_BATCH_SIZE', 1), \
+             patch.object(janitor.Janitor, 'remove_batch', remove_batch):
+            self.collect_applied()
+        self.assertEqual(self.output.getvalue().count('"discovery_start"'), 2)
+        self.assertTrue(first.is_dir())
+        self.assertTrue((task/'output').is_file())  # named from gate-1, walked after the rediscovery
+        self.assertFalse(second.exists())
+
     def test_a_suite_path_through_a_link_inside_a_run_keeps_both_runs(self):
         first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
         (first/'latest').symlink_to(second)
         suite = self.volume/'unbound-validation/suite/sheriff-S9-abc'
         suite.mkdir(parents=True)
         (suite/'run.log').write_text(f'{first}/latest/output\n')
+        self.collect_applied()
+        self.assertTrue(first.is_dir())
+        self.assertTrue(second.is_dir())
+
+    def test_a_run_named_at_the_end_of_a_sentence_is_kept(self):
+        first, second, third, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3', 'gate-4'])
+        suite = self.volume/'unbound-validation/suite/sheriff-S9-abc'
+        suite.mkdir(parents=True)
+        (suite/'run.log').write_text(f'kept {second}.\nreused {third}: yes\n')
+        self.collect_applied()
+        self.assertTrue(second.is_dir())
+        self.assertTrue(third.is_dir())
+        self.assertFalse(first.exists())
+
+    def test_a_suite_path_through_links_after_another_runs_folder_keeps_both_runs(self):
+        # The path passes a runs/ folder that is not the validation runs before the linked one.
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        (first/'latest').symlink_to(second)
+        (self.cache/'runs/x').mkdir(parents=True)
+        (self.cache/'runs/x/validation').symlink_to(self.volume/'unbound-validation')
+        suite = self.volume/'unbound-validation/suite/sheriff-S9-abc'
+        suite.mkdir(parents=True)
+        (suite/'run.log').write_text(f'{self.cache}/runs/x/validation/runs/probe/gate-1/latest/output\n')
         self.collect_applied()
         self.assertTrue(first.is_dir())
         self.assertTrue(second.is_dir())
@@ -241,6 +335,7 @@ class JanitorTests(unittest.TestCase):
         self.assertTrue(first.is_dir())
         self.assertTrue(second.is_dir())
         self.assertIn('sheriff suite references not read yet', self.output.getvalue())
+        self.assertTrue(self.j.partial)
 
     def test_active_unknown_and_conflicting_tasks_are_kept(self):
         for name in ('q2', 'q3', 'q4'):
