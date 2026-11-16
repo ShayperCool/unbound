@@ -551,6 +551,9 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       omitted. Mixed float/signed/unsigned programs prepare during startup too; incompatible
       attachment types defer only their pipelines. Later attachment/layout/state changes can still
       require driver work, as documented for Vulkan/Metal/DX12. Unreadable source programs fail explicitly.
+      A shader the renderer has no source for (built-in shaders whose source Unity does not publish,
+      such as `Hidden/Internal-UIRAtlasBlitCopy`) is skipped by collection and global warm-up with one
+      warning per shader and its variants count as warm, as the Editor warms them (`warmupbuiltin`).
 - [ ] `SystemInfo` answers follow what the renderer does.
 - [ ] `api-gaps` noise: trivial attributes (`JetBrains.Annotations.*`, `ResourcePathAttribute`,
       `CategoryInfoAttribute`, `ShaderKeywordFilter.*`) implemented, so the coverage line counts

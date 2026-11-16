@@ -82,6 +82,9 @@ namespace Unbound.Tests
         {
             var first = Declared(new string[] { null }, new[] { "A" });
             var second = Declared(new string[] { null }, Array.Empty<string>());
+            // A shader the renderer cannot compile is skipped (tests/projects/warmupbuiltin).
+            var unknown = Declared(new string[] { null }, Array.Empty<string>());
+            ShaderPassInfo.s_CallForTests = name => "{\"shader\":\"" + name + "\",\"found\":" + (name == unknown.name ? "false" : "true") + ",\"tags\":{},\"passes\":[]}";
             first.maximumLOD = 1;
             var collection = new ShaderVariantCollection();
             collection.Add(new ShaderVariantCollection.ShaderVariant(first, PassType.Normal, "A"));
@@ -99,11 +102,13 @@ namespace Unbound.Tests
             Shader.WarmupAllShaders();
             Assert.Equal(1, sent[first.name]);
             Assert.Equal(1, sent[second.name]);
+            Assert.False(sent.ContainsKey(unknown.name));
             Assert.False(collection.isWarmedUp);
             Assert.Equal(0, collection.warmedUpVariantCount);
             Object.DestroyImmediate(collection);
             Object.DestroyImmediate(first);
             Object.DestroyImmediate(second);
+            Object.DestroyImmediate(unknown);
         }
 
         // ---------------------------------------------------------------- LightingSettings
@@ -901,6 +906,53 @@ LightingSettings:
             Assert.True(c.Remove(V(shader, PassType.Normal, "B")));
             c.WarmUp();
             Assert.Equal(5, prepared.Count);
+        }
+
+        sealed class LogCapture : ILogHandler
+        {
+            internal readonly List<(LogType Type, string Text)> Logs = new List<(LogType, string)>();
+            public void LogFormat(LogType type, Object context, string format, params object[] args) => Logs.Add((type, string.Format(format, args)));
+            public void LogException(Exception exception, Object context) => Logs.Add((LogType.Exception, exception.Message));
+        }
+
+        [Fact]
+        public void WarmupSkipsAShaderTheRendererCannotCompileAndWarnsOnce()
+        {
+            // As the Editor warms built-in shaders without published source (tests/projects/warmupbuiltin).
+            var shader = Declared(new string[] { null }, Array.Empty<string>());
+            ShaderWarmup.s_PrepareForTests = null;
+            ShaderPassInfo.s_CallForTests = name => "{\"shader\":\"" + name + "\",\"found\":false,\"tags\":{},\"passes\":[]}";
+            var sent = new List<string>();
+            ShaderWarmup.s_SendForTests = sent.Add;
+            var first = new ShaderVariantCollection();
+            first.Add(V(shader, PassType.Normal));
+            var second = new ShaderVariantCollection();
+            second.Add(V(shader, PassType.Normal));
+            var logger = Debug.unityLogger;
+            var previousHandler = logger.logHandler;
+            bool previousEnabled = logger.logEnabled;
+            var previousFilter = logger.filterLogType;
+            var capture = new LogCapture();
+            try
+            {
+                logger.logHandler = capture;
+                logger.logEnabled = true;
+                logger.filterLogType = LogType.Log;
+                Assert.False(first.WarmUpProgressively(0));
+                first.WarmUp();
+                Assert.True(second.WarmUpProgressively(1));
+            }
+            finally
+            {
+                logger.logHandler = previousHandler;
+                logger.logEnabled = previousEnabled;
+                logger.filterLogType = previousFilter;
+            }
+            Assert.True(first.isWarmedUp);
+            Assert.Equal(1, first.warmedUpVariantCount);
+            Assert.True(second.isWarmedUp);
+            Assert.Empty(sent);
+            Assert.Single(capture.Logs, l => l.Type == LogType.Warning && l.Text.Contains(shader.name, StringComparison.Ordinal));
         }
 
         [Fact]

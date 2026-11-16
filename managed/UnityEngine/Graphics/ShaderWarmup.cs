@@ -10,13 +10,32 @@ namespace Unbound.Runtime
     {
         internal static Action<Shader, PassType, string[]> s_PrepareForTests;
         internal static Action<string> s_SendForTests;
+        /// <summary>Shaders warm-up skipped, warned once each.</summary>
+        static readonly HashSet<string> s_Unprepared = new HashSet<string>();
 
         internal static void PrepareAll()
         {
             var shaders = Resources.FindObjectsOfTypeAll<Shader>();
             Flush();
             foreach (var shader in shaders)
-                Send(shader.name, Array.Empty<int>(), Array.Empty<string>(), true);
+                if (Preparable(shader))
+                    Send(shader.name, Array.Empty<int>(), Array.Empty<string>(), true);
+        }
+
+        /// <summary>Whether the renderer can compile the shader. The Editor warms every shader,
+        /// built-in ones whose source Unity does not publish included (tests/projects/warmupbuiltin).
+        /// Warming changes no result, so a shader the renderer cannot compile is skipped (counted as
+        /// warm by a collection); drawing with it draws the error shader.</summary>
+        static bool Preparable(Shader shader)
+        {
+            var info = ShaderPassInfo.Of(shader);
+            if (info == null)
+                throw new NotSupportedException("Unbound: shader warm-up requires an active renderer.");
+            if (info.Found) return true;
+            lock (s_Unprepared)
+                if (s_Unprepared.Add(shader.name))
+                    Debug.LogWarning($"Unbound: shader `{shader.name}` has no source the renderer can compile; warm-up skips it.");
+            return false;
         }
 
         static void Flush()
@@ -38,9 +57,7 @@ namespace Unbound.Runtime
             var keys = keywords.Length == 0 ? Array.Empty<string>() : keywords.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (s_PrepareForTests != null) { s_PrepareForTests(shader, type, keys); return; }
             Flush();
-            var info = ShaderPassInfo.Of(shader);
-            if (info == null || !info.Found)
-                throw new NotSupportedException("Unbound: shader warm-up requires readable passes and an active renderer.");
+            if (!Preparable(shader)) return;
             var passes = new List<int>();
             var source = ShaderPassInfo.FindPassSource(shader, candidate =>
             {
