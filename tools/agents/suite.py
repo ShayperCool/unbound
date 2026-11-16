@@ -67,7 +67,9 @@ with an earlier summary (default: agents/baseline/ when it exists) and lists eve
 status or summary changed. --update-baseline copies this run's summary to agents/baseline/;
 --promote LABEL does that for an earlier run without running anything.
 
-Image comparators print measurements, not verdicts. Each run records them (`images` in the
+Image comparators print measurements, not verdicts, except where a recipe gates them
+(particles/compare_images.py --gate: exact images apart from a probe's listed residuals; used
+by assetbundles, blendshapes and particles). Each run records them (`images` in the
 summary: every printed image mean, worst channel difference and count of pixels over 8, by
 comparator step (its script and first argument) and image); a probe with any status regresses when
 one of them gets worse against the baseline: a higher mean as printed (two decimals), more pixels
@@ -160,15 +162,18 @@ def ref(name=''):
     return '{probe}/Reference' + ('/'+name if name else '')
 
 
-def classic(variable, out, run_args, compare=None, images=None, verdict='summary', extra_env=None):
+def classic(variable, out, run_args, compare=None, images=None, verdict='summary', extra_env=None,
+            image_gate=False):
     """The original probe layout: an *_OUT variable, `unbound run`, compare.py REFERENCE OUT."""
     target = '{work}/'+out
     steps = [run(*run_args, env={variable: target, **(extra_env or {})})]
     steps.append(py('compare.py', *(compare or [ref(), target]), verdict=verdict))
     if images:
-        # compare_images.py prints means but always exits 0: a measurement, not a verdict.
+        # compare_images.py prints means and exits 0: a measurement, not a verdict; with
+        # image_gate (probes whose images are exact on the Linux GPU) every image must match its
+        # reference pixel for pixel and the step decides.
         steps.append(py('particles/compare_images.py', ref(images if images is not True else ''), target,
-                        verdict='none'))
+                        *(('--gate',) if image_gate else ()), verdict='exit' if image_gate else 'none'))
     return steps
 
 
@@ -368,7 +373,8 @@ def recipes(release):
     R['particles'] = [run('--frames', '60', '--size', '320x180', '--no-watch',
                           env={'PARTICLES_PROBE_OUT': '{work}/out.jsonl', 'PARTICLES_IMAGE_DIR': '{work}/images'}),
                       py('compare.py', single_ref(), '{work}/out.jsonl', verdict='summary'),
-                      py('compare_images.py', ref('images'), '{work}/images', verdict='none')]
+                      # Exact images, apart from the residuals image-residuals.json records.
+                      py('compare_images.py', ref('images'), '{work}/images', '--gate', '{probe}/image-residuals.json')]
     R['lighting'] = [run('--frames', '10', '--size', '320x180', '--no-watch', '--force-glcore',
                          env={'LIGHTING_PROBE_OUT': '{work}/out'}),
                      py('particles/compare_images.py', ref('images'), '{work}/out', verdict='none')]
@@ -429,10 +435,10 @@ def recipes(release):
     R['terrain'] = classic('TERRAIN_PROBE_OUT', 'out', ['--frames', '300', '--size', '320x180', '--no-watch'], images=True)
     R['lod'] = classic('LOD_PROBE_OUT', 'out', ['--frames', '20000', '--size', '320x180', '--no-watch'])
     R['assetbundles'] = classic('BUNDLE_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'],
-                                images=True)
+                                images=True, image_gate=True)
     R['video'] = classic('VIDEO_PROBE_OUT', 'out', ['--frames', '30000', '--size', '320x180', '--no-watch'], images=True)
     R['blendshapes'] = classic('BLEND_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'],
-                               images=True)
+                               images=True, image_gate=True)
     R['grass'] = classic('GRASS_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'], images=True)
     R['ambient'] = declared('ambient', release)
     R['xr'] = classic('XR_PROBE_OUT', 'out', ['--frames', '300', '--size', '320x180', '--no-watch'])
@@ -760,10 +766,13 @@ def recipes(release):
             R['contactevents3d'] += [
                 driver('run.py', 'engine', '--suite', suite, '--unity-version', '{release}', '--work', '{work}',
                        '--label', 'engine', '--profile', str(profile), '--cli', '{cli}',
-                       env={'UNBOUND_MANAGED_DIR': '{managed}'}),
-                py('compare.py', reference+'.jsonl', f'{{work}}/{suite}-engine-p{profile}.jsonl',
-                   '--output', f'{{work}}/{suite}-p{profile}.json', *(() if suite == 'controls' else ('--numeric',)),
-                   verdict='none' if suite == 'controls' else 'differences')]
+                       env={'UNBOUND_MANAGED_DIR': '{managed}'})]
+            compare = ('compare.py', reference+'.jsonl', f'{{work}}/{suite}-engine-p{profile}.jsonl',
+                       '--output', f'{{work}}/{suite}-p{profile}.json', *(() if suite == 'controls' else ('--numeric',)))
+            # The raw controls comparison is kept in full but decides nothing: its only differences
+            # are the two process-dependent hash literals, and verify_controls.py gates the rest.
+            R['contactevents3d'].append(driver(*compare) if suite == 'controls'
+                                        else py(*compare, verdict='differences'))
             if suite == 'controls':
                 R['contactevents3d'].append(py('verify_controls.py', reference+'.jsonl',
                     f'{{work}}/{suite}-engine-p{profile}.jsonl', '--output', '{work}/controls-verdict.json'))
