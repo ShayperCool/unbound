@@ -1,0 +1,40 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:p="LegacyProbe">
+    <p:OldPlain class="case plainEmpty" />
+    <p:OldPlain class="case plainFull" name="n" view-data-key="k" tooltip="t" picking-mode="Position" usage-hints="DynamicTransform" focusable="false" tabindex="7" enabled="true" />
+    <p:OldPlain class="case plainFocusIndex" focus-index="5" />
+    <p:OldBindable class="case bindableEmpty" />
+    <p:OldBindable class="case bindableFull" binding-path="p" />
+    <p:OldText class="case textEmpty" />
+    <p:OldText class="case textFull" label="L" value="V" max-length="3" password="false" mask-character="*" placeholder-text="Type" hide-placeholder-on-focus="false" readonly="false" is-delayed="false" multiline="false" select-all-on-focus="true" select-all-on-mouse-up="true" select-word-by-double-click="true" select-line-by-triple-click="true" vertical-scroller-visibility="Hidden" />
+    <p:OldText class="case textObsolete" maxLength="2" maskCharacter="%" />
+    <p:OldButton class="case buttonEmpty" />
+    <p:OldButton class="case buttonFull" text="B" focusable="true" />
+    <p:OldToggle class="case toggleEmpty" />
+    <p:OldToggle class="case toggleFull" label="L" text="T" value="false" />
+    <p:OldVector3 class="case vectorEmpty" />
+    <p:OldVector3 class="case vectorX" x="4" />
+    <p:OldVector3 class="case vectorValue" value="7,8,9" />
+    <p:OldSlider class="case sliderEmpty" />
+    <p:OldSlider class="case sliderFull" low-value="1" high-value="3" value="2" page-size="0.5" show-input-field="false" inverted="false" direction="Horizontal" />
+    <p:OldIntegerField class="case integerEmpty" />
+    <p:OldIntegerField class="case integerFull" value="7" label="I" />
+    <p:OldScrollView class="case scrollEmpty" />
+    <p:OldScrollView class="case scrollFull" mode="Vertical" horizontal-scroller-visibility="AlwaysVisible" elasticity="0.2" touch-scroll-type="Elastic" />
+    <p:OldListView class="case listEmpty" />
+    <p:OldListView class="case listFull" fixed-item-height="30" reorderable="false" show-border="false" selection-type="Single" header-title="H" />
+    <p:OldListView class="case listObsolete" item-height="25" />
+    <p:OldFoldout class="case foldoutEmpty" />
+    <p:OldFoldout class="case foldoutFull" text="F" value="true" />
+    <p:OldLabel class="case labelEmpty" />
+    <p:OldLabel class="case labelFull" text="T" enable-rich-text="true" display-tooltip-when-elided="true" parse-escape-sequences="false" />
+    <p:OldDropdown class="case dropdownEmpty" />
+    <p:OldDropdown class="case dropdownFull" choices="x,y" index="1" />
+    <p:OldProgress class="case progressEmpty" />
+    <p:OldProgress class="case progressFull" low-value="1" high-value="5" value="3" title="P" />
+    <p:CustomButton class="case customEmpty" />
+    <p:CustomButton class="case customFull" text="C" number="4" />
+    <ui:TextField class="case builtinTextPlaceholder" placeholder-text="Type here" hide-placeholder-on-focus="true" />
+    <ui:TextField class="case builtinTextSelect" select-word-by-double-click="false" select-line-by-triple-click="false" />
+    <ui:Label class="case builtinLabelSelectable" text="L" selectable="true" double-click-selects-word="false" triple-click-selects-line="false" />
+    <ui:Label class="case builtinLabelObsolete" text="L" selectWordByDoubleClick="false" select-line-by-triple-click="false" />
+</ui:UXML>
