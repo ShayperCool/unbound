@@ -132,7 +132,6 @@ namespace Unbound.Runtime
                 if (mapping.name.StartsWith(IndirectListName, StringComparison.Ordinal))
                     (mapping.name.EndsWith(PerCameraSuffix, StringComparison.Ordinal) ? cameraLists : stepLists).Add(mapping.index);
             m_StepLists = stepLists.ToArray();
-            m_CameraLists = cameraLists.ToArray();
 
             var updates = new List<Kernel>();
             var perCamera = new List<Kernel>();
@@ -155,16 +154,27 @@ namespace Unbound.Runtime
                 else if (task.type == VFXTaskType.Update) updates.Add(new Kernel(this, task, shader));
                 else if (task.type == VFXTaskType.PerCameraUpdate) perCamera.Add(new Kernel(this, task, shader));
             }
-            m_Updates = updates.ToArray();
             m_Outputs = outputs.ToArray();
             foreach (var output in m_Outputs) m_HasIndirect |= output.Indirect;
-            // Only the per-camera kernels whose list an output draws (an output that is not
-            // drawn needs none made).
-            var drawn = new List<Kernel>(perCamera.Count);
-            foreach (var kernel in perCamera)
-                if (Drawn(kernel.List)) drawn.Add(kernel);
+            // Only the per-camera kernels whose list an output draws, and none of the
+            // output-update kernels that run at each step for an output that is not drawn: it
+            // needs no list made. The step's lists are emptied all the same (the update kernel
+            // fills its own whether or not it is drawn).
+            m_PerCamera = KeepDrawn(perCamera, false);
+            m_Updates = KeepDrawn(updates, true);
+            cameraLists.RemoveAll(list => !Drawn(list));
+            m_CameraLists = cameraLists.ToArray();
+        }
+
+        /// <summary>The kernels whose list an output draws, and those that make no list when
+        /// <paramref name="unlisted"/>; the others are released.</summary>
+        Kernel[] KeepDrawn(List<Kernel> kernels, bool unlisted)
+        {
+            var kept = new List<Kernel>(kernels.Count);
+            foreach (var kernel in kernels)
+                if (kernel.List < 0 ? unlisted : Drawn(kernel.List)) kept.Add(kernel);
                 else kernel.Release();
-            m_PerCamera = drawn.ToArray();
+            return kept.ToArray();
         }
 
         /// <summary>Whether an output draws the list of buffer <paramref name="list"/>.</summary>
