@@ -16,6 +16,10 @@ namespace Unbound.Runtime
         internal static ArgumentNullException Null(string paramName) =>
             new ArgumentNullException(null, "Value cannot be null." + ParameterName + paramName);
 
+        /// <summary>What Unity's runtime throws for a call through a null reference (no period
+        /// at the end, unlike .NET's message).</summary>
+        internal static NullReferenceException NullReference() => new NullReferenceException("Object reference not set to an instance of an object");
+
         /// <summary>Unity's <c>new ArgumentOutOfRangeException(paramName)</c>.</summary>
         internal static ArgumentOutOfRangeException OutOfRange(string paramName) =>
             new ArgumentOutOfRangeException(null, "Specified argument was out of the range of valid values." + ParameterName + paramName);

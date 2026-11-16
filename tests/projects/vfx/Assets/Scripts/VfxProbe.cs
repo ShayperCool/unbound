@@ -386,7 +386,7 @@ public sealed class VfxProbe : MonoBehaviour
 
     /// <summary>Output events (README.md, "Output events"): an effect seen by the camera, one
     /// behind it, one paused from frame 5 to frame 12, one listened to from frame 10 only, one
-    /// whose first listener throws once.</summary>
+    /// whose first listener throws once, one whose only listener removes itself.</summary>
     void BeginOutputEvents()
     {
         const string Graph = "Assets/EventGraphs/OutEvents.vfx";
@@ -406,8 +406,19 @@ public sealed class VfxProbe : MonoBehaviour
         };
         Application.logMessageReceived += (text, stack, type) =>
         {
-            if (text.Contains("probe listener") && m_Frame <= 20) m_ListenerLogs.Add("f" + m_Frame.ToString("000") + " " + m_Phase + " " + type + ": " + text.Split('\n')[0]);
+            if ((text.Contains("probe listener") || text.Contains("NullReferenceException")) && m_Frame <= 20)
+                m_ListenerLogs.Add("f" + m_Frame.ToString("000") + " " + m_Phase + " " + type + ": " + text.Split('\n')[0]);
         };
+        // An effect whose only listener removes itself at the first Tick of frame 3 (the first
+        // event of a step that raises three).
+        var once = Effect("events once", Graph, new Vector3(4.5f, -2f, 0f));
+        Action<VFXOutputEventArgs> oneShot = null;
+        oneShot = args =>
+        {
+            OutputEventReceived(once, args);
+            if (m_Frame == 3 && EventName(args.nameId) == "Tick") once.outputEventReceived -= oneShot;
+        };
+        once.outputEventReceived += oneShot;
         Listen(m_EventsSeen);
         Listen(behind);
         Listen(m_EventsPaused);

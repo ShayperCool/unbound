@@ -392,10 +392,16 @@ namespace UnityEngine.VFX
                 {
                     var (nameId, source) = m_OutputEvents[i];
                     attribute.CopyAllFrom(source);
-                    // A listener's exception is its own: the next events are still handed over
-                    // (tests/projects/vfx `events/listener logs`). The listener is read again for
-                    // each event, as Unity's own handing over does.
-                    try { outputEventReceived(new VFXOutputEventArgs(nameId, attribute)); }
+                    // A listener's exception is its own: the next events are still handed over;
+                    // the listener is read again for each event, and one removed in the step logs
+                    // the call through nothing for each event left (tests/projects/vfx
+                    // `events/listener logs`, `events once`).
+                    var listener = outputEventReceived;
+                    try
+                    {
+                        if (listener == null) throw MonoExceptions.NullReference();
+                        listener(new VFXOutputEventArgs(nameId, attribute));
+                    }
                     catch (Exception e) { Debug.LogException(e, this); }
                 }
             }

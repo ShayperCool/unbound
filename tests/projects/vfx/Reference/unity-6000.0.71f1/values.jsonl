@@ -1987,6 +1987,8 @@
 {"k":"events/events paused/f001/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events throwing/f001/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 first"}
 {"k":"events/events throwing/f001/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events once/f001/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 first"}
+{"k":"events/events once/f001/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"sim/override timing/f001 3 end of frame","v":"40e00000 none"}
 {"k":"camera/needed/f002","v":"main Depth, ortho None, scene None"}
 {"k":"sim/override timing/f002 1 update","v":"40e00000 none"}
@@ -2029,6 +2031,8 @@
 {"k":"events/events paused/f002/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events throwing/f002/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"events/events throwing/f002/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events once/f002/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events once/f002/1","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"sim/override timing/f002 3 end of frame","v":"40e00000 41100000"}
 {"k":"camera/needed/f003","v":"main Depth, ortho None, scene None"}
 {"k":"sim/override timing/f003 1 update","v":"40e00000 41100000"}
@@ -2076,6 +2080,8 @@
 {"k":"events/events throwing/f003/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
 {"k":"events/events throwing/f003/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
 {"k":"events/events throwing/f003/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events once/f003/0","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
+{"k":"events/events once/f003/1","v":"after late update Tick spawnCount=3f800000 color=3e800000 3f000000 3f400000 00000000 size=3dcccccd lifetime=40000000 same"}
 {"k":"sim/override timing/f003 3 end of frame","v":"40e00000 41100000"}
 {"k":"bundle/effect/f003","v":"culled=0 awake=0 renderer enabled=1 visible=1"}
 {"k":"draw/opaque/f003","v":"alive=40 culled=0 awake=1 renderer enabled=1 visible=1"}
@@ -7577,7 +7583,7 @@
 {"k":"camera/values/update16/p02","v":"00000000,00000000"}
 {"k":"camera/values/lines","v":"17"}
 {"k":"camera/manager logs","v":"f004 Error: Invalid value for bufferType: 3. One and only one type bit should be set | f004 Error: Invalid value for bufferType: 0. One and only one type bit should be set | f004 Assert: Assertion failed on expression: 'HasFlag(flag, bufferType)' | f008 Warning: Visual effect requires the main camera but there are no active cameras with the \"MainCamera\" tag"}
-{"k":"events/listener logs","v":"f007 after late update Exception: InvalidOperationException: probe listener"}
+{"k":"events/listener logs","v":"f003 after late update Exception: NullReferenceException: Object reference not set to an instance of an object | f003 after late update Exception: NullReferenceException: Object reference not set to an instance of an object | f007 after late update Exception: InvalidOperationException: probe listener"}
 {"k":"events/kept attribute","v":"spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000"}
 {"k":"sim/time/f021","v":"3d088889"}
 {"k":"sim/rate/f021","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f2aaaad before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}

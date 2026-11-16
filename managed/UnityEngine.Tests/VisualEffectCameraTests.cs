@@ -53,7 +53,6 @@ namespace UnityEngine.Tests
             return values;
         }
 
-
         [Fact]
         public void ASheetSaysWhetherItReadsTheMainCameraAndWhichOfItsBuffers()
         {

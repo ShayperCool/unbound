@@ -11,8 +11,9 @@ namespace Unbound.Runtime
     /// one particle raises it once, in the order of its inputs (output event contexts of one
     /// name make one event fed by all of them); the effect hands the step's events to
     /// <see cref="VisualEffect.outputEventReceived"/> after all its systems updated, each with
-    /// the attributes of the spawn context that raised it. Matches the Unity 6000.0.71f1 Editor
-    /// (tests/projects/vfx, <c>events/*</c>).
+    /// the attributes of the spawn context that raised it. The events, their order and their
+    /// attributes match the Unity 6000.0.71f1 Editor (tests/projects/vfx, <c>events/*</c>); the
+    /// Editor's point of handing them over within the effects' update is not measured.
     /// </summary>
     internal sealed class VFXOutputEventSystem : VFXSystem
     {

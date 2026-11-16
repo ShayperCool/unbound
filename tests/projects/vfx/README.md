@@ -310,11 +310,12 @@ named `Never` the third (a spawn count under one raises nothing) and one named `
 each event the probe's listener took in frames 1 to 20, in order: where in the frame (after the
 scripts' `LateUpdate`, before the end of the frame), its name, the attributes it carries and
 whether it is the same attribute set as the effect's event before. The effects: `events` in
-front of the camera; `events behind`, culled (nothing); `events paused`, paused from frame 5 to
+front of the camera; `events behind`, culled (only its first update, which runs whole, raises events); `events paused`, paused from frame 5 to
 frame 12; `events late`, listened to from frame 10 only (no event of the frames before is kept
 for it); `events throwing`, whose first listener throws once, at the first event of frame 7
 (`events/listener logs`: what is logged; the frame's next events still reach the probe's
-listener). `events/kept attribute` reads the last attribute set handed over,
+listener); `events once`, whose only listener removes itself at the first `Tick` of frame 3,
+the first of a step's three events (what the step's next events log). `events/kept attribute` reads the last attribute set handed over,
 a frame later.
 
 ## A built asset

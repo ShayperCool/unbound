@@ -40,7 +40,6 @@ namespace UnityEngine.Tests
             return asset;
         }
 
-
         [Fact]
         public void EachStepHandsItsEventsInOrderWithTheAttributesThatRaisedThem()
         {
@@ -73,6 +72,18 @@ namespace UnityEngine.Tests
                     Assert.Equal(new[] { "Exception: listener" }, logs.Logged);
                 }
                 Assert.Equal(2, received.Count);
+                // A sole listener that removes itself at the first of a step's three events: the
+                // two left each log the call through nothing.
+                received.Clear();
+                Action<VFXOutputEventArgs> once = null;
+                once = args => { received.Add(("", 0f, null)); effect.outputEventReceived -= once; };
+                effect.outputEventReceived = once;
+                using (var logs = new RecordedLogs())
+                {
+                    effect.UpdateEffect(Thirtieth);
+                    Assert.Equal(new[] { "Exception: Object reference not set to an instance of an object", "Exception: Object reference not set to an instance of an object" }, logs.Logged);
+                }
+                Assert.Single(received);
                 // Without a listener a step's events are not kept for later.
                 effect.outputEventReceived = null;
                 effect.UpdateEffect(Thirtieth);
