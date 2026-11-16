@@ -108,6 +108,13 @@ class CompareImagesTests(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertIn("NOW MATCHES a", out)
 
+    def test_gate_before_the_directories_takes_no_residual_list(self):
+        for name in ("a", "b"):
+            write_png(os.path.join(self.cand, name + ".png"), image())
+        done = subprocess.run([sys.executable, SCRIPT, "--gate", self.ref, self.cand], capture_output=True, text=True)
+        self.assertEqual(0, done.returncode, done.stderr)
+        self.assertIn("gate: 2 exact", done.stdout)
+
     def test_a_residual_for_an_unknown_image_fails(self):
         for name in ("a", "b"):
             write_png(os.path.join(self.cand, name + ".png"), image())

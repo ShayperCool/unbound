@@ -234,7 +234,9 @@ namespace UnityEngine
                 // mesh keeps everything it had (6000.0.71f1, tests/projects/blendshapes misuse
                 // "vertices change"; the macOS Editor, outside a committed reference: the vertices
                 // setter and SetVertices alike, whatever the submeshes' topology, their base vertex
-                // added). Only a shorter array needs the indices read.
+                // added). Only a shorter array needs the indices read: indices set without
+                // validation (MeshUpdateFlags.DontValidateIndices) past the current vertices are not
+                // checked against a longer array (unmeasured).
                 int length = value?.Length ?? 0;
                 if (length < m_Vertices.Length && HighestIndexedVertex() >= length)
                 {

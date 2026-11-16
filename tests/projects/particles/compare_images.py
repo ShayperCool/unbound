@@ -4,6 +4,7 @@ over pixels of the largest channel difference (0-255), the worst pixel, and how 
 by more than 8.
 
 usage: compare_images.py REFERENCE_DIR CANDIDATE_DIR [--gate [RESIDUALS.json]]
+(--gate takes the argument after it as the residual list only when it ends in .json)
 
 Without --gate the comparison is a measurement and always exits 0. With --gate every image must
 match its reference pixel for pixel, except those RESIDUALS.json lists, each as
@@ -23,7 +24,7 @@ gate = "--gate" in args
 residuals = {}
 if gate:
     at = args.index("--gate")
-    if at + 1 < len(args) and not args[at + 1].startswith("--"):
+    if at + 1 < len(args) and args[at + 1].endswith(".json"):
         with open(args[at + 1]) as handle:
             residuals = json.load(handle)
         del args[at + 1]
