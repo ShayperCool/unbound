@@ -623,3 +623,11 @@ rows, appended before the completion row; every earlier row and inventory entry 
 TextField's (they need laid-out text). Event type registration numbers are Unbound's raw values and
 moved as the fields touch event types earlier: their queued actual values are refreshed, and
 GeometryChangedEvent now matches the release.
+
+The composite fields slice (Q528) adds `Vector2Field`, `Vector3Field`, `Vector4Field`,
+`Vector2IntField`, `Vector3IntField`, `RectField`, `RectIntField`, `BoundsField`,
+`BoundsIntField`, `Hash128Field` and `BaseCompositeField<TValueType, TField, TFieldValue>` to the
+handwritten inventory. The same two GPU Editor captures agree on all 504 of their rows, appended
+before the completion row; every earlier row and inventory entry is byte-identical (14305 rows).
+Hash128Field's cursor rows are queued as the other text inputs' are, and the event type numbers'
+queued actual values are refreshed again (MouseDownEvent now matches the release).
