@@ -537,7 +537,8 @@ public class NativeGfxMetalProbe : MonoBehaviour
 
     /// <summary>A dynamically scaled texture's content across changes of scale: a pattern (left
     /// half red, right half green) blitted into it at 0.5 then read at 1 (ReadPixels), and blitted
-    /// at 1 then read at 0.5 (sampled by a Blit, ReadPixels reading zeros there).</summary>
+    /// at 1 then read at 0.5 (sampled by a Blit, ReadPixels reading zeros there), then read back
+    /// at 1; and two controls of an image kept across scales with nothing written there.</summary>
     void DynamicContent()
     {
         screenLogs = new List<string>();
@@ -556,6 +557,30 @@ public class NativeGfxMetalProbe : MonoBehaviour
         Value("dynres.content.down", Pixels(content, 8, 8));
         ScalableBufferManager.ResizeBuffers(1f, 1f);
         Value("dynres.content.back", Read(content, 16, 16));
+        // Controls with quadrants (red, green below blue, white): through two scales, sampled at
+        // each and written at neither; and a texture marked useDynamicScaleExplicit, scaled and
+        // back by ApplyDynamicScale.
+        var quadrants = Keep(new Texture2D(2, 2, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Point });
+        quadrants.SetPixels32(new[] { new Color32(255, 0, 0, 255), new Color32(0, 255, 0, 255),
+            new Color32(0, 0, 255, 255), new Color32(255, 255, 255, 255) });
+        quadrants.Apply();
+        Graphics.Blit(quadrants, content);
+        ScalableBufferManager.ResizeBuffers(0.5f, 0.5f);
+        Pixels(content, 8, 8);
+        ScalableBufferManager.ResizeBuffers(0.25f, 0.5f);
+        Pixels(content, 4, 8);
+        ScalableBufferManager.ResizeBuffers(1f, 1f);
+        Value("dynres.content.twice", Read(content, 16, 16));
+        var explicitContent = Keep(new RenderTexture(16, 16, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+            { name = "dyncontentexplicit", useDynamicScale = true, useDynamicScaleExplicit = true });
+        explicitContent.Create();
+        Graphics.Blit(quadrants, explicitContent);
+        ScalableBufferManager.ResizeBuffers(0.5f, 0.5f);
+        explicitContent.ApplyDynamicScale();
+        Pixels(explicitContent, 8, 8);
+        ScalableBufferManager.ResizeBuffers(1f, 1f);
+        explicitContent.ApplyDynamicScale();
+        Value("dynres.content.explicit", Read(explicitContent, 16, 16));
         Value("dynres.content.logs", L(screenLogs));
         screenLogs = null;
     }
