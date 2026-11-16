@@ -82,8 +82,8 @@ submits a delay during a crossfade and changes `wetMix` five buffers later.
 | Documented, Unity 6000.0 | The [Echo component](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioEchoFilter.html), [AudioEchoFilter.delay](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioEchoFilter-delay.html) and the [Echo effect](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioEchoEffect.html) define the delay in milliseconds. They specify no transition when it changes. |
 | Measured, Unity 6000.0.71f1, this offline profile | The history is a ring of whole half-seconds holding at least 128 frames beyond the delay. A delay change keeps it: the read position moves, and over 2048 frames the previous tap fades out linearly while the new one fades in; the feedback path hears the blend. A delay submitted during that crossfade is not applied; the next submission of a parameter of that unit applies it (measured with `wetMix` on the component; a waiting AudioMixer Echo delay is unmeasured). A delay beyond the ring's headroom moves the whole ring into a larger one that ends at the write position, fades its oldest 128 frames in, and reads silence where nothing was written yet. The delay rounds to whole frames before the eight-frame boundary; the component setter keeps whole milliseconds. `Compat.MixerEffectTransitionsMeasured` selects this rule; other releases keep restarting the history empty. |
 
-
-Not measured: a delay still waiting when its source stops or finishes, when its owner is
-recreated, or across `AudioSettings.Reset`. The engine gives such a recreated or reset unit
-the submitted delay, as a new unit would have it; a reconnected unit keeps its ring and the
-delay it applied. Extra channel pairs of one component follow the delay the first pair applies.
+Not measured: a delay still waiting, or a ring grown for an earlier longer delay, when its
+source stops or finishes, when its owner is recreated, or across `AudioSettings.Reset`. The
+engine gives such a recreated or reset unit the submitted delay and the ring a new unit would
+have; a reconnected unit keeps its ring and the delay it applied. Extra channel pairs of one
+component follow the delay and crossfade the first pair has.
