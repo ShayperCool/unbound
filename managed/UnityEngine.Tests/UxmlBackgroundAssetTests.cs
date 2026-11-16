@@ -430,8 +430,9 @@ namespace UnityEngine.Tests
         // Red at 7718c50e: the factory element's icon-image is dropped silently;
         // Assert.Same(icon.Texture, factoryButton.iconImage.texture) fails (null). The `badge`
         // assertions are a guard that passes there too; their red recipe is a mutation passing
-        // engineDeclaredOnly: false from ApplyUxmlAttributes and ApplyBuiltInTraitAttributes, which
-        // sets `badge` (Assert.True(...badge.IsEmpty()) fails).
+        // engineDeclaredOnly: false from ApplyUxmlAttributes, which sets `badge`
+        // (Assert.True(...badge.IsEmpty()) fails). The factory element's icon-image is now read by
+        // Button's traits (tests/projects/uxmllegacy).
         [Fact]
         public void UndeclaredGameBackgroundPropertiesStayUntouched()
         {

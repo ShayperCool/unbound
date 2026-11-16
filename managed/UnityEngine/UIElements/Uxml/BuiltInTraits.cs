@@ -301,16 +301,25 @@ namespace UnityEngine.UIElements
             {
                 base.Init(ve, bag, cc);
                 var field = (EnumField)ve;
+                // A type initializes the field with the value named (exactly, as Enum.TryParse reads
+                // it) or, without one, the type's zero value; a value the type does not define is
+                // reported and leaves the field typed without a value; no type leaves it untyped.
                 var type = m_Type.GetValueFromBag(bag, cc);
-                bool includeObsolete = m_IncludeObsoleteValues.GetValueFromBag(bag, cc);
-                // A type and a value of it initialize the field; a type alone gives its choices and
-                // no value; neither leaves the field without a type.
-                if (type != null && UxmlBuiltInTraits.TryParseEnum(type, m_Value.GetValueFromBag(bag, cc), out var value))
+                if (type == null)
                 {
-                    field.Init(value, includeObsolete);
+                    field.SetTypeWithoutValue(null);
                     return;
                 }
-                field.SetTypeWithoutValue(type);
+                string text = null;
+                object parsed = null;
+                if (m_Value.TryGetValueFromBag(bag, cc, ref text) && !Enum.TryParse(type, text, false, out parsed))
+                {
+                    Debug.LogErrorFormat("EnumField: Could not parse value of '{0}', because it isn't defined in the {1} enum.", text, type.FullName);
+                    field.SetTypeWithoutValue(type);
+                    return;
+                }
+                var value = (Enum)(text != null && parsed != null ? parsed : Enum.ToObject(type, 0));
+                field.Init(value, m_IncludeObsoleteValues.GetValueFromBag(bag, cc));
             }
         }
     }
@@ -607,6 +616,8 @@ namespace UnityEngine.UIElements
 
             protected UxmlTraits() => m_PickingMode.defaultValue = PickingMode.Ignore;
 
+            public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription { get { yield break; } }
+
             public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)
             {
                 base.Init(ve, bag, cc);
@@ -648,6 +659,8 @@ namespace UnityEngine.UIElements
             readonly UxmlBoolAttributeDescription m_AutoExpand = new UxmlBoolAttributeDescription { name = "auto-expand" };
 
             public UxmlTraits() { }
+
+            public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription { get { yield break; } }
 
             public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)
             {
@@ -966,6 +979,15 @@ namespace UnityEngine.UIElements
         }
     }
 
+    public partial class Label
+    {
+        [Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlTraits : TextElement.UxmlTraits
+        {
+            public UxmlTraits() { }
+        }
+    }
+
     public partial class Image
     {
         [Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
@@ -1107,6 +1129,410 @@ namespace UnityEngine.UIElements
         public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription { get { yield break; } }
     }
 
+
+    // The built-in factories (their constructors), as game factories may derive from them.
+    public partial class BoundsField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<BoundsField, BoundsField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class BoundsIntField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<BoundsIntField, BoundsIntField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Box
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Box>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Button
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Button, Button.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class DoubleField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<DoubleField, DoubleField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class DropdownField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<DropdownField, DropdownField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class EnumField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<EnumField, EnumField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class FloatField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<FloatField, FloatField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Foldout
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Foldout, Foldout.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class GroupBox
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<GroupBox, GroupBox.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Hash128Field
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Hash128Field, Hash128Field.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class IMGUIContainer
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<IMGUIContainer, IMGUIContainer.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Image
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Image, Image.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class IntegerField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<IntegerField, IntegerField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Label
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Label, Label.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class ListView
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<ListView, ListView.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class LongField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<LongField, LongField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class MinMaxSlider
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<MinMaxSlider, MinMaxSlider.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class MultiColumnListView
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<MultiColumnListView, MultiColumnListView.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class MultiColumnTreeView
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<MultiColumnTreeView, MultiColumnTreeView.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class ProgressBar
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<ProgressBar, AbstractProgressBar.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class RadioButton
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<RadioButton, RadioButton.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class RadioButtonGroup
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<RadioButtonGroup, RadioButtonGroup.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class RectField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<RectField, RectField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class RectIntField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<RectIntField, RectIntField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class RepeatButton
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<RepeatButton, RepeatButton.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class ScrollView
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<ScrollView, ScrollView.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Scroller
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Scroller, Scroller.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Slider
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Slider, Slider.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class SliderInt
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<SliderInt, SliderInt.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Tab
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Tab, Tab.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class TabView
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<TabView, TabView.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class TemplateContainer
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<TemplateContainer, TemplateContainer.UxmlTraits>
+        {
+            public UxmlFactory() { }
+            internal const string k_ElementName = "Instance";
+
+            public override string uxmlName => k_ElementName;
+
+            public override string uxmlQualifiedName => typeof(TemplateContainer).Namespace + "." + uxmlName;
+
+        }
+    }
+
+    public partial class TextElement
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<TextElement, TextElement.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class TextField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<TextField, TextField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Toggle
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Toggle, Toggle.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class TreeView
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<TreeView, TreeView.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class UnsignedIntegerField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<UnsignedIntegerField, UnsignedIntegerField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class UnsignedLongField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<UnsignedLongField, UnsignedLongField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Vector2Field
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Vector2Field, Vector2Field.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Vector2IntField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Vector2IntField, Vector2IntField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Vector3Field
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Vector3Field, Vector3Field.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Vector3IntField
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Vector3IntField, Vector3IntField.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class Vector4Field
+    {
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<Vector4Field, Vector4Field.UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
     /// <summary>Readers the built-in traits share.</summary>
     static class UxmlBuiltInTraits
     {
@@ -1117,14 +1543,6 @@ namespace UnityEngine.UIElements
             var choices = new List<string>();
             foreach (var choice in text.Split(',')) choices.Add(choice.Trim());
             return choices;
-        }
-
-        internal static bool TryParseEnum(Type type, string text, out Enum value)
-        {
-            value = null;
-            if (string.IsNullOrEmpty(text) || !type.IsEnum || !Enum.IsDefined(type, text)) return false;
-            value = (Enum)Enum.Parse(type, text);
-            return true;
         }
 
         internal static UxmlEnumAttributeDescription<ColumnSortingMode> SortingMode() =>

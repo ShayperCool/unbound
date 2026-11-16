@@ -908,6 +908,11 @@ namespace Unbound.UIElements
             (typeof(TextInputBaseField<>), "maskCharacter", "maskChar"),
             (typeof(TextInputBaseField<>), "mask-char", null),
             (typeof(TextValueField<>), "format-string", null),
+            // Text inputs' placeholder (internal properties) and selection options.
+            (typeof(TextInputBaseField<>), "placeholder-text", "placeholderText"),
+            (typeof(TextInputBaseField<>), "hide-placeholder-on-focus", "hidePlaceholderOnFocus"),
+            (typeof(TextInputBaseField<>), "select-word-by-double-click", "doubleClickSelectsWord"),
+            (typeof(TextInputBaseField<>), "select-line-by-triple-click", "tripleClickSelectsLine"),
             // Text elements' selection options (internal properties) under their names and former names.
             (typeof(TextElement), "selectable", "isSelectable"),
             (typeof(TextElement), "double-click-selects-word", "doubleClickSelectsWord"),

@@ -92,6 +92,37 @@ namespace UnityEngine.Tests
             Assert.False(field.isReadOnly);
         }
 
+        public enum Fruit { Apple, Pear }
+
+        // EnumField's traits read the value as Enum.TryParse does, a number included (enum* rows: a
+        // type alone gives the zero value, another case is not a value).
+        [Fact]
+        public void EnumFieldTraitsReadNumericValues()
+        {
+            var type = typeof(Fruit).AssemblyQualifiedName;
+            var numeric = Create<EnumField, EnumField.UxmlTraits>(new EnumField(), "type", type, "value", "1");
+            Assert.Equal(Fruit.Pear, numeric.value);
+            var none = Create<EnumField, EnumField.UxmlTraits>(new EnumField(KeyCode.Space), "type", type);
+            Assert.Equal(Fruit.Apple, none.value);
+        }
+
+        // Every text input reads the placeholder and selection attributes (builtin* rows: a text
+        // field and an integer field).
+        [Fact]
+        public void TextInputsReadThePlaceholderAndSelectionNames()
+        {
+            var asset = ScriptableObject.CreateInstance<VisualTreeAsset>();
+            asset.name = "LegacyPlaceholder";
+            Unbound.UIElements.UxmlImporter.Import("Assets/UI/LegacyPlaceholder.uxml",
+                "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:LongField placeholder-text=\"Big\" hide-placeholder-on-focus=\"true\" select-word-by-double-click=\"false\" /></ui:UXML>", asset);
+            var root = new VisualElement();
+            asset.CloneTree(root);
+            var field = root.Q<LongField>();
+            Assert.Equal("Big", field.textEdition.placeholder);
+            Assert.True(field.textEdition.hidePlaceholderOnFocus);
+            Assert.False(field.doubleClickSelectsWord);
+        }
+
         // A button is a text element: its selection options are read under the text element's
         // names, the former ones included.
         [Fact]
