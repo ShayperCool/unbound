@@ -30,9 +30,15 @@ none of the values depends on the OS or the graphics device):
 * A destroyed object's members throw MissingReferenceException; as an argument the message
   ends " Parameter name: <name>".
 
-Unbound gives the measured argument errors, tags, finders and destroyed-object messages, and
-game code's calls of members whose binding refuses a dead object check their receiver as the
-binding does. The placeholder objects are open (`residuals.json`, Q530 slice 2b).
+Also measured: a ScriptableObject asset's unassigned references are placeholders too, an object
+made at runtime has null references, fields typed MonoBehaviour or ScriptableObject (or a
+subclass) stay null while Component and Behaviour fields get placeholders, the message names the
+script class without its namespace, and GetComponent of a missing abstract engine class
+(Collider, Renderer) answers a placeholder of that class.
+
+Unbound gives all of these. The two `*.nested.instantiate` values remain (`residuals.json`):
+their ArgumentNullException carries the Editor's parameter name, but .NET then writes the name
+into the message as " (Parameter 'data')" where Mono writes "\nParameter name: data".
 
     export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
     python3 tests/projects/objecterrors/run.py record --label A     # macOS: batch-mode Editor
