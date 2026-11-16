@@ -170,13 +170,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEngine.UIElements.PointerCaptureEventBase`1",
-    "Message": "type interfaces is UnityEngine.UIElements.IPointerCaptureEvent, Unity's is UnityEngine.UIElements.IPointerCaptureEvent,UnityEngine.UIElements.IPointerCaptureEventInternal",
-    "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.PointerCaptureEventBase`1 needs internal capture and release target bookkeeping. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.UIElements.VisualElement",
     "Message": "type interfaces is UnityEngine.UIElements.Experimental.ITransitionAnimations,UnityEngine.UIElements.IExperimentalFeatures,UnityEngine.UIElements.IResolvedStyle,UnityEngine.UIElements.ITransform,UnityEngine.UIElements.IVisualElementScheduler, Unity's is UnityEngine.UIElements.Experimental.ITransitionAnimations,UnityEngine.UIElements.IExperimentalFeatures,UnityEngine.UIElements.IResolvedStyle,UnityEngine.UIElements.IStylePropertyAnimations,UnityEngine.UIElements.ITransform,UnityEngine.UIElements.IVisualElementScheduler",
     "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.VisualElement needs style-property animation ownership and cancellation. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."

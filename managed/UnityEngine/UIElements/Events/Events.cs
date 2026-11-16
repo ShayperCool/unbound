@@ -1433,9 +1433,15 @@ namespace UnityEngine.UIElements
     // ---- capture ----
 
     public partial interface IPointerCaptureEvent { }
+
+    /// <summary>The pointer a capture event is about, for the engine's own code.</summary>
+    internal partial interface IPointerCaptureEventInternal
+    {
+        int pointerId { get; }
+    }
     public partial interface IMouseCaptureEvent { }
 
-    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)1)] public abstract partial class PointerCaptureEventBase<T> : EventBase<T>, IPointerCaptureEvent where T : PointerCaptureEventBase<T>, new()
+    [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)1)] public abstract partial class PointerCaptureEventBase<T> : EventBase<T>, IPointerCaptureEvent, IPointerCaptureEventInternal where T : PointerCaptureEventBase<T>, new()
     {
         public IEventHandler relatedTarget { get; private set; }
         public int pointerId { get; private set; }
