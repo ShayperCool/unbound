@@ -558,10 +558,6 @@ class Gate:
 
         cli = Path(self.env['UNBOUND'])
         stubs = self.full or any(STUB_INPUTS.match(path) for path in changed)
-        if stubs:
-            # gen-stubs rewrites managed/.../Generated/ until its drift check restores it; Cargo
-            # build scripts that watch managed/ must not see it change under a running `cargo test`.
-            self.generate_stubs(cli)
 
         def dotnet_lane():
             # The .NET steps share the checkout's managed build directory: one sequence.
@@ -577,10 +573,17 @@ class Gate:
             args = ['--workspace'] if self.full else [arg for crate in crates for arg in ('-p', crate)]
             lanes.append(lambda: self.rust_tests([*build_py, '--', 'test', '--release', '--locked', *args]))
         try:
+            if stubs:
+                # gen-stubs rewrites managed/.../Generated/ until its drift check restores it; Cargo
+                # build scripts that watch managed/ must not see it change under a running `cargo test`.
+                self.generate_stubs(cli)
             self.run_lanes(lanes)
         except BaseException:
             # No probe will run on the frozen runtime: let runtime cleanup retire it.
-            release_reference(self.log.with_suffix('.runtime'), automatic=True)
+            try:
+                release_reference(self.log.with_suffix('.runtime'), automatic=True)
+            except OSError as error:
+                print(f'land: runtime release deferred: {error}', file=sys.stderr)
             raise
         self.use_probe_runtime()
 

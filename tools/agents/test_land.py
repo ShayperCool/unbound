@@ -1823,7 +1823,7 @@ class GateLaneTests(unittest.TestCase):
         gate = land.Gate(root, 'base', [], False, root/'gate.log', environment={'UNBOUND': str(root/'unbound')})
         record = lambda name: (lambda *a, **k: events.append(name))
         gate.build = lambda: ([sys.executable, 'tools/build.py'], root/'target')
-        gate.freeze_runtime = record('snapshot')
+        gate.freeze_runtime = lambda target: (events.append('snapshot'), setattr(gate, 'probe_runtime', root/'frozen'))
         gate.use_probe_runtime = record('probe runtime')
         gate.generate_stubs = record('generated stubs')
         gate.run_probes = record('probes')
@@ -1831,7 +1831,9 @@ class GateLaneTests(unittest.TestCase):
         gate.automatic = []
         gate.touched_crates = lambda changed: ['unbound-control']
         gate.managed_tests = lambda target: gate.step('managed tests', steps['managed tests'])
-        gate.api_checks = lambda cli: gate.step('API declarations and attribute lookups', steps['api'])
+        self.api_cli = []
+        gate.api_checks = lambda cli: (self.api_cli.append(cli),
+                                       gate.step('API declarations and attribute lookups', steps['api']))
         return gate
 
     def run_gate(self, gate, changed):
@@ -1871,6 +1873,7 @@ class GateLaneTests(unittest.TestCase):
             self.assertLess(events.index('API declarations and attribute lookups'), events.index('managed tests'))
             # The tests run in the build's environment; the probes then use the frozen runtime.
             self.assertEqual(events[5:], ['probe runtime', 'probes', 'automatic'])
+            self.assertEqual(self.api_cli, [root/'unbound'])
             self.assertEqual(self.released, [])
             log = (root/'gate.log').read_text()
             self.assertRegex(log, r'land: rust tests: exit 0 after \d+s')
@@ -1923,6 +1926,29 @@ class GateLaneTests(unittest.TestCase):
             self.assertLess(time.monotonic()-started, 30)
             self.assertEqual(re.findall(r'gate failed at ([A-Za-z ]+)', self.errors), ['API declarations and attribute lookups'])
             self.assertNotIn('probe runtime', events)
+
+    def test_a_stub_failure_also_retires_the_frozen_runtime(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            events = []
+            gate = self.gate(root, events, {'api': [sys.executable, '-c', 'pass'],
+                                            'managed tests': [sys.executable, '-c', 'pass']})
+            gate.generate_stubs = lambda cli: land.die(5, 'gate failed at generated stubs')
+            with self.assertRaises(SystemExit):
+                self.run_gate(gate, 'managed/UnityEngine/Core/Attributes.cs')
+            self.assertEqual(self.released, [root/'gate.runtime'])
+            # A release that cannot be written leaves the gate's own failure in place.
+            with mock.patch.object(land, 'release_reference', side_effect=OSError('no space')), \
+                 contextlib.redirect_stderr(io.StringIO()) as errors, self.assertRaises(SystemExit) as error:
+                gate.run_lanes = lambda lanes: land.die(5, 'gate failed at rust tests')
+                gate.generate_stubs = lambda cli: None
+                guard = subprocess.CompletedProcess([], 0)
+                with mock.patch.object(land, 'git', return_value='crates/unbound-control/src/lib.rs'), \
+                     mock.patch.object(land.subprocess, 'run', return_value=guard), \
+                     contextlib.redirect_stdout(io.StringIO()):
+                    gate.run()
+            self.assertEqual(error.exception.code, 5)
+            self.assertIn('runtime release deferred: no space', errors.getvalue())
 
     def test_without_touched_crates_only_the_dotnet_lane_runs(self):
         with tempfile.TemporaryDirectory() as temporary:
