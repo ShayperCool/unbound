@@ -127,10 +127,14 @@ namespace UnityEngine
             m_InstancedDetails.Clear();
         }
 
-        /// <summary>The prototypes' textures side by side, then a white 4 × 4 the meshes sample, in
-        /// the smallest power-of-two texture they fit (the Editor's atlas for one 16 × 32 texture
-        /// is 32 × 32); the rects inset by half a texel, as the Editor's uvs.</summary>
-        Rect[] BuildDetailAtlas(DetailPrototype[] prototypes, out Rect white)
+        /// <summary>The prototypes' textures side by side from the left, the rest of the atlas
+        /// transparent black, in the smallest power-of-two texture that holds their widths plus 4
+        /// (the Editor's atlas for one 16 × 32 texture is 32 × 32); the rects inset by half a
+        /// texel, as the Editor's uvs. The atlas samples with clamped edges and without blending
+        /// mip levels, as the Editor's: a texture at the atlas's edge or beside empty texels keeps
+        /// its own texels in the lower mips (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/grass).</summary>
+        Rect[] BuildDetailAtlas(DetailPrototype[] prototypes)
         {
             var textures = new List<Texture2D>();
             var index = new int[prototypes.Length];
@@ -150,6 +154,8 @@ namespace UnityEngine
                 m_DetailAtlas = new Texture2D(width, height, TextureFormat.RGBA32, true) { name = "Unbound Detail Atlas", hideFlags = HideFlags.HideAndDontSave };
             else
                 m_DetailAtlas.Reinitialize(width, height);
+            m_DetailAtlas.wrapMode = TextureWrapMode.Clamp;
+            m_DetailAtlas.filterMode = FilterMode.Bilinear;
             var pixels = new Color32[width * height];
             var rects = new Rect[textures.Count];
             int x = 0;
@@ -163,14 +169,10 @@ namespace UnityEngine
                 rects[i] = new Rect((x + 0.5f) / width, 0.5f / height, (t.width - 1f) / width, (t.height - 1f) / height);
                 x += t.width;
             }
-            for (int row = 0; row < 4; row++)
-                for (int column = 0; column < 4; column++)
-                    pixels[row * width + x + column] = new Color32(255, 255, 255, 255);
-            white = new Rect((x + 2f) / width, 2f / height, 0f, 0f);
             m_DetailAtlas.SetPixels32(pixels);
             m_DetailAtlas.Apply(true);
             var result = new Rect[prototypes.Length];
-            for (int i = 0; i < prototypes.Length; i++) result[i] = index[i] >= 0 ? rects[index[i]] : white;
+            for (int i = 0; i < prototypes.Length; i++) result[i] = index[i] >= 0 ? rects[index[i]] : default;
             return result;
         }
 
@@ -187,7 +189,8 @@ namespace UnityEngine
                 m_DetailMaterials[kind] = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
                 m_DetailMaterials[kind].SetFloat("_Cutoff", 0.375f);
             }
-            m_DetailMaterials[kind].mainTexture = m_DetailAtlas;
+            // Mesh details take their colour from the vertices: their material samples white.
+            m_DetailMaterials[kind].mainTexture = kind == (int)DetailKind.Mesh ? Texture2D.whiteTexture : m_DetailAtlas;
             return m_DetailMaterials[kind];
         }
 
@@ -221,6 +224,7 @@ namespace UnityEngine
             (byte)Mathf.Clamp(Mathf.RoundToInt(c.b * 255f), 0, 255), (byte)Mathf.Clamp(Mathf.RoundToInt(c.a * 255f), 0, 255));
 
         internal void BuildDetailsForTest(Terrain terrain, TerrainData data, Vector3 origin) => BuildDetails(terrain, data, origin);
+        internal Texture2D DetailAtlasForTest => m_DetailAtlas;
 
         void BuildDetails(Terrain terrain, TerrainData data, Vector3 origin)
         {
@@ -233,7 +237,7 @@ namespace UnityEngine
             m_DetailsDensity = terrain.detailObjectDensity;
             var prototypes = data.detailPrototypes;
             if (prototypes.Length == 0 || data.detailResolution == 0) return;
-            var rects = BuildDetailAtlas(prototypes, out var white);
+            var rects = BuildDetailAtlas(prototypes);
             int patches = data.detailPatchCount;
             var layers = new TerrainData.DetailLayerSetup[prototypes.Length];
             for (int layer = 0; layer < prototypes.Length; layer++) layers[layer] = data.PrepareDetailLayer(layer);
@@ -273,7 +277,7 @@ namespace UnityEngine
                                 if (data.PlacePatchMeshDetails(setup, px, py, density, placed, perInstance, ref used, placements))
                                     placed++;
                                 if (placements.Count == 0) continue;
-                                if (mesh != null) BakeMeshDetails(builders[(int)DetailKind.Mesh] ??= new MeshBuilder(), prototype, placements, white);
+                                if (mesh != null) BakeMeshDetails(builders[(int)DetailKind.Mesh] ??= new MeshBuilder(), prototype, placements);
                                 else AddQuads(data, prototype, placements, mode == DetailRenderMode.GrassBillboard, rects[index], builders);
                             }
                         }
@@ -368,9 +372,9 @@ namespace UnityEngine
 
         /// <summary>Meshes drawn without instancing: each instance's mesh through its transform
         /// (turned, tilted to the ground, scaled), its normals turned and tilted, coloured the
-        /// instance's colour, sampling the atlas's white (or the material's texture would be
-        /// packed: not yet).</summary>
-        static void BakeMeshDetails(MeshBuilder builder, DetailPrototype prototype, List<Matrix4x4> placements, Rect white)
+        /// instance's colour, drawn with a material that samples white (the prototype material's
+        /// texture is not used: not yet).</summary>
+        static void BakeMeshDetails(MeshBuilder builder, DetailPrototype prototype, List<Matrix4x4> placements)
         {
             var mesh = PrototypeMesh(prototype.prototype, out _);
             if (mesh == null) return;
@@ -389,7 +393,7 @@ namespace UnityEngine
                 for (int v = 0; v < vertices.Length; v++)
                 {
                     var n = v < normals.Length ? normals[v] : Vector3.up;
-                    builder.Add(model.MultiplyPoint3x4(vertices[v]), ax * n.x + ay * n.y + az * n.z, new Vector4(1f, 0f, 0f, 1f), color, white.position);
+                    builder.Add(model.MultiplyPoint3x4(vertices[v]), ax * n.x + ay * n.y + az * n.z, new Vector4(1f, 0f, 0f, 1f), color, Vector2.zero);
                 }
                 foreach (var t in triangles) builder.Indices.Add(first + t);
             }

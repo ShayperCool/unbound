@@ -467,6 +467,35 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>The detail atlas samples as the Editor's (tests/projects/grass): clamped edges,
+        /// no blending of mip levels, and nothing but transparent texels beside the textures, so a
+        /// texture keeps its own texels at its edges in the lower mips.</summary>
+        [Fact]
+        public void TheDetailAtlasClampsAndHoldsOnlyTheTextures()
+        {
+            var texture = Own(new Texture2D(16, 32, TextureFormat.RGBA32, true));
+            var pixels = new Color32[16 * 32];
+            for (int i = 0; i < pixels.Length; i++) pixels[i] = new Color32(40, 200, 60, 255);
+            texture.SetPixels32(pixels);
+            texture.Apply();
+            var data = Data(DetailScatterMode.InstanceCountMode, new DetailPrototype { prototypeTexture = texture });
+            Fill(data, 0, 2);
+            var go = Own(new GameObject("atlas"));
+            go.SetActive(false);
+            var terrain = go.AddComponent<Terrain>();
+            terrain.terrainData = data;
+            go.SetActive(true);
+            terrain.Renderer.BuildDetailsForTest(terrain, data, terrain.GetPosition());
+            var atlas = terrain.Renderer.DetailAtlasForTest;
+            Assert.Equal(TextureWrapMode.Clamp, atlas.wrapMode);
+            Assert.Equal(FilterMode.Bilinear, atlas.filterMode);
+            Assert.Equal((32, 32), (atlas.width, atlas.height));
+            // Level 2 (8 × 8): the texture's four columns, then transparent texels only.
+            var level2 = atlas.GetPixels32(2);
+            Assert.Equal(255, level2[3].a);
+            for (int x = 4; x < 8; x++) Assert.Equal(0, level2[x].a);
+        }
+
         /// <summary>Drawn details are rebuilt when the detail density changes, the terrain's or the
         /// quality level's.</summary>
         [Fact]
