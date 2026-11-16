@@ -150,6 +150,8 @@ namespace Unbound.Runtime
                     Debug.LogException(e);
                 }
             }
+            // As the model imports: render pipelines' and projects' editors (MaterialValidation).
+            MaterialValidation.Validate(material, editorsOfTheEditor: false);
         }
 
         /// <summary>

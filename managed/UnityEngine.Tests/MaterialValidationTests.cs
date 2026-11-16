@@ -134,6 +134,37 @@ namespace UnityEngine.Tests
                 && l.Message.Contains("UnityEditor.StandardParticlesShaderGUI.ValidateMaterial is not implemented"));
             Assert.Equal("PROBE_OTHER", Keywords(stubbed));
             Assert.Empty(Validate(Made("StandardParticlesShaderGUI")).Messages);
+            // One that has no validation of its own (Unity's does nothing): nothing is said or made.
+            var plain = Made("SkyboxProceduralShaderGUI");
+            Assert.Empty(Validate(plain).Messages);
+            Assert.Equal("PROBE_OTHER", Keywords(plain));
+        }
+
+        [Fact]
+        public void AModelsMaterialsAreNotValidatedByTheEditorsOwnEditors()
+        {
+            // As a model imports, only render pipelines' and projects' editors validate
+            // (tests/projects/modelimport: emissive Standard materials keep their flags).
+            var m = Standard();
+            m.SetColor("_EmissionColor", new Color(2f, 1f, 0f));
+            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive | MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            var logs = new Logs();
+            var handler = Debug.unityLogger.logHandler;
+            try
+            {
+                Debug.unityLogger.logHandler = logs;
+                MaterialValidation.Validate(m, editorsOfTheEditor: false);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = handler;
+            }
+            Assert.Empty(logs.Messages);
+            Assert.Equal(MaterialGlobalIlluminationFlags.RealtimeEmissive | MaterialGlobalIlluminationFlags.EmissiveIsBlack, m.globalIlluminationFlags);
+            // Control: loaded from a material file, the Standard editor validates it.
+            Validate(m);
+            Assert.Equal(MaterialGlobalIlluminationFlags.RealtimeEmissive, m.globalIlluminationFlags);
+            Assert.True(m.IsKeywordEnabled("_EMISSION"));
         }
     }
 }

@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/materialvalidation/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ; \\d+ reported",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/MaterialValidation.cs",
+    "managed/UnityEngine/Editor/StandardShaderGUI.cs",
+    "managed/UnityEngine/Editor/ModelMaterialImport.cs",
+    "managed/UnityEngine/Editor/Editors.cs",
+    "managed/UnityEngine/Graphics/Material.cs",
+    "managed/UnityEngine/Runtime/Loading.cs"
+  ]
+}

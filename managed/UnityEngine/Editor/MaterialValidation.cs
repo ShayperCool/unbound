@@ -14,12 +14,17 @@ namespace Unbound.Runtime
     /// <c>CustomEditor</c>, a <see cref="ShaderGUI"/> class whose full name is that name or
     /// <c>UnityEditor.</c> and that name (the Editor's own, which Unbound makes, and those of
     /// render pipelines and projects). Measured (tests/projects/materialvalidation, the Unity
-    /// 6000.0.71f1 Editor): every material of a project asset is validated, those made by scripts
-    /// and the built-in resources' are not, and by the next frame a material has what its
-    /// editor's validation sets (keywords, render queue, tags, values and GI flags). Unbound
-    /// validates each material once, when its file has loaded; the Editor validates it again
-    /// before the next frame, and a material loaded in Play mode still reads its saved keywords,
-    /// render queue and tags until then.
+    /// 6000.0.71f1 Editor): the materials of the project's material and prefab files are
+    /// validated, those made by scripts and the built-in resources' are not, and by the next frame
+    /// a material has what its editor's validation sets (keywords, render queue, tags, values and
+    /// GI flags). Unbound validates each material once, when its file has loaded; the Editor
+    /// validates it again before the next frame, and a material loaded in Play mode still reads
+    /// its saved keywords, render queue, tags and GI flags until then. The materials a model's
+    /// import makes are not validated on load (tests/projects/modelimport: emissive Standard ones
+    /// keep GI flags the Standard editor would change); render pipelines' and projects' editors
+    /// validate them as the model imports (<see cref="ModelMaterialImport"/>: URP's model
+    /// materials get their blend states, queue control and GI flags, as its import postprocessing
+    /// gives them).
     /// </summary>
     internal static class MaterialValidation
     {
@@ -35,15 +40,19 @@ namespace Unbound.Runtime
                     Validate(material);
         }
 
-        internal static void Validate(Material material)
+        /// <param name="editorsOfTheEditor">Whether the Editor's own shader editors (Unbound's
+        /// UnityEditor) validate too, or only those of render pipelines and projects.</param>
+        internal static void Validate(Material material, bool editorsOfTheEditor = true)
         {
             var shader = material.shader;
             if (shader == null) return;
             var type = EditorType(CurrentEditor(shader));
-            if (type == null) return;
+            if (type == null || (!editorsOfTheEditor && type.Assembly == typeof(ShaderGUI).Assembly)) return;
             var method = type.GetMethod(nameof(ShaderGUI.ValidateMaterial), BindingFlags.Instance | BindingFlags.Public,
                 null, new[] { typeof(Material) }, null);
-            if (method == null || method.IsDefined(typeof(StubAttribute), false))
+            // An editor without its own validation validates nothing (ShaderGUI's does nothing).
+            if (method == null || method.DeclaringType == typeof(ShaderGUI)) return;
+            if (method.IsDefined(typeof(StubAttribute), false))
             {
                 Stubs.Ignored(type.FullName + ".ValidateMaterial",
                     "is not implemented: materials of its shaders keep their saved keywords, render queue and tags when they load");
