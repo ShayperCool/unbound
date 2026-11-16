@@ -51,14 +51,15 @@ the earlier reference files stay unchanged. Pass `--cascades` to each command ab
 record, publish or compare this diagnostic. Comparisons compose the full 217-key reference
 in the run cache and remain strict.
 
-The diagnostic currently matches 205/217 keys. All 12 failures remain in `comparison.json`:
-`Directional.{line,trail,mesh}.{cascade3,cascade4Wide}.map.{covered,pixels}`. Unbound draws
-one additional atlas tile in each case. Two cascades, the other four-cascade split, and the
-orthographic control match. Changing strip geometry or shadow bias does not explain the
-regular-mesh failures. Receiver-volume containment across cascades remains open; follow-up
-controls must vary the receiver frustum, sphere shrink/blending and culling flags before
-changing the shared caster selection. These failures are outside the default one-cascade
-gate, which retains all 145 strict checks without exceptions.
+The diagnostic matches 217/217 keys (205/217 before the cascades' culling spheres were taken
+into account: one additional atlas tile in `Directional.{line,trail,mesh}.{cascade3,cascade4Wide}`).
+With stable-fit shadow projection a caster is drawn into a directional light's cascades in their
+order until one cascade's culling sphere holds the caster's whole shadow volume (its bounding
+sphere swept along the light until it leaves the camera's frustum cut at the shadow distance);
+the later cascades leave it out. A cascade also takes a caster only when, in the light's frame,
+the caster's bounding sphere reaches the cascade's sphere across the light and is not wholly
+beyond it along the light; the cascades' culling planes then apply as before. Both the default
+gate and `--cascades` are strict gate commands.
 
 SRP lists retain renderers whose coarse bounds are unmeasured, including non-rigid skins,
 while still respecting split exclusions. Measured strip face selection and trusted mesh

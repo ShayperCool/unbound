@@ -1,6 +1,7 @@
 {
   "commands": [
-    "python3 tests/projects/stripshadows/run.py check --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label gate-$(date +%s%N)"
+    "python3 tests/projects/stripshadows/run.py check --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label gate-$(date +%s%N)",
+    "python3 tests/projects/stripshadows/run.py check --release \"$UNBOUND_PROBE_UNITY_VERSION\" --cascades --label gate-cascades-$(date +%s%N)"
   ],
   "summary": "stripshadows: .*",
   "engine_paths": [
