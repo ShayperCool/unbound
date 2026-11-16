@@ -139,10 +139,10 @@ namespace Unbound.Runtime
             m_CopyUint = m_Copy.FindKernel("CSVFXBatchCopyCountUint");
             m_CopyKvp = m_Copy.FindKernel("CSVFXBatchCopyCountKvp");
             // One count at a time; a count is the first element of a list.
-            m_Copy.SetBoxedInt(s_Size, s_One);
+            m_Copy.SetBoxed(s_Size, s_One);
             m_ZeroKernel = m_Clear.FindKernel("CSVFXZeroInitBuffer");
-            m_Clear.SetBoxedInt(s_DstOffset, s_Zero);
-            m_Clear.SetBoxedInt(s_DispatchWidth, s_One);
+            m_Clear.SetBoxed(s_DstOffset, s_Zero);
+            m_Clear.SetBoxed(s_DispatchWidth, s_One);
             return true;
         }
 
@@ -210,10 +210,10 @@ namespace Unbound.Runtime
             Prepare();
             int kernel = keyIndexPairs ? m_CopyKvp : m_CopyUint;
             m_Copy.SetBuffer(kernel, keyIndexPairs ? s_SrcKvp : s_SrcUint, counts);
-            m_Copy.SetBoxedInt(s_DstOffset, m_Boxed[entry]);
+            m_Copy.SetBoxed(s_DstOffset, m_Boxed[entry]);
             m_Copy.Dispatch(kernel, 1, 1, 1);
-            m_Fill.SetBoxedInt(s_MaxNb, m_Boxed[entry + 1]);
-            m_Fill.SetBoxedInt(s_Offset, m_Boxed[entry]);
+            m_Fill.SetBoxed(s_MaxNb, m_Boxed[entry + 1]);
+            m_Fill.SetBoxed(s_Offset, m_Boxed[entry]);
             m_Fill.Dispatch(m_FillKernel, 1, 1, 1);
             return true;
         }
@@ -224,7 +224,7 @@ namespace Unbound.Runtime
         {
             if (!Usable()) return;
             m_Clear.SetBuffer(m_ZeroKernel, s_DstBuffer, counts);
-            m_Clear.SetBoxedInt(s_Size, counts.stride == KeyIndexPairBytes ? s_Two : s_One);
+            m_Clear.SetBoxed(s_Size, counts.stride == KeyIndexPairBytes ? s_Two : s_One);
             m_Clear.Dispatch(m_ZeroKernel, 1, 1, 1);
         }
     }
