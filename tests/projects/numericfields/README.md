@@ -26,8 +26,8 @@ and double values are recorded as round-trip text and bits.
 - `third.*`: a FloatField holding 1/3 (shown as 0.3333333): an edit ending unchanged keeps the
   value without a change event; typing the shown text sets the shown value; `R(0,100)` typed twice
   reads the random function's sequence from a fresh evaluator (it is read again on every change).
-- `slider.*`, `sliderInt.*`: the text fields of a Slider and a SliderInt read expressions; a
-  relative "+=" form there reads 0.
+- `slider.*`, `sliderInt.*`: the text fields of a Slider and a SliderInt read expressions; "+=5"
+  typed key by key reads 0 there (each keystroke is read, and "+=" is no number to start from).
 - `plain`, `short`: a field without a label and one with a maximum length of 3.
 - `uxml.*`: the fields from UXML: `value`, `label`, `is-delayed`, `readonly`, `max-length`; the
   numeric fields take no `format-string`; text inputs read `readonly`, `password` and
