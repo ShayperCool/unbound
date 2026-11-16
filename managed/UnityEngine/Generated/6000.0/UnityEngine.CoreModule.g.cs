@@ -4306,12 +4306,6 @@ namespace UnityEngine.Rendering
             Manual = 0,
             Automatic = 1,
         }
-        unsafe partial struct BuildSettings
-        {
-            [global::Unbound.Stub] public BuildSettings(global::UnityEngine.Rendering.RayTracingAccelerationStructureBuildFlags buildFlags, global::UnityEngine.Vector3 relativeOrigin) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingAccelerationStructure.BuildSettings.ctor"); }
-            public global::UnityEngine.Rendering.RayTracingAccelerationStructureBuildFlags buildFlags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingAccelerationStructure.BuildSettings.buildFlags"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingAccelerationStructure.BuildSettings.buildFlags"); } }
-            public global::UnityEngine.Vector3 relativeOrigin { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingAccelerationStructure.BuildSettings.relativeOrigin"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RayTracingAccelerationStructure.BuildSettings.relativeOrigin"); } }
-        }
         [global::System.Obsolete("RayTracingAccelerationStructure.RASSettings is deprecated. Use RayTracingAccelerationStructure.Settings instead. (UnityUpgradable) -> RayTracingAccelerationStructure/Settings")]
         [global::Unbound.Stub]
         public unsafe partial struct RASSettings

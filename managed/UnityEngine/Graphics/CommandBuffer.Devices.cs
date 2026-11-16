@@ -92,9 +92,26 @@ namespace UnityEngine.Rendering
         public void Dispose() { }
         [Unbound.EditorFaithful("The unsupported device created no resource to release.")]
         public void Release() { }
+        /// <summary>How an acceleration structure is built: the build flags (PreferFastTrace by
+        /// default) and the origin instances are placed relative to (zero by default), as the Unity
+        /// 6000.0.71f1 Editor initializes them (tests/projects/defaultstate).</summary>
         public partial struct BuildSettings
         {
-            public BuildSettings() { }
+            public RayTracingAccelerationStructureBuildFlags buildFlags { get; set; }
+
+            public Vector3 relativeOrigin { get; set; }
+
+            public BuildSettings()
+            {
+                buildFlags = RayTracingAccelerationStructureBuildFlags.PreferFastTrace;
+                relativeOrigin = Vector3.zero;
+            }
+
+            public BuildSettings(RayTracingAccelerationStructureBuildFlags buildFlags, Vector3 relativeOrigin)
+            {
+                this.buildFlags = buildFlags;
+                this.relativeOrigin = relativeOrigin;
+            }
         }
 
         [Flags]
