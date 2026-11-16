@@ -14,10 +14,10 @@ Physics rows are categories, because exact positions and velocities depend on th
 arithmetic and, in Normal mode, on frame timing. The probe's graphs run on game time
 (`DirectorUpdateMode.GameTime`): a new graph's default DSP clock follows the audio device in real
 time, so on a loaded machine the pose ran ahead of the fixed steps and the platform left the box
-behind. A graph's animation output is evaluated once per frame for a Fixed Animator too (an
-exploratory macOS Editor capture outside the reference: the pose stays the same over a frame's
-fixed steps), so frames much longer than a fixed step move the platform in jumps the box does not
-follow; the engine run therefore fixes its frames at 60 per second (`run.py` `FIXED_FPS`). The
+behind. In each fixed step a Fixed Animator takes the graph time of the last Update (an
+exploratory macOS Editor capture outside the reference), so its pose stays the same over all of a
+frame's fixed steps and frames much longer than a fixed step move the platform in jumps the box
+does not follow; the engine run therefore fixes its frames at 60 per second (`run.py` `FIXED_FPS`). The
 Editor captures were taken with frames far shorter than a fixed step; two captures with game-time
 graphs are byte-identical to the reference. A kinematic platform (4 × 0.5 × 2 box) is animated
 along x at 1 unit/s with a 1 m box resting on it; after 100 fixed steps the probe records whether the

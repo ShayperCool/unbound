@@ -84,8 +84,8 @@ public class AnimatePhysicsProbe : MonoBehaviour
         animator.animatePhysics = animatePhysics;
         var graph = PlayableGraph.Create(go.name);
         // A new graph runs on the DSP clock (its default, tests/projects/playables core.defaults),
-        // which follows the audio device in real time; game time keeps the pose in step with the
-        // fixed steps however long a frame takes.
+        // which follows the audio device, not Time.time; game time ties the pose to Time.time
+        // (run.py fixes the frame rate so that frames stay shorter than a fixed step).
         graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
         var output = AnimationPlayableOutput.Create(graph, "out", animator);
         if (clip != null) output.SetSourcePlayable(AnimationClipPlayable.Create(graph, clip));
