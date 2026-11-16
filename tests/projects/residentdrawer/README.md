@@ -62,9 +62,18 @@ a zone without wind comes (320), then a wind again (330); a spherical zone reach
 asset's wind (to frame 470). The drawer holds every tree; floats are recorded as the hex of their
 bits (values compare exactly).
 
-    python3 tests/projects/residentdrawer/run.py native --label L [--profile occlusion|controls|lightmaps|shadowmask|speedtree]   # two Editor captures
-    python3 tests/projects/residentdrawer/run.py publish L-1 L-2 [--profile occlusion|controls|lightmaps|shadowmask|speedtree]
-    python3 tests/projects/residentdrawer/run.py check [--profile occlusion|controls|lightmaps|shadowmask|speedtree]              # the land gate
+`motion` is `occlusion` with the probe's other scene (`RESIDENT_DRAWER_MOTION=1`): a grey wall,
+five Lit cubes in a row behind it and two farther away beside it, and a camera that stays behind the
+wall (frames 1 to 10), jumps 6 to the left (11), back (16) and 6 to the right (21), moves sideways
+from x -3 at 0.25 a frame (25 to 36) and zooms from a field of view of 60 to 20 (37 to 42) and back
+(43 to 48). Every frame is captured, with every renderer's isVisible and the renderers the drawer
+holds. Each frame's draws are tested against the previous frame's depth pyramid and the ones it
+culls again against the frame's own, so the Editor draws every cube the camera sees in the frame it
+shows; the cubes behind the wall are the control that occlusion culling hides what is hidden.
+
+    python3 tests/projects/residentdrawer/run.py native --label L [--profile occlusion|motion|controls|lightmaps|shadowmask|speedtree]   # two Editor captures
+    python3 tests/projects/residentdrawer/run.py publish L-1 L-2 [--profile occlusion|motion|controls|lightmaps|shadowmask|speedtree]
+    python3 tests/projects/residentdrawer/run.py check [--profile occlusion|motion|controls|lightmaps|shadowmask|speedtree]              # the land gate
 
 Recording: a windowed Editor with `-force-vulkan` on the GPU-backed display :0 (the drawer
 dispatches its changes from the player loop, which a batch-mode Editor does not run between

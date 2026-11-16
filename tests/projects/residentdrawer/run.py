@@ -10,7 +10,7 @@
 --profile selects the drawer's settings (controls: direct's, with more refusal controls, see the
 README; lightmaps and shadowmask: the URP probe's baked Subtractive and Shadowmask scenes as they are;
 speedtree: the SpeedTree 9 wind parameters the drawer writes for trees, with tests/projects/speedtree9wind's
-trees): direct (the default: occlusion culling off, so the drawer
+trees; motion: occlusion's settings with a moving camera, see the README): direct (the default: occlusion culling off, so the drawer
 draws with direct draw commands) or occlusion (GPU occlusion culling in cameras on, so the main
 camera's commands are indirect ones the drawer's compute shaders fill). Both sides use the Vulkan
 device: the Editor windowed with -force-vulkan on the GPU-backed display :0 (the drawer dispatches
