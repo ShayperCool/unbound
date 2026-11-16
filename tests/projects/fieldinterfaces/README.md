@@ -20,7 +20,7 @@ runtime panel, independent of the OS and the graphics device). The gate compares
 - `detached`, `reattached.*`: a field removed from the panel and added back twice raises one
   notification per focus change (its callbacks are not registered twice).
 - `focusedDetach`: removing the focused field from the panel leaves nothing focused and raises no
-  editingEnded (its callbacks are unregistered as it leaves).
+  editingEnded.
 - `replaced`, `cleared`: a replaced handler alone is told; a cleared one stops the notifications.
 
 Other releases are unmeasured.
