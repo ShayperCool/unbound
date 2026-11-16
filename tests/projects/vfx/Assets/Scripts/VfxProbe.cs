@@ -89,6 +89,7 @@ public sealed class VfxProbe : MonoBehaviour
             BeginCameras();
             BeginSoftParticles();
             BeginOutputEvents();
+            BeginOperations();
             Bundled();
             SpawnerStates(m_Running[0].Effect);
             AffineInverse();
@@ -438,6 +439,36 @@ public sealed class VfxProbe : MonoBehaviour
             Rec("events/kept attribute", "spawnCount=" + F(m_KeptEventAttribute.GetFloat("spawnCount")) + " color=" + V(m_KeptEventAttribute.GetVector3("color")));
     }
 
+    // ------------------------------------------------------------------------ operations
+
+    VisualEffect m_Operations;
+    GraphicsBuffer m_OperationsBuffer;
+
+    /// <summary>The operation controls (README.md, "Operations"): an effect of OpsValues whose
+    /// script block reads what the operators give; at frame 3 its buffer and one row change.</summary>
+    void BeginOperations() => m_Operations = Effect("operations", "Assets/OpGraphs/OpsValues.vfx", new Vector3(0f, 4f, 0f));
+
+    void OperationFrame()
+    {
+        if (m_Frame == 3)
+        {
+            m_OperationsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 7, 12);
+            m_Operations.SetGraphicsBuffer("Buffer", m_OperationsBuffer);
+            m_Operations.SetVector4("A", new Vector4(-2f, 0.5f, 9f, -1f));
+            m_Operations.SetVector3("Hue", new Vector3(0.05f, 1f, 0.25f));
+            m_Operations.SetVector4("Tint", new Vector4(0f, 0f, 0f, 1f));
+        }
+        if (m_Frame != 8) return;
+        foreach (var line in OpsInputs.Logs.TryGetValue("operations", out var log) ? log : new List<string>())
+        {
+            var parts = line.Split(' ');
+            foreach (var part in parts)
+                if (part.Contains("=")) Rec("operations/" + parts[0] + "/" + part.Substring(0, part.IndexOf('=')), part.Substring(part.IndexOf('=') + 1));
+        }
+        Rec("operations/lines", OpsInputs.Logs.TryGetValue("operations", out var all) ? all.Count : -1);
+        m_OperationsBuffer?.Release();
+    }
+
     // ---------------------------------------------------------------------------- bundle
 
     VisualEffect m_Bundled;
@@ -515,6 +546,7 @@ public sealed class VfxProbe : MonoBehaviour
             m_Phase = "update";
             CameraFrame();
             OutputEventFrame();
+            OperationFrame();
             Simulate();
             if (m_Frame < k_LastFrame) return;
         }

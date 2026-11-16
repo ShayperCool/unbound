@@ -39,6 +39,7 @@ own models; its assembly carries the name of one of the package's friend assembl
 - `CamValues`, `CamDepth`, `SoftAdditive` (`Assets/CameraGraphs`): the camera controls' graphs
   (below).
 - `OutEvents` (`Assets/EventGraphs`): the output event controls' graph (below).
+- `OpsValues` (`Assets/OpGraphs`): the operation controls' graph (below).
 
 `Exposed`'s texture and mesh properties default to `Assets/Objects/ImageA.png` and
 `ShapeA.asset`, which the authoring script also makes (with `ImageB` and `ShapeB`).
@@ -318,6 +319,19 @@ listener); `events once`, whose only listener removes itself at the first `Tick`
 the first of a step's three events (what the step's next events log). `events/kept attribute` reads the last attribute set handed over,
 a frame later.
 
+## Operations
+
+`OpsValues` has a spawn context with a block written as a script (`Assets/Callbacks/OpsInputs.cs`)
+whose inputs are fed by operators over exposed properties; `operations/<update>/*` is what it
+read when the context played and in its first three updates: matrices built from four vectors as
+rows and as columns (`m00`, `m01`), rows and columns of a matrix (`q00` to `q03`), a look-at frame
+(`m02`, built from axes) with its position, angles (some negative) and scale (`v00` to `v02`), the
+position, angles and scale of a matrix with an uneven scale and a last row that is not
+(0, 0, 0, 1) (`v04` to `v06`), a colour's hue, saturation and value (`v03`) and a colour from
+them (`q04`), a texture's width and height (`u00`, `u01`) and a graphics buffer's count (`u02`).
+At frame 3 the probe gives the effect a buffer of seven elements, another row, a hue in the first
+sixth of the circle and a black colour (no hue, no saturation).
+
 ## A built asset
 
 The authoring step builds an AssetBundle with the asset of a graph of its own
@@ -342,11 +356,10 @@ runs (culled, awake), not its particles or an image of them.
 Outputs that are sorted or culled per camera (alpha blended ones are, by default: the effects
 of the simulation controls), drawn through an indirect buffer, lit outputs,
 motion vectors, Shader Graph outputs, shadows, strips, meshes and primitives other than quads
-(Unbound draws none of these and says so); GPU events, bounds computed on the GPU. Expression operations without a control: the inverse of a general matrix and an
-event attribute read in a spawn context (no operator of the package gives either here), and
-the ones the runtime does not do yet (matrices built from or split into rows, columns and axes,
-angles and scales taken from a matrix, colour spaces, meshes, noise, texture
-and buffer sizes). Of baked curves and gradients, not measured: a curve whose values are larger than a
+(Unbound draws none of these and says so); GPU events, bounds computed on the GPU. Expression operations without a control: the inverse of a general matrix and a matrix's axis
+(no operator of the package gives either on the CPU), and the ones the runtime does not do yet:
+an event attribute read in a spawn context (it is evaluated per spawn event), meshes, noise, a
+texture's depth and format and a buffer's stride. Of baked curves and gradients, not measured: a curve whose values are larger than a
 half float holds (its scale is held by a unit test, as a gradient's is by `hdr`), a curve
 that ping-pongs, one that loops before its first key and clamps after its last, one that
 loops after its last key with a range whose product by 127 and quotient by 127 round below

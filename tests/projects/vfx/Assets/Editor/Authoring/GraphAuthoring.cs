@@ -44,6 +44,7 @@ public static class GraphAuthoring
         DrawnOverLife();
         Cameras();
         OutputEvents();
+        Operations();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -256,6 +257,94 @@ public static class GraphAuthoring
         OutputEvent(graph, "Never", half);
         OutputEvent(graph, "Fast", fast);
         graph.GetResource().updateMode = VFXUpdateMode.ExactFixedTimeStep;
+        Save(graph);
+    }
+
+    const string OperationFolder = "Assets/OpGraphs";
+
+    /// <summary>The operation controls' graph (README.md, "Operations"): a spawn context whose
+    /// script block reads matrices built from and split into rows and columns, a look-at frame
+    /// with its position, angles and scale, colour spaces, and a texture's and a buffer's sizes, all
+    /// over exposed properties.</summary>
+    static void Operations()
+    {
+        Directory.CreateDirectory(OperationFolder);
+        AssetDatabase.Refresh();
+        var graph = NewGraph("OpsValues", OperationFolder);
+        var (spawn, _, _, _) = System(graph, 8);
+        ConstantRate(spawn, 1f);
+        var block = Make<VFXSpawnerCustomWrapper>();
+        block.SetSettingValue("m_customType", new SerializableType(typeof(OpsInputs)));
+        spawn.AddChild(block);
+        VFXSlot Exposed(Type type, string name, object value) => Parameter(graph, type, name, value).outputSlots[0];
+        void To(VFXSlot from, string input) => Link(from, Input(block, input));
+        var a = Exposed(typeof(Vector4), "A", new Vector4(1f, 2f, 3f, 4f));
+        var b = Exposed(typeof(Vector4), "B", new Vector4(5f, -6f, 7f, 8f));
+        var c = Exposed(typeof(Vector4), "C", new Vector4(-1f, 0.5f, 0.25f, 2f));
+        var d = Exposed(typeof(Vector4), "D", new Vector4(0f, 0.125f, -3f, 1f));
+        foreach (var (order, input) in new[] { (ConstructMatrix.Order.Row, "m00"), (ConstructMatrix.Order.Column, "m01") })
+        {
+            var built = Make<ConstructMatrix>();
+            graph.AddChild(built);
+            built.SetSettingValue("order", order);
+            Link(a, built.inputSlots[0]);
+            Link(b, built.inputSlots[1]);
+            Link(c, built.inputSlots[2]);
+            Link(d, built.inputSlots[3]);
+            To(built.outputSlots[0], input);
+        }
+        var m = Exposed(typeof(Matrix4x4), "M", new Matrix4x4(new Vector4(1f, 2f, 3f, 4f), new Vector4(-5f, 6f, 7f, 8f), new Vector4(9f, -10f, 11f, 12f), new Vector4(13f, 14f, -15f, 16f)));
+        foreach (var (order, first, second) in new[] { (SplitMatrix.Order.Row, "q00", "q01"), (SplitMatrix.Order.Column, "q02", "q03") })
+        {
+            var split = Make<SplitMatrix>();
+            graph.AddChild(split);
+            split.SetSettingValue("order", order);
+            Link(m, split.inputSlots[0]);
+            To(split.outputSlots[1], first);
+            To(split.outputSlots[2], second);
+        }
+        var look = Make<LookAt>();
+        graph.AddChild(look);
+        Link(Exposed(typeof(Position), "From", (Position)new Vector3(1f, 2f, 3f)), look.inputSlots[0]);
+        Link(Exposed(typeof(Position), "Target", (Position)new Vector3(-4f, 5f, -1f)), look.inputSlots[1]);
+        To(look.outputSlots[0], "m02");
+        To(look.outputSlots[0].children.First(s => s.name == "position"), "v00");
+        To(look.outputSlots[0].children.First(s => s.name == "angles"), "v01");
+        To(look.outputSlots[0].children.First(s => s.name == "scale"), "v02");
+        // A matrix of a translation, a rotation and an uneven scale, with a last row that is
+        // not (0, 0, 0, 1), taken as a frame (its position, angles and scale).
+        var n = Matrix4x4.TRS(new Vector3(10f, 20f, 30f), Quaternion.Euler(30f, -120f, 200f), new Vector3(2f, 0.5f, 3f));
+        n.m30 = 0.25f;
+        n.m33 = 2f;
+        var frame = Make<Branch>();
+        graph.AddChild(frame);
+        frame.SetOperandType(typeof(UnityEditor.VFX.Transform));
+        Link(Exposed(typeof(bool), "Pick", true), frame.inputSlots[0]);
+        var nSlot = Exposed(typeof(Matrix4x4), "N", n);
+        Link(nSlot, frame.inputSlots[1]);
+        Link(nSlot, frame.inputSlots[2]);
+        To(frame.outputSlots[0].children.First(s => s.name == "position"), "v04");
+        To(frame.outputSlots[0].children.First(s => s.name == "angles"), "v05");
+        To(frame.outputSlots[0].children.First(s => s.name == "scale"), "v06");
+        var hsv = Make<RGBtoHSV>();
+        graph.AddChild(hsv);
+        Link(Exposed(typeof(Color), "Tint", new Color(0.8f, 0.3f, 0.6f, 1f)), hsv.inputSlots[0]);
+        To(hsv.outputSlots[0], "v03");
+        var rgb = Make<HSVtoRGB>();
+        graph.AddChild(rgb);
+        Link(Exposed(typeof(Vector3), "Hue", new Vector3(0.71f, 0.6f, 0.9f)), rgb.inputSlots[0]);
+        To(rgb.outputSlots[0], "q04");
+        var dims = Make<TextureDimensions>();
+        graph.AddChild(dims);
+        dims.SetOperandType(typeof(Texture2D));
+        Link(Exposed(typeof(Texture2D), "Image", Object<Texture2D>("ImageC")), dims.inputSlots[0]);
+        To(dims.outputSlots[0], "u00");
+        To(dims.outputSlots[1], "u01");
+        var count = Make<BufferCount>();
+        graph.AddChild(count);
+        Link(Exposed(typeof(GraphicsBuffer), "Buffer", null), count.inputSlots[0]);
+        To(count.outputSlots[0], "u02");
+        graph.GetResource().cullingFlags = VFXCullingFlags.CullNone;
         Save(graph);
     }
 
