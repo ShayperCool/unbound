@@ -28,6 +28,33 @@ namespace Unbound.Runtime
     }
 
     /// <summary>
+    /// GPU buffers made anew while draws collected earlier in the frame still hold them (a draw
+    /// is emitted after its list collects): released in a later frame, once those are drawn.
+    /// </summary>
+    internal sealed class VFXRetiredBuffers
+    {
+        readonly List<GraphicsBuffer> m_Buffers = new List<GraphicsBuffer>();
+        int m_Frame;
+
+        /// <summary>Keeps <paramref name="buffer"/> (none: nothing) until a later frame.</summary>
+        internal void Retire(GraphicsBuffer buffer)
+        {
+            if (buffer == null) return;
+            ReleaseOlder();
+            m_Buffers.Add(buffer);
+            m_Frame = Time.s_FrameCount;
+        }
+
+        /// <summary>Releases the buffers retired in an earlier frame.</summary>
+        internal void ReleaseOlder()
+        {
+            if (m_Buffers.Count == 0 || Time.s_FrameCount == m_Frame) return;
+            foreach (var buffer in m_Buffers) buffer.Release();
+            m_Buffers.Clear();
+        }
+    }
+
+    /// <summary>
     /// The arguments of indirect draws and dispatches of effects, computed on the GPU from
     /// counts the kernels keep there, as the package's own kernels compute them: a user reserves
     /// an entry of a kind (a primitive, a mesh, or a dispatch), and before each use has the count
@@ -87,10 +114,8 @@ namespace Unbound.Runtime
         /// <summary>The integers 0 to the entries' capacity, boxed once: an entry's place and
         /// the count past it, set for each fill without a new box.</summary>
         object[] m_Boxed = Array.Empty<object>();
-        /// <summary>Entries' buffers made anew in frame <see cref="m_RetiredFrame"/>: draws
-        /// collected before kept their handles, so they are released in a later frame.</summary>
-        readonly List<GraphicsBuffer> m_Retired = new List<GraphicsBuffer>();
-        int m_RetiredFrame;
+        /// <summary>Entries' buffers made anew: draws collected before kept their handles.</summary>
+        readonly VFXRetiredBuffers m_Retired = new VFXRetiredBuffers();
         bool m_Loaded, m_Usable;
 
         /// <summary>The buffer of every entry's words (made anew, its words lost, when entries
@@ -160,21 +185,12 @@ namespace Unbound.Runtime
         /// <summary>Buffers for every reserved entry; the descriptions uploaded when they changed.</summary>
         void Prepare()
         {
-            int frame = Time.s_FrameCount;
-            if (m_Retired.Count != 0 && frame != m_RetiredFrame)
-            {
-                foreach (var buffer in m_Retired) buffer.Release();
-                m_Retired.Clear();
-            }
+            m_Retired.ReleaseOlder();
             if (m_Used > m_Capacity)
             {
                 m_Capacity = Math.Max(FirstCapacity, m_Capacity);
                 while (m_Capacity < m_Used) m_Capacity *= 2;
-                if (m_Args != null)
-                {
-                    m_Retired.Add(m_Args);
-                    m_RetiredFrame = frame;
-                }
+                m_Retired.Retire(m_Args);
                 m_DescriptionBuffer?.Release();
                 m_Counts?.Release();
                 Generation++;
