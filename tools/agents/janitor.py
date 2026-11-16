@@ -1150,8 +1150,14 @@ class Janitor:
         self.sealed.discard(key)
         self.unsealed.add(key)
         self.emit('unseal', path=key, reason=reason)
-        links = reference_paths([path], excluded=self.excluded, seconds=self.scan_budget(), watcher=self.watch,
-                                index_root=self.cache, prune=False, sealed=self.sealed)
+        try:
+            links = reference_paths([path], excluded=self.excluded, seconds=self.scan_budget(), watcher=self.watch,
+                                    index_root=self.cache, prune=False, sealed=self.sealed)
+        except OSError as error:
+            # Partly read: not sealed, so a later full walk reads it, but nothing goes before that.
+            if not gone(error) or isinstance(error, (ReferenceChanged, TimeoutError)):
+                raise
+            raise ReferenceChanged(f'kept run changed while it was walked: {key}: {error}') from error
         new = links-self.links
         self.links |= links
         for link in new:
@@ -1371,40 +1377,40 @@ class Janitor:
     def prepare_removal(self, path, kind, hours):
         path = Path(os.path.abspath(path))
         hours = max(self.idle_hours, hours or 0)
+        self.refresh_links()
         try:
-            self.refresh_links()
-            if reason := self.reason(path, hours):
-                self.keep(path, reason)
-                return None
-            _, allocated, reclaimable = inventory(path)
-            directory = path.is_dir() and not path.is_symlink()
-            directory_ctimes = {}
-            if self.apply and directory:
-                # Only directories need chmod; files can share live target inodes.
-                for _, _, _, descriptor in os.fwalk(path, follow_symlinks=False):
-                    before = os.fstat(descriptor)
-                    mode = stat.S_IMODE(before.st_mode)
-                    if mode & stat.S_IRWXU != stat.S_IRWXU:
-                        os.fchmod(descriptor, mode | stat.S_IRWXU)
-                        after = os.fstat(descriptor)
-                        directory_ctimes[(before.st_dev, before.st_ino)] = (after.st_ctime_ns, before.st_ctime)
-            # Recheck every descendant after permission preparation. Only the
-            # exact ctime changes made above are excluded from the age test.
-            if reason := self.reason(path, hours, directory_ctimes):
-                self.keep(path, reason)
-                return None
-            identity = path.lstat()
-            task = next((p.name.lower() for p in path.parents
-                         if p.parent in (self.volume, self.cache.resolve()) and
-                         re.fullmatch(r'q\d+', p.name, re.I)), '')
-            return path, kind, directory, task, allocated, reclaimable, hours, (identity.st_dev, identity.st_ino, stat.S_IFMT(identity.st_mode))
+            reason = self.reason(path, hours)
+            if not reason:
+                _, allocated, reclaimable = inventory(path)
+                directory = path.is_dir() and not path.is_symlink()
+                directory_ctimes = {}
+                if self.apply and directory:
+                    # Only directories need chmod; files can share live target inodes.
+                    for _, _, _, descriptor in os.fwalk(path, follow_symlinks=False):
+                        before = os.fstat(descriptor)
+                        mode = stat.S_IMODE(before.st_mode)
+                        if mode & stat.S_IRWXU != stat.S_IRWXU:
+                            os.fchmod(descriptor, mode | stat.S_IRWXU)
+                            after = os.fstat(descriptor)
+                            directory_ctimes[(before.st_dev, before.st_ino)] = (after.st_ctime_ns, before.st_ctime)
+                # Recheck every descendant after permission preparation. Only the
+                # exact ctime changes made above are excluded from the age test.
+                reason = self.reason(path, hours, directory_ctimes)
+            if not reason:
+                identity = path.lstat()
+                task = next((p.name.lower() for p in path.parents
+                             if p.parent in (self.volume, self.cache.resolve()) and
+                             re.fullmatch(r'q\d+', p.name, re.I)), '')
+                return path, kind, directory, task, allocated, reclaimable, hours, (identity.st_dev, identity.st_ino, stat.S_IFMT(identity.st_mode))
         except OSError as error:
             if not gone(error):
                 raise
-            if os.path.lexists(path):
-                # Something inside went while it was looked at: it is being written to.
-                self.keep(path, 'modified during the check')
-            return None
+            if not os.path.lexists(path):
+                return None
+            # Something inside went while it was looked at: it is being written to.
+            reason = 'modified during the check'
+        self.keep(path, reason)
+        return None
 
     def keep(self, path, reason):
         self.emit('keep', path=str(path), reason=reason)
@@ -1454,43 +1460,49 @@ class Janitor:
             self.refresh_guards()
         removed = 0
         for path, kind, directory, task, allocated, reclaimable, hours, identity in prepared:
-            try:
-                if self.apply:
-                    # A slow removal ends guard reuse. Queue edits and new links
-                    # are checked for every entry, including the first one.
-                    if time.monotonic()-self.guards_at >= GUARD_REUSE_SECONDS:
-                        self.refresh_guards()
-                    self.refresh_queue()
-                    self.refresh_links()
-                    if kind == 'task' and self.states.get(task) != 'landed':
-                        self.keep(path, 'task state changed')
-                        continue
-                    if reason := self.protection_reason(path):
-                        self.keep(path, reason)
-                        continue
+            if self.apply:
+                # A slow removal ends guard reuse. Queue edits and new links
+                # are checked for every entry, including the first one.
+                if time.monotonic()-self.guards_at >= GUARD_REUSE_SECONDS:
+                    self.refresh_guards()
+                self.refresh_queue()
+                self.refresh_links()
+                if kind == 'task' and self.states.get(task) != 'landed':
+                    self.keep(path, 'task state changed')
+                    continue
+                if reason := self.protection_reason(path):
+                    self.keep(path, reason)
+                    continue
+                try:
                     current = path.lstat()
-                    if (current.st_dev, current.st_ino, stat.S_IFMT(current.st_mode)) != identity:
-                        self.keep(path, 'candidate identity changed')
-                        continue
-                    if not directory and max(current.st_mtime, current.st_ctime) >= time.time()-hours*3600:
-                        self.keep(path, 'recently modified')
-                        continue
-                    self.emit('removing', path=str(path), kind=kind, allocated_bytes=allocated,
-                              reclaimable_bytes=reclaimable)
-                    if self.watch:
-                        self.watch.retire(path)
-                    self.removed_paths.append(path)
+                except FileNotFoundError:
+                    continue
+                if (current.st_dev, current.st_ino, stat.S_IFMT(current.st_mode)) != identity:
+                    self.keep(path, 'candidate identity changed')
+                    continue
+                if not directory and max(current.st_mtime, current.st_ctime) >= time.time()-hours*3600:
+                    self.keep(path, 'recently modified')
+                    continue
+                self.emit('removing', path=str(path), kind=kind, allocated_bytes=allocated,
+                          reclaimable_bytes=reclaimable)
+                if self.watch:
+                    self.watch.retire(path)
+                self.removed_paths.append(path)
+                try:
                     if directory:
                         shutil.rmtree(path)
                     else:
                         path.unlink()
-                self.emit('removed' if self.apply else 'would_remove', path=str(path), kind=kind,
-                          allocated_bytes=allocated, reclaimable_bytes=reclaimable)
-                self.removed += 1
-                removed += 1
-                self.reclaimable += reclaimable
-            except FileNotFoundError:
-                continue
+                except FileNotFoundError:
+                    if os.path.lexists(path):
+                        # Something inside went during the removal: what is left stays.
+                        self.keep(path, 'modified during the removal')
+                    continue
+            self.emit('removed' if self.apply else 'would_remove', path=str(path), kind=kind,
+                      allocated_bytes=allocated, reclaimable_bytes=reclaimable)
+            self.removed += 1
+            removed += 1
+            self.reclaimable += reclaimable
         return removed
 
     def remove(self, path, *, kind='runtime', hours=None):

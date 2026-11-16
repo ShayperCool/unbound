@@ -299,6 +299,53 @@ class JanitorTests(unittest.TestCase):
         self.assertIn('modified during the check', self.output.getvalue())
         self.assertNotIn('links into a removed run', self.output.getvalue())
 
+    def test_a_kept_run_that_changes_while_it_is_walked_stops_removals(self):
+        # gate-2 is quiet at the first check, written to before its removal, and a folder inside
+        # it is replaced while it is walked: partly read, so nothing else goes in this run.
+        alpha = self.instances('alpha', ['gate-1', 'gate-2', 'gate-3'])
+        beta = self.instances('beta', ['gate-1', 'gate-2'])
+        self.aged = alpha+beta
+        (alpha[1]/'aa').mkdir()
+        (alpha[1]/'zz').mkdir()
+        (alpha[1]/'zz/link').symlink_to(beta[0]/'output')
+        original_inventory, original_add = janitor.inventory, janitor.ReferenceWatch.add
+        calls = []
+        def inventory(path, *args, **kwargs):
+            result = original_inventory(path, *args, **kwargs)
+            if path == alpha[1]:
+                calls.append(path)
+                if len(calls) == 2:
+                    return (self.future, *result[1:])
+            return result
+        def add(watch, directory):
+            if os.fspath(directory) == str(alpha[1]/'aa'):
+                raise NotADirectoryError(20, 'Not a directory', os.fspath(directory))
+            return original_add(watch, directory)
+        with patch.object(janitor, 'inventory', inventory), \
+             patch.object(janitor.ReferenceWatch, 'add', add):
+            self.collect_applied()
+        self.assertTrue(beta[0].is_dir())
+        self.assertTrue(alpha[1].is_dir())
+        self.assertIn('kept run changed while it was walked', self.output.getvalue())
+        self.assertTrue(self.j.partial)
+
+    def test_a_run_whose_files_change_during_its_removal_keeps_what_it_names(self):
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        task = self.directory('q1')
+        (first/'link').symlink_to(task/'output')
+        original = shutil.rmtree
+        def rmtree(path, *args, **kwargs):
+            if Path(path) == first:
+                (first/'output').unlink()
+                raise FileNotFoundError(2, 'No such file or directory', str(first/'temporary'))
+            return original(path, *args, **kwargs)
+        with patch.object(janitor.shutil, 'rmtree', rmtree):
+            self.collect_applied()
+        self.assertTrue(first.is_dir())
+        self.assertTrue((task/'output').is_file())  # named from what is left of gate-1
+        self.assertFalse(second.exists())
+        self.assertIn('modified during the removal', self.output.getvalue())
+
     def test_a_sealed_run_that_goes_during_its_check_is_not_walked(self):
         first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
         original = janitor.inventory
