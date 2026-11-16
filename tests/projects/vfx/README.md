@@ -299,20 +299,22 @@ a scaled parent, the scene view's camera as the main camera
 
 ## Output events
 
-`OutEvents` has three spawn contexts, stepped at a fixed time step each (two steps a frame): ten
+`OutEvents` has five spawn contexts, stepped at a fixed time step each (two steps a frame): ten
 particles a second with three event attributes set by its blocks (it also spawns particles, so
-that the camera sees the effect), three every 0.2 s with another attribute set, and half a
-particle once. Two output event contexts named `Tick` take the first two (one event fed by
-both), one named `Burst` the second, one named `Never` the third (a spawn count under one raises
-nothing). `events/names` is what `GetOutputEventNames` lists. `events/<effect>/f<frame>/<n>` is
+that the camera sees the effect), three every 0.2 s with another attribute set, half a particle
+once, another ten a second (firing in the same steps as the first) and sixty a second (in every
+step). Three output event contexts named `Tick` take the first, second and fourth (one event fed
+by all three: two inputs firing in one step raise it twice), one named `Burst` the second, one
+named `Never` the third (a spawn count under one raises nothing) and one named `Fast` the last
+(an event in each of a frame's two steps). `events/names` is what `GetOutputEventNames` lists. `events/<effect>/f<frame>/<n>` is
 each event the probe's listener took in frames 1 to 20, in order: where in the frame (after the
 scripts' `LateUpdate`, before the end of the frame), its name, the attributes it carries and
 whether it is the same attribute set as the effect's event before. The effects: `events` in
 front of the camera; `events behind`, culled (nothing); `events paused`, paused from frame 5 to
 frame 12; `events late`, listened to from frame 10 only (no event of the frames before is kept
-for it); `events throwing`, whose first listener throws once, at the first of the two events of
-a step of frame 7 (`events/listener logs`: what is logged; the second event of that step still
-reaches the probe's listener). `events/kept attribute` reads the last attribute set handed over,
+for it); `events throwing`, whose first listener throws once, at the first event of frame 7
+(`events/listener logs`: what is logged; the frame's next events still reach the probe's
+listener). `events/kept attribute` reads the last attribute set handed over,
 a frame later.
 
 ## A built asset

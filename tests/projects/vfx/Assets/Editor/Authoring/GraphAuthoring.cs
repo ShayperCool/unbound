@@ -223,7 +223,7 @@ public static class GraphAuthoring
         foreach (var spawner in from) spawner.LinkTo(output);
     }
 
-    /// <summary>The output event controls' graph (README.md, "Output events"): three spawn
+    /// <summary>The output event controls' graph (README.md, "Output events"): five spawn
     /// contexts, each step of a fixed time step (two a frame).</summary>
     static void OutputEvents()
     {
@@ -241,11 +241,20 @@ public static class GraphAuthoring
         SpawnSet(burst, "size", 0.125f);
         var half = Spawner(graph);
         Burst(half, false, 0.5f, 0.1f);
-        // Two contexts of one name make one event fed by both.
+        // Another ten a second, firing in the same steps as the first, and sixty a second (in
+        // every step, two a frame).
+        var twin = Spawner(graph);
+        ConstantRate(twin, 10f);
+        SpawnSet(twin, "size", 0.25f);
+        var fast = Spawner(graph);
+        ConstantRate(fast, 60f);
+        // Contexts of one name make one event fed by all of them.
         OutputEvent(graph, "Tick", rate);
         OutputEvent(graph, "Tick", burst);
+        OutputEvent(graph, "Tick", twin);
         OutputEvent(graph, "Burst", burst);
         OutputEvent(graph, "Never", half);
+        OutputEvent(graph, "Fast", fast);
         graph.GetResource().updateMode = VFXUpdateMode.ExactFixedTimeStep;
         Save(graph);
     }

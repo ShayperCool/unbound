@@ -357,7 +357,8 @@ public sealed class VfxProbe : MonoBehaviour
     readonly List<string> m_ListenerLogs = new List<string>();
 
     static string EventName(int id) =>
-        id == Shader.PropertyToID("Tick") ? "Tick" : id == Shader.PropertyToID("Burst") ? "Burst" : id == Shader.PropertyToID("Never") ? "Never" : "id " + id;
+        id == Shader.PropertyToID("Tick") ? "Tick" : id == Shader.PropertyToID("Burst") ? "Burst" : id == Shader.PropertyToID("Never") ? "Never"
+        : id == Shader.PropertyToID("Fast") ? "Fast" : "id " + id;
 
     void Listen(VisualEffect effect) => effect.outputEventReceived += args => OutputEventReceived(effect, args);
 
@@ -393,8 +394,8 @@ public sealed class VfxProbe : MonoBehaviour
         var behind = Effect("events behind", Graph, new Vector3(0f, 0f, -20f));
         m_EventsPaused = Effect("events paused", Graph, new Vector3(1.5f, -2f, 0f));
         m_EventsLate = Effect("events late", Graph, new Vector3(-1.5f, -2f, 0f));
-        // A listener that throws at the first event of frame 7 (whose step raises two), before
-        // the probe's own listener of the same effect.
+        // A listener that throws at the first event of frame 7 (a frame of several), before the
+        // probe's own listener of the same effect.
         var throwing = Effect("events throwing", Graph, new Vector3(3f, -2f, 0f));
         bool thrown = false;
         throwing.outputEventReceived += args =>
