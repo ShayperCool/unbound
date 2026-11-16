@@ -164,6 +164,14 @@
 {"k":"texture.copy_region_outside_source.logs","v":"Error: Graphics.CopyTexture called with region not fitting in source element: trying to copy from region on GPU (x:2, y:2, width:4, height:4) of mip 0 (size: 4x4)"}
 {"k":"texture.copy_region_outside_destination","v":"returns done"}
 {"k":"texture.copy_region_outside_destination.logs","v":"Error: Graphics.CopyTexture called with region not fitting in destination element: trying to copy to region on GPU (x:2, y:2, width:4, height:4) of mip 0 (size: 4x4)"}
+{"k":"texture.copy_whole_size_mismatch","v":"returns done"}
+{"k":"texture.copy_whole_size_mismatch.logs","v":"Error: Graphics.CopyTexture called with mismatching texture sizes (src 8x4x1 (array length 0), dst 4x8x1 (array length 0))"}
+{"k":"texture.copy_whole_size_mismatch_pixel","v":"returns RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_element_size_mismatch","v":"returns done"}
+{"k":"texture.copy_element_size_mismatch_pixel","v":"returns RGBA(1.000, 0.000, 0.000, 1.000)"}
+{"k":"texture.copy_element_size_mismatch_far_pixel","v":"returns RGBA(0.804, 0.804, 0.804, 0.804)"}
+{"k":"texture.copy_whole_larger","v":"returns done"}
+{"k":"texture.copy_whole_larger.logs","v":"Error: Graphics.CopyTexture called with mismatching texture sizes (src 8x8x1 (array length 0), dst 4x4x1 (array length 0))"}
 {"k":"texture.non_readable_get_pixel","v":"throws UnityEngine.UnityException: Texture '' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
 {"k":"texture.non_readable_set_pixel","v":"throws UnityEngine.UnityException: Texture '' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
 {"k":"texture.non_readable_get_pixels","v":"throws System.ArgumentException: Texture2D.GetPixels: texture data is either not readable, corrupted or does not exist. (Texture '')"}

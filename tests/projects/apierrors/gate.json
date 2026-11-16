@@ -15,6 +15,9 @@
     "managed/UnityEngine/Animation/Animator.cs",
     "managed/UnityEngine/Animation/AnimatorErrors.cs",
     "managed/UnityEngine/Animation/Playables/AnimatorControllerPlayable.cs",
-    "managed/UnityEngine/Runtime/ObjectErrors.cs"
+    "managed/UnityEngine/Runtime/ObjectErrors.cs",
+    "managed/UnityEngine/Graphics/Immediate.cs",
+    "managed/UnityEngine/Graphics/Texture2D.CopyStorage.cs",
+    "managed/UnityEngine/Graphics/Procedural.cs"
   ]
 }
