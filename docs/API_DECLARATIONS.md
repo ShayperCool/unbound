@@ -119,19 +119,20 @@ Editor and collection-validation methods.
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
 | Layout | 68 | 61 |
-| Interfaces | 65 | 12 |
+| Interfaces | 65 | 11 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 0 |
 | Lookup policies | 11 | 10 |
-| Total | 1,332 | 103 |
+| Total | 1,332 | 102 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes. After the declaration
 extras slice, Q516's slider drag slice removes BaseSlider's IValueField entry and its column
 layout slice ColumnLayout's IDisposable entry, its mixer slice the two mixer sub-asset marker
-entries, its text command slice TextElement's event-interest entry and its field interface
-slice BaseField's interface entry. With the one pipeline-restriction lookup entry outside Q410,
-the allow-list holds 104 entries.
+entries, its text command slice TextElement's event-interest entry, its field interface
+slice BaseField's interface entry and its capture event slice PointerCaptureEventBase's interface
+entry. With the one pipeline-restriction lookup entry outside Q410, the allow-list holds 103
+entries.
 
 Q410's enum slice copies obsolete constructor arguments, messages, error flags and
 accompanying annotations for 190 enum declarations. The attribute probe records
@@ -406,7 +407,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-GUI-serialized-payloads` | 0 | Done for the selected release by `guipayload`, with shared GUIStyle payloads across YAML, JSON and cloning; wrapper field annotations match the selected declarations. |
 | `Q410-ObjectIdentifier-serialization` | 1 | Empty composite eligibility that preserves initializer values during cloning. |
 | `Q410-UI-command-events` | 0 | Done by `textcommands`: text fields take command and IME events; the composition preview is covered by managed tests with a stand-in input method. |
-| `Q410-UI-interfaces` | 4 | Panel/group ownership, collection serialization callbacks, pointer capture and animations; the runtime panel interface is covered by `runtimepanels`, column binding notifications by `columnnotify`, hierarchy equality by `declarationextras`, the slider's value-field interface by `sliderdrag`, the column layout's lifetime by `columnlayout` and the base field's mixed-value, prefix-label and editing interfaces by `fieldinterfaces`. |
+| `Q410-UI-interfaces` | 3 | Panel/group ownership, collection serialization callbacks and animations; the runtime panel interface is covered by `runtimepanels`, column binding notifications by `columnnotify`, hierarchy equality by `declarationextras`, the slider's value-field interface by `sliderdrag`, the column layout's lifetime by `columnlayout` the base field's mixed-value, prefix-label and editing interfaces by `fieldinterfaces` and the capture events' internal pointer interface by `captureevents`. |
 | `Q410-XR-value-payloads` | 0 | Done for value identity, equality, hashing and capability storage by `xrvalues`; physical feature-provider queries remain unsupported and outside this payload slice. |
 | `Q410-animation-job-producer` | 1 | Animation producer payload and scheduling/lifetime controls. |
 | `Q410-asset-interface-adapters` | 0 | All asset types use the typed registry (`assetdispatch`, `assetadapters`, `audioadapters`, `manifestadapters`); the mixer group and snapshot declare the subasset-duplication marker (`mixerclone`). |
