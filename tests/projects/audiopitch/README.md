@@ -179,4 +179,4 @@ with 2,621,632 strict passing values per rate. A separate pose diagnostic record
 two-listener transitions without prescribing a universal simultaneous-listener
 order. The complete topology comparison retains its remaining Mono startup values.
 
-The [six-input voice profile](VOICE_INPUT.md) adds source callback streams, static/live pan and volume, source/group Distortion, pitch and one-shot controls in Stereo/Prologic. Separate encoding gates compare private 2-, 4-, 6- and 8-channel device references. Both profiles compare every value with the existing bounds; other six-input contexts remain explicitly queued.
+The [six-input voice profile](VOICE_INPUT.md) adds source callback streams, static/live pan and volume, source/group Distortion, pitch and one-shot controls in Stereo/Prologic, and the [six-layouts](SIX_LAYOUTS.md) profile gates the same clip through Mono, Quad, Surround, 5.1 and 7.1 output with balance. Separate encoding gates compare private 2-, 4-, 6- and 8-channel device references. Both profiles compare every value with the existing bounds; other six-input contexts remain explicitly queued.

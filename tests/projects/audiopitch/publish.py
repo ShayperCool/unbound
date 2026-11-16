@@ -28,7 +28,7 @@ p.add_argument('--listener-scripts', action='store_true', help='Publish listener
 p.add_argument('--wide', action='store_true', help='Publish the independent wide output-settings controls')
 p.add_argument('--wide-pcm', action='store_true', help='Publish the certified wide settings')
 p.add_argument('--schedule', action='store_true', help='Publish fractional scheduling and audio-update controls')
-p.add_argument('--six-layouts', action='store_true', help='Publish six-input output-layout and balance diagnostics, without engine PCM admission')
+p.add_argument('--six-layouts', action='store_true', help='Publish six-input output-layout and balance references')
 p.add_argument('--encoding', action='store_true', help='Publish six-input encoder availability diagnostics, without engine PCM admission')
 p.add_argument('--listener-chain', action='store_true', help='Publish listener component and contiguous script controls')
 p.add_argument('--listener-diagnostics', action='store_true', help='Publish separate listener topology diagnostics without engine admission')

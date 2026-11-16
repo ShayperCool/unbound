@@ -28,8 +28,12 @@ Rows are inputs 0 to 5, columns the layout's output channels, at pan 0:
 this capture context, not a documented mapping; physical drivers and other backends are
 unmeasured. Spatial six-input sources and streamed six-channel clips are not covered here.
 
-The engine still rejects six-input voices outside 2D Stereo/Prologic on this release (the
-start fails with the existing diagnostic), so this profile has no engine gate. Record two
+The engine implements this balance and these matrices for non-streamed 2D six-input voices
+on this release (`Compat` AudioOutputRules.six_channel_2d_voices). `context_run.py --profile
+six-layouts` gates every control at both rates: all 8,323,278 values per rate pass, with
+no failure in the strict comparison either (existing bounds, device PCM compared without
+a 16-bit step). Spatial and streamed six-input voices still fail to start with the existing
+diagnostic. Record two
 fresh projects per rate with `native.py --release 6000.0.71f1 --rate RATE --set six-layouts
 --work FRESH_CACHE_DIRECTORY`, then publish with `publish.py --six-layouts --capture FIRST/capture
 --repeat SECOND/capture`. The canonical reference is under
