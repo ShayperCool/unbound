@@ -156,7 +156,8 @@ namespace Unbound.Runtime
 
         static Object MissingPlaceholder(Type type, Object receiver)
         {
-            if (type == null || !typeof(Component).IsAssignableFrom(type)) return null;
+            // Script classes and interfaces answer null without building anything.
+            if (type == null || !typeof(Component).IsAssignableFrom(type) || !Placeholders.For(type)) return null;
             var go = receiver as GameObject ?? (receiver as Component)?.gameObject;
             return go is null ? null : Placeholders.Make(type, Placeholders.MissingComponent(type, go.name));
         }

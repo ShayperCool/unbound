@@ -17,9 +17,11 @@ namespace UnityEngine
         /// <summary>Whether the wrapper has no engine object behind it (and never had one).</summary>
         internal bool IsUncreated => m_InstanceID == 0 && m_Destroyed && Compat.UncreatedObjectWrappersMeasured;
 
+        /// <summary>A wrapper without an engine object throws as Unity's bindings do: its error
+        /// string's exception for an Editor placeholder, else a NullReferenceException.</summary>
         internal void ThrowIfUncreated()
         {
-            if (IsUncreated) throw new NullReferenceException();
+            if (IsUncreated) throw ObjectErrors.Receiver(this);
         }
 
         internal void PreserveCreationIdentity()

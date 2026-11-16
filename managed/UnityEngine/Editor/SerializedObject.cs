@@ -896,10 +896,10 @@ namespace UnityEditor
             get
             {
                 var n = N;
-                // A dead object (a placeholder or a destroyed object) reads as no reference, as
-                // the Editor's native data does.
+                // A placeholder (no engine object, instance id 0) reads as no reference, as the
+                // Editor's native data does; a destroyed object keeps its id.
                 if (n.PropertyType == SerializedPropertyType.ObjectReference)
-                    return SerializedTree.GetValue(n) is Object value && value != null ? value : null;
+                    return SerializedTree.GetValue(n) is Object value && !(value.m_InstanceID == 0 && value.m_Destroyed) ? value : null;
                 Unsupported("pptr");
                 return null;
             }

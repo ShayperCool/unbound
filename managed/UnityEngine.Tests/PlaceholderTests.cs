@@ -106,8 +106,30 @@ MonoBehaviour:
             {
                 using var so = new SerializedObject(sample);
                 Assert.True(ReferenceEquals(so.FindProperty("go").objectReferenceValue, null));
+                Assert.Equal(0, so.FindProperty("go").objectReferenceInstanceIDValue);
+                // A destroyed object keeps its id: tools find missing references by it.
+                var doomed = new GameObject("Doomed");
+                int id = doomed.GetInstanceID();
+                sample.go = doomed;
+                Object.DestroyImmediate(doomed);
+                using var after = new SerializedObject(sample);
+                Assert.Equal(id, after.FindProperty("go").objectReferenceInstanceIDValue);
             }
             finally { Object.DestroyImmediate(sample); }
+        }
+
+        [Fact]
+        public void AScriptClassMissBuildsNothing()
+        {
+            var go = new GameObject("Holder");
+            try
+            {
+                Lifetime.MissingComponent<ObjectErrorsTests.Probe>(null, go);
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int i = 0; i < 100; i++) Lifetime.MissingComponent<ObjectErrorsTests.Probe>(null, go);
+                Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+            finally { Object.DestroyImmediate(go); }
         }
 
         [Fact]
@@ -139,6 +161,8 @@ MonoBehaviour:
                 Assert.Null(Lifetime.MissingComponent<ObjectErrorsTests.Probe>(null, go));
                 Assert.Null(Lifetime.MissingComponent<INone>(null, go));
                 Assert.Null(Lifetime.MissingComponentNamed(null, go, "NoSuchComponent"));
+                // A placeholder's members reached without the call's check throw its own exception.
+                Assert.Throws<MissingComponentException>(() => rigidbody.name);
             }
             finally { Object.DestroyImmediate(go); }
         }
