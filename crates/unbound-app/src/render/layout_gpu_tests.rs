@@ -3,23 +3,37 @@
 //! the draw still binds the main group there (`compiled.rs`, `executor.rs`).
 use wgpu::util::DeviceExt;
 
-/// A device of the machine's primary backend (Metal, Vulkan; OpenGL where it is the only one),
-/// none without an adapter.
-fn device() -> Option<(wgpu::Device, wgpu::Queue)> {
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::all(),
-        ..wgpu::InstanceDescriptor::new_without_display_handle_from_env()
-    });
-    let adapter =
-        bevy::tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
-            .ok()?;
-    bevy::tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-        label: Some("layout test"),
-        required_features: wgpu::Features::empty(),
-        required_limits: adapter.limits(),
-        ..Default::default()
-    }))
-    .ok()
+/// A device of each of the machine's backends that has an adapter (Vulkan, Metal, OpenGL),
+/// with the backend's name.
+fn devices() -> Vec<(&'static str, wgpu::Device, wgpu::Queue)> {
+    let mut out = Vec::new();
+    for (name, backends) in [
+        ("Vulkan", wgpu::Backends::VULKAN),
+        ("Metal", wgpu::Backends::METAL),
+        ("OpenGL", wgpu::Backends::GL),
+    ] {
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends,
+            ..wgpu::InstanceDescriptor::new_without_display_handle_from_env()
+        });
+        let Some(adapter) = bevy::tasks::block_on(instance.enumerate_adapters(backends))
+            .into_iter()
+            .next()
+        else {
+            continue;
+        };
+        if let Ok((device, queue)) =
+            bevy::tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+                label: Some("layout test"),
+                required_features: wgpu::Features::empty(),
+                required_limits: adapter.limits(),
+                ..Default::default()
+            }))
+        {
+            out.push((name, device, queue));
+        }
+    }
+    out
 }
 
 fn texel(device: &wgpu::Device, queue: &wgpu::Queue, rgba: [u8; 4]) -> wgpu::TextureView {
@@ -84,19 +98,35 @@ const SHADER: &str = r#"
 "#;
 
 /// A program whose layout has no group 2 draws with the main group bound there, right after a
-/// program that reads it, in one pass: its groups 0, 1 and 3 are its own (the backends that
-/// number bindings across groups, Metal and OpenGL, number past the gap) and nothing fails
-/// validation.
+/// program that reads it, in one pass, on each of the machine's backends: its groups 0, 1 and 3
+/// are its own (the backends that number bindings across groups, Metal and OpenGL, number past
+/// the gap; on Vulkan they are set again after the gap, vendor/wgpu-sampler/PATCHES.md) and
+/// nothing fails validation.
 #[test]
 fn a_layout_without_the_main_group_draws_beside_one_with_it() {
-    let Some((device, queue)) = device() else {
+    let devices = devices();
+    if devices.is_empty() {
         eprintln!("skipped: no GPU adapter");
-        return;
-    };
-    if device.limits().max_storage_buffers_per_shader_stage == 0 {
-        eprintln!("skipped: the device binds no storage buffers");
-        return;
     }
+    for (backend, device, queue) in devices {
+        if device.limits().max_storage_buffers_per_shader_stage == 0 {
+            eprintln!("skipped on {backend}: the device binds no storage buffers");
+            continue;
+        }
+        let drawn = draw_beside(&device, &queue);
+        let expected = [64, 128, 191, 255];
+        assert!(
+            drawn
+                .iter()
+                .zip(expected)
+                .all(|(&d, e)| (d as i32 - e).abs() <= 1),
+            "{backend}: {drawn:?}"
+        );
+    }
+}
+
+/// The pixel the program without the main group drew, after the one with it drew beside it.
+fn draw_beside(device: &wgpu::Device, queue: &wgpu::Queue) -> [u8; 4] {
     let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: None,
@@ -204,8 +234,8 @@ fn a_layout_without_the_main_group_draws_beside_one_with_it() {
             entries: &entries,
         })
     };
-    let own_texture = texel(&device, &queue, [0, 128, 0, 0]);
-    let main_texture = texel(&device, &queue, [255, 0, 255, 255]);
+    let own_texture = texel(device, queue, [0, 128, 0, 0]);
+    let main_texture = texel(device, queue, [255, 0, 255, 255]);
     let uniform_group = bind(&uniform_layout, &[uniform.as_entire_binding()]);
     let texture_group = bind(
         &texture_layout,
@@ -300,13 +330,5 @@ fn a_layout_without_the_main_group_draws_beside_one_with_it() {
     // The main texture where its program drew; the uniform, own texture and buffer where the
     // program without the main group drew.
     assert_eq!(data[0..4], [255, 0, 255, 255]);
-    let drawn = &data[4..8];
-    let expected = [64, 128, 191, 255];
-    assert!(
-        drawn
-            .iter()
-            .zip(expected)
-            .all(|(&d, e)| (d as i32 - e).abs() <= 1),
-        "{drawn:?}"
-    );
+    data[4..8].try_into().unwrap()
 }
