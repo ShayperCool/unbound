@@ -557,7 +557,8 @@ public unsafe class BrgProbe : MonoBehaviour
     /// 6.5) and minus its square (about 43).</summary>
     static readonly float[] s_ApproximateDepths = { -50f, -20f, -10f, -5f, -2f, 0f, 3f, 1000000f, -1000000f };
     /// <summary>The orthographic camera's c5 depths, around minus the blue renderer's view depth (6),
-    /// minus its square (36) and minus the square of its distance (about 42 to 44).</summary>
+    /// minus its square (36) and minus the square of its distance (about 42 to 44); -5 and -7 do
+    /// not separate the view depth from the plain distance (6.46 to 6.59).</summary>
     static readonly float[] s_OrthographicDepths = { -50f, -44f, -40f, -37f, -35f, -10f, -7f, -5f, -2f };
 
     static readonly Color SortGreen = new Color(0.1f, 0.9f, 0.2f, 0.5f), SortRed = new Color(0.95f, 0.1f, 0.1f, 0.5f),

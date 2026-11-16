@@ -60,7 +60,8 @@ view type how many callbacks ran. Scenarios:
   `sorting_ortho`: the same through an orthographic camera framing the quads alike (size 6 tan of
   half the field of view), the c5 depths from -50 to -2: an unflagged command sorts as if minus its
   `sortingPosition` were the renderer's view depth, 6 (nearer from -5 up, farther at -7 and
-  below), the orthographic camera's own distance metric; flagged commands sort at their positions
+  below; the depths do not separate it from the plain distance, 6.46 to 6.59), the orthographic
+  camera's own distance metric (TransparencySortMode.Orthographic); flagged commands sort at their positions
   as through the perspective camera.
 
 - `split_masks`: the sun casts hard shadows in two cascades onto a large ground; four pillars
