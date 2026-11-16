@@ -134,6 +134,7 @@ namespace Unbound.Runtime
         {
             var instance = new DataInstance { Id = s_NextId++, Data = data, Position = position, Rotation = rotation };
             s_Data.Add(instance);
+            s_DataAdded++;
             // The links the bake generated come with the data, placed by its pose.
             foreach (var baked in data.m_Links)
             {
@@ -192,6 +193,7 @@ namespace Unbound.Runtime
 
         internal static void RemoveLink(int id)
         {
+            s_Bindings.Remove(id);
             if (s_Links.RemoveAll(l => l.Id == id) > 0) s_Dirty = true;
         }
 
@@ -256,6 +258,7 @@ namespace Unbound.Runtime
             Version++;
             s_Surfaces.Clear();
             HasHeightMeshes = false;
+            var pending = new List<(Surface Surface, DataInstance Instance, int Index, DtMeshData Placed, DtSurface MeshSurface)>();
             foreach (var instance in s_Data)
             {
                 if (instance.Data != null && instance.Data.m_HeightMeshes.Count > 0) HasHeightMeshes = true;
@@ -288,6 +291,15 @@ namespace Unbound.Runtime
                     var tile = instance.Data.m_Tiles[index];
                     var placed = NavMeshCarving.Carve(Place(tile, instance.Position, instance.Rotation), instance.Data.m_Settings, ObstacleSystem.Holes);
                     Attach(placed, meshSurface, tile.header);
+                    placed.ownerKey = OwnerKey(instance.Id, index);
+                    pending.Add((surface, instance, index, placed, meshSurface));
+                }
+            }
+            // Each point link's ends bind to the nearest polygon of all the surface's tiles.
+            BindLinks(pending);
+            foreach (var (surface, instance, index, placed, meshSurface) in pending)
+            {
+                {
                     AddLinks(surface, placed);
                     // Tiles of different data at the same place go on further layers.
                     surface.Mesh.CalcTileLoc(Center(placed.header), out int tx, out int ty);
@@ -390,6 +402,7 @@ namespace Unbound.Runtime
                     var tile = NavMeshCarving.Carve(Place(source, placed.Instance.Position, placed.Instance.Rotation),
                         settings, ObstacleSystem.Holes);
                     Attach(tile, placed.Surface, source.header);
+                    tile.ownerKey = OwnerKey(placed.Instance.Id, placed.Index);
                     AddLinks(surface, tile);
                     tile.header.x = old.data.header.x;
                     tile.header.y = old.data.header.y;
@@ -530,6 +543,156 @@ namespace Unbound.Runtime
         /// end lands in the tiles it lies over (DtNavMesh.LandTiles). The links whose end lies over
         /// this tile (or within the snap radius of it) land in it, and a bidirectional landing takes one of this tile's link slots for the way
         /// back, so this tile reserves slots for them too, whether or not it holds any start.</summary>
+        static long OwnerKey(int instanceId, int index) => ((long)instanceId << DtMeshData.OwnerDataShift) | (long)(index + 1);
+        static long DataOfKey(long ownerKey) => ownerKey >> DtMeshData.OwnerDataShift;
+
+        /// <summary>A point link's ends, each bound to the data instance holding the polygon nearest to
+        /// it among all the surface's tiles (within the snap radius across and the agent type's
+        /// climb up and down); 0 when none is near. Within that data an end attaches as before (to
+        /// each of its tiles it lies over). Wide links attach along their ends instead.</summary>
+        struct Binding
+        {
+            /// <summary>The data instance ids the ends are bound to (0: none).</summary>
+            internal long Start, End;
+            /// <summary>For an unbound start, the count of data additions it waits to be passed.</summary>
+            internal int StartWait;
+        }
+
+        static readonly Dictionary<int, Binding> s_Bindings = new Dictionary<int, Binding>();
+        /// <summary>How many times data has been added (a waiting start binds after the next).</summary>
+        static int s_DataAdded;
+        static readonly HashSet<int> s_LiveLinks = new HashSet<int>();
+        static readonly List<int> s_StaleBindings = new List<int>();
+
+        /// <summary>The bindings (Unity 6000.0.71f1: tests/projects/navpath `--profile layers`
+        /// rebind, addCloser and climb): an end binds to the nearest polygon within the agent
+        /// type's climb and keeps it while its data stays, also when nearer data comes. A start
+        /// whose data is removed attaches nowhere until data is next added, then binds again; an
+        /// end whose data is removed binds again at once to the nearest polygon left. An end with
+        /// no polygon within reach attaches nowhere. Adding the link again binds both anew.</summary>
+        static void BindLinks(List<(Surface Surface, DataInstance Instance, int Index, DtMeshData Placed, DtSurface MeshSurface)> pending)
+        {
+            if (!Compat.NavMeshLinkBindingMeasured) { s_Bindings.Clear(); return; }
+            // Links removed with their data drop their bindings.
+            if (s_Bindings.Count > s_Links.Count)
+            {
+                s_LiveLinks.Clear();
+                foreach (var link in s_Links) s_LiveLinks.Add(link.Id);
+                s_StaleBindings.Clear();
+                foreach (var id in s_Bindings.Keys) if (!s_LiveLinks.Contains(id)) s_StaleBindings.Add(id);
+                foreach (var id in s_StaleBindings) s_Bindings.Remove(id);
+            }
+            foreach (var link in s_Links)
+            {
+                if (link.Link.width > 0f) continue;
+                s_Surfaces.TryGetValue(link.Link.agentTypeID, out var surface);
+                float snap = surface != null ? SnapRadius(surface) : 0f;
+                float climb = NavMesh.GetSettingsByID(link.Link.agentTypeID).agentClimb;
+                if (!s_Bindings.TryGetValue(link.Id, out var b))
+                {
+                    long start = Nearest(pending, surface, link.Start, snap, climb);
+                    b = new Binding { Start = start, End = Nearest(pending, surface, link.End, snap, climb), StartWait = start == 0 ? s_DataAdded : -1 };
+                }
+                else
+                {
+                    if (b.Start != 0 && FindData((int)b.Start) == null) { b.Start = 0; b.StartWait = s_DataAdded; }
+                    if (b.Start == 0 && s_DataAdded > b.StartWait)
+                    {
+                        b.Start = Nearest(pending, surface, link.Start, snap, climb);
+                        b.StartWait = b.Start == 0 ? s_DataAdded : -1;
+                    }
+                    if (b.End == 0 || FindData((int)b.End) == null) b.End = Nearest(pending, surface, link.End, snap, climb);
+                }
+                s_Bindings[link.Id] = b;
+            }
+        }
+
+        static long Nearest(List<(Surface Surface, DataInstance Instance, int Index, DtMeshData Placed, DtSurface MeshSurface)> pending,
+            Surface surface, Vector3 point, float snap, float climb)
+        {
+            if (surface == null) return 0;
+            var p = new RcVec3f(point.x, point.y, point.z);
+            float best = float.MaxValue;
+            long key = 0;
+            foreach (var item in pending)
+            {
+                if (item.Surface != surface) continue;
+                var tile = item.Placed;
+                var h = tile.header;
+                if (p.X < h.bmin.X - snap || p.X > h.bmax.X + snap || p.Z < h.bmin.Z - snap || p.Z > h.bmax.Z + snap
+                    || p.Y < h.bmin.Y - climb || p.Y > h.bmax.Y + climb) continue;
+                float d = NearestPolyDistanceSqr(tile, p, snap, climb);
+                if (d < best) { best = d; key = DataOfKey(tile.ownerKey); }
+            }
+            return key;
+        }
+
+        /// <summary>The squared distance from p to the closest point of the tile's ground polygons
+        /// (their detail triangles) within the search box, or MaxValue.</summary>
+        static float NearestPolyDistanceSqr(DtMeshData tile, RcVec3f p, float snap, float climb)
+        {
+            float best = float.MaxValue;
+            for (int i = 0; i < tile.header.polyCount; i++)
+            {
+                var poly = tile.polys[i];
+                if (poly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_GROUND) continue;
+                int triCount, triBase, vertBase;
+                if (tile.detailMeshes != null && i < tile.detailMeshes.Length)
+                {
+                    var pd = tile.detailMeshes[i];
+                    triCount = pd.triCount; triBase = pd.triBase; vertBase = pd.vertBase;
+                }
+                else { triCount = 0; triBase = 0; vertBase = 0; }
+                RcVec3f Vert(int k)
+                {
+                    if (k < poly.vertCount) { int v = poly.verts[k] * 3; return new RcVec3f(tile.verts[v], tile.verts[v + 1], tile.verts[v + 2]); }
+                    int d = (vertBase + k - poly.vertCount) * 3;
+                    return new RcVec3f(tile.detailVerts[d], tile.detailVerts[d + 1], tile.detailVerts[d + 2]);
+                }
+                void Triangle(RcVec3f a, RcVec3f b, RcVec3f c)
+                {
+                    var q = ClosestOnTriangle(p, a, b, c);
+                    if (MathF.Abs(q.X - p.X) > snap || MathF.Abs(q.Z - p.Z) > snap || MathF.Abs(q.Y - p.Y) > climb) return;
+                    float d = RcVec3f.DistanceSquared(p, q);
+                    if (d < best) best = d;
+                }
+                if (triCount > 0)
+                    for (int t = 0; t < triCount; t++)
+                    {
+                        int ti = (triBase + t) * 4;
+                        Triangle(Vert(tile.detailTris[ti]), Vert(tile.detailTris[ti + 1]), Vert(tile.detailTris[ti + 2]));
+                    }
+                else
+                    for (int k = 2; k < poly.vertCount; k++) Triangle(Vert(0), Vert(k - 1), Vert(k));
+            }
+            return best;
+        }
+
+        /// <summary>The point of triangle abc closest to p (by its Voronoi regions).</summary>
+        static RcVec3f ClosestOnTriangle(RcVec3f p, RcVec3f a, RcVec3f b, RcVec3f c)
+        {
+            var ab = b - a;
+            var ac = c - a;
+            var ap = p - a;
+            float d1 = RcVec3f.Dot(ab, ap), d2 = RcVec3f.Dot(ac, ap);
+            if (d1 <= 0f && d2 <= 0f) return a;
+            var bp = p - b;
+            float d3 = RcVec3f.Dot(ab, bp), d4 = RcVec3f.Dot(ac, bp);
+            if (d3 >= 0f && d4 <= d3) return b;
+            float vc = d1 * d4 - d3 * d2;
+            if (vc <= 0f && d1 >= 0f && d3 <= 0f) return a + ab * (d1 / (d1 - d3));
+            var cp = p - c;
+            float d5 = RcVec3f.Dot(ab, cp), d6 = RcVec3f.Dot(ac, cp);
+            if (d6 >= 0f && d5 <= d6) return c;
+            float vb = d5 * d2 - d1 * d6;
+            if (vb <= 0f && d2 >= 0f && d6 <= 0f) return a + ac * (d2 / (d2 - d6));
+            float va = d3 * d6 - d5 * d4;
+            if (va <= 0f && d4 - d3 >= 0f && d5 - d6 >= 0f)
+                return b + (c - b) * ((d4 - d3) / (d4 - d3 + (d5 - d6)));
+            float denom = 1f / (va + vb + vc);
+            return a + ab * (vb * denom) + ac * (vc * denom);
+        }
+
         static void AddLinks(Surface surface, DtMeshData tile)
         {
             var h = tile.header;
@@ -545,6 +708,9 @@ namespace Unbound.Runtime
                 if (!(end.x < h.bmin.X - snap || end.x > h.bmax.X + snap || end.z < h.bmin.Z - snap || end.z > h.bmax.Z + snap)) ends++;
                 var start = link.Start;
                 if (start.x < h.bmin.X || start.x > h.bmax.X || start.z < h.bmin.Z || start.z > h.bmax.Z) continue;
+                // A bound point link starts in the data of its start's nearest polygon only (and
+                // nowhere while its start is unbound).
+                if (s_Bindings.TryGetValue(link.Id, out var bound) && bound.Start != DataOfKey(tile.ownerKey)) continue;
                 add.Add((link, start, end));
             }
             // Three link slots per end that can land here. DotRecast's own tile builder reserves two
@@ -588,6 +754,8 @@ namespace Unbound.Runtime
                     userId = link.Id,
                     costModifier = link.Link.costModifier >= 0f ? link.Link.costModifier : -1f,
                     halfWidth = HalfWidth(link, start, end),
+                    landKey = s_Bindings.TryGetValue(link.Id, out var b) ? (b.End != 0 ? b.End : -1) : 0,
+                    climb = s_Bindings.ContainsKey(link.Id) ? NavMesh.GetSettingsByID(link.Link.agentTypeID).agentClimb : 0f,
                 };
                 cons[tile.offMeshCons.Length + i] = con;
             }

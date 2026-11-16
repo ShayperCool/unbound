@@ -25,6 +25,13 @@ namespace DotRecast.Detour
     internal class DtMeshData
     {
         public DtMeshHeader header; //< The tile header.
+
+        /// Unbound: the data instance and tile index this placed tile came from (0: none), the key
+        /// link ends are bound by.
+        public long ownerKey;
+
+        /// Unbound: the owner key's data instance part (ownerKey >> this).
+        public const int OwnerDataShift = 20;
         public DtPoly[] polys; //< The tile polygons. [Size: dtMeshHeader::polyCount]
         public float[] verts; //< The tile vertices. [(x, y, z) * dtMeshHeader::vertCount] 
         public DtPolyDetail[] detailMeshes; //< The tile's detail sub-meshes. [Size: dtMeshHeader::detailMeshCount]

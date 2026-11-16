@@ -890,6 +890,15 @@ namespace DotRecast.Detour
 
         /// Unbound: connects the off-mesh connections of a newly added tile to the tiles their ends
         /// lie over, and the connections of other tiles whose ends lie over it.
+        /// Unbound: whether a connection's end may land in this tile (a bound end lands in its tile
+        /// only).
+        /// Unbound: how far up or down a connection's ends attach: its own reach when bound (the
+        /// agent type's climb), else the tile's.
+        static float ClimbOf(DtOffMeshConnection con, DtMeshTile tile) => con.climb > 0f ? con.climb : tile.data.header.walkableClimb;
+
+        static bool LandsIn(DtOffMeshConnection con, DtMeshTile land) =>
+            con.landKey == 0 || con.landKey == land.data.ownerKey >> DtMeshData.OwnerDataShift;
+
         void ConnectOffMeshEnds(DtMeshTile tile)
         {
             for (int c = 0; c < tile.data.header.offMeshConCount; ++c)
@@ -904,6 +913,8 @@ namespace DotRecast.Detour
                     {
                         // A wide start is attached in its own tile by BaseOffMeshLinks.
                         if (end == 0 && land == tile)
+                            continue;
+                        if (end == 1 && !LandsIn(con, land))
                             continue;
                         ConnectOffMeshEnd(land, tile, con, end);
                     }
@@ -920,7 +931,7 @@ namespace DotRecast.Detour
                     {
                         if (end == 0 && !con.IsWide)
                             break;
-                        if (EndOverTile(con, end, tile))
+                        if (EndOverTile(con, end, tile) && (end != 1 || LandsIn(con, tile)))
                             ConnectOffMeshEnd(tile, holder, con, end);
                     }
                 }
@@ -1140,7 +1151,7 @@ namespace DotRecast.Detour
             var ext = new RcVec3f()
             {
                 X = targetCon.rad,
-                Y = target.data.header.walkableClimb,
+                Y = ClimbOf(targetCon, target),
                 Z = targetCon.rad
             };
 
@@ -1161,7 +1172,7 @@ namespace DotRecast.Detour
             }
 
             // Unbound: and within the climb in height (Unity's; measured, tests/projects/navpath link.snap).
-            if (MathF.Abs(nearestPt.Y - p.Y) > target.data.header.walkableClimb)
+            if (MathF.Abs(nearestPt.Y - p.Y) > ClimbOf(targetCon, target))
             {
                 return;
             }
@@ -1409,7 +1420,7 @@ namespace DotRecast.Detour
                 var ext = new RcVec3f()
                 {
                     X = con.rad,
-                    Y = tile.data.header.walkableClimb,
+                    Y = ClimbOf(con, tile),
                     Z = con.rad,
                 };
 
@@ -1429,7 +1440,7 @@ namespace DotRecast.Detour
                 }
 
                 // Unbound: and within the climb in height (Unity's; measured, tests/projects/navpath link.snap).
-                if (MathF.Abs(nearestPt.Y - p[0].Y) > tile.data.header.walkableClimb)
+                if (MathF.Abs(nearestPt.Y - p[0].Y) > ClimbOf(con, tile))
                 {
                     continue;
                 }

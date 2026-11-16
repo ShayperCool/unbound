@@ -46,6 +46,13 @@ namespace DotRecast.Detour
         /// The id of the offmesh connection. (User assigned when the navigation mesh is built.)
         public int userId;
 
+        /// Unbound: the data instance (owner key's data part) whose tiles the connection's end lands
+        /// in (0: any tile over it, as Detour does; -1: none).
+        public long landKey;
+
+        /// Unbound: how far up or down the connection's ends attach (0: the tile's walkable climb).
+        public float climb;
+
         /// Unbound: the cost per metre of crossing the connection in place of its area's cost; negative:
         /// the area's cost (NavMeshLinkData.costModifier, Unity's).
         public float costModifier = -1f;
