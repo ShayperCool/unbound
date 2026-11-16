@@ -516,8 +516,9 @@ namespace UnityEngine
         {
             m_LastUsedFrame = Time.frameCount;
             // Created, unless it scales and its scaled size changed since: then it is remade at
-            // its new size, as the Editor's Metal device resizes existing textures (the content
-            // of the remade one is not kept).
+            // its new size, as the Editor's Metal device resizes existing textures. The renderer
+            // keeps the full-size image meanwhile and has it again back at full size; a scaled
+            // image starts cleared (the Editor's reads what the memory it shares held).
             if (m_Created && (!m_Descriptor.useDynamicScale || (Math.Max(1, ScaledWidth) == m_AllocatedWidth && Math.Max(1, ScaledHeight) == m_AllocatedHeight)))
                 return m_NativeHandle;
             if (m_Descriptor.dimension == TextureDimension.Tex3D && depth > 0)

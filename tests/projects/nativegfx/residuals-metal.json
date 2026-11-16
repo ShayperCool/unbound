@@ -48,13 +48,10 @@
   "array.decode.PVRTC_RGBA2",
   "array.decode.PVRTC_RGBA4"
  ],
- "A dynamically scaled render texture's content across changes of scale where something was written at another scale: sampled at 0.5, a full-size image reads garbled (dynres.content.down); blitted at 0.5, a pattern reads uniform red at full size (dynres.content.up); dynres.reset.texels holds the last clear. No rule found here explains these (hypothesis, unconfirmed: one allocation seen at each size, though the native texture's reported size changes with the scale); Unbound remakes the texture at each scale, cleared. Recorded, not modelled": [
+ "A dynamically scaled render texture's content across changes of scale where something was written at another scale, or a full-size image read scaled: sampled at 0.5, a full-size image reads garbled (dynres.content.down); blitted at 0.5, a pattern reads uniform red at full size (dynres.content.up); dynres.reset.texels holds the last clear made at another scale. The Manual says a scaled target uses a portion of the full-resolution one; no rule found here explains which texels these read. Unbound keeps the full-size image while the texture is scaled (unchanged by drawing at a scale: dynres.content.back, .twice and .explicit match) and starts each scaled image cleared. Recorded, not modelled": [
   "dynres.reset.texels",
   "dynres.content.down",
   "dynres.content.up"
- ],
- "A full-size image of a dynamically scaled render texture after a round trip through 0.5 with nothing written at 0.5: the macOS Editor's is whole again (dynres.content.back); Unbound remakes the texture at each scale and reads it cleared. Queued (keeping the full-size images across a round trip)": [
-  "dynres.content.back"
  ],
  "A Graphics.Blit into a dynamically scaled render texture with a shader writing _ScreenParams (Shaders/DynamicParams.shader pass 2), read back by sampling: the macOS Editor's image holds zero, Unbound's draw sees its scaled 8x4 (a camera's command buffer draw sees 8x4 in both, cameraparams.sampled). A Blit into a scaled texture does draw there (dynres.content.up: its source's red), so 'nothing drawn' is unlikely; zero screen parameters in a Blit is the remaining reading, unconfirmed. Queued": [
   "dynres.next.blitparams.sampled",

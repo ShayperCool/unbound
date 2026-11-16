@@ -612,6 +612,11 @@ pub struct UnityRenderer {
     /// Zeros standing in for channels 4..7 of meshes without them.
     zero_extra: Option<wgpu::Buffer>,
     textures: HashMap<u64, GpuTexture>,
+    /// The full-size allocations of dynamically scaled render textures while they are scaled,
+    /// with their pending automatic mips: the Editor keeps a scaled texture's full-resolution
+    /// target and draws into a portion of it, so a texture back at full size has the image it
+    /// had (tests/projects/nativegfx `dynres.content.back`).
+    full_resolution: HashMap<u64, (GpuTexture, Option<wgpu::TextureFormat>)>,
     texture_mip_biases: HashMap<u64, f32>,
     defaults: HashMap<&'static str, GpuTexture>,
     /// Default textures of other dimensions (cube, 3D, array): views by (dimension, default).
@@ -773,6 +778,7 @@ impl UnityRenderer {
             pre_draw: Vec::new(),
             pre_copies: Vec::new(),
             feedback_copies: HashMap::default(),
+            full_resolution: HashMap::default(),
             depth_reads: HashMap::default(),
             target_handles: (0, 0),
             screen_stand_in: 0,
@@ -1079,12 +1085,35 @@ impl UnityRenderer {
                 // Stored in the screen's channel order only where the screen is blue first.
                 texture.screen_order &= self.conventions.screen_bgra;
                 self.generation += 1;
-                let old = self.textures.remove(&handle);
+                let mut old = self.textures.remove(&handle);
                 let previous = old
                     .as_ref()
                     .map(|gpu| (gpu.texture.clone(), gpu.sampler_key));
+                let mut pending = None;
+                match (&old, texture.logical) {
+                    // Scaled from its full size: that allocation is kept, the scaled one new.
+                    (Some(full), Some(logical))
+                        if full.logical.is_none() && (full.width, full.height) == logical =>
+                    {
+                        let full = old.take().expect("matched");
+                        let mips = self.pending_mips.get(&full.texture).copied();
+                        self.full_resolution.insert(handle, (full, mips));
+                    }
+                    // Back at its full size: the kept allocation, whose shape the upload checks.
+                    (_, None) => {
+                        if let Some((full, mips)) = self.full_resolution.remove(&handle) {
+                            pending = mips.map(|format| (full.texture.clone(), format));
+                            old = Some(full);
+                        }
+                    }
+                    _ => {}
+                }
                 let gpu =
                     resources::upload_texture(&device, &self.queue, old, &texture, self.generation);
+                // Its automatic mips still pending when it was scaled, if it is the one kept.
+                if let Some((kept, format)) = pending.filter(|(kept, _)| *kept == gpu.texture) {
+                    self.pending_mips.insert(kept, format);
+                }
                 self.install_texture(handle, gpu, previous, &texture);
             }
             Upload::ReleaseTexture(handle) => {
@@ -1105,6 +1134,7 @@ impl UnityRenderer {
                 self.bit_views.retain(|(h, _), _| *h != handle);
                 self.depth_main_groups.retain(|(h, _), _| *h != handle);
                 self.feedback_copies.remove(&handle);
+                self.full_resolution.remove(&handle);
             }
             Upload::TextureMipBias(handle, bias) => {
                 self.texture_mip_biases.insert(handle, bias);
