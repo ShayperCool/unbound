@@ -7462,6 +7462,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.BoundsField+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.BoundsField+UxmlTraits"
     },
     {
@@ -7469,6 +7475,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.BoundsIntField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.BoundsIntField+UxmlFactory"
     },
     {
       "category": "class",
@@ -7486,7 +7498,19 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.Box+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.Button"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.Button+UxmlFactory"
     },
     {
       "category": "class",
@@ -7660,6 +7684,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.DoubleField+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.DoubleField+UxmlTraits"
     },
     {
@@ -7714,6 +7744,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.DropdownField+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.DropdownField+UxmlTraits"
     },
     {
@@ -7763,6 +7799,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.EnumField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.EnumField+UxmlFactory"
     },
     {
       "category": "class",
@@ -7834,6 +7876,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.FloatField+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.FloatField+UxmlTraits"
     },
     {
@@ -7888,6 +7936,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.Foldout+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.Foldout+UxmlTraits"
     },
     {
@@ -7918,6 +7972,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.GroupBox+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.GroupBox+UxmlTraits"
     },
     {
@@ -7936,6 +7996,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.Hash128Field+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.Hash128Field+UxmlTraits"
     },
     {
@@ -7943,6 +8009,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.IMGUIContainer"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.IMGUIContainer+UxmlFactory"
     },
     {
       "category": "class",
@@ -7972,6 +8044,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.Image+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.Image+UxmlTraits"
     },
     {
@@ -7985,6 +8063,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.IntegerField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.IntegerField+UxmlFactory"
     },
     {
       "category": "class",
@@ -8023,6 +8107,18 @@
       "type": "UnityEngine.UIElements.Label"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.Label+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.Label+UxmlTraits"
+    },
+    {
       "category": "struct",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
@@ -8033,6 +8129,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.ListView"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.ListView+UxmlFactory"
     },
     {
       "category": "class",
@@ -8051,6 +8153,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.LongField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.LongField+UxmlFactory"
     },
     {
       "category": "class",
@@ -8087,6 +8195,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.MinMaxSlider"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.MinMaxSlider+UxmlFactory"
     },
     {
       "category": "class",
@@ -8200,6 +8314,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.MultiColumnListView+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.MultiColumnListView+UxmlTraits"
     },
     {
@@ -8213,6 +8333,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.MultiColumnTreeView"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.MultiColumnTreeView+UxmlFactory"
     },
     {
       "category": "class",
@@ -8392,7 +8518,19 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.ProgressBar+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.RadioButton"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.RadioButton+UxmlFactory"
     },
     {
       "category": "class",
@@ -8410,6 +8548,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.RadioButtonGroup+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.RadioButtonGroup+UxmlTraits"
     },
     {
@@ -8417,6 +8561,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.RectField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.RectField+UxmlFactory"
     },
     {
       "category": "class",
@@ -8434,6 +8584,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.RectIntField+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.RectIntField+UxmlTraits"
     },
     {
@@ -8441,6 +8597,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.RepeatButton"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.RepeatButton+UxmlFactory"
     },
     {
       "category": "class",
@@ -8476,6 +8638,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.ScrollView+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.ScrollView+UxmlTraits"
     },
     {
@@ -8483,6 +8651,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.Scroller"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.Scroller+UxmlFactory"
     },
     {
       "category": "class",
@@ -8506,6 +8680,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.Slider+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.Slider+UxmlTraits"
     },
     {
@@ -8513,6 +8693,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.SliderInt"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.SliderInt+UxmlFactory"
     },
     {
       "category": "class",
@@ -8680,6 +8866,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.Tab+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.Tab+UxmlTraits"
     },
     {
@@ -8687,6 +8879,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.TabView"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.TabView+UxmlFactory"
     },
     {
       "category": "class",
@@ -8704,6 +8902,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.TemplateContainer+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.TemplateContainer+UxmlTraits"
     },
     {
@@ -8716,6 +8920,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.TextElement+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.TextElement+UxmlTraits"
     },
     {
@@ -8723,6 +8933,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.TextField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.TextField+UxmlFactory"
     },
     {
       "category": "class",
@@ -8788,6 +9004,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.Toggle+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.Toggle+UxmlTraits"
     },
     {
@@ -8843,6 +9065,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.TreeView"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.TreeView+UxmlFactory"
     },
     {
       "category": "class",
@@ -8920,6 +9148,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.UnsignedIntegerField+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.UnsignedIntegerField+UxmlTraits"
     },
     {
@@ -8927,6 +9161,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.UnsignedLongField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.UnsignedLongField+UxmlFactory"
     },
     {
       "category": "class",
@@ -9118,6 +9358,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.Vector2Field+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.Vector2Field+UxmlTraits"
     },
     {
@@ -9125,6 +9371,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.Vector2IntField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.Vector2IntField+UxmlFactory"
     },
     {
       "category": "class",
@@ -9142,6 +9394,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.Vector3Field+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.Vector3Field+UxmlTraits"
     },
     {
@@ -9154,6 +9412,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.Vector3IntField+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.Vector3IntField+UxmlTraits"
     },
     {
@@ -9161,6 +9425,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.Vector4Field"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.Vector4Field+UxmlFactory"
     },
     {
       "category": "class",
