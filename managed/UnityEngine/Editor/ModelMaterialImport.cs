@@ -232,7 +232,8 @@ namespace Unbound.Runtime
             m.SetFloat("_Glossiness", 0f);
             // An opaque material with one of these textures is tagged Opaque (measured with URP's
             // Lit, whose untextured legacy materials read no RenderType; Standard reads Opaque
-            // either way).
+            // either way). Each measured case also had a normal map or emission: a diffuse
+            // texture alone is unmeasured.
             if (textured && !transparentMaterial) m.SetOverrideTag("RenderType", "Opaque");
         }
 
@@ -265,7 +266,7 @@ namespace Unbound.Runtime
         /// roughness and metallic are written as they are, zero when the file has none; the
         /// opacity, mask threshold and UV offset (V negated) and scale only when the file has them.
         /// No blend mode, keyword, queue or GI flag is set. False when the pipeline has no such
-        /// shader.
+        /// shader: the material then takes the default shader like the others (unmeasured).
         /// </summary>
         static bool PipelineAutodeskInteractive(MaterialDescription d, Material m, UnityEngine.Rendering.RenderPipelineAsset pipeline)
         {

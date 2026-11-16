@@ -314,6 +314,8 @@ residuals: OnRenderObject handler order 24 and batch activation order 11 (orders
 open), GetTransformedBy rotation 21, exception text 4 and JSON number spelling 2. The scene-id
 sign pair counted above is closed. The rotation keys come from the Editor's Mono runtime
 evaluating `Quaternion` products with double intermediates: recomputing the probe's own products
-in float32 gives Unbound's bits and with double intermediates the Editor's. Unbound keeps script
-arithmetic in single precision by default (`docs/COMPATIBILITY_GAPS.md`, row "Script float
-arithmetic in single precision"). Anything beyond these 62 pairs is a regression.
+in float32 gives Unbound's bits and with double intermediates the Editor's. Unbound's own
+`Quaternion` operator stays single precision: the opt-in wide script arithmetic
+(`docs/COMPATIBILITY_GAPS.md`, row "Script float arithmetic in single precision") rewrites game
+assemblies only and would not change these keys, so keeping them is a policy choice, not a
+missing switch. Anything beyond these 62 pairs is a regression.

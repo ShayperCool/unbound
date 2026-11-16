@@ -144,19 +144,12 @@ and [execution order](https://docs.unity3d.com/6000.0/Documentation/Manual/Execu
 do not guarantee an order between these instances. The raw sequences remain
 strictly compared; no global wake sort is added.
 
-The 21 prefab-field differences came from the SerializedObject property tree (all 6280
-prefab fields match on main e541da0ea).
-Its GameObject view omits components, icon, navigation layer and static editor
-flags. Its Transform view omits proportional-scale state, children and the
-Euler-angle hint, including that hint's default overrides. BoxCollider's own
-fields are absent. This affects the engine-property bindings shared by editor
-queries, beyond the callback recorder.
-[SerializedObject](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SerializedObject.html)
-provides buffered reads and writes applied through ApplyModifiedProperties.
-The follow-up must bind real values and preserve authored metadata, with
-read/write and structural-array controls. A property-name-only patch would
-hide the missing behavior. This remains a functional gap, with all 21 strict
-field differences retained.
+Earlier, 21 prefab-field differences came from the SerializedObject property
+tree: its GameObject view omitted components, icon, navigation layer and static
+editor flags, its Transform view proportional-scale state, children and the
+Euler-angle hint, and BoxCollider's own fields were absent. Those bindings have
+since been implemented: on main e541da0ea all 6280 prefab fields of the 255
+records match, so a prefab-field difference is now a regression.
 
 ## Sheriff status (main e541da0ea, 2026-11-16)
 

@@ -135,5 +135,7 @@ recording stubs before their writes to reproduce the former process-start race.
 30 of 555 values differ, all recorded in `docs/COMPATIBILITY_GAPS.md` (appfacts row and the
 rows it names): stack-trace text and byte counts (10), component/GameObject memory (11),
 materials (2), sprites (1), one-sample clips (2) and texture size/creation values (4). Most
-values are facts of the Linux capture's machine; on macOS many more differ by design. Any
-change in these 30 on Linux is a regression.
+values are facts of the Linux capture's machine; on macOS many more differ by design. Four
+stack byte counts also follow the length of the project path the probe runs from, so their
+values change with the checkout; a new failing key on Linux, or a change outside those four
+counts, is a regression.

@@ -49,7 +49,9 @@ GI flags), and slots without a material get URP's Lit.mat. The legacy importer m
 materials with URP's shaders from the start (Lit's own defaults, not Standard's), sets the main
 colour and texture beside `_Color`/`_MainTex`, leaves Lit's blend values alone, tags an opaque
 material with a diffuse, normal or emission texture Opaque (the untextured ones read no
-RenderType), and gives Autodesk Interactive materials URP's Autodesk Interactive shaders with the
+RenderType; every measured textured one also has a normal map or emission, so a material with
+only a diffuse texture is unmeasured, as is a pipeline without Autodesk Interactive shaders,
+whose Autodesk Interactive materials Unbound converts like the others), and gives Autodesk Interactive materials URP's Autodesk Interactive shaders with the
 file's values (base colour, emission, roughness and metallic zero when absent; opacity, mask
 threshold, UV offset with V negated and UV scale when present), with no blend mode, keyword,
 queue or GI flag and no ShaderGUI validation.
