@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/collectionjson/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Controls/ListView.cs",
+    "managed/UnityEngine/UIElements/Controls/TreeView.cs",
+    "managed/UnityEngine/Core/JsonUtility.cs"
+  ]
+}

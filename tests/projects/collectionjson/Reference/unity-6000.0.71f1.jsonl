@@ -1,0 +1,26 @@
+{"key":"toJson.selection","value":"\"m_SelectedIds\":[2,5]"}
+{"key":"toJson.state","value":"ids [2,5] indices [2,5] index 2 item i2 items 2 events 1/1"}
+{"key":"direct.state","value":"ids [2,5] indices [2,5] index 2 item i2 items 2 events 0/0"}
+{"key":"direct.before","value":"ids [2,5] indices [2,5] index 2 item i2 items 2 events 0/0"}
+{"key":"overwrite.state","value":"ids [7,3] indices [7,3] index 7 item i7 items 2 events 1/1"}
+{"key":"overwrite.marked","value":"rows 10 marked [i3,i7] ids [7,3] indices [7,3] index 7 item i7 items 2 events 0/0"}
+{"key":"overwrite.toJson","value":"\"m_SelectedIds\":[7,3]"}
+{"key":"overwrite.addSelected","value":"ids [7,3] indices [7,3] index 7 item i7 items 2 events 1/1"}
+{"key":"overwrite.addPrevious","value":"ids [7,3,2] indices [7,3,2] index 7 item i7 items 3 events 1/1"}
+{"key":"overwrite.remove","value":"ids [7,2] indices [7,2] index 7 item i7 items 2 events 1/1"}
+{"key":"overwrite.clear","value":"ids [] indices [] index -1 item <null> items 0 events 1/1"}
+{"key":"missing.state","value":"ids [42,4] indices [42,4] index 42 item <null> items 2 events 1/1"}
+{"key":"empty.state","value":"ids [] indices [] index -1 item <null> items 0 events 1/1"}
+{"key":"empty.marked","value":"rows 10 marked [] ids [] indices [] index -1 item <null> items 0 events 0/0"}
+{"key":"noSource.state","value":"ids [1] indices [] index -1 item <null> items 0 events 0/0 json \"m_SelectedIds\":[1]"}
+{"key":"noSource.sourceSet","value":"ids [1] indices [1] index 1 item n1 items 1 events 1/1"}
+{"key":"detached.state","value":"ids [6] indices [6] index 6 item i6 items 1 events 1/1"}
+{"key":"detached.attached","value":"rows 10 marked [i6] ids [6] indices [6] index 6 item i6 items 1 events 0/0"}
+{"key":"detached.later","value":"rows 10 marked [i6] ids [6] indices [6] index 6 item i6 items 1 events 0/0"}
+{"key":"detachedControl.state","value":"ids [6] indices [6] index 6 item i6 items 1 events 1/1"}
+{"key":"detachedControl.attached","value":"rows 10 marked [i6] ids [6] indices [6] index 6 item i6 items 1 events 0/0"}
+{"key":"detachedControl.later","value":"rows 10 marked [i6] ids [6] indices [6] index 6 item i6 items 1 events 0/0"}
+{"key":"tree.state","value":"ids [20,11] indices [1] index 1 item b items 1 events 1/1"}
+{"key":"tree.marked","value":"rows 2 marked [t20] ids [20,11] indices [1] index 1 item b items 1 events 0/0"}
+{"key":"tree.expanded","value":"rows 4 marked [t11,t20] ids [20,11] indices [3,1] index 3 item b items 2 events 1/1"}
+{"key":"complete","value":"1"}
