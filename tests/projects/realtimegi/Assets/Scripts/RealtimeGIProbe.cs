@@ -433,9 +433,7 @@ public class RealtimeGIProbe : MonoBehaviour
             // a dark ambient color, so that parts of the lightmap receive next to nothing.
             if (LightmapSettings.lightmapsMode == LightmapsMode.CombinedDirectional)
             {
-                s.point.enabled = false;
-                DynamicGI.SetEmissive(s.panel, Color.black);
-                RenderSettings.ambientLight = new Color(0.02f, 0.025f, 0.03f);
+                Dim(s);
                 yield return Converge();
                 Capture(label + "-dim", s);
             }
@@ -955,9 +953,7 @@ public class RealtimeGIProbe : MonoBehaviour
         s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
         yield return Converge();
         Capture("roomdirectional-moved", s, frames);
-        s.point.enabled = false;
-        DynamicGI.SetEmissive(s.panel, Color.black);
-        RenderSettings.ambientLight = new Color(0.02f, 0.025f, 0.03f);
+        Dim(s);
         yield return Converge();
         Capture("roomdirectional-dim", s, frames);
     }
@@ -999,6 +995,15 @@ public class RealtimeGIProbe : MonoBehaviour
             thrown = e.GetType().Name;
         }
         return "\"" + thrown.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", " ") + "\"";
+    }
+
+    /// <summary>Hardly any light for the directional cases: no light on, the panel's emission
+    /// black and a dark ambient color.</summary>
+    static void Dim(RealtimeGIScene s)
+    {
+        s.point.enabled = false;
+        DynamicGI.SetEmissive(s.panel, Color.black);
+        RenderSettings.ambientLight = new Color(0.02f, 0.025f, 0.03f);
     }
 
     static Light Sun(LightShadows shadows, float x, float y)
