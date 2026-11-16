@@ -117,6 +117,23 @@ public static class EventAuthoring
         SetVector(dots.Init, "color", new Vector3(1f, 0.9f, 0.3f));
         Save(always);
 
+        // Two that move right and each spawn one a step, into a system with room to spare
+        // whose particles fly off at random: what is spawned, and in which step, shows.
+        var roomy = NewGraph("EventAlwaysRoom");
+        var pair = Quads(roomy, 4, 0.2f, new Vector3(0.4f, 0.8f, 1f));
+        Burst(pair.Spawn, 2f);
+        SetRandom(pair.Init, "position", new Vector3(-1.3f, -0.8f, 0f), new Vector3(-1.1f, 0.8f, 0f));
+        SetVector(pair.Init, "velocity", new Vector3(1f, 0f, 0f));
+        var everyStep = Trigger(pair.Update, TriggerEvent.Mode.Always, 1u);
+        var flying = Child<VFXPlanarPrimitiveOutput>(roomy, everyStep, 512);
+        flying.Output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        Inherit(flying.Init, "position");
+        SetRandom(flying.Init, "velocity", new Vector3(-1f, -2f, 0f), new Vector3(1f, 2f, 0f));
+        Set(flying.Init, "lifetime", 0.4f);
+        Set(flying.Init, "size", 0.06f);
+        SetVector(flying.Init, "color", new Vector3(1f, 0.9f, 0.3f));
+        Save(roomy);
+
         // Three that move and spawn twenty a second each, which stay where they were spawned.
         var rate = NewGraph("EventRate");
         var leaders = Quads(rate, 4, 0.2f, new Vector3(0.6f, 1f, 0.6f));

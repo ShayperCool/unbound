@@ -24,7 +24,7 @@ public sealed class EventProbe : MonoBehaviour
     readonly List<Stage> m_Stages = new List<Stage>();
     readonly List<string> m_Names = new List<string>();
     Texture2D m_Shot;
-    Stage m_Reinit, m_Stopped, m_KeepReinit, m_Toggled, m_KeepToggled, m_Paused;
+    Stage m_Reinit, m_Stopped, m_KeepReinit, m_Toggled, m_KeepToggled, m_Paused, m_PausedRoom;
     int m_Frame;
     bool m_Done;
 
@@ -84,6 +84,9 @@ public sealed class EventProbe : MonoBehaviour
             m_KeepToggled = Draw("keep toggled", "EventKeep", 40, 44, 50, 60, 66);
             // One paused from frame 20 to frame 36, whose particles spawn one a step each.
             m_Paused = Draw("paused", "EventAlways", 10, 19, 30, 35, 40, 50);
+            // The same pause where the spawned system has room and its particles show when
+            // they were spawned: whether a paused effect's particles trigger.
+            m_PausedRoom = Draw("paused room", "EventAlwaysRoom", 10, 19, 21, 30, 35, 37, 40, 50);
             foreach (var stage in m_Stages)
             {
                 m_Names.Clear();
@@ -180,14 +183,14 @@ public sealed class EventProbe : MonoBehaviour
         m_Frame++;
         switch (m_Frame)
         {
-            case 20: m_Paused.Effect.pause = true; break;
+            case 20: m_Paused.Effect.pause = m_PausedRoom.Effect.pause = true; break;
             case 30:
                 m_Reinit.Effect.Reinit();
                 m_Stopped.Effect.Stop();
                 m_Toggled.Effect.gameObject.SetActive(false);
                 break;
             case 34: m_Toggled.Effect.gameObject.SetActive(true); break;
-            case 36: m_Paused.Effect.pause = false; break;
+            case 36: m_Paused.Effect.pause = m_PausedRoom.Effect.pause = false; break;
             case 45:
                 m_KeepReinit.Effect.Reinit();
                 m_KeepToggled.Effect.gameObject.SetActive(false);

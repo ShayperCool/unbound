@@ -21,6 +21,8 @@ spawned systems take their particles' position from the particle that spawned th
   sparks with velocities drawn at random.
 - `EventAlways`: four particles that each spawn one a step, into a system of 32 whose
   particles live three tenths of a second: more are asked for than it has room for.
+  `EventAlwaysRoom`: two particles that each spawn one a step into a system with room to spare,
+  whose particles fly off with velocities drawn at random.
 - `EventRate`: three particles that each spawn twenty a second (`Over Time`).
   `EventRateFast`: a hundred and fifty a second each, with the block's `Clamp To One` off:
   several events of one particle in a step.
@@ -39,8 +41,9 @@ spawned systems take their particles' position from the particle that spawned th
 
 `Assets/Scripts/EventProbe.cs` gives each control an effect of a graph (seed 11) and an
 orthographic camera rendering into a 64x64 texture. At the frames named it saves the image
-`draw-<control>-f<frame>.png`; at a fixed list of frames (the first ones, around frame 30 and
-around the alive counts' second answer, frame 63) a row `sim/<control>/f<frame>`: the effect's
+`draw-<control>-f<frame>.png`; at a fixed list of frames (the first ones, around what the probe
+does at frames 30 to 36 and 45 to 50, and around the alive counts' second answer, frame 63) a
+row `sim/<control>/f<frame>`: the effect's
 alive count, whether it is culled and awake, and each particle system's alive count, capacity
 and whether it sleeps. `systems/<control>` lists the systems' names.
 
@@ -56,8 +59,11 @@ and whether it sleeps. `systems/<control>` lists the systems' names.
   frame 45 to 48, once its spawned system has filled: the system empties and fills again.
 - `stopped`: `EventRate` with `Stop()` called at frame 30: the spawner stops, the particles
   that spawn go on living and spawning.
-- `paused`: `EventAlways` paused from frame 20 to frame 36: while paused nothing is spawned
-  and nothing ages (frames 19, 30 and 35 show the same).
+- `paused`, `paused room`: `EventAlways` and `EventAlwaysRoom` paused from frame 20 to frame
+  36. While paused nothing ages and nothing is spawned: the images of frames 19, 30 and 35 are
+  the same (and 21 of `paused room`), also where the spawned system has room and every particle
+  spawned would show (`paused room`; the spawned system of `paused` is full when the pause
+  begins, so it shows the first only).
 
 What the rows show of systems spawned by GPU events: such a system is awake while the system
 that spawns into it is; its alive count is read back from the GPU like that of any system that
