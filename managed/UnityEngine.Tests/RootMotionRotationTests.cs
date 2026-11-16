@@ -38,11 +38,16 @@ namespace UnityEngine.Tests
             return clip;
         }
 
-        [Fact]
-        public void ATiltedRootStaysAUnitRotationInItsPlaneOverAPlay()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ATiltedRootStaysAUnitRotationInItsPlaneOverAPlay(bool parented)
         {
             var start = Quaternion.Euler(-60f, 0f, 20f);
+            var holder = parented ? new GameObject("Holder") : null;
+            if (parented) holder.transform.rotation = Quaternion.Euler(10f, 35f, -5f);
             var root = new GameObject("Turning");
+            if (parented) root.transform.SetParent(holder.transform, false);
             root.transform.rotation = start;
             var animator = root.AddComponent<Animator>();
             animator.applyRootMotion = true;
@@ -67,7 +72,7 @@ namespace UnityEngine.Tests
             finally
             {
                 g.Destroy();
-                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(holder != null ? holder : root);
             }
         }
     }
