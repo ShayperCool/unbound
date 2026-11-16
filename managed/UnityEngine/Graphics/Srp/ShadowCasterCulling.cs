@@ -50,12 +50,126 @@ namespace Unbound.Runtime
                     long index = (long)info.splitRange.start + split;
                     if (index >= 0 && index < data.ShadowSplits.Count)
                     {
+                        if (!InCascadeSphere(data, light, info, split, bounds)) return false;
                         var culling = data.ShadowSplits[(int)index];
                         return InsidePlanes(bounds, culling);
                     }
                 }
             }
             return InsidePlanes(bounds, fallback);
+        }
+
+        /// <summary>The largest number of cascades a directional light has.</summary>
+        const int MaxCascades = 4;
+        /// <summary>How small a ray's slope against a plane may be for the ray to leave through it.</summary>
+        const float GrazingSlope = 1e-6f;
+        /// <summary>Keeps the shadow volume's length finite where its ray grazes the exit plane.</summary>
+        const float LengthGuard = 1e-4f;
+
+        /// <summary>
+        /// Whether a directional light's cascade <paramref name="split"/> takes a caster by the
+        /// cascades' culling spheres (Unity 6000.0.71f1 with stable-fit shadow projection,
+        /// tests/projects/stripshadows --cascades). In the light's frame (its right and up axes
+        /// across, its direction along), each cascade not excluded takes the caster's bounding
+        /// sphere (its bounds' center, the length of their extents) when, across, the centers are
+        /// no farther apart than the two radii together and, along the light, the caster's center
+        /// does not lie beyond the cascade's sphere by more than their overlap allows. The
+        /// cascades are taken in order, and the first whose culling sphere holds the caster's
+        /// shadow volume (its sphere swept along the light until it leaves the camera's frustum
+        /// cut at the shadow distance) ends the search: later cascades leave the caster out. With
+        /// one cascade, close-fit projection or splits that are not a directional light's, every
+        /// cascade takes it. The cascades' blend culling factor is unmeasured (URP gives 1).
+        /// </summary>
+        static bool InCascadeSphere(CullingData data, int light, in LightShadowCasterCullingInfo info, int split, Bounds bounds)
+        {
+            int count = info.splitRange.length;
+            if (count <= 1 || count > MaxCascades || QualitySettings.shadowProjection != ShadowProjection.StableFit) return true;
+            if ((uint)light >= (uint)data.Lights.Length || data.Lights[light].lightType != LightType.Directional) return true;
+            if (info.splitRange.start < 0 || info.splitRange.start + count > data.ShadowSplits.Count) return true;
+            var extent = bounds.extents;
+            if (extent.x <= 0 && extent.y <= 0 && extent.z <= 0) return true;
+            var toWorld = data.Lights[light].localToWorldMatrix;
+            Vector3 right = toWorld.GetColumn(0), up = toWorld.GetColumn(1), along = toWorld.GetColumn(2);
+            var center = bounds.center;
+            float radius = MathF.Sqrt((extent.z * extent.z + extent.y * extent.y) + extent.x * extent.x);
+            var frustum = ShadowFrustumPlanes(data);
+            if (frustum == null) return true;
+            float length = ShadowVolumeLength(radius, along, center, frustum);
+            var end = new Vector3(along.x * length + center.x, along.y * length + center.y, length * along.z + center.z);
+            float x = (right.z * center.z + right.y * center.y) + right.x * center.x;
+            float y = (up.z * center.z + up.y * center.y) + up.x * center.x;
+            float depth = (along.x * center.x + along.y * center.y) + along.z * center.z;
+            int mask = 0;
+            for (int s = 0; s < count; s++)
+            {
+                if ((info.splitExclusionMask & (1 << s)) != 0) continue;
+                var sphere = data.ShadowSplits[info.splitRange.start + s].cullingSphere;
+                float sx = (sphere.z * right.z + sphere.y * right.y) + sphere.x * right.x;
+                float sy = (sphere.z * up.z + sphere.y * up.y) + sphere.x * up.x;
+                float sz = (sphere.z * along.z + sphere.y * along.y) + sphere.x * along.x;
+                float dx = x - sx, dy = y - sy;
+                dx *= dx;
+                dy *= dy;
+                float reach = (sphere.w + radius) * (sphere.w + radius);
+                if (!(dx + dy <= reach)) continue;
+                float overlap = MathF.Sqrt((reach - dx) - dy);
+                if (!(depth <= sz + overlap)) continue;
+                mask |= 1 << s;
+                if (CapsuleInsideSphere(center, end, radius, sphere)) break;
+            }
+            return (mask & (1 << split)) != 0;
+        }
+
+        /// <summary>The camera's frustum cut at the shadow distance, as inward planes, once per
+        /// culling (null when the shadow distance does not reach past the near plane).</summary>
+        static Plane[] ShadowFrustumPlanes(CullingData data)
+        {
+            if (!data.ShadowFrustumKnown)
+            {
+                data.ShadowFrustumKnown = true;
+                data.ShadowFrustum = ShadowFrustum(data, out var corners) ? FacePlanes(corners, out _) : null;
+            }
+            return data.ShadowFrustum;
+        }
+
+        /// <summary>How far a caster's shadow reaches along the light before it leaves the frustum:
+        /// the distance its center's ray travels to the first face it leaves through, plus its
+        /// radius over the slope of that face (zero when the ray leaves through none).</summary>
+        static float ShadowVolumeLength(float radius, Vector3 direction, Vector3 origin, Plane[] frustum)
+        {
+            int exit = -1;
+            float best = float.PositiveInfinity;
+            for (int i = 0; i < frustum.Length; i++)
+            {
+                var n = frustum[i].normal;
+                float slope = (direction.z * n.z + direction.x * n.x) + direction.y * n.y;
+                if (slope > 0f || !(Math.Abs(slope) > GrazingSlope)) continue;
+                float t = (-((n.z * origin.z + n.y * origin.y) + n.x * origin.x) - frustum[i].distance) / slope;
+                if (t > 0f && t < best)
+                {
+                    best = t;
+                    exit = i;
+                }
+            }
+            if (exit < 0) return 0f;
+            var face = frustum[exit];
+            float distance = Math.Abs((origin.z * face.normal.z + face.normal.x * origin.x + origin.y * face.normal.y) + face.distance);
+            float ratio = distance / (LengthGuard + best);
+            float across = MathF.Sqrt(1f - ratio * ratio);
+            return best + radius / (ratio / across + LengthGuard);
+        }
+
+        /// <summary>Whether a capsule (a segment and a radius) lies inside a sphere (center and
+        /// radius in w).</summary>
+        static bool CapsuleInsideSphere(Vector3 a, Vector3 b, float radius, Vector4 sphere)
+        {
+            if (!(radius < sphere.w)) return false;
+            float room = sphere.w - radius;
+            room *= room;
+            float ax = sphere.x - a.x, ay = sphere.y - a.y, az = sphere.z - a.z;
+            if (!((ay * ay + ax * ax) + az * az < room)) return false;
+            float bx = sphere.x - b.x, by = sphere.y - b.y, bz = sphere.z - b.z;
+            return (bz * bz + by * by) + bx * bx < room;
         }
 
         internal static bool InsidePlanes(Bounds bounds, in ShadowSplitData split)

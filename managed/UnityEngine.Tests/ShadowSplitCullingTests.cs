@@ -51,6 +51,65 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A directional light's cascades by their culling spheres (stable fit): a caster
+        /// whose shadow stays inside the first cascade's sphere is left out of the second; one
+        /// reaching past it is drawn into both; a caster beside every sphere into none. Close fit
+        /// takes every cascade (the planes alone decide).</summary>
+        [Fact]
+        public void ACasterInsideAnEarlierCascadesSphereLeavesTheLaterOnes()
+        {
+            string version=ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion="6000.0.71f1";
+            var projection=QualitySettings.shadowProjection;
+            var camera=new GameObject("camera").AddComponent<Camera>();
+            var sun=new GameObject("sun").AddComponent<Light>();
+            CullingData data=null;
+            try
+            {
+                QualitySettings.shadowProjection=ShadowProjection.StableFit;
+                sun.type=LightType.Directional;
+                sun.shadows=LightShadows.Hard;
+                // Shining straight down.
+                sun.transform.rotation=Quaternion.Euler(90f,0f,0f);
+                Assert.True(camera.TryGetCullingParameters(out var parameters));
+                parameters.shadowDistance=50f;
+                var context=new ScriptableRenderContext();
+                var results=context.Cull(ref parameters);
+                data=results.Data;
+                Assert.Equal(LightType.Directional,data.Lights[0].lightType);
+                var splits=new NativeArray<ShadowSplitData>(2,Allocator.Temp);
+                var lights=new NativeArray<LightShadowCasterCullingInfo>(1,Allocator.Temp);
+                try
+                {
+                    splits[0]=new ShadowSplitData { cullingSphere=new Vector4(0f,0f,10f,10f) };
+                    splits[1]=new ShadowSplitData { cullingSphere=new Vector4(0f,0f,30f,20f) };
+                    lights[0]=new LightShadowCasterCullingInfo { splitRange=new RangeInt(0,2) };
+                    context.CullShadowCasters(results,new ShadowCastersCullingInfos { splitBuffer=splits,perLightInfos=lights });
+                }
+                finally { splits.Dispose();lights.Dispose(); }
+                // Its shadow falls inside the first sphere before leaving the view.
+                var held=new Bounds(new Vector3(0f,2f,10f),Vector3.one);
+                Assert.True(ShadowCasterCulling.SeesSplit(data,0,0,held,default));
+                Assert.False(ShadowCasterCulling.SeesSplit(data,0,1,held,default));
+                // Between the spheres' centers: reaches past the first sphere.
+                var between=new Bounds(new Vector3(0f,0f,19f),Vector3.one);
+                Assert.True(ShadowCasterCulling.SeesSplit(data,0,0,between,default));
+                Assert.True(ShadowCasterCulling.SeesSplit(data,0,1,between,default));
+                // Beside both spheres (across the light).
+                var beside=new Bounds(new Vector3(40f,0f,10f),Vector3.one);
+                Assert.False(ShadowCasterCulling.SeesSplit(data,0,0,beside,default));
+                Assert.False(ShadowCasterCulling.SeesSplit(data,0,1,beside,default));
+                QualitySettings.shadowProjection=ShadowProjection.CloseFit;
+                Assert.True(ShadowCasterCulling.SeesSplit(data,0,1,held,default));
+                Assert.True(ShadowCasterCulling.SeesSplit(data,0,1,beside,default));
+            }
+            finally
+            {
+                QualitySettings.shadowProjection=projection;
+                data?.Reset();Object.DestroyImmediate(camera.gameObject);Object.DestroyImmediate(sun.gameObject);ProjectInfo.UnityVersion=version;
+            }
+        }
+
         [Theory]
         [InlineData(0f)]
         [InlineData(float.NaN)]

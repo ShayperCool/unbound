@@ -1078,6 +1078,10 @@ namespace Unbound.Runtime
         internal readonly Dictionary<int, int> ShadowListsMade = new Dictionary<int, int>();
         internal readonly List<ShadowSplitData> ShadowSplits = new List<ShadowSplitData>();
         internal readonly List<LightShadowCasterCullingInfo> ShadowLights = new List<LightShadowCasterCullingInfo>();
+        /// <summary>The camera's frustum cut at the shadow distance (inward planes), found once per
+        /// culling for the cascades' caster selection.</summary>
+        internal Plane[] ShadowFrustum;
+        internal bool ShadowFrustumKnown;
 
         internal void Dispose()
         {
@@ -1093,6 +1097,8 @@ namespace Unbound.Runtime
             Dispose();
             Camera = null;
             Parameters = default;
+            ShadowFrustum = null;
+            ShadowFrustumKnown = false;
             Renderers.Clear();
             Visible.Clear();
             Queued.Clear();
