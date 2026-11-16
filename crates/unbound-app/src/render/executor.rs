@@ -668,6 +668,12 @@ pub struct UnityRenderer {
     /// The render target with a depth copy being drawn into (a depth-only one, or one whose depth
     /// element draws sample), whose depth is copied for sampling when drawing moves on.
     depth_target: Option<u64>,
+    /// How many ops this executor has encoded: with the passes not encoded yet, the position
+    /// that marks where drawing into the depth target started across mid-frame submissions.
+    encoded_ops: usize,
+    /// Whether the dispatch being planned samples the depth target's depth copy (a depth-only
+    /// render texture read through a float slot), which must be brought up to date before it.
+    dispatch_reads_depth_target: bool,
     /// [`Self::repack_texture`]'s textures, oldest first.
     repack_textures: Vec<wgpu::Texture>,
     /// The pipelines (and their layouts) that copy a depth buffer into a float color texture:
@@ -810,6 +816,8 @@ impl UnityRenderer {
             error_program: None,
             depth_default: [None, None],
             depth_target: None,
+            encoded_ops: 0,
+            dispatch_reads_depth_target: false,
             repack_textures: Vec::new(),
             depth_copy_pipelines: std::array::from_fn(|_| None),
             depth_blit_pipelines: HashMap::default(),
@@ -2112,13 +2120,18 @@ impl UnityRenderer {
         Some(bg)
     }
 
-    /// Queues the copy of the depth target's depth into its color copy, when passes since
-    /// `mark` drew into it.
+    /// The position after `passes` among all ops this executor has encoded and will encode.
+    fn op_position(&self, passes: &[Op]) -> usize {
+        self.encoded_ops + passes.len()
+    }
+
+    /// Queues the copy of the depth target's depth into its color copy, when ops since the
+    /// position `mark` drew into it (including ops already submitted mid-frame).
     fn copy_depth(&mut self, passes: &mut Vec<Op>, mark: usize) {
         let Some(handle) = self.depth_target else {
             return;
         };
-        if passes.len() <= mark {
+        if self.op_position(passes) <= mark {
             return;
         }
         if let Some(copy) = self.depth_copy_op(handle) {
@@ -3067,8 +3080,8 @@ impl UnityRenderer {
         let mut open = false;
         let mut end_frame = false;
         let mut draws = 0usize;
-        // Where the passes into the depth-only target being drawn start (this submission's).
-        let mut depth_mark = 0usize;
+        // The position (`op_position`) where the ops into the depth target being drawn start.
+        let mut depth_mark = self.encoded_ops;
         // The instances an instance multiplier adds to a mesh-instancing call, drawn after its
         // last instance, from its draw, before the next command (`multiplied_instances`).
         let mut added: Option<(MeshInstanceSlot, Box<commands::Draw>)> = None;
@@ -3180,7 +3193,7 @@ impl UnityRenderer {
                         passes.push(Op::Pass(pass));
                     }
                     self.encode(std::mem::take(&mut passes));
-                    depth_mark = 0;
+                    depth_mark = self.encoded_ops;
                     // Whether the current target's pass was drawing: a plugin event that does not
                     // care where it runs runs inside it on the Vulkan device.
                     self.plugin_pass_open |= open;
@@ -3233,7 +3246,7 @@ impl UnityRenderer {
                     // a G-buffer's) is copied where shaders sample it when it has a depth copy.
                     self.depth_target = depth_owner(color, depth)
                         .filter(|h| self.textures.get(h).is_some_and(|t| t.depth_copy.is_some()));
-                    depth_mark = passes.len();
+                    depth_mark = self.op_position(&passes);
                     let changed = !self.same_target(color, depth, mip, slice, &extra);
                     self.framebuffer_dirty |= changed;
                     self.target_handles = (color, depth);
@@ -3773,8 +3786,16 @@ impl UnityRenderer {
                 }
                 Command::Dispatch(d) => {
                     open = false;
+                    self.dispatch_reads_depth_target = false;
                     if let Some(op) = self.plan_dispatch(&d) {
-                        passes.push(op);
+                        // A kernel sampling the depth being drawn reads what was drawn before it.
+                        if self.dispatch_reads_depth_target {
+                            self.copy_depth(&mut passes, depth_mark);
+                            passes.push(op);
+                            depth_mark = self.op_position(&passes);
+                        } else {
+                            passes.push(op);
+                        }
                     }
                 }
                 Command::CopyBuffer {
@@ -3874,7 +3895,7 @@ impl UnityRenderer {
                 } => {
                     open = false;
                     self.copy_depth(&mut passes, depth_mark);
-                    depth_mark = passes.len();
+                    depth_mark = self.op_position(&passes);
                     if (source == 0 || destination == 0) && !self.screen_touched {
                         let target = self.screen_target(self.color_space);
                         let pass = self.new_pass(target);
@@ -4972,6 +4993,7 @@ impl UnityRenderer {
         if passes.is_empty() {
             return;
         }
+        self.encoded_ops += passes.len();
         let device = self.device.clone();
         let bytes = self.uniforms.len().max(1) as u64 * DRAW_SLOT;
         if self.draw_buffer.as_ref().is_none_or(|b| b.size() < bytes) {

@@ -1263,6 +1263,10 @@ fn main() {
                             .filter(|t| texture_dimension(t) == *dim);
                         let (source, view) = if let Some(texture) = actual.filter(|_| wanted == has)
                         {
+                            // A depth-only target reads through its depth copy (`view_for`).
+                            if texture.format == 5 && self.depth_target == Some(handle) {
+                                self.dispatch_reads_depth_target = true;
+                            }
                             (
                                 Some(texture.texture.clone()),
                                 self.sampled_texture_view(texture, space),
