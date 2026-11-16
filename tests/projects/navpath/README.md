@@ -176,3 +176,9 @@ scenarios. Its ownership and lifetime controls still rule out reconnecting every
 point link on every refresh. A fixed layer capacity does not explain the point
 bindings or the eight-layer wide-link corner heights. Persistent ownership and
 selective reconnection remain a separate implementation task.
+
+Q519 binds each end of a point link to the NavMesh data whose polygon is nearest it, within the
+agent type's climb, and keeps that binding while the data stays (rebinding as described in the gap
+row `Stacked runtime link ownership and lifetime`). The layers profile falls from 523/5826 values
+in 18/30 scenarios to 28 in 2: the eight-layer wide links' corner heights. The main profile's bent
+routes (23), wide-link offsets (2) and post avoidance (17) are unchanged.
