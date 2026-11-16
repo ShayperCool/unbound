@@ -82,13 +82,13 @@ the glossy mips of the reflection cubemaps (sphere rims in `reflections*`) and t
 sphere's realtime shadow in the lightmap scenarios (see docs/COMPATIBILITY_GAPS.md).
 
 Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): every scenario and rendering-path image is gated by `urp/compare.py --gate
-image-residuals.json`: 32 of the 168 match pixel for pixel, 125 are recorded within 4/255, and the
-list records the rest with their reasons: `upscale_stp` (open, queued) and `upscale_auto_fractional`
-(the render scale's integer size without Mono's wider floats, an opt-in) from the gap rows, the
-lightmap scenarios' shadow edge above, and small Vulkan differences (up to 1/255 on the
-screen-space decals since Vulkan programs take coarse derivatives, as the Editor's do: before,
-`decal_screen_space_forward` differed in 160 pixels up to 31/255 and `decal_layers_forward` in 133
-up to 22). Any other difference fails.
+image-residuals.json`: 32 of the 168 match pixel for pixel, 128 are recorded within 4/255 (the
+Vulkan screen-space decals among them, at 1/255 since Vulkan programs take coarse derivatives as
+the Editor's do: before, `decal_screen_space_forward` differed in 160 pixels up to 31/255 and
+`decal_layers_forward` in 133 up to 22), and the list records the other 8 with their reasons:
+`upscale_stp` (open, queued) and `upscale_auto_fractional` (the render scale's integer size without
+Mono's wider floats, an opt-in) from the gap rows, and the lightmap scenarios' shadow edge above.
+Any other difference fails.
 
 `texture-formats.jsonl` (compared by `compare_constants.py`) records the `format` of the cookie
 textures, of two Single Channel textures (Alpha and Red) and of the baked lightmaps, with each
