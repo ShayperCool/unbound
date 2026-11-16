@@ -135,16 +135,14 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
   here can tell, as a particle out of a camera's view is not seen either way. (Its shadow would
   be: an output of this kind that casts shadows is not measured, here or in
   `tests/projects/vfxlit`, whose casters draw themselves.)
-- The arguments' buffer made anew while effects draw: the stages hold 27 entries before frame 6
-  (more than the first buffer's 16, made anew at the first fill, before any draw took it), and
-  `late` adds three, which fit: what is collected before such a renewal keeps the outgrown buffer
-  until a later frame, and the arguments are filled again, unmeasured here.
 - Alpha-blended outputs with sorting off are drawn but not measured here (their order shows).
 - Triangles and octagons sorted, through a list made at each step or for each camera, lit, or
   through an indirect buffer beyond 8192 octagons; octagons cropped by more than one half; cull
   modes other than the output's default.
-- An effect made while a camera collects its draws (its entries outgrow the arguments' buffer
-  after other draws took it): Unbound keeps the outgrown buffer until the next frame; no control
+- The arguments' buffer made anew after draws took it: the stages reserve 27 entries before the
+  first fill (one buffer of 32 is made for them) and `late` adds three, which fit. An effect whose
+  entries outgrow the buffer once others drew (made while a camera collects, or more than fit)
+  has Unbound keep the outgrown buffer until a later frame and fill every entry again; no control
   makes one.
 - The order of an unsorted list: the package documents it as not deterministic (Shared Output
   Settings, Sort: an alpha-blended output with sorting off flickers), so no control blends

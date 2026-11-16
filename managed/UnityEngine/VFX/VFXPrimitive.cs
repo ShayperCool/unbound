@@ -25,8 +25,6 @@ namespace Unbound.Runtime
         /// generated vertex programs find a particle: <c>(vertexID >> 2) + instanceID * 2048</c>
         /// for quads, <c>(vertexID >> 3) + instanceID * 1024</c> for octagons.</summary>
         const uint QuadsPerInstance = 2048, OctagonsPerInstance = 1024;
-        /// <summary>The vertices one draw's 16-bit indices reach.</summary>
-        const uint VerticesOf16BitIndices = 1 << 16;
 
         internal readonly int Vertices;
         readonly ushort[] m_Pattern;
@@ -35,7 +33,9 @@ namespace Unbound.Runtime
         internal readonly uint MaxPerDraw, PerInstance;
         GraphicsBuffer m_Indices;
         uint m_Made;
-        /// <summary>Buffers outgrown while draws taken before still hold them.</summary>
+        /// <summary>Buffers outgrown while draws taken before still hold them (released by the
+        /// primitive's next request for indices in a later frame; at most one frame's growths
+        /// wait until then).</summary>
         readonly VFXRetiredBuffers m_Retired = new VFXRetiredBuffers();
 
         /// <summary>A primitive of <paramref name="vertices"/> drawn by <paramref name="pattern"/>;
@@ -46,7 +46,8 @@ namespace Unbound.Runtime
             Vertices = vertices;
             m_Pattern = pattern;
             PerInstance = perInstance;
-            MaxPerDraw = perInstance == 0 ? 0 : VerticesOf16BitIndices / (uint)vertices;
+            // As many as one draw's 16-bit indices reach.
+            MaxPerDraw = perInstance == 0 ? 0 : (uint)IndexedDraws.StandInVertices / (uint)vertices;
         }
 
         internal int IndicesPerPrimitive => m_Pattern.Length;

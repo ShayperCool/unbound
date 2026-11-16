@@ -964,10 +964,18 @@ namespace UnityEngine.Tests
             var setup = Primitive.Triangle.Draw(triangles, 30000);
             Assert.Equal((90000u, 1u), (setup.IndexCount, setup.Instances));
             Assert.Same(triangles, Primitive.Triangle.Indices(20000));
-            // Outgrown in a frame where a draw holds them: kept until a later frame.
+            // Outgrown in a frame where a draw holds them: kept until a later frame, then released.
             var bigger = Primitive.Triangle.Indices(200000);
             Assert.NotSame(triangles, bigger);
             Assert.True(triangles.IsValid());
+            int frame = Time.s_FrameCount;
+            try
+            {
+                Time.s_FrameCount = frame + 1;
+                Assert.Same(bigger, Primitive.Triangle.Indices(1));
+                Assert.False(triangles.IsValid());
+            }
+            finally { Time.s_FrameCount = frame; }
             var data = (uint[])Primitive.Triangle.Data(30000);
             Assert.Equal(new uint[] { 89994, 89995, 89996, 89997, 89998, 89999 }, data[89994..]);
             Assert.Equal(new ushort[] { 0, 2, 1, 1, 2, 3, 4, 6, 5, 5, 6, 7 }, Primitive.Quad.Data(2));
