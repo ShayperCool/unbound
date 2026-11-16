@@ -21,6 +21,8 @@ namespace UnityEngine
         internal readonly List<long> m_PreloadTable = new List<long>();
         internal string m_AssetFile;
         internal bool m_IsStreamedScene;
+        /// <summary>The serialized <c>m_PathFlags</c>: which names find an asset (see <see cref="Lookup"/>).</summary>
+        internal int m_PathFlags = PathFlagsAll;
         /// <summary>The AssetBundle cache version it was loaded from, in use until it unloads.</summary>
         internal BundleCaches.Version m_CacheVersion;
         internal readonly List<(string Path, string Key)> m_Scenes = new List<(string, string)>();
@@ -205,6 +207,7 @@ namespace UnityEngine
             m_Name = body.Str("m_Name");
             if (string.IsNullOrEmpty(m_Name)) m_Name = body.Str("m_AssetBundleName");
             m_IsStreamedScene = body.Bool("m_IsStreamedSceneAssetBundle");
+            m_PathFlags = body.Get("m_PathFlags") != null ? body.Int("m_PathFlags") : PathFlagsAll;
             foreach (var p in body.Get("m_PreloadTable")?.Seq() ?? Array.Empty<YNode>())
                 m_PreloadTable.Add(p.Long("fileID"));
             foreach (var entry in body.Get("m_Container")?.Seq() ?? Array.Empty<YNode>())
@@ -218,11 +221,41 @@ namespace UnityEngine
 
         Object Resolve(long fileId) => m_AssetFile == null || fileId == 0 ? null : BundleFiles.Load("bundle:" + m_AssetFile, fileId);
 
-        static bool Matches(string key, string name)
+        // m_PathFlags bits: a name without '/' may be an asset's file name without its extension (1)
+        // or with it (2); the name is lower-cased before it is compared (4), as BuildPipeline stores
+        // lower-case paths. A bundle without the field (an older format, not measured) takes all three.
+        const int PathFlagFileName = 1, PathFlagFileNameWithExtension = 2, PathFlagLowerCase = 4;
+        const int PathFlagsAll = PathFlagFileName | PathFlagFileNameWithExtension | PathFlagLowerCase;
+
+        /// <summary>The container entries a name finds, as Unity 6000.0.71f1 looks them up
+        /// (tests/projects/bundlenames): backslashes read as '/', lower case when the bundle's names
+        /// are, then the stored names compared exactly. Only when that finds none and the name has
+        /// no '/', the entries whose file name (without, then with its extension) equals it.</summary>
+        internal List<(string Name, int PreloadIndex, int PreloadSize, long Asset)> Lookup(string name)
         {
-            var lower = name.ToLowerInvariant();
-            if (key == lower || key.EndsWith("/" + lower, StringComparison.Ordinal)) return true;
-            return string.Equals(Path.GetFileNameWithoutExtension(key), name, StringComparison.OrdinalIgnoreCase);
+            var query = name.Replace('\\', '/');
+            if ((m_PathFlags & PathFlagLowerCase) != 0) query = AsciiLower(query);
+            var found = m_Container.FindAll(c => string.Equals(c.Name, query, StringComparison.Ordinal));
+            if (found.Count > 0 || query.IndexOf('/') >= 0) return found;
+            if ((m_PathFlags & PathFlagFileName) != 0)
+                found = m_Container.FindAll(c => string.Equals(Path.GetFileNameWithoutExtension(FileName(c.Name)), query, StringComparison.Ordinal));
+            if (found.Count == 0 && (m_PathFlags & PathFlagFileNameWithExtension) != 0)
+                found = m_Container.FindAll(c => string.Equals(FileName(c.Name), query, StringComparison.Ordinal));
+            return found;
+        }
+
+        static string FileName(string path) => path.Substring(path.LastIndexOf('/') + 1);
+
+        /// <summary>Lower case for ASCII letters only; other characters stay.</summary>
+        static string AsciiLower(string s)
+        {
+            int i = 0;
+            while (i < s.Length && !(s[i] >= 'A' && s[i] <= 'Z')) i++;
+            if (i == s.Length) return s;
+            var chars = s.ToCharArray();
+            for (; i < chars.Length; i++)
+                if (chars[i] >= 'A' && chars[i] <= 'Z') chars[i] = (char)(chars[i] + ('a' - 'A'));
+            return new string(chars);
         }
 
         static Object Typed(Object o, Type type)
@@ -244,7 +277,7 @@ namespace UnityEngine
             if (name.Length == 0) throw new ArgumentException("The input asset name cannot be empty.");
         }
 
-        public bool Contains(string name) => m_Container.Any(c => Matches(c.Name, name));
+        public bool Contains(string name) => Lookup(name).Count > 0;
 
         public Object LoadAsset(string name) => LoadAsset(name, typeof(Object));
         public T LoadAsset<T>(string name) where T : Object => (T)LoadAsset(name, typeof(T));
@@ -254,9 +287,8 @@ namespace UnityEngine
             CheckName(name);
             if (type == null) throw new NullReferenceException("The input type cannot be null.");
             ThrowIfUnloaded();
-            foreach (var entry in m_Container)
+            foreach (var entry in Lookup(name))
             {
-                if (!Matches(entry.Name, name)) continue;
                 var found = Typed(Resolve(entry.Asset), type);
                 if (found != null) return found;
                 // A sub-asset of the entry (a texture's sprite).
@@ -279,9 +311,8 @@ namespace UnityEngine
             CheckName(name);
             ThrowIfUnloaded();
             var result = new List<Object>();
-            foreach (var entry in m_Container)
+            foreach (var entry in Lookup(name))
             {
-                if (!Matches(entry.Name, name)) continue;
                 var o = Typed(Resolve(entry.Asset), type);
                 if (o != null && !result.Contains(o)) result.Add(o);
             }
