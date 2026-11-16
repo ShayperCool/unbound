@@ -62,9 +62,9 @@ and whether it sleeps. `systems/<control>` lists the systems' names.
 - `paused`, `paused room`: `EventAlways` and `EventAlwaysRoom` paused from frame 20 to frame
   36. A paused effect's particles go on triggering at every frame (these graphs' update
   contexts do not skip a step of no time), and what they spawn neither ages nor moves: it lies
-  on the particle that spawned it, so the images of the paused frames (19, 21, 30, 35) are the
-  same here, and what was spawned while paused shows once the pause ends: frames 37 and 40 of
-  `paused room` hold about twice the spawned particles of a frame without a pause, flying off
+  on the particle that spawned it, so the image of frame 19 and those of the paused frames (21,
+  30, 35) are the same here, and what was spawned while paused shows once the pause ends: frames 37 and 40 of
+  `paused room` hold about twice and more the spawned particles of a frame without a pause, flying off
   from the two places the spawning particles were paused at, and are gone by frame 50. (The
   spawned system of `paused` is full when its pause begins: it shows only that nothing ages.)
   What a run of the same graph without a pause shows at those frames is not recorded.
