@@ -9,7 +9,7 @@ namespace UnityEngine
 {
     /// <summary>
     /// An AssetBundle the Editor built (UnityFS: uncompressed, LZ4 or LZMA): its archive stays open on
-    /// the native side; its AssetBundle object lists its assets (by lowercase path) or scenes. The
+    /// the native side; its AssetBundle object lists its assets (by stored path) or scenes. The
     /// objects of its serialized files are made when an asset is first loaded, so references into
     /// bundles loaded after it (its dependencies) resolve, as in Unity.
     /// </summary>
