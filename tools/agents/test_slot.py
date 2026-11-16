@@ -39,6 +39,11 @@ class SlotTests(unittest.TestCase):
         cwd = os.getcwd()
         os.chdir(self.repo)
         self.addCleanup(os.chdir, cwd)
+        # Processes outside the fixture never use its targets; a control names the paths that are used.
+        self.live_paths = set()
+        live = mock.patch.object(slot, 'live_process_paths', side_effect=lambda: self.live_paths)
+        live.start()
+        self.addCleanup(live.stop)
 
     def git(self, *args, cwd=None):
         return subprocess.run(['git', *args], cwd=cwd or self.repo, check=True,
@@ -343,6 +348,108 @@ class SlotTests(unittest.TestCase):
         finally:
             unreadable.chmod(0o700)
 
+    def test_reap_prunes_records_of_removed_or_broken_worktrees_and_removes_their_targets(self):
+        base = Path(self.temp.name).resolve()
+        broken = base/'no-git-file'
+        self.git('worktree', 'add', '-q', '-b', 't3/broken', str(broken), 'main')
+        broken_target = self.make_target(broken)
+        (broken/'.git').unlink()  # a leftover directory: no git command works in it
+        (broken/'notes.txt').write_text('not ours to delete\n')
+        removed = base/'removed'
+        self.git('worktree', 'add', '-q', '-b', 't3/removed', str(removed), 'main')
+        removed_target = self.make_target(removed)
+        subprocess.run(['rm', '-rf', str(removed)], check=True)
+        finished = base/'finished'
+        self.git('worktree', 'add', '-q', '-b', 't3/finished', str(finished), 'main')
+        self.make_old(finished)
+
+        code, out = self.run_slot('reap', '--dry-run')
+        self.assertEqual(code, 0)
+        self.assertIn('3 would be removed', out)
+        self.assertTrue(broken_target.exists() and removed_target.exists())
+
+        code, out = self.run_slot('reap')
+        self.assertEqual(code, 0)
+        self.assertIn('3 removed', out)
+        self.assertFalse(broken_target.exists() or removed_target.exists() or finished.exists())
+        self.assertEqual((broken/'notes.txt').read_text(), 'not ours to delete\n')
+        listed = self.git('worktree', 'list', '--porcelain')
+        self.assertNotIn(str(broken), listed)
+        self.assertNotIn(str(removed), listed)
+        self.assertIn('t3/broken', self.git('branch', '--list', 't3/broken'))
+
+    def test_reap_removes_orphaned_targets_while_run_cache_links_cannot_be_inspected(self):
+        base = Path(self.temp.name).resolve()
+        checkout = base/'clean-idle'
+        self.git('worktree', 'add', '-q', '-b', 't3/clean-idle', str(checkout), 'main')
+        self.make_old(checkout)
+        checkout_target = self.make_target(checkout)
+        orphan = self.make_target(base/'gone')
+        unreadable = Path(self.env['XDG_CACHE_HOME'])/'unbound/private-runs'
+        unreadable.mkdir(parents=True)
+        unreadable.chmod(0)
+        try:
+            with self.assertRaises(SystemExit) as raised:
+                self.run_slot('reap')
+            self.assertIn('refusing to reap worktrees', str(raised.exception))
+        finally:
+            unreadable.chmod(0o700)
+        self.assertFalse(orphan.exists())
+        self.assertTrue(checkout.exists() and checkout_target.exists())
+
+    def test_reap_keeps_targets_a_live_process_uses_or_that_belong_to_another_checkout(self):
+        base = Path(self.temp.name).resolve()
+        used = self.make_target(base/'gone-but-running')
+        unused = self.make_target(base/'gone')
+        clone = base/'clone'
+        subprocess.run(['git', 'clone', '-q', str(self.repo), str(clone)], check=True)
+        clone_target = self.make_target(clone)  # not a worktree of this repository, still a checkout
+        self.live_paths = {used/'release/unbound'}
+        code, out = self.run_slot('reap')
+        self.assertEqual(code, 0)
+        self.assertIn('a live process uses it', out)
+        self.assertTrue(used.exists() and clone_target.exists())
+        self.assertFalse(unused.exists())
+
+        slot.live_process_paths.side_effect = OSError('cannot inspect live process 1')
+        self.live_paths = set()
+        code, out = self.run_slot('reap')
+        self.assertIn('keep 1 orphaned targets: cannot inspect live processes', out)
+        self.assertTrue(used.exists())
+
+    def test_reap_walks_the_run_caches_again_when_a_live_run_changes_them(self):
+        import run_cache_index
+        base = Path(self.temp.name).resolve()
+        checkout = base/'clean-idle'
+        self.git('worktree', 'add', '-q', '-b', 't3/clean-idle', str(checkout), 'main')
+        self.make_old(checkout)
+        runs = Path(self.env['XDG_CACHE_HOME'])/'unbound/runs/live'
+        runs.mkdir(parents=True)
+        original = run_cache_index.DirectoryIndex.read
+        changes = {'left': 1}
+
+        def changing(index, path, stamp):
+            if changes['left'] and Path(path) == runs:
+                changes['left'] -= 1
+                raise run_cache_index.DirectoryChanged(f'run-cache directory changed during indexing: {path}')
+            return original(index, path, stamp)
+        with mock.patch.object(run_cache_index.DirectoryIndex, 'read', changing):
+            code, out = self.run_slot('reap')
+        self.assertEqual(code, 0)
+        self.assertIn('walking again', out)
+        self.assertFalse(checkout.exists())
+
+        changes['left'] = slot.LINK_WALK_ATTEMPTS
+        (runs/'next-run').mkdir()  # the saved listing no longer matches: every walk reads it
+        other = base/'other'
+        self.git('worktree', 'add', '-q', '-b', 't3/other', str(other), 'main')
+        self.make_old(other)
+        with mock.patch.object(run_cache_index.DirectoryIndex, 'read', changing):
+            with self.assertRaises(SystemExit) as raised:
+                self.run_slot('reap')
+        self.assertIn('refusing to reap worktrees', str(raised.exception))
+        self.assertTrue(other.exists())
+
     def test_reap_keeps_both_source_and_destination_of_a_reference_chain(self):
         base = Path(self.temp.name).resolve()
         source, destination, unused = [base/name for name in ('source', 'destination', 'unused')]
@@ -477,6 +584,45 @@ class SlotTests(unittest.TestCase):
         (cache/'reference').symlink_to('directory-alias/../reference')
         self.run_slot('reap')
         self.assertTrue(checkout.exists())
+
+
+
+
+class LiveProcessTests(unittest.TestCase):
+    def test_processes_hold_their_directory_and_open_files_but_the_cache_daemon_does_not(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp).resolve()
+            for name in ('worker', 'opened', 'daemon', 'idle'):
+                (base/name).mkdir()
+            (base/'opened/file').write_text('x')
+            daemon = base/'kache-engine'
+            shutil.copy('/bin/bash', daemon)
+            processes = [
+                subprocess.Popen(['/bin/bash', '-c', 'read -t 30'], cwd=base/'worker', stdin=subprocess.PIPE),
+                subprocess.Popen(['/bin/bash', '-c', 'exec 3<"$0"; read -t 30', str(base/'opened/file')],
+                                 cwd=base, stdin=subprocess.PIPE),
+                # The compiler cache's daemon keeps the directory of the compiler that started it.
+                subprocess.Popen([str(daemon), '-c', 'read -t 30', 'daemon'], cwd=base/'daemon',
+                                 stdin=subprocess.PIPE),
+            ]
+            try:
+                deadline = time.monotonic()+10
+                while True:
+                    paths = slot.live_process_paths()
+                    if (slot.inside_any(base/'worker', paths) and slot.inside_any(base/'opened', paths)) or \
+                            time.monotonic() > deadline:
+                        break
+                    time.sleep(.05)
+                self.assertTrue(slot.inside_any(base/'worker', paths))
+                self.assertTrue(slot.inside_any(base/'opened', paths))
+                self.assertFalse(slot.inside_any(base/'daemon', paths))
+                self.assertFalse(slot.inside_any(base/'idle', paths))
+                self.assertFalse(slot.inside_any(base/'work', paths))  # a prefix of a name is not inside it
+            finally:
+                for process in processes:
+                    process.kill()
+                    process.wait()
 
 
 if __name__ == '__main__':

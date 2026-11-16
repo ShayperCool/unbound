@@ -26,6 +26,10 @@ class Entry:
         return os.stat(self.path)
 
 
+class DirectoryChanged(OSError):
+    """A directory changed while it was listed; a new walk lists it again."""
+
+
 class DirectoryIndex:
     # Bounded batches amortize executor and SQL overhead across directory checks.
     batch_size = 512
@@ -176,7 +180,7 @@ class DirectoryIndex:
             values = [(entry.name, 'link' if entry.is_symlink() else 'dir') for entry in entries
                       if entry.is_symlink() or entry.is_dir(follow_symlinks=False)]
         if self.stamp(os.stat(path)) != stamp:
-            raise OSError(f'run-cache directory changed during indexing: {path}; retry reap')
+            raise DirectoryChanged(f'run-cache directory changed during indexing: {path}')
         return values
 
     # A caller that pauses between its own batches turns this check off (the deadline still

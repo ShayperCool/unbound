@@ -70,9 +70,16 @@ tools/validation/README.md for why that is unsafe).
   and prints progress every 10 s; a large historical cache may take more than 10 minutes even
   with warm listings. `slot.py index` warms listings with a printed 300 s limit, but each later
   invocation still validates directory metadata from the root. An interrupted or incomplete
-  scan permits no worktree deletion. Concurrent walkers wait for database writers, and
+  scan permits no worktree deletion; a directory that a live run changes while it is listed is
+  read again in a new complete walk (at most three walks). Concurrent walkers wait for database writers, and
   completed batches release their write locks before further filesystem I/O. Completed task runtime links are retired
   when landing, reassigning a slot, or reaping its checkout.
+- Before that walk, and independently of it, reap prunes git's records of worktrees whose
+  directory or `.git` is gone and removes orphaned build targets: a target whose checkout is
+  neither a registered worktree nor a directory holding `.git` (a clone elsewhere keeps its
+  target), and that no live process uses (cwd, executable, open or mapped file, argument or
+  environment value inside it; when processes cannot be inspected, every orphan stays). So it
+  frees orphaned targets even while busy workers keep the walk from completing.
 
 ## Worker
 

@@ -14,10 +14,13 @@ prepare refuses a slot that still holds work: tracked changes, untracked files t
 ignored, or commits that are not on main. --discard drops them; only use it for work that is
 landed or abandoned. Ignored files (caches) are kept.
 
-reap removes worktrees that are not slots and not the main checkout once they are clean and
-idle for --idle-hours, together with their build targets. Branches and commits are retained. It skips a
-worktree that a symlink under the run caches points into. It also deletes targets whose checkout
-no longer exists.
+reap first prunes git's records of worktrees whose directory is gone, and deletes orphaned build
+targets: targets whose checkout is neither a registered worktree nor a git checkout any more and that
+no live process uses. That step does not depend on the run-cache link walk below, so it also works
+while other workers' runs are changing. Then it removes worktrees that are not slots, not locked and
+not the main checkout once they are clean and idle for --idle-hours, together with their build
+targets. Branches and commits are retained. It skips a worktree that a symlink under the run caches
+points into, and refuses to remove any worktree when those links cannot be inspected completely.
 
 Slots live in $UNBOUND_SLOT_ROOT, else next to the build root (tools/build.py), so checkouts and
 targets share the cache volume.
@@ -25,6 +28,7 @@ targets share the cache volume.
 import argparse
 import errno
 import fcntl
+import json
 import os
 from pathlib import Path
 import shutil
@@ -188,6 +192,7 @@ def cmd_prepare(args, repo):
 
 def _symlink_targets(base, checkouts, index):
     """Run-cache links at any depth, including caches stored behind directory aliases."""
+    from run_cache_index import DirectoryChanged
     found = set()
     base = base.absolute()
     checkouts = set(checkouts)
@@ -205,6 +210,8 @@ def _symlink_targets(base, checkouts, index):
         return any(value == root or value.startswith(prefix) for root, prefix in prefixes[key])
 
     def unreadable(error):
+        if isinstance(error, DirectoryChanged):
+            raise error  # symlink_targets() walks again
         if error.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP):
             return  # a run was cleaned up, or its link no longer resolves
         raise SystemExit(f'cannot inspect run-cache links: {error}; refusing to reap worktrees')
@@ -277,20 +284,31 @@ def _symlink_targets(base, checkouts, index):
     return found
 
 
+# Complete walks of the run caches while live runs change them. A repeated walk reuses the
+# listings of unchanged directories, so only the directories that changed are read again.
+LINK_WALK_ATTEMPTS = 3
+
+
 def symlink_targets(base, checkouts=(), *, seconds=None):
-    from run_cache_index import DirectoryIndex
+    from run_cache_index import DirectoryChanged, DirectoryIndex
     import sqlite3
-    index = None
-    try:
-        index = DirectoryIndex(base.absolute(), seconds=seconds)
-        result = _symlink_targets(base, checkouts, index)
-        index.finish()
-        return result
-    except (OSError, sqlite3.Error, ValueError) as error:
-        raise SystemExit(f'cannot inspect run-cache links: {error}; refusing to reap worktrees')
-    finally:
-        if index is not None:
-            index.close()
+    for attempt in range(1, LINK_WALK_ATTEMPTS+1):
+        index = None
+        try:
+            index = DirectoryIndex(base.absolute(), seconds=seconds)
+            result = _symlink_targets(base, checkouts, index)
+            index.finish()
+            return result
+        except DirectoryChanged as error:
+            if attempt == LINK_WALK_ATTEMPTS:
+                raise SystemExit(f'cannot inspect run-cache links: {error} (in {attempt} complete walks); '
+                                 'refusing to reap worktrees')
+            print(f'run-cache directory changed during walk {attempt}; walking again', flush=True)
+        except (OSError, sqlite3.Error, ValueError) as error:
+            raise SystemExit(f'cannot inspect run-cache links: {error}; refusing to reap worktrees')
+        finally:
+            if index is not None:
+                index.close()
 
 
 def run_cache(env=os.environ):
@@ -321,16 +339,127 @@ def cmd_index(args, repo):
     return 0
 
 
+def orphaned_targets(cache, checkouts):
+    """Targets whose checkout is gone: the marker names neither a registered worktree nor a directory
+    holding a git checkout (a missing path, or a leftover directory without .git). A path that still
+    holds .git may be a clone outside this repository, so its target is kept."""
+    registered = {str(path) for path in checkouts}
+    targets = cache/'targets'
+    found = []
+    for target in sorted(targets.iterdir()) if targets.is_dir() else []:
+        if target.is_symlink() or not target.is_dir():
+            continue
+        try:
+            owner = (target/'.unbound-source-root').read_text().strip()
+        except (FileNotFoundError, NotADirectoryError):
+            continue
+        if owner and owner not in registered and not os.path.lexists(os.path.join(owner, '.git')):
+            found.append((target, owner))
+    return found
+
+
+def cache_daemon(executable, arguments):
+    """The compiler cache's server (tools/build.py starts kache's). It serves its cache directory;
+    its working directory and environment only name the checkout whose compiler started it."""
+    return Path(executable).name.startswith('kache') and b'daemon' in arguments[1:]
+
+
+def live_process_paths(proc=Path('/proc'), *, uid=None, exclude_pid=None, privileged=True):
+    """Paths that live processes of this user hold: working directory, executable, open and mapped
+    files, as the kernel reports them (a removed directory carries ' (deleted)'). The compiler
+    cache's daemon is skipped. Unlike the janitor's reference scan (tools/agents/janitor.py), command
+    arguments and environment values do not count: the daemon's would name every checkout whose
+    compiler once started one.
+
+    A process that exits meanwhile is skipped. Some processes of this user are not dumpable (sandboxes,
+    containers); they are read through this function run by passwordless sudo, else OSError is raised."""
+    if not (proc/'self/stat').is_file():
+        raise OSError('live process inspection requires Linux /proc')
+    uid = os.getuid() if uid is None else uid
+    found = set()
+    for process in proc.glob('[0-9]*'):
+        try:
+            if process.stat().st_uid != uid or int(process.name) in (os.getpid(), exclude_pid):
+                continue
+            executable = os.readlink(process/'exe')
+            if cache_daemon(executable, (process/'cmdline').read_bytes().split(b'\0')):
+                continue
+            found.update((executable, os.readlink(process/'cwd')))
+            for descriptor in os.listdir(process/'fd'):
+                try:
+                    found.add(os.readlink(process/'fd'/descriptor))
+                except FileNotFoundError:
+                    pass  # closed meanwhile
+            for line in (process/'maps').read_text().splitlines():
+                fields = line.split(maxsplit=5)
+                if len(fields) == 6 and fields[5].startswith('/'):
+                    found.add(fields[5])
+        except (FileNotFoundError, ProcessLookupError):
+            continue  # exited during inspection
+        except OSError as error:
+            if not process.exists():
+                continue
+            if isinstance(error, PermissionError) and privileged:
+                command = ['sudo', '-n', sys.executable, str(Path(__file__).resolve()), 'live-paths',
+                           '--uid', str(uid), '--exclude-process', str(os.getpid())]
+                result = subprocess.run(command, capture_output=True, text=True, timeout=60,
+                                        stdin=subprocess.DEVNULL)
+                if result.returncode == 0:
+                    return set(json.loads(result.stdout))
+                raise OSError(f'cannot inspect live process {process.name}; '
+                              f'read-only helper failed: {result.stderr.strip()}') from error
+            raise OSError(f'cannot inspect live process {process.name}: {error}') from error
+    return found
+
+
+def inside_any(root, paths):
+    """Whether one of `paths` is `root` or lies below it."""
+    root = str(root)
+    prefix = root.rstrip(os.sep)+os.sep
+    return any(path == root or path.startswith(prefix) for path in map(str, paths))
+
+
+def reap_orphaned_targets(cache, checkouts, dry_run):
+    """Remove orphaned targets that no live process uses (live_process_paths). Returns how many
+    were removed."""
+    orphans = orphaned_targets(cache, checkouts)
+    if not orphans:
+        return 0
+    try:
+        used = live_process_paths()
+    except OSError as error:
+        print(f'keep {len(orphans)} orphaned targets: cannot inspect live processes: {error}')
+        return 0
+    removed = 0
+    for target, owner in orphans:
+        if inside_any(target, used):
+            print(f'keep orphaned target {target} ({owner}): a live process uses it')
+            continue
+        print(f'{"would remove" if dry_run else "remove"} orphaned target {target} ({owner})')
+        if not dry_run:
+            shutil.rmtree(target)
+        removed += 1
+    return removed
+
+
 def cmd_reap(args, repo):
     root = slot_root()
     main = main_checkout(repo)
     cache = build.build_root()
-    linked = None
-    removed = kept_unmerged = 0
+    # Records of worktrees whose directory (or its .git) is gone would fail every git command below.
+    git('worktree', 'prune', *(['--dry-run'] if args.dry_run else []), cwd=repo)
     entries = worktrees(repo)
     locked = locked_worktrees(repo)
+    # A dry run leaves prunable records in place; count them as gone, as the real run will.
+    checkouts = [path for path, _, _ in entries if os.path.lexists(path/'.git') or path in locked]
+    # Independent of the run-cache walk below, which refuses while live runs keep changing.
+    removed = reap_orphaned_targets(cache, checkouts, args.dry_run)
+    linked = None
+    kept_unmerged = 0
     for path, head, branch in entries:
-        if not path.exists():
+        if not os.path.lexists(path/'.git'):
+            if args.verbose and path.exists():
+                print(f'keep {path} ({branch or "detached"}): not a checkout (no .git)')
             continue
         if path == main or path.parent == root:
             kept_unmerged += bool(unmerged_commits(path, repo))
@@ -375,16 +504,6 @@ def cmd_reap(args, repo):
             if target.exists():
                 shutil.rmtree(target)
         removed += 1
-    # Targets whose checkout is gone can never be used again.
-    targets = cache/'targets'
-    for target in sorted(targets.iterdir()) if targets.is_dir() else []:
-        marker = target/'.unbound-source-root'
-        owner = marker.read_text().strip() if marker.is_file() else ''
-        if owner and not Path(owner).exists():
-            print(f'{"would remove" if args.dry_run else "remove"} orphaned target {target} ({owner})')
-            if not args.dry_run:
-                shutil.rmtree(target)
-            removed += 1
     if not args.dry_run:
         git('worktree', 'prune', cwd=repo)
     print(f'{removed} removed' if not args.dry_run else f'{removed} would be removed')
@@ -409,7 +528,14 @@ def main(argv=None):
     reap.add_argument('--idle-hours', type=float, default=6)
     reap.add_argument('--dry-run', action='store_true')
     reap.add_argument('--verbose', action='store_true')
+    live = sub.add_parser('live-paths')  # the read-only helper of live_process_paths(), run by sudo
+    live.add_argument('--uid', type=int, required=True)
+    live.add_argument('--exclude-process', type=int)
     args = parser.parse_args(argv)
+    if args.command == 'live-paths':
+        print(json.dumps(sorted(live_process_paths(uid=args.uid, exclude_pid=args.exclude_process,
+                                                   privileged=False))))
+        return 0
     repo = main_checkout(Path.cwd())
     return {'create': cmd_create, 'list': cmd_list, 'prepare': cmd_prepare, 'reap': cmd_reap,
             'index': cmd_index}[args.command](args, repo)
