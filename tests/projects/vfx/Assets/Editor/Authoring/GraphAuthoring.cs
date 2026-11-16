@@ -41,10 +41,64 @@ public static class GraphAuthoring
         Expressions();
         Chained();
         Drawn();
+        DrawnOverLife();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
         Bundled();
+    }
+
+    /// <summary>A block that sets an attribute over each particle's life from a curve (the
+    /// colour and alpha from a gradient), given as a value or wired to a slot.</summary>
+    static AttributeFromCurve OverLife(VFXContext context, string attribute, object value = null, VFXSlot source = null)
+    {
+        var block = Make<AttributeFromCurve>();
+        block.SetSettingValue("attribute", attribute);
+        context.AddChild(block);
+        if (value != null) block.inputSlots[0].value = value;
+        if (source != null) Link(source, block.inputSlots[0]);
+        return block;
+    }
+
+    static Gradient Ramp(GradientMode mode, float alpha, params (float Time, Color Color)[] keys)
+    {
+        var gradient = new Gradient { mode = mode };
+        gradient.SetKeys(keys.Select(k => new GradientColorKey(k.Color, k.Time)).ToArray(),
+            new[] { new GradientAlphaKey(alpha, 0f), new GradientAlphaKey(alpha, 1f) });
+        return gradient;
+    }
+
+    /// <summary>The graphs whose particles change over their lives by curves and gradients
+    /// (README.md, "Drawing"): the programs sample them from a texture the effect bakes.</summary>
+    static void DrawnOverLife()
+    {
+        // Twenty a second living a second: their size from an exposed curve, their colour
+        // from an exposed gradient, their alpha from a curve that loops both ways.
+        var graph = NewGraph("DrawOverLife", DrawFolder);
+        var (spawn, init, update, output) = System(graph, 64);
+        output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Additive);
+        ConstantRate(spawn, 20f);
+        SetRandom(init, "position", new Vector3(-1.2f, -1f, 0f), new Vector3(1.2f, 1f, 0f));
+        Set(init, "lifetime", 1f);
+        var size = Parameter(graph, typeof(AnimationCurve), "Size", new AnimationCurve(new Keyframe(0f, 0.05f), new Keyframe(0.5f, 0.45f), new Keyframe(1f, 0.1f)));
+        var tint = Parameter(graph, typeof(Gradient), "Tint", Ramp(GradientMode.Blend, 1f, (0f, Color.red), (0.5f, Color.green), (1f, Color.blue)));
+        OverLife(update, "size", source: size.outputSlots[0]);
+        OverLife(update, "color", source: tint.outputSlots[0]);
+        OverLife(update, "alpha", new AnimationCurve(new Keyframe(0f, 0.2f), new Keyframe(0.5f, 1f), new Keyframe(1f, 0.2f)) { preWrapMode = WrapMode.Loop, postWrapMode = WrapMode.Loop });
+        Save(graph);
+
+        // Colours whose red or blue is brighter than a half float holds: the texture keeps
+        // such a row scaled, with its scale. The image's target clamps the bright channel;
+        // the other two show whether the scale is applied. Fixed between their keys.
+        var hdr = NewGraph("DrawHdr", DrawFolder);
+        var (hdrSpawn, hdrInit, hdrUpdate, hdrOutput) = System(hdr, 16);
+        hdrOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Additive);
+        Burst(hdrSpawn, false, 9f, 0f);
+        SetRandom(hdrInit, "position", new Vector3(-1f, -1f, 0f), new Vector3(1f, 1f, 0f));
+        Set(hdrInit, "size", 0.5f);
+        Set(hdrInit, "lifetime", 100f);
+        OverLife(hdrUpdate, "color", Ramp(GradientMode.Fixed, 1f, (0.5f, new Color(131008f, 0.5f, 0.25f)), (1f, new Color(0.25f, 0.5f, 131008f))));
+        Save(hdr);
     }
 
     /// <summary>Where the probe finds the bundle (under StreamingAssets, so by a path of the
@@ -571,6 +625,20 @@ public static class GraphAuthoring
         Bools(U, A);
         Ints(P);
         Link(P, Input(block, "u20"));
+        // A curve and a gradient sampled where the effect's expressions are evaluated (in a
+        // spawn context: on the CPU), at a time the probe changes.
+        var curve = Exposed(typeof(AnimationCurve), "Curve", new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 2f)));
+        var ramp = Exposed(typeof(Gradient), "Ramp", Ramp(GradientMode.Blend, 0.5f, (0f, Color.red), (1f, Color.blue)));
+        var sampledCurve = Make<SampleCurve>();
+        graph.AddChild(sampledCurve);
+        Link(curve, sampledCurve.inputSlots[0]);
+        Link(C, sampledCurve.inputSlots[1]);
+        Link(sampledCurve.outputSlots[0], Input(block, "c00"));
+        var sampledRamp = Make<SampleGradient>();
+        graph.AddChild(sampledRamp);
+        Link(ramp, sampledRamp.inputSlots[0]);
+        Link(C, sampledRamp.inputSlots[1]);
+        Link(sampledRamp.outputSlots[0], Input(block, "r00"));
         // The same to a bool from numbers that are zero (W, and Z until the probe sets it).
         Bools(W);
         Link(Z, Input(block, "b20"));

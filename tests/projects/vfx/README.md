@@ -34,8 +34,8 @@ own models; its assembly carries the name of one of the package's friend assembl
   `SimRatePrewarm`, `SimBurst`, `SimRandom`, `SimLoop`, `SimLoopRandom`, `SimKill`, `SimKeep`:
   `SimExpressions`, `SimTexture`, `SimChain`: the simulation controls' graphs (below), kept in
   `Assets/SimGraphs` apart from the graphs the import rows list.
-- `DrawOpaque`, `DrawAdditive`, `DrawMany`, `DrawTextured` (`Assets/DrawGraphs`): the drawing
-  controls' graphs (below).
+- `DrawOpaque`, `DrawAdditive`, `DrawMany`, `DrawTextured`, `DrawOverLife`, `DrawHdr`
+  (`Assets/DrawGraphs`): the drawing controls' graphs (below).
 
 `Exposed`'s texture and mesh properties default to `Assets/Objects/ImageA.png` and
 `ShapeA.asset`, which the authoring script also makes (with `ImageB` and `ShapeB`).
@@ -138,7 +138,9 @@ the alive count is the particles spawned so far, exactly, each frame:
   `v*`, `q*` vectors through a transform's matrix, its inverse, its transpose and their
   product; `m*` those matrices; `g*` whether the game's time as the graph reads it is
   `Time`'s; `b17` to `b20` a bool from an unsigned number and from a float, each from one that
-  is not zero and from one that is. An input the block does not have, and an input read as
+  is not zero and from one that is; `c00`, `r00` an exposed curve and an exposed gradient
+  sampled at a time (the `others` control gives the effect another curve, and a gradient that
+  is fixed between its keys). An input the block does not have, and an input read as
   another type, are recorded too. The same effect's rows record two event attributes a block of the context sets.
 - `expressions others`: the same graph with other values (a NaN, a divisor of zero, other
   signs, a frame of no depth), set in the frame the effect is made and again at frame 4.
@@ -211,6 +213,15 @@ and the draw), the kind Unbound draws:
   (`Assets/Objects/ImageC.png`, whose four quarters differ: a texture drawn turned or mirrored
   would show).
 
+- `over life` (frames 12, 24, 40): twenty a second living a second, their size from an exposed
+  curve, their colour from an exposed gradient and their alpha from a curve that loops both
+  ways, all sampled by the update kernel from the texture the effect bakes its curves and
+  gradients into; at frame 25 the probe gives the effect another size curve.
+- `hdr` (frame 5): nine quads whose colour is a gradient, fixed between its keys, with a red
+  and a blue brighter than a half float holds: the texture keeps such a row scaled, with its
+  scale. The image's 8-bit target clamps the bright channel; the other two show whether the
+  scale is applied.
+
 The images are compared pixel by pixel (`image_limits.json`: no difference where both ran, one
 machine with an NVIDIA driver; the quads' edges fall between pixel centres, so another GPU may
 decide an edge pixel differently). Not shown by them: quads turned to face a camera (the
@@ -242,8 +253,9 @@ motion vectors, Shader Graph outputs, shadows, strips, meshes and primitives oth
 camera hooks. Expression operations without a control: the inverse of a general matrix and an
 event attribute read in a spawn context (no operator of the package gives either here), and
 the ones the runtime does not do yet (matrices built from or split into rows, columns and axes,
-angles and scales taken from a matrix, colour spaces, curves and gradients, meshes, the main
-camera, noise, texture and buffer sizes). The update modes that ignore the time scale are not
+angles and scales taken from a matrix, colour spaces, meshes, the main camera, noise, texture
+and buffer sizes). Of baked curves: one whose values are larger than a half float holds has no
+image (its scale is held by a unit test, as a gradient's is by `hdr`). The update modes that ignore the time scale are not
 compared: the Editor's unscaled delta time under a capture frame rate is the wall clock's.
 One attribute name with different
 types in two graphs (a custom attribute) is not measured for `CopyValuesFrom`.

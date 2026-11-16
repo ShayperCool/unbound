@@ -21,6 +21,9 @@ public class ProbeInputs : VFXSpawnerCallbacks
         public bool b00, b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20;
         public Vector3 v00, v01, v02, v03, v04, v05;
         public Vector4 q00, q01, q02, q03;
+        /// <summary>A curve and a gradient sampled at a time.</summary>
+        public float c00;
+        public Vector4 r00;
         public Matrix4x4 m00, m01, m02, m03;
         /// <summary>The game's time as the effect's expressions read it, in the order of
         /// <see cref="GameTime"/>: compared with the engine's own values, not written down.</summary>

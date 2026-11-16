@@ -163,6 +163,9 @@ public sealed class VfxProbe : MonoBehaviour
         Draw("additive", "DrawAdditive", 12, 30);
         Draw("many", "DrawMany", 5);
         Draw("textured", "DrawTextured", 5);
+        // Over each particle's life by a curve and a gradient; the curve is another from frame 25.
+        Draw("over life", "DrawOverLife", 12, 24, 40);
+        Draw("hdr", "DrawHdr", 5);
     }
 
     // ---------------------------------------------------------------------------- bundle
@@ -203,6 +206,9 @@ public sealed class VfxProbe : MonoBehaviour
     /// effect says of itself.</summary>
     void Shoot()
     {
+        if (m_Frame == 25)
+            foreach (var stage in m_Stages)
+                if (stage.Key == "over life") stage.Effect.SetAnimationCurve("Size", new AnimationCurve(new Keyframe(0f, 0.3f), new Keyframe(1f, 0.02f)));
         if (m_Bundled != null && (m_Frame == 3 || m_Frame == 20))
             Rec("bundle/effect/f" + m_Frame.ToString("000"), "culled=" + (m_Bundled.culled ? 1 : 0) + " awake=" + (m_Bundled.HasAnySystemAwake() ? 1 : 0) + " renderer " + RendererState(m_Bundled));
         foreach (var stage in m_Stages)
@@ -492,6 +498,10 @@ public sealed class VfxProbe : MonoBehaviour
         effect.SetUInt("U", 7u);
         effect.SetUInt("V", 3u);
         effect.SetUInt("W", 5u);
+        effect.SetAnimationCurve("Curve", new AnimationCurve(new Keyframe(-1f, 3f), new Keyframe(0f, -1f), new Keyframe(2f, 5f)));
+        var ramp = new Gradient { mode = GradientMode.Fixed };
+        ramp.SetKeys(new[] { new GradientColorKey(Color.green, 0.25f), new GradientColorKey(Color.yellow, 1f) }, new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.25f, 1f) });
+        effect.SetGradient("Ramp", ramp);
         effect.SetBool("P", false);
         effect.SetBool("Q", false);
         effect.SetVector3("T", new Vector3(-1f, 0f, 2.5f));
