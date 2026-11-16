@@ -158,6 +158,11 @@ public class RealtimeGIProbe : MonoBehaviour
             DynamicGI.SetEnvironmentData(EnvironmentData());
             yield return Converge();
             Capture("room-envdata", lit);
+            RenderSettings.skybox = null;
+            RenderSettings.ambientIntensity = 1f;
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            DynamicGI.UpdateEnvironment();
+            yield return Directionality(true);
             Finish();
             yield break;
         }
@@ -928,7 +933,32 @@ public class RealtimeGIProbe : MonoBehaviour
         RenderSettings.ambientIntensity = 2f;
         yield return Converge();
         Capture("pipeline-sky-intensity", s, false);
+        RenderSettings.skybox = null;
+        RenderSettings.ambientIntensity = 1f;
+        RenderSettings.ambientMode = AmbientMode.Flat;
+        DynamicGI.UpdateEnvironment();
+        yield return Directionality(false);
         Finish();
+    }
+
+    /// <summary>The directional scene as the linear sequence first records it: as it loads, with
+    /// its point light moved, then with hardly any light (no light on, the panel's emission black
+    /// and a dark ambient color). For the gamma-space sequence and a render pipeline's; frames only
+    /// when <paramref name="frames"/>.</summary>
+    IEnumerator Directionality(bool frames)
+    {
+        yield return Load("RoomDirectional");
+        var s = Scene();
+        yield return Converge();
+        Capture("roomdirectional-base", s, frames);
+        s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
+        yield return Converge();
+        Capture("roomdirectional-moved", s, frames);
+        s.point.enabled = false;
+        DynamicGI.SetEmissive(s.panel, Color.black);
+        RenderSettings.ambientLight = new Color(0.02f, 0.025f, 0.03f);
+        yield return Converge();
+        Capture("roomdirectional-dim", s, frames);
     }
 
     /// <summary>An environment for DynamicGI.SetEnvironmentData: six faces of 8 x 8 RGBA texels.</summary>
