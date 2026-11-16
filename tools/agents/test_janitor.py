@@ -275,6 +275,45 @@ class JanitorTests(unittest.TestCase):
         self.assertIn('"unseal"', self.output.getvalue())
         self.assertNotIn('links into a removed run', self.output.getvalue())
 
+    def test_a_run_whose_files_change_before_its_removal_keeps_what_it_names(self):
+        # The check before any removal finds gate-2 quiet; a file inside it goes while it is
+        # looked at again just before its removal: it is kept and its links protect.
+        alpha = self.instances('alpha', ['gate-1', 'gate-2', 'gate-3'])
+        beta = self.instances('beta', ['gate-1', 'gate-2'])
+        self.aged = alpha+beta
+        (alpha[1]/'link').symlink_to(beta[0]/'output')
+        original = janitor.inventory
+        calls = []
+        def inventory(path, *args, **kwargs):
+            if path == alpha[1]:
+                calls.append(path)
+                if len(calls) == 2:
+                    raise FileNotFoundError(2, 'No such file or directory', str(path/'temporary'))
+            return original(path, *args, **kwargs)
+        with patch.object(janitor, 'inventory', inventory):
+            self.collect_applied()
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(alpha[1].is_dir())
+        self.assertTrue(beta[0].is_dir())  # named from the kept run
+        self.assertFalse(alpha[0].exists())
+        self.assertIn('modified during the check', self.output.getvalue())
+        self.assertNotIn('links into a removed run', self.output.getvalue())
+
+    def test_a_sealed_run_that_goes_during_its_check_is_not_walked(self):
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        original = janitor.inventory
+        def inventory(path, *args, **kwargs):
+            if path == second and path.exists():
+                shutil.rmtree(path)
+                raise FileNotFoundError(2, 'No such file or directory', str(path))
+            return original(path, *args, **kwargs)
+        with patch.object(janitor, 'inventory', inventory):
+            self.collect_applied()
+        self.assertFalse(second.exists())
+        unsealed = [json.loads(line)['path'] for line in self.output.getvalue().splitlines()
+                    if line.startswith('{') and json.loads(line)['action'] == 'unseal']
+        self.assertNotIn(str(second), unsealed)
+
     def test_runs_sealed_again_by_a_rediscovery_are_checked_before_removals(self):
         first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
         task = self.directory('q1')

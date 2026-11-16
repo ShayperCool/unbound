@@ -1173,7 +1173,9 @@ class Janitor:
                 return self.stop_batches(unchecked)
             try:
                 newest, _, _ = inventory(Path(key))
-            except FileNotFoundError:
+            except OSError as error:
+                if not gone(error):
+                    raise
                 if not os.path.lexists(key):
                     continue  # the run itself is gone
                 newest = cutoff  # something inside went during the check: it is being written to
@@ -1396,7 +1398,12 @@ class Janitor:
                          if p.parent in (self.volume, self.cache.resolve()) and
                          re.fullmatch(r'q\d+', p.name, re.I)), '')
             return path, kind, directory, task, allocated, reclaimable, hours, (identity.st_dev, identity.st_ino, stat.S_IFMT(identity.st_mode))
-        except FileNotFoundError:
+        except OSError as error:
+            if not gone(error):
+                raise
+            if os.path.lexists(path):
+                # Something inside went while it was looked at: it is being written to.
+                self.keep(path, 'modified during the check')
             return None
 
     def keep(self, path, reason):
