@@ -6,7 +6,9 @@ A probe's script writes `values.jsonl` into the directory named by its output va
 `{"k": "complete", "v": true}`. Images are PNG files next to it. The probe's `run.py` calls
 `main(...)` with its project directory, Editor method and output variable:
 
-    run.py record --label L     one Editor capture on the GPU display (run cache)
+    run.py record --label L     one Editor capture on the GPU display (run cache); on macOS a
+                                batch-mode capture with the Hub's Editor, for values that
+                                depend on neither the OS nor the graphics device
     run.py publish A B          two byte-identical captures -> Reference/unity-<release>/
     run.py gate [--label L]     the engine on a fresh copy, compared with Reference/
 
@@ -206,11 +208,40 @@ def images(directory):
 RECORD_TIMEOUT = 900
 
 
+MACOS_RESULT = 'macos-batch.json'
+
+
+def macos_editor():
+    return Path('/Applications/Unity/Hub/Editor')/unity_version()/'Unity.app/Contents/MacOS/Unity'
+
+
+def record_macos(out, project, capture, method, variable, timeout):
+    """A batch-mode capture with the macOS Editor: no display and no GPU check, so only for
+    values that depend on neither the OS nor the graphics device."""
+    env = {**os.environ, variable: str(capture)}
+    with (out/'editor.out').open('w') as log:
+        code = subprocess.run(['timeout', '-s', 'KILL', str(timeout), str(macos_editor()), '-batchmode', '-projectPath',
+                               str(project), '-executeMethod', method, '-logFile', str(out/'editor.log')],
+                              env=env, stdout=log, stderr=subprocess.STDOUT).returncode
+    (out/MACOS_RESULT).write_text(json.dumps({'exit_code': code, 'editor': str(macos_editor())}) + '\n')
+    try:
+        read_values(capture/VALUES)
+    except (OSError, ValueError) as error:
+        raise SystemExit(f'{out}: Editor exit {code}, no complete capture ({error})')
+    if code:
+        raise SystemExit(f'{out}: Editor exit {code}')
+    print('captured', capture)
+
+
 def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None):
     out = run_root(probe, label)
     project = assemble(probe, out, base)
     capture = out/'capture'
     capture.mkdir(parents=True)
+    if sys.platform == 'darwin':
+        if not batch:
+            raise SystemExit('a windowed capture needs the Linux GPU Editor')
+        return record_macos(out, project, capture, method, variable, timeout)
     job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', method], batch=batch,
         graphics=True, env={variable: str(capture)}, timeout=timeout, label=probe.name+'-'+label)
     print(editor_runner.summary(editor_runner.run(job)))
@@ -220,8 +251,34 @@ def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=N
     print('captured', capture)
 
 
+def publish_macos(probe, roots):
+    """macOS batch-mode captures: at least two, each complete and with exit 0, byte-identical."""
+    if len(roots) < 2:
+        raise SystemExit('publishing needs two independent repeats')
+    for root in roots:
+        if json.loads((root/MACOS_RESULT).read_text()).get('exit_code') != 0:
+            raise SystemExit(f'{root.name}: the Editor did not exit 0; not publishing')
+        read_values(root/'capture'/VALUES)
+    first = roots[0]/'capture'
+    names = [VALUES, *images(first)]
+    for root in roots[1:]:
+        if [VALUES, *images(root/'capture')] != names or any(
+                (root/'capture'/name).read_bytes() != (first/name).read_bytes() for name in names):
+            raise SystemExit(f'{root.name} differs from {roots[0].name}; not publishing')
+    target = reference_root(probe)
+    if target.exists():
+        raise SystemExit(f'refusing to overwrite {target}')
+    target.mkdir(parents=True)
+    for name in names:
+        shutil.copyfile(first/name, target/name)
+    print('published', target)
+    return 0
+
+
 def publish(probe, labels):
     roots = [run_root(probe, label) for label in labels]
+    if roots and all((root/MACOS_RESULT).is_file() for root in roots):
+        return publish_macos(probe, roots)
     for root in roots:
         problem = editor_runner.result_problem(root, gpu=True)
         if problem:

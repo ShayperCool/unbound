@@ -1,0 +1,453 @@
+{"k":"unassigned.game_object.reference_null","v":"false"}
+{"k":"unassigned.game_object.equals_null","v":"true"}
+{"k":"unassigned.game_object.bool","v":"false"}
+{"k":"unassigned.game_object.is_null","v":"false"}
+{"k":"unassigned.game_object.type","v":"UnityEngine.GameObject"}
+{"k":"unassigned.game_object.to_string","v":"returns null"}
+{"k":"unassigned.game_object.name","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector."}
+{"k":"unassigned.game_object.id_zero","v":"returns True"}
+{"k":"unassigned.game_object.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector."}
+{"k":"unassigned.game_object.equals_self","v":"returns True"}
+{"k":"unassigned.game_object.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector."}
+{"k":"unassigned.game_object.active_self","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector."}
+{"k":"unassigned.game_object.set_active","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector."}
+{"k":"unassigned.game_object.add_component","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector."}
+{"k":"unassigned.game_object.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.transform.reference_null","v":"false"}
+{"k":"unassigned.transform.equals_null","v":"true"}
+{"k":"unassigned.transform.bool","v":"false"}
+{"k":"unassigned.transform.is_null","v":"false"}
+{"k":"unassigned.transform.type","v":"UnityEngine.Transform"}
+{"k":"unassigned.transform.to_string","v":"returns null"}
+{"k":"unassigned.transform.name","v":"throws UnityEngine.UnassignedReferenceException: The variable transformField of Holder has not been assigned.\nYou probably need to assign the transformField variable of the Holder script in the inspector."}
+{"k":"unassigned.transform.id_zero","v":"returns True"}
+{"k":"unassigned.transform.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable transformField of Holder has not been assigned.\nYou probably need to assign the transformField variable of the Holder script in the inspector."}
+{"k":"unassigned.transform.equals_self","v":"returns True"}
+{"k":"unassigned.transform.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable transformField of Holder has not been assigned.\nYou probably need to assign the transformField variable of the Holder script in the inspector."}
+{"k":"unassigned.transform.game_object","v":"throws UnityEngine.UnassignedReferenceException: The variable transformField of Holder has not been assigned.\nYou probably need to assign the transformField variable of the Holder script in the inspector."}
+{"k":"unassigned.transform.get_component","v":"throws UnityEngine.UnassignedReferenceException: The variable transformField of Holder has not been assigned.\nYou probably need to assign the transformField variable of the Holder script in the inspector."}
+{"k":"unassigned.transform.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable transformField of Holder has not been assigned.\nYou probably need to assign the transformField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.rigidbody.reference_null","v":"false"}
+{"k":"unassigned.rigidbody.equals_null","v":"true"}
+{"k":"unassigned.rigidbody.bool","v":"false"}
+{"k":"unassigned.rigidbody.is_null","v":"false"}
+{"k":"unassigned.rigidbody.type","v":"UnityEngine.Rigidbody"}
+{"k":"unassigned.rigidbody.to_string","v":"returns null"}
+{"k":"unassigned.rigidbody.name","v":"throws UnityEngine.UnassignedReferenceException: The variable rigidbodyField of Holder has not been assigned.\nYou probably need to assign the rigidbodyField variable of the Holder script in the inspector."}
+{"k":"unassigned.rigidbody.id_zero","v":"returns True"}
+{"k":"unassigned.rigidbody.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable rigidbodyField of Holder has not been assigned.\nYou probably need to assign the rigidbodyField variable of the Holder script in the inspector."}
+{"k":"unassigned.rigidbody.equals_self","v":"returns True"}
+{"k":"unassigned.rigidbody.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable rigidbodyField of Holder has not been assigned.\nYou probably need to assign the rigidbodyField variable of the Holder script in the inspector."}
+{"k":"unassigned.rigidbody.game_object","v":"throws UnityEngine.UnassignedReferenceException: The variable rigidbodyField of Holder has not been assigned.\nYou probably need to assign the rigidbodyField variable of the Holder script in the inspector."}
+{"k":"unassigned.rigidbody.get_component","v":"throws UnityEngine.UnassignedReferenceException: The variable rigidbodyField of Holder has not been assigned.\nYou probably need to assign the rigidbodyField variable of the Holder script in the inspector."}
+{"k":"unassigned.rigidbody.mass","v":"throws UnityEngine.UnassignedReferenceException: The variable rigidbodyField of Holder has not been assigned.\nYou probably need to assign the rigidbodyField variable of the Holder script in the inspector."}
+{"k":"unassigned.rigidbody.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable rigidbodyField of Holder has not been assigned.\nYou probably need to assign the rigidbodyField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.collider.reference_null","v":"false"}
+{"k":"unassigned.collider.equals_null","v":"true"}
+{"k":"unassigned.collider.bool","v":"false"}
+{"k":"unassigned.collider.is_null","v":"false"}
+{"k":"unassigned.collider.type","v":"UnityEngine.Collider"}
+{"k":"unassigned.collider.to_string","v":"returns null"}
+{"k":"unassigned.collider.name","v":"throws UnityEngine.UnassignedReferenceException: The variable colliderField of Holder has not been assigned.\nYou probably need to assign the colliderField variable of the Holder script in the inspector."}
+{"k":"unassigned.collider.id_zero","v":"returns True"}
+{"k":"unassigned.collider.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable colliderField of Holder has not been assigned.\nYou probably need to assign the colliderField variable of the Holder script in the inspector."}
+{"k":"unassigned.collider.equals_self","v":"returns True"}
+{"k":"unassigned.collider.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable colliderField of Holder has not been assigned.\nYou probably need to assign the colliderField variable of the Holder script in the inspector."}
+{"k":"unassigned.collider.game_object","v":"throws UnityEngine.UnassignedReferenceException: The variable colliderField of Holder has not been assigned.\nYou probably need to assign the colliderField variable of the Holder script in the inspector."}
+{"k":"unassigned.collider.get_component","v":"throws UnityEngine.UnassignedReferenceException: The variable colliderField of Holder has not been assigned.\nYou probably need to assign the colliderField variable of the Holder script in the inspector."}
+{"k":"unassigned.collider.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable colliderField of Holder has not been assigned.\nYou probably need to assign the colliderField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.marker.reference_null","v":"true"}
+{"k":"unassigned.marker.equals_null","v":"true"}
+{"k":"unassigned.marker.bool","v":"false"}
+{"k":"unassigned.marker.is_null","v":"true"}
+{"k":"unassigned.marker.type","v":"none"}
+{"k":"unassigned.data.reference_null","v":"true"}
+{"k":"unassigned.data.equals_null","v":"true"}
+{"k":"unassigned.data.bool","v":"false"}
+{"k":"unassigned.data.is_null","v":"true"}
+{"k":"unassigned.data.type","v":"none"}
+{"k":"unassigned.material.reference_null","v":"false"}
+{"k":"unassigned.material.equals_null","v":"true"}
+{"k":"unassigned.material.bool","v":"false"}
+{"k":"unassigned.material.is_null","v":"false"}
+{"k":"unassigned.material.type","v":"UnityEngine.Material"}
+{"k":"unassigned.material.to_string","v":"returns null"}
+{"k":"unassigned.material.name","v":"throws UnityEngine.UnassignedReferenceException: The variable materialField of Holder has not been assigned.\nYou probably need to assign the materialField variable of the Holder script in the inspector."}
+{"k":"unassigned.material.id_zero","v":"returns True"}
+{"k":"unassigned.material.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable materialField of Holder has not been assigned.\nYou probably need to assign the materialField variable of the Holder script in the inspector."}
+{"k":"unassigned.material.equals_self","v":"returns True"}
+{"k":"unassigned.material.color","v":"throws UnityEngine.UnassignedReferenceException: The variable materialField of Holder has not been assigned.\nYou probably need to assign the materialField variable of the Holder script in the inspector."}
+{"k":"unassigned.material.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable materialField of Holder has not been assigned.\nYou probably need to assign the materialField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.texture.reference_null","v":"false"}
+{"k":"unassigned.texture.equals_null","v":"true"}
+{"k":"unassigned.texture.bool","v":"false"}
+{"k":"unassigned.texture.is_null","v":"false"}
+{"k":"unassigned.texture.type","v":"UnityEngine.Texture2D"}
+{"k":"unassigned.texture.to_string","v":"returns null"}
+{"k":"unassigned.texture.name","v":"throws UnityEngine.UnassignedReferenceException: The variable textureField of Holder has not been assigned.\nYou probably need to assign the textureField variable of the Holder script in the inspector."}
+{"k":"unassigned.texture.id_zero","v":"returns True"}
+{"k":"unassigned.texture.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable textureField of Holder has not been assigned.\nYou probably need to assign the textureField variable of the Holder script in the inspector."}
+{"k":"unassigned.texture.equals_self","v":"returns True"}
+{"k":"unassigned.texture.width","v":"throws UnityEngine.UnassignedReferenceException: The variable textureField of Holder has not been assigned.\nYou probably need to assign the textureField variable of the Holder script in the inspector."}
+{"k":"unassigned.texture.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable textureField of Holder has not been assigned.\nYou probably need to assign the textureField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.object.reference_null","v":"false"}
+{"k":"unassigned.object.equals_null","v":"true"}
+{"k":"unassigned.object.bool","v":"false"}
+{"k":"unassigned.object.is_null","v":"false"}
+{"k":"unassigned.object.type","v":"UnityEngine.Object"}
+{"k":"unassigned.object.to_string","v":"returns null"}
+{"k":"unassigned.object.name","v":"throws UnityEngine.UnassignedReferenceException: The variable objectField of Holder has not been assigned.\nYou probably need to assign the objectField variable of the Holder script in the inspector."}
+{"k":"unassigned.object.id_zero","v":"returns True"}
+{"k":"unassigned.object.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable objectField of Holder has not been assigned.\nYou probably need to assign the objectField variable of the Holder script in the inspector."}
+{"k":"unassigned.object.equals_self","v":"returns True"}
+{"k":"unassigned.object.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable objectField of Holder has not been assigned.\nYou probably need to assign the objectField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.private.reference_null","v":"false"}
+{"k":"unassigned.private.equals_null","v":"true"}
+{"k":"unassigned.private.bool","v":"false"}
+{"k":"unassigned.private.is_null","v":"false"}
+{"k":"unassigned.private.type","v":"UnityEngine.GameObject"}
+{"k":"unassigned.private.to_string","v":"returns null"}
+{"k":"unassigned.private.name","v":"throws UnityEngine.UnassignedReferenceException: The variable privateField of Holder has not been assigned.\nYou probably need to assign the privateField variable of the Holder script in the inspector."}
+{"k":"unassigned.private.id_zero","v":"returns True"}
+{"k":"unassigned.private.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable privateField of Holder has not been assigned.\nYou probably need to assign the privateField variable of the Holder script in the inspector."}
+{"k":"unassigned.private.equals_self","v":"returns True"}
+{"k":"unassigned.private.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable privateField of Holder has not been assigned.\nYou probably need to assign the privateField variable of the Holder script in the inspector."}
+{"k":"unassigned.private.active_self","v":"throws UnityEngine.UnassignedReferenceException: The variable privateField of Holder has not been assigned.\nYou probably need to assign the privateField variable of the Holder script in the inspector."}
+{"k":"unassigned.private.set_active","v":"throws UnityEngine.UnassignedReferenceException: The variable privateField of Holder has not been assigned.\nYou probably need to assign the privateField variable of the Holder script in the inspector."}
+{"k":"unassigned.private.add_component","v":"throws UnityEngine.UnassignedReferenceException: The variable privateField of Holder has not been assigned.\nYou probably need to assign the privateField variable of the Holder script in the inspector."}
+{"k":"unassigned.private.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable privateField of Holder has not been assigned.\nYou probably need to assign the privateField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.array.length","v":"2"}
+{"k":"unassigned.array.0.reference_null","v":"false"}
+{"k":"unassigned.array.0.equals_null","v":"true"}
+{"k":"unassigned.array.0.bool","v":"false"}
+{"k":"unassigned.array.0.is_null","v":"false"}
+{"k":"unassigned.array.0.type","v":"UnityEngine.GameObject"}
+{"k":"unassigned.array.0.to_string","v":"returns null"}
+{"k":"unassigned.array.0.name","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector."}
+{"k":"unassigned.array.0.id_zero","v":"returns True"}
+{"k":"unassigned.array.0.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector."}
+{"k":"unassigned.array.0.equals_self","v":"returns True"}
+{"k":"unassigned.array.0.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector."}
+{"k":"unassigned.array.0.active_self","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector."}
+{"k":"unassigned.array.0.set_active","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector."}
+{"k":"unassigned.array.0.add_component","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector."}
+{"k":"unassigned.array.0.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.list.count","v":"1"}
+{"k":"unassigned.list.0.reference_null","v":"false"}
+{"k":"unassigned.list.0.equals_null","v":"true"}
+{"k":"unassigned.list.0.bool","v":"false"}
+{"k":"unassigned.list.0.is_null","v":"false"}
+{"k":"unassigned.list.0.type","v":"UnityEngine.Transform"}
+{"k":"unassigned.list.0.to_string","v":"returns null"}
+{"k":"unassigned.list.0.name","v":"throws UnityEngine.UnassignedReferenceException: The variable listField of Holder has not been assigned.\nYou probably need to assign the listField variable of the Holder script in the inspector."}
+{"k":"unassigned.list.0.id_zero","v":"returns True"}
+{"k":"unassigned.list.0.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable listField of Holder has not been assigned.\nYou probably need to assign the listField variable of the Holder script in the inspector."}
+{"k":"unassigned.list.0.equals_self","v":"returns True"}
+{"k":"unassigned.list.0.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable listField of Holder has not been assigned.\nYou probably need to assign the listField variable of the Holder script in the inspector."}
+{"k":"unassigned.list.0.game_object","v":"throws UnityEngine.UnassignedReferenceException: The variable listField of Holder has not been assigned.\nYou probably need to assign the listField variable of the Holder script in the inspector."}
+{"k":"unassigned.list.0.get_component","v":"throws UnityEngine.UnassignedReferenceException: The variable listField of Holder has not been assigned.\nYou probably need to assign the listField variable of the Holder script in the inspector."}
+{"k":"unassigned.list.0.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable listField of Holder has not been assigned.\nYou probably need to assign the listField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.nested.reference_null","v":"false"}
+{"k":"unassigned.nested.equals_null","v":"true"}
+{"k":"unassigned.nested.bool","v":"false"}
+{"k":"unassigned.nested.is_null","v":"false"}
+{"k":"unassigned.nested.type","v":"UnityEngine.GameObject"}
+{"k":"unassigned.nested.to_string","v":"returns null"}
+{"k":"unassigned.nested.name","v":"throws System.NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"unassigned.nested.id_zero","v":"returns True"}
+{"k":"unassigned.nested.hide_flags","v":"throws System.NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"unassigned.nested.equals_self","v":"returns True"}
+{"k":"unassigned.nested.transform","v":"throws System.NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"unassigned.nested.active_self","v":"throws System.NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"unassigned.nested.set_active","v":"throws System.NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"unassigned.nested.add_component","v":"throws System.NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"unassigned.nested.instantiate","v":"throws System.ArgumentNullException: Value cannot be null.\nParameter name: data"}
+{"k":"unassigned.non_serialized.reference_null","v":"true"}
+{"k":"unassigned.non_serialized.equals_null","v":"true"}
+{"k":"unassigned.non_serialized.bool","v":"false"}
+{"k":"unassigned.non_serialized.is_null","v":"true"}
+{"k":"unassigned.non_serialized.type","v":"none"}
+{"k":"unassigned.assigned.reference_null","v":"false"}
+{"k":"unassigned.assigned.equals_null","v":"false"}
+{"k":"unassigned.assigned.bool","v":"true"}
+{"k":"unassigned.assigned.is_null","v":"false"}
+{"k":"unassigned.assigned.type","v":"UnityEngine.Transform"}
+{"k":"unassigned.assigned.to_string","v":"returns Holder (UnityEngine.Transform)"}
+{"k":"unassigned.assigned.name","v":"returns Holder"}
+{"k":"unassigned.assigned.id_zero","v":"returns False"}
+{"k":"unassigned.assigned.hide_flags","v":"returns None"}
+{"k":"unassigned.assigned.equals_self","v":"returns True"}
+{"k":"unassigned.assigned.transform","v":"returns UnityEngine.Transform 'Holder'"}
+{"k":"unassigned.assigned.game_object","v":"returns UnityEngine.GameObject 'Holder'"}
+{"k":"unassigned.assigned.get_component","v":"returns UnityEngine.Transform 'Holder'"}
+{"k":"unassigned.assigned.instantiate","v":"returns UnityEngine.Transform 'Holder(Clone)'"}
+{"k":"unassigned.coalesce","v":"false"}
+{"k":"added.game_object.reference_null","v":"true"}
+{"k":"added.game_object.equals_null","v":"true"}
+{"k":"added.game_object.bool","v":"false"}
+{"k":"added.game_object.is_null","v":"true"}
+{"k":"added.game_object.type","v":"none"}
+{"k":"added.array_null.reference_null","v":"true"}
+{"k":"added.array_null.equals_null","v":"true"}
+{"k":"added.array_null.bool","v":"false"}
+{"k":"added.array_null.is_null","v":"true"}
+{"k":"added.array_null.type","v":"none"}
+{"k":"added.array","v":"null"}
+{"k":"instantiated.game_object.reference_null","v":"false"}
+{"k":"instantiated.game_object.equals_null","v":"true"}
+{"k":"instantiated.game_object.bool","v":"false"}
+{"k":"instantiated.game_object.is_null","v":"false"}
+{"k":"instantiated.game_object.type","v":"UnityEngine.GameObject"}
+{"k":"instantiated.game_object.to_string","v":"returns null"}
+{"k":"instantiated.game_object.name","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector."}
+{"k":"instantiated.game_object.id_zero","v":"returns True"}
+{"k":"instantiated.game_object.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector."}
+{"k":"instantiated.game_object.equals_self","v":"returns True"}
+{"k":"instantiated.game_object.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector."}
+{"k":"instantiated.game_object.active_self","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector."}
+{"k":"instantiated.game_object.set_active","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector."}
+{"k":"instantiated.game_object.add_component","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector."}
+{"k":"instantiated.game_object.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable gameObjectField of Holder has not been assigned.\nYou probably need to assign the gameObjectField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"instantiated.array.0.reference_null","v":"false"}
+{"k":"instantiated.array.0.equals_null","v":"true"}
+{"k":"instantiated.array.0.bool","v":"false"}
+{"k":"instantiated.array.0.is_null","v":"false"}
+{"k":"instantiated.array.0.type","v":"UnityEngine.GameObject"}
+{"k":"instantiated.array.0.to_string","v":"returns null"}
+{"k":"instantiated.array.0.name","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector."}
+{"k":"instantiated.array.0.id_zero","v":"returns True"}
+{"k":"instantiated.array.0.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector."}
+{"k":"instantiated.array.0.equals_self","v":"returns True"}
+{"k":"instantiated.array.0.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector."}
+{"k":"instantiated.array.0.active_self","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector."}
+{"k":"instantiated.array.0.set_active","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector."}
+{"k":"instantiated.array.0.add_component","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector."}
+{"k":"instantiated.array.0.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable arrayField of Holder has not been assigned.\nYou probably need to assign the arrayField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"missing.generic.reference_null","v":"false"}
+{"k":"missing.generic.equals_null","v":"true"}
+{"k":"missing.generic.bool","v":"false"}
+{"k":"missing.generic.is_null","v":"false"}
+{"k":"missing.generic.type","v":"UnityEngine.Rigidbody"}
+{"k":"missing.generic.to_string","v":"returns null"}
+{"k":"missing.generic.name","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.generic.id_zero","v":"returns True"}
+{"k":"missing.generic.hide_flags","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.generic.equals_self","v":"returns True"}
+{"k":"missing.generic.transform","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.generic.game_object","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.generic.get_component","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.generic.mass","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.generic.instantiate","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it. Parameter name: data"}
+{"k":"missing.type.reference_null","v":"false"}
+{"k":"missing.type.equals_null","v":"true"}
+{"k":"missing.type.bool","v":"false"}
+{"k":"missing.type.is_null","v":"false"}
+{"k":"missing.type.type","v":"UnityEngine.Rigidbody"}
+{"k":"missing.type.to_string","v":"returns null"}
+{"k":"missing.type.name","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.type.id_zero","v":"returns True"}
+{"k":"missing.type.hide_flags","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.type.equals_self","v":"returns True"}
+{"k":"missing.type.transform","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.type.game_object","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.type.get_component","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.type.mass","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.type.instantiate","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it. Parameter name: data"}
+{"k":"missing.string.reference_null","v":"false"}
+{"k":"missing.string.equals_null","v":"true"}
+{"k":"missing.string.bool","v":"false"}
+{"k":"missing.string.is_null","v":"false"}
+{"k":"missing.string.type","v":"UnityEngine.Rigidbody"}
+{"k":"missing.string.to_string","v":"returns null"}
+{"k":"missing.string.name","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.string.id_zero","v":"returns True"}
+{"k":"missing.string.hide_flags","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.string.equals_self","v":"returns True"}
+{"k":"missing.string.transform","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.string.game_object","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.string.get_component","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.string.mass","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.string.instantiate","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it. Parameter name: data"}
+{"k":"missing.behaviour.reference_null","v":"true"}
+{"k":"missing.behaviour.equals_null","v":"true"}
+{"k":"missing.behaviour.bool","v":"false"}
+{"k":"missing.behaviour.is_null","v":"true"}
+{"k":"missing.behaviour.type","v":"none"}
+{"k":"missing.interface","v":"returns null"}
+{"k":"missing.children.reference_null","v":"true"}
+{"k":"missing.children.equals_null","v":"true"}
+{"k":"missing.children.bool","v":"false"}
+{"k":"missing.children.is_null","v":"true"}
+{"k":"missing.children.type","v":"none"}
+{"k":"missing.parent.reference_null","v":"true"}
+{"k":"missing.parent.equals_null","v":"true"}
+{"k":"missing.parent.bool","v":"false"}
+{"k":"missing.parent.is_null","v":"true"}
+{"k":"missing.parent.type","v":"none"}
+{"k":"missing.from_component.reference_null","v":"false"}
+{"k":"missing.from_component.equals_null","v":"true"}
+{"k":"missing.from_component.bool","v":"false"}
+{"k":"missing.from_component.is_null","v":"false"}
+{"k":"missing.from_component.type","v":"UnityEngine.Rigidbody"}
+{"k":"missing.from_component.to_string","v":"returns null"}
+{"k":"missing.from_component.name","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.from_component.id_zero","v":"returns True"}
+{"k":"missing.from_component.hide_flags","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.from_component.equals_self","v":"returns True"}
+{"k":"missing.from_component.transform","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.from_component.game_object","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.from_component.get_component","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.from_component.mass","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.from_component.instantiate","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Holder\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Holder\". Or your script needs to check if the component is attached before using it. Parameter name: data"}
+{"k":"missing.try","v":"False True"}
+{"k":"missing.components","v":"0"}
+{"k":"missing.inactive.reference_null","v":"false"}
+{"k":"missing.inactive.equals_null","v":"true"}
+{"k":"missing.inactive.bool","v":"false"}
+{"k":"missing.inactive.is_null","v":"false"}
+{"k":"missing.inactive.type","v":"UnityEngine.Rigidbody"}
+{"k":"missing.inactive.to_string","v":"returns null"}
+{"k":"missing.inactive.name","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Sleeper\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Sleeper\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.inactive.id_zero","v":"returns True"}
+{"k":"missing.inactive.hide_flags","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Sleeper\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Sleeper\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.inactive.equals_self","v":"returns True"}
+{"k":"missing.inactive.transform","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Sleeper\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Sleeper\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.inactive.game_object","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Sleeper\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Sleeper\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.inactive.get_component","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Sleeper\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Sleeper\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.inactive.mass","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Sleeper\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Sleeper\". Or your script needs to check if the component is attached before using it."}
+{"k":"missing.inactive.instantiate","v":"throws UnityEngine.MissingComponentException: There is no 'Rigidbody' attached to the \"Sleeper\" game object, but a script is trying to access it.\nYou probably need to add a Rigidbody to the game object \"Sleeper\". Or your script needs to check if the component is attached before using it. Parameter name: data"}
+{"k":"missing.coalesce","v":"false"}
+{"k":"argument.instantiate_null","v":"throws System.ArgumentException: The Object you want to instantiate is null."}
+{"k":"argument.instantiate_generic_null","v":"throws System.ArgumentException: The Object you want to instantiate is null."}
+{"k":"argument.instantiate_null_parent","v":"throws System.ArgumentException: The Object you want to instantiate is null."}
+{"k":"argument.destroy_null","v":"returns done"}
+{"k":"argument.destroy_immediate_null","v":"returns done"}
+{"k":"argument.add_null","v":"returns null"}
+{"k":"argument.add_null.logs","v":"Warning: AddComponent asking for invalid type"}
+{"k":"argument.add_string","v":"returns null"}
+{"k":"argument.add_string.logs","v":"Warning: AddComponent asking for \"String\" which is not a Unity engine type."}
+{"k":"argument.add_transform","v":"returns null"}
+{"k":"argument.add_transform.logs","v":"Log: Can't add component 'Transform' to Holder because such a component is already added to the game object!"}
+{"k":"argument.add_abstract","v":"returns null"}
+{"k":"argument.add_abstract.logs","v":"Log: Cannot add component of type 'Collider' because it is abstract. Add component of type that is derived from 'Collider' instead."}
+{"k":"argument.add_monobehaviour","v":"returns null"}
+{"k":"argument.add_monobehaviour.logs","v":"Error: AddComponent with MonoBehaviour is not allowed. Create a class that derives from MonoBehaviour and add it instead."}
+{"k":"argument.get_string_type","v":"throws System.ArgumentException: GetComponent requires that the requested component 'String' derives from MonoBehaviour or Component or is an interface."}
+{"k":"argument.get_null_type","v":"throws System.ArgumentException: Type cannot be null."}
+{"k":"argument.get_null_name","v":"returns null"}
+{"k":"argument.get_unknown_name","v":"returns null"}
+{"k":"argument.get_components_null_list","v":"returns done"}
+{"k":"argument.get_components_null_type","v":"throws System.ArgumentException: Type cannot be null."}
+{"k":"argument.children_null_type","v":"throws System.ArgumentException: Type cannot be null."}
+{"k":"argument.find_null","v":"returns null"}
+{"k":"argument.find_tag_null","v":"throws System.ArgumentException: Tag: tag name is null or empty."}
+{"k":"argument.find_tag_unknown","v":"throws UnityEngine.UnityException: Tag: NoSuchTag is not defined."}
+{"k":"argument.compare_tag_unknown","v":"returns False"}
+{"k":"argument.compare_tag_unknown.logs","v":"Error: Tag: NoSuchTag is not defined."}
+{"k":"argument.set_tag_unknown","v":"returns done"}
+{"k":"argument.set_tag_unknown.logs","v":"Error: Tag: NoSuchTag is not defined."}
+{"k":"argument.send_message_required","v":"returns done"}
+{"k":"argument.send_message_required.logs","v":"Error: SendMessage NoSuchMessage has no receiver!"}
+{"k":"argument.send_message_null","v":"returns done"}
+{"k":"argument.send_message_null.logs","v":"Error: SendMessage  has no receiver!"}
+{"k":"argument.find_objects_null","v":"returns null"}
+{"k":"argument.find_objects_null.logs","v":"Error: FindAllObjectsOfType: Invalid Type"}
+{"k":"argument.create_instance_null","v":"returns null"}
+{"k":"argument.create_instance_unknown","v":"returns null"}
+{"k":"argument.create_instance_unknown.logs","v":"Error: Instance of NoSuchType couldn't be created because there is no script with that name."}
+{"k":"argument.create_instance_component","v":"throws System.InvalidCastException: Specified cast is not valid."}
+{"k":"argument.new_component","v":"returns Unity-null Marker"}
+{"k":"argument.new_component.logs","v":"Warning: You are trying to create a MonoBehaviour using the 'new' keyword.  This is not allowed.  MonoBehaviours can only be added using AddComponent(). Alternatively, your script can inherit from ScriptableObject or no base class at all"}
+{"k":"argument.set_parent_self","v":"returns done"}
+{"k":"argument.child_out_of_range","v":"throws UnityEngine.UnityException: Transform child out of bounds"}
+{"k":"argument.child_negative","v":"throws UnityEngine.UnityException: Transform child out of bounds"}
+{"k":"argument.sibling_index_out_of_range","v":"returns 5"}
+{"k":"destroyed.game_object.reference_null","v":"false"}
+{"k":"destroyed.game_object.equals_null","v":"true"}
+{"k":"destroyed.game_object.bool","v":"false"}
+{"k":"destroyed.game_object.is_null","v":"false"}
+{"k":"destroyed.game_object.type","v":"UnityEngine.GameObject"}
+{"k":"destroyed.game_object.to_string","v":"returns null"}
+{"k":"destroyed.game_object.name","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.game_object.id_zero","v":"returns False"}
+{"k":"destroyed.game_object.hide_flags","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.game_object.equals_self","v":"returns True"}
+{"k":"destroyed.game_object.transform","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.game_object.active_self","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.game_object.set_active","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.game_object.add_component","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.game_object.instantiate","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: data"}
+{"k":"destroyed.transform.reference_null","v":"false"}
+{"k":"destroyed.transform.equals_null","v":"true"}
+{"k":"destroyed.transform.bool","v":"false"}
+{"k":"destroyed.transform.is_null","v":"false"}
+{"k":"destroyed.transform.type","v":"UnityEngine.Transform"}
+{"k":"destroyed.transform.to_string","v":"returns null"}
+{"k":"destroyed.transform.name","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.Transform' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.transform.id_zero","v":"returns False"}
+{"k":"destroyed.transform.hide_flags","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.Transform' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.transform.equals_self","v":"returns True"}
+{"k":"destroyed.transform.transform","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.Transform' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.transform.game_object","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.Transform' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.transform.get_component","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.Transform' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.transform.instantiate","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.Transform' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: data"}
+{"k":"destroyed.collider.reference_null","v":"false"}
+{"k":"destroyed.collider.equals_null","v":"true"}
+{"k":"destroyed.collider.bool","v":"false"}
+{"k":"destroyed.collider.is_null","v":"false"}
+{"k":"destroyed.collider.type","v":"UnityEngine.BoxCollider"}
+{"k":"destroyed.collider.to_string","v":"returns null"}
+{"k":"destroyed.collider.name","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.BoxCollider' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.collider.id_zero","v":"returns False"}
+{"k":"destroyed.collider.hide_flags","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.BoxCollider' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.collider.equals_self","v":"returns True"}
+{"k":"destroyed.collider.transform","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.BoxCollider' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.collider.game_object","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.BoxCollider' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.collider.get_component","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.BoxCollider' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.collider.instantiate","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.BoxCollider' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: data"}
+{"k":"destroyed.marker.reference_null","v":"false"}
+{"k":"destroyed.marker.equals_null","v":"true"}
+{"k":"destroyed.marker.bool","v":"false"}
+{"k":"destroyed.marker.is_null","v":"false"}
+{"k":"destroyed.marker.type","v":"Marker"}
+{"k":"destroyed.marker.to_string","v":"returns null"}
+{"k":"destroyed.marker.name","v":"throws UnityEngine.MissingReferenceException: The object of type 'Marker' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.marker.id_zero","v":"returns False"}
+{"k":"destroyed.marker.hide_flags","v":"throws UnityEngine.MissingReferenceException: The object of type 'Marker' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.marker.equals_self","v":"returns True"}
+{"k":"destroyed.marker.transform","v":"throws UnityEngine.MissingReferenceException: The object of type 'Marker' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.marker.game_object","v":"throws UnityEngine.MissingReferenceException: The object of type 'Marker' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.marker.get_component","v":"throws UnityEngine.MissingReferenceException: The object of type 'Marker' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.marker.enabled","v":"throws UnityEngine.MissingReferenceException: The object of type 'Marker' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.marker.instantiate","v":"throws UnityEngine.MissingReferenceException: The object of type 'Marker' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: data"}
+{"k":"destroyed.texture.reference_null","v":"false"}
+{"k":"destroyed.texture.equals_null","v":"true"}
+{"k":"destroyed.texture.bool","v":"false"}
+{"k":"destroyed.texture.is_null","v":"false"}
+{"k":"destroyed.texture.type","v":"UnityEngine.Texture2D"}
+{"k":"destroyed.texture.to_string","v":"returns null"}
+{"k":"destroyed.texture.name","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.Texture2D' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.texture.id_zero","v":"returns False"}
+{"k":"destroyed.texture.hide_flags","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.Texture2D' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.texture.equals_self","v":"returns True"}
+{"k":"destroyed.texture.width","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.Texture2D' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.texture.instantiate","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.Texture2D' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: data"}
+{"k":"destroyed.data.reference_null","v":"false"}
+{"k":"destroyed.data.equals_null","v":"true"}
+{"k":"destroyed.data.bool","v":"false"}
+{"k":"destroyed.data.is_null","v":"false"}
+{"k":"destroyed.data.type","v":"Data"}
+{"k":"destroyed.data.to_string","v":"returns null"}
+{"k":"destroyed.data.name","v":"throws UnityEngine.MissingReferenceException: The object of type 'Data' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.data.id_zero","v":"returns False"}
+{"k":"destroyed.data.hide_flags","v":"throws UnityEngine.MissingReferenceException: The object of type 'Data' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.data.equals_self","v":"returns True"}
+{"k":"destroyed.data.instantiate","v":"throws UnityEngine.MissingReferenceException: The object of type 'Data' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: data"}
+{"k":"destroyed.set_parent","v":"returns done"}
+{"k":"destroyed.destroy_again","v":"returns done"}
+{"k":"destroyed.destroy_immediate_again","v":"returns done"}
+{"k":"destroyed.dont_destroy","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: target"}
+{"k":"destroyed.instantiate_with_parent","v":"returns UnityEngine.GameObject 'Parent(Clone)'"}
+{"k":"destroyed.get_component_generic","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"destroyed.compare_tag","v":"throws UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object."}
+{"k":"complete","v":true}

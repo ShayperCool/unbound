@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/objecterrors/run.py gate"],
+  "summary": "objecterrors: .*",
+  "engine_paths": ["managed/UnityEngine/Core/Object.cs", "managed/UnityEngine/Core/GameObject.cs", "managed/UnityEngine/Core/Component.cs", "managed/UnityEngine/Runtime/MonoExceptions.cs"]
+}
