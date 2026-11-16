@@ -1,0 +1,11 @@
+{"key":"buffer.matchesConfiguration","value":"True"}
+{"key":"graph.defaultClock","value":"DSPClock"}
+{"key":"dsp.wholeBuffers","value":"True"}
+{"key":"dsp.monotonic","value":"True"}
+{"key":"dsp.followsRealTime","value":"True"}
+{"key":"dsp.hitchCountedNextFrame","value":"True"}
+{"key":"dsp.hitchNotCountedBefore","value":"True"}
+{"key":"graph.hitchCountedNextFrame","value":"True"}
+{"key":"graph.wholeBuffers","value":"False"}
+{"key":"graph.movesEveryFrame","value":"True"}
+{"key":"complete","value":"1"}

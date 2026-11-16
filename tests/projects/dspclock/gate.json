@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/dspclock/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "crates/unbound-runtime/src/audio/mod.rs",
+    "crates/unbound-runtime/src/audio/mixer.rs",
+    "managed/UnityEngine/Audio/AudioBackend.cs",
+    "managed/UnityEngine/Audio/AudioSettings.cs",
+    "managed/UnityEngine/Audio/AudioSystem.cs",
+    "managed/UnityEngine/Core/Time.cs",
+    "managed/UnityEngine/Playables/PlayableSystem.cs",
+    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs"
+  ]
+}
