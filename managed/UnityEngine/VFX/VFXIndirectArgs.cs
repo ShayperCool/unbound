@@ -87,6 +87,10 @@ namespace Unbound.Runtime
         /// <summary>The integers 0 to the entries' capacity, boxed once: an entry's place and
         /// the count past it, set for each fill without a new box.</summary>
         object[] m_Boxed = Array.Empty<object>();
+        /// <summary>Entries' buffers made anew in frame <see cref="m_RetiredFrame"/>: draws
+        /// collected before kept their handles, so they are released in a later frame.</summary>
+        readonly List<GraphicsBuffer> m_Retired = new List<GraphicsBuffer>();
+        int m_RetiredFrame;
         bool m_Loaded, m_Usable;
 
         /// <summary>The buffer of every entry's words (made anew, its words lost, when entries
@@ -142,14 +146,35 @@ namespace Unbound.Runtime
             return true;
         }
 
+        /// <summary>Whether entries can be filled now (the package's kernels are there), with a
+        /// buffer for every entry reserved so far: an output takes the entries' buffer only
+        /// after this, so that no entry reserved later makes it anew under a draw collected
+        /// before.</summary>
+        internal bool Ready()
+        {
+            if (!Usable()) return false;
+            Prepare();
+            return true;
+        }
+
         /// <summary>Buffers for every reserved entry; the descriptions uploaded when they changed.</summary>
         void Prepare()
         {
+            int frame = Time.frameCount;
+            if (m_Retired.Count != 0 && frame != m_RetiredFrame)
+            {
+                foreach (var buffer in m_Retired) buffer.Release();
+                m_Retired.Clear();
+            }
             if (m_Used > m_Capacity)
             {
                 m_Capacity = Math.Max(FirstCapacity, m_Capacity);
                 while (m_Capacity < m_Used) m_Capacity *= 2;
-                m_Args?.Release();
+                if (m_Args != null)
+                {
+                    m_Retired.Add(m_Args);
+                    m_RetiredFrame = frame;
+                }
                 m_DescriptionBuffer?.Release();
                 m_Counts?.Release();
                 Generation++;

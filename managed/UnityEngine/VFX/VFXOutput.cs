@@ -258,8 +258,12 @@ namespace Unbound.Runtime
             uint quads = m_System.DrawnParticles;
             if (quads == 0 || !m_Material) return;
             var arguments = VFXIndirectArgs.Shared;
-            // Arguments made anew since this camera's were computed are computed again.
-            if (Indirect && m_FilledGeneration != arguments.Generation && !FillArguments()) return;
+            if (Indirect)
+            {
+                if (!arguments.Ready()) return;
+                // Arguments made anew since this camera's were computed are computed again.
+                if (m_FilledGeneration != arguments.Generation && !FillArguments()) return;
+            }
             var effect = m_System.Effect;
             for (int i = 0; i < m_BufferNames.Length; i++)
             {
