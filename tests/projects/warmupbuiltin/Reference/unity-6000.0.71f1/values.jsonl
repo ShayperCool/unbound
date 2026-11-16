@@ -1,0 +1,22 @@
+{"k":"find/Hidden/Internal-UIRAtlasBlitCopy","v":"found"}
+{"k":"find/UI/Default","v":"found"}
+{"k":"find/Hidden/UIElements/EditorUIE","v":"found"}
+{"k":"find/Sprites/Default","v":"found"}
+{"k":"loaded","v":"true"}
+{"k":"state/cold","v":"shaders 4 variants 5 warm False warmed 0"}
+{"k":"contains/Hidden/Internal-UIRAtlasBlitCopy","v":"true"}
+{"k":"contains/UI/Default","v":"true"}
+{"k":"contains/Hidden/UIElements/EditorUIE","v":"true"}
+{"k":"contains/Sprites/Default","v":"true"}
+{"k":"progressive/1","v":"False"}
+{"k":"state/progressive/1","v":"shaders 4 variants 5 warm False warmed 1"}
+{"k":"progressive/2","v":"False"}
+{"k":"state/progressive/2","v":"shaders 4 variants 5 warm False warmed 2"}
+{"k":"progressive/3","v":"False"}
+{"k":"state/progressive/3","v":"shaders 4 variants 5 warm False warmed 3"}
+{"k":"full","v":"done"}
+{"k":"state/full","v":"shaders 4 variants 5 warm True warmed 5"}
+{"k":"progressive/after","v":"True"}
+{"k":"global","v":"done"}
+{"k":"state/global","v":"shaders 4 variants 5 warm True warmed 5"}
+{"k":"complete","v":true}

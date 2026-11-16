@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/warmupbuiltin/run.py gate"
+  ],
+  "summary": "warmupbuiltin: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/ShaderWarmup.cs",
+    "managed/UnityEngine/Graphics/ShaderVariantCollection.cs"
+  ]
+}
