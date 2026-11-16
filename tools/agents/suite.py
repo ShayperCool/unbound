@@ -68,8 +68,9 @@ status or summary changed. --update-baseline copies this run's summary to agents
 --promote LABEL does that for an earlier run without running anything.
 
 Image comparators print measurements, not verdicts, except where a recipe gates them
-(particles/compare_images.py --gate: exact images apart from a probe's listed residuals; used
-by assetbundles, blendshapes and particles). Each run records them (`images` in the
+(particles/compare_images.py and urp/compare.py --gate: exact images apart from a probe's listed
+residuals, tests/projects/urp/image_gate.py; used by assetbundles, baked, blendshapes, grass,
+lighting, particles, shadergraph, urp, urp2d and video). Each run records them (`images` in the
 summary: every printed image mean, worst channel difference and count of pixels over 8, by
 comparator step (its script and first argument) and image); a probe with any status regresses when
 one of them gets worse against the baseline: a higher mean as printed (two decimals), more pixels
@@ -162,6 +163,12 @@ def ref(name=''):
     return '{probe}/Reference' + ('/'+name if name else '')
 
 
+def gated_image(reference, candidate, residuals=None):
+    """urp/compare.py of one image as a gate: pixel for pixel, apart from what the probe's residual
+    list records (tests/projects/urp/image_gate.py)."""
+    return py('urp/compare.py', reference, candidate, '--gate', *((residuals,) if residuals else ()))
+
+
 def classic(variable, out, run_args, compare=None, images=None, verdict='summary', extra_env=None,
             image_gate=False):
     """The original probe layout: an *_OUT variable, `unbound run`, compare.py REFERENCE OUT."""
@@ -172,8 +179,10 @@ def classic(variable, out, run_args, compare=None, images=None, verdict='summary
         # compare_images.py prints means and exits 0: a measurement, not a verdict; with
         # image_gate (probes whose images are exact on the Linux GPU) every image must match its
         # reference pixel for pixel and the step decides.
+        # image_gate: True for exact images, or a residual list's path.
+        gate = ('--gate',) + ((image_gate,) if isinstance(image_gate, str) else ()) if image_gate else ()
         steps.append(py('particles/compare_images.py', ref(images if images is not True else ''), target,
-                        *(('--gate',) if image_gate else ()), verdict='exit' if image_gate else 'none'))
+                        *gate, verdict='exit' if image_gate else 'none'))
     return steps
 
 
@@ -377,13 +386,13 @@ def recipes(release):
                       py('compare_images.py', ref('images'), '{work}/images', '--gate', '{probe}/image-residuals.json')]
     R['lighting'] = [run('--frames', '10', '--size', '320x180', '--no-watch', '--force-glcore',
                          env={'LIGHTING_PROBE_OUT': '{work}/out'}),
-                     py('particles/compare_images.py', ref('images'), '{work}/out', verdict='none')]
+                     py('particles/compare_images.py', ref('images'), '{work}/out', '--gate', '{probe}/image-residuals.json')]
     # On the Vulkan device too, against the Vulkan Editor's capture (shadow biases differ).
     if (PROJECTS/'lighting/Reference'/f'unity-{release}'/'vulkan').is_dir():
         R['lighting'] += [run('--frames', '10', '--size', '320x180', '--no-watch', '--force-vulkan',
                               env={'LIGHTING_PROBE_OUT': '{work}/out-vulkan'}),
                           py('particles/compare_images.py', ref('unity-{release}/vulkan'), '{work}/out-vulkan',
-                             verdict='none')]
+                             '--gate', '{probe}/image-residuals-vulkan.json')]
     R['materials'] = classic('MATERIALS_PROBE_OUT', 'out.json', ['--no-watch', '--frames', '10'],
                              [single_ref('json'), '{work}/out.json'], verdict='exit')
     R['builtinrp'] = classic('BUILTIN_PROBE_OUT', 'out', ['--frames', '30', '--size', '640x480', '--no-watch'],
@@ -397,10 +406,10 @@ def recipes(release):
                     # display/compare.py always exits 0: its values count decides, its image is measured.
                     py('compare.py', ref(), '{work}/out', '{work}/display.png')]
     R['baked'] = [run('--no-watch', '--frames', '20', '--size', '320x180', env={'BAKED_PROBE_OUT': '{work}/out.png'}),
-                  py('urp/compare.py', single_ref('png'), '{work}/out.png', verdict='none')]
+                  gated_image(single_ref('png'), '{work}/out.png', '{probe}/image-residuals.json')]
     R['shadergraph'] = [run('--no-watch', '--frames', '30', '--size', '320x180',
                             env={'SHADERGRAPH_PROBE_OUT': '{work}/out.png'}),
-                        py('urp/compare.py', single_ref('png'), '{work}/out.png', verdict='none')]
+                        gated_image(single_ref('png'), '{work}/out.png')]
     R['uitk'] = classic('UITK_PROBE_OUT', 'out.jsonl', ['--no-watch', '--frames', '30'],
                         [single_ref(), '{work}/out.jsonl'], verdict='exit')
     R['twod'] = classic('TWOD_PROBE_OUT', 'out.json', ['--no-watch', '--frames', '40'],
@@ -410,7 +419,7 @@ def recipes(release):
     for name, variable, frames in [('urp', 'URP_PROBE_DIR', '60'), ('urp2d', 'URP2D_PROBE_DIR', '40')]:
         scenarios = sorted((PROJECTS/name/'Reference/scenarios').glob('*.png'))
         R[name] = [run('--no-watch', '--frames', frames, '--size', '320x180', env={variable: '{work}/out'})]
-        R[name] += [py('urp/compare.py', str(png), '{work}/out/'+png.name, verdict='none') for png in scenarios]
+        R[name] += [gated_image(str(png), '{work}/out/'+png.name, '{probe}/image-residuals.json') for png in scenarios]
     R['urp'].append(py('compare_constants.py', ref('scenarios/per-object-constants.jsonl'),
                        '{work}/out/per-object-constants.jsonl'))
     R['urp'].append(py('compare_constants.py', ref('scenarios/texture-formats.jsonl'),
@@ -429,17 +438,19 @@ def recipes(release):
         out = '{work}/paths' + ('' if device == 'opengl' else '-'+device)
         R['urp'].append(run('--no-watch', '--frames', '200', '--size', '320x180', flag,
                             env={'URP_PROBE_DEFERRED_DIR': out}))
-        R['urp'] += [py('urp/compare.py', str(png), out+'/'+png.name, verdict='none')
+        R['urp'] += [gated_image(str(png), out+'/'+png.name, '{probe}/image-residuals.json')
                      for png in sorted(paths.glob('*.png'))]
         R['urp'].append(py('compare_constants.py', str(paths/'modes.jsonl'), out+'/modes.jsonl'))
     R['terrain'] = classic('TERRAIN_PROBE_OUT', 'out', ['--frames', '300', '--size', '320x180', '--no-watch'], images=True)
     R['lod'] = classic('LOD_PROBE_OUT', 'out', ['--frames', '20000', '--size', '320x180', '--no-watch'])
     R['assetbundles'] = classic('BUNDLE_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'],
                                 images=True, image_gate=True)
-    R['video'] = classic('VIDEO_PROBE_OUT', 'out', ['--frames', '30000', '--size', '320x180', '--no-watch'], images=True)
+    R['video'] = classic('VIDEO_PROBE_OUT', 'out', ['--frames', '30000', '--size', '320x180', '--no-watch'], images=True,
+                         image_gate='{probe}/image-residuals.json')
     R['blendshapes'] = classic('BLEND_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'],
                                images=True, image_gate=True)
-    R['grass'] = classic('GRASS_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'], images=True)
+    R['grass'] = classic('GRASS_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'], images=True,
+                         image_gate='{probe}/image-residuals.json')
     R['ambient'] = declared('ambient', release)
     R['xr'] = classic('XR_PROBE_OUT', 'out', ['--frames', '300', '--size', '320x180', '--no-watch'])
     R['wind'] = classic('WIND_PROBE_OUT', 'out', ['--frames', '100000', '--size', '320x180', '--no-watch'],

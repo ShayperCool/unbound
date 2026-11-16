@@ -1,0 +1,7 @@
+{
+ "Reference/scenarios/spot.png": {
+  "pixels": 2,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ }
+}

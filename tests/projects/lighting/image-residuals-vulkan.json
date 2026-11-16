@@ -1,0 +1,122 @@
+{
+ "directional_point": {
+  "pixels": 5854,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "falloff_point": {
+  "pixels": 962,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "falloff_spot": {
+  "pixels": 3509,
+  "worst": 4,
+  "reason": "visually insignificant: up to 4/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "five_points": {
+  "pixels": 8494,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "legacy_diffuse": {
+  "pixels": 7553,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "pixel_light_count": {
+  "pixels": 2379,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "point": {
+  "pixels": 5294,
+  "worst": 3,
+  "reason": "visually insignificant: up to 3/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "point_range": {
+  "pixels": 4383,
+  "worst": 12,
+  "reason": "a point light's range fade, up to 12/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "shadow_cascades": {
+  "pixels": 212,
+  "worst": 14,
+  "reason": "shadow edges: pixels along shadow boundaries (shadow map sampling at the edges, not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "shadow_directional_hard": {
+  "pixels": 59,
+  "worst": 16,
+  "reason": "shadow edges: pixels along shadow boundaries (shadow map sampling at the edges, not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "shadow_directional_hard_mask": {
+  "pixels": 101,
+  "worst": 19,
+  "reason": "shadow edges: pixels along shadow boundaries (shadow map sampling at the edges, not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "shadow_directional_soft": {
+  "pixels": 296,
+  "worst": 7,
+  "reason": "shadow edges: pixels along shadow boundaries (shadow map sampling at the edges, not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "shadow_directional_soft_mask": {
+  "pixels": 198,
+  "worst": 8,
+  "reason": "shadow edges: pixels along shadow boundaries (shadow map sampling at the edges, not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "shadow_point": {
+  "pixels": 4029,
+  "worst": 6,
+  "reason": "shadow edges: pixels along shadow boundaries (shadow map sampling at the edges, not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "shadow_shadows_only": {
+  "pixels": 122,
+  "worst": 16,
+  "reason": "shadow edges: pixels along shadow boundaries (shadow map sampling at the edges, not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "shadow_spot": {
+  "pixels": 4295,
+  "worst": 48,
+  "reason": "the spot cone's edge: the default spot cookie is a fitted curve (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "shadow_two_directionals": {
+  "pixels": 437,
+  "worst": 11,
+  "reason": "shadow edges: pixels along shadow boundaries (shadow map sampling at the edges, not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "shadow_two_sided": {
+  "pixels": 43,
+  "worst": 6,
+  "reason": "shadow edges: pixels along shadow boundaries (shadow map sampling at the edges, not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "spot": {
+  "pixels": 2541,
+  "worst": 57,
+  "reason": "the spot cone's edge: the default spot cookie is a fitted curve (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "spot_cookie": {
+  "pixels": 1185,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "textures_point": {
+  "pixels": 12808,
+  "worst": 5,
+  "reason": "light attenuation and shading rounding, up to 5/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "textures_spot": {
+  "pixels": 21652,
+  "worst": 37,
+  "reason": "the spot cone's edge: the default spot cookie is a fitted curve (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "two_points": {
+  "pixels": 9703,
+  "worst": 6,
+  "reason": "light attenuation and shading rounding, up to 6/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "vertexlit": {
+  "pixels": 17862,
+  "worst": 46,
+  "reason": "VertexLit: unlit regions up to 9/255 brighter than the flat ambient the Editor shows (13 against 22 on 448 pixels), sphere silhouettes up to 46 on 12 pixels; a light term on the unlit side, not traced; 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ }
+}

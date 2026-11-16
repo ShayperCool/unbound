@@ -1,0 +1,7 @@
+{
+ "Reference/unity-6000.0.71f1.png": {
+  "pixels": 857,
+  "worst": 19,
+  "reason": "a one-pixel shift of the column's silhouette (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ }
+}

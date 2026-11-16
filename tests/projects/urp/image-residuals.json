@@ -1,0 +1,682 @@
+{
+ "Reference/scenarios/aa_fxaa.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/aa_smaa_high.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/aa_smaa_low.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/aa_smaa_medium.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/aa_taa.png": {
+  "pixels": 20,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/base.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/camera_stack.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/cookie_directional.png": {
+  "pixels": 8,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/cookie_directional_opaque.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/cookie_point.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/cookie_spot.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/decal_angle_fade.png": {
+  "pixels": 14,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/decal_automatic.png": {
+  "pixels": 6,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/decal_draw_distance.png": {
+  "pixels": 6,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/decal_fade_factor.png": {
+  "pixels": 5,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/decal_forward_plus.png": {
+  "pixels": 6,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/decal_layers.png": {
+  "pixels": 6,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/decal_normal_blend_high.png": {
+  "pixels": 5,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/decal_normal_blend_medium.png": {
+  "pixels": 7,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/decal_screen_space.png": {
+  "pixels": 6,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/decal_size_pivot.png": {
+  "pixels": 15,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/decal_uv.png": {
+  "pixels": 6,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/deferred.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/depth_opaque.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/fog.png": {
+  "pixels": 3,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/forward_plus.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/inline_sampler.png": {
+  "pixels": 7200,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/light_data_block.png": {
+  "pixels": 2,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/lightmap_distance_shadowmask.png": {
+  "pixels": 13,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/lightmap_shadowmask.png": {
+  "pixels": 14,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/lightmap_subtractive.png": {
+  "pixels": 11,
+  "worst": 31,
+  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/lights.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/lights_shadows.png": {
+  "pixels": 3,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/motion_blur_camera.png": {
+  "pixels": 2,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/motion_blur_camera_high.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/motion_blur_objects.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/motion_blur_skinned.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/motion_blur_skinned_moved.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/motion_blur_skinned_off.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/motion_blur_skinned_renderer.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/motion_blur_skinned_root.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/motion_blur_skinned_root_scale.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/msaa.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/override_shader_0.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/override_shader_1.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/override_shader_and_material.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/override_shader_default.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_bloom.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_channel_mixer.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_chromatic_aberration.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_color.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_curves.png": {
+  "pixels": 1,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_dof_bokeh.png": {
+  "pixels": 2,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_dof_gaussian.png": {
+  "pixels": 5,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_dof_gaussian_hq.png": {
+  "pixels": 33,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_film_grain.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_lift_gamma_gain.png": {
+  "pixels": 1,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_lut.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_lut_hdr.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_panini.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_shadows_midtones_highlights.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_split_toning.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_tonemap.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_tonemap_neutral.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_vignette.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/postfx_white_balance.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/reflections.png": {
+  "pixels": 120,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/reflections_forward_plus.png": {
+  "pixels": 135,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/reflections_simple.png": {
+  "pixels": 119,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/render_scale.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/shadows.png": {
+  "pixels": 4,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/skybox.png": {
+  "pixels": 9712,
+  "worst": 3,
+  "reason": "visually insignificant: up to 3/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/spot_shadows.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/ssao_blur_medium.png": {
+  "pixels": 2,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/ssao_depth.png": {
+  "pixels": 2,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/ssao_downsample.png": {
+  "pixels": 3,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/ssao_lightmap.png": {
+  "pixels": 12,
+  "worst": 31,
+  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/ssao_params.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/ssao_samples_high.png": {
+  "pixels": 3,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/state_block.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/structured_buffer.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/terrain_light_layers.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/transparent.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/upscale_auto_fractional.png": {
+  "pixels": 11118,
+  "worst": 133,
+  "reason": "fractional render scale: URP's (int)(pixelWidth * renderScale) without Mono's wider float intermediates (the Mono float opt-in is off by default), so the scaled target is a pixel off (docs/COMPATIBILITY_GAPS.md, script float arithmetic row); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/scenarios/upscale_stp.png": {
+  "pixels": 16644,
+  "worst": 142,
+  "reason": "STP upscaling: silhouette edges, open and queued (docs/COMPATIBILITY_GAPS.md, URP post-processing row, Q227); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/accurate_normals_deferred.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/accurate_normals_forward.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/decal_layers_deferred.png": {
+  "pixels": 6,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/decal_layers_forward.png": {
+  "pixels": 6,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/decal_screen_space_deferred.png": {
+  "pixels": 6,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/decal_screen_space_forward.png": {
+  "pixels": 6,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/light_layers_deferred.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/light_layers_forward.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/lightmap_distance_shadowmask_deferred.png": {
+  "pixels": 13,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/lightmap_distance_shadowmask_forward.png": {
+  "pixels": 13,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/lightmap_shadowmask_deferred.png": {
+  "pixels": 14,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/lightmap_shadowmask_forward.png": {
+  "pixels": 14,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/lightmap_subtractive_deferred.png": {
+  "pixels": 11,
+  "worst": 31,
+  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/lightmap_subtractive_forward.png": {
+  "pixels": 11,
+  "worst": 31,
+  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/lights_deferred.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/lights_forward.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/many_lights_deferred.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/many_lights_forward.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/msaa_deferred.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/msaa_forward.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/opaque_deferred.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/opaque_forward.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/shadows_deferred.png": {
+  "pixels": 8,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/shadows_forward.png": {
+  "pixels": 8,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/transparent_deferred.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-opengl/transparent_forward.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/accurate_normals_deferred.png": {
+  "pixels": 68,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/decal_dbuffer_deferred.png": {
+  "pixels": 1618,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/decal_dbuffer_forward.png": {
+  "pixels": 521,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/decal_dbuffer_layers_deferred.png": {
+  "pixels": 1167,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/decal_dbuffer_layers_forward.png": {
+  "pixels": 223,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/decal_layers_deferred.png": {
+  "pixels": 908,
+  "worst": 3,
+  "reason": "visually insignificant: up to 3/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/decal_layers_forward.png": {
+  "pixels": 133,
+  "worst": 22,
+  "reason": "Vulkan screen-space decals: scattered pixels along the decal projection's and the cube's edges (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/decal_screen_space_deferred.png": {
+  "pixels": 1205,
+  "worst": 5,
+  "reason": "Vulkan screen-space decals: scattered pixels along the decal projection's and the cube's edges (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/decal_screen_space_forward.png": {
+  "pixels": 160,
+  "worst": 31,
+  "reason": "Vulkan screen-space decals: scattered pixels along the decal projection's and the cube's edges (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/light_layers_deferred.png": {
+  "pixels": 124,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/lightmap_distance_shadowmask_deferred.png": {
+  "pixels": 725,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/lightmap_distance_shadowmask_forward.png": {
+  "pixels": 13,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/lightmap_shadowmask_deferred.png": {
+  "pixels": 736,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/lightmap_shadowmask_forward.png": {
+  "pixels": 14,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/lightmap_subtractive_deferred.png": {
+  "pixels": 37,
+  "worst": 31,
+  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/lightmap_subtractive_forward.png": {
+  "pixels": 11,
+  "worst": 31,
+  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/lights_deferred.png": {
+  "pixels": 241,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/many_lights_deferred.png": {
+  "pixels": 212,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/msaa_deferred.png": {
+  "pixels": 241,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/opaque_deferred.png": {
+  "pixels": 127,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/shadows_deferred.png": {
+  "pixels": 952,
+  "worst": 2,
+  "reason": "visually insignificant: up to 2/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/shadows_forward.png": {
+  "pixels": 7,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/ssao_deferred.png": {
+  "pixels": 818,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/paths-vulkan/transparent_deferred.png": {
+  "pixels": 238,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ }
+}

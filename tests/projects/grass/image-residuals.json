@@ -1,0 +1,37 @@
+{
+ "Counts": {
+  "pixels": 11249,
+  "worst": 141,
+  "reason": "the layerless terrains' checker, which the Editor draws darker and with more contrast (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Coverage": {
+  "pixels": 4860,
+  "worst": 137,
+  "reason": "the layerless terrains' checker, which the Editor draws darker and with more contrast (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "DensityCounts": {
+  "pixels": 9938,
+  "worst": 169,
+  "reason": "the layerless terrains' checker, which the Editor draws darker and with more contrast (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "DensityCoverage": {
+  "pixels": 8300,
+  "worst": 153,
+  "reason": "the layerless terrains' checker, which the Editor draws darker and with more contrast (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Instanced": {
+  "pixels": 63,
+  "worst": 1,
+  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Refusals": {
+  "pixels": 2153,
+  "worst": 133,
+  "reason": "the layerless terrains' checker, which the Editor draws darker and with more contrast (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Tilted": {
+  "pixels": 10949,
+  "worst": 144,
+  "reason": "the layerless terrains' checker, which the Editor draws darker and with more contrast (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ }
+}
