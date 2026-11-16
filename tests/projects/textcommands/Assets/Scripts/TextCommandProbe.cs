@@ -218,7 +218,7 @@ public class TextCommandProbe : MonoBehaviour
         // IME mode as it was (set with nothing focused).
         multi.Blur();
         yield return Settle();
-        UnityEngine.Input.imeCompositionMode = IMECompositionMode.On;
+        UnityEngine.Input.imeCompositionMode = IMECompositionMode.Off;
         locked.Focus();
         yield return Settle();
         Put("ime.lockedFocused", UnityEngine.Input.imeCompositionMode);
