@@ -7239,6 +7239,12 @@
     {
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
+      "status": "abstract",
+      "type": "UnityEngine.UIElements.BaseFieldMouseDragger"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
       "status": "open-generic",
       "type": "UnityEngine.UIElements.BaseField`1"
     },
@@ -7673,6 +7679,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "open-generic",
       "type": "UnityEngine.UIElements.Experimental.ValueAnimation`1"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "open-generic",
+      "type": "UnityEngine.UIElements.FieldMouseDragger`1"
     },
     {
       "category": "class",
@@ -8195,6 +8207,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.Slider"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.SliderInt"
     },
     {
       "category": "class",

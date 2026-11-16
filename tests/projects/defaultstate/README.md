@@ -603,3 +603,8 @@ new `VFXSpawnerState` is finished and loops without end (duration -1, count -1).
 and `vfxEventAttribute` are recorded as `requires-context`: a state made with `new` has no event
 attributes (reading its spawn count stops the Editor), a state filled by
 `VisualEffect.GetSpawnSystemInfo` has them (`tests/projects/vfx`, `spawner state/copy*`).
+
+The slider drag slice (Q516) adds `SliderInt`, `FieldMouseDragger<T>` and `BaseFieldMouseDragger` to
+the handwritten inventory. Two independent 6000.0.71f1 GPU Editor captures agree on all 58 of their
+rows, appended before the completion row; every earlier row and inventory entry is byte-identical
+(13,362 rows).
