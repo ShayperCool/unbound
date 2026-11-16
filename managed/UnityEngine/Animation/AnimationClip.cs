@@ -1134,7 +1134,7 @@ namespace Unbound.Runtime
     {
         /// <summary>Keys closer than this keep the curve's own evaluation (their rounding is
         /// not measured).</summary>
-        const float MinSegmentLength = 1e-4f;
+        const float MinSegmentLength = AnimationCurve.MinCubicLength;
 
         readonly float[] m_Times;
         readonly float[] m_Coefficients;

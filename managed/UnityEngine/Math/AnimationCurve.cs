@@ -422,8 +422,11 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>The shortest distance of two keys <see cref="EvaluateCubic"/> divides by.</summary>
-        const float MinCubicLength = 1e-4f;
+        /// <summary>The shortest distance of two keys a segment's cubic is computed over.
+        /// <see cref="EvaluateCubic"/> takes closer keys as this far apart; the Animator's
+        /// segments (<see cref="Unbound.Runtime.KeySegments"/>) leave them to
+        /// <see cref="Evaluate"/>, their rounding there not being measured.</summary>
+        internal const float MinCubicLength = 1e-4f;
 
         /// <summary>
         /// The curve at <paramref name="time"/> as a Visual Effect Graph samples it (its Sample

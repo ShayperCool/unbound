@@ -88,7 +88,11 @@ namespace Unbound.Runtime
                     // A curve that loops both ways is sampled at texel centres (its end wraps
                     // onto its start, and the generated code samples it without the half
                     // texel it adds where it clamps); any other from its first key to its
-                    // last. A curve of one key has no range: every sample is its value, and
+                    // last. Where the last sample's time reaches the last key of a curve
+                    // that loops after it, it reads the first key's value, as any time on
+                    // that key does (AnimationCurve.EvaluateCubic); whether it reaches it is
+                    // this expression's rounding (tests/projects/vfx, `draw-loop end`).
+                    // A curve of one key has no range: every sample is its value, and
                     // the words below are not numbers (the generated code then samples at
                     // whatever its clamp of that gives; the texels are all the same).
                     float time = loops ? (i + 0.5f) * range * (1f / Width) : i * range / (Width - 1);

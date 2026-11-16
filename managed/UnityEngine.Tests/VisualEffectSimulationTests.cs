@@ -27,7 +27,8 @@ namespace UnityEngine.Tests
             new VFXExpressionValueContainerDesc<T> { expressionIndex = (uint)expression, value = value };
 
         static VisualEffectCompiledData Data(VFXExpressionDesc[] expressions, VFXExpressionValueContainerDesc[] values,
-            VFXEditorSystemDesc[] systems = null, VFXEventDesc[] events = null, int spawners = 0, VFXExposedMapping[] exposed = null)
+            VFXEditorSystemDesc[] systems = null, VFXEventDesc[] events = null, int spawners = 0, VFXExposedMapping[] exposed = null,
+            VFXExpressionDesc[] perSpawnEvent = null)
         {
             var resource = new VisualEffectResource();
             // The event attributes (one per spawner after the asset's own): a spawn count of one.
@@ -42,7 +43,11 @@ namespace UnityEngine.Tests
                     layout = new[] { new VFXLayoutElementDesc { name = "spawnCount", type = VFXValueType.Float, offset = new VFXLayoutOffset { structure = 1 } } },
                 };
             }
-            resource.SetRuntimeData(new VFXExpressionSheet { expressions = expressions, values = values, exposed = exposed ?? Array.Empty<VFXExposedMapping>() },
+            resource.SetRuntimeData(new VFXExpressionSheet
+            {
+                expressions = expressions, values = values, exposed = exposed ?? Array.Empty<VFXExposedMapping>(),
+                expressionsPerSpawnEventAttribute = perSpawnEvent,
+            },
                 systems ?? Array.Empty<VFXEditorSystemDesc>(), events ?? Array.Empty<VFXEventDesc>(), null, buffers, null, null,
                 ShadowCastingMode.Off, MotionVectorGenerationMode.Camera, VFXInstancingDisabledReason.None, 7);
             var data = resource.m_Data;
@@ -308,6 +313,16 @@ namespace UnityEngine.Tests
             var baked = Data(new[] { Value(VFXValueType.Curve), Op(VFXExpressionOperation.BakeCurve, 0) }, new[] { Constant(0, new AnimationCurve()) });
             Assert.Null(VisualEffect.Unsupported(baked));
             Assert.False(baked.UnplacedBake);
+            // One among the expressions of a spawn event has none: the graph is refused; the
+            // sheet's own bake in the same graph keeps its place.
+            var bakedPerEvent = Data(new[] { Value(VFXValueType.Curve), Op(VFXExpressionOperation.BakeCurve, 0) }, new[] { Constant(0, new AnimationCurve()) },
+                perSpawnEvent: new[] { Op(VFXExpressionOperation.BakeCurve, 0) });
+            Assert.True(bakedPerEvent.UnplacedBake);
+            Assert.Equal("a curve or gradient baked among the expressions of a spawn event", VisualEffect.Unsupported(bakedPerEvent));
+            Assert.Equal(new[] { -1, 0, -1 }, bakedPerEvent.BakePlaces);
+            var rampPerEvent = Data(new[] { Value(VFXValueType.ColorGradient) }, new[] { Constant(0, new Gradient()) },
+                perSpawnEvent: new[] { Op(VFXExpressionOperation.BakeGradient, 0) });
+            Assert.Equal("a curve or gradient baked among the expressions of a spawn event", VisualEffect.Unsupported(rampPerEvent));
             var strips = Data(Array.Empty<VFXExpressionDesc>(), Array.Empty<VFXExpressionValueContainerDesc>(), new[]
             {
                 new VFXEditorSystemDesc { name = "Trail", type = VFXSystemType.Particle, layer = 0, flags = VFXSystemFlag.SystemHasKill | VFXSystemFlag.SystemHasStrips, tasks = Array.Empty<VFXEditorTaskDesc>() },
@@ -498,6 +513,19 @@ namespace UnityEngine.Tests
                 state.Baked.Apply();
                 Assert.Equal((uint)Mathf.FloatToHalf(0.5f) | (uint)Mathf.FloatToHalf(0.25f) << 16, Words(4, 4)[0]);
                 Assert.Equal((1f, 3f), (texture.GetPixel(0, 0).b, texture.GetPixel(127, 0).b));
+                // A curve that loops after its last key and not before its first. Where the
+                // last sample's time reaches the last key, it reads the first key's value, as
+                // any time on that key does; with keys where that time falls just short of
+                // the last key, the value there.
+                foreach (var (from, to, last) in new[] { (0f, 1f, 0.05f), (0.3f, 1.4f, 0.5f) })
+                {
+                    values.SetObject(0, new AnimationCurve(new Keyframe(from, 0.05f), new Keyframe(to, 0.5f)) { postWrapMode = WrapMode.Loop });
+                    VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, state, null);
+                    state.Baked.Apply();
+                    Assert.Equal(2u | 8u, Words(4, 4)[3]);
+                    Assert.Equal((0.05f, last), (MathF.Round(texture.GetPixel(0, 0).b, 3), MathF.Round(texture.GetPixel(127, 0).b, 3)));
+                    Assert.Equal(0.5f, texture.GetPixel(126, 0).b, 2);
+                }
                 // No gradient: a row of nothing, not fixed, no scale.
                 values.SetObject(3, null);
                 VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, state, null);
