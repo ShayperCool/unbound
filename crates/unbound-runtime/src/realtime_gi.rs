@@ -39,9 +39,10 @@ pub struct GiLight {
 
 /// Experimental.GlobalIllumination.FalloffType's values ([`GiLight::falloff`]) realtime GI
 /// takes; Undefined is lit as Legacy (matches the Unity 6000.0.71f1 Editor,
-/// tests/projects/realtimegi `room-delegate-*`). Linear (2) is not supported.
+/// tests/projects/realtimegi `room-delegate-*`).
 pub const FALLOFF_INVERSE_SQUARED: i32 = 0;
 pub const FALLOFF_INVERSE_SQUARED_NO_RANGE_ATTENUATION: i32 = 1;
+pub const FALLOFF_LINEAR: i32 = 2;
 pub const FALLOFF_LEGACY: i32 = 3;
 pub const FALLOFF_UNDEFINED: i32 = 4;
 
@@ -413,6 +414,7 @@ impl Scene {
                             FALLOFF_INVERSE_SQUARED_NO_RANGE_ATTENUATION => {
                                 Falloff::InverseSquaredNoRangeAttenuation
                             }
+                            FALLOFF_LINEAR => Falloff::Linear,
                             FALLOFF_LEGACY | FALLOFF_UNDEFINED => Falloff::Legacy,
                             other => bail!(
                                 "light falloff type {other} in precomputed realtime GI is not supported"
@@ -1399,7 +1401,7 @@ mod tests {
         );
         // A render pipeline's inverse-squared falloff lights the scene, and differently from
         // the legacy one; without its range attenuation differently again; Undefined as the
-        // legacy one; the other falloff types fail loudly.
+        // legacy one; Linear by its own table; other values fail loudly.
         let lights = [point([0.0, 2.0, 0.0])];
         assert!((0..500).any(|_| update(handle, &frame, &lights).unwrap() & UPDATE_CONVERGED != 0));
         let mut legacy = vec![0u16; 4 * 64 * 64];
@@ -1439,19 +1441,21 @@ mod tests {
         let legacy = lit_as(FALLOFF_LEGACY, range);
         assert!(lit_as(FALLOFF_UNDEFINED, range) == legacy);
         assert!(lit_as(FALLOFF_INVERSE_SQUARED, range) != legacy);
-        for falloff in [2, 9] {
-            let error = update(
-                handle,
-                &frame,
-                &[GiLight {
-                    falloff,
-                    ..lights[0]
-                }],
-            )
-            .unwrap_err()
-            .to_string();
-            assert!(error.contains("falloff type"), "{error}");
-        }
+        // Linear: lit, and by the range (the table holds the range itself).
+        let linear = lit_as(FALLOFF_LINEAR, range);
+        assert!(linear.chunks_exact(4).any(|t| t[0] != 0));
+        assert!(linear != legacy && linear != lit_as(FALLOFF_LINEAR, 2.0 * range));
+        let error = update(
+            handle,
+            &frame,
+            &[GiLight {
+                falloff: 9,
+                ..lights[0]
+            }],
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("falloff type"), "{error}");
         // Unsupported lights fail loudly; the scene goes away with its handle.
         let area = GiLight { kind: 3, ..spot };
         assert!(

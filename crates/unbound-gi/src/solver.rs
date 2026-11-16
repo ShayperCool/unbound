@@ -67,6 +67,9 @@ pub enum Falloff {
     InverseSquared,
     /// 1 / distance^2 without the window (the table still ends at the range).
     InverseSquaredNoRangeAttenuation,
+    /// The range times (p - 1) / 13 at table position p: not a function of the distance alone
+    /// (matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi `room-delegate-linear`).
+    Linear,
 }
 
 /// Steps of a spot light's angular table between the cosine of half its angle and 1.
@@ -181,6 +184,23 @@ impl FalloffTable {
                 window * window * inverse_squared(x2, range)
             }),
             Falloff::InverseSquaredNoRangeAttenuation => Self::new(|x2| inverse_squared(x2, range)),
+            Falloff::Linear => {
+                // Evenly spaced in the table position (not in distance), from the range / 13
+                // at the outermost lit sample to the range itself at the innermost one, then 1
+                // at the light as for every falloff.
+                let steps = (FALLOFF_SAMPLES - 3) as f32;
+                let mut values = [0.0; FALLOFF_SAMPLES];
+                for (i, v) in values
+                    .iter_mut()
+                    .enumerate()
+                    .take(FALLOFF_SAMPLES - 1)
+                    .skip(2)
+                {
+                    *v = (i - 1) as f32 / steps * range;
+                }
+                values[FALLOFF_SAMPLES - 1] = 1.0;
+                Self(values)
+            }
         }
     }
 
@@ -943,6 +963,30 @@ mod falloff_tests {
                 .eval(0.25)
                 .is_finite()
         );
+    }
+
+    #[test]
+    fn a_linear_falloff_is_even_in_the_table_position_and_scaled_by_the_range() {
+        // A light of range 4: the range times (p - 1) / 13 at table position p (2 to 14), so
+        // linear in the position and not in the distance; 1 at the light; nothing from the
+        // range on.
+        let table = FalloffTable::of(Falloff::Linear, 4.0);
+        for i in 2..FALLOFF_SAMPLES - 1 {
+            let x2 = (15.0 / i as f32 - 1.0) / 14.0;
+            let expected = 4.0 * (i - 1) as f32 / 13.0;
+            assert!((table.eval(x2) - expected).abs() < 1e-5, "sample {i}");
+        }
+        // Half the range: position 15 / 4.5.
+        let t = 15.0f32 / 4.5;
+        assert!((table.eval(0.25) - 4.0 * (t - 1.0) / 13.0).abs() < 1e-5);
+        // At the innermost sample the range itself, above the 1 at the light.
+        assert!((table.eval(1.0 / 196.0) - 4.0).abs() < 1e-4);
+        assert_eq!(table.eval(0.0), 1.0);
+        assert_eq!(table.eval(1.0), 0.0);
+        assert_eq!(table.eval(9.0), 0.0);
+        // Twice the range: twice the value at the same x.
+        let wide = FalloffTable::of(Falloff::Linear, 8.0);
+        assert!((wide.eval(0.25) - 2.0 * table.eval(0.25)).abs() < 1e-5);
     }
 
     #[test]
