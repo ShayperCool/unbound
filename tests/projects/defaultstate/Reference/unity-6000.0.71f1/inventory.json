@@ -7819,6 +7819,12 @@
       "type": "UnityEngine.UIElements.GeometryChangedEvent"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.GroupBox"
+    },
+    {
       "category": "struct",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",

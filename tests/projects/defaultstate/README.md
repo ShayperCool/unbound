@@ -631,3 +631,7 @@ handwritten inventory. The same two GPU Editor captures agree on all 504 of thei
 before the completion row; every earlier row and inventory entry is byte-identical (14305 rows).
 Hash128Field's cursor rows are queued as the other text inputs' are, and the event type numbers'
 queued actual values are refreshed again (MouseDownEvent now matches the release).
+
+The group box slice (Q528) adds `GroupBox` to the handwritten inventory. The same two GPU Editor
+captures agree on all 45 of its rows, appended before the completion row; every earlier row and
+inventory entry is byte-identical (14350 rows).
