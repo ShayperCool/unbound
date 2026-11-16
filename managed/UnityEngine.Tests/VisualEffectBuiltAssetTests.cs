@@ -108,8 +108,12 @@ namespace UnityEngine.Tests
             built.TakeBuiltPrograms("assets/built.vfx", path => decoy);
             Assert.Equal("programs built for a graphics device, and the project's graph at assets/built.vfx compiles to another graph", VisualEffect.Unsupported(built.m_Data));
             var lost = Read(Document);
-            lost.TakeBuiltPrograms(null, path => throw new InvalidOperationException("no path to look at"));
-            Assert.Equal("programs built for a graphics device, and the project has no graph at its path to compile them from", VisualEffect.Unsupported(lost.m_Data));
+            lost.TakeBuiltPrograms("assets/gone.vfx", path => null);
+            Assert.Equal("programs built for a graphics device, and the project has no graph at assets/gone.vfx to compile them from", VisualEffect.Unsupported(lost.m_Data));
+            // Its bundle lists it under no path (a dependency of another asset): no graph is looked for.
+            var unlisted = Read(Document);
+            unlisted.TakeBuiltPrograms(null, path => throw new InvalidOperationException("no path to look at"));
+            Assert.StartsWith("programs built for a graphics device, and its bundle does not list it", VisualEffect.Unsupported(unlisted.m_Data));
             // It does: the asset runs with that graph's programs and what a build does not keep
             // of its tasks, taken once.
             var other = Read(Document);
@@ -120,7 +124,11 @@ namespace UnityEngine.Tests
             twin.m_Data.Processors[1][0] = program;
             twin.m_Data.Systems[1].tasks[0].usesMaterialVariant = true;
             string asked = null;
-            other.TakeBuiltPrograms("assets/built.vfx", path => { asked = path; return twin; });
+            using (var logs = new RecordedLogs())
+            {
+                other.TakeBuiltPrograms("assets/built.vfx", path => { asked = path; return twin; });
+                Assert.Equal(new[] { "Log: Unbound: the built VisualEffectAsset 'Built' runs with the programs the project's assets/built.vfx compiles to (values written into its blocks are the project's)." }, logs.Logged);
+            }
             Assert.Equal("assets/built.vfx", asked);
             Assert.Same(program, other.m_Data.Processors[1][0]);
             Assert.True(other.m_Data.Systems[1].tasks[0].usesMaterialVariant);

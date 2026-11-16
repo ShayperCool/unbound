@@ -219,16 +219,6 @@ namespace UnityEngine
 
         // ------------------------------------------------------------ assets
 
-        /// <summary>The path a loaded bundle's container gives an object it holds; null for an
-        /// object of no loaded bundle.</summary>
-        internal static string ContainerPathOf(Object o)
-        {
-            foreach (var bundle in s_Loaded)
-                foreach (var entry in bundle.m_Container)
-                    if (ReferenceEquals(bundle.Resolve(entry.Asset), o)) return entry.Name;
-            return null;
-        }
-
         Object Resolve(long fileId) => m_AssetFile == null || fileId == 0 ? null : BundleFiles.Load("bundle:" + m_AssetFile, fileId);
 
         // m_PathFlags bits: a name without '/' may be an asset's file name without its extension (1)
@@ -682,8 +672,20 @@ namespace Unbound.Runtime
             {
                 var docs = Documents(entry.Bundle, entry.File);
                 entry.Loaded = ObjectGraphBuilder.Build(docs, entry.File, guid, ObjectGraphBuilder.Kind.Bundle, null, f => entry.Loaded = f);
+                NameBuiltGraphs(entry);
             }
             return entry.Loaded.Objects.TryGetValue(fileId, out var obj) ? obj : null;
+        }
+
+        /// <summary>A built VisualEffectAsset of a bundle's asset file learns the path its
+        /// bundle's container lists it under (the project path it was built from), which tells
+        /// it the project graph whose programs it runs with.</summary>
+        static void NameBuiltGraphs(Entry entry)
+        {
+            var bundle = entry.Bundle;
+            if (bundle == null || entry.File != bundle.m_AssetFile) return;
+            foreach (var (name, _, _, asset) in bundle.m_Container)
+                if (entry.Loaded.Objects.TryGetValue(asset, out var obj) && obj is UnityEngine.VFX.VisualEffectAsset graph) graph.NameBuiltPath(name);
         }
 
         internal static void Unregister(string file, bool destroyObjects)

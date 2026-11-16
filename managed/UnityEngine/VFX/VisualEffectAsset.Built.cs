@@ -11,14 +11,18 @@ namespace UnityEngine.VFX
     /// A VisualEffectAsset as a build serializes it (an AssetBundle's): its compiled graph read
     /// from its document. The programs a build holds are compiled for its graphics device, as
     /// every built shader is; Unbound compiles programs from their sources, so the built asset
-    /// runs with the programs of the project's graph that compiles to the same graph (a graph of
-    /// the asset's name whose compiled data is the same). Without one it does not run and says
-    /// so. Matches the Unity 6000.0.71f1 Editor (tests/projects/vfx, <c>bundle/*</c>).
+    /// runs with the programs of the project's graph at the path its bundle lists it under, when
+    /// that graph compiles to the same graph. Without one it does not run and says why. Matches the Unity 6000.0.71f1 Editor (tests/projects/vfx, <c>bundle/*</c>).
     /// </summary>
     public partial class VisualEffectAsset
     {
         /// <summary>Whether the asset came from a build and has not taken its programs yet.</summary>
         bool m_BuiltPrograms;
+        /// <summary>The path its bundle's container lists the asset under; null for a graph a
+        /// bundle holds only as another asset's dependency.</summary>
+        string m_BuiltPath;
+
+        internal void NameBuiltPath(string path) => m_BuiltPath ??= path;
 
         internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
@@ -233,7 +237,10 @@ namespace UnityEngine.VFX
         /// the same graph; otherwise the asset says why it does not run. The values written into
         /// the graph's blocks are part of its programs: a project graph changed in those after
         /// the build cannot be told apart, so the asset says which graph it runs with.</summary>
-        internal void TakeBuiltPrograms() => TakeBuiltPrograms(UnityEngine.AssetBundle.ContainerPathOf(this), ProjectGraphAt);
+        internal void TakeBuiltPrograms()
+        {
+            if (m_BuiltPrograms) TakeBuiltPrograms(m_BuiltPath, ProjectGraphAt);
+        }
 
         /// <summary>The project's graph asset at a path, compared without case (a bundle keeps
         /// its paths in lower case); null without one.</summary>
@@ -251,10 +258,15 @@ namespace UnityEngine.VFX
         {
             if (!m_BuiltPrograms) return;
             m_BuiltPrograms = false;
-            var twin = path == null ? null : graphAt(path);
+            if (path == null)
+            {
+                m_Data.BuiltRefusal = "programs built for a graphics device, and its bundle does not list it (a graph built in as another asset's dependency), so no graph of the project is known to compile them";
+                return;
+            }
+            var twin = graphAt(path);
             if (twin == null || ReferenceEquals(twin, this) || twin.m_BuiltPrograms)
             {
-                m_Data.BuiltRefusal = $"programs built for a graphics device, and the project has no graph at {path ?? "its path"} to compile them from";
+                m_Data.BuiltRefusal = $"programs built for a graphics device, and the project has no graph at {path} to compile them from";
                 return;
             }
             if (!twin.m_Data.SameGraph(m_Data))
