@@ -103,6 +103,16 @@ namespace UnityEngine.Tests
             Assert.Equal("1.250000E-001", D(0.125, "E"));
         }
 
+        // An integer whose digits end in 5 before its trailing zeros is a tie too (5000000000000025
+        // × 2 is 1000000000000005 × 10: a tie at 15 digits).
+        [Fact]
+        public void IntegersWithTrailingZerosTieToo()
+        {
+            Assert.Equal("1.00000000000001E+16", D(10000000000000050.0));
+            Assert.Equal("1.00000000000001E+016", D(10000000000000050.0, "E14"));
+            Assert.Equal("1E+16", D(10000000000000040.0));
+        }
+
         [Fact]
         public void LowerCaseRoundTripPrintsAnUpperCaseExponent()
         {

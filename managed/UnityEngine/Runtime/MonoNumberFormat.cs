@@ -77,60 +77,59 @@ namespace Unbound
             }
             // The value's first `precision` significant digits, formatted as a decimal number: the
             // Framework rounds those digits again (half away from zero) and drops the sign of a zero.
-            var significant = Digits(value, precision, out int exponent);
-            if (TryDigitsAsDecimal(significant, exponent, value < 0, out var number)) return number.ToString(format, provider);
+            Span<char> significant = stackalloc char[DoubleExtendedPrecision];
+            Digits(value, precision, significant, out int exponent);
+            if (TryDigitsAsDecimal(significant.Slice(0, precision), exponent, value < 0, out var number))
+                return number.ToString(format, provider);
             // Beyond decimal's range a fixed-point format still prints those digits, then zeros
             // (-3.4e37f "F2" is "-34000000000000000000000000000000000000.00", not the float's exact
             // value): every kept digit is then before the point, so nothing rounds, and an integer
             // holding them goes through the same .NET formatting as the decimal above.
-            if (IsFixedPoint(format) && TryDigitsAsInteger(significant, exponent, value < 0, out var integer))
+            if (IsFixedPoint(format) && TryDigitsAsInteger(significant.Slice(0, precision), exponent, value < 0, out var integer))
                 return integer.ToString(format, provider);
             return single ? ((float)value).ToString(format, provider) : value.ToString(format, provider);
         }
 
         /// <summary>The first <paramref name="count"/> significant digits of the value's magnitude
-        /// and the decimal exponent of the first, as the Framework takes them: the exact value
-        /// rounded half away from zero. .NET's exact formatting rounds a tie (the exact value has
-        /// <paramref name="count"/> + 1 digits, the last a 5) to the even digit, so a tie is taken
-        /// from its <paramref name="count"/> + 1 exact digits instead and rounded up (Unity
-        /// 6000.0.71f1, tests/projects/floattext: <c>245f / 1024</c>, 0.2392578125, is "0.239257813"
-        /// in "R"; 2^-25 is "2.9802322387695313E-08").</summary>
-        static string Digits(double value, int count, out int exponent)
+        /// into <paramref name="digits"/>, and the decimal exponent of the first, as the Framework
+        /// takes them: the exact value rounded half away from zero. .NET's exact formatting rounds a
+        /// tie (the exact value has <paramref name="count"/> + 1 significant digits, the last a 5)
+        /// to the even digit, so a tie is taken from its <paramref name="count"/> + 1 exact digits
+        /// instead and rounded up (Unity 6000.0.71f1, tests/projects/floattext: <c>245f / 1024</c>,
+        /// 0.2392578125, is "0.239257813" in "R"; 2^-25 is "2.9802322387695313E-08").</summary>
+        static void Digits(double value, int count, Span<char> digits, out int exponent)
         {
             double magnitude = Math.Abs(value);
             if (magnitude == 0)
             {
                 exponent = 0;
-                return new string('0', count);
+                digits.Slice(0, count).Fill('0');
+                return;
             }
             bool tie = IsTie(magnitude, count);
-            string text = magnitude.ToString("E" + (tie ? count : count - 1).ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
+            Span<char> text = stackalloc char[32];
+            magnitude.TryFormat(text, out int written, ExponentialFormats[tie ? count : count - 1], CultureInfo.InvariantCulture);
+            text = text.Slice(0, written);
             int e = text.IndexOf('E');
-            exponent = int.Parse(text.AsSpan(e + 1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
-            var digits = new StringBuilder(count + 1);
-            foreach (char c in text.AsSpan(0, e))
-                if (char.IsAsciiDigit(c)) digits.Append(c);
-            if (tie)
-            {
-                digits.Length = count;
-                if (Increment(digits)) exponent++;
-            }
-            return digits.ToString();
+            exponent = int.Parse(text.Slice(e + 1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+            int n = 0;
+            foreach (char c in text.Slice(0, e))
+                if (char.IsAsciiDigit(c) && n < count) digits[n++] = c;
+            if (tie && Increment(digits.Slice(0, count))) exponent++;
         }
 
-        /// <summary>The first <paramref name="count"/> of the digits, rounded half away from zero
-        /// (the Framework's second rounding).</summary>
-        static string Round(string digits, int count, ref int exponent)
+        /// <summary>The first <paramref name="count"/> of <paramref name="length"/> digits, rounded
+        /// half away from zero in place (the Framework's second rounding); their new length.</summary>
+        static int Round(Span<char> digits, int length, int count, ref int exponent)
         {
-            if (count >= digits.Length) return digits;
-            var kept = new StringBuilder(digits, 0, count, count);
-            if (digits[count] >= '5' && Increment(kept)) exponent++;
-            return kept.ToString();
+            if (count >= length) return length;
+            if (digits[count] >= '5' && Increment(digits.Slice(0, count))) exponent++;
+            return count;
         }
 
         /// <summary>Adds one to the last digit; true when that carries out of the first (all nines
         /// become 1 and zeros, one place higher).</summary>
-        static bool Increment(StringBuilder digits)
+        static bool Increment(Span<char> digits)
         {
             for (int i = digits.Length - 1; i >= 0; i--)
             {
@@ -152,23 +151,26 @@ namespace Unbound
         static string General(double value, int taken, int shown, int limit, NumberFormatInfo info, bool lower)
         {
             if (value == 0) return "0";
-            var digits = Round(Digits(value, taken, out int exponent), shown, ref exponent).TrimEnd('0');
-            var text = new StringBuilder(digits.Length + 8);
+            Span<char> digits = stackalloc char[DoubleExtendedPrecision];
+            Digits(value, taken, digits, out int exponent);
+            int length = Round(digits, taken, shown, ref exponent);
+            while (length > 1 && digits[length - 1] == '0') length--;
+            ReadOnlySpan<char> kept = digits.Slice(0, length);
+            var text = Text();
             if (value < 0) text.Append(info.NegativeSign);
             if (exponent >= limit || exponent < -4)
             {
-                text.Append(digits[0]);
-                if (digits.Length > 1) text.Append(info.NumberDecimalSeparator).Append(digits, 1, digits.Length - 1);
+                text.Append(kept[0]);
+                if (length > 1) text.Append(info.NumberDecimalSeparator).Append(kept.Slice(1));
                 AppendExponent(text, exponent, 2, info, lower);
             }
             else if (exponent >= 0)
             {
-                text.Append(digits, 0, Math.Min(digits.Length, exponent + 1));
-                if (digits.Length <= exponent) text.Append('0', exponent + 1 - digits.Length);
-                else if (digits.Length > exponent + 1)
-                    text.Append(info.NumberDecimalSeparator).Append(digits, exponent + 1, digits.Length - exponent - 1);
+                text.Append(kept.Slice(0, Math.Min(length, exponent + 1)));
+                if (length <= exponent) text.Append('0', exponent + 1 - length);
+                else if (length > exponent + 1) text.Append(info.NumberDecimalSeparator).Append(kept.Slice(exponent + 1));
             }
-            else text.Append('0').Append(info.NumberDecimalSeparator).Append('0', -exponent - 1).Append(digits);
+            else text.Append('0').Append(info.NumberDecimalSeparator).Append('0', -exponent - 1).Append(kept);
             return text.ToString();
         }
 
@@ -176,13 +178,14 @@ namespace Unbound
         /// to <paramref name="shown"/> (padded with zeros), and an exponent of at least three digits.</summary>
         static string Exponential(double value, int taken, int shown, NumberFormatInfo info, bool lower)
         {
-            int exponent;
-            var digits = Round(Digits(value, taken, out exponent), shown, ref exponent);
-            var text = new StringBuilder(shown + 8);
+            Span<char> digits = stackalloc char[DoubleExtendedPrecision];
+            Digits(value, taken, digits, out int exponent);
+            int length = Round(digits, taken, shown, ref exponent);
+            var text = Text();
             if (value < 0) text.Append(info.NegativeSign);
             text.Append(digits[0]);
             if (shown > 1)
-                text.Append(info.NumberDecimalSeparator).Append(digits, 1, digits.Length - 1).Append('0', shown - digits.Length);
+                text.Append(info.NumberDecimalSeparator).Append(digits.Slice(1, length - 1)).Append('0', shown - length);
             AppendExponent(text, exponent, 3, info, lower);
             return text.ToString();
         }
@@ -190,14 +193,50 @@ namespace Unbound
         static void AppendExponent(StringBuilder text, int exponent, int width, NumberFormatInfo info, bool lower)
         {
             text.Append(lower ? 'e' : 'E').Append(exponent < 0 ? info.NegativeSign : info.PositiveSign);
-            text.Append(Math.Abs(exponent).ToString("D" + width.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture));
+            int magnitude = Math.Abs(exponent);
+            for (int bound = 10, places = 1; places < width; bound *= 10, places++)
+                if (magnitude < bound) text.Append('0');
+            Span<char> number = stackalloc char[4];
+            magnitude.TryFormat(number, out int written, default, CultureInfo.InvariantCulture);
+            text.Append(number.Slice(0, written));
         }
 
-        /// <summary>Whether the exact decimal value has <paramref name="significant"/> + 1
-        /// significant digits, the last a 5: halfway between two texts of
-        /// <paramref name="significant"/> digits. With the value m × 2^e (m odd), only an integer
-        /// (e = 0) or a value with a fractional part (e &lt; 0) can end in 5, and the digits of the
-        /// latter are those of m × 5^-e.</summary>
+        /// <summary>The formats "E0" to "E17": the exact digits .NET gives up to a tie of 17.</summary>
+        static readonly string[] ExponentialFormats = MakeExponentialFormats();
+
+        static string[] MakeExponentialFormats()
+        {
+            var formats = new string[DoubleExtendedPrecision + 1];
+            for (int i = 0; i < formats.Length; i++) formats[i] = "E" + i.ToString(CultureInfo.InvariantCulture);
+            return formats;
+        }
+
+        [ThreadStatic] static StringBuilder cachedText;
+
+        /// <summary>This thread's text builder, emptied: one string per formatted value.</summary>
+        static StringBuilder Text()
+        {
+            var text = cachedText ??= new StringBuilder(64);
+            text.Clear();
+            return text;
+        }
+
+        // 5^0 to 5^27, the largest power of 5 in an unsigned long.
+        static readonly ulong[] PowersOfFive = MakePowersOfFive();
+
+        static ulong[] MakePowersOfFive()
+        {
+            var powers = new ulong[28];
+            powers[0] = 1;
+            for (int i = 1; i < powers.Length; i++) powers[i] = powers[i - 1] * 5;
+            return powers;
+        }
+
+        /// <summary>Whether the value's significant digits (trailing zeros dropped) are
+        /// <paramref name="significant"/> + 1, the last a 5: halfway between two texts of
+        /// <paramref name="significant"/> digits. With the value m × 2^e (m odd), those digits are
+        /// those of m × 5^-e for e ≤ 0, and for e &gt; 0 of m / 5^e when 5^e divides m (the value is
+        /// then that number × 10^e); otherwise they end in an even digit.</summary>
         static bool IsTie(double magnitude, int significant)
         {
             long bits = BitConverter.DoubleToInt64Bits(magnitude);
@@ -206,15 +245,25 @@ namespace Unbound
             if (biased == 0) biased = 1;
             else mantissa |= 1L << 52;
             int zeros = BitOperations.TrailingZeroCount(mantissa);
-            mantissa >>= zeros;
+            ulong odd = (ulong)mantissa >> zeros;
             int exponent = biased - 1075 + zeros;
-            // 5^26 alone has 19 digits, more than a tie of the 17 digits taken at most.
-            if (exponent > 0 || exponent < -25) return false;
-            UInt128 exact = (ulong)mantissa;
-            for (int i = 0; i < -exponent; i++) exact *= 5;
-            if (exact % 10 != 5) return false;
+            UInt128 number;
+            if (exponent > 0)
+            {
+                if (exponent >= PowersOfFive.Length || odd % PowersOfFive[exponent] != 0) return false;
+                number = odd / PowersOfFive[exponent];
+            }
+            else
+            {
+                // m × 5^k has more than (bit length of m - 1) log10 2 + k log10 5 digits: most values
+                // with a fraction have too many to be a tie.
+                int length = 64 - BitOperations.LeadingZeroCount(odd);
+                if ((length - 1) * 0.30103 + -exponent * 0.69897 > significant + 1.001) return false;
+                number = (UInt128)odd * PowersOfFive[-exponent];
+            }
+            if (number % 10 != 5) return false;
             int count = 0;
-            for (; exact != 0; exact /= 10) count++;
+            for (; number != 0; number /= 10) count++;
             return count == significant + 1;
         }
 
@@ -225,7 +274,7 @@ namespace Unbound
 
         /// <summary>The digits times 10^(exponent - their count + 1) as an integer; false when a
         /// digit falls after the point.</summary>
-        static bool TryDigitsAsInteger(string digits, int exponent, bool negative, out BigInteger number)
+        static bool TryDigitsAsInteger(ReadOnlySpan<char> digits, int exponent, bool negative, out BigInteger number)
         {
             number = BigInteger.Zero;
             int zeros = exponent - (digits.Length - 1);
@@ -255,7 +304,7 @@ namespace Unbound
         /// <summary>The digits times 10^(exponent - their count + 1) as a decimal (trailing zeros
         /// dropped, so it formats like the number and not like its scale); false out of decimal's
         /// range.</summary>
-        static bool TryDigitsAsDecimal(string digits, int exponent, bool negative, out decimal number)
+        static bool TryDigitsAsDecimal(ReadOnlySpan<char> digits, int exponent, bool negative, out decimal number)
         {
             number = 0;
             int length = digits.Length;
@@ -263,7 +312,7 @@ namespace Unbound
             // The scale of the last digit kept: decimal holds at most 28 places and 28 digits.
             int scale = length - 1 - exponent;
             if (exponent > 27 || scale > 28) return false;
-            var integer = decimal.Parse(digits.AsSpan(0, length), NumberStyles.None, CultureInfo.InvariantCulture);
+            var integer = decimal.Parse(digits.Slice(0, length), NumberStyles.None, CultureInfo.InvariantCulture);
             if (scale > 0) number = new decimal(decimal.GetBits(integer)[0], decimal.GetBits(integer)[1], decimal.GetBits(integer)[2], negative, (byte)scale);
             else
             {
