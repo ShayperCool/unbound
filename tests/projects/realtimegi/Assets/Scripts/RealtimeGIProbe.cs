@@ -674,15 +674,15 @@ public class RealtimeGIProbe : MonoBehaviour
 
         // The lights as a script's delegate (GlobalIllumination.Lightmapping.SetDelegate) gives
         // them in the built-in pipeline, as LightmapperUtils extracts them but with each
-        // falloff type in turn, set before the room loads: the legacy and the undefined one at
-        // the point light's own range, the inverse-squared ones and the linear one with it given
-        // a range of 4 (the far walls beyond it, so the range attenuation of the ones that have
-        // it shows).
+        // falloff type in turn, set before the room loads: the legacy, the undefined and the
+        // linear one at the point light's own range, the inverse-squared ones with it given a
+        // range of 4 (the far walls beyond it, so the range attenuation of the one that has it
+        // shows).
         var falloffs = new[]
         {
             ("legacy", GI.FalloffType.Legacy, 0f), ("inversesquared", GI.FalloffType.InverseSquared, 4f),
             ("norange", GI.FalloffType.InverseSquaredNoRangeAttenuation, 4f), ("undefined", GI.FalloffType.Undefined, 0f),
-            ("linear", GI.FalloffType.Linear, 4f),
+            ("linear", GI.FalloffType.Linear, 0f),
         };
         foreach (var (name, falloff, range) in falloffs)
         {
