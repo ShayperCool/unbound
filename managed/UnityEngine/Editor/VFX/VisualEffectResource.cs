@@ -76,27 +76,7 @@ namespace UnityEditor.VFX
         {
             m_Graph = resolver.Resolve(body.Ref("m_Graph"), typeof(ScriptableObject)) as ScriptableObject;
             var infos = body.Get("m_Infos");
-            if (infos == null) return;
-            var renderer = infos.Get("m_RendererSettings");
-            if (renderer != null)
-            {
-                m_Settings.Renderer = new VFXRendererSettings
-                {
-                    motionVectorGenerationMode = (MotionVectorGenerationMode)renderer.Int("motionVectorGenerationMode"),
-                    shadowCastingMode = (ShadowCastingMode)renderer.Int("shadowCastingMode"),
-                    rayTracingMode = (RayTracingAccelerationStructure.RayTracingModeMask)renderer.Int("rayTracingMode"),
-                    receiveShadows = renderer.Bool("receiveShadows"),
-                    reflectionProbeUsage = (ReflectionProbeUsage)renderer.Int("reflectionProbeUsage"),
-                    lightProbeUsage = (LightProbeUsage)renderer.Int("lightProbeUsage"),
-                };
-            }
-            m_Settings.CullingFlags = (VFXCullingFlags)infos.Int("m_CullingFlags", (int)VFXCullingFlags.CullDefault);
-            m_Settings.UpdateMode = (VFXUpdateMode)infos.Int("m_UpdateMode");
-            m_Settings.PreWarmDeltaTime = infos.Float("m_PreWarmDeltaTime", 0.05f);
-            m_Settings.PreWarmStepCount = (uint)infos.Long("m_PreWarmStepCount");
-            m_Settings.InitialEventName = infos.Str("m_InitialEventName", VisualEffectAsset.PlayEventName);
-            m_Settings.InstancingMode = (VFXInstancingMode)infos.Int("m_InstancingMode");
-            m_Settings.InstancingCapacity = (uint)infos.Long("m_InstancingCapacity", 64);
+            if (infos != null) m_Settings = VisualEffectSettings.Read(infos);
         }
 
         public ScriptableObject graph
@@ -247,39 +227,8 @@ namespace UnityEditor.VFX
         {
             ClearRuntimeData();
             systemDesc ??= Array.Empty<VFXEditorSystemDesc>();
-            var expressions = sheet.expressions ?? Array.Empty<VFXExpressionDesc>();
-            var perEvent = sheet.expressionsPerSpawnEventAttribute ?? Array.Empty<VFXExpressionDesc>();
-
-            uint layer = 0;
-            foreach (var system in systemDesc)
-            {
-                if (system.layer == NoLayer) continue;
-                if (system.layer < layer) throw new ArgumentException("System in wrong order: " + system.name);
-                layer = system.layer;
-            }
-            int total = expressions.Length + perEvent.Length;
-            foreach (var expression in expressions)
-                if (!ValidExpression(expression, expressions, perEvent, total)) throw new ArgumentException("Invalid expression sheet");
-            foreach (var expression in perEvent)
-                if (!ValidExpression(expression, expressions, perEvent, total)) throw new ArgumentException("Invalid expression sheet");
-
-            var data = new VisualEffectCompiledData
-            {
-                Expressions = expressions,
-                ExpressionsPerSpawnEventAttribute = perEvent,
-                Values = sheet.values ?? Array.Empty<VFXExpressionValueContainerDesc>(),
-                Exposed = sheet.exposed ?? Array.Empty<VFXExposedMapping>(),
-                Systems = systemDesc,
-                Events = eventDesc ?? Array.Empty<VFXEventDesc>(),
-                GpuBuffers = gpuBufferDesc ?? Array.Empty<VFXGPUBufferDesc>(),
-                CpuBuffers = cpuBufferDesc ?? Array.Empty<VFXCPUBufferDesc>(),
-                CpuInitialWords = InitialWords(cpuBufferDesc),
-                TemporaryBuffers = temporaryBufferDesc ?? Array.Empty<VFXTemporaryGPUBufferDesc>(),
-                ShadowCastingMode = shadowCastingMode,
-                MotionVectorGenerationMode = motionVectorGenerationMode,
-                InstancingDisabledReason = instancingDisabledReason,
-                CompiledVersion = version,
-            };
+            var data = CompiledData(sheet, systemDesc, eventDesc, gpuBufferDesc, cpuBufferDesc, temporaryBufferDesc,
+                shadowCastingMode, motionVectorGenerationMode, instancingDisabledReason, version);
             var models = new Object[systemDesc.Length][];
             for (int s = 0; s < systemDesc.Length; s++)
             {
@@ -305,6 +254,50 @@ namespace UnityEditor.VFX
                 data.Events = Array.Empty<VFXEventDesc>();
                 throw new ArgumentException($"Event named '{repeated}' is referenced twice");
             }
+        }
+
+        /// <summary>A compiled graph from the descriptions a compiler hands over (or a build
+        /// serializes), checked as Unity checks them: systems whose layers do not decrease and
+        /// expressions the engine can evaluate (an ArgumentException otherwise).</summary>
+        internal static VisualEffectCompiledData CompiledData(VFXExpressionSheet sheet, VFXEditorSystemDesc[] systemDesc, VFXEventDesc[] eventDesc,
+            VFXGPUBufferDesc[] gpuBufferDesc, VFXCPUBufferDesc[] cpuBufferDesc, VFXTemporaryGPUBufferDesc[] temporaryBufferDesc,
+            ShadowCastingMode shadowCastingMode, MotionVectorGenerationMode motionVectorGenerationMode, VFXInstancingDisabledReason instancingDisabledReason,
+            uint version)
+        {
+            systemDesc ??= Array.Empty<VFXEditorSystemDesc>();
+            var expressions = sheet.expressions ?? Array.Empty<VFXExpressionDesc>();
+            var perEvent = sheet.expressionsPerSpawnEventAttribute ?? Array.Empty<VFXExpressionDesc>();
+
+            uint layer = 0;
+            foreach (var system in systemDesc)
+            {
+                if (system.layer == NoLayer) continue;
+                if (system.layer < layer) throw new ArgumentException("System in wrong order: " + system.name);
+                layer = system.layer;
+            }
+            int total = expressions.Length + perEvent.Length;
+            foreach (var expression in expressions)
+                if (!ValidExpression(expression, expressions, perEvent, total)) throw new ArgumentException("Invalid expression sheet");
+            foreach (var expression in perEvent)
+                if (!ValidExpression(expression, expressions, perEvent, total)) throw new ArgumentException("Invalid expression sheet");
+
+            return new VisualEffectCompiledData
+            {
+                Expressions = expressions,
+                ExpressionsPerSpawnEventAttribute = perEvent,
+                Values = sheet.values ?? Array.Empty<VFXExpressionValueContainerDesc>(),
+                Exposed = sheet.exposed ?? Array.Empty<VFXExposedMapping>(),
+                Systems = systemDesc,
+                Events = eventDesc ?? Array.Empty<VFXEventDesc>(),
+                GpuBuffers = gpuBufferDesc ?? Array.Empty<VFXGPUBufferDesc>(),
+                CpuBuffers = cpuBufferDesc ?? Array.Empty<VFXCPUBufferDesc>(),
+                CpuInitialWords = InitialWords(cpuBufferDesc),
+                TemporaryBuffers = temporaryBufferDesc ?? Array.Empty<VFXTemporaryGPUBufferDesc>(),
+                ShadowCastingMode = shadowCastingMode,
+                MotionVectorGenerationMode = motionVectorGenerationMode,
+                InstancingDisabledReason = instancingDisabledReason,
+                CompiledVersion = version,
+            };
         }
 
         static uint[][] InitialWords(VFXCPUBufferDesc[] buffers)

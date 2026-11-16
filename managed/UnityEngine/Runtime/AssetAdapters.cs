@@ -56,6 +56,7 @@ namespace Unbound.Runtime
             Read<Font>((a, b, r) => a.ReadSerialized(b, r));
             Clone<Font>(a => a.CloneObject());
             Read<UnityEditor.VFX.VisualEffectResource>((a, b, r) => a.ReadSerialized(b, r));
+            Read<UnityEngine.VFX.VisualEffectAsset>((a, b, r) => a.ReadSerialized(b, r));
             Clone<UnityEditor.VFX.VisualEffectResource>(a => a.CloneObject());
 
             // Read and cloned.

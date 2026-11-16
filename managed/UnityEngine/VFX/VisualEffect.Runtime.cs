@@ -133,6 +133,7 @@ namespace UnityEngine.VFX
         /// <summary>What a graph uses that the runtime does not do yet, null when it runs whole.</summary>
         internal static string Unsupported(VisualEffectCompiledData data)
         {
+            if (data.BuiltRefusal != null) return data.BuiltRefusal;
             foreach (var op in data.Operations)
                 if (!VFXExpressionEvaluator.Supported(op)) return $"the expression operation {op}";
             if (data.UnplacedBake) return "a curve or gradient baked among the expressions of a spawn event";
@@ -158,6 +159,7 @@ namespace UnityEngine.VFX
             UpdateRenderer();
             // Systems are made once the effect's object is active (enabled or not), and kept.
             if (m_Asset == null || m_Data.Systems.Length == 0 || !(m_Registered || gameObject.activeInHierarchy)) return;
+            m_Asset.TakeBuiltPrograms();
             m_Unsupported = Unsupported(m_Data);
             if (m_Unsupported != null)
             {

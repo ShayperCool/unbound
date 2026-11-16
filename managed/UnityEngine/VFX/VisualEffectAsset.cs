@@ -134,6 +134,33 @@ namespace Unbound.Runtime
         internal VFXInstancingMode InstancingMode;
         internal uint InstancingCapacity;
 
+        /// <summary>The settings as a graph file or a built asset keeps them (its <c>m_Infos</c>).</summary>
+        internal static VisualEffectSettings Read(YNode infos)
+        {
+            var settings = Default;
+            var renderer = infos.Get("m_RendererSettings");
+            if (renderer != null)
+            {
+                settings.Renderer = new VFXRendererSettings
+                {
+                    motionVectorGenerationMode = (MotionVectorGenerationMode)renderer.Int("motionVectorGenerationMode"),
+                    shadowCastingMode = (ShadowCastingMode)renderer.Int("shadowCastingMode"),
+                    rayTracingMode = (RayTracingAccelerationStructure.RayTracingModeMask)renderer.Int("rayTracingMode"),
+                    receiveShadows = renderer.Bool("receiveShadows"),
+                    reflectionProbeUsage = (ReflectionProbeUsage)renderer.Int("reflectionProbeUsage"),
+                    lightProbeUsage = (LightProbeUsage)renderer.Int("lightProbeUsage"),
+                };
+            }
+            settings.CullingFlags = (VFXCullingFlags)infos.Int("m_CullingFlags", (int)VFXCullingFlags.CullDefault);
+            settings.UpdateMode = (VFXUpdateMode)infos.Int("m_UpdateMode");
+            settings.PreWarmDeltaTime = infos.Float("m_PreWarmDeltaTime", 0.05f);
+            settings.PreWarmStepCount = (uint)infos.Long("m_PreWarmStepCount");
+            settings.InitialEventName = infos.Str("m_InitialEventName", VisualEffectAsset.PlayEventName);
+            settings.InstancingMode = (VFXInstancingMode)infos.Int("m_InstancingMode");
+            settings.InstancingCapacity = (uint)infos.Long("m_InstancingCapacity", 64);
+            return settings;
+        }
+
         /// <summary>A new resource's settings, as the Unity 6000.0.71f1 Editor creates one.</summary>
         internal static VisualEffectSettings Default => new VisualEffectSettings
         {
@@ -293,6 +320,68 @@ namespace Unbound.Runtime
                 if (own[i]) BakePlaces[i] += Operations[i] == VFXExpressionOperation.BakeCurve ? sharedCurves : sharedGradients;
             BakedCurves = sharedCurves + ownCurves;
             BakedGradients = sharedGradients + ownGradients;
+        }
+
+        /// <summary>Why a built asset's graph does not run: its programs were built for a
+        /// graphics device and the project has no graph that compiles to the same graph.</summary>
+        internal string BuiltRefusal;
+
+        /// <summary>Whether two compiled graphs are the same graph (the programs of one run the
+        /// other): the same expressions, systems with the same tasks and mappings, events, buffers
+        /// and exposed names, and the same compiled version. The constants may differ.</summary>
+        internal bool SameGraph(VisualEffectCompiledData other)
+        {
+            if (CompiledVersion != other.CompiledVersion || !SameExpressions(Expressions, other.Expressions)
+                || !SameExpressions(ExpressionsPerSpawnEventAttribute, other.ExpressionsPerSpawnEventAttribute)
+                || Systems.Length != other.Systems.Length || Events.Length != other.Events.Length || GpuBuffers.Length != other.GpuBuffers.Length
+                || CpuBuffers.Length != other.CpuBuffers.Length || Exposed.Length != other.Exposed.Length)
+                return false;
+            for (int i = 0; i < Exposed.Length; i++)
+                if (Exposed[i].mapping.name != other.Exposed[i].mapping.name || Exposed[i].mapping.index != other.Exposed[i].mapping.index) return false;
+            for (int i = 0; i < Events.Length; i++)
+                if (Events[i].name != other.Events[i].name) return false;
+            for (int i = 0; i < GpuBuffers.Length; i++)
+                if (GpuBuffers[i].size != other.GpuBuffers[i].size || GpuBuffers[i].stride != other.GpuBuffers[i].stride || GpuBuffers[i].target != other.GpuBuffers[i].target) return false;
+            for (int s = 0; s < Systems.Length; s++)
+            {
+                var a = Systems[s];
+                var b = other.Systems[s];
+                if (a.type != b.type || a.flags != b.flags || a.capacity != b.capacity || a.layer != b.layer || a.name != b.name
+                    || !SameMappings(a.buffers, b.buffers) || !SameMappings(a.values, b.values))
+                    return false;
+                var ta = a.tasks ?? Array.Empty<VFXEditorTaskDesc>();
+                var tb = b.tasks ?? Array.Empty<VFXEditorTaskDesc>();
+                if (ta.Length != tb.Length) return false;
+                for (int t = 0; t < ta.Length; t++)
+                    if (ta[t].type != tb[t].type || !SameMappings(ta[t].buffers, tb[t].buffers) || !SameMappings(ta[t].values, tb[t].values)
+                        || !SameMappings(ta[t].parameters, tb[t].parameters))
+                        return false;
+            }
+            return true;
+        }
+
+        static bool SameExpressions(VFXExpressionDesc[] a, VFXExpressionDesc[] b)
+        {
+            a ??= Array.Empty<VFXExpressionDesc>();
+            b ??= Array.Empty<VFXExpressionDesc>();
+            if (a.Length != b.Length) return false;
+            for (int i = 0; i < a.Length; i++)
+            {
+                if (a[i].op != b[i].op) return false;
+                for (int k = 0; k < 4; k++)
+                    if ((a[i].data != null && k < a[i].data.Length ? a[i].data[k] : -1) != (b[i].data != null && k < b[i].data.Length ? b[i].data[k] : -1)) return false;
+            }
+            return true;
+        }
+
+        static bool SameMappings(VFXMapping[] a, VFXMapping[] b)
+        {
+            a ??= Array.Empty<VFXMapping>();
+            b ??= Array.Empty<VFXMapping>();
+            if (a.Length != b.Length) return false;
+            for (int i = 0; i < a.Length; i++)
+                if (a[i].name != b[i].name || a[i].index != b[i].index) return false;
+            return true;
         }
 
         /// <summary>Whether a bake has no place: the effect does not run then, and says so.</summary>
