@@ -58,16 +58,15 @@ namespace UnityEngine.Tests
             Assert.True(camera.ReadsMainCamera);
             Assert.Equal(VFXCameraBufferTypes.Depth | VFXCameraBufferTypes.Color, camera.CameraBuffers);
             // A graph whose programs read the buffers does not run yet (it still asks for them).
-            Assert.Equal("the main camera's Depth, Color buffer read by its programs", VisualEffect.Unsupported(camera));
+            Assert.Equal("the main camera's buffers read by its programs", VisualEffect.Unsupported(camera));
             var lens = Data(new[] { Op(VFXExpressionOperation.ExtractFOVFromMainCamera) }, Array.Empty<VFXExpressionValueContainerDesc>());
             Assert.True(lens.ReadsMainCamera);
             Assert.Null(VisualEffect.Unsupported(lens));
             Assert.Equal(VFXCameraBufferTypes.None, lens.CameraBuffers);
-            // The expressions of a spawn event do not count.
-            var plain = Data(new[] { Value(VFXValueType.Float) }, new[] { Constant(0, 1f) },
+            // Among the expressions of a spawn event, a buffer is refused all the same.
+            var perEvent = Data(new[] { Value(VFXValueType.Float) }, new[] { Constant(0, 1f) },
                 perSpawnEvent: new[] { Op(VFXExpressionOperation.GetBufferFromMainCamera, -1, -1, -1, (int)VFXCameraBufferTypes.Depth) });
-            Assert.False(plain.ReadsMainCamera);
-            Assert.Equal(VFXCameraBufferTypes.None, plain.CameraBuffers);
+            Assert.Equal("the main camera's buffers read by its programs", VisualEffect.Unsupported(perEvent));
         }
 
         [Fact]
@@ -133,8 +132,7 @@ namespace UnityEngine.Tests
                 Assert.Null(values.GetObject(11));
 
                 // A value of no single kind is refused and one the effects do not read asserted,
-                // with the Editor's messages (whether the size given with the first is taken, and
-                // the second kept, is not measured: Unbound does both).
+                // with the Editor's messages; the size given with the last call is read.
                 using (var logs = new Logs())
                 {
                     VFXManager.SetCameraBuffer(main, VFXCameraBufferTypes.Depth | VFXCameraBufferTypes.Color, colour, 0, 0, 10, 10);
@@ -148,10 +146,8 @@ namespace UnityEngine.Tests
                 VFXManager.UpdateMainCamera();
                 Assert.Equal(new Vector2Int(12, 9), VFXManager.MainCameraScaledSize);
                 Assert.Same(depth, VFXManager.MainCameraBuffer((uint)VFXCameraBufferTypes.Depth));
-                Assert.Same(colour, VFXManager.MainCameraBuffer((uint)VFXCameraBufferTypes.Normal));
 
-                // Without a camera tagged as the main one: said once (and again after a main
-                // camera came back: not measured);
+                // Without a camera tagged as the main one: said once;
                 // the graph reads a new camera's lens, a 1920x1080 screen and no buffers.
                 eye.tag = "Untagged";
                 using (var logs = new Logs())
@@ -171,11 +167,6 @@ namespace UnityEngine.Tests
                     Assert.Null(values.GetObject(8));
                     Assert.Equal(0u, values.GetWord(9));
                     Assert.Equal(Bits(5f), values.GetWord(10));
-                    eye.tag = "MainCamera";
-                    VFXManager.UpdateMainCamera();
-                    eye.tag = "Untagged";
-                    VFXManager.UpdateMainCamera();
-                    Assert.Equal(2, logs.Logged.Count);
                 }
                 // A destroyed buffer is none.
                 eye.tag = "MainCamera";

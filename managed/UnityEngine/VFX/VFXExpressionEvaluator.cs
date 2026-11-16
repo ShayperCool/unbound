@@ -338,7 +338,8 @@ namespace Unbound.Runtime
                         (w[at], w[at + 1]) = (Bits(shift.x), Bits(shift.y));
                         break;
                     }
-                    // The buffer of the kind the fourth operand names.
+                    // The buffer of the kind the fourth operand names (a graph that reads one does
+                    // not run yet: VisualEffect.Unsupported).
                     case VFXExpressionOperation.GetBufferFromMainCamera: values.SetObject(e, VFXManager.MainCameraBuffer((uint)operands[d + 3])); break;
                     case VFXExpressionOperation.IsMainCameraOrthographic: w[at] = VFXManager.MainCamera is Camera ortho && ortho.orthographic ? 1u : 0u; break;
                     case VFXExpressionOperation.GetOrthographicSizeFromMainCamera: w[at] = Bits(VFXManager.MainCamera is Camera sized ? sized.orthographicSize : NoCameraOrthographicSize); break;

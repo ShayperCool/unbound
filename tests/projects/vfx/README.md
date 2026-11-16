@@ -275,8 +275,8 @@ without it the pipeline keeps no history of the camera and hands an effect none 
   buffer, for the main camera of the last update only.
 - `camera/api/*`: the camera entry points with no camera, a destroyed one, a camera that is not
   the main one, and buffers handed over the wrong way at frame 4 (of two kinds at once, of none,
-  of a kind no graph reads: logged, and the size given is taken all the same: the inputs read it
-  from frame 4 on).
+  of a kind no graph reads: logged; the inputs read the size given with the last of them at
+  frame 4, until the pipeline hands over the depth again).
 - `SoftAdditive` (`draw-soft*`): eight quads added to what is behind that fade over 0.6 where
   they come near what is opaque behind them (soft particles), among three boards at several
   depths, seen at frames 10 and 20 by a perspective camera with the pipeline's depth texture
