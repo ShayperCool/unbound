@@ -25,6 +25,8 @@ namespace UnityEngine.VFX
 
         internal void NameBuiltPath(string path) => m_BuiltPath ??= path;
 
+        internal string BuiltPath => m_BuiltPath;
+
         internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             var infos = body.Get("m_Infos");
@@ -57,7 +59,9 @@ namespace UnityEngine.VFX
             m_Data = data;
             uint version = (uint)infos.Long("m_RuntimeVersion");
             // A graph of another runtime data layout is not read as this one.
-            if (version != RuntimeDataVersion) data.BuiltRefusal = $"a compiled graph of runtime data version {version} (this release's is {RuntimeDataVersion})";
+            // (Its bundle has named it before any of the file's objects is read.)
+            if (version != RuntimeDataVersion)
+                data.BuiltRefusal = $"a compiled graph of runtime data version {version} (this release's is {RuntimeDataVersion})" + (m_BuiltPath != null ? ", built from " + m_BuiltPath : "");
             else m_BuiltPrograms = true;
         }
 

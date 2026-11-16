@@ -145,6 +145,41 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ABundlesGraphsKnowTheirPathBeforeTheyAreRead()
+        {
+            // A bundle file of three graphs: one listed by the container, one of another runtime
+            // data version listed too, one only another asset's dependency.
+            const string File = "CAB-built-graphs-test";
+            var bundle = new AssetBundle { m_AssetFile = File };
+            bundle.m_Container.Add(("assets/built.vfx", 0, 0, 3));
+            bundle.m_Container.Add(("assets/old.vfx", 0, 0, 4));
+            YDocument Graph(long id, string json)
+            {
+                using var document = JsonDocument.Parse(json);
+                return new YDocument { ClassId = 2058629509, FileId = id, TypeName = "VisualEffectAsset", Body = YNode.FromJson(document.RootElement.Clone()) };
+            }
+            var documents = new List<YDocument>
+            {
+                Graph(3, Document), Graph(4, Document.Replace(@"""m_RuntimeVersion"": 38", @"""m_RuntimeVersion"": 37")), Graph(5, Document),
+            };
+            BundleFiles.KeepDocuments(bundle, File, documents);
+            BundleFiles.Register(bundle, File);
+            try
+            {
+                var listed = Assert.IsType<VisualEffectAsset>(BundleFiles.Load("bundle:" + File, 3));
+                Assert.Equal("assets/built.vfx", listed.BuiltPath);
+                Assert.Null(Assert.IsType<VisualEffectAsset>(BundleFiles.Load("bundle:" + File, 5)).BuiltPath);
+                // Named before it was read: what it read says where it was built from.
+                var old = Assert.IsType<VisualEffectAsset>(BundleFiles.Load("bundle:" + File, 4));
+                Assert.Equal("a compiled graph of runtime data version 37 (this release's is 38), built from assets/old.vfx", VisualEffect.Unsupported(old.m_Data));
+            }
+            finally
+            {
+                BundleFiles.Unregister(File, true);
+            }
+        }
+
+        [Fact]
         public void EveryKindOfConstantIsRead()
         {
             const string Sheet = @"""m_PropertySheet"": {

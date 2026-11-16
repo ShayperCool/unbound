@@ -661,6 +661,10 @@ namespace Unbound.Runtime
         internal static ulong NativeId(string guid) =>
             guid != null && s_Files.TryGetValue(guid, out var entry) ? entry.Bundle.m_NativeId : 0;
 
+        /// <summary>A bundle file's documents given rather than read from the bundle (tests).</summary>
+        internal static void KeepDocuments(UnityEngine.AssetBundle bundle, string file, List<YDocument> documents) =>
+            s_Documents[(bundle, file)] = new WeakReference<List<YDocument>>(documents);
+
         internal static void Register(UnityEngine.AssetBundle bundle, string file) =>
             s_Files["bundle:" + file] = new Entry { Bundle = bundle, File = file };
 
