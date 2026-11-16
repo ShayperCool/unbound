@@ -2,32 +2,16 @@ using Unity.Properties;
 using System;
 using System.Collections.Generic;
 
-// RadioButton and RadioButtonGroup, from the Unity 6000.0 Manual pages "RadioButton" and
-// "RadioButtonGroup" (UI Toolkit control reference) and the Scripting API pages of both types:
-//   - "A RadioButton lets users select a single choice when used along with other RadioButtons in a
-//     group. You can use a GroupBox to group RadioButtons. Otherwise, the panel acts as the default
-//     group." A group is the nearest ancestor that is a group box (GroupBox, RadioButtonGroup), else
-//     the root of the hierarchy (the panel's visual tree once attached).
-//   - RadioButtonGroup: "Selecting one will deselect the others"; its value is the index of the
-//     checked option ("the numbering sequence of the option in Value, starting at 0"); writing
-//     `choices` "removes existing RadioButton elements, except those added explicitly to hierarchy,
-//     and re-creates them to display the new list"; it has a container element.
-//   - USS class names from the pages' USS class tables.
-// Unbound's choices (unmeasured; the pages say nothing):
-//   - a click checks an unchecked radio button and leaves a checked one checked;
-//   - checking an option through `value` unchecks the others through their `value` (each sends its
-//     ChangeEvent<bool>), then sets the group's `value` (ChangeEvent<int>), then the option's own
-//     ChangeEvent<bool> is sent; SetValueWithoutNotify does the same silently;
-//   - unchecking the group's checked option sets the group's value to -1;
-//   - a new group's value is -1; a value outside the options checks none and is kept as given;
-//   - option indices follow the hierarchy order of the group's radio buttons (nested groups
-//     excluded); the buttons created from `choices` come first, showing each choice as their `text`;
-//   - a radio button added to a RadioButtonGroup's container is reconciled with the group's value
-//     (a checked one wins); removing one re-derives the value from the checked option (or -1);
-//     radio buttons grouped by a GroupBox or the panel are reconciled only when one is checked;
-//   - the group's container is its input element, and its content container;
-//   - the mixed-value display removes the checkmark and clears the checked state;
-//   - focus and keyboard navigation are BaseBoolField's (submit toggles, here: checks).
+// RadioButton and RadioButtonGroup (Unity 6000.0 Manual "RadioButton" and "RadioButtonGroup",
+// Scripting API of both types: "A RadioButton lets users select a single choice when used along with
+// other RadioButtons in a group. You can use a GroupBox to group RadioButtons. Otherwise, the panel
+// acts as the default group"; RadioButtonGroup's value is the index of the checked option).
+// Measured (Unity 6000.0.71f1, tests/projects/radiogroups): a radio button joins its group when it is
+// attached to a panel and leaves it when detached (GroupBoxUtility), so buttons outside a panel are
+// not grouped; checking one through `value` sends its own change event first, then unchecks the
+// others in the order they joined; SetValueWithoutNotify checks without unchecking the others; a
+// RadioButtonGroup's options are the radio buttons below it in hierarchy order, the ones made from
+// `choices` first.
 namespace UnityEngine.UIElements
 {
     public partial class RadioButton : BaseBoolField, IGroupBoxOption
@@ -40,23 +24,16 @@ namespace UnityEngine.UIElements
         public static readonly string textUssClassName = ussClassName + "__text";
 
         readonly VisualElement m_CheckmarkBackground;
-        bool m_NotifyOthers;
-        bool m_SetByGroup;
 
         public override bool value
         {
             get => base.value;
             set
             {
-                m_NotifyOthers = true;
-                try
-                {
-                    base.value = value;
-                }
-                finally
-                {
-                    m_NotifyOthers = false;
-                }
+                if (base.value == value) return;
+                base.value = value;
+                UpdateCheckmark();
+                if (value) this.OnOptionSelected();
             }
         }
 
@@ -72,6 +49,9 @@ namespace UnityEngine.UIElements
             m_CheckmarkBackground.AddToClassList(checkmarkBackgroundUssClassName);
             visualInput.Insert(visualInput.IndexOf(m_CheckMark), m_CheckmarkBackground);
             m_CheckmarkBackground.Add(m_CheckMark);
+            UpdateCheckmark();
+            RegisterCallback<AttachToPanelEvent>(_ => this.RegisterGroupBoxOption());
+            RegisterCallback<DetachFromPanelEvent>(_ => this.UnregisterGroupBoxOption());
         }
 
         protected override void InitLabel()
@@ -80,24 +60,25 @@ namespace UnityEngine.UIElements
             m_Label.AddToClassList(textUssClassName);
         }
 
+        /// <summary>A checked radio button stays checked when clicked.</summary>
         protected override void ToggleValue()
         {
             if (!value) value = true;
         }
 
         [global::System.@ObsoleteAttribute("[UI Toolkit] Please set the value property instead.", false)]
-        public void SetSelected(bool selected) => value = selected;
+        public void SetSelected(bool selected) => ((IGroupBoxOption)this).SetSelected(selected);
+
+        // Through `value`, so that options deselected by their group send their change events.
+        void IGroupBoxOption.SetSelected(bool selected) => value = selected;
 
         public override void SetValueWithoutNotify(bool newValue)
         {
-            bool notify = m_NotifyOthers;
-            m_NotifyOthers = false;
-            bool wasChecked = base.value;
             base.SetValueWithoutNotify(newValue);
-            if (m_SetByGroup || wasChecked == newValue) return;
-            if (newValue) OnChecked(notify);
-            else OnUnchecked(notify);
+            UpdateCheckmark();
         }
+
+        void UpdateCheckmark() => m_CheckMark.style.display = value ? DisplayStyle.Flex : DisplayStyle.None;
 
         protected override void UpdateMixedValueContent()
         {
@@ -120,205 +101,218 @@ namespace UnityEngine.UIElements
                 pseudoStates &= ~PseudoStates.Checked;
             }
         }
-
-        /// <summary>Checks or unchecks this option on behalf of its group, without re-entering the
-        /// group logic.</summary>
-        internal void SetCheckedByGroup(bool on, bool notify)
-        {
-            m_SetByGroup = true;
-            try
-            {
-                if (notify) value = on;
-                else SetValueWithoutNotify(on);
-            }
-            finally
-            {
-                m_SetByGroup = false;
-            }
-        }
-
-        void OnChecked(bool notify)
-        {
-            var root = GroupRootOf(this);
-            if (root == null) return;
-            var options = OptionsOf(root);
-            foreach (var other in options)
-                if (other != this && other.value) other.SetCheckedByGroup(false, notify);
-            if (root is RadioButtonGroup group) group.OnOptionChecked(options.IndexOf(this), notify);
-        }
-
-        void OnUnchecked(bool notify)
-        {
-            if (!(GroupRootOf(this) is RadioButtonGroup group)) return;
-            group.OnOptionUnchecked(OptionsOf(group).IndexOf(this), notify);
-        }
-
-        /// <summary>The element whose radio buttons form this option's group: the nearest group box
-        /// ancestor, else the root of the hierarchy; null for a button without a parent.</summary>
-        internal static VisualElement GroupRootOf(VisualElement option)
-        {
-            var current = option.hierarchy.parent;
-            if (current == null) return null;
-            while (true)
-            {
-                if (current is IGroupBox) return current;
-                var up = current.hierarchy.parent;
-                if (up == null) return current;
-                current = up;
-            }
-        }
-
-        /// <summary>The radio buttons of a group, in hierarchy order, without those of nested groups.</summary>
-        internal static List<RadioButton> OptionsOf(VisualElement root)
-        {
-            var options = new List<RadioButton>();
-            if (root != null) CollectOptions(root, options);
-            return options;
-        }
-
-        static void CollectOptions(VisualElement element, List<RadioButton> options)
-        {
-            foreach (var child in element.hierarchy.Children())
-            {
-                if (child is RadioButton option)
-                {
-                    options.Add(option);
-                    continue;
-                }
-                if (child is IGroupBox) continue;
-                CollectOptions(child, options);
-            }
-        }
     }
 
     public partial class RadioButtonGroup : BaseField<int>, IGroupBox
     {
+        internal static readonly BindingId choicesProperty = nameof(choices);
         public new static readonly string ussClassName = "unity-radio-button-group";
         public static readonly string containerUssClassName = ussClassName + "__container";
+        internal static readonly string containerName = "contentContainer";
+        internal static readonly string choicesContainerName = "choicesContentContainer";
 
-        readonly VisualElement m_Container, m_ChoicesContainer;
-        readonly List<RadioButton> m_CreatedOptions = new List<RadioButton>();
-        List<string> m_Choices = new List<string>();
-        bool m_Rebuilding;
-        bool m_Syncing;
+        readonly VisualElement m_ChoicesContainer;
+        readonly VisualElement m_ContentContainer;
+        readonly List<RadioButton> m_RegisteredRadioButtons = new List<RadioButton>();
+        readonly List<RadioButton> m_AllRadioButtons = new List<RadioButton>();
+        readonly List<string> m_Choices = new List<string>();
+        readonly EventCallback<ChangeEvent<bool>> m_RadioButtonValueChanged;
+        RadioButton m_SelectedRadioButton;
+        bool m_UpdateScheduled;
 
+        /// <summary>The texts of the group's radio buttons; setting it renames the buttons made from
+        /// choices, makes more or removes the extra ones.</summary>
         [CreateProperty]
         public IEnumerable<string> choices
         {
-            get => m_Choices;
+            get
+            {
+                foreach (var button in AllRadioButtons()) yield return button.text;
+            }
             set
             {
-                m_Rebuilding = true;
-                try
-                {
-                    foreach (var created in m_CreatedOptions) created.RemoveFromHierarchy();
-                    m_CreatedOptions.Clear();
-                    m_Choices = value != null ? new List<string>(value) : new List<string>();
-                    for (int i = 0; i < m_Choices.Count; i++)
-                    {
-                        var option = new RadioButton { text = m_Choices[i] };
-                        m_CreatedOptions.Add(option);
-                        m_ChoicesContainer.Insert(i, option);
-                    }
-                }
-                finally
-                {
-                    m_Rebuilding = false;
-                }
-                SetValueWithoutNotify(rawValue);
+                if (value != null ? SameChoices(value) : m_Choices.Count == 0) return;
+                m_Choices.Clear();
+                if (value != null) m_Choices.AddRange(value);
+                RebuildChoiceButtons();
+                NotifyPropertyChanged(choicesProperty);
             }
         }
 
-        public override VisualElement contentContainer => m_Container ?? this;
+        internal List<string> choicesList
+        {
+            get => m_Choices;
+            set => choices = value;
+        }
+
+        public override VisualElement contentContainer => m_ContentContainer ?? this;
 
         public RadioButtonGroup() : this(null) { }
 
         public RadioButtonGroup(string label, List<string> radioButtonChoices = null) : base(label, null)
         {
             AddToClassList(ussClassName);
+            m_RadioButtonValueChanged = OnRadioButtonValueChanged;
             if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured)
             {
-                m_ChoicesContainer = CreateOptionsContainer("choicesContentContainer");
-                m_Container = CreateOptionsContainer("contentContainer");
-                visualInput.Add(m_ChoicesContainer);
-                visualInput.Add(m_Container);
+                visualInput.Add(m_ChoicesContainer = new VisualElement { name = choicesContainerName });
+                m_ChoicesContainer.AddToClassList(containerUssClassName);
+                visualInput.Add(m_ContentContainer = new VisualElement { name = containerName });
+                m_ContentContainer.AddToClassList(containerUssClassName);
                 visualInput.focusable = false;
                 delegatesFocus = true;
             }
             else
             {
-                m_ChoicesContainer = m_Container = visualInput;
-                ConfigureOptionsContainer(m_Container);
+                // Releases without a measured default state keep the options in the input element.
+                m_ChoicesContainer = m_ContentContainer = visualInput;
+                visualInput.AddToClassList(containerUssClassName);
             }
-            SetValueWithoutNotify(-1);
             choices = radioButtonChoices;
+            value = -1;
         }
 
-        VisualElement CreateOptionsContainer(string name)
+        bool SameChoices(IEnumerable<string> other)
         {
-            var container = new VisualElement { name = name };
-            ConfigureOptionsContainer(container);
-            return container;
+            int i = 0;
+            foreach (var choice in other)
+            {
+                if (i >= m_Choices.Count || !string.Equals(m_Choices[i], choice)) return false;
+                i++;
+            }
+            return i == m_Choices.Count;
         }
 
-        void ConfigureOptionsContainer(VisualElement container)
+        void RebuildChoiceButtons()
         {
-            container.AddToClassList(containerUssClassName);
-            container.elementAdded += OnElementAdded;
-            container.elementRemoved += OnElementRemoved;
+            if (m_Choices.Count == 0 && ReferenceEquals(m_ChoicesContainer, m_ContentContainer))
+            {
+                // One shared container: remove only the buttons made from choices.
+                for (int j = m_ChoicesContainer.childCount - 1; j >= 0; j--)
+                    if (m_ChoicesContainer[j] is RadioButton made && m_MadeFromChoices.Contains(made)) made.RemoveFromHierarchy();
+                m_MadeFromChoices.Clear();
+                return;
+            }
+            if (m_Choices.Count == 0)
+            {
+                m_ChoicesContainer.Clear();
+                m_MadeFromChoices.Clear();
+                return;
+            }
+            int i = 0;
+            foreach (var choice in m_Choices)
+            {
+                if (i < m_MadeFromChoices.Count)
+                {
+                    m_MadeFromChoices[i].text = choice;
+                    ScheduleRadioButtons();
+                }
+                else
+                {
+                    var button = new RadioButton { text = choice };
+                    m_MadeFromChoices.Add(button);
+                    m_ChoicesContainer.Add(button);
+                }
+                i++;
+            }
+            // The extra buttons leave their group, which unregisters them.
+            for (int j = m_MadeFromChoices.Count - 1; j >= i; j--)
+            {
+                m_MadeFromChoices[j].RemoveFromHierarchy();
+                m_MadeFromChoices.RemoveAt(j);
+            }
+        }
+
+        readonly List<RadioButton> m_MadeFromChoices = new List<RadioButton>();
+
+        /// <summary>The group's radio buttons in hierarchy order.</summary>
+        List<RadioButton> AllRadioButtons()
+        {
+            m_AllRadioButtons.Clear();
+            this.Query<RadioButton>().ForEach(m_AllRadioButtons.Add);
+            return m_AllRadioButtons;
+        }
+
+        void OnRadioButtonValueChanged(ChangeEvent<bool> evt)
+        {
+            if (!evt.newValue) return;
+            value = AllRadioButtons().IndexOf(evt.target as RadioButton);
+            evt.StopPropagation();
         }
 
         public override void SetValueWithoutNotify(int newValue)
         {
             base.SetValueWithoutNotify(newValue);
-            m_Syncing = true;
-            try
+            UpdateRadioButtons(true);
+        }
+
+        /// <summary>Checks the button at the value's index and unchecks the others; with no such
+        /// button, unchecks the registered ones. Only while the group is in a panel.</summary>
+        void UpdateRadioButtons(bool notify)
+        {
+            m_UpdateScheduled = false;
+            if (panel == null) return;
+            var buttons = AllRadioButtons();
+            if (value >= 0 && value < buttons.Count)
             {
-                var options = RadioButton.OptionsOf(this);
-                for (int i = 0; i < options.Count; i++)
+                m_SelectedRadioButton = buttons[value];
+                if (notify) m_SelectedRadioButton.value = true;
+                else m_SelectedRadioButton.SetValueWithoutNotify(true);
+                // Unchecking the others may re-enter through their change events: take a copy.
+                foreach (var button in buttons.ToArray())
                 {
-                    bool on = i == rawValue;
-                    if (options[i].value != on) options[i].SetCheckedByGroup(on, false);
+                    if (button == m_SelectedRadioButton) continue;
+                    if (notify) button.value = false;
+                    else button.SetValueWithoutNotify(false);
                 }
             }
-            finally
+            else
             {
-                m_Syncing = false;
+                foreach (var button in m_RegisteredRadioButtons.ToArray())
+                {
+                    if (notify) button.value = false;
+                    else button.SetValueWithoutNotify(false);
+                }
             }
         }
 
-        internal void OnOptionChecked(int index, bool notify)
+        void ScheduleRadioButtons()
         {
-            if (m_Syncing) return;
-            if (notify) value = index;
-            else SetValueWithoutNotify(index);
+            if (m_UpdateScheduled) return;
+            schedule.Execute(() => UpdateRadioButtons(false));
+            m_UpdateScheduled = true;
         }
 
-        internal void OnOptionUnchecked(int index, bool notify)
+        void RegisterRadioButton(RadioButton button)
         {
-            if (m_Syncing || index < 0 || index != rawValue) return;
-            if (notify) value = -1;
-            else SetValueWithoutNotify(-1);
+            if (m_RegisteredRadioButtons.Contains(button)) return;
+            m_RegisteredRadioButtons.Add(button);
+            button.RegisterValueChangedCallback(m_RadioButtonValueChanged);
+            // A button checked before it joined sets the value of a group with none.
+            if (value == -1 && button.value) SetValueWithoutNotify(AllRadioButtons().IndexOf(button));
+            ScheduleRadioButtons();
         }
 
-        void OnElementAdded(VisualElement child, int index)
+        void UnregisterRadioButton(RadioButton button)
         {
-            if (m_Rebuilding || m_Syncing) return;
-            var options = RadioButton.OptionsOf(this);
-            int checkedIndex = child is RadioButton added && added.value ? options.IndexOf(added) : options.FindIndex(o => o.value);
-            SetValueWithoutNotify(checkedIndex >= 0 ? checkedIndex : rawValue);
+            if (!m_RegisteredRadioButtons.Remove(button)) return;
+            button.UnregisterValueChangedCallback(m_RadioButtonValueChanged);
+            UpdateRadioButtons(false);
         }
 
-        void OnElementRemoved(VisualElement child)
+        void IGroupBox.OnOptionAdded(IGroupBoxOption option)
         {
-            if (m_Rebuilding || m_Syncing) return;
-            SetValueWithoutNotify(RadioButton.OptionsOf(this).FindIndex(o => o.value));
+            if (!(option is RadioButton button)) throw new ArgumentException("[UI Toolkit] Internal group box error. Expected a radio button element.");
+            RegisterRadioButton(button);
+        }
+
+        void IGroupBox.OnOptionRemoved(IGroupBoxOption option)
+        {
+            if (!(option is RadioButton button)) throw new ArgumentException("[UI Toolkit] Internal group box error. Expected a radio button element.");
+            UnregisterRadioButton(button);
+            if (m_SelectedRadioButton != button) return;
+            m_SelectedRadioButton = null;
+            value = -1;
         }
     }
-
-    // Declared here so that the hand-written code builds alone for `unbound gen-stubs`; their members
-    // and the explicit implementations are generated.
-    internal partial interface IGroupBox { }
-
-    internal partial interface IGroupBoxOption { }
 }

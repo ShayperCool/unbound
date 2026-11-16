@@ -87,11 +87,11 @@ namespace UnityEngine.Tests
             var manual = new RadioButton(); group.Add(manual);
             Assert.NotSame(group, group.contentContainer); Assert.False(group.contentContainer.focusable);
             Assert.Equal("contentContainer", group.contentContainer.name); Assert.Equal(1, group.contentContainer.childCount);
-            Assert.Equal(3, RadioButton.OptionsOf(group).Count);
+            Assert.Equal(3, group.Query<RadioButton>().ToList().Count);
             Assert.Same(group, manual.parent);
             group.choices = new[] { "c" };
             Assert.Same(group.contentContainer, manual.hierarchy.parent); Assert.Equal(1, group.contentContainer.childCount);
-            Assert.Equal(2, RadioButton.OptionsOf(group).Count);
+            Assert.Equal(2, group.Query<RadioButton>().ToList().Count);
         }
 
         [Fact]

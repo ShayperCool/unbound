@@ -163,13 +163,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEngine.UIElements.BaseVisualElementPanel",
-    "Message": "type interfaces is System.IDisposable,UnityEngine.UIElements.IPanel, Unity's is System.IDisposable,UnityEngine.UIElements.IGroupBox,UnityEngine.UIElements.IPanel",
-    "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.BaseVisualElementPanel needs group-box registration and active group membership. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.UIElements.VisualElement",
     "Message": "type interfaces is UnityEngine.UIElements.Experimental.ITransitionAnimations,UnityEngine.UIElements.IExperimentalFeatures,UnityEngine.UIElements.IResolvedStyle,UnityEngine.UIElements.ITransform,UnityEngine.UIElements.IVisualElementScheduler, Unity's is UnityEngine.UIElements.Experimental.ITransitionAnimations,UnityEngine.UIElements.IExperimentalFeatures,UnityEngine.UIElements.IResolvedStyle,UnityEngine.UIElements.IStylePropertyAnimations,UnityEngine.UIElements.ITransform,UnityEngine.UIElements.IVisualElementScheduler",
     "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.VisualElement needs style-property animation ownership and cancellation. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."

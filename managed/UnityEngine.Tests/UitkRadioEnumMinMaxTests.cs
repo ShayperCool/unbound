@@ -11,7 +11,8 @@ using Xunit;
 //            their USS class tables) or the Scripting API pages of these types;
 //   [choice] Unbound's choice where those pages say nothing (event order, clamping details,
 //            display names, defaults). These check Unbound's implementation, not Unity behaviour.
-// No reference capture covers these controls; nothing here is a measured Unity value.
+// tests/projects/radiogroups measures radio grouping (tests marked "Measured"); the other values
+// here are not measured Unity values.
 // Red base: 9dbe3085, where the four types are generated stubs (their members do nothing and
 // answer defaults). The file uses only members that exist there, so it compiles on that base.
 // The UXML EnumField attribute cases name their own red base, 01e797d8.
@@ -57,6 +58,15 @@ namespace UnityEngine.Tests
         }
 
         static Panel NewPanel() => new Panel(null, ContextType.Player, EventDispatcher.CreateDefault(), null);
+
+        // Radio buttons join their group when attached to a panel (tests/projects/radiogroups); a
+        // RadioButtonGroup reconciles its buttons on its scheduler.
+        static T Attached<T>(Panel panel, T element) where T : VisualElement
+        {
+            panel.visualTree.Add(element);
+            panel.uaScheduler.UpdateScheduledEvents();
+            return element;
+        }
 
         static VisualElement Clone(string body)
         {
@@ -155,6 +165,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void GroupBoxesFormSeparateGroups()
         {
+            using var panel = NewPanel();
             var root = new VisualElement();
             var first = new GroupBox();
             var second = new GroupBox();
@@ -166,6 +177,7 @@ namespace UnityEngine.Tests
             first.Add(a1);
             first.Add(a2);
             second.Add(b1);
+            Attached(panel, root);
             a1.value = true;
             b1.value = true;
             a2.value = true;
@@ -202,7 +214,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void ValueIsTheIndexOfTheCheckedOption()
         {
-            var group = new RadioButtonGroup("G", new List<string> { "A", "B", "C" });
+            using var panel = NewPanel();
+            var group = Attached(panel, new RadioButtonGroup("G", new List<string> { "A", "B", "C" }));
             group.value = 1;
             var radios = All<RadioButton>(group);
             Assert.Equal(new[] { false, true, false }, radios.Select(r => r.value));
@@ -212,16 +225,16 @@ namespace UnityEngine.Tests
         }
 
         // [doc] The group sends ChangeEvent<int> (the Manual's example registers it).
-        // [choice] Checking an option through value unchecks the previous one through value (its
-        // ChangeEvent<bool> first), then the option's own ChangeEvent<bool>; the group's value and
-        // SetValueWithoutNotify check and uncheck the options silently.
+        // Measured (tests/projects/radiogroups): checking an option through value sends its own
+        // ChangeEvent<bool> first, then the previous one is unchecked through value; setting the
+        // group's value (also through SetValueWithoutNotify) checks and unchecks the options through
+        // their value.
         // Red on 9dbe3085: no radio button exists (Assert.Equal(2, radios.Count) fails).
         [Fact]
         public void ChangeEventsOfGroupAndOptions()
         {
             using var panel = NewPanel();
-            var group = new RadioButtonGroup("G", new List<string> { "A", "B" });
-            panel.visualTree.Add(group);
+            var group = Attached(panel, new RadioButtonGroup("G", new List<string> { "A", "B" }));
             var radios = All<RadioButton>(group);
             Assert.Equal(2, radios.Count);
             var groupEvents = new List<(int, int)>();
@@ -243,17 +256,17 @@ namespace UnityEngine.Tests
 
             radios[1].value = true;
             Assert.Equal(new[] { (-1, 0), (0, 1) }, groupEvents);
-            Assert.Equal(new[] { "0:True", "0:False", "1:True" }, radioEvents);
+            Assert.Equal(new[] { "0:True", "1:True", "0:False" }, radioEvents);
 
             group.value = 0;
             Assert.Equal(new[] { (-1, 0), (0, 1), (1, 0) }, groupEvents);
-            Assert.Equal(new[] { "0:True", "0:False", "1:True" }, radioEvents);
+            Assert.Equal(new[] { "0:True", "1:True", "0:False", "0:True", "1:False" }, radioEvents);
             Assert.True(radios[0].value);
             Assert.False(radios[1].value);
 
             group.SetValueWithoutNotify(1);
             Assert.Equal(3, groupEvents.Count);
-            Assert.Equal(3, radioEvents.Count);
+            Assert.Equal(new[] { "0:True", "1:True", "0:False", "0:True", "1:False", "1:True", "0:False" }, radioEvents);
             Assert.Equal(new[] { false, true }, radios.Select(r => r.value));
         }
 
@@ -274,16 +287,20 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "C", "X" }, texts);
         }
 
-        // [choice] A checked radio button added to a group becomes the group's checked option.
+        // Measured (tests/projects/radiogroups rbg2): a checked radio button added to a group that has
+        // a value keeps it until the group reconciles its buttons, which unchecks it.
         // Red on 9dbe3085: Add throws InvalidOperationException (the stub contentContainer is null).
         [Fact]
         public void AddingACheckedRadioButtonSetsTheGroupValue()
         {
-            var group = new RadioButtonGroup("G", new List<string> { "A", "B" });
+            using var panel = NewPanel();
+            var group = Attached(panel, new RadioButtonGroup("G", new List<string> { "A", "B" }));
             group.value = 0;
             group.Add(new RadioButton { text = "X", value = true });
-            Assert.Equal(2, group.value);
-            Assert.Equal(new[] { false, false, true }, All<RadioButton>(group).Select(r => r.value));
+            Assert.Equal(new[] { true, false, true }, All<RadioButton>(group).Select(r => r.value));
+            panel.uaScheduler.UpdateScheduledEvents();
+            Assert.Equal(0, group.value);
+            Assert.Equal(new[] { true, false, false }, All<RadioButton>(group).Select(r => r.value));
         }
 
         // [doc] UXML tags RadioButtonGroup (label, choices as comma separated values, value) and
@@ -293,7 +310,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void UxmlCreatesRadioButtonGroupAndRadioButton()
         {
-            var root = Clone("<ui:RadioButtonGroup label=\"G\" choices=\"A,B,C\" value=\"1\" /><ui:RadioButton label=\"L\" text=\"T\" value=\"true\" />");
+            using var panel = NewPanel();
+            var root = Attached(panel, Clone("<ui:RadioButtonGroup label=\"G\" choices=\"A,B,C\" value=\"1\" /><ui:RadioButton label=\"L\" text=\"T\" value=\"true\" />"));
             var group = Assert.IsType<RadioButtonGroup>(root[0]);
             Assert.Equal("G", group.label);
             Assert.Equal(1, group.value);
@@ -311,7 +329,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void UxmlRadioButtonChildrenJoinTheGroup()
         {
-            var root = Clone("<ui:RadioButtonGroup value=\"1\"><ui:RadioButton text=\"A\" /><ui:RadioButton text=\"B\" /></ui:RadioButtonGroup>");
+            using var panel = NewPanel();
+            var root = Attached(panel, Clone("<ui:RadioButtonGroup value=\"1\"><ui:RadioButton text=\"A\" /><ui:RadioButton text=\"B\" /></ui:RadioButtonGroup>"));
             var group = Assert.IsType<RadioButtonGroup>(root[0]);
             var radios = All<RadioButton>(group);
             Assert.Equal(new[] { "A", "B" }, radios.Select(r => r.text));
