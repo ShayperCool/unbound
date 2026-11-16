@@ -271,7 +271,7 @@ namespace UnityEngine.SceneManagement
             {
                 if (AssetBundle.FindScene(sceneName, out var path, out var key))
                     return SceneManagerInternal.LoadBundled(path, key, parameters, async: false).Scene;
-                SceneLoadErrors.Name(sceneName);
+                SceneLoadErrors.Name(sceneName, async: false);
                 return default;
             }
             return SceneManagerInternal.Load(index, parameters, async: false).Scene;
@@ -319,7 +319,7 @@ namespace UnityEngine.SceneManagement
             {
                 if (AssetBundle.FindScene(sceneName, out var path, out var key))
                     return SceneManagerInternal.LoadBundled(path, key, parameters, async: true).Operation;
-                SceneLoadErrors.Name(sceneName);
+                SceneLoadErrors.Name(sceneName, async: true);
                 return null;
             }
             return SceneManagerInternal.Load(index, parameters, async: true).Operation;
@@ -380,22 +380,23 @@ namespace UnityEngine.SceneManagement
     /// <summary>The errors of a scene load the build list cannot serve, as the Unity 6000.0.71f1
     /// Editor logs them (tests/projects/apierrors `scene.load_*`): an empty name or a negative
     /// index has its own error. Other releases keep the build settings wording
-    /// (<see cref="Compat.BuildProfileLoadErrorsMeasured"/>).</summary>
+    /// (<see cref="Compat.SceneLoadErrorsMeasured"/>).</summary>
     static class SceneLoadErrors
     {
         const string ProfileHint = "\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles";
 
-        internal static void Name(string sceneName)
+        internal static void Name(string sceneName, bool async)
         {
-            if (!Compat.BuildProfileLoadErrorsMeasured)
-                Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the build settings or the AssetBundle has not been loaded.\nTo add a scene to the build settings use the menu File->Build Settings...");
+            if (!Compat.SceneLoadErrorsMeasured)
+                Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the build settings or the AssetBundle has not been loaded."
+                               + (async ? "" : "\nTo add a scene to the build settings use the menu File->Build Settings..."));
             else if (string.IsNullOrEmpty(sceneName)) Unnamed(-1);
             else Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the active build profile or shared scene list or the AssetBundle has not been loaded.{ProfileHint}");
         }
 
         internal static void BuildIndex(int buildIndex)
         {
-            if (!Compat.BuildProfileLoadErrorsMeasured)
+            if (!Compat.SceneLoadErrorsMeasured)
                 Debug.LogError($"Scene with build index: {buildIndex} couldn't be loaded because it has not been added to the build settings.");
             else if (buildIndex < 0) Unnamed(buildIndex);
             else Debug.LogError($"Scene with build index: {buildIndex} couldn't be loaded because it has not been added to the active build profile or shared scene list.{ProfileHint}");

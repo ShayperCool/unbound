@@ -437,10 +437,10 @@ namespace UnityEngine
         public void SetColors(Color[] inColors) => colors = inColors;
         public void SetColors(List<Color32> inColors) => colors32 = inColors?.ToArray();
         public void SetColors(Color32[] inColors) => colors32 = inColors;
-        public void SetColors(List<Color> inColors, int start, int length, MeshUpdateFlags flags ) => colors = inColors?.GetRange(start, length).ToArray();
-        public void SetColors(Color[] inColors, int start, int length, MeshUpdateFlags flags ) => colors = inColors == null ? null : new ArraySegment<Color>(inColors, start, length).ToArray();
-        public void SetColors(List<Color32> inColors, int start, int length, MeshUpdateFlags flags ) => colors32 = inColors?.GetRange(start, length).ToArray();
-        public void SetColors(Color32[] inColors, int start, int length, MeshUpdateFlags flags ) => colors32 = inColors == null ? null : new ArraySegment<Color32>(inColors, start, length).ToArray();
+        public void SetColors(List<Color> inColors, int start, int length, MeshUpdateFlags flags ) => colors = inColors.GetRange(start, length).ToArray();
+        public void SetColors(Color[] inColors, int start, int length, MeshUpdateFlags flags ) => colors = new ArraySegment<Color>(inColors, start, length).ToArray();
+        public void SetColors(List<Color32> inColors, int start, int length, MeshUpdateFlags flags ) => colors32 = inColors.GetRange(start, length).ToArray();
+        public void SetColors(Color32[] inColors, int start, int length, MeshUpdateFlags flags ) => colors32 = new ArraySegment<Color32>(inColors, start, length).ToArray();
 
         public void GetColors(List<Color> colors)
         {
