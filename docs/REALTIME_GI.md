@@ -936,17 +936,14 @@ tests/projects/materialvalidation; the probe's setup saves the keyword all the s
 
 A script's request to bake ([`Lightmapping.Bake`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Lightmapping.Bake.html):
 "Starts a synchronous bake job", answering whether it ran) is measured in the Unity 6000.0.71f1
-Editor (batch mode): in Play mode `Bake` and `BakeAsync` bake nothing, warn "Computing lightmaps
-is not available in play mode." and answer false; otherwise, also from editor code that runs
-while the Editor enters Play mode, `Bake` bakes the open scenes, sends `bakeStarted` and then
-`bakeCompleted` and answers true, and the scene plays with that realtime GI. Unbound does the
-same for the scene Play mode starts with when editor code bakes it as Play mode is entered: the
-scene is baked as it is read, as one that asks for a bake on load (above), with the events sent
-and true answered at once; right after the call the Editor's scene already has its data and
-realtime lightmap indices, Unbound's only once the scene is read. A scene already read (`unbound
-test` in Edit mode) is not baked again, and a scene with lighting data keeps it (the Editor makes
-it again), each said once; `BakeAsync` outside Play mode is not implemented (it says so). Not
-measured: data the Editor finds invalid (moved geometry,
+Editor (batch mode, tests/projects/realtimegi `script_bake.py`): in Play mode `Bake` and
+`BakeAsync` bake nothing, warn "Computing lightmaps is not available in play mode." and answer
+false; called by editor code as the Editor enters Play mode, `Bake` bakes the open scene, sends
+`bakeStarted` and then `bakeCompleted`, answers true and writes the scene's lighting data, but
+Play mode starts with the scene as it was: none of its renderers has a realtime lightmap.
+Unbound answers and sends the same and writes no lighting data (which later sessions would use;
+said once); a bake in Edit mode (`unbound test`) is not implemented (it warns and answers false),
+nor is `BakeAsync` outside Play mode. Not measured: data the Editor finds invalid (moved geometry,
 changed settings; Unbound bakes only for missing data), a scene that references the built-in
 default lighting data, a scene saved by an earlier release with Auto Generate on (it has no
 bake-on-load setting of its own), and additive opens of several scenes. A scene that does
@@ -1091,4 +1088,4 @@ measure):
   engine uses it for a scene the Editor would bake when it opens it
   (`Lightmapping.bakeOnSceneLoad`, no lighting data), cached by a content hash and format
   version ([When the engine uses it](#when-the-engine-uses-it)). Open: lighting that matches the
-  Editor's, the automatic charts still open, and script bakes of scenes already loaded.
+  Editor's, the automatic charts still open, and script bakes in Edit mode.
