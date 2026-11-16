@@ -101,6 +101,9 @@ namespace UnityEngine.Tests
                 var beside=new Bounds(new Vector3(40f,0f,10f),Vector3.one);
                 Assert.False(ShadowCasterCulling.SeesSplit(data,0,0,beside,default));
                 Assert.False(ShadowCasterCulling.SeesSplit(data,0,1,beside,default));
+                // Wholly beyond the first sphere along the light (below it).
+                var below=new Bounds(new Vector3(0f,-15f,10f),Vector3.one);
+                Assert.False(ShadowCasterCulling.SeesSplit(data,0,0,below,default));
                 var nan=new Bounds(new Vector3(float.NaN,0f,10f),Vector3.one);
                 Assert.True(ShadowCasterCulling.SeesSplit(data,0,1,nan,default));
                 // No blend culling: the second cascade shares the held caster.

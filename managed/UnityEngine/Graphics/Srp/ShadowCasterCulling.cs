@@ -61,11 +61,12 @@ namespace Unbound.Runtime
 
         /// <summary>The largest number of cascades a directional light has.</summary>
         const int MaxCascades = 4;
-        /// <summary>How small a ray's slope against a plane may be for the ray to leave through it
-        /// (the Editor's threshold; its effect is not measured on its own).</summary>
+        /// <summary>How small a ray's slope against a plane may be for the ray to leave through it:
+        /// a small guard; with the rest of the rule it matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/stripshadows --cascades, and no control isolates its own effect.</summary>
         const float GrazingSlope = 1e-6f;
-        /// <summary>Keeps the shadow volume's length finite where its ray grazes the exit plane (the
-        /// Editor's value; its effect is not measured on its own).</summary>
+        /// <summary>Keeps the shadow volume's length finite where its ray grazes the exit plane: a
+        /// small guard, as <see cref="GrazingSlope"/>.</summary>
         const float LengthGuard = 1e-4f;
 
         /// <summary>
@@ -83,8 +84,9 @@ namespace Unbound.Runtime
         /// shadowCascadeBlendCullingFactor (the documented multiplier: lower values let cascades
         /// share more casters; URP gives 1, the measured case). With one cascade, or splits that
         /// are not a directional light's, every cascade takes it; close-fit projection takes every
-        /// cascade too (unmeasured: the probe measures stable fit). Bounds that are not finite are
-        /// left to the culling planes.
+        /// cascade too (unmeasured: the probe measures stable fit). Bounds that are not finite, and
+        /// splits without a culling sphere (a pipeline's own splits; unmeasured), are left to the
+        /// culling planes.
         /// </summary>
         static bool InCascadeSphere(CullingData data, int light, in LightShadowCasterCullingInfo info, int split, Bounds bounds)
         {
@@ -108,8 +110,14 @@ namespace Unbound.Runtime
             float x = (right.z * center.z + right.y * center.y) + right.x * center.x;
             float y = (up.z * center.z + up.y * center.y) + up.x * center.x;
             float depth = (along.x * center.x + along.y * center.y) + along.z * center.z;
-            int mask = 0;
             for (int s = 0; s < count; s++)
+            {
+                var w = data.ShadowSplits[info.splitRange.start + s].cullingSphere.w;
+                if (!(w > 0f) || !float.IsFinite(w)) return true;
+            }
+            int mask = 0;
+            // The cascades after the asked one cannot change its answer.
+            for (int s = 0; s <= split; s++)
             {
                 if ((info.splitExclusionMask & (1 << s)) != 0) continue;
                 var cascade = data.ShadowSplits[info.splitRange.start + s];
