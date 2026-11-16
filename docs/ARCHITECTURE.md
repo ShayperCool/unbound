@@ -188,7 +188,9 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   (`VFXSpawnerSystem`: loop state and blocks, in managed code like the particle system
   module) and then the particle systems (`VFXParticleSystem`), which upload what the generated
   kernels read (graph values, spawn events and their attributes), bind the textures and
-  buffers each kernel's task names and dispatch the initialize and update kernels. An effect is a batch of one instance of its asset. Its renderer's
+  buffers each kernel's task names and dispatch the initialize and update kernels. The curves
+  and gradients a graph's programs sample are baked into one texture per effect
+  (`VFX/VFXBakedTexture.cs`), at places the compiled data assigns. An effect is a batch of one instance of its asset. Its renderer's
   draws are its systems' outputs (`VFX/VFXOutput.cs`): each quad output that draws itself is one
   indexed draw of stand-in vertices with the material of the shader the graph compiled to, whose
   vertex program finds each particle in the system's buffers by its vertex id; outputs of other
