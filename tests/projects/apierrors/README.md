@@ -13,10 +13,10 @@ log messages it writes with their log type (`.logs`; logs written on other threa
   archive, and null arguments.
 * `mesh.*`: Mesh submesh, index, channel and size errors.
 * `texture.*`: Texture2D creation and reinitialization sizes, mip levels, pixel blocks and
-  array sizes, and an unreadable texture.
+  array sizes, Graphics.CopyTexture regions outside a texture, and an unreadable texture.
 * `animator.*`: Animator parameters, layers and states that do not exist or have another type,
   with `Resources/Ctrl.controller` (state Idle; parameters go: trigger, speed: float,
-  flag: bool, count: int) and without a controller (`bare_*`).
+  flag: bool, count: int), with `logWarnings` off (`quiet_*`) and without a controller (`bare_*`).
 * `playable.*`, `playable_bound.*`: the same lookups on an AnimatorControllerPlayable of that
   controller alone, and on one an AnimationPlayableOutput plays on an Animator.
 
@@ -28,4 +28,5 @@ recorded. `run.py record` / `publish` / `gate` (tests/value_probe.py).
 Recorded residuals (`residuals.json`): an ArgumentNullException or ArgumentOutOfRangeException
 with a parameter name has Mono's message format in the Editor and .NET's in Unbound, which keeps
 the parameter name; a controller playable that no output plays has no state in Unbound, so its
-lookups answer without warnings.
+lookups answer without warnings; a null reference in the probe's own code has the runtime's
+message, without a full stop on Mono and with one on CoreCLR.

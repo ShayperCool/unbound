@@ -135,6 +135,8 @@ public class ApiErrorsProbe : MonoBehaviour
         Try("scene.by_build_index_negative", () => SceneManager.GetSceneByBuildIndex(-1));
         Try("scene.by_build_index_loaded", () => SceneManager.GetSceneByBuildIndex(0));
         Try("scene.load_async_negative_index", () => SceneManager.LoadSceneAsync(-1));
+        Do("scene.load_empty_name", () => SceneManager.LoadScene(""));
+        Try("scene.load_async_empty_name", () => SceneManager.LoadSceneAsync(""));
         Try("scene.by_name_missing", () => SceneManager.GetSceneByName("NoSuchScene"));
         Try("scene.by_path_missing", () => SceneManager.GetSceneByPath("Assets/NoSuchScene.unity"));
         Try("scene.set_active_invalid", () => SceneManager.SetActiveScene(default(Scene)));
@@ -166,6 +168,7 @@ public class ApiErrorsProbe : MonoBehaviour
         File.WriteAllBytes(garbage, new byte[16]);
         Try("bundle.load_garbage_file", () => AssetBundle.LoadFromFile(garbage));
         Try("bundle.load_memory_async_null", () => AssetBundle.LoadFromMemoryAsync(null).assetBundle);
+        Try("bundle.load_memory_async_null_request", () => AssetBundle.LoadFromMemoryAsync(null));
         File.Delete(garbage);
     }
 
@@ -266,6 +269,10 @@ public class ApiErrorsProbe : MonoBehaviour
         Try("texture.get_pixels_block_negative", () => t.GetPixels(-1, 0, 2, 2));
         Do("texture.set_pixels_null", () => t.SetPixels(null));
         Do("texture.set_pixels_block_short", () => t.SetPixels(0, 0, 2, 2, new Color[3]));
+        var copy = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+        Do("texture.copy_region_outside_source", () => Graphics.CopyTexture(copy, 0, 0, 2, 2, 4, 4, t, 0, 0, 0, 0));
+        Do("texture.copy_region_outside_destination", () => Graphics.CopyTexture(copy, 0, 0, 0, 0, 4, 4, t, 0, 0, 2, 2));
+        Destroy(copy);
         var locked = new Texture2D(4, 4);
         locked.Apply(false, true);
         Try("texture.non_readable_get_pixel", () => locked.GetPixel(0, 0));
@@ -325,6 +332,12 @@ public class ApiErrorsProbe : MonoBehaviour
         Try("animator.bare_layer_weight", () => bare.GetLayerWeight(0));
         Try("animator.bare_get_parameter", () => bare.GetParameter(0));
         Try("animator.bare_in_transition", () => bare.IsInTransition(0));
+        animator.logWarnings = false;
+        Try("animator.quiet_layer_name_bad", () => animator.GetLayerName(5));
+        Do("animator.quiet_play_bad_layer", () => animator.Play("Idle", 5));
+        Do("animator.quiet_play_missing", () => animator.Play("NoSuchState"));
+        Do("animator.quiet_set_float_missing", () => animator.SetFloat("NoSuch", 1f));
+        animator.logWarnings = true;
         var graph = PlayableGraph.Create("Probe");
         var playable = AnimatorControllerPlayable.Create(graph, animator.runtimeAnimatorController);
         Do("playable.set_float_missing", () => playable.SetFloat("NoSuch", 1f));

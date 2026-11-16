@@ -33,6 +33,10 @@
 {"k":"scene.by_build_index_loaded","v":"returns scene valid=True name=Probe"}
 {"k":"scene.load_async_negative_index","v":"returns null"}
 {"k":"scene.load_async_negative_index.logs","v":"Error: Cannot load scene: Invalid scene name (empty string) and invalid build index -1"}
+{"k":"scene.load_empty_name","v":"returns done"}
+{"k":"scene.load_empty_name.logs","v":"Error: Cannot load scene: Invalid scene name (empty string) and invalid build index -1"}
+{"k":"scene.load_async_empty_name","v":"returns null"}
+{"k":"scene.load_async_empty_name.logs","v":"Error: Cannot load scene: Invalid scene name (empty string) and invalid build index -1"}
 {"k":"scene.by_name_missing","v":"returns scene valid=False name="}
 {"k":"scene.by_path_missing","v":"returns scene valid=False name="}
 {"k":"scene.set_active_invalid","v":"throws System.ArgumentException: SceneManager.SetActiveScene failed; invalid scene"}
@@ -59,6 +63,7 @@
 {"k":"bundle.load_garbage_file","v":"returns null"}
 {"k":"bundle.load_garbage_file.logs","v":"Error: Unable to read header from archive file: <temp>/garbage.bundle\n---\nError: Failed to read data for the AssetBundle 'garbage.bundle'."}
 {"k":"bundle.load_memory_async_null","v":"throws System.NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"bundle.load_memory_async_null_request","v":"returns null"}
 {"k":"mesh.triangles_out_of_range","v":"returns done"}
 {"k":"mesh.triangles_out_of_range.logs","v":"Error: Failed setting triangles. Some indices are referencing out of bounds vertices. IndexCount: 3, VertexCount: 3"}
 {"k":"mesh.triangles_after_bad","v":"returns Int32[][3]"}
@@ -155,6 +160,10 @@
 {"k":"texture.get_pixels_block_negative","v":"throws System.ArgumentException: Texture2D.GetPixels: the size of data to be written is outside the target buffer bounds. (Texture '')"}
 {"k":"texture.set_pixels_null","v":"throws System.ArgumentException: Texture2D.SetPixels: size of data to be filled was larger than the size of data available in the source array. (Texture '')"}
 {"k":"texture.set_pixels_block_short","v":"throws System.ArgumentException: Texture2D.SetPixels: size of data to be filled was larger than the size of data available in the source array. (Texture '')"}
+{"k":"texture.copy_region_outside_source","v":"returns done"}
+{"k":"texture.copy_region_outside_source.logs","v":"Error: Graphics.CopyTexture called with region not fitting in source element: trying to copy from region on GPU (x:2, y:2, width:4, height:4) of mip 0 (size: 4x4)"}
+{"k":"texture.copy_region_outside_destination","v":"returns done"}
+{"k":"texture.copy_region_outside_destination.logs","v":"Error: Graphics.CopyTexture called with region not fitting in destination element: trying to copy to region on GPU (x:2, y:2, width:4, height:4) of mip 0 (size: 4x4)"}
 {"k":"texture.non_readable_get_pixel","v":"throws UnityEngine.UnityException: Texture '' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
 {"k":"texture.non_readable_set_pixel","v":"throws UnityEngine.UnityException: Texture '' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
 {"k":"texture.non_readable_get_pixels","v":"throws System.ArgumentException: Texture2D.GetPixels: texture data is either not readable, corrupted or does not exist. (Texture '')"}
@@ -241,6 +250,13 @@
 {"k":"animator.bare_get_parameter.logs","v":"Warning: Animator is not playing an AnimatorController\n---\nWarning: Animator is not playing an AnimatorController"}
 {"k":"animator.bare_in_transition","v":"returns False"}
 {"k":"animator.bare_in_transition.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.quiet_layer_name_bad","v":"returns "}
+{"k":"animator.quiet_layer_name_bad.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"animator.quiet_play_bad_layer","v":"returns done"}
+{"k":"animator.quiet_play_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"animator.quiet_play_missing","v":"returns done"}
+{"k":"animator.quiet_play_missing.logs","v":"Warning: Animator.GotoState: State could not be found\n---\nWarning: Invalid Layer Index '-1'"}
+{"k":"animator.quiet_set_float_missing","v":"returns done"}
 {"k":"playable.set_float_missing","v":"returns done"}
 {"k":"playable.set_float_missing.logs","v":"Warning: Parameter 'NoSuch' does not exist."}
 {"k":"playable.set_bool_on_float","v":"returns done"}
