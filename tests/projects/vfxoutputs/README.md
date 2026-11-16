@@ -92,8 +92,10 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
   particles at most, where every capture agreed.
 - Frustum planes: URP 17 declares the planes the output-update kernel culls with
   (`_FrustumPlanes`) and never sets them (read off the pipeline's sources); Unbound gives the
-  kernel none, so it culls nothing. What the Editor's kernel reads is not measured: no image can
-  tell, as a particle out of a camera's view is not seen either way.
+  kernel none, so it culls nothing. What the Editor's kernel reads is not measured: no image
+  here can tell, as a particle out of a camera's view is not seen either way. (Its shadow would
+  be: an output of this kind that casts shadows is not measured, here or in
+  `tests/projects/vfxlit`, whose casters draw themselves.)
 - `late` makes the entries of indirect arguments outgrow their first buffer (16 entries: the
   stages hold 15 before frame 6 and 18 after); a probe with more stages before frame 6 would no
   longer show it.

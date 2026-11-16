@@ -110,6 +110,10 @@ adds to that is not separated.
   mesh outputs drawn through an indirect buffer (alpha blended ones by default; unlit quads
   through an unsorted one are `tests/projects/vfxoutputs`): not drawn; each says so once for
   its asset.
+- Shadows cast by an output drawn through an indirect buffer (the casters here draw
+  themselves): such an output's shadow pass is drawn from the list its colour is drawn from, a
+  frustum-culled one included, where the Editor may leave out of the shadows the particles its
+  culling left out.
 - A lit output that fades against the camera's depth (soft particles are measured for unlit
   outputs, `tests/projects/vfx`).
 - Forward+, light cookies, light layers, reflection probes, light probes other than the ambient

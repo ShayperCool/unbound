@@ -42,7 +42,8 @@ namespace Unbound.Runtime
     /// buffer: a list of the particles to draw that the system's kernels make (the update
     /// kernel, an output-update kernel at each step, or one for each camera that sees the
     /// effect), whose count gives the draw's arguments (<see cref="VFXIndirectArgs"/>); and
-    /// meshes the output draws itself. Either unlit or lit by the pipeline. An output of another
+    /// meshes the output draws itself. What an output draws itself may be lit by the pipeline;
+    /// what goes through an indirect buffer is unlit. An output of another
     /// kind is not drawn and says so once (<see cref="Refusal"/>): the system is simulated all
     /// the same. The draws match the Unity 6000.0.71f1 Editor (tests/projects/vfx `draw-*`,
     /// tests/projects/vfxoutputs, tests/projects/vfxlit).
@@ -131,7 +132,7 @@ namespace Unbound.Runtime
             if (task.type != VFXTaskType.ParticleQuadOutput && task.type != VFXTaskType.ParticleMeshOutput) return $"{task.type} is not drawn yet (quads and meshes are)";
             if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0) return "strips are not drawn yet";
             if (Parameter(task, IndirectDrawName) != 0 && Sorted(system, task)) return "its particles are sorted, which is not done yet";
-            // Meshes are drawn for every particle the system has room for: not from a list.
+            // Meshes are drawn for the particles the system has to draw, not from a list.
             if (Parameter(task, IndirectDrawName) != 0 && task.type == VFXTaskType.ParticleMeshOutput)
                 return "it draws meshes through an indirect buffer, which is not done yet";
             if (task.usesMaterialVariant) return "outputs of a Shader Graph are not drawn yet";

@@ -190,8 +190,9 @@ In dependency order; each item ends with an Editor-reference probe.
       system info, with the graph's initialize and update kernels dispatched on the GPU
       (`tests/projects/vfx`). Quad and mesh outputs that draw themselves (opaque or additive,
       unsorted), unlit or lit by URP in its forward and deferred renderers, are drawn, and
-      effects cast shadows (`tests/projects/vfxlit`). Not yet: outputs that are sorted or
-      culled per camera (alpha blended ones by default) or drawn through an indirect buffer,
+      effects cast shadows (`tests/projects/vfxlit`); unlit quads are also drawn through an
+      unsorted indirect buffer (`tests/projects/vfxoutputs`). Not yet: outputs that are
+      sorted (alpha blended ones by default), lit or mesh outputs through an indirect buffer,
       strips, other primitives, motion vectors and Shader Graph outputs (such an output says
       once that it is not drawn; its system runs), GPU events,
       output events, bounds computed on the GPU and part of the expression operations (an
