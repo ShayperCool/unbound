@@ -183,10 +183,10 @@ namespace UnityEngine
             InstantiateParameters parameters, CancellationToken cancellationToken = default) where T : Object
         {
             // Only a null reference fails here; a destroyed original fails below, as in Unity.
-            if ((object)original == null) throw new ArgumentException("The Object you want to instantiate is null.");
+            CheckNullArgument(original, InstantiateNull);
             if (count <= 0) throw new ArgumentException("Cannot call instantiate multiple with count less or equal to zero");
             if (original is ScriptableObject) throw new ArgumentException("Cannot call instantiate multiple for a ScriptableObject");
-            ThrowIfDestroyedArgument(original, "original");
+            ThrowIfNullArgument(original, "original");
             var op = AsyncOperation.Bind(new AsyncInstantiateOperation<T>(IntPtr.Zero, cancellationToken), AsyncOperation.OperationCapabilities.SceneActivation);
             AsyncInstantiation.Start(op, original, count, positions, rotations, parameters);
             return op;
@@ -194,28 +194,18 @@ namespace UnityEngine
 
         public static T Instantiate<T>(T original, InstantiateParameters parameters) where T : Object
         {
-            CheckReferenceArgument(original);
-            ThrowIfDestroyedArgument(original, "data");
+            CheckNullArgument(original, InstantiateNull);
+            ThrowIfNullArgument(original, "data");
             return (T)Instantiation.Clone(original, parameters, null, null);
         }
 
         public static T Instantiate<T>(T original, Vector3 position, Quaternion rotation, InstantiateParameters parameters) where T : Object
         {
-            CheckReferenceArgument(original);
-            ThrowIfDestroyedArgument(original, "data");
+            CheckNullArgument(original, InstantiateNull);
+            ThrowIfNullArgument(original, "data");
             return (T)Instantiation.Clone(original, parameters, position, rotation);
         }
 
-        static void CheckReferenceArgument(object original)
-        {
-            if (original == null) throw new ArgumentException("The Object you want to instantiate is null.");
-        }
-
-        /// <summary>A destroyed object passed where Unity's engine needs a live one.</summary>
-        static void ThrowIfDestroyedArgument(Object original, string parameter)
-        {
-            if (original.m_Destroyed) throw ObjectErrors.Argument(original, parameter);
-        }
     }
 }
 

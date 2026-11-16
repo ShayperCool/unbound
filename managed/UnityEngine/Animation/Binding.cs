@@ -1024,7 +1024,8 @@ namespace Unbound.Runtime
                 return spec;
             }
 
-            var component = go.GetComponent(type);
+            // The engine's own lookup: a class that is no component binds nothing.
+            var component = go.FindComponent(type);
             if (component == null) return spec;
 
             if (objectValued) return ResolveObject(component, binding, clip);

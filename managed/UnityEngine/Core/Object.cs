@@ -195,7 +195,7 @@ namespace UnityEngine
 
         public static Object Instantiate(Object original)
         {
-            CheckNullArgument(original, "The Object you want to instantiate is null.");
+            CheckNullArgument(original, InstantiateNull);
             MainThreadCheck.Check("Internal_CloneSingle");
             return CloneChecked(original, null, false, null, null);
         }
@@ -205,14 +205,14 @@ namespace UnityEngine
 
         public static Object Instantiate(Object original, Transform parent, bool instantiateInWorldSpace)
         {
-            CheckNullArgument(original, "The Object you want to instantiate is null.");
+            CheckNullArgument(original, InstantiateNull);
             MainThreadCheck.Check(parent == null ? "Internal_CloneSingle" : "Internal_CloneSingleWithParent");
             return CloneChecked(original, parent, instantiateInWorldSpace, null, null);
         }
 
         public static Object Instantiate(Object original, Vector3 position, Quaternion rotation)
         {
-            CheckNullArgument(original, "The Object you want to instantiate is null.");
+            CheckNullArgument(original, InstantiateNull);
             MainThreadCheck.Check("Internal_InstantiateSingle");
             if (original is ScriptableObject)
                 throw new ArgumentException("Cannot instantiate a ScriptableObject with a position and rotation");
@@ -221,14 +221,14 @@ namespace UnityEngine
 
         public static Object Instantiate(Object original, Vector3 position, Quaternion rotation, Transform parent)
         {
-            CheckNullArgument(original, "The Object you want to instantiate is null.");
+            CheckNullArgument(original, InstantiateNull);
             MainThreadCheck.Check(parent == null ? "Internal_InstantiateSingle" : "Internal_InstantiateSingleWithParent");
             return CloneChecked(original, parent, true, position, rotation);
         }
 
         public static Object Instantiate(Object original, Scene scene)
         {
-            CheckNullArgument(original, "The Object you want to instantiate is null.");
+            CheckNullArgument(original, InstantiateNull);
             MainThreadCheck.Check("Internal_CloneSingleWithScene");
             var clone = CloneChecked(original, null, false, null, null);
             if (clone is GameObject go)
@@ -412,6 +412,8 @@ namespace UnityEngine
         /// <summary>Unity's check of a null reference (an object reference, not Unity's null): a
         /// destroyed or placeholder object passes it and fails the engine's own argument check
         /// in <see cref="CloneChecked"/> instead (tests/projects/objecterrors).</summary>
+        const string InstantiateNull = "The Object you want to instantiate is null.";
+
         static void CheckNullArgument(object arg, string message)
         {
             if (arg == null) throw new ArgumentException(message);

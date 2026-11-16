@@ -352,7 +352,11 @@ namespace UnityEngine
 
         public T GetComponentInChildren<T>() => GetComponentInChildren<T>(false);
 
-        public T GetComponentInChildren<T>(bool includeInactive) => (T)(object)GetComponentInChildren(typeof(T), includeInactive);
+        public T GetComponentInChildren<T>(bool includeInactive)
+        {
+            ObjectErrors.CheckComponentQuery<T>();
+            return (T)(object)ComponentQueries.InChildren(this, typeof(T), includeInactive);
+        }
 
         public Component GetComponentInParent(Type type) => GetComponentInParent(type, false);
 
@@ -364,7 +368,11 @@ namespace UnityEngine
 
         public T GetComponentInParent<T>() => GetComponentInParent<T>(false);
 
-        public T GetComponentInParent<T>(bool includeInactive) => (T)(object)GetComponentInParent(typeof(T), includeInactive);
+        public T GetComponentInParent<T>(bool includeInactive)
+        {
+            ObjectErrors.CheckComponentQuery<T>();
+            return (T)(object)ComponentQueries.InParent(this, typeof(T), includeInactive);
+        }
 
         public Component[] GetComponents(Type type)
         {

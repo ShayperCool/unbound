@@ -149,7 +149,7 @@ namespace UnityEditor
             var t = string.IsNullOrEmpty(binding.path) ? root.transform : root.transform.Find(binding.path);
             if (t == null) return null;
             if (binding.type == typeof(GameObject)) return t.gameObject;
-            return binding.type == null ? null : t.GetComponent(binding.type);
+            return binding.type == null ? null : t.gameObject.FindComponent(binding.type);
         }
 
         /// <summary>A binding's current value on the objects below a root.</summary>
