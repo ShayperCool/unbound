@@ -1,0 +1,20 @@
+{
+  "commands": [
+    "python3 tests/projects/apierrors/run.py gate"
+  ],
+  "summary": "apierrors: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Core/Resources.cs",
+    "managed/UnityEngine/Core/SceneManagement.cs",
+    "managed/UnityEngine/Runtime/AssetBundles.cs",
+    "managed/UnityEngine/Graphics/Mesh.cs",
+    "managed/UnityEngine/Graphics/Texture2D.cs",
+    "managed/UnityEngine/Graphics/Texture2D.Mips.cs",
+    "managed/UnityEngine/Graphics/Texture2D.PixelData.cs",
+    "managed/UnityEngine/Graphics/PixelDataTransfer.cs",
+    "managed/UnityEngine/Animation/Animator.cs",
+    "managed/UnityEngine/Animation/AnimatorErrors.cs",
+    "managed/UnityEngine/Animation/Playables/AnimatorControllerPlayable.cs",
+    "managed/UnityEngine/Runtime/ObjectErrors.cs"
+  ]
+}

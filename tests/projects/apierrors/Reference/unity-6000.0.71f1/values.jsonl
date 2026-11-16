@@ -1,0 +1,272 @@
+{"k":"resources.load_null","v":"returns null"}
+{"k":"resources.load_missing","v":"returns null"}
+{"k":"resources.load_wrong_type","v":"returns null"}
+{"k":"resources.load_null_type","v":"throws System.ArgumentNullException: Value cannot be null.\nParameter name: systemTypeInstance"}
+{"k":"resources.load_all_null","v":"throws System.ArgumentNullException: Value cannot be null.\nParameter name: path"}
+{"k":"resources.load_all_missing","v":"returns Object[][0]"}
+{"k":"resources.load_async_null","v":"returns UnityEngine.ResourceRequest"}
+{"k":"resources.load_async_missing","v":"returns null"}
+{"k":"resources.unload_null","v":"returns done"}
+{"k":"resources.unload_game_object","v":"returns done"}
+{"k":"resources.unload_game_object.logs","v":"Error: UnloadAsset can only be used on assets;"}
+{"k":"resources.unload_component","v":"returns done"}
+{"k":"resources.unload_component.logs","v":"Error: UnloadAsset can only be used on assets;"}
+{"k":"resources.find_all_null","v":"returns null"}
+{"k":"resources.find_all_null.logs","v":"Error: FindAllObjectsOfType: Invalid Type"}
+{"k":"resources.find_all_non_object","v":"returns null"}
+{"k":"resources.find_all_non_object.logs","v":"Error: FindAllObjectsOfType: The type has to be derived from UnityEngine.Object. Type is String."}
+{"k":"resources.load_all_null_type","v":"throws System.ArgumentNullException: Value cannot be null.\nParameter name: systemTypeInstance"}
+{"k":"scene.load_missing_name","v":"returns done"}
+{"k":"scene.load_missing_name.logs","v":"Error: Scene 'NoSuchScene' couldn't be loaded because it has not been added to the active build profile or shared scene list or the AssetBundle has not been loaded.\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles"}
+{"k":"scene.load_bad_index","v":"returns done"}
+{"k":"scene.load_bad_index.logs","v":"Error: Scene with build index: 99 couldn't be loaded because it has not been added to the active build profile or shared scene list.\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles"}
+{"k":"scene.load_negative_index","v":"returns done"}
+{"k":"scene.load_negative_index.logs","v":"Error: Cannot load scene: Invalid scene name (empty string) and invalid build index -1"}
+{"k":"scene.load_async_missing","v":"returns null"}
+{"k":"scene.load_async_missing.logs","v":"Error: Scene 'NoSuchScene' couldn't be loaded because it has not been added to the active build profile or shared scene list or the AssetBundle has not been loaded.\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles"}
+{"k":"scene.load_async_bad_index","v":"returns null"}
+{"k":"scene.load_async_bad_index.logs","v":"Error: Scene with build index: 99 couldn't be loaded because it has not been added to the active build profile or shared scene list.\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles"}
+{"k":"scene.get_at_bad","v":"throws System.IndexOutOfRangeException: Scene index \"99\" is out of range."}
+{"k":"scene.get_at_negative","v":"throws System.IndexOutOfRangeException: Scene index \"-1\" is out of range."}
+{"k":"scene.by_build_index_bad","v":"throws System.ArgumentException: GetSceneByBuildIndex: Invalid build index: 99\nTo add a scene to the build settings use the menu File->Build Settings..."}
+{"k":"scene.by_build_index_negative","v":"throws System.ArgumentException: GetSceneByBuildIndex: Invalid build index: -1\nTo add a scene to the build settings use the menu File->Build Settings..."}
+{"k":"scene.by_build_index_loaded","v":"returns scene valid=True name=Probe"}
+{"k":"scene.load_async_negative_index","v":"returns null"}
+{"k":"scene.load_async_negative_index.logs","v":"Error: Cannot load scene: Invalid scene name (empty string) and invalid build index -1"}
+{"k":"scene.by_name_missing","v":"returns scene valid=False name="}
+{"k":"scene.by_path_missing","v":"returns scene valid=False name="}
+{"k":"scene.set_active_invalid","v":"throws System.ArgumentException: SceneManager.SetActiveScene failed; invalid scene"}
+{"k":"scene.unload_missing_name","v":"throws System.ArgumentException: Scene to unload is invalid"}
+{"k":"scene.unload_invalid","v":"throws System.ArgumentException: Scene to unload is invalid"}
+{"k":"scene.unload_bad_index","v":"throws System.ArgumentException: Scene to unload is invalid"}
+{"k":"scene.move_null","v":"throws System.ArgumentNullException: Value cannot be null.\nParameter name: go"}
+{"k":"scene.move_invalid_scene","v":"throws System.ArgumentException: Destination scene is not valid"}
+{"k":"scene.move_child","v":"throws System.ArgumentException: Gameobject is not a root in a scene"}
+{"k":"scene.create_existing","v":"throws System.ArgumentException: Scene with name \"Probe\" already exists"}
+{"k":"scene.create_empty","v":"throws System.ArgumentException: The input scene name cannot be empty"}
+{"k":"scene.create_null","v":"throws System.ArgumentNullException: Value cannot be null.\nParameter name: sceneName"}
+{"k":"scene.merge_invalid","v":"throws System.ArgumentException: Source scene is invalid"}
+{"k":"bundle.load_missing_file","v":"returns null"}
+{"k":"bundle.load_missing_file.logs","v":"Error: Unable to open archive file: NoSuchFolder/no_such_bundle\n---\nError: Failed to read data for the AssetBundle 'no_such_bundle'."}
+{"k":"bundle.load_null_path","v":"returns null"}
+{"k":"bundle.load_null_path.logs","v":"Error: Unable to open archive file: \n---\nError: Failed to read data for the AssetBundle ''."}
+{"k":"bundle.load_memory_null","v":"returns null"}
+{"k":"bundle.load_memory_garbage","v":"returns null"}
+{"k":"bundle.load_memory_garbage.logs","v":"Error: Failed to decompress data for the AssetBundle 'Memory'."}
+{"k":"bundle.load_stream_null","v":"throws System.ArgumentNullException: stream\nParameter name: ManagedStream object must be non-null"}
+{"k":"bundle.load_stream_garbage","v":"returns null"}
+{"k":"bundle.load_stream_garbage.logs","v":"Error: Unable to read header from archive file: \n---\nError: Failed to read data for the AssetBundle 'IO.Stream'."}
+{"k":"bundle.load_garbage_file","v":"returns null"}
+{"k":"bundle.load_garbage_file.logs","v":"Error: Unable to read header from archive file: <temp>/garbage.bundle\n---\nError: Failed to read data for the AssetBundle 'garbage.bundle'."}
+{"k":"bundle.load_memory_async_null","v":"throws System.NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"mesh.triangles_out_of_range","v":"returns done"}
+{"k":"mesh.triangles_out_of_range.logs","v":"Error: Failed setting triangles. Some indices are referencing out of bounds vertices. IndexCount: 3, VertexCount: 3"}
+{"k":"mesh.triangles_after_bad","v":"returns Int32[][3]"}
+{"k":"mesh.triangles_not_multiple","v":"returns done"}
+{"k":"mesh.triangles_not_multiple.logs","v":"Error: Failed setting triangles. The number of supplied triangle indices must be a multiple of 3."}
+{"k":"mesh.set_triangles_bad_submesh","v":"returns done"}
+{"k":"mesh.set_triangles_bad_submesh.logs","v":"Error: Failed getting triangles. Submesh index is out of bounds."}
+{"k":"mesh.set_triangles_negative_submesh","v":"returns done"}
+{"k":"mesh.set_triangles_negative_submesh.logs","v":"Error: Failed getting triangles. Submesh index is out of bounds."}
+{"k":"mesh.get_indices_bad_submesh","v":"returns Int32[][0]"}
+{"k":"mesh.get_indices_bad_submesh.logs","v":"Error: Failed getting indices. Submesh index is out of bounds."}
+{"k":"mesh.get_triangles_bad_submesh","v":"returns Int32[][0]"}
+{"k":"mesh.get_triangles_bad_submesh.logs","v":"Error: Failed getting triangles. Submesh index is out of bounds."}
+{"k":"mesh.get_submesh_bad","v":"throws System.ArgumentException: Invalid submesh index - got 5, should be [0,1)"}
+{"k":"mesh.get_topology_bad","v":"returns Triangles"}
+{"k":"mesh.get_topology_bad.logs","v":"Error: Failed getting topology. Submesh index is out of bounds."}
+{"k":"mesh.uv_wrong_length","v":"returns done"}
+{"k":"mesh.uv_wrong_length.logs","v":"Error: Mesh.uv is out of bounds. The supplied array needs to be the same size as the Mesh.vertices array."}
+{"k":"mesh.normals_wrong_length","v":"returns done"}
+{"k":"mesh.normals_wrong_length.logs","v":"Error: Mesh.normals is out of bounds. The supplied array needs to be the same size as the Mesh.vertices array."}
+{"k":"mesh.colors_wrong_length","v":"returns done"}
+{"k":"mesh.colors_wrong_length.logs","v":"Error: Mesh.colors is out of bounds. The supplied array needs to be the same size as the Mesh.vertices array."}
+{"k":"mesh.tangents_wrong_length","v":"returns done"}
+{"k":"mesh.tangents_wrong_length.logs","v":"Error: Mesh.tangents is out of bounds. The supplied array needs to be the same size as the Mesh.vertices array."}
+{"k":"mesh.vertices_null","v":"returns done"}
+{"k":"mesh.vertices_null.logs","v":"Error: Mesh.vertices is too small. The supplied vertex array has less vertices than are referenced by the triangles array."}
+{"k":"mesh.set_vertices_null","v":"returns done"}
+{"k":"mesh.set_vertices_null.logs","v":"Error: Mesh.vertices is too small. The supplied vertex array has less vertices than are referenced by the triangles array."}
+{"k":"mesh.set_indices_bad_count","v":"returns done"}
+{"k":"mesh.set_indices_bad_count.logs","v":"Error: Failed setting triangles. The number of supplied triangle indices must be a multiple of 3."}
+{"k":"mesh.submesh_count_negative","v":"returns done"}
+{"k":"mesh.submesh_count_negative.logs","v":"Error: subMeshCount can't be set to negative value"}
+{"k":"mesh.set_uvs_bad_channel","v":"returns done"}
+{"k":"mesh.set_uvs_bad_channel.logs","v":"Error: The uv index is invalid. Must be in the range 0 to 7."}
+{"k":"mesh.get_uvs_bad_channel","v":"throws System.IndexOutOfRangeException: The uv index is invalid. Must be in the range 0 to 7."}
+{"k":"mesh.set_colors_null","v":"returns done"}
+{"k":"mesh.get_index_start_bad","v":"throws System.IndexOutOfRangeException: Specified sub mesh is out of range. Must be greater or equal to 0 and less than subMeshCount."}
+{"k":"mesh.get_index_count_bad","v":"throws System.IndexOutOfRangeException: Specified sub mesh is out of range. Must be greater or equal to 0 and less than subMeshCount."}
+{"k":"mesh.get_base_vertex_bad","v":"throws System.IndexOutOfRangeException: Specified sub mesh is out of range. Must be greater or equal to 0 and less than subMeshCount."}
+{"k":"mesh.get_indices_negative","v":"returns Int32[][0]"}
+{"k":"mesh.get_indices_negative.logs","v":"Error: Failed getting indices. Submesh index is out of bounds."}
+{"k":"mesh.get_topology_negative","v":"returns Triangles"}
+{"k":"mesh.get_topology_negative.logs","v":"Error: Failed getting topology. Submesh index is out of bounds."}
+{"k":"mesh.get_submesh_negative","v":"throws System.ArgumentException: Invalid submesh index - got -1, should be [0,1)"}
+{"k":"mesh.get_triangles_list_bad","v":"throws System.IndexOutOfRangeException: Specified sub mesh is out of range. Must be greater or equal to 0 and less than subMeshCount."}
+{"k":"mesh.get_triangles_list_null","v":"throws System.ArgumentNullException: The result triangles list cannot be null.\nParameter name: triangles"}
+{"k":"mesh.get_indices_list_bad","v":"throws System.IndexOutOfRangeException: Specified sub mesh is out of range. Must be greater or equal to 0 and less than subMeshCount."}
+{"k":"mesh.get_uvs_null_list","v":"throws System.ArgumentNullException: The result uvs list cannot be null.\nParameter name: uvs"}
+{"k":"mesh.set_uvs_array_bad_channel","v":"throws System.ArgumentOutOfRangeException: The uv index is invalid. Must be in the range 0 to 7.\nParameter name: uvIndex\nActual value was 8."}
+{"k":"mesh.set_indices_bad_submesh","v":"returns done"}
+{"k":"mesh.set_indices_bad_submesh.logs","v":"Error: Failed getting indices. Submesh index is out of bounds."}
+{"k":"mesh.set_indices_lines_odd","v":"returns done"}
+{"k":"mesh.set_indices_out_of_range","v":"returns done"}
+{"k":"mesh.set_indices_out_of_range.logs","v":"Error: Failed setting triangles. Some indices are referencing out of bounds vertices. IndexCount: 4, VertexCount: 3"}
+{"k":"mesh.triangles_not_multiple_submeshes","v":"returns 1 3"}
+{"k":"mesh.triangles_not_multiple_submeshes.logs","v":"Error: Failed setting triangles. The number of supplied triangle indices must be a multiple of 3."}
+{"k":"mesh.set_colors_null_clears","v":"returns 0"}
+{"k":"mesh.submesh_count_negative_after","v":"returns 1"}
+{"k":"mesh.submesh_count_negative_after.logs","v":"Error: subMeshCount can't be set to negative value"}
+{"k":"texture.new_negative","v":"throws UnityEngine.UnityException: Failed to create texture because of invalid parameters."}
+{"k":"texture.new_negative.logs","v":"Assert: Assertion failed on expression: '!((width >> minSizeLog2) < 1 && (height >> minSizeLog2) < 1 && (depth >> minSizeLog2) < 1)'\n---\nError: Texture must have width greater than 0."}
+{"k":"texture.new_zero","v":"returns UnityEngine.Texture2D ''"}
+{"k":"texture.new_negative_height","v":"throws UnityEngine.UnityException: Failed to create texture because of invalid parameters."}
+{"k":"texture.new_negative_height.logs","v":"Assert: Assertion failed on expression: '!((width >> minSizeLog2) < 1 && (height >> minSizeLog2) < 1 && (depth >> minSizeLog2) < 1)'\n---\nError: Texture must have height greater than 0."}
+{"k":"texture.new_zero_width","v":"throws UnityEngine.UnityException: Failed to create texture because of invalid parameters."}
+{"k":"texture.new_zero_width.logs","v":"Error: Texture must have width greater than 0."}
+{"k":"texture.new_both_negative","v":"throws UnityEngine.UnityException: Failed to create texture because of invalid parameters."}
+{"k":"texture.new_both_negative.logs","v":"Assert: Assertion failed on expression: '!((width >> minSizeLog2) < 1 && (height >> minSizeLog2) < 1 && (depth >> minSizeLog2) < 1)'\n---\nError: Texture must have width greater than 0."}
+{"k":"texture.set_pixels_short","v":"throws System.ArgumentException: Texture2D.SetPixels: size of data to be filled was larger than the size of data available in the source array. (Texture '')"}
+{"k":"texture.set_pixels32_short","v":"throws System.ArgumentException: Texture2D.SetPixels32: size of data to be filled was larger than the size of data available in the source array. (Texture '')"}
+{"k":"texture.get_pixels_bad_mip","v":"throws System.ArgumentException: Texture2D.GetPixels: invalid mipmap level. (Texture '')"}
+{"k":"texture.set_pixels_bad_mip","v":"throws System.ArgumentException: Texture2D.SetPixels: invalid mipmap level. (Texture '')"}
+{"k":"texture.get_pixel_outside","v":"returns RGBA(0.804, 0.804, 0.804, 0.804)"}
+{"k":"texture.get_pixels_block_outside","v":"throws System.ArgumentException: Texture2D.GetPixels: the size of data to be written is outside the target buffer bounds. (Texture '')"}
+{"k":"texture.set_pixels_block_outside","v":"throws System.ArgumentException: Texture2D.SetPixels: the size of data to be written is outside the target buffer bounds. (Texture '')"}
+{"k":"texture.load_raw_short","v":"throws UnityEngine.UnityException: LoadRawTextureData: not enough data provided (will result in overread)."}
+{"k":"texture.set_pixel_data_short","v":"throws System.ArgumentException: Texture2D.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture '')"}
+{"k":"texture.set_pixel_data_bad_mip","v":"throws System.ArgumentException: Texture2D.SetPixelData: invalid mipmap level. (Texture '')"}
+{"k":"texture.get_pixel_data_bad_mip","v":"throws System.ArgumentException: The passed in miplevel 9 is invalid. It needs to be in the range 0 and 2"}
+{"k":"texture.reinitialize_negative","v":"returns False"}
+{"k":"texture.reinitialize_negative.logs","v":"Assert: Assertion failed on expression: '!((width >> minSizeLog2) < 1 && (height >> minSizeLog2) < 1 && (depth >> minSizeLog2) < 1)'\n---\nError: Texture must have width greater than 0."}
+{"k":"texture.reinitialize_negative_height","v":"returns False"}
+{"k":"texture.reinitialize_negative_height.logs","v":"Assert: Assertion failed on expression: '!((width >> minSizeLog2) < 1 && (height >> minSizeLog2) < 1 && (depth >> minSizeLog2) < 1)'\n---\nError: Texture must have height greater than 0."}
+{"k":"texture.size_after_reinitialize","v":"returns 4x4"}
+{"k":"texture.get_pixels32_bad_mip","v":"throws System.ArgumentException: Texture2D.GetPixels32: invalid mipmap level. (Texture '')"}
+{"k":"texture.set_pixels32_bad_mip","v":"throws System.ArgumentException: Texture2D.SetPixels32: invalid mipmap level. (Texture '')"}
+{"k":"texture.get_pixel_bad_mip","v":"returns RGBA(1.000, 1.000, 1.000, 1.000)"}
+{"k":"texture.get_pixel_bad_mip.logs","v":"Error: GetPixel called on an undefined mip (valid values are 0 - 2"}
+{"k":"texture.set_pixel_bad_mip","v":"returns done"}
+{"k":"texture.set_pixel_bad_mip.logs","v":"Error: SetPixel called on an undefined mip (valid values are 0 - 2"}
+{"k":"texture.get_pixel_bilinear_bad_mip","v":"returns RGBA(1.000, 1.000, 1.000, 1.000)"}
+{"k":"texture.get_pixel_bilinear_bad_mip.logs","v":"Error: GetPixelBilinear called on an undefined mip (valid values are 0 - 2"}
+{"k":"texture.set_pixels32_block_outside","v":"throws System.ArgumentException: Texture2D.SetPixels32: the size of data to be written is outside the target buffer bounds. (Texture '')"}
+{"k":"texture.get_pixels_block_negative","v":"throws System.ArgumentException: Texture2D.GetPixels: the size of data to be written is outside the target buffer bounds. (Texture '')"}
+{"k":"texture.set_pixels_null","v":"throws System.ArgumentException: Texture2D.SetPixels: size of data to be filled was larger than the size of data available in the source array. (Texture '')"}
+{"k":"texture.set_pixels_block_short","v":"throws System.ArgumentException: Texture2D.SetPixels: size of data to be filled was larger than the size of data available in the source array. (Texture '')"}
+{"k":"texture.non_readable_get_pixel","v":"throws UnityEngine.UnityException: Texture '' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
+{"k":"texture.non_readable_set_pixel","v":"throws UnityEngine.UnityException: Texture '' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
+{"k":"texture.non_readable_get_pixels","v":"throws System.ArgumentException: Texture2D.GetPixels: texture data is either not readable, corrupted or does not exist. (Texture '')"}
+{"k":"animator.set_float_missing","v":"returns done"}
+{"k":"animator.set_float_missing.logs","v":"Warning: Parameter 'NoSuch' does not exist."}
+{"k":"animator.get_float_missing","v":"returns 0"}
+{"k":"animator.get_float_missing.logs","v":"Warning: Parameter 'NoSuch' does not exist."}
+{"k":"animator.set_float_on_bool","v":"returns done"}
+{"k":"animator.set_float_on_bool.logs","v":"Warning: Parameter type 'flag' does not match."}
+{"k":"animator.set_bool_on_float","v":"returns done"}
+{"k":"animator.set_bool_on_float.logs","v":"Warning: Parameter type 'speed' does not match."}
+{"k":"animator.set_integer_on_trigger","v":"returns done"}
+{"k":"animator.set_integer_on_trigger.logs","v":"Warning: Parameter type 'go' does not match."}
+{"k":"animator.set_trigger_missing","v":"returns done"}
+{"k":"animator.set_trigger_missing.logs","v":"Warning: Parameter 'NoSuch' does not exist."}
+{"k":"animator.reset_trigger_missing","v":"returns done"}
+{"k":"animator.reset_trigger_missing.logs","v":"Warning: Parameter 'NoSuch' does not exist."}
+{"k":"animator.get_bool_missing","v":"returns False"}
+{"k":"animator.get_bool_missing.logs","v":"Warning: Parameter 'NoSuch' does not exist."}
+{"k":"animator.play_missing","v":"returns done"}
+{"k":"animator.play_missing.logs","v":"Warning: Animator.GotoState: State could not be found\n---\nWarning: Invalid Layer Index '-1'"}
+{"k":"animator.cross_fade_missing","v":"returns done"}
+{"k":"animator.cross_fade_missing.logs","v":"Warning: Animator.GotoState: State could not be found\n---\nWarning: Invalid Layer Index '-1'"}
+{"k":"animator.play_bad_layer","v":"returns done"}
+{"k":"animator.play_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"animator.state_info_bad_layer","v":"returns state hash=0"}
+{"k":"animator.state_info_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"animator.layer_name_bad","v":"returns "}
+{"k":"animator.layer_name_bad.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"animator.layer_weight_bad","v":"returns done"}
+{"k":"animator.layer_weight_bad.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"animator.get_layer_weight_bad","v":"returns 0"}
+{"k":"animator.get_layer_weight_bad.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"animator.get_parameter_bad","v":"throws System.IndexOutOfRangeException: Index must be between 0 and 4"}
+{"k":"animator.get_parameter_negative","v":"throws System.IndexOutOfRangeException: Index must be between 0 and 4"}
+{"k":"animator.bare_set_float","v":"returns done"}
+{"k":"animator.bare_set_float.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.bare_get_float","v":"returns 0"}
+{"k":"animator.bare_get_float.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.bare_play","v":"returns done"}
+{"k":"animator.bare_play.logs","v":"Warning: Animator does not have an AnimatorController"}
+{"k":"animator.bare_state_info","v":"returns state hash=0"}
+{"k":"animator.bare_state_info.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.bare_parameter_count","v":"returns 0"}
+{"k":"animator.bare_parameter_count.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.play_missing_layer0","v":"returns done"}
+{"k":"animator.play_missing_layer0.logs","v":"Warning: Animator.GotoState: State could not be found"}
+{"k":"animator.play_missing_hash","v":"returns done"}
+{"k":"animator.play_missing_hash.logs","v":"Warning: Animator.GotoState: State could not be found\n---\nWarning: Invalid Layer Index '-1'"}
+{"k":"animator.cross_fade_bad_layer","v":"returns done"}
+{"k":"animator.cross_fade_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"animator.cross_fade_fixed_missing","v":"returns done"}
+{"k":"animator.cross_fade_fixed_missing.logs","v":"Warning: Animator.GotoState: State could not be found\n---\nWarning: Invalid Layer Index '-1'"}
+{"k":"animator.next_state_info_bad_layer","v":"returns state hash=0"}
+{"k":"animator.next_state_info_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"animator.clip_info_bad_layer","v":"returns AnimatorClipInfo[][0]"}
+{"k":"animator.clip_info_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"animator.in_transition_bad_layer","v":"returns False"}
+{"k":"animator.in_transition_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"animator.has_state_bad_layer","v":"returns False"}
+{"k":"animator.has_state_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"animator.layer_index_missing","v":"returns -1"}
+{"k":"animator.set_trigger_on_float","v":"returns done"}
+{"k":"animator.set_trigger_on_float.logs","v":"Warning: Parameter type 'speed' does not match."}
+{"k":"animator.get_integer_on_bool","v":"returns 0"}
+{"k":"animator.get_integer_on_bool.logs","v":"Warning: Parameter type 'flag' does not match."}
+{"k":"animator.set_bool_missing_id","v":"returns done"}
+{"k":"animator.set_bool_missing_id.logs","v":"Warning: Parameter 'Hash 12345' does not exist."}
+{"k":"animator.set_float_on_bool_id","v":"returns done"}
+{"k":"animator.set_float_on_bool_id.logs","v":"Warning: Parameter type 'Hash -772478054' does not match."}
+{"k":"animator.bare_get_bool","v":"returns False"}
+{"k":"animator.bare_get_bool.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.bare_set_trigger","v":"returns done"}
+{"k":"animator.bare_set_trigger.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.bare_cross_fade","v":"returns done"}
+{"k":"animator.bare_cross_fade.logs","v":"Warning: Animator does not have an AnimatorController"}
+{"k":"animator.bare_layer_name","v":"returns "}
+{"k":"animator.bare_layer_name.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.bare_layer_count","v":"returns 0"}
+{"k":"animator.bare_layer_count.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.bare_layer_weight","v":"returns -1"}
+{"k":"animator.bare_layer_weight.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.bare_get_parameter","v":"throws System.IndexOutOfRangeException: Index must be between 0 and 0"}
+{"k":"animator.bare_get_parameter.logs","v":"Warning: Animator is not playing an AnimatorController\n---\nWarning: Animator is not playing an AnimatorController"}
+{"k":"animator.bare_in_transition","v":"returns False"}
+{"k":"animator.bare_in_transition.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"playable.set_float_missing","v":"returns done"}
+{"k":"playable.set_float_missing.logs","v":"Warning: Parameter 'NoSuch' does not exist."}
+{"k":"playable.set_bool_on_float","v":"returns done"}
+{"k":"playable.set_bool_on_float.logs","v":"Warning: Parameter type 'speed' does not match."}
+{"k":"playable.play_missing","v":"returns done"}
+{"k":"playable.play_missing.logs","v":"Warning: Animator.GotoState: State could not be found\n---\nWarning: Invalid Layer Index '-1'"}
+{"k":"playable.play_bad_layer","v":"returns done"}
+{"k":"playable.play_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"playable.layer_name_bad","v":"returns "}
+{"k":"playable.layer_name_bad.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"playable.state_info_bad_layer","v":"returns state hash=0"}
+{"k":"playable.state_info_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"playable_bound.set_float_missing","v":"returns done"}
+{"k":"playable_bound.set_float_missing.logs","v":"Warning: Parameter 'NoSuch' does not exist."}
+{"k":"playable_bound.set_bool_on_float","v":"returns done"}
+{"k":"playable_bound.set_bool_on_float.logs","v":"Warning: Parameter type 'speed' does not match."}
+{"k":"playable_bound.set_float_on_bool_id","v":"returns done"}
+{"k":"playable_bound.set_float_on_bool_id.logs","v":"Warning: Parameter type 'Hash -772478054' does not match."}
+{"k":"playable_bound.play_missing","v":"returns done"}
+{"k":"playable_bound.play_missing.logs","v":"Warning: Animator.GotoState: State could not be found\n---\nWarning: Invalid Layer Index '-1'"}
+{"k":"playable_bound.play_missing_layer0","v":"returns done"}
+{"k":"playable_bound.play_missing_layer0.logs","v":"Warning: Animator.GotoState: State could not be found"}
+{"k":"playable_bound.play_bad_layer","v":"returns done"}
+{"k":"playable_bound.play_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"playable_bound.layer_name_bad","v":"returns "}
+{"k":"playable_bound.layer_name_bad.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"playable_bound.state_info_bad_layer","v":"returns state hash=0"}
+{"k":"playable_bound.state_info_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"complete","v":true}

@@ -1,0 +1,21 @@
+{
+ "An ArgumentException cannot carry both the parameter name and the Mono runtime's message on .NET: Unbound keeps the name (docs/COMPATIBILITY_GAPS.md, Object API errors)": [
+  "bundle.load_stream_null",
+  "mesh.get_triangles_list_null",
+  "mesh.get_uvs_null_list",
+  "mesh.set_uvs_array_bad_channel",
+  "resources.load_all_null",
+  "resources.load_all_null_type",
+  "resources.load_null_type",
+  "scene.create_null",
+  "scene.move_null"
+ ],
+ "A controller playable no output plays has no state in Unbound (its player needs the output's Animator): its lookups answer without warnings; the playable_bound rows check the same warnings": [
+  "playable.layer_name_bad.logs",
+  "playable.play_bad_layer.logs",
+  "playable.play_missing.logs",
+  "playable.set_bool_on_float.logs",
+  "playable.set_float_missing.logs",
+  "playable.state_info_bad_layer.logs"
+ ]
+}
