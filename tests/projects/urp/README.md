@@ -81,6 +81,13 @@ differ). Unbound renders every new scenario within a mean of 0.65; the remaining
 the glossy mips of the reflection cubemaps (sphere rims in `reflections*`) and the edge of a
 sphere's realtime shadow in the lightmap scenarios (see docs/COMPATIBILITY_GAPS.md).
 
+Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): every scenario and rendering-path image is gated by `urp/compare.py --gate
+image-residuals.json`: 32 of the 168 match pixel for pixel, 125 are recorded within 4/255, and the
+list records the rest with their reasons: `upscale_stp` (open, queued) and `upscale_auto_fractional`
+(the render scale's integer size without Mono's wider floats, an opt-in) from the gap rows, the
+lightmap scenarios' shadow edge above, and on Vulkan the screen-space decals' edge pixels (up to
+31/255 on 160 pixels, not traced). Any other difference fails.
+
 `texture-formats.jsonl` (compared by `compare_constants.py`) records the `format` of the cookie
 textures, of two Single Channel textures (Alpha and Red) and of the baked lightmaps, with each
 lightmap channel's largest stored value (read back through a float target).

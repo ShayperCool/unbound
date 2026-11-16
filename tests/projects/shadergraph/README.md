@@ -18,4 +18,6 @@ Run Unbound and compare (the URP probe's comparison: its "sphere" point is the g
     SHADERGRAPH_PROBE_OUT=/tmp/shadergraph.png unbound run -p tests/projects/shadergraph --no-watch --frames 30 --size 320x180
     python3 tests/projects/urp/compare.py tests/projects/shadergraph/Reference/unity-6000.0.71f1.png /tmp/shadergraph.png
 
-Mean difference 0.02/255; 13 edge pixels differ by more than 8.
+Earlier runs measured a mean difference of 0.02/255 with 13 edge pixels over 8; the run below matches exactly.
+
+Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): the image now matches pixel for pixel, and `urp/compare.py --gate` requires that.

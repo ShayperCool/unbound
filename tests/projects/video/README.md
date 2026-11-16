@@ -31,3 +31,6 @@ the probe needs many of them to play 3 seconds):
 Every record matches. The frames are exact: Unbound decodes the planes with ffmpeg and turns them
 into colours with Unity's own `Hidden/VideoDecode` shader; the camera planes are within 0.6/255
 (drawn with `Hidden/VideoComposite`).
+
+Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): 10 of the 12 images match pixel for pixel; `image-residuals.json` records the two
+camera planes within 4/255, and `compare_images.py --gate` fails any other difference.

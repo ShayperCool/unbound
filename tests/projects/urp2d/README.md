@@ -29,6 +29,9 @@ Run Unbound (in a window: the images are read back from the GPU) and compare:
     for ref in tests/projects/urp2d/Reference/scenarios/*.png; do
         python3 tests/projects/urp/compare.py "$ref" "/tmp/urp2d/$(basename "$ref")"; done
 
-Every scenario matches the Editor within a mean difference of 0.02/255; `point`, `shadows` and `all`
-keep a few single dark pixels (32 at most) inside the point light, where triangles of the light or
-shadow geometry meet.
+Every scenario matches the Editor within a mean difference of 0.02/255. Earlier runs kept a few
+single dark pixels (32 at most) in `point`, `shadows` and `all` inside the point light, where
+triangles of the light or shadow geometry meet; in the runs below only `spot` differs.
+
+Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): 12 of the 13 scenario images match pixel for pixel; `image-residuals.json`
+records the remaining one (within 4/255) and `urp/compare.py --gate` fails any other difference.

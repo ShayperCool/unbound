@@ -39,3 +39,11 @@ its shadow and is not drawn; `shadow_two_sided`: of two quads turned away from t
 `five_points` follows the forward lights' ranking and fades (tests/projects/builtinrp
 `light_rank_*`). What still differs: `textures_spot` and the spot cone's edge in `spot`/`shadow_spot` (the default spot
 cookie is a fitted curve, within 2/255 on average).
+
+Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): both devices' images are gated by `compare_images.py --gate`, OpenGL Core with
+`image-residuals.json` (25 of 27 images listed) and Vulkan with `image-residuals-vulkan.json` (24 of
+27), each entry with its pixel count, largest difference and reason: the spot cone's edge above;
+shadow edges (pixels along shadow boundaries); a point light's range fade (`point_range`, up to
+12/255); light attenuation rounding elsewhere (up to 6/255, mostly 1 to 3); and `vertexlit`, whose
+unlit regions are up to 9/255 brighter than the flat ambient the Editor shows (13 against 22 on 448
+pixels; a light term on the unlit side, not traced). Any other difference fails.
