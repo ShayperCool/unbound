@@ -57,9 +57,11 @@ namespace UnityEngine.Tests
             var camera = CameraSheet();
             Assert.True(camera.ReadsMainCamera);
             Assert.Equal(VFXCameraBufferTypes.Depth | VFXCameraBufferTypes.Color, camera.CameraBuffers);
-            Assert.Null(VisualEffect.Unsupported(camera));
+            // A graph whose programs read the buffers does not run yet (it still asks for them).
+            Assert.Equal("the main camera's Depth, Color buffer read by its programs", VisualEffect.Unsupported(camera));
             var lens = Data(new[] { Op(VFXExpressionOperation.ExtractFOVFromMainCamera) }, Array.Empty<VFXExpressionValueContainerDesc>());
             Assert.True(lens.ReadsMainCamera);
+            Assert.Null(VisualEffect.Unsupported(lens));
             Assert.Equal(VFXCameraBufferTypes.None, lens.CameraBuffers);
             // The expressions of a spawn event do not count.
             var plain = Data(new[] { Value(VFXValueType.Float) }, new[] { Constant(0, 1f) },
@@ -130,8 +132,9 @@ namespace UnityEngine.Tests
                 Assert.Equal(Bits(main.orthographicSize), values.GetWord(10));
                 Assert.Null(values.GetObject(11));
 
-                // A value of no single kind is refused and its size taken; one the effects do not
-                // read is taken and asserted.
+                // A value of no single kind is refused and one the effects do not read asserted,
+                // with the Editor's messages (whether the size given with the first is taken, and
+                // the second kept, is not measured: Unbound does both).
                 using (var logs = new Logs())
                 {
                     VFXManager.SetCameraBuffer(main, VFXCameraBufferTypes.Depth | VFXCameraBufferTypes.Color, colour, 0, 0, 10, 10);
@@ -147,7 +150,8 @@ namespace UnityEngine.Tests
                 Assert.Same(depth, VFXManager.MainCameraBuffer((uint)VFXCameraBufferTypes.Depth));
                 Assert.Same(colour, VFXManager.MainCameraBuffer((uint)VFXCameraBufferTypes.Normal));
 
-                // Without a camera tagged as the main one: said once, until there is one again;
+                // Without a camera tagged as the main one: said once (and again after a main
+                // camera came back: not measured);
                 // the graph reads a new camera's lens, a 1920x1080 screen and no buffers.
                 eye.tag = "Untagged";
                 using (var logs = new Logs())

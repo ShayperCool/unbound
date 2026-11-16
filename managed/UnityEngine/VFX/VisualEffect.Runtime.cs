@@ -124,6 +124,8 @@ namespace UnityEngine.VFX
             foreach (var op in data.Operations)
                 if (!VFXExpressionEvaluator.Supported(op)) return $"the expression operation {op}";
             if (data.UnplacedBake) return "a curve or gradient baked among the expressions of a spawn event";
+            // What the programs read in them is not measured (the effects still ask for them).
+            if (data.CameraBuffers != VFXCameraBufferTypes.None) return $"the main camera's {data.CameraBuffers} buffer read by its programs";
             foreach (var system in data.Systems)
             {
                 if (system.type == VFXSystemType.Mesh) return $"the mesh output system '{system.name}'";

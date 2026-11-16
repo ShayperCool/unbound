@@ -291,7 +291,9 @@ the cause is not found.
 
 Not shown by these: what the graph's GPU programs read in the depth and colour buffers (the
 particles' colours are not recorded: in this setup the depth the pipeline hands over reads as
-nothing in the Editor too, which is not explained), the scene view's camera as the main camera
+nothing in the Editor too, which is not explained; Unbound does not run such a graph and says
+so), whether the size handed over with a value of no single kind is taken, a main camera under
+a scaled parent, the scene view's camera as the main camera
 (an Editor preference; Unbound has no scene view), and the work an effect does per camera.
 
 ## A built asset
