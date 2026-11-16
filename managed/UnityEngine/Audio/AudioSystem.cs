@@ -101,6 +101,9 @@ namespace Unbound.Runtime
 
         static AudioSystem()
         {
+            // The virtual device counts the frame's real time as it starts, after the frame's
+            // time update and before DirectorSampleTime and the scripts read the dsp clock.
+            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.TimeUpdate.WaitForLastPresentationAndUpdateTime), AdvanceClock);
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.UpdateAudio), Update);
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.FixedUpdate.AudioFixedUpdate), FixedUpdate);
             try { AudioBackend.Current.InstallCallback(); }
@@ -485,6 +488,12 @@ namespace Unbound.Runtime
             }
         }
 
+        internal static void AdvanceClock()
+        {
+            try { AudioBackend.Current.AdvanceClock(Math.Max(0.0, Time.s_RealDeltaTime)); }
+            catch (Exception e) { Debug.LogException(e); }
+        }
+
         internal static void Update()
         {
             var backend = AudioBackend.Current;
@@ -555,7 +564,8 @@ namespace Unbound.Runtime
                 }
             }
 
-            SubmitFrame(realDelta, playing, motionDelta, fixedStep: false);
+            // The frame's real time was counted as it started (AdvanceClock).
+            SubmitFrame(0f, playing, motionDelta, fixedStep: false);
         }
 
         // Listener units retain their connection order independently of hearing poses.

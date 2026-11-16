@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 82;
+        internal const uint CurrentVersion = 83;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -54,6 +54,8 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<ulong, float, float, void> AudioUpdateGroup;
         internal delegate* unmanaged<AudioFramePacket*, AudioStatus*, void> AudioFrame;
         internal delegate* unmanaged<double> AudioDspTime;
+        /// <summary>The virtual device's time at the start of a frame (`Engine::advance`).</summary>
+        internal delegate* unmanaged<double, void> AudioAdvance;
         internal delegate* unmanaged<ulong, int, float*, int, int, int> AudioOutputData;
         internal delegate* unmanaged<delegate* unmanaged<int, ulong, float*, int, int, long, void>, void> AudioSetCallback;
         /// <summary>(bytes, length, out width, out height, out is-JPEG, out RGBA8 rows bottom first): 1 when decoded.</summary>

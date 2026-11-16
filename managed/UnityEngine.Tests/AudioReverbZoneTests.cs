@@ -266,6 +266,8 @@ namespace UnityEngine.Tests
                 var source = host.AddComponent<AudioSource>(); source.clip = clip;
                 if (initialOneShot) source.PlayOneShot(clip); else source.Play();
                 Time.s_RealDeltaTime = 0.04;
+                // A frame: its real time counted as it starts, then the audio update.
+                AudioSystem.AdvanceClock();
                 AudioSystem.Update();
                 var before = m_Backend.State(source.Handle);
                 if (!initialOneShot) Assert.True(before.Position > 0);

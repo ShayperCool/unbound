@@ -67,6 +67,9 @@ namespace Unbound.Runtime
             UpdateGroup(group.m_Handle, group.EffectiveGain(0), group.EffectivePitch(0));
         }
         internal abstract AudioStatus Frame(in AudioFramePacket frame);
+        /// <summary>The virtual device's time at the start of a frame: the real time since the
+        /// last frame began, in whole dsp buffers (a real device keeps its own time).</summary>
+        internal abstract void AdvanceClock(double realDelta);
         internal abstract double DspTime { get; }
         /// <summary>window &lt; 0: samples; else the spectrum with that FFTWindow.</summary>
         internal abstract bool OutputData(ulong handle, int channel, Span<float> data, int window);
@@ -183,6 +186,8 @@ namespace Unbound.Runtime
         }
 
         internal override double DspTime => Native.Api.AudioDspTime();
+
+        internal override void AdvanceClock(double realDelta) => Native.Api.AudioAdvance(realDelta);
 
         internal override bool OutputData(ulong handle, int channel, Span<float> data, int window)
         {
@@ -540,14 +545,20 @@ namespace Unbound.Runtime
             LastFrame = frame;
             m_ListenerPaused = (frame.Flags & AudioFrameFlags.Paused) != 0;
             int rate = m_Configuration.sampleRate, buffer = Math.Max(1, m_Configuration.dspBufferSize);
-            m_Owed += Math.Max(0, frame.DeltaTime);
+            AdvanceClock(frame.DeltaTime);
+            return new AudioStatus { DspTime = DspTime, SampleRate = rate, BufferSize = buffer, SpeakerMode = (int)m_Configuration.speakerMode, RealVoices = m_Configuration.numRealVoices };
+        }
+
+        internal override void AdvanceClock(double realDelta)
+        {
+            int rate = m_Configuration.sampleRate, buffer = Math.Max(1, m_Configuration.dspBufferSize);
+            m_Owed += Math.Max(0, realDelta);
             long buffers = (long)Math.Floor(m_Owed * rate / buffer);
             if (buffers > 0)
             {
                 Advance(buffers * buffer);
                 m_Owed -= (double)(buffers * buffer) / rate;
             }
-            return new AudioStatus { DspTime = DspTime, SampleRate = rate, BufferSize = buffer, SpeakerMode = (int)m_Configuration.speakerMode, RealVoices = m_Configuration.numRealVoices };
         }
 
         void Advance(long n)

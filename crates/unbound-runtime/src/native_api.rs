@@ -90,7 +90,7 @@ use std::ffi::c_void;
 /// 80: texture packets distinguish 24-bit depth without stencil from depth with stencil.
 /// 81: a dynamically scaled render texture's size before scaling at the end of `TexturePacket`.
 /// 82: texture packet flag 1 << 16 stores a texture in the screen's channel order.
-pub const NATIVE_API_VERSION: u32 = 82;
+pub const NATIVE_API_VERSION: u32 = 83;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -180,6 +180,8 @@ pub struct NativeApi {
     pub audio_update_group: extern "C" fn(u64, f32, f32),
     pub audio_frame: extern "C" fn(*const AudioFramePacket, *mut AudioStatus),
     pub audio_dsp_time: extern "C" fn() -> f64,
+    /// The virtual device's time at the start of a frame (`Engine::advance`).
+    pub audio_advance: extern "C" fn(f64),
     pub audio_output_data: extern "C" fn(u64, i32, *mut f32, i32, i32) -> i32,
     pub audio_set_callback: extern "C" fn(Option<Callback>),
     // Version 5: image bytes (ImageConversion).
@@ -385,6 +387,7 @@ pub fn api() -> NativeApi {
         audio_update_group,
         audio_frame,
         audio_dsp_time,
+        audio_advance,
         audio_output_data,
         audio_set_callback,
         image_decode,
@@ -1272,6 +1275,10 @@ extern "C" fn audio_frame(packet: *const AudioFramePacket, status: *mut AudioSta
 /// `AudioSettings.dspTime`, without taking the mixer's lock.
 extern "C" fn audio_dsp_time() -> f64 {
     state::state().audio.dsp_time()
+}
+
+extern "C" fn audio_advance(delta_time: f64) {
+    state::state().audio.advance(delta_time);
 }
 
 /// `GetOutputData` (`window` < 0) or `GetSpectrumData` (`window`: `FFTWindow`) of a source

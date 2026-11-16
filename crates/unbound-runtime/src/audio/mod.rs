@@ -630,7 +630,36 @@ impl Engine {
         Ok(output)
     }
 
-    /// Once per frame: the listener, and the virtual device's time.
+    /// The virtual device's time at the start of a frame: the real time since the last frame
+    /// began, in whole dsp buffers (the rest is owed to the next one), so that the frame's
+    /// scripts read a dsp clock that has already counted it, as the Editor's audio thread has
+    /// (tests/projects/dspclock). A real device keeps its own time; capture stops the clock.
+    pub fn advance(&self, delta_time: f64) {
+        if self.has_device() {
+            return;
+        }
+        let mut mixer = self.mixer();
+        self.advance_virtual(&mut mixer, delta_time);
+        self.clock.store(&mixer);
+    }
+
+    fn advance_virtual(&self, mixer: &mut Mixer, delta_time: f64) {
+        if self.capturing.load(Ordering::Acquire) {
+            return;
+        }
+        let rate = mixer.config.sample_rate as f64;
+        let buffer = mixer.config.buffer_size.max(1) as usize;
+        let mut owed = self.owed.lock().unwrap();
+        *owed += delta_time.max(0.0);
+        let buffers = (*owed * rate / buffer as f64).floor() as usize;
+        if buffers > 0 {
+            mixer.advance(buffers * buffer);
+            *owed -= (buffers * buffer) as f64 / rate;
+        }
+    }
+
+    /// Once per frame: the listener, and the virtual device's time (`delta_time`, which is 0
+    /// when [`Engine::advance`] already counted the frame).
     pub fn frame(&self, packet: &AudioFramePacket) -> AudioStatus {
         let virtual_device = !self.has_device();
         let mut mixer = self.mixer();
@@ -655,16 +684,8 @@ impl Engine {
         );
         mixer.update_zone(&packet.zone, packet.flags & frame_flags::ZONE_STARTUP != 0);
         mixer.update_suspension();
-        if virtual_device && !self.capturing.load(Ordering::Acquire) {
-            let rate = mixer.config.sample_rate as f64;
-            let buffer = mixer.config.buffer_size.max(1) as usize;
-            let mut owed = self.owed.lock().unwrap();
-            *owed += packet.delta_time.max(0.0);
-            let buffers = (*owed * rate / buffer as f64).floor() as usize;
-            if buffers > 0 {
-                mixer.advance(buffers * buffer);
-                *owed -= (buffers * buffer) as f64 / rate;
-            }
+        if virtual_device {
+            self.advance_virtual(&mut mixer, packet.delta_time);
         }
         self.clock.store(&mixer);
         AudioStatus {
@@ -1085,6 +1106,15 @@ mod tests {
         assert_eq!(engine.frame(&packet(0.15)).dsp_time, 0.1);
         assert_eq!(engine.frame(&packet(0.06)).dsp_time, 0.2);
         assert_eq!(engine.dsp_time(), 0.2);
+        // Counted as a frame starts (Engine::advance), owing the same remainder; the frame's
+        // update with no time of its own then adds nothing.
+        engine.advance(0.25);
+        assert_eq!(engine.dsp_time(), 0.4);
+        assert_eq!(engine.frame(&packet(0.0)).dsp_time, 0.4);
+        engine.advance(0.06);
+        assert_eq!(engine.dsp_time(), 0.5);
+        engine.advance(-1.0);
+        assert_eq!(engine.dsp_time(), 0.5);
 
         // A clip ends on the virtual clock.
         {
