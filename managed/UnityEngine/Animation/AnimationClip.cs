@@ -1168,11 +1168,7 @@ namespace Unbound.Runtime
                     ownEvaluation[i] = true;
                     continue;
                 }
-                float inverse = 1f / dx;
-                float inverse2 = inverse * inverse;
-                float dy = k1.value - k0.value;
-                float d1 = k0.outTangent * dx, d2 = k1.inTangent * dx;
-                float a = (d1 + d2 - dy - dy) * inverse2 * inverse, b = (dy + dy + dy - d1 - d1 - d2) * inverse2;
+                AnimationCurve.CubicCoefficients(k0, k1, dx, out float a, out float b);
                 // Huge finite tangents can overflow the coefficients.
                 if (!float.IsFinite(a) || !float.IsFinite(b))
                 {

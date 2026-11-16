@@ -422,6 +422,110 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>The shortest distance of two keys <see cref="EvaluateCubic"/> divides by.</summary>
+        const float MinCubicLength = 1e-4f;
+
+        /// <summary>
+        /// The curve at <paramref name="time"/> as a Visual Effect Graph samples it (its Sample
+        /// Curve operator and the curves it bakes): the curve <see cref="Evaluate"/> gives,
+        /// rounded another way, and with another value on the last key of a curve that loops
+        /// after it. Between the keys and where the curve loops, an unweighted segment is a
+        /// cubic in the time from its first key (<see cref="CubicCoefficients"/>). A time
+        /// where the curve loops is wrapped into the keys (a time on the last key onto the
+        /// first one), and the segment's start moves by what the wrap took, so that the
+        /// cubic's time is taken from the time given. Where the curve ping-pongs, the segment
+        /// at the wrapped time is the sum of its Hermite terms, the second key's value added
+        /// last (<see cref="HermiteEndLast"/>). Where it clamps, and on a weighted segment, it
+        /// is <see cref="Evaluate"/>'s. Matches the Unity 6000.0.71f1 Editor
+        /// (tests/projects/vfx, `sim/expressions others/inputs/*/c00`: between keys, past and
+        /// on the last key of a curve that loops there, before the first key of one that
+        /// ping-pongs there).
+        /// </summary>
+        internal float EvaluateCubic(float time)
+        {
+            int count = m_Keys.Count;
+            if (count < 2)
+                return count == 0 ? 0.0f : m_Keys[0].value;
+            float first = m_Keys[0].time;
+            float last = m_Keys[count - 1].time;
+            float range = last - first;
+            float wrapped = time;
+            bool outside = time >= last || time < first;
+            WrapMode mode = time >= last ? m_PostWrapMode : m_PreWrapMode;
+            if (outside)
+            {
+                if ((mode != WrapMode.Loop && mode != WrapMode.PingPong) || !(range > 0.0f) || !float.IsFinite(time))
+                    return Evaluate(time);
+                if (mode == WrapMode.PingPong)
+                    WrapTime(ref wrapped, mode, first, range);
+                else
+                {
+                    float past = time - first;
+                    wrapped = past - MathF.Floor(past / range) * range + first;
+                    if (time >= last)
+                        wrapped = Math.Min(Math.Max(wrapped, first), last);
+                }
+            }
+            else if (float.IsNaN(time))
+                return Evaluate(time);
+
+            // Last segment whose start key is at or before the wrapped time.
+            int lo = 0, hi = count - 2;
+            while (lo < hi)
+            {
+                int mid = (lo + hi + 1) >> 1;
+                if (m_Keys[mid].time <= wrapped)
+                    lo = mid;
+                else
+                    hi = mid - 1;
+            }
+            Keyframe k0 = m_Keys[lo], k1 = m_Keys[lo + 1];
+            if ((k0.weightedMode & WeightedMode.Out) != 0 || (k1.weightedMode & WeightedMode.In) != 0)
+                return EvaluateSegment(k0, k1, wrapped);
+            if (Stepped(k0, k1, out float held))
+                return held;
+            if (outside && mode == WrapMode.PingPong)
+                return HermiteEndLast(k0, k1, wrapped);
+
+            CubicCoefficients(k0, k1, Math.Max(k1.time - k0.time, MinCubicLength), out float a, out float b);
+            float t = time - (k0.time + (time - wrapped));
+            return ((a * t + b) * t + k0.outTangent) * t + k0.value;
+        }
+
+        /// <summary>The cubic ((a t + b) t + c) t + d an unweighted segment is, in t = time −
+        /// the first key's time: a = (d1 + d2 − 2 dy) / dx³ and b = (3 dy − 2 d1 − d2) / dx²,
+        /// with <paramref name="dx"/> the keys' distance, dy their value difference and d1, d2
+        /// the out and in slopes times dx; c is the first key's out slope and d its value.
+        /// Single precision in this order, the divisions as products by 1 / dx and its square
+        /// (Unity 6000.0.71f1 Editor: tests/projects/vfx for a curve a graph samples,
+        /// tests/projects/humanfirstpose for the Animator).</summary>
+        internal static void CubicCoefficients(in Keyframe k0, in Keyframe k1, float dx, out float a, out float b)
+        {
+            float inverse = 1.0f / dx;
+            float inverse2 = inverse * inverse;
+            float dy = k1.value - k0.value;
+            float d1 = k0.outTangent * dx, d2 = k1.inTangent * dx;
+            a = (d1 + d2 - dy - dy) * inverse2 * inverse;
+            b = (dy + dy + dy - d1 - d1 - d2) * inverse2;
+        }
+
+        /// <summary>An unweighted segment at <paramref name="time"/> as the sum of its Hermite
+        /// terms with the second key's value added last: the last bits differ from
+        /// <see cref="EvaluateSegment"/>'s sum, which adds it third.</summary>
+        static float HermiteEndLast(in Keyframe k0, in Keyframe k1, float time)
+        {
+            float dx = k1.time - k0.time;
+            float s = dx != 0.0f ? (time - k0.time) / dx : 0.0f;
+            float m0 = k0.outTangent * dx, m1 = dx * k1.inTangent;
+            float s2 = s * s;
+            float s3 = s * s2;
+            float h00 = s3 + s3 - 3.0f * s2 + 1.0f;
+            float h10 = s3 - (s2 + s2) + s;
+            float h11 = s3 - s2;
+            float h01 = 3.0f * s2 - (s3 + s3);
+            return h01 * k1.value + (h00 * k0.value + h10 * m0 + h11 * m1);
+        }
+
         /// <summary>A stepped segment: constant at the first key's value when the first key's
         /// out-tangent or the second key's in-tangent is +∞, else at the second key's value when
         /// either is −∞ (Unity 6000.0.71f1 Editor, tests/projects/animedges: the curve, a clip

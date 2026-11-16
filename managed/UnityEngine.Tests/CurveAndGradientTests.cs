@@ -26,6 +26,48 @@ namespace Unbound.Tests
             Assert.Equal(1, AnimationCurve.Linear(1f, 2f, 1f, 5f).length);
         }
 
+        /// <summary>The curve as a Visual Effect Graph samples it: each segment a cubic in the
+        /// time from its first key (Unity 6000.0.71f1 Editor, tests/projects/vfx,
+        /// `sim/expressions others/inputs/*/c00`).</summary>
+        [Fact]
+        public void ACurveSampledAsCubicsRoundsAsTheEditorDoes()
+        {
+            static uint Bits(float f) => BitConverter.SingleToUInt32Bits(f);
+            var flat = new AnimationCurve(new Keyframe(-1f, 3f), new Keyframe(0f, -1f), new Keyframe(2f, 5f));
+            Assert.Equal(0x3e978d54u, Bits(flat.EvaluateCubic(0.6f)));
+            Assert.Equal(0x3e978d52u, Bits(flat.Evaluate(0.6f)));
+            // Slopes at the keys, keys no power of two apart; ping-pong before, a loop after.
+            var sloped = new AnimationCurve(new Keyframe(-1f, 3f, 0f, -2.5f), new Keyframe(0.7f, -1f, 1.25f, 0.6f), new Keyframe(2f, 5f, 3f, 0f))
+            {
+                preWrapMode = WrapMode.PingPong, postWrapMode = WrapMode.Loop,
+            };
+            Assert.Equal(0xbd8db290u, Bits(sloped.EvaluateCubic(1.04f)));
+            // Past the last key the time wraps, and the cubic's time is still taken from the
+            // time given; on the last key it wraps onto the first one.
+            Assert.Equal(0xbf332e80u, Bits(sloped.EvaluateCubic(3.87f)));
+            Assert.Equal(3f, sloped.EvaluateCubic(2f));
+            // Where it ping-pongs: the Hermite terms, the second key's value added last.
+            Assert.Equal(0x406c0d24u, Bits(sloped.EvaluateCubic(-3.7f)));
+            Assert.Equal(0x406c0d23u, Bits(sloped.Evaluate(-3.7f)));
+            // Where it clamps, and on a weighted or stepped segment: Evaluate's.
+            Assert.Equal(3f, flat.EvaluateCubic(-5f));
+            Assert.Equal(5f, flat.EvaluateCubic(2f));
+            Assert.Equal(5f, flat.EvaluateCubic(9f));
+            var weighted = new AnimationCurve(new Keyframe(0f, 0f, 0f, 2f, 0f, 0.8f) { weightedMode = WeightedMode.Out }, new Keyframe(1f, 1f));
+            Assert.Equal(Bits(weighted.Evaluate(0.3f)), Bits(weighted.EvaluateCubic(0.3f)));
+            var stepped = new AnimationCurve(new Keyframe(0f, 1f, 0f, float.PositiveInfinity), new Keyframe(1f, 4f), new Keyframe(2f, 6f, float.NegativeInfinity, 0f))
+            {
+                preWrapMode = WrapMode.PingPong,
+            };
+            Assert.Equal((1f, 6f, 1f), (stepped.EvaluateCubic(0.5f), stepped.EvaluateCubic(1.5f), stepped.EvaluateCubic(-0.5f)));
+            // No keys, one key, two keys at one time, a time that is no number.
+            Assert.Equal((0f, 7f), (new AnimationCurve().EvaluateCubic(3f), new AnimationCurve(new Keyframe(2f, 7f)).EvaluateCubic(-100f)));
+            var upright = new AnimationCurve(new Keyframe(1f, 2f), new Keyframe(1f, 5f)) { postWrapMode = WrapMode.Loop, preWrapMode = WrapMode.Loop };
+            Assert.Equal(Bits(upright.Evaluate(1f)), Bits(upright.EvaluateCubic(1f)));
+            Assert.Equal(Bits(sloped.Evaluate(float.NaN)), Bits(sloped.EvaluateCubic(float.NaN)));
+            Assert.Equal(Bits(sloped.Evaluate(float.PositiveInfinity)), Bits(sloped.EvaluateCubic(float.PositiveInfinity)));
+        }
+
         [Fact]
         public void HermiteWithTangents()
         {
