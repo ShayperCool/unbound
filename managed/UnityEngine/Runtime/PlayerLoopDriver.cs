@@ -416,6 +416,7 @@ namespace Unbound.Runtime
             CanvasSystem.EnsureRegistered();
             // UnityGUI draws after the overlay canvases.
             GuiDispatch.EnsureRegistered();
+            UnityEngine.Rendering.RenderPipelineManager.ActivateConfiguredPipelineTag();
             // Play mode runs inside the Editor: its editor code prepares Play mode first.
             UnityEditor.EditorInitialization.BeforePlayMode();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);

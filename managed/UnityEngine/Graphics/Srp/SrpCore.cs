@@ -292,6 +292,17 @@ namespace UnityEngine.Rendering
             SupportedRenderingFeatures.active = null;
         }
 
+        /// <summary>Play mode starts in an Editor that has drawn its views through the configured
+        /// pipeline: that pipeline's shader tag is active before the first scene loads, so the
+        /// scene's materials see its SubShaders (their render queues as they validate), though
+        /// the pipeline itself is made at the first render (tests/projects/graphqueue, Unity
+        /// 6000.0.71f1: `early`).</summary>
+        internal static void ActivateConfiguredPipelineTag()
+        {
+            var asset = GraphicsSettings.currentRenderPipeline;
+            if (asset != null) Shader.globalRenderPipeline = asset.renderPipelineShaderTag;
+        }
+
         internal static bool TryPrepareRenderPipeline(RenderPipelineAsset pipelineAsset)
         {
             HandleRenderPipelineChange(pipelineAsset);
