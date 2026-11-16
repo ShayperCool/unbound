@@ -600,11 +600,36 @@ namespace UnityEngine
         public static void CopyTexture(Texture src, int srcElement, int srcMip, Texture dst, int dstElement, int dstMip) =>
             CopyTexture(src, srcElement, srcMip, -1, -1, -1, -1, dst, dstElement, dstMip, 0, 0);
 
+        /// <summary>A region copy whose region leaves the source or the destination level copies
+        /// nothing and logs the engine's error (the Unity 6000.0.71f1 Editor, tests/projects/apierrors
+        /// `texture.copy_region_*`).</summary>
+        static bool CopyRegionFits(Texture src, int srcMip, int srcX, int srcY, int width, int height, Texture dst, int dstMip, int dstX, int dstY)
+        {
+            if (width < 0) return true;
+            static (int W, int H) Level(Texture t, int mip) => (Math.Max(1, t.width >> mip), Math.Max(1, t.height >> mip));
+            static bool Fits((int W, int H) level, int x, int y, int w, int h) =>
+                x >= 0 && y >= 0 && w >= 0 && h >= 0 && (long)x + w <= level.W && (long)y + h <= level.H;
+            var from = Level(src, srcMip);
+            if (!Fits(from, srcX, srcY, width, height))
+            {
+                Debug.LogError($"Graphics.CopyTexture called with region not fitting in source element: trying to copy from region on GPU (x:{srcX}, y:{srcY}, width:{width}, height:{height}) of mip {srcMip} (size: {from.W}x{from.H})");
+                return false;
+            }
+            var to = Level(dst, dstMip);
+            if (!Fits(to, dstX, dstY, width, height))
+            {
+                Debug.LogError($"Graphics.CopyTexture called with region not fitting in destination element: trying to copy to region on GPU (x:{dstX}, y:{dstY}, width:{width}, height:{height}) of mip {dstMip} (size: {to.W}x{to.H})");
+                return false;
+            }
+            return true;
+        }
+
         /// <summary>Copies on the GPU; between Texture2Ds the retained CPU pixels too, independent of readability.</summary>
         public static void CopyTexture(Texture src, int srcElement, int srcMip, int srcX, int srcY, int srcWidth, int srcHeight, Texture dst, int dstElement, int dstMip, int dstX, int dstY)
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
             if (dst == null) throw new ArgumentNullException(nameof(dst));
+            if (!CopyRegionFits(src, srcMip, srcX, srcY, srcWidth, srcHeight, dst, dstMip, dstX, dstY)) return;
             if (src is Texture2D b1 && dst is Texture2D b2
                 && (BlockFormats.BlockBytes(b1.format) > 0 || BlockFormats.BlockBytes(b2.format) > 0))
             {
