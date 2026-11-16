@@ -16,6 +16,10 @@ namespace Unbound.Runtime.Playables
         static bool s_Registered;
         static double s_LastDsp = double.NaN;
 
+        /// <summary>How far behind the audio clock, in buffers, a graph on it is pulled up to it:
+        /// Unbound's choice inside the 2.8 to 5.7 ms the Editor measures (<see cref="SampleTime"/>).</summary>
+        const double PullUpBuffers = 0.25;
+
         /// <summary>The DSP clock's advance this frame (DirectorUpdateMode.DSPClock).</summary>
         internal static double DspDelta { get; private set; }
 
@@ -53,8 +57,8 @@ namespace Unbound.Runtime.Playables
         /// Unbound's choice inside 2.8 to 5.7 ms: where a graph stands against the clock depends on
         /// the Editor's real frame timing, so no recorded control pins it). Unbound also holds it
         /// at most a buffer ahead (unmeasured), so that it follows a device clock that drifts from
-        /// real time. The buffer is the one of the last
-        /// audio update (no per-frame settings query).</summary>
+        /// real time. The buffer is the one of the last audio update (no per-frame settings
+        /// query).</summary>
         internal static void SampleTime()
         {
             double dsp = AudioSettings.dspTime;
@@ -68,7 +72,7 @@ namespace Unbound.Runtime.Playables
             double buffer = status.SampleRate > 0 ? (double)status.BufferSize / status.SampleRate : 0;
             double real = double.IsFinite(Time.s_RealDeltaTime) ? System.Math.Max(0, Time.s_RealDeltaTime) : 0;
             double next = System.Math.Min(s_LastDsp + real, dsp + buffer);
-            if (next < dsp - 0.25 * buffer) next = dsp;
+            if (next < dsp - PullUpBuffers * buffer) next = dsp;
             DspDelta = System.Math.Max(0, next - s_LastDsp);
             s_LastDsp = System.Math.Max(s_LastDsp, next);
         }

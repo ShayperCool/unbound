@@ -86,9 +86,9 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        // Made with 2 ms of real time the clock still owes: left that far behind it as the clock
-        // steps (the Editor left a graph 2.8 ms behind).
-        [InlineData(0.002, false)]
+        // Made with 2.8 ms of real time the clock still owes: left that far behind it as the clock
+        // steps (as the Editor left a graph 2.8 ms behind).
+        [InlineData(0.0028, false)]
         // Made with 6 ms owed, more than a quarter of a buffer (5.3 ms): pulled up to it as the
         // clock steps (the Editor pulled up ones 5.7 and 12 ms behind).
         [InlineData(0.006, true)]
@@ -116,7 +116,7 @@ namespace UnityEngine.Tests
             else
             {
                 Assert.Equal(made + frames * 0.0001, PlayableSystem.GraphDspTime, 9);
-                Assert.InRange(behind, 0.0019, 0.0021);
+                Assert.InRange(behind, 0.0027, 0.0029);
             }
         }
 
