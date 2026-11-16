@@ -325,8 +325,8 @@ drawing left). Plugin events run later there, on the Editor's render thread: `ca
 `executed.pixels` show colors the scripts set after the events. The engine run is compared with
 the batch-mode reference only.
 
-Unbound matches 343/386 records with 43 declared residuals before Q515 (328/371 with 43 expected
-after it, the four `outside.*` rows; not rerun on macOS for that change) (`residuals-metal.json`, each with its
+Unbound matches 339/386 records with 47 declared residuals, the four `outside.*` rows among them
+since Q515 (rerun on macOS) (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
 Editor's is the pass it began, clearing; Unbound begins a pass of its own that loads), a Blit from a
