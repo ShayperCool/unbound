@@ -82,9 +82,12 @@ namespace Unbound.Tests
         {
             var first = Declared(new string[] { null }, new[] { "A" });
             var second = Declared(new string[] { null }, Array.Empty<string>());
-            // A shader the renderer cannot compile is skipped (tests/projects/warmupbuiltin).
+            // A shader the renderer has no source for is skipped (tests/projects/warmupbuiltin); one
+            // it knows that draws nothing under the current pipeline or LOD is still prepared.
             var unknown = Declared(new string[] { null }, Array.Empty<string>());
-            ShaderPassInfo.s_CallForTests = name => "{\"shader\":\"" + name + "\",\"found\":" + (name == unknown.name ? "false" : "true") + ",\"tags\":{},\"passes\":[]}";
+            var hidden = Declared(new string[] { null }, Array.Empty<string>());
+            ShaderPassInfo.s_CallForTests = name => "{\"shader\":\"" + name + "\",\"found\":" + (name == unknown.name || name == hidden.name ? "false" : "true")
+                + ",\"known\":" + (name == unknown.name ? "false" : "true") + ",\"tags\":{},\"passes\":[]}";
             first.maximumLOD = 1;
             var collection = new ShaderVariantCollection();
             collection.Add(new ShaderVariantCollection.ShaderVariant(first, PassType.Normal, "A"));
@@ -103,12 +106,14 @@ namespace Unbound.Tests
             Assert.Equal(1, sent[first.name]);
             Assert.Equal(1, sent[second.name]);
             Assert.False(sent.ContainsKey(unknown.name));
+            Assert.Equal(1, sent[hidden.name]);
             Assert.False(collection.isWarmedUp);
             Assert.Equal(0, collection.warmedUpVariantCount);
             Object.DestroyImmediate(collection);
             Object.DestroyImmediate(first);
             Object.DestroyImmediate(second);
             Object.DestroyImmediate(unknown);
+            Object.DestroyImmediate(hidden);
         }
 
         // ---------------------------------------------------------------- LightingSettings
@@ -921,7 +926,8 @@ LightingSettings:
             // As the Editor warms built-in shaders without published source (tests/projects/warmupbuiltin).
             var shader = Declared(new string[] { null }, Array.Empty<string>());
             ShaderWarmup.s_PrepareForTests = null;
-            ShaderPassInfo.s_CallForTests = name => "{\"shader\":\"" + name + "\",\"found\":false,\"tags\":{},\"passes\":[]}";
+            var hidden = Declared(new string[] { null }, Array.Empty<string>());
+            ShaderPassInfo.s_CallForTests = name => "{\"shader\":\"" + name + "\",\"found\":false,\"known\":" + (name == hidden.name ? "true" : "false") + ",\"tags\":{},\"passes\":[]}";
             var sent = new List<string>();
             ShaderWarmup.s_SendForTests = sent.Add;
             var first = new ShaderVariantCollection();
@@ -941,6 +947,10 @@ LightingSettings:
                 Assert.False(first.WarmUpProgressively(0));
                 first.WarmUp();
                 Assert.True(second.WarmUpProgressively(1));
+                var third = new ShaderVariantCollection();
+                third.Add(V(hidden, PassType.Normal));
+                third.WarmUp();
+                Assert.True(third.isWarmedUp);
             }
             finally
             {
@@ -952,7 +962,10 @@ LightingSettings:
             Assert.Equal(1, first.warmedUpVariantCount);
             Assert.True(second.isWarmedUp);
             Assert.Empty(sent);
-            Assert.Single(capture.Logs, l => l.Type == LogType.Warning && l.Text.Contains(shader.name, StringComparison.Ordinal));
+            Assert.Single(capture.Logs, l => l.Type == LogType.Warning && l.Text.Contains(shader.name, StringComparison.Ordinal)
+                && l.Text.Contains("has no source", StringComparison.Ordinal));
+            Assert.Single(capture.Logs, l => l.Type == LogType.Warning && l.Text.Contains(hidden.name, StringComparison.Ordinal)
+                && l.Text.Contains("draws no SubShader", StringComparison.Ordinal));
         }
 
         [Fact]

@@ -554,6 +554,9 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       A shader the renderer has no source for (built-in shaders whose source Unity does not publish,
       such as `Hidden/Internal-UIRAtlasBlitCopy`) is skipped by collection and global warm-up with one
       warning per shader and its variants count as warm, as the Editor warms them (`warmupbuiltin`).
+      Global warm-up still prepares every source SubShader of a known shader, and a fallback without
+      source ends its chain as in drawing; a collection variant of a known shader that draws no
+      SubShader under the current pipeline and maximum LOD is skipped with a warning (unmeasured).
 - [ ] `SystemInfo` answers follow what the renderer does.
 - [ ] `api-gaps` noise: trivial attributes (`JetBrains.Annotations.*`, `ResourcePathAttribute`,
       `CategoryInfoAttribute`, `ShaderKeywordFilter.*`) implemented, so the coverage line counts

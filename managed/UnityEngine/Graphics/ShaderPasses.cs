@@ -12,6 +12,9 @@ namespace Unbound.Runtime
     {
         internal string DrawnShader = "";
         internal bool Found;
+        /// <summary>The renderer has the shader's source, whether or not it draws anything under
+        /// the current pipeline and maximum LOD.</summary>
+        internal bool Known;
         /// <summary>The drawn shader's `Fallback` (null: none): passes it lacks, such as its
         /// shadow caster, come from there.</summary>
         internal string Fallback;
@@ -120,6 +123,7 @@ namespace Unbound.Runtime
                     DrawnShader = root.GetProperty("shader").GetString() ?? "",
                     Found = root.GetProperty("found").GetBoolean(),
                 };
+                info.Known = root.TryGetProperty("known", out var known) ? known.GetBoolean() : info.Found;
                 foreach (var tag in root.GetProperty("tags").EnumerateObject()) info.Tags[tag.Name] = tag.Value.GetString() ?? "";
                 if (root.TryGetProperty("fallback", out var fallback) && fallback.ValueKind == JsonValueKind.String)
                     info.Fallback = fallback.GetString();

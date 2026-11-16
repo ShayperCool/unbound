@@ -187,8 +187,10 @@ impl Resolver {
     }
 
     /// The SubShader a shader draws with under the active pipeline (after its fallbacks; the
-    /// error shader's when none), as JSON: `{ shader, found, tags, passes: [{ name, tags, lighting }] }`.
+    /// error shader's when none), as JSON: `{ shader, found, known, tags, passes: [{ name, tags,
+    /// lighting }] }`. `known`: the renderer has the shader's source, whatever it draws now.
     pub fn describe(&mut self, name: &str) -> String {
+        let known = self.index.get(name).is_some();
         let (found, lab) = match self.shader(name) {
             Some(lab) => (true, lab),
             None => (false, self.error_shader()),
@@ -210,6 +212,7 @@ impl Resolver {
         serde_json::json!({
             "shader": lab.name,
             "found": found,
+            "known": known,
             "tags": lab.tags,
             "passes": passes,
             "dependencies": lab.dependencies.iter().cloned().collect::<std::collections::HashMap<_, _>>(),
@@ -274,9 +277,19 @@ impl Resolver {
         let mut seen = HashSet::new();
         let mut sources = Vec::new();
         while seen.insert(current.clone()) {
-            let (labs, fallback) = self.index.warmup_sources(&current).ok_or_else(|| {
-                format!("shader `{current}` has no readable source for global warm-up")
-            })?;
+            let Some((labs, fallback)) = self.index.warmup_sources(&current) else {
+                if current == material.shader {
+                    return Err(format!(
+                        "shader `{current}` has no readable source for global warm-up"
+                    ));
+                }
+                // Drawing ends a fallback chain at a shader it lacks; so does warm-up.
+                tracing::warn!(
+                    "shader `{}`: its fallback `{current}` has no readable source; global warm-up stops there",
+                    material.shader
+                );
+                break;
+            };
             sources.extend(labs.into_iter().map(|lab| self.resolve_lab(material, lab)));
             let Some(fallback) = fallback else {
                 break;
@@ -694,6 +707,33 @@ mod tests {
                 .warmup_sources(&material("Warm/Absent", vec![]))
                 .is_err()
         );
+    }
+
+    #[test]
+    fn global_warmup_ends_at_a_fallback_without_source() {
+        let shader =
+            r#"Shader "Warm/Lost" { SubShader { Pass { ColorMask R } } Fallback "Warm/Missing" }"#;
+        let mut resolver = Resolver::new(index(&[shader]));
+        let sources = resolver
+            .warmup_sources(&material("Warm/Lost", vec![]))
+            .unwrap();
+        assert_eq!(sources.len(), 1);
+    }
+
+    #[test]
+    fn a_known_shader_that_draws_nothing_now_is_described_as_known() {
+        let hidden = r#"Shader "Warm/Hidden" { SubShader { LOD 300 Pass { } } }"#;
+        let mut resolver = Resolver::new(index(&[hidden]));
+        let described = |r: &mut Resolver, name: &str| -> (bool, bool) {
+            let v: serde_json::Value = serde_json::from_str(&r.describe(name)).unwrap();
+            (v["found"].as_bool().unwrap(), v["known"].as_bool().unwrap())
+        };
+        assert_eq!(described(&mut resolver, "Warm/Hidden"), (true, true));
+        assert_eq!(
+            described(&mut resolver, "Warm/Hidden|lod=100"),
+            (false, true)
+        );
+        assert_eq!(described(&mut resolver, "Warm/Absent"), (false, false));
     }
 
     fn material(shader: &str, props: Vec<(&str, PropertyValue)>) -> Material {
