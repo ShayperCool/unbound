@@ -46,12 +46,14 @@ namespace Unbound.Runtime.Playables
 
         /// <summary>The DSP clock as graphs follow it: the audio clock moves in whole dsp buffers,
         /// a graph on it moves every frame by the frame's real time, and is pulled up to the audio
-        /// clock when that would leave it more than half a buffer behind. Measured with the Unity
-        /// 6000.0.71f1 Editor (tests/projects/dspclock `graph.*`, and an exploratory capture: a graph
-        /// 18 ms ahead of the clock is not pulled back, one that would be 12 ms behind is pulled up
-        /// to it, one 2.8 ms behind is not; half a buffer, 10.7 ms there, is Unbound's choice
-        /// inside that range). Unbound also holds it at most a buffer ahead (unmeasured), so that
-        /// it follows a device clock that drifts from real time. The buffer is the one of the last
+        /// clock when that would leave it more than a quarter of a buffer behind. Measured with the
+        /// Unity 6000.0.71f1 Editor (tests/projects/dspclock `graph.*`, and an exploratory capture: a
+        /// graph 18 ms ahead of the clock is not pulled back, one left 2.8 ms behind is not pulled
+        /// up, ones that would be 5.7 and 12 ms behind are; a quarter of a buffer, 5.3 ms there, is
+        /// Unbound's choice inside 2.8 to 5.7 ms: where a graph stands against the clock depends on
+        /// the Editor's real frame timing, so no recorded control pins it). Unbound also holds it
+        /// at most a buffer ahead (unmeasured), so that it follows a device clock that drifts from
+        /// real time. The buffer is the one of the last
         /// audio update (no per-frame settings query).</summary>
         internal static void SampleTime()
         {
@@ -66,7 +68,7 @@ namespace Unbound.Runtime.Playables
             double buffer = status.SampleRate > 0 ? (double)status.BufferSize / status.SampleRate : 0;
             double real = double.IsFinite(Time.s_RealDeltaTime) ? System.Math.Max(0, Time.s_RealDeltaTime) : 0;
             double next = System.Math.Min(s_LastDsp + real, dsp + buffer);
-            if (next < dsp - 0.5 * buffer) next = dsp;
+            if (next < dsp - 0.25 * buffer) next = dsp;
             DspDelta = System.Math.Max(0, next - s_LastDsp);
             s_LastDsp = System.Math.Max(s_LastDsp, next);
         }

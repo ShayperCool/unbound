@@ -86,11 +86,14 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        // Made with 1/120 s of real time the clock still owes: left that far behind it.
-        [InlineData(1.0 / 120, false)]
-        // Made with 15 ms owed, more than half a buffer: pulled up to it as the clock steps.
-        [InlineData(0.015, true)]
-        public void AGraphMadeWhileTheClockOwesTimeIsPulledUpOnlyFromHalfABufferBehind(double owed, bool pulled)
+        // Made with 2 ms of real time the clock still owes: left that far behind it as the clock
+        // steps (the Editor left a graph 2.8 ms behind).
+        [InlineData(0.002, false)]
+        // Made with 6 ms owed, more than a quarter of a buffer (5.3 ms): pulled up to it as the
+        // clock steps (the Editor pulled up ones 5.7 and 12 ms behind).
+        [InlineData(0.006, true)]
+        [InlineData(0.012, true)]
+        public void AGraphMadeWhileTheClockOwesTimeIsPulledUpOnlyFromAQuarterBufferBehind(double owed, bool pulled)
         {
             Sample(0.0);
             Sample(owed);
@@ -99,20 +102,21 @@ namespace UnityEngine.Tests
             PlayableSystem.SampleTime();
             double made = PlayableSystem.GraphDspTime;
             Assert.Equal(AudioSettings.dspTime, made);
-            // Frames of 1 ms until the audio clock steps a buffer.
+            // Frames of 0.1 ms until the audio clock steps a buffer (overshooting it by less than
+            // a frame).
             double dsp = AudioSettings.dspTime;
             int frames = 0;
             while (AudioSettings.dspTime == dsp)
             {
-                Sample(0.001);
+                Sample(0.0001);
                 frames++;
             }
             double behind = AudioSettings.dspTime - PlayableSystem.GraphDspTime;
             if (pulled) Assert.Equal(0, behind, 12);
             else
             {
-                Assert.Equal(made + frames * 0.001, PlayableSystem.GraphDspTime, 9);
-                Assert.InRange(behind, 0.008, 0.5 * Step);
+                Assert.Equal(made + frames * 0.0001, PlayableSystem.GraphDspTime, 9);
+                Assert.InRange(behind, 0.0019, 0.0021);
             }
         }
 
