@@ -189,7 +189,252 @@ public unsafe class AsyncReadProbe : MonoBehaviour
         Logs("cancel");
         FrameTimingStatic();
         Logs("timing");
+        Metrics();
+        Logs("metrics");
     }
+
+    static string Positive(double v) => v > 0 ? "positive" : v == 0 ? "0" : v < 0 ? "negative" : v.ToString();
+
+    string DescribeMetric(AsyncReadManagerRequestMetric m) =>
+        "asset=" + m.AssetName + " file=" + (m.FileName == null ? "null" : m.FileName.Replace(s_Root, "<project>")) +
+        " offset=" + m.OffsetBytes + " size=" + m.SizeBytes + " type=" + m.AssetTypeId + " read=" + m.CurrentBytesRead +
+        " batch=" + m.BatchReadCount + " isBatch=" + m.IsBatchRead + " state=" + m.State + " readType=" + m.ReadType +
+        " priority=" + m.PriorityLevel + " subsystem=" + m.Subsystem + " request=" + Positive(m.RequestTimeMicroseconds) +
+        " queue=" + Positive(m.TimeInQueueMicroseconds) + " total=" + Positive(m.TotalTimeMicroseconds);
+
+    string DescribeAll(AsyncReadManagerRequestMetric[] all)
+    {
+        if (all == null) return "null";
+        var parts = new List<string>();
+        foreach (var m in all) parts.Add(DescribeMetric(m));
+        return all.Length + ": " + string.Join(" ; ", parts);
+    }
+
+    static string DescribeSummary(AsyncReadManagerSummaryMetrics s)
+    {
+        if (s == null) return "null";
+        return "bytes=" + s.TotalBytesRead + " bw=" + Positive(s.AverageBandwidthMBPerSecond) + " avgSize=" + s.AverageReadSizeInBytes +
+            " wait=" + Positive(s.AverageWaitTimeMicroseconds) + " readTime=" + Positive(s.AverageReadTimeMicroseconds) +
+            " totalTime=" + Positive(s.AverageTotalRequestTimeMicroseconds) + " tp=" + Positive(s.AverageThroughputMBPerSecond) +
+            " longestWait=" + Positive(s.LongestWaitTimeMicroseconds) + " longestRead=" + Positive(s.LongestReadTimeMicroseconds) +
+            " readAsset=" + s.LongestReadAssetType + " waitAsset=" + s.LongestWaitAssetType + " readSub=" + s.LongestReadSubsystem +
+            " waitSub=" + s.LongestWaitSubsystem + " inProgress=" + s.NumberOfInProgressRequests + " completed=" + s.NumberOfCompletedRequests +
+            " failed=" + s.NumberOfFailedRequests + " waiting=" + s.NumberOfWaitingRequests + " canceled=" + s.NumberOfCanceledRequests +
+            " total=" + s.TotalNumberOfRequests + " cached=" + s.NumberOfCachedReads + " async=" + s.NumberOfAsyncReads + " sync=" + s.NumberOfSyncReads;
+    }
+
+    ReadHandle MetricsRead(string key, (long Offset, long Size)[] reads, string path = null, string asset = null,
+        ulong type = 0, AssetLoadingSubsystem subsystem = AssetLoadingSubsystem.Scripts, bool complete = true)
+    {
+        int total = 1;
+        foreach (var r in reads) total += (int)Math.Max(r.Size, 0);
+        var buffer = Buffer(total);
+        var commands = new NativeArray<ReadCommand>(Math.Max(reads.Length, 1), Allocator.Persistent);
+        int at = 0;
+        for (int i = 0; i < reads.Length; i++) { commands[i] = Command(reads[i].Offset, reads[i].Size, buffer + at); at += (int)reads[i].Size; }
+        var handle = asset == null
+            ? AsyncReadManager.Read(path ?? m_Absolute, (ReadCommand*)commands.GetUnsafePtr(), (uint)reads.Length)
+            : AsyncReadManager.Read(path ?? m_Absolute, (ReadCommand*)commands.GetUnsafePtr(), (uint)reads.Length, asset, type, subsystem);
+        handle.JobHandle.Complete();
+        Record(key, handle.Status.ToString());
+        handle.Dispose();
+        commands.Dispose();
+        UnsafeUtility.Free(buffer, Allocator.Persistent);
+        return handle;
+    }
+
+    static AsyncReadManagerRequestMetric[] All() => AsyncReadManagerMetrics.GetMetrics(AsyncReadManagerMetrics.Flags.None);
+    static AsyncReadManagerRequestMetric[] Take() => AsyncReadManagerMetrics.GetMetrics(AsyncReadManagerMetrics.Flags.ClearOnRead);
+
+    void Metrics()
+    {
+        var none = AsyncReadManagerMetrics.Flags.None;
+        Try("metrics.enabled", () => AsyncReadManagerMetrics.IsEnabled().ToString());
+        Try("metrics.before", () => DescribeAll(All()));
+        Try("metrics.nonAsrm.before", () => AsyncReadManagerMetrics.GetTotalSizeOfNonASRMReadsBytes(false).ToString());
+        Try("metrics.summary.before", () => DescribeSummary(AsyncReadManagerMetrics.GetCurrentSummaryMetrics(none)));
+        Try("metrics.start", () => AsyncReadManagerMetrics.StartCollectingMetrics());
+        Try("metrics.enabledAfterStart", () => AsyncReadManagerMetrics.IsEnabled().ToString());
+        MetricsRead("metrics.read1", new[] { (64L, 32L) });
+        MetricsRead("metrics.read2", new[] { (4090L, 16L) });
+        MetricsRead("metrics.readMissing", new[] { (0L, 8L) }, m_Missing);
+        MetricsRead("metrics.readRelative", new[] { (0L, 4L) }, m_Relative);
+        Try("metrics.relative", () => DescribeAll(AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(ProcessingState.Completed), AsyncReadManagerMetrics.Flags.None)));
+        Try("metrics.all", () => DescribeAll(All()));
+        // The list overloads are called only with null (a managed check): the release's native
+        // fill of a list throws for new lists and leaves the Editor's heap corrupted (later
+        // captures crashed in its garbage collector), so their outcome is not recorded.
+        Try("metrics.listNull", () => AsyncReadManagerMetrics.GetMetrics((List<AsyncReadManagerRequestMetric>)null, none));
+        Try("metrics.filterCompleted", () => DescribeAll(AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(ProcessingState.Completed), none)));
+        Try("metrics.filterFailed", () => DescribeAll(AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(ProcessingState.Failed), none)));
+        Try("metrics.filterSubsystemOther", () => DescribeAll(AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(AssetLoadingSubsystem.Other), none)));
+        Try("metrics.filterSubsystemScripts", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(AssetLoadingSubsystem.Scripts), none).Length.ToString());
+        Try("metrics.filterAsync", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(FileReadType.Async), none).Length.ToString());
+        Try("metrics.filterSync", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(FileReadType.Sync), none).Length.ToString());
+        Try("metrics.filterLow", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(Priority.PriorityLow), none).Length.ToString());
+        Try("metrics.filterHigh", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(Priority.PriorityHigh), none).Length.ToString());
+        Try("metrics.filterType0", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(0UL), none).Length.ToString());
+        Try("metrics.filterType28", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(28UL), none).Length.ToString());
+        Try("metrics.filterBoth", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(null, new[] { ProcessingState.Completed, ProcessingState.Failed }, null, null, new[] { AssetLoadingSubsystem.Mesh }), none).Length.ToString());
+        Try("metrics.filterStates", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(new[] { ProcessingState.Completed, ProcessingState.Failed }), none).Length.ToString());
+        Try("metrics.filterEmptyArray", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(new ProcessingState[0]), none).Length.ToString());
+        Try("metrics.filterEmpty", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(), none).Length.ToString());
+        Try("metrics.filterNull", () => DescribeAll(AsyncReadManagerMetrics.GetMetrics((AsyncReadManagerMetricsFilters)null, none)));
+        Try("metrics.summary", () => DescribeSummary(AsyncReadManagerMetrics.GetCurrentSummaryMetrics(none)));
+        Try("metrics.summaryFiltered", () => DescribeSummary(AsyncReadManagerMetrics.GetCurrentSummaryMetrics(new AsyncReadManagerMetricsFilters(ProcessingState.Completed), none)));
+        Try("metrics.summaryFilterNull", () => DescribeSummary(AsyncReadManagerMetrics.GetCurrentSummaryMetrics((AsyncReadManagerMetricsFilters)null, none)));
+        Try("metrics.summaryOfEmpty", () => DescribeSummary(AsyncReadManagerMetrics.GetSummaryOfMetrics(new AsyncReadManagerRequestMetric[0])));
+        Try("metrics.summaryOfNullArray", () => DescribeSummary(AsyncReadManagerMetrics.GetSummaryOfMetrics((AsyncReadManagerRequestMetric[])null)));
+        Try("metrics.summaryOfNullList", () => DescribeSummary(AsyncReadManagerMetrics.GetSummaryOfMetrics((List<AsyncReadManagerRequestMetric>)null)));
+        Try("metrics.summaryOfDefault", () => DescribeSummary(AsyncReadManagerMetrics.GetSummaryOfMetrics(new AsyncReadManagerRequestMetric[] { default })));
+        Try("metrics.summaryOfAll", () => DescribeSummary(AsyncReadManagerMetrics.GetSummaryOfMetrics(All())));
+        Try("metrics.summaryOfFiltered", () => DescribeSummary(AsyncReadManagerMetrics.GetSummaryOfMetrics(All(), new AsyncReadManagerMetricsFilters(ProcessingState.Failed))));
+        Try("metrics.summaryOfFilterNull", () => DescribeSummary(AsyncReadManagerMetrics.GetSummaryOfMetrics(All(), null)));
+        Try("metrics.summaryClearOnRead", () => DescribeSummary(AsyncReadManagerMetrics.GetCurrentSummaryMetrics(AsyncReadManagerMetrics.Flags.ClearOnRead)));
+        Try("metrics.afterSummaryClear", () => DescribeAll(All()));
+
+        // Several commands, an asset name, type and subsystem, none, size zero, a directory.
+        MetricsRead("metrics.multi", new[] { (0L, 8L), (5000L, 4L), (100L, 4L) }, null, "Probe/Asset", 28, AssetLoadingSubsystem.Texture);
+        Try("metrics.multi.all", () => DescribeAll(Take()));
+        MetricsRead("metrics.noCommands", new (long, long)[0]);
+        Try("metrics.noCommands.all", () => DescribeAll(Take()));
+        MetricsRead("metrics.zeroSize", new[] { (10L, 0L) });
+        Try("metrics.zeroSize.all", () => DescribeAll(Take()));
+        MetricsRead("metrics.directory", new[] { (0L, 8L) }, Path.GetFullPath(m_Directory));
+        Try("metrics.directory.all", () => DescribeAll(Take()));
+        MetricsRead("metrics.nullAsset", new[] { (0L, 8L) }, null, null, 0, AssetLoadingSubsystem.Mesh);
+        MetricsRead("metrics.namedMesh", new[] { (0L, 8L) }, null, "M", 43, AssetLoadingSubsystem.Mesh);
+        Try("metrics.subsystems.all", () => DescribeAll(Take()));
+
+        // Through a file handle, deferred, pending and canceled.
+        var file = AsyncReadManager.OpenFileAsync(m_Absolute);
+        file.JobHandle.Complete();
+        Try("metrics.open.all", () => DescribeAll(All()));
+        var buffer = Buffer(16);
+        var commands = (ReadCommand*)UnsafeUtility.Malloc(sizeof(ReadCommand) * 2, 16, Allocator.Persistent);
+        commands[0] = Command(0, 8, buffer);
+        commands[1] = Command(8, 8, buffer + 8);
+        var handleRead = AsyncReadManager.Read(file, new ReadCommandArray { ReadCommands = commands, CommandCount = 2 });
+        handleRead.JobHandle.Complete();
+        Record("metrics.handle", handleRead.Status.ToString());
+        handleRead.Dispose();
+        Try("metrics.handle.all", () => DescribeAll(Take()));
+
+        var array = (ReadCommandArray*)UnsafeUtility.Malloc(sizeof(ReadCommandArray), 16, Allocator.Persistent);
+        *array = new ReadCommandArray { ReadCommands = commands, CommandCount = 1 };
+        Volatile.Write(ref s_Release, 0);
+        var hold = new HoldJob().Schedule();
+        JobHandle.ScheduleBatchedJobs();
+        var pending = AsyncReadManager.ReadDeferred(file, array, hold);
+        Try("metrics.pending.all", () => DescribeAll(All()));
+        Try("metrics.pending.summary", () => DescribeSummary(AsyncReadManagerMetrics.GetCurrentSummaryMetrics(none)));
+        Try("metrics.pending.clear", () => AsyncReadManagerMetrics.ClearCompletedMetrics());
+        Try("metrics.pending.afterClear", () => DescribeAll(All()));
+        Volatile.Write(ref s_Release, 1);
+        pending.JobHandle.Complete();
+        Record("metrics.pending", pending.Status.ToString());
+        pending.Dispose();
+        Try("metrics.pending.done", () => DescribeAll(Take()));
+
+        Volatile.Write(ref s_Release, 0);
+        hold = new HoldJob().Schedule();
+        JobHandle.ScheduleBatchedJobs();
+        var canceled = AsyncReadManager.ReadDeferred(file, array, hold);
+        canceled.Cancel();
+        Volatile.Write(ref s_Release, 1);
+        var readJob = canceled.JobHandle;
+        file.Close(readJob).Complete();
+        hold.Complete();
+        Record("metrics.canceled", canceled.Status.ToString());
+        canceled.Dispose();
+        Try("metrics.canceled.all", () => DescribeAll(All()));
+        Try("metrics.canceled.summary", () => DescribeSummary(AsyncReadManagerMetrics.GetCurrentSummaryMetrics(none)));
+        Take();
+        UnsafeUtility.Free(array, Allocator.Persistent);
+        UnsafeUtility.Free(commands, Allocator.Persistent);
+        UnsafeUtility.Free(buffer, Allocator.Persistent);
+
+        var info = (FileInfoResult*)UnsafeUtility.Malloc(sizeof(FileInfoResult), 16, Allocator.Persistent);
+        var infoRead = AsyncReadManager.GetFileInfo(m_Absolute, info);
+        infoRead.JobHandle.Complete();
+        infoRead.Dispose();
+        UnsafeUtility.Free(info, Allocator.Persistent);
+        Try("metrics.fileInfo.all", () => DescribeAll(Take()));
+        Try("metrics.nonAsrm", () => AsyncReadManagerMetrics.GetTotalSizeOfNonASRMReadsBytes(true).ToString());
+
+        // Clearing, stopping, restarting.
+        MetricsRead("metrics.read3", new[] { (0L, 8L) });
+        Try("metrics.clear", () => AsyncReadManagerMetrics.ClearCompletedMetrics());
+        Try("metrics.afterClear", () => DescribeAll(All()));
+        MetricsRead("metrics.read4", new[] { (0L, 4L) });
+        Try("metrics.startAgain", () => AsyncReadManagerMetrics.StartCollectingMetrics());
+        Try("metrics.afterStartAgain", () => All().Length.ToString());
+        Try("metrics.stop", () => AsyncReadManagerMetrics.StopCollectingMetrics());
+        Try("metrics.afterStopKept", () => All().Length.ToString());
+        MetricsRead("metrics.read5", new[] { (0L, 8L) });
+        Try("metrics.afterStop", () => All().Length.ToString());
+        Try("metrics.enabledAfterStop", () => AsyncReadManagerMetrics.IsEnabled().ToString());
+        Try("metrics.stopTwice", () => AsyncReadManagerMetrics.StopCollectingMetrics());
+        Try("metrics.restart", () => AsyncReadManagerMetrics.StartCollectingMetrics());
+        Try("metrics.afterRestart", () => All().Length.ToString());
+        AsyncReadManagerMetrics.StopCollectingMetrics();
+        Take();
+
+        var f = new AsyncReadManagerMetricsFilters(ProcessingState.Failed);
+        Try("metrics.filterSetNull", () => f.SetStateFilter((ProcessingState[])null));
+
+        // Lists, summaries of mixed states and of typed reads.
+        AsyncReadManagerMetrics.StartCollectingMetrics();
+        MetricsRead("metrics.l1", new[] { (0L, 8L) });
+        MetricsRead("metrics.l2", new[] { (8L, 4L) }, null, "T", 28, AssetLoadingSubsystem.Texture);
+        MetricsRead("metrics.l3", new[] { (0L, 2L) }, m_Missing);
+        Try("metrics.filterSetNullUse", () => AsyncReadManagerMetrics.GetMetrics(f, none).Length.ToString());
+        var three = All();
+        Try("metrics.sumTyped", () => DescribeSummary(AsyncReadManagerMetrics.GetSummaryOfMetrics(three, new AsyncReadManagerMetricsFilters(28UL))));
+        Try("metrics.sumTexture", () => DescribeSummary(AsyncReadManagerMetrics.GetSummaryOfMetrics(three, new AsyncReadManagerMetricsFilters(AssetLoadingSubsystem.Texture))));
+
+        MetricsMixedStates(none);
+        AsyncReadManagerMetrics.StopCollectingMetrics();
+        Take();
+    }
+
+    /// <summary>Summaries of a request still queued beside finished ones, then of a finished and a
+    /// canceled one.</summary>
+    void MetricsMixedStates(AsyncReadManagerMetrics.Flags none)
+    {
+        var file = AsyncReadManager.OpenFileAsync(m_Absolute);
+        var buffer = Buffer(8);
+        var command = Command(0, 8, buffer);
+        var array = new ReadCommandArray { ReadCommands = &command, CommandCount = 1 };
+        Volatile.Write(ref s_Release, 0);
+        var hold = new HoldJob().Schedule();
+        JobHandle.ScheduleBatchedJobs();
+        var pending = AsyncReadManager.ReadDeferred(file, &array, hold);
+        Try("metrics.mixedPending", () => DescribeSummary(AsyncReadManagerMetrics.GetCurrentSummaryMetrics(none)));
+        Try("metrics.mixedPendingAll", () => All().Length.ToString());
+        Volatile.Write(ref s_Release, 1);
+        pending.JobHandle.Complete();
+        pending.Dispose();
+        Volatile.Write(ref s_Release, 0);
+        hold = new HoldJob().Schedule();
+        JobHandle.ScheduleBatchedJobs();
+        var canceled = AsyncReadManager.ReadDeferred(file, &array, hold);
+        canceled.Cancel();
+        Volatile.Write(ref s_Release, 1);
+        file.Close(canceled.JobHandle).Complete();
+        hold.Complete();
+        canceled.Dispose();
+        UnsafeUtility.Free(buffer, Allocator.Persistent);
+        var five = All();
+        Try("metrics.mixedStates", () => { var b = new StringBuilder(); foreach (var m in five) b.Append(m.State).Append(' '); return b.ToString(); });
+        Try("metrics.mixedSummary", () => DescribeSummary(AsyncReadManagerMetrics.GetCurrentSummaryMetrics(none)));
+        Try("metrics.mixedSummaryOf", () => DescribeSummary(AsyncReadManagerMetrics.GetSummaryOfMetrics(five)));
+        Try("metrics.canceledFilter", () => DescribeSummary(AsyncReadManagerMetrics.GetSummaryOfMetrics(five, new AsyncReadManagerMetricsFilters(ProcessingState.Canceled))));
+        Try("metrics.canceledFilterGet", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(ProcessingState.Canceled), none).Length.ToString());
+        // ClearCompletedMetrics clears failed and canceled requests too (the Scripting API).
+        Try("metrics.clearWithCanceled", () => { AsyncReadManagerMetrics.ClearCompletedMetrics(); return DescribeAll(All()); });
+    }
+
 
     static void Defaults()
     {

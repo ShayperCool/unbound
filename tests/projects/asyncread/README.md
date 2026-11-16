@@ -24,6 +24,14 @@ OpenGLCore). `Assets/Scripts/AsyncReadProbe.cs` writes a 4096-byte file under th
   and `syncInterval` under `vSyncCount` 1, 0 and 2, and the delay: frame 35 sleeps 250 ms, and
   the frame on which it is first the newest timing and its index ten frames later are recorded.
   Durations are not recorded (they are timing).
+* **Read metrics** (`metrics.*`): `AsyncReadManagerMetrics` before and after
+  `StartCollectingMetrics`: `IsEnabled`, the records of reads by name (one per command, with
+  asset name, type and subsystem, none, size zero, a missing file, a directory, a relative path),
+  through a file handle, deferred while their dependency holds them and canceled, and of
+  `GetFileInfo`; filters of each category alone and together, empty and null; summaries of the
+  current records, of arrays and with filters, with requests finished, failed, queued and
+  canceled; `ClearOnRead`, `ClearCompletedMetrics` (with a canceled record), stopping and
+  starting again. Durations are recorded as zero or positive only.
 * **Logs** (`log.*`): the messages game code receives per section (none: the Editor writes its
   file errors to its own log only).
 
@@ -50,14 +58,38 @@ refresh rate whatever `vSyncCount` is.
 Left out because they crash the 6000.0.71f1 Editor or are timing-dependent there:
 `GetLatestTimings` with a null array (crash), into an array shorter than the count it returns
 (the Editor writes past the array's end and later crashes in its garbage collector),
-`GetVSyncsPerSecond` (crash on OpenGLCore), and the status read right after `Cancel` (either
-`Canceled` or `InProgress`). How many frames exist before the first `Update` depends on the
+`GetVSyncsPerSecond` (crash on OpenGLCore), the status read right after `Cancel` (either
+`Canceled` or `InProgress`), and `AsyncReadManagerMetrics.GetMetrics` into a list (the Editor
+throws a NullReferenceException for new lists, and captures that called it crashed later in its
+garbage collector; summaries of lists did not count the list's records; only the null list's
+check is recorded). How many frames exist before the first `Update` depends on the
 Editor frames before Play mode (28 in both captures, which an engine run starts without), so
 only the per-frame growth (at most one, never fewer) is recorded. macOS is not measured.
+`timing.longFrameNewestAfter` assumes no frame before the slept one lasts 250 ms: on a heavily
+loaded machine an engine run can see an earlier frame that long (one run of four at a load
+average of 68).
+
+Measured read metrics (two identical captures, the Editor started without
+`-enable-file-read-metrics`): collection is off until started and `IsEnabled` answers whether it
+records; each command is a record (its batch is the request's command count), failed when it
+asked for bytes and got none; a file that does not open spends no time queued, a directory does;
+file handle reads name no file; `GetFileInfo` is a record of subsystem FileInfo without offset,
+size or batch; a deferred read is recorded `InQueue` with its array's commands while its
+dependency holds it, and `ClearCompletedMetrics` keeps it; stopping keeps the records and
+starting again does not clear them. Summaries count finished, failed, queued and reading
+requests, not canceled ones: `TotalBytesRead` is the sizes asked for by finished and failed
+requests, `AverageReadSizeInBytes` that over their count; the longest read's and wait's asset
+type and subsystem, and the canceled, cached, synchronous and asynchronous counts, are 0 (Other).
+A null filter set throws NullReferenceException `(null)`; empty or null categories keep every
+value.
 
 Contracts: [AsyncReadManager.Read](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Unity.IO.LowLevel.Unsafe.AsyncReadManager.Read.html)
 (commands are copied), [ReadDeferred](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Unity.IO.LowLevel.Unsafe.AsyncReadManager.ReadDeferred.html)
 (the array is read when the dependency completes; the read waits for the open),
 [ReadStatus](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Unity.IO.LowLevel.Unsafe.ReadStatus.html),
 [Frame timing manager](https://docs.unity3d.com/6000.0/Documentation/Manual/frame-timing-manager.html)
-(always active in the Editor; GPU time per platform).
+(always active in the Editor; GPU time per platform),
+[AsyncReadManagerMetrics](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.html)
+(available in the Editor; IsEnabled reports whether it is recording; ClearCompletedMetrics clears
+failed and canceled requests too; it also collects reads of internal Unity systems, of which the
+probe's captures show none: Unbound records game code's requests only).

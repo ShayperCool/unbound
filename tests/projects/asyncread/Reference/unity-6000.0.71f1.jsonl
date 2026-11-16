@@ -322,6 +322,101 @@
 {"k":"timing.zeroFrames","v":"0"}
 {"k":"timing.default","v":"cpu0 main0 wait0 render0 gpu0 start0 submit0 present0 complete0 ordered:True scale:0x0 sync:0"}
 {"k":"log.timing","v":""}
+{"k":"metrics.enabled","v":"False"}
+{"k":"metrics.before","v":"0: "}
+{"k":"metrics.nonAsrm.before","v":"0"}
+{"k":"metrics.summary.before","v":"bytes=0 bw=0 avgSize=0 wait=0 readTime=0 totalTime=0 tp=0 longestWait=0 longestRead=0 readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=0 failed=0 waiting=0 canceled=0 total=0 cached=0 async=0 sync=0"}
+{"k":"metrics.start","v":"ok"}
+{"k":"metrics.enabledAfterStart","v":"True"}
+{"k":"metrics.read1","v":"Complete"}
+{"k":"metrics.read2","v":"Truncated"}
+{"k":"metrics.readMissing","v":"Failed"}
+{"k":"metrics.readRelative","v":"Complete"}
+{"k":"metrics.relative","v":"3: asset= file=<project>/Temp/AsyncReadProbe/data.bin offset=64 size=32 type=0 read=32 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive ; asset= file=<project>/Temp/AsyncReadProbe/data.bin offset=4090 size=16 type=0 read=6 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive ; asset= file=Temp/AsyncReadProbe/data.bin offset=0 size=4 type=0 read=4 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive"}
+{"k":"metrics.all","v":"4: asset= file=<project>/Temp/AsyncReadProbe/data.bin offset=64 size=32 type=0 read=32 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive ; asset= file=<project>/Temp/AsyncReadProbe/data.bin offset=4090 size=16 type=0 read=6 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive ; asset= file=<project>/Temp/AsyncReadProbe/missing.bin offset=0 size=8 type=0 read=0 batch=1 isBatch=True state=Failed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=0 total=positive ; asset= file=Temp/AsyncReadProbe/data.bin offset=0 size=4 type=0 read=4 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive"}
+{"k":"metrics.listNull","v":"throws ArgumentNullException: Value cannot be null.\u000aParameter name: metrics"}
+{"k":"metrics.filterCompleted","v":"3: asset= file=<project>/Temp/AsyncReadProbe/data.bin offset=64 size=32 type=0 read=32 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive ; asset= file=<project>/Temp/AsyncReadProbe/data.bin offset=4090 size=16 type=0 read=6 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive ; asset= file=Temp/AsyncReadProbe/data.bin offset=0 size=4 type=0 read=4 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive"}
+{"k":"metrics.filterFailed","v":"1: asset= file=<project>/Temp/AsyncReadProbe/missing.bin offset=0 size=8 type=0 read=0 batch=1 isBatch=True state=Failed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=0 total=positive"}
+{"k":"metrics.filterSubsystemOther","v":"0: "}
+{"k":"metrics.filterSubsystemScripts","v":"4"}
+{"k":"metrics.filterAsync","v":"4"}
+{"k":"metrics.filterSync","v":"0"}
+{"k":"metrics.filterLow","v":"4"}
+{"k":"metrics.filterHigh","v":"0"}
+{"k":"metrics.filterType0","v":"4"}
+{"k":"metrics.filterType28","v":"0"}
+{"k":"metrics.filterBoth","v":"0"}
+{"k":"metrics.filterStates","v":"4"}
+{"k":"metrics.filterEmptyArray","v":"4"}
+{"k":"metrics.filterEmpty","v":"4"}
+{"k":"metrics.filterNull","v":"throws NullReferenceException: (null)"}
+{"k":"metrics.summary","v":"bytes=60 bw=positive avgSize=15 wait=positive readTime=positive totalTime=positive tp=positive longestWait=positive longestRead=positive readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=3 failed=1 waiting=0 canceled=0 total=4 cached=0 async=0 sync=0"}
+{"k":"metrics.summaryFiltered","v":"bytes=52 bw=positive avgSize=17.33333 wait=positive readTime=positive totalTime=positive tp=positive longestWait=positive longestRead=positive readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=3 failed=0 waiting=0 canceled=0 total=3 cached=0 async=0 sync=0"}
+{"k":"metrics.summaryFilterNull","v":"throws NullReferenceException: (null)"}
+{"k":"metrics.summaryOfEmpty","v":"bytes=0 bw=0 avgSize=0 wait=0 readTime=0 totalTime=0 tp=0 longestWait=0 longestRead=0 readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=0 failed=0 waiting=0 canceled=0 total=0 cached=0 async=0 sync=0"}
+{"k":"metrics.summaryOfNullArray","v":"bytes=0 bw=0 avgSize=0 wait=0 readTime=0 totalTime=0 tp=0 longestWait=0 longestRead=0 readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=0 failed=0 waiting=0 canceled=0 total=0 cached=0 async=0 sync=0"}
+{"k":"metrics.summaryOfNullList","v":"bytes=0 bw=0 avgSize=0 wait=0 readTime=0 totalTime=0 tp=0 longestWait=0 longestRead=0 readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=0 failed=0 waiting=0 canceled=0 total=0 cached=0 async=0 sync=0"}
+{"k":"metrics.summaryOfDefault","v":"bytes=0 bw=0 avgSize=0 wait=0 readTime=0 totalTime=0 tp=0 longestWait=0 longestRead=0 readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=0 failed=0 waiting=0 canceled=0 total=0 cached=0 async=0 sync=0"}
+{"k":"metrics.summaryOfAll","v":"bytes=60 bw=positive avgSize=15 wait=positive readTime=positive totalTime=positive tp=positive longestWait=positive longestRead=positive readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=3 failed=1 waiting=0 canceled=0 total=4 cached=0 async=0 sync=0"}
+{"k":"metrics.summaryOfFiltered","v":"bytes=8 bw=0 avgSize=8 wait=0 readTime=0 totalTime=positive tp=0 longestWait=0 longestRead=0 readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=0 failed=1 waiting=0 canceled=0 total=1 cached=0 async=0 sync=0"}
+{"k":"metrics.summaryOfFilterNull","v":"throws NullReferenceException: (null)"}
+{"k":"metrics.summaryClearOnRead","v":"bytes=60 bw=positive avgSize=15 wait=positive readTime=positive totalTime=positive tp=positive longestWait=positive longestRead=positive readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=3 failed=1 waiting=0 canceled=0 total=4 cached=0 async=0 sync=0"}
+{"k":"metrics.afterSummaryClear","v":"0: "}
+{"k":"metrics.multi","v":"Failed"}
+{"k":"metrics.multi.all","v":"3: asset=Probe/Asset file=<project>/Temp/AsyncReadProbe/data.bin offset=0 size=8 type=28 read=8 batch=3 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Texture request=positive queue=positive total=positive ; asset=Probe/Asset file=<project>/Temp/AsyncReadProbe/data.bin offset=5000 size=4 type=28 read=0 batch=3 isBatch=True state=Failed readType=Async priority=PriorityLow subsystem=Texture request=positive queue=positive total=positive ; asset=Probe/Asset file=<project>/Temp/AsyncReadProbe/data.bin offset=100 size=4 type=28 read=4 batch=3 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Texture request=positive queue=positive total=positive"}
+{"k":"metrics.noCommands","v":"Complete"}
+{"k":"metrics.noCommands.all","v":"0: "}
+{"k":"metrics.zeroSize","v":"Complete"}
+{"k":"metrics.zeroSize.all","v":"1: asset= file=<project>/Temp/AsyncReadProbe/data.bin offset=10 size=0 type=0 read=0 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive"}
+{"k":"metrics.directory","v":"Failed"}
+{"k":"metrics.directory.all","v":"1: asset= file=<project>/Temp/AsyncReadProbe offset=0 size=8 type=0 read=0 batch=1 isBatch=True state=Failed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive"}
+{"k":"metrics.nullAsset","v":"Complete"}
+{"k":"metrics.namedMesh","v":"Complete"}
+{"k":"metrics.subsystems.all","v":"2: asset= file=<project>/Temp/AsyncReadProbe/data.bin offset=0 size=8 type=0 read=8 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive ; asset=M file=<project>/Temp/AsyncReadProbe/data.bin offset=0 size=8 type=43 read=8 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Mesh request=positive queue=positive total=positive"}
+{"k":"metrics.open.all","v":"0: "}
+{"k":"metrics.handle","v":"Complete"}
+{"k":"metrics.handle.all","v":"2: asset= file= offset=0 size=8 type=0 read=8 batch=2 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive ; asset= file= offset=8 size=8 type=0 read=8 batch=2 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive"}
+{"k":"metrics.pending.all","v":"1: asset= file= offset=0 size=8 type=0 read=0 batch=1 isBatch=True state=InQueue readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive"}
+{"k":"metrics.pending.summary","v":"bytes=0 bw=0 avgSize=0 wait=positive readTime=0 totalTime=positive tp=0 longestWait=positive longestRead=0 readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=0 failed=0 waiting=1 canceled=0 total=1 cached=0 async=0 sync=0"}
+{"k":"metrics.pending.clear","v":"ok"}
+{"k":"metrics.pending.afterClear","v":"1: asset= file= offset=0 size=8 type=0 read=0 batch=1 isBatch=True state=InQueue readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive"}
+{"k":"metrics.pending","v":"Complete"}
+{"k":"metrics.pending.done","v":"1: asset= file= offset=0 size=8 type=0 read=8 batch=1 isBatch=True state=Completed readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive"}
+{"k":"metrics.canceled","v":"Canceled"}
+{"k":"metrics.canceled.all","v":"1: asset= file= offset=0 size=8 type=0 read=0 batch=1 isBatch=True state=Canceled readType=Async priority=PriorityLow subsystem=Scripts request=positive queue=positive total=positive"}
+{"k":"metrics.canceled.summary","v":"bytes=0 bw=0 avgSize=0 wait=0 readTime=0 totalTime=0 tp=0 longestWait=0 longestRead=0 readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=0 failed=0 waiting=0 canceled=0 total=0 cached=0 async=0 sync=0"}
+{"k":"metrics.fileInfo.all","v":"1: asset= file=<project>/Temp/AsyncReadProbe/data.bin offset=0 size=0 type=0 read=0 batch=0 isBatch=False state=Completed readType=Async priority=PriorityLow subsystem=FileInfo request=positive queue=positive total=positive"}
+{"k":"metrics.nonAsrm","v":"0"}
+{"k":"metrics.read3","v":"Complete"}
+{"k":"metrics.clear","v":"ok"}
+{"k":"metrics.afterClear","v":"0: "}
+{"k":"metrics.read4","v":"Complete"}
+{"k":"metrics.startAgain","v":"ok"}
+{"k":"metrics.afterStartAgain","v":"1"}
+{"k":"metrics.stop","v":"ok"}
+{"k":"metrics.afterStopKept","v":"1"}
+{"k":"metrics.read5","v":"Complete"}
+{"k":"metrics.afterStop","v":"1"}
+{"k":"metrics.enabledAfterStop","v":"False"}
+{"k":"metrics.stopTwice","v":"ok"}
+{"k":"metrics.restart","v":"ok"}
+{"k":"metrics.afterRestart","v":"1"}
+{"k":"metrics.filterSetNull","v":"ok"}
+{"k":"metrics.l1","v":"Complete"}
+{"k":"metrics.l2","v":"Complete"}
+{"k":"metrics.l3","v":"Failed"}
+{"k":"metrics.filterSetNullUse","v":"3"}
+{"k":"metrics.sumTyped","v":"bytes=4 bw=positive avgSize=4 wait=positive readTime=positive totalTime=positive tp=positive longestWait=positive longestRead=positive readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=1 failed=0 waiting=0 canceled=0 total=1 cached=0 async=0 sync=0"}
+{"k":"metrics.sumTexture","v":"bytes=4 bw=positive avgSize=4 wait=positive readTime=positive totalTime=positive tp=positive longestWait=positive longestRead=positive readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=1 failed=0 waiting=0 canceled=0 total=1 cached=0 async=0 sync=0"}
+{"k":"metrics.mixedPending","v":"bytes=14 bw=positive avgSize=4.666667 wait=positive readTime=positive totalTime=positive tp=positive longestWait=positive longestRead=positive readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=2 failed=1 waiting=1 canceled=0 total=4 cached=0 async=0 sync=0"}
+{"k":"metrics.mixedPendingAll","v":"4"}
+{"k":"metrics.mixedStates","v":"Completed Completed Failed Completed Canceled "}
+{"k":"metrics.mixedSummary","v":"bytes=22 bw=positive avgSize=5.5 wait=positive readTime=positive totalTime=positive tp=positive longestWait=positive longestRead=positive readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=3 failed=1 waiting=0 canceled=0 total=4 cached=0 async=0 sync=0"}
+{"k":"metrics.mixedSummaryOf","v":"bytes=22 bw=positive avgSize=5.5 wait=positive readTime=positive totalTime=positive tp=positive longestWait=positive longestRead=positive readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=3 failed=1 waiting=0 canceled=0 total=4 cached=0 async=0 sync=0"}
+{"k":"metrics.canceledFilter","v":"bytes=0 bw=0 avgSize=0 wait=0 readTime=0 totalTime=0 tp=0 longestWait=0 longestRead=0 readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=0 failed=0 waiting=0 canceled=0 total=0 cached=0 async=0 sync=0"}
+{"k":"metrics.canceledFilterGet","v":"1"}
+{"k":"metrics.clearWithCanceled","v":"0: "}
+{"k":"log.metrics","v":""}
 {"k":"timing.captureNoEffect","v":true}
 {"k":"timing.growsAtMostOnePerFrame","v":true}
 {"k":"timing.countAfter12","v":8}
