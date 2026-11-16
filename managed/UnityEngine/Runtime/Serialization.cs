@@ -301,7 +301,9 @@ namespace Unbound.Runtime
             m_ReferenceTable = body.Get("references");
             m_ManagedReferences = null;
             m_Callbacks.Clear();
-            ReadFields(target, target.GetType(), body, 0);
+            m_Script = target.GetType().Name;
+            try { ReadFields(target, target.GetType(), body, 0); }
+            finally { m_Script = null; }
             if (target is ISerializationCallbackReceiver receiver) m_Callbacks.Add(receiver);
             foreach (var callback in m_Callbacks)
             {
@@ -357,11 +359,26 @@ namespace Unbound.Runtime
             Fields(type, body, 0);
         }
 
+        /// <summary>The script object being read (its class name) and its top-level field, for the
+        /// placeholders of unassigned references (<see cref="Placeholders"/>); a reference of a
+        /// nested class gets one without a message.</summary>
+        string m_Script, m_Field;
+        bool m_Nested;
+
         internal void ReadFields(object target, Type type, YNode map, int depth, bool guiStatePayload = false)
         {
             if (map == null || map.Kind != YKind.Map) return;
+            bool wasNested = m_Nested;
+            m_Nested = depth > 0;
+            try { ReadMembers(target, type, map, depth, guiStatePayload); }
+            finally { m_Nested = wasNested; }
+        }
+
+        void ReadMembers(object target, Type type, YNode map, int depth, bool guiStatePayload)
+        {
             foreach (var member in SerializationRules.Members(type, guiStatePayload))
             {
+                if (depth == 0) m_Field = member.Name;
                 var node = MemberNode(map, member);
                 if (node == null)
                 {
@@ -450,7 +467,8 @@ namespace Unbound.Runtime
                 case Shape.UnityObject:
                 {
                     var reference = node.AsRef();
-                    if (reference.IsNull) return null;
+                    if (reference.IsNull)
+                        return m_Script == null ? null : Placeholders.Make(type, m_Nested ? "" : Placeholders.Unassigned(m_Field, m_Script));
                     var obj = m_Resolver.Resolve(reference, type);
                     return obj != null && type.IsInstanceOfType(obj) ? obj : null;
                 }

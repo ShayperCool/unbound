@@ -29,6 +29,18 @@ static class LifetimeChecks
 {
     const string ListFile = "checked-members.txt";
 
+    /// <summary>GetComponent's overloads: game code's calls answer the Editor's placeholder for
+    /// an engine component the object lacks (<see cref="Unbound.Runtime.Lifetime.MissingComponent{T}"/>).</summary>
+    static readonly Dictionary<string, string> s_MissingComponent = new(StringComparer.Ordinal)
+    {
+        ["UnityEngine.GameObject::GetComponent`1()"] = "generic",
+        ["UnityEngine.Component::GetComponent`1()"] = "generic",
+        ["UnityEngine.GameObject::GetComponent(System.Type)"] = "type",
+        ["UnityEngine.Component::GetComponent(System.Type)"] = "type",
+        ["UnityEngine.GameObject::GetComponent(System.String)"] = "name",
+        ["UnityEngine.Component::GetComponent(System.String)"] = "name",
+    };
+
     static HashSet<string> s_Checked = new(StringComparer.Ordinal);
     /// <summary>"Type::Name" of listed members with a nested type in their key: a delta's reference
     /// names nested types without their outer type, so these match by name alone.</summary>
@@ -133,7 +145,8 @@ static class LifetimeChecks
         int open = declaring.IndexOf('<');
         string type = open < 0 ? declaring : declaring.Substring(0, open);
         string member = type + "::" + name;
-        if (s_Checked.Contains(member + "(" + string.Join(",", parameters) + ")")) return true;
+        string full = member + "(" + string.Join(",", parameters) + ")";
+        if (s_Checked.Contains(full) || s_MissingComponent.ContainsKey(full)) return true;
         // A generic method's arity is not described here: any listed generic method of the name.
         return s_GenericNames.Contains(member) || s_NestedNames.Contains(member);
     }
@@ -170,7 +183,6 @@ static class LifetimeChecks
     /// rewritten: the assembly still loads, without the receiver checks.</summary>
     internal static byte[] TryInstrument(byte[] image)
     {
-        if (s_Checked.Count == 0) return image;
         try
         {
             return Instrument(image);
@@ -209,11 +221,13 @@ static class LifetimeChecks
                     var element = target is GenericInstanceMethod generic ? generic.ElementMethod : target;
                     if (element.DeclaringType is GenericInstanceType || element.DeclaringType.IsArray) continue;
                     var key = Key(element);
-                    if (!s_Checked.Contains(key)) continue;
+                    bool listed = s_Checked.Contains(key);
+                    s_MissingComponent.TryGetValue(key, out var missing);
+                    if (!listed && missing == null) continue;
                     if (!callable.TryGetValue(key, out bool open))
                         callable[key] = open = element.Resolve() is not { } resolved || !(resolved.IsFamily || resolved.IsFamilyAndAssembly || resolved.IsFamilyOrAssembly);
                     if (!open) continue;
-                    instruction.Operand = calls.For(target, instruction.OpCode);
+                    instruction.Operand = calls.For(target, instruction.OpCode, listed, missing);
                     instruction.OpCode = OpCodes.Call;
                 }
             }
@@ -268,19 +282,19 @@ static class LifetimeChecks
 
         internal bool Any => m_Holder != null;
 
-        internal MethodReference For(MethodReference target, OpCode call)
+        internal MethodReference For(MethodReference target, OpCode call, bool check, string? missing)
         {
             var element = target is GenericInstanceMethod instance ? instance.ElementMethod : target;
             bool virtualCall = call == OpCodes.Callvirt;
             var key = (element.FullName, virtualCall);
-            if (!m_Made.TryGetValue(key, out var wrapper)) m_Made[key] = wrapper = Make(element, virtualCall);
+            if (!m_Made.TryGetValue(key, out var wrapper)) m_Made[key] = wrapper = Make(element, virtualCall, check, missing);
             if (target is not GenericInstanceMethod generic) return wrapper;
             var instantiated = new GenericInstanceMethod(wrapper);
             foreach (var argument in generic.GenericArguments) instantiated.GenericArguments.Add(argument);
             return instantiated;
         }
 
-        MethodDefinition Make(MethodReference element, bool virtualCall)
+        MethodDefinition Make(MethodReference element, bool virtualCall, bool check, string? missing)
         {
             if (m_Holder == null)
             {
@@ -321,10 +335,33 @@ static class LifetimeChecks
                 inner = instance;
             }
             var il = wrapper.Body.GetILProcessor();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Call, m_Check!);
+            if (check)
+            {
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Call, m_Check!);
+            }
             for (int i = 0; i < wrapper.Parameters.Count; i++) il.Emit(OpCodes.Ldarg, wrapper.Parameters[i]);
             il.Emit(virtualCall ? OpCodes.Callvirt : OpCodes.Call, inner);
+            if (missing != null)
+            {
+                // The result, the receiver (and the type or its name): the Editor's placeholder
+                // for an engine component the object lacks.
+                il.Emit(OpCodes.Ldarg_0);
+                var lifetime = typeof(Unbound.Runtime.Lifetime);
+                if (missing == "generic")
+                {
+                    var answer = new GenericInstanceMethod(m_Module.ImportReference(lifetime.GetMethods()
+                        .Single(m => m.Name == nameof(Unbound.Runtime.Lifetime.MissingComponent) && m.IsGenericMethodDefinition)));
+                    answer.GenericArguments.Add(wrapper.GenericParameters[0]);
+                    il.Emit(OpCodes.Call, answer);
+                }
+                else
+                {
+                    il.Emit(OpCodes.Ldarg_1);
+                    var name = missing == "type" ? nameof(Unbound.Runtime.Lifetime.MissingComponent) : nameof(Unbound.Runtime.Lifetime.MissingComponentNamed);
+                    il.Emit(OpCodes.Call, m_Module.ImportReference(lifetime.GetMethods().Single(m => m.Name == name && !m.IsGenericMethodDefinition)));
+                }
+            }
             il.Emit(OpCodes.Ret);
             // Short forms and inlining keep the call as cheap as the original where the JIT allows.
             wrapper.Body.Optimize();

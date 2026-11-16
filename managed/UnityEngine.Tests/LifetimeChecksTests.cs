@@ -28,6 +28,9 @@ public static class Probe
     public static int Generic<T>(T texture) where T : Texture => texture.width;
     public static T Add<T>(GameObject go) where T : Component => go.AddComponent<T>();
     public static string TryGet(GameObject go) => go.TryGetComponent<BoxCollider>(out var found) + "" "" + (found == null);
+    public static Rigidbody Missing(GameObject go) => go.GetComponent<Rigidbody>();
+    public static bool Coalesce(GameObject go, Rigidbody other) => ReferenceEquals(go.GetComponent<Rigidbody>() ?? other, other);
+    public static Component MissingByName(GameObject go) => go.GetComponent(""Rigidbody"");
 }
 public class Behaviour : MonoBehaviour
 {
@@ -87,7 +90,10 @@ public static class Keys
 
             var go = new GameObject("Doomed");
             var child = new GameObject("Child").transform;
-            Assert.Null(RunGeneric(probe, "Get", typeof(BoxCollider), go));
+            // A component the object lacks: the Editor's placeholder, equal to null.
+            var lacking = (Object)RunGeneric(probe, "Get", typeof(BoxCollider), go)!;
+            Assert.True(lacking == null);
+            Assert.IsType<BoxCollider>(lacking);
             Object.DestroyImmediate(go);
             Assert.Throws<MissingReferenceException>(() => RunGeneric(probe, "Get", typeof(BoxCollider), go));
             Object.DestroyImmediate(child.gameObject);
@@ -118,6 +124,26 @@ public static class Keys
             var calls = module.GetType(Unbound.Runtime.Lifetime.CallsType)!;
             Assert.DoesNotContain(calls.Methods, m => m.Name.StartsWith("OnHeaderGUI_"));
             Assert.Contains(calls.Methods, m => m.Name.StartsWith("GetComponent_c"));
+        }
+
+        [Fact]
+        public void GameCodesGetComponentAnswersTheEditorsPlaceholder()
+        {
+            var probe = WideFloatsTests.Load(LifetimeChecks.Instrument(Image(OptimizationLevel.Release)));
+            var go = new GameObject("Holder");
+            try
+            {
+                var missing = (Rigidbody)Run(probe, "Missing", go)!;
+                Assert.False(ReferenceEquals(missing, null));
+                Assert.True(missing == null);
+                Assert.Throws<MissingComponentException>(() => Unbound.Runtime.Lifetime.Check(missing));
+                // The placeholder is not a null reference: ?? keeps it, as in the Editor.
+                Assert.Equal(false, Run(probe, "Coalesce", go, null));
+                Assert.IsType<Rigidbody>(Run(probe, "MissingByName", go));
+                // The engine's own lookups keep answering null.
+                Assert.True(ReferenceEquals(go.GetComponent<Rigidbody>(), null));
+            }
+            finally { Object.DestroyImmediate(go); }
         }
 
         [Fact]
@@ -178,7 +204,8 @@ public static class Game
         [Fact]
         public void AnAssemblyWithoutListedCallsIsLeftAsItIs()
         {
-            var image = Image(OptimizationLevel.Release);
+            var image = WideFloatsTests.Emit(WideFloatsTests.Compilation(
+                "public static class P { public static int W(UnityEngine.Texture2D t) => t.width; }", OptimizationLevel.Release, "Plain", engine: true)).Image;
             LifetimeChecks.Set(new[] { "UnityEngine.Light::get_range()" });
             Assert.Same(image, LifetimeChecks.Instrument(image));
         }

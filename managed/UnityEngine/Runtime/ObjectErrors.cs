@@ -138,10 +138,86 @@ namespace Unbound.Runtime
             if (receiver.m_Destroyed) ThrowDead(receiver);
         }
 
+        /// <summary>GetComponent's answer to game code: the component, or for an engine class the
+        /// object lacks the Editor's placeholder (null for a script class or an interface).</summary>
+        [System.Diagnostics.StackTraceHidden]
+        public static T MissingComponent<T>(T result, Object receiver) =>
+            result is not null || MissingPlaceholder(typeof(T), receiver) is not T placeholder ? result : placeholder;
+
+        /// <summary>GetComponent(Type)'s answer to game code (see <see cref="MissingComponent{T}"/>).</summary>
+        [System.Diagnostics.StackTraceHidden]
+        public static Component MissingComponent(Component result, Object receiver, Type type) =>
+            result ?? MissingPlaceholder(type, receiver) as Component;
+
+        /// <summary>GetComponent(string)'s answer to game code: the engine class of that name.</summary>
+        [System.Diagnostics.StackTraceHidden]
+        public static Component MissingComponentNamed(Component result, Object receiver, string type) =>
+            result ?? MissingPlaceholder(EngineComponent(type), receiver) as Component;
+
+        static Object MissingPlaceholder(Type type, Object receiver)
+        {
+            if (type == null || !typeof(Component).IsAssignableFrom(type)) return null;
+            var go = receiver as GameObject ?? (receiver as Component)?.gameObject;
+            return go is null ? null : Placeholders.Make(type, Placeholders.MissingComponent(type, go.name));
+        }
+
+        static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Type> s_Components = new();
+
+        /// <summary>The engine component class of a name (Unity's own classes only).</summary>
+        static Type EngineComponent(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            return s_Components.GetOrAdd(name, n =>
+            {
+                foreach (var type in typeof(Object).Assembly.GetTypes())
+                    if (type.Namespace != null && type.Namespace.StartsWith("UnityEngine", StringComparison.Ordinal)
+                        && (type.Name == n || type.FullName == n) && typeof(Component).IsAssignableFrom(type))
+                        return type;
+                return null;
+            });
+        }
+
         [System.Diagnostics.StackTraceHidden]
         static void ThrowNull() => throw new NullReferenceException(ObjectErrors.RuntimeNullReference);
 
         [System.Diagnostics.StackTraceHidden]
         static void ThrowDead(Object receiver) => throw ObjectErrors.Receiver(receiver);
+    }
+
+    /// <summary>
+    /// The Editor's placeholder objects (Unity 6000.0.71f1, tests/projects/objecterrors): an
+    /// object of a reference's own class that compares equal to null without being a null
+    /// reference, with instance id 0, whose members throw the exception its error string names.
+    /// The Editor makes them for the unassigned serialized references of script objects (also
+    /// array and list items; a nested serializable class's get one without a message) and for a
+    /// component GetComponent does not find; references of script classes stay null.
+    /// </summary>
+    internal static class Placeholders
+    {
+        /// <summary>Whether a reference of the class gets a placeholder: an engine object class,
+        /// not MonoBehaviour, ScriptableObject or a class deriving from them.</summary>
+        internal static bool For(Type type) =>
+            typeof(Object).IsAssignableFrom(type) && !typeof(MonoBehaviour).IsAssignableFrom(type)
+            && !typeof(ScriptableObject).IsAssignableFrom(type) && !type.IsAbstract && !type.ContainsGenericParameters;
+
+        /// <summary>A placeholder of the class, or null when it gets none.</summary>
+        internal static Object Make(Type type, string error)
+        {
+            if (!For(type)) return null;
+            var placeholder = (Object)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(type);
+            placeholder.m_UnityRuntimeErrorString = error;
+            return placeholder;
+        }
+
+        /// <summary>The error string of an unassigned reference: the field (an array's or list's
+        /// for its items) and the script class's name.</summary>
+        internal static string Unassigned(string field, string script) =>
+            $"UnassignedReferenceException:The variable {field} of {script} has not been assigned.\n" +
+            $"You probably need to assign the {field} variable of the {script} script in the inspector.";
+
+        /// <summary>The error string of a component GetComponent did not find.</summary>
+        internal static string MissingComponent(Type type, string gameObject) =>
+            $"MissingComponentException:There is no '{type.Name}' attached to the \"{gameObject}\" game object, but a script is trying to access it.\n" +
+            $"You probably need to add a {type.Name} to the game object \"{gameObject}\". Or your script needs to check if the component is attached before using it.";
     }
 }
