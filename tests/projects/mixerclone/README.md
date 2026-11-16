@@ -17,5 +17,6 @@ mode and instantiates each group and the snapshot:
   (`snapshot.transition`).
 - An AudioSource cloned with its GameObject keeps the original group (`source.*`).
 
-Not recorded: how a source routed to an instantiated group sounds, and `Instantiate` of the
-AudioMixer itself (unsupported in Unbound; it throws). Other releases are unmeasured.
+Not recorded: what a cloned snapshot's transition changes, how a source routed to an instantiated
+group sounds (Unbound refuses that routing with NotSupportedException), and `Instantiate` of the
+AudioMixer itself (the Editor makes a clone; Unbound throws). Other releases are unmeasured.
