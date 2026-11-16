@@ -678,19 +678,27 @@ public class RealtimeGIProbe : MonoBehaviour
         // linear one at the point light's own range, the inverse-squared ones with it given a
         // range of 4 (the far walls beyond it, so the range attenuation of the one that has it
         // shows), and the linear one again with a range of 6 (the far corners near it, so the
-        // outer part of its table and its scale by the range show).
+        // outer part of its table and its scale by the range show) and at its own range with the
+        // light raised to 0.4 below the ceiling (inside a fourteenth of its range, so the part of
+        // the table between its innermost sample and the light shows).
         var falloffs = new[]
         {
-            ("legacy", GI.FalloffType.Legacy, 0f), ("inversesquared", GI.FalloffType.InverseSquared, 4f),
-            ("norange", GI.FalloffType.InverseSquaredNoRangeAttenuation, 4f), ("undefined", GI.FalloffType.Undefined, 0f),
-            ("linear", GI.FalloffType.Linear, 0f), ("linear-range6", GI.FalloffType.Linear, 6f),
+            ("legacy", GI.FalloffType.Legacy, 0f, 0f), ("inversesquared", GI.FalloffType.InverseSquared, 4f, 0f),
+            ("norange", GI.FalloffType.InverseSquaredNoRangeAttenuation, 4f, 0f), ("undefined", GI.FalloffType.Undefined, 0f, 0f),
+            ("linear", GI.FalloffType.Linear, 0f, 0f), ("linear-range6", GI.FalloffType.Linear, 6f, 0f),
+            ("linear-near", GI.FalloffType.Linear, 0f, 3.6f),
         };
-        foreach (var (name, falloff, range) in falloffs)
+        foreach (var (name, falloff, range, height) in falloffs)
         {
             GI.Lightmapping.SetDelegate(LightsWith(falloff));
             yield return Load("Room");
             s = Scene();
             if (range > 0f) s.point.range = range;
+            if (height > 0f)
+            {
+                var position = s.point.transform.position;
+                s.point.transform.position = new Vector3(position.x, height, position.z);
+            }
             yield return Converge();
             Capture("room-delegate-" + name, s);
         }
