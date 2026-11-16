@@ -700,7 +700,11 @@ namespace UnityEngine.UIElements
             {
                 base.Init(ve, bag, cc);
                 var view = (MultiColumnListView)ve;
-                view.sortingMode = UxmlBuiltInTraits.ReadSortingMode(m_SortingMode, bag, cc);
+                if (UxmlBuiltInTraits.TryReadSortingMode(m_SortingMode, bag, cc, out var mode)) view.sortingMode = mode;
+                // Columns and sort descriptions declared as UXML objects are not read (unsupported, as for
+                // built-in UXML): both are set to none, which clears them, as for a document declaring none.
+                view.sortColumnDescriptions = null;
+                view.columns = null;
             }
         }
     }
@@ -718,7 +722,9 @@ namespace UnityEngine.UIElements
             {
                 base.Init(ve, bag, cc);
                 var view = (MultiColumnTreeView)ve;
-                view.sortingMode = UxmlBuiltInTraits.ReadSortingMode(m_SortingMode, bag, cc);
+                if (UxmlBuiltInTraits.TryReadSortingMode(m_SortingMode, bag, cc, out var mode)) view.sortingMode = mode;
+                view.sortColumnDescriptions = null;
+                view.columns = null;
             }
         }
     }
@@ -973,7 +979,9 @@ namespace UnityEngine.UIElements
                     return;
                 }
                 container.templateSource = template;
-                // Template attribute overrides and slots of the enclosing document are not passed on (unmeasured).
+                // The enclosing document's slots are not passed on to the template (unmeasured): reported.
+                if (cc.slotInsertionPoints != null && cc.slotInsertionPoints.Count > 0)
+                    Unbound.Runtime.Stubs.Ignored("TemplateContainer.UxmlTraits.Init", "does not pass the document's slots on to the template");
                 template.CloneTree(container);
             }
         }
@@ -1536,10 +1544,10 @@ namespace UnityEngine.UIElements
     /// <summary>Readers the built-in traits share.</summary>
     static class UxmlBuiltInTraits
     {
-        /// <summary>A comma-separated list of choices, each trimmed; null for an empty text.</summary>
+        /// <summary>A comma-separated list of choices, each trimmed; null for an empty or blank text.</summary>
         internal static List<string> ParseChoices(string text)
         {
-            if (string.IsNullOrEmpty(text)) return null;
+            if (string.IsNullOrEmpty(text?.Trim())) return null;
             var choices = new List<string>();
             foreach (var choice in text.Split(',')) choices.Add(choice.Trim());
             return choices;
@@ -1548,12 +1556,14 @@ namespace UnityEngine.UIElements
         internal static UxmlEnumAttributeDescription<ColumnSortingMode> SortingMode() =>
             new UxmlEnumAttributeDescription<ColumnSortingMode> { name = "sorting-mode", obsoleteNames = new[] { "sorting-enabled" }, defaultValue = ColumnSortingMode.None };
 
-        /// <summary>The sorting mode; the former boolean attribute reads true as Default and false as None.</summary>
-        internal static ColumnSortingMode ReadSortingMode(UxmlEnumAttributeDescription<ColumnSortingMode> description, IUxmlAttributes bag, CreationContext cc)
+        /// <summary>The sorting mode when the attribute is present (an absent one leaves the view's);
+        /// a boolean, the former attribute's form, reads true as Custom and false as None.</summary>
+        internal static bool TryReadSortingMode(UxmlEnumAttributeDescription<ColumnSortingMode> description, IUxmlAttributes bag, CreationContext cc, out ColumnSortingMode mode)
         {
-            if (description.TryGetValueFromBagAsString(bag, cc, out var text) && bool.TryParse(text, out var enabled))
-                return enabled ? ColumnSortingMode.Default : ColumnSortingMode.None;
-            return description.GetValueFromBag(bag, cc);
+            mode = ColumnSortingMode.None;
+            if (!description.TryGetValueFromBagAsString(bag, cc, out var text)) return false;
+            mode = bool.TryParse(text, out var enabled) ? enabled ? ColumnSortingMode.Custom : ColumnSortingMode.None : description.GetValueFromBag(bag, cc);
+            return true;
         }
     }
 }

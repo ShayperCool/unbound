@@ -123,6 +123,29 @@ namespace UnityEngine.Tests
             Assert.False(field.doubleClickSelectsWord);
         }
 
+        // A multi-column tree view's traits keep its sorting mode without the attribute, read the
+        // former boolean as Custom or None, and clear columns declared in code (multiColumn* rows,
+        // there for the list view).
+        [Fact]
+        public void MultiColumnTreeTraitsKeepSortingAndClearColumns()
+        {
+            var tree = new MultiColumnTreeView { sortingMode = ColumnSortingMode.Default };
+            tree.columns.Add(new Column { name = "c" });
+            Create<MultiColumnTreeView, MultiColumnTreeView.UxmlTraits>(tree);
+            Assert.Equal(ColumnSortingMode.Default, tree.sortingMode);
+            Assert.Equal(0, tree.columns.Count);
+            Create<MultiColumnTreeView, MultiColumnTreeView.UxmlTraits>(tree, "sorting-enabled", "true");
+            Assert.Equal(ColumnSortingMode.Custom, tree.sortingMode);
+        }
+
+        // Blank choices are none: a radio button group gets no buttons from them.
+        [Fact]
+        public void BlankChoicesAreNone()
+        {
+            var group = Create<RadioButtonGroup, RadioButtonGroup.UxmlTraits>(new RadioButtonGroup(), "choices", "   ");
+            Assert.Empty(group.choices);
+        }
+
         // A button is a text element: its selection options are read under the text element's
         // names, the former ones included.
         [Fact]
