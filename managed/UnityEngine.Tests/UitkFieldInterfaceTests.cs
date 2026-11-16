@@ -101,6 +101,12 @@ namespace UnityEngine.Tests
             field.Focus();
             Tick();
             Assert.Equal(new[] { 2, 1 }, counts);
+            // Removing the focused field ends no edit and leaves nothing focused.
+            var focus = field.focusController;
+            field.RemoveFromHierarchy();
+            Tick();
+            Assert.Equal(new[] { 2, 1 }, counts);
+            Assert.Null(focus.focusedElement);
         }
 
         [Fact]
