@@ -93,6 +93,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void SceneLoadsTheBuildListCannotServeLogTheEnginesErrors()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             const string hint = "\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles";
             Assert.Equal(new[] { "Error: Scene 'NoSuchScene' couldn't be loaded because it has not been added to the active build profile or shared scene list or the AssetBundle has not been loaded." + hint },
                 Logs(() => Assert.Null(SceneManager.LoadSceneAsync("NoSuchScene"))));
@@ -100,6 +101,16 @@ namespace UnityEngine.Tests
                 Logs(() => Assert.Null(SceneManager.LoadSceneAsync(99))));
             Assert.Equal(new[] { "Error: Cannot load scene: Invalid scene name (empty string) and invalid build index -1" },
                 Logs(() => Assert.Null(SceneManager.LoadSceneAsync(-1))));
+            Assert.Equal(new[] { "Error: Cannot load scene: Invalid scene name (empty string) and invalid build index -1" },
+                Logs(() => Assert.Null(SceneManager.LoadSceneAsync(""))));
+            // Control: a release without the measurement keeps the build settings wording.
+            using (TestRelease.Pin(TestRelease.Unmeasured))
+            {
+                Assert.Equal(new[] { "Error: Scene with build index: 99 couldn't be loaded because it has not been added to the build settings." },
+                    Logs(() => Assert.Null(SceneManager.LoadSceneAsync(99))));
+                Assert.Equal(new[] { "Error: Scene with build index: -1 couldn't be loaded because it has not been added to the build settings." },
+                    Logs(() => Assert.Null(SceneManager.LoadSceneAsync(-1))));
+            }
         }
 
         [Fact]
@@ -120,8 +131,8 @@ namespace UnityEngine.Tests
             }
             finally { File.Delete(garbage); }
             Assert.Empty(Logs(() => Assert.Null(AssetBundle.LoadFromMemory(null))));
-            Assert.Equal("Object reference not set to an instance of an object",
-                Assert.Throws<NullReferenceException>(() => AssetBundle.LoadFromMemoryAsync(null)).Message);
+            // No data makes no request.
+            Assert.Empty(Logs(() => Assert.Null(AssetBundle.LoadFromMemoryAsync(null))));
             // The release's reference assemblies pass the message as the parameter name.
             Assert.Equal("ManagedStream object must be non-null", Assert.Throws<ArgumentNullException>(() => AssetBundle.LoadFromStream(null)).ParamName);
         }
@@ -200,6 +211,37 @@ namespace UnityEngine.Tests
             // Controls: an empty texture and a valid size are made without logs.
             Assert.Empty(Logs(() => Own(new Texture2D(0, 0))));
             Assert.Empty(Logs(() => Assert.True(t.Reinitialize(2, 2))));
+        }
+
+        [Fact]
+        public void ACopyRegionOutsideEitherTextureCopiesNothing()
+        {
+            var source = Own(new Texture2D(4, 4, TextureFormat.RGBA32, false));
+            var destination = Own(new Texture2D(4, 4, TextureFormat.RGBA32, false));
+            source.SetPixel(0, 0, Color.red);
+            source.Apply();
+            destination.SetPixel(0, 0, Color.blue);
+            destination.Apply();
+            Assert.Equal(new[] { "Error: Graphics.CopyTexture called with region not fitting in source element: trying to copy from region on GPU (x:2, y:2, width:4, height:4) of mip 0 (size: 4x4)" },
+                Logs(() => Graphics.CopyTexture(source, 0, 0, 2, 2, 4, 4, destination, 0, 0, 0, 0)));
+            Assert.Equal(new[] { "Error: Graphics.CopyTexture called with region not fitting in destination element: trying to copy to region on GPU (x:2, y:2, width:4, height:4) of mip 0 (size: 4x4)" },
+                Logs(() => Graphics.CopyTexture(source, 0, 0, 0, 0, 4, 4, destination, 0, 0, 2, 2)));
+            Assert.Equal(Color.blue, destination.GetPixel(0, 0));
+            // Control: a region inside both copies.
+            Assert.Empty(Logs(() => Graphics.CopyTexture(source, 0, 0, 0, 0, 2, 2, destination, 0, 0, 0, 0)));
+            Assert.Equal(Color.red, destination.GetPixel(0, 0));
+        }
+
+        [Fact]
+        public void ProceduralStandInsKeepTheirWholeTriangles()
+        {
+            string[] logs = null;
+            Mesh mesh = null;
+            logs = Logs(() => mesh = Unbound.Runtime.ProceduralMeshes.Get(MeshTopology.Triangles, Unbound.Runtime.ProceduralMeshes.IndirectVertices));
+            Assert.Empty(logs);
+            Assert.Equal(65535u, mesh.GetIndexCount(0));
+            Assert.Equal(4u, Unbound.Runtime.ProceduralMeshes.Get(MeshTopology.Points, 4).GetIndexCount(0));
+            Assert.Equal(3u, Unbound.Runtime.ProceduralMeshes.Get(MeshTopology.Triangles, 4).GetIndexCount(0));
         }
 
         [Fact]
