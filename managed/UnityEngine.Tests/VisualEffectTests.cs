@@ -252,9 +252,9 @@ namespace UnityEngine.Tests
                     "Error assigning 2D texture to 3D texture property 'Volume': Dimensions must match",
                     "Error assigning 3D texture to 2D texture property 'Image': Dimensions must match",
                 }, capture.Errors);
-                // No texture is always accepted.
-                effect.SetTexture("Image", null);
-                Assert.Null(effect.GetTexture("Image"));
+                // No texture is not a value to set: the property keeps the one it has.
+                Assert.Equal("t", Assert.Throws<ArgumentNullException>(() => effect.SetTexture("Image", null)).ParamName);
+                Assert.Same(flat, effect.GetTexture("Image"));
                 Assert.Equal(2, capture.Errors.Count);
             }
             finally

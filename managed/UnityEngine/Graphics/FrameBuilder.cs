@@ -285,11 +285,24 @@ namespace Unbound.Runtime
         /// program tells apart by their id, counted and indexed by <paramref name="setup"/>,
         /// with one material and the draw's own values (an effect's output).</summary>
         internal static void AddProceduralDraw(Renderer renderer, Material material, Matrix4x4 model, DrawSetup setup, Dictionary<int, object> properties,
-            CameraContext camera, List<DrawItem> into)
+            CameraContext camera, List<DrawItem> into) =>
+            AddRendererDraw(renderer, IndexedDraws.StandIn(MeshTopology.Triangles), 0, material, model, setup, properties, camera, into);
+
+        /// <summary>A renderer's draw of <paramref name="instances"/> instances of a submesh
+        /// of a mesh that is not the renderer's own, with one material and the draw's own values:
+        /// the vertex program tells the instances apart by their number (an effect's output of
+        /// meshes).</summary>
+        internal static void AddInstancedDraw(Renderer renderer, Mesh mesh, int subMesh, Material material, Matrix4x4 model, uint instances,
+            Dictionary<int, object> properties, CameraContext camera, List<DrawItem> into) =>
+            AddRendererDraw(renderer, mesh, subMesh, material, model, new DrawSetup { Instances = instances }, properties, camera, into);
+
+        static void AddRendererDraw(Renderer renderer, Mesh mesh, int subMesh, Material material, Matrix4x4 model, DrawSetup setup,
+            Dictionary<int, object> properties, CameraContext camera, List<DrawItem> into)
         {
             into.Add(new DrawItem
             {
-                Mesh = IndexedDraws.StandIn(MeshTopology.Triangles).Sync(),
+                Mesh = mesh.Sync(),
+                Submesh = subMesh,
                 Material = material,
                 Model = model,
                 Color = Color.white,
@@ -357,10 +370,11 @@ namespace Unbound.Runtime
                 new Culler(camera.projectionMatrix * camera.worldToCameraMatrix, position, forward, camera.layerCullDistances, camera.layerCullSpherical);
 
             /// <summary>Renderers whose bounds are those Unity culls with (mesh and sprite
-            /// renderers) or cover everything they draw (particle renderers that can bound their
-            /// draw); others are drawn whether culled or not.</summary>
+            /// renderers, and an effect's renderer: its bounds are the ones its graph gives its
+            /// systems, whatever its particles do) or cover everything they draw (particle
+            /// renderers that can bound their draw); others are drawn whether culled or not.</summary>
             internal static bool TrustsBounds(Renderer renderer) =>
-                renderer.GetType() == typeof(MeshRenderer) || renderer is SpriteRenderer ||
+                renderer.GetType() == typeof(MeshRenderer) || renderer is SpriteRenderer || renderer is UnityEngine.VFX.VFXRenderer ||
                 renderer is SkinnedMeshRenderer skin && skin.HasMeasuredCullingBounds ||
                 renderer is ParticleSystemRenderer particles && (particles.NothingToDraw || particles.CullingBoundsCoverDraw);
 

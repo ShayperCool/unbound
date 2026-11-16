@@ -11,7 +11,7 @@ namespace UnityEngine.Tests
     /// <summary>The Visual Effect runtime on compiled graphs made by hand (no graph package, no
     /// GPU): spawner states, the expression evaluator, the frame's steps, and effects whose
     /// particle systems only count (no kernels, particles that never die).</summary>
-    public class VisualEffectSimulationTests
+    public partial class VisualEffectSimulationTests
     {
         const float Frame = 1f / 30f;
 
@@ -654,7 +654,8 @@ namespace UnityEngine.Tests
 
         /// <summary>A spawner at a constant rate feeding a particle system of 20 particles that
         /// never die (so its alive count is what it spawned), with events to play and stop it.</summary>
-        static VisualEffectAsset Counting(float rate, VFXCullingFlags culling = VFXCullingFlags.CullNone, VFXUpdateMode mode = VFXUpdateMode.FixedDeltaTime)
+        static VisualEffectAsset Counting(float rate, VFXCullingFlags culling = VFXCullingFlags.CullNone, VFXUpdateMode mode = VFXUpdateMode.FixedDeltaTime,
+            params VFXValueType[] more)
         {
             var spawner = new VFXEditorSystemDesc
             {
@@ -666,7 +667,11 @@ namespace UnityEngine.Tests
                 name = "Particles", type = VFXSystemType.Particle, layer = 0, capacity = 20, flags = VFXSystemFlag.SystemHasAttributeBuffer,
                 buffers = new[] { new VFXMapping("spawner_input", 1) }, tasks = Array.Empty<VFXEditorTaskDesc>(),
             };
-            var data = Data(new[] { Value(VFXValueType.Float) }, new[] { Constant(0, rate) }, new[] { spawner, particles }, new[]
+            // The rate, then the values asked for besides (expressions 1, 2, ...).
+            var expressions = new VFXExpressionDesc[1 + more.Length];
+            expressions[0] = Value(VFXValueType.Float);
+            for (int i = 0; i < more.Length; i++) expressions[1 + i] = Value(more[i]);
+            var data = Data(expressions, new[] { Constant(0, rate) }, new[] { spawner, particles }, new[]
             {
                 new VFXEventDesc { name = "OnPlay", startSystems = new uint[] { 0 }, stopSystems = Array.Empty<uint>(), initSystems = Array.Empty<uint>() },
                 new VFXEventDesc { name = "OnStop", startSystems = Array.Empty<uint>(), stopSystems = new uint[] { 0 }, initSystems = Array.Empty<uint>() },
@@ -765,9 +770,13 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>The counting effect with an output task for its particles.</summary>
-        static VisualEffectAsset WithOutput(VFXTaskType type, Object processor, params VFXMapping[] parameters)
+        static VisualEffectAsset WithOutput(VFXTaskType type, Object processor, params VFXMapping[] parameters) =>
+            WithOutput(type, processor, Array.Empty<VFXValueType>(), parameters);
+
+        /// <summary>That effect with values besides its rate (expressions 1, 2, ...).</summary>
+        static VisualEffectAsset WithOutput(VFXTaskType type, Object processor, VFXValueType[] values, params VFXMapping[] parameters)
         {
-            var asset = Counting(30f);
+            var asset = Counting(30f, more: values);
             asset.m_Data.Systems[1].tasks = new[] { new VFXEditorTaskDesc { type = type, parameters = parameters } };
             asset.m_Data.Processors = new[] { Array.Empty<Object>(), new[] { processor } };
             return asset;
@@ -917,7 +926,7 @@ namespace UnityEngine.Tests
             // What is drawn, and each thing that is not.
             Assert.Null(VFXOutput.Refusal(system, quads, material));
             Assert.Equal("its shader was not imported", VFXOutput.Refusal(system, quads, null));
-            Assert.Equal("ParticleMeshOutput is not drawn yet (quads are)", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleMeshOutput }, material));
+            Assert.Equal("ParticlePointOutput is not drawn yet (quads and meshes are)", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticlePointOutput }, material));
             // Through an indirect buffer: drawn from the list that counts its particles; one
             // drawn from another (sorted) list, or in a system that sorts one, is not.
             VFXEditorTaskDesc Indirect(int list, int read) => new VFXEditorTaskDesc
@@ -930,6 +939,20 @@ namespace UnityEngine.Tests
             Assert.Equal("its particles are sorted, which is not done yet", VFXOutput.Refusal(system, Indirect(2, 3), material));
             var sorting = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.GlobalSort } } };
             Assert.Equal("its particles are sorted, which is not done yet", VFXOutput.Refusal(sorting, Indirect(2, 2), material));
+            // A mesh output's task names its mesh and the mask of its submeshes, and draws
+            // itself; one through an indirect buffer is not drawn (an output of several meshes
+            // compiles to one such task per mesh).
+            var meshes = new VFXEditorTaskDesc { type = VFXTaskType.ParticleMeshOutput, parameters = new[] { new VFXMapping("mesh", 1), new VFXMapping("subMeshMask", 2), new VFXMapping("sortPriority", 0) } };
+            Assert.Null(VFXOutput.Refusal(system, meshes, material));
+            var oneOfSeveral = new VFXEditorTaskDesc
+            {
+                type = VFXTaskType.ParticleMeshOutput,
+                parameters = new[] { new VFXMapping("mesh", 1), new VFXMapping("subMeshMask", 2), new VFXMapping("indirectDraw", 1), new VFXMapping("indirectIndex", 1) },
+                buffers = new[] { new VFXMapping("indirectBuffer", 1) },
+            };
+            Assert.Equal("it draws meshes through an indirect buffer, which is not done yet", VFXOutput.Refusal(system, oneOfSeveral, material));
+            Assert.Equal("its task names no mesh or no submesh mask", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleMeshOutput }, material));
+            Assert.Equal("its shader was not imported", VFXOutput.Refusal(system, meshes, null));
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, parameters = new[] { new VFXMapping("indirectDraw", 0) } }, material));
             Assert.Equal("strips are not drawn yet", VFXOutput.Refusal(new VFXEditorSystemDesc { flags = VFXSystemFlag.SystemHasStrips }, quads, material));
             Assert.Equal("outputs of a Shader Graph are not drawn yet", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, usesMaterialVariant = true }, material));
@@ -943,11 +966,16 @@ namespace UnityEngine.Tests
             Assert.Null(VFXOutput.SourceRefusal(unlit));
             Assert.Null(VFXOutput.SourceRefusal(null));
             // ... and so is one that fades against the camera's depth (soft particles: the
-            // pipeline's depth texture); a lit one and one with another pass are not.
+            // pipeline's depth texture) ...
             Assert.Null(VFXOutput.SourceRefusal(unlit.Replace("#define USE_SOFT_PARTICLE 0", "#define USE_SOFT_PARTICLE 1")));
-            Assert.Equal("it is lit, and lit outputs are not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("#define VFX_PRIMITIVE_QUAD 1", "#define URP_LIT 1")));
+            // ... and a lit output's, forward and deferred; one with another pass is not.
+            const string lit = "Shader \"Hidden/VFX/G/S/Output Particle|URP Lit|Quad\" { SubShader { Pass { Tags { \"LightMode\"=\"DepthOnly\" } }\n"
+                + "Pass { Tags { \"LightMode\"=\"DepthNormals\" } } Pass { Tags { \"LightMode\"=\"UniversalGBuffer\" } }\n"
+                + "Pass { Tags { \"LightMode\"=\"UniversalForward\"} HLSLPROGRAM\n#define URP_LIT 1\n#define USE_SOFT_PARTICLE 0\nENDHLSL } Pass { Tags { \"LightMode\"=\"ShadowCaster\" } } } }";
+            Assert.Null(VFXOutput.SourceRefusal(lit));
             Assert.Equal("its pass 'MotionVectors' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"ShadowCaster\"", "\"MotionVectors\"")));
-            Assert.Equal("its pass 'UniversalGBuffer' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"DepthOnly\"", "\"UniversalGBuffer\"")));
+            Assert.Equal("its pass 'MotionVectors' is not drawn yet", VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"MotionVectors\"")));
+            Assert.Equal("its pass 'DBufferProjectorVFX' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"DepthOnly\"", "\"DBufferProjectorVFX\"")));
             // Read for each output task of a compiled graph from the shader source it names:
             // not for a kernel, a task without a source of the graph's, or a source out of range.
             var compiled = new[]
@@ -968,21 +996,32 @@ namespace UnityEngine.Tests
             };
             var sources = new[]
             {
-                new VFXShaderSourceDesc { compute = true, source = "#define URP_LIT 1" },
+                new VFXShaderSourceDesc { compute = true, source = "Tags { \"LightMode\"=\"MotionVectors\" }" },
                 new VFXShaderSourceDesc { source = unlit },
-                new VFXShaderSourceDesc { source = unlit.Replace("#define VFX_PRIMITIVE_QUAD 1", "#define URP_LIT 1") },
+                new VFXShaderSourceDesc { source = unlit.Replace("\"ShadowCaster\"", "\"MotionVectors\"") },
             };
             var found = VFXOutput.SourceRefusals(compiled, sources);
             Assert.Empty(found[0]);
-            Assert.Equal(new[] { null, null, "it is lit, and lit outputs are not drawn yet", null, null }, found[1]);
+            const string Moving = "its pass 'MotionVectors' is not drawn yet";
+            Assert.Equal(new[] { null, null, Moving, null, null }, found[1]);
             // The reason found in the source is the output's when nothing of its task refuses first.
-            Assert.Equal("it is lit, and lit outputs are not drawn yet", VFXOutput.Refusal(system, quads, material, "it is lit, and lit outputs are not drawn yet"));
+            Assert.Equal(Moving, VFXOutput.Refusal(system, quads, material, Moving));
+            Assert.Equal("its particles are sorted, which is not done yet", VFXOutput.Refusal(system, Indirect(2, 3), material, Moving));
+            // A lit output through an indirect buffer: each is measured, the two together are not.
+            VFXEditorTaskDesc From(VFXEditorTaskDesc task, int sourceIndex)
+            {
+                task.shaderSourceIndex = sourceIndex;
+                return task;
+            }
+            var litIndirect = VFXOutput.SourceRefusals(
+                new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { From(Indirect(2, 2), 0), From(quads, 0), From(Indirect(2, 2), 1) } } },
+                new[] { new VFXShaderSourceDesc { source = lit }, new VFXShaderSourceDesc { source = unlit } });
+            Assert.Equal(new[] { VFXOutput.LitIndirectRefusal, null, null }, litIndirect[0]);
 
             var asset = WithOutput(VFXTaskType.ParticleQuadOutput, material);
             asset.m_Data.Systems[1].tasks[0].parameters = Indirect(2, 3).parameters;
             asset.m_Data.Systems[1].tasks[0].buffers = Indirect(2, 3).buffers;
             asset.m_Name = "Smoke";
-            asset.m_Settings.Renderer.shadowCastingMode = ShadowCastingMode.On;
             VisualEffect first = null, second = null;
             var eye = new GameObject("eye").AddComponent<Camera>();
             try
@@ -996,8 +1035,6 @@ namespace UnityEngine.Tests
                 var said = Assert.Single(warnings.Messages, m => m.Contains("not drawn"));
                 Assert.StartsWith("Unbound: VisualEffect '", said);
                 Assert.Contains("(Smoke): an output of 'Particles' is not drawn: its particles are sorted", said);
-                // So are the shadows an asset asks its renderer to cast.
-                Assert.Single(warnings.Messages, m => m.Contains("(Smoke): its outputs cast shadows in the Editor"));
                 // The system runs all the same, and its renderer has no draw.
                 Assert.Equal(new[] { 1, 2, 3 }, Counts(first, 3));
                 var draws = new List<FrameBuilder.DrawItem>();

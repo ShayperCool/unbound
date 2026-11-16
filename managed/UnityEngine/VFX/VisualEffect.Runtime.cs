@@ -90,8 +90,13 @@ namespace UnityEngine.VFX
             VFXManager.Add(this);
             m_Registered = true;
             EnableRenderer(true);
+            // Making the systems sets the renderer up too.
             if (m_Systems.Length == 0) CreateSystems(true);
-            else if (m_Start == StartState.Started) Initialize(true);
+            else
+            {
+                UpdateRenderer();
+                if (m_Start == StartState.Started) Initialize(true);
+            }
         }
 
         /// <summary>A disabled effect, or one on an inactive object, stops updating and keeps its
@@ -109,6 +114,13 @@ namespace UnityEngine.VFX
         void EnableRenderer(bool enabled)
         {
             if (m_Renderer || TryGetComponent(out m_Renderer)) m_Renderer.enabled = enabled;
+        }
+
+        /// <summary>The effect's renderer takes what its asset asks of it
+        /// (<see cref="VFXRendererSetup"/>).</summary>
+        void UpdateRenderer()
+        {
+            if (m_Renderer || TryGetComponent(out m_Renderer)) VFXRendererSetup.Apply(m_Renderer, m_Asset);
         }
 
         internal override void OnEngineDestroy()
@@ -144,6 +156,7 @@ namespace UnityEngine.VFX
         void CreateSystems(bool sendInitialEvent)
         {
             DestroySystems();
+            UpdateRenderer();
             // Systems are made once the effect's object is active (enabled or not), and kept.
             if (m_Asset == null || m_Data.Systems.Length == 0 || !(m_Registered || gameObject.activeInHierarchy)) return;
             m_Unsupported = Unsupported(m_Data);
@@ -154,7 +167,6 @@ namespace UnityEngine.VFX
                     Debug.LogWarning($"Unbound: VisualEffect '{name}' ({m_Asset.name}) is not simulated: it uses {m_Unsupported}, which Unbound does not run yet. `unbound doctor` lists the project's effects.", this);
                 return;
             }
-            if (m_Asset.m_Settings.Renderer.shadowCastingMode != UnityEngine.Rendering.ShadowCastingMode.Off) WarnShadowsNotCast();
             m_GpuBuffers = new GraphicsBuffer[m_Data.GpuBuffers.Length];
             m_State.Baked = VFXBakedTexture.For(m_Data);
             var systems = new List<VFXSystem>(m_Data.Systems.Length);

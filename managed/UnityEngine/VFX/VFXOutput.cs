@@ -37,15 +37,17 @@ namespace Unbound.Runtime
     /// <summary>
     /// An output of a particle system: one draw of its particles with the shader the graph
     /// compiled to, whose vertex program finds each particle in the system's buffers by its
-    /// vertex id. Drawn here: quads, unsorted, either all the system has room for (the vertex
-    /// program leaves out the dead ones) or through an indirect buffer: a list of the particles
-    /// to draw that the system's kernels make (the update kernel, an output-update kernel at each
-    /// step, or one for each camera that sees the effect), whose count gives the draw's
-    /// arguments (<see cref="VFXIndirectArgs"/>). An output of another kind is not drawn and says
-    /// so once (<see cref="Refusal"/>): the system is simulated all the same. The draws match the
-    /// Unity 6000.0.71f1 Editor (tests/projects/vfx `draw-*`, tests/projects/vfxoutputs).
+    /// vertex id (or, of a mesh, by its instance). Drawn here: quads, unsorted, either all the
+    /// system has room for (the vertex program leaves out the dead ones) or through an indirect
+    /// buffer: a list of the particles to draw that the system's kernels make (the update
+    /// kernel, an output-update kernel at each step, or one for each camera that sees the
+    /// effect), whose count gives the draw's arguments (<see cref="VFXIndirectArgs"/>); and
+    /// meshes the output draws itself. Either unlit or lit by the pipeline. An output of another
+    /// kind is not drawn and says so once (<see cref="Refusal"/>): the system is simulated all
+    /// the same. The draws match the Unity 6000.0.71f1 Editor (tests/projects/vfx `draw-*`,
+    /// tests/projects/vfxoutputs, tests/projects/vfxlit).
     /// </summary>
-    internal sealed class VFXOutput
+    internal sealed partial class VFXOutput
     {
         /// <summary>The quads one draw's 16-bit indices reach (four vertices each), and the
         /// quads of each instance of a draw of more: the generated vertex programs find a
@@ -87,6 +89,8 @@ namespace Unbound.Runtime
             m_Bound = new GraphicsBuffer[count];
             for (int i = 0; i < count; i++) m_BufferNames[i] = Shader.PropertyToID(task.buffers[i].name);
             m_Objects = new VFXTaskObjects(system.Effect.Data, task);
+            m_MeshExpression = Parameter(task, MeshParameter, -1);
+            m_SubMeshMaskExpression = Parameter(task, SubMeshMaskParameter, -1);
             // One instance, active, in a batch of one: the counts as the programs read them
             // (the bits of unsigned integers), and instance zero's place in the buffers.
             float one = BitConverter.Int32BitsToSingle(1);
@@ -124,32 +128,41 @@ namespace Unbound.Runtime
         /// (<see cref="SourceRefusal"/>).</summary>
         internal static string Refusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task, UnityEngine.Object processor, string sourceRefusal = null)
         {
-            if (task.type != VFXTaskType.ParticleQuadOutput) return $"{task.type} is not drawn yet (quads are)";
+            if (task.type != VFXTaskType.ParticleQuadOutput && task.type != VFXTaskType.ParticleMeshOutput) return $"{task.type} is not drawn yet (quads and meshes are)";
             if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0) return "strips are not drawn yet";
             if (Parameter(task, IndirectDrawName) != 0 && Sorted(system, task)) return "its particles are sorted, which is not done yet";
+            // Meshes are drawn for every particle the system has room for: not from a list.
+            if (Parameter(task, IndirectDrawName) != 0 && task.type == VFXTaskType.ParticleMeshOutput)
+                return "it draws meshes through an indirect buffer, which is not done yet";
             if (task.usesMaterialVariant) return "outputs of a Shader Graph are not drawn yet";
             // An output with motion vectors keeps each particle's last frame in buffers of its own.
             if (task.temporaryBuffers != null && task.temporaryBuffers.Length != 0) return "it keeps buffers of the frame before (motion vectors), which is not done yet";
             if (sourceRefusal != null) return sourceRefusal;
             if (!(processor is Material)) return "its shader was not imported";
+            if (task.type == VFXTaskType.ParticleMeshOutput) return MeshRefusal(task);
             return null;
         }
 
-        /// <summary>The passes of a generated output shader that are drawn as measured, by
-        /// their LightMode: the unlit forward pass, the depth passes of an opaque output and
-        /// the shadow pass (shadows themselves are left out, and said so); the selection and
-        /// picking passes are the Editor's own and the 2D renderer's pass is never asked for
-        /// here.</summary>
+        /// <summary>The passes of a generated output shader that the pipeline may draw, by
+        /// their LightMode. Measured: the forward pass of an unlit and of a lit output, an
+        /// opaque lit output's deferred pass and the shadow pass (tests/projects/vfx,
+        /// tests/projects/vfxlit). Admitted with them, as the same vertex program writing
+        /// depth alone, and not measured: the depth passes of an opaque output (a depth
+        /// prepass, the depth and normals textures). The selection and picking passes are the
+        /// Editor's own and the 2D renderer's pass is never asked for here.</summary>
         static readonly string[] s_DrawnPasses =
         {
-            "UniversalForwardOnly", "DepthOnly", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D",
+            "UniversalForwardOnly", "UniversalForward", "UniversalGBuffer", "DepthOnly", "DepthNormals", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D",
         };
 
-        /// <summary>The define the graph compiler writes into an output's shader for what the
-        /// draw would need besides the system's buffers: the pipeline's lighting. (Particles
-        /// that fade against the camera's depth read the pipeline's own depth texture, as any
-        /// shader of the pipeline does: tests/projects/vfx, `draw-soft*`.)</summary>
+        /// <summary>The define the graph compiler writes into the shader of an output that the
+        /// pipeline lights.</summary>
         const string LitDefine = "#define URP_LIT 1";
+
+        /// <summary>A lit output is measured where it draws itself and an output drawn through
+        /// an indirect buffer where it is unlit (tests/projects/vfxlit, tests/projects/vfxoutputs):
+        /// the two together are not, and are not drawn until they are.</summary>
+        internal const string LitIndirectRefusal = "it is lit and draws through an indirect buffer, which is not measured yet";
 
         /// <summary>Per system and task of a compiled graph: what each output's generated
         /// shader does that is not drawn yet (null for a task that is no output, has no shader
@@ -164,20 +177,22 @@ namespace Unbound.Runtime
                 for (int t = 0; t < tasks.Length; t++)
                 {
                     int index = tasks[t].shaderSourceIndex;
-                    if (index >= 0 && index < sources.Length && !sources[index].compute && IsOutput(tasks[t].type))
-                        refusals[s][t] = SourceRefusal(sources[index].source);
+                    if (index < 0 || index >= sources.Length || sources[index].compute || !IsOutput(tasks[t].type)) continue;
+                    string source = sources[index].source;
+                    refusals[s][t] = SourceRefusal(source);
+                    if (refusals[s][t] == null && Parameter(tasks[t], IndirectDrawName) != 0 && !string.IsNullOrEmpty(source) && source.Contains(LitDefine, StringComparison.Ordinal))
+                        refusals[s][t] = LitIndirectRefusal;
                 }
             }
             return refusals;
         }
 
         /// <summary>What the generated shader of an output does that is not drawn yet, read
-        /// off its source; null when it does only what the probe measured
-        /// (tests/projects/vfx, `draw-*`).</summary>
+        /// off its source: a pass that is not among the ones drawn; null without one
+        /// (tests/projects/vfx, `draw-*`; tests/projects/vfxlit).</summary>
         internal static string SourceRefusal(string source)
         {
             if (string.IsNullOrEmpty(source)) return null;
-            if (source.Contains(LitDefine, StringComparison.Ordinal)) return "it is lit, and lit outputs are not drawn yet";
             const string Tag = "\"LightMode\"";
             for (int at = source.IndexOf(Tag, StringComparison.Ordinal); at >= 0; at = source.IndexOf(Tag, at + Tag.Length, StringComparison.Ordinal))
             {
@@ -207,11 +222,13 @@ namespace Unbound.Runtime
             return -1;
         }
 
-        static int Parameter(in VFXEditorTaskDesc task, string name)
+        /// <summary>What a parameter of a task holds (a number, or the expression that gives
+        /// one), <paramref name="missing"/> when the task has none of that name.</summary>
+        internal static int Parameter(in VFXEditorTaskDesc task, string name, int missing = 0)
         {
             foreach (var parameter in task.parameters ?? Array.Empty<VFXMapping>())
                 if (parameter.name == name) return parameter.index;
-            return 0;
+            return missing;
         }
 
         /// <summary>The indices of <see cref="MaxQuadsPerDraw"/> quads: two triangles over each
@@ -285,6 +302,11 @@ namespace Unbound.Runtime
                 else if (value is GraphicsBuffer graphicsBuffer) m_Block.SetBuffer(name, graphicsBuffer);
                 // A property without an object leaves the program what it has without one.
                 else m_Block.m_Values.Remove(name);
+            }
+            if (m_Task.type == VFXTaskType.ParticleMeshOutput)
+            {
+                CollectMeshes(renderer, quads, camera, into);
+                return;
             }
             var setup = Indirect
                 ? IndexedDraws.Indirect(QuadIndices(), arguments.Arguments.Handle, VFXIndirectArgs.Offset(m_ArgsEntry))

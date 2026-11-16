@@ -90,18 +90,10 @@ namespace UnityEngine.VFX
 
         /// <summary>What Unbound draws of an effect (<c>unbound doctor</c> says it of every
         /// effect with an asset; an effect that runs says which of its outputs it leaves out).</summary>
-        internal const string NotDrawn = "of Visual Effect Graph outputs, unlit quads that the output draws itself are drawn: sorted or indirect outputs, lit outputs, motion vectors, Shader Graph outputs, strips, meshes and other primitives show nothing yet, and no effect casts shadows";
+        internal const string NotDrawn = "of Visual Effect Graph outputs, quads (also through an indirect buffer, unsorted and unlit) and meshes that the output draws itself are drawn, unlit or lit: sorted outputs, lit or mesh outputs through an indirect buffer, motion vectors, Shader Graph outputs, strips and other primitives show nothing yet";
 
         /// <summary>The outputs said not to be drawn: once per asset, system and reason.</summary>
         static readonly HashSet<(int Asset, string System, string Reason)> s_WarnedOutputs = new HashSet<(int, string, string)>();
-
-        /// <summary>Says, once for the asset, that its outputs' shadows are left out: the asset
-        /// asks its renderer to cast shadows (an output of its graph does).</summary>
-        void WarnShadowsNotCast()
-        {
-            if (!s_WarnedOutputs.Add((m_Asset.GetInstanceID(), "", "shadows"))) return;
-            Debug.LogWarning($"Unbound: VisualEffect '{name}' ({m_Asset.name}): its outputs cast shadows in the Editor; Unbound draws no shadows of effects yet. `unbound doctor` lists the project's effects.", this);
-        }
 
         /// <summary>Says, once for the asset, that an output of a system is not drawn and why.</summary>
         internal void WarnOutputNotDrawn(string system, string reason)
@@ -540,32 +532,40 @@ namespace UnityEngine.VFX
             m_Values.SetMatrix(Expression(index), v);
         }
 
+        /// <summary>The setters of a texture, a curve, a gradient and a mesh take one: given
+        /// none they throw, whether the effect has a property of the name or not, and given an
+        /// engine object that was destroyed they throw as any use of it does (Unity
+        /// 6000.0.71f1, tests/projects/vfxlit, `null/*`).</summary>
+        static void RequireValue(object value, string parameter)
+        {
+            if (value == null) throw new ArgumentNullException(parameter);
+            if (value is Object engineObject) engineObject.ThrowIfDestroyed();
+        }
+
         /// <summary>A texture must have the property's dimension (a camera buffer property: 2D
         /// or a 2D array); another one is refused with an error and the property keeps its value.</summary>
         public void SetTexture(int nameID, Texture t)
         {
+            RequireValue(t, nameof(t));
             int index = Find(nameID, TextureKind);
             if (index < 0) return;
-            if (t != null)
+            var type = m_Data.ExposedType(index);
+            var actual = t.dimension;
+            if (type == VFXValueType.CameraBuffer)
             {
-                var type = m_Data.ExposedType(index);
-                var actual = t.dimension;
-                if (type == VFXValueType.CameraBuffer)
+                if (actual != TextureDimension.Tex2D && actual != TextureDimension.Tex2DArray)
                 {
-                    if (actual != TextureDimension.Tex2D && actual != TextureDimension.Tex2DArray)
-                    {
-                        Debug.LogError($"Error assigning {DimensionName(actual)} texture to CameraBuffer property '{Shader.IdToName(nameID)}': Dimensions must match", this);
-                        return;
-                    }
+                    Debug.LogError($"Error assigning {DimensionName(actual)} texture to CameraBuffer property '{Shader.IdToName(nameID)}': Dimensions must match", this);
+                    return;
                 }
-                else
+            }
+            else
+            {
+                var wanted = UnityEditor.VFX.VFXExpressionHelper.GetTextureDimension(type);
+                if (actual != wanted)
                 {
-                    var wanted = UnityEditor.VFX.VFXExpressionHelper.GetTextureDimension(type);
-                    if (actual != wanted)
-                    {
-                        Debug.LogError($"Error assigning {DimensionName(actual)} texture to {DimensionName(wanted)} texture property '{Shader.IdToName(nameID)}': Dimensions must match", this);
-                        return;
-                    }
+                    Debug.LogError($"Error assigning {DimensionName(actual)} texture to {DimensionName(wanted)} texture property '{Shader.IdToName(nameID)}': Dimensions must match", this);
+                    return;
                 }
             }
             m_Overridden[index] = true;
@@ -590,19 +590,24 @@ namespace UnityEngine.VFX
         /// <summary>The property takes a copy of the curve.</summary>
         public void SetAnimationCurve(int nameID, AnimationCurve c)
         {
-            AnimationCurve copy = null;
-            if (c != null)
-            {
-                copy = new AnimationCurve();
-                copy.CopyFrom(c);
-            }
+            RequireValue(c, nameof(c));
+            var copy = new AnimationCurve();
+            copy.CopyFrom(c);
             SetObject(nameID, VFXValueType.Curve, copy);
         }
 
         /// <summary>The property takes a copy of the gradient.</summary>
-        public void SetGradient(int nameID, Gradient g) => SetObject(nameID, VFXValueType.ColorGradient, Copy(g));
+        public void SetGradient(int nameID, Gradient g)
+        {
+            RequireValue(g, nameof(g));
+            SetObject(nameID, VFXValueType.ColorGradient, Copy(g));
+        }
 
-        public void SetMesh(int nameID, Mesh m) => SetObject(nameID, VFXValueType.Mesh, m);
+        public void SetMesh(int nameID, Mesh m)
+        {
+            RequireValue(m, nameof(m));
+            SetObject(nameID, VFXValueType.Mesh, m);
+        }
         public void SetSkinnedMeshRenderer(int nameID, SkinnedMeshRenderer m) => SetObject(nameID, VFXValueType.SkinnedMeshRenderer, m);
         public void SetGraphicsBuffer(int nameID, GraphicsBuffer g) => SetObject(nameID, VFXValueType.Buffer, g);
 
