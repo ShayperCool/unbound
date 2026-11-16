@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:IntegerField name="int" label="Count" value="42" is-delayed="true" />
+    <ui:LongField name="long" label="Big" value="-9000000000" readonly="true" />
+    <ui:FloatField name="float" label="Ratio" value="1.25" format-string="0.00" />
+    <ui:DoubleField name="double" value="0.1" />
+    <ui:UnsignedIntegerField name="uint" label="Mask" value="4000000000" max-length="5" />
+    <ui:UnsignedLongField name="ulong" value="18446744073709551615" />
+    <ui:IntegerField name="aliases" value="12" is-read-only="true" password="true" mask-character="#" />
+    <ui:IntegerField name="propertyNames" value="12" is-password-field="true" mask-char="%" />
+    <ui:TextField name="text" value="abc" readonly="true" password="true" mask-character="$" format-string="0.0" />
+</ui:UXML>

@@ -1,0 +1,646 @@
+{"key":"eval.0.expression","value":"[2+2]"}
+{"key":"eval.0.double","value":"True 4|4010000000000000"}
+{"key":"eval.0.float","value":"True 4|40800000"}
+{"key":"eval.0.int","value":"True 4"}
+{"key":"eval.0.long","value":"True 4"}
+{"key":"eval.0.ulong","value":"True 4"}
+{"key":"eval.1.expression","value":"[2*3^2]"}
+{"key":"eval.1.double","value":"True 18|4032000000000000"}
+{"key":"eval.1.float","value":"True 18|41900000"}
+{"key":"eval.1.int","value":"True 18"}
+{"key":"eval.1.long","value":"True 18"}
+{"key":"eval.1.ulong","value":"True 18"}
+{"key":"eval.2.expression","value":"[-(1-2)*-3]"}
+{"key":"eval.2.double","value":"True -3|c008000000000000"}
+{"key":"eval.2.float","value":"True -3|c0400000"}
+{"key":"eval.2.int","value":"True -3"}
+{"key":"eval.2.long","value":"True -3"}
+{"key":"eval.2.ulong","value":"True 0"}
+{"key":"eval.3.expression","value":"[10/4]"}
+{"key":"eval.3.double","value":"True 2.5|4004000000000000"}
+{"key":"eval.3.float","value":"True 2.5|40200000"}
+{"key":"eval.3.int","value":"True 2"}
+{"key":"eval.3.long","value":"True 2"}
+{"key":"eval.3.ulong","value":"True 2"}
+{"key":"eval.4.expression","value":"[7%3]"}
+{"key":"eval.4.double","value":"True 1|3ff0000000000000"}
+{"key":"eval.4.float","value":"True 1|3f800000"}
+{"key":"eval.4.int","value":"True 1"}
+{"key":"eval.4.long","value":"True 1"}
+{"key":"eval.4.ulong","value":"True 1"}
+{"key":"eval.5.expression","value":"[-7%3]"}
+{"key":"eval.5.double","value":"True -1|bff0000000000000"}
+{"key":"eval.5.float","value":"True -1|bf800000"}
+{"key":"eval.5.int","value":"True -1"}
+{"key":"eval.5.long","value":"True -1"}
+{"key":"eval.5.ulong","value":"True 0"}
+{"key":"eval.6.expression","value":"[2^-1]"}
+{"key":"eval.6.double","value":"False 0|0000000000000000"}
+{"key":"eval.6.float","value":"False 0|00000000"}
+{"key":"eval.6.int","value":"False 0"}
+{"key":"eval.6.long","value":"False 0"}
+{"key":"eval.6.ulong","value":"False 0"}
+{"key":"eval.7.expression","value":"[sqrt(16)]"}
+{"key":"eval.7.double","value":"True 4|4010000000000000"}
+{"key":"eval.7.float","value":"True 4|40800000"}
+{"key":"eval.7.int","value":"True 4"}
+{"key":"eval.7.long","value":"True 4"}
+{"key":"eval.7.ulong","value":"True 4"}
+{"key":"eval.8.expression","value":"[sqrt(-4)]"}
+{"key":"eval.8.double","value":"True 0|0000000000000000"}
+{"key":"eval.8.float","value":"True 0|00000000"}
+{"key":"eval.8.int","value":"True 0"}
+{"key":"eval.8.long","value":"True 0"}
+{"key":"eval.8.ulong","value":"True 0"}
+{"key":"eval.9.expression","value":"[floor(2.7)]"}
+{"key":"eval.9.double","value":"True 2|4000000000000000"}
+{"key":"eval.9.float","value":"True 2|40000000"}
+{"key":"eval.9.int","value":"True 2"}
+{"key":"eval.9.long","value":"True 2"}
+{"key":"eval.9.ulong","value":"True 2"}
+{"key":"eval.10.expression","value":"[ceil(-2.2)]"}
+{"key":"eval.10.double","value":"True -2|c000000000000000"}
+{"key":"eval.10.float","value":"True -2|c0000000"}
+{"key":"eval.10.int","value":"True -2"}
+{"key":"eval.10.long","value":"True -2"}
+{"key":"eval.10.ulong","value":"True 0"}
+{"key":"eval.11.expression","value":"[round(2.5)]"}
+{"key":"eval.11.double","value":"True 2|4000000000000000"}
+{"key":"eval.11.float","value":"True 2|40000000"}
+{"key":"eval.11.int","value":"True 2"}
+{"key":"eval.11.long","value":"True 2"}
+{"key":"eval.11.ulong","value":"True 2"}
+{"key":"eval.12.expression","value":"[round(3.5)]"}
+{"key":"eval.12.double","value":"True 4|4010000000000000"}
+{"key":"eval.12.float","value":"True 4|40800000"}
+{"key":"eval.12.int","value":"True 4"}
+{"key":"eval.12.long","value":"True 4"}
+{"key":"eval.12.ulong","value":"True 4"}
+{"key":"eval.13.expression","value":"[cos(0)]"}
+{"key":"eval.13.double","value":"True 1|3ff0000000000000"}
+{"key":"eval.13.float","value":"True 1|3f800000"}
+{"key":"eval.13.int","value":"True 1"}
+{"key":"eval.13.long","value":"True 1"}
+{"key":"eval.13.ulong","value":"True 1"}
+{"key":"eval.14.expression","value":"[sin(0)]"}
+{"key":"eval.14.double","value":"True 0|0000000000000000"}
+{"key":"eval.14.float","value":"True 0|00000000"}
+{"key":"eval.14.int","value":"True 0"}
+{"key":"eval.14.long","value":"True 0"}
+{"key":"eval.14.ulong","value":"True 0"}
+{"key":"eval.15.expression","value":"[1/3*3]"}
+{"key":"eval.15.double","value":"True 0.999999999999999|3feffffffffffff7"}
+{"key":"eval.15.float","value":"True 1|3f800000"}
+{"key":"eval.15.int","value":"True 0"}
+{"key":"eval.15.long","value":"True 0"}
+{"key":"eval.15.ulong","value":"True 0"}
+{"key":"eval.16.expression","value":"[0.1+0.2]"}
+{"key":"eval.16.double","value":"True 0.3|3fd3333333333333"}
+{"key":"eval.16.float","value":"True 0.3|3e99999a"}
+{"key":"eval.16.int","value":"True 0"}
+{"key":"eval.16.long","value":"True 0"}
+{"key":"eval.16.ulong","value":"True 0"}
+{"key":"eval.17.expression","value":"[1/3]"}
+{"key":"eval.17.double","value":"True 0.333333333333333|3fd555555555554f"}
+{"key":"eval.17.float","value":"True 0.333333343|3eaaaaab"}
+{"key":"eval.17.int","value":"True 0"}
+{"key":"eval.17.long","value":"True 0"}
+{"key":"eval.17.ulong","value":"True 0"}
+{"key":"eval.18.expression","value":"[2/3]"}
+{"key":"eval.18.double","value":"True 0.666666666666667|3fe5555555555558"}
+{"key":"eval.18.float","value":"True 0.6666667|3f2aaaab"}
+{"key":"eval.18.int","value":"True 0"}
+{"key":"eval.18.long","value":"True 0"}
+{"key":"eval.18.ulong","value":"True 0"}
+{"key":"eval.19.expression","value":"[1e39]"}
+{"key":"eval.19.double","value":"True 1E+39|48078287f49c4a1d"}
+{"key":"eval.19.float","value":"True Infinity|7f800000"}
+{"key":"eval.19.int","value":"<unspecified>"}
+{"key":"eval.19.long","value":"<unspecified>"}
+{"key":"eval.19.ulong","value":"<unspecified>"}
+{"key":"eval.20.expression","value":"[-1e39]"}
+{"key":"eval.20.double","value":"True -1E+39|c8078287f49c4a1d"}
+{"key":"eval.20.float","value":"True -Infinity|ff800000"}
+{"key":"eval.20.int","value":"<unspecified>"}
+{"key":"eval.20.long","value":"<unspecified>"}
+{"key":"eval.20.ulong","value":"True 0"}
+{"key":"eval.21.expression","value":"[1e400]"}
+{"key":"eval.21.double","value":"False 0|0000000000000000"}
+{"key":"eval.21.float","value":"False 0|00000000"}
+{"key":"eval.21.int","value":"False 0"}
+{"key":"eval.21.long","value":"False 0"}
+{"key":"eval.21.ulong","value":"False 0"}
+{"key":"eval.22.expression","value":"[1e-50]"}
+{"key":"eval.22.double","value":"True 1E-50|358dee7a4ad4b81f"}
+{"key":"eval.22.float","value":"True 0|00000000"}
+{"key":"eval.22.int","value":"False 0"}
+{"key":"eval.22.long","value":"False 0"}
+{"key":"eval.22.ulong","value":"False 0"}
+{"key":"eval.23.expression","value":"[pi]"}
+{"key":"eval.23.double","value":"True 3.1415926535897931|400921fb54442d18"}
+{"key":"eval.23.float","value":"True 3.14159274|40490fdb"}
+{"key":"eval.23.int","value":"True 3"}
+{"key":"eval.23.long","value":"True 3"}
+{"key":"eval.23.ulong","value":"True 3"}
+{"key":"eval.24.expression","value":"[2*pi]"}
+{"key":"eval.24.double","value":"True 6.28318530717959|401921fb54442d1c"}
+{"key":"eval.24.float","value":"True 6.28318548|40c90fdb"}
+{"key":"eval.24.int","value":"True 6"}
+{"key":"eval.24.long","value":"True 6"}
+{"key":"eval.24.ulong","value":"True 6"}
+{"key":"eval.25.expression","value":"[1,5]"}
+{"key":"eval.25.double","value":"True 1.5|3ff8000000000000"}
+{"key":"eval.25.float","value":"True 1.5|3fc00000"}
+{"key":"eval.25.int","value":"False 0"}
+{"key":"eval.25.long","value":"False 0"}
+{"key":"eval.25.ulong","value":"False 0"}
+{"key":"eval.26.expression","value":"[1.5f]"}
+{"key":"eval.26.double","value":"True 1.5|3ff8000000000000"}
+{"key":"eval.26.float","value":"True 1.5|3fc00000"}
+{"key":"eval.26.int","value":"True 1"}
+{"key":"eval.26.long","value":"True 1"}
+{"key":"eval.26.ulong","value":"True 1"}
+{"key":"eval.27.expression","value":"[3l]"}
+{"key":"eval.27.double","value":"True 3|4008000000000000"}
+{"key":"eval.27.float","value":"True 3|40400000"}
+{"key":"eval.27.int","value":"True 3"}
+{"key":"eval.27.long","value":"True 3"}
+{"key":"eval.27.ulong","value":"True 3"}
+{"key":"eval.28.expression","value":"[2.5d]"}
+{"key":"eval.28.double","value":"True 2.5|4004000000000000"}
+{"key":"eval.28.float","value":"True 2.5|40200000"}
+{"key":"eval.28.int","value":"True 2"}
+{"key":"eval.28.long","value":"True 2"}
+{"key":"eval.28.ulong","value":"True 2"}
+{"key":"eval.29.expression","value":"[]"}
+{"key":"eval.29.double","value":"True 0|0000000000000000"}
+{"key":"eval.29.float","value":"True 0|00000000"}
+{"key":"eval.29.int","value":"True 0"}
+{"key":"eval.29.long","value":"True 0"}
+{"key":"eval.29.ulong","value":"True 0"}
+{"key":"eval.30.expression","value":"[ ]"}
+{"key":"eval.30.double","value":"False 0|0000000000000000"}
+{"key":"eval.30.float","value":"False 0|00000000"}
+{"key":"eval.30.int","value":"False 0"}
+{"key":"eval.30.long","value":"False 0"}
+{"key":"eval.30.ulong","value":"False 0"}
+{"key":"eval.31.expression","value":"[  7  ]"}
+{"key":"eval.31.double","value":"True 7|401c000000000000"}
+{"key":"eval.31.float","value":"True 7|40e00000"}
+{"key":"eval.31.int","value":"True 7"}
+{"key":"eval.31.long","value":"True 7"}
+{"key":"eval.31.ulong","value":"True 7"}
+{"key":"eval.32.expression","value":"[abc]"}
+{"key":"eval.32.double","value":"False 0|0000000000000000"}
+{"key":"eval.32.float","value":"False 0|00000000"}
+{"key":"eval.32.int","value":"False 0"}
+{"key":"eval.32.long","value":"False 0"}
+{"key":"eval.32.ulong","value":"False 0"}
+{"key":"eval.33.expression","value":"[2+]"}
+{"key":"eval.33.double","value":"True 2|4000000000000000"}
+{"key":"eval.33.float","value":"True 2|40000000"}
+{"key":"eval.33.int","value":"True 2"}
+{"key":"eval.33.long","value":"True 2"}
+{"key":"eval.33.ulong","value":"True 2"}
+{"key":"eval.34.expression","value":"[2*]"}
+{"key":"eval.34.double","value":"True 2|4000000000000000"}
+{"key":"eval.34.float","value":"True 2|40000000"}
+{"key":"eval.34.int","value":"True 2"}
+{"key":"eval.34.long","value":"True 2"}
+{"key":"eval.34.ulong","value":"True 2"}
+{"key":"eval.35.expression","value":"[(2+3]"}
+{"key":"eval.35.double","value":"False 0|0000000000000000"}
+{"key":"eval.35.float","value":"False 0|00000000"}
+{"key":"eval.35.int","value":"False 0"}
+{"key":"eval.35.long","value":"False 0"}
+{"key":"eval.35.ulong","value":"False 0"}
+{"key":"eval.36.expression","value":"[2+3)]"}
+{"key":"eval.36.double","value":"True 5|4014000000000000"}
+{"key":"eval.36.float","value":"True 5|40a00000"}
+{"key":"eval.36.int","value":"True 5"}
+{"key":"eval.36.long","value":"True 5"}
+{"key":"eval.36.ulong","value":"True 5"}
+{"key":"eval.37.expression","value":"[((2))]"}
+{"key":"eval.37.double","value":"True 2|4000000000000000"}
+{"key":"eval.37.float","value":"True 2|40000000"}
+{"key":"eval.37.int","value":"True 2"}
+{"key":"eval.37.long","value":"True 2"}
+{"key":"eval.37.ulong","value":"True 2"}
+{"key":"eval.38.expression","value":"[+=3]"}
+{"key":"eval.38.double","value":"False 0|0000000000000000"}
+{"key":"eval.38.float","value":"False 0|00000000"}
+{"key":"eval.38.int","value":"False 0"}
+{"key":"eval.38.long","value":"False 0"}
+{"key":"eval.38.ulong","value":"False 0"}
+{"key":"eval.39.expression","value":"[x*2]"}
+{"key":"eval.39.double","value":"False 0|0000000000000000"}
+{"key":"eval.39.float","value":"False 0|00000000"}
+{"key":"eval.39.int","value":"False 0"}
+{"key":"eval.39.long","value":"False 0"}
+{"key":"eval.39.ulong","value":"False 0"}
+{"key":"eval.40.expression","value":"[L(0,10)]"}
+{"key":"eval.40.double","value":"False 0|0000000000000000"}
+{"key":"eval.40.float","value":"False 0|00000000"}
+{"key":"eval.40.int","value":"False 0"}
+{"key":"eval.40.long","value":"False 0"}
+{"key":"eval.40.ulong","value":"False 0"}
+{"key":"eval.41.expression","value":"[R(0,1)]"}
+{"key":"eval.41.double","value":"False 0|0000000000000000"}
+{"key":"eval.41.float","value":"False 0|00000000"}
+{"key":"eval.41.int","value":"False 0"}
+{"key":"eval.41.long","value":"False 0"}
+{"key":"eval.41.ulong","value":"False 0"}
+{"key":"eval.42.expression","value":"[#]"}
+{"key":"eval.42.double","value":"False 0|0000000000000000"}
+{"key":"eval.42.float","value":"False 0|00000000"}
+{"key":"eval.42.int","value":"False 0"}
+{"key":"eval.42.long","value":"False 0"}
+{"key":"eval.42.ulong","value":"False 0"}
+{"key":"eval.43.expression","value":"[9999999999]"}
+{"key":"eval.43.double","value":"True 9999999999|4202a05f1ff80000"}
+{"key":"eval.43.float","value":"True 1E+10|501502f9"}
+{"key":"eval.43.int","value":"<unspecified>"}
+{"key":"eval.43.long","value":"True 9999999999"}
+{"key":"eval.43.ulong","value":"True 9999999999"}
+{"key":"eval.44.expression","value":"[-9999999999]"}
+{"key":"eval.44.double","value":"True -9999999999|c202a05f1ff80000"}
+{"key":"eval.44.float","value":"True -1E+10|d01502f9"}
+{"key":"eval.44.int","value":"<unspecified>"}
+{"key":"eval.44.long","value":"True -9999999999"}
+{"key":"eval.44.ulong","value":"True 0"}
+{"key":"eval.45.expression","value":"[-5]"}
+{"key":"eval.45.double","value":"True -5|c014000000000000"}
+{"key":"eval.45.float","value":"True -5|c0a00000"}
+{"key":"eval.45.int","value":"True -5"}
+{"key":"eval.45.long","value":"True -5"}
+{"key":"eval.45.ulong","value":"True 0"}
+{"key":"eval.46.expression","value":"[18446744073709551615]"}
+{"key":"eval.46.double","value":"True 1.8446744073709552E+19|43f0000000000000"}
+{"key":"eval.46.float","value":"True 1.84467441E+19|5f800000"}
+{"key":"eval.46.int","value":"<unspecified>"}
+{"key":"eval.46.long","value":"<unspecified>"}
+{"key":"eval.46.ulong","value":"<unspecified>"}
+{"key":"eval.47.expression","value":"[18446744073709551616]"}
+{"key":"eval.47.double","value":"True 1.8446744073709552E+19|43f0000000000000"}
+{"key":"eval.47.float","value":"True 1.84467441E+19|5f800000"}
+{"key":"eval.47.int","value":"<unspecified>"}
+{"key":"eval.47.long","value":"<unspecified>"}
+{"key":"eval.47.ulong","value":"<unspecified>"}
+{"key":"eval.48.expression","value":"[1.23456789012345678]"}
+{"key":"eval.48.double","value":"True 1.2345678901234567|3ff3c0ca428c59fb"}
+{"key":"eval.48.float","value":"True 1.23456788|3f9e0652"}
+{"key":"eval.48.int","value":"True 1"}
+{"key":"eval.48.long","value":"True 1"}
+{"key":"eval.48.ulong","value":"True 1"}
+{"key":"eval.49.expression","value":"[123456789.123]"}
+{"key":"eval.49.double","value":"True 123456789.123|419d6f34547df3b6"}
+{"key":"eval.49.float","value":"True 123456792|4ceb79a3"}
+{"key":"eval.49.int","value":"True 123456789"}
+{"key":"eval.49.long","value":"True 123456789"}
+{"key":"eval.49.ulong","value":"True 123456789"}
+{"key":"eval.50.expression","value":"[0x10]"}
+{"key":"eval.50.double","value":"False 0|0000000000000000"}
+{"key":"eval.50.float","value":"False 0|00000000"}
+{"key":"eval.50.int","value":"False 0"}
+{"key":"eval.50.long","value":"False 0"}
+{"key":"eval.50.ulong","value":"False 0"}
+{"key":"eval.51.expression","value":"[1 000]"}
+{"key":"eval.51.double","value":"False 0|0000000000000000"}
+{"key":"eval.51.float","value":"False 0|00000000"}
+{"key":"eval.51.int","value":"False 0"}
+{"key":"eval.51.long","value":"False 0"}
+{"key":"eval.51.ulong","value":"False 0"}
+{"key":"eval.52.expression","value":"[--2]"}
+{"key":"eval.52.double","value":"False 0|0000000000000000"}
+{"key":"eval.52.float","value":"False 0|00000000"}
+{"key":"eval.52.int","value":"False 0"}
+{"key":"eval.52.long","value":"False 0"}
+{"key":"eval.52.ulong","value":"False 0"}
+{"key":"eval.53.expression","value":"[3-]"}
+{"key":"eval.53.double","value":"True 3|4008000000000000"}
+{"key":"eval.53.float","value":"True 3|40400000"}
+{"key":"eval.53.int","value":"True 3"}
+{"key":"eval.53.long","value":"True 3"}
+{"key":"eval.53.ulong","value":"True 3"}
+{"key":"eval.54.expression","value":"[1e5]"}
+{"key":"eval.54.double","value":"True 100000|40f86a0000000000"}
+{"key":"eval.54.float","value":"True 100000|47c35000"}
+{"key":"eval.54.int","value":"True 100000"}
+{"key":"eval.54.long","value":"True 100000"}
+{"key":"eval.54.ulong","value":"True 100000"}
+{"key":"eval.55.expression","value":"[1E5]"}
+{"key":"eval.55.double","value":"True 100000|40f86a0000000000"}
+{"key":"eval.55.float","value":"True 100000|47c35000"}
+{"key":"eval.55.int","value":"True 100000"}
+{"key":"eval.55.long","value":"True 100000"}
+{"key":"eval.55.ulong","value":"True 100000"}
+{"key":"eval.56.expression","value":"[+5]"}
+{"key":"eval.56.double","value":"True 5|4014000000000000"}
+{"key":"eval.56.float","value":"True 5|40a00000"}
+{"key":"eval.56.int","value":"True 5"}
+{"key":"eval.56.long","value":"True 5"}
+{"key":"eval.56.ulong","value":"True 5"}
+{"key":"eval.57.expression","value":"[.5]"}
+{"key":"eval.57.double","value":"True 0.5|3fe0000000000000"}
+{"key":"eval.57.float","value":"True 0.5|3f000000"}
+{"key":"eval.57.int","value":"True 0"}
+{"key":"eval.57.long","value":"True 0"}
+{"key":"eval.57.ulong","value":"True 0"}
+{"key":"eval.58.expression","value":"[5.]"}
+{"key":"eval.58.double","value":"True 5|4014000000000000"}
+{"key":"eval.58.float","value":"True 5|40a00000"}
+{"key":"eval.58.int","value":"True 5"}
+{"key":"eval.58.long","value":"True 5"}
+{"key":"eval.58.ulong","value":"True 5"}
+{"key":"eval.59.expression","value":"[1/0]"}
+{"key":"eval.59.double","value":"False 0|0000000000000000"}
+{"key":"eval.59.float","value":"False 0|00000000"}
+{"key":"eval.59.int","value":"False 0"}
+{"key":"eval.59.long","value":"False 0"}
+{"key":"eval.59.ulong","value":"False 0"}
+{"key":"eval.60.expression","value":"[-1/0]"}
+{"key":"eval.60.double","value":"False 0|0000000000000000"}
+{"key":"eval.60.float","value":"False 0|00000000"}
+{"key":"eval.60.int","value":"False 0"}
+{"key":"eval.60.long","value":"False 0"}
+{"key":"eval.60.ulong","value":"False 0"}
+{"key":"eval.61.expression","value":"[0/0]"}
+{"key":"eval.61.double","value":"False 0|0000000000000000"}
+{"key":"eval.61.float","value":"False 0|00000000"}
+{"key":"eval.61.int","value":"False 0"}
+{"key":"eval.61.long","value":"False 0"}
+{"key":"eval.61.ulong","value":"False 0"}
+{"key":"eval.62.expression","value":"[2^64]"}
+{"key":"eval.62.double","value":"True 1.84467440737096E+19|43f000000000000c"}
+{"key":"eval.62.float","value":"True 1.84467441E+19|5f800000"}
+{"key":"eval.62.int","value":"<unspecified>"}
+{"key":"eval.62.long","value":"<unspecified>"}
+{"key":"eval.62.ulong","value":"<unspecified>"}
+{"key":"eval.63.expression","value":"[2^63]"}
+{"key":"eval.63.double","value":"True 9.22337203685478E+18|43e0000000000002"}
+{"key":"eval.63.float","value":"True 9.223372E+18|5f000000"}
+{"key":"eval.63.int","value":"<unspecified>"}
+{"key":"eval.63.long","value":"<unspecified>"}
+{"key":"eval.63.ulong","value":"True 9223372036854779904"}
+{"key":"eval.64.expression","value":"[inf]"}
+{"key":"eval.64.double","value":"False 0|0000000000000000"}
+{"key":"eval.64.float","value":"False 0|00000000"}
+{"key":"eval.64.int","value":"False 0"}
+{"key":"eval.64.long","value":"False 0"}
+{"key":"eval.64.ulong","value":"False 0"}
+{"key":"eval.65.expression","value":"[nan]"}
+{"key":"eval.65.double","value":"False 0|0000000000000000"}
+{"key":"eval.65.float","value":"False 0|00000000"}
+{"key":"eval.65.int","value":"False 0"}
+{"key":"eval.65.long","value":"False 0"}
+{"key":"eval.65.ulong","value":"False 0"}
+{"key":"int.default","value":"value 0 text 0 format #######0 delayed False maxLength 1000 readOnly False"}
+{"key":"int.classes","value":"unity-base-field unity-base-text-field unity-integer-field | label unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-integer-field__label unity-label unity-text-element | input unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input"}
+{"key":"int.set","value":"value 7 text 7 changes 1 0>7"}
+{"key":"int.setSame","value":"value 7 text 7 changes 0 "}
+{"key":"int.withoutNotify","value":"value -3 text -3 changes 0 "}
+{"key":"int.format","value":"value -3 text -003 changes 0 "}
+{"key":"int.formatNull","value":"value -3 text -3 changes 0 "}
+{"key":"int.type0.typed","value":"value 14 text 2+3*4 changes 3 5>14"}
+{"key":"int.type0.committed","value":"value 14 text 14 changes 0 "}
+{"key":"int.type1.typed","value":"value 12 text 12ac changes 2 1>12"}
+{"key":"int.type1.committed","value":"value 12 text 12 changes 0 "}
+{"key":"int.type2.typed","value":"value 2 text 10/4 changes 3 10>2"}
+{"key":"int.type2.committed","value":"value 2 text 2 changes 0 "}
+{"key":"int.type3.typed","value":"value 7 text - changes 0 "}
+{"key":"int.type3.committed","value":"value 7 text 7 changes 0 "}
+{"key":"int.type4.typed","value":"value 2147483647 text 3000000000 changes 10 300000000>2147483647"}
+{"key":"int.type4.committed","value":"value 2147483647 text 2147483647 changes 0 "}
+{"key":"int.type5.typed","value":"value -2147483648 text -3000000000 changes 10 -300000000>-2147483648"}
+{"key":"int.type5.committed","value":"value -2147483648 text -2147483648 changes 0 "}
+{"key":"int.type6.typed","value":"value 7 text x changes 0 "}
+{"key":"int.type6.committed","value":"value 7 text 7 changes 0 "}
+{"key":"int.type7.typed","value":"value 5 text L(0,10) changes 1 7>5"}
+{"key":"int.type7.committed","value":"value 5 text 5 changes 0 "}
+{"key":"int.type8.typed","value":"value 1 text 1,5 changes 1 7>1"}
+{"key":"int.type8.committed","value":"value 1 text 1 changes 0 "}
+{"key":"int.type9.typed","value":"value 7 text ac changes 0 "}
+{"key":"int.type9.committed","value":"value 7 text 7 changes 0 "}
+{"key":"int.plusEquals.typed","value":"value 10 text +=3 changes 1 7>10"}
+{"key":"int.plusEquals.committed","value":"value 10 text 10 changes 0 "}
+{"key":"int.timesEquals.typed","value":"value 20 text *=2 changes 1 10>20"}
+{"key":"int.timesEquals.committed","value":"value 20 text 20 changes 0 "}
+{"key":"int.delayed.typed","value":"value 7 text 2*4 changes 0 "}
+{"key":"int.delayed.committed","value":"value 8 text 8 changes 1 7>8"}
+{"key":"int.delta.normal","value":"value 17 text 17 changes 1 7>17"}
+{"key":"int.delta.fast","value":"value 5 text 5 changes 1 17>5"}
+{"key":"int.delta.slow","value":"value 3 text 3 changes 1 5>3"}
+{"key":"int.labelDrag","value":"value 11 text 11 changes 2 19>11"}
+{"key":"int.readOnly.label","value":"unity-base-field__label unity-base-text-field__label unity-integer-field__label unity-label unity-text-element"}
+{"key":"int.readOnly.typed","value":"value 11 text 11 changes 0 "}
+{"key":"int.readOnly.off","value":"unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-integer-field__label unity-label unity-text-element"}
+{"key":"int.mixed","value":"value 7 text — changes 0  classes unity-base-field unity-base-field__label--mixed-value unity-base-text-field unity-integer-field"}
+{"key":"int.mixed.focused","value":"value 7 text  changes 0 "}
+{"key":"int.mixed.blurred","value":"value 7 text — changes 0  mixed True"}
+{"key":"int.mixed.off","value":"value 7 text 7 changes 0 "}
+{"key":"int.clear","value":"value 0 text  changes 1 7>0"}
+{"key":"long.default","value":"value 0 text 0 format #######0 delayed False maxLength 1000 readOnly False"}
+{"key":"long.classes","value":"unity-base-field unity-base-text-field unity-long-field | label unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-label unity-long-field__label unity-text-element | input unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-long-field__input"}
+{"key":"long.set","value":"value 9000000000 text 9000000000 changes 1 0>9000000000"}
+{"key":"long.setSame","value":"value 9000000000 text 9000000000 changes 0 "}
+{"key":"long.withoutNotify","value":"value -1 text -1 changes 0 "}
+{"key":"long.format","value":"value -1 text -1 changes 0 "}
+{"key":"long.formatNull","value":"value -1 text -1 changes 0 "}
+{"key":"long.type0.typed","value":"value 9223372036854775807 text 9223372036854775807 changes 19 922337203685477580>9223372036854775807"}
+{"key":"long.type0.committed","value":"value 9223372036854775807 text 9223372036854775807 changes 0 "}
+{"key":"long.type1.typed","value":"value 4611686018427389952 text 2^62 changes 3 64>4611686018427389952"}
+{"key":"long.type1.committed","value":"value 4611686018427389952 text 4611686018427389952 changes 0 "}
+{"key":"long.type2.typed","value":"value -5 text -5 changes 1 9000000000>-5"}
+{"key":"long.type2.committed","value":"value -5 text -5 changes 0 "}
+{"key":"long.type3.typed","value":"value 3 text 7/2 changes 2 7>3"}
+{"key":"long.type3.committed","value":"value 3 text 3 changes 0 "}
+{"key":"long.type4.typed","value":"value -9223372036854775808 text -9223372036854775808 changes 19 -922337203685477580>-9223372036854775808"}
+{"key":"long.type4.committed","value":"value -9223372036854775808 text -9223372036854775808 changes 0 "}
+{"key":"long.plusEquals.typed","value":"value 9000000003 text +=3 changes 1 9000000000>9000000003"}
+{"key":"long.plusEquals.committed","value":"value 9000000003 text 9000000003 changes 0 "}
+{"key":"long.timesEquals.typed","value":"value 18000000006 text *=2 changes 1 9000000003>18000000006"}
+{"key":"long.timesEquals.committed","value":"value 18000000006 text 18000000006 changes 0 "}
+{"key":"long.delayed.typed","value":"value 9000000000 text 2*4 changes 0 "}
+{"key":"long.delayed.committed","value":"value 8 text 8 changes 1 9000000000>8"}
+{"key":"long.delta.normal","value":"value 9000028460 text 9000028460 changes 1 9000000000>9000028460"}
+{"key":"long.delta.fast","value":"value 8999994308 text 8999994308 changes 1 9000028460>8999994308"}
+{"key":"long.delta.slow","value":"value 8999989328 text 8999989328 changes 1 8999994308>8999989328"}
+{"key":"long.labelDrag","value":"value 9000011384 text 9000011384 changes 2 9000034152>9000011384"}
+{"key":"long.readOnly.label","value":"unity-base-field__label unity-base-text-field__label unity-label unity-long-field__label unity-text-element"}
+{"key":"long.readOnly.typed","value":"value 9000011384 text 9000011384 changes 0 "}
+{"key":"long.readOnly.off","value":"unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-label unity-long-field__label unity-text-element"}
+{"key":"long.mixed","value":"value 9000000000 text — changes 0  classes unity-base-field unity-base-field__label--mixed-value unity-base-text-field unity-long-field"}
+{"key":"long.mixed.focused","value":"value 9000000000 text  changes 0 "}
+{"key":"long.mixed.blurred","value":"value 9000000000 text — changes 0  mixed True"}
+{"key":"long.mixed.off","value":"value 9000000000 text 9000000000 changes 0 "}
+{"key":"long.clear","value":"value 0 text  changes 1 9000000000>0"}
+{"key":"float.default","value":"value 0|00000000 text 0 format g7 delayed False maxLength 1000 readOnly False"}
+{"key":"float.classes","value":"unity-base-field unity-base-text-field unity-float-field | label unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-float-field__label unity-label unity-text-element | input unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input"}
+{"key":"float.set","value":"value 1.5|3fc00000 text 1.5 changes 1 0|00000000>1.5|3fc00000"}
+{"key":"float.setSame","value":"value 1.5|3fc00000 text 1.5 changes 0 "}
+{"key":"float.withoutNotify","value":"value -0.1|bdcccccd text -0.1 changes 0 "}
+{"key":"float.format","value":"value -0.1|bdcccccd text -0.10 changes 0 "}
+{"key":"float.formatNull","value":"value -0.1|bdcccccd text -0.1 changes 0 "}
+{"key":"float.type0.typed","value":"value 0.333333343|3eaaaaab text 1/3 changes 2 1|3f800000>0.333333343|3eaaaaab"}
+{"key":"float.type0.committed","value":"value 0.333333343|3eaaaaab text 0.3333333 changes 0 "}
+{"key":"float.type1.typed","value":"value 1.41421354|3fb504f3 text 2^0.5 changes 3 1|3f800000>1.41421354|3fb504f3"}
+{"key":"float.type1.committed","value":"value 1.41421354|3fb504f3 text 1.414214 changes 0 "}
+{"key":"float.type2.typed","value":"value 3.40282347E+38|7f7fffff text 1e39 changes 3 1000|447a0000>3.40282347E+38|7f7fffff"}
+{"key":"float.type2.committed","value":"value 3.40282347E+38|7f7fffff text 3.402823E+38 changes 0 "}
+{"key":"float.type3.typed","value":"value -3.40282347E+38|ff7fffff text -1e39 changes 3 -1000|c47a0000>-3.40282347E+38|ff7fffff"}
+{"key":"float.type3.committed","value":"value -3.40282347E+38|ff7fffff text -3.402823E+38 changes 0 "}
+{"key":"float.type4.typed","value":"value 1.5|3fc00000 text 1,5 changes 2 1|3f800000>1.5|3fc00000"}
+{"key":"float.type4.committed","value":"value 1.5|3fc00000 text 1.5 changes 0 "}
+{"key":"float.type5.typed","value":"value 3.14159274|40490fdb text pi changes 1 1.5|3fc00000>3.14159274|40490fdb"}
+{"key":"float.type5.committed","value":"value 3.14159274|40490fdb text 3.141593 changes 0 "}
+{"key":"float.type6.typed","value":"value Infinity|7f800000 text inf changes 1 1.5|3fc00000>Infinity|7f800000"}
+{"key":"float.type6.committed","value":"value Infinity|7f800000 text Infinity changes 0 "}
+{"key":"float.type7.typed","value":"value -Infinity|ff800000 text -infinity changes 1 1.5|3fc00000>-Infinity|ff800000"}
+{"key":"float.type7.committed","value":"value -Infinity|ff800000 text -Infinity changes 0 "}
+{"key":"float.type8.typed","value":"value NaN|ffc00000 text nan changes 1 1.5|3fc00000>NaN|ffc00000"}
+{"key":"float.type8.committed","value":"value NaN|ffc00000 text NaN changes 0 "}
+{"key":"float.type9.typed","value":"value 1.5|3fc00000 text ac changes 0 "}
+{"key":"float.type9.committed","value":"value 1.5|3fc00000 text 1.5 changes 0 "}
+{"key":"float.type10.typed","value":"value 0.3|3e99999a text 0.1+0.2 changes 3 0.1|3dcccccd>0.3|3e99999a"}
+{"key":"float.type10.committed","value":"value 0.3|3e99999a text 0.3 changes 0 "}
+{"key":"float.type11.typed","value":"value 123456792|4ceb79a3 text 123456789 changes 9 12345678|4b3c614e>123456792|4ceb79a3"}
+{"key":"float.type11.committed","value":"value 123456792|4ceb79a3 text 1.234568E+08 changes 0 "}
+{"key":"float.plusEquals.typed","value":"value 4.5|40900000 text +=3 changes 1 1.5|3fc00000>4.5|40900000"}
+{"key":"float.plusEquals.committed","value":"value 4.5|40900000 text 4.5 changes 0 "}
+{"key":"float.timesEquals.typed","value":"value 9|41100000 text *=2 changes 1 4.5|40900000>9|41100000"}
+{"key":"float.timesEquals.committed","value":"value 9|41100000 text 9 changes 0 "}
+{"key":"float.delayed.typed","value":"value 1.5|3fc00000 text 2*4 changes 0 "}
+{"key":"float.delayed.committed","value":"value 8|41000000 text 8 changes 1 1.5|3fc00000>8|41000000"}
+{"key":"float.delta.normal","value":"value 1.87|3fef5c29 text 1.87 changes 1 1.5|3fc00000>1.87|3fef5c29"}
+{"key":"float.delta.fast","value":"value 1.38|3fb0a3d7 text 1.38 changes 1 1.87|3fef5c29>1.38|3fb0a3d7"}
+{"key":"float.delta.slow","value":"value 1.32|3fa8f5c3 text 1.32 changes 1 1.38|3fb0a3d7>1.32|3fa8f5c3"}
+{"key":"float.labelDrag","value":"value 1.65|3fd33333 text 1.65 changes 2 1.94|3ff851ec>1.65|3fd33333"}
+{"key":"float.readOnly.label","value":"unity-base-field__label unity-base-text-field__label unity-float-field__label unity-label unity-text-element"}
+{"key":"float.readOnly.typed","value":"value 1.65|3fd33333 text 1.65 changes 0 "}
+{"key":"float.readOnly.off","value":"unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-float-field__label unity-label unity-text-element"}
+{"key":"float.mixed","value":"value 1.5|3fc00000 text — changes 0  classes unity-base-field unity-base-field__label--mixed-value unity-base-text-field unity-float-field"}
+{"key":"float.mixed.focused","value":"value 1.5|3fc00000 text  changes 0 "}
+{"key":"float.mixed.blurred","value":"value 1.5|3fc00000 text — changes 0  mixed True"}
+{"key":"float.mixed.off","value":"value 1.5|3fc00000 text 1.5 changes 0 "}
+{"key":"float.clear","value":"value 0|00000000 text  changes 1 1.5|3fc00000>0|00000000"}
+{"key":"double.default","value":"value 0|0000000000000000 text 0 format R delayed False maxLength 1000 readOnly False"}
+{"key":"double.classes","value":"unity-base-field unity-base-text-field unity-double-field | label unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-double-field__label unity-label unity-text-element | input unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-double-field__input"}
+{"key":"double.set","value":"value 0.1|3fb999999999999a text 0.1 changes 1 0|0000000000000000>0.1|3fb999999999999a"}
+{"key":"double.setSame","value":"value 0.1|3fb999999999999a text 0.1 changes 0 "}
+{"key":"double.withoutNotify","value":"value 1E-07|3e7ad7f29abcaf48 text 1E-07 changes 0 "}
+{"key":"double.format","value":"value 1E-07|3e7ad7f29abcaf48 text 0.000 changes 0 "}
+{"key":"double.formatNull","value":"value 1E-07|3e7ad7f29abcaf48 text 1E-07 changes 0 "}
+{"key":"double.type0.typed","value":"value 0.333333333333333|3fd555555555554f text 1/3 changes 2 1|3ff0000000000000>0.333333333333333|3fd555555555554f"}
+{"key":"double.type0.committed","value":"value 0.333333333333333|3fd555555555554f text 0.333333333333333 changes 0 "}
+{"key":"double.type1.typed","value":"value 1E+40|483d6329f1c35ca5 text 1e400 changes 3 10000|40c3880000000000>1E+40|483d6329f1c35ca5"}
+{"key":"double.type1.committed","value":"value 1E+40|483d6329f1c35ca5 text 1E+40 changes 0 "}
+{"key":"double.type2.typed","value":"value 0.3|3fd3333333333333 text 0.1+0.2 changes 3 0.1|3fb999999999999a>0.3|3fd3333333333333"}
+{"key":"double.type2.committed","value":"value 0.3|3fd3333333333333 text 0.3 changes 0 "}
+{"key":"double.type3.typed","value":"value Infinity|7ff0000000000000 text inf changes 1 0.1|3fb999999999999a>Infinity|7ff0000000000000"}
+{"key":"double.type3.committed","value":"value Infinity|7ff0000000000000 text Infinity changes 0 "}
+{"key":"double.type4.typed","value":"value 0.666666666666667|3fe5555555555558 text 2/3 changes 2 2|4000000000000000>0.666666666666667|3fe5555555555558"}
+{"key":"double.type4.committed","value":"value 0.666666666666667|3fe5555555555558 text 0.666666666666667 changes 0 "}
+{"key":"double.type5.typed","value":"value 9.99988867182683E-321|00000000000007e8 text 1e-320 changes 4 1E-32|3949f623d5a8a733>9.99988867182683E-321|00000000000007e8"}
+{"key":"double.type5.committed","value":"value 9.99988867182683E-321|00000000000007e8 text 9.99988867182683E-321 changes 0 "}
+{"key":"double.plusEquals.typed","value":"value 3.1|4008cccccccccccd text +=3 changes 1 0.1|3fb999999999999a>3.1|4008cccccccccccd"}
+{"key":"double.plusEquals.committed","value":"value 3.1|4008cccccccccccd text 3.1 changes 0 "}
+{"key":"double.timesEquals.typed","value":"value 6.2|4018cccccccccccd text *=2 changes 1 3.1|4008cccccccccccd>6.2|4018cccccccccccd"}
+{"key":"double.timesEquals.committed","value":"value 6.2|4018cccccccccccd text 6.2 changes 0 "}
+{"key":"double.delayed.typed","value":"value 0.1|3fb999999999999a text 2*4 changes 0 "}
+{"key":"double.delayed.committed","value":"value 8|4020000000000000 text 8 changes 1 0.1|3fb999999999999a>8|4020000000000000"}
+{"key":"double.delta.normal","value":"value 0.4|3fd999999999999a text 0.4 changes 1 0.1|3fb999999999999a>0.4|3fd999999999999a"}
+{"key":"double.delta.fast","value":"value 0.04|3fa47ae147ae147b text 0.04 changes 1 0.4|3fd999999999999a>0.04|3fa47ae147ae147b"}
+{"key":"double.delta.slow","value":"value -0.01|bf847ae147ae147b text -0.01 changes 1 0.04|3fa47ae147ae147b>-0.01|bf847ae147ae147b"}
+{"key":"double.labelDrag","value":"value 0.22|3fcc28f5c28f5c29 text 0.22 changes 2 0.46|3fdd70a3d70a3d71>0.22|3fcc28f5c28f5c29"}
+{"key":"double.readOnly.label","value":"unity-base-field__label unity-base-text-field__label unity-double-field__label unity-label unity-text-element"}
+{"key":"double.readOnly.typed","value":"value 0.22|3fcc28f5c28f5c29 text 0.22 changes 0 "}
+{"key":"double.readOnly.off","value":"unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-double-field__label unity-label unity-text-element"}
+{"key":"double.mixed","value":"value 0.1|3fb999999999999a text — changes 0  classes unity-base-field unity-base-field__label--mixed-value unity-base-text-field unity-double-field"}
+{"key":"double.mixed.focused","value":"value 0.1|3fb999999999999a text  changes 0 "}
+{"key":"double.mixed.blurred","value":"value 0.1|3fb999999999999a text — changes 0  mixed True"}
+{"key":"double.mixed.off","value":"value 0.1|3fb999999999999a text 0.1 changes 0 "}
+{"key":"double.clear","value":"value 0|0000000000000000 text  changes 1 0.1|3fb999999999999a>0|0000000000000000"}
+{"key":"uint.default","value":"value 0 text 0 format #######0 delayed False maxLength 1000 readOnly False"}
+{"key":"uint.classes","value":"unity-base-field unity-base-text-field unity-unsigned-integer-field | label unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-label unity-text-element unity-unsigned-integer-field__label | input unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-unsigned-integer-field__input"}
+{"key":"uint.set","value":"value 4000000000 text 4000000000 changes 1 0>4000000000"}
+{"key":"uint.setSame","value":"value 4000000000 text 4000000000 changes 0 "}
+{"key":"uint.withoutNotify","value":"value 0 text 0 changes 0 "}
+{"key":"uint.format","value":"value 0 text 0 changes 0 "}
+{"key":"uint.formatNull","value":"value 0 text 0 changes 0 "}
+{"key":"uint.type0.typed","value":"value 0 text -5 changes 0 "}
+{"key":"uint.type0.committed","value":"value 0 text 0 changes 0 "}
+{"key":"uint.type1.typed","value":"value 4294967295 text 4294967296 changes 10 429496729>4294967295"}
+{"key":"uint.type1.committed","value":"value 4294967295 text 4294967295 changes 0 "}
+{"key":"uint.type2.typed","value":"value 6 text 2*3 changes 2 2>6"}
+{"key":"uint.type2.committed","value":"value 6 text 6 changes 0 "}
+{"key":"uint.type3.typed","value":"value 4294967295 text 4294967295 changes 10 429496729>4294967295"}
+{"key":"uint.type3.committed","value":"value 4294967295 text 4294967295 changes 0 "}
+{"key":"uint.plusEquals.typed","value":"value 4000000003 text +=3 changes 1 4000000000>4000000003"}
+{"key":"uint.plusEquals.committed","value":"value 4000000003 text 4000000003 changes 0 "}
+{"key":"uint.timesEquals.typed","value":"value 4294967295 text *=2 changes 1 4000000003>4294967295"}
+{"key":"uint.timesEquals.committed","value":"value 4294967295 text 4294967295 changes 0 "}
+{"key":"uint.delayed.typed","value":"value 4000000000 text 2*4 changes 0 "}
+{"key":"uint.delayed.committed","value":"value 8 text 8 changes 1 4000000000>8"}
+{"key":"uint.delta.normal","value":"value 4000018970 text 4000018970 changes 1 4000000000>4000018970"}
+{"key":"uint.delta.fast","value":"value 3999996206 text 3999996206 changes 1 4000018970>3999996206"}
+{"key":"uint.delta.slow","value":"value 3999992886 text 3999992886 changes 1 3999996206>3999992886"}
+{"key":"uint.labelDrag","value":"value 4000007588 text 4000007588 changes 2 4000022764>4000007588"}
+{"key":"uint.readOnly.label","value":"unity-base-field__label unity-base-text-field__label unity-label unity-text-element unity-unsigned-integer-field__label"}
+{"key":"uint.readOnly.typed","value":"value 4000007588 text 4000007588 changes 0 "}
+{"key":"uint.readOnly.off","value":"unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-label unity-text-element unity-unsigned-integer-field__label"}
+{"key":"uint.mixed","value":"value 4000000000 text — changes 0  classes unity-base-field unity-base-field__label--mixed-value unity-base-text-field unity-unsigned-integer-field"}
+{"key":"uint.mixed.focused","value":"value 4000000000 text  changes 0 "}
+{"key":"uint.mixed.blurred","value":"value 4000000000 text — changes 0  mixed True"}
+{"key":"uint.mixed.off","value":"value 4000000000 text 4000000000 changes 0 "}
+{"key":"uint.clear","value":"value 0 text  changes 1 4000000000>0"}
+{"key":"ulong.default","value":"value 0 text 0 format #######0 delayed False maxLength 1000 readOnly False"}
+{"key":"ulong.classes","value":"unity-base-field unity-base-text-field unity-unsigned-long-field | label unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-label unity-text-element unity-unsigned-long-field__label | input unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-unsigned-long-field__input"}
+{"key":"ulong.set","value":"value 18446744073709551615 text 18446744073709551615 changes 1 0>18446744073709551615"}
+{"key":"ulong.setSame","value":"value 18446744073709551615 text 18446744073709551615 changes 0 "}
+{"key":"ulong.withoutNotify","value":"value 1 text 1 changes 0 "}
+{"key":"ulong.format","value":"value 1 text 1 changes 0 "}
+{"key":"ulong.formatNull","value":"value 1 text 1 changes 0 "}
+{"key":"ulong.type0.typed","value":"value 0 text -5 changes 1 1>0"}
+{"key":"ulong.type0.committed","value":"value 0 text 0 changes 0 "}
+{"key":"ulong.type1.typed","value":"value 10000000000000000000 text 1e19 changes 3 10>10000000000000000000"}
+{"key":"ulong.type1.committed","value":"value 10000000000000000000 text 10000000000000000000 changes 0 "}
+{"key":"ulong.type2.typed","value":"value 12345678901234567890 text 12345678901234567890 changes 20 1234567890123456789>12345678901234567890"}
+{"key":"ulong.type2.committed","value":"value 12345678901234567890 text 12345678901234567890 changes 0 "}
+{"key":"ulong.type3.typed","value":"value 18446744073709551615 text 18446744073709551615 changes 20 1844674407370955161>18446744073709551615"}
+{"key":"ulong.type3.committed","value":"value 18446744073709551615 text 18446744073709551615 changes 0 "}
+{"key":"ulong.type4.typed","value":"value 1152921504606850048 text 2^60 changes 3 64>1152921504606850048"}
+{"key":"ulong.type4.committed","value":"value 1152921504606850048 text 1152921504606850048 changes 0 "}
+{"key":"ulong.plusEquals.typed","value":"value 18446744073709551615 text +=3 changes 0 "}
+{"key":"ulong.plusEquals.committed","value":"value 18446744073709551615 text 18446744073709551615 changes 0 "}
+{"key":"ulong.timesEquals.typed","value":"value 18446744073709551615 text *=2 changes 0 "}
+{"key":"ulong.timesEquals.committed","value":"value 18446744073709551615 text 18446744073709551615 changes 0 "}
+{"key":"ulong.delayed.typed","value":"value 18446744073709551615 text 2*4 changes 0 "}
+{"key":"ulong.delayed.committed","value":"value 8 text 8 changes 1 18446744073709551615>8"}
+{"key":"ulong.delta.normal","value":"value 18446744073709551615 text 18446744073709551615 changes 0 "}
+{"key":"ulong.delta.fast","value":"value 18446744072163363423 text 18446744072163363423 changes 1 18446744073709551615>18446744072163363423"}
+{"key":"ulong.delta.slow","value":"value 18446744071937877647 text 18446744071937877647 changes 1 18446744072163363423>18446744071937877647"}
+{"key":"ulong.labelDrag","value":"value 18446744072678759487 text 18446744072678759487 changes 1 18446744073709551615>18446744072678759487"}
+{"key":"ulong.readOnly.label","value":"unity-base-field__label unity-base-text-field__label unity-label unity-text-element unity-unsigned-long-field__label"}
+{"key":"ulong.readOnly.typed","value":"value 18446744072678759487 text 18446744072678759487 changes 0 "}
+{"key":"ulong.readOnly.off","value":"unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-label unity-text-element unity-unsigned-long-field__label"}
+{"key":"ulong.mixed","value":"value 18446744073709551615 text — changes 0  classes unity-base-field unity-base-field__label--mixed-value unity-base-text-field unity-unsigned-long-field"}
+{"key":"ulong.mixed.focused","value":"value 18446744073709551615 text  changes 0 "}
+{"key":"ulong.mixed.blurred","value":"value 18446744073709551615 text — changes 0  mixed True"}
+{"key":"ulong.mixed.off","value":"value 18446744073709551615 text 18446744073709551615 changes 0 "}
+{"key":"ulong.clear","value":"value 0 text  changes 1 18446744073709551615>0"}
+{"key":"plain","value":"unity-base-field unity-base-field--no-label unity-base-text-field unity-integer-field | label unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-integer-field__label unity-label unity-text-element | text 0 label []"}
+{"key":"short.typed","value":"value 123|42f60000 text 123 changes 0 "}
+{"key":"short.committed","value":"value 123|42f60000 text 123 changes 0 "}
+{"key":"uxml.int","value":"IntegerField 42 42 [Count] delayed True readOnly False format #######0 max 1000"}
+{"key":"uxml.long","value":"LongField -9000000000 -9000000000 [Big] delayed False readOnly True format #######0 max 1000"}
+{"key":"uxml.float","value":"FloatField 1.25|3fa00000 1.25 [Ratio] delayed False readOnly False format g7 max 1000"}
+{"key":"uxml.double","value":"DoubleField 0.1|3fb999999999999a 0.1 [] delayed False readOnly False format R max 1000"}
+{"key":"uxml.uint","value":"UnsignedIntegerField 4000000000 40000 [Mask] delayed False readOnly False format #######0 max 5"}
+{"key":"uxml.ulong","value":"UnsignedLongField 18446744073709551615 18446744073709551615 [] delayed False readOnly False format #######0 max 1000"}
+{"key":"uxml.aliases","value":"readOnly False password True mask 35 text 12"}
+{"key":"uxml.propertyNames","value":"readOnly False password False mask 0 text 12"}
+{"key":"uxml.text","value":"readOnly True password True mask 36 text abc"}
+{"key":"binding.initial","value":"value 5 text 5 changes 1 0>5 source 5"}
+{"key":"binding.fromSource","value":"value 9 text 9 changes 1 5>9 source 9"}
+{"key":"binding.toSource","value":"value 11 text 11 changes 1 9>11 source 11"}
+{"key":"complete","value":"1"}

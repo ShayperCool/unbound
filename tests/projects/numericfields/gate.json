@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/numericfields/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Controls/NumericFields.cs",
+    "managed/UnityEngine/UIElements/Controls/TextField.cs",
+    "managed/UnityEngine/Core/ExpressionEvaluator.cs",
+    "managed/UnityEngine/Core/UINumericFieldsUtils.cs",
+    "managed/UnityEngine/Math/Mathf.NumericFields.cs",
+    "managed/UnityEngine/Runtime/MonoNumberFormat.cs",
+    "managed/UnityEngine/Runtime/NumericFieldDraggerUtility.cs",
+    "managed/UnityEngine/UIElements/Uxml/VisualTreeAsset.cs"
+  ]
+}
