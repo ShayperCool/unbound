@@ -60,10 +60,14 @@ and whether it sleeps. `systems/<control>` lists the systems' names.
 - `stopped`: `EventRate` with `Stop()` called at frame 30: the spawner stops, the particles
   that spawn go on living and spawning.
 - `paused`, `paused room`: `EventAlways` and `EventAlwaysRoom` paused from frame 20 to frame
-  36. While paused nothing ages and nothing is spawned: the images of frames 19, 30 and 35 are
-  the same (and 21 of `paused room`), also where the spawned system has room and every particle
-  spawned would show (`paused room`; the spawned system of `paused` is full when the pause
-  begins, so it shows the first only).
+  36. A paused effect's particles go on triggering at every frame (these graphs' update
+  contexts do not skip a step of no time), and what they spawn neither ages nor moves: it lies
+  on the particle that spawned it, so the images of the paused frames (19, 21, 30, 35) are the
+  same here, and what was spawned while paused shows once the pause ends: frames 37 and 40 of
+  `paused room` hold about twice the spawned particles of a frame without a pause, flying off
+  from the two places the spawning particles were paused at, and are gone by frame 50. (The
+  spawned system of `paused` is full when its pause begins: it shows only that nothing ages.)
+  What a run of the same graph without a pause shows at those frames is not recorded.
 
 What the rows show of systems spawned by GPU events: such a system is awake while the system
 that spawns into it is; its alive count is read back from the GPU like that of any system that
@@ -85,7 +89,8 @@ Linux Editor on OpenGL Core).
 - `On Collide` triggers; a spawned system that reads the count of its event (`spawnCount`);
   events of a system that spawns from the CPU as well.
 - An effect whose spawning system sleeps or is culled while the spawned one still has
-  particles; several effects of one graph; another play rate; a time scale of zero.
+  particles; several effects of one graph; another play rate; a time scale of zero; an update
+  context set to skip steps of no time (`Skip Zero Delta Time`), under a pause.
 - Several steps in a frame (the asset's exact fixed time step, a prewarm, `Simulate`).
 - Events into a system whose outputs draw through an indirect buffer, are lit or are meshes.
 - More events in a step than one dispatch's thread groups reach, and systems of more than a
