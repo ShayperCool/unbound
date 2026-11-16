@@ -42,10 +42,17 @@ cookie is a fitted curve, within 2/255 on average, at worst 57/255 on `spot`, 48
 37 on `textures_spot`); the gate below lists every other difference.
 
 Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): both devices' images are gated by `compare_images.py --gate`, OpenGL Core with
-`image-residuals.json` (25 of 27 images listed) and Vulkan with `image-residuals-vulkan.json` (24 of
+`image-residuals.json` (28 of 31 images listed) and Vulkan with `image-residuals-vulkan.json` (24 of
 27), each entry with its pixel count, largest difference and reason: the spot cone's edge above;
 shadow edges (pixels along shadow boundaries); a point light's range fade (`point_range`, up to
-12/255); small differences of light attenuation elsewhere (up to 6/255, mostly 1 to 3; not traced); and `vertexlit`, whose
-unlit regions are up to 9/255 brighter than the flat ambient the Editor shows (13 against 22 on 448
-pixels; a light term on the unlit side, not traced; open in docs/COMPATIBILITY_GAPS.md, built-in
-lighting images). Any other difference fails.
+12/255); small differences of light attenuation elsewhere (up to 6/255, mostly 1 to 3; not traced);
+and VertexLit's silhouette pixels (13 to 19, up to 44/255; not traced). The shadow edges and the
+silhouettes are open in docs/COMPATIBILITY_GAPS.md (built-in lighting images). Any other difference
+fails.
+
+VertexLit controls (`vertexlit_ambient`, `vertexlit_point`, `vertexlit_directional`,
+`vertexlit_no_pixel_lights`: the ambient alone, one point light, one directional light, the two
+point lights with no pixel lights allowed; OpenGL Core references only, two identical captures of
+2026-11-16): the ambient alone is the flat ambient itself, so the fixed-function lighting takes the
+ambient at half (the ambient color halved, times the material's) like each light, and
+`Combine texture * primary DOUBLE` brings both back; `vertexlit_ambient` matches exactly.

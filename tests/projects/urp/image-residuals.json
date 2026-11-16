@@ -585,24 +585,24 @@
   "reason": "small: 223 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/decal_layers_deferred.png": {
-  "pixels": 908,
-  "worst": 3,
-  "reason": "small: 908 pixels up to 3/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "pixels": 837,
+  "worst": 1,
+  "reason": "small: 837 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, run of 2026-11-16"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/decal_layers_forward.png": {
-  "pixels": 133,
-  "worst": 22,
-  "reason": "Vulkan screen-space decals: scattered pixels along the decal projection's and the cube's edges; suspected, as recorded for the OpenGL scenarios before, the normal reconstructed from depth at a depth discontinuity (docs/COMPATIBILITY_GAPS.md, urp rows); not traced; 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, run of 2026-11-16"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/decal_screen_space_deferred.png": {
-  "pixels": 1205,
-  "worst": 5,
-  "reason": "Vulkan screen-space decals: scattered pixels along the decal projection's and the cube's edges; suspected, as recorded for the OpenGL scenarios before, the normal reconstructed from depth at a depth discontinuity (docs/COMPATIBILITY_GAPS.md, urp rows); not traced; 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "pixels": 1109,
+  "worst": 1,
+  "reason": "small: 1109 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, run of 2026-11-16"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/decal_screen_space_forward.png": {
-  "pixels": 160,
-  "worst": 31,
-  "reason": "Vulkan screen-space decals: scattered pixels along the decal projection's and the cube's edges; suspected, as recorded for the OpenGL scenarios before, the normal reconstructed from depth at a depth discontinuity (docs/COMPATIBILITY_GAPS.md, urp rows); not traced; 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, run of 2026-11-16"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/light_layers_deferred.png": {
   "pixels": 124,

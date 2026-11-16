@@ -120,8 +120,23 @@
   "reason": "light attenuation and shading, 9703 pixels up to 6/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "vertexlit": {
-  "pixels": 17862,
-  "worst": 46,
-  "reason": "VertexLit: unlit regions up to 9/255 brighter than the flat ambient the Editor shows (13 against 22 on 448 pixels), sphere silhouettes up to 46 on 12 pixels; a light term on the unlit side, not traced; 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "pixels": 19,
+  "worst": 44,
+  "reason": "VertexLit: silhouette pixels of the spheres (the unlit side matches the ambient since the ambient fix), not traced; 6000.0.71f1, Linux GPU, run of 2026-11-16"
+ },
+ "vertexlit_directional": {
+  "pixels": 14,
+  "worst": 28,
+  "reason": "VertexLit: silhouette pixels of the spheres (the unlit side matches the ambient since the ambient fix), not traced; 6000.0.71f1, Linux GPU, run of 2026-11-16"
+ },
+ "vertexlit_no_pixel_lights": {
+  "pixels": 19,
+  "worst": 44,
+  "reason": "VertexLit: silhouette pixels of the spheres (the unlit side matches the ambient since the ambient fix), not traced; 6000.0.71f1, Linux GPU, run of 2026-11-16"
+ },
+ "vertexlit_point": {
+  "pixels": 13,
+  "worst": 44,
+  "reason": "VertexLit: silhouette pixels of the spheres (the unlit side matches the ambient since the ambient fix), not traced; 6000.0.71f1, Linux GPU, run of 2026-11-16"
  }
 }
