@@ -12,7 +12,8 @@ namespace UnityEngine.VFX
     /// from its document. The programs a build holds are compiled for its graphics device, as
     /// every built shader is; Unbound compiles programs from their sources, so the built asset
     /// runs with the programs of the project's graph at the path its bundle lists it under, when
-    /// that graph compiles to the same graph. Without one it does not run and says why. Matches the Unity 6000.0.71f1 Editor (tests/projects/vfx, <c>bundle/*</c>).
+    /// that graph compiles to the same graph. Without one it does not run and says why. Matches
+    /// the Unity 6000.0.71f1 Editor (tests/projects/vfx, <c>bundle/*</c>).
     /// </summary>
     public partial class VisualEffectAsset
     {

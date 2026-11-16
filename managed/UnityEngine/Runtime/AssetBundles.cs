@@ -671,8 +671,13 @@ namespace Unbound.Runtime
             if (entry.Loaded == null)
             {
                 var docs = Documents(entry.Bundle, entry.File);
-                entry.Loaded = ObjectGraphBuilder.Build(docs, entry.File, guid, ObjectGraphBuilder.Kind.Bundle, null, f => entry.Loaded = f);
-                NameBuiltGraphs(entry);
+                // Named as soon as the file's objects exist, before any of them is read or a
+                // script's callback can run an effect.
+                entry.Loaded = ObjectGraphBuilder.Build(docs, entry.File, guid, ObjectGraphBuilder.Kind.Bundle, null, f =>
+                {
+                    entry.Loaded = f;
+                    NameBuiltGraphs(entry);
+                });
             }
             return entry.Loaded.Objects.TryGetValue(fileId, out var obj) ? obj : null;
         }
