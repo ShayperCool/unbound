@@ -23,7 +23,9 @@ POST_COMMIT = r'''#!/bin/sh
 # Only a branch whose upstream is the same-named branch on a remote is pushed: never a branch
 # into another name (a work branch tracking origin/main must not push to main).
 # Log: <git common dir>/auto-push.log
-branch=$(git symbolic-ref --quiet --short HEAD) || exit 0
+ref=$(git symbolic-ref --quiet HEAD) || exit 0
+branch=${ref#refs/heads/}
+[ "$branch" != "$ref" ] || exit 0
 remote=$(git config --get "branch.$branch.remote") || exit 0
 merge=$(git config --get "branch.$branch.merge") || exit 0
 log="$(git rev-parse --git-common-dir)/auto-push.log"
@@ -41,10 +43,19 @@ exit 0
 '''
 
 HOOKS = {'post-commit': POST_COMMIT}
+# The first comment line of every hook written here; another hook found in its place is kept
+# beside it (<name>.local) before it is replaced.
+MARKER = '# Installed by tools/agents/git_hooks.py'
 
 
 def hooks_dir(repo):
-    """The common hooks directory of every worktree of repo (core.hooksPath is not followed)."""
+    """The common hooks directory of every worktree of repo. A core.hooksPath setting would make
+    git run other hooks than these, so it is refused."""
+    configured = subprocess.run(['git', '-C', str(repo), 'config', '--get', 'core.hooksPath'],
+                                capture_output=True, text=True).stdout.strip()
+    if configured:
+        raise SystemExit(f'core.hooksPath is set to {configured} for {repo}: git would not run the hooks '
+                         f'of tools/agents/git_hooks.py; unset it (git config --unset core.hooksPath)')
     common = subprocess.run(['git', '-C', str(repo), 'rev-parse', '--path-format=absolute', '--git-common-dir'],
                             check=True, capture_output=True, text=True).stdout.strip()
     return Path(common)/'hooks'
@@ -58,10 +69,15 @@ def install(repo):
     for name, text in HOOKS.items():
         path = directory/name
         try:
-            if path.read_text() == text and os.access(path, os.X_OK):
-                continue
+            current = path.read_text()
         except FileNotFoundError:
-            pass
+            current = None
+        if current == text and os.access(path, os.X_OK):
+            continue
+        if current is not None and MARKER not in current:
+            backup = path.with_name(name+'.local')
+            if not backup.exists():
+                backup.write_text(current)
         temporary = path.with_name(f'.{name}.{os.getpid()}')
         temporary.write_text(text)
         temporary.chmod(0o755)

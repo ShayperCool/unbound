@@ -32,7 +32,6 @@ class SlotTests(unittest.TestCase):
         self.git('init', '-q', '-b', 'main')
         self.git('config', 'user.email', 'infra-test@example.invalid')
         self.git('config', 'user.name', 'Infra test')
-        self.git('config', 'core.hooksPath', '/dev/null')
         (self.repo/'.gitignore').write_text('/cache/\n')
         (self.repo/'a.txt').write_text('a\n')
         self.git('add', '.')

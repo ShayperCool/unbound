@@ -102,6 +102,30 @@ class PostCommitTests(unittest.TestCase):
         self.assertIsNone(self.remote_head('slot/plain'))
         self.assertNotIn('slot/plain', self.log())
 
+    def test_a_branch_named_like_a_tag_is_still_judged_by_its_own_upstream(self):
+        main = self.remote_head('main')
+        self.git('tag', 'slot/tagged')
+        self.git('switch', '-q', '-c', 'slot/tagged', '--track', 'origin/main')
+        self.commit('work')
+        self.assertTrue(self.wait_for_log('slot/tagged: upstream origin refs/heads/main is not its own branch'))
+        self.assertEqual(self.remote_head('main'), main)
+
+    def test_install_refuses_a_hooks_path_that_git_would_use_instead(self):
+        self.git('config', 'core.hooksPath', str(self.repo/'elsewhere'))
+        with self.assertRaises(SystemExit) as error:
+            git_hooks.install(self.repo)
+        self.assertIn('core.hooksPath', str(error.exception))
+
+    def test_install_keeps_a_hand_written_hook_beside_it(self):
+        hook = git_hooks.hooks_dir(self.repo)/'post-commit'
+        hook.write_text('#!/bin/sh\necho mine\n')
+        self.assertEqual(git_hooks.install(self.repo), ['post-commit'])
+        self.assertEqual((hook.parent/'post-commit.local').read_text(), '#!/bin/sh\necho mine\n')
+        # An older installed version is replaced without a copy.
+        hook.write_text(git_hooks.MARKER+'; an older version\n')
+        git_hooks.install(self.repo)
+        self.assertEqual((hook.parent/'post-commit.local').read_text(), '#!/bin/sh\necho mine\n')
+
     def test_install_rewrites_only_a_hook_that_differs(self):
         hook = git_hooks.hooks_dir(self.repo)/'post-commit'
         self.assertEqual(git_hooks.install(self.repo), [])
