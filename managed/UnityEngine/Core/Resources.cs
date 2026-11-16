@@ -33,7 +33,7 @@ namespace UnityEngine
         public static Object Load(string path, Type systemTypeInstance)
         {
             MainThreadCheck.Check("Load");
-            if (systemTypeInstance == null) throw new NullReferenceException("The type is null.");
+            if (systemTypeInstance == null) throw new ArgumentNullException(nameof(systemTypeInstance));
             foreach (var entry in Find(path, folder: false))
             {
                 var obj = AssetDatabaseRuntime.LoadMain(entry.Guid, systemTypeInstance);
@@ -59,6 +59,8 @@ namespace UnityEngine
 
         public static Object[] LoadAll(string path, Type systemTypeInstance)
         {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (systemTypeInstance == null) throw new ArgumentNullException(nameof(systemTypeInstance));
             var result = new List<Object>();
             foreach (var entry in Find(path, folder: true))
                 foreach (var obj in AssetDatabaseRuntime.LoadAll(entry.Guid))
@@ -100,14 +102,16 @@ namespace UnityEngine
         public static void UnloadAsset(Object assetToUnload)
         {
             if (assetToUnload == null) return;
-            if (assetToUnload is GameObject || assetToUnload is Component || assetToUnload is AssetBundle)
-            {
-                Debug.LogError("UnloadAsset may only be used on individual assets and can not be used on GameObject's / Components / AssetBundles or GameManagers");
-                return;
-            }
+            // An object that is no asset is refused first, whatever its class
+            // (tests/projects/apierrors `resources.unload_game_object`).
             if (!assetToUnload.IsPersistentAsset)
             {
                 Debug.LogError("UnloadAsset can only be used on assets;");
+                return;
+            }
+            if (assetToUnload is GameObject || assetToUnload is Component || assetToUnload is AssetBundle)
+            {
+                Debug.LogError("UnloadAsset may only be used on individual assets and can not be used on GameObject's / Components / AssetBundles or GameManagers");
                 return;
             }
             // A custom render texture asset stops updating (its unload event fires) and frees its
@@ -141,7 +145,8 @@ namespace UnityEngine
 
         internal static void UnloadUnusedAssetsInternal() => ObjectRegistry.Compact();
 
-        public static Object[] FindObjectsOfTypeAll(Type type) => ObjectRegistry.TypedArray(type, ObjectRegistry.All(type));
+        public static Object[] FindObjectsOfTypeAll(Type type) =>
+            ObjectErrors.FindTypeIsValid(type) ? ObjectRegistry.TypedArray(type, ObjectRegistry.All(type)) : null;
 
         public static T[] FindObjectsOfTypeAll<T>() where T : Object
         {

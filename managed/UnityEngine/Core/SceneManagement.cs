@@ -195,7 +195,8 @@ namespace UnityEngine.SceneManagement
         public static bool SetActiveScene(Scene scene)
         {
             var data = scene.Data;
-            if (data == null || !data.IsLoaded)
+            if (data == null) throw new ArgumentException("SceneManager.SetActiveScene failed; invalid scene");
+            if (!data.IsLoaded)
                 throw new ArgumentException("SceneManager.SetActiveScene failed; scene is not loaded and therefore cannot be set active");
             var previous = GetActiveScene();
             SceneRegistry.Active = data;
@@ -207,7 +208,7 @@ namespace UnityEngine.SceneManagement
         {
             var listed = SceneManagerInternal.Listed();
             if (index < 0 || index >= listed.Count)
-                throw new ArgumentException("The scene index is out of range.");
+                throw new IndexOutOfRangeException($"Scene index \"{index}\" is out of range.");
             return new Scene(listed[index].Handle);
         }
 
@@ -225,20 +226,31 @@ namespace UnityEngine.SceneManagement
             return default;
         }
 
+        /// <summary>The loaded scene of a build index; an index outside the build list throws
+        /// (tests/projects/apierrors `scene.by_build_index_*`).</summary>
         public static Scene GetSceneByBuildIndex(int buildIndex)
         {
+            if (buildIndex < 0 || buildIndex >= ProjectInfo.BuildScenes.Count)
+                throw new ArgumentException($"GetSceneByBuildIndex: Invalid build index: {buildIndex}\nTo add a scene to the build settings use the menu File->Build Settings...");
+            return new Scene(LoadedByBuildIndex(buildIndex)?.Handle ?? default);
+        }
+
+        static SceneData LoadedByBuildIndex(int buildIndex)
+        {
             foreach (var s in SceneRegistry.Loaded)
-                if (s.BuildIndex == buildIndex) return new Scene(s.Handle);
-            return default;
+                if (s.BuildIndex == buildIndex) return s;
+            return null;
         }
 
         public static Scene CreateScene(string sceneName) => CreateScene(sceneName, default);
 
         public static Scene CreateScene(string sceneName, CreateSceneParameters parameters)
         {
+            if (sceneName == null) throw new ArgumentNullException(nameof(sceneName));
+            if (sceneName.Length == 0) throw new ArgumentException("The input scene name cannot be empty");
             foreach (var s in SceneRegistry.Loaded)
                 if (s.Name == sceneName)
-                    throw new ArgumentException($"A scene named '{sceneName}' already exists.");
+                    throw new ArgumentException($"Scene with name \"{sceneName}\" already exists");
             var data = SceneRegistry.Create(sceneName, "", -1);
             SceneManagerInternal.CreateLocalPhysics(data, parameters.localPhysicsMode);
             data.IsLoaded = true;
@@ -259,7 +271,7 @@ namespace UnityEngine.SceneManagement
             {
                 if (AssetBundle.FindScene(sceneName, out var path, out var key))
                     return SceneManagerInternal.LoadBundled(path, key, parameters, async: false).Scene;
-                Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the build settings or the AssetBundle has not been loaded.\nTo add a scene to the build settings use the menu File->Build Settings...");
+                SceneLoadErrors.Name(sceneName);
                 return default;
             }
             return SceneManagerInternal.Load(index, parameters, async: false).Scene;
@@ -274,7 +286,7 @@ namespace UnityEngine.SceneManagement
         {
             if (sceneBuildIndex < 0 || sceneBuildIndex >= ProjectInfo.BuildScenes.Count)
             {
-                Debug.LogError($"Scene with build index: {sceneBuildIndex} couldn't be loaded because it has not been added to the build settings.");
+                SceneLoadErrors.BuildIndex(sceneBuildIndex);
                 return default;
             }
             return SceneManagerInternal.Load(sceneBuildIndex, parameters, async: false).Scene;
@@ -289,7 +301,7 @@ namespace UnityEngine.SceneManagement
         {
             if (sceneBuildIndex < 0 || sceneBuildIndex >= ProjectInfo.BuildScenes.Count)
             {
-                Debug.LogError($"Scene with build index: {sceneBuildIndex} couldn't be loaded because it has not been added to the build settings.");
+                SceneLoadErrors.BuildIndex(sceneBuildIndex);
                 return null;
             }
             return SceneManagerInternal.Load(sceneBuildIndex, parameters, async: true).Operation;
@@ -307,7 +319,7 @@ namespace UnityEngine.SceneManagement
             {
                 if (AssetBundle.FindScene(sceneName, out var path, out var key))
                     return SceneManagerInternal.LoadBundled(path, key, parameters, async: true).Operation;
-                Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the build settings or the AssetBundle has not been loaded.");
+                SceneLoadErrors.Name(sceneName);
                 return null;
             }
             return SceneManagerInternal.Load(index, parameters, async: true).Operation;
@@ -317,12 +329,12 @@ namespace UnityEngine.SceneManagement
         public static bool UnloadScene(Scene scene) => SceneManagerInternal.Unload(scene.Data) != null;
 
         [Obsolete("Use SceneManager.UnloadSceneAsync. This function is not safe to use during triggers and under other circumstances. See Scripting reference for more details.")]
-        public static bool UnloadScene(int sceneBuildIndex) => UnloadScene(GetSceneByBuildIndex(sceneBuildIndex));
+        public static bool UnloadScene(int sceneBuildIndex) => SceneManagerInternal.Unload(LoadedByBuildIndex(sceneBuildIndex)) != null;
 
         [Obsolete("Use SceneManager.UnloadSceneAsync. This function is not safe to use during triggers and under other circumstances. See Scripting reference for more details.")]
         public static bool UnloadScene(string sceneName) => UnloadScene(GetSceneByName(sceneName));
 
-        public static AsyncOperation UnloadSceneAsync(int sceneBuildIndex) => SceneManagerInternal.Unload(GetSceneByBuildIndex(sceneBuildIndex).Data, asynchronously: true);
+        public static AsyncOperation UnloadSceneAsync(int sceneBuildIndex) => SceneManagerInternal.Unload(LoadedByBuildIndex(sceneBuildIndex), asynchronously: true);
         public static AsyncOperation UnloadSceneAsync(string sceneName) => SceneManagerInternal.Unload(GetSceneByName(sceneName).Data, asynchronously: true);
         public static AsyncOperation UnloadSceneAsync(Scene scene) => SceneManagerInternal.Unload(scene.Data, asynchronously: true);
         public static AsyncOperation UnloadSceneAsync(int sceneBuildIndex, UnloadSceneOptions options) => UnloadSceneAsync(sceneBuildIndex);
@@ -333,7 +345,8 @@ namespace UnityEngine.SceneManagement
         {
             var source = sourceScene.Data;
             var destination = destinationScene.Data;
-            if (source == null || destination == null) throw new ArgumentException("Invalid scene.");
+            if (source == null) throw new ArgumentException("Source scene is invalid");
+            if (destination == null) throw new ArgumentException("Invalid scene.");
             foreach (var go in source.Roots.ToArray()) SceneRegistry.MoveToScene(go, destination);
             Unbound.Runtime.PhysicsWorld.SceneMembershipChanged();
             SceneManagerInternal.Unload(source);
@@ -341,10 +354,11 @@ namespace UnityEngine.SceneManagement
 
         public static void MoveGameObjectToScene(GameObject go, Scene scene)
         {
-            if (go == null) throw new ArgumentException("The GameObject is null.");
+            if (go == null) throw ObjectErrors.Argument(go, nameof(go));
             if (go.transform.parent != null) throw new ArgumentException("Gameobject is not a root in a scene");
             var data = scene.Data;
-            if (data == null || !data.IsLoaded) throw new ArgumentException("The scene is invalid or not loaded.");
+            if (data == null) throw new ArgumentException("Destination scene is not valid");
+            if (!data.IsLoaded) throw new ArgumentException("The scene is invalid or not loaded.");
             SceneRegistry.MoveToScene(go, data);
             // Its bodies and colliders move to the new scene's physics scene.
             Unbound.Runtime.PhysicsWorld.SceneMembershipChanged();
@@ -361,6 +375,21 @@ namespace UnityEngine.SceneManagement
             SceneRegistry.MoveToScene(go, SceneRegistry.DontDestroyOnLoad);
             Unbound.Runtime.PhysicsWorld.SceneMembershipChanged();
         }
+    }
+
+    /// <summary>The errors of a scene load the build list cannot serve, as the Unity 6000.0.71f1
+    /// Editor logs them (tests/projects/apierrors `scene.load_*`).</summary>
+    static class SceneLoadErrors
+    {
+        const string Hint = "\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles";
+
+        internal static void Name(string sceneName) =>
+            Debug.LogError($"Scene '{sceneName}' couldn't be loaded because it has not been added to the active build profile or shared scene list or the AssetBundle has not been loaded.{Hint}");
+
+        internal static void BuildIndex(int buildIndex) =>
+            Debug.LogError(buildIndex < 0
+                ? $"Cannot load scene: Invalid scene name (empty string) and invalid build index {buildIndex}"
+                : $"Scene with build index: {buildIndex} couldn't be loaded because it has not been added to the active build profile or shared scene list.{Hint}");
     }
 
     public static partial class SceneUtility

@@ -430,7 +430,7 @@ namespace Unbound.Tests
                 requested = new Requested(extra);
                 Assert.Equal("Main valid True loaded True roots 0, Extra valid True loaded False roots 0 | loadedSceneCount 1", Listing());
                 Assert.Equal(new Scene(extra.Handle), SceneManager.GetSceneAt(1));
-                Assert.Throws<ArgumentException>(() => SceneManager.GetSceneAt(2));
+                Assert.Throws<IndexOutOfRangeException>(() => SceneManager.GetSceneAt(2));
                 // The internal loaded list is not changed by the listing.
                 Assert.Equal("internal [Main]", Internal());
 
