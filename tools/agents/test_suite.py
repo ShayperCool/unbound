@@ -287,6 +287,10 @@ class OracleGuardTests(unittest.TestCase):
             self.assertEqual(self.guard().returncode, 0, free)
         self.commit('not an object', [entry], file=residuals)
         self.assertEqual(self.guard().returncode, 4)
+        self.commit('not a number', {'a': dict(entry, pixels='100')}, file=residuals)
+        refused = self.guard()
+        self.assertEqual(refused.returncode, 4, refused.stderr)
+        self.assertIn('not an object with integer pixels and worst', refused.stdout)
 
 
 class ImageTests(unittest.TestCase):

@@ -51,4 +51,5 @@ and with more contrast than Unbound.
 
 Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): `compare_images.py --gate image-residuals.json` holds each of the seven images to
 its recorded pixel count and largest difference: six are the checker difference above (2153 to
-11249 pixels, up to 169/255), one is within 4/255. Any other difference fails.
+11249 pixels, up to 169/255; open in docs/COMPATIBILITY_GAPS.md, checker of terrains without
+layers), one is within 4/255. Any other difference fails.
