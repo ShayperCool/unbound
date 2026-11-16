@@ -1,7 +1,7 @@
 # Slider label drags
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 194 rows. The values are managed slider state and
+byte-identical and the canonical reference has 228 rows. The values are managed slider state and
 change notifications in a runtime panel, so they do not depend on the OS or the graphics device.
 The gate compares every missing, extra or unequal row exactly.
 
@@ -26,9 +26,17 @@ the change notification and whether the label holds the mouse capture:
   `int.reversed.*`). Arrow keys do nothing without navigation (`int.key.right*`); navigation moves
   step once a submit has made the dragger movable (`int.narrow.nav.*`, `int.keyed.nav.*`).
 
-Tracker clicks and dragger drags are not recorded: a tracker click acts only when the element under
-the pointer (in the Editor, the real mouse's) is the tracker, which a batch-mode capture does not
-control. Managed tests pin SliderInt's tracker rules.
+- Tracker clicks and dragger drags of SliderInt (`track*.click.*`, `drag.*`): without a page size a
+  click jumps the dragger there and a drag moves it, the value rounded to a whole number; with one, a
+  click beside the dragger steps by the page size, its sign following reversed ranges, `inverted`
+  and the vertical direction. Each press is preceded by a pointer move to the same place: a press
+  acts only when the element under the pointer, which the panel takes from the pointer events
+  themselves, is inside the tracker.
+
+The panel's scale is set to `96 / Screen.dpi`, so a panel point is a screen pixel on every display
+(the macOS Editor's batch-mode screen is 640x480 at 255 dpi; without this its panel is 241 points
+wide and clicks at the far end of a 300-point slider fall outside it). The engine runs at 640x480,
+the Editor's batch-mode screen size.
 
 | Unity 6000.0 documentation | Discriminating control |
 | --- | --- |

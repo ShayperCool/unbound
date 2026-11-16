@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Globalization;
 using System.IO;
 using UnityEditor;
@@ -21,15 +22,19 @@ public class SliderDragProbe : MonoBehaviour
 
     static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);
 
-    void Start()
+    IEnumerator Start()
     {
-        string path = Environment.GetEnvironmentVariable("SLIDER_DRAG_OUT"); if (string.IsNullOrEmpty(path)) return;
-        try
-        {
-            using (output = new StreamWriter(path)) { Record(); Put("complete", 1); }
-            EditorApplication.Exit(0);
-        }
-        catch (Exception ex) { Debug.LogException(ex); EditorApplication.Exit(1); }
+        string path = Environment.GetEnvironmentVariable("SLIDER_DRAG_OUT"); if (string.IsNullOrEmpty(path)) yield break;
+        output = new StreamWriter(path);
+        bool failed = false;
+        try { Record(); }
+        catch (Exception ex) { Debug.LogException(ex); failed = true; }
+        // The tracker controls need the panel's layout: a few frames.
+        for (int i = 0; i < 5 && !failed; i++) yield return null;
+        try { if (!failed) { RecordTracker(); Put("complete", 1); } }
+        catch (Exception ex) { Debug.LogException(ex); failed = true; }
+        output.Dispose();
+        EditorApplication.Exit(failed ? 1 : 0);
     }
 
     static void Send(VisualElement target, EventBase evt)
@@ -78,6 +83,59 @@ public class SliderDragProbe : MonoBehaviour
         lastChange = "";
     }
 
+    SliderInt[] tracks;
+
+    static Event At(EventType type, Vector2 position, Vector2 delta) =>
+        new Event { type = type, button = 0, mousePosition = position, delta = delta, clickCount = type == EventType.MouseDown ? 1 : 0 };
+
+    // A click on the tracker beside the dragger (towards high or low), then release.
+    void Click(string key, SliderInt track, bool towardsEnd)
+    {
+        var container = track.Q("unity-drag-container");
+        var bound = container.worldBound;
+        bool vertical = track.direction == SliderDirection.Vertical;
+        var position = vertical
+            ? new Vector2(bound.center.x, towardsEnd ? bound.yMax - 3f : bound.yMin + 3f)
+            : new Vector2(towardsEnd ? bound.xMax - 3f : bound.xMin + 3f, bound.center.y);
+        changes = 0;
+        lastChange = "";
+        // The pointer moves there first: the element under it is then the tracker's.
+        Send(container, PointerMoveEvent.GetPooled(At(EventType.MouseMove, position, Vector2.zero)));
+        Send(container, PointerDownEvent.GetPooled(At(EventType.MouseDown, position, Vector2.zero)));
+        Put(key + ".down", track.value + " " + changes);
+        Send(container, PointerUpEvent.GetPooled(At(EventType.MouseUp, position, Vector2.zero)));
+        Put(key + ".up", track.value + " " + changes);
+    }
+
+    void RecordTracker()
+    {
+        Click("track0.click.end", tracks[0], true);
+        Click("track0.click.start", tracks[0], false);
+        for (int i = 1; i < tracks.Length; i++)
+        {
+            Click("track" + i + ".click.end", tracks[i], true);
+            Click("track" + i + ".click.start", tracks[i], false);
+            Click("track" + i + ".click.start.again", tracks[i], false);
+        }
+        // Dragging the dragger: its position along the tracker sets the value, rounded.
+        var drag = tracks[0];
+        drag.value = 5;
+        var container = drag.Q("unity-drag-container");
+        var dragger = drag.Q("unity-dragger");
+        var start = dragger.worldBound.center;
+        Send(dragger, PointerMoveEvent.GetPooled(At(EventType.MouseMove, start, Vector2.zero)));
+        Send(dragger, PointerDownEvent.GetPooled(At(EventType.MouseDown, start, Vector2.zero)));
+        Put("drag.down", drag.value);
+        foreach (var dx in new[] { 60f, 100f, -200f, 400f })
+        {
+            var p = start + new Vector2(dx, 0f);
+            Send(container, PointerMoveEvent.GetPooled(At(EventType.MouseDrag, p, new Vector2(dx, 0f))));
+            Put("drag.move" + dx.ToString(CultureInfo.InvariantCulture), drag.value);
+        }
+        Send(container, PointerUpEvent.GetPooled(At(EventType.MouseUp, start, Vector2.zero)));
+        Put("drag.up", drag.value);
+    }
+
     void Record()
     {
         Put("slider.valueField", typeof(IValueField<float>).IsAssignableFrom(typeof(Slider)));
@@ -86,6 +144,9 @@ public class SliderDragProbe : MonoBehaviour
         Put("baseSlider.declares", Array.IndexOf(typeof(BaseSlider<float>).GetInterfaces(), typeof(IValueField<float>)) >= 0);
 
         var settings = ScriptableObject.CreateInstance<PanelSettings>();
+        // One panel point per screen pixel whatever the display's density, so the tracker
+        // controls see the same layout on every OS (the screen is 640x480 in batch mode).
+        if (Screen.dpi > 0) settings.scale = 96f / Screen.dpi;
         var go = new GameObject("Document");
         var document = go.AddComponent<UIDocument>();
         document.panelSettings = settings;
@@ -143,6 +204,7 @@ public class SliderDragProbe : MonoBehaviour
         State("axis.to.y", slider);
         Move(label, -3.1f, 3f);
         State("axis.kept.y", slider);
+        Move(label, 10f, 0f);
         Move(label, 10f, 10.9f);
         State("axis.ratio.below", slider);
         Move(label, 10f, 0f);
@@ -275,6 +337,25 @@ public class SliderDragProbe : MonoBehaviour
         reversed.value = 15;
         Put("int.reversed.clamp", reversed.value);
 
+        // Sliders for the tracker controls, laid out over the next frames.
+        tracks = new SliderInt[5];
+        tracks[0] = new SliderInt("Track", 0, 10) { value = 5 };
+        tracks[1] = new SliderInt("Paged", 0, 10, SliderDirection.Horizontal, 2f) { value = 5 };
+        tracks[2] = new SliderInt("Inverted", 0, 10, SliderDirection.Horizontal, 2f) { value = 5, inverted = true };
+        tracks[3] = new SliderInt("Reversed", 10, 0, SliderDirection.Horizontal, 2f) { value = 5 };
+        tracks[4] = new SliderInt("Vertical", 0, 10, SliderDirection.Vertical, 2f) { value = 5 };
+        foreach (var track in tracks)
+        {
+            track.style.width = 300;
+            track.style.height = track.direction == SliderDirection.Vertical ? 300 : 30;
+            track.Q("unity-dragger").style.width = 20;
+            track.Q("unity-dragger").style.height = 20;
+            track.Q("unity-drag-container").style.flexGrow = 1;
+            if (track.direction == SliderDirection.Vertical) track.Q("unity-drag-container").style.height = 280;
+            root.Add(track);
+            Watch(track);
+        }
+
         // The interface's own calls: ApplyInputDeviceDelta uses the current value, not the start.
         slider.value = 2f;
         changes = 0;
@@ -291,6 +372,8 @@ public class SliderDragProbe : MonoBehaviour
         field.StopDragging();
         field.value = 7f;
         State("direct.value", slider);
+        sliderInt.value = 50;
+        changes = 0;
         IValueField<int> intField = sliderInt;
         intField.ApplyInputDeviceDelta(new Vector3(-12f, 0f, 0f), DeltaSpeed.Normal, 0);
         State("direct.int", sliderInt);

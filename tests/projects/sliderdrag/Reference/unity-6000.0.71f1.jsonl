@@ -58,16 +58,16 @@
 {"key":"axis.kept.y.value","value":"0.03358252"}
 {"key":"axis.kept.y.changes","value":"1 0.0465243123>0.03358252"}
 {"key":"axis.kept.y.captured","value":"True"}
-{"key":"axis.ratio.below.value","value":"0"}
-{"key":"axis.ratio.below.changes","value":"1 0.03358252>0"}
+{"key":"axis.ratio.below.value","value":"0.107959196"}
+{"key":"axis.ratio.below.changes","value":"2 0.06358252>0.107959196"}
 {"key":"axis.ratio.below.captured","value":"True"}
-{"key":"axis.ratio.above.value","value":"0"}
-{"key":"axis.ratio.above.changes","value":"2 0.03>0"}
+{"key":"axis.ratio.above.value","value":"0.09291522"}
+{"key":"axis.ratio.above.changes","value":"2 0.1379592>0.09291522"}
 {"key":"axis.ratio.above.captured","value":"True"}
-{"key":"up.value","value":"0"}
+{"key":"up.value","value":"0.09291522"}
 {"key":"up.changes","value":"0 "}
 {"key":"up.captured","value":"False"}
-{"key":"move.after.up.value","value":"0"}
+{"key":"move.after.up.value","value":"0.09291522"}
 {"key":"move.after.up.changes","value":"0 "}
 {"key":"move.after.up.captured","value":"False"}
 {"key":"touch.down.value","value":"3"}
@@ -188,7 +188,41 @@
 {"key":"direct.value.value","value":"7"}
 {"key":"direct.value.changes","value":"1 2.15749979>7"}
 {"key":"direct.value.captured","value":"False"}
-{"key":"direct.int.value","value":"0"}
-{"key":"direct.int.changes","value":"0 "}
+{"key":"direct.int.value","value":"38"}
+{"key":"direct.int.changes","value":"1 50>38"}
 {"key":"direct.int.captured","value":"False"}
+{"key":"track0.click.end.down","value":"10 1"}
+{"key":"track0.click.end.up","value":"10 1"}
+{"key":"track0.click.start.down","value":"0 1"}
+{"key":"track0.click.start.up","value":"0 1"}
+{"key":"track1.click.end.down","value":"7 1"}
+{"key":"track1.click.end.up","value":"7 1"}
+{"key":"track1.click.start.down","value":"5 1"}
+{"key":"track1.click.start.up","value":"5 1"}
+{"key":"track1.click.start.again.down","value":"3 1"}
+{"key":"track1.click.start.again.up","value":"3 1"}
+{"key":"track2.click.end.down","value":"7 1"}
+{"key":"track2.click.end.up","value":"7 1"}
+{"key":"track2.click.start.down","value":"5 1"}
+{"key":"track2.click.start.up","value":"5 1"}
+{"key":"track2.click.start.again.down","value":"3 1"}
+{"key":"track2.click.start.again.up","value":"3 1"}
+{"key":"track3.click.end.down","value":"3 1"}
+{"key":"track3.click.end.up","value":"3 1"}
+{"key":"track3.click.start.down","value":"5 1"}
+{"key":"track3.click.start.up","value":"5 1"}
+{"key":"track3.click.start.again.down","value":"7 1"}
+{"key":"track3.click.start.again.up","value":"7 1"}
+{"key":"track4.click.end.down","value":"3 1"}
+{"key":"track4.click.end.up","value":"3 1"}
+{"key":"track4.click.start.down","value":"5 1"}
+{"key":"track4.click.start.up","value":"5 1"}
+{"key":"track4.click.start.again.down","value":"7 1"}
+{"key":"track4.click.start.again.up","value":"7 1"}
+{"key":"drag.down","value":"5"}
+{"key":"drag.move60","value":"7"}
+{"key":"drag.move100","value":"9"}
+{"key":"drag.move-200","value":"0"}
+{"key":"drag.move400","value":"10"}
+{"key":"drag.up","value":"10"}
 {"key":"complete","value":"1"}
