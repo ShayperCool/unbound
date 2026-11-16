@@ -265,7 +265,7 @@ namespace Unbound.Runtime
         /// <summary>The system's particles as the effect counts them: the particles spawned so
         /// far when none dies, else the count last read back from the GPU (-1 before the first
         /// answer arrives).</summary>
-        internal int AliveCount => CountedOnGpu ? m_ReadAlive : (int)m_Total;
+        internal int AliveCount => HasKill ? m_ReadAlive : (int)m_Total;
 
         internal bool Sleeping => m_Sleeping;
 
@@ -353,7 +353,7 @@ namespace Unbound.Runtime
             bool spawning = m_Spawned != 0 || ParentAwake;
             if (spawning) m_LastActiveFrame = frame;
             bool wasSleeping = m_Sleeping;
-            if (!CountedOnGpu) m_Sleeping = m_Total == 0;
+            if (!HasKill) m_Sleeping = m_Total == 0;
             else if (m_LastActiveFrame < m_ReadbackFrame)
             {
                 // An answer newer than the last spawn says whether anything is left alive; a
@@ -438,9 +438,7 @@ namespace Unbound.Runtime
                     int words = SourceWords(events);
                     Effect.GpuBuffer(m_SourceBuffer, words).SetData(m_SourceWords, 0, 0, words);
                 }
-                // The initialize kernel takes particles from the dead list as long as the count
-                // it had when the step began allows: the count's copy.
-                if (HasKill && !HasStrips && m_DeadList >= 0) VFXManager.CopyDeadCount(Effect.GpuBuffer(m_DeadList, 0));
+                CopyDeadCount();
                 m_Initialize.Dispatch(spawned, 0);
             }
             m_Spawned = 0;
@@ -507,6 +505,13 @@ namespace Unbound.Runtime
                 if (output.Indirect) output.FillArguments();
         }
 
+        /// <summary>Before an initialize kernel runs: it takes particles from the dead list as
+        /// long as the count the list had when the step began allows, the count's copy.</summary>
+        void CopyDeadCount()
+        {
+            if (HasKill && !HasStrips && m_DeadList >= 0) VFXManager.CopyDeadCount(Effect.GpuBuffer(m_DeadList, 0));
+        }
+
         /// <summary>The particles an output draws: the ones spawned so far of a system that
         /// neither kills nor takes GPU events, else every particle it has room for (the vertex
         /// programs leave out the dead ones). None before the system's first step, nor while
@@ -566,24 +571,14 @@ namespace Unbound.Runtime
         /// of its simulation asks nothing: tests/projects/vfxoutputs `away`).</summary>
         internal void UpdateReadback()
         {
-            if (!CountedOnGpu || HasStrips || Capacity == 0 || !m_HasRenderer) return;
-            // The particles left of a system that kills: its room less its dead ones. Of a
-            // system that kills none and is spawned into by GPU events: the particles spawned
-            // so far, the count its list keeps.
-            bool dead = HasKill && m_DeadList >= 0;
-            if (!dead && m_EventList < 0) return;
+            if (!HasKill || HasStrips || m_DeadList < 0 || Capacity == 0 || !m_HasRenderer) return;
             uint frame = VFXManager.Frame;
             if (m_ReadbackPending || m_NextReadbackFrame > frame || m_Sleeping || m_UpdatedFrame != frame) return;
             m_ReadbackPending = true;
             m_ReadbackFrame = frame;
             m_RequestGeneration = m_ReadbackGeneration;
-            m_ReadsDead = dead;
-            if (dead) AsyncGPUReadback.Request(Effect.GpuBuffer(m_DeadList, 0), sizeof(uint), 0, m_OnReadback ??= OnReadback);
-            else AsyncGPUReadback.Request(Effect.GpuBuffer(m_EventList, 0), sizeof(uint), sizeof(uint), m_OnReadback ??= OnReadback);
+            AsyncGPUReadback.Request(Effect.GpuBuffer(m_DeadList, 0), sizeof(uint), 0, m_OnReadback ??= OnReadback);
         }
-
-        /// <summary>Whether the count asked for is the dead particles' (else the spawned ones').</summary>
-        bool m_ReadsDead;
 
         void OnReadback(AsyncGPUReadbackRequest request)
         {
@@ -592,8 +587,7 @@ namespace Unbound.Runtime
             m_ReadbackPending = false;
             m_NextReadbackFrame += ReadbackPeriod;
             if (request.hasError) return;
-            uint counted = Math.Min(Capacity, request.GetData<uint>()[0]);
-            m_ReadAlive = (int)(m_ReadsDead ? Capacity - counted : counted);
+            m_ReadAlive = (int)(Capacity - Math.Min(Capacity, request.GetData<uint>()[0]));
         }
 
         /// <summary>A count rounded up to whole thread groups.</summary>

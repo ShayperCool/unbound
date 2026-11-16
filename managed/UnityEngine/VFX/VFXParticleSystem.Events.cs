@@ -58,11 +58,6 @@ namespace Unbound.Runtime
                 if (system.Index == m_ParentIndex) m_Parent = system as VFXParticleSystem;
         }
 
-        /// <summary>Whether what the system has alive is counted on the GPU and read back from
-        /// there: a system that kills particles, or one spawned into by GPU events (how many
-        /// those spawned is known there alone).</summary>
-        bool CountedOnGpu => HasKill || ReceivesGpuEvents;
-
         /// <summary>Whether the system whose kernels spawn into this one is awake: this one
         /// then initializes from what that one's step counted, and is awake itself.</summary>
         bool ParentAwake
@@ -125,9 +120,7 @@ namespace Unbound.Runtime
             int entry = m_Parent.EventEntry(m_EventList);
             var arguments = VFXIndirectArgs.Shared.Arguments;
             if (entry < 0 || arguments == null) return;
-            // As for particles spawned from the CPU: the kernel takes particles from the dead
-            // list as long as the count it had when the step began allows.
-            if (HasKill && !HasStrips && m_DeadList >= 0) VFXManager.CopyDeadCount(Effect.GpuBuffer(m_DeadList, 0));
+            CopyDeadCount();
             m_Initialize.DispatchIndirect(arguments, VFXIndirectArgs.Offset(entry));
         }
 

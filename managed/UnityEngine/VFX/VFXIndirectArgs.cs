@@ -129,7 +129,7 @@ namespace Unbound.Runtime
         {
             if (m_Loaded) return m_Usable;
             m_Loaded = true;
-            const string Without = "effects drawn through an indirect buffer are not drawn";
+            const string Without = "effects drawn through an indirect buffer are not drawn, and systems spawned by GPU events spawn nothing";
             m_Fill = VFXPackageShaders.Load(VFXPackageShaders.FillIndirectArgs, Without);
             m_Copy = VFXPackageShaders.Load(VFXPackageShaders.CopyBuffer, Without);
             m_Clear = VFXPackageShaders.Load(VFXPackageShaders.CopyBuffer, Without);

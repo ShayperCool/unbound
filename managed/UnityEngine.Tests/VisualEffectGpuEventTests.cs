@@ -73,11 +73,13 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ASystemSpawnedByGpuEventsRunsWhetherItsParticlesDieOrNot()
+        public void ASystemSpawnedByGpuEventsRunsWhenItHasAListOfDeadParticles()
         {
             Assert.Null(VisualEffect.Unsupported(Spawning(10f, VFXSystemFlag.SystemReceivedEventGPU | VFXSystemFlag.SystemHasKill).m_Data));
-            // So does one whose particles never die; strips are not run yet.
-            Assert.Null(VisualEffect.Unsupported(Spawning(10f, VFXSystemFlag.SystemReceivedEventGPU).m_Data));
+            // One without a list of dead particles is not what the graph compiler writes, and
+            // says so; strips are not run yet.
+            Assert.Equal("the system 'Child' spawned by GPU events without a list of dead particles",
+                VisualEffect.Unsupported(Spawning(10f, VFXSystemFlag.SystemReceivedEventGPU).m_Data));
             Assert.Equal("SystemHasStrips of the system 'Child'",
                 VisualEffect.Unsupported(Spawning(10f, VFXSystemFlag.SystemReceivedEventGPU | VFXSystemFlag.SystemHasKill | VFXSystemFlag.SystemHasStrips).m_Data));
         }
