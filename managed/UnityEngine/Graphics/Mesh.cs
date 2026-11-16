@@ -232,8 +232,9 @@ namespace UnityEngine
             {
                 // Fewer vertices than the indices reference (null counts as none): an error, and the
                 // mesh keeps everything it had (6000.0.71f1, tests/projects/blendshapes misuse
-                // "vertices change"; the macOS Editor: the vertices setter and SetVertices alike,
-                // whatever the submeshes' topology). Only a shorter array needs the indices read.
+                // "vertices change"; the macOS Editor, outside a committed reference: the vertices
+                // setter and SetVertices alike, whatever the submeshes' topology, their base vertex
+                // added). Only a shorter array needs the indices read.
                 int length = value?.Length ?? 0;
                 if (length < m_Vertices.Length && HighestIndexedVertex() >= length)
                 {

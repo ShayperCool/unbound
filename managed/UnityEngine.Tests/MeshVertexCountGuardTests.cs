@@ -8,8 +8,9 @@ namespace UnityEngine.Tests
     /// <summary>
     /// Fewer vertices than a mesh's indices reference. Manual 6000.0 (Mesh): "Unity always checks
     /// the supplied triangle indices whether they don't reference out of bounds vertices"; the
-    /// 6000.0.71f1 Editor (tests/projects/blendshapes misuse "vertices change", and the macOS Editor
-    /// for the other cases here) logs "Mesh.vertices is too small. ..." and keeps the mesh as it
+    /// 6000.0.71f1 Editor (tests/projects/blendshapes misuse "vertices change"; the other cases
+    /// here were measured with the macOS Editor outside a committed reference, a follow-up for the
+    /// blendshapes misuse capture) logs "Mesh.vertices is too small. ..." and keeps the mesh as it
     /// was, through the vertices setter and SetVertices alike, null counting as no vertices and the
     /// indices of every topology counting. A shorter array that still covers the indices is taken.
     /// </summary>
@@ -85,6 +86,23 @@ namespace UnityEngine.Tests
                 mesh.SetIndices(new[] { 0, 1, 7 }, MeshTopology.Points, 0);
                 using var capture = new Capture();
                 mesh.vertices = new Vector3[5];
+                Assert.Equal(new[] { TooSmall }, capture.Errors);
+                Assert.Equal(9, mesh.vertexCount);
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
+        public void ASubmeshBaseVertexCounts()
+        {
+            var mesh = Grid();
+            try
+            {
+                // Indices 0..2 from base vertex 6 reach vertex 8: 8 vertices are too few (macOS
+                // Editor: refused, as are 5).
+                mesh.SetIndices(new[] { 0, 1, 2 }, MeshTopology.Triangles, 0, true, 6);
+                using var capture = new Capture();
+                mesh.vertices = new Vector3[8];
                 Assert.Equal(new[] { TooSmall }, capture.Errors);
                 Assert.Equal(9, mesh.vertexCount);
             }

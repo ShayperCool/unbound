@@ -27,4 +27,4 @@ Run Unbound and compare:
     python3 tests/projects/particles/compare_images.py tests/projects/assetbundles/Reference /tmp/bundles
 
 Everything the probe records matches; the image matches the reference pixel for pixel on the
-Linux GPU (Q526), and the suite gates it so (`compare_images.py --gate`).
+Linux GPU (6000.0.71f1, two runs, 2026-11-16), and the suite gates it so (`compare_images.py --gate`).

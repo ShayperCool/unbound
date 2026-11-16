@@ -25,7 +25,7 @@ Run Unbound (in a window: the images need a GPU) and compare:
 
 With `--gate` (the suite's recipe) every image must match its reference pixel for pixel, except
 the residuals `image-residuals.json` lists with their pixel count, largest difference and reason:
-on the Linux GPU (Q526, two runs identical) 15 of the 17 images are exact, `lights` differs in
+on the Linux GPU (6000.0.71f1, two identical runs, 2026-11-16) 15 of the 17 images are exact, `lights` differs in
 1120 pixels by up to 4/255 (the lights module below) and `stretched` in 24 pixels by 1/255.
 `test_compare_images.py` tests the gate.
 
