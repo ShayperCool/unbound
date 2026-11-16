@@ -201,6 +201,32 @@ public class ObjectErrorsProbe : MonoBehaviour
         Try("argument.set_parent_self", () => { holder.transform.SetParent(holder.transform); return "done"; });
         Try("argument.child_out_of_range", () => holder.transform.GetChild(3));
         Try("argument.child_negative", () => holder.transform.GetChild(-1));
+        Try("argument.add_game_object_type", () => holder.AddComponent(typeof(GameObject)));
+        Try("argument.add_scriptable_type", () => holder.AddComponent(typeof(Data)));
+        Try("argument.add_component_type", () => holder.AddComponent(typeof(Component)));
+        Try("argument.add_behaviour_type", () => holder.AddComponent(typeof(Behaviour)));
+        Try("argument.get_game_object_type", () => holder.GetComponent(typeof(GameObject)));
+        Try("argument.get_scriptable_type", () => holder.GetComponent(typeof(Data)));
+        Try("argument.get_generic_string", () => holder.GetComponent<string>());
+        Try("argument.get_generic_interface", () => holder.GetComponent<IMarker>());
+        Try("argument.parent_null_type", () => holder.GetComponentInParent(null));
+        Try("argument.children_all_null_type", () => holder.GetComponentsInChildren(null));
+        Try("argument.parent_all_null_type", () => holder.GetComponentsInParent(null));
+        Try("argument.try_null_type", () => holder.TryGetComponent(null, out var found) + " " + ReferenceEquals(found, null));
+        Try("argument.children_string_type", () => holder.GetComponentInChildren(typeof(string)));
+        Try("argument.components_string_type", () => holder.GetComponents(typeof(string)));
+        Try("argument.find_objects_string", () => FindObjectsByType(typeof(string), FindObjectsSortMode.None));
+        Try("argument.find_object_null", () => FindFirstObjectByType(null));
+        Try("argument.find_all_tag_null", () => GameObject.FindGameObjectsWithTag(null));
+        Try("argument.find_all_tag_unknown", () => GameObject.FindGameObjectsWithTag("NoSuchTag"));
+        Try("argument.find_tag_empty", () => GameObject.FindWithTag(""));
+        Try("argument.compare_tag_null", () => holder.CompareTag((string)null));
+        Try("argument.compare_tag_empty", () => holder.CompareTag(""));
+        Try("argument.tag_after_unknown", () => holder.tag);
+        Do("argument.set_tag_null", () => holder.tag = null);
+        Try("argument.create_instance_string", () => ScriptableObject.CreateInstance(typeof(string)));
+        Try("argument.create_instance_abstract", () => ScriptableObject.CreateInstance(typeof(AbstractData)));
+        Try("argument.create_instance_component_name", () => ScriptableObject.CreateInstance("Marker"));
         Try("argument.sibling_index_out_of_range", () => { holder.transform.SetSiblingIndex(99); return holder.transform.GetSiblingIndex(); });
     }
 

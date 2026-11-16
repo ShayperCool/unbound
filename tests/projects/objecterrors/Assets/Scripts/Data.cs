@@ -5,3 +5,6 @@ public class Data : ScriptableObject
 {
     public int value;
 }
+
+/// <summary>An abstract scriptable object type: CreateInstance refuses it.</summary>
+public abstract class AbstractData : ScriptableObject { }

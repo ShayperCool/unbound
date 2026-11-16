@@ -361,6 +361,44 @@
 {"k":"argument.set_parent_self","v":"returns done"}
 {"k":"argument.child_out_of_range","v":"throws UnityEngine.UnityException: Transform child out of bounds"}
 {"k":"argument.child_negative","v":"throws UnityEngine.UnityException: Transform child out of bounds"}
+{"k":"argument.add_game_object_type","v":"returns null"}
+{"k":"argument.add_game_object_type.logs","v":"Log: Can't add component because 'GameObject' is not derived from Component."}
+{"k":"argument.add_scriptable_type","v":"returns null"}
+{"k":"argument.add_scriptable_type.logs","v":"Warning: AddComponent asking for invalid type using [ExtensionOfNativeClass] in its ancestor but cannot be found in the assembly"}
+{"k":"argument.add_component_type","v":"returns null"}
+{"k":"argument.add_component_type.logs","v":"Log: Can't add component 'Component' to Holder because such a component is already added to the game object!"}
+{"k":"argument.add_behaviour_type","v":"returns null"}
+{"k":"argument.add_behaviour_type.logs","v":"Log: Can't add component 'Behaviour' to Holder because such a component is already added to the game object!"}
+{"k":"argument.get_game_object_type","v":"throws System.ArgumentException: GetComponent requires that the requested component 'GameObject' derives from MonoBehaviour or Component or is an interface."}
+{"k":"argument.get_scriptable_type","v":"throws System.ArgumentException: GetComponent requires that the requested component 'Data' derives from MonoBehaviour or Component or is an interface."}
+{"k":"argument.get_generic_string","v":"throws System.ArgumentException: GetComponent requires that the requested component 'String' derives from MonoBehaviour or Component or is an interface."}
+{"k":"argument.get_generic_interface","v":"returns null"}
+{"k":"argument.parent_null_type","v":"throws System.ArgumentException: Type cannot be null."}
+{"k":"argument.children_all_null_type","v":"throws System.ArgumentException: Type cannot be null."}
+{"k":"argument.parent_all_null_type","v":"throws System.ArgumentException: Type cannot be null."}
+{"k":"argument.try_null_type","v":"throws System.ArgumentException: Type cannot be null."}
+{"k":"argument.children_string_type","v":"throws System.ArgumentException: GetComponent requires that the requested component 'String' derives from MonoBehaviour or Component or is an interface."}
+{"k":"argument.components_string_type","v":"throws System.ArgumentException: GetComponent requires that the requested component 'String' derives from MonoBehaviour or Component or is an interface."}
+{"k":"argument.find_objects_string","v":"returns null"}
+{"k":"argument.find_objects_string.logs","v":"Error: FindAllObjectsOfType: The type has to be derived from UnityEngine.Object. Type is String."}
+{"k":"argument.find_object_null","v":"throws System.NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"argument.find_object_null.logs","v":"Error: FindAllObjectsOfType: Invalid Type"}
+{"k":"argument.find_all_tag_null","v":"throws System.ArgumentException: Tag: tag name is null or empty."}
+{"k":"argument.find_all_tag_unknown","v":"throws UnityEngine.UnityException: Tag: NoSuchTag is not defined."}
+{"k":"argument.find_tag_empty","v":"throws System.ArgumentException: Tag: tag name is null or empty."}
+{"k":"argument.compare_tag_null","v":"returns False"}
+{"k":"argument.compare_tag_null.logs","v":"Error: Tag: tag name is null or empty."}
+{"k":"argument.compare_tag_empty","v":"returns False"}
+{"k":"argument.compare_tag_empty.logs","v":"Error: Tag: tag name is null or empty."}
+{"k":"argument.tag_after_unknown","v":"returns Untagged"}
+{"k":"argument.set_tag_null","v":"returns done"}
+{"k":"argument.set_tag_null.logs","v":"Error: Tag: tag name is null or empty."}
+{"k":"argument.create_instance_string","v":"returns null"}
+{"k":"argument.create_instance_string.logs","v":"Assert: 'System.String' is missing the class attribute 'ExtensionOfNativeClass'!\n---\nWarning: The class named 'System.String' is not derived from MonoBehaviour or ScriptableObject!"}
+{"k":"argument.create_instance_abstract","v":"returns null"}
+{"k":"argument.create_instance_abstract.logs","v":"Warning: The class named 'AbstractData' is abstract. The script class can't be abstract!\n---\nWarning: The class named 'AbstractData' is abstract. The script class can't be abstract!"}
+{"k":"argument.create_instance_component_name","v":"returns null"}
+{"k":"argument.create_instance_component_name.logs","v":"Error: Instance of Marker couldn't be created. The script class needs to derive from ScriptableObject."}
 {"k":"argument.sibling_index_out_of_range","v":"returns 5"}
 {"k":"destroyed.game_object.reference_null","v":"false"}
 {"k":"destroyed.game_object.equals_null","v":"true"}
