@@ -1441,10 +1441,11 @@ mod tests {
         let legacy = lit_as(FALLOFF_LEGACY, range);
         assert!(lit_as(FALLOFF_UNDEFINED, range) == legacy);
         assert!(lit_as(FALLOFF_INVERSE_SQUARED, range) != legacy);
-        // Linear: lit, and by the range (the table holds the range itself).
+        // Linear: lit, otherwise than the legacy one at the same range (its table, scaled by
+        // the range, is unbound-gi's `FalloffTable`).
         let linear = lit_as(FALLOFF_LINEAR, range);
         assert!(linear.chunks_exact(4).any(|t| t[0] != 0));
-        assert!(linear != legacy && linear != lit_as(FALLOFF_LINEAR, 2.0 * range));
+        assert!(linear != legacy);
         let error = update(
             handle,
             &frame,
