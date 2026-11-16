@@ -269,16 +269,21 @@ namespace UnityEngine.Tests
         });
 
         [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public void AnEndUncoveredByCarvingAttaches(bool start) => NavigationTestRelease.At("6000.0.71f1", () =>
+        [InlineData(true, false)]
+        [InlineData(false, false)]
+        [InlineData(true, true)]
+        [InlineData(false, true)]
+        public void AnEndUncoveredByCarvingAttaches(bool start, bool moved) => NavigationTestRelease.At("6000.0.71f1", () =>
         {
             // A carving obstacle over one end when the link is added: that end binds to nothing.
             // Once the obstacle goes, the tile is cut anew and the end attaches (as it did before
-            // ends were bound; how Unity binds an end under a hole is unmeasured).
+            // ends were bound; how Unity binds an end under a hole is unmeasured). Moved: both
+            // floors' data placed 1 m along x from where it was built (the cut tiles are searched
+            // in their surface's frame).
             ObstacleSystem.ResetCarving();
-            var left = NavMesh.AddNavMeshData(Floor(-4f));
-            var right = NavMesh.AddNavMeshData(Floor(4f));
+            var offset = moved ? Vector3.right : Vector3.zero;
+            var left = NavMesh.AddNavMeshData(Floor(-4f - offset.x), offset, Quaternion.identity);
+            var right = NavMesh.AddNavMeshData(Floor(4f - offset.x), offset, Quaternion.identity);
             var from = At(-2.7f, 0.0833f) + Vector3.forward;
             var to = At(2.7f, 0.0833f) + Vector3.forward;
             var go = new GameObject("obstacle");
