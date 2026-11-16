@@ -761,6 +761,126 @@ fn front_facing(words: &[u32]) -> Result<Vec<u32>> {
     Ok(out)
 }
 
+/// A fragment program's position input as HLSL has it: its `w` is the clip-space w of the
+/// fragment (Direct3D's `SV_Position.w`, which the Visual Effect Graph's soft particles take as
+/// the fragment's eye depth), where SPIR-V's `FragCoord.w` (and so WGSL's position) is its
+/// reciprocal. glslang leaves the reciprocal (its option for Direct3D's `w` is not reachable
+/// through shaderc), so every load of the position built-in, and every load of its fourth
+/// component through an access chain, divides one by `w` (tests/projects/vfx `draw-soft*`).
+fn fragment_position_w(words: &[u32]) -> Result<Vec<u32>> {
+    let list = instructions(words)?;
+    let op = |at: usize| words[at] & 0xffff;
+    let mut positions = Vec::new();
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        // OpDecorate <id> BuiltIn FragCoord.
+        if op(at) == 71 && count >= 4 && inst[2] == 11 && inst[3] == 15 {
+            positions.push(inst[1]);
+        }
+    }
+    if positions.is_empty() {
+        return Ok(words.to_vec());
+    }
+    let mut pointee: HashMap<u32, u32> = HashMap::new();
+    let mut component_of: HashMap<u32, u32> = HashMap::new();
+    let mut integers: HashMap<u32, u32> = HashMap::new();
+    let mut int_types = Vec::new();
+    let mut variable_type: HashMap<u32, u32> = HashMap::new();
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        match op(at) {
+            21 => int_types.push(inst[1]),
+            23 => {
+                component_of.insert(inst[1], inst[2]);
+            }
+            32 => {
+                pointee.insert(inst[1], inst[3]);
+            }
+            43 if count == 4 && int_types.contains(&inst[1]) => {
+                integers.insert(inst[2], inst[3]);
+            }
+            59 => {
+                variable_type.insert(inst[2], inst[1]);
+            }
+            _ => {}
+        }
+    }
+    positions.retain(|v| variable_type.contains_key(v));
+    // The float type of each position variable's components.
+    let float_of = |variable: &u32| -> Option<u32> {
+        component_of
+            .get(pointee.get(variable_type.get(variable)?)?)
+            .copied()
+    };
+    let mut bound = words[3];
+    let mut fresh = || {
+        bound += 1;
+        bound - 1
+    };
+    let mut ones: HashMap<u32, u32> = HashMap::new();
+    for v in &positions {
+        if let Some(float) = float_of(v) {
+            ones.entry(float).or_insert_with(&mut fresh);
+        }
+    }
+    // Access chains to the fourth component.
+    let mut fourth: Vec<u32> = Vec::new();
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        if op(at) == 65
+            && count == 5
+            && positions.contains(&inst[3])
+            && integers.get(&inst[4]) == Some(&3)
+        {
+            fourth.push(inst[2]);
+        }
+    }
+    let mut out = words[..5].to_vec();
+    let mut defined = false;
+    for &(at, count) in &list {
+        let inst = &words[at..at + count];
+        match op(at) {
+            // The constants one, before the first position variable.
+            59 if positions.contains(&inst[2]) && !defined => {
+                defined = true;
+                for (float, one) in &ones {
+                    out.extend_from_slice(&[(4 << 16) | 43, *float, *one, 1.0f32.to_bits()]);
+                }
+                out.extend_from_slice(inst);
+            }
+            // The whole position: loaded, its w divided into one and put back.
+            61 if positions.contains(&inst[3]) => {
+                let Some(float) = float_of(&inst[3]) else {
+                    out.extend_from_slice(inst);
+                    continue;
+                };
+                let (loaded, w, reciprocal) = (fresh(), fresh(), fresh());
+                out.extend_from_slice(&[(count as u32) << 16 | 61, inst[1], loaded]);
+                out.extend_from_slice(&inst[3..]);
+                out.extend_from_slice(&[(5 << 16) | 81, float, w, loaded, 3]);
+                out.extend_from_slice(&[(5 << 16) | 136, float, reciprocal, ones[&float], w]);
+                out.extend_from_slice(&[(6 << 16) | 82, inst[1], inst[2], reciprocal, loaded, 3]);
+            }
+            // Its w alone.
+            61 if fourth.contains(&inst[3]) => {
+                let loaded = fresh();
+                out.extend_from_slice(&[(count as u32) << 16 | 61, inst[1], loaded]);
+                out.extend_from_slice(&inst[3..]);
+                let one = *ones.get(&inst[1]).unwrap_or(&0);
+                if one == 0 {
+                    bail!(
+                        "the fragment position's w is loaded as another type than its components"
+                    );
+                }
+                out.extend_from_slice(&[(5 << 16) | 136, inst[1], inst[2], one, loaded]);
+            }
+            _ => out.extend_from_slice(inst),
+        }
+    }
+    out[3] = bound;
+    Ok(out)
+}
+
 /// Declares the integer `vec2`s that naga's SPIR-V reader looks up for the texel coordinate of a
 /// 2D array image when it splits the array layer off an integer coordinate (`Load`, `RW` reads
 /// and writes): it declares only the float one itself and panics when a program builds that
@@ -1333,7 +1453,8 @@ pub(crate) fn fit(
         &align_uniform_members(&strip_relaxed_precision(&per_sampler(&fragment)?))?,
     )?)?)?;
     let vertex_scan = scan(&vertex, Stage::Vertex)?;
-    let fragment_scan = scan(&fragment, Stage::Fragment)?;
+    let mut fragment_scan = scan(&fragment, Stage::Fragment)?;
+    fragment_scan.words = fragment_position_w(&fragment_scan.words)?;
     let mut vertex = parse(&vertex_scan.words, clip).context("vertex program")?;
     let mut fragment = parse(&fragment_scan.words, clip).context("fragment program")?;
     pad_fragment_outputs(&mut fragment);

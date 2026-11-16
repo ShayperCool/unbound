@@ -34,7 +34,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 57;
+pub const FORMAT_VERSION: u32 = 58;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -2146,6 +2146,48 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             .unwrap();
         assert!(compiled.texture_aliases.is_empty());
         assert_eq!(compiled.textures, ["_A", "_B"]);
+    }
+
+    /// A fragment program reads its position's `w` as Direct3D gives it (the clip-space w),
+    /// not as SPIR-V's `FragCoord.w` (its reciprocal): a whole position, a position in a
+    /// struct and the component alone each divide one by the built-in's `w`; a program that
+    /// does not read the position is left as it is.
+    #[test]
+    fn a_fragment_reads_its_positions_w_as_the_clip_space_w() {
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let plain = "float4 vert(float4 position : POSITION) : SV_POSITION { return position; }";
+        let with_uv = "struct V { float2 uv : TEXCOORD0; float4 pos : SV_POSITION; };\n\
+                       V vert(float4 position : POSITION) { V o; o.uv = position.xy; o.pos = position; return o; }";
+        for (vertex, fragment, reads) in [
+            (
+                plain,
+                "float4 frag(float4 p : SV_POSITION) : SV_Target { return p.w; }",
+                true,
+            ),
+            (
+                with_uv,
+                "float4 frag(V i) : SV_Target { return float4(i.uv, i.pos.zw); }",
+                true,
+            ),
+            (
+                plain,
+                "float4 frag(float4 p : POSITION) : SV_Target { return p.w; }",
+                true,
+            ),
+            (plain, "float4 frag() : SV_Target { return 1; }", false),
+        ] {
+            let source =
+                format!("#pragma vertex vert\n#pragma fragment frag\n{vertex}\n{fragment}\n");
+            let compiled = compiler
+                .compile(&program(&source, false), &[], false)
+                .unwrap();
+            assert_eq!(
+                compiled.fragment.contains("1f / "),
+                reads,
+                "{fragment}\n{}",
+                compiled.fragment
+            );
+        }
     }
 
     /// A slot binds a sampler only where the program samples through it: where a program
