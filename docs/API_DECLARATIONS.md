@@ -114,7 +114,7 @@ Editor and collection-validation methods.
 
 | Category | Before Q410 | Q410 entries retained |
 | --- | ---: | ---: |
-| Attributes | 938 | 13 |
+| Attributes | 938 | 12 |
 | Modifiers | 87 | 6 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
@@ -123,14 +123,14 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 0 |
 | Lookup policies | 11 | 10 |
-| Total | 1,332 | 105 |
+| Total | 1,332 | 104 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes. After the declaration
 extras slice, Q516's slider drag slice removes BaseSlider's IValueField entry and its column
-layout slice ColumnLayout's IDisposable entry, and its mixer slice the two mixer sub-asset marker
-entries. With the one pipeline-restriction lookup entry outside Q410, the allow-list holds 106
-entries.
+layout slice ColumnLayout's IDisposable entry, its mixer slice the two mixer sub-asset marker
+entries and its text command slice TextElement's event-interest entry. With the one
+pipeline-restriction lookup entry outside Q410, the allow-list holds 105 entries.
 
 Q410's enum slice copies obsolete constructor arguments, messages, error flags and
 accompanying annotations for 190 enum declarations. The attribute probe records
@@ -141,8 +141,10 @@ modifiers and optional defaults. JSON controls start with different field values
 before overwrite; angle controls exercise unmarked private fields. Declaration
 controls record private setters, final overrides and abstract methods. Interface
 migrations remain separate because notification subscriptions change binding updates.
-The exact TextElement event-interest list also remains queued until command and IME
-event types have handwritten pooling and propagation controls, tracked as Q410-UI-command-events.
+The exact TextElement event-interest list followed once text fields handled command and IME
+events: `textcommands` (66 exact controls) records which commands a focused, read-only or
+disabled field takes, what each does to the text, selection and clipboard, pooled event reuse,
+panel dispatch, the IME mode a focused field sets and IMEEvent's propagation.
 
 The controls cover Unity 6000.0's [private-field serialization rules](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SerializeField.html)
 and [JSON overwrite semantics](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/JsonUtility.FromJsonOverwrite.html):
@@ -402,11 +404,11 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-FrameRate-serialization` | 0 | Done by `framepayloads`: signed scalar root JSON, reconstruction and overwrite preserve the selected payload; the unmarked nested type stays omitted. |
 | `Q410-GUI-serialized-payloads` | 0 | Done for the selected release by `guipayload`, with shared GUIStyle payloads across YAML, JSON and cloning; wrapper field annotations match the selected declarations. |
 | `Q410-ObjectIdentifier-serialization` | 1 | Empty composite eligibility that preserves initializer values during cloning. |
-| `Q410-UI-command-events` | 1 | Command/IME event pooling and propagation before the exact interest list. |
-| `Q410-UI-interfaces` | 7 | Panel/group ownership, editable-field and slider interfaces (the slider's needs FieldMouseDragger), animations and the column layout's cleanup; the runtime panel interface is covered by `runtimepanels`, column binding notifications by `columnnotify` and hierarchy equality by `declarationextras`. |
+| `Q410-UI-command-events` | 0 | Done by `textcommands`: text fields take command and IME events; the composition preview is covered by managed tests with a stand-in input method. |
+| `Q410-UI-interfaces` | 5 | Panel/group ownership, editable-field interfaces, collection serialization callbacks, pointer capture and animations; the runtime panel interface is covered by `runtimepanels`, column binding notifications by `columnnotify`, hierarchy equality by `declarationextras`, the slider's value-field interface by `sliderdrag` and the column layout's lifetime by `columnlayout`. |
 | `Q410-XR-value-payloads` | 0 | Done for value identity, equality, hashing and capability storage by `xrvalues`; physical feature-provider queries remain unsupported and outside this payload slice. |
 | `Q410-animation-job-producer` | 1 | Animation producer payload and scheduling/lifetime controls. |
-| `Q410-asset-interface-adapters` | 2 | All asset types use the typed registry (`assetdispatch`, `assetadapters`, `audioadapters`, `manifestadapters`); the mixer group and snapshot still need the Editor subasset-duplication marker. |
+| `Q410-asset-interface-adapters` | 0 | All asset types use the typed registry (`assetdispatch`, `assetadapters`, `audioadapters`, `manifestadapters`); the mixer group and snapshot declare the subasset-duplication marker (`mixerclone`). |
 | `Q410-built-in-inspector-registration` | 3 | Target-specific single/multiple-object inspector behavior before registry annotations. |
 | `Q410-enumerator-current-state` | 0 | Done by `propertyenumerator`: Current caches each advance, including false, and preserves its state across Reset/Dispose for enumerable, list, indexed and default forms. |
 | `Q410-generic-equality-interfaces` | 0 | Done by `scenevalues`: generic collections use Scene object equality/hash behavior after removal of the extra interface; internal registries already use their own handles and keys. |
